@@ -1,7 +1,10 @@
-﻿namespace CSharpEssentials;
+﻿using System.Text.Json.Serialization;
+
+namespace CSharpEssentials;
 
 public readonly record struct Error : IError
 {
+    [JsonConstructor]
     private Error(string code, string description, ErrorType type, ErrorMetadata? metadata)
     {
         Code = code;

@@ -1,16 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using CSharpEssentials.Interfaces;
+using CSharpEssentials.Json;
 
 namespace CSharpEssentials;
 
-[Serializable]
 public readonly partial record struct Result<TValue> : IResult<TValue>
 {
     private readonly EqualityComparer<TValue> _comparer = EqualityComparer<TValue>.Default;
     private readonly Error[]? _errors = null;
     private readonly TValue? _value = default;
-
-    public Result() => throw new InvalidOperationException("Result must have a value or an error");
+    [JsonConstructor]
+#pragma warning disable IDE0051
+    private Result(bool isSuccess, TValue? value = default, Error[]? errorsOrEmptyArray = null)
+    {
+        _value = isSuccess ? value : default;
+        _errors = !isSuccess ? errorsOrEmptyArray : null;
+    }
+#pragma warning restore IDE0051
     private Result(TValue value)
     {
         ArgumentNullException.ThrowIfNull(value);
@@ -39,11 +46,14 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     [MemberNotNullWhen(true, nameof(Value))]
     [MemberNotNullWhen(true, nameof(_value))]
     public readonly bool IsSuccess => _errors is null;
-
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
     public readonly TValue Value => IsSuccess ? _value : default!;
+    [JsonPropertyName("errors")]
+    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
+    [JsonIgnore]
     public readonly Error[] Errors => IsFailure ? _errors : [Error.NoErrors];
+    [JsonIgnore]
     public readonly Error FirstError => IsFailure ? _errors[0] : Error.NoFirstError;
+    [JsonIgnore]
     public readonly Error LastError => IsFailure ? _errors[^1] : Error.NoLastError;
 
     /// <summary>
@@ -59,7 +69,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     public override string ToString()
     {
         if (IsSuccess)
-            return $"Success: {Value}";
+            return $"Success: {Value.ConvertToJson()}";
         if (Errors.Length == 1)
             return $"Failure: {Errors.Length} error, first error: {FirstError}";
         return $"Failure: {Errors.Length} errors, first error: {FirstError}, last error: {LastError}";
