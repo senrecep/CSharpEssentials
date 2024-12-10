@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CSharpEssentials.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,9 @@ public sealed class GlobalExceptionHandler(
             ApplicationException or
             ValidationException or
             BadHttpRequestException or
+            BadHttpRequestException or
+            EnhancedValidationException or
+            DomainException or
             InvalidOperationException => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
         };
@@ -32,7 +36,15 @@ public sealed class GlobalExceptionHandler(
         {
             HttpContext = httpContext,
             Exception = exception,
-            ProblemDetails = Error.Exception(exception).ToProblemDetails(statusCode: statusCode)
+            ProblemDetails = CreateProblemDetails(exception, statusCode)
         });
     }
+
+    private static EnhancedProblemDetails CreateProblemDetails(Exception exception, int statusCode) =>
+        exception switch
+        {
+            EnhancedValidationException validationException => validationException.Errors.ToProblemDetails(statusCode: statusCode),
+            DomainException domainException => domainException.Error.ToProblemDetails(statusCode: statusCode),
+            _ => Error.Exception(exception).ToProblemDetails(statusCode: statusCode)
+        };
 }
