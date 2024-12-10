@@ -8,7 +8,7 @@
     <PackageId>CSharpEssentials.EntityFrameworkCore</PackageId>
     <Title>CSharp Essentials EntityFrameworkCore</Title>
     <Product>CSharp Essentials EntityFrameworkCore</Product>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials" Version="1.0.9" />
+    <PackageReference Include="CSharpEssentials" Version="1.0.10" />
     <PackageReference Include="EFCore.CheckConstraints" Version="9.0.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
