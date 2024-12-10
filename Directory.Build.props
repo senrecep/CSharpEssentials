@@ -1,0 +1,33 @@
+<Project>
+	<PropertyGroup>
+		<AnalysisLevel>latest</AnalysisLevel>
+		<AnalysisMode>All</AnalysisMode>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
+		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+		<RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
+		<NoWarn>1591</NoWarn>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+		<EnableNETAnalyzers>true</EnableNETAnalyzers>
+		<Optimize>true</Optimize>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
+		<PackageReference Include="SonarAnalyzer.CSharp" Version="*">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+
+	<PropertyGroup Label="ConfigFiles">
+		<EditorConfigFile Condition=" '$(EditorConfigFile)' == '' ">
+			$([MSBuild]::GetPathOfFileAbove('.editorconfig',
+			$(MSBuildProjectDirectory)))
+		</EditorConfigFile>
+	</PropertyGroup>
+
+	<ItemGroup Label="ConfigFiles">
+		<None Condition="Exists('$(EditorConfigFile)')" Include="$(EditorConfigFile)" Visible="false" />
+	</ItemGroup>
+</Project>

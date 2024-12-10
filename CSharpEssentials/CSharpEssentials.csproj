@@ -1,0 +1,42 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <PackageId>CSharpEssentials</PackageId>
+    <Title>CSharp Essentials</Title>
+    <Product>CSharp Essentials</Product>
+    <Version>1.0.9</Version>
+    <Authors>SenRecep</Authors>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
+    <Description>Simplifies C# development by providing essential building blocks, including a framework for implementing common design patterns such as the Result Pattern, Any Pattern, and Maybe Pattern. Additionally, it includes utility methods to streamline and enhance development efficiency.</Description>
+    <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseFile>LICENCE</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENCE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.MD">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MediatR.Contracts" Version="2.0.1" />
+  </ItemGroup>
+</Project>
