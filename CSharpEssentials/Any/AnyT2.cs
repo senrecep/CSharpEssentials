@@ -1,3 +1,5 @@
+using CSharpEssentials.Json;
+
 namespace CSharpEssentials;
 
 public readonly struct Any<T0, T1>
@@ -11,6 +13,7 @@ public readonly struct Any<T0, T1>
     }
 
     public readonly int Index { get; }
+    public readonly object? Value { get; }
 
     public bool IsFirst => Index == 0;
     public bool IsSecond => Index == 1;
@@ -49,6 +52,7 @@ public readonly struct Any<T0, T1>
     public static Any<T0, T1> First(T0 value) => value;
     public static Any<T0, T1> Second(T1 value) => value;
 
+    public override string ToString() => _value.ConvertToJson();
     private static Exception InvalidOperation => new InvalidOperationException("No value");
 }
 

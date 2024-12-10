@@ -1,6 +1,8 @@
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using CSharpEssentials.Interfaces;
+using CSharpEssentials.Json;
 
 namespace CSharpEssentials;
 
@@ -8,6 +10,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
 {
     private readonly T? _value;
 
+    [JsonConstructor]
     private Maybe(T? value)
     {
         if (Equals(value, default(T)))
@@ -39,7 +42,14 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     /// <summary>
     /// Gets the value of the Maybe.
     /// </summary>
+    [JsonIgnore]
     public readonly T Value => GetValueOrThrow();
+
+    /// <summary>
+    /// Gets the value of the Maybe.
+    /// </summary>
+    [JsonPropertyName("value"), JsonInclude]
+    internal readonly T Data => GetValueOrDefault();
 
     /// <summary>
     /// Gets the value of the Maybe or throws an exception if there is no value.
@@ -200,7 +210,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         if (HasNoValue)
             return "No value";
 
-        return _value.ToString() ?? _value.GetType().Name;
+        return _value.ConvertToJson() ?? _value.GetType().Name;
     }
 }
 public readonly partial record struct Maybe : IMaybe
