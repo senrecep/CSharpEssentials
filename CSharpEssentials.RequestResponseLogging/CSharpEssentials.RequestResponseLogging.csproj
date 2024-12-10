@@ -1,0 +1,46 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+ <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    
+    <PackageId>CSharpEssentials.RequestResponseLogging</PackageId>
+    <Title>CSharp Essentials Request Response Logging</Title>
+    <Product>CSharp Essentials Request Response Logging</Product>
+    <Version>1.0.2</Version>
+    <Authors>SenRecep</Authors>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>AspNetCore,Request,Response,Logging,RequestResponseLogging</PackageTags>
+    <Description>Configurable request response logging</Description>
+    <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseFile>LICENCE</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENCE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.MD">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+	</ItemGroup>
+
+</Project>

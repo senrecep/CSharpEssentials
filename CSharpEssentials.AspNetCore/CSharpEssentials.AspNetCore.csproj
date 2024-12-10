@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  
+    <PackageId>CSharpEssentials.AspNetCore</PackageId>
+    <Title>CSharp Essentials AspNetCore</Title>
+    <Product>CSharp Essentials AspNetCore</Product>
+    <Version>1.0.2</Version>
+    <Authors>SenRecep</Authors>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
+    <Description>Simplifies C# development by providing essential building blocks, including a framework for implementing common design patterns such as the Result Pattern, Any Pattern, and Maybe Pattern. Additionally, it includes utility methods to streamline and enhance development efficiency.</Description>
+    <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageLicenseFile>LICENCE</PackageLicenseFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENCE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.MD">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+   <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
+    <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
+    <PackageReference Include="CSharpEssentials" Version="1.0.9" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="7.1.0" />
+   </ItemGroup>
+</Project>
