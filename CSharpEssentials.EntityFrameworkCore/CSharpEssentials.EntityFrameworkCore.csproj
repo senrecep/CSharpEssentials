@@ -8,7 +8,7 @@
     <PackageId>CSharpEssentials.EntityFrameworkCore</PackageId>
     <Title>CSharp Essentials EntityFrameworkCore</Title>
     <Product>CSharp Essentials EntityFrameworkCore</Product>
-    <Version>1.0.8</Version>
+    <Version>1.0.9</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
