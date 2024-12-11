@@ -37,7 +37,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials" Version="1.0.13" />
+    <PackageReference Include="CSharpEssentials" Version="1.0.14" />
     <PackageReference Include="EFCore.CheckConstraints" Version="9.0.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
