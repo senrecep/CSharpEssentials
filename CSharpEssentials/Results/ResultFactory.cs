@@ -46,8 +46,12 @@ public readonly partial record struct Result
     /// <returns></returns>
     public static Result And(params IEnumerable<IResultBase> results)
     {
-        Error[] errors = [.. results.SelectMany(r => r.ErrorsOrEmptyArray)];
-        return errors.Length == 0 ? Success() : Failure(errors);
+        foreach (IResultBase result in results)
+        {
+            if (result.IsFailure)
+                return result.Errors;
+        }
+        return Success();
     }
 
     /// <summary>
