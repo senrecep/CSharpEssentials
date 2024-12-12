@@ -7,24 +7,6 @@ namespace CSharpEssentials.Json;
 public static class EnhancedJsonSerializerOptions
 {
     /// <summary>
-    /// The default JSON serializer options.
-    /// </summary>
-    public static readonly JsonSerializerOptions DefaultOptions = new(JsonSerializerDefaults.Web)
-    {
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        WriteIndented = false,
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters =
-        {
-            new ConditionalStringEnumConverter(),
-            new MultiFormatDateTimeConverterFactory(),
-        }
-    };
-
-    /// <summary>
     /// The default JSON serializer options without converters.
     /// </summary>
     public static readonly JsonSerializerOptions DefaultOptionsWithoutConverters = new(JsonSerializerDefaults.Web)
@@ -38,18 +20,20 @@ public static class EnhancedJsonSerializerOptions
     };
 
     /// <summary>
+    /// The default JSON serializer options.
+    /// </summary>
+    public static readonly JsonSerializerOptions DefaultOptions = DefaultOptionsWithoutConverters.Create(options =>
+    {
+        options.Converters.Add(new ConditionalStringEnumConverter());
+        options.Converters.Add(new MultiFormatDateTimeConverterFactory());
+        options.Converters.Add(new PolymorphicJsonConverterFactory());
+    });
+
+    /// <summary>
     /// The default JSON serializer options with a date time converter.
     /// </summary>
-    public static readonly JsonSerializerOptions DefaultOptionsWithDateTimeConverter = new(JsonSerializerDefaults.Web)
-    {
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        WriteIndented = false,
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new MultiFormatDateTimeConverterFactory() }
-    };
+    public static readonly JsonSerializerOptions DefaultOptionsWithDateTimeConverter = DefaultOptionsWithoutConverters.Create(
+        options => options.Converters.Add(new MultiFormatDateTimeConverterFactory()));
 
     /// <summary>
     /// Creates JSON serializer options with the specified converters.
