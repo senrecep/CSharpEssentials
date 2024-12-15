@@ -1,4 +1,3 @@
-
 using System.Reflection;
 using Asp.Versioning.ApiExplorer;
 using CSharpEssentials.AspNetCore.Swagger.Filters;
@@ -15,10 +14,10 @@ public static class ConfigureSwaggerExtension
 {
     public static IServiceCollection AddSwagger<TConfigureSwaggerOptions>(
      this IServiceCollection services,
-     OpenApiSecurityScheme securityScheme)
+     OpenApiSecurityScheme securityScheme,
+     Assembly assembly)
         where TConfigureSwaggerOptions : ConfigureSwaggerOptions
     {
-        var assembly = Assembly.GetCallingAssembly();
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
