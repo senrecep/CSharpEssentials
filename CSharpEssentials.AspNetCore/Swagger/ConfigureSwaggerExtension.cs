@@ -15,12 +15,13 @@ public static class ConfigureSwaggerExtension
     public static IServiceCollection AddSwagger<TConfigureSwaggerOptions>(
      this IServiceCollection services,
      OpenApiSecurityScheme securityScheme,
-     Assembly assembly)
+     Assembly? assembly = null)
         where TConfigureSwaggerOptions : ConfigureSwaggerOptions
     {
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
+            assembly ??= Assembly.GetCallingAssembly();
             string xmlFile = $"{assembly.GetName().Name}.xml";
             string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
             options.IncludeXmlComments(xmlPath);
