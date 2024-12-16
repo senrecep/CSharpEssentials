@@ -79,7 +79,7 @@ public static class EntityBaseExtensions
 
     public static void ApplySoftDeleteQueryFilter(this ModelBuilder modelBuilder)
     {
-        Type entityBaseType = typeof(ISoftDeletable);
+        Type entityBaseType = typeof(ISoftDeletableBase);
         IMutableEntityType[] entities = [.. modelBuilder.Model
             .GetEntityTypes()
             .Where(entityType => entityBaseType.IsAssignableFrom(entityType.ClrType))
@@ -88,6 +88,6 @@ public static class EntityBaseExtensions
         foreach (IMutableEntityType? entityType in entities)
             modelBuilder
             .Entity(entityType.ClrType)
-            .AddQueryFilter<ISoftDeletable>(e => !e.IsDeleted);
+            .AddQueryFilter<ISoftDeletableBase>(e => !e.IsDeleted);
     }
 }

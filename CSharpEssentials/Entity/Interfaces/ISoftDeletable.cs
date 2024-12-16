@@ -1,10 +1,14 @@
 namespace CSharpEssentials.Interfaces;
 
-public interface ISoftDeletable
+public interface ISoftDeletableBase
+{
+    bool IsDeleted { get; }
+}
+
+public interface ISoftDeletable : ISoftDeletableBase
 {
     DateTimeOffset? DeletedAt { get; }
     string? DeletedBy { get; }
-    bool IsDeleted { get; }
     bool IsHardDeleted { get; }
 
     void MarkAsDeleted(DateTimeOffset deletedAt, string deletedBy);
