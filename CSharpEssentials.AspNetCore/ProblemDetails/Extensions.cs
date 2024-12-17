@@ -68,7 +68,27 @@ public static class Extensions
         EnhancedProblemDetails problemDetails = errors.ToProblemDetails(extensions, statusCode);
         return Results.Problem(problemDetails);
     }
-
+    /// <summary>
+    /// Converts a list of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
+    public static IResult ToProblemResult(this IReadOnlyList<Error> errors, ErrorMetadata? extensions = null, int? statusCode = null)
+    {
+        EnhancedProblemDetails problemDetails = errors.ToProblemDetails(extensions, statusCode);
+        return Results.Problem(problemDetails);
+    }
+    /// <summary>
+    /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="result"></param>
+    /// <param name="httpContext"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public static IActionResult ToActionResult(this Interfaces.IResultBase result, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         if (result.IsSuccess)
@@ -76,10 +96,36 @@ public static class Extensions
         return result.Errors.ToActionResult(httpContext, extensions, statusCode);
 
     }
-
+    /// <summary>
+    /// Converts an <see cref="Error"/> to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="error"></param>
+    /// <param name="httpContext"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static IActionResult ToActionResult(this Error error, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
         ToActionResult([error], httpContext, extensions, statusCode);
 
+    /// <summary>
+    /// Converts an array of <see cref="Error"/> to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <param name="httpContext"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
+    public static IActionResult ToActionResult(this IReadOnlyList<Error> errors, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
+        ToActionResult([.. errors], httpContext, extensions, statusCode);
+
+    /// <summary>
+    /// Converts an array of <see cref="Error"/> to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <param name="httpContext"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static IActionResult ToActionResult(this Error[] errors, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         EnhancedProblemDetails problemDetails = errors.ToProblemDetails(extensions, statusCode);
@@ -97,20 +143,83 @@ public static class Extensions
         };
     }
 
+    /// <summary>
+    /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="controller"></param>
+    /// <param name="result"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static IActionResult Problem(this ControllerBase controller, Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null) =>
         result.ToActionResult(controller.HttpContext, extensions, statusCode);
+    /// <summary>
+    /// Converts an <see cref="Error"/> to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="controller"></param>
+    /// <param name="error"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static IActionResult Problem(this ControllerBase controller, Error error, ErrorMetadata? extensions = null, int? statusCode = null) =>
         error.ToActionResult(controller.HttpContext, extensions, statusCode);
+    /// <summary>
+    /// Converts an array of <see cref="Error"/> to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="controller"></param>
+    /// <param name="errors"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static IActionResult Problem(this ControllerBase controller, Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null) =>
         errors.ToActionResult(controller.HttpContext, extensions, statusCode);
-
+    /// <summary>
+    /// Converts a list of <see cref="Error"/> to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="controller"></param>
+    /// <param name="errors"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
+    public static IActionResult Problem(this ControllerBase controller, IReadOnlyList<Error> errors, ErrorMetadata? extensions = null, int? statusCode = null) =>
+        errors.ToActionResult(controller.HttpContext, extensions, statusCode);
+    /// <summary>
+    /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
+    /// </summary>
+    /// <param name="result"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public static EnhancedProblemDetails ToProblemDetails(this Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         if (result.IsSuccess)
             throw new InvalidOperationException("Cannot convert a successful result to a problem details");
         return result.Errors.ToProblemDetails(extensions, statusCode);
     }
+    /// <summary>
+    /// Converts an <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <param name="error"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static EnhancedProblemDetails ToProblemDetails(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemDetails([error], extensions, statusCode);
+    /// <summary>
+    /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
+    public static EnhancedProblemDetails ToProblemDetails(this IReadOnlyList<Error> errors, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemDetails([.. errors], extensions, statusCode);
+    /// <summary>
+    /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <param name="extensions"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static EnhancedProblemDetails ToProblemDetails(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         ErrorMetadata metadata = extensions.IsNotNull() ? new ErrorMetadata(extensions) : ErrorMetadata.CreateEmpty();
@@ -132,16 +241,34 @@ public static class Extensions
             Extensions = metadata
         };
     }
-
+    /// <summary>
+    /// Produces a <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <param name="builder"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static RouteHandlerBuilder ProducesProblem(this RouteHandlerBuilder builder, int statusCode = HttpCodes.BadRequest) =>
         builder.ProducesProblem<EnhancedProblemDetails>(statusCode);
+    /// <summary>
+    /// Produces a <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <typeparam name="TProblemDetails"></typeparam>
+    /// <param name="builder"></param>
+    /// <param name="statusCode"></param>
+    /// <returns></returns>
     public static RouteHandlerBuilder ProducesProblem<TProblemDetails>(this RouteHandlerBuilder builder, int statusCode = HttpCodes.BadRequest)
         where TProblemDetails : ProblemDetails
     {
         return OpenApiRouteHandlerBuilderExtensions.Produces<TProblemDetails>(builder, statusCode, "application/problem+json");
     }
 
-
+    /// <summary>
+    /// Adds the HTTP context details to the <see cref="ProblemDetails"/> object.
+    /// </summary>
+    /// <param name="problemDetails"></param>
+    /// <param name="httpContext"></param>
+    /// <param name="configure"></param>
+    /// <returns></returns>
     internal static ProblemDetails AddHttpContextDetails(this ProblemDetails problemDetails, HttpContext? httpContext, Action<ProblemDetails, HttpContext>? configure = null)
     {
         if (httpContext is null)

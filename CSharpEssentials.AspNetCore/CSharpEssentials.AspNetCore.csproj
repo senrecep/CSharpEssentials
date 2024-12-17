@@ -8,7 +8,7 @@
     <PackageId>CSharpEssentials.AspNetCore</PackageId>
     <Title>CSharp Essentials AspNetCore</Title>
     <Product>CSharp Essentials AspNetCore</Product>
-    <Version>1.0.9</Version>
+    <Version>1.0.10</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
