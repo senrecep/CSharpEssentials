@@ -7,7 +7,7 @@ public readonly partial record struct Result<TValue>
     /// </summary>
     /// <param name="onFailure"></param>
     /// <returns></returns>
-    public Result<TValue> Else(Func<IReadOnlyList<Error>, Error> onFailure)
+    public Result<TValue> Else(Func<Error[], Error> onFailure)
     {
         if (IsSuccess)
             return Value;
@@ -19,7 +19,7 @@ public readonly partial record struct Result<TValue>
     /// </summary>
     /// <param name="onFailure"></param>
     /// <returns></returns>
-    public Result<TValue> Else(Func<IReadOnlyList<Error>, IReadOnlyList<Error>> onFailure)
+    public Result<TValue> Else(Func<Error[], Error[]> onFailure)
     {
         if (IsSuccess)
             return Value;
@@ -43,7 +43,7 @@ public readonly partial record struct Result<TValue>
     /// </summary>
     /// <param name="onFailure"></param>
     /// <returns></returns>
-    public Result<TValue> Else(Func<IReadOnlyList<Error>, TValue> onFailure)
+    public Result<TValue> Else(Func<Error[], TValue> onFailure)
     {
         if (IsSuccess)
             return Value;
@@ -68,7 +68,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<Result<TValue>> ElseAsync(Func<IReadOnlyList<Error>, Task<TValue>> onFailure, CancellationToken cancellationToken = default)
+    public async Task<Result<TValue>> ElseAsync(Func<Error[], Task<TValue>> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsSuccess)
             return Value;
@@ -82,7 +82,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<Result<TValue>> ElseAsync(Func<IReadOnlyList<Error>, Task<Error>> onFailure, CancellationToken cancellationToken = default)
+    public async Task<Result<TValue>> ElseAsync(Func<Error[], Task<Error>> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsSuccess)
             return Value;
@@ -96,11 +96,11 @@ public readonly partial record struct Result<TValue>
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<Result<TValue>> ElseAsync(Func<IReadOnlyList<Error>, Task<IReadOnlyList<Error>>> onFailure, CancellationToken cancellationToken = default)
+    public async Task<Result<TValue>> ElseAsync(Func<Error[], Task<Error[]>> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsSuccess)
             return Value;
-        IReadOnlyList<Error> result = await onFailure(Errors).WithCancellation(cancellationToken);
+        Error[] result = await onFailure(Errors).WithCancellation(cancellationToken);
         return result.ToResult<TValue>();
     }
 
@@ -143,7 +143,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<IReadOnlyList<Error>, TValue> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<Error[], TValue> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -171,7 +171,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<IReadOnlyList<Error>, Task<TValue>> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Task<TValue>> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.ElseAsync(onFailure, cancellationToken);
@@ -199,7 +199,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<IReadOnlyList<Error>, Error> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -213,7 +213,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<IReadOnlyList<Error>, IReadOnlyList<Error>> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<Error[], Error[]> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -240,7 +240,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<IReadOnlyList<Error>, Task<Error>> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Task<Error>> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.ElseAsync(onFailure, cancellationToken);
@@ -254,7 +254,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<IReadOnlyList<Error>, Task<IReadOnlyList<Error>>> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Task<Error[]>> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.ElseAsync(onFailure, cancellationToken);

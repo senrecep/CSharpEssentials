@@ -7,7 +7,7 @@ public readonly partial record struct Result<TValue>
     /// </summary>
     /// <param name="onSuccess"></param>
     /// <param name="onError"></param>
-    public void Switch(Action<TValue> onSuccess, Action<IReadOnlyList<Error>> onError)
+    public void Switch(Action<TValue> onSuccess, Action<Error[]> onError)
     {
         if (IsFailure)
         {
@@ -24,7 +24,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task SwitchAsync(Func<TValue, Task> onSuccess, Func<IReadOnlyList<Error>, Task> onError, CancellationToken cancellationToken = default)
+    public async Task SwitchAsync(Func<TValue, Task> onSuccess, Func<Error[], Task> onError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
         {
@@ -110,7 +110,7 @@ public static partial class ResultExtensions
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Switch<TValue>(this Task<Result<TValue>> task, Action<TValue> onSuccess, Action<IReadOnlyList<Error>> onError, CancellationToken cancellationToken = default)
+    public static async Task Switch<TValue>(this Task<Result<TValue>> task, Action<TValue> onSuccess, Action<Error[]> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         result.Switch(onSuccess, onError);
@@ -125,7 +125,7 @@ public static partial class ResultExtensions
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task SwitchAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task> onSuccess, Func<IReadOnlyList<Error>, Task> onError, CancellationToken cancellationToken = default)
+    public static async Task SwitchAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task> onSuccess, Func<Error[], Task> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         await result.SwitchAsync(onSuccess, onError, cancellationToken);
