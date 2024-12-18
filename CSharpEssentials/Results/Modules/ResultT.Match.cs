@@ -9,7 +9,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onSuccess"></param>
     /// <param name="onError"></param>
     /// <returns></returns>
-    public T Match<T>(Func<TValue, T> onSuccess, Func<IReadOnlyList<Error>, T> onError)
+    public T Match<T>(Func<TValue, T> onSuccess, Func<Error[], T> onError)
     {
         if (IsFailure)
             return onError(Errors);
@@ -24,7 +24,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<T> MatchAsync<T>(Func<TValue, Task<T>> onSuccess, Func<IReadOnlyList<Error>, Task<T>> onError, CancellationToken cancellationToken = default)
+    public async Task<T> MatchAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error[], Task<T>> onError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
             return await onError(Errors).WithCancellation(cancellationToken);
@@ -103,7 +103,7 @@ public static partial class ResultExtensions
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<T> Match<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<IReadOnlyList<Error>, T> onError, CancellationToken cancellationToken = default)
+    public static async Task<T> Match<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error[], T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Match(onSuccess, onError);
@@ -119,7 +119,7 @@ public static partial class ResultExtensions
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<T> MatchAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, Task<T>> onSuccess, Func<IReadOnlyList<Error>, Task<T>> onError, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, Task<T>> onSuccess, Func<Error[], Task<T>> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.MatchAsync(onSuccess, onError, cancellationToken);

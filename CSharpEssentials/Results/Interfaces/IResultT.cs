@@ -27,14 +27,14 @@ public interface IResult<TValue> : IResultBase
     /// </summary>
     /// <param name="onFailure">A function that takes a list of errors and returns a single error.</param>
     /// <returns>A result containing the value or the provided error.</returns>
-    Result<TValue> Else(Func<IReadOnlyList<Error>, Error> onFailure);
+    Result<TValue> Else(Func<Error[], Error> onFailure);
 
     /// <summary>
     /// Handles failure by providing a list of errors.
     /// </summary>
     /// <param name="onFailure">A function that takes a list of errors and returns a list of errors.</param>
     /// <returns>A result containing the value or the provided list of errors.</returns>
-    Result<TValue> Else(Func<IReadOnlyList<Error>, IReadOnlyList<Error>> onFailure);
+    Result<TValue> Else(Func<Error[], Error[]> onFailure);
 
     /// <summary>
     /// Handles failure by providing a specific error.
@@ -48,7 +48,7 @@ public interface IResult<TValue> : IResultBase
     /// </summary>
     /// <param name="onFailure">A function that takes a list of errors and returns a value.</param>
     /// <returns>A result containing the value or the provided value.</returns>
-    Result<TValue> Else(Func<IReadOnlyList<Error>, TValue> onFailure);
+    Result<TValue> Else(Func<Error[], TValue> onFailure);
 
     /// <summary>
     /// Handles failure by providing a specific value.
@@ -63,7 +63,7 @@ public interface IResult<TValue> : IResultBase
     /// <param name="onFailure">A function that takes a list of errors and returns a task of value.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation, containing the result with the value or the provided value.</returns>
-    Task<Result<TValue>> ElseAsync(Func<IReadOnlyList<Error>, Task<TValue>> onFailure, CancellationToken cancellationToken = default);
+    Task<Result<TValue>> ElseAsync(Func<Error[], Task<TValue>> onFailure, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asynchronously handles failure by providing a single error.
@@ -71,7 +71,7 @@ public interface IResult<TValue> : IResultBase
     /// <param name="onFailure">A function that takes a list of errors and returns a task of error.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation, containing the result with the value or the provided error.</returns>
-    Task<Result<TValue>> ElseAsync(Func<IReadOnlyList<Error>, Task<Error>> onFailure, CancellationToken cancellationToken = default);
+    Task<Result<TValue>> ElseAsync(Func<Error[], Task<Error>> onFailure, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asynchronously handles failure by providing a list of errors.
@@ -79,7 +79,7 @@ public interface IResult<TValue> : IResultBase
     /// <param name="onFailure">A function that takes a list of errors and returns a task of list of errors.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation, containing the result with the value or the provided list of errors.</returns>
-    Task<Result<TValue>> ElseAsync(Func<IReadOnlyList<Error>, Task<IReadOnlyList<Error>>> onFailure, CancellationToken cancellationToken = default);
+    Task<Result<TValue>> ElseAsync(Func<Error[], Task<Error[]>> onFailure, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Asynchronously handles failure by providing a specific error.
@@ -138,7 +138,7 @@ public interface IResult<TValue> : IResultBase
     /// <param name="onSuccess">A function that takes the value and returns a result value.</param>
     /// <param name="onError">A function that takes a list of errors and returns a result value.</param>
     /// <returns>The result value based on success or failure.</returns>
-    T Match<T>(Func<TValue, T> onSuccess, Func<IReadOnlyList<Error>, T> onError);
+    T Match<T>(Func<TValue, T> onSuccess, Func<Error[], T> onError);
 
     /// <summary>
     /// Asynchronously matches the result to a value based on success or failure.
@@ -148,7 +148,7 @@ public interface IResult<TValue> : IResultBase
     /// <param name="onError">A function that takes a list of errors and returns a task of result value.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation, containing the result value based on success or failure.</returns>
-    Task<T> MatchAsync<T>(Func<TValue, Task<T>> onSuccess, Func<IReadOnlyList<Error>, Task<T>> onError, CancellationToken cancellationToken = default);
+    Task<T> MatchAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error[], Task<T>> onError, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Matches the result to a value based on success or the first error.
@@ -192,7 +192,7 @@ public interface IResult<TValue> : IResultBase
     /// </summary>
     /// <param name="onSuccess">An action to be executed on success.</param>
     /// <param name="onError">An action to be executed on failure.</param>
-    void Switch(Action<TValue> onSuccess, Action<IReadOnlyList<Error>> onError);
+    void Switch(Action<TValue> onSuccess, Action<Error[]> onError);
 
     /// <summary>
     /// Asynchronously switches between success and failure actions.
@@ -201,7 +201,7 @@ public interface IResult<TValue> : IResultBase
     /// <param name="onError">A function that returns a task to be executed on failure.</param>
     /// <param name="cancellationToken">A token to cancel the asynchronous operation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    Task SwitchAsync(Func<TValue, Task> onSuccess, Func<IReadOnlyList<Error>, Task> onError, CancellationToken cancellationToken = default);
+    Task SwitchAsync(Func<TValue, Task> onSuccess, Func<Error[], Task> onError, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Switches between success and the first error actions.
