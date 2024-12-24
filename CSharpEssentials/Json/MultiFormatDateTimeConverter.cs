@@ -36,6 +36,7 @@ public sealed class MultiFormatDateTimeConverterFactory(params string[] formats)
 
     private static readonly string[] _defaultFormats =
     [
+        "yyyy-MM-ddTHH:mm:ss.ffffffzzz",
         "yyyy-MM-ddTHH:mm:ss.fffZ",
         "yyyy-MM-ddTHH:mm:ssZ",
         "yyyy-MM-ddTHH:mm:ss",
@@ -56,17 +57,29 @@ public sealed class MultiFormatDateTimeConverterFactory(params string[] formats)
         "HH:mm",
         "yyyyMMdd",
         "yyyy-MM",
-        "yyyy'W'ww"
+        "yyyy'W'ww",
+
+        "yyyy-MM-ddTHH:mm:ss.ffffff",
+        "yyyy-MM-ddTHH:mm:ss.fff",
+        "ddd, dd MMM yyyy HH:mm:ss 'GMT'",
+        "ddd, dd-MMM-yy HH:mm:ss 'GMT'",
+        "yyyy-MM-dd'T'HH:mm:ssXXX",
+        "yyyy-MM-dd HH:mm:ss zzz",
+        "dd MMM yyyy HH:mm:ss",
+        "yyyy.MM.dd G 'at' HH:mm:ss z",
+        "yyyyMMddHHmmss",
+        "yyyy-MM-dd_HH-mm-ss",
+        "yyyy年MM月dd日"
     ];
 }
 
-/// <summary>
+/// <summary> 
 /// A multi-format date time converter.
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
 {
-    private const string _defaultFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+    private const string _defaultFormat = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
     private readonly string[] _formats;
     private readonly string _supportedFormats;
     private readonly bool _isNullable;
