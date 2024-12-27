@@ -11,8 +11,8 @@
     <Version>1.0.13</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageTags>EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
-    <Description>Simplifies C# development by providing essential building blocks, including a framework for implementing common design patterns such as the Result Pattern, Any Pattern, and Maybe Pattern. Additionally, it includes utility methods to streamline and enhance development efficiency.</Description>
+    <PackageTags>EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance,NamingConventions</PackageTags>
+    <Description>Enhances Entity Framework Core with functional programming patterns and DDD-friendly features. Includes base entity classes, soft delete support, audit trails, query filters, optimistic concurrency, PostgreSQL integration, query performance monitoring, and domain event handling. Perfect for building maintainable and scalable data access layers in modern .NET applications.</Description>
     <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
