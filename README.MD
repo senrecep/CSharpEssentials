@@ -141,13 +141,31 @@ string json = myObject.ConvertToJson(options);
 var randomItem = list.GetRandomItem();
 ```
 
+### Request Response Logging
+
+[`RequestResponseLogging`](CSharpEssentials.RequestResponseLogging/Readme.MD) - Comprehensive HTTP traffic monitoring:
+
+````csharp
+public void Configure(IApplicationBuilder app)
+{
+    app.AddRequestResponseLogging(opt =>
+    {
+        // Configure logging options
+        var loggingOptions = LoggingOptions.CreateAllFields();
+        loggingOptions.HeaderKeys.Add("X-Correlation-Id");
+
+        // Use the configured logger
+        opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions);
+    });
+}
+
 ## 🚀 Getting Started
 
 ### Installation
 
 ```bash
 dotnet add package CSharpEssentials
-```
+````
 
 You can also install the package directly from the [NuGet Gallery](https://www.nuget.org/packages/CSharpEssentials).
 
@@ -172,6 +190,7 @@ Each module has its own detailed documentation:
 - [Extensions Documentation](CSharpEssentials/Extensions/Readme.MD)
 - [Time Management Documentation](CSharpEssentials/Time/Readme.MD)
 - [Any Type Documentation](CSharpEssentials/Any/Readme.MD)
+- [Request Response Logging Documentation](CSharpEssentials.RequestResponseLogging/Readme.MD)
 
 ## 🔧 Best Practices
 
@@ -207,6 +226,7 @@ This library was inspired by and builds upon the work of several excellent open-
 - [ErrorOr](https://github.com/amantinband/error-or) - A simple, fluent discriminated union of an error or a result
 - [CSharpFunctionalExtensions](https://github.com/vkhorikov/CSharpFunctionalExtensions) - Functional extensions for C#
 - [OneOf](https://github.com/mcintyre321/OneOf) - Easy to use F#-like discriminated unions for C#
+- [TechBuddySolution](https://github.com/salihcantekin/TechBuddySolution) - The foundation for our Request Response Logging module
 
 Special thanks to all contributors who have helped shape this library and to the maintainers of these inspiring projects.
 

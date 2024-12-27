@@ -1,10 +1,11 @@
-﻿
-using Microsoft.AspNetCore.Http.Features;
+﻿using Microsoft.AspNetCore.Http.Features;
 
 namespace CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
 
 internal abstract class BaseMiddleware(ILogWriter logWriter, string[] ignoredPaths)
 {
+    private const string _defaultRequestText = "Skipped logging request body";
+    private const string _defaultResponseText = "Skipped logging response body";
     private readonly ILogWriter? _logWriter = logWriter is NullLogWriter ? null : logWriter;
     private readonly RecyclableMemoryStreamManager _recyclableMemoryStreamManager = new();
 
@@ -21,14 +22,19 @@ internal abstract class BaseMiddleware(ILogWriter logWriter, string[] ignoredPat
         return (isSkipRequestLogging, isSkipResponseLogging);
     }
 
-    protected bool IsIgnoredPath(HttpContext context) => ignoredPaths.Contains(context.Request.Path.Value);
+    protected bool IsIgnoredPath(HttpContext context)
+    {
+        string? requestPath = context.Request.Path.Value?.TrimEnd('/');
+        return ignoredPaths.Any(ignorePath =>
+            requestPath?.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
 
     protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext)
     {
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = IsSkipRequestResponseLogging(httpContext);
 
-        string requestText = "Skipped logging request body";
-        string responseText = "Skipped logging response body";
+        string requestText = _defaultRequestText;
+        string responseText = _defaultResponseText;
 
         if (!isSkipRequestLogging)
             requestText = await GetRequestBody(httpContext);
@@ -39,9 +45,9 @@ internal abstract class BaseMiddleware(ILogWriter logWriter, string[] ignoredPat
         if (!isSkipResponseLogging)
             httpContext.Response.Body = responseBody;
 
-        var sw = Stopwatch.StartNew();
+        long startTime = Stopwatch.GetTimestamp();
         await next.Invoke(httpContext);
-        sw.Stop();
+        TimeSpan elapsedTime = Stopwatch.GetElapsedTime(startTime);
 
 
         if (!isSkipResponseLogging)
@@ -59,7 +65,7 @@ internal abstract class BaseMiddleware(ILogWriter logWriter, string[] ignoredPat
         {
             RequestBody = requestText,
             ResponseBody = responseText,
-            ResponseCreationTime = TimeSpan.FromTicks(sw.ElapsedTicks)
+            ResponseCreationTime = elapsedTime
         };
 
         _logWriter?.Write(reqResContext);
