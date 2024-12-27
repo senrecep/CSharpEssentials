@@ -6,13 +6,13 @@
     <Nullable>enable</Nullable>
     
     <PackageId>CSharpEssentials.RequestResponseLogging</PackageId>
-    <Title>CSharp Essentials Request Response Logging</Title>
+    <Title>CSharp Essentials Request Response Logging - Advanced HTTP Traffic Monitoring</Title>
     <Product>CSharp Essentials Request Response Logging</Product>
     <Version>1.0.2</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageTags>AspNetCore,Request,Response,Logging,RequestResponseLogging</PackageTags>
-    <Description>Configurable request response logging</Description>
+    <PackageTags>AspNetCore;Request;Response;Logging;RequestResponseLogging;Middleware;HTTP;Monitoring;Performance;Security;Headers;APIMonitoring;Diagnostics;Tracing</PackageTags>
+    <Description>A powerful and flexible request/response logging middleware for ASP.NET Core applications. Features include: configurable logging fields, path-based filtering, customizable header logging, high performance with minimal overhead, support for custom request/response handlers, and comprehensive HTTP traffic monitoring capabilities.</Description>
     <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>

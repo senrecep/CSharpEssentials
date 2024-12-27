@@ -11,8 +11,8 @@
     <Version>1.0.12</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageTags>AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvet,Utility</PackageTags>
-    <Description>Simplifies C# development by providing essential building blocks, including a framework for implementing common design patterns such as the Result Pattern, Any Pattern, and Maybe Pattern. Additionally, it includes utility methods to streamline and enhance development efficiency.</Description>
+    <PackageTags>AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,ApiVersioning,Swagger,ProblemDetails,ExceptionHandling,GlobalExceptionHandler,JsonConfiguration,ValidationSupport</PackageTags>
+    <Description>A comprehensive ASP.NET Core library that enhances functional programming capabilities in web applications. Features include API versioning, global exception handling with enhanced problem details, advanced Swagger/OpenAPI configuration, model validation, optimized JSON handling, and seamless integration with CSharpEssentials core functional patterns (Result, Maybe, Rule Engine). Perfect for building robust, maintainable, and type-safe web APIs following functional programming principles.</Description>
     <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
