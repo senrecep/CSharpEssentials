@@ -8,7 +8,7 @@
     <PackageId>CSharpEssentials</PackageId>
     <Title>CSharp Essentials</Title>
     <Product>CSharp Essentials</Product>
-    <Version>1.0.18</Version>
+    <Version>1.0.19</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,Monad,DiscriminatedUnions,TypeSafety,ErrorHandling,DDD,EntityFramework,TimeManagement,Extensions,LINQ</PackageTags>
