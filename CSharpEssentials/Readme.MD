@@ -4,9 +4,7 @@ CSharpEssentials is a comprehensive library that enhances C#'s functional progra
 
 ## 🌟 Package Information
 
-- **NuGet Package**: [CSharpEssentials](https://www.nuget.org/packages/CSharpEssentials)
-- **GitHub Repository**: [SenRecep/CSharpEssentials](https://github.com/SenRecep/CSharpEssentials)
-- **Author**: [Recep Şen](https://www.nuget.org/profiles/recepsen)
+- **NuGet Package**: [CSharpEssentials](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 
 ## 🌟 Key Features
 
