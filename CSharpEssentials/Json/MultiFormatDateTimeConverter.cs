@@ -36,40 +36,63 @@ public sealed class MultiFormatDateTimeConverterFactory(params string[] formats)
 
     private static readonly string[] _defaultFormats =
     [
-        "yyyy-MM-ddTHH:mm:ss.ffffffzzz",
-        "yyyy-MM-ddTHH:mm:ss.fffZ",
-        "yyyy-MM-ddTHH:mm:ssZ",
-        "yyyy-MM-ddTHH:mm:ss",
-        "yyyy-MM-dd HH:mm:ss",
-        "yyyy-MM-dd",
-        "yyyy/MM/dd",
-        "dd-MM-yyyy",
-        "dd/MM/yyyy",
-        "MM/dd/yyyy",
-        "dd.MM.yyyy",
-        "MMMM yyyy",
-        "MMM yyyy",
-        "dd MMM yyyy",
-        "d MMM yyyy",
-        "MMM d, yyyy",
-        "MMMM d, yyyy",
-        "HH:mm:ss",
-        "HH:mm",
-        "yyyyMMdd",
-        "yyyy-MM",
-        "yyyy'W'ww",
-
-        "yyyy-MM-ddTHH:mm:ss.ffffff",
-        "yyyy-MM-ddTHH:mm:ss.fff",
-        "ddd, dd MMM yyyy HH:mm:ss 'GMT'",
-        "ddd, dd-MMM-yy HH:mm:ss 'GMT'",
-        "yyyy-MM-dd'T'HH:mm:ssXXX",
-        "yyyy-MM-dd HH:mm:ss zzz",
-        "dd MMM yyyy HH:mm:ss",
-        "yyyy.MM.dd G 'at' HH:mm:ss z",
-        "yyyyMMddHHmmss",
-        "yyyy-MM-dd_HH-mm-ss",
-        "yyyy年MM月dd日"
+        // ISO 8601 and Web Formats
+        "yyyy-MM-ddTHH:mm:ss.ffffffzzz",    // 2024-03-14T15:30:45.123456+03:00
+        "yyyy-MM-ddTHH:mm:ss.fffZ",         // 2024-03-14T15:30:45.123Z
+        "yyyy-MM-ddTHH:mm:ssZ",             // 2024-03-14T15:30:45Z
+        "yyyy-MM-ddTHH:mm:ss",              // 2024-03-14T15:30:45
+        "yyyy-MM-dd HH:mm:ss",              // 2024-03-14 15:30:45
+        
+        // Basic Date Formats
+        "yyyy-MM-dd",                       // 2024-03-14
+        "dd.MM.yyyy",                       // 14.03.2024
+        "dd/MM/yyyy",                       // 14/03/2024
+        "MM/dd/yyyy",                       // 03/14/2024 (US format)
+        "yyyy/MM/dd",                       // 2024/03/14
+        "dd-MM-yyyy",                       // 14-03-2024
+        
+        // Human Readable Formats
+        "d MMMM yyyy",                      // 14 March 2024
+        "MMMM d, yyyy",                     // March 14, 2024
+        "dd MMM yyyy",                      // 14 Mar 2024
+        "MMM d, yyyy",                      // Mar 14, 2024
+        
+        // Compact Formats
+        "yyyyMMdd",                         // 20240314
+        "yyyy-MM",                          // 2024-03
+        "yyyy'W'ww",                        // 2024W11 (Week 11)
+        
+        // Detailed ISO Formats
+        "yyyy-MM-ddTHH:mm:ss.ffffff",       // 2024-03-14T15:30:45.123456
+        "yyyy-MM-ddTHH:mm:ss.fff",          // 2024-03-14T15:30:45.123
+        
+        // RFC and Email Formats
+        "ddd, dd MMM yyyy HH:mm:ss 'GMT'",  // Thu, 14 Mar 2024 15:30:45 GMT
+        "ddd, dd-MMM-yy HH:mm:ss 'GMT'",    // Thu, 14-Mar-24 15:30:45 GMT
+        "yyyy-MM-dd'T'HH:mm:ssXXX",         // 2024-03-14T15:30:45+03:00
+        "yyyy-MM-dd HH:mm:ss zzz",          // 2024-03-14 15:30:45 +03:00
+        "dd MMM yyyy HH:mm:ss",             // 14 Mar 2024 15:30:45
+        "yyyy.MM.dd G 'at' HH:mm:ss z",     // 2024.03.14 AD at 15:30:45 GMT
+        
+        // Compact Timestamp Formats
+        "yyyyMMddHHmmss",                   // 20240314153045
+        "yyyy-MM-dd_HH-mm-ss",              // 2024-03-14_15-30-45
+        
+        // International and Special Formats
+        "yyyy年MM月dd日",                    // 2024年03月14日 (Japanese)
+        "dd-MMM-yyyy",                      // 14-Mar-2024
+        "yyyy.MM.dd HH:mm",                 // 2024.03.14 15:30
+        "dd.MM.yyyy HH:mm",                 // 14.03.2024 15:30
+        "yyyy-MM-dd HH.mm",                 // 2024-03-14 15.30
+        "dd/MM/yyyy HH:mm:ss",              // 14/03/2024 15:30:45
+        
+        // Week-Based Formats
+        "yyyy'W'ww",                        // 2024W11
+        "yyyy-'W'ww-d",                     // 2024-W11-4 (4th day of week 11)
+        
+        // Unix and SQL Formats
+        "U",                                // 1710424245 (Unix timestamp)
+        "yyyy-MM-dd HH:mm:ss.fff"           // 2024-03-14 15:30:45.123 (SQL)
     ];
 }
 
