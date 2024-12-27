@@ -1,5 +1,7 @@
 # CSharpEssentials.RequestResponseLogging
 
+- **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
+
 A powerful and flexible request/response logging middleware for ASP.NET Core applications that enables comprehensive HTTP traffic monitoring with minimal setup.
 
 ## Features
@@ -131,16 +133,12 @@ loggingOptions.HeaderKeys.Add("Custom-Header");
    ```csharp
    app.AddRequestResponseLogging(opt =>
    {
-       var loggingOptions = new LoggingOptions
-       {
-           LoggingFields = new List<LogFields>
-           {
-               LogFields.Method,
-               LogFields.Path,
-               LogFields.ResponseTiming
-           }
-       };
-       opt.UseLogger(loggerFactory, loggingOptions);
+        opt.IgnorePaths("/health");
+        opt.IgnorePaths("/swagger");
+        var loggingOptions = LoggingOptions.CreateAllFields();
+        loggingOptions.HeaderKeys.Add(HeaderNames.AcceptLanguage);
+        loggingOptions.HeaderKeys.Add(CustomHeaderNames.TenantId);
+        opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions);
    });
    ```
 
