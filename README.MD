@@ -4,7 +4,10 @@ CSharpEssentials is a comprehensive library that enhances C#'s functional progra
 
 ## 🌟 Package Information
 
-- **NuGet Package**: [CSharpEssentials](https://www.nuget.org/packages/CSharpEssentials)
+- **NuGet Package**: [CSharpEssentials](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
+- **NuGet Package EntityFrameworkCore**: [CSharpEssentials.EntityFrameworkCore](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore)
+- **NuGet Package AspNetCore**: [CSharpEssentials.AspNetCore](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore)
+- **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
 - **GitHub Repository**: [SenRecep/CSharpEssentials](https://github.com/SenRecep/CSharpEssentials)
 - **Author**: [Recep Şen](https://www.nuget.org/profiles/recepsen)
 
@@ -90,16 +93,31 @@ public Any<string, int> ParseOrKeepAsString(string input)
 
 ### Entity Framework Support
 
-[`EntityBase`](CSharpEssentials/Entity/Readme.MD) - DDD-friendly entity base classes:
+[`EntityFrameworkCore`](CSharpEssentials.EntityFrameworkCore/Readme.MD) - Enhanced EF Core support with functional patterns:
 
 ```csharp
-public class Product : EntityBase
+public class Product : SoftDeletableEntityBase<Guid>
 {
-    public void UpdatePrice(decimal newPrice)
+    private Product(string name, decimal price)
     {
-        Price = newPrice;
-        Raise(new PriceUpdatedEvent(newPrice));
+        Id = Guid.NewGuid();
+        Name = name;
+        Price = price;
     }
+
+    public static Product Create(string name, decimal price)
+    {
+        var product = new Product(name, price);
+        product.Raise(new ProductCreatedEvent(product.Id));
+        return product;
+    }
+}
+
+// Configure in DbContext
+public void Configure(EntityTypeBuilder<Product> builder)
+{
+    builder.SoftDeletableEntityBaseGuidIdMap();
+    builder.OptimisticConcurrencyVersionMap();
 }
 ```
 
@@ -145,7 +163,7 @@ var randomItem = list.GetRandomItem();
 
 [`RequestResponseLogging`](CSharpEssentials.RequestResponseLogging/Readme.MD) - Comprehensive HTTP traffic monitoring:
 
-````csharp
+```csharp
 public void Configure(IApplicationBuilder app)
 {
     app.AddRequestResponseLogging(opt =>
@@ -158,58 +176,222 @@ public void Configure(IApplicationBuilder app)
         opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions);
     });
 }
+```
+
+### ASP.NET Core Integration
+
+[`AspNetCore`](CSharpEssentials.AspNetCore/Readme.MD) - Enhanced ASP.NET Core capabilities:
+
+```csharp
+public void ConfigureServices(IServiceCollection services)
+{
+    services
+        .AddExceptionHandler<GlobalExceptionHandler>()
+        .ConfigureModelValidatorResponse()
+        .ConfigureSystemTextJson()
+        .AddEnhancedProblemDetails()
+        .AddAndConfigureApiVersioning()
+        .AddSwagger<DefaultConfigureSwaggerOptions>(
+            SecuritySchemes.JwtBearerTokenSecurity,
+            Assembly.GetExecutingAssembly()
+        );
+}
+
+public void Configure(IApplicationBuilder app)
+{
+    app.UseVersionableSwagger();
+    app.UseExceptionHandler();
+    app.UseStatusCodePages();
+}
+```
 
 ## 🚀 Getting Started
 
 ### Installation
 
+Choose the packages you need:
+
+#### Core Package
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
+
 ```bash
 dotnet add package CSharpEssentials
-````
+```
 
-You can also install the package directly from the [NuGet Gallery](https://www.nuget.org/packages/CSharpEssentials).
+#### Entity Framework Core Integration
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore)
+
+```bash
+dotnet add package CSharpEssentials.EntityFrameworkCore
+```
+
+#### ASP.NET Core Integration
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore)
+
+```bash
+dotnet add package CSharpEssentials.AspNetCore
+```
+
+#### Request Response Logging
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
+
+```bash
+dotnet add package CSharpEssentials.RequestResponseLogging
+```
+
+You can also install the packages directly from the [NuGet Gallery](https://www.nuget.org/profiles/recepsen).
 
 ### Basic Setup
 
-Import the namespace:
+Import the required namespaces based on your needs:
 
 ```csharp
+// Core functionality
 using CSharpEssentials;
+
+// Entity Framework Core integration
+using CSharpEssentials.EntityFrameworkCore;
+
+// ASP.NET Core integration
+using CSharpEssentials.AspNetCore;
+
+// Request Response Logging
+using CSharpEssentials.RequestResponseLogging;
 ```
 
 ## 📚 Documentation
 
-Each module has its own detailed documentation:
+### Core Modules Documentation
 
-- [Maybe Monad Documentation](CSharpEssentials/Monad/Readme.MD)
-- [Result Pattern Documentation](CSharpEssentials/Results/Readme.MD)
-- [Rule Engine Documentation](CSharpEssentials/Rules/Readme.MD)
-- [Error Types Documentation](CSharpEssentials/Errors/Readme.MD)
-- [Entity Base Documentation](CSharpEssentials/Entity/Readme.MD)
-- [JSON Utilities Documentation](CSharpEssentials/Json/Readme.MD)
-- [Extensions Documentation](CSharpEssentials/Extensions/Readme.MD)
-- [Time Management Documentation](CSharpEssentials/Time/Readme.MD)
-- [Any Type Documentation](CSharpEssentials/Any/Readme.MD)
-- [Request Response Logging Documentation](CSharpEssentials.RequestResponseLogging/Readme.MD)
+#### Functional Programming Essentials
+
+- [Maybe Monad](CSharpEssentials/Monad/Readme.MD) - Null-safe programming with Maybe pattern
+- [Result Pattern](CSharpEssentials/Results/Readme.MD) - Railway-oriented programming with Result types
+- [Any Type (Discriminated Unions)](CSharpEssentials/Any/Readme.MD) - Type-safe union types for C#
+- [Extensions](CSharpEssentials/Extensions/Readme.MD) - Functional programming extension methods
+
+#### Domain Modeling
+
+- [Rule Engine](CSharpEssentials/Rules/Readme.MD) - Business rule validation and processing
+- [Error Types](CSharpEssentials/Errors/Readme.MD) - Structured error handling system
+- [Entity Base](CSharpEssentials/Entity/Readme.MD) - Base classes and patterns for domain entities
+
+#### Infrastructure
+
+- [JSON Utilities](CSharpEssentials/Json/Readme.MD) - Enhanced JSON serialization and handling
+- [Time Management](CSharpEssentials/Time/Readme.MD) - Testable datetime operations
+
+### Integration Modules Documentation
+
+#### Web Development
+
+- [ASP.NET Core Integration](CSharpEssentials.AspNetCore/Readme.MD)
+  - Global exception handling
+  - API versioning
+  - Swagger integration
+  - Problem Details support
+  - Model validation
+  - Security configurations
+
+#### Data Access
+
+- [Entity Framework Core Integration](CSharpEssentials.EntityFrameworkCore/Readme.MD)
+  - Soft delete support
+  - Audit logging
+  - Query interceptors
+  - Domain events
+  - Optimistic concurrency
+  - Entity configurations
+
+#### Logging and Monitoring
+
+- [Request Response Logging](CSharpEssentials.RequestResponseLogging/Readme.MD)
+  - HTTP traffic monitoring
+  - Request/Response logging
+  - Performance tracking
+  - Custom log writers
 
 ## 🔧 Best Practices
 
-1. **Error Handling**
+### Error Handling
 
-   - Use `Result<T>` for operations that can fail
-   - Prefer `Maybe<T>` over null values
-   - Use structured `Error` types for domain errors
+- Use `Result<T>` for operations that can fail
+- Prefer `Maybe<T>` over null values for optional values
+- Use structured `Error` types for domain errors
+- Chain operations with LINQ-style methods on `Result<T>`
+- Handle validation errors separately from domain errors
+- Use `Error.Validation()` for input validation failures
+- Use `Error.NotFound()` for resource not found scenarios
+- Use `Error.Unauthorized()` for authentication/authorization failures
 
-2. **Domain Modeling**
+### Domain Modeling
 
-   - Extend `EntityBase` for domain entities
-   - Use `RuleEngine` for complex validations
-   - Implement domain events for state changes
+- Extend `EntityBase` for domain entities
+- Use `RuleEngine` for complex validations
+- Implement domain events for state changes
+- Keep entities immutable where possible
+- Use static factory methods for entity creation
+- Encapsulate business rules within the domain model
+- Use value objects for complex value types
+- Implement `IRule<T>` for reusable business rules
 
-3. **Testing**
-   - Use `DateTimeProvider` for time-dependent tests
-   - Mock interfaces instead of concrete implementations
-   - Utilize `Result<T>` for predictable error scenarios
+### Functional Programming
+
+- Use `Any<T0,T1>` for type-safe union types
+- Leverage extension methods for fluent interfaces
+- Use pure functions where possible
+- Avoid side effects in business logic
+- Use immutable collections when appropriate
+- Chain operations using LINQ and functional extensions
+- Use pattern matching with discriminated unions
+
+### ASP.NET Core Integration
+
+- Use global exception handling middleware
+- Configure proper API versioning
+- Implement proper request/response logging
+- Use problem details for error responses
+- Configure Swagger documentation properly
+- Use proper security headers
+- Implement proper model validation
+- Use proper HTTP status codes
+
+### Entity Framework Core
+
+- Use `SoftDeletableEntityBase` for soft delete support
+- Configure proper entity type configurations
+- Use optimistic concurrency where needed
+- Implement proper audit logging
+- Use proper indexing strategies
+- Configure proper lazy loading settings
+- Use proper query tracking behavior
+- Monitor slow queries with interceptors
+
+### Testing
+
+- Use `DateTimeProvider` for time-dependent tests
+- Mock interfaces instead of concrete implementations
+- Utilize `Result<T>` for predictable error scenarios
+- Write unit tests for business rules
+- Test error scenarios thoroughly
+- Use proper test data builders
+- Implement integration tests for critical paths
+- Test validation rules independently
+
+### Performance
+
+- Use proper caching strategies
+- Implement proper database indexing
+- Use async/await properly
+- Avoid N+1 query problems
+- Use proper connection pooling
+- Implement proper response compression
+- Monitor and log performance metrics
+- Use proper batch operations
 
 ## 🤝 Contributing
 
@@ -233,3 +415,7 @@ Special thanks to all contributors who have helped shape this library and to the
 ## 📬 Support
 
 For support, please open an issue in the GitHub repository or contact the maintainers.
+
+## 🔍 Related Projects
+
+Take a look at [SenRecep.Aspire](https://www.nuget.org/packages/SenRecep.Aspire), a modern microservices template built with .NET Aspire 9.0. The template provides a robust foundation for building scalable, maintainable, and cloud-ready microservices applications. Check out the [GitHub repository](https://github.com/SenRecep/Aspire) for more details.
