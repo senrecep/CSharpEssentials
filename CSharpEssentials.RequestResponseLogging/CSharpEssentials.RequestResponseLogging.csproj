@@ -8,7 +8,7 @@
     <PackageId>CSharpEssentials.RequestResponseLogging</PackageId>
     <Title>CSharp Essentials Request Response Logging - Advanced HTTP Traffic Monitoring</Title>
     <Product>CSharp Essentials Request Response Logging</Product>
-    <Version>1.0.3</Version>
+    <Version>1.0.4</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>AspNetCore;Request;Response;Logging;RequestResponseLogging;Middleware;HTTP;Monitoring;Performance;Security;Headers;APIMonitoring;Diagnostics;Tracing</PackageTags>
