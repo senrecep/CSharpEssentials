@@ -1,14 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
 
     <PackageId>CSharpEssentials.EntityFrameworkCore</PackageId>
     <Title>CSharp Essentials EntityFrameworkCore</Title>
     <Product>CSharp Essentials EntityFrameworkCore</Product>
-    <Version>1.0.14</Version>
+    <Version>1.0.15</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance,NamingConventions</PackageTags>
@@ -37,10 +34,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials" Version="1.0.18" />
+    <PackageReference Include="CSharpEssentials" Version="1.0.20" />
     <PackageReference Include="EFCore.CheckConstraints" Version="9.0.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
   </ItemGroup>
 
 </Project>

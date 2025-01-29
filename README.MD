@@ -8,6 +8,7 @@ CSharpEssentials is a comprehensive library that enhances C#'s functional progra
 - **NuGet Package EntityFrameworkCore**: [CSharpEssentials.EntityFrameworkCore](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore)
 - **NuGet Package AspNetCore**: [CSharpEssentials.AspNetCore](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore)
 - **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
+- **NuGet Package GcpSecretManager**: [CSharpEssentials.GcpSecretManager](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager)
 - **GitHub Repository**: [SenRecep/CSharpEssentials](https://github.com/SenRecep/CSharpEssentials) [![GitHub stars](https://img.shields.io/github/stars/SenRecep/CSharpEssentials.svg)](https://github.com/SenRecep/CSharpEssentials/stargazers)
 - **Author**: [Recep Şen](https://www.nuget.org/profiles/recepsen)
 
@@ -205,6 +206,27 @@ public void Configure(IApplicationBuilder app)
 }
 ```
 
+### Google Cloud Secret Manager Integration
+
+[`GcpSecretManager`](CSharpEssentials.GcpSecretManager/Readme.MD) - Seamless integration with Google Cloud Secret Manager:
+
+```csharp
+// Configure in Program.cs or Startup.cs
+builder.Configuration.AddGcpSecretManager(options =>
+{
+    options.CredentialsPath = "/path/to/credentials.json";
+    options.AddProject(new ProjectSecretConfiguration
+    {
+        ProjectId = "your-gcp-project-id",
+        Region = "europe-west1",
+        PrefixFilters = ["app1_", "app2_"]
+    });
+});
+
+// Or use configuration from appsettings.json
+builder.Configuration.AddGcpSecretManager();
+```
+
 ## 🚀 Getting Started
 
 ### Installation
@@ -241,6 +263,14 @@ dotnet add package CSharpEssentials.AspNetCore
 
 ```bash
 dotnet add package CSharpEssentials.RequestResponseLogging
+```
+
+#### Google Cloud Secret Manager Integration
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager)
+
+```bash
+dotnet add package CSharpEssentials.GcpSecretManager
 ```
 
 You can also install the packages directly from the [NuGet Gallery](https://www.nuget.org/profiles/recepsen).
@@ -314,6 +344,17 @@ using CSharpEssentials.RequestResponseLogging;
   - Request/Response logging
   - Performance tracking
   - Custom log writers
+
+#### Secret Management
+
+- [Google Cloud Secret Manager Integration](CSharpEssentials.GcpSecretManager/Readme.MD)
+  - Configuration provider integration
+  - Region-specific secret management
+  - Flexible secret filtering
+  - Batch processing support
+  - JSON value flattening
+  - Automatic secret rotation
+  - Built-in retry policies
 
 ## 🔧 Best Practices
 
@@ -392,6 +433,17 @@ using CSharpEssentials.RequestResponseLogging;
 - Implement proper response compression
 - Monitor and log performance metrics
 - Use proper batch operations
+
+### Secret Management
+
+- Use region-specific endpoints for better latency
+- Implement proper credentials management
+- Use prefix filters to limit secret access
+- Configure appropriate batch sizes
+- Monitor secret loading performance
+- Implement proper error handling
+- Use JSON flattening for complex values
+- Configure proper retry policies
 
 ## 🤝 Contributing
 
