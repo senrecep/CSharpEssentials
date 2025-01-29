@@ -1,14 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
   
     <PackageId>CSharpEssentials.AspNetCore</PackageId>
     <Title>CSharp Essentials AspNetCore</Title>
     <Product>CSharp Essentials AspNetCore</Product>
-    <Version>1.0.13</Version>
+    <Version>1.0.14</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,ApiVersioning,Swagger,ProblemDetails,ExceptionHandling,GlobalExceptionHandler,JsonConfiguration,ValidationSupport</PackageTags>
@@ -19,6 +16,7 @@
     <PackageReadmeFile>README.MD</PackageReadmeFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageLicenseFile>LICENCE</PackageLicenseFile>
+
   </PropertyGroup>
 
   <ItemGroup>
@@ -44,7 +42,7 @@
     <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
     <PackageReference Include="Asp.Versioning.Mvc" Version="8.1.0" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
-    <PackageReference Include="CSharpEssentials" Version="1.0.18" />
+    <PackageReference Include="CSharpEssentials" Version="1.0.20" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
    </ItemGroup>
 </Project>
