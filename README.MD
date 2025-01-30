@@ -211,7 +211,10 @@ public void Configure(IApplicationBuilder app)
 [`GcpSecretManager`](CSharpEssentials.GcpSecretManager/Readme.MD) - Seamless integration with Google Cloud Secret Manager:
 
 ```csharp
-// Configure in Program.cs or Startup.cs
+// Basic configuration in Program.cs or Startup.cs
+builder.Configuration.AddGcpSecretManager();
+
+// Advanced configuration with options
 builder.Configuration.AddGcpSecretManager(options =>
 {
     options.CredentialsPath = "/path/to/credentials.json";
@@ -219,13 +222,50 @@ builder.Configuration.AddGcpSecretManager(options =>
     {
         ProjectId = "your-gcp-project-id",
         Region = "europe-west1",
-        PrefixFilters = ["app1_", "app2_"]
+        PrefixFilters = ["app_", "service_"],
+        SecretIds = ["specific-secret1"],
+        RawSecretIds = ["config-json"],      // Skip JSON parsing for these secrets
+        RawSecretPrefixes = ["raw_"]         // Skip JSON parsing for secrets with these prefixes
     });
 });
 
-// Or use configuration from appsettings.json
-builder.Configuration.AddGcpSecretManager();
+// Configuration in appsettings.json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id",
+        "Region": "europe-west1",
+        "PrefixFilters": ["app_"],
+        "SecretIds": ["specific-secret1"],
+        "RawSecretIds": ["config-json"],
+        "RawSecretPrefixes": ["raw_"]
+      }
+    ]
+  }
+}
 ```
+
+Key features:
+- Seamless integration with .NET configuration system
+- Region-specific secret management
+- Flexible secret filtering with prefix and exact matches
+- JSON value flattening with control over parsing behavior
+- Batch processing for optimal performance
+- Automatic secret rotation support
+- Built-in retry policies for resilience
+
+### Secret Management
+
+- Use region-specific endpoints for better latency
+- Implement proper credentials management
+- Use prefix filters to limit secret access
+- Configure appropriate batch sizes
+- Monitor secret loading performance
+- Implement proper error handling
+- Use JSON flattening for complex values with control over parsing behavior
+- Configure proper retry policies
+- Use RawSecretIds and RawSecretPrefixes to control JSON parsing behavior
 
 ## 🚀 Getting Started
 
@@ -442,8 +482,9 @@ using CSharpEssentials.RequestResponseLogging;
 - Configure appropriate batch sizes
 - Monitor secret loading performance
 - Implement proper error handling
-- Use JSON flattening for complex values
+- Use JSON flattening for complex values with control over parsing behavior
 - Configure proper retry policies
+- Use RawSecretIds and RawSecretPrefixes to control JSON parsing behavior
 
 ## 🤝 Contributing
 
@@ -471,3 +512,44 @@ For support, please open an issue in the GitHub repository or contact the mainta
 ## 🔍 Related Projects
 
 Take a look at [SenRecep.Aspire](https://www.nuget.org/packages/SenRecep.Aspire), a modern microservices template built with .NET Aspire 9.0. The template provides a robust foundation for building scalable, maintainable, and cloud-ready microservices applications. Check out the [GitHub repository](https://github.com/SenRecep/Aspire) for more details.
+
+## Quick Start
+
+1. Add the following configuration to your `appsettings.json`:
+
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        // Required: Your Google Cloud project ID
+        "ProjectId": "your-gcp-project-id",
+        
+        // Optional: Specific region for better latency (e.g., "europe-west1", "us-central1")
+        "Region": "europe-west1",
+        
+        // Optional: Only load secrets with these prefixes
+        "PrefixFilters": ["app_", "service_"],
+        
+        // Optional: Load only these specific secrets
+        "SecretIds": ["database-password", "api-key"],
+        
+        // Optional: Skip JSON parsing for these specific secrets
+        "RawSecretIds": ["config-json", "plain-text"],
+        
+        // Optional: Skip JSON parsing for secrets with these prefixes
+        "RawSecretPrefixes": ["raw_", "text_"]
+      }
+    ]
+  }
+}
+```
+
+2. Configure the secret manager in your application:
+
+```csharp
+var builder = WebApplication.CreateBuilder(args);
+
+// Add GCP Secret Manager configuration
+builder.Configuration.AddGcpSecretManager();
+```
