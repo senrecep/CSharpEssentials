@@ -102,8 +102,8 @@ internal sealed class SecretManagerConfigurationProvider(
         try
         {
             string secretPath = SecretManagerPaths.BuildSecretPath(
-                context.ProjectName.ProjectId,
-                context.Config.Region,
+                    context.ProjectName.ProjectId,
+                    context.Config.Region,
                 secret.SecretName.SecretId);
 
             Console.WriteLine($"Started loading secret: {secretPath}");
@@ -111,26 +111,35 @@ internal sealed class SecretManagerConfigurationProvider(
             SecretLoadResult result = await LoadSecretValueAsync(context, secret, secretPath).ConfigureAwait(false);
             string jsonValue = result.Value;
 
-            try
-            {
-                using var document = JsonDocument.Parse(jsonValue);
-                var tempData = new Dictionary<string, string?>(StringComparer.Ordinal);
-                FlattenJson(tempData, document.RootElement, result.Key);
+            resultDict.TryAdd(result.Key, jsonValue);
 
-                if (tempData.Count > 0)
-                    foreach ((string key, string value) in tempData)
-                        resultDict.TryAdd(key, value);
-            }
-            catch
-            {
-                resultDict.TryAdd(result.Key, jsonValue);
-            }
+            if (!context.Config.IsRawSecret(secret.SecretName.SecretId))
+                TryParseAndFlattenJson(resultDict, result, jsonValue);
 
             Console.WriteLine($"Completed loading secret: {secretPath}");
+
         }
         catch (RpcException ex)
         {
             await Console.Error.WriteLineAsync($"Failed to load secret {secret.SecretName.SecretId}: {ex.StatusCode}");
+        }
+    }
+
+    private static void TryParseAndFlattenJson(IDictionary<string, string?> resultDict, SecretLoadResult result, string jsonValue)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(jsonValue);
+            var tempData = new Dictionary<string, string?>(StringComparer.Ordinal);
+            FlattenJson(tempData, document.RootElement, result.Key);
+
+            if (tempData.Count > 0)
+                foreach ((string key, string value) in tempData)
+                    resultDict.TryAdd(key, value);
+        }
+        catch
+        {
+            // If JSON parsing fails, we already have the raw value saved, so just continue
         }
     }
 
