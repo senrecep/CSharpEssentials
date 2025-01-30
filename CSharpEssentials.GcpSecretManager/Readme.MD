@@ -12,6 +12,7 @@ A .NET library for seamlessly integrating Google Cloud Secret Manager with your 
 - 🔁 Built-in retry policies for resilience
 - 🗃️ JSON flattening support for complex secret values
 - 🛠️ Customizable configuration loader
+- 📝 Control over JSON parsing behavior for specific secrets
 
 ## Installation
 
@@ -33,7 +34,9 @@ dotnet add package CSharpEssentials.GcpSecretManager
         "ProjectId": "your-gcp-project-id",
         "Region": "europe-west1",  // Optional
         "PrefixFilters": ["app1_", "app2_"],  // Optional
-        "SecretIds": ["specific_secret_1", "specific_secret_2"]  // Optional
+        "SecretIds": ["specific_secret_1", "specific_secret_2"],  // Optional
+        "RawSecretIds": ["config-json", "plain-text"],  // Optional: Skip JSON parsing for these secrets
+        "RawSecretPrefixes": ["raw_", "text_"]  // Optional: Skip JSON parsing for secrets with these prefixes
       }
     ]
   }
@@ -109,6 +112,131 @@ builder.Configuration.AddGcpSecretManager(options =>
 | `Region` | Specific region for secrets | No |
 | `PrefixFilters` | List of prefixes to filter secrets | No |
 | `SecretIds` | List of specific secret IDs to load | No |
+| `RawSecretIds` | List of secret IDs that should skip JSON parsing | No |
+| `RawSecretPrefixes` | List of prefixes for secrets that should skip JSON parsing | No |
+
+## Configuration Examples
+
+Here are various configuration examples with explanations:
+
+1. **Minimal Configuration (ProjectId only)**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id"
+      }
+    ]
+  }
+}
+```
+This configuration retrieves ALL secrets from the specified project without any filtering.
+
+2. **Region-Specific Configuration**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id",
+        "Region": "europe-west1"
+      }
+    ]
+  }
+}
+```
+Only retrieves secrets from the specified region, which can improve performance by using regional endpoints.
+
+3. **Prefix-Based Filtering**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id",
+        "PrefixFilters": ["app_", "service_"]
+      }
+    ]
+  }
+}
+```
+Only retrieves secrets whose IDs start with "app_" or "service_".
+
+4. **Specific Secret IDs**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id",
+        "SecretIds": ["database-password", "api-key"]
+      }
+    ]
+  }
+}
+```
+Only retrieves the explicitly specified secrets.
+
+5. **Combined Filtering**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id",
+        "SecretIds": ["specific-secret1", "specific-secret2"],
+        "PrefixFilters": ["app_", "service_"]
+      }
+    ]
+  }
+}
+```
+Retrieves both specifically listed secrets AND secrets matching the prefixes (OR logic).
+
+6. **JSON Parsing Control**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "your-gcp-project-id",
+        "SecretIds": ["config-json", "settings-json", "plain-text"],
+        "PrefixFilters": ["app_", "service_"],
+        "RawSecretIds": ["config-json", "plain-text"],
+        "RawSecretPrefixes": ["app_"]
+      }
+    ]
+  }
+}
+```
+This configuration:
+- Retrieves secrets matching the SecretIds and PrefixFilters
+- Skips JSON parsing for:
+  - Secrets listed in RawSecretIds
+  - Secrets with prefixes listed in RawSecretPrefixes
+- Other secrets will be parsed as JSON if possible
+
+7. **Multi-Project Configuration**:
+```json
+{
+  "GoogleSecretManager": {
+    "Projects": [
+      {
+        "ProjectId": "project-1",
+        "Region": "europe-west1",
+        "PrefixFilters": ["app1_"]
+      },
+      {
+        "ProjectId": "project-2",
+        "Region": "us-central1",
+        "PrefixFilters": ["app2_"]
+      }
+    ]
+  }
+}
+```
+Configures multiple projects with different settings for each.
 
 ## Best Practices
 
