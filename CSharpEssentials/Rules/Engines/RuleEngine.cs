@@ -1,10 +1,12 @@
 using System.Data;
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Rules;
 
 namespace CSharpEssentials;
 
 public static partial class RuleEngine
 {
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Result Evaluate<TContext>(IRuleBase<TContext> rule, TContext context, CancellationToken cancellationToken = default) =>
         InternalEvaluate(rule, context, cancellationToken);
 
