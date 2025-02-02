@@ -60,7 +60,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Failure(
-        string code = "Failure",
+        string code = nameof(Failure),
         string description = "A failure has occurred.",
         ErrorMetadata? metadata = null) =>
             new(code, description, ErrorType.Failure, metadata);
@@ -72,7 +72,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Unexpected(
-        string code = "Unexpected",
+        string code = nameof(Unexpected),
         string description = "An unexpected error has occurred.",
         ErrorMetadata? metadata = null) =>
             new(code, description, ErrorType.Unexpected, metadata);
@@ -84,7 +84,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Validation(
-        string code = "Validation",
+        string code = nameof(Validation),
         string description = "A validation error has occurred.",
         ErrorMetadata? metadata = null) =>
             new(code, description, ErrorType.Validation, metadata);
@@ -96,7 +96,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Conflict(
-        string code = "Conflict",
+        string code = nameof(Conflict),
         string description = "A conflict error has occurred.",
         ErrorMetadata? metadata = null) =>
             new(code, description, ErrorType.Conflict, metadata);
@@ -109,7 +109,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error NotFound(
-        string code = "NotFound",
+        string code = nameof(NotFound),
         string description = "A 'Not Found' error has occurred.",
         ErrorMetadata? metadata = null) =>
             new(code, description, ErrorType.NotFound, metadata);
@@ -121,7 +121,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Unauthorized(
-        string code = "Unauthorized",
+        string code = nameof(Unauthorized),
         string description = "An 'Unauthorized' error has occurred.",
         ErrorMetadata? metadata = null) =>
             new(code, description, ErrorType.Unauthorized, metadata);
@@ -133,7 +133,7 @@ public readonly record struct Error : IError
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
     public static Error Forbidden(
-        string code = "Forbidden",
+        string code = nameof(Forbidden),
         string description = "A 'Forbidden' error has occurred.",
         ErrorMetadata? metadata = null) =>
         new(code, description, ErrorType.Forbidden, metadata);
@@ -193,6 +193,10 @@ public readonly record struct Error : IError
     internal static readonly Error NoErrors = Unexpected(
         code: "Result.NoErrors",
         description: "Error array cannot be retrieved from a successful Result.");
+
+    internal static readonly Error False = Validation(
+        code: nameof(False),
+        description: "A false error has occurred.");
 
     public bool Equals(Error other)
     {
