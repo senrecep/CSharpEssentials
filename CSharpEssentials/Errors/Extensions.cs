@@ -1,5 +1,5 @@
 ﻿namespace CSharpEssentials;
-public static class Extensions
+public static partial class Extensions
 {
     public static int ToIntType(this ErrorType type) => (int)type;
     public static int ToHttpStatusCode(this ErrorType errorType)
