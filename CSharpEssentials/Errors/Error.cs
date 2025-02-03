@@ -194,7 +194,7 @@ public readonly record struct Error : IError
         code: "Result.NoErrors",
         description: "Error array cannot be retrieved from a successful Result.");
 
-    internal static readonly Error False = Validation(
+    public static readonly Error False = Validation(
         code: nameof(False),
         description: "A false error has occurred.");
 
