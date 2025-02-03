@@ -601,3 +601,160 @@ This flexibility allows you to:
 - Create hybrid validation strategies
 
 The engine treats all rules equally regardless of their implementation approach, making it seamless to combine different styles based on your needs.
+
+## 🚀 Performance Optimizations
+
+1. **Record Struct Usage**
+```csharp
+// ❌ Bad: Using class
+public class UserRule : IRule<User> { }
+
+// ✅ Good: Using record struct
+public readonly record struct UserRule : IRule<User> { }
+```
+
+2. **Static Error Definitions**
+```csharp
+// ❌ Bad: Creating new error each time
+return Error.Validation("USER.NOT_ADULT", "User is not adult");
+
+// ✅ Good: Static error definitions
+public static class UserErrors
+{
+    public static readonly Error NotAdult = Error.Validation(
+        "USER.NOT_ADULT",
+        "User is not adult"
+    );
+}
+```
+
+3. **Lazy Evaluation**
+```csharp
+// Lazy evaluation of rules
+public IRuleBase<Order>[] Rules => 
+    _rules ??= [
+        new OrderAmountRule(),
+        new StockAvailabilityRule()
+    ];
+```
+
+4. **Immutable Design**
+```csharp
+// ❌ Bad: Mutable state
+public class UserRule : IRule<User> 
+{
+    private int _minimumAge;
+    public void SetMinimumAge(int age) => _minimumAge = age;
+}
+
+// ✅ Good: Immutable design
+public readonly record struct UserRule : IRule<User> 
+{
+    private readonly int _minimumAge;
+    public UserRule(int minimumAge) => _minimumAge = minimumAge;
+}
+```
+
+## 🛠 Error Handling Best Practices
+
+1. **Centralized Error Management**
+```csharp
+public static class OrderErrors
+{
+    public static Error InsufficientStock(int required, int available) => Error.Validation(
+        code: "ORDER.INSUFFICIENT_STOCK",
+        description: "Not enough items in stock",
+        metadata: new ErrorMetadata(
+            ("RequiredQuantity", required),
+            ("AvailableQuantity", available)
+        )
+    );
+
+    public static Error InvalidAmount(decimal minimum, decimal actual) => Error.Validation(
+        code: "ORDER.INVALID_AMOUNT",
+        description: "Order amount is below minimum",
+        metadata: new ErrorMetadata(
+            ("MinimumAmount", minimum),
+            ("ActualAmount", actual)
+        )
+    );
+}
+```
+
+2. **Rich Error Details**
+```csharp
+public Result Evaluate(Order context)
+{
+    if (context.Amount < MinimumAmount)
+        return OrderErrors.InvalidAmount(MinimumAmount, context.Amount);
+
+    if (context.Quantity > AvailableStock)
+        return OrderErrors.InsufficientStock(context.Quantity, AvailableStock);
+
+    return Result.Success();
+}
+```
+
+## 🎯 Real World Examples
+
+### E-Commerce Validation
+```csharp
+public readonly record struct OrderValidationRule : IAndRule<Order>
+{
+    private readonly IStockService _stockService;
+    private readonly IPaymentService _paymentService;
+
+    public OrderValidationRule(IStockService stockService, IPaymentService paymentService)
+    {
+        _stockService = stockService;
+        _paymentService = paymentService;
+    }
+
+    public IRuleBase<Order>[] Rules =>
+    [
+        new OrderAmountRule(minimumAmount: 50),           // Minimum order amount
+        new StockAvailabilityRule(_stockService),         // Stock check
+        new PaymentMethodValidationRule(_paymentService), // Payment method
+        new ShippingAddressRule(),                        // Shipping address
+        new UserValidationRule()                          // User status
+    ];
+}
+```
+
+### Payment Processing
+```csharp
+public readonly record struct PaymentMethodRule : IOrRule<Payment>
+{
+    public IRuleBase<Payment>[] Rules =>
+    [
+        new CreditCardRule(),     // Credit card validation
+        new BankTransferRule(),   // Bank transfer validation
+        new CryptoRule()          // Cryptocurrency validation
+    ];
+}
+```
+
+## 📚 Advanced Usage
+
+### Rule Decorators
+```csharp
+public record struct LoggingRuleDecorator<T> : IRule<T>
+{
+    private readonly IRule<T> _rule;
+    private readonly ILogger _logger;
+
+    public LoggingRuleDecorator(IRule<T> rule, ILogger logger)
+    {
+        _rule = rule;
+        _logger = logger;
+    }
+
+    public Result Evaluate(T context)
+    {
+        _logger.LogInformation("Starting rule evaluation: {RuleType}", _rule.GetType().Name);
+        var result = _rule.Evaluate(context);
+        _logger.LogInformation("Rule evaluation completed: {Success}", result.IsSuccess);
+        return result;
+    }
+}
+```
