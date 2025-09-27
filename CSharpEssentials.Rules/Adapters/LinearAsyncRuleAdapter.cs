@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Results;
 
-namespace CSharpEssentials.Rules.Adapters;
+namespace CSharpEssentials.Rules;
 
 internal readonly record struct LinearAsyncRuleAdapter<TContext>(
     IAsyncRule<TContext> Rule,
@@ -18,7 +18,6 @@ internal readonly record struct LinearAsyncRuleAdapter<TContext>(
         IAsyncRule<TContext> rule,
         IRuleBase<TContext> next
     ) => new(rule, next);
-
 }
 
 

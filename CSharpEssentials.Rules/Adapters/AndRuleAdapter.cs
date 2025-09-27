@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Results;
 
-namespace CSharpEssentials.Rules.Adapters;
+namespace CSharpEssentials.Rules;
 
 internal readonly record struct AndRuleAdapter<TContext>(
     IRuleBase<TContext>[] Rules
