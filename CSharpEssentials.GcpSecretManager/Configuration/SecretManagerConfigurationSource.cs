@@ -3,7 +3,6 @@ using Google.Cloud.SecretManager.V1;
 using Microsoft.Extensions.Configuration;
 using CSharpEssentials.GcpSecretManager.Infrastructure.Internal;
 using CSharpEssentials.GcpSecretManager.Models.Internal;
-using CSharpEssentials.GcpSecretManager.Configuration.Internal;
 
 namespace CSharpEssentials.GcpSecretManager.Configuration.Internal;
 

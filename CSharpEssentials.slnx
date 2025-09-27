@@ -7,6 +7,7 @@
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
   <Project Path="CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
+  <Project Path="CSharpEssentials.GcpSecretManager/CSharpEssentials.GcpSecretManager.csproj" />
   <Project Path="CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
   <Project Path="CSharpEssentials.RequestResponseLogging/CSharpEssentials.RequestResponseLogging.csproj" />
