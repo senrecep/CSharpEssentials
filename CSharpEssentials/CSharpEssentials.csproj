@@ -4,15 +4,20 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    
+
     <PackageId>CSharpEssentials</PackageId>
     <Title>CSharp Essentials</Title>
     <Product>CSharp Essentials</Product>
     <Version>1.0.19</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageTags>Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,Monad,DiscriminatedUnions,TypeSafety,ErrorHandling,DDD,EntityFramework,TimeManagement,Extensions,LINQ</PackageTags>
-    <Description>A comprehensive C# library enhancing functional programming capabilities with type-safe monads (Maybe, Result), discriminated unions (Any), and robust error handling. Features include: domain-driven design support, enhanced Entity Framework integration, testable time management, JSON utilities, and LINQ extensions. Built for modern C# development with focus on maintainability, testability, and functional programming principles.</Description>
+    <PackageTags>
+      Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,Monad,DiscriminatedUnions,TypeSafety,ErrorHandling,DDD,EntityFramework,TimeManagement,Extensions,LINQ</PackageTags>
+    <Description>A comprehensive C# library enhancing functional programming capabilities with
+      type-safe monads (Maybe, Result), discriminated unions (Any), and robust error handling.
+      Features include: domain-driven design support, enhanced Entity Framework integration,
+      testable time management, JSON utilities, and LINQ extensions. Built for modern C# development
+      with focus on maintainability, testability, and functional programming principles.</Description>
     <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
@@ -37,6 +42,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MediatR.Contracts" Version="2.0.1" />
+    <ProjectReference Include="..\CSharpEssentials.Any\CSharpEssentials.Any.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Clone\CSharpEssentials.Clone.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj" />
   </ItemGroup>
 </Project>
