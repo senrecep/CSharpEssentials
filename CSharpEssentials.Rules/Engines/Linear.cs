@@ -1,8 +1,7 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Results;
-using CSharpEssentials.Rules;
 
-namespace CSharpEssentials;
+namespace CSharpEssentials.Rules;
 
 public static partial class RuleEngine
 {

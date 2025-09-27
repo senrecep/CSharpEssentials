@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Results;
 
-namespace CSharpEssentials;
+namespace CSharpEssentials.Rules;
 
 public static partial class RuleEngine
 {
