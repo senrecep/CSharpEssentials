@@ -1,5 +1,5 @@
 ﻿using System.Linq.Expressions;
-using CSharpEssentials.Interfaces;
+using CSharpEssentials.Entity.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

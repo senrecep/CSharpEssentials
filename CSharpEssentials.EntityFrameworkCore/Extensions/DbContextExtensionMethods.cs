@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
-using CSharpEssentials.Interfaces;
+using CSharpEssentials.Entity;
+using CSharpEssentials.Entity.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace CSharpEssentials.EntityFrameworkCore;

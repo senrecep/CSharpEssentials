@@ -4,10 +4,13 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
   </ItemGroup>
 
 </Project>

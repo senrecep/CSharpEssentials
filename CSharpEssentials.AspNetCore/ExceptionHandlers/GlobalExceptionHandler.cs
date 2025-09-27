@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;

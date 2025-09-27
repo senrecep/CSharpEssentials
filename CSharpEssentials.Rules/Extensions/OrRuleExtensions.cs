@@ -1,8 +1,11 @@
 
 using System.Runtime.CompilerServices;
+using CSharpEssentials.Results;
+using CSharpEssentials.Rules;
 using CSharpEssentials.Rules.Adapters;
 
 namespace CSharpEssentials;
+
 public static partial class Extensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -8,8 +8,13 @@
     <Version>1.0.16</Version>
     <Authors>SenRecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageTags>EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance,NamingConventions</PackageTags>
-    <Description>Enhances Entity Framework Core with functional programming patterns and DDD-friendly features. Includes base entity classes, soft delete support, audit trails, query filters, optimistic concurrency, PostgreSQL integration, query performance monitoring, and domain event handling. Perfect for building maintainable and scalable data access layers in modern .NET applications.</Description>
+    <PackageTags>
+      EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance,NamingConventions</PackageTags>
+    <Description>Enhances Entity Framework Core with functional programming patterns and
+      DDD-friendly features. Includes base entity classes, soft delete support, audit trails, query
+      filters, optimistic concurrency, PostgreSQL integration, query performance monitoring, and
+      domain event handling. Perfect for building maintainable and scalable data access layers in
+      modern .NET applications.</Description>
     <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
@@ -34,10 +39,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials" Version="1.0.21" />
-    <PackageReference Include="EFCore.CheckConstraints" Version="9.0.0" />
+    <PackageReference Include="EFCore.CheckConstraints" Version="9.1.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
   </ItemGroup>
 
 </Project>

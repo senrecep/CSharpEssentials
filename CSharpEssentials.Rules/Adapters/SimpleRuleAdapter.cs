@@ -1,7 +1,9 @@
 
 using System.Runtime.CompilerServices;
+using CSharpEssentials.Results;
 
 namespace CSharpEssentials.Rules.Adapters;
+
 internal readonly record struct SimpleRuleAdapter<TContext>(
     Func<TContext, Result> Rule
 ) : IRule<TContext>

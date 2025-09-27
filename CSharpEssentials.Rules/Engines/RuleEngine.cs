@@ -1,11 +1,7 @@
 using System.Data;
-<<<<<<<< HEAD:CSharpEssentials.Rules/RuleEngine.cs
 using CSharpEssentials.Core;
 using CSharpEssentials.Results;
-========
 using System.Runtime.CompilerServices;
-using CSharpEssentials.Rules;
->>>>>>>> 2f29d8bd2089aaae0132b080a1f0ed50fac4f276:CSharpEssentials.Rules/Engines/RuleEngine.cs
 
 namespace CSharpEssentials.Rules;
 
