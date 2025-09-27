@@ -1,4 +1,6 @@
-﻿namespace CSharpEssentials;
+﻿using CSharpEssentials.Enums;
+
+namespace CSharpEssentials.Errors;
 
 /// <summary>
 /// Error types.

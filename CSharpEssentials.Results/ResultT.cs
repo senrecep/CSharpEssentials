@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Errors;
+using CSharpEssentials.Json;
 using CSharpEssentials.Results.Interfaces;
 
 namespace CSharpEssentials.Results;
