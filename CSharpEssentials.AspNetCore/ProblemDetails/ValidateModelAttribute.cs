@@ -1,4 +1,5 @@
 
+using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace CSharpEssentials.AspNetCore;

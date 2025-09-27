@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:CSharpEssentials.Rules/RuleEngineTResult.cs
-========
 using System.Runtime.CompilerServices;
-using CSharpEssentials.Rules;
->>>>>>>> 2f29d8bd2089aaae0132b080a1f0ed50fac4f276:CSharpEssentials.Rules/Engines/RuleEngineTResult.cs
 
 using CSharpEssentials.Core;
 using CSharpEssentials.Results;

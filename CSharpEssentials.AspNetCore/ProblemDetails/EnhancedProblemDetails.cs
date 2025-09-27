@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CSharpEssentials.AspNetCore;

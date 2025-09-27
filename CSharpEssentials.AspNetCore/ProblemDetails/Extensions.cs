@@ -1,13 +1,14 @@
-using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Core;
+using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CSharpEssentials;
+namespace CSharpEssentials.AspNetCore;
 
-public static class Extensions
+public static partial class Extensions
 {
     private static Action<ProblemDetails, HttpContext>? _problemDetailsEnhancer;
     /// <summary>
@@ -40,7 +41,7 @@ public static class Extensions
     /// <param name="statusCode"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public static IResult ToProblemResult(this Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null)
+    public static IResult ToProblemResult(this Results.Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         if (result.IsSuccess)
             throw new InvalidOperationException("Cannot convert a successful result to a problem result");
@@ -66,7 +67,7 @@ public static class Extensions
     public static IResult ToProblemResult(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         EnhancedProblemDetails problemDetails = errors.ToProblemDetails(extensions, statusCode);
-        return Results.Problem(problemDetails);
+        return Microsoft.AspNetCore.Http.Results.Problem(problemDetails);
     }
 
     /// <summary>
@@ -78,7 +79,7 @@ public static class Extensions
     /// <param name="statusCode"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public static IActionResult ToActionResult(this Interfaces.IResultBase result, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null)
+    public static IActionResult ToActionResult(this Results.Interfaces.IResultBase result, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         if (result.IsSuccess)
             throw new InvalidOperationException("Cannot convert a successful result to an action result");
@@ -129,7 +130,7 @@ public static class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-    public static IActionResult Problem(this ControllerBase controller, Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null) =>
+    public static IActionResult Problem(this ControllerBase controller, Results.Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null) =>
         result.ToActionResult(controller.HttpContext, extensions, statusCode);
     /// <summary>
     /// Converts an <see cref="Error"/> to an <see cref="IActionResult"/>.
@@ -160,7 +161,7 @@ public static class Extensions
     /// <param name="statusCode"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public static EnhancedProblemDetails ToProblemDetails(this Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null)
+    public static EnhancedProblemDetails ToProblemDetails(this Results.Interfaces.IResultBase result, ErrorMetadata? extensions = null, int? statusCode = null)
     {
         if (result.IsSuccess)
             throw new InvalidOperationException("Cannot convert a successful result to a problem details");
