@@ -121,4 +121,5 @@ public readonly partial record struct Result
     public static implicit operator Result(Error[] errors) => new(errors);
     public static implicit operator Result(List<Error> errors) => new(errors);
     public static implicit operator Result(HashSet<Error> errors) => new(errors);
+    public static implicit operator Result(bool isSuccess) => isSuccess ? Success() : Error.False;
 }

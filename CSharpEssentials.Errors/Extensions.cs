@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Errors;
