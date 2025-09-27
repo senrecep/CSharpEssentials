@@ -1,9 +1,7 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Results;
-using CSharpEssentials.Rules;
-using CSharpEssentials.Rules.Adapters;
 
-namespace CSharpEssentials;
+namespace CSharpEssentials.Rules;
 
 public static partial class Extensions
 {

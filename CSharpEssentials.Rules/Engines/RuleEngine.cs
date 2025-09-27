@@ -1,7 +1,8 @@
 using System.Data;
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.Results;
-using System.Runtime.CompilerServices;
+using CSharpEssentials.Rules;
 
 namespace CSharpEssentials.Rules;
 
