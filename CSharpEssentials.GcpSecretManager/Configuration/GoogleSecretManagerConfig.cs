@@ -1,5 +1,3 @@
-using CSharpEssentials.GcpSecretManager.Models;
-
 namespace CSharpEssentials.GcpSecretManager.Configuration.Internal;
 
 internal sealed class GoogleSecretManagerConfig
