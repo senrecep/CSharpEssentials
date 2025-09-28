@@ -6,16 +6,17 @@ namespace CSharpEssentials.Maybe;
 
 public static class MaybeExtensions
 {
+    private static readonly Error _defaultError = Error.NotFound(code: "Maybe.Result", description: "The 'Maybe' has no value.");
     /// <summary>
     /// Converts the Maybe to a Result.
     /// </summary>
     /// <param name="maybe"></param>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static Result<T> ToResult<T>(this Maybe<T> maybe, Error error)
+    public static Result<T> ToMaybeResult<T>(this Maybe<T> maybe, Error? error = null)
     {
         if (maybe.HasNoValue)
-            return error;
+            return error ?? _defaultError;
 
         return maybe.Value;
     }
@@ -25,10 +26,10 @@ public static class MaybeExtensions
     /// <param name="maybe"></param>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static Result ToUnitResult<T>(this Maybe<T> maybe, Error error)
+    public static Result ToMaybeUnitResult<T>(this Maybe<T> maybe, Error? error = null)
     {
         if (maybe.HasNoValue)
-            return error;
+            return error ?? _defaultError;
 
         return Result.Success();
     }
@@ -42,10 +43,10 @@ public static class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<T>> ToResult<T>(this Task<Maybe<T>> maybeTask, Error error, CancellationToken cancellationToken = default)
+    public static async Task<Result<T>> ToMaybeResult<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return maybe.ToResult(error);
+        return maybe.ToMaybeResult(error);
     }
 
     /// <summary>
@@ -56,10 +57,10 @@ public static class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Result<T>> ToResult<T>(this ValueTask<Maybe<T>> maybeTask, Error error, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<T>> ToMaybeResult<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return maybe.ToResult(error);
+        return maybe.ToMaybeResult(error);
     }
 
     /// <summary>
@@ -70,10 +71,10 @@ public static class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result> ToUnitResult<T>(this Task<Maybe<T>> maybeTask, Error error, CancellationToken cancellationToken = default)
+    public static async Task<Result> ToMaybeUnitResult<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return maybe.ToUnitResult(error);
+        return maybe.ToMaybeUnitResult(error);
     }
 
     /// <summary>
@@ -84,9 +85,9 @@ public static class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Result> ToUnitResult<T>(this ValueTask<Maybe<T>> maybeTask, Error error, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result> ToMaybeUnitResult<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return maybe.ToUnitResult(error);
+        return maybe.ToMaybeUnitResult(error);
     }
 }

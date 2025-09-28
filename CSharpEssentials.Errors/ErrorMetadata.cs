@@ -29,6 +29,12 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
         return metadata;
     }
 
+    public ErrorMetadata AddMetadata(string key, object? value)
+    {
+        TryAdd(key, value);
+        return this;
+    }
+
 
     public ErrorMetadata AddStackTrace()
     {
@@ -66,8 +72,13 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
     public override string ToString()
     {
         var sb = new StringBuilder();
-        foreach ((string key, object value) in this)
-            sb.AppendLine(string.Create(CultureInfo.InvariantCulture, $"{key}: {value}"));
-        return sb.ToString();
+        for (int i = 0; i < Count; i++)
+        {
+            (string? key, object? value) = this.ElementAtOrDefault(i);
+            sb.Append(string.Create(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}"));
+            if (i < Count - 1)
+                sb.Append(", ");
+        }
+        return $"[{sb}]";
     }
 }

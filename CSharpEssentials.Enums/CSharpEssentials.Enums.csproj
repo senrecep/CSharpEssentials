@@ -28,9 +28,4 @@
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <!-- Dependencies: Enums uses System.Text.Json for JSON serialization -->
-  <ItemGroup>
-    <PackageReference Include="System.Text.Json" Version="9.0.0" />
-  </ItemGroup>
-
 </Project>

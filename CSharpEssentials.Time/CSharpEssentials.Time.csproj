@@ -27,10 +27,4 @@
     <None Include="..\README.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
-
-  <!-- Minimal dependency required for NuGet packaging -->
-  <ItemGroup>
-    <PackageReference Include="System.Memory" Version="4.5.5" />
-  </ItemGroup>
-
 </Project>
