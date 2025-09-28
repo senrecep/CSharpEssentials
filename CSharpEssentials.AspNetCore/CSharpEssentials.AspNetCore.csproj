@@ -50,9 +50,20 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.4" />
   </ItemGroup>
 
+  <!-- Dependencies: AspNetCore depends on Errors, Json, and Results -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 </Project>
