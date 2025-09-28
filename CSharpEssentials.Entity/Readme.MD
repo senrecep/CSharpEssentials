@@ -1,5 +1,7 @@
 # Entity Module
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 ## Core Interfaces
 
 ### `IEntityBase`

@@ -1,8 +1,8 @@
 # CSharpEssentials.AspNetCore
 
-A comprehensive ASP.NET Core library that provides essential building blocks and utilities for modern web applications, focusing on API development best practices and common patterns.
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore/)
+A comprehensive ASP.NET Core library that provides essential building blocks and utilities for modern web applications, focusing on API development best practices and common patterns.
 
 ## Features
 

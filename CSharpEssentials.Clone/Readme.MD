@@ -1,4 +1,6 @@
-# Clone Extensions
+# CSharpEssentials.Clone
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
 
 This library provides functional programming approach to object cloning in C#. It offers type-safe cloning capabilities for both single objects and collections.
 

@@ -1,5 +1,7 @@
 # CSharpEssentials
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 CSharpEssentials is a comprehensive library that enhances C#'s functional programming capabilities. It provides a robust set of tools and utilities designed to make your C# applications more maintainable, testable, and aligned with functional programming principles.
 
 ## 🌟 Package Information

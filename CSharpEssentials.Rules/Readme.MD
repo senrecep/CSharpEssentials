@@ -1,5 +1,7 @@
 # Rule Engine
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 A powerful and flexible rule engine implementation that supports both object-oriented and functional programming patterns in C#. This engine allows you to create and compose complex business rules while maintaining clean and maintainable code.
 
 ## Features
@@ -14,6 +16,7 @@ A powerful and flexible rule engine implementation that supports both object-ori
     - OR Rules (`IOrRule<TContext>`, `IOrAsyncRule<TContext>`)
 
 - **Multiple Programming Paradigms**:
+
   - Object-Oriented Approach with class-based rules
   - Functional Programming with lambda expressions
   - Extension methods for converting functions to rules
@@ -73,6 +76,7 @@ Result result2 = RuleEngine.And(
 ### When to Use Each Approach
 
 #### Object-Oriented Approach Benefits
+
 - Better for complex business rules that require state or configuration
 - Provides better encapsulation and reusability
 - Makes rules more maintainable when logic is complex
@@ -81,6 +85,7 @@ Result result2 = RuleEngine.And(
 - Better for rules that require documentation and versioning
 
 #### Functional Approach Benefits
+
 - More concise for simple validations
 - Reduces boilerplate code
 - Easier to write inline
@@ -92,6 +97,7 @@ Result result2 = RuleEngine.And(
 ### Choosing the Right Approach
 
 1. **Use Object-Oriented Approach When**:
+
    - Rules are complex and require multiple steps
    - Rules need to be reused across the application
    - Rules require configuration or dependencies
@@ -100,6 +106,7 @@ Result result2 = RuleEngine.And(
    - Rules are part of your domain model
 
 2. **Use Functional Approach When**:
+
    - Rules are simple and straightforward
    - Rules are specific to one use case
    - Rules don't require state or configuration
@@ -569,7 +576,7 @@ IRule<User> rule1 = userValidation.ToRule();
 // Using converted rules in class-based rules
 public readonly record struct ComplexValidation : IAndRule<User>
 {
-    public IEnumerable<IRuleBase<User>> Rules => 
+    public IEnumerable<IRuleBase<User>> Rules =>
     [
         userValidation.ToRule(),           // Converted function
         new AgeValidationRule(),           // Class-based rule
@@ -593,6 +600,7 @@ var result = RuleEngine.And(
 ```
 
 This flexibility allows you to:
+
 - Use the most appropriate approach for each rule
 - Gradually migrate between approaches
 - Mix synchronous and asynchronous rules
@@ -605,6 +613,7 @@ The engine treats all rules equally regardless of their implementation approach,
 ## 🚀 Performance Optimizations
 
 1. **Record Struct Usage**
+
 ```csharp
 // ❌ Bad: Using class
 public class UserRule : IRule<User> { }
@@ -614,6 +623,7 @@ public readonly record struct UserRule : IRule<User> { }
 ```
 
 2. **Static Error Definitions**
+
 ```csharp
 // ❌ Bad: Creating new error each time
 return Error.Validation("USER.NOT_ADULT", "User is not adult");
@@ -629,9 +639,10 @@ public static class UserErrors
 ```
 
 3. **Lazy Evaluation**
+
 ```csharp
 // Lazy evaluation of rules
-public IRuleBase<Order>[] Rules => 
+public IRuleBase<Order>[] Rules =>
     _rules ??= [
         new OrderAmountRule(),
         new StockAvailabilityRule()
@@ -639,16 +650,17 @@ public IRuleBase<Order>[] Rules =>
 ```
 
 4. **Immutable Design**
+
 ```csharp
 // ❌ Bad: Mutable state
-public class UserRule : IRule<User> 
+public class UserRule : IRule<User>
 {
     private int _minimumAge;
     public void SetMinimumAge(int age) => _minimumAge = age;
 }
 
 // ✅ Good: Immutable design
-public readonly record struct UserRule : IRule<User> 
+public readonly record struct UserRule : IRule<User>
 {
     private readonly int _minimumAge;
     public UserRule(int minimumAge) => _minimumAge = minimumAge;
@@ -658,6 +670,7 @@ public readonly record struct UserRule : IRule<User>
 ## 🛠 Error Handling Best Practices
 
 1. **Centralized Error Management**
+
 ```csharp
 public static class OrderErrors
 {
@@ -682,6 +695,7 @@ public static class OrderErrors
 ```
 
 2. **Rich Error Details**
+
 ```csharp
 public Result Evaluate(Order context)
 {
@@ -698,6 +712,7 @@ public Result Evaluate(Order context)
 ## 🎯 Real World Examples
 
 ### E-Commerce Validation
+
 ```csharp
 public readonly record struct OrderValidationRule : IAndRule<Order>
 {
@@ -722,6 +737,7 @@ public readonly record struct OrderValidationRule : IAndRule<Order>
 ```
 
 ### Payment Processing
+
 ```csharp
 public readonly record struct PaymentMethodRule : IOrRule<Payment>
 {
@@ -737,6 +753,7 @@ public readonly record struct PaymentMethodRule : IOrRule<Payment>
 ## 📚 Advanced Usage
 
 ### Rule Decorators
+
 ```csharp
 public record struct LoggingRuleDecorator<T> : IRule<T>
 {
@@ -758,3 +775,4 @@ public record struct LoggingRuleDecorator<T> : IRule<T>
     }
 }
 ```
+
