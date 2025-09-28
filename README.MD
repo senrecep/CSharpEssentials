@@ -487,6 +487,100 @@ using CSharpEssentials.RequestResponseLogging;
 - Configure proper retry policies
 - Use RawSecretIds and RawSecretPrefixes to control JSON parsing behavior
 
+## 🔧 Development
+
+### Building and Publishing NuGet Packages
+
+This repository includes optimized build and publish scripts that handle all CSharpEssentials packages with proper dependency order management:
+
+- **Bash Script** (`build-and-publish-nugets.sh`): Cross-platform script for Linux, macOS, and Windows (Git Bash/WSL)
+- **PowerShell Script** (`build-and-publish-nugets.ps1`): Native Windows PowerShell script
+
+#### Features
+
+- **Smart Dependency Management**: Automatically packages and publishes in correct dependency order
+- **Parallel Processing**: Optional parallel build/publish for same-level packages (`--parallel`)
+- **Comprehensive Validation**: Environment, API key, and project validation
+- **Multiple Modes**: Build-only, dry-run, verbose logging, skip-build options
+- **Error Handling**: Robust error handling with colored output and proper cleanup
+- **Cross-Platform**: Works on Windows (Git Bash/WSL), Linux, and macOS
+
+#### Usage Examples
+
+**Bash Script (Linux/macOS/Git Bash):**
+
+```bash
+# Basic build and package (no publishing)
+./build-and-publish-nugets.sh
+
+# Build, package and publish to NuGet.org
+./build-and-publish-nugets.sh YOUR_API_KEY
+
+# Use parallel processing for faster builds
+./build-and-publish-nugets.sh --parallel YOUR_API_KEY
+
+# Preview what would happen (dry run)
+./build-and-publish-nugets.sh --dry-run --verbose YOUR_API_KEY
+
+# Skip build and only package existing builds
+./build-and-publish-nugets.sh --skip-build YOUR_API_KEY
+
+# Force package even with warnings (for NU5017 errors)
+./build-and-publish-nugets.sh --force-pack YOUR_API_KEY
+
+# Show help
+./build-and-publish-nugets.sh --help
+```
+
+**PowerShell Script (Windows):**
+
+```powershell
+# Basic build and package (no publishing)
+.\build-and-publish-nugets.ps1
+
+# Build, package and publish to NuGet.org
+.\build-and-publish-nugets.ps1 -ApiKey "YOUR_API_KEY"
+
+# Use parallel processing for faster builds
+.\build-and-publish-nugets.ps1 -Parallel -ApiKey "YOUR_API_KEY"
+
+# Preview what would happen (dry run)
+.\build-and-publish-nugets.ps1 -DryRun -VerboseOutput -ApiKey "YOUR_API_KEY"
+
+# Skip build and only package existing builds
+.\build-and-publish-nugets.ps1 -SkipBuild -ApiKey "YOUR_API_KEY"
+
+# Show help
+Get-Help .\build-and-publish-nugets.ps1 -Full
+```
+
+#### Package Dependency Levels
+
+- **Level 0**: Core, Enums, Time, Clone, AspNetCore, GcpSecretManager, RequestResponseLogging
+- **Level 1**: Errors, Json
+- **Level 2**: Results
+- **Level 3**: Any, Maybe, Rules, Entity, EntityFrameworkCore
+- **Level 4**: CSharpEssentials (meta-package)
+
+#### Options
+
+**Bash Script:**
+
+- `--parallel`: Enable parallel processing for same-level packages
+- `--verbose`: Enable detailed logging
+- `--dry-run`: Show what would be executed without doing it
+- `--skip-build`: Skip build step and only package/publish
+- `--force-pack`: Force packaging even with NU5017 warnings
+- `--help`, `-h`: Show usage information
+
+**PowerShell Script:**
+
+- `-Parallel`: Enable parallel processing for same-level packages
+- `-VerboseOutput`: Enable detailed logging
+- `-DryRun`: Show what would be executed without doing it
+- `-SkipBuild`: Skip build step and only package/publish
+- `-ApiKey`: NuGet API key for publishing
+
 ## 🤝 Contributing
 
 We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
