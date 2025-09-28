@@ -6,13 +6,13 @@ This library provides functional programming approach to object cloning in C#. I
 
 - Generic type-safe cloning with covariant type parameter
 - Extension methods for easy usage
-- Support for both single objects and collections (IEnumerable&lt;T&gt; and IQueryable&lt;T&gt;)
+- Support for both single objects and collections (`IEnumerable<T>` and `IQueryable<T>`)
 - LINQ-friendly design
 - Functional programming approach
 
 ## Usage
 
-### 1. Implement ICloneable&lt;T&gt; Interface
+### 1. Implement `ICloneable<T>` Interface
 
 ```csharp
 public class Person : ICloneable<Person>
