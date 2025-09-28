@@ -1,15 +1,43 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Errors</PackageId>
+    <Title>CSharpEssentials.Errors</Title>
+    <Product>CSharpEssentials.Errors</Product>
+    <Description>
+      Comprehensive error handling system for functional programming in C#.
+      Provides Error types, ErrorMetadata, ErrorType enums, and extensions for robust error
+      management.
+      Foundation for Result pattern and functional error handling.
+    </Description>
+    <PackageTags>
+      Errors,ErrorHandling,FunctionalProgramming,ErrorTypes,ErrorMetadata,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <!-- Package content -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
   </ItemGroup>
+
+  <!-- Dependencies: Errors depends on Core and Enums -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
 </Project>

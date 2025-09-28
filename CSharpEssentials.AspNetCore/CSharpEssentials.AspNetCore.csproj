@@ -6,7 +6,7 @@
     <Title>CSharp Essentials AspNetCore</Title>
     <Product>CSharp Essentials AspNetCore</Product>
     <Version>1.0.15</Version>
-    <Authors>SenRecep</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,ApiVersioning,Swagger,ProblemDetails,ExceptionHandling,GlobalExceptionHandler,JsonConfiguration,ValidationSupport</PackageTags>
@@ -16,12 +16,11 @@
       optimized JSON handling, and seamless integration with CSharpEssentials core functional
       patterns (Result, Maybe, Rule Engine). Perfect for building robust, maintainable, and
       type-safe web APIs following functional programming principles.</Description>
-    <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
+    <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
     <PackageReadmeFile>README.MD</PackageReadmeFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageLicenseFile>LICENCE</PackageLicenseFile>
 
   </PropertyGroup>
 

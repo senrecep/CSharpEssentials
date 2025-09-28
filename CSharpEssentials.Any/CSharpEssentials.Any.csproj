@@ -1,15 +1,43 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Any</PackageId>
+    <Title>CSharpEssentials.Any</Title>
+    <Product>CSharpEssentials.Any</Product>
+    <Description>
+      Discriminated union types (Any&lt;T0,T1&gt; to Any&lt;T0,...,T7&gt;) for functional
+      programming in C#.
+      Provides type-safe alternatives to object/dynamic with pattern matching, implicit conversions,
+      and JSON serialization support.
+      Essential for functional programming patterns and type-safe handling of multiple possible
+      types.
+    </Description>
+    <PackageTags>
+      DiscriminatedUnion,FunctionalProgramming,PatternMatching,TypeSafety,Any,Union,JSON,CSharpEssentials
+    </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <!-- Package content -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Any depends on Json for serialization -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
 </Project>

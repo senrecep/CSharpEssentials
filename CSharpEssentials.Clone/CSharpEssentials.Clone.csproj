@@ -1,11 +1,34 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Clone</PackageId>
+    <Title>CSharpEssentials.Clone</Title>
+    <Product>CSharpEssentials.Clone</Product>
+    <Description>
+      Object cloning utilities for deep and shallow copying in C#.
+      Provides ICloneable extensions and generic cloning methods for complex object hierarchies.
+      Essential for creating immutable object patterns and safe object copying.
+    </Description>
+    <PackageTags>
+      Clone,DeepCopy,ShallowCopy,ICloneable,ObjectCopying,Immutable,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <!-- Package content -->
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Minimal dependency required for NuGet packaging -->
+  <ItemGroup>
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+  </ItemGroup>
 
 </Project>

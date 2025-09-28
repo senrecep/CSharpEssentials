@@ -1,15 +1,39 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Json</PackageId>
+    <Title>CSharpEssentials.Json</Title>
+    <Product>CSharpEssentials.Json</Product>
+    <Description>
+      JSON utilities and custom converters for System.Text.Json in C#.
+      Includes MultiFormatDateTimeConverter, ConditionalStringEnumConverter,
+      PolymorphicJsonConverterFactory, and JsonOptions.
+      Essential for advanced JSON serialization scenarios.
+    </Description>
+    <PackageTags>
+      JSON,SystemTextJson,JsonConverter,DateTime,Enum,Polymorphic,Serialization,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <!-- Package content -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Json depends on Enums for enum converters -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
 </Project>

@@ -1,15 +1,38 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Rules</PackageId>
+    <Title>CSharpEssentials.Rules</Title>
+    <Product>CSharpEssentials.Rules</Product>
+    <Description>
+      Business rules engine for domain-driven design in C#.
+      Provides rule validation, business logic enforcement, and domain rule composition patterns.
+      Essential for implementing complex business rules in a maintainable way.
+    </Description>
+    <PackageTags>
+      BusinessRules,DDD,DomainDrivenDesign,RulesEngine,Validation,BusinessLogic,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <!-- Package content -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Rules depends on Results -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
 </Project>
