@@ -31,7 +31,7 @@
 
   <!-- Dependencies: Rules depends on Results -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.3]"
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.4]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
