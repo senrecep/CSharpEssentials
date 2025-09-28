@@ -8,6 +8,11 @@
 		<!-- Use project references by default for development -->
 		<UseProjectReferences Condition="'$(UseProjectReferences)' == ''">true</UseProjectReferences>
 
+		<!-- Packaging -->
+		<IsPackable>true</IsPackable>
+		<IncludeBuildOutput>true</IncludeBuildOutput>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
 		<!-- Compiler and analysis settings -->
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
@@ -22,7 +27,7 @@
 		<AnalysisLevel>latest</AnalysisLevel>
 		<AnalysisMode>All</AnalysisMode>
 		<NoWarn>1591</NoWarn>
-		<WarningsNotAsErrors>NU1701;NU1902;NU5017;NU5118;NU5128</WarningsNotAsErrors>
+		<WarningsNotAsErrors></WarningsNotAsErrors>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
 		<!-- Package metadata -->
