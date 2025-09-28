@@ -42,17 +42,52 @@
     </None>
   </ItemGroup>
 
+  <!-- Dependencies: Meta-package that includes all CSharpEssentials packages -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Any\CSharpEssentials.Any.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Clone\CSharpEssentials.Clone.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj" />
+    <PackageReference Include="CSharpEssentials.Any" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Clone" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Entity" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Maybe" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Rules" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Time" Version="[2.0.2]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Any\CSharpEssentials.Any.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Clone\CSharpEssentials.Clone.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 </Project>

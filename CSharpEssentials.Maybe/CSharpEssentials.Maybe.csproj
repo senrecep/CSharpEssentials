@@ -30,9 +30,9 @@
 
   <!-- Dependencies: Maybe depends on Results and Errors -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.0]"
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.2]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.0]"
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.2]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
