@@ -28,6 +28,7 @@
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="..\README.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- No dependencies: Core is the foundation module -->

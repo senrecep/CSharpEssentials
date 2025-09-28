@@ -25,6 +25,7 @@
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="..\README.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- Dependencies: Errors depends on Core and Enums -->

@@ -29,6 +29,7 @@
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="..\README.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <!-- Dependencies: Any depends on Json for serialization -->
