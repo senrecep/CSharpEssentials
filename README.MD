@@ -1,15 +1,28 @@
 # CSharpEssentials
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 CSharpEssentials is a comprehensive library that enhances C#'s functional programming capabilities. It provides a robust set of tools and utilities designed to make your C# applications more maintainable, testable, and aligned with functional programming principles.
 
 ## 🌟 Package Information
 
-- **NuGet Package**: [CSharpEssentials](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
-- **NuGet Package EntityFrameworkCore**: [CSharpEssentials.EntityFrameworkCore](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore)
-- **NuGet Package AspNetCore**: [CSharpEssentials.AspNetCore](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore)
-- **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
-- **NuGet Package GcpSecretManager**: [CSharpEssentials.GcpSecretManager](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager)
-- **GitHub Repository**: [senrecep/CSharpEssentials](https://github.com/senrecep/CSharpEssentials) [![GitHub stars](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials/stargazers)
+- **NuGet Package**: [CSharpEssentials](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Core**: [CSharpEssentials.Core](https://www.nuget.org/packages/CSharpEssentials.Core) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Any**: [CSharpEssentials.Any](https://www.nuget.org/packages/CSharpEssentials.Any) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Maybe**: [CSharpEssentials.Maybe](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Results**: [CSharpEssentials.Results](https://www.nuget.org/packages/CSharpEssentials.Results) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Errors**: [CSharpEssentials.Errors](https://www.nuget.org/packages/CSharpEssentials.Errors) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Rules**: [CSharpEssentials.Rules](https://www.nuget.org/packages/CSharpEssentials.Rules) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Entity**: [CSharpEssentials.Entity](https://www.nuget.org/packages/CSharpEssentials.Entity) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package EntityFrameworkCore**: [CSharpEssentials.EntityFrameworkCore](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package AspNetCore**: [CSharpEssentials.AspNetCore](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Json**: [CSharpEssentials.Json](https://www.nuget.org/packages/CSharpEssentials.Json) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Time**: [CSharpEssentials.Time](https://www.nuget.org/packages/CSharpEssentials.Time) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Clone**: [CSharpEssentials.Clone](https://www.nuget.org/packages/CSharpEssentials.Clone) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package Enums**: [CSharpEssentials.Enums](https://www.nuget.org/packages/CSharpEssentials.Enums) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **NuGet Package GcpSecretManager**: [CSharpEssentials.GcpSecretManager](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+- **GitHub Repository**: [senrecep/CSharpEssentials](https://github.com/senrecep/CSharpEssentials) [![GitHub stars](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials/stargazers) [![GitHub forks](https://img.shields.io/github/forks/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials/network) [![GitHub issues](https://img.shields.io/github/issues/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials/issues)
 - **Author**: [Recep Şen](https://www.nuget.org/profiles/recepsen)
 
 ## 🌟 Key Features
@@ -282,6 +295,56 @@ Choose the packages you need:
 dotnet add package CSharpEssentials
 ```
 
+#### Core Utilities
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core)
+
+```bash
+dotnet add package CSharpEssentials.Core
+```
+
+#### Functional Programming
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe)
+
+```bash
+dotnet add package CSharpEssentials.Maybe
+```
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results)
+
+```bash
+dotnet add package CSharpEssentials.Results
+```
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any)
+
+```bash
+dotnet add package CSharpEssentials.Any
+```
+
+#### Error Handling & Validation
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors)
+
+```bash
+dotnet add package CSharpEssentials.Errors
+```
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules)
+
+```bash
+dotnet add package CSharpEssentials.Rules
+```
+
+#### Domain Modeling
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity)
+
+```bash
+dotnet add package CSharpEssentials.Entity
+```
+
 #### Entity Framework Core Integration
 
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore)
@@ -296,6 +359,38 @@ dotnet add package CSharpEssentials.EntityFrameworkCore
 
 ```bash
 dotnet add package CSharpEssentials.AspNetCore
+```
+
+#### JSON Utilities
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json)
+
+```bash
+dotnet add package CSharpEssentials.Json
+```
+
+#### Time Management
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time)
+
+```bash
+dotnet add package CSharpEssentials.Time
+```
+
+#### Object Cloning
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone)
+
+```bash
+dotnet add package CSharpEssentials.Clone
+```
+
+#### Enum Utilities
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums)
+
+```bash
+dotnet add package CSharpEssentials.Enums
 ```
 
 #### Request Response Logging
@@ -340,21 +435,27 @@ using CSharpEssentials.RequestResponseLogging;
 
 #### Functional Programming Essentials
 
-- [Maybe Monad](CSharpEssentials/Monad/Readme.MD) - Null-safe programming with Maybe pattern
-- [Result Pattern](CSharpEssentials/Results/Readme.MD) - Railway-oriented programming with Result types
-- [Any Type (Discriminated Unions)](CSharpEssentials/Any/Readme.MD) - Type-safe union types for C#
+- [Maybe Monad](CSharpEssentials.Maybe/Readme.MD) - Null-safe programming with Maybe pattern
+- [Result Pattern](CSharpEssentials.Results/Readme.MD) - Railway-oriented programming with Result types
+- [Any Type (Discriminated Unions)](CSharpEssentials.Any/Readme.MD) - Type-safe union types for C#
 - [Extensions](CSharpEssentials/Extensions/Readme.MD) - Functional programming extension methods
+
+#### Error Handling & Validation
+
+- [Error Types](CSharpEssentials.Errors/Readme.MD) - Structured error handling system
+- [Rule Engine](CSharpEssentials.Rules/Readme.MD) - Business rule validation and processing
 
 #### Domain Modeling
 
-- [Rule Engine](CSharpEssentials/Rules/Readme.MD) - Business rule validation and processing
-- [Error Types](CSharpEssentials/Errors/Readme.MD) - Structured error handling system
-- [Entity Base](CSharpEssentials/Entity/Readme.MD) - Base classes and patterns for domain entities
+- [Entity Base](CSharpEssentials.Entity/Readme.MD) - Base classes and patterns for domain entities
+- [Core Utilities](CSharpEssentials.Core/Readme.MD) - Core utilities and base functionality
 
-#### Infrastructure
+#### Infrastructure & Utilities
 
-- [JSON Utilities](CSharpEssentials/Json/Readme.MD) - Enhanced JSON serialization and handling
-- [Time Management](CSharpEssentials/Time/Readme.MD) - Testable datetime operations
+- [JSON Utilities](CSharpEssentials.Json/Readme.MD) - Enhanced JSON serialization and handling
+- [Time Management](CSharpEssentials.Time/Readme.MD) - Testable datetime operations
+- [Object Cloning](CSharpEssentials.Clone/Readme.MD) - Deep cloning utilities
+- [Enum Utilities](CSharpEssentials.Enums/Readme.MD) - String enum support and utilities
 
 ### Integration Modules Documentation
 
@@ -396,6 +497,46 @@ using CSharpEssentials.RequestResponseLogging;
   - JSON value flattening
   - Automatic secret rotation
   - Built-in retry policies
+
+### Package-Specific Documentation
+
+#### Core Packages
+
+- [CSharpEssentials](CSharpEssentials/Readme.MD) - Main package overview
+- [CSharpEssentials.Core](CSharpEssentials.Core/README.MD) - Core utilities documentation
+
+#### Functional Programming
+
+- [CSharpEssentials.Maybe](CSharpEssentials.Maybe/Readme.MD) - Maybe monad implementation
+- [CSharpEssentials.Results](CSharpEssentials.Results/Readme.MD) - Result pattern implementation
+- [CSharpEssentials.Any](CSharpEssentials.Any/Readme.MD) - Discriminated unions
+
+#### Error Handling
+
+- [CSharpEssentials.Errors](CSharpEssentials.Errors/Readme.MD) - Error types and handling
+- [CSharpEssentials.Rules](CSharpEssentials.Rules/Readme.MD) - Business rule engine
+
+#### Domain & Infrastructure
+
+- [CSharpEssentials.Entity](CSharpEssentials.Entity/Readme.MD) - Domain entity base classes
+- [CSharpEssentials.Json](CSharpEssentials.Json/Readme.MD) - JSON utilities
+- [CSharpEssentials.Time](CSharpEssentials.Time/Readme.MD) - Time management
+- [CSharpEssentials.Clone](CSharpEssentials.Clone/Readme.MD) - Object cloning
+- [CSharpEssentials.Enums](CSharpEssentials.Enums/Readme.MD) - Enum utilities
+
+#### Integration Packages
+
+- [CSharpEssentials.AspNetCore](CSharpEssentials.AspNetCore/Readme.MD) - ASP.NET Core integration
+- [CSharpEssentials.EntityFrameworkCore](CSharpEssentials.EntityFrameworkCore/Readme.MD) - EF Core integration
+- [CSharpEssentials.RequestResponseLogging](CSharpEssentials.RequestResponseLogging/Readme.MD) - HTTP logging
+- [CSharpEssentials.GcpSecretManager](CSharpEssentials.GcpSecretManager/Readme.MD) - GCP Secret Manager
+
+### Getting Help
+
+- **GitHub Issues**: Report bugs or request features at [GitHub Issues](https://github.com/senrecep/CSharpEssentials/issues)
+- **Documentation**: Each package has its own detailed README with examples
+- **NuGet Packages**: All packages are available on [NuGet Gallery](https://www.nuget.org/profiles/recepsen)
+- **Source Code**: Browse the source code at [GitHub Repository](https://github.com/senrecep/CSharpEssentials)
 
 ## 🔧 Best Practices
 
@@ -491,10 +632,9 @@ using CSharpEssentials.RequestResponseLogging;
 
 ### Building and Publishing NuGet Packages
 
-This repository includes optimized build and publish scripts that handle all CSharpEssentials packages with proper dependency order management:
+This repository includes an optimized build and publish script that handles all CSharpEssentials packages with proper dependency order management.
 
-- **Bash Script** (`build-and-publish-nugets.sh`): Cross-platform script for Linux, macOS, and Windows (Git Bash/WSL)
-- **PowerShell Script** (`build-and-publish-nugets.ps1`): Native Windows PowerShell script
+**Script**: `build-and-publish-nugets.sh` - Cross-platform script for Linux, macOS, and Windows (Git Bash/WSL)
 
 #### Features
 
@@ -506,8 +646,6 @@ This repository includes optimized build and publish scripts that handle all CSh
 - **Cross-Platform**: Works on Windows (Git Bash/WSL), Linux, and macOS
 
 #### Usage Examples
-
-**Bash Script (Linux/macOS/Git Bash):**
 
 ```bash
 # Basic build and package (no publishing)
@@ -532,28 +670,6 @@ This repository includes optimized build and publish scripts that handle all CSh
 ./build-and-publish-nugets.sh --help
 ```
 
-**PowerShell Script (Windows):**
-
-```powershell
-# Basic build and package (no publishing)
-.\build-and-publish-nugets.ps1
-
-# Build, package and publish to NuGet.org
-.\build-and-publish-nugets.ps1 -ApiKey "YOUR_API_KEY"
-
-# Use parallel processing for faster builds
-.\build-and-publish-nugets.ps1 -Parallel -ApiKey "YOUR_API_KEY"
-
-# Preview what would happen (dry run)
-.\build-and-publish-nugets.ps1 -DryRun -VerboseOutput -ApiKey "YOUR_API_KEY"
-
-# Skip build and only package existing builds
-.\build-and-publish-nugets.ps1 -SkipBuild -ApiKey "YOUR_API_KEY"
-
-# Show help
-Get-Help .\build-and-publish-nugets.ps1 -Full
-```
-
 #### Package Dependency Levels
 
 - **Level 0**: Core, Enums, Time, Clone, AspNetCore, GcpSecretManager, RequestResponseLogging
@@ -562,9 +678,7 @@ Get-Help .\build-and-publish-nugets.ps1 -Full
 - **Level 3**: Any, Maybe, Rules, Entity, EntityFrameworkCore
 - **Level 4**: CSharpEssentials (meta-package)
 
-#### Options
-
-**Bash Script:**
+#### Script Options
 
 - `--parallel`: Enable parallel processing for same-level packages
 - `--verbose`: Enable detailed logging
@@ -573,13 +687,22 @@ Get-Help .\build-and-publish-nugets.ps1 -Full
 - `--force-pack`: Force packaging even with NU5017 warnings
 - `--help`, `-h`: Show usage information
 
-**PowerShell Script:**
+### Development Workflow
 
-- `-Parallel`: Enable parallel processing for same-level packages
-- `-VerboseOutput`: Enable detailed logging
-- `-DryRun`: Show what would be executed without doing it
-- `-SkipBuild`: Skip build step and only package/publish
-- `-ApiKey`: NuGet API key for publishing
+```bash
+# Clone the repository
+git clone https://github.com/senrecep/CSharpEssentials.git
+cd CSharpEssentials
+
+# Build all packages
+./build-and-publish-nugets.sh
+
+# Run tests (if available)
+dotnet test
+
+# Build and publish with API key
+./build-and-publish-nugets.sh --parallel YOUR_NUGET_API_KEY
+```
 
 ## 🤝 Contributing
 

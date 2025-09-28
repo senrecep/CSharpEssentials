@@ -1,5 +1,7 @@
 # CSharpEssentials.GcpSecretManager
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 A .NET library for seamlessly integrating Google Cloud Secret Manager with your application's configuration system. This library provides a configuration provider that allows you to store and manage your application secrets in Google Cloud Secret Manager and access them through the standard .NET configuration system.
 
 ## Features
@@ -32,11 +34,11 @@ dotnet add package CSharpEssentials.GcpSecretManager
     "Projects": [
       {
         "ProjectId": "your-gcp-project-id",
-        "Region": "europe-west1",  // Optional
-        "PrefixFilters": ["app1_", "app2_"],  // Optional
-        "SecretIds": ["specific_secret_1", "specific_secret_2"],  // Optional
-        "RawSecretIds": ["config-json", "plain-text"],  // Optional: Skip JSON parsing for these secrets
-        "RawSecretPrefixes": ["raw_", "text_"]  // Optional: Skip JSON parsing for secrets with these prefixes
+        "Region": "europe-west1", // Optional
+        "PrefixFilters": ["app1_", "app2_"], // Optional
+        "SecretIds": ["specific_secret_1", "specific_secret_2"], // Optional
+        "RawSecretIds": ["config-json", "plain-text"], // Optional: Skip JSON parsing for these secrets
+        "RawSecretPrefixes": ["raw_", "text_"] // Optional: Skip JSON parsing for secrets with these prefixes
       }
     ]
   }
@@ -77,12 +79,12 @@ builder.Configuration.AddGcpSecretManager(options =>
 ```csharp
 public class CustomSecretManagerLoader : ISecretManagerConfigurationLoader
 {
-    public string GetKey(Secret secret) => 
+    public string GetKey(Secret secret) =>
         // Your custom key generation logic
-    
+
     public string GetKey(string keyId) =>
         // Your custom key generation logic
-    
+
     public bool ShouldLoadSecret(Secret secret, ProjectSecretConfiguration projectConfig) =>
         // Your custom secret filtering logic
 }
@@ -96,30 +98,31 @@ builder.Configuration.AddGcpSecretManager(options =>
 
 ## Configuration Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `CredentialsPath` | Path to Google Cloud credentials JSON file | `null` |
-| `LoadFromAppSettings` | Whether to load configuration from appsettings.json | `true` when no options provided |
-| `ConfigurationSectionName` | Section name in appsettings.json | `"GoogleSecretManager"` |
-| `BatchSize` | Number of secrets to load in parallel | `10` |
-| `PageSize` | Number of secrets to retrieve per page | `300` |
+| Option                     | Description                                         | Default                         |
+| -------------------------- | --------------------------------------------------- | ------------------------------- |
+| `CredentialsPath`          | Path to Google Cloud credentials JSON file          | `null`                          |
+| `LoadFromAppSettings`      | Whether to load configuration from appsettings.json | `true` when no options provided |
+| `ConfigurationSectionName` | Section name in appsettings.json                    | `"GoogleSecretManager"`         |
+| `BatchSize`                | Number of secrets to load in parallel               | `10`                            |
+| `PageSize`                 | Number of secrets to retrieve per page              | `300`                           |
 
 ## Project Configuration
 
-| Property | Description | Required |
-|----------|-------------|----------|
-| `ProjectId` | Google Cloud project ID | Yes |
-| `Region` | Specific region for secrets | No |
-| `PrefixFilters` | List of prefixes to filter secrets | No |
-| `SecretIds` | List of specific secret IDs to load | No |
-| `RawSecretIds` | List of secret IDs that should skip JSON parsing | No |
-| `RawSecretPrefixes` | List of prefixes for secrets that should skip JSON parsing | No |
+| Property            | Description                                                | Required |
+| ------------------- | ---------------------------------------------------------- | -------- |
+| `ProjectId`         | Google Cloud project ID                                    | Yes      |
+| `Region`            | Specific region for secrets                                | No       |
+| `PrefixFilters`     | List of prefixes to filter secrets                         | No       |
+| `SecretIds`         | List of specific secret IDs to load                        | No       |
+| `RawSecretIds`      | List of secret IDs that should skip JSON parsing           | No       |
+| `RawSecretPrefixes` | List of prefixes for secrets that should skip JSON parsing | No       |
 
 ## Configuration Examples
 
 Here are various configuration examples with explanations:
 
 1. **Minimal Configuration (ProjectId only)**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -131,9 +134,11 @@ Here are various configuration examples with explanations:
   }
 }
 ```
+
 This configuration retrieves ALL secrets from the specified project without any filtering.
 
 2. **Region-Specific Configuration**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -146,9 +151,11 @@ This configuration retrieves ALL secrets from the specified project without any 
   }
 }
 ```
+
 Only retrieves secrets from the specified region, which can improve performance by using regional endpoints.
 
 3. **Prefix-Based Filtering**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -161,9 +168,11 @@ Only retrieves secrets from the specified region, which can improve performance 
   }
 }
 ```
-Only retrieves secrets whose IDs start with "app_" or "service_".
+
+Only retrieves secrets whose IDs start with "app*" or "service*".
 
 4. **Specific Secret IDs**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -176,9 +185,11 @@ Only retrieves secrets whose IDs start with "app_" or "service_".
   }
 }
 ```
+
 Only retrieves the explicitly specified secrets.
 
 5. **Combined Filtering**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -192,9 +203,11 @@ Only retrieves the explicitly specified secrets.
   }
 }
 ```
+
 Retrieves both specifically listed secrets AND secrets matching the prefixes (OR logic).
 
 6. **JSON Parsing Control**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -210,7 +223,9 @@ Retrieves both specifically listed secrets AND secrets matching the prefixes (OR
   }
 }
 ```
+
 This configuration:
+
 - Retrieves secrets matching the SecretIds and PrefixFilters
 - Skips JSON parsing for:
   - Secrets listed in RawSecretIds
@@ -218,6 +233,7 @@ This configuration:
 - Other secrets will be parsed as JSON if possible
 
 7. **Multi-Project Configuration**:
+
 ```json
 {
   "GoogleSecretManager": {
@@ -236,16 +252,19 @@ This configuration:
   }
 }
 ```
+
 Configures multiple projects with different settings for each.
 
 ## Best Practices
 
 1. **Credentials Management**:
+
    - Use service account with minimal required permissions
    - Store credentials securely and use environment-specific paths
    - Consider using managed identities in cloud environments
 
 2. **Performance Optimization**:
+
    - Adjust `BatchSize` based on your application's needs
    - Use `PrefixFilters` or `SecretIds` to limit loaded secrets
    - Consider regional endpoints for better latency

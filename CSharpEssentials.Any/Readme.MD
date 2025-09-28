@@ -1,5 +1,7 @@
 # Any<T0, T1, ...> - Discriminated Union Type for Functional Programming in C#
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 `Any<T0, T1, ...>` is a discriminated union type developed to enhance functional programming capabilities in C#. It serves as a lightweight alternative to the OneOf library, allowing functions to return multiple different types in a type-safe manner.
 
 ## Features

@@ -1,5 +1,7 @@
 # Error Types in CSharpEssentials
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 CSharpEssentials provides a robust error management system designed according to functional programming principles. This system treats errors as values and aims to avoid side effects.
 
 ## Error Structure

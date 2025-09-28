@@ -1,5 +1,7 @@
 # CSharpEssentials.Core
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 Core utilities and extensions for C# development. This is the foundation package for all CSharpEssentials libraries.
 
 ## Features
