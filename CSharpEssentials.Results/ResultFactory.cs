@@ -1,7 +1,7 @@
 using CSharpEssentials.Errors;
-using CSharpEssentials.Results.Interfaces;
+using CSharpEssentials.ResultPattern.Interfaces;
 
-namespace CSharpEssentials.Results;
+namespace CSharpEssentials.ResultPattern;
 
 public readonly partial record struct Result
 {

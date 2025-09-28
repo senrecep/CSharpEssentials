@@ -1,6 +1,6 @@
 using CSharpEssentials.Errors;
 
-namespace CSharpEssentials.Results;
+namespace CSharpEssentials.ResultPattern;
 
 public static partial class ResultExtensions
 {

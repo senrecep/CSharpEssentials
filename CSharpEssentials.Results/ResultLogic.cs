@@ -1,6 +1,6 @@
 using CSharpEssentials.Errors;
 
-namespace CSharpEssentials.Results;
+namespace CSharpEssentials.ResultPattern;
 
 internal static class ResultLogic
 {
