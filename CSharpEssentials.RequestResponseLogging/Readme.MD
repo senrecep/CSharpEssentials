@@ -1,5 +1,7 @@
 # CSharpEssentials.RequestResponseLogging
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 - **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
 
 A powerful and flexible request/response logging middleware for ASP.NET Core applications that enables comprehensive HTTP traffic monitoring with minimal setup.

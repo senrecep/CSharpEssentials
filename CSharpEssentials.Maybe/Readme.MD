@@ -1,5 +1,7 @@
 # Maybe Monad in C#
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 The Maybe monad is a functional programming concept that provides a safe way to handle nullable values and avoid null reference exceptions. It represents a value that may or may not exist.
 
 ## Core Features

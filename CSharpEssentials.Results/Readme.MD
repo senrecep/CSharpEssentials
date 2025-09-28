@@ -1,5 +1,7 @@
 # Result Pattern in CSharpEssentials
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 CSharpEssentials provides a robust implementation of the Result pattern, inspired by functional programming principles and popular libraries like CSharpFunctionalExtensions and ErrorOr. This implementation helps you handle success and failure cases in a more functional and type-safe way.
 
 ## Core Features

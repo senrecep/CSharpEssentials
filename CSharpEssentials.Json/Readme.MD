@@ -1,4 +1,6 @@
-# JSON Utilities for C#
+# CSharpEssentials.Json
+
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
 
 This package provides enhanced JSON serialization and deserialization capabilities for C# applications, focusing on functional programming principles and type safety.
 

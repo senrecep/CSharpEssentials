@@ -1,6 +1,6 @@
 # CSharpEssentials.EntityFrameworkCore
 
-- **NuGet Package EntityFrameworkCore**: [CSharpEssentials.EntityFrameworkCore](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore)
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
 
 CSharpEssentials.EntityFrameworkCore is a powerful extension library for Entity Framework Core that enhances its capabilities with functional programming features and DDD-friendly patterns. It provides a robust set of utilities and base classes to streamline your data access layer while maintaining clean architecture principles.
 

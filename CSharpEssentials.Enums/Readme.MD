@@ -1,5 +1,7 @@
 # String Enum Support
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 This module provides enhanced enum functionality for C# applications, focusing on string-based enum operations and conversions.
 
 ## Features

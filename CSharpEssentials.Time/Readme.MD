@@ -1,5 +1,7 @@
 # DateTimeProvider
 
+[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+
 `DateTimeProvider` is a structure designed to facilitate time management and enhance testability in modern C# applications. This structure provides more functional and testable time management using .NET's new `TimeProvider` class.
 
 ## Key Features
