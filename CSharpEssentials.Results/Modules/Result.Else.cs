@@ -1,7 +1,7 @@
 using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 
-namespace CSharpEssentials.Results;
+namespace CSharpEssentials.ResultPattern;
 
 /// <summary>
 /// Represents a result that can be either successful or a failure with associated errors.

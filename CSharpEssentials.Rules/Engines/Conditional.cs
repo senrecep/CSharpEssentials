@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Results;
+using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Rules;
 

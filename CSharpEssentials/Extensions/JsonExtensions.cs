@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Results;
+using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Json;
 
