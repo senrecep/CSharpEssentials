@@ -14,6 +14,8 @@
     <PackageTags>
       Result,ResultPattern,FunctionalProgramming,ErrorHandling,RailwayOriented,CSharpEssentials
     </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
 
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -30,9 +32,9 @@
 
   <!-- Dependencies: Results depends on Errors and Json -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.2]"
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.3]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.2]"
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.3]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"

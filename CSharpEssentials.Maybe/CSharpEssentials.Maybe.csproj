@@ -14,6 +14,8 @@
     <PackageTags>
       Maybe,Monad,FunctionalProgramming,NullSafety,LINQ,Optional,CSharpEssentials
     </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
 
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -30,9 +32,9 @@
 
   <!-- Dependencies: Maybe depends on Results and Errors -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.2]"
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.3]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.2]"
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.3]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"

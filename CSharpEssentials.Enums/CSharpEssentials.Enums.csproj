@@ -14,6 +14,8 @@
     <PackageTags>
       Enums,StringEnum,EnumAttribute,EnumUtils,Serialization,CSharpEssentials
     </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
 
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
