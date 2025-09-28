@@ -1,6 +1,6 @@
 using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Results;
+using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Maybe;
 

@@ -1,7 +1,7 @@
 using CSharpEssentials.Errors;
-using CSharpEssentials.Results.Comparers;
+using CSharpEssentials.ResultPattern.Comparers;
 
-namespace CSharpEssentials.Results.Interfaces;
+namespace CSharpEssentials.ResultPattern.Interfaces;
 
 public interface IResultBase
 {

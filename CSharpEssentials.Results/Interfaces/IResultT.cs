@@ -1,7 +1,7 @@
 using CSharpEssentials.Errors;
-using CSharpEssentials.Results.Comparers;
+using CSharpEssentials.ResultPattern.Comparers;
 
-namespace CSharpEssentials.Results.Interfaces;
+namespace CSharpEssentials.ResultPattern.Interfaces;
 /// <summary>
 /// Represents a result that can either be a success or a failure, with various methods to handle both cases.
 /// </summary>

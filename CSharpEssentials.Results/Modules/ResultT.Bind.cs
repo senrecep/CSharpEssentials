@@ -1,6 +1,6 @@
 using CSharpEssentials.Core;
 
-namespace CSharpEssentials.Results;
+namespace CSharpEssentials.ResultPattern;
 
 public readonly partial record struct Result<TValue>
 {

@@ -1,5 +1,5 @@
 
-using CSharpEssentials.Results;
+using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Rules;
 

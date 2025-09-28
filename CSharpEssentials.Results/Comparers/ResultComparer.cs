@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using CSharpEssentials.Results.Interfaces;
+using CSharpEssentials.ResultPattern.Interfaces;
 
-namespace CSharpEssentials.Results.Comparers;
+namespace CSharpEssentials.ResultPattern.Comparers;
 
 public class ResultBaseComparer : IEqualityComparer<IResultBase>
 {
