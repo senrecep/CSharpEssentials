@@ -20,7 +20,7 @@ Here's how you can contribute to the project using Git:
 
    ```bash
    # Clone your fork
-   git clone https://github.com/SenRecep/CSharpEssentials.git
+   git clone https://github.com/senrecep/CSharpEssentials.git
 
    # Navigate to the newly cloned directory
    cd CSharpEssentials
@@ -54,7 +54,7 @@ Here's how you can contribute to the project using Git:
 
    ```bash
    # Add the upstream repository
-   git remote add upstream https://github.com/SenRecep/CSharpEssentials.git
+   git remote add upstream https://github.com/senrecep/CSharpEssentials.git
 
    # Fetch upstream changes
    git fetch upstream
@@ -96,9 +96,9 @@ Pull requests are the best way to propose changes to the codebase. We actively w
 
 In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-## Report bugs using Github's [issue tracker](https://github.com/SenRecep/CSharpEssentials/issues)
+## Report bugs using Github's [issue tracker](https://github.com/senrecep/CSharpEssentials/issues)
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/SenRecep/CSharpEssentials/issues/new); it's that easy!
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/senrecep/CSharpEssentials/issues/new); it's that easy!
 
 ## Write bug reports with detail, background, and sample code
 

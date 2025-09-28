@@ -6,7 +6,7 @@
     <Title>CSharp Essentials EntityFrameworkCore</Title>
     <Product>CSharp Essentials EntityFrameworkCore</Product>
     <Version>1.0.16</Version>
-    <Authors>SenRecep</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance,NamingConventions</PackageTags>
@@ -15,12 +15,11 @@
       filters, optimistic concurrency, PostgreSQL integration, query performance monitoring, and
       domain event handling. Perfect for building maintainable and scalable data access layers in
       modern .NET applications.</Description>
-    <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
+    <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
     <PackageReadmeFile>README.MD</PackageReadmeFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageLicenseFile>LICENCE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>

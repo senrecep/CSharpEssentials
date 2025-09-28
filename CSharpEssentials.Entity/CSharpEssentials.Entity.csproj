@@ -1,11 +1,44 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Entity</PackageId>
+    <Title>CSharpEssentials.Entity</Title>
+    <Product>CSharpEssentials.Entity</Product>
+    <Description>
+      Domain-driven design (DDD) entity base classes and patterns for CSharpEssentials.
+      Provides EntityBase&lt;TId&gt; with soft delete functionality, audit trails, and domain event
+      integration.
+      Essential for building robust domain models with type safety and functional programming
+      principles.
+    </Description>
+    <PackageTags>
+      DDD,Entity,DomainDrivenDesign,SoftDelete,AuditTrail,DomainEvents,EntityBase,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <!-- Package content -->
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Entity depends on Time and Results for audit trails and domain operations -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Time" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
 
 </Project>
