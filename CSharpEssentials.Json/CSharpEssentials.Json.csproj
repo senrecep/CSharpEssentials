@@ -14,6 +14,8 @@
     <PackageTags>
       JSON,SystemTextJson,JsonConverter,DateTime,Enum,Polymorphic,Serialization,CSharpEssentials
     </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
 
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -30,7 +32,7 @@
 
   <!-- Dependencies: Json depends on Enums for enum converters -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.2]"
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.3]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"

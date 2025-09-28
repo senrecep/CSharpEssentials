@@ -13,6 +13,8 @@
     <PackageTags>
       Clone,DeepCopy,ShallowCopy,ICloneable,ObjectCopying,Immutable,CSharpEssentials
     </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
 
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
