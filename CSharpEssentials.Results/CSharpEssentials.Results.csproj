@@ -1,16 +1,43 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Results</PackageId>
+    <Title>CSharpEssentials.Results</Title>
+    <Product>CSharpEssentials.Results</Product>
+    <Description>
+      Result pattern implementation for functional error handling in C#.
+      Provides Result&lt;T&gt; and Result types for railway-oriented programming, eliminating
+      exceptions for expected failures.
+      Foundation for functional programming patterns and robust error handling.
+    </Description>
+    <PackageTags>
+      Result,ResultPattern,FunctionalProgramming,ErrorHandling,RailwayOriented,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <!-- Package content -->
   <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" />
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Results depends on Errors and Json -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
 </Project>

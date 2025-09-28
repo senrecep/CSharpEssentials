@@ -1,21 +1,52 @@
+<!-- Directory.Build.props - Centralized configuration for all CSharpEssentials packages -->
 <Project>
 	<PropertyGroup>
+		<!-- Single target framework for now -->
 		<TargetFramework>net9.0</TargetFramework>
+		<LangVersion>13.0</LangVersion>
+
+		<!-- Use project references by default for development -->
+		<UseProjectReferences Condition="'$(UseProjectReferences)' == ''">true</UseProjectReferences>
+
+		<!-- Compiler and analysis settings -->
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-
-		<AnalysisLevel>latest</AnalysisLevel>
-		<AnalysisMode>All</AnalysisMode>
+		<Optimize>true</Optimize>
+		<Deterministic>true</Deterministic>
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<CodeAnalysisTreatWarningsAsErrors>true</CodeAnalysisTreatWarningsAsErrors>
 		<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 		<RunAnalyzersDuringLiveAnalysis>true</RunAnalyzersDuringLiveAnalysis>
-		<NoWarn>1591</NoWarn>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
 		<EnableNETAnalyzers>true</EnableNETAnalyzers>
-		<Optimize>true</Optimize>
+		<AnalysisLevel>latest</AnalysisLevel>
+		<AnalysisMode>All</AnalysisMode>
+		<NoWarn>1591</NoWarn>
+		<WarningsNotAsErrors>NU1701;NU1902;NU5017;NU5118;NU5128</WarningsNotAsErrors>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+		<!-- Package metadata -->
+		<Authors>senrecep</Authors>
+		<Company>senrecep</Company>
+		<Copyright>Copyright © senrecep 2024-2025</Copyright>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
+		<RepositoryType>git</RepositoryType>
+		<RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
+		<RepositoryBranch>main</RepositoryBranch>
+
+		<!-- Version management -->
+		<Version>2.0.0</Version>
+		<AssemblyVersion>2.0.0.0</AssemblyVersion>
+		<FileVersion>2.0.0.0</FileVersion>
+		<PackageVersion>2.0.0</PackageVersion>
+
+		<!-- Documentation -->
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
+
+	<!-- Static analysis -->
 	<ItemGroup Condition="'$(MSBuildProjectExtension)' != '.dcproj'">
 		<PackageReference Include="SonarAnalyzer.CSharp" Version="*">
 			<PrivateAssets>all</PrivateAssets>
@@ -24,6 +55,7 @@
 	</ItemGroup>
 
 
+	<!-- ConfigFiles -->
 	<PropertyGroup Label="ConfigFiles">
 		<EditorConfigFile Condition=" '$(EditorConfigFile)' == '' ">
 			$([MSBuild]::GetPathOfFileAbove('.editorconfig',
@@ -32,6 +64,7 @@
 	</PropertyGroup>
 
 	<ItemGroup Label="ConfigFiles">
-		<None Condition="Exists('$(EditorConfigFile)')" Include="$(EditorConfigFile)" Visible="false" />
+		<None Condition="Exists('$(EditorConfigFile)')" Include="$(EditorConfigFile)"
+			Visible="false" />
 	</ItemGroup>
 </Project>

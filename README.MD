@@ -9,7 +9,7 @@ CSharpEssentials is a comprehensive library that enhances C#'s functional progra
 - **NuGet Package AspNetCore**: [CSharpEssentials.AspNetCore](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore)
 - **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
 - **NuGet Package GcpSecretManager**: [CSharpEssentials.GcpSecretManager](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager)
-- **GitHub Repository**: [SenRecep/CSharpEssentials](https://github.com/SenRecep/CSharpEssentials) [![GitHub stars](https://img.shields.io/github/stars/SenRecep/CSharpEssentials.svg)](https://github.com/SenRecep/CSharpEssentials/stargazers)
+- **GitHub Repository**: [senrecep/CSharpEssentials](https://github.com/senrecep/CSharpEssentials) [![GitHub stars](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials/stargazers)
 - **Author**: [Recep Şen](https://www.nuget.org/profiles/recepsen)
 
 ## 🌟 Key Features
@@ -247,6 +247,7 @@ builder.Configuration.AddGcpSecretManager(options =>
 ```
 
 Key features:
+
 - Seamless integration with .NET configuration system
 - Region-specific secret management
 - Flexible secret filtering with prefix and exact matches
@@ -511,45 +512,4 @@ For support, please open an issue in the GitHub repository or contact the mainta
 
 ## 🔍 Related Projects
 
-Take a look at [SenRecep.Aspire](https://www.nuget.org/packages/SenRecep.Aspire), a modern microservices template built with .NET Aspire 9.0. The template provides a robust foundation for building scalable, maintainable, and cloud-ready microservices applications. Check out the [GitHub repository](https://github.com/SenRecep/Aspire) for more details.
-
-## Quick Start
-
-1. Add the following configuration to your `appsettings.json`:
-
-```json
-{
-  "GoogleSecretManager": {
-    "Projects": [
-      {
-        // Required: Your Google Cloud project ID
-        "ProjectId": "your-gcp-project-id",
-        
-        // Optional: Specific region for better latency (e.g., "europe-west1", "us-central1")
-        "Region": "europe-west1",
-        
-        // Optional: Only load secrets with these prefixes
-        "PrefixFilters": ["app_", "service_"],
-        
-        // Optional: Load only these specific secrets
-        "SecretIds": ["database-password", "api-key"],
-        
-        // Optional: Skip JSON parsing for these specific secrets
-        "RawSecretIds": ["config-json", "plain-text"],
-        
-        // Optional: Skip JSON parsing for secrets with these prefixes
-        "RawSecretPrefixes": ["raw_", "text_"]
-      }
-    ]
-  }
-}
-```
-
-2. Configure the secret manager in your application:
-
-```csharp
-var builder = WebApplication.CreateBuilder(args);
-
-// Add GCP Secret Manager configuration
-builder.Configuration.AddGcpSecretManager();
-```
+Take a look at [senrecep.Aspire](https://www.nuget.org/packages/senrecep.Aspire), a modern microservices template built with .NET Aspire 9.0. The template provides a robust foundation for building scalable, maintainable, and cloud-ready microservices applications. Check out the [GitHub repository](https://github.com/senrecep/Aspire) for more details.

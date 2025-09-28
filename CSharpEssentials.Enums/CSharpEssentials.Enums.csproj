@@ -1,11 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Enums</PackageId>
+    <Title>CSharpEssentials.Enums</Title>
+    <Product>CSharpEssentials.Enums</Product>
+    <Description>
+      Enum utilities and attributes for enhanced enum functionality in C#.
+      Provides StringEnumAttribute and various enum helper methods for better enum handling and
+      serialization.
+      Essential for working with enums in modern C# applications.
+    </Description>
+    <PackageTags>
+      Enums,StringEnum,EnumAttribute,EnumUtils,Serialization,CSharpEssentials
+    </PackageTags>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <!-- Package content -->
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Enums uses System.Text.Json for JSON serialization -->
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+  </ItemGroup>
 
 </Project>

@@ -11,7 +11,7 @@
     <Title>CSharp Essentials</Title>
     <Product>CSharp Essentials</Product>
     <Version>1.0.19</Version>
-    <Authors>SenRecep</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,Monad,DiscriminatedUnions,TypeSafety,ErrorHandling,DDD,EntityFramework,TimeManagement,Extensions,LINQ</PackageTags>
@@ -20,12 +20,11 @@
       Features include: domain-driven design support, enhanced Entity Framework integration,
       testable time management, JSON utilities, and LINQ extensions. Built for modern C# development
       with focus on maintainability, testability, and functional programming principles.</Description>
-    <PackageProjectUrl>https://github.com/SenRecep/CSharpEssentials</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/SenRecep/CSharpEssentials</RepositoryUrl>
+    <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
     <PackageReadmeFile>README.MD</PackageReadmeFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageLicenseFile>LICENCE</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>

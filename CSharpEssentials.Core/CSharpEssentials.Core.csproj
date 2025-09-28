@@ -1,11 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <Deterministic>true</Deterministic>
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Core</PackageId>
+    <Title>CSharpEssentials.Core</Title>
+    <Product>CSharpEssentials.Core</Product>
+    <Description>
+      Core utilities and extensions for C# development.
+      Includes string extensions, collection extensions, general purpose utilities, HTTP constants,
+      and GUID utilities.
+      Foundation package for all CSharpEssentials libraries.
+    </Description>
+    <PackageTags>
+      Core,Extensions,StringExtensions,CollectionExtensions,HttpCodes,Guids,Utilities,CSharpEssentials
+    </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>README.MD</PackageReadmeFile>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>embedded</DebugType>
+    <IncludeBuildOutput>true</IncludeBuildOutput>
   </PropertyGroup>
 
+  <!-- Package content -->
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- No dependencies: Core is the foundation module -->
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="9.0.0" />
+  </ItemGroup>
 </Project>
