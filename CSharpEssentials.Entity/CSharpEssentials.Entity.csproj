@@ -31,9 +31,9 @@
 
   <!-- Dependencies: Entity depends on Time and Results for audit trails and domain operations -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Time" Version="[2.0.0]"
+    <PackageReference Include="CSharpEssentials.Time" Version="[2.0.2]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.0]"
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.2]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj"
