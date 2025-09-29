@@ -34,6 +34,16 @@ public static class Extensions
         JsonSerializer.Deserialize<TClass>(json, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
 
     /// <summary>
+    /// Converts a JSON string to an object.
+    /// </summary>
+    /// <param name="json"></param>
+    /// <param name="returnType"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    public static object? ConvertFromJson(this string json, Type returnType, JsonSerializerOptions? options = null) =>
+        JsonSerializer.Deserialize(json, returnType, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
+
+    /// <summary>
     /// Converts a JSON string to a JSON document.
     /// </summary>
     private static readonly Func<string, JsonDocument?>[] _deserializers = [
