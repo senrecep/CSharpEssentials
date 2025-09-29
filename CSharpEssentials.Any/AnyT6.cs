@@ -1,80 +1,113 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CSharpEssentials.Json;
 
 namespace CSharpEssentials.Any;
 
 public readonly struct Any<T0, T1, T2, T3, T4, T5>
 {
-    private readonly object? _value;
-
-    private Any(int index, object? value)
+    private static readonly Dictionary<int, Type> _typeMap = new()
     {
-        Index = index;
-        _value = value;
-    }
+        { 0, typeof(T0) },
+        { 1, typeof(T1) },
+        { 2, typeof(T2) },
+        { 3, typeof(T3) },
+        { 4, typeof(T4) },
+        { 5, typeof(T5) }
+    };
+
+    [JsonConstructor]
+    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(_typeMap, index, value);
+    private Any(T0 value) => (Index, Value) = (0, value);
+    private Any(T1 value) => (Index, Value) = (1, value);
+    private Any(T2 value) => (Index, Value) = (2, value);
+    private Any(T3 value) => (Index, Value) = (3, value);
+    private Any(T4 value) => (Index, Value) = (4, value);
+    private Any(T5 value) => (Index, Value) = (5, value);
 
     public readonly int Index { get; }
     public readonly object? Value { get; }
 
+    [JsonIgnore]
     public bool IsFirst => Index == 0;
+    [JsonIgnore]
     public bool IsSecond => Index == 1;
+    [JsonIgnore]
     public bool IsThird => Index == 2;
+    [JsonIgnore]
     public bool IsFourth => Index == 3;
+    [JsonIgnore]
     public bool IsFifth => Index == 4;
+    [JsonIgnore]
     public bool IsSixth => Index == 5;
 
 
-    public T0 GetFirst() => Index == 0 ? (T0)_value! : throw InvalidOperation;
-    public T1 GetSecond() => Index == 1 ? (T1)_value! : throw InvalidOperation;
-    public T2 GetThird() => Index == 2 ? (T2)_value! : throw InvalidOperation;
-    public T3 GetFourth() => Index == 3 ? (T3)_value! : throw InvalidOperation;
-    public T4 GetFifth() => Index == 4 ? (T4)_value! : throw InvalidOperation;
-    public T5 GetSixth() => Index == 5 ? (T5)_value! : throw InvalidOperation;
+    public T0 GetFirst() => Index == 0 ? (T0)Value! : throw Any.InvalidOperation;
+    public T1 GetSecond() => Index == 1 ? (T1)Value! : throw Any.InvalidOperation;
+    public T2 GetThird() => Index == 2 ? (T2)Value! : throw Any.InvalidOperation;
+    public T3 GetFourth() => Index == 3 ? (T3)Value! : throw Any.InvalidOperation;
+    public T4 GetFifth() => Index == 4 ? (T4)Value! : throw Any.InvalidOperation;
+    public T5 GetSixth() => Index == 5 ? (T5)Value! : throw Any.InvalidOperation;
 
-    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T0 value) => new(0, value);
-    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T1 value) => new(1, value);
-    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T2 value) => new(2, value);
-    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T3 value) => new(3, value);
-    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T4 value) => new(4, value);
-    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T5 value) => new(5, value);
+    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T0 value) => new(value);
+    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T1 value) => new(value);
+    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T2 value) => new(value);
+    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T3 value) => new(value);
+    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T4 value) => new(value);
+    public static implicit operator Any<T0, T1, T2, T3, T4, T5>(T5 value) => new(value);
 
-    public void Switch(Action<T0> f0, Action<T1> f1, Action<T2> f2, Action<T3> f3, Action<T4> f4, Action<T5> f5)
+    public AnyActionStatus Switch(
+        Action<T0>? first = null,
+        Action<T1>? second = null,
+        Action<T2>? third = null,
+        Action<T3>? fourth = null,
+        Action<T4>? fifth = null,
+        Action<T5>? sixth = null)
     {
+        ArgumentNullException.ThrowIfNull(Value);
         switch (Index)
         {
-            case 0:
-                f0((T0)_value!);
-                break;
-            case 1:
-                f1((T1)_value!);
-                break;
-            case 2:
-                f2((T2)_value!);
-                break;
-            case 3:
-                f3((T3)_value!);
-                break;
-            case 4:
-                f4((T4)_value!);
-                break;
-            case 5:
-                f5((T5)_value!);
-                break;
+            case 0 when first is not null:
+                first((T0)Value);
+                return AnyActionStatus.Executed;
+            case 1 when second is not null:
+                second((T1)Value);
+                return AnyActionStatus.Executed;
+            case 2 when third is not null:
+                third((T2)Value);
+                return AnyActionStatus.Executed;
+            case 3 when fourth is not null:
+                fourth((T3)Value);
+                return AnyActionStatus.Executed;
+            case 4 when fifth is not null:
+                fifth((T4)Value);
+                return AnyActionStatus.Executed;
+            case 5 when sixth is not null:
+                sixth((T5)Value);
+                return AnyActionStatus.Executed;
             default:
-                throw InvalidOperation;
+                return AnyActionStatus.NotExecuted;
         }
     }
 
-    public TResult Match<TResult>(Func<T0, TResult> f0, Func<T1, TResult> f1, Func<T2, TResult> f2, Func<T3, TResult> f3, Func<T4, TResult> f4, Func<T5, TResult> f5)
+    public AnyActionResult<TResult> Match<TResult>(
+        Func<T0, TResult>? first = null,
+        Func<T1, TResult>? second = null,
+        Func<T2, TResult>? third = null,
+        Func<T3, TResult>? fourth = null,
+        Func<T4, TResult>? fifth = null,
+        Func<T5, TResult>? sixth = null)
     {
+        ArgumentNullException.ThrowIfNull(Value);
         return Index switch
         {
-            0 => f0((T0)_value!),
-            1 => f1((T1)_value!),
-            2 => f2((T2)_value!),
-            3 => f3((T3)_value!),
-            4 => f4((T4)_value!),
-            5 => f5((T5)_value!),
-            _ => throw InvalidOperation
+            0 when first is not null => first((T0)Value),
+            1 when second is not null => second((T1)Value),
+            2 when third is not null => third((T2)Value),
+            3 when fourth is not null => fourth((T3)Value),
+            4 when fifth is not null => fifth((T4)Value),
+            5 when sixth is not null => sixth((T5)Value),
+            _ => AnyActionStatus.NotExecuted
         };
     }
 
@@ -85,6 +118,5 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
     public static Any<T0, T1, T2, T3, T4, T5> Fifth(T4 value) => value;
     public static Any<T0, T1, T2, T3, T4, T5> Sixth(T5 value) => value;
 
-    public override string ToString() => _value.ConvertToJson();
-    private static Exception InvalidOperation => new InvalidOperationException("No value");
+    public override string ToString() => Value.ConvertToJson();
 }

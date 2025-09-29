@@ -12,9 +12,11 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     private readonly T? _value;
 
     [JsonConstructor]
-    private Maybe(T? value)
+    private Maybe(
+        T? data,
+        bool hasValue)
     {
-        if (Equals(value, default(T)))
+        if (data is null || !hasValue)
         {
             HasValue = false;
             _value = default;
@@ -22,7 +24,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         }
 
         HasValue = true;
-        _value = value;
+        _value = data;
     }
 
 
@@ -38,6 +40,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     /// </summary>
     [MemberNotNullWhen(false, nameof(Value))]
     [MemberNotNullWhen(false, nameof(_value))]
+    [JsonIgnore]
     public readonly bool HasNoValue => !HasValue;
 
     /// <summary>
@@ -117,14 +120,18 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static Maybe<T> From(T? value) => new(value);
+    public static Maybe<T> From(T? value) => new(value, value is not null);
 
     /// <summary>
     /// Creates a Maybe from the specified function.
     /// </summary>
     /// <param name="func"></param>
     /// <returns></returns>
-    public static Maybe<T> From(Func<T?> func) => new(func());
+    public static Maybe<T> From(Func<T?> func)
+    {
+        T? value = func();
+        return new(value, value is not null);
+    }
 
     /// <summary>
     /// Creates a Maybe from the specified task.
@@ -135,8 +142,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     public static async Task<Maybe<T>> FromAsync(Task<T?> task, CancellationToken cancellationToken = default)
     {
         T? value = await task.WithCancellation(cancellationToken);
-
-        return new Maybe<T>(value);
+        return new(value, value is not null);
     }
 
     /// <summary>
@@ -149,7 +155,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     {
         T? value = await taskFunc().WithCancellation(cancellationToken);
 
-        return new Maybe<T>(value);
+        return new(value, value is not null);
     }
 
     public static bool operator ==(Maybe<T> maybe, T? value)
