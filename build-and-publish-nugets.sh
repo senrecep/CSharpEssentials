@@ -263,7 +263,7 @@ package_project() {
     local project_name
     project_name=$(basename "$project_path" .csproj)
     
-    local pack_cmd="dotnet pack '$project_path' -c $BUILD_CONFIG -o '$NUPKGS_DIR' --no-build"
+    local pack_cmd="dotnet pack '$project_path' -c $BUILD_CONFIG -o '$NUPKGS_DIR'"
     
     # Add properties to ensure package content is included
     pack_cmd="$pack_cmd -p:IsPackable=true -p:IncludeBuildOutput=true -p:GeneratePackageOnBuild=false"
