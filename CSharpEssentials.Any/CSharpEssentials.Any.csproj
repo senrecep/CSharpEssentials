@@ -34,7 +34,7 @@
 
   <!-- Dependencies: Any depends on Json for serialization -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.6]"
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.7]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
