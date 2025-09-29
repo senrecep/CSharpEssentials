@@ -33,7 +33,7 @@
 		<!-- Package metadata -->
 		<Authors>senrecep</Authors>
 		<Company>senrecep</Company>
-		<Copyright>Copyright © senrecep 2024-2025</Copyright>
+		<Copyright>Copyright © senrecep 2024-2026</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
 		<RepositoryType>git</RepositoryType>
@@ -44,7 +44,7 @@
 		<Version>2.0.0</Version>
 		<AssemblyVersion>2.0.0.1</AssemblyVersion>
 		<FileVersion>2.0.0.1</FileVersion>
-		<PackageVersion>2.0.5</PackageVersion>
+		<PackageVersion>2.0.6</PackageVersion>
 
 		<!-- Documentation -->
 		<IncludeSymbols>true</IncludeSymbols>
