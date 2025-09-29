@@ -38,7 +38,7 @@ CSharpEssentials is a comprehensive library that enhances C#'s functional progra
 
 ### Maybe Monad
 
-[`Maybe<T>`](CSharpEssentials/Monad/Readme.MD) - Safe handling of nullable values:
+[`Maybe<T>`](CSharpEssentials.Maybe/Readme.MD) - Safe handling of nullable values:
 
 ```csharp
 Maybe<string> someValue = Maybe.From("Hello");
@@ -52,7 +52,7 @@ var result = someValue
 
 ### Result Pattern
 
-[`Result<T>`](CSharpEssentials/Results/Readme.MD) - Functional approach to error handling:
+[`Result<T>`](CSharpEssentials.Results/Readme.MD) - Functional approach to error handling:
 
 ```csharp
 public Result<User> CreateUser(UserDto dto)
@@ -67,7 +67,7 @@ public Result<User> CreateUser(UserDto dto)
 
 ### Rule Engine
 
-[`RuleEngine`](CSharpEssentials/Rules/Readme.MD) - Complex business rule management:
+[`RuleEngine`](CSharpEssentials.Rules/Readme.MD) - Complex business rule management:
 
 ```csharp
 public class EmailValidationRule : IRule<string>
@@ -83,7 +83,7 @@ public class EmailValidationRule : IRule<string>
 
 ### Error Types
 
-[`Error`](CSharpEssentials/Errors/Readme.MD) - Structured error handling:
+[`Error`](CSharpEssentials.Errors/Readme.MD) - Structured error handling:
 
 ```csharp
 var error = Error.Validation(
@@ -94,7 +94,7 @@ var error = Error.Validation(
 
 ### Discriminated Unions
 
-[`Any<T0,T1,...>`](CSharpEssentials/Any/Readme.MD) - Type-safe union types:
+[`Any<T0,T1,...>`](CSharpEssentials.Any/Readme.MD) - Type-safe union types:
 
 ```csharp
 public Any<string, int> ParseOrKeepAsString(string input)
@@ -137,7 +137,7 @@ public void Configure(EntityTypeBuilder<Product> builder)
 
 ### Time Management
 
-[`DateTimeProvider`](CSharpEssentials/Time/Readme.MD) - Testable datetime handling:
+[`DateTimeProvider`](CSharpEssentials.Time/Readme.MD) - Testable datetime handling:
 
 ```csharp
 public class OrderService
@@ -153,7 +153,7 @@ public class OrderService
 
 ### JSON Utilities
 
-[`JSON`](CSharpEssentials/Json/Readme.MD) - Enhanced JSON capabilities:
+[`JSON`](CSharpEssentials.Json/Readme.MD) - Enhanced JSON capabilities:
 
 ```csharp
 var options = EnhancedJsonSerializerOptions.DefaultOptions;
@@ -162,7 +162,7 @@ string json = myObject.ConvertToJson(options);
 
 ### Extensions
 
-[`Extensions`](CSharpEssentials/Extensions/Readme.MD) - Useful extension methods:
+[`Extensions`](CSharpEssentials/Readme.MD) - Useful extension methods:
 
 ```csharp
 // String transformations
@@ -438,7 +438,7 @@ using CSharpEssentials.RequestResponseLogging;
 - [Maybe Monad](CSharpEssentials.Maybe/Readme.MD) - Null-safe programming with Maybe pattern
 - [Result Pattern](CSharpEssentials.Results/Readme.MD) - Railway-oriented programming with Result types
 - [Any Type (Discriminated Unions)](CSharpEssentials.Any/Readme.MD) - Type-safe union types for C#
-- [Extensions](CSharpEssentials/Extensions/Readme.MD) - Functional programming extension methods
+- [Extensions](CSharpEssentials/Readme.MD) - Functional programming extension methods
 
 #### Error Handling & Validation
 
@@ -503,7 +503,7 @@ using CSharpEssentials.RequestResponseLogging;
 #### Core Packages
 
 - [CSharpEssentials](CSharpEssentials/Readme.MD) - Main package overview
-- [CSharpEssentials.Core](CSharpEssentials.Core/README.MD) - Core utilities documentation
+- [CSharpEssentials.Core](CSharpEssentials.Core/Readme.MD) - Core utilities documentation
 
 #### Functional Programming
 

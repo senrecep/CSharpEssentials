@@ -32,7 +32,7 @@
 
   <!-- Dependencies: Json depends on Enums for enum converters -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.5]"
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.6]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
