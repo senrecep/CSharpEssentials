@@ -8,10 +8,11 @@
 
 - Support for 2 to 8 different types (from `Any<T0, T1>` to `Any<T0, T1, ..., T7>`)
 - Implicit conversion support
-- Pattern matching and switch expression support
+- Pattern matching and switch expression support with execution status tracking
 - Type safety at compile time
 - Built-in JSON serialization support
 - Null-safety by design
+- Graceful handling of missing pattern handlers with `AnyActionStatus` and `AnyActionResult<T>`
 
 ## Usage Examples
 
@@ -69,30 +70,114 @@ public static Result<Any<string, int>> ValidateAndParse(string? input)
 }
 ```
 
+### 5. Partial Pattern Matching
+
+The new implementation allows for graceful handling of partial pattern matching:
+
+```csharp
+Any<string, int, bool> value = true;
+
+// Only handle specific cases you care about
+AnyActionStatus status = value.Switch(
+    str => Console.WriteLine($"String: {str}"),
+    // Note: no handler for int or bool
+);
+
+if (status == AnyActionStatus.NotExecuted)
+{
+    Console.WriteLine("No handler was provided for this type");
+}
+
+// Similarly with Match
+AnyActionResult<string> result = value.Match(
+    str => $"Processing string: {str}"
+    // No handlers for int or bool
+);
+
+if (result.Status == AnyActionStatus.Executed)
+{
+    Console.WriteLine(result.Result);
+}
+```
+
 ## Pattern Matching
 
 `Any` type provides two different approaches for pattern matching:
 
 ### 1. Switch Method
 
-Use when you need to perform actions without returning a value:
+Use when you need to perform actions and get execution status. Returns `AnyActionStatus` indicating whether an action was executed:
 
 ```csharp
-value.Switch(
+AnyActionStatus status = value.Switch(
     str => Console.WriteLine($"String: {str}"),
     num => Console.WriteLine($"Number: {num}")
 );
+
+// Check if an action was executed
+if (status == AnyActionStatus.Executed)
+{
+    Console.WriteLine("Action was successfully executed");
+}
+else
+{
+    Console.WriteLine("No matching action was provided");
+}
 ```
 
 ### 2. Match Method
 
-Use when you need to transform the value into another type:
+Use when you need to transform the value into another type. Returns `AnyActionResult<TResult>` with both status and result:
 
 ```csharp
-string result = value.Match(
+AnyActionResult<string> result = value.Match(
     str => $"String value: {str}",
     num => $"Number value: {num}"
 );
+
+// Check the execution status and get the result
+if (result.Status == AnyActionStatus.Executed)
+{
+    string transformedValue = result.Result;
+    Console.WriteLine(transformedValue);
+}
+else
+{
+    Console.WriteLine("No matching transformation function was provided");
+}
+```
+
+## Action Result Types
+
+The library provides specialized types for handling pattern matching results:
+
+### AnyActionStatus
+
+An enum indicating the execution status of pattern matching operations:
+
+```csharp
+public enum AnyActionStatus
+{
+    NotExecuted,  // No matching handler was provided
+    Executed      // A handler was found and executed
+}
+```
+
+### AnyActionResul<TResult>
+
+A result type that combines execution status with the actual result:
+
+```csharp
+AnyActionResult<string> result = value.Match(
+    str => $"Got string: {str}",
+    num => $"Got number: {num}"
+);
+
+// Access both status and result
+if (result.Status == AnyActionStatus.Executed)
+{
+    Console.WriteLine(result.Result);
+}
 ```
 
 ## Type Checking and Value Retrieval
@@ -132,8 +217,11 @@ public static Any<int, string> CreateExample(bool condition)
 1. Use as return types for functions that can return different types
 2. Leverage in domain modeling for different entity types
 3. Combine with pattern matching for elegant type handling
-4. Keep type count reasonable (2-4 types is ideal)
-5. Create meaningful type combinations that make sense in your domain
+4. Always check `AnyActionStatus` when using `Switch` method to ensure actions were executed
+5. Use `AnyActionResult<T>` when you need both execution status and transformation result
+6. Provide handlers for all expected cases in `Switch` and `Match` methods
+7. Keep type count reasonable (2-4 types is ideal)
+8. Create meaningful type combinations that make sense in your domain
 
 ## Performance Characteristics
 
