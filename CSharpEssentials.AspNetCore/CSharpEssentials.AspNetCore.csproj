@@ -52,11 +52,11 @@
 
   <!-- Dependencies: AspNetCore depends on Errors, Json, and Results -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.4]"
+    <PackageReference Include="CSharpEssentials.Errors" Version="[2.0.5]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.4]"
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.5]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.4]"
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.0.5]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
