@@ -1,4 +1,7 @@
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
@@ -12,6 +15,7 @@ public static class Extensions
        this IQueryable<T> query,
        IPaginationRequest paginationRequest,
        Func<string, Expression<Func<T, bool>>>? search = null,
+        bool includeTotalCount = true,
        CancellationToken cancellationToken = default)
     {
         paginationRequest.Normalize();
@@ -20,46 +24,66 @@ public static class Extensions
             query = query
                 .Where(search(paginationRequest.Search));
 
-        int count = await query
-            .CountAsync(cancellationToken);
+        int count = includeTotalCount ? await query
+            .CountAsync(cancellationToken)
+            : -1;
 
-        T[] data = await query
+        IReadOnlyList<T> data = await query
             .Skip(paginationRequest.SkipCount())
             .Take(paginationRequest.PageSize)
-            .ToArrayAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
 
-        return new PaginationResponse<T>(data, paginationRequest.PageNumber, data.Length, count);
+
+        return new PaginationResponse<T>(data, paginationRequest.PageNumber, paginationRequest.PageSize, count);
     }
 
+    private static readonly ConcurrentDictionary<LambdaExpression, Delegate> _cursorSelectorCache = new(
+        Environment.ProcessorCount * 2,
+        31
+    );
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static TCursor GetCursor<T, TCursor>(
+        this T data,
+        Expression<Func<T, TCursor>> cursorSelector)
+    {
+        return Unsafe.As<Func<T, TCursor>>(
+            _cursorSelectorCache.GetOrAdd(
+                cursorSelector,
+                static key => key.Compile(preferInterpretation: false)
+            )
+        )(data);
+    }
     public static async Task<CursorPaginationResponse<T, TCursor>> PaginateAsync<T, TCursor>(
         this IQueryable<T> query,
         ICursorPaginationRequest<TCursor> request,
         Expression<Func<T, TCursor>> cursorSelector,
         bool isAscending = true,
         Func<string, Expression<Func<T, bool>>>? search = null,
-        Func<IOrderedQueryable<T>, IOrderedQueryable<T>>? order = null,
+        Func<IOrderedQueryable<T>, IOrderedQueryable<T>>? thenBy = null,
         CancellationToken cancellationToken = default)
         where TCursor : IComparable<TCursor>
     {
         request.Normalize();
         IQueryable<T> q = query;
 
-        if (request.Cursor is not null)
+        if (request.Cursor.IsNotNull() &&
+            !EqualityComparer<TCursor>.Default.Equals(request.Cursor, default))
         {
             ParameterExpression parameter = cursorSelector.Parameters[0];
             ConstantExpression cursorConstant = Expression.Constant(request.Cursor, typeof(TCursor));
-
-            Expression comparison = isAscending
-                ? Expression.GreaterThan(cursorSelector.Body, cursorConstant)
-                : Expression.LessThan(cursorSelector.Body, cursorConstant);
-
-            q = q.Where(Expression.Lambda<Func<T, bool>>(comparison, parameter));
+            Func<Expression, Expression, BinaryExpression> makeComparison = isAscending
+                ? Expression.GreaterThan
+                : Expression.LessThan;
+            Expression comparison = makeComparison(cursorSelector.Body, cursorConstant);
+            var lambda = Expression.Lambda<Func<T, bool>>(comparison, parameter);
+            q = q.Where(lambda);
         }
 
         q = search.IsNotNull() && request.Search.IsNotEmpty() ? q.Where(search(request.Search)) : q;
 
         IOrderedQueryable<T> cursorOrdered = isAscending ? q.OrderBy(cursorSelector) : q.OrderByDescending(cursorSelector);
-        q = order is not null ? order(cursorOrdered) : cursorOrdered;
+        q = thenBy is not null ? thenBy(cursorOrdered) : cursorOrdered;
 
         List<T> items = await q.Take(request.Limit + 1).ToListAsync(cancellationToken);
 
@@ -67,12 +91,14 @@ public static class Extensions
         if (hasMore.IsTrue())
             items.RemoveAt(items.Count - 1);
 
-        if (hasMore.IsFalse())
-            return new CursorPaginationResponse<T, TCursor>(items);
+        if (!hasMore || items.Count == 0)
+        {
+            return new CursorPaginationResponse<T, TCursor>(items, default, hasMore);
+        }
 
-        TCursor cursor = cursorSelector.Compile()(items[^1]);
+        TCursor? nextCursor = items[^1].GetCursor(cursorSelector);
 
-        return new CursorPaginationResponse<T, TCursor>(items, cursor, hasMore);
+        return new CursorPaginationResponse<T, TCursor>(items, nextCursor, hasMore);
     }
 
 }

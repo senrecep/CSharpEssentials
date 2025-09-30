@@ -3,7 +3,7 @@ using System;
 namespace CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
 
 public record PaginationResponse<T>(
-    IEnumerable<T> Items,
+    IReadOnlyList<T> Items,
     int PageNumber,
     int PageSize,
     int TotalCount)
