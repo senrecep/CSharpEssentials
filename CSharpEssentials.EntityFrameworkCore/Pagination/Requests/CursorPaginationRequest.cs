@@ -13,9 +13,9 @@ public interface ICursorPaginationRequest<TCursor>
     }
 }
 
-public record CursorPaginationRequest<TCursor>
+public record CursorPaginationRequest<TCursor> : ICursorPaginationRequest<TCursor>
 {
     public string? Search { get; set; }
     public TCursor? Cursor { get; set; }
-    public int Limit { get; set; }
+    public int Limit { get; set; } = 10;
 }
