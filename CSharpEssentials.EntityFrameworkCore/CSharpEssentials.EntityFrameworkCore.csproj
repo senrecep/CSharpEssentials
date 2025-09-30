@@ -45,15 +45,23 @@
 
   <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, and Json -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.8]" Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Entity" Version="[2.0.8]" Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.8]" Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.8]" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.9]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Entity" Version="[2.0.9]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.9]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.9]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
 
-    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
   </ItemGroup>
 

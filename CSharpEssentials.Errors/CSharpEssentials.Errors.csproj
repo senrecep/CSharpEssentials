@@ -32,9 +32,9 @@
 
   <!-- Dependencies: Errors depends on Core and Enums -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.8]"
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.9]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.8]"
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.9]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
