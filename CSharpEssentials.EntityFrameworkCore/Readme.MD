@@ -9,6 +9,7 @@ CSharpEssentials.EntityFrameworkCore is a powerful extension library for Entity 
 - **Base Entity Classes**: Rich set of base classes for domain entities
 - **Soft Delete Support**: Built-in soft delete functionality with query filters
 - **Audit Trail**: Automatic tracking of creation and modification timestamps
+- **Pagination Support**: Both offset-based and cursor-based pagination with search capabilities
 - **Query Filters**: Flexible and composable query filter system
 - **Optimistic Concurrency**: Easy setup for version-based concurrency control
 - **Extension Methods**: Useful extensions for DbContext and entity operations
@@ -242,6 +243,178 @@ warn: SlowQueryInterceptor[0]
       Slow query (00:00:01.5000000): SELECT * FROM Products WHERE CategoryId = @p0, Parameters: @p0=5, Transaction: No, Database: ProductDb in ReaderExecuted
 ```
 
+### Pagination Support
+
+The library provides comprehensive pagination support with two different approaches: traditional offset-based pagination and cursor-based pagination for better performance with large datasets.
+
+#### 1. Offset-Based Pagination
+
+Traditional pagination using page numbers and page sizes:
+
+```csharp
+// Basic pagination request
+var request = new PaginationRequest
+{
+    PageNumber = 1,
+    PageSize = 10,
+    Search = "product name"
+};
+
+// Paginate query with search
+var result = await dbContext.Products
+    .PaginateAsync(
+        request,
+        search: searchTerm => p => p.Name.Contains(searchTerm),
+        includeTotalCount: true);
+
+// Access pagination information
+Console.WriteLine($"Total items: {result.TotalCount}");
+Console.WriteLine($"Total pages: {result.TotalPages}");
+Console.WriteLine($"Has next page: {result.HasNextPage}");
+Console.WriteLine($"Has previous page: {result.HasPreviousPage}");
+
+// Access the data
+foreach (var item in result.Items)
+{
+    Console.WriteLine(item.Name);
+}
+```
+
+#### 2. Cursor-Based Pagination
+
+High-performance pagination for large datasets using cursors:
+
+```csharp
+// Basic cursor pagination request
+var request = new CursorPaginationRequest<DateTime>
+{
+    Cursor = DateTime.UtcNow.AddDays(-7), // Start from a week ago
+    Limit = 20,
+    Search = "urgent"
+};
+
+// Paginate with cursor
+var result = await dbContext.Orders
+    .PaginateAsync(
+        request,
+        cursorSelector: o => o.CreatedAt,
+        isAscending: true,
+        search: searchTerm => o => o.Status.Contains(searchTerm),
+        thenBy: q => q.ThenBy(o => o.Id)); // Secondary sort for consistency
+
+// Check if there are more items
+if (result.HasMore)
+{
+    Console.WriteLine($"Next cursor: {result.Next}");
+
+    // Use the next cursor for the next request
+    var nextRequest = new CursorPaginationRequest<DateTime>
+    {
+        Cursor = result.Next,
+        Limit = 20
+    };
+}
+
+// Access the data
+foreach (var order in result.Items)
+{
+    Console.WriteLine($"Order {order.Id} created at {order.CreatedAt}");
+}
+```
+
+#### 3. Advanced Pagination Examples
+
+**Complex search with multiple criteria:**
+
+```csharp
+// Define a custom search function
+Func<string, Expression<Func<Product, bool>>> complexSearch = searchTerm =>
+    p => p.Name.Contains(searchTerm) ||
+         p.Description.Contains(searchTerm) ||
+         p.Category.Name.Contains(searchTerm);
+
+var result = await dbContext.Products
+    .Include(p => p.Category)
+    .PaginateAsync(request, complexSearch);
+```
+
+**Cursor pagination with composite cursor:**
+
+```csharp
+// For more complex sorting scenarios, you can use composite cursors
+public record ProductCursor(DateTime CreatedAt, Guid Id);
+
+var request = new CursorPaginationRequest<ProductCursor>
+{
+    Cursor = new ProductCursor(DateTime.UtcNow.AddDays(-1), Guid.Empty),
+    Limit = 50
+};
+
+// Note: For composite cursors, you'd need to implement custom comparison logic
+```
+
+**Performance optimized pagination:**
+
+```csharp
+// Disable total count calculation for better performance
+var result = await dbContext.Products
+    .AsNoTracking() // Don't track entities for read-only scenarios
+    .PaginateAsync(
+        request,
+        includeTotalCount: false); // Skip expensive COUNT query
+
+// Use cursor pagination for very large datasets
+var cursorResult = await dbContext.Logs
+    .AsNoTracking()
+    .PaginateAsync(
+        cursorRequest,
+        l => l.Timestamp,
+        isAscending: false); // Latest first
+```
+
+#### 4. Custom Pagination Models
+
+You can create custom pagination request models by implementing the interfaces:
+
+```csharp
+public class ProductSearchRequest : IPaginationRequest
+{
+    public string? Search { get; set; }
+    public int PageNumber { get; set; } = 1;
+    public int PageSize { get; set; } = 10;
+
+    // Additional properties for product-specific filtering
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
+    public string? Category { get; set; }
+}
+
+// Usage with custom filtering
+var searchRequest = new ProductSearchRequest
+{
+    Search = "laptop",
+    MinPrice = 500,
+    MaxPrice = 2000,
+    Category = "Electronics"
+};
+
+// Apply additional filters before pagination
+var query = dbContext.Products.AsQueryable();
+
+if (searchRequest.MinPrice.HasValue)
+    query = query.Where(p => p.Price >= searchRequest.MinPrice);
+
+if (searchRequest.MaxPrice.HasValue)
+    query = query.Where(p => p.Price <= searchRequest.MaxPrice);
+
+if (!string.IsNullOrEmpty(searchRequest.Category))
+    query = query.Where(p => p.Category.Name == searchRequest.Category);
+
+var result = await query.PaginateAsync(
+    searchRequest,
+    search: term => p => p.Name.Contains(term) || p.Description.Contains(term));
+```
+
 ## 🔧 Best Practices
 
 1. **Entity Design**
@@ -274,10 +447,18 @@ warn: SlowQueryInterceptor[0]
    - Use Result pattern for error handling
 
 5. **Microservices Architecture**
+
    - Keep DbContext scoped to bounded contexts
    - Use domain events for cross-service communication
    - Implement proper entity isolation
    - Use proper naming conventions for database objects
+
+6. **Pagination Performance**
+   - Use cursor-based pagination for large datasets (> 10,000 records)
+   - Disable total count calculation when not needed for better performance
+   - Use `AsNoTracking()` for read-only pagination scenarios
+   - Implement proper indexing on cursor fields (e.g., CreatedAt, Id)
+   - Use composite cursors for consistent ordering in high-concurrency scenarios
 
 ## 📚 Examples
 
