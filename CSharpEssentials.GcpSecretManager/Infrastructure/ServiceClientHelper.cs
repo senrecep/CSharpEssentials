@@ -3,7 +3,7 @@ using Grpc.Core;
 using Polly;
 using Polly.Retry;
 
-namespace CSharpEssentials.GcpSecretManager.Infrastructure.Internal;
+namespace CSharpEssentials.GcpSecretManager.Infrastructure;
 
 internal interface IServiceClientHelper
 {
