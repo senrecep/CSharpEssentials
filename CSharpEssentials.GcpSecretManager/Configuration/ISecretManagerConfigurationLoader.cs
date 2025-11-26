@@ -1,7 +1,7 @@
 using Google.Cloud.SecretManager.V1;
 using Microsoft.Extensions.Configuration;
 
-namespace CSharpEssentials.GcpSecretManager;
+namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 /// <summary>
 /// Defines methods for loading and filtering secrets from Google Cloud Secret Manager.

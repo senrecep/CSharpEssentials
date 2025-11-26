@@ -1,15 +1,15 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using CSharpEssentials.GcpSecretManager.Infrastructure;
+using CSharpEssentials.GcpSecretManager.Models.Internal;
+using Google.Api.Gax;
 using Google.Cloud.SecretManager.V1;
 using Grpc.Core;
 using Microsoft.Extensions.Configuration;
 using Polly;
 using Polly.Retry;
-using Google.Api.Gax;
-using CSharpEssentials.GcpSecretManager.Models.Internal;
-using CSharpEssentials.GcpSecretManager.Infrastructure.Internal;
 
-namespace CSharpEssentials.GcpSecretManager.Configuration.Internal;
+namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 internal sealed class SecretManagerConfigurationProvider(
     List<ProjectSecretLoadContext> projectConfigs,
@@ -38,7 +38,7 @@ internal sealed class SecretManagerConfigurationProvider(
 
             Dictionary<string, string?>[] results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
-            foreach (Dictionary<string, string?>? result in results)
+            foreach (Dictionary<string, string?> result in results)
             {
                 foreach ((string key, string value) in result)
                 {

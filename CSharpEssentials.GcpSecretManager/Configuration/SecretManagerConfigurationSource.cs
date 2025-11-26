@@ -1,10 +1,10 @@
+using CSharpEssentials.GcpSecretManager.Infrastructure;
+using CSharpEssentials.GcpSecretManager.Models.Internal;
 using Google.Api.Gax.ResourceNames;
 using Google.Cloud.SecretManager.V1;
 using Microsoft.Extensions.Configuration;
-using CSharpEssentials.GcpSecretManager.Infrastructure.Internal;
-using CSharpEssentials.GcpSecretManager.Models.Internal;
 
-namespace CSharpEssentials.GcpSecretManager.Configuration.Internal;
+namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 internal sealed class SecretManagerConfigurationSource : IConfigurationSource
 {
