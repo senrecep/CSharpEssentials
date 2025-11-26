@@ -338,7 +338,7 @@ package_projects_batch() {
 }
 
 # Define project dependencies in levels
-declare -A PROJECT_LEVELS
+declare -a PROJECT_LEVELS
 PROJECT_LEVELS=(
     [0]="CSharpEssentials.Core CSharpEssentials.Enums CSharpEssentials.Time CSharpEssentials.Clone CSharpEssentials.AspNetCore CSharpEssentials.GcpSecretManager CSharpEssentials.RequestResponseLogging"
     [1]="CSharpEssentials.Errors CSharpEssentials.Json"
@@ -563,7 +563,7 @@ publish_all_packages() {
     log_step "Publishing packages to NuGet.org in dependency order..."
     
     # Define packages for each level with their patterns and display names
-    local -A LEVEL_PACKAGES
+    local -a LEVEL_PACKAGES
     LEVEL_PACKAGES=(
         [0]="CSharpEssentials.Core.*.nupkg Core CSharpEssentials.Enums.*.nupkg Enums CSharpEssentials.Time.*.nupkg Time CSharpEssentials.Clone.*.nupkg Clone CSharpEssentials.AspNetCore.*.nupkg AspNetCore CSharpEssentials.GcpSecretManager.*.nupkg GcpSecretManager CSharpEssentials.RequestResponseLogging.*.nupkg RequestResponseLogging"
         [1]="CSharpEssentials.Errors.*.nupkg Errors CSharpEssentials.Json.*.nupkg Json"
