@@ -1,166 +1,95 @@
-# Error Types in CSharpEssentials
+# CSharpEssentials.Errors
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.Errors` provides a structured, type-safe error handling system for .NET applications. It encapsulates errors as data rather than exceptions, promoting the Result pattern and making failure flows explicit and manageable.
 
-CSharpEssentials provides a robust error management system designed according to functional programming principles. This system treats errors as values and aims to avoid side effects.
+## 🚀 Features
 
-## Error Structure
+- **Structured Errors**: `Error` struct with unique codes, descriptions, and types (NotFound, Validation, Conflict, etc.).
+- **Rich Metadata**: Attach additional context (`ErrorMetadata`) to errors.
+- **Standard Error Types**: predefined types like `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden`.
+- **Exception Integration**: Convert exceptions to `Error` objects or wrap `Error` objects in `DomainException`.
 
-`Error` is designed as an immutable `readonly record struct` with the following properties:
+## 📦 Installation
 
-- `Code`: Unique error code
-- `Description`: Error description
-- `Type`: Error type (`ErrorType` enum)
-- `NumericType`: Numeric value of the error type
-- `Metadata`: Additional information about the error (optional)
-
-## Error Types
-
-The `ErrorType` enum includes the following error types:
-
-- `Failure`: General failure cases
-- `Unexpected`: Unexpected errors
-- `Validation`: Validation errors
-- `Conflict`: Conflict situations
-- `NotFound`: Not found situations
-- `Unauthorized`: Unauthorized access
-- `Forbidden`: Forbidden access
-- `Unknown`: Unknown errors
-
-## Usage Examples
-
-### 1. Simple Error Creation
-
-```csharp
-// Creating a validation error
-var validationError = Error.Validation(
-    code: "USER_INVALID_AGE",
-    description: "User age must be greater than 18."
-);
-
-// Creating a not found error
-var notFoundError = Error.NotFound(
-    code: "USER_NOT_FOUND",
-    description: "User with specified ID was not found."
-);
+```bash
+dotnet add package CSharpEssentials.Errors
 ```
 
-### 2. Error with Metadata
+## 🛠 Usage
+
+### 1. Creating Errors
+
+Use the static factory methods on the `Error` struct to create standard errors.
 
 ```csharp
-var metadata = new ErrorMetadata()
-    .Add("userId", 123)
-    .Add("attemptCount", 3);
+using CSharpEssentials.Errors;
 
-var error = Error.Unauthorized(
-    code: "INVALID_LOGIN",
-    description: "Invalid login attempt",
+// Common error types
+var notFound = Error.NotFound("User.NotFound", "The user with the specified ID was not found.");
+var validation = Error.Validation("User.EmailInvalid", "The email address is in an invalid format.");
+var conflict = Error.Conflict("User.AlreadyExists", "A user with this email already exists.");
+var failure = Error.Failure("Payment.Failed", "The payment gateway rejected the transaction.");
+```
+
+### 2. Error Metadata
+
+You can attach extra information to an error for debugging or client responses.
+
+```csharp
+var metadata = new ErrorMetadata 
+{
+    { "RetryCount", 3 },
+    { "Gateway", "Stripe" }
+};
+
+var error = Error.Failure(
+    code: "Payment.Failed", 
+    description: "Transaction failed", 
     metadata: metadata
 );
 ```
 
-### ErrorMetadata Factory Methods
+### 3. Converting Exceptions to Errors
 
-ErrorMetadata provides several factory methods and fluent extension methods for creating and manipulating metadata:
-
-#### Static Factory Methods
+Capture exception details into a structured error.
 
 ```csharp
-// Create an empty metadata
-var emptyMetadata = ErrorMetadata.CreateEmpty();
-
-// Create metadata with stack trace
-var stackTraceMetadata = ErrorMetadata.CreateWithStackTrace();
-
-// Create metadata with exception
-var exceptionMetadata = ErrorMetadata.CreateWithException(exception);
-
-// Create detailed exception metadata (includes type, stack trace, message, and inner exceptions)
-var detailedExceptionMetadata = ErrorMetadata.CreateWithExceptionDetailed(exception);
-```
-
-#### Fluent Extension Methods
-
-```csharp
-// Add stack trace to existing metadata
-var metadata = new ErrorMetadata()
-    .Add("userId", 123)
-    .AddStackTrace();
-
-// Add exception to existing metadata
-metadata.AddException(exception);
-
-// Add detailed exception information
-metadata.AddExceptionDetailed(exception);
-
-// Combine two metadata objects
-var combinedMetadata = metadata.Combine(otherMetadata);
-```
-
-The `CreateWithExceptionDetailed` method creates a rich metadata structure:
-
-- `exceptionType`: The type name of the exception
-- `exceptionStackTrace`: The stack trace of the exception
-- `exceptionMessage`: The exception message
-- `innerException`: Nested metadata for inner exceptions (if any)
-
-### 3. Creating Error from Exception
-
-```csharp
-try
+try 
 {
-    // ... some code that might throw
+    // ... risky code ...
 }
 catch (Exception ex)
 {
     var error = Error.Exception(
-        code: "DB_CONNECTION_ERROR",
-        exception: ex,
-        type: ErrorType.Failure
+        code: "System.Unhandled", 
+        exception: ex
     );
+    // error.Description will be ex.Message
+    // error.Metadata will contain exception details
 }
 ```
 
-### 4. Creating Multiple Errors
+### 4. Domain Exceptions
+
+If you must throw an exception but want to keep the structured error format (e.g., to be caught by a global handler), use `DomainException`.
 
 ```csharp
-var errors = Error.CreateMany([
-    Error.Validation("FIELD_REQUIRED", "Email field is required."),
-    Error.Validation("INVALID_FORMAT", "Invalid email format.")
-]);
-```
+using CSharpEssentials.Exceptions;
 
-## Best Practices
-
-1. **Unique Codes**: Use meaningful and unique codes for each error.
-2. **Descriptive Messages**: Write clear and understandable error messages.
-3. **Proper Type Selection**: Choose the most appropriate `ErrorType` for the error's nature.
-4. **Metadata Usage**: Store necessary debugging and logging information in metadata.
-5. **Immutability**: Don't try to modify error objects, create new instances instead.
-
-## Integration with Result Pattern
-
-The Error type works most effectively when used with the Result pattern:
-
-```csharp
-public Result<User> CreateUser(UserDto dto)
+public void DoSomething()
 {
-    if (!dto.IsValid)
-        return Error.Validation("INVALID_USER", "Invalid user information");
-
-    if (UserExists(dto.Email))
-        return Error.Conflict("USER_EXISTS", "This email is already in use");
-
-    // ... in case of success
-    return new User(dto);
+    var error = Error.Validation("Input.Invalid", "Value cannot be negative");
+    throw new DomainException(error);
 }
 ```
 
-## Why Use This Error System?
+### 5. Error Equality
 
-1. **Functional Approach**: Treats errors as values rather than using exceptions for control flow.
-2. **Type Safety**: Provides compile-time safety through strong typing.
-3. **Immutability**: Prevents accidental modifications and ensures thread safety.
-4. **Rich Error Context**: Allows including detailed metadata without breaking encapsulation.
-5. **HTTP Integration**: Error types naturally map to HTTP status codes.
-6. **Predictable Error Handling**: Makes error handling more predictable and easier to test.
+Errors are value types and check for equality based on their content (Code, Description, Type, Metadata).
+
+```csharp
+var e1 = Error.NotFound("Item.Missing");
+var e2 = Error.NotFound("Item.Missing");
+
+bool areEqual = (e1 == e2); // True
+```

@@ -1,125 +1,88 @@
 # CSharpEssentials.AspNetCore
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.AspNetCore` provides essential utilities and middleware for building production-ready ASP.NET Core Web APIs. It integrates seamlessly with the **CSharpEssentials.Errors** ecosystem to provide structured error responses and simplifies common configurations like Swagger and API Versioning.
 
-A comprehensive ASP.NET Core library that provides essential building blocks and utilities for modern web applications, focusing on API development best practices and common patterns.
+## 🚀 Features
 
-## Features
+- **Global Exception Handler**: Middleware (`IExceptionHandler`) that catches exceptions and converts them into standard RFC 7807 `ProblemDetails` responses.
+- **Enhanced Problem Details**: Extends `ProblemDetails` to include structured error codes and messages from `CSharpEssentials.Errors`.
+- **Swagger Configuration**: Easy setup for Swagger with support for API Versioning and custom schema filters.
+- **API Versioning**: Pre-configured extensions for setting up API versioning (URL segment + Header).
 
-- 🔄 **API Versioning**: Simplified API versioning setup with built-in support for URL and header-based versioning
-- 🛡️ **Global Exception Handling**: Centralized exception handling with enhanced problem details
-- 📝 **Swagger Integration**: Advanced Swagger/OpenAPI configuration with versioning support
-- ⚡ **Problem Details**: Enhanced problem details implementation with validation support
-- 🔧 **JSON Configuration**: Extended JSON serialization options and utilities
-
-## Installation
+## 📦 Installation
 
 ```bash
 dotnet add package CSharpEssentials.AspNetCore
 ```
 
-## Usage
+## 🛠 Usage
 
-### Complete Setup Example
+### 1. Global Exception Handling
 
-```csharp
-// In Program.cs or Startup.cs ConfigureServices
-public void ConfigureServices(IServiceCollection services)
-{
-    services
-            .AddExceptionHandler<GlobalExceptionHandler>()
-            .ConfigureModelValidatorResponse()
-            .ConfigureSystemTextJson()
-            .AddEnhancedProblemDetails()
-            .AddAndConfigureApiVersioning()
-            .AddSwagger<DefaultConfigureSwaggerOptions>(
-                SecuritySchemes.JwtBearerTokenSecurity,
-                Assembly.GetExecutingAssembly()
-            );
-}
-
-// In Program.cs or Startup.cs Configure
-public void Configure(IApplicationBuilder app)
-{
-    app.UseVersionableSwagger();
-    app.UseExceptionHandler();
-    app.UseStatusCodePages();
-}
-```
-
-### API Versioning Setup
+Register the global exception handler to automatically convert `DomainException`, `ValidationException`, and others into structured JSON error responses.
 
 ```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    // Add API versioning with enhanced configuration
-    services.AddAndConfigureApiVersioning();
-}
+using CSharpEssentials.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add problem details support
+builder.Services.AddProblemDetails();
+
+// Register the handler
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 ```
 
-### Global Exception Handling and Problem Details
+Then, in your middleware pipeline:
 
 ```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    services
-            .AddExceptionHandler<GlobalExceptionHandler>()
-            .ConfigureModelValidatorResponse()
-            .AddEnhancedProblemDetails();
-}
+var app = builder.Build();
 
-public void Configure(IApplicationBuilder app)
-{
-    app.UseExceptionHandler();
-    app.UseStatusCodePages();
-}
+app.UseExceptionHandler(); // Uses the registered GlobalExceptionHandler
 ```
 
-### Swagger Configuration with Security
+### 2. API Versioning
+
+Enable standard API versioning (URL Segment + Header support) with a single line.
 
 ```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    services.AddSwagger<DefaultConfigureSwaggerOptions>(
-        SecuritySchemes.JwtBearerTokenSecurity,  // Use JWT Bearer authentication
-        Assembly.GetExecutingAssembly()
-    );
-}
+using CSharpEssentials.AspNetCore;
 
-public void Configure(IApplicationBuilder app)
-{
-    app.UseVersionableSwagger();
-}
+builder.Services.AddAndConfigureApiVersioning();
 ```
 
-### JSON Configuration
+### 3. Swagger with Versioning
+
+Simplify Swagger configuration, especially when using API versioning.
 
 ```csharp
-public void ConfigureServices(IServiceCollection services)
-{
-    services.AddControllers()
-        .ConfigureSystemTextJson();  // Applies optimized JSON settings
-}
+using CSharpEssentials.AspNetCore;
+
+// Add Swagger services
+builder.Services.AddSwagger<ConfigureSwaggerOptions>(
+    securityScheme: SecuritySchemes.Bearer // Or your custom scheme
+);
+
+// Use Swagger Middleware
+app.UseVersionableSwagger();
 ```
 
-## Best Practices
+### 4. Structured Error Responses
 
-1. Always use the global exception handler for consistent error responses
-2. Implement API versioning from the start of your project
-3. Use the `ValidateModel` attribute on controllers that require model validation
-4. Configure Swagger documentation for better API discoverability
-5. Utilize the enhanced problem details for standardized error responses
-6. Configure request/response logging early in the pipeline
-7. Use appropriate security schemes based on your authentication requirements
+When an exception occurs (e.g., `DomainException` from `CSharpEssentials.Errors`), the response will look like this:
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the terms of the license included in the repository.
-
-## Support
-
-For support, please open an issue in the GitHub repository or contact the maintainers.
+```json
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Bad Request",
+  "status": 400,
+  "errors": [
+    {
+      "code": "User.InvalidEmail",
+      "description": "The email format is incorrect.",
+      "type": "Validation"
+    }
+  ],
+  "errorCodes": [ "User.InvalidEmail" ]
+}
+```

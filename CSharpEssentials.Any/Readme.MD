@@ -1,238 +1,90 @@
-# Any<T0, T1, ...> - Discriminated Union Type for Functional Programming in C#
+# CSharpEssentials.Any
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.Any` provides a robust implementation of **Discriminated Unions** (also known as Sum Types or Coproducts) for .NET. It allows you to define a type that can hold a value of one of several fixed types, providing type safety and exhaustive pattern matching.
 
-`Any<T0, T1, ...>` is a discriminated union type developed to enhance functional programming capabilities in C#. It serves as a lightweight alternative to the OneOf library, allowing functions to return multiple different types in a type-safe manner.
+## 🚀 Features
 
-## Features
+- **Discriminated Unions**: Support for unions of 2 up to 8 types (`Any<T0, T1>`, `Any<T0, T1, T2>`, etc.).
+- **Type Safety**: Compiler-checked access to values.
+- **Pattern Matching**: `Switch` and `Match` methods to handle each case.
+- **Implicit Conversions**: Seamlessly convert values to their union type.
+- **JSON Support**: Built-in serialization handling.
 
-- Support for 2 to 8 different types (from `Any<T0, T1>` to `Any<T0, T1, ..., T7>`)
-- Implicit conversion support
-- Pattern matching and switch expression support with execution status tracking
-- Type safety at compile time
-- Built-in JSON serialization support
-- Null-safety by design
-- Graceful handling of missing pattern handlers with `AnyActionStatus` and `AnyActionResult<T>`
+## 📦 Installation
 
-## Usage Examples
-
-### 1. Basic Usage
-
-```csharp
-public static Any<string, int> ParseOrKeepAsString(string input)
-{
-    return int.TryParse(input, out int number)
-        ? number    // implicitly converts to Any<string, int>
-        : input;   // implicitly converts to Any<string, int>
-}
+```bash
+dotnet add package CSharpEssentials.Any
 ```
 
-### 2. Collection Transformations
+## 🛠 Usage
+
+### 1. Defining a Union
+
+You can use `Any<T0, T1>` as a return type or property.
 
 ```csharp
-public static Any<int[], List<int>, HashSet<int>, IEnumerable<int>> ToCollection(int type, int[] array)
+using CSharpEssentials.Any;
+
+public Any<string, int> ParseOrReturnOriginal(string input)
 {
-    return type switch
+    if (int.TryParse(input, out int result))
     {
-        0 => array,
-        1 => array.ToList(),
-        2 => array.ToHashSet(),
-        3 => array.AsEnumerable(),
-        _ => throw new InvalidOperationException()
-    };
+        return result; // Implicit conversion to Any<string, int>
+    }
+    return input; // Implicit conversion
 }
 ```
 
-### 3. Domain Modeling Example
+### 2. Pattern Matching (Match)
+
+Use `Match` to transform the value based on which type it holds.
 
 ```csharp
-public static Any<User, Company> GetEntityById(string id)
-{
-    if (id.StartsWith("USR"))
-        return new User(id);  // implicitly converts
-    return new Company(id);   // implicitly converts
-}
-```
+Any<string, int> result = ParseOrReturnOriginal("123");
 
-### 4. Integration with Result Pattern
-
-```csharp
-public static Result<Any<string, int>> ValidateAndParse(string? input)
-{
-    if (input.IsEmpty())
-        return Error.Validation("Input.Empty", "Input cannot be empty");
-
-    Any<string, int> result = int.TryParse(input, out int number)
-        ? number
-        : input;
-
-    return result;
-}
-```
-
-### 5. Partial Pattern Matching
-
-The new implementation allows for graceful handling of partial pattern matching:
-
-```csharp
-Any<string, int, bool> value = true;
-
-// Only handle specific cases you care about
-AnyActionStatus status = value.Switch(
-    str => Console.WriteLine($"String: {str}"),
-    // Note: no handler for int or bool
+string output = result.Match(
+    first: str => $"It's a string: {str}",
+    second: num => $"It's a number: {num}"
 );
+```
 
-if (status == AnyActionStatus.NotExecuted)
-{
-    Console.WriteLine("No handler was provided for this type");
-}
+### 3. Executing Actions (Switch)
 
-// Similarly with Match
-AnyActionResult<string> result = value.Match(
-    str => $"Processing string: {str}"
-    // No handlers for int or bool
+Use `Switch` to execute code based on the type.
+
+```csharp
+result.Switch(
+    first: str => Console.WriteLine("String"),
+    second: num => Console.WriteLine("Number")
 );
+```
 
-if (result.Status == AnyActionStatus.Executed)
+### 4. Checking and Accessing
+
+```csharp
+if (result.IsSecond)
 {
-    Console.WriteLine(result.Result);
+    int val = result.GetSecond();
 }
 ```
 
-## Pattern Matching
+### 5. Handling more types
 
-`Any` type provides two different approaches for pattern matching:
-
-### 1. Switch Method
-
-Use when you need to perform actions and get execution status. Returns `AnyActionStatus` indicating whether an action was executed:
+You can handle up to 8 variations.
 
 ```csharp
-AnyActionStatus status = value.Switch(
-    str => Console.WriteLine($"String: {str}"),
-    num => Console.WriteLine($"Number: {num}")
+// A result that can be Success (string), NotFound (int code), or Error (Exception)
+public Any<string, int, Exception> GetData(int id)
+{
+    // ... logic
+    return new Exception("Failed"); 
+}
+
+var data = GetData(5);
+
+data.Switch(
+    first: s => Console.WriteLine($"Success: {s}"),
+    second: i => Console.WriteLine($"Not Found: {i}"),
+    third: e => Console.WriteLine($"Error: {e.Message}")
 );
-
-// Check if an action was executed
-if (status == AnyActionStatus.Executed)
-{
-    Console.WriteLine("Action was successfully executed");
-}
-else
-{
-    Console.WriteLine("No matching action was provided");
-}
 ```
-
-### 2. Match Method
-
-Use when you need to transform the value into another type. Returns `AnyActionResult<TResult>` with both status and result:
-
-```csharp
-AnyActionResult<string> result = value.Match(
-    str => $"String value: {str}",
-    num => $"Number value: {num}"
-);
-
-// Check the execution status and get the result
-if (result.Status == AnyActionStatus.Executed)
-{
-    string transformedValue = result.Result;
-    Console.WriteLine(transformedValue);
-}
-else
-{
-    Console.WriteLine("No matching transformation function was provided");
-}
-```
-
-## Action Result Types
-
-The library provides specialized types for handling pattern matching results:
-
-### AnyActionStatus
-
-An enum indicating the execution status of pattern matching operations:
-
-```csharp
-public enum AnyActionStatus
-{
-    NotExecuted,  // No matching handler was provided
-    Executed      // A handler was found and executed
-}
-```
-
-### AnyActionResul<TResult>
-
-A result type that combines execution status with the actual result:
-
-```csharp
-AnyActionResult<string> result = value.Match(
-    str => $"Got string: {str}",
-    num => $"Got number: {num}"
-);
-
-// Access both status and result
-if (result.Status == AnyActionStatus.Executed)
-{
-    Console.WriteLine(result.Result);
-}
-```
-
-## Type Checking and Value Retrieval
-
-Each type position has dedicated methods for checking and retrieving values:
-
-```csharp
-Any<string, int> value = "test";
-
-if (value.IsFirst)
-{
-    string str = value.GetFirst();
-    // Use string value
-}
-else if (value.IsSecond)
-{
-    int number = value.GetSecond();
-    // Use int value
-}
-```
-
-## Static Factory Methods
-
-The type provides a generic creation method using `Any.Create`:
-
-```csharp
-public static Any<int, string> CreateExample(bool condition)
-{
-    return condition
-        ? Any.Create<int, string>("Good")  // Creates Any<int, string> containing string
-        : Any.Create<int, string>(13);     // Creates Any<int, string> containing int
-}
-```
-
-## Best Practices
-
-1. Use as return types for functions that can return different types
-2. Leverage in domain modeling for different entity types
-3. Combine with pattern matching for elegant type handling
-4. Always check `AnyActionStatus` when using `Switch` method to ensure actions were executed
-5. Use `AnyActionResult<T>` when you need both execution status and transformation result
-6. Provide handlers for all expected cases in `Switch` and `Match` methods
-7. Keep type count reasonable (2-4 types is ideal)
-8. Create meaningful type combinations that make sense in your domain
-
-## Performance Characteristics
-
-- Implemented as a struct to minimize heap allocations
-- Minimized boxing/unboxing operations
-- Designed for lightweight and fast execution
-- Zero allocation in most common scenarios
-
-## Limitations
-
-- Maximum of 8 different types supported
-- Cannot use the same type multiple times in type parameters
-- Special handling might be needed for null values
-- Type parameters must be distinct types

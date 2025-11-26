@@ -1,155 +1,109 @@
 # CSharpEssentials.Json
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.Json` provides advanced JSON serialization and deserialization utilities for .NET. It builds on top of `System.Text.Json` to offer enhanced features like polymorphic serialization, multi-format date handling, and smarter enum conversion.
 
-This package provides enhanced JSON serialization and deserialization capabilities for C# applications, focusing on functional programming principles and type safety.
+## 🚀 Features
 
-## Features
+- **Conditional String Enums**: Automatically serialize enums as strings if they are marked with `[StringEnum]`.
+- **Multi-Format Date Conversion**: Deserialize dates from a wide variety of formats (ISO 8601, RFC, etc.) seamlessly.
+- **Polymorphic Serialization**: Built-in support for handling abstract classes and interfaces using a `$type` discriminator.
+- **Enhanced Options**: Pre-configured `JsonSerializerOptions` for modern web standards (CamelCase, IgnoreCycles, etc.).
+- **Fluent Extensions**: Methods like `ConvertToJson()` and `ConvertFromJson()` for quick object-string conversions.
 
-### 1. Enhanced JSON Serializer Options
+## 📦 Installation
 
-The `EnhancedJsonSerializerOptions` class provides pre-configured JSON serialization options with sensible defaults:
+```bash
+dotnet add package CSharpEssentials.Json
+```
+
+## 🛠 Usage
+
+### 1. Enhanced Serialization Options
+
+Use `EnhancedJsonSerializerOptions.DefaultOptions` to get a configured set of options that includes all the custom converters.
 
 ```csharp
-// Default options with all converters
+using CSharpEssentials.Json;
+using System.Text.Json;
+
 var options = EnhancedJsonSerializerOptions.DefaultOptions;
-
-// Default options without converters
-var basicOptions = EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters;
-
-// Options with only DateTime converter
-var dateTimeOptions = EnhancedJsonSerializerOptions.DefaultOptionsWithDateTimeConverter;
+string json = JsonSerializer.Serialize(myObject, options);
 ```
 
-### 2. Multi-Format DateTime Converter
+### 2. Polymorphic Serialization
 
-The `MultiFormatDateTimeConverter` supports parsing multiple date formats:
+Serialize and deserialize class hierarchies automatically. The converter adds a `$type` property to the JSON to identify the concrete type.
 
 ```csharp
-// Using with custom formats
-var options = EnhancedJsonSerializerOptions.CreateOptionsWithConverters(
-    new MultiFormatDateTimeConverterFactory(
-        "dd/MM/yyyy",
-        "yyyy-MM-dd"
-    )
-);
+using CSharpEssentials.Json;
 
-// Example JSON
-var json = @"{
-    ""date"": ""2024-03-14"",
-    ""alternateDate"": ""14/03/2024""
-}";
+public abstract class Animal { public string Name { get; set; } }
+public class Dog : Animal { public string Bark { get; set; } }
+public class Cat : Animal { public string Meow { get; set; } }
 
-var result = JsonSerializer.Deserialize<DateContainer>(json, options);
+var animals = new List<Animal> { new Dog(), new Cat() };
+
+// Serializes with "$type": "Namespace.Dog"
+string json = animals.ConvertToJson(); 
+
+// Deserializes back to specific Dog/Cat types
+List<Animal>? result = json.ConvertFromJson<List<Animal>>();
 ```
 
-Supports numerous date formats including:
+### 3. Multi-Format Date Handling
 
-- ISO 8601
-- Common regional formats
-- Unix timestamps
-- SQL datetime formats
-- Week-based formats
-- And more...
-
-### 3. Polymorphic JSON Serialization
-
-The `PolymorphicJsonConverter` enables type-safe serialization of abstract classes and interfaces:
+The library can deserialize date strings in many different formats without manual configuration.
 
 ```csharp
-public interface IAnimal { string Name { get; } }
-public class Dog : IAnimal { public string Name { get; set; } }
-public class Cat : IAnimal { public string Name { get; set; } }
+using CSharpEssentials.Json;
 
-// Serialization
-var animal = new Dog { Name = "Rex" };
-string json = JsonSerializer.Serialize<IAnimal>(animal, options);
+// All these formats work automatically
+string[] jsonDates = [
+    "\"2024-03-14T15:30:45Z\"",
+    "\"14.03.2024\"",
+    "\"March 14, 2024\""
+];
 
-// Deserialization
-IAnimal deserializedAnimal = JsonSerializer.Deserialize<IAnimal>(json, options);
+foreach(var json in jsonDates)
+{
+    DateTime dt = json.ConvertFromJson<DateTime>();
+}
 ```
 
-### 4. Conditional String Enum Converter
+### 4. String Enum Support
 
-Converts enums to strings based on attributes:
+Mark your enums with `[StringEnum]` (from `CSharpEssentials.Enums`) to serialize them as strings. Unmarked enums remain as integers (or default behavior).
 
 ```csharp
+using CSharpEssentials.Enums;
+using CSharpEssentials.Json;
+
 [StringEnum]
-public enum Status
-{
-    Active,
-    Inactive,
-    Pending
-}
+public enum Status { Active, Inactive }
 
-// Will be serialized as strings: "active", "inactive", "pending"
-var data = new { Status = Status.Active };
-string json = JsonSerializer.Serialize(data, options);
+public enum Level { Low, High }
+
+var data = new { S = Status.Active, L = Level.High };
+
+// Result: {"s": "Active", "l": 1}
+string json = data.ConvertToJson(); 
 ```
 
-### 5. JSON Extension Methods
+### 5. Quick Extensions
 
-Utility methods for common JSON operations:
-
-```csharp
-// Convert object to JSON
-var myObject = new { Name = "Test" };
-string json = myObject.ConvertToJson();
-
-// Convert JSON to object
-var obj = json.ConvertFromJson<MyClass>();
-
-// Convert to JsonDocument
-var doc = myObject.ConvertToJsonDocument();
-
-// Try get nested properties
-var result = doc.TryGetNestedProperty("user", "address", "city");
-```
-
-## Best Practices
-
-1. **Default Options**: Use `EnhancedJsonSerializerOptions.DefaultOptions` for most scenarios as it includes all converters.
-
-2. **DateTime Handling**: Use `MultiFormatDateTimeConverter` when dealing with dates from various sources or formats.
-
-3. **Polymorphic Types**: Implement `PolymorphicJsonConverter` when working with inheritance hierarchies or interfaces.
-
-4. **Enum Serialization**: Apply `[StringEnum]` attribute to enums that should be serialized as strings.
-
-5. **Error Handling**: Use the `TryGetProperty` and `TryGetNestedProperty` methods for safe property access.
-
-## Configuration
-
-The default configuration includes:
+Simplify your code with direct conversion methods.
 
 ```csharp
-new JsonSerializerOptions(JsonSerializerDefaults.Web)
-{
-    ReferenceHandler = ReferenceHandler.IgnoreCycles,
-    WriteIndented = false,
-    PropertyNameCaseInsensitive = true,
-    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-    Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-}
-```
+using CSharpEssentials.Json;
 
-## Extension Points
+var user = new { Name = "Alice", Age = 30 };
 
-You can create custom configurations using:
+// To JSON
+string json = user.ConvertToJson();
 
-```csharp
-var customOptions = EnhancedJsonSerializerOptions.CreateOptionsWithConverters(
-    new YourCustomConverter(),
-    new AnotherCustomConverter()
-);
-```
+// From JSON
+var parsed = json.ConvertFromJson<dynamic>();
 
-Or modify existing options:
-
-```csharp
-var options = EnhancedJsonSerializerOptions.DefaultOptions.Create(opt => {
-    opt.WriteIndented = true;
-    opt.PropertyNamingPolicy = null;
-});
+// To JsonDocument
+JsonDocument doc = json.ConvertToJsonDocument();
 ```

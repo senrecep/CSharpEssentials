@@ -1,103 +1,87 @@
-# Maybe Monad in C#
+# CSharpEssentials.Maybe
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.Maybe` implements the Maybe (Option) monad for .NET. It provides a type-safe way to handle the presence or absence of a value without relying on null references, making your code more expressive and less prone to `NullReferenceException`.
 
-The Maybe monad is a functional programming concept that provides a safe way to handle nullable values and avoid null reference exceptions. It represents a value that may or may not exist.
+## 🚀 Features
 
-## Core Features
+- **Explicit Null Safety**: `Maybe<T>` represents a value that might be missing.
+- **Functional API**: Chain operations with `Map`, `Bind`, `Where`, and `Match`.
+- **LINQ Support**: Use `Select`, `SelectMany`, and `Where` in LINQ query syntax.
+- **Async Support**: First-class support for async workflows (`MapAsync`, `BindAsync`).
+- **JSON Integration**: Serialization support included.
 
-- **Type-Safe**: Provides compile-time safety for handling nullable values
-- **Immutable**: Implemented as a readonly struct
-- **JSON Serialization Support**: Built-in support for System.Text.Json
-- **LINQ-Compatible**: Supports functional composition through LINQ methods
-- **Async Support**: Built-in support for async operations
+## 📦 Installation
 
-## Basic Usage
-
-```csharp
-// Creating Maybe instances
-Maybe<string> someValue = Maybe.From("Hello");
-Maybe<string> noValue = Maybe<string>.None;
-
-// Implicit conversion
-Maybe<int> number = 42;
-Maybe<string> emptyString = null; // Will be converted to None
-
-// Checking for values
-if (someValue.HasValue)
-{
-    string value = someValue.Value;
-}
-
-if (noValue.HasNoValue)
-{
-    // Handle empty case
-}
+```bash
+dotnet add package CSharpEssentials.Maybe
 ```
 
-## Safe Value Access
+## 🛠 Usage
+
+### 1. Creating Maybe
+
+Wrap values to indicate they might be absent.
 
 ```csharp
-// Safe ways to access values
-string value1 = someValue.GetValueOrDefault("default");
-string value2 = someValue.GetValueOrThrow("Custom error message");
+using CSharpEssentials.Maybe;
 
-// Pattern matching
-if (someValue.TryGetValue(out string? value))
+public Maybe<User> GetUser(int id)
 {
-    // Use value safely
+    User? user = _repo.Find(id);
+    return user; // Implicit conversion from T? to Maybe<T>
 }
 
-// Deconstruction
-var (hasValue, value) = someValue;
+// Explicit creation
+var maybeValue = Maybe.From(someValue);
+var none = Maybe.None;
 ```
 
-## Async Operations
+### 2. Functional Chaining
+
+Transform values safely. If the value is missing, the operations are skipped.
 
 ```csharp
-// Creating Maybe from async operations
-Task<string?> asyncOperation = GetDataAsync();
-Maybe<string> result = await Maybe.From(asyncOperation);
-
-// Using with async functions
-Maybe<string> result2 = await Maybe.From(async () => await GetDataAsync());
+string result = GetUser(1)
+    .Where(u => u.IsActive)          // Filter
+    .Map(u => u.Address)             // Transform
+    .Map(a => a.City)
+    .GetValueOrDefault("Unknown");   // Unwrap
 ```
 
-## Best Practices
+### 3. LINQ Query Syntax
 
-1. Use Maybe instead of null when:
+Use LINQ to compose multiple Maybe values.
 
-   - A value might not exist
-   - You want to force null-check at compile time
-   - You need to chain operations safely
+```csharp
+var result = 
+    from user in GetUser(1)
+    from order in GetLatestOrder(user.Id)
+    where order.Amount > 100
+    select order.TrackingNumber;
 
-2. Combine with LINQ for functional composition:
+// result is Maybe<string>
+```
 
-   ```csharp
-   Maybe<int> result = Maybe.From("42")
-       .Select(str => int.Parse(str))
-       .Where(num => num > 0);
-   ```
+### 4. Matching (Unwrapping)
 
-3. Use pattern matching for elegant handling:
-   ```csharp
-   string message = someValue.Match(
-       some: value => $"Value is {value}",
-       none: () => "No value present"
-   );
-   ```
+Handle both cases (Value vs None) explicitly.
 
-## Benefits
+```csharp
+GetUser(1).Match(
+    some: user => Console.WriteLine($"Found: {user.Name}"),
+    none: () => Console.WriteLine("User not found")
+);
+```
 
-- Eliminates null reference exceptions
-- Makes code more expressive and intention-clear
-- Enforces handling of missing values at compile-time
-- Provides a functional approach to handling optional values
+### 5. Async Workflow
 
-## Implementation Details
+Seamlessly work with async tasks.
 
-The Maybe monad is implemented as a readonly struct for performance and implements:
-
-- `IMaybe<T>` for basic Maybe operations
-- `IEquatable<T>` for value comparison
-- JSON serialization support through System.Text.Json attributes
+```csharp
+public async Task<Maybe<Order>> ProcessAsync(int userId)
+{
+    return await GetUserAsync(userId)
+        .BindAsync(user => GetOrderAsync(user.Id))
+        .MapAsync(order => EnrichOrderAsync(order));
+}
+```
