@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Configuration;
-using CSharpEssentials.GcpSecretManager.Configuration.Internal;
 
-namespace CSharpEssentials.GcpSecretManager;
+namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 /// <summary>
 /// Configuration options for Google Cloud Secret Manager integration.

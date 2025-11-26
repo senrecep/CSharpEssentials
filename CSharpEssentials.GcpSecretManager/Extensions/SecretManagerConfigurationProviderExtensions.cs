@@ -1,9 +1,9 @@
+using CSharpEssentials.GcpSecretManager.Configuration;
 using Microsoft.Extensions.Configuration;
-using CSharpEssentials.GcpSecretManager.Configuration.Internal;
 
-namespace CSharpEssentials.GcpSecretManager;
+namespace CSharpEssentials.GcpSecretManager.Extensions;
 
-public static class SecretManagerConfigurationProviderExtensions
+public static class Extensions
 {
     /// <summary>
     /// Adds Google Cloud Secret Manager as a configuration source.

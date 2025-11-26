@@ -1,4 +1,4 @@
-namespace CSharpEssentials.GcpSecretManager.Infrastructure.Internal;
+namespace CSharpEssentials.GcpSecretManager.Infrastructure;
 
 internal static class SecretManagerPaths
 {

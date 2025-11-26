@@ -40,18 +40,18 @@
   <ItemGroup>
     <PackageReference Include="EFCore.CheckConstraints" Version="9.1.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="9.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.11" />
   </ItemGroup>
 
   <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, and Json -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.0.9]"
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.0]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Entity" Version="[2.0.9]"
+    <PackageReference Include="CSharpEssentials.Entity" Version="[2.1.0]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.0.9]"
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.1.0]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.0.9]"
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.0]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"

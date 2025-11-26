@@ -1,4 +1,4 @@
-namespace CSharpEssentials.GcpSecretManager.Configuration.Internal;
+namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 internal sealed class GoogleSecretManagerConfig
 {
