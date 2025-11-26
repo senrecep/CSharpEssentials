@@ -1,183 +1,101 @@
-# Entity Module
+# CSharpEssentials.Entity
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.Entity` provides a robust foundation for Domain-Driven Design (DDD) entities in .NET. It offers base classes for auditing, soft deletion, and domain event management, helping you build standard and maintainable domain models.
 
-## Core Interfaces
+## 🚀 Features
 
-### `IEntityBase`
+- **Audit Logging**: Built-in tracking for `CreatedAt`, `CreatedBy`, `UpdatedAt`, and `UpdatedBy`.
+- **Soft Delete**: Standardized soft deletion support via `SoftDeletableEntityBase`.
+- **Domain Events**: Built-in container for raising and clearing domain events.
+- **Flexible Generics**: Support for strongly-typed IDs (e.g., `Guid`, `int`, `long`).
 
-Base interface for all entities, providing essential functionality:
+## 📦 Installation
 
-- Domain event handling
-- Creation and modification audit
-
-### `IDomainEvent` & `IDomainEventHolder`
-
-Support for domain events:
-
-- `IDomainEvent`: Marker interface for domain events
-- `IDomainEventHolder`: Manages domain events collection and operations
-
-### Audit Interfaces
-
-- `ICreationAudit`: Tracks entity creation (CreatedAt, CreatedBy)
-- `IModificationAudit`: Tracks entity modifications (UpdatedAt, UpdatedBy)
-- `ISoftDeletable`: Manages soft deletion state and operations
-
-## Abstract Classes
-
-### `EntityBase`
-
-```csharp
-public class MyEntity : EntityBase
-{
-    public string Name { get; private set; }
-
-    public void UpdateName(string newName)
-    {
-        Name = newName;
-        Raise(new NameUpdatedEvent(newName));
-    }
-}
-
-// Usage
-var entity = new MyEntity();
-entity.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
-entity.UpdateName("New Name");
-var events = entity.DomainEvents; // Access domain events
+```bash
+dotnet add package CSharpEssentials.Entity
 ```
 
-Features:
+## 🛠 Usage
 
-- Domain event management
-- Audit trail (creation and modification)
-- Immutable properties with controlled setters
+### 1. Basic Entity
 
-### `SoftDeletableEntityBase`
+Inherit from `EntityBase<TId>` to get standard audit fields and ID management.
 
 ```csharp
-public class MySoftDeletableEntity : SoftDeletableEntityBase
-{
-    public string Title { get; private set; }
+using CSharpEssentials.Entity;
 
-    public void Archive(string deletedBy)
+public class Product : EntityBase<Guid>
+{
+    public string Name { get; set; }
+    
+    public Product(string name)
     {
-        MarkAsDeleted(DateTimeOffset.UtcNow, deletedBy);
-        Raise(new EntityArchivedEvent(Id));
-    }
-}
-
-// Usage
-var entity = new MySoftDeletableEntity();
-entity.Archive("admin");
-if (entity.IsDeleted)
-{
-    // Entity is soft deleted
-}
-entity.Restore(); // Bring it back
-```
-
-Features:
-
-- Inherits all `EntityBase` functionality
-- Soft deletion support
-- Hard deletion flag
-- Restoration capability
-
-## Generic Variants
-
-### `EntityBaseTId<TId>`
-
-```csharp
-public class CustomEntity : EntityBaseTId<Guid>
-{
-    public CustomEntity(Guid id)
-    {
-        Id = id;
-    }
-}
-```
-
-### `SoftDeletableEntityBaseTId<TId>`
-
-```csharp
-public class CustomSoftDeletableEntity : SoftDeletableEntityBaseTId<int>
-{
-    public CustomSoftDeletableEntity(int id)
-    {
-        Id = id;
-    }
-}
-```
-
-## Best Practices
-
-1. Always use private setters for properties
-2. Raise domain events for significant state changes
-3. Use the audit trail capabilities for tracking changes
-4. Prefer soft deletion over hard deletion when possible
-5. Implement custom domain logic through methods, not property setters
-
-## Functional Programming Features
-
-1. Immutable state through private setters
-2. Event sourcing support via domain events
-3. Pure functions for state modifications
-4. Side-effect isolation in domain event handlers
-
-## Example: Complete Entity Implementation
-
-```csharp
-public class Product : SoftDeletableEntityBase
-{
-    public string Name { get; private set; }
-    public decimal Price { get; private set; }
-    public int Stock { get; private set; }
-
-    private Product(string name, decimal price)
-    {
+        Id = Guid.NewGuid();
         Name = name;
-        Price = price;
-        Stock = 0;
     }
+}
+```
 
-    public static Product Create(string name, decimal price)
-    {
-        var product = new Product(name, price);
-        product.Raise(new ProductCreatedEvent(product));
-        return product;
-    }
+### 2. Soft Deletable Entity
 
-    public void UpdatePrice(decimal newPrice)
-    {
-        if (newPrice <= 0) throw new ArgumentException("Price must be positive");
+Use `SoftDeletableEntityBase<TId>` to add soft delete capabilities (IsDeleted, DeletedAt, DeletedBy).
 
-        var oldPrice = Price;
-        Price = newPrice;
+```csharp
+using CSharpEssentials.Entity;
 
-        Raise(new ProductPriceUpdatedEvent(Id, oldPrice, newPrice));
-    }
-
-    public void AddStock(int quantity)
-    {
-        if (quantity <= 0) throw new ArgumentException("Quantity must be positive");
-
-        Stock += quantity;
-        Raise(new StockAddedEvent(Id, quantity));
-    }
+public class User : SoftDeletableEntityBase<Guid>
+{
+    public string Username { get; set; }
 }
 
 // Usage
-var product = Product.Create("Laptop", 999.99m);
-product.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
-product.UpdatePrice(899.99m);
-product.AddStock(10);
+var user = new User();
+
+// Mark as deleted (doesn't remove from DB, just flags it)
+user.MarkAsDeleted(deletedAt: DateTimeOffset.UtcNow, deletedBy: "Admin");
+
+// Restore if needed
+user.Restore();
 ```
 
-This implementation showcases:
+### 3. Domain Events
 
-- Factory method pattern
-- Domain event usage
-- Immutable state management
-- Business rule enforcement
-- Audit trail tracking
+Entities can raise events that can be dispatched later (e.g., by your persistence layer).
+
+```csharp
+using CSharpEssentials.Entity;
+using CSharpEssentials.Entity.Interfaces;
+
+public record ProductCreated(Guid ProductId) : IDomainEvent;
+
+public class Product : EntityBase<Guid>
+{
+    public Product()
+    {
+        Id = Guid.NewGuid();
+        // Raise an event
+        Raise(new ProductCreated(Id));
+    }
+}
+
+// Accessing events (e.g., in EF Core SaveChanges)
+foreach (var domainEvent in product.DomainEvents)
+{
+    // Dispatch event...
+}
+product.ClearDomainEvents();
+```
+
+### 4. Auditing
+
+The base classes expose methods to set audit info, typically called by your repository or DbContext.
+
+```csharp
+var product = new Product("Laptop");
+
+// Set creation info
+product.SetCreatedInfo(DateTimeOffset.UtcNow, "User123");
+
+// Set update info
+product.SetUpdatedInfo(DateTimeOffset.UtcNow, "User456");
+```
