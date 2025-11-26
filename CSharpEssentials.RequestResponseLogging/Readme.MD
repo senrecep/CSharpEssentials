@@ -1,180 +1,90 @@
 # CSharpEssentials.RequestResponseLogging
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.RequestResponseLogging` provides configurable middleware for logging HTTP requests and responses in ASP.NET Core applications. It supports detailed logging of headers, bodies, timings, and more, with options to filter specific paths or modify behavior per endpoint.
 
-- **NuGet Package RequestResponseLogging**: [CSharpEssentials.RequestResponseLogging](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging)
+## 🚀 Features
 
-A powerful and flexible request/response logging middleware for ASP.NET Core applications that enables comprehensive HTTP traffic monitoring with minimal setup.
+- **Comprehensive Logging**: Log Request/Response bodies, Headers, Path, Method, QueryString, Timing, and Sizes.
+- **Configurable**: Choose exactly what fields to log (`LogFields`).
+- **Filtering**: Ignore specific paths globally.
+- **Attributes**: Use `[SkipRequestLogging]`, `[SkipResponseLogging]`, or `[SkipRequestResponseLogging]` on controllers or actions.
+- **Custom Handlers**: Inject custom logic to handle the log context.
 
-## Features
-
-- 🚀 Easy integration with ASP.NET Core applications
-- 📝 Configurable logging fields (Request, Response, Headers, Timing, etc.)
-- 🎯 Path-based filtering for ignored routes
-- 🔧 Customizable header logging
-- ⚡ High performance with minimal overhead
-- 🎨 Flexible logging options
-- 🔄 Support for custom request/response handlers
-
-## Installation
+## 📦 Installation
 
 ```bash
 dotnet add package CSharpEssentials.RequestResponseLogging
 ```
 
-## Quick Start
+## 🛠 Usage
+
+### 1. Registration
+
+Register the middleware in your `Program.cs` or `Startup.cs`.
 
 ```csharp
 using CSharpEssentials.RequestResponseLogging;
 
-public void Configure(IApplicationBuilder app)
+var app = builder.Build();
+
+// ... other middleware ...
+
+app.AddRequestResponseLogging(opt =>
 {
-    app.AddRequestResponseLogging(opt =>
+    // REQUIRED: Provide a LoggerFactory
+    opt.LoggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+    
+    // Configure what to log
+    opt.LoggingOptions = LoggingOptions.CreateAllFields();
+    
+    // Customize specific options
+    opt.LoggingOptions.LoggingLevel = LogLevel.Information;
+    opt.LoggingOptions.HeaderKeys = ["User-Agent", "Correlation-ID"]; // Whitelist headers
+    
+    // Ignore specific paths (e.g., health checks)
+    opt.IgnoredPaths = ["/health", "/metrics"];
+});
+
+app.Run();
+```
+
+### 2. Fine-Grained Control
+
+You can disable logging for specific endpoints using attributes.
+
+```csharp
+using CSharpEssentials.RequestResponseLogging.Attributes;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
+{
+    [HttpPost("login")]
+    [SkipRequestLogging] // Don't log the request body (e.g. password)
+    public IActionResult Login(LoginRequest request)
     {
-        // Basic configuration
-        opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>());
-    });
+        // ...
+    }
+    
+    [HttpGet("heavy-data")]
+    [SkipResponseLogging] // Don't log the large response body
+    public IActionResult GetHeavyData()
+    {
+        // ...
+    }
 }
 ```
 
-## Advanced Configuration
+### 3. Customizing Log Fields
+
+If you don't want to log everything, specify only the fields you need.
 
 ```csharp
-app.AddRequestResponseLogging(opt =>
-{
-    // Ignore specific paths
-    opt.IgnorePaths("/health");
-    opt.IgnorePaths("/swagger");
-
-    // Configure logging options
-    var loggingOptions = LoggingOptions.CreateAllFields();
-
-    // Add specific headers to log
-    loggingOptions.HeaderKeys.Add("Accept-Language");
-    loggingOptions.HeaderKeys.Add("X-Tenant-Id");
-
-    // Configure logging level and fields
-    loggingOptions.LoggingLevel = LogLevel.Information;
-    loggingOptions.UseSeparateContext = true;
-
-    // Use the configured logger
-    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions);
-});
+opt.LoggingOptions.LoggingFields = 
+[
+    LogFields.Method,
+    LogFields.Path,
+    LogFields.ResponseTiming,
+    LogFields.Response // Only response body
+];
 ```
-
-## Available Logging Fields
-
-The library supports logging the following fields:
-
-- `Request`: Full request body
-- `Response`: Full response body
-- `HostName`: Server hostname
-- `Path`: Request path
-- `Method`: HTTP method
-- `QueryString`: URL query parameters
-- `Headers`: HTTP headers (configurable)
-- `ResponseTiming`: Request processing duration
-- `RequestLength`: Request body length
-- `ResponseLength`: Response body length
-
-## Configuration Options
-
-### LoggingOptions
-
-```csharp
-var options = new LoggingOptions
-{
-    LoggingLevel = LogLevel.Information,
-    UseSeparateContext = true,
-    LoggerCategoryName = "CustomRequestResponseLogger",
-    LoggingFields = new List<LogFields>
-    {
-        LogFields.Method,
-        LogFields.Path,
-        LogFields.Headers,
-        LogFields.ResponseTiming
-    }
-};
-```
-
-### Ignoring Paths
-
-You can ignore specific paths to prevent logging:
-
-```csharp
-opt.IgnorePaths("/health");
-opt.IgnorePaths("/metrics");
-opt.IgnorePaths("/swagger");
-```
-
-### Custom Header Logging
-
-Configure specific headers to be logged:
-
-```csharp
-loggingOptions.HeaderKeys.Add("Authorization");
-loggingOptions.HeaderKeys.Add("X-Correlation-Id");
-loggingOptions.HeaderKeys.Add("Custom-Header");
-```
-
-## Use Cases
-
-1. **API Monitoring**
-
-   ```csharp
-   app.AddRequestResponseLogging(opt =>
-   {
-       var loggingOptions = LoggingOptions.CreateAllFields();
-       loggingOptions.LoggingLevel = LogLevel.Debug;
-       opt.UseLogger(loggerFactory, loggingOptions);
-   });
-   ```
-
-2. **Performance Monitoring**
-
-   ```csharp
-   app.AddRequestResponseLogging(opt =>
-   {
-        opt.IgnorePaths("/health");
-        opt.IgnorePaths("/swagger");
-        var loggingOptions = LoggingOptions.CreateAllFields();
-        loggingOptions.HeaderKeys.Add(HeaderNames.AcceptLanguage);
-        loggingOptions.HeaderKeys.Add(CustomHeaderNames.TenantId);
-        opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions);
-   });
-   ```
-
-3. **Security Monitoring**
-   ```csharp
-   app.AddRequestResponseLogging(opt =>
-   {
-       var loggingOptions = new LoggingOptions
-       {
-           LoggingFields = new List<LogFields>
-           {
-               LogFields.Headers,
-               LogFields.Method,
-               LogFields.Path
-           }
-       };
-       loggingOptions.HeaderKeys.Add("Authorization");
-       loggingOptions.HeaderKeys.Add("X-API-Key");
-       opt.UseLogger(loggerFactory, loggingOptions);
-   });
-   ```
-
-## Best Practices
-
-1. Always ignore health check and swagger endpoints to reduce noise
-2. Configure appropriate logging levels based on environment
-3. Be selective with header logging to avoid security issues
-4. Use separate context for better log organization
-5. Consider performance impact when logging full request/response bodies
-
-## Acknowledgments
-
-This project is based on and enhances [TechBuddySolution](https://github.com/salihcantekin/TechBuddySolution) by Salih Cantekin. We've built upon the original codebase to add additional features, improve performance, and enhance the overall functionality while maintaining the core concepts of the original implementation.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.

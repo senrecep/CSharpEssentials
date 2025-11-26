@@ -1,90 +1,56 @@
 # CSharpEssentials.Clone
 
-[![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) [![NuGet](https://img.shields.io/nuget/dt/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) [![GitHub](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
+`CSharpEssentials.Clone` provides a type-safe generic cloning interface and extension methods. It addresses the limitations of the legacy `System.ICloneable` by providing a strongly-typed `ICloneable<T>`.
 
-This library provides functional programming approach to object cloning in C#. It offers type-safe cloning capabilities for both single objects and collections.
+## 🚀 Features
 
-## Features
+- **Generic `ICloneable<T>`**: Type-safe interface for implementing clone behavior.
+- **Collection Extensions**: Easily clone `IEnumerable<T>` and `IQueryable<T>` collections where items implement `ICloneable<T>`.
 
-- Generic type-safe cloning with covariant type parameter
-- Extension methods for easy usage
-- Support for both single objects and collections (`IEnumerable<T>` and `IQueryable<T>`)
-- LINQ-friendly design
-- Functional programming approach
+## 📦 Installation
 
-## Usage
+```bash
+dotnet add package CSharpEssentials.Clone
+```
 
-### 1. Implement `ICloneable<T>` Interface
+## 🛠 Usage
+
+### 1. Implementing ICloneable\<T\>
+
+Implement the interface in your classes to define how they should be copied.
 
 ```csharp
-public class Person : ICloneable<Person>
+using CSharpEssentials.Clone;
+
+public class User : ICloneable<User>
 {
     public string Name { get; set; }
-    public int Age { get; set; }
+    public Address Address { get; set; }
 
-    public Person Clone()
+    public User Clone()
     {
-        return new Person
+        return new User
         {
             Name = this.Name,
-            Age = this.Age
+            Address = this.Address.Clone() // Assuming Address also implements ICloneable<Address>
         };
     }
 }
 ```
 
-### 2. Use Extension Methods
+### 2. Cloning Collections
+
+Use the `Clone()` extension method to deeply copy collections of cloneable items.
 
 ```csharp
-// Single object cloning
-var person = new Person { Name = "John", Age = 30 };
-var clonedPerson = person.Clone();
+using CSharpEssentials.Clone;
 
-// List cloning
-var people = new List<Person>
+var users = new List<User>
 {
-    new Person { Name = "John", Age = 30 },
-    new Person { Name = "Jane", Age = 25 }
+    new User { Name = "Alice" },
+    new User { Name = "Bob" }
 };
-var clonedPeople = people.Clone();
 
-// LINQ query cloning
-var queryablePeople = people.AsQueryable();
-var clonedQueryable = queryablePeople.Clone();
-```
-
-## Benefits
-
-1. **Type Safety**: Generic type parameter ensures compile-time type checking
-2. **Functional Approach**: Extension methods and LINQ support functional programming paradigms
-3. **Collection Support**: Cloning support for both single objects and collections
-4. **Chainable API**: Can be used with LINQ methods seamlessly
-5. **Immutability Support**: Perfect for working with immutable data structures
-
-## Best Practices
-
-- Use for defensive copying when working with mutable objects
-- Implement deep cloning when needed for complex objects
-- Combine with LINQ for powerful data transformations
-- Consider using with immutable objects for functional programming patterns
-
-## Implementation Details
-
-```csharp
-public interface ICloneable<out T>
-{
-    T Clone();
-}
-
-public static class Extensions
-{
-    private static T Clone<T>(this T source)
-        where T : ICloneable<T> => source.Clone();
-
-    public static IEnumerable<T> Clone<T>(this IEnumerable<T> source)
-        where T : ICloneable<T> => source.Select(Clone);
-
-    public static IQueryable<T> Clone<T>(this IQueryable<T> source)
-        where T : ICloneable<T> => source.Select(Clone).AsQueryable();
-}
+// Creates a new IEnumerable where each User is cloned
+var clonedUsers = users.Clone();
 ```
