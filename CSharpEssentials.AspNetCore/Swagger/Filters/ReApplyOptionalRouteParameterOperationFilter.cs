@@ -35,6 +35,10 @@ public sealed partial class ReApplyOptionalRouteParameterOperationFilter : IOper
         }
     }
 
+#if NET7_0_OR_GREATER
     [GeneratedRegex(@"{(?<routeParameter>\w+)\?}")]
     private static partial Regex RouteRegex();
+#else
+    private static Regex RouteRegex() => new Regex(@"{(?<routeParameter>\w+)\?}", RegexOptions.Compiled);
+#endif
 }

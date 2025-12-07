@@ -5,7 +5,11 @@ namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 
 public class SwashbuckleSchemaIdFactory
 {
+#if NET8_0_OR_GREATER
     private readonly Dictionary<string, List<string>> _schemaNameRepetition = [];
+#else
+    private readonly Dictionary<string, List<string>> _schemaNameRepetition = new Dictionary<string, List<string>>();
+#endif
 
     private string DefaultSchemaIdSelector(Type modelType)
     {
@@ -24,7 +28,11 @@ public class SwashbuckleSchemaIdFactory
         string id = DefaultSchemaIdSelector(modelType);
 
         if (!_schemaNameRepetition.ContainsKey(id))
+#if NET8_0_OR_GREATER
             _schemaNameRepetition.Add(id, []);
+#else
+            _schemaNameRepetition.Add(id, new List<string>());
+#endif
 
         List<string> modelNameList = _schemaNameRepetition[id];
         string fullName = modelType.FullName ?? string.Empty;

@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Multi-targeting support -->
+    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Rules</PackageId>
     <Title>CSharpEssentials.Rules</Title>
@@ -29,12 +32,16 @@
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
-  <!-- Dependencies: Rules depends on Results -->
+  <!-- Dependencies: Rules depends on Results and Core for polyfills -->
   <ItemGroup>
     <PackageReference Include="CSharpEssentials.Results" Version="[2.1.0]"
       Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.0]"
+      Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 

@@ -14,7 +14,7 @@ public class EnumSchemaFilter : ISchemaFilter
         bool isStringEnum = context.Type.IsEnum && context.Type.GetCustomAttribute<StringEnumAttribute>() != null;
         if (isStringEnum.IsFalse())
             return;
-        string[] values = [.. Enum.GetNames(context.Type).Select(x => x.ToSnakeCase())];
+        string[] values = Enum.GetNames(context.Type).Select(x => x.ToSnakeCase()).ToArray();
 
         var enumValues = values
             .Select(name => new OpenApiString(name))

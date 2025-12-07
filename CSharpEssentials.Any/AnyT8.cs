@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Json;
 
@@ -6,7 +5,7 @@ namespace CSharpEssentials.Any;
 
 public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
 {
-    private static readonly Dictionary<int, Type> _typeMap = new()
+    private static readonly Dictionary<int, Type> TypeMap = new()
     {
         { 0, typeof(T0) },
         { 1, typeof(T1) },
@@ -19,7 +18,7 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
     };
 
     [JsonConstructor]
-    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(_typeMap, index, value);
+    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(TypeMap, index, value);
     private Any(T0 value) => (Index, Value) = (0, value);
     private Any(T1 value) => (Index, Value) = (1, value);
     private Any(T2 value) => (Index, Value) = (2, value);
@@ -29,8 +28,8 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
     private Any(T6 value) => (Index, Value) = (6, value);
     private Any(T7 value) => (Index, Value) = (7, value);
 
-    public readonly int Index { get; }
-    public readonly object? Value { get; }
+    public int Index { get; }
+    public object? Value { get; }
 
     [JsonIgnore]
     public bool IsFirst => Index == 0;
@@ -78,7 +77,12 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
         Action<T6>? seventh = null,
         Action<T7>? eighth = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(Value);
+#else
+        if (Value is null)
+            throw new InvalidOperationException("Value cannot be null");
+#endif
         switch (Index)
         {
             case 0 when first is not null:
@@ -120,7 +124,12 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
         Func<T6, TResult>? seventh = null,
         Func<T7, TResult>? eighth = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(Value);
+#else
+        if (Value is null)
+            throw new InvalidOperationException("Value cannot be null");
+#endif
         return Index switch
         {
             0 when first is not null => first((T0)Value),

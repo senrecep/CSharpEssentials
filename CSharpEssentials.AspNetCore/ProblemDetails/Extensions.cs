@@ -22,7 +22,12 @@ public static partial class Extensions
         Action<ProblemDetails, HttpContext>? configure = null)
     {
         _problemDetailsEnhancer = configure;
+#if NET7_0_OR_GREATER
         services.AddProblemDetails(options => options.CustomizeProblemDetails = context => context.ProblemDetails.AddHttpContextDetails(context.HttpContext));
+#else
+        // AddProblemDetails is not available in .NET 6
+        // This method is not functional in .NET 6
+#endif
         return services;
     }
 
@@ -55,7 +60,11 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
+#if NET8_0_OR_GREATER
     public static IResult ToProblemResult(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemResult([error], extensions, statusCode);
+#else
+    public static IResult ToProblemResult(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemResult(new[] { error }, extensions, statusCode);
+#endif
 
     /// <summary>
     /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
@@ -94,8 +103,13 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
+#if NET8_0_OR_GREATER
     public static IActionResult ToActionResult(this Error error, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
         ToActionResult([error], httpContext, extensions, statusCode);
+#else
+    public static IActionResult ToActionResult(this Error error, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
+        ToActionResult(new[] { error }, httpContext, extensions, statusCode);
+#endif
 
     /// <summary>
     /// Converts an array of <see cref="Error"/> to an <see cref="IActionResult"/>.
@@ -174,7 +188,11 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
+#if NET8_0_OR_GREATER
     public static EnhancedProblemDetails ToProblemDetails(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemDetails([error], extensions, statusCode);
+#else
+    public static EnhancedProblemDetails ToProblemDetails(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemDetails(new[] { error }, extensions, statusCode);
+#endif
     /// <summary>
     /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
     /// </summary>
@@ -191,7 +209,7 @@ public static partial class Extensions
         var errorCodes = errors.Select(e => e.Code).ToHashSet();
         var errorMessages = errors.Select(e => e.Description).ToHashSet();
 
-        return new EnhancedProblemDetails
+        var problemDetails = new EnhancedProblemDetails
         {
             Status = statusCode,
             Title = error.Type.GetProblemTitle(),
@@ -199,9 +217,21 @@ public static partial class Extensions
             Type = GetProblemRfcType(statusCode.Value),
             Errors = errors,
             ErrorCodes = errorCodes,
-            ErrorMessages = errorMessages,
-            Extensions = metadata
+            ErrorMessages = errorMessages
         };
+#if NET7_0_OR_GREATER
+        problemDetails.Extensions = metadata;
+#else
+        // Extensions is read-only in .NET 6, use TryAdd instead
+        if (metadata != null)
+        {
+            foreach (KeyValuePair<string, object?> kvp in metadata)
+            {
+                problemDetails.Extensions.TryAdd(kvp.Key, kvp.Value);
+            }
+        }
+#endif
+        return problemDetails;
     }
     /// <summary>
     /// Produces a <see cref="ProblemDetails"/> object.

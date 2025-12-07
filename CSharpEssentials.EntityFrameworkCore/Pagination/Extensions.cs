@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
@@ -42,7 +41,6 @@ public static class Extensions
         31
     );
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static TCursor GetCursor<T, TCursor>(
         this T data,
         Expression<Func<T, TCursor>> cursorSelector)

@@ -68,7 +68,7 @@ public readonly partial record struct Result
     /// <returns></returns>
     public static Result Or(params IEnumerable<IResultBase> results)
     {
-        List<Error> errors = [];
+        var errors = new List<Error>();
         foreach (IResultBase result in results)
         {
             if (result.IsSuccess)
@@ -117,7 +117,11 @@ public readonly partial record struct Result
     public static Result<TValue> From<TValue>(params IEnumerable<Error> errors) => Result<TValue>.From(errors);
 
 
+#if NET8_0_OR_GREATER
     public static implicit operator Result(Error error) => new([error]);
+#else
+    public static implicit operator Result(Error error) => new(new[] { error });
+#endif
     public static implicit operator Result(Error[] errors) => new(errors);
     public static implicit operator Result(List<Error> errors) => new(errors);
     public static implicit operator Result(HashSet<Error> errors) => new(errors);

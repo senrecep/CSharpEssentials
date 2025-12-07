@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CSharpEssentials.AspNetCore;
 
+#if NET7_0_OR_GREATER
 public sealed class GlobalExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<GlobalExceptionHandler> logger
@@ -40,7 +41,6 @@ public sealed class GlobalExceptionHandler(
             ProblemDetails = CreateProblemDetails(exception, statusCode)
         });
     }
-
     private static EnhancedProblemDetails CreateProblemDetails(Exception exception, int statusCode) =>
         exception switch
         {
@@ -48,4 +48,16 @@ public sealed class GlobalExceptionHandler(
             DomainException domainException => domainException.Error.ToProblemDetails(statusCode: statusCode),
             _ => Error.Exception(exception).ToProblemDetails(statusCode: statusCode)
         };
+#else
+public sealed class GlobalExceptionHandler
+{
+    // IExceptionHandler is not available in .NET 6
+    // This class is not functional in .NET 6
+#pragma warning disable IDE0060 // Remove unused parameter
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    {
+        // Constructor required for DI, but class is not functional in .NET 6
+    }
+#pragma warning restore IDE0060
+#endif
 }

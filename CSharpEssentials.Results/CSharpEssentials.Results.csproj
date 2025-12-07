@@ -1,16 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Multi-targeting support -->
+    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Results</PackageId>
     <Title>CSharpEssentials.Results</Title>
     <Product>CSharpEssentials.Results</Product>
-    <Description>
-      Result pattern implementation for functional error handling in C#.
+    <Description>Result pattern implementation for functional error handling in C#.
       Provides Result&lt;T&gt; and Result types for railway-oriented programming, eliminating
       exceptions for expected failures.
-      Foundation for functional programming patterns and robust error handling.
-    </Description>
+      Foundation for functional programming patterns and robust error handling.</Description>
     <PackageTags>
       Result,ResultPattern,FunctionalProgramming,ErrorHandling,RailwayOriented,CSharpEssentials
     </PackageTags>

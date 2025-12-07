@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-
-namespace CSharpEssentials.Core;
+﻿namespace CSharpEssentials.Core;
 
 public static class ExceptionExtensions
 {
@@ -13,7 +11,6 @@ public static class ExceptionExtensions
             innerException = innerException.InnerException;
         }
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IEnumerable<string?> GetInnerExceptionsMessages(this Exception ex) =>
         ex.GetInnerExceptions().Select(x => x.Message);
 }

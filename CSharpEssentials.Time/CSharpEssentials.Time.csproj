@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Multi-targeting support -->
+    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Time</PackageId>
     <Title>CSharpEssentials.Time</Title>
@@ -28,5 +31,10 @@
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="..\README.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- TimeProvider polyfill for .NET Standard 2.1 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="8.0.0" />
   </ItemGroup>
 </Project>

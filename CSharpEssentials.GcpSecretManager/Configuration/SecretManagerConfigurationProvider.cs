@@ -65,14 +65,14 @@ internal sealed class SecretManagerConfigurationProvider(
                 ListSecretsAsync(context, parent)).ConfigureAwait(false);
 
             if (secrets.Count == 0)
-                return [];
+                return new Dictionary<string, string?>();
 
             var filteredSecrets = secrets
                 .Where(secret => loader.ShouldLoadSecret(secret, context.Config))
                 .ToList();
 
             if (filteredSecrets.Count == 0)
-                return [];
+                return new Dictionary<string, string?>();
 
             Dictionary<string, string?> resultDict = new(StringComparer.Ordinal);
 
@@ -166,7 +166,7 @@ internal sealed class SecretManagerConfigurationProvider(
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"Error listing secrets: {ex.Message}");
-            return [];
+            return new List<Secret>();
         }
     }
 

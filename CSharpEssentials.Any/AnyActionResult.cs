@@ -1,5 +1,3 @@
-using System;
-
 namespace CSharpEssentials.Any;
 
 public enum AnyActionStatus

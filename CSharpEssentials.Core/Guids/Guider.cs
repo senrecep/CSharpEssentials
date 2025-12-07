@@ -1,6 +1,5 @@
 ﻿using System.Buffers.Text;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace CSharpEssentials.Core;
 
@@ -19,7 +18,12 @@ public static class Guider
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
         Span<byte> span = stackalloc byte[_inputLength];
+#if NETSTANDARD2_1
+        byte[] guidBytes = id.ToByteArray();
+        guidBytes.CopyTo(bytes);
+#else
         MemoryMarshal.TryWrite(bytes, in id);
+#endif
         Base64.EncodeToUtf8(bytes, span, out _, out _);
         Span<char> chars = stackalloc char[_encodedLength];
         for (int i = default; i < _encodedLength; i++)
@@ -58,5 +62,10 @@ public static class Guider
     /// </summary>
     /// <returns></returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Guid NewGuid() => Guid.CreateVersion7();
+    public static Guid NewGuid()
+#if NET9_0_OR_GREATER
+        => Guid.CreateVersion7();
+#else
+        => Guid.NewGuid();
+#endif
 }

@@ -49,18 +49,17 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
-        Type? type = value?.GetType();
-
-        if (EqualityComparer<T>.Default.Equals(value, default) || type == null)
+        if (value is null)
         {
             JsonSerializer.Serialize(writer, value, options);
             return;
         }
 
+        Type valueType = value.GetType();
         writer.WriteStartObject();
-        writer.WriteString(TypePropertyName, type.FullName);
+        writer.WriteString(TypePropertyName, valueType.FullName);
 
-        foreach (JsonProperty property in JsonSerializer.SerializeToElement(value, type, options).EnumerateObject())
+        foreach (JsonProperty property in JsonSerializer.SerializeToElement(value, valueType, options).EnumerateObject())
         {
             property.WriteTo(writer);
         }

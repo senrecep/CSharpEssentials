@@ -21,14 +21,24 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
 #pragma warning restore IDE0051
     private Result(TValue value)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(value);
+#else
+        if (value is null)
+            throw new ArgumentNullException(nameof(value));
+#endif
         _value = value;
     }
 
     private Result(IEnumerable<Error> errors)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(errors);
-        Error[] errorArray = [.. errors];
+#else
+        if (errors is null)
+            throw new ArgumentNullException(nameof(errors));
+#endif
+        Error[] errorArray = errors.ToArray();
 
         if (errorArray.Length == 0)
             throw ResultLogic.CreateEmptyErrorArrayException();
@@ -49,9 +59,17 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     public readonly bool IsSuccess => _errors is null;
     public readonly TValue Value => IsSuccess ? _value : default!;
     [JsonPropertyName("errors")]
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
+#if NET8_0_OR_GREATER
+    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors! : [];
+#else
+    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors! : Array.Empty<Error>();
+#endif
     [JsonIgnore]
-    public readonly Error[] Errors => IsFailure ? _errors : [Error.NoErrors];
+#if NET8_0_OR_GREATER
+    public readonly Error[] Errors => IsFailure ? _errors! : [Error.NoErrors];
+#else
+    public readonly Error[] Errors => IsFailure ? _errors! : new[] { Error.NoErrors };
+#endif
     [JsonIgnore]
     public readonly Error FirstError => IsFailure ? _errors[0] : Error.NoFirstError;
     [JsonIgnore]
