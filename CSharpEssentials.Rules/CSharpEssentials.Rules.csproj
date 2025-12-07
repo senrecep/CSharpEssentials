@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- Multi-targeting support -->
     <TargetFrameworks>netstandard2.1</TargetFrameworks>
-    
+
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Rules</PackageId>
     <Title>CSharpEssentials.Rules</Title>
@@ -34,9 +34,9 @@
 
   <!-- Dependencies: Rules depends on Results and Core for polyfills -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.1.0]"
+    <PackageReference Include="CSharpEssentials.Results" Version="[2.1.1]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.0]"
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.1]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
