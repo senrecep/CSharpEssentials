@@ -35,9 +35,9 @@
 
   <!-- Dependencies: Any depends on Json for serialization and Core for polyfills -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.0]"
+    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.1]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.0]"
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.1]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
