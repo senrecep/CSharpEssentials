@@ -48,8 +48,8 @@ public readonly partial record struct Result<TValue>
     /// <returns></returns>
     public static Result<TValue[]> And(params IEnumerable<IResult<TValue>> results)
     {
-        List<Error> errors = [];
-        List<TValue> values = [];
+        var errors = new List<Error>();
+        var values = new List<TValue>();
         foreach (IResult<TValue> item in results)
             if (item.IsSuccess)
                 values.Add(item.Value);
@@ -75,7 +75,11 @@ public readonly partial record struct Result<TValue>
     /// <returns></returns>
     public static Result<TValue> Or(params IEnumerable<IResult<TValue>> results)
     {
+#if NET8_0_OR_GREATER
         List<Error> errors = [];
+#else
+        var errors = new List<Error>();
+#endif
         foreach (IResult<TValue> result in results)
         {
             if (result.IsSuccess)
@@ -87,7 +91,11 @@ public readonly partial record struct Result<TValue>
     }
 
 
+#if NET8_0_OR_GREATER
     public static implicit operator Result<TValue>(Error error) => new([error]);
+#else
+    public static implicit operator Result<TValue>(Error error) => new(new[] { error });
+#endif
     public static implicit operator Result<TValue>(Error[] errors) => new(errors);
     public static implicit operator Result<TValue>(List<Error> errors) => new(errors);
     public static implicit operator Result<TValue>(HashSet<Error> errors) => new(errors);

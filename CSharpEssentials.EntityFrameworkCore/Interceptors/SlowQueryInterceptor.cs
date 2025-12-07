@@ -5,9 +5,14 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 
 namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
-public class SlowQueryInterceptor(ILogger<SlowQueryInterceptor> logger) : DbCommandInterceptor
+public class SlowQueryInterceptor : DbCommandInterceptor
 {
-    private readonly ILogger<SlowQueryInterceptor> _logger = logger;
+    private readonly ILogger<SlowQueryInterceptor> _logger;
+
+    public SlowQueryInterceptor(ILogger<SlowQueryInterceptor> logger)
+    {
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+    }
     private readonly double _thresholdMilliseconds = TimeSpan.FromSeconds(1).TotalMilliseconds;
 
     private void LogIfSlowQuery(DbCommand command, TimeSpan elapsedTime, [CallerMemberName] string methodName = "")

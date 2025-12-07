@@ -5,19 +5,19 @@ namespace CSharpEssentials.Any;
 
 public readonly struct Any<T0, T1>
 {
-    private static readonly Dictionary<int, Type> _typeMap = new()
+    private static readonly Dictionary<int, Type> TypeMap = new()
     {
         { 0, typeof(T0) },
         { 1, typeof(T1) }
     };
 
     [JsonConstructor]
-    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(_typeMap, index, value);
+    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(TypeMap, index, value);
     private Any(T0 value) => (Index, Value) = (0, value);
     private Any(T1 value) => (Index, Value) = (1, value);
 
-    public readonly int Index { get; }
-    public readonly object? Value { get; }
+    public int Index { get; }
+    public object? Value { get; }
 
     [JsonIgnore]
     public bool IsFirst => Index == 0;
@@ -34,7 +34,12 @@ public readonly struct Any<T0, T1>
         Action<T0>? first = null,
         Action<T1>? second = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(Value);
+#else
+        if (Value is null)
+            throw new InvalidOperationException("Value cannot be null");
+#endif
         switch (Index)
         {
             case 0 when first is not null:
@@ -52,7 +57,12 @@ public readonly struct Any<T0, T1>
         Func<T0, TResult>? first = null,
         Func<T1, TResult>? second = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(Value);
+#else
+        if (Value is null)
+            throw new InvalidOperationException("Value cannot be null");
+#endif
         return Index switch
         {
             0 when first is not null => first((T0)Value),

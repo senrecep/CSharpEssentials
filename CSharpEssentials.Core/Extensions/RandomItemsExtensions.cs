@@ -1,12 +1,10 @@
-﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
 namespace CSharpEssentials.Core;
 
 public static class RandomItemsExtensions
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T GetRandomItem<T>(this Span<T> source)
     {
         int index = RandomNumberGenerator.GetInt32(0, source.Length);
@@ -30,29 +28,32 @@ public static class RandomItemsExtensions
         while (index < count)
         {
             int randomIndex = RandomNumberGenerator.GetInt32(0, sourceLength);
-            if (selectedIndices[randomIndex].IsFalse())
-            {
-                selectedIndices[randomIndex] = true;
-                resultArray[index++] = source[randomIndex];
-            }
+            if (!selectedIndices[randomIndex].IsFalse())
+                continue;
+            selectedIndices[randomIndex] = true;
+            resultArray[index++] = source[randomIndex];
         }
 
         return resultArray;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T[] GetRandomItems<T>(this List<T> source, int count) =>
-        CollectionsMarshal.AsSpan(source).GetRandomItems(count);
+    public static T[] GetRandomItems<T>(this List<T> source, int count)
+#if NET5_0_OR_GREATER
+        => CollectionsMarshal.AsSpan(source).GetRandomItems(count);
+#else
+        => source.ToArray().AsSpan().GetRandomItems(count);
+#endif
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T GetRandomItem<T>(this List<T> source) =>
-        CollectionsMarshal.AsSpan(source).GetRandomItem();
+    public static T GetRandomItem<T>(this List<T> source)
+#if NET5_0_OR_GREATER
+        => CollectionsMarshal.AsSpan(source).GetRandomItem();
+#else
+        => source.ToArray().AsSpan().GetRandomItem();
+#endif
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T[] GetRandomItems<T>(this T[] source, int count) =>
         source.AsSpan().GetRandomItems(count);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T GetRandomItem<T>(this T[] source) =>
         source.AsSpan().GetRandomItem();
 

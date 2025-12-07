@@ -1,4 +1,3 @@
-using System;
 using CSharpEssentials.Entity.Interfaces;
 
 namespace CSharpEssentials.Entity;

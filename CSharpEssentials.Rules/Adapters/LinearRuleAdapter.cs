@@ -1,5 +1,4 @@
 
-using System.Runtime.CompilerServices;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Rules;
@@ -9,11 +8,9 @@ internal readonly record struct LinearRuleAdapter<TContext>(
     IRuleBase<TContext> Next
 ) : ILinearRule<TContext>
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result Evaluate(TContext context, CancellationToken cancellationToken = default) =>
         Rule.Evaluate(context, cancellationToken);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static LinearRuleAdapter<TContext> From(
         IRule<TContext> rule,
         IRuleBase<TContext> next
@@ -25,11 +22,9 @@ internal readonly record struct LinearRuleAdapter<TContext, TResult>(
     IRuleBase<TContext, TResult> Next
 ) : ILinearRule<TContext, TResult>
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Result<TResult> Evaluate(TContext context, CancellationToken cancellationToken = default) =>
         Rule.Evaluate(context, cancellationToken);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static LinearRuleAdapter<TContext, TResult> From(
         IRule<TContext, TResult> rule,
         IRuleBase<TContext, TResult> next

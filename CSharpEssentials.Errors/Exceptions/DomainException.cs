@@ -2,7 +2,13 @@ using CSharpEssentials.Errors;
 
 namespace CSharpEssentials.Exceptions;
 
-public class DomainException(Error error) : Exception(error.Description)
+public class DomainException : Exception
 {
-    public Error Error => error;
+    public DomainException(Error error) 
+        : base(error.Description)
+    {
+        Error = error;
+    }
+
+    public Error Error { get; }
 }

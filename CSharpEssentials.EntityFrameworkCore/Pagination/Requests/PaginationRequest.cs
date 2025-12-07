@@ -1,5 +1,3 @@
-using System;
-
 namespace CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 
 public interface IPaginationRequest

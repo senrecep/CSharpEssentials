@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace CSharpEssentials.Errors;
 
@@ -18,42 +17,40 @@ public readonly record struct Error : IError
     /// <summary>
     /// Gets the unique error code.
     /// </summary>
-    public readonly string Code { get; }
+    public string Code { get; }
 
     /// <summary>
     /// Gets the error description.
     /// </summary>
-    public readonly string Description { get; }
+    public string Description { get; }
 
     /// <summary>
     /// Gets the error type.
     /// </summary>
-    public readonly ErrorType Type { get; }
+    public ErrorType Type { get; }
 
     /// <summary>
     /// Gets the numeric value of the type.
     /// </summary>
-    public readonly int NumericType { get; }
+    public int NumericType { get; }
 
     /// <summary>
     /// Gets the metadata.
     /// </summary>
-    public readonly ErrorMetadata? Metadata { get; }
+    public ErrorMetadata? Metadata { get; }
 
     /// <summary>
     /// Creates an <see cref="Error"/> from a code and description.
     /// </summary>
     /// <param name="errors"></param>
     /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Error[] CreateMany(params IEnumerable<Error> errors) => [.. errors];
+    public static Error[] CreateMany(params IEnumerable<Error> errors) => errors.ToArray();
     /// <summary>
     /// Creates an <see cref="Error"/> from a code and description.
     /// </summary>
     /// <param name="errors"></param>
     /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Error[] CreateMany(params IEnumerable<IEnumerable<Error>> errors) => [.. errors.SelectMany(x => x)];
+    public static Error[] CreateMany(params IEnumerable<IEnumerable<Error>> errors) => errors.SelectMany(x => x).ToArray();
 
 
     /// <summary>
@@ -62,7 +59,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Failure(
         string code = nameof(Failure),
         string description = "A failure has occurred.",
@@ -75,7 +71,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Unexpected(
         string code = nameof(Unexpected),
         string description = "An unexpected error has occurred.",
@@ -88,7 +83,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Validation(
         string code = nameof(Validation),
         string description = "A validation error has occurred.",
@@ -101,7 +95,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Conflict(
         string code = nameof(Conflict),
         string description = "A conflict error has occurred.",
@@ -115,7 +108,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error NotFound(
         string code = nameof(NotFound),
         string description = "A 'Not Found' error has occurred.",
@@ -128,7 +120,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Unauthorized(
         string code = nameof(Unauthorized),
         string description = "An 'Unauthorized' error has occurred.",
@@ -141,7 +132,6 @@ public readonly record struct Error : IError
     /// <param name="code">The unique error code.</param>
     /// <param name="description">The error description.</param>
     /// <param name="metadata">A dictionary which provides optional space for information.</param>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Forbidden(
         string code = nameof(Forbidden),
         string description = "A 'Forbidden' error has occurred.",
@@ -155,7 +145,6 @@ public readonly record struct Error : IError
     /// <param name="type"></param>
     /// <param name="metadata"></param>
     /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Exception(
         Exception exception,
         ErrorType type = ErrorType.Failure,
@@ -169,7 +158,6 @@ public readonly record struct Error : IError
     /// <param name="type"></param>
     /// <param name="metadata"></param>
     /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Exception(
         string code,
         Exception exception,
@@ -186,7 +174,6 @@ public readonly record struct Error : IError
     /// <param name="type"></param>
     /// <param name="metadata"></param>
     /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Error Exception(
         string code,
         string description,

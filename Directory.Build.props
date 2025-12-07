@@ -1,9 +1,8 @@
 <!-- Directory.Build.props - Centralized configuration for all CSharpEssentials packages -->
 <Project>
 	<PropertyGroup>
-		<!-- Single target framework for now -->
-		<TargetFramework>net9.0</TargetFramework>
-		<LangVersion>13.0</LangVersion>
+		<!-- Individual projects define their own TargetFrameworks -->
+		<LangVersion>latest</LangVersion>
 
 		<!-- Use project references by default for development -->
 		<UseProjectReferences Condition="'$(UseProjectReferences)' == ''">true</UseProjectReferences>
