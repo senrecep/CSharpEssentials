@@ -1,6 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <!-- Multi-targeting support -->
+    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Maybe</PackageId>
     <Title>CSharpEssentials.Maybe</Title>

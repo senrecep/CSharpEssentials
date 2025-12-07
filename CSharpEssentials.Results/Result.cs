@@ -16,8 +16,13 @@ public readonly partial record struct Result : IResult
 
     private Result(IEnumerable<Error> errors)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(errors);
-        Error[] errorArray = [.. errors];
+#else
+        if (errors is null)
+            throw new ArgumentNullException(nameof(errors));
+#endif
+        Error[] errorArray = errors.ToArray();
 
         if (errorArray.Length == 0)
             throw ResultLogic.CreateEmptyErrorArrayException();
@@ -32,13 +37,21 @@ public readonly partial record struct Result : IResult
     [MemberNotNullWhen(false, nameof(_errors))]
     public readonly bool IsSuccess => _errors is null;
     [JsonPropertyName("errors")]
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
+#if NET8_0_OR_GREATER
+    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors! : [];
+#else
+    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors! : Array.Empty<Error>();
+#endif
     [JsonIgnore]
-    public readonly Error[] Errors => IsFailure ? _errors : [Error.NoErrors];
+#if NET8_0_OR_GREATER
+    public readonly Error[] Errors => IsFailure ? _errors! : [Error.NoErrors];
+#else
+    public readonly Error[] Errors => IsFailure ? _errors! : new[] { Error.NoErrors };
+#endif
     [JsonIgnore]
-    public readonly Error FirstError => IsFailure ? _errors[0] : Error.NoFirstError;
+    public readonly Error FirstError => IsFailure ? _errors![0] : Error.NoFirstError;
     [JsonIgnore]
-    public readonly Error LastError => IsFailure ? _errors[^1] : Error.NoLastError;
+    public readonly Error LastError => IsFailure ? _errors![_errors!.Length - 1] : Error.NoLastError;
 
 
     public override string ToString()

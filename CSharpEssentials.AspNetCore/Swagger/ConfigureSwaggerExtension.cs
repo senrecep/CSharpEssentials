@@ -28,7 +28,11 @@ public static class ConfigureSwaggerExtension
             options.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
+#if NET8_0_OR_GREATER
                 { securityScheme, [] }
+#else
+                { securityScheme, Array.Empty<string>() }
+#endif
             });
             var factory = new SwashbuckleSchemaIdFactory();
             options.CustomSchemaIds(factory.GetSchemaId);

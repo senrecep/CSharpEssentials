@@ -26,7 +26,11 @@ internal sealed class ServiceClientHelper : IServiceClientHelper
 
     public SecretManagerServiceClient Create(string credentialsPath)
     {
+#if NET6_0_OR_GREATER
         ArgumentException.ThrowIfNullOrEmpty(credentialsPath);
+#else
+        if (string.IsNullOrEmpty(credentialsPath)) throw new ArgumentException("Value cannot be null or empty.", nameof(credentialsPath));
+#endif
 
         var clientBuilder = new SecretManagerServiceClientBuilder
         {

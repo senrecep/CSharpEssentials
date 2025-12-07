@@ -8,7 +8,11 @@ namespace CSharpEssentials.Entity;
 /// </summary>
 public abstract class EntityBase : IEntityBase
 {
+#if NET8_0_OR_GREATER
     private readonly List<IDomainEvent> _domainEvents = [];
+#else
+    private readonly List<IDomainEvent> _domainEvents = new List<IDomainEvent>(0);
+#endif
 
 
     public DateTimeOffset CreatedAt { get; private set; }
@@ -19,7 +23,7 @@ public abstract class EntityBase : IEntityBase
     public string? UpdatedBy { get; private set; }
 
 
-    public IReadOnlyList<IDomainEvent> DomainEvents => [.. _domainEvents];
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.ToList().AsReadOnly();
 
     public void ClearDomainEvents() => _domainEvents.Clear();
 

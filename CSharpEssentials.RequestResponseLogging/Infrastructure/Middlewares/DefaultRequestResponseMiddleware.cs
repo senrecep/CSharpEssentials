@@ -1,6 +1,13 @@
 ﻿namespace CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
 
-internal sealed class DefaultRequestResponseMiddleware(RequestDelegate next, ILogWriter logWriter, string[] ignoredPaths) : BaseMiddleware(logWriter, ignoredPaths)
+internal sealed class DefaultRequestResponseMiddleware : BaseMiddleware
 {
-    public Task InvokeAsync(HttpContext httpContext) => IsIgnoredPath(httpContext) ? next(httpContext) : InvokeMiddleware(next, httpContext);
+    private readonly RequestDelegate _next;
+
+    public DefaultRequestResponseMiddleware(RequestDelegate next, ILogWriter logWriter, string[] ignoredPaths) : base(logWriter, ignoredPaths)
+    {
+        _next = next;
+    }
+
+    public Task InvokeAsync(HttpContext httpContext) => IsIgnoredPath(httpContext) ? _next(httpContext) : InvokeMiddleware(_next, httpContext);
 }

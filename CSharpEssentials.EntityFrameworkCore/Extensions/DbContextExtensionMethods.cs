@@ -15,7 +15,11 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbContext context, TEntity? entity)
         where TEntity : class, ISoftDeletableEntityBase
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(entity);
+#else
+        if (entity is null) throw new ArgumentNullException(nameof(entity));
+#endif
         entity.MarkAsHardDeleted();
         context.Remove(entity);
     }
@@ -23,7 +27,7 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbContext context, IEnumerable<TEntity> entities)
         where TEntity : class, ISoftDeletableEntityBase
     {
-        TEntity[] records = entities as TEntity[] ?? [.. entities];
+        TEntity[] records = entities as TEntity[] ?? entities.ToArray();
         records.HardDelete();
         context.Set<TEntity>().RemoveRange(records);
     }
@@ -31,7 +35,11 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbSet<TEntity> context, TEntity? entity)
     where TEntity : class, ISoftDeletableEntityBase
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(entity);
+#else
+        if (entity is null) throw new ArgumentNullException(nameof(entity));
+#endif
         entity.MarkAsHardDeleted();
         context.Remove(entity);
     }
@@ -39,7 +47,7 @@ public static class DbContextExtensionMethods
     public static void Delete<TEntity>(this DbSet<TEntity> context, IEnumerable<TEntity> entities)
         where TEntity : class, ISoftDeletableEntityBase
     {
-        TEntity[] entityBases = entities as TEntity[] ?? [.. entities];
+        TEntity[] entityBases = entities as TEntity[] ?? entities.ToArray();
         entityBases.HardDelete();
         context.RemoveRange(entityBases);
     }
@@ -120,23 +128,26 @@ public static class DbContextExtensionMethods
             query(dbSet)
             .ToListAsync(cancellationToken);
 
-        TEntity[] theyWillBeDeleted = [.. entities
+        TEntity[] theyWillBeDeleted = entities
             .Where(entity => dataList
-                .All(item => !dataKeySelector(item).Equals(entityKeySelector(entity))))];
+                .All(item => !dataKeySelector(item).Equals(entityKeySelector(entity))))
+            .ToArray();
 
         if (hardDeleteMode && theyWillBeDeleted.Length != 0)
             theyWillBeDeleted.OfType<ISoftDeletable>().HardDelete();
 
 
-        TEntity[] theyWillBeUpdated = [.. entities
+        TEntity[] theyWillBeUpdated = entities
             .Join(dataList, entityKeySelector, dataKeySelector, (entity, item) => new { entity, item })
             .Where(obj => isUpdatedFunc(obj.entity, obj.item))
-            .Select(obj => updateFunc(obj.entity, obj.item))];
+            .Select(obj => updateFunc(obj.entity, obj.item))
+            .ToArray();
 
-        TEntity[] theyWillBeAdded = [.. dataList
+        TEntity[] theyWillBeAdded = dataList
             .Where(item => entities
                 .All(entity => !entityKeySelector(entity).Equals(dataKeySelector(item))))
-            .Select(converter)];
+            .Select(converter)
+            .ToArray();
 
         if (theyWillBeDeleted.Length != 0)
             dbSet.RemoveRange(theyWillBeDeleted);

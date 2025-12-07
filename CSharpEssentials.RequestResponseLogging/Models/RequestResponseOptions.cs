@@ -2,7 +2,11 @@
 
 public class RequestResponseOptions
 {
+#if NET8_0_OR_GREATER
     internal string[] IgnoredPaths = [];
+#else
+    internal string[] IgnoredPaths = Array.Empty<string>();
+#endif
     internal LoggingOptions LoggingOptions = new();
     internal ILoggerFactory? LoggerFactory;
 

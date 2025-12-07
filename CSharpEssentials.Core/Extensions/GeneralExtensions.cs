@@ -1,44 +1,31 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 
 namespace CSharpEssentials.Core;
 
 public static class GeneralExtensions
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsEmpty(
         [NotNullWhen(returnValue: false)] this string? str) =>
         string.IsNullOrEmpty(str) || string.IsNullOrWhiteSpace(str);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNotEmpty(
         [NotNullWhen(returnValue: true)] this string? str) => !str.IsEmpty();
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNotNull<T>(
         [NotNullWhen(returnValue: true)] this T? item) => item is not null;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(
         [NotNullWhen(returnValue: false)] this T? item) => item is null;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsTrue(this bool value) => value;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsFalse(this bool value) => !value;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static T ExplicitCast<T>(this object obj) => (T)obj;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ToStringFromGuid(this Guid value) => Guider.ToStringFromGuid(value);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Guid ToGuidFromString(this ReadOnlySpan<char> id) => Guider.ToGuidFromString(id);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Guid ToGuidFromString(this string id) => Guider.ToGuidFromString(id);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static DateTime MsToDateTime(this long value) =>
         DateTimeOffset.FromUnixTimeMilliseconds(value).DateTime;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static TGroup GetTypeGroup<TGroup, TType>(this TType type, int group = 100)
         where TGroup : Enum
         where TType : Enum, IConvertible
@@ -47,10 +34,13 @@ public static class GeneralExtensions
         return (TGroup)Enum.ToObject(typeof(TGroup), groupValue);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Task<T> AsTask<T>(this T obj) => Task.FromResult(obj);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static ValueTask<T> AsValueTask<T>(this T obj) => ValueTask.FromResult(obj);
+    public static ValueTask<T> AsValueTask<T>(this T obj)
+#if NETSTANDARD2_1
+        => new(obj);
+#else
+        => ValueTask.FromResult(obj);
+#endif
 
     public static async Task WithCancellation(this Task task, CancellationToken cancellationToken = default)
     {
@@ -106,7 +96,6 @@ public static class GeneralExtensions
 
 
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfTrue(this bool condition, Action action)
     {
         if (condition)
@@ -114,7 +103,6 @@ public static class GeneralExtensions
         return condition;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfFalse(this bool condition, Action action)
     {
         if (!condition)
@@ -122,7 +110,6 @@ public static class GeneralExtensions
         return condition;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNotNull<T>(
         [NotNullWhen(returnValue: true)] this T? obj, Action<T> action)
     {
@@ -131,7 +118,6 @@ public static class GeneralExtensions
         return obj.IsNotNull();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNotNull<T>(
          [NotNullWhen(returnValue: true)] this T? obj, Action action)
     {
@@ -140,7 +126,6 @@ public static class GeneralExtensions
         return obj.IsNotNull();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNotNull<T>(
         [NotNullWhen(returnValue: true)] this T? obj, Action<T> action, Action elseAction)
     {
@@ -151,7 +136,6 @@ public static class GeneralExtensions
         return obj.IsNotNull();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNotNull<T>(
         [NotNullWhen(returnValue: true)] this T? obj, Action action, Action elseAction)
     {
@@ -163,7 +147,6 @@ public static class GeneralExtensions
     }
 
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNull<T>(
         [NotNullWhen(returnValue: false)] this T? obj, Action action)
     {
@@ -172,7 +155,6 @@ public static class GeneralExtensions
         return obj.IsNull();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNull<T>(
         [NotNullWhen(returnValue: false)] this T? obj, Action action, Action<T> elseAction)
     {
@@ -183,7 +165,6 @@ public static class GeneralExtensions
         return obj.IsNull();
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IfNull<T>(
         [NotNullWhen(returnValue: false)] this T? obj, Action action, Action elseAction)
     {

@@ -21,8 +21,13 @@ internal abstract class BaseMiddleware
         ILogWriter logWriter,
         string[] ignoredPaths)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(logWriter);
         ArgumentNullException.ThrowIfNull(ignoredPaths);
+#else
+        if (logWriter is null) throw new ArgumentNullException(nameof(logWriter));
+        if (ignoredPaths is null) throw new ArgumentNullException(nameof(ignoredPaths));
+#endif
 
         _logWriter = logWriter is not NullLogWriter ? logWriter : null;
         _ignoredPaths = new HashSet<string>(
@@ -34,7 +39,11 @@ internal abstract class BaseMiddleware
 
     protected bool IsIgnoredPath(HttpContext context)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(context);
+#else
+        if (context is null) throw new ArgumentNullException(nameof(context));
+#endif
         string? requestPath = context.Request.Path.Value?.TrimEnd('/');
         return !string.IsNullOrEmpty(requestPath) &&
                _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
@@ -42,8 +51,13 @@ internal abstract class BaseMiddleware
 
     protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(next);
         ArgumentNullException.ThrowIfNull(httpContext);
+#else
+        if (next is null) throw new ArgumentNullException(nameof(next));
+        if (httpContext is null) throw new ArgumentNullException(nameof(httpContext));
+#endif
 
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = GetLoggingConfiguration(httpContext);
         string requestText;
@@ -161,7 +175,13 @@ internal abstract class BaseMiddleware
     {
         long startTime = Stopwatch.GetTimestamp();
         await next(httpContext).ConfigureAwait(false);
+#if NET7_0_OR_GREATER
         return Stopwatch.GetElapsedTime(startTime);
+#else
+        long endTime = Stopwatch.GetTimestamp();
+        long elapsed = endTime - startTime;
+        return TimeSpan.FromTicks((long)(elapsed * (10000000.0 / Stopwatch.Frequency)));
+#endif
     }
 
     private async Task<string> CaptureResponseBody(MemoryStream responseBody, Stream originalBodyStream)

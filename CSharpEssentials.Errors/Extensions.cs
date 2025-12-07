@@ -1,13 +1,10 @@
-using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Errors;
 
 public static class Extensions
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int ToIntType(this ErrorType type) => (int)type;
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int ToHttpStatusCode(this ErrorType errorType)
     {
         return errorType switch
@@ -24,7 +21,6 @@ public static class Extensions
         };
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static ErrorType ToErrorType(this int statusCode)
     {
         return statusCode switch

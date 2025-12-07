@@ -1,5 +1,4 @@
 
-using System.Runtime.CompilerServices;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Rules;
@@ -9,11 +8,9 @@ internal readonly record struct LinearAsyncRuleAdapter<TContext>(
     IRuleBase<TContext> Next
 ) : ILinearAsyncRule<TContext>
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<Result> EvaluateAsync(TContext context, CancellationToken cancellationToken = default) =>
         Rule.EvaluateAsync(context, cancellationToken);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static LinearAsyncRuleAdapter<TContext> From(
         IAsyncRule<TContext> rule,
         IRuleBase<TContext> next
@@ -26,11 +23,9 @@ internal readonly record struct LinearAsyncRuleAdapter<TContext, TResult>(
     IRuleBase<TContext, TResult> Next
 ) : ILinearAsyncRule<TContext, TResult>
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ValueTask<Result<TResult>> EvaluateAsync(TContext context, CancellationToken cancellationToken = default) =>
         Rule.EvaluateAsync(context, cancellationToken);
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static LinearAsyncRuleAdapter<TContext, TResult> From(
         IAsyncRule<TContext, TResult> rule,
         IRuleBase<TContext, TResult> next

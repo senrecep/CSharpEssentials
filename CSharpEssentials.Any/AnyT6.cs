@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Json;
 
@@ -6,7 +5,7 @@ namespace CSharpEssentials.Any;
 
 public readonly struct Any<T0, T1, T2, T3, T4, T5>
 {
-    private static readonly Dictionary<int, Type> _typeMap = new()
+    private static readonly Dictionary<int, Type> TypeMap = new()
     {
         { 0, typeof(T0) },
         { 1, typeof(T1) },
@@ -17,7 +16,7 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
     };
 
     [JsonConstructor]
-    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(_typeMap, index, value);
+    public Any(int index, object? value) => (Index, Value) = Any.Deserialize(TypeMap, index, value);
     private Any(T0 value) => (Index, Value) = (0, value);
     private Any(T1 value) => (Index, Value) = (1, value);
     private Any(T2 value) => (Index, Value) = (2, value);
@@ -25,8 +24,8 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
     private Any(T4 value) => (Index, Value) = (4, value);
     private Any(T5 value) => (Index, Value) = (5, value);
 
-    public readonly int Index { get; }
-    public readonly object? Value { get; }
+    public int Index { get; }
+    public object? Value { get; }
 
     [JsonIgnore]
     public bool IsFirst => Index == 0;
@@ -64,7 +63,12 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
         Action<T4>? fifth = null,
         Action<T5>? sixth = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(Value);
+#else
+        if (Value is null)
+            throw new InvalidOperationException("Value cannot be null");
+#endif
         switch (Index)
         {
             case 0 when first is not null:
@@ -98,7 +102,12 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
         Func<T4, TResult>? fifth = null,
         Func<T5, TResult>? sixth = null)
     {
+#if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(Value);
+#else
+        if (Value is null)
+            throw new InvalidOperationException("Value cannot be null");
+#endif
         return Index switch
         {
             0 when first is not null => first((T0)Value),
