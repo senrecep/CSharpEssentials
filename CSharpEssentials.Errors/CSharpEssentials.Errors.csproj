@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- Multi-targeting support -->
     <TargetFrameworks>netstandard2.1</TargetFrameworks>
-    
+
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Errors</PackageId>
     <Title>CSharpEssentials.Errors</Title>
@@ -35,9 +35,9 @@
 
   <!-- Dependencies: Errors depends on Core and Enums -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.0]"
+    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.1]"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.1.0]"
+    <PackageReference Include="CSharpEssentials.Enums" Version="[2.1.1]"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
