@@ -1,4 +1,3 @@
-using System;
 using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
@@ -15,7 +14,7 @@ public static class JsonExtensions
     /// <returns></returns>
     public static Result<JsonElement> TryGetProperty(this JsonElement jsonElement, params string[] propNames)
     {
-        if (propNames == null || propNames.Length == 0)
+        if (propNames.Length == 0)
             return Error.Validation("NoPropertyNames", "At least one property name must be provided.");
 
         foreach (string name in propNames)
@@ -35,10 +34,10 @@ public static class JsonExtensions
     /// <returns></returns>
     public static Result<JsonElement?> TryGetNestedProperty(this JsonDocument document, params string[] propNames)
     {
-        if (document == null || document.RootElement.ValueKind == JsonValueKind.Null)
+        if (document.RootElement.ValueKind == JsonValueKind.Null)
             return Error.Validation("DocumentIsNull", "The document is null or has no root element.");
 
-        if (propNames == null || propNames.Length == 0)
+        if (propNames.Length == 0)
             return Error.Validation("NoPropertyNames", "At least one property name must be provided.");
 
         JsonElement value = document.RootElement;
