@@ -154,3 +154,9 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 ## 🙏 Acknowledgments
 
 Inspired by excellent community projects like [ErrorOr](https://github.com/amantinband/error-or), [CSharpFunctionalExtensions](https://github.com/vkhorikov/CSharpFunctionalExtensions), and [OneOf](https://github.com/mcintyre321/OneOf).
+
+
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=senrecep/CSharpEssentials&type=date&legend=top-left)](https://www.star-history.com/#senrecep/CSharpEssentials&type=date&legend=top-left)
