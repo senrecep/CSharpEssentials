@@ -17,6 +17,42 @@ public class CloneExtensionsTests
         };
     }
 
+    private sealed class NestedCloneable : ICloneable<NestedCloneable>
+    {
+        public int Id { get; init; }
+        public TestCloneable Child { get; init; } = new();
+
+        public NestedCloneable Clone() => new()
+        {
+            Id = Id,
+            Child = Child.Clone()
+        };
+    }
+
+    private sealed class NestedCloneableWithSetter : ICloneable<NestedCloneableWithSetter>
+    {
+        public int Id { get; set; }
+        public TestCloneableWithSetter Child { get; set; } = new();
+
+        public NestedCloneableWithSetter Clone() => new()
+        {
+            Id = Id,
+            Child = Child.Clone()
+        };
+    }
+
+    private sealed class TestCloneableWithSetter : ICloneable<TestCloneableWithSetter>
+    {
+        public int Value { get; set; }
+        public string Name { get; set; } = string.Empty;
+
+        public TestCloneableWithSetter Clone() => new()
+        {
+            Value = Value,
+            Name = Name
+        };
+    }
+
     [Fact]
     public void Clone_IEnumerable_ShouldCloneAllItems()
     {
@@ -132,5 +168,50 @@ public class CloneExtensionsTests
         cloned[1].Value.Should().Be(1);
         cloned[2].Value.Should().Be(2);
     }
-}
 
+    [Fact]
+    public void Clone_IEnumerable_WithNestedItems_ShouldDeepClone()
+    {
+        List<NestedCloneable> source =
+        [
+            new() { Id = 1, Child = new TestCloneable { Value = 10, Name = "Child1" } },
+            new() { Id = 2, Child = new TestCloneable { Value = 20, Name = "Child2" } }
+        ];
+
+        var cloned = source.Clone().ToList();
+
+        cloned.Should().HaveCount(2);
+        cloned[0].Child.Should().NotBeSameAs(source[0].Child);
+        cloned[1].Child.Should().NotBeSameAs(source[1].Child);
+        cloned[0].Child.Value.Should().Be(10);
+        cloned[1].Child.Name.Should().Be("Child2");
+    }
+
+    [Fact]
+    public void Clone_IEnumerable_WithNestedItems_ShouldBeIndependent()
+    {
+        List<NestedCloneableWithSetter> source =
+        [
+            new() { Id = 1, Child = new TestCloneableWithSetter { Value = 10, Name = "Child1" } }
+        ];
+
+        var cloned = source.Clone().ToList();
+
+        cloned[0].Child.Name = "Modified";
+
+        source[0].Child.Name.Should().Be("Child1");
+    }
+
+    [Fact]
+    public void Clone_IQueryable_WithNestedItems_ShouldDeepClone()
+    {
+        List<NestedCloneable> source =
+        [
+            new() { Id = 1, Child = new TestCloneable { Value = 10, Name = "Child1" } }
+        ];
+
+        var cloned = source.AsQueryable().Clone().ToList();
+
+        cloned[0].Child.Should().NotBeSameAs(source[0].Child);
+    }
+}

@@ -1,6 +1,6 @@
-using CSharpEssentials.Core;
 using FluentAssertions;
 using static CSharpEssentials.Tests.TestData;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Tests.Core;
 
@@ -187,18 +187,59 @@ public class GeneralExtensionsTests
     public async Task WithCancellation_WithTaskT_ShouldWork()
     {
         var task = Task.FromResult(42);
-        int result = await task.WithCancellation(CancellationToken.None);
+        var result = await task.WithCancellation(CancellationToken.None);
 
         result.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithTaskT_WhenCancelled_ShouldThrow()
+    {
+        using CancellationTokenSource cts = new();
+        cts.CancelAfter(10);
+        var task = Task.Delay(1000).ContinueWith(_ => 42, TaskScheduler.Default);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => task.WithCancellation(cts.Token));
     }
 
     [Fact]
     public async Task WithCancellation_WithValueTask_ShouldWork()
     {
         var valueTask = ValueTask.FromResult(42);
-        int result = await valueTask.WithCancellation(CancellationToken.None);
+        var result = await valueTask.WithCancellation(CancellationToken.None);
 
         result.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithValueTaskT_WhenCancelled_ShouldThrow()
+    {
+        using CancellationTokenSource cts = new();
+        cts.CancelAfter(10);
+        var tcs = new TaskCompletionSource<int>();
+        var valueTask = new ValueTask<int>(tcs.Task);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => valueTask.WithCancellation(cts.Token).AsTask());
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithValueTaskNonGeneric_WhenNotCancelled_ShouldComplete()
+    {
+        var valueTask = new ValueTask(Task.Delay(10));
+        await valueTask.WithCancellation(CancellationToken.None);
+
+        valueTask.IsCompleted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithValueTaskNonGeneric_WhenCancelled_ShouldThrow()
+    {
+        using CancellationTokenSource cts = new();
+        cts.CancelAfter(10);
+        var tcs = new TaskCompletionSource<object>();
+        var valueTask = new ValueTask(tcs.Task);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => valueTask.WithCancellation(cts.Token).AsTask());
     }
 
     [Fact]
@@ -222,6 +263,14 @@ public class GeneralExtensionsTests
     }
 
     [Fact]
+    public void IfTrue_WithNullAction_ShouldThrowNullReferenceException()
+    {
+        Action action = null!;
+        Action act = () => true.IfTrue(action);
+        act.Should().Throw<NullReferenceException>();
+    }
+
+    [Fact]
     public void IfFalse_WhenFalse_ShouldExecuteAction()
     {
         bool executed = false;
@@ -229,6 +278,24 @@ public class GeneralExtensionsTests
 
         executed.Should().BeTrue();
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IfFalse_WhenTrue_ShouldNotExecuteAction()
+    {
+        bool executed = false;
+        bool result = true.IfFalse(() => executed = true);
+
+        executed.Should().BeFalse();
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfFalse_WithNullAction_ShouldThrowNullReferenceException()
+    {
+        Action action = null!;
+        Action act = () => false.IfFalse(action);
+        act.Should().Throw<NullReferenceException>();
     }
 
     [Fact]
@@ -265,6 +332,44 @@ public class GeneralExtensionsTests
     }
 
     [Fact]
+    public void IfNotNull_WithElseAction_WhenNull_ShouldExecuteElse()
+    {
+        bool ifExecuted = false;
+        bool elseExecuted = false;
+        string? value = null;
+        bool result = value.IfNotNull(_ => ifExecuted = true, () => elseExecuted = true);
+
+        ifExecuted.Should().BeFalse();
+        elseExecuted.Should().BeTrue();
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IfNotNull_WithActionAndElseAction_ShouldExecuteCorrectly()
+    {
+        bool ifExecuted = false;
+        bool elseExecuted = false;
+        bool result = "test".IfNotNull(() => ifExecuted = true, () => elseExecuted = true);
+
+        ifExecuted.Should().BeTrue();
+        elseExecuted.Should().BeFalse();
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfNotNull_WithActionAndElseAction_WhenNull_ShouldExecuteElse()
+    {
+        bool ifExecuted = false;
+        bool elseExecuted = false;
+        string? value = null;
+        bool result = value.IfNotNull(() => ifExecuted = true, () => elseExecuted = true);
+
+        ifExecuted.Should().BeFalse();
+        elseExecuted.Should().BeTrue();
+        result.Should().BeFalse();
+    }
+
+    [Fact]
     public void IfNull_WithNull_ShouldExecuteAction()
     {
         bool executed = false;
@@ -296,5 +401,107 @@ public class GeneralExtensionsTests
         ifExecuted.Should().BeTrue();
         elseExecuted.Should().BeFalse();
         result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfNull_WithActionAndElseAction_ShouldExecuteCorrectly()
+    {
+        bool ifExecuted = false;
+        bool elseExecuted = false;
+        string? value = null;
+        bool result = value.IfNull(() => ifExecuted = true, () => elseExecuted = true);
+
+        ifExecuted.Should().BeTrue();
+        elseExecuted.Should().BeFalse();
+        result.Should().BeTrue();
+    }
+
+    [Fact]
+    public void IfNull_WithActionAndElseAction_WhenNotNull_ShouldExecuteElse()
+    {
+        bool ifExecuted = false;
+        bool elseExecuted = false;
+        bool result = "test".IfNull(() => ifExecuted = true, () => elseExecuted = true);
+
+        ifExecuted.Should().BeFalse();
+        elseExecuted.Should().BeTrue();
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsNull_WithNullableValueTypeNull_ShouldReturnTrue()
+    {
+        int? value = null;
+        value.IsNull().Should().BeTrue();
+    }
+
+    [Fact]
+    public void IsNull_WithNullableValueTypeNotNull_ShouldReturnFalse()
+    {
+        int? value = 42;
+        value.IsNull().Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsNotNull_WithNullableValueTypeNull_ShouldReturnFalse()
+    {
+        int? value = null;
+        value.IsNotNull().Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsNotNull_WithNullableValueTypeNotNull_ShouldReturnTrue()
+    {
+        int? value = 42;
+        value.IsNotNull().Should().BeTrue();
+    }
+
+    [Fact]
+    public void ExplicitCast_WithInvalidCast_ShouldThrowInvalidCastException()
+    {
+        object value = "not an int";
+        Action act = () => value.ExplicitCast<int>();
+        act.Should().Throw<InvalidCastException>();
+    }
+
+    [Fact]
+    public void ToGuidFromString_WithInvalidString_ShouldThrowIndexOutOfRangeException()
+    {
+        Action act = () => "invalid-guid".ToGuidFromString();
+        act.Should().Throw<IndexOutOfRangeException>();
+    }
+
+    [Fact]
+    public void MsToDateTime_WithZero_ShouldReturnUnixEpoch()
+    {
+        long timestamp = 0;
+        DateTime result = timestamp.MsToDateTime();
+        result.Should().Be(DateTime.UnixEpoch);
+    }
+
+    [Fact]
+    public void MsToDateTime_WithNegative_ShouldReturnBeforeUnixEpoch()
+    {
+        long timestamp = -86400000;
+        DateTime result = timestamp.MsToDateTime();
+        result.Should().Be(new DateTime(1969, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public async Task AsTask_WithNullReferenceType_ShouldReturnTaskWithNull()
+    {
+        string? value = null;
+        Task<string?> task = value.AsTask();
+        string? result = await task;
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task AsValueTask_WithNullReferenceType_ShouldReturnValueTaskWithNull()
+    {
+        string? value = null;
+        ValueTask<string?> valueTask = value.AsValueTask();
+        string? result = await valueTask;
+        result.Should().BeNull();
     }
 }
