@@ -41,13 +41,28 @@ internal sealed class DefaultSecretManagerConfigurationLoader : ISecretManagerCo
 
     public bool ShouldLoadSecret(Secret secret, ProjectSecretConfiguration projectConfig)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(secret);
-        ArgumentNullException.ThrowIfNull(projectConfig);
-#else
-        if (secret is null) throw new ArgumentNullException(nameof(secret));
-        if (projectConfig is null) throw new ArgumentNullException(nameof(projectConfig));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(secret);
+
+        #else
+
+            if (secret is null)
+
+                throw new ArgumentNullException(nameof(secret));
+
+        #endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(projectConfig);
+
+        #else
+
+            if (projectConfig is null)
+
+                throw new ArgumentNullException(nameof(projectConfig));
+
+        #endif
 
         if (projectConfig.PrefixFilters.Count == 0 && projectConfig.SecretIds.Count == 0)
             return true;
