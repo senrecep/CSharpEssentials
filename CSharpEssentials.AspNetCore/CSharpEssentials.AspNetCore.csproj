@@ -7,7 +7,7 @@
     <PackageId>CSharpEssentials.AspNetCore</PackageId>
     <Title>CSharp Essentials AspNetCore</Title>
     <Product>CSharp Essentials AspNetCore</Product>
-    <Version>1.0.15</Version>
+    <!-- Version inherited from Directory.Build.props -->
     <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
