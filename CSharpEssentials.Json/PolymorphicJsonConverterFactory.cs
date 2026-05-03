@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -28,6 +29,22 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
             .ToDictionary(t => t.FullName ?? t.Name);
     });
 
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> InnerOptionsCache = new();
+
+    private static JsonSerializerOptions GetInnerOptions(JsonSerializerOptions options)
+    {
+        return InnerOptionsCache.GetValue(options, static opts =>
+        {
+            var inner = new JsonSerializerOptions(opts);
+            for (int i = inner.Converters.Count - 1; i >= 0; i--)
+            {
+                if (inner.Converters[i] is PolymorphicJsonConverterFactory)
+                    inner.Converters.RemoveAt(i);
+            }
+            return inner;
+        });
+    }
+
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         using var doc = JsonDocument.ParseValue(ref reader);
@@ -44,14 +61,14 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
             throw new JsonException($"Unknown type discriminator '{typeName}'.");
         }
 
-        return (T?)JsonSerializer.Deserialize(root.GetRawText(), derivedType, options);
+        return (T?)JsonSerializer.Deserialize(root.GetRawText(), derivedType, GetInnerOptions(options));
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
         if (value is null)
         {
-            JsonSerializer.Serialize(writer, value, options);
+            writer.WriteNullValue();
             return;
         }
 
@@ -59,7 +76,7 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
         writer.WriteStartObject();
         writer.WriteString(TypePropertyName, valueType.FullName);
 
-        foreach (JsonProperty property in JsonSerializer.SerializeToElement(value, valueType, options).EnumerateObject())
+        foreach (JsonProperty property in JsonSerializer.SerializeToElement(value, valueType, GetInnerOptions(options)).EnumerateObject())
         {
             property.WriteTo(writer);
         }
