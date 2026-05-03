@@ -1,5 +1,6 @@
 ﻿using System.Buffers.Text;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace CSharpEssentials.Core;
 
@@ -18,7 +19,7 @@ public static class Guider
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
         Span<byte> span = stackalloc byte[_inputLength];
-#if NETSTANDARD2_1
+#if NETSTANDARD
         byte[] guidBytes = id.ToByteArray();
         guidBytes.CopyTo(bytes);
 #else
@@ -33,7 +34,11 @@ public static class Guider
                 _plusByte => _underscore,
                 _ => (char)span[i]
             };
+#if NETSTANDARD2_0
+        return new string(chars.ToArray());
+#else
         return new string(chars);
+#endif
     }
 
     /// <summary>
@@ -53,8 +58,14 @@ public static class Guider
             };
         span[_encodedLength] = span[_encodedLength + 1] = _equal;
         Span<byte> bytes = stackalloc byte[_byteCount];
+#if NETSTANDARD2_0
+        byte[] byteArray = bytes.ToArray();
+        Convert.FromBase64CharArray(span.ToArray(), 0, span.Length).CopyTo(byteArray, 0);
+        return new Guid(byteArray);
+#else
         Convert.TryFromBase64Chars(span, bytes, out _);
         return new Guid(bytes);
+#endif
     }
 
     /// <summary>

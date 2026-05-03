@@ -7,7 +7,7 @@ public static class RandomItemsExtensions
 {
     public static T GetRandomItem<T>(this Span<T> source)
     {
-        int index = RandomNumberGenerator.GetInt32(0, source.Length);
+        int index = GetRandomInt32(0, source.Length);
         return source[index];
     }
     public static T[] GetRandomItems<T>(this Span<T> source, int count)
@@ -27,7 +27,7 @@ public static class RandomItemsExtensions
 
         while (index < count)
         {
-            int randomIndex = RandomNumberGenerator.GetInt32(0, sourceLength);
+            int randomIndex = GetRandomInt32(0, sourceLength);
             if (!selectedIndices[randomIndex].IsFalse())
                 continue;
             selectedIndices[randomIndex] = true;
@@ -58,11 +58,20 @@ public static class RandomItemsExtensions
         source.AsSpan().GetRandomItem();
 
 
+    private static int GetRandomInt32(int fromInclusive, int toExclusive)
+    {
+#if NETSTANDARD2_0
+        return RandomNumberGeneratorPolyfill.GetInt32(fromInclusive, toExclusive);
+#else
+        return RandomNumberGenerator.GetInt32(fromInclusive, toExclusive);
+#endif
+    }
+
     private static void Shuffle<T>(T[] array)
     {
         for (int i = array.Length - 1; i > 0; i--)
         {
-            int j = RandomNumberGenerator.GetInt32(0, i + 1);
+            int j = GetRandomInt32(0, i + 1);
             (array[j], array[i]) = (array[i], array[j]);
         }
     }

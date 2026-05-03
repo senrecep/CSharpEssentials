@@ -61,7 +61,7 @@ public static class CollectionExtensions
 
 
     public static bool HasSameElements<T>(this IEnumerable<T> src, IEnumerable<T> dest) =>
-        src.ToHashSet().SetEquals(dest.ToHashSet());
+        new HashSet<T>(src).SetEquals(new HashSet<T>(dest));
 
 
     public static bool AllTrue(this IEnumerable<bool> list)
