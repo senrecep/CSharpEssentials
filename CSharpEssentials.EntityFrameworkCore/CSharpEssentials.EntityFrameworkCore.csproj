@@ -41,23 +41,23 @@
 
   <!-- EF Core packages - version varies by target framework -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="EFCore.NamingConventions" Version="[9.0.0,)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[9.0.4,)" />
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="EFCore.NamingConventions" Version="[8.0.2,)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8.0.11,)" />
+    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[8.0.2,)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.11,)" />
   </ItemGroup>
 
   <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, and Json -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Core"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Entity" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Entity"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Enums"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Json"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"

@@ -35,7 +35,7 @@
 
   <!-- Dependencies: Json depends on Enums for enum converters -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Enums"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
@@ -44,7 +44,7 @@
 
   <!-- System.Text.Json for .NET Standard 2.1 -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="System.Text.Json" Version="[8.0.5,)" />
+    <PackageReference Include="System.Text.Json" />
   </ItemGroup>
 
 </Project>

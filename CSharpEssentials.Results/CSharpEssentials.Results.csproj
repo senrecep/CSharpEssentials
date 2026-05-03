@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
 
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Results</PackageId>
@@ -33,9 +33,9 @@
 
   <!-- Dependencies: Results depends on Errors and Json -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Errors"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Json"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
