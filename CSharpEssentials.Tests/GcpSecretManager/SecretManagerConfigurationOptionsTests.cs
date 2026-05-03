@@ -1,6 +1,7 @@
 using CSharpEssentials.GcpSecretManager;
 using CSharpEssentials.GcpSecretManager.Configuration;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 
 namespace CSharpEssentials.Tests.GcpSecretManager;
 
@@ -16,6 +17,9 @@ public class SecretManagerConfigurationOptionsTests
         options.BatchSize.Should().Be(10);
         options.PageSize.Should().Be(300);
         options.ConfigurationSectionName.Should().Be("GoogleSecretManager");
+        options.CredentialsPath.Should().BeNull();
+        options.Loader.Should().BeNull();
+        options.LoadFromAppSettings.Should().BeFalse();
     }
 
     [Fact]
@@ -88,5 +92,149 @@ public class SecretManagerConfigurationOptionsTests
 
         options.PageSize.Should().Be(500);
     }
-}
 
+    [Fact]
+    public void SecretManagerConfigurationOptions_ShouldAllowCustomLoader()
+    {
+        var loader = new CustomLoader();
+        var options = new SecretManagerConfigurationOptions
+        {
+            Loader = loader
+        };
+
+        options.Loader.Should().Be(loader);
+    }
+
+    [Fact]
+    public void SecretManagerConfigurationOptions_ShouldAllowCustomSectionName()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            ConfigurationSectionName = "CustomSection"
+        };
+
+        options.ConfigurationSectionName.Should().Be("CustomSection");
+    }
+
+    [Fact]
+    public void LoadFromConfiguration_WhenLoadFromAppSettingsIsFalse_ShouldNotLoad()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            LoadFromAppSettings = false
+        };
+        var configuration = new ConfigurationBuilder().Build();
+
+        options.LoadFromConfiguration(configuration);
+
+        options.Projects.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void LoadFromConfiguration_WhenSectionMissing_ShouldThrowInvalidOperationException()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            LoadFromAppSettings = true
+        };
+        var configuration = new ConfigurationBuilder().Build();
+
+        Action action = () => options.LoadFromConfiguration(configuration);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("Configuration section 'GoogleSecretManager' not found in appsettings.json");
+    }
+
+    [Fact]
+    public void LoadFromConfiguration_WhenProjectIdEmpty_ShouldThrowInvalidOperationException()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            LoadFromAppSettings = true
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GoogleSecretManager:Projects:0:ProjectId"] = "",
+                ["GoogleSecretManager:Projects:0:Region"] = "us-central1"
+            })
+            .Build();
+
+        Action action = () => options.LoadFromConfiguration(configuration);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("ProjectId is required for each project configuration");
+    }
+
+    [Fact]
+    public void LoadFromConfiguration_WhenProjectIdMissing_ShouldThrowInvalidOperationException()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            LoadFromAppSettings = true
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GoogleSecretManager:Projects:0:Region"] = "us-central1"
+            })
+            .Build();
+
+        Action action = () => options.LoadFromConfiguration(configuration);
+
+        action.Should().Throw<InvalidOperationException>()
+            .WithMessage("ProjectId is required for each project configuration");
+    }
+
+    [Fact]
+    public void LoadFromConfiguration_WithValidSection_ShouldLoadProjects()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            LoadFromAppSettings = true
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["GoogleSecretManager:Projects:0:ProjectId"] = "project1",
+                ["GoogleSecretManager:Projects:0:Region"] = "us-central1",
+                ["GoogleSecretManager:Projects:1:ProjectId"] = "project2"
+            })
+            .Build();
+
+        options.LoadFromConfiguration(configuration);
+
+        options.Projects.Should().HaveCount(2);
+        options.Projects[0].ProjectId.Should().Be("project1");
+        options.Projects[0].Region.Should().Be("us-central1");
+        options.Projects[1].ProjectId.Should().Be("project2");
+    }
+
+    [Fact]
+    public void LoadFromConfiguration_WithCustomSectionName_ShouldUseCustomName()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            LoadFromAppSettings = true,
+            ConfigurationSectionName = "CustomSecrets"
+        };
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["CustomSecrets:Projects:0:ProjectId"] = "project1"
+            })
+            .Build();
+
+        options.LoadFromConfiguration(configuration);
+
+        options.Projects.Should().HaveCount(1);
+        options.Projects[0].ProjectId.Should().Be("project1");
+    }
+
+    private sealed class CustomLoader : ISecretManagerConfigurationLoader
+    {
+        public string GetKey(Google.Cloud.SecretManager.V1.Secret secret) => secret.SecretName.SecretId;
+        public string GetKey(string keyId) => keyId;
+        public bool ShouldLoadSecret(Google.Cloud.SecretManager.V1.Secret secret, ProjectSecretConfiguration projectConfig) => true;
+    }
+}
