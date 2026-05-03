@@ -1,16 +1,15 @@
 using System;
 using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
-using CSharpEssentials.ResultPattern;
 
-namespace CSharpEssentials.Core;
+namespace CSharpEssentials.ResultPattern;
 
-public static class StringExtensions
+public static class StringResultExtensions
 {
     public static Result<string> TrimStart(
-    this string? input,
-    string prefixToRemove,
-    StringComparison comparisonType = StringComparison.CurrentCulture)
+        this string? input,
+        string prefixToRemove,
+        StringComparison comparisonType = StringComparison.CurrentCulture)
     {
         if (input.IsEmpty())
             return Error.Validation(code: "InputIsEmpty", description: "Input is null or empty.");
@@ -30,5 +29,4 @@ public static class StringExtensions
             return Error.Validation(code: "SuffixIsEmpty", description: "Suffix is null or empty.");
         return input.EndsWith(suffixToRemove, comparisonType) ? input[..^suffixToRemove.Length] : input;
     }
-
 }

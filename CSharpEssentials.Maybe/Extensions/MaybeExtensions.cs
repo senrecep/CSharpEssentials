@@ -4,7 +4,7 @@ using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Maybe;
 
-public static class MaybeExtensions
+public static partial class MaybeExtensions
 {
     private static readonly Error _defaultError = Error.NotFound(code: "Maybe.Result", description: "The 'Maybe' has no value.");
     /// <summary>
