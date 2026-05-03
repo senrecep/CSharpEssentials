@@ -59,7 +59,7 @@ public class CursorPaginationResponseTests
         CursorPaginationResponse<int, int> response = new(items);
 
         response.Items.Should().BeEquivalentTo(items);
-        response.Next.Should().Be(default(int));
+        response.Next.Should().Be(default);
         response.HasMore.Should().BeFalse();
     }
 
