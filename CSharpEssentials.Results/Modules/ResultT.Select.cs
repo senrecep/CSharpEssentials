@@ -1,3 +1,4 @@
+using CSharpEssentials.Core;
 namespace CSharpEssentials.ResultPattern;
 
 public readonly partial record struct Result<TValue>
@@ -64,7 +65,54 @@ public readonly partial record struct Result<TValue>
             .Map(intermediate => projector(value, intermediate));
     }
 }
+
 public static partial class ResultExtensions
 {
+    /// <summary>
+    /// Maps a function to the result.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TOut"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="selector"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Result<TOut>> SelectAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, TOut> selector, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Select(selector);
+    }
+
+    /// <summary>
+    /// Maps a function to the result.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TOut"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="selector"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Result<TOut>> SelectAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Task<TOut>> selector, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        if (result.IsFailure)
+            return result.Errors;
+        return await selector(result.Value).WithCancellation(cancellationToken);
+    }
+
+    /// <summary>
+    /// Maps a function to the result.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TOut"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="selector"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result<TOut>> SelectAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<TValue, TOut> selector, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Select(selector);
+    }
 
 }

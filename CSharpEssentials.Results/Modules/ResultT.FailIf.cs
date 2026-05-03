@@ -139,4 +139,56 @@ public static partial class ResultExtensions
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.FailIfAsync(onSuccess, func, cancellationToken);
     }
+
+    /// <summary>
+    /// Fail if the value is true.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> FailIf<TValue>(
+        this ValueTask<Result<TValue>> task,
+        Func<TValue, bool> onSuccess,
+        Error error,
+        CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.FailIf(onSuccess, error);
+    }
+
+    /// <summary>
+    /// Fail if the value is true.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> FailIf<TValue>(
+        this ValueTask<Result<TValue>> task,
+        Func<TValue, bool> onSuccess,
+        Func<TValue, Error> func,
+        CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.FailIf(onSuccess, func);
+    }
+
+    /// <summary>
+    /// Fail if the value is true.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
+        this ValueTask<Result<TValue>> task,
+        Func<TValue, Task<bool>> onSuccess,
+        Error error,
+        CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return await result.FailIfAsync(onSuccess, error, cancellationToken);
+    }
+
+    /// <summary>
+    /// Fail if the value is true.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
+        this ValueTask<Result<TValue>> task,
+        Func<TValue, Task<bool>> onSuccess,
+        Func<TValue, Task<Error>> func,
+        CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return await result.FailIfAsync(onSuccess, func, cancellationToken);
+    }
 }

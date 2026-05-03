@@ -1,3 +1,4 @@
+using CSharpEssentials.Core;
 namespace CSharpEssentials.ResultPattern;
 
 public readonly partial record struct Result<TValue>
@@ -78,7 +79,122 @@ public readonly partial record struct Result<TValue>
         return this;
     }
 }
+
 public static partial class ResultExtensions
 {
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Result<TValue>> TapAsync<TValue>(this Task<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(action);
+    }
 
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Result<TValue>> TapAsync<TValue>(this Task<Result<TValue>> task, Action action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(action);
+    }
+
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="condition"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Result<TValue>> TapAsync<TValue>(this Task<Result<TValue>> task, bool condition, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(condition, action);
+    }
+
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="condition"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Result<TValue>> TapAsync<TValue>(this Task<Result<TValue>> task, Func<bool> condition, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(condition, action);
+    }
+
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result<TValue>> TapAsync<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(action);
+    }
+
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result<TValue>> TapAsync<TValue>(this ValueTask<Result<TValue>> task, Action action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(action);
+    }
+
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="condition"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result<TValue>> TapAsync<TValue>(this ValueTask<Result<TValue>> task, bool condition, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(condition, action);
+    }
+
+    /// <summary>
+    /// Executes a function if the result is a success.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="condition"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result<TValue>> TapAsync<TValue>(this ValueTask<Result<TValue>> task, Func<bool> condition, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Tap(condition, action);
+    }
 }
