@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
 using Microsoft.EntityFrameworkCore;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.EntityFrameworkCore.Pagination;
 
@@ -70,10 +70,11 @@ public static class Extensions
         {
             ParameterExpression parameter = cursorSelector.Parameters[0];
             ConstantExpression cursorConstant = Expression.Constant(request.Cursor, typeof(TCursor));
-            Func<Expression, Expression, BinaryExpression> makeComparison = isAscending
-                ? Expression.GreaterThan
-                : Expression.LessThan;
-            Expression comparison = makeComparison(cursorSelector.Body, cursorConstant);
+            System.Reflection.MethodInfo compareMethod = typeof(TCursor).GetMethod(nameof(IComparable<TCursor>.CompareTo), [typeof(TCursor)])!;
+            Expression compareCall = Expression.Call(cursorSelector.Body, compareMethod, cursorConstant);
+            Expression comparison = isAscending
+                ? Expression.GreaterThan(compareCall, Expression.Constant(0))
+                : Expression.LessThan(compareCall, Expression.Constant(0));
             var lambda = Expression.Lambda<Func<T, bool>>(comparison, parameter);
             q = q.Where(lambda);
         }
