@@ -18,6 +18,30 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      - name: Verify version alignment
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PROP_VERSION=$(grep -oP '(?<=<PackageVersion>)[^<]+' Directory.Build.props)
+
+          echo "Tag version:    $TAG_VERSION"
+          echo "Props version:  $PROP_VERSION"
+
+          if [ "$TAG_VERSION" != "$PROP_VERSION" ]; then
+            echo "::error::Version mismatch! Tag is v$TAG_VERSION but Directory.Build.props has $PROP_VERSION"
+            exit 1
+          fi
+
+          echo "Versions aligned."
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test --no-build --configuration Release
+
       - name: Make script executable
         run: chmod +x ./build-and-publish-nugets.sh
 
