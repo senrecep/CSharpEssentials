@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace CSharpEssentials.Errors;
