@@ -67,26 +67,38 @@ public static class EnhancedJsonSerializerOptions
 
     public static JsonSerializerOptions ApplyTo(this JsonSerializerOptions source, JsonSerializerOptions target)
     {
-        target.ReferenceHandler = source.ReferenceHandler;
-        target.WriteIndented = source.WriteIndented;
-        target.PropertyNameCaseInsensitive = source.PropertyNameCaseInsensitive;
-        target.PropertyNamingPolicy = source.PropertyNamingPolicy;
-        target.Encoder = source.Encoder;
-        target.DefaultIgnoreCondition = source.DefaultIgnoreCondition;
+        target.AllowTrailingCommas = source.AllowTrailingCommas;
         target.DefaultBufferSize = source.DefaultBufferSize;
+        target.DefaultIgnoreCondition = source.DefaultIgnoreCondition;
+        target.DictionaryKeyPolicy = source.DictionaryKeyPolicy;
+        target.Encoder = source.Encoder;
         target.IgnoreReadOnlyFields = source.IgnoreReadOnlyFields;
         target.IgnoreReadOnlyProperties = source.IgnoreReadOnlyProperties;
-        target.ReadCommentHandling = source.ReadCommentHandling;
-        target.AllowTrailingCommas = source.AllowTrailingCommas;
-        target.WriteIndented = source.WriteIndented;
-        target.Encoder = source.Encoder;
-        target.NumberHandling = source.NumberHandling;
+        target.IncludeFields = source.IncludeFields;
         target.MaxDepth = source.MaxDepth;
+        target.NumberHandling = source.NumberHandling;
+        target.PreferredObjectCreationHandling = source.PreferredObjectCreationHandling;
+        target.PropertyNameCaseInsensitive = source.PropertyNameCaseInsensitive;
+        target.PropertyNamingPolicy = source.PropertyNamingPolicy;
+        target.ReadCommentHandling = source.ReadCommentHandling;
+        target.ReferenceHandler = source.ReferenceHandler;
+        target.TypeInfoResolver = source.TypeInfoResolver;
+        target.UnknownTypeHandling = source.UnknownTypeHandling;
+        target.UnmappedMemberHandling = source.UnmappedMemberHandling;
+        target.WriteIndented = source.WriteIndented;
 
+#if NET9_0_OR_GREATER
+        target.AllowOutOfOrderMetadataProperties = source.AllowOutOfOrderMetadataProperties;
+        target.IndentCharacter = source.IndentCharacter;
+        target.IndentSize = source.IndentSize;
+        target.NewLine = source.NewLine;
+        target.RespectNullableAnnotations = source.RespectNullableAnnotations;
+        target.RespectRequiredConstructorParameters = source.RespectRequiredConstructorParameters;
+#endif
 
         foreach (JsonConverter converter in source.Converters)
         {
-            if (target.Converters.Any(c => c.Type == converter.Type))
+            if (target.Converters.Any(c => c.GetType() == converter.GetType()))
                 continue;
             target.Converters.Add(converter);
         }

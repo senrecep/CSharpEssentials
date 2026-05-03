@@ -93,13 +93,16 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         "dd.MM.yyyy HH:mm",                 // 14.03.2024 15:30
         "yyyy-MM-dd HH.mm",                 // 2024-03-14 15.30
         "dd/MM/yyyy HH:mm:ss",              // 14/03/2024 15:30:45
+        "MM/dd/yyyy HH:mm:ss",              // 03/14/2024 15:30:45 (US format with time)
         
         // Week-Based Formats
         "yyyy'W'ww",                        // 2024W11
         "yyyy-'W'ww-d",                     // 2024-W11-4 (4th day of week 11)
         
+        // Timezone-aware Formats
+        "yyyy-MM-ddTHH:mm:sszzz",           // 2024-03-14T15:30:45+03:00
+        
         // Unix and SQL Formats
-        "U",                                // 1710424245 (Unix timestamp)
         "yyyy-MM-dd HH:mm:ss.fff"           // 2024-03-14 15:30:45.123 (SQL)
     };
 }
@@ -143,6 +146,13 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         {
             if (DateTime.TryParseExact(dateString, format, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime dateTime))
                 return (T)(object)dateTime;
+        }
+
+        // Try Unix timestamp as fallback (pure numeric string)
+        if (long.TryParse(dateString, out long unixSeconds))
+        {
+            DateTime unixDate = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).DateTime;
+            return (T)(object)unixDate;
         }
 
         throw new JsonException($"Unable to convert \"{dateString}\" to DateTime. Supported formats: {_supportedFormats}.");
