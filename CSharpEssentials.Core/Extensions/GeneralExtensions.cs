@@ -21,7 +21,7 @@ public static class GeneralExtensions
 
     public static string ToStringFromGuid(this Guid value) => Guider.ToStringFromGuid(value);
     public static Guid ToGuidFromString(this ReadOnlySpan<char> id) => Guider.ToGuidFromString(id);
-    public static Guid ToGuidFromString(this string id) => Guider.ToGuidFromString(id);
+    public static Guid ToGuidFromString(this string id) => Guider.ToGuidFromString(id.AsSpan());
 
     public static DateTime MsToDateTime(this long value) =>
         DateTimeOffset.FromUnixTimeMilliseconds(value).DateTime;
@@ -36,7 +36,7 @@ public static class GeneralExtensions
 
     public static Task<T> AsTask<T>(this T obj) => Task.FromResult(obj);
     public static ValueTask<T> AsValueTask<T>(this T obj)
-#if NETSTANDARD2_1
+#if NETSTANDARD
         => new(obj);
 #else
         => ValueTask.FromResult(obj);
@@ -45,7 +45,11 @@ public static class GeneralExtensions
     public static async Task WithCancellation(this Task task, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<bool>();
+#if NETSTANDARD2_0
+        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#else
         await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#endif
             if (task != await Task.WhenAny(task, tcs.Task))
                 throw new OperationCanceledException(cancellationToken);
 
@@ -55,7 +59,11 @@ public static class GeneralExtensions
     public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<bool>();
+#if NETSTANDARD2_0
+        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#else
         await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#endif
             if (task != await Task.WhenAny(task, tcs.Task))
                 throw new OperationCanceledException(cancellationToken);
 
@@ -65,7 +73,11 @@ public static class GeneralExtensions
     public static async ValueTask<T> WithCancellation<T>(this ValueTask<T> valueTask, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<bool>();
+#if NETSTANDARD2_0
+        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#else
         await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#endif
         {
             Task<T> task = valueTask.AsTask();
 
@@ -81,7 +93,11 @@ public static class GeneralExtensions
     public static async ValueTask WithCancellation(this ValueTask valueTask, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<bool>();
+#if NETSTANDARD2_0
+        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#else
         await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
+#endif
         {
             Task task = valueTask.AsTask();
 

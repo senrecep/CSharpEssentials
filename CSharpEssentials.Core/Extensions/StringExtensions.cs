@@ -23,18 +23,20 @@ public static class StringExtensions
         Title
     }
 
-    public static string ToPascalCase(this string input) => ConvertCase(input, CaseType.Pascal);
-    public static string ToCamelCase(this string input) => ConvertCase(input, CaseType.Camel);
-    public static string ToKebabCase(this string input) => ConvertCase(input, CaseType.Kebab);
-    public static string ToSnakeCase(this string input) => ConvertCase(input, CaseType.Snake);
-    public static string ToMacroCase(this string input) => ConvertCase(input, CaseType.Macro);
-    public static string ToTrainCase(this string input) => ConvertCase(input, CaseType.Train);
-    public static string ToTitleCase(this string input) => ConvertCase(input, CaseType.Title);
-    public static string ToUnderscoreCamelCase(this string input) => ConvertCase(input, CaseType.UnderscoreCamel);
+    public static string ToPascalCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Pascal, culture);
+    public static string ToCamelCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Camel, culture);
+    public static string ToKebabCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Kebab, culture);
+    public static string ToSnakeCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Snake, culture);
+    public static string ToMacroCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Macro, culture);
+    public static string ToTrainCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Train, culture);
+    public static string ToTitleCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.Title, culture);
+    public static string ToUnderscoreCamelCase(this string input, CultureInfo? culture = null) => ConvertCase(input, CaseType.UnderscoreCamel, culture);
 
-    private static string ConvertCase(string input, CaseType caseType)
+    private static string ConvertCase(string input, CaseType caseType, CultureInfo? culture = null)
     {
-        ReadOnlySpan<char> value = input;
+        if (input.Length == Zero) return string.Empty;
+
+        ReadOnlySpan<char> value = input.AsSpan();
         bool isFirstCharacter = true;
         bool insertSeparator = caseType is not CaseType.Camel and not CaseType.UnderscoreCamel;
 
@@ -53,8 +55,7 @@ public static class StringExtensions
 
         UnicodeCategory current = UnicodeCategory.OtherSymbol;
 
-        int startIndex = caseType == CaseType.UnderscoreCamel ? One : Zero;
-        for (int i = startIndex; i < value.Length; i++)
+        for (int i = Zero; i < value.Length; i++)
         {
             UnicodeCategory previous = current;
             current = char.GetUnicodeCategory(value[i]);
@@ -65,7 +66,7 @@ public static class StringExtensions
                 if (insertSeparator && !isFirstCharacter && NeedsSeparator(caseType))
                     newString[newIndex++] = GetSeparator(caseType);
 
-                newString[newIndex] = GetCharacterCase(value[i], caseType, insertSeparator, isFirstCharacter);
+                newString[newIndex] = GetCharacterCase(value[i], caseType, insertSeparator, isFirstCharacter, culture);
                 isFirstCharacter = false;
                 insertSeparator = false;
                 newIndex++;
@@ -74,26 +75,34 @@ public static class StringExtensions
 
 #if NET8_0_OR_GREATER
         return new string(newString[..newIndex]);
+#elif NETSTANDARD2_1
+        return new string(newString.Slice(0, newIndex));
 #else
-        return new(newString.Slice(0, newIndex));
+        return new string(newString.Slice(0, newIndex).ToArray());
 #endif
     }
 
-    private static char GetCharacterCase(char c, CaseType caseType, bool insertSeparator, bool isFirstCharacter)
+    private static char GetCharacterCase(char c, CaseType caseType, bool insertSeparator, bool isFirstCharacter, CultureInfo? culture)
     {
         return caseType switch
         {
-            CaseType.Macro => char.ToUpperInvariant(c),
-            CaseType.Kebab or CaseType.Snake => char.ToLowerInvariant(c),
+            CaseType.Macro => ToUpper(c, culture),
+            CaseType.Kebab or CaseType.Snake => ToLower(c, culture),
             CaseType.Camel or CaseType.UnderscoreCamel => insertSeparator && !isFirstCharacter
-                ? char.ToUpperInvariant(c)
-                : char.ToLowerInvariant(c),
-            CaseType.Pascal => insertSeparator ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c),
-            CaseType.Train => insertSeparator ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c),
-            CaseType.Title => insertSeparator ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c),
+                ? ToUpper(c, culture)
+                : ToLower(c, culture),
+            CaseType.Pascal => insertSeparator ? ToUpper(c, culture) : ToLower(c, culture),
+            CaseType.Train => insertSeparator ? ToUpper(c, culture) : ToLower(c, culture),
+            CaseType.Title => insertSeparator ? ToUpper(c, culture) : ToLower(c, culture),
             _ => throw new ArgumentOutOfRangeException(nameof(caseType), caseType, null)
         };
     }
+
+    private static char ToUpper(char c, CultureInfo? culture) =>
+        culture is null ? char.ToUpperInvariant(c) : char.ToUpper(c, culture);
+
+    private static char ToLower(char c, CultureInfo? culture) =>
+        culture is null ? char.ToLowerInvariant(c) : char.ToLower(c, culture);
 
     private static bool NeedsSeparator(CaseType caseType) =>
         caseType is CaseType.Kebab or CaseType.Snake or CaseType.Macro or CaseType.Train or CaseType.Title;
@@ -120,7 +129,8 @@ public static class StringExtensions
             divs += CheckCategory(previous, current) ? One : Zero;
             previous = current;
         }
-        return divs - skips;
+        int result = divs - skips;
+        return result > Zero ? result : Zero;
     }
 
 
@@ -135,7 +145,8 @@ public static class StringExtensions
         return skips;
     }
     private static bool CheckCategory(UnicodeCategory previous, UnicodeCategory current) =>
-        previous != current && (current is UnicodeCategory.UppercaseLetter || current is UnicodeCategory.DecimalDigitNumber);
+        previous != current && (current is UnicodeCategory.UppercaseLetter || current is UnicodeCategory.DecimalDigitNumber
+            || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
 
     private static bool InsertSeparator(this bool insertSeparator, UnicodeCategory previous, UnicodeCategory current) =>
         CheckCategory(previous, current) || insertSeparator;
