@@ -21,7 +21,7 @@ internal readonly record struct OrRuleAdapter<TContext, TResult>(
 ) : IOrRule<TContext, TResult>
 {
     public Result<TResult> Evaluate(TContext context, CancellationToken cancellationToken = default) =>
-        Rules.Length > 0 ? default : RuleErrors.EmptyRuleArrayError;
+        Rules.Length > 0 ? default(Result<TResult>) : RuleErrors.EmptyRuleArrayError;
 
     internal static OrRuleAdapter<TContext, TResult> From(
         IRuleBase<TContext, TResult>[] rules
