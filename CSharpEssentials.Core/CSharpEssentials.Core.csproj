@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
@@ -23,7 +23,7 @@
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <DebugType>embedded</DebugType>
+    <DebugType>portable</DebugType>
     <IncludeBuildOutput>true</IncludeBuildOutput>
   </PropertyGroup>
 
@@ -36,7 +36,7 @@
   <!-- Package content -->
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
-    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+    <None Include="README.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 

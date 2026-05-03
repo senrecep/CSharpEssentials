@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
@@ -16,18 +16,18 @@
       Result,ResultPattern,FunctionalProgramming,ErrorHandling,RailwayOriented,CSharpEssentials
     </PackageTags>
     <PackageIcon>icon.png</PackageIcon>
-    <PackageReadmeFile>README.MD</PackageReadmeFile>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
 
     <!-- Publishing settings -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <DebugType>embedded</DebugType>
+    <DebugType>portable</DebugType>
   </PropertyGroup>
 
   <!-- Package content -->
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
-    <None Include="..\README.MD" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
   </ItemGroup>
 
