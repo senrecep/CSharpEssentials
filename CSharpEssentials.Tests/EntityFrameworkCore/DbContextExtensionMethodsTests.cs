@@ -36,7 +36,7 @@ public class DbContextExtensionMethodsTests
 
     private sealed class SimpleSeed
     {
-        public int Key { get; set; }
+        public int Key { get; init; }
         public string Name { get; set; } = string.Empty;
     }
 
@@ -48,7 +48,7 @@ public class DbContextExtensionMethodsTests
 
     private sealed class SoftMigrateSeed
     {
-        public int Key { get; init; }
+        public int Key { get; set; }
         public string Name { get; set; } = string.Empty;
     }
 
@@ -357,6 +357,7 @@ public class DbContextExtensionMethodsTests
             });
 
         context.SoftMigrates.Should().BeEmpty();
+        _ = new SoftMigrateSeed { Key = 1 };
     }
 
     #endregion

@@ -25,6 +25,10 @@ public class ModelConfigurationExtensionsTests
     {
         public DbSet<EnumEntity> EnumEntities { get; set; } = null!;
         public EnumConventionDbContext(DbContextOptions<EnumConventionDbContext> options) : base(options) { }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<EnumEntity>().HasKey(x => x.Id);
+        }
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             configurationBuilder.ConfigureEnumConventions(typeof(EnumConventionDbContext).Assembly);
@@ -46,5 +50,6 @@ public class ModelConfigurationExtensionsTests
         property.GetValueConverter().Should().NotBeNull();
         property.GetValueConverter()!.ModelClrType.Should().Be<TestStatus>();
         property.GetValueConverter()!.ProviderClrType.Should().Be<string>();
+        _ = new EnumEntity { Id = 1, Status = TestStatus.Active };
     }
 }
