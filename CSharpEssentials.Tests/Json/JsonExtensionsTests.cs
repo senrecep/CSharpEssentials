@@ -113,7 +113,7 @@ public class JsonExtensionsTests
         string json = """{"user":{"name":"John"}}""";
         var document = JsonDocument.Parse(json);
 
-        Result<JsonElement?> result = document.TryGetNestedProperty([]);
+        Result<JsonElement?> result = document.TryGetNestedProperty(Array.Empty<string>());
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("NoPropertyNames");
