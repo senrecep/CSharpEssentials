@@ -17,6 +17,52 @@ Console.WriteLine($"Any from int: {anyInt.Value} (Type: {anyInt.Value?.GetType()
 Console.WriteLine();
 
 // ============================================================================
+// DECONSTRUCT (TUPLE SYNTAX)
+// ============================================================================
+Console.WriteLine("--- Deconstruct ---");
+
+(string? sVal, int iVal) = anyString;
+Console.WriteLine($"Deconstruct string: first={sVal}, second={iVal}");
+
+(string? sVal2, int iVal2) = anyInt;
+Console.WriteLine($"Deconstruct int: first={sVal2}, second={iVal2}");
+Console.WriteLine();
+
+// ============================================================================
+// TO TUPLE
+// ============================================================================
+Console.WriteLine("--- ToTuple ---");
+
+(string? t1, int? t2) = anyString.ToTuple();
+Console.WriteLine($"ToTuple string: First={t1}, Second={t2}");
+
+(string? t3, int? t4) = anyInt.ToTuple();
+Console.WriteLine($"ToTuple int: First={t3}, Second={t4}");
+Console.WriteLine();
+
+// ============================================================================
+// IS<T> / AS<T> / TRYAS<T>
+// ============================================================================
+Console.WriteLine("--- Is<T> / As<T> / TryAs<T> ---");
+
+Console.WriteLine($"anyString.Is<string>(): {anyString.Is<string, string, int>()}");
+Console.WriteLine($"anyString.Is<int>(): {anyString.Is<int, string, int>()}");
+Console.WriteLine($"anyInt.Is<int>(): {anyInt.Is<int, string, int>()}");
+
+string? asString = anyString.As<string, string, int>();
+Console.WriteLine($"anyString.As<string>(): {asString}");
+
+int? asInt = anyInt.As<int, string, int>();
+Console.WriteLine($"anyInt.As<int>(): {asInt}");
+
+bool trySuccess = anyString.TryAs<string, string, int>(out string? tryString);
+Console.WriteLine($"anyString.TryAs<string>(): success={trySuccess}, value={tryString}");
+
+bool tryFail = anyString.TryAs<int, string, int>(out int tryInt);
+Console.WriteLine($"anyString.TryAs<int>(): success={tryFail}, value={tryInt}");
+Console.WriteLine();
+
+// ============================================================================
 // TYPE CHECKING
 // ============================================================================
 Console.WriteLine("--- Type Checking ---");
@@ -85,58 +131,23 @@ Console.WriteLine($"Match result: Status={matchedInt.Status}, Result={matchedInt
 Console.WriteLine();
 
 // ============================================================================
-// ANY ACTION RESULT
+// MULTIPLE TYPES (AnyT3)
 // ============================================================================
-Console.WriteLine("--- Any Action Result ---");
-
-AnyActionResult<string> success = new(AnyActionStatus.Executed, "Operation completed");
-Console.WriteLine($"Success: Status={success.Status}, Result={success.Result}");
-
-AnyActionResult<string> notExecuted = AnyActionStatus.NotExecuted;
-Console.WriteLine($"NotExecuted: Status={notExecuted.Status}, Result={notExecuted.Result}");
-
-AnyActionResult<string> fromResult = "Implicit result";
-Console.WriteLine($"From implicit: Status={fromResult.Status}, Result={fromResult.Result}");
-Console.WriteLine();
-
-// ============================================================================
-// MULTIPLE TYPES (AnyT3, AnyT4, AnyT5)
-// ============================================================================
-Console.WriteLine("--- Multiple Typed Values ---");
+Console.WriteLine("--- Multiple Typed Values (AnyT3) ---");
 
 Any<string, int, bool> triple = Any<string, int, bool>.First("Age");
-Console.WriteLine($"Triple: Value={triple.Value}, IsFirst={triple.IsFirst}, IsSecond={triple.IsSecond}, IsThird={triple.IsThird}");
-
 Any<string, int, bool> tripleSecond = Any<string, int, bool>.Second(95);
-Console.WriteLine($"Triple Second: Value={tripleSecond.Value}, IsSecond={tripleSecond.IsSecond}");
-
 Any<string, int, bool> tripleThird = Any<string, int, bool>.Third(true);
-Console.WriteLine($"Triple Third: Value={tripleThird.Value}, IsThird={tripleThird.IsThird}");
 
-tripleThird.Switch(
-    first: v => Console.WriteLine($"  Triple Switch first: {v}"),
-    second: v => Console.WriteLine($"  Triple Switch second: {v}"),
-    third: v => Console.WriteLine($"  Triple Switch third: {v}")
-);
+(string? t3First, int? t3Second, bool? t3Third) = tripleSecond.ToTuple();
+Console.WriteLine($"AnyT3 ToTuple: First={t3First}, Second={t3Second}, Third={t3Third}");
 
-AnyActionResult<string> tripleMatch = tripleSecond.Match(
-    first: v => $"Triple match string: {v}",
-    second: v => $"Triple match int: {v}",
-    third: v => $"Triple match bool: {v}"
-);
-Console.WriteLine($"Triple match: Status={tripleMatch.Status}, Result={tripleMatch.Result}");
-Console.WriteLine();
+Console.WriteLine($"tripleSecond.Is<int>(): {tripleSecond.Is<int, string, int, bool>()}");
+int? t3As = tripleSecond.As<int, string, int, bool>();
+Console.WriteLine($"tripleSecond.As<int>(): {t3As}");
 
-// ============================================================================
-// ANY T4 - T8
-// ============================================================================
-Console.WriteLine("--- AnyT4 and AnyT5 ---");
-
-Any<int, string, bool, double> quad = Any<int, string, bool, double>.Fourth(3.14);
-Console.WriteLine($"AnyT4: IsFourth={quad.IsFourth}, Value={quad.GetFourth()}");
-
-Any<int, string, bool, double, DateTime> quint = Any<int, string, bool, double, DateTime>.Fifth(DateTime.UtcNow);
-Console.WriteLine($"AnyT5: IsFifth={quint.IsFifth}, Value={quint.GetFifth()}");
+bool t3Try = tripleThird.TryAs<bool, string, int, bool>(out bool t3Bool);
+Console.WriteLine($"tripleThird.TryAs<bool>(): success={t3Try}, value={t3Bool}");
 Console.WriteLine();
 
 Console.WriteLine("========================================");
