@@ -184,4 +184,58 @@ public static partial class ResultExtensions
         Result result = await task.WithCancellation(cancellationToken);
         return await result.ElseAsync(onFailure, cancellationToken);
     }
+
+    /// <summary>
+    /// Awaits a ValueTask and, if the operation failed, executes a function to generate a single error.
+    /// </summary>
+    public static async ValueTask<Result> Else(this ValueTask<Result> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken);
+        return result.Else(onFailure);
+    }
+
+    /// <summary>
+    /// Awaits a ValueTask and, if the operation failed, executes a function to generate multiple errors.
+    /// </summary>
+    public static async ValueTask<Result> Else(this ValueTask<Result> task, Func<Error[], IEnumerable<Error>> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken);
+        return result.Else(onFailure);
+    }
+
+    /// <summary>
+    /// Awaits a ValueTask and, if the operation failed, replaces the current errors with a specified error.
+    /// </summary>
+    public static async ValueTask<Result> Else(this ValueTask<Result> task, Error error, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken);
+        return result.Else(error);
+    }
+
+    /// <summary>
+    /// Awaits a ValueTask and, if the operation failed, executes an asynchronous function to generate a single error.
+    /// </summary>
+    public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Func<Error[], Task<Error>> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken);
+        return await result.ElseAsync(onFailure, cancellationToken);
+    }
+
+    /// <summary>
+    /// Awaits a ValueTask and, if the operation failed, executes an asynchronous function to generate multiple errors.
+    /// </summary>
+    public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Func<Error[], Task<IEnumerable<Error>>> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken);
+        return await result.ElseAsync(onFailure, cancellationToken);
+    }
+
+    /// <summary>
+    /// Awaits a ValueTask and, if the operation failed, replaces the current errors with a specified asynchronous error.
+    /// </summary>
+    public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Task<Error> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken);
+        return await result.ElseAsync(onFailure, cancellationToken);
+    }
 }
