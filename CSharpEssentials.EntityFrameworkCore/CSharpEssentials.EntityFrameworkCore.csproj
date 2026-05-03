@@ -45,8 +45,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[8.0.2,)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.11,)" />
+    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[8.0.0,)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.0,)" />
   </ItemGroup>
 
   <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, and Json -->
