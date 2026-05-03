@@ -11,7 +11,7 @@
     <PackageId>CSharpEssentials</PackageId>
     <Title>CSharp Essentials</Title>
     <Product>CSharp Essentials</Product>
-    <Version>1.0.19</Version>
+    <!-- Version inherited from Directory.Build.props -->
     <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
