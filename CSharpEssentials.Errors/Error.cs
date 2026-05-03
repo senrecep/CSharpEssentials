@@ -39,11 +39,6 @@ public readonly record struct Error : IError
     /// </summary>
     public ErrorMetadata? Metadata { get; }
 
-    /// <summary>
-    /// Creates an <see cref="Error"/> from a code and description.
-    /// </summary>
-    /// <param name="errors"></param>
-    /// <returns></returns>
     public static Error[] CreateMany(params IEnumerable<Error> errors) => errors.ToArray();
     /// <summary>
     /// Creates an <see cref="Error"/> from a code and description.
@@ -197,6 +192,16 @@ public readonly record struct Error : IError
     public static readonly Error False = Validation(
         code: nameof(False),
         description: "A false error has occurred.");
+
+    /// <summary>
+    /// Implicitly converts a single <see cref="Error"/> to an <see cref="Error"/> array.
+    /// </summary>
+    public static implicit operator Error[](Error error) => [error];
+
+    /// <summary>
+    /// Combines two <see cref="Error"/> instances into an array.
+    /// </summary>
+    public static Error[] operator +(Error left, Error right) => [left, right];
 
     public bool Equals(Error other)
     {
