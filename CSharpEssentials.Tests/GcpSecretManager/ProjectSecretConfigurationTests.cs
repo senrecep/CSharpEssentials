@@ -14,10 +14,15 @@ public class ProjectSecretConfigurationTests
         };
 
         config.ProjectId.Should().Be("test-project");
+        config.Region.Should().BeNull();
         config.PrefixFilters.Should().NotBeNull();
+        config.PrefixFilters.Should().BeEmpty();
         config.SecretIds.Should().NotBeNull();
+        config.SecretIds.Should().BeEmpty();
         config.RawSecretIds.Should().NotBeNull();
+        config.RawSecretIds.Should().BeEmpty();
         config.RawSecretPrefixes.Should().NotBeNull();
+        config.RawSecretPrefixes.Should().BeEmpty();
     }
 
     [Fact]
@@ -73,5 +78,44 @@ public class ProjectSecretConfigurationTests
 
         config.Region.Should().Be("us-central1");
     }
-}
 
+    [Fact]
+    public void IsRawSecret_WithEmptyLists_ShouldReturnFalse()
+    {
+        var config = new ProjectSecretConfiguration
+        {
+            ProjectId = "test-project"
+        };
+
+        config.IsRawSecret("any-secret").Should().BeFalse();
+        config.IsRawSecret("").Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsRawSecret_WithMultiplePrefixes_ShouldMatchAny()
+    {
+        var config = new ProjectSecretConfiguration
+        {
+            ProjectId = "test-project",
+            RawSecretPrefixes = new[] { "RAW_", "PLAIN_" }
+        };
+
+        config.IsRawSecret("RAW_secret").Should().BeTrue();
+        config.IsRawSecret("PLAIN_secret").Should().BeTrue();
+        config.IsRawSecret("JSON_secret").Should().BeFalse();
+    }
+
+    [Fact]
+    public void IsRawSecret_WithMultipleSecretIds_ShouldMatchAny()
+    {
+        var config = new ProjectSecretConfiguration
+        {
+            ProjectId = "test-project",
+            RawSecretIds = new[] { "id1", "id2", "id3" }
+        };
+
+        config.IsRawSecret("id1").Should().BeTrue();
+        config.IsRawSecret("id2").Should().BeTrue();
+        config.IsRawSecret("id4").Should().BeFalse();
+    }
+}

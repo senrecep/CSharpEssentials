@@ -10,7 +10,7 @@ public class ErrorMetadataTests
     [Fact]
     public void Constructor_ShouldCreateEmptyMetadata()
     {
-        ErrorMetadata metadata = new();
+        var metadata = new ErrorMetadata();
 
         metadata.Should().BeEmpty();
     }
