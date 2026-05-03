@@ -25,7 +25,7 @@ CSharpEssentials is modular. You can use the meta-package to get everything, or 
 | **[CSharpEssentials.Rules](CSharpEssentials.Rules/Readme.MD)** | Composable business rule engine (And, Or, Linear, Conditional logic). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
 | **[CSharpEssentials.Any](CSharpEssentials.Any/Readme.MD)** | Discriminated Unions (`Any<T1, T2, ...>`) for type-safe polymorphic returns. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
 | **[CSharpEssentials.Entity](CSharpEssentials.Entity/Readme.MD)** | Domain-Driven Design base classes (`EntityBase`, `SoftDeletableEntityBase`). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
-| **[CSharpEssentials.EntityFrameworkCore](CSharpEssentials.EntityFrameworkCore/Readme.MD)** | EF Core extensions, Interceptors (Slow Query), and Pagination support. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
+| **[CSharpEssentials.EntityFrameworkCore](CSharpEssentials.EntityFrameworkCore/Readme.MD)** | EF Core extensions, Audit/Domain-Event/Slow-Query interceptors, and Pagination (offset + cursor). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
 | **[CSharpEssentials.AspNetCore](CSharpEssentials.AspNetCore/Readme.MD)** | Web API utilities: Global Exception Handler, Problem Details, API Versioning. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
 | **[CSharpEssentials.Json](CSharpEssentials.Json/Readme.MD)** | Advanced JSON serialization: Polymorphism, String Enums, Multi-format Dates. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
 | **[CSharpEssentials.Time](CSharpEssentials.Time/Readme.MD)** | Testable `IDateTimeProvider` abstraction and extensions. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
@@ -43,6 +43,27 @@ dotnet add package CSharpEssentials
 ```
 
 Or pick individual packages as needed (e.g., `dotnet add package CSharpEssentials.Results`).
+
+### Target Framework Support
+
+| Package | .NET 9 | .NET 8 | .NET Standard 2.1 | .NET Standard 2.0 |
+|---------|--------|--------|-------------------|-------------------|
+| CSharpEssentials.Core | ✅ | ✅ | ✅ | ✅ |
+| CSharpEssentials.Enums | ✅ | ✅ | ✅ | ✅ |
+| CSharpEssentials.Errors | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Results | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Maybe | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Any | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Json | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Time | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Clone | ✅ | ✅ | ✅ | ✅ |
+| CSharpEssentials.Entity | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.Rules | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.GcpSecretManager | ✅ | ✅ | ✅ | — |
+| CSharpEssentials.AspNetCore | ✅ | ✅ | — | — |
+| CSharpEssentials.EntityFrameworkCore | ✅ | ✅ | — | — |
+| CSharpEssentials.RequestResponseLogging | ✅ | ✅ | — | — |
+| **CSharpEssentials (Meta)** | ✅ | ✅ | ✅ | — |
 
 ## 💡 Feature Highlights
 
@@ -130,6 +151,43 @@ public class Order : EntityBase<Guid>
     }
 }
 ```
+
+## 🔮 Roadmap
+
+CSharpEssentials is designed with future .NET versions in mind.
+
+### .NET 9 (Current Baseline)
+Full support with all modern optimizations:
+- `lock` objects
+- `OverloadResolutionPriority`
+- Inline arrays
+- `params ReadOnlySpan<T>`
+- `Task.WhenEach`
+
+### .NET 10 (Planned)
+- **Params collections** expansion — cleaner APIs across `Result`, `Maybe`, `Any` factory methods.
+- **Extension types** (if available) — static extension methods for `IEnumerable<Result<T>>` batch operations.
+- **Improved JSON serialization** — leverage any new `System.Text.Json` source-generator features.
+
+### .NET 11 (Future-Proof)
+- **Native `union` types** — The big one. All discriminated-union-style types (`Result<T>`, `Maybe<T>`, `Any<...>`, `Error`) are structured so they can be migrated to `readonly union` with **zero breaking changes** when the language feature arrives.
+- **Field keyword** — Simplify property declarations in `EntityBase` and error types.
+
+```csharp
+// Today (.NET 9)
+public readonly struct Result<T> { /* ... */ }
+
+// Tomorrow (.NET 11)
+public readonly union Result<T>(T Value, Error Error);
+// Your code: no changes needed!
+```
+
+### Migration Strategy
+We follow a **conditional-compilation bridge** pattern:
+1. Keep the `struct` implementation as the fallback for all targets.
+2. When .NET 11 ships, add a new target and gate the `union` syntax behind `#if NET11_0_OR_GREATER`.
+3. The public API surface (`IsSuccess`, `Value`, `Error`, `Match`, `Map`, `Bind`) remains **100 % identical**.
+4. Consumers simply upgrade their TFM — no code changes required.
 
 ## 🛠️ Development & Publishing
 
