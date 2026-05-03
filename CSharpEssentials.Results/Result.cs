@@ -16,12 +16,17 @@ public readonly partial record struct Result : IResult
 
     private Result(IEnumerable<Error> errors)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(errors);
-#else
-        if (errors is null)
-            throw new ArgumentNullException(nameof(errors));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(errors);
+
+        #else
+
+            if (errors is null)
+
+                throw new ArgumentNullException(nameof(errors));
+
+        #endif
         Error[] errorArray = errors.ToArray();
 
         if (errorArray.Length == 0)

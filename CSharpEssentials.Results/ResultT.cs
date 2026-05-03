@@ -21,23 +21,33 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
 #pragma warning restore IDE0051
     private Result(TValue value)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(value);
-#else
-        if (value is null)
-            throw new ArgumentNullException(nameof(value));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(value);
+
+        #else
+
+            if (value is null)
+
+                throw new ArgumentNullException(nameof(value));
+
+        #endif
         _value = value;
     }
 
     private Result(IEnumerable<Error> errors)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(errors);
-#else
-        if (errors is null)
-            throw new ArgumentNullException(nameof(errors));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(errors);
+
+        #else
+
+            if (errors is null)
+
+                throw new ArgumentNullException(nameof(errors));
+
+        #endif
         Error[] errorArray = errors.ToArray();
 
         if (errorArray.Length == 0)
