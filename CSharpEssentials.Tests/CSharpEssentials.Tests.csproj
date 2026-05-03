@@ -22,6 +22,8 @@
     <PackageReference Include="Testcontainers" />
     <PackageReference Include="Testcontainers.PostgreSql" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" VersionOverride="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" VersionOverride="9.0.4" />
   </ItemGroup>
 
   <ItemGroup>
