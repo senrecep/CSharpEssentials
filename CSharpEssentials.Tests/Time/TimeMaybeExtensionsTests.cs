@@ -2,7 +2,7 @@ using CSharpEssentials.Maybe;
 using CSharpEssentials.Time;
 using FluentAssertions;
 
-namespace CSharpEssentials.Tests.Meta;
+namespace CSharpEssentials.Tests.Time;
 
 public class TimeExtensionsTests
 {
