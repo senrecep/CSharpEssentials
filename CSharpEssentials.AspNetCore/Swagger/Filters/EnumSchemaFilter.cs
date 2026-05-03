@@ -1,9 +1,9 @@
 using System.Reflection;
-using CSharpEssentials.Core;
 using CSharpEssentials.Enums;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 
