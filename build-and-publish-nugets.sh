@@ -50,7 +50,7 @@ log_error() {
 }
 
 log_step() {
-    echo -e "${PURPLE}� $1${NC}"
+    echo -e "${PURPLE}🔹 $1${NC}"
 }
 
 log_progress() {
@@ -69,7 +69,6 @@ cleanup() {
     if [[ $exit_code -ne 0 ]]; then
         log_error "Script failed with exit code $exit_code"
     fi
-    exit $exit_code
 }
 
 # Set up trap for cleanup
@@ -212,11 +211,12 @@ build_solution() {
 
 # Execute command with proper logging and dry-run support
 execute_command() {
-    local cmd="$1"
-    local description="${2:-$cmd}"
+    local description="$1"
+    shift
+    local -a cmd=("$@")
     
     if [[ "$VERBOSE" == "true" ]]; then
-        log_info "Executing: $cmd"
+        log_info "Executing: ${cmd[*]}"
     fi
     
     if [[ "$DRY_RUN" == "true" ]]; then
@@ -228,14 +228,14 @@ execute_command() {
     local output
     local exit_code
     
-    output=$(eval "$cmd" 2>&1)
+    output=$("${cmd[@]}" 2>&1)
     exit_code=$?
     
     # Special handling for packaging commands with NU5017
-    if [[ $exit_code -ne 0 && "$description" =~ "Packaging" ]]; then
-        # Check if package was actually created despite NU5017 error
-        local project_name=$(echo "$description" | sed 's/Packaging //')
-        if ls "$NUPKGS_DIR"/${project_name}.*.nupkg 1> /dev/null 2>&1; then
+    if [[ $exit_code -ne 0 && "$description" == Packaging* ]]; then
+        # Extract project name from description
+        local project_name="${description#Packaging }"
+        if compgen -G "$NUPKGS_DIR/${project_name}.*.nupkg" > /dev/null 2>&1; then
             if [[ "$FORCE_PACK" == "true" ]]; then
                 log_info "Package created despite NU5017 warning: $project_name"
                 return 0
@@ -263,23 +263,28 @@ package_project() {
     local project_name
     project_name=$(basename "$project_path" .csproj)
     
-    local pack_cmd="dotnet pack '$project_path' -c $BUILD_CONFIG -o '$NUPKGS_DIR'"
+    local -a pack_cmd=(dotnet pack "$project_path" -c "$BUILD_CONFIG" -o "$NUPKGS_DIR")
     
     # Add properties to ensure package content is included
-    pack_cmd="$pack_cmd -p:IsPackable=true -p:IncludeBuildOutput=true -p:GeneratePackageOnBuild=false"
+    pack_cmd+=(-p:IsPackable=true -p:IncludeBuildOutput=true -p:GeneratePackageOnBuild=false)
+    
+    # Skip build if requested
+    if [[ "$SKIP_BUILD" == "true" ]]; then
+        pack_cmd+=(--no-build)
+    fi
     
     # Force packaging even if there are warnings
     if [[ "$FORCE_PACK" == "true" ]]; then
-        pack_cmd="$pack_cmd --no-restore -p:NoWarn=NU5017"
+        pack_cmd+=(--no-restore -p:NoWarn=NU5017)
     fi
     
     if [[ "$VERBOSE" == "true" ]]; then
-        pack_cmd="$pack_cmd --verbosity normal"
+        pack_cmd+=(--verbosity normal)
     else
-        pack_cmd="$pack_cmd --verbosity minimal"
+        pack_cmd+=(--verbosity minimal)
     fi
     
-    execute_command "$pack_cmd" "Packaging $project_name"
+    execute_command "Packaging $project_name" "${pack_cmd[@]}"
 }
 
 # Package projects in parallel if enabled
@@ -305,7 +310,7 @@ package_projects_batch() {
         if [[ "$DRY_RUN" == "false" ]]; then
             for i in "${!pids[@]}"; do
                 if wait "${pids[$i]}"; then
-                    ((success_count++))
+                    success_count=$((success_count + 1))
                 else
                     failed_projects+=("${projects[$i]}")
                 fi
@@ -315,7 +320,7 @@ package_projects_batch() {
         log_info "Packaging ${#projects[@]} projects sequentially..."
         for project in "${projects[@]}"; do
             if package_project "$project"; then
-                ((success_count++))
+                success_count=$((success_count + 1))
             else
                 failed_projects+=("$project")
             fi
@@ -337,48 +342,154 @@ package_projects_batch() {
     return 0
 }
 
-# Define project dependencies in levels
-declare -a PROJECT_LEVELS
-PROJECT_LEVELS=(
-    [0]="CSharpEssentials.Core CSharpEssentials.Enums CSharpEssentials.Time CSharpEssentials.Clone CSharpEssentials.AspNetCore CSharpEssentials.GcpSecretManager CSharpEssentials.RequestResponseLogging"
-    [1]="CSharpEssentials.Errors CSharpEssentials.Json"
-    [2]="CSharpEssentials.Results"
-    [3]="CSharpEssentials.Any CSharpEssentials.Maybe CSharpEssentials.Rules CSharpEssentials.Entity CSharpEssentials.EntityFrameworkCore"
-    [4]="CSharpEssentials"
-)
+# Get all packable projects in the solution (excluding tests and examples)
+get_all_packable_projects() {
+    local -n result=$1
+    while IFS= read -r -d '' csproj; do
+        local dir_name
+        dir_name=$(basename "$(dirname "$csproj")")
+        # Skip test projects and examples
+        if [[ "$dir_name" == *Tests* || "$dir_name" == *Test* || "$dir_name" == Example* ]]; then
+            continue
+        fi
+        # Check if explicitly marked as not packable
+        if grep -qi '<IsPackable>false</IsPackable>' "$csproj" 2>/dev/null; then
+            continue
+        fi
+        result+=("$dir_name")
+    done < <(find . -maxdepth 2 -name "*.csproj" -print0 2>/dev/null)
+}
+
+# Get dependencies of a single project (only internal project references)
+get_project_dependencies() {
+    local project_name="$1"
+    local csproj="$project_name/$project_name.csproj"
+    local -n out_deps=$2
+    
+    if [[ ! -f "$csproj" ]]; then
+        return
+    fi
+    
+    while IFS= read -r ref; do
+        # Extract project name from path (e.g., ..\CSharpEssentials.Core\CSharpEssentials.Core.csproj)
+        local dep_name
+        dep_name=$(basename "$(echo "$ref" | tr '\\' '/')" .csproj)
+        # Only include references to projects in this solution
+        if [[ -f "$dep_name/$dep_name.csproj" ]]; then
+            out_deps+=("$dep_name")
+        fi
+    done < <(grep -o 'Include="[^"]*\.csproj"' "$csproj" 2>/dev/null | sed 's/Include="//;s/"$//')
+}
+
+# Compute dependency levels using topological sort
+compute_dependency_levels() {
+    local -n projects=$1
+    local -n levels=$2
+    
+    local changed=true
+    local iterations=0
+    local max_iterations=100
+    
+    # Initialize all levels to 0
+    for proj in "${projects[@]}"; do
+        levels[$proj]=0
+    done
+    
+    # Iteratively compute levels until stable
+    while [[ "$changed" == "true" && $iterations -lt $max_iterations ]]; do
+        changed=false
+        iterations=$((iterations + 1))
+        
+        for proj in "${projects[@]}"; do
+            local -a deps=()
+            get_project_dependencies "$proj" deps
+            
+            local max_dep_level=0
+            for dep in "${deps[@]}"; do
+                # Only consider dependencies that are also packable projects
+                if [[ -n "${levels[$dep]+isset}" ]]; then
+                    local dep_level=${levels[$dep]:-0}
+                    if (( dep_level + 1 > max_dep_level )); then
+                        max_dep_level=$((dep_level + 1))
+                    fi
+                fi
+            done
+            
+            local current_level=${levels[$proj]:-0}
+            if (( max_dep_level > current_level )); then
+                levels[$proj]=$max_dep_level
+                changed=true
+            fi
+        done
+    done
+    
+    if [[ "$changed" == "true" ]]; then
+        log_warning "Dependency level computation did not converge within $max_iterations iterations. There may be circular dependencies."
+    fi
+}
+
+# Get maximum dependency level
+get_max_level() {
+    local -n levels=$1
+    local max=0
+    for proj in "${!levels[@]}"; do
+        local lvl=${levels[$proj]}
+        if (( lvl > max )); then
+            max=$lvl
+        fi
+    done
+    echo "$max"
+}
 
 # Package all projects in dependency order
 package_all_projects() {
     log_step "Packaging projects in dependency order..."
     
-    local max_level=4
-    local total_success=0
-    local total_failed=0
+    local -a all_projects=()
+    get_all_packable_projects all_projects
+    
+    if [[ ${#all_projects[@]} -eq 0 ]]; then
+        error_exit "No packable projects found!"
+    fi
+    
+    declare -A dep_levels
+    compute_dependency_levels all_projects dep_levels
+    
+    local max_level
+    max_level=$(get_max_level dep_levels)
+    
+    log_info "Detected ${#all_projects[@]} packable projects across $((max_level + 1)) dependency levels"
     
     for level in $(seq 0 $max_level); do
-        local projects_str="${PROJECT_LEVELS[$level]}"
-        if [[ -n "$projects_str" ]]; then
-            IFS=' ' read -ra projects <<< "$projects_str"
-            local project_paths=()
-            
-            log_progress "Level $level: Processing ${projects[*]}"
-            
-            for project in "${projects[@]}"; do
-                local project_path="$project/$project.csproj"
-                if [[ -f "$project_path" ]]; then
-                    project_paths+=("$project_path")
-                else
-                    log_warning "Project file not found: $project_path"
-                fi
-            done
-            
-            if [[ ${#project_paths[@]} -gt 0 ]]; then
-                # Don't exit on failure, continue with next level
-                if package_projects_batch "${project_paths[@]}"; then
-                    log_success "Level $level packaging completed successfully"
-                else
-                    log_warning "Level $level packaging completed with some failures"
-                fi
+        local -a level_projects=()
+        
+        for proj in "${all_projects[@]}"; do
+            if [[ ${dep_levels[$proj]:-0} -eq $level ]]; then
+                level_projects+=("$proj")
+            fi
+        done
+        
+        if [[ ${#level_projects[@]} -eq 0 ]]; then
+            continue
+        fi
+        
+        local -a project_paths=()
+        log_progress "Level $level: Processing ${level_projects[*]}"
+        
+        for project in "${level_projects[@]}"; do
+            local project_path="$project/$project.csproj"
+            if [[ -f "$project_path" ]]; then
+                project_paths+=("$project_path")
+            else
+                log_warning "Project file not found: $project_path"
+            fi
+        done
+        
+        if [[ ${#project_paths[@]} -gt 0 ]]; then
+            if package_projects_batch "${project_paths[@]}"; then
+                log_success "Level $level packaging completed successfully"
+            else
+                log_warning "Level $level packaging completed with some failures"
             fi
         fi
     done
@@ -410,7 +521,7 @@ list_packages() {
         echo ""
         
         local count
-        count=$(echo "$packages" | wc -l)
+        count=$(find "$NUPKGS_DIR" -name "*.nupkg" -type f | wc -l)
         log_info "Total packages: $count"
         
         if [[ $count -eq 0 ]]; then
@@ -454,8 +565,8 @@ publish_package() {
     local package_name="$2"
     
     # Expand the pattern to get actual filenames
-    local package_files
-    package_files=($(find "$NUPKGS_DIR" -name "$package_pattern" -type f 2>/dev/null))
+    local -a package_files
+    mapfile -t package_files < <(find "$NUPKGS_DIR" -name "$package_pattern" -type f 2>/dev/null)
     
     if [[ ${#package_files[@]} -eq 0 ]]; then
         log_warning "Package not found: $package_pattern"
@@ -465,18 +576,18 @@ publish_package() {
     # Process each matching package file
     local failed=false
     for package_file in "${package_files[@]}"; do
-        local push_cmd="dotnet nuget push '$package_file' --source '$NUGET_SOURCE' --api-key '$API_KEY' --skip-duplicate"
+        local -a push_cmd=(dotnet nuget push "$package_file" --source "$NUGET_SOURCE" --api-key "$API_KEY" --skip-duplicate)
         
         # Capture output to handle symbol package errors gracefully
         local output
         local exit_code
         
         if [[ "$DRY_RUN" == "true" ]]; then
-            log_info "Would execute: $push_cmd"
+            log_info "Would execute: ${push_cmd[*]}"
             continue
         fi
         
-        output=$(eval "$push_cmd" 2>&1)
+        output=$("${push_cmd[@]}" 2>&1)
         exit_code=$?
         
         # Check if the main package was successfully pushed even if symbol package failed
@@ -514,8 +625,9 @@ publish_projects_batch() {
     local pids=()
     local failed_packages=()
     
-    if [[ "$PARALLEL_BUILD" == "true" && ${#packages[@]} -gt 1 ]]; then
-        log_info "Publishing ${#packages[@]} packages in parallel..."
+    local package_count=$(( ${#packages[@]} / 2 ))
+    if [[ "$PARALLEL_BUILD" == "true" && $package_count -gt 1 ]]; then
+        log_info "Publishing $package_count packages in parallel..."
         
         for i in $(seq 0 2 $((${#packages[@]} - 1))); do
             local pattern="${packages[$i]}"
@@ -533,18 +645,20 @@ publish_projects_batch() {
         if [[ "$DRY_RUN" == "false" ]]; then
             for i in "${!pids[@]}"; do
                 if ! wait "${pids[$i]}"; then
-                    failed_packages+=("${packages[$((i*2))]}")
+                    local pattern="${packages[$((i*2))]}"
+                    local name="${packages[$((i*2+1))]}"
+                    failed_packages+=("$name ($pattern)")
                 fi
             done
         fi
     else
-        log_info "Publishing ${#packages[@]} packages sequentially..."
+        log_info "Publishing $package_count packages sequentially..."
         for i in $(seq 0 2 $((${#packages[@]} - 1))); do
             local pattern="${packages[$i]}"
             local name="${packages[$i+1]}"
             
             if ! publish_package "$pattern" "$name"; then
-                failed_packages+=("$pattern")
+                failed_packages+=("$name ($pattern)")
             fi
         done
     fi
@@ -562,29 +676,43 @@ publish_projects_batch() {
 publish_all_packages() {
     log_step "Publishing packages to NuGet.org in dependency order..."
     
-    # Define packages for each level with their patterns and display names
-    local -a LEVEL_PACKAGES
-    LEVEL_PACKAGES=(
-        [0]="CSharpEssentials.Core.*.nupkg Core CSharpEssentials.Enums.*.nupkg Enums CSharpEssentials.Time.*.nupkg Time CSharpEssentials.Clone.*.nupkg Clone CSharpEssentials.AspNetCore.*.nupkg AspNetCore CSharpEssentials.GcpSecretManager.*.nupkg GcpSecretManager CSharpEssentials.RequestResponseLogging.*.nupkg RequestResponseLogging"
-        [1]="CSharpEssentials.Errors.*.nupkg Errors CSharpEssentials.Json.*.nupkg Json"
-        [2]="CSharpEssentials.Results.*.nupkg Results"
-        [3]="CSharpEssentials.Any.*.nupkg Any CSharpEssentials.Maybe.*.nupkg Maybe CSharpEssentials.Rules.*.nupkg Rules CSharpEssentials.Entity.*.nupkg Entity CSharpEssentials.EntityFrameworkCore.*.nupkg EntityFrameworkCore"
-        [4]="CSharpEssentials.[0-9]*.nupkg Main"
-    )
+    local -a all_projects=()
+    get_all_packable_projects all_projects
     
-    local max_level=4
+    if [[ ${#all_projects[@]} -eq 0 ]]; then
+        error_exit "No packable projects found!"
+    fi
+    
+    declare -A dep_levels
+    compute_dependency_levels all_projects dep_levels
+    
+    local max_level
+    max_level=$(get_max_level dep_levels)
+    
     for level in $(seq 0 $max_level); do
-        local packages_str="${LEVEL_PACKAGES[$level]}"
-        if [[ -n "$packages_str" ]]; then
-            IFS=' ' read -ra packages <<< "$packages_str"
-            
-            log_progress "Level $level: Publishing packages..."
-            
-            if ! publish_projects_batch "${packages[@]}"; then
-                error_exit "Failed to publish Level $level packages"
+        local -a level_packages=()
+        
+        for proj in "${all_projects[@]}"; do
+            if [[ ${dep_levels[$proj]:-0} -eq $level ]]; then
+                # Special pattern for main CSharpEssentials package to avoid matching others
+                if [[ "$proj" == "CSharpEssentials" ]]; then
+                    level_packages+=("CSharpEssentials.[0-9]*.nupkg" "Main")
+                else
+                    level_packages+=("$proj.*.nupkg" "$proj")
+                fi
             fi
-            log_success "Level $level publishing completed"
+        done
+        
+        if [[ ${#level_packages[@]} -eq 0 ]]; then
+            continue
         fi
+        
+        log_progress "Level $level: Publishing packages..."
+        
+        if ! publish_projects_batch "${level_packages[@]}"; then
+            error_exit "Failed to publish Level $level packages"
+        fi
+        log_success "Level $level publishing completed"
     done
 }
 
@@ -625,15 +753,18 @@ main() {
     fi
     
     # Only publish if we have packages to publish
-    local package_count
-    package_count=$(find "$NUPKGS_DIR" -name "*.nupkg" -type f 2>/dev/null | wc -l)
-    
-    if [[ $package_count -eq 0 ]]; then
-        log_error "No packages available for publishing. Exiting."
-        exit 1
+    if [[ "$DRY_RUN" == "false" ]]; then
+        local package_count
+        package_count=$(find "$NUPKGS_DIR" -name "*.nupkg" -type f 2>/dev/null | wc -l)
+        
+        if [[ $package_count -eq 0 ]]; then
+            log_error "No packages available for publishing. Exiting."
+            exit 1
+        fi
+        
+        log_info "Found $package_count packages ready for publishing."
     fi
     
-    log_info "Found $package_count packages ready for publishing."
     publish_all_packages
     
     echo ""
