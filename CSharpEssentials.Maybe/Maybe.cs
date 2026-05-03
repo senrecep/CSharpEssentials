@@ -1,9 +1,9 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
-using CSharpEssentials.Core;
 using CSharpEssentials.Json;
 using CSharpEssentials.Maybe.Interfaces;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Maybe;
 
