@@ -86,7 +86,22 @@ foreach (var domainEvent in product.DomainEvents)
 product.ClearDomainEvents();
 ```
 
-### 4. Auditing
+### 4. Domain Event Timing
+
+Control when domain events are published relative to persistence using the `[DomainEventTiming]` attribute.
+
+```csharp
+using CSharpEssentials.Entity;
+
+// Published after the database transaction commits (default)
+public record OrderCreatedEvent(Guid OrderId) : IDomainEvent;
+
+// Published before the transaction commits — use for validation
+[DomainEventTiming(DomainEventTiming.BeforeSave)]
+public record OrderValidationEvent(Guid OrderId) : IDomainEvent;
+```
+
+### 5. Auditing
 
 The base classes expose methods to set audit info, typically called by your repository or DbContext.
 
