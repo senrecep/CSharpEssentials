@@ -34,8 +34,12 @@ string pascal = text.ToPascalCase();          // "HelloWorld"
 string kebab = text.ToKebabCase();            // "hello-world"
 string snake = text.ToSnakeCase();            // "hello_world"
 string macro = text.ToMacroCase();            // "HELLO_WORLD"
+string train = text.ToTrainCase();            // "Hello-World"
 string title = text.ToTitleCase();            // "Hello World"
 string underscoreCamel = text.ToUnderscoreCamelCase(); // "_helloWorld"
+
+// All case conversions support optional CultureInfo
+string turkish = text.ToPascalCase(new CultureInfo("tr-TR"));
 ```
 
 ### 2. Collection Extensions
