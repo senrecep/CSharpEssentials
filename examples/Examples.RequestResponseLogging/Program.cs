@@ -1,5 +1,6 @@
 using CSharpEssentials.RequestResponseLogging;
 using Examples.RequestResponseLogging.Infrastructure;
+using Microsoft.Net.Http.Headers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,26 +22,13 @@ var app = builder.Build();
 
 // The request/response logging middleware MUST be placed early in the pipeline
 // so it wraps the entire request lifecycle, including all downstream middleware.
-app.AddRequestResponseLogging(options =>
+app.AddRequestResponseLogging(opt =>
 {
-    // Ignore health check endpoints — no need to log these
-    options.IgnorePaths("/health");
-
-    // Use the built-in logger with custom options
-    options.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions =>
-    {
-        loggingOptions.LoggingLevel = LogLevel.Information;
-        loggingOptions.UseSeparateContext = true;
-        loggingOptions.LoggerCategoryName = "RequestResponseLogger";
-    });
-
-    // Alternative: Use a custom handler for full control over logging output
-    // options.UseHandler(async context =>
-    // {
-    //     await StructuredJsonLogWriter.WriteAsync(context, logger);
-    // });
+    opt.IgnorePaths("/health");
+    var loggingOptions = LoggingOptions.CreateAllFields();
+    loggingOptions.HeaderKeys.Add(HeaderNames.AcceptLanguage);
+    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), loggingOptions);
 });
-
 app.UseRouting();
 app.MapControllers();
 app.MapHealthChecks("/health");
