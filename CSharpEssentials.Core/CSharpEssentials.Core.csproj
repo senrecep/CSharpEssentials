@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net9.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Core</PackageId>
@@ -26,6 +26,12 @@
     <DebugType>embedded</DebugType>
     <IncludeBuildOutput>true</IncludeBuildOutput>
   </PropertyGroup>
+
+  <!-- Polyfills for netstandard2.0 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="System.Memory" Version="[4.5.5,)" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="[4.5.4,)" />
+  </ItemGroup>
 
   <!-- Package content -->
   <ItemGroup>
