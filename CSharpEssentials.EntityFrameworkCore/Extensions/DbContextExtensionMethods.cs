@@ -15,11 +15,17 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbContext context, TEntity? entity)
         where TEntity : class, ISoftDeletableEntityBase
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(entity);
-#else
-        if (entity is null) throw new ArgumentNullException(nameof(entity));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(entity);
+
+        #else
+
+            if (entity is null)
+
+                throw new ArgumentNullException(nameof(entity));
+
+        #endif
         entity.MarkAsHardDeleted();
         context.Remove(entity);
     }
@@ -35,11 +41,17 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbSet<TEntity> context, TEntity? entity)
     where TEntity : class, ISoftDeletableEntityBase
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(entity);
-#else
-        if (entity is null) throw new ArgumentNullException(nameof(entity));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(entity);
+
+        #else
+
+            if (entity is null)
+
+                throw new ArgumentNullException(nameof(entity));
+
+        #endif
         entity.MarkAsHardDeleted();
         context.Remove(entity);
     }
@@ -71,61 +83,24 @@ public static class DbContextExtensionMethods
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public static Task MigrateDataAsync<TEntity, TSeedData, TKey>(
-        this DbContext dbContext,
-        IEnumerable<TSeedData> data,
-        Func<IQueryable<TEntity>, IQueryable<TEntity>> query,
-        Func<IQueryable<TEntity>, IEnumerable<TSeedData>, bool> preConditionFunc,
-        Expression<Func<TEntity, TKey>> entityKeyProperty,
-        Expression<Func<TSeedData, TKey>> dataKeyProperty,
-        Func<TEntity, TSeedData, bool> isUpdatedFunc,
-        Func<TEntity, TSeedData, TEntity> updateFunc,
-        Func<TSeedData, TEntity> converter,
-        bool hardDeleteMode = false,
-        CancellationToken cancellationToken = default)
-        where TEntity : class
-        where TSeedData : class
-        where TKey : IEquatable<TKey>
-    {
-        var dataList = data.ToList();
-        DbSet<TEntity> dbSet = dbContext.Set<TEntity>();
-        if (preConditionFunc(dbSet, dataList))
-            return Task.CompletedTask;
-
-        return dbContext.MigrateDataAsync(
-            dataList,
-            query,
-            entityKeyProperty,
-            dataKeyProperty,
-            isUpdatedFunc,
-            updateFunc,
-            converter,
-            hardDeleteMode,
-            cancellationToken);
-
-    }
-
     public static async Task MigrateDataAsync<TEntity, TSeedData, TKey>(
         this DbContext dbContext,
         IEnumerable<TSeedData> data,
-        Func<IQueryable<TEntity>, IQueryable<TEntity>> query,
-        Expression<Func<TEntity, TKey>> entityKeyProperty,
-        Expression<Func<TSeedData, TKey>> dataKeyProperty,
-        Func<TEntity, TSeedData, bool> isUpdatedFunc,
-        Func<TEntity, TSeedData, TEntity> updateFunc,
-        Func<TSeedData, TEntity> converter,
-        bool hardDeleteMode = false,
+        MigrateDataOptions<TEntity, TSeedData, TKey> options,
         CancellationToken cancellationToken = default)
         where TEntity : class
         where TSeedData : class
         where TKey : IEquatable<TKey>
     {
         var dataList = data.ToList();
-        Func<TEntity, TKey> entityKeySelector = entityKeyProperty.Compile();
-        Func<TSeedData, TKey> dataKeySelector = dataKeyProperty.Compile();
         DbSet<TEntity> dbSet = dbContext.Set<TEntity>();
+        if (options.PreConditionFunc is not null && options.PreConditionFunc(dbSet, dataList))
+            return;
+
+        Func<TEntity, TKey> entityKeySelector = options.EntityKeyProperty.Compile();
+        Func<TSeedData, TKey> dataKeySelector = options.DataKeyProperty.Compile();
         List<TEntity> entities = await
-            query(dbSet)
+            options.Query(dbSet)
             .ToListAsync(cancellationToken);
 
         TEntity[] theyWillBeDeleted = entities
@@ -133,20 +108,19 @@ public static class DbContextExtensionMethods
                 .All(item => !dataKeySelector(item).Equals(entityKeySelector(entity))))
             .ToArray();
 
-        if (hardDeleteMode && theyWillBeDeleted.Length != 0)
+        if (options.HardDeleteMode && theyWillBeDeleted.Length != 0)
             theyWillBeDeleted.OfType<ISoftDeletable>().HardDelete();
-
 
         TEntity[] theyWillBeUpdated = entities
             .Join(dataList, entityKeySelector, dataKeySelector, (entity, item) => new { entity, item })
-            .Where(obj => isUpdatedFunc(obj.entity, obj.item))
-            .Select(obj => updateFunc(obj.entity, obj.item))
+            .Where(obj => options.IsUpdatedFunc(obj.entity, obj.item))
+            .Select(obj => options.UpdateFunc(obj.entity, obj.item))
             .ToArray();
 
         TEntity[] theyWillBeAdded = dataList
             .Where(item => entities
                 .All(entity => !entityKeySelector(entity).Equals(dataKeySelector(item))))
-            .Select(converter)
+            .Select(options.Converter)
             .ToArray();
 
         if (theyWillBeDeleted.Length != 0)
