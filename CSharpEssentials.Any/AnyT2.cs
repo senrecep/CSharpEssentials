@@ -34,12 +34,8 @@ public readonly struct Any<T0, T1>
         Action<T0>? first = null,
         Action<T1>? second = null)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(Value);
-#else
-        if (Value is null)
+if (Value is null)
             throw new InvalidOperationException("Value cannot be null");
-#endif
         switch (Index)
         {
             case 0 when first is not null:
@@ -57,12 +53,8 @@ public readonly struct Any<T0, T1>
         Func<T0, TResult>? first = null,
         Func<T1, TResult>? second = null)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(Value);
-#else
-        if (Value is null)
+if (Value is null)
             throw new InvalidOperationException("Value cannot be null");
-#endif
         return Index switch
         {
             0 when first is not null => first((T0)Value),

@@ -63,12 +63,8 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
         Action<T4>? fifth = null,
         Action<T5>? sixth = null)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(Value);
-#else
-        if (Value is null)
+if (Value is null)
             throw new InvalidOperationException("Value cannot be null");
-#endif
         switch (Index)
         {
             case 0 when first is not null:
@@ -102,12 +98,8 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5>
         Func<T4, TResult>? fifth = null,
         Func<T5, TResult>? sixth = null)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(Value);
-#else
-        if (Value is null)
+if (Value is null)
             throw new InvalidOperationException("Value cannot be null");
-#endif
         return Index switch
         {
             0 when first is not null => first((T0)Value),
