@@ -7,52 +7,32 @@ public static partial class Extensions
     #region Build Chain
     public static IRuleBase<TContext> Linear<TContext>(this IRule<TContext>[] rules)
     {
-        IRule<TContext> current = rules[0];
-        IRuleBase<TContext> chain = current;
-
-        foreach (IRule<TContext> item in rules[1..])
-        {
-            chain = current.Next(item);
-            current = item;
-        }
+        IRuleBase<TContext> chain = rules[^1];
+        for (int i = rules.Length - 2; i >= 0; i--)
+            chain = rules[i].Next(chain);
         return chain;
     }
     public static IRuleBase<TContext> Linear<TContext>(this IAsyncRule<TContext>[] rules)
     {
-        IAsyncRule<TContext> current = rules[0];
-        IRuleBase<TContext> chain = current;
-
-        foreach (IAsyncRule<TContext> item in rules[1..])
-        {
-            chain = current.Next(item);
-            current = item;
-        }
+        IRuleBase<TContext> chain = rules[^1];
+        for (int i = rules.Length - 2; i >= 0; i--)
+            chain = rules[i].Next(chain);
         return chain;
     }
 
     public static IRuleBase<TContext, TResult> Linear<TContext, TResult>(this IRule<TContext, TResult>[] rules)
     {
-        IRule<TContext, TResult> current = rules[0];
-        IRuleBase<TContext, TResult> chain = current;
-
-        foreach (IRule<TContext, TResult> item in rules[1..])
-        {
-            chain = current.Next(item);
-            current = item;
-        }
+        IRuleBase<TContext, TResult> chain = rules[^1];
+        for (int i = rules.Length - 2; i >= 0; i--)
+            chain = rules[i].Next(chain);
         return chain;
     }
 
     public static IRuleBase<TContext, TResult> Linear<TContext, TResult>(this IAsyncRule<TContext, TResult>[] rules)
     {
-        IAsyncRule<TContext, TResult> current = rules[0];
-        IRuleBase<TContext, TResult> chain = current;
-
-        foreach (IAsyncRule<TContext, TResult> item in rules[1..])
-        {
-            chain = current.Next(item);
-            current = item;
-        }
+        IRuleBase<TContext, TResult> chain = rules[^1];
+        for (int i = rules.Length - 2; i >= 0; i--)
+            chain = rules[i].Next(chain);
         return chain;
     }
     #endregion

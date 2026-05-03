@@ -1,6 +1,6 @@
-using CSharpEssentials.Core;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Rules;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Rules;
 
