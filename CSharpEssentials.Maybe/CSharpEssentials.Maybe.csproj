@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
 
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Maybe</PackageId>
@@ -35,9 +35,9 @@
 
   <!-- Dependencies: Maybe depends on Results and Errors -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Results"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Errors"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"

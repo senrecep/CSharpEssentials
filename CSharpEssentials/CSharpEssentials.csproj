@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Optimize>true</Optimize>
@@ -45,27 +45,27 @@
 
   <!-- Dependencies: Meta-package that includes all CSharpEssentials packages -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Any" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Any"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Clone" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Clone"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Core" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Core"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Entity" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Entity"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Enums"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Errors"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Json"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Maybe" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Maybe"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Results"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Rules" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Rules"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Time" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Time"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Any\CSharpEssentials.Any.csproj"

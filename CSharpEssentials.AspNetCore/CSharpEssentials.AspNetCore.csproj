@@ -47,19 +47,19 @@
 
   <!-- Package versions vary by target framework -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0' or '$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="Asp.Versioning.Http" Version="[8.1.0,)" />
-    <PackageReference Include="Asp.Versioning.Mvc" Version="[8.1.0,)" />
-    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="[8.1.0,)" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="[8.1.0,)" />
+    <PackageReference Include="Asp.Versioning.Http" />
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
   <!-- Dependencies: AspNetCore depends on Errors, Json, and Results -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Errors" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Errors"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Json"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Results"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
