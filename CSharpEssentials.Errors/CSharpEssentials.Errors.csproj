@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
 
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Errors</PackageId>
@@ -48,7 +48,7 @@
 
   <!-- System.Text.Json for .NET Standard 2.1 -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="System.Text.Json" Version="8.0.5" />
+    <PackageReference Include="System.Text.Json" Version="[8.0.5,)" />
   </ItemGroup>
 
 </Project>
