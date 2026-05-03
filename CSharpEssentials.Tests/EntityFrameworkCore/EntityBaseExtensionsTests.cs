@@ -141,6 +141,7 @@ public class EntityBaseExtensionsTests
         GetProperty(entityType, nameof(AuditEntity.UpdatedAt)).IsNullable.Should().BeTrue();
         GetProperty(entityType, nameof(AuditEntity.UpdatedBy)).IsNullable.Should().BeTrue();
         GetProperty(entityType, nameof(AuditEntity.UpdatedBy)).GetMaxLength().Should().Be(40);
+        _ = new AuditEntity { Id = 1 };
     }
 
     [Fact]
@@ -160,6 +161,7 @@ public class EntityBaseExtensionsTests
         GetProperty(entityType, nameof(SoftAuditEntity.IsDeleted)).IsNullable.Should().BeFalse();
         entityType.FindProperty(nameof(SoftAuditEntity.IsHardDeleted)).Should().BeNull();
         GetProperty(entityType, nameof(SoftAuditEntity.CreatedAt)).IsNullable.Should().BeFalse();
+        _ = new SoftAuditEntity { Id = 1 };
     }
 
     [Fact]
@@ -208,6 +210,7 @@ public class EntityBaseExtensionsTests
         property.IsConcurrencyToken.Should().BeTrue();
         property.ValueGenerated.Should().Be(ValueGenerated.OnAddOrUpdate);
         property.ClrType.Should().Be<byte[]>();
+        _ = new VersionedEntity { Id = 1 };
     }
 
     [Fact]
@@ -224,8 +227,8 @@ public class EntityBaseExtensionsTests
         var filter = entityType.GetQueryFilter();
         filter.Should().NotBeNull();
         var compiled = (Expression<Func<FilteredEntity, bool>>)filter!;
-        compiled.Compile()(new FilteredEntity { IsActive = true }).Should().BeTrue();
-        compiled.Compile()(new FilteredEntity { IsActive = false }).Should().BeFalse();
+        compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true }).Should().BeTrue();
+        compiled.Compile()(new FilteredEntity { Id = 1, IsActive = false }).Should().BeFalse();
     }
 
     [Fact]
@@ -243,9 +246,9 @@ public class EntityBaseExtensionsTests
         var filter = entityType.GetQueryFilter();
         filter.Should().NotBeNull();
         var compiled = (Expression<Func<FilteredEntity, bool>>)filter!;
-        compiled.Compile()(new FilteredEntity { IsActive = true, Name = "A" }).Should().BeTrue();
-        compiled.Compile()(new FilteredEntity { IsActive = false, Name = "A" }).Should().BeFalse();
-        compiled.Compile()(new FilteredEntity { IsActive = true, Name = null }).Should().BeFalse();
+        compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true, Name = "A" }).Should().BeTrue();
+        compiled.Compile()(new FilteredEntity { Id = 1, IsActive = false, Name = "A" }).Should().BeFalse();
+        compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true, Name = null }).Should().BeFalse();
     }
 
     [Fact]
@@ -263,6 +266,8 @@ public class EntityBaseExtensionsTests
         var nonSoftType = context.Model.FindEntityType(typeof(NonSoftEntity))!;
         softType.GetQueryFilter().Should().NotBeNull();
         nonSoftType.GetQueryFilter().Should().BeNull();
+        _ = new DirectSoftEntity { Id = Guid.NewGuid() };
+        _ = new NonSoftEntity { Id = Guid.NewGuid() };
     }
 
     private static IProperty GetProperty(IEntityType entityType, string name)
