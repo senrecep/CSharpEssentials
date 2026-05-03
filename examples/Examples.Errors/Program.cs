@@ -18,18 +18,31 @@ Console.WriteLine($"Validation: Code={validation.Code}, Type={validation.Type}")
 
 Error conflict = Error.Conflict("User.Duplicate", "A user with this email already exists");
 Console.WriteLine($"Conflict: Code={conflict.Code}, Type={conflict.Type}");
+Console.WriteLine();
 
-Error unauthorized = Error.Unauthorized("Auth.Token", "Invalid or expired token");
-Console.WriteLine($"Unauthorized: Code={unauthorized.Code}, Type={unauthorized.Type}");
+// ============================================================================
+// ERROR[] IMPLICIT CONVERSION
+// ============================================================================
+Console.WriteLine("--- Error[] Implicit Conversion ---");
 
-Error forbidden = Error.Forbidden("Auth.Permission", "You do not have permission to access this resource");
-Console.WriteLine($"Forbidden: Code={forbidden.Code}, Type={forbidden.Type}");
+Error single = Error.Validation("Single", "One error");
+Error[] array = single;
+Console.WriteLine($"Implicit to array: Length={array.Length}, Code={array[0].Code}");
+Console.WriteLine();
 
-Error unexpected = Error.Unexpected("System.Error", "An unexpected error occurred");
-Console.WriteLine($"Unexpected: Code={unexpected.Code}, Type={unexpected.Type}");
+// ============================================================================
+// + OPERATOR FOR COMBINING ERRORS
+// ============================================================================
+Console.WriteLine("--- + Operator (Combining Errors) ---");
 
-Error failure = Error.Failure("Payment.Failed", "Payment could not be processed");
-Console.WriteLine($"Failure: Code={failure.Code}, Type={failure.Type}");
+Error errorA = Error.Validation("A", "First error");
+Error errorB = Error.Validation("B", "Second error");
+Error[] combined = errorA + errorB;
+Console.WriteLine($"Combined: Length={combined.Length}");
+foreach (Error err in combined)
+{
+    Console.WriteLine($"  - {err.Code}: {err.Description}");
+}
 Console.WriteLine();
 
 // ============================================================================
@@ -37,7 +50,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Error Type to HTTP Status ---");
 
-Error[] errors = { notFound, validation, conflict, unauthorized, forbidden, unexpected };
+Error[] errors = { notFound, validation, conflict };
 foreach (Error error in errors)
 {
     Console.WriteLine($"{error.Type} -> HTTP {error.Type.ToHttpStatusCode()}");
@@ -85,22 +98,6 @@ foreach (Error err in multipleErrors)
 Console.WriteLine();
 
 // ============================================================================
-// EXCEPTION-BASED ERROR
-// ============================================================================
-Console.WriteLine("--- Exception-Based Error ---");
-
-try
-{
-    throw new InvalidOperationException("Database connection failed");
-}
-catch (Exception ex)
-{
-    Error exceptionError = Error.Exception("Database.Error", ex);
-    Console.WriteLine($"Exception Error: {exceptionError.Code} - {exceptionError.Description}");
-}
-Console.WriteLine();
-
-// ============================================================================
 // DOMAIN EXCEPTION
 // ============================================================================
 Console.WriteLine("--- DomainException ---");
@@ -141,20 +138,6 @@ catch (EnhancedValidationException vex)
         Console.WriteLine($"    - {err.Code}: {err.Description}");
     }
 }
-Console.WriteLine();
-
-// ============================================================================
-// IERROR INTERFACE
-// ============================================================================
-Console.WriteLine("--- IError Interface ---");
-
-static void LogError(IError error)
-{
-    Console.WriteLine($"[LOG] {error.Code}: {error.Description} (Type: {error.Type})");
-}
-
-LogError(notFound);
-LogError(validation);
 Console.WriteLine();
 
 Console.WriteLine("========================================");
