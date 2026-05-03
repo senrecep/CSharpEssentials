@@ -35,7 +35,7 @@
 
   <!-- TimeProvider polyfill for .NET Standard 2.1 -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
-    <PackageReference Include="Microsoft.Bcl.TimeProvider" Version="[8.0.0,)" />
+    <PackageReference Include="Microsoft.Bcl.TimeProvider" />
   </ItemGroup>
 
   <ItemGroup>

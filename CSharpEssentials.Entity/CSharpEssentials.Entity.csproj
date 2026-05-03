@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
 
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.Entity</PackageId>
@@ -34,9 +34,9 @@
 
   <!-- Dependencies: Entity depends on Time and Results for audit trails and domain operations -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Time" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Time"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Results" Version="[2.1.1]"
+    <PackageReference Include="CSharpEssentials.Results"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj"
