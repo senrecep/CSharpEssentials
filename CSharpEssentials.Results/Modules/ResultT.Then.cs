@@ -176,4 +176,58 @@ public static partial class ResultExtensions
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.ThenDoAsync(action, cancellationToken);
     }
+
+    /// <summary>
+    /// Executes the given function if the result is successful.
+    /// </summary>
+    public static async ValueTask<Result<T>> Then<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Result<T>> onSuccess, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Then(onSuccess);
+    }
+
+    /// <summary>
+    /// Executes the given function if the result is successful.
+    /// </summary>
+    public static async ValueTask<Result<T>> Then<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.Then(onSuccess);
+    }
+
+    /// <summary>
+    /// Executes the given action if the result is successful.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> ThenDo<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return result.ThenDo(action);
+    }
+
+    /// <summary>
+    /// Executes the given async function if the result is successful.
+    /// </summary>
+    public static async ValueTask<Result<T>> ThenAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Task<Result<T>>> onSuccess, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return await result.ThenAsync(onSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the given async function if the result is successful.
+    /// </summary>
+    public static async ValueTask<Result<T>> ThenAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Task<T>> onSuccess, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return await result.ThenAsync(onSuccess, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the given async action if the result is successful.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> ThenDoAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        return await result.ThenDoAsync(action, cancellationToken);
+    }
 }

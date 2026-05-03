@@ -193,4 +193,58 @@ public static partial class ResultExtensions
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         await result.SwitchLastAsync(onSuccess, onError, cancellationToken);
     }
+
+    /// <summary>
+    /// Executes the provided action if the result is a value; otherwise the error action is executed.
+    /// </summary>
+    public static async ValueTask Switch<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> onSuccess, Action<Error[]> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        result.Switch(onSuccess, onError);
+    }
+
+    /// <summary>
+    /// Executes the provided async function if the result is a value; otherwise the async error function is executed.
+    /// </summary>
+    public static async ValueTask SwitchAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task> onSuccess, Func<Error[], Task> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        await result.SwitchAsync(onSuccess, onError, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the provided action if the result is a value; otherwise the first error action is executed.
+    /// </summary>
+    public static async ValueTask SwitchFirst<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> onSuccess, Action<Error> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        result.SwitchFirst(onSuccess, onError);
+    }
+
+    /// <summary>
+    /// Executes the provided async function if the result is a value; otherwise the first error async function is executed.
+    /// </summary>
+    public static async ValueTask SwitchFirstAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task> onSuccess, Func<Error, Task> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        await result.SwitchFirstAsync(onSuccess, onError, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the provided action if the result is a value; otherwise the last error action is executed.
+    /// </summary>
+    public static async ValueTask SwitchLast<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> onSuccess, Action<Error> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        result.SwitchLast(onSuccess, onError);
+    }
+
+    /// <summary>
+    /// Executes the provided async function if the result is a value; otherwise the last error async function is executed.
+    /// </summary>
+    public static async ValueTask SwitchLastAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task> onSuccess, Func<Error, Task> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        await result.SwitchLastAsync(onSuccess, onError, cancellationToken);
+    }
 }
