@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
@@ -19,8 +19,11 @@
       modern .NET applications.</Description>
     <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
     <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
-    <PackageReadmeFile>README.MD</PackageReadmeFile>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
@@ -33,7 +36,7 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
-    <None Include="..\README.MD">
+    <None Include="Readme.MD">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
