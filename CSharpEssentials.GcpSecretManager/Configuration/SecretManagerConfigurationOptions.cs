@@ -54,12 +54,17 @@ public sealed class SecretManagerConfigurationOptions
     /// <param name="project">The project configuration to add.</param>
     public void AddProject(ProjectSecretConfiguration project)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(project);
-#else
-        if (project is null)
-            throw new ArgumentNullException(nameof(project));
-#endif
+        #if NET6_0_OR_GREATER
+
+            ArgumentNullException.ThrowIfNull(project);
+
+        #else
+
+            if (project is null)
+
+                throw new ArgumentNullException(nameof(project));
+
+        #endif
         _projects.Add(project);
     }
 
