@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
+    <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
     
     <!-- Package-specific metadata -->
     <PackageId>CSharpEssentials.RequestResponseLogging</PackageId>
@@ -26,6 +26,10 @@
     <DebugType>embedded</DebugType>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
   <!-- Package content -->
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
@@ -39,7 +43,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+    <PackageReference Include="Microsoft.IO.RecyclableMemoryStream" Version="[3.0.1,)" />
   </ItemGroup>
 
 </Project>

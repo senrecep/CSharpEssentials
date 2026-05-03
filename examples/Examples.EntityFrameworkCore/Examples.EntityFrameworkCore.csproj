@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AnalysisMode>None</AnalysisMode>
+      <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <RunAnalyzersDuringBuild>false</RunAnalyzersDuringBuild>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+  </PropertyGroup>  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Core/CSharpEssentials.Core.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Time/CSharpEssentials.Time.csproj" />
+  </ItemGroup>
+
+</Project>
