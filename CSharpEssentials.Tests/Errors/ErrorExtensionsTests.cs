@@ -1,6 +1,6 @@
-using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 using FluentAssertions;
+using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Tests.Errors;
 
@@ -48,7 +48,7 @@ public class ErrorExtensionsTests
     [Fact]
     public void ToHttpStatusCode_And_ToErrorType_ShouldRoundTrip()
     {
-        var errorTypes = new[]
+        ErrorType[] errorTypes = new[]
         {
             ErrorType.Validation,
             ErrorType.Conflict,

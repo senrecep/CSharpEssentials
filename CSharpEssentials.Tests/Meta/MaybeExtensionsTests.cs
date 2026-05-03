@@ -76,7 +76,7 @@ public class MaybeExtensionsTests
     [Fact]
     public async Task ToMaybeResult_WithValueTask_ShouldReturnSuccess()
     {
-        ValueTask<Maybe<int>> maybeTask = new ValueTask<Maybe<int>>(42);
+        var maybeTask = new ValueTask<Maybe<int>>(42);
 
         Result<int> result = await maybeTask.ToMaybeResult();
 
@@ -97,7 +97,7 @@ public class MaybeExtensionsTests
     [Fact]
     public async Task ToMaybeUnitResult_WithValueTask_ShouldReturnSuccess()
     {
-        ValueTask<Maybe<int>> maybeTask = new ValueTask<Maybe<int>>(42);
+        var maybeTask = new ValueTask<Maybe<int>>(42);
 
         Result result = await maybeTask.ToMaybeUnitResult();
 
