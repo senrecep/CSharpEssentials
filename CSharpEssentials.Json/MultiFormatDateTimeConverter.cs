@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace CSharpEssentials.Json;
 
+#pragma warning disable IDE0370
 /// <summary>
 /// A multi-format date time converter factory.
 /// </summary>
@@ -14,14 +15,10 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
     private static readonly Type _convertType = typeof(MultiFormatDateTimeConverter<>);
     private readonly string[] _formats;
 
-    public MultiFormatDateTimeConverterFactory(params string[] formats)
-    {
-#if NET8_0_OR_GREATER
+
+    public MultiFormatDateTimeConverterFactory(params string[] formats) =>
         _formats = [.. _defaultFormats, .. formats ?? []];
-#else
-        _formats = _defaultFormats.Concat(formats ?? Array.Empty<string>()).ToArray();
-#endif
-    }
+
 
     public override bool CanConvert(Type typeToConvert) => typeToConvert == _dateTimeType || typeToConvert == _nullableDateTimeType;
 
@@ -42,8 +39,7 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         )!;
     }
 
-    private static readonly string[] _defaultFormats = new[]
-    {
+    private static readonly string[] _defaultFormats = [
         // ISO 8601 and Web Formats
         "yyyy-MM-ddTHH:mm:ss.ffffffzzz",    // 2024-03-14T15:30:45.123456+03:00
         "yyyy-MM-ddTHH:mm:ss.fffZ",         // 2024-03-14T15:30:45.123Z
@@ -104,7 +100,7 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         
         // Unix and SQL Formats
         "yyyy-MM-dd HH:mm:ss.fff"           // 2024-03-14 15:30:45.123 (SQL)
-    };
+    ];
 }
 
 /// <summary> 

@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.Features;
-using System.Buffers;
+﻿using System.Buffers;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
 
@@ -21,28 +21,28 @@ internal abstract class BaseMiddleware
         ILogWriter logWriter,
         string[] ignoredPaths)
     {
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(logWriter);
+        ArgumentNullException.ThrowIfNull(logWriter);
 
-        #else
+#else
 
             if (logWriter is null)
 
                 throw new ArgumentNullException(nameof(logWriter));
 
-        #endif
-        #if NET6_0_OR_GREATER
+#endif
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(ignoredPaths);
+        ArgumentNullException.ThrowIfNull(ignoredPaths);
 
-        #else
+#else
 
             if (ignoredPaths is null)
 
                 throw new ArgumentNullException(nameof(ignoredPaths));
 
-        #endif
+#endif
 
         _logWriter = logWriter is not NullLogWriter ? logWriter : null;
         _ignoredPaths = new HashSet<string>(
@@ -54,17 +54,17 @@ internal abstract class BaseMiddleware
 
     protected bool IsIgnoredPath(HttpContext context)
     {
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(context);
 
-        #else
+#else
 
             if (context is null)
 
                 throw new ArgumentNullException(nameof(context));
 
-        #endif
+#endif
         string? requestPath = context.Request.Path.Value?.TrimEnd('/');
         return !string.IsNullOrEmpty(requestPath) &&
                _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
@@ -72,28 +72,28 @@ internal abstract class BaseMiddleware
 
     protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext)
     {
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(next);
+        ArgumentNullException.ThrowIfNull(next);
 
-        #else
+#else
 
             if (next is null)
 
                 throw new ArgumentNullException(nameof(next));
 
-        #endif
-        #if NET6_0_OR_GREATER
+#endif
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(httpContext);
+        ArgumentNullException.ThrowIfNull(httpContext);
 
-        #else
+#else
 
             if (httpContext is null)
 
                 throw new ArgumentNullException(nameof(httpContext));
 
-        #endif
+#endif
 
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = GetLoggingConfiguration(httpContext);
         string requestText;
