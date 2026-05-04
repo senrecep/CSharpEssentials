@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>net9.0;net8.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net9.0;net8.0</TargetFrameworks>
 
     <PackageId>CSharpEssentials.EntityFrameworkCore</PackageId>
     <Title>CSharp Essentials EntityFrameworkCore</Title>
@@ -43,7 +43,7 @@
   </ItemGroup>
 
   <!-- EF Core packages - version varies by target framework -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' or '$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
@@ -74,6 +74,10 @@
     <PackageReference Include="CSharpEssentials.Maybe"
       Condition="'$(UseProjectReferences)' != 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <PackageReference Include="CSharpEssentials.Results"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 

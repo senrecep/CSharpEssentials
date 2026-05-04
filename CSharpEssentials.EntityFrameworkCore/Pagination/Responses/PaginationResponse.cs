@@ -1,5 +1,3 @@
-using System;
-
 namespace CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
 
 public record PaginationResponse<T>(
