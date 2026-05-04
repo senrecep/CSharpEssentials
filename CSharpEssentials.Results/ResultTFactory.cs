@@ -94,7 +94,7 @@ public readonly partial record struct Result<TValue>
 #if NET8_0_OR_GREATER
     public static implicit operator Result<TValue>(Error error) => new([error]);
 #else
-    public static implicit operator Result<TValue>(Error error) => new(new[] { error });
+    public static implicit operator Result<TValue>(Error error) => new([error]);
 #endif
     public static implicit operator Result<TValue>(Error[] errors) => new(errors);
     public static implicit operator Result<TValue>(List<Error> errors) => new(errors);
