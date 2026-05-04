@@ -13,7 +13,7 @@ public interface IResult : IResultBase
     /// <summary>
     /// A static comparer for comparing two <see cref="IResult"/> instances.
     /// </summary>
-    new static readonly IEqualityComparer<IResult> Comparer = new ResultComparer();
+    static new readonly IEqualityComparer<IResult> Comparer = new ResultComparer();
 
     /// <summary>
     /// Returns a new result if the current result is a failure, using the provided function to handle errors.

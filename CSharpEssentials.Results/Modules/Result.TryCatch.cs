@@ -1,5 +1,5 @@
-using CSharpEssentials.Errors;
 using CSharpEssentials.Core;
+using CSharpEssentials.Errors;
 
 namespace CSharpEssentials.ResultPattern;
 
