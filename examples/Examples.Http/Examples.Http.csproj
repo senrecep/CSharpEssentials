@@ -15,10 +15,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../CSharpEssentials.Enums/CSharpEssentials.Enums.csproj"
-                      OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="true"
-                      SetTargetFramework="TargetFramework=netstandard2.0" />
+    <ProjectReference Include="../../CSharpEssentials.Http/CSharpEssentials.Http.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
   </ItemGroup>
 
 </Project>
