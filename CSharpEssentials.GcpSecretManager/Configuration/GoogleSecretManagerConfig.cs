@@ -6,6 +6,6 @@ internal sealed class GoogleSecretManagerConfig
 #if NET8_0_OR_GREATER
     public List<ProjectSecretConfiguration> Projects { get; set; } = [];
 #else
-    public List<ProjectSecretConfiguration> Projects { get; set; } = new List<ProjectSecretConfiguration>();
+    public List<ProjectSecretConfiguration> Projects { get; set; } = [];
 #endif
 }
