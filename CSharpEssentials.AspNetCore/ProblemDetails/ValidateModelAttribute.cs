@@ -11,10 +11,9 @@ public sealed class ValidateModelAttribute : ActionFilterAttribute
     {
         if (context.ModelState.IsValid)
             return;
-        Error[] errors = context.ModelState
+        Error[] errors = [.. context.ModelState
             .Where(arg => arg.Value != null)
-            .SelectMany(state => state.Value!.Errors.Select(x => Error.Validation($"validation.{state.Key}", x.ErrorMessage)))
-            .ToArray();
+            .SelectMany(state => state.Value!.Errors.Select(x => Error.Validation($"validation.{state.Key}", x.ErrorMessage)))];
         context.Result = errors.ToActionResult(context.HttpContext);
     }
 }
