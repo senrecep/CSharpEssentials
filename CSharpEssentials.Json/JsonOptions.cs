@@ -20,6 +20,22 @@ public static class EnhancedJsonSerializerOptions
     };
 
     /// <summary>
+    /// Strict JSON serializer options that reject trailing commas, comments, and unmapped members.
+    /// </summary>
+    public static readonly JsonSerializerOptions StrictOptions = new(JsonSerializerDefaults.Web)
+    {
+        ReferenceHandler = ReferenceHandler.IgnoreCycles,
+        WriteIndented = false,
+        PropertyNameCaseInsensitive = false,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        AllowTrailingCommas = false,
+        ReadCommentHandling = JsonCommentHandling.Disallow,
+        UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+    };
+
+    /// <summary>
     /// The default JSON serializer options.
     /// </summary>
     public static readonly JsonSerializerOptions DefaultOptions = DefaultOptionsWithoutConverters.Create(options =>
