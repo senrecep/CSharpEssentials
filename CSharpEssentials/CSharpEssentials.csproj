@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <!-- Multi-targeting support -->
-    <TargetFrameworks>net9.0;netstandard2.1</TargetFrameworks>
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <Optimize>true</Optimize>
@@ -57,6 +57,8 @@
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Errors"
       Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Http"
+      Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Json"
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Maybe"
@@ -65,6 +67,7 @@
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Rules"
       Condition="'$(UseProjectReferences)' != 'true'" />
+
     <PackageReference Include="CSharpEssentials.Time"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
@@ -80,6 +83,8 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Http\CSharpEssentials.Http.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj"
@@ -88,6 +93,7 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
+
     <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>

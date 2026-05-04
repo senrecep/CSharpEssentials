@@ -7,8 +7,8 @@ public readonly record struct Error : IError
     [JsonConstructor]
     private Error(string code, string description, ErrorType type, ErrorMetadata? metadata)
     {
-        Code = code;
-        Description = description;
+        Code = code ?? throw new ArgumentNullException(nameof(code));
+        Description = description ?? throw new ArgumentNullException(nameof(description));
         Type = type;
         NumericType = type.ToIntType();
         Metadata = metadata;
@@ -17,12 +17,12 @@ public readonly record struct Error : IError
     /// <summary>
     /// Gets the unique error code.
     /// </summary>
-    public string Code { get; }
+    public string Code { get; init; }
 
     /// <summary>
     /// Gets the error description.
     /// </summary>
-    public string Description { get; }
+    public string Description { get; init; }
 
     /// <summary>
     /// Gets the error type.
@@ -39,13 +39,13 @@ public readonly record struct Error : IError
     /// </summary>
     public ErrorMetadata? Metadata { get; }
 
-    public static Error[] CreateMany(params IEnumerable<Error> errors) => errors.ToArray();
+    public static Error[] CreateMany(params IEnumerable<Error> errors) => [.. errors];
     /// <summary>
     /// Creates an <see cref="Error"/> from a code and description.
     /// </summary>
     /// <param name="errors"></param>
     /// <returns></returns>
-    public static Error[] CreateMany(params IEnumerable<IEnumerable<Error>> errors) => errors.SelectMany(x => x).ToArray();
+    public static Error[] CreateMany(params IEnumerable<IEnumerable<Error>> errors) => [.. errors.SelectMany(x => x)];
 
 
     /// <summary>

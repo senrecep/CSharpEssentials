@@ -29,7 +29,7 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
             .ToDictionary(t => t.FullName ?? t.Name);
     });
 
-    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> InnerOptionsCache = new();
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> InnerOptionsCache = [];
 
     private static JsonSerializerOptions GetInnerOptions(JsonSerializerOptions options)
     {
