@@ -23,7 +23,7 @@ public class MaybeAdvancedModulesTests
         var result = source.Choose(x => x.ToString(CultureInfo.InvariantCulture)).ToList();
 
         result.Should().HaveCount(3);
-        result.Should().Contain("1", "2", "3");
+        result.Should().BeEquivalentTo("1", "2", "3");
     }
 
     [Fact]
