@@ -11,7 +11,7 @@ public interface IResult<TValue> : IResultBase
     /// <summary>
     /// A static readonly instance of <see cref="IEqualityComparer{T}"/> for comparing instances of <see cref="IResult{TValue}"/>.
     /// </summary>
-    new static readonly IEqualityComparer<IResult<TValue>> Comparer = new ResultComparer<TValue>();
+    static new readonly IEqualityComparer<IResult<TValue>> Comparer = new ResultComparer<TValue>();
     /// <summary>
     /// Gets the value of the result.
     /// </summary>
