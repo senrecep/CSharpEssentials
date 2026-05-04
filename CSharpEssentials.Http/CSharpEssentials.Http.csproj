@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
+    <PackageId>CSharpEssentials.Http</PackageId>
+    <Title>CSharp Essentials Http</Title>
+    <Product>CSharp Essentials Http</Product>
+    <Description>HttpClient extensions that bridge HTTP calls to the Result pattern.
+      Provides GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, status code mapping,
+      and Polly resilience integration.</Description>
+    <PackageTags>HttpClient,Result,Error,Http,Polly,Resilience,FunctionalProgramming,CSharpEssentials</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
+    <PackageReference Include="System.Net.Http.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Results" Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <PackageReference Include="CSharpEssentials.Errors" Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <PackageReference Include="Polly" />
+  </ItemGroup>
+
+</Project>
