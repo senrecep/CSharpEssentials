@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
 using Microsoft.EntityFrameworkCore;
-using CSharpEssentials.Core;
 
 namespace CSharpEssentials.EntityFrameworkCore.Pagination;
 
@@ -70,7 +71,7 @@ public static class Extensions
         {
             ParameterExpression parameter = cursorSelector.Parameters[0];
             ConstantExpression cursorConstant = Expression.Constant(request.Cursor, typeof(TCursor));
-            System.Reflection.MethodInfo compareMethod = typeof(TCursor).GetMethod(nameof(IComparable<TCursor>.CompareTo), [typeof(TCursor)])!;
+            MethodInfo compareMethod = typeof(TCursor).GetMethod(nameof(IComparable<>.CompareTo), [typeof(TCursor)])!;
             Expression compareCall = Expression.Call(cursorSelector.Body, compareMethod, cursorConstant);
             Expression comparison = isAscending
                 ? Expression.GreaterThan(compareCall, Expression.Constant(0))

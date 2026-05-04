@@ -1,6 +1,8 @@
-using System.Linq.Expressions;
+
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
 using Microsoft.EntityFrameworkCore;
 
 namespace CSharpEssentials.EntityFrameworkCore;
@@ -15,17 +17,17 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbContext context, TEntity? entity)
         where TEntity : class, ISoftDeletableEntityBase
     {
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(entity);
 
-        #else
+#else
 
             if (entity is null)
 
                 throw new ArgumentNullException(nameof(entity));
 
-        #endif
+#endif
         entity.MarkAsHardDeleted();
         context.Remove(entity);
     }
@@ -33,7 +35,7 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbContext context, IEnumerable<TEntity> entities)
         where TEntity : class, ISoftDeletableEntityBase
     {
-        TEntity[] records = entities as TEntity[] ?? entities.ToArray();
+        TEntity[] records = entities as TEntity[] ?? [.. entities];
         records.HardDelete();
         context.Set<TEntity>().RemoveRange(records);
     }
@@ -41,17 +43,17 @@ public static class DbContextExtensionMethods
     public static void HardDelete<TEntity>(this DbSet<TEntity> context, TEntity? entity)
     where TEntity : class, ISoftDeletableEntityBase
     {
-        #if NET6_0_OR_GREATER
+#if NET6_0_OR_GREATER
 
-            ArgumentNullException.ThrowIfNull(entity);
+        ArgumentNullException.ThrowIfNull(entity);
 
-        #else
+#else
 
             if (entity is null)
 
                 throw new ArgumentNullException(nameof(entity));
 
-        #endif
+#endif
         entity.MarkAsHardDeleted();
         context.Remove(entity);
     }
@@ -59,7 +61,7 @@ public static class DbContextExtensionMethods
     public static void Delete<TEntity>(this DbSet<TEntity> context, IEnumerable<TEntity> entities)
         where TEntity : class, ISoftDeletableEntityBase
     {
-        TEntity[] entityBases = entities as TEntity[] ?? entities.ToArray();
+        TEntity[] entityBases = entities as TEntity[] ?? [.. entities];
         entityBases.HardDelete();
         context.RemoveRange(entityBases);
     }
@@ -103,25 +105,22 @@ public static class DbContextExtensionMethods
             options.Query(dbSet)
             .ToListAsync(cancellationToken);
 
-        TEntity[] theyWillBeDeleted = entities
+        TEntity[] theyWillBeDeleted = [.. entities
             .Where(entity => dataList
-                .All(item => !dataKeySelector(item).Equals(entityKeySelector(entity))))
-            .ToArray();
+                .All(item => !dataKeySelector(item).Equals(entityKeySelector(entity))))];
 
         if (options.HardDeleteMode && theyWillBeDeleted.Length != 0)
             theyWillBeDeleted.OfType<ISoftDeletable>().HardDelete();
 
-        TEntity[] theyWillBeUpdated = entities
+        TEntity[] theyWillBeUpdated = [.. entities
             .Join(dataList, entityKeySelector, dataKeySelector, (entity, item) => new { entity, item })
             .Where(obj => options.IsUpdatedFunc(obj.entity, obj.item))
-            .Select(obj => options.UpdateFunc(obj.entity, obj.item))
-            .ToArray();
+            .Select(obj => options.UpdateFunc(obj.entity, obj.item))];
 
-        TEntity[] theyWillBeAdded = dataList
+        TEntity[] theyWillBeAdded = [.. dataList
             .Where(item => entities
                 .All(entity => !entityKeySelector(entity).Equals(dataKeySelector(item))))
-            .Select(options.Converter)
-            .ToArray();
+            .Select(options.Converter)];
 
         if (theyWillBeDeleted.Length != 0)
             dbSet.RemoveRange(theyWillBeDeleted);
@@ -133,5 +132,73 @@ public static class DbContextExtensionMethods
             dbSet.AddRange(theyWillBeAdded);
 
         await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public static async Task<Result<T>> FirstOrDefaultAsResultAsync<T>(
+        this IQueryable<T> source,
+        Error? notFoundError = null,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        T? entity = await source.FirstOrDefaultAsync(cancellationToken);
+        if (entity is null)
+            return notFoundError ?? Error.NotFound();
+        return entity;
+    }
+
+    public static async Task<Result<T>> SingleOrDefaultAsResultAsync<T>(
+        this IQueryable<T> source,
+        Error? notFoundError = null,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        T? entity = await source.SingleOrDefaultAsync(cancellationToken);
+        if (entity is null)
+            return notFoundError ?? Error.NotFound();
+        return entity;
+    }
+
+    public static async Task<Result<T>> FindAsResultAsync<T>(
+        this DbSet<T> source,
+        object?[]? keyValues,
+        Error? notFoundError = null,
+        CancellationToken cancellationToken = default)
+        where T : class
+    {
+        T? entity = await source.FindAsync(keyValues, cancellationToken);
+        if (entity is null)
+            return notFoundError ?? Error.NotFound();
+        return entity;
+    }
+
+    public static async Task<Result> SaveChangesAsResultAsync(
+        this DbContext context,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+            return Result.Success();
+        }
+        catch (DbUpdateException ex)
+        {
+            return Error.Exception(ex, ErrorType.Unknown);
+        }
+    }
+
+    public static async Task<Result<int>> SaveChangesAsResultAsync(
+        this DbContext context,
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            int count = await context.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            return count;
+        }
+        catch (DbUpdateException ex)
+        {
+            return Error.Exception(ex, ErrorType.Unknown);
+        }
     }
 }

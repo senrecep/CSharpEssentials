@@ -1,8 +1,8 @@
 using System.Reflection;
+using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Converters;
 using CSharpEssentials.Enums;
 using Microsoft.EntityFrameworkCore;
-using CSharpEssentials.Core;
 
 namespace CSharpEssentials.EntityFrameworkCore;
 
