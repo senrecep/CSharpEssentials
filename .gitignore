@@ -761,4 +761,5 @@ $RECYCLE.BIN/
 *.db-shm
 *.db-wal
 
+plans/
 
