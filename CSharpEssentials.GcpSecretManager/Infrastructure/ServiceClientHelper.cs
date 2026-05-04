@@ -16,8 +16,7 @@ internal interface IServiceClientHelper
 internal sealed class ServiceClientHelper : IServiceClientHelper
 {
     private static readonly AsyncRetryPolicy<SecretManagerServiceClient> RetryPolicy = Policy<SecretManagerServiceClient>
-        .Handle<RpcException>(ex => ex.StatusCode == StatusCode.ResourceExhausted ||
-                                  ex.StatusCode == StatusCode.Unavailable)
+        .Handle<RpcException>(ex => ex.StatusCode is StatusCode.ResourceExhausted or StatusCode.Unavailable)
         .WaitAndRetryAsync(3, retryAttempt =>
             TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
 
@@ -29,7 +28,8 @@ internal sealed class ServiceClientHelper : IServiceClientHelper
 #if NET6_0_OR_GREATER
         ArgumentException.ThrowIfNullOrEmpty(credentialsPath);
 #else
-        if (string.IsNullOrEmpty(credentialsPath)) throw new ArgumentException("Value cannot be null or empty.", nameof(credentialsPath));
+        if (string.IsNullOrEmpty(credentialsPath))
+            throw new ArgumentException("Value cannot be null or empty.", nameof(credentialsPath));
 #endif
 
         var clientBuilder = new SecretManagerServiceClientBuilder
