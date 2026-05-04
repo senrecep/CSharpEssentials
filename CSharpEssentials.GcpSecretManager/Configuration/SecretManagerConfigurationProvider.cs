@@ -20,8 +20,7 @@ internal sealed class SecretManagerConfigurationProvider(
     private const char _separator = ':';
 
     private static readonly AsyncRetryPolicy _retryPolicy = Policy
-        .Handle<RpcException>(ex => ex.StatusCode == StatusCode.ResourceExhausted ||
-                                  ex.StatusCode == StatusCode.Unavailable)
+        .Handle<RpcException>(ex => ex.StatusCode is StatusCode.ResourceExhausted or StatusCode.Unavailable)
         .WaitAndRetryAsync(3, retryAttempt =>
             TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
     private readonly ConcurrentDictionary<string, string?> _data = new();
@@ -65,16 +64,16 @@ internal sealed class SecretManagerConfigurationProvider(
                 ListSecretsAsync(context, parent)).ConfigureAwait(false);
 
             if (secrets.Count == 0)
-                return new Dictionary<string, string?>();
+                return [];
 
             var filteredSecrets = secrets
                 .Where(secret => loader.ShouldLoadSecret(secret, context.Config))
                 .ToList();
 
             if (filteredSecrets.Count == 0)
-                return new Dictionary<string, string?>();
+                return [];
 
-            Dictionary<string, string?> resultDict = new(StringComparer.Ordinal);
+            Dictionary<string, string?> resultDict = [];
 
             for (int i = 0; i < filteredSecrets.Count; i += options.BatchSize)
             {
@@ -90,7 +89,7 @@ internal sealed class SecretManagerConfigurationProvider(
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"Error loading secrets for {parent}: {ex}");
-            return new Dictionary<string, string?>(StringComparer.Ordinal);
+            return [];
         }
     }
 
@@ -166,7 +165,7 @@ internal sealed class SecretManagerConfigurationProvider(
         catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"Error listing secrets: {ex.Message}");
-            return new List<Secret>();
+            return [];
         }
     }
 
@@ -187,6 +186,7 @@ internal sealed class SecretManagerConfigurationProvider(
     private static void FlattenJson(IDictionary<string, string?> data, JsonElement element, string parentPath)
     {
 
+#pragma warning disable IDE0010
         switch (element.ValueKind)
         {
             case JsonValueKind.Object:
@@ -216,5 +216,6 @@ internal sealed class SecretManagerConfigurationProvider(
                 data[parentPath] = element.ToString();
                 break;
         }
+#pragma warning restore IDE0010
     }
 }
