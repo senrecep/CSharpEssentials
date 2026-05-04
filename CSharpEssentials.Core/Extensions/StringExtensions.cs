@@ -34,7 +34,8 @@ public static class StringExtensions
 
     private static string ConvertCase(string input, CaseType caseType, CultureInfo? culture = null)
     {
-        if (input.Length == Zero) return string.Empty;
+        if (input.Length == Zero)
+            return string.Empty;
 
         ReadOnlySpan<char> value = input.AsSpan();
         bool isFirstCharacter = true;
