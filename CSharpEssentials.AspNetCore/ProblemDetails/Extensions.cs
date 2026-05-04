@@ -1,10 +1,10 @@
+using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using CSharpEssentials.Core;
 
 namespace CSharpEssentials.AspNetCore;
 
@@ -93,8 +93,8 @@ public static partial class Extensions
         if (result.IsSuccess)
             throw new InvalidOperationException("Cannot convert a successful result to an action result");
         return result.Errors.ToActionResult(httpContext, extensions, statusCode);
-
     }
+
     /// <summary>
     /// Converts an <see cref="Error"/> to an <see cref="IActionResult"/>.
     /// </summary>
@@ -181,6 +181,7 @@ public static partial class Extensions
             throw new InvalidOperationException("Cannot convert a successful result to a problem details");
         return result.Errors.ToProblemDetails(extensions, statusCode);
     }
+
     /// <summary>
     /// Converts an <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
     /// </summary>
@@ -202,12 +203,17 @@ public static partial class Extensions
     /// <returns></returns>
     public static EnhancedProblemDetails ToProblemDetails(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null)
     {
-        ErrorMetadata metadata = extensions.IsNotNull() ? new ErrorMetadata(extensions) : ErrorMetadata.CreateEmpty();
+        ErrorMetadata metadata = [];
+        if (extensions.IsNotNull())
+            foreach (KeyValuePair<string, object?> item in extensions)
+                metadata[item.Key] = item.Value;
         Error error = errors.MaxBy(e => e.Type.ToHttpStatusCode());
         statusCode ??= error.Type.ToHttpStatusCode();
 
+#pragma warning disable IDE0028
         var errorCodes = errors.Select(e => e.Code).ToHashSet();
         var errorMessages = errors.Select(e => e.Description).ToHashSet();
+#pragma warning restore IDE0028
 
         var problemDetails = new EnhancedProblemDetails
         {
