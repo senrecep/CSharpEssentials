@@ -50,19 +50,19 @@
 
     <!-- CSharpEssentials Internal Packages -->
     <ItemGroup Label="CSharpEssentials">
-        <PackageVersion Include="CSharpEssentials.Any" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Clone" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Core" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Entity" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Enums" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Errors" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Http" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Json" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Maybe" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Mediator" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Results" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Rules" Version="[3.0.2]" />
-        <PackageVersion Include="CSharpEssentials.Time" Version="[3.0.2]" />
+        <PackageVersion Include="CSharpEssentials.Any" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Clone" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Core" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Entity" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Enums" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Errors" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Http" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Json" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Maybe" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Mediator" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Results" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Rules" Version="[3.0.3]" />
+        <PackageVersion Include="CSharpEssentials.Time" Version="[3.0.3]" />
     </ItemGroup>
 
     <!-- Test -->
