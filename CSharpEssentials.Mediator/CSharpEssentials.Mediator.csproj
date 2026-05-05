@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
+    <PackageId>CSharpEssentials.Mediator</PackageId>
+    <Title>CSharp Essentials Mediator</Title>
+    <Product>CSharp Essentials Mediator</Product>
+    <Description>High-performance CQRS and pipeline behaviors built on the Mediator source-generator library.
+      Provides Result-integrated commands, queries, validation, logging, caching, and transaction behaviors
+      with full Native AOT support.</Description>
+    <PackageTags>Mediator,CQRS,Pipeline,Behavior,Validation,Logging,Caching,Transaction,SourceGenerator,NativeAOT,FunctionalProgramming,CSharpEssentials</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mediator.Abstractions" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+
+    <PackageReference Include="CSharpEssentials.Results" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Maybe" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Errors" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
+</Project>
