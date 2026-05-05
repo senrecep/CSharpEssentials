@@ -19,7 +19,7 @@ public sealed class EntityBaseFieldKeywordTests
     public void SetCreatedInfo_With_Valid_Date_Should_Set_CreatedAt()
     {
         var entity = new TestEntity();
-        var now = DateTimeOffset.UtcNow;
+        DateTimeOffset now = DateTimeOffset.UtcNow;
         entity.SetCreatedInfo(now, "user");
         entity.CreatedAt.Should().Be(now);
     }

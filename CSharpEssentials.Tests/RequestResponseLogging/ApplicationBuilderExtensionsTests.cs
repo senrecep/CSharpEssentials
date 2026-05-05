@@ -30,10 +30,7 @@ public class ApplicationBuilderExtensionsTests
 
         ILoggerFactory loggerFactory = Mock.Of<ILoggerFactory>();
 
-        IApplicationBuilder result = mockBuilder.Object.AddRequestResponseLogging(options =>
-        {
-            options.UseLogger(loggerFactory, _ => { });
-        });
+        IApplicationBuilder result = mockBuilder.Object.AddRequestResponseLogging(options => options.UseLogger(loggerFactory, _ => { }));
 
         result.Should().Be(mockBuilder.Object);
     }

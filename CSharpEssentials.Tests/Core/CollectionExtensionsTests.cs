@@ -1,6 +1,6 @@
+using CSharpEssentials.Core;
 using FluentAssertions;
 using static CSharpEssentials.Tests.TestData;
-using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Tests.Core;
 

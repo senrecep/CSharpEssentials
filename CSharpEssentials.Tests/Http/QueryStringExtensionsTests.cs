@@ -1,4 +1,5 @@
 using CSharpEssentials.Http;
+using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Http;
@@ -15,7 +16,7 @@ public class QueryStringExtensionsTests
             { "nullKey", null }
         };
 
-        var result = parameters.ToQueryString();
+        Result<string> result = parameters.ToQueryString();
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Contain("name=Alice");
@@ -28,7 +29,7 @@ public class QueryStringExtensionsTests
     {
         var obj = new { Name = "Bob", Age = 25 };
 
-        var result = obj.ToQueryString();
+        Result<string> result = obj.ToQueryString();
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Contain("Name=Bob");
@@ -41,7 +42,7 @@ public class QueryStringExtensionsTests
         var uri = new Uri("https://test.com/api");
         var parameters = new Dictionary<string, string?> { { "page", "1" } };
 
-        var result = uri.WithQueryString(parameters);
+        Result<Uri> result = uri.WithQueryString(parameters);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Query.Should().Contain("page=1");
@@ -52,7 +53,7 @@ public class QueryStringExtensionsTests
     {
         var uri = new Uri("https://test.com/api");
 
-        var result = uri.WithQueryString(new { limit = "10" });
+        Result<Uri> result = uri.WithQueryString(new { limit = "10" });
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Query.Should().Contain("limit=10");
@@ -63,7 +64,7 @@ public class QueryStringExtensionsTests
     {
         var uri = new Uri("https://test.com/api");
 
-        var result = uri.WithQueryString("sort", "desc");
+        Result<Uri> result = uri.WithQueryString("sort", "desc");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Query.Should().Contain("sort=desc");
@@ -74,7 +75,7 @@ public class QueryStringExtensionsTests
     {
         var uri = new Uri("https://test.com/api?existing=true");
 
-        var result = uri.WithQueryString("new", "value");
+        Result<Uri> result = uri.WithQueryString("new", "value");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Query.Should().Contain("existing=true");
@@ -86,7 +87,7 @@ public class QueryStringExtensionsTests
     {
         Uri? uri = null;
 
-        var result = uri!.WithQueryString("key", "value");
+        Result<Uri> result = uri!.WithQueryString("key", "value");
 
         result.IsFailure.Should().BeTrue();
     }
@@ -96,7 +97,7 @@ public class QueryStringExtensionsTests
     {
         var uri = new Uri("https://test.com/api");
 
-        var result = uri.WithQueryString("", "value");
+        Result<Uri> result = uri.WithQueryString("", "value");
 
         result.IsFailure.Should().BeTrue();
     }
@@ -106,7 +107,7 @@ public class QueryStringExtensionsTests
     {
         var parameters = new Dictionary<string, string?> { { "", "value" } };
 
-        var result = parameters.ToQueryString();
+        Result<string> result = parameters.ToQueryString();
 
         result.IsFailure.Should().BeTrue();
     }

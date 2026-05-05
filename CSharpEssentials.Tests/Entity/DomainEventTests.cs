@@ -13,9 +13,9 @@ public sealed class DomainEventTests
     [Fact]
     public void DomainEvent_Should_Set_OccurredOn_To_UtcNow_By_Default()
     {
-        var before = DateTimeOffset.UtcNow.AddMilliseconds(-100);
+        DateTimeOffset before = DateTimeOffset.UtcNow.AddMilliseconds(-100);
         var evt = new OrderCreated(Guid.NewGuid());
-        var after = DateTimeOffset.UtcNow.AddMilliseconds(100);
+        DateTimeOffset after = DateTimeOffset.UtcNow.AddMilliseconds(100);
 
         evt.OccurredOn.Should().BeOnOrAfter(before);
         evt.OccurredOn.Should().BeOnOrBefore(after);
@@ -25,7 +25,7 @@ public sealed class DomainEventTests
     public void DomainEvent_Should_Allow_Custom_OccurredOn()
     {
         var custom = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        var evt = new OrderCreated(Guid.NewGuid()) with { OccurredOn = custom };
+        OrderCreated evt = new OrderCreated(Guid.NewGuid()) with { OccurredOn = custom };
 
         evt.OccurredOn.Should().Be(custom);
     }

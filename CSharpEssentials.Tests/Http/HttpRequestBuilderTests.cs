@@ -11,7 +11,7 @@ public class HttpRequestBuilderTests
     [Fact]
     public void Build_Should_Create_Request_With_Method_And_Uri()
     {
-        var result = HttpRequestBuilder.Get("https://test.com/api").Build();
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Get("https://test.com/api").Build();
 
         result.IsSuccess.Should().BeTrue();
         using HttpRequestMessage request = result.Value;
@@ -22,7 +22,7 @@ public class HttpRequestBuilderTests
     [Fact]
     public void Build_WithQuery_Should_Append_QueryString()
     {
-        var result = HttpRequestBuilder.Get("https://test.com/api")
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Get("https://test.com/api")
             .WithQuery("page", "1")
             .Build();
 
@@ -34,7 +34,7 @@ public class HttpRequestBuilderTests
     [Fact]
     public void Build_WithHeader_Should_Add_Header()
     {
-        var result = HttpRequestBuilder.Get("https://test.com/api")
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Get("https://test.com/api")
             .WithHeader("x-api-key", "secret")
             .Build();
 
@@ -46,7 +46,7 @@ public class HttpRequestBuilderTests
     [Fact]
     public void Build_WithJsonContent_Should_Set_Content()
     {
-        var result = HttpRequestBuilder.Post("https://test.com/api")
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Post("https://test.com/api")
             .WithJsonContent(new { Name = "Alice" })
             .Build();
 
@@ -104,7 +104,7 @@ public class HttpRequestBuilderTests
     [Fact]
     public async Task AsResultAsync_WithNullClient_Should_Return_ValidationError()
     {
-        var result = await HttpRequestBuilder.Get("https://test.com/api")
+        Result result = await HttpRequestBuilder.Get("https://test.com/api")
             .AsResultAsync(null!);
 
         result.IsFailure.Should().BeTrue();

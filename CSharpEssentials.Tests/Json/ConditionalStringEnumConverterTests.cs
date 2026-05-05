@@ -1,7 +1,7 @@
+using System.Text.Json;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace CSharpEssentials.Tests.Json;
 

@@ -1,5 +1,5 @@
-using FluentAssertions;
 using System.Diagnostics;
+using FluentAssertions;
 
 namespace CSharpEssentials.Tests;
 

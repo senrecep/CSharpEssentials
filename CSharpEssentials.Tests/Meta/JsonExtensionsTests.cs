@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
+using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Meta;
@@ -11,9 +12,9 @@ public class JsonExtensionsTests
     public void TryGetProperty_ShouldReturnProperty_WhenFound()
     {
         string json = """{"name":"Alice","age":30}""";
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
-        var result = doc.RootElement.TryGetProperty("name");
+        Result<JsonElement> result = doc.RootElement.TryGetProperty("name");
 
         result.IsSuccess.Should().BeTrue();
         result.Value.GetString().Should().Be("Alice");
@@ -23,9 +24,9 @@ public class JsonExtensionsTests
     public void TryGetProperty_ShouldReturnError_WhenNotFound()
     {
         string json = """{"name":"Alice"}""";
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
-        var result = doc.RootElement.TryGetProperty("missing");
+        Result<JsonElement> result = doc.RootElement.TryGetProperty("missing");
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Type.Should().Be(ErrorType.NotFound);
@@ -35,9 +36,9 @@ public class JsonExtensionsTests
     public void TryGetProperty_ShouldReturnError_WhenNoNamesProvided()
     {
         string json = """{"name":"Alice"}""";
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
-        var result = doc.RootElement.TryGetProperty();
+        Result<JsonElement> result = doc.RootElement.TryGetProperty();
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Type.Should().Be(ErrorType.Validation);
@@ -47,9 +48,9 @@ public class JsonExtensionsTests
     public void TryGetNestedProperty_ShouldReturnNestedValue_WhenPathExists()
     {
         string json = """{"user":{"profile":{"name":"Alice"}}}""";
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
-        var result = doc.TryGetNestedProperty("user", "profile", "name");
+        Result<JsonElement?> result = doc.TryGetNestedProperty("user", "profile", "name");
 
         result.IsSuccess.Should().BeTrue();
         result.Value!.Value.GetString().Should().Be("Alice");
@@ -59,9 +60,9 @@ public class JsonExtensionsTests
     public void TryGetNestedProperty_ShouldReturnError_WhenPathMissing()
     {
         string json = """{"user":{"profile":{"name":"Alice"}}}""";
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
-        var result = doc.TryGetNestedProperty("user", "profile", "missing");
+        Result<JsonElement?> result = doc.TryGetNestedProperty("user", "profile", "missing");
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Type.Should().Be(ErrorType.NotFound);
@@ -71,9 +72,9 @@ public class JsonExtensionsTests
     public void TryGetNestedProperty_ShouldReturnError_WhenNoNamesProvided()
     {
         string json = """{"name":"Alice"}""";
-        using JsonDocument doc = JsonDocument.Parse(json);
+        using var doc = JsonDocument.Parse(json);
 
-        var result = doc.TryGetNestedProperty();
+        Result<JsonElement?> result = doc.TryGetNestedProperty();
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Type.Should().Be(ErrorType.Validation);

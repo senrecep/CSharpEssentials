@@ -1,6 +1,5 @@
 using CSharpEssentials.AspNetCore;
 using FluentAssertions;
-using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;

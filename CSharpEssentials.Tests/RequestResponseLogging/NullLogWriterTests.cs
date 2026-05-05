@@ -20,7 +20,7 @@ public class NullLogWriterTests
         var writer = new NullLogWriter();
         var context = new RequestResponseContext(new DefaultHttpContext());
 
-        var task = writer.Write(context);
+        Task task = writer.Write(context);
 
         task.IsCompletedSuccessfully.Should().BeTrue();
         await task;
