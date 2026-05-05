@@ -60,7 +60,7 @@ public class ResultFinallyTests
     [Fact]
     public void ResultT_Finally_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string final = result.Finally(r => r.IsSuccess ? $"value:{r.Value}" : "fail");
 
@@ -80,7 +80,7 @@ public class ResultFinallyTests
     [Fact]
     public void ResultT_Finally_ShouldTransformToAnyType()
     {
-        var result = Result<string>.Success("hello");
+        var result = "hello".ToResult();
 
         int length = result.Finally(r => r.IsSuccess ? r.Value.Length : 0);
 
@@ -90,7 +90,7 @@ public class ResultFinallyTests
     [Fact]
     public void ResultT_Finally_Chained_ShouldWorkAfterOperations()
     {
-        int final = Result<int>.Success(10)
+        int final = 10.ToResult()
             .Then(v => v * 2)
             .Finally(r => r.IsSuccess ? r.Value : 0);
 

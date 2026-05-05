@@ -16,7 +16,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result<int> bound = result.Bind(() => Result<int>.Success(42));
+        Result<int> bound = result.Bind(() => 42.ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -31,7 +31,7 @@ public class ResultBindTests
         Result<int> bound = result.Bind(() =>
         {
             called = true;
-            return Result<int>.Success(42);
+            return 42.ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -69,7 +69,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result<int> bound = await result.Bind(() => Task.FromResult(Result<int>.Success(42)));
+        Result<int> bound = await result.Bind(() => Task.FromResult(42.ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -84,7 +84,7 @@ public class ResultBindTests
         Result<int> bound = await result.Bind(() =>
         {
             called = true;
-            return Task.FromResult(Result<int>.Success(42));
+            return Task.FromResult(42.ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -122,7 +122,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result<int> bound = await result.Bind(() => ValueTask.FromResult(Result<int>.Success(42)));
+        Result<int> bound = await result.Bind(() => ValueTask.FromResult(42.ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -137,7 +137,7 @@ public class ResultBindTests
         Result<int> bound = await result.Bind(() =>
         {
             called = true;
-            return ValueTask.FromResult(Result<int>.Success(42));
+            return ValueTask.FromResult(42.ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -241,7 +241,7 @@ public class ResultBindTests
         var valueTask = ValueTask.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        Result<int> bound = await valueTask.BindAsync(() => Result<int>.Success(42));
+        Result<int> bound = await valueTask.BindAsync(() => 42.ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -258,7 +258,7 @@ public class ResultBindTests
         Result<int> bound = await valueTask.BindAsync(() =>
         {
             called = true;
-            return Result<int>.Success(42);
+            return 42.ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -302,7 +302,7 @@ public class ResultBindTests
         var valueTask = ValueTask.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        Result<int> bound = await valueTask.BindAsync(() => ValueTask.FromResult(Result<int>.Success(42)));
+        Result<int> bound = await valueTask.BindAsync(() => ValueTask.FromResult(42.ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -319,7 +319,7 @@ public class ResultBindTests
         Result<int> bound = await valueTask.BindAsync(() =>
         {
             called = true;
-            return ValueTask.FromResult(Result<int>.Success(42));
+            return ValueTask.FromResult(42.ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -363,9 +363,9 @@ public class ResultBindTests
     [Fact]
     public void ResultT_Bind_ToGeneric_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> bound = result.Bind(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> bound = result.Bind(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -380,7 +380,7 @@ public class ResultBindTests
         Result<string> bound = result.Bind(v =>
         {
             called = true;
-            return Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -390,7 +390,7 @@ public class ResultBindTests
     [Fact]
     public void ResultT_Bind_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result bound = result.Bind(v => v > 5 ? Result.Success() : Result.Failure(TestError));
 
@@ -416,9 +416,9 @@ public class ResultBindTests
     [Fact]
     public async Task ResultT_Bind_ToGeneric_Task_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> bound = await result.Bind(v => Task.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        Result<string> bound = await result.Bind(v => Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -433,7 +433,7 @@ public class ResultBindTests
         Result<string> bound = await result.Bind(v =>
         {
             called = true;
-            return Task.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -443,7 +443,7 @@ public class ResultBindTests
     [Fact]
     public async Task ResultT_Bind_ToResult_Task_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result bound = await result.Bind(v => Task.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
@@ -469,9 +469,9 @@ public class ResultBindTests
     [Fact]
     public async Task ResultT_Bind_ToGeneric_ValueTask_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> bound = await result.Bind(v => ValueTask.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        Result<string> bound = await result.Bind(v => ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -486,7 +486,7 @@ public class ResultBindTests
         Result<string> bound = await result.Bind(v =>
         {
             called = true;
-            return ValueTask.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -496,7 +496,7 @@ public class ResultBindTests
     [Fact]
     public async Task ResultT_Bind_ToResult_ValueTask_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result bound = await result.Bind(v => ValueTask.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
@@ -527,10 +527,10 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_Task_ToGeneric_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
-        Result<string> bound = await task.BindAsync((int v) => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> bound = await task.BindAsync((int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -547,7 +547,7 @@ public class ResultBindTests
         Result<string> bound = await task.BindAsync((int v) =>
         {
             called = true;
-            return Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -558,7 +558,7 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_Task_ToResult_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result bound = await task.BindAsync((int v) => v > 5 ? Result.Success() : Result.Failure(TestError));
@@ -588,10 +588,10 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_Task_ToGeneric_TaskFunc_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
-        Result<string> bound = await task.BindAsync((int v) => Task.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        Result<string> bound = await task.BindAsync((int v) => Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -608,7 +608,7 @@ public class ResultBindTests
         Result<string> bound = await task.BindAsync((int v) =>
         {
             called = true;
-            return Task.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -619,7 +619,7 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_Task_ToResult_TaskFunc_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result bound = await task.BindAsync((int v) => Task.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
@@ -649,10 +649,10 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_ValueTask_ToGeneric_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(10));
+        var valueTask = ValueTask.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
-        Result<string> bound = await valueTask.BindAsync((int v) => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> bound = await valueTask.BindAsync((int v) => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -669,7 +669,7 @@ public class ResultBindTests
         Result<string> bound = await valueTask.BindAsync((int v) =>
         {
             called = true;
-            return Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -680,7 +680,7 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_ValueTask_ToResult_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(10));
+        var valueTask = ValueTask.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result bound = await valueTask.BindAsync((int v) => v > 5 ? Result.Success() : Result.Failure(TestError));
@@ -710,10 +710,10 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_ValueTask_ToGeneric_ValueTaskFunc_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(10));
+        var valueTask = ValueTask.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
-        Result<string> bound = await valueTask.BindAsync((int v) => ValueTask.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        Result<string> bound = await valueTask.BindAsync((int v) => ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -730,7 +730,7 @@ public class ResultBindTests
         Result<string> bound = await valueTask.BindAsync((int v) =>
         {
             called = true;
-            return ValueTask.FromResult(Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -741,7 +741,7 @@ public class ResultBindTests
     public async Task ResultT_BindAsync_ValueTask_ToResult_ValueTaskFunc_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(10));
+        var valueTask = ValueTask.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result bound = await valueTask.BindAsync((int v) => ValueTask.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));

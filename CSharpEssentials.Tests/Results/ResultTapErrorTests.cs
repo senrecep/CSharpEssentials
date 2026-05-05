@@ -65,7 +65,7 @@ public class ResultTapErrorTests
     [Fact]
     public void ResultT_TapError_ErrorsAction_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.TapError((Error[] errors) => called = true);
@@ -89,7 +89,7 @@ public class ResultTapErrorTests
     [Fact]
     public void ResultT_TapError_FirstErrorAction_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.TapErrorFirst(error => called = true);
@@ -217,7 +217,7 @@ public class ResultTapErrorTests
     [Fact]
     public void ResultT_TapErrorIf_BoolCondition_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.TapErrorIf(true, (Error[] errors) => called = true);
@@ -253,7 +253,7 @@ public class ResultTapErrorTests
     [Fact]
     public void ResultT_TapErrorIf_FuncCondition_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.TapErrorIf(() => true, (Error[] errors) => called = true);
@@ -321,7 +321,7 @@ public class ResultTapErrorTests
     [Fact]
     public async Task ResultT_TapErrorAsync_ErrorsFunc_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = await result.TapErrorAsync((Error[] errors) => { called = true; return Task.CompletedTask; });
@@ -345,7 +345,7 @@ public class ResultTapErrorTests
     [Fact]
     public async Task ResultT_TapErrorAsync_FirstErrorFunc_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = await result.TapErrorFirstAsync(error => { called = true; return Task.CompletedTask; });

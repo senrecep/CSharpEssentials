@@ -15,7 +15,7 @@ public class ResultModulesTests
     {
         var result = Result.Success();
 
-        Result<int> bound = result.Bind(() => Result<int>.Success(42));
+        Result<int> bound = result.Bind(() => 42.ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -30,7 +30,7 @@ public class ResultModulesTests
         Result<int> bound = result.Bind(() =>
         {
             functionCalled = true;
-            return Result<int>.Success(42);
+            return 42.ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -113,7 +113,7 @@ public class ResultModulesTests
     {
         var result = Result.Success();
 
-        Result<int> mapped = result.Map(() => Result<int>.Success(42));
+        Result<int> mapped = result.Map(() => 42.ToResult());
 
         mapped.IsSuccess.Should().BeTrue();
         mapped.Value.Should().Be(42);

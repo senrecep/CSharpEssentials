@@ -14,7 +14,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void FailIf_WithConditionTrue_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<int> failIfResult = result.FailIf(x => x > 5, TestError);
 
@@ -25,7 +25,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void FailIf_WithConditionFalse_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(3);
+        var result = 3.ToResult();
 
         Result<int> failIfResult = result.FailIf(x => x > 5, TestError);
 
@@ -47,7 +47,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void FailIf_WithErrorFunc_ShouldCreateErrorBasedOnValue()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<int> failIfResult = result.FailIf(
             x => x > 5,
@@ -64,7 +64,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void Else_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = result.Else(AlternativeError);
 
@@ -123,7 +123,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void Finally_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string finalResult = result.Finally(r => r.IsSuccess ? $"Value: {r.Value}" : "Failed");
 
@@ -143,7 +143,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void Finally_ShouldTransformResultToAnyType()
     {
-        var result = Result<string>.Success("Hello");
+        var result = "Hello".ToResult();
 
         int length = result.Finally(r => r.IsSuccess ? r.Value.Length : 0);
 
@@ -157,7 +157,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void Switch_WithSuccess_ShouldCallSuccessAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int? capturedValue = null;
         bool failureCalled = false;
 
@@ -223,9 +223,9 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void Then_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> thenResult = result.Then(value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> thenResult = result.Then(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         thenResult.IsSuccess.Should().BeTrue();
         thenResult.Value.Should().Be("10");
@@ -240,7 +240,7 @@ public class ResultTAdvancedModulesTests
         Result<string> thenResult = result.Then(value =>
         {
             functionCalled = true;
-            return Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         thenResult.IsFailure.Should().BeTrue();
@@ -250,7 +250,7 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void ThenDo_WithSuccess_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int capturedValue = 0;
 
         Result<int> thenResult = result.ThenDo(value => capturedValue = value);
@@ -278,9 +278,9 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void BindIf_WithTrueCondition_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(true, x => Result<int>.Success(x * 2));
+        Result<int> bound = result.BindIf(true, x => (x * 2).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(20);
@@ -289,9 +289,9 @@ public class ResultTAdvancedModulesTests
     [Fact]
     public void BindIf_WithFalseCondition_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(false, x => Result<int>.Success(x * 2));
+        Result<int> bound = result.BindIf(false, x => (x * 2).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(10);
@@ -302,7 +302,7 @@ public class ResultTAdvancedModulesTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> bound = result.BindIf(true, x => Result<int>.Success(x * 2));
+        Result<int> bound = result.BindIf(true, x => (x * 2).ToResult());
 
         bound.IsFailure.Should().BeTrue();
     }

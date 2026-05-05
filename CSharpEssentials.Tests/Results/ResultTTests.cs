@@ -14,7 +14,7 @@ public class ResultTTests
     [Fact]
     public void Success_ShouldCreateSuccessfulResultWithValue()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         result.IsSuccess.Should().BeTrue();
         result.IsFailure.Should().BeFalse();
@@ -24,7 +24,7 @@ public class ResultTTests
     [Fact]
     public void Success_WithReferenceType_ShouldCreateSuccessfulResult()
     {
-        var result = Result<string>.Success("test");
+        var result = "test".ToResult();
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("test");
@@ -90,9 +90,9 @@ public class ResultTTests
     [Fact]
     public void And_WithAllSuccess_ShouldReturnSuccessWithValues()
     {
-        var result1 = Result<int>.Success(1);
-        var result2 = Result<int>.Success(2);
-        var result3 = Result<int>.Success(3);
+        var result1 = 1.ToResult();
+        var result2 = 2.ToResult();
+        var result3 = 3.ToResult();
 #pragma warning disable IDE0008
         var combined = Result<int>.And(result1, result2, result3);
 #pragma warning restore IDE0008
@@ -104,9 +104,9 @@ public class ResultTTests
     [Fact]
     public void And_WithAnyFailure_ShouldReturnFailure()
     {
-        var result1 = Result<int>.Success(1);
+        var result1 = 1.ToResult();
         var result2 = Result<int>.Failure(Error.Failure("TEST", "Error"));
-        var result3 = Result<int>.Success(3);
+        var result3 = 3.ToResult();
 #pragma warning disable IDE0008
         var combined = Result<int>.And(result1, result2, result3);
 #pragma warning restore IDE0008
@@ -122,8 +122,8 @@ public class ResultTTests
     public void Or_WithAnySuccess_ShouldReturnFirstSuccess()
     {
         var result1 = Result<int>.Failure(Error.Failure("TEST", "Error"));
-        var result2 = Result<int>.Success(42);
-        var result3 = Result<int>.Success(100);
+        var result2 = 42.ToResult();
+        var result3 = 100.ToResult();
 #pragma warning disable IDE0008
         var combined = Result<int>.Or(result1, result2, result3);
 #pragma warning restore IDE0008
@@ -161,7 +161,7 @@ public class ResultTTests
     [Fact]
     public void Value_OnSuccess_ShouldReturnValue()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         result.Value.Should().Be(42);
     }
@@ -173,8 +173,8 @@ public class ResultTTests
     [Fact]
     public void Equality_SameSuccessValues_ShouldBeEqual()
     {
-        var result1 = Result<int>.Success(42);
-        var result2 = Result<int>.Success(42);
+        var result1 = 42.ToResult();
+        var result2 = 42.ToResult();
 
         result1.Should().Be(result2);
     }
@@ -182,8 +182,8 @@ public class ResultTTests
     [Fact]
     public void Equality_DifferentSuccessValues_ShouldNotBeEqual()
     {
-        var result1 = Result<int>.Success(42);
-        var result2 = Result<int>.Success(43);
+        var result1 = 42.ToResult();
+        var result2 = 43.ToResult();
 
         result1.Should().NotBe(result2);
     }
@@ -195,7 +195,7 @@ public class ResultTTests
     [Fact]
     public void JsonSerialization_Success_ShouldWork()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         string json = JsonSerializer.Serialize(result);
         Result<int> deserialized = JsonSerializer.Deserialize<Result<int>>(json);
 
