@@ -15,7 +15,7 @@ public class ResultTryTests
     {
         bool called = false;
 
-        Result result = Result.Try(() => { called = true; }, ex => TestError);
+        var result = Result.Try(() => { called = true; }, ex => TestError);
 
         result.IsSuccess.Should().BeTrue();
         called.Should().BeTrue();
@@ -24,7 +24,7 @@ public class ResultTryTests
     [Fact]
     public void Result_Try_Action_Exception_ShouldReturnFailure()
     {
-        Result result = Result.Try(
+        var result = Result.Try(
             () => throw new InvalidOperationException("boom"),
             ex =>
             {
@@ -43,7 +43,7 @@ public class ResultTryTests
     [Fact]
     public void Result_TryT_Func_Success_ShouldReturnSuccessWithValue()
     {
-        Result<int> result = Result.Try(() => 42, ex => TestError);
+        var result = Result.Try(() => 42, ex => TestError);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -52,7 +52,7 @@ public class ResultTryTests
     [Fact]
     public void Result_TryT_Func_Exception_ShouldReturnFailure()
     {
-        Result<int> result = Result.Try(
+        var result = Result.Try(
             (Func<Result<int>>)(() => throw new InvalidOperationException("boom")),
             ex => TestError);
 
@@ -63,7 +63,7 @@ public class ResultTryTests
     [Fact]
     public void Result_TryT_ResultFunc_Success_ShouldReturnSuccessWithValue()
     {
-        Result<int> result = Result.Try(() => Result<int>.Success(42), ex => TestError);
+        var result = Result.Try(() => Result<int>.Success(42), ex => TestError);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -72,7 +72,7 @@ public class ResultTryTests
     [Fact]
     public void Result_TryT_ResultFunc_Exception_ShouldReturnFailure()
     {
-        Result<int> result = Result.Try<int>(
+        var result = Result.Try<int>(
             () => throw new InvalidOperationException("boom"),
             ex => TestError);
 

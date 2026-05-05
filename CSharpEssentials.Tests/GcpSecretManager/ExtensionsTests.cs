@@ -12,10 +12,7 @@ public class ExtensionsTests
     {
         using var configuration = new ConfigurationManager();
 
-        configuration.AddGcpSecretManager(options =>
-        {
-            options.AddProject(new() { ProjectId = "test-project" });
-        });
+        configuration.AddGcpSecretManager(options => options.AddProject(new() { ProjectId = "test-project" }));
 
         configuration.Sources.Should().Contain(x => x is SecretManagerConfigurationSource);
     }
@@ -43,10 +40,7 @@ public class ExtensionsTests
             ["GoogleSecretManager:Projects:0:ProjectId"] = "test-project"
         });
 
-        configuration.AddGcpSecretManager(options =>
-        {
-            options.LoadFromAppSettings = true;
-        });
+        configuration.AddGcpSecretManager(options => options.LoadFromAppSettings = true);
 
         configuration.Sources.Should().Contain(x => x is SecretManagerConfigurationSource);
     }
@@ -78,10 +72,7 @@ public class ExtensionsTests
     {
         using var configuration = new ConfigurationManager();
 
-        var result = configuration.AddGcpSecretManager(options =>
-        {
-            options.AddProject(new() { ProjectId = "test-project" });
-        });
+        IConfigurationManager result = configuration.AddGcpSecretManager(options => options.AddProject(new() { ProjectId = "test-project" }));
 
         result.Should().BeSameAs(configuration);
     }

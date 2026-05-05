@@ -11,7 +11,7 @@ public class AnyExtensionsTests
     public void Deconstruct_AnyT2_First_ShouldReturnFirst()
     {
         Any<int, string> any = 42;
-        var (first, second) = any;
+        (int first, string? second) = any;
 
         first.Should().Be(42);
         second.Should().BeNull();
@@ -21,7 +21,7 @@ public class AnyExtensionsTests
     public void Deconstruct_AnyT2_Second_ShouldReturnSecond()
     {
         Any<int, string> any = "hello";
-        var (first, second) = any;
+        (int first, string? second) = any;
 
         first.Should().Be(0);
         second.Should().Be("hello");
@@ -31,7 +31,7 @@ public class AnyExtensionsTests
     public void ToTuple_AnyT2_First_ShouldReturnFirst()
     {
         Any<int, string> any = 42;
-        var tuple = any.ToTuple();
+        (int First, string? Second) tuple = any.ToTuple();
 
         tuple.First.Should().Be(42);
         tuple.Second.Should().BeNull();
@@ -41,7 +41,7 @@ public class AnyExtensionsTests
     public void ToTuple_AnyT2_Second_ShouldReturnSecond()
     {
         Any<int, string> any = "hello";
-        var tuple = any.ToTuple();
+        (int First, string? Second) tuple = any.ToTuple();
 
         tuple.First.Should().Be(0);
         tuple.Second.Should().Be("hello");
@@ -148,7 +148,7 @@ public class AnyExtensionsTests
     public void Deconstruct_AnyT3_First_ShouldReturnFirst()
     {
         Any<int, string, double> any = 42;
-        var (first, second, third) = any;
+        (int first, string? second, double third) = any;
 
         first.Should().Be(42);
         second.Should().BeNull();
@@ -159,7 +159,7 @@ public class AnyExtensionsTests
     public void Deconstruct_AnyT3_Second_ShouldReturnSecond()
     {
         Any<int, string, double> any = "hello";
-        var (first, second, third) = any;
+        (int first, string? second, double third) = any;
 
         first.Should().Be(0);
         second.Should().Be("hello");
@@ -170,7 +170,7 @@ public class AnyExtensionsTests
     public void Deconstruct_AnyT3_Third_ShouldReturnThird()
     {
         Any<int, string, double> any = 3.14;
-        var (first, second, third) = any;
+        (int first, string? second, double third) = any;
 
         first.Should().Be(0);
         second.Should().BeNull();
@@ -181,7 +181,7 @@ public class AnyExtensionsTests
     public void ToTuple_AnyT3_First_ShouldReturnFirst()
     {
         Any<int, string, double> any = 42;
-        var tuple = any.ToTuple();
+        (int First, string? Second, double Third) tuple = any.ToTuple();
 
         tuple.First.Should().Be(42);
         tuple.Second.Should().BeNull();
@@ -192,7 +192,7 @@ public class AnyExtensionsTests
     public void ToTuple_AnyT3_Second_ShouldReturnSecond()
     {
         Any<int, string, double> any = "hello";
-        var tuple = any.ToTuple();
+        (int First, string? Second, double Third) tuple = any.ToTuple();
 
         tuple.First.Should().Be(0);
         tuple.Second.Should().Be("hello");
@@ -203,7 +203,7 @@ public class AnyExtensionsTests
     public void ToTuple_AnyT3_Third_ShouldReturnThird()
     {
         Any<int, string, double> any = 3.14;
-        var tuple = any.ToTuple();
+        (int First, string? Second, double Third) tuple = any.ToTuple();
 
         tuple.First.Should().Be(0);
         tuple.Second.Should().BeNull();

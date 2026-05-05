@@ -1,4 +1,3 @@
-using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Rules;
 using FluentAssertions;

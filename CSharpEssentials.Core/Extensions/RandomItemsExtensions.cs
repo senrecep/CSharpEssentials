@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿#if NET5_0_OR_GREATER
+using System.Runtime.InteropServices;
+#endif
 using System.Security.Cryptography;
 
 namespace CSharpEssentials.Core;

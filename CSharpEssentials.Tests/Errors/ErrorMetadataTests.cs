@@ -98,9 +98,10 @@ public class ErrorMetadataTests
     [Fact]
     public void Add_ShouldAddKeyValue()
     {
-        ErrorMetadata metadata = new();
-
-        metadata.Add("key", "value");
+        ErrorMetadata metadata = new()
+        {
+            { "key", "value" }
+        };
 
         metadata.Should().ContainKey("key");
     }
@@ -116,7 +117,7 @@ public class ErrorMetadataTests
     [Fact]
     public void ContainsKey_WithNonExistingKey_ShouldReturnFalse()
     {
-        ErrorMetadata metadata = new();
+        ErrorMetadata metadata = [];
 
         metadata.ContainsKey("key").Should().BeFalse();
     }

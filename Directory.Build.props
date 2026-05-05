@@ -2,7 +2,10 @@
 <Project>
 	<PropertyGroup>
 		<!-- Individual projects define their own TargetFrameworks -->
-		<LangVersion>latest</LangVersion>
+		<LangVersion>preview</LangVersion>
+
+		<!-- .NET 11 Native Union Flag -->
+		<DefineConstants Condition="'$(TargetFramework)' == 'net11.0'">$(DefineConstants);CSHARP_ESSENTIALS_ENABLE_UNIONS</DefineConstants>
 
 		<!-- Use project references by default for development -->
 		<UseProjectReferences Condition="'$(UseProjectReferences)' == ''">true</UseProjectReferences>
@@ -40,9 +43,9 @@
 		<RepositoryBranch>main</RepositoryBranch>
 
 		<!-- Version management -->
-		<Version>3.0.1</Version>
+		<Version>3.0.2</Version>
 		<AssemblyVersion>3.0.0.0</AssemblyVersion>
-		<FileVersion>3.0.1.0</FileVersion>
+		<FileVersion>3.0.2.0</FileVersion>
 
 		<!-- Documentation -->
 		<IncludeSymbols>true</IncludeSymbols>

@@ -8,7 +8,7 @@ public static partial class MaybeExtensions
     public static Maybe<TValue> AsMaybe<TValue>(this Result<TValue> result)
     {
         if (result.IsSuccess)
-            return Maybe<TValue>.From(result.Value);
+            return result.Value;
         return Maybe<TValue>.None;
     }
 

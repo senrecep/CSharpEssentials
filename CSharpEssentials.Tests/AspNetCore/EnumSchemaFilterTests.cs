@@ -1,7 +1,6 @@
 using CSharpEssentials.AspNetCore.Swagger.Filters;
 using CSharpEssentials.Enums;
 using FluentAssertions;
-using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -28,7 +27,7 @@ public class EnumSchemaFilterTests
     {
         var filter = new EnumSchemaFilter();
         var schema = new OpenApiSchema();
-        var context = CreateContext(typeof(TestString));
+        SchemaFilterContext context = CreateContext(typeof(TestString));
 
         filter.Apply(schema, context);
 
@@ -42,7 +41,7 @@ public class EnumSchemaFilterTests
     {
         var filter = new EnumSchemaFilter();
         var schema = new OpenApiSchema { Type = "integer" };
-        var context = CreateContext(typeof(TestInt));
+        SchemaFilterContext context = CreateContext(typeof(TestInt));
 
         filter.Apply(schema, context);
 

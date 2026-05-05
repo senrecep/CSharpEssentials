@@ -1,6 +1,6 @@
+using CSharpEssentials.Core;
 using FluentAssertions;
 using static CSharpEssentials.Tests.TestData;
-using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Tests.Core;
 
@@ -186,7 +186,7 @@ public class GeneralExtensionsTests
     [Fact]
     public async Task WithCancellation_WithTaskT_ShouldWork()
     {
-        var task = Task.FromResult(42);
+        Task<int> task = Task.FromResult(42);
         var result = await task.WithCancellation(CancellationToken.None);
 
         result.Should().Be(42);
@@ -197,7 +197,7 @@ public class GeneralExtensionsTests
     {
         using CancellationTokenSource cts = new();
         cts.CancelAfter(10);
-        var task = Task.Delay(1000).ContinueWith(_ => 42, TaskScheduler.Default);
+        Task<int> task = Task.Delay(1000).ContinueWith(_ => 42, TaskScheduler.Default);
 
         await Assert.ThrowsAsync<OperationCanceledException>(() => task.WithCancellation(cts.Token));
     }
@@ -205,7 +205,7 @@ public class GeneralExtensionsTests
     [Fact]
     public async Task WithCancellation_WithValueTask_ShouldWork()
     {
-        var valueTask = ValueTask.FromResult(42);
+        ValueTask<int> valueTask = ValueTask.FromResult(42);
         var result = await valueTask.WithCancellation(CancellationToken.None);
 
         result.Should().Be(42);

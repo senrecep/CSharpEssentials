@@ -46,20 +46,14 @@ public sealed class AuditInterceptor(
 
         foreach (EntityEntry entry in context.ChangeTracker.Entries())
         {
-            switch (entry.State)
+            if (entry.State == EntityState.Added && entry.Entity is ICreationAudit creationAudit)
+                creationAudit.SetCreatedInfo(now, userId);
+            else if (entry.State == EntityState.Modified && entry.Entity is IModificationAudit modificationAudit)
+                modificationAudit.SetUpdatedInfo(now, userId);
+            else if (entry.State == EntityState.Deleted && entry.Entity is ISoftDeletable softDeletable && !softDeletable.IsHardDeleted)
             {
-                case EntityState.Added when entry.Entity is ICreationAudit creationAudit:
-                    creationAudit.SetCreatedInfo(now, userId);
-                    break;
-
-                case EntityState.Modified when entry.Entity is IModificationAudit modificationAudit:
-                    modificationAudit.SetUpdatedInfo(now, userId);
-                    break;
-
-                case EntityState.Deleted when entry.Entity is ISoftDeletable softDeletable && !softDeletable.IsHardDeleted:
-                    softDeletable.MarkAsDeleted(now, userId);
-                    entry.State = EntityState.Modified;
-                    break;
+                softDeletable.MarkAsDeleted(now, userId);
+                entry.State = EntityState.Modified;
             }
         }
     }

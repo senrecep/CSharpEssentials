@@ -35,12 +35,14 @@ internal sealed class LoggerFactoryLogWriter : ILogWriter
         string?[]? parameters = null;
 
         if (values is not null)
-            parameters = values.ToArray();
+            parameters = [.. values];
 #pragma warning disable CA2254
 #if NET8_0_OR_GREATER
-        _logger.Log(options.LoggingLevel, logString, parameters ?? Array.Empty<object?>());
+        if (_logger.IsEnabled(options.LoggingLevel))
+            _logger.Log(options.LoggingLevel, logString, parameters ?? Array.Empty<object?>());
 #else
-        _logger.Log(_loggingLevel, logString, parameters ?? Array.Empty<object?>());
+        if (_logger.IsEnabled(_loggingLevel))
+            _logger.Log(_loggingLevel, logString, parameters ?? Array.Empty<object?>());
 #endif
 #pragma warning restore CA2254
 
