@@ -8,7 +8,7 @@ using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Mediator;
 
-public sealed record TestTransactionalCommand(string Name) : ICommand<Result>, ITransactionalRequest;
+internal sealed record TestTransactionalCommand(string Name) : ICommand<Result>, ITransactionalRequest;
 
 public class TransactionScopeBehaviorTests
 {
