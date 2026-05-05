@@ -42,6 +42,18 @@ public readonly partial record struct Result
         }
     }
 
+    public static Result Try(Func<Result> func, Func<Exception, Error> errorHandler)
+    {
+        try
+        {
+            return func();
+        }
+        catch (Exception ex)
+        {
+            return errorHandler(ex);
+        }
+    }
+
     public static async Task<Result> TryAsync(Func<Task> action, Func<Exception, Error> errorHandler, CancellationToken cancellationToken = default)
     {
         try
@@ -68,6 +80,18 @@ public readonly partial record struct Result
     }
 
     public static async Task<Result<TValue>> TryAsync<TValue>(Func<Task<Result<TValue>>> func, Func<Exception, Error> errorHandler, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await func().WithCancellation(cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return errorHandler(ex);
+        }
+    }
+
+    public static async Task<Result> TryAsync(Func<Task<Result>> func, Func<Exception, Error> errorHandler, CancellationToken cancellationToken = default)
     {
         try
         {
