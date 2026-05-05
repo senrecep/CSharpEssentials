@@ -63,6 +63,8 @@
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Maybe"
       Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Mediator"
+      Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Results"
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Rules"
@@ -88,6 +90,8 @@
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Mediator\CSharpEssentials.Mediator.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
