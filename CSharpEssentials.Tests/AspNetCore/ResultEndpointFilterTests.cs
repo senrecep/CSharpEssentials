@@ -15,7 +15,7 @@ public class ResultEndpointFilterTests
         var filter = new ResultEndpointFilter();
         var context = new DefaultEndpointFilterInvocationContext(new DefaultHttpContext());
 
-        object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>((Result<int>)42)))!;
+        object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(42.ToResult())))!;
 
         var okResult = (Ok<object>)result;
         okResult.Value!.Should().Be(42);

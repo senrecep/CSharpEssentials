@@ -24,7 +24,7 @@ public class HttpClientResilienceExtensionsTests
     {
         ResiliencePipeline pipeline = HttpClientResilienceExtensions.CreateRetryPipeline(maxRetryAttempts: 1);
 
-        Result<int> result = await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(Result<int>.Success(42)));
+        Result<int> result = await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(42.ToResult()));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -80,7 +80,7 @@ public class HttpClientResilienceExtensionsTests
             attempts++;
             if (attempts < 2)
                 return Task.FromResult(Result<int>.Failure(Error.Unexpected()));
-            return Task.FromResult(Result<int>.Success(99));
+            return Task.FromResult(99.ToResult());
         });
 
         result.IsSuccess.Should().BeTrue();
@@ -97,7 +97,7 @@ public class HttpClientResilienceExtensionsTests
         Result<int> result = await pipeline.ExecuteAsResultAsync(_ =>
         {
             attempts++;
-            return Task.FromResult(Result<int>.Success(42));
+            return Task.FromResult(42.ToResult());
         });
 
         result.IsSuccess.Should().BeTrue();
@@ -113,7 +113,7 @@ public class HttpClientResilienceExtensionsTests
             timeout: TimeSpan.FromSeconds(1),
             retryDelay: TimeSpan.FromMilliseconds(10));
 
-        Result<int> result = await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(Result<int>.Success(7)));
+        Result<int> result = await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(7.ToResult()));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(7);
@@ -154,7 +154,7 @@ public class HttpClientResilienceExtensionsTests
             attempts++;
             if (attempts < 2)
                 return Task.FromResult(Result<int>.Failure(Error.Conflict()));
-            return Task.FromResult(Result<int>.Success(42));
+            return Task.FromResult(42.ToResult());
         });
 
         result.IsSuccess.Should().BeTrue();
@@ -202,7 +202,7 @@ public class HttpClientResilienceExtensionsTests
             result.IsFailure.Should().BeTrue();
         }
 
-        Func<Task> act = async () => await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(Result<int>.Success(1)));
+        Func<Task> act = async () => await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(1.ToResult()));
         await act.Should().ThrowAsync<BrokenCircuitException>();
     }
 

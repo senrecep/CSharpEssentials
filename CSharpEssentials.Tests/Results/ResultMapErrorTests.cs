@@ -60,7 +60,7 @@ public class ResultMapErrorTests
     [Fact]
     public void ResultT_MapError_ArrayMapper_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> mapped = result.MapError(errors => new[] { MappedError });
 
@@ -82,7 +82,7 @@ public class ResultMapErrorTests
     [Fact]
     public void ResultT_MapError_FirstErrorMapper_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> mapped = result.MapError(error => MappedError);
 

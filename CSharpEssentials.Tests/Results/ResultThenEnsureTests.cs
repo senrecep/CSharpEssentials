@@ -13,9 +13,9 @@ public class ResultThenEnsureTests
     [Fact]
     public void ResultT_ThenEnsure_ResultTValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
-        Result<int> ensured = result.ThenEnsure(v => Result<int>.Success(v));
+        Result<int> ensured = result.ThenEnsure(v => v.ToResult());
 
         ensured.IsSuccess.Should().BeTrue();
         ensured.Value.Should().Be(42);
@@ -24,7 +24,7 @@ public class ResultThenEnsureTests
     [Fact]
     public void ResultT_ThenEnsure_ResultTValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> ensured = result.ThenEnsure(v => Result<int>.Failure(TestError));
 
@@ -37,7 +37,7 @@ public class ResultThenEnsureTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> ensured = result.ThenEnsure(v => Result<int>.Success(99));
+        Result<int> ensured = result.ThenEnsure(v => 99.ToResult());
 
         ensured.IsFailure.Should().BeTrue();
         ensured.FirstError.Should().Be(TestError);
@@ -46,7 +46,7 @@ public class ResultThenEnsureTests
     [Fact]
     public void ResultT_ThenEnsure_ResultValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> ensured = result.ThenEnsure(v => Result.Success());
 
@@ -57,7 +57,7 @@ public class ResultThenEnsureTests
     [Fact]
     public void ResultT_ThenEnsure_ResultValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> ensured = result.ThenEnsure(v => Result.Failure(TestError));
 
@@ -83,9 +83,9 @@ public class ResultThenEnsureTests
     [Fact]
     public async Task ResultT_ThenEnsureAsync_ResultTValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
-        Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(Result<int>.Success(v)));
+        Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(v.ToResult()));
 
         ensured.IsSuccess.Should().BeTrue();
         ensured.Value.Should().Be(42);
@@ -94,7 +94,7 @@ public class ResultThenEnsureTests
     [Fact]
     public async Task ResultT_ThenEnsureAsync_ResultTValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(Result<int>.Failure(TestError)));
 
@@ -107,7 +107,7 @@ public class ResultThenEnsureTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(Result<int>.Success(99)));
+        Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(99.ToResult()));
 
         ensured.IsFailure.Should().BeTrue();
         ensured.FirstError.Should().Be(TestError);
@@ -116,7 +116,7 @@ public class ResultThenEnsureTests
     [Fact]
     public async Task ResultT_ThenEnsureAsync_ResultValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(Result.Success()));
 
@@ -127,7 +127,7 @@ public class ResultThenEnsureTests
     [Fact]
     public async Task ResultT_ThenEnsureAsync_ResultValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> ensured = await result.ThenEnsureAsync(v => Task.FromResult(Result.Failure(TestError)));
 
@@ -154,10 +154,10 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_Task_ResultTValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> ensured = await task.ThenEnsureAsync(v => Task.FromResult(Result<int>.Success(v)));
+        Result<int> ensured = await task.ThenEnsureAsync(v => Task.FromResult(v.ToResult()));
 
         ensured.IsSuccess.Should().BeTrue();
         ensured.Value.Should().Be(42);
@@ -167,7 +167,7 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_Task_ResultTValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await task.ThenEnsureAsync(v => Task.FromResult(Result<int>.Failure(TestError)));
@@ -180,7 +180,7 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_Task_ResultValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await task.ThenEnsureAsync(v => Task.FromResult(Result.Success()));
@@ -193,7 +193,7 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_Task_ResultValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await task.ThenEnsureAsync(v => Task.FromResult(Result.Failure(TestError)));
@@ -206,10 +206,10 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_ValueTask_ResultTValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(42));
+        var valueTask = ValueTask.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> ensured = await valueTask.ThenEnsureAsync(v => Task.FromResult(Result<int>.Success(v)));
+        Result<int> ensured = await valueTask.ThenEnsureAsync(v => Task.FromResult(v.ToResult()));
 
         ensured.IsSuccess.Should().BeTrue();
         ensured.Value.Should().Be(42);
@@ -219,7 +219,7 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_ValueTask_ResultTValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(42));
+        var valueTask = ValueTask.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await valueTask.ThenEnsureAsync(v => Task.FromResult(Result<int>.Failure(TestError)));
@@ -232,7 +232,7 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_ValueTask_ResultValidator_WithSuccess_Valid_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(42));
+        var valueTask = ValueTask.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await valueTask.ThenEnsureAsync(v => Task.FromResult(Result.Success()));
@@ -245,7 +245,7 @@ public class ResultThenEnsureTests
     public async Task ResultT_ThenEnsureAsync_ValueTask_ResultValidator_WithSuccess_Invalid_ShouldReturnFailure()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(42));
+        var valueTask = ValueTask.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await valueTask.ThenEnsureAsync(v => Task.FromResult(Result.Failure(TestError)));

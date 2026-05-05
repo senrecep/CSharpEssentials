@@ -60,7 +60,7 @@ public class ResultTryCatchTests
     {
         var result = Result.Success();
 
-        Result<int> caught = result.TryCatch(() => Result<int>.Success(42));
+        Result<int> caught = result.TryCatch(() => 42.ToResult());
 
         caught.IsSuccess.Should().BeTrue();
         caught.Value.Should().Be(42);
@@ -72,7 +72,7 @@ public class ResultTryCatchTests
         var result = Result.Failure(TestError);
         bool called = false;
 
-        Result<int> caught = result.TryCatch(() => { called = true; return Result<int>.Success(42); });
+        Result<int> caught = result.TryCatch(() => { called = true; return 42.ToResult(); });
 
         caught.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
@@ -118,7 +118,7 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result caught = result.TryCatch(value => value > 5 ? Result.Success() : Result.Failure(TestError));
 
@@ -140,7 +140,7 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_ToResult_WithException_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result caught = result.TryCatch(_ => throw new InvalidOperationException("boom"));
 
@@ -150,7 +150,7 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_ToResult_WithExceptionAndCustomError_ShouldReturnCustomError()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result caught = result.TryCatch(_ => throw new InvalidOperationException("boom"), CustomCatchError);
 
@@ -161,9 +161,9 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_Generic_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> caught = result.TryCatch(value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> caught = result.TryCatch(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         caught.IsSuccess.Should().BeTrue();
         caught.Value.Should().Be("10");
@@ -178,7 +178,7 @@ public class ResultTryCatchTests
         Result<string> caught = result.TryCatch(value =>
         {
             called = true;
-            return Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         caught.IsFailure.Should().BeTrue();
@@ -188,7 +188,7 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_Generic_WithException_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> caught = result.TryCatch<string>(_ => throw new InvalidOperationException("boom"));
 
@@ -198,7 +198,7 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_Generic_WithExceptionAndCustomError_ShouldReturnCustomError()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> caught = result.TryCatch<string>(_ => throw new InvalidOperationException("boom"), CustomCatchError);
 
@@ -209,9 +209,9 @@ public class ResultTryCatchTests
     [Fact]
     public void ResultT_TryCatch_Chained_ShouldCatchInChain()
     {
-        Result<string> result = Result<int>.Success(10)
-            .TryCatch(v => Result<int>.Success(v * 2))
-            .TryCatch(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> result = 10.ToResult()
+            .TryCatch(v => (v * 2).ToResult())
+            .TryCatch(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("20");

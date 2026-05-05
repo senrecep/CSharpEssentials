@@ -63,7 +63,7 @@ public class ResultTryTests
     [Fact]
     public void Result_TryT_ResultFunc_Success_ShouldReturnSuccessWithValue()
     {
-        var result = Result.Try(() => Result<int>.Success(42), ex => TestError);
+        var result = Result.Try(() => 42.ToResult(), ex => TestError);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -136,7 +136,7 @@ public class ResultTryTests
     public async Task Result_TryAsyncT_ResultFunc_Success_ShouldReturnSuccessWithValue()
     {
         Result<int> result = await Result.TryAsync(
-            () => Task.FromResult(Result<int>.Success(42)),
+            () => Task.FromResult(42.ToResult()),
             ex => TestError);
 
         result.IsSuccess.Should().BeTrue();

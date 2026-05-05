@@ -227,9 +227,9 @@ public class ResultThenTests
     [Fact]
     public void ResultT_Then_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> thenResult = result.Then(value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> thenResult = result.Then(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         thenResult.IsSuccess.Should().BeTrue();
         thenResult.Value.Should().Be("10");
@@ -244,7 +244,7 @@ public class ResultThenTests
         Result<string> thenResult = result.Then(value =>
         {
             called = true;
-            return Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         thenResult.IsFailure.Should().BeTrue();
@@ -254,7 +254,7 @@ public class ResultThenTests
     [Fact]
     public void ResultT_Then_ToValue_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> thenResult = result.Then(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -281,7 +281,7 @@ public class ResultThenTests
     [Fact]
     public void ResultT_ThenDo_WithSuccess_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int captured = 0;
 
         Result<int> thenResult = result.ThenDo(value => captured = value);
@@ -305,7 +305,7 @@ public class ResultThenTests
     [Fact]
     public void ResultT_Then_Chained_ShouldTransformThroughChain()
     {
-        Result<string> result = Result<int>.Success(10)
+        Result<string> result = 10.ToResult()
             .Then(v => v * 2)
             .Then(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -318,7 +318,7 @@ public class ResultThenTests
     {
         int callCount = 0;
 
-        Result<string> result = Result<int>.Success(10)
+        Result<string> result = 10.ToResult()
             .Then(v => { callCount++; return v * 2; })
             .Then(_ => Result<int>.Failure(TestError))
             .Then(v => { callCount++; return v.ToString(System.Globalization.CultureInfo.InvariantCulture); });
@@ -330,10 +330,10 @@ public class ResultThenTests
     [Fact]
     public async Task ResultT_ThenAsync_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> thenResult = await result.ThenAsync(value =>
-            Task.FromResult(Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+            Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         thenResult.IsSuccess.Should().BeTrue();
         thenResult.Value.Should().Be("10");
@@ -348,7 +348,7 @@ public class ResultThenTests
         Result<string> thenResult = await result.ThenAsync(value =>
         {
             called = true;
-            return Task.FromResult(Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            return Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
         });
 
         thenResult.IsFailure.Should().BeTrue();
@@ -358,7 +358,7 @@ public class ResultThenTests
     [Fact]
     public async Task ResultT_ThenAsync_ToValue_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> thenResult = await result.ThenAsync(value =>
             Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
@@ -386,7 +386,7 @@ public class ResultThenTests
     [Fact]
     public async Task ResultT_ThenDoAsync_WithSuccess_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int captured = 0;
 
         Result<int> thenResult = await result.ThenDoAsync(value =>
@@ -422,10 +422,10 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_Then_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(10.ToResult());
 
         Result<string> thenResult = await task.Then(
-            value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult(),
             CancellationToken.None);
 
         thenResult.IsSuccess.Should().BeTrue();
@@ -442,7 +442,7 @@ public class ResultThenTests
             value =>
             {
                 called = true;
-                return Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                return value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
             },
             CancellationToken.None);
 
@@ -453,7 +453,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_Then_ToValue_WithSuccess_ShouldExecuteFunction()
     {
-        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(10.ToResult());
 
         Result<string> thenResult = await task.Then(
             value => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -484,7 +484,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenDo_WithSuccess_ShouldExecuteAction()
     {
-        Task<Result<int>> task = Task.FromResult(Result<int>.Success(42));
+        Task<Result<int>> task = Task.FromResult(42.ToResult());
         int captured = 0;
 
         Result<int> thenResult = await task.ThenDo(value => captured = value, CancellationToken.None);
@@ -508,10 +508,10 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenAsync_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(10.ToResult());
 
         Result<string> thenResult = await task.ThenAsync(
-            value => Task.FromResult(Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture))),
+            value => Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()),
             CancellationToken.None);
 
         thenResult.IsSuccess.Should().BeTrue();
@@ -528,7 +528,7 @@ public class ResultThenTests
             value =>
             {
                 called = true;
-                return Task.FromResult(Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                return Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
             },
             CancellationToken.None);
 
@@ -539,7 +539,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenAsync_ToValue_WithSuccess_ShouldExecuteFunction()
     {
-        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(10.ToResult());
 
         Result<string> thenResult = await task.ThenAsync(
             value => Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
@@ -570,7 +570,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenDoAsync_WithSuccess_ShouldExecuteAction()
     {
-        Task<Result<int>> task = Task.FromResult(Result<int>.Success(42));
+        Task<Result<int>> task = Task.FromResult(42.ToResult());
         int captured = 0;
 
         Result<int> thenResult = await task.ThenDoAsync(

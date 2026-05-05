@@ -298,7 +298,7 @@ public class ResultElseTests
     [Fact]
     public void ResultT_Else_FuncError_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = result.Else(errors => AnotherError);
 
@@ -320,7 +320,7 @@ public class ResultElseTests
     [Fact]
     public void ResultT_Else_FuncErrorArray_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = result.Else(errors => new[] { AnotherError });
 
@@ -342,7 +342,7 @@ public class ResultElseTests
     [Fact]
     public void ResultT_Else_Error_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = result.Else(AnotherError);
 
@@ -364,7 +364,7 @@ public class ResultElseTests
     [Fact]
     public void ResultT_Else_FuncValue_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = result.Else(errors => 99);
 
@@ -386,7 +386,7 @@ public class ResultElseTests
     [Fact]
     public void ResultT_Else_Value_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = result.Else(99);
 
@@ -408,7 +408,7 @@ public class ResultElseTests
     [Fact]
     public async Task ResultT_ElseAsync_FuncTaskValue_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = await result.ElseAsync(errors => Task.FromResult(99));
 
@@ -430,7 +430,7 @@ public class ResultElseTests
     [Fact]
     public async Task ResultT_ElseAsync_FuncTaskError_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = await result.ElseAsync(errors => Task.FromResult(AnotherError));
 
@@ -452,7 +452,7 @@ public class ResultElseTests
     [Fact]
     public async Task ResultT_ElseAsync_FuncTaskErrorArray_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = await result.ElseAsync(errors => Task.FromResult(new[] { AnotherError }));
 
@@ -474,7 +474,7 @@ public class ResultElseTests
     [Fact]
     public async Task ResultT_ElseAsync_TaskError_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = await result.ElseAsync(Task.FromResult(AnotherError));
 
@@ -496,7 +496,7 @@ public class ResultElseTests
     [Fact]
     public async Task ResultT_ElseAsync_TaskValue_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> elseResult = await result.ElseAsync(Task.FromResult(99));
 
@@ -523,7 +523,7 @@ public class ResultElseTests
     public async Task ResultT_Else_Task_FuncValue_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.Else(errors => 99);
@@ -549,7 +549,7 @@ public class ResultElseTests
     public async Task ResultT_Else_Task_Value_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.Else(99);
@@ -575,7 +575,7 @@ public class ResultElseTests
     public async Task ResultT_ElseAsync_Task_FuncTaskValue_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.ElseAsync(errors => Task.FromResult(99));
@@ -601,7 +601,7 @@ public class ResultElseTests
     public async Task ResultT_ElseAsync_Task_TaskValue_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.ElseAsync(Task.FromResult(99));
@@ -627,7 +627,7 @@ public class ResultElseTests
     public async Task ResultT_Else_Task_FuncError_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.Else(errors => AnotherError);
@@ -653,7 +653,7 @@ public class ResultElseTests
     public async Task ResultT_Else_Task_FuncErrorArray_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.Else(errors => new[] { AnotherError });
@@ -679,7 +679,7 @@ public class ResultElseTests
     public async Task ResultT_Else_Task_Error_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.Else(AnotherError);
@@ -705,7 +705,7 @@ public class ResultElseTests
     public async Task ResultT_ElseAsync_Task_FuncTaskError_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.ElseAsync(errors => Task.FromResult(AnotherError));
@@ -731,7 +731,7 @@ public class ResultElseTests
     public async Task ResultT_ElseAsync_Task_FuncTaskErrorArray_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.ElseAsync(errors => Task.FromResult(new[] { AnotherError }));
@@ -757,7 +757,7 @@ public class ResultElseTests
     public async Task ResultT_ElseAsync_Task_TaskError_WithSuccess_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> elseResult = await task.ElseAsync(Task.FromResult(AnotherError));

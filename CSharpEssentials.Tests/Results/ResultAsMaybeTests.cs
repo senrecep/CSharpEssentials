@@ -14,7 +14,7 @@ public class ResultAsMaybeTests
     [Fact]
     public void ResultT_AsMaybe_WithSuccess_ShouldReturnSome()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Maybe<int> maybe = result.AsMaybe();
 
@@ -40,7 +40,7 @@ public class ResultAsMaybeTests
     public async Task ResultT_AsMaybeAsync_Task_WithSuccess_ShouldReturnSome()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Maybe<int> maybe = await task.AsMaybeAsync();
@@ -65,7 +65,7 @@ public class ResultAsMaybeTests
     public async Task ResultT_AsMaybeAsync_ValueTask_WithSuccess_ShouldReturnSome()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(42));
+        var valueTask = ValueTask.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         Maybe<int> maybe = await valueTask.AsMaybeAsync();
