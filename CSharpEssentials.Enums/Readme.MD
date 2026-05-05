@@ -1,21 +1,21 @@
 # CSharpEssentials.Enums
 
-`CSharpEssentials.Enums` provides enum metadata attributes and a built-in source generator for fast, compile-time enum operations. It is designed to work with **CSharpEssentials.Json** and **CSharpEssentials.EntityFrameworkCore** for serialization and storage scenarios.
+Source generator for fast, compile-time enum operations. Mark enums with `[StringEnum]` and get optimized extension methods generated automatically.
 
-## 🚀 Features
+## Features
 
-- **StringEnumAttribute**: A marker attribute to explicitly indicate that an `Enum` should be serialized as a string rather than an integer.
-- **Built-in Source Generator**: Apply `[StringEnum]` to enums and the generator produces compile-time optimized extension methods and constants.
+- **StringEnumAttribute** — Marker to opt enums into source generation.
+- **Source Generator** — Compile-time optimized `ToString`, parsing, and formatting with zero reflection.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Enums
 ```
 
-## 🛠 Usage
+## Usage
 
-Apply the `[StringEnum]` attribute to your enum definitions.
+### Mark Your Enum
 
 ```csharp
 using CSharpEssentials.Enums;
@@ -29,25 +29,7 @@ public enum UserStatus
 }
 ```
 
-The source generator automatically creates `{Enum}Extensions` with:
-
-| Member | Description |
-|--------|-------------|
-| `ToOptimizedString()` | Fast `switch`-based string conversion |
-| `ToSnakeCase()` | Compile-time snake_case string |
-| `ToKebabCase()` | Compile-time kebab-case string |
-| `ToLowerCase()` | Compile-time lower-case string |
-| `ToUpperCase()` | Compile-time upper-case string |
-| `{Member}SnakeCase` | Public constant for snake_case |
-| `{Member}KebabCase` | Public constant for kebab-case |
-| `IsDefined(string)` | Fast name lookup |
-| `TryParse(string, out Enum)` | Fast parsing with numeric fallback |
-| `Parse(string)` | Fast parsing (throws on failure) |
-| `GetNames()` | Array of enum member names |
-| `GetValues()` | Array of enum values |
-| `AsUnderlyingType()` | Cast to backing numeric type |
-
-### Example
+### Generated Extensions
 
 ```csharp
 UserStatus s = UserStatus.Active;
@@ -55,13 +37,24 @@ UserStatus s = UserStatus.Active;
 s.ToOptimizedString();      // "Active"
 s.ToSnakeCase();            // "active"
 s.ToKebabCase();            // "active"
+s.ToLowerCase();            // "active"
+s.ToUpperCase();            // "ACTIVE"
+s.AsUnderlyingType();       // 0
 
-UserStatusExtensions.ActiveSnakeCase;   // "active"
-UserStatusExtensions.InactiveKebabCase; // "inactive"
+// Constants
+UserStatusExtensions.ActiveSnakeCase;    // "active"
+UserStatusExtensions.ActiveKebabCase;    // "active"
 
-UserStatusExtensions.IsDefined("Active");           // true
-UserStatusExtensions.TryParse("Inactive", out var v); // true, v = Inactive
+// Lookup
+UserStatusExtensions.IsDefined("Active");              // true
+UserStatusExtensions.TryParse("Inactive", out var v);  // true, v = Inactive
+UserStatusExtensions.Parse("Suspended");               // UserStatus.Suspended
+
+// Metadata
+UserStatusExtensions.GetNames();   // ["Active", "Inactive", "Suspended"]
+UserStatusExtensions.GetValues();  // [Active, Inactive, Suspended]
 ```
 
 ### Integration
-This package is intended to be used with serialization libraries (like `CSharpEssentials.Json`) and ORMs (like `CSharpEssentials.EntityFrameworkCore`) that look for this marker to automatically apply string conversion logic.
+
+`CSharpEssentials.Json` and `CSharpEssentials.EntityFrameworkCore` recognize `[StringEnum]` to automatically serialize enums as strings.

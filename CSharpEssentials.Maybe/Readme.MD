@@ -1,87 +1,81 @@
 # CSharpEssentials.Maybe
 
-`CSharpEssentials.Maybe` implements the Maybe (Option) monad for .NET. It provides a type-safe way to handle the presence or absence of a value without relying on null references, making your code more expressive and less prone to `NullReferenceException`.
+Maybe (Option) monad for null-safe, expressive code. Avoid `NullReferenceException` by making missing values explicit.
 
-## 🚀 Features
+## Features
 
-- **Explicit Null Safety**: `Maybe<T>` represents a value that might be missing.
-- **Functional API**: Chain operations with `Map`, `Bind`, `Where`, and `Match`.
-- **LINQ Support**: Use `Select`, `SelectMany`, and `Where` in LINQ query syntax.
-- **Async Support**: First-class support for async workflows (`MapAsync`, `BindAsync`).
-- **JSON Integration**: Serialization support included.
+- **Maybe<T>** — Explicit presence/absence of a value with implicit conversions.
+- **Functional API** — `Map`, `Bind`, `Where`, `Match`, `Or`, `Tap`.
+- **LINQ Support** — Query syntax with `Select`, `SelectMany`, `Where`.
+- **Async Support** — `MapAsync`, `BindAsync`, and awaitable extensions.
+- **Result Bridge** — Convert `Maybe<T>` to `Result<T>` and back.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Maybe
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Creating Maybe
-
-Wrap values to indicate they might be absent.
+### Creating Maybe
 
 ```csharp
 using CSharpEssentials.Maybe;
 
-public Maybe<User> GetUser(int id)
+public Maybe<User> FindUser(int id)
 {
     User? user = _repo.Find(id);
-    return user; // Implicit conversion from T? to Maybe<T>
+    return user; // implicit from T? to Maybe<T>
 }
 
-// Explicit creation
-var maybeValue = Maybe.From(someValue);
-var none = Maybe.None;
+Maybe<string> none = Maybe<string>.None;
+Maybe<int> value = Maybe<int>.From(42);
 ```
 
-### 2. Functional Chaining
-
-Transform values safely. If the value is missing, the operations are skipped.
+### Functional Chaining
 
 ```csharp
-string result = GetUser(1)
-    .Where(u => u.IsActive)          // Filter
-    .Map(u => u.Address)             // Transform
+string city = FindUser(1)
+    .Where(u => u.IsActive)
+    .Map(u => u.Address)
     .Map(a => a.City)
-    .GetValueOrDefault("Unknown");   // Unwrap
+    .GetValueOrDefault("Unknown");
 ```
 
-### 3. LINQ Query Syntax
-
-Use LINQ to compose multiple Maybe values.
+### LINQ Queries
 
 ```csharp
-var result = 
-    from user in GetUser(1)
-    from order in GetLatestOrder(user.Id)
+Maybe<string> tracking =
+    from user in FindUser(1)
+    from order in FindOrder(user.Id)
     where order.Amount > 100
     select order.TrackingNumber;
-
-// result is Maybe<string>
 ```
 
-### 4. Matching (Unwrapping)
-
-Handle both cases (Value vs None) explicitly.
+### Matching
 
 ```csharp
-GetUser(1).Match(
+FindUser(1).Match(
     some: user => Console.WriteLine($"Found: {user.Name}"),
-    none: () => Console.WriteLine("User not found")
-);
+    none: () => Console.WriteLine("Not found"));
 ```
 
-### 5. Async Workflow
-
-Seamlessly work with async tasks.
+### Converting to Result
 
 ```csharp
-public async Task<Maybe<Order>> ProcessAsync(int userId)
-{
-    return await GetUserAsync(userId)
-        .BindAsync(user => GetOrderAsync(user.Id))
-        .MapAsync(order => EnrichOrderAsync(order));
-}
+Maybe<Order> order = FindOrder(1);
+Result<Order> result = order.ToResult(Error.NotFound("Order.Missing", "Order not found."));
+
+// Result -> Maybe
+Result<Order> result2 = Result.Success(new Order());
+Maybe<Order> maybe = result2.AsMaybe();
+```
+
+### Async
+
+```csharp
+Maybe<Order> order = await FindUserAsync(1)
+    .BindAsync(user => GetOrderAsync(user.Id))
+    .MapAsync(order => EnrichAsync(order));
 ```

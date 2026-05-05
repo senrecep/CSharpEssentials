@@ -1,78 +1,63 @@
 # CSharpEssentials.Time
 
-`CSharpEssentials.Time` provides a lightweight, testable abstraction over system time, built on top of the modern .NET `TimeProvider`. It simplifies date and time operations and makes unit testing time-dependent logic effortless.
+Testable time abstraction built on .NET `TimeProvider`. Decouple your code from the system clock for reliable unit testing.
 
-## 🚀 Features
+## Features
 
-- **Testable Time Abstraction**: `IDateTimeProvider` interface to decouple your code from the system clock.
-- **Modern .NET Support**: Uses `DateTimeOffset`, `DateOnly`, and `TimeOnly`.
-- **Simple Extensions**: Helper methods to convert `DateTime` to `DateOnly` or `TimeOnly`.
-- **TimeProvider Integration**: Designed to work seamlessly with the built-in .NET `TimeProvider`.
+- **IDateTimeProvider** — Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, and `UtcNowTime`.
+- **TimeProvider Integration** — Works with .NET's built-in `TimeProvider` and `FakeTimeProvider` for testing.
+- **DateTime Extensions** — Convert `DateTime` to `DateOnly` and `TimeOnly`.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Time
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Using the Date Time Provider
-
-Inject `IDateTimeProvider` into your services to access current time properties. This abstraction allows you to control time during testing.
+### DateTimeProvider
 
 ```csharp
-public class TicketService(IDateTimeProvider dateTimeProvider)
-{
-    public void ProcessTicket(Ticket ticket)
-    {
-        // Get current UTC time
-        DateTimeOffset now = dateTimeProvider.UtcNow;
-        
-        // Get just the date part
-        DateOnly today = dateTimeProvider.UtcNowDate;
+using CSharpEssentials.Time;
 
-        ticket.ProcessedAt = now;
+public class OrderService(IDateTimeProvider time)
+{
+    public Order CreateOrder()
+    {
+        return new Order
+        {
+            CreatedAt = time.UtcNow,
+            CreatedDate = time.UtcNowDate
+        };
     }
 }
 ```
 
-### 2. Registration
-
-Register the provider in your Dependency Injection container. Since `DateTimeProvider` depends on .NET's abstract `TimeProvider`, you should register that as well (usually `TimeProvider.System`).
+### Dependency Injection
 
 ```csharp
-using CSharpEssentials.Time;
-
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 ```
 
-### 3. Extensions
-
-Convenient extension methods for converting `DateTime`.
+### Testing with FakeTimeProvider
 
 ```csharp
-using CSharpEssentials.Time;
+using Microsoft.Extensions.Time.Testing;
 
+FakeTimeProvider fakeTime = new();
+fakeTime.SetUtcNow(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+IDateTimeProvider provider = new DateTimeProvider(fakeTime);
+provider.UtcNow.Year.Should().Be(2025);
+```
+
+### Extensions
+
+```csharp
 DateTime now = DateTime.UtcNow;
 
 DateOnly date = now.ToDateOnly();
 TimeOnly time = now.ToTimeOnly();
-```
-
-## 🧪 Testing
-
-The main benefit of this package is testability. You can mock `IDateTimeProvider` to return fixed times, ensuring your tests are deterministic.
-
-```csharp
-// Example using NSubstitute or Moq
-var mockTime = Substitute.For<IDateTimeProvider>();
-var fixedTime = new DateTimeOffset(2023, 1, 1, 12, 0, 0, TimeSpan.Zero);
-
-mockTime.UtcNow.Returns(fixedTime);
-mockTime.UtcNowDate.Returns(DateOnly.FromDateTime(fixedTime.DateTime));
-
-var service = new TicketService(mockTime);
-// ... run assertions ...
 ```

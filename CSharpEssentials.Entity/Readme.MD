@@ -1,116 +1,79 @@
 # CSharpEssentials.Entity
 
-`CSharpEssentials.Entity` provides a robust foundation for Domain-Driven Design (DDD) entities in .NET. It offers base classes for auditing, soft deletion, and domain event management, helping you build standard and maintainable domain models.
+DDD foundation for .NET entities with auditing, soft deletion, and domain events.
 
-## 🚀 Features
+## Features
 
-- **Audit Logging**: Built-in tracking for `CreatedAt`, `CreatedBy`, `UpdatedAt`, and `UpdatedBy`.
-- **Soft Delete**: Standardized soft deletion support via `SoftDeletableEntityBase`.
-- **Domain Events**: Built-in container for raising and clearing domain events.
-- **Flexible Generics**: Support for strongly-typed IDs (e.g., `Guid`, `int`, `long`).
+- **EntityBase<TId>** — Typed IDs with creation and modification audit fields.
+- **SoftDeletableEntityBase** — Soft delete with `MarkAsDeleted`, `Restore`, and `MarkAsHardDeleted`.
+- **Domain Events** — Raise and clear events for outbox or dispatcher patterns.
+- **Event Timing** — Control when events publish with `[DomainEventTiming]`.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Entity
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Basic Entity
-
-Inherit from `EntityBase<TId>` to get standard audit fields and ID management.
+### Basic Entity
 
 ```csharp
 using CSharpEssentials.Entity;
 
 public class Product : EntityBase<Guid>
 {
-    public string Name { get; set; }
-    
-    public Product(string name)
-    {
-        Id = Guid.NewGuid();
-        Name = name;
-    }
+    public string Name { get; set; } = string.Empty;
 }
+
+var product = new Product { Id = Guid.NewGuid(), Name = "Laptop" };
+product.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
+product.SetUpdatedInfo(DateTimeOffset.UtcNow, "admin");
 ```
 
-### 2. Soft Deletable Entity
-
-Use `SoftDeletableEntityBase<TId>` to add soft delete capabilities (IsDeleted, DeletedAt, DeletedBy).
+### Soft Deletable Entity
 
 ```csharp
-using CSharpEssentials.Entity;
-
 public class User : SoftDeletableEntityBase<Guid>
 {
-    public string Username { get; set; }
+    public string Name { get; set; } = string.Empty;
 }
 
-// Usage
 var user = new User();
-
-// Mark as deleted (doesn't remove from DB, just flags it)
-user.MarkAsDeleted(deletedAt: DateTimeOffset.UtcNow, deletedBy: "Admin");
-
-// Restore if needed
+user.MarkAsDeleted(DateTimeOffset.UtcNow, "Admin");
 user.Restore();
 ```
 
-### 3. Domain Events
-
-Entities can raise events that can be dispatched later (e.g., by your persistence layer).
+### Domain Events
 
 ```csharp
-using CSharpEssentials.Entity;
-using CSharpEssentials.Entity.Interfaces;
+public record OrderCreated(Guid OrderId) : IDomainEvent;
 
-public record ProductCreated(Guid ProductId) : IDomainEvent;
-
-public class Product : EntityBase<Guid>
+public class Order : EntityBase<Guid>
 {
-    public Product()
+    public void Create()
     {
         Id = Guid.NewGuid();
-        // Raise an event
-        Raise(new ProductCreated(Id));
+        Raise(new OrderCreated(Id));
     }
 }
 
-// Accessing events (e.g., in EF Core SaveChanges)
-foreach (var domainEvent in product.DomainEvents)
+// Later (e.g., in EF Core SaveChanges)
+foreach (var evt in order.DomainEvents)
 {
-    // Dispatch event...
+    // dispatch...
 }
-product.ClearDomainEvents();
+order.ClearDomainEvents();
 ```
 
-### 4. Domain Event Timing
-
-Control when domain events are published relative to persistence using the `[DomainEventTiming]` attribute.
+### Event Timing
 
 ```csharp
-using CSharpEssentials.Entity;
-
-// Published after the database transaction commits (default)
+// Published after transaction commits (default)
 public record OrderCreatedEvent(Guid OrderId) : IDomainEvent;
 
-// Published before the transaction commits — use for validation
+// Published before transaction commits
 [DomainEventTiming(DomainEventTiming.BeforeSave)]
 public record OrderValidationEvent(Guid OrderId) : IDomainEvent;
-```
-
-### 5. Auditing
-
-The base classes expose methods to set audit info, typically called by your repository or DbContext.
-
-```csharp
-var product = new Product("Laptop");
-
-// Set creation info
-product.SetCreatedInfo(DateTimeOffset.UtcNow, "User123");
-
-// Set update info
-product.SetUpdatedInfo(DateTimeOffset.UtcNow, "User456");
 ```

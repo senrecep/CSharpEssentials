@@ -1,105 +1,97 @@
 # CSharpEssentials.Results
 
-`CSharpEssentials.Results` implements the **Result Pattern** for functional error handling in .NET. It allows you to represent the success or failure of an operation explicitly, avoiding exceptions for control flow and making your code more robust and readable.
+Functional Result pattern for explicit success/failure handling in .NET. No exceptions for control flow.
 
-## 🚀 Features
+## Features
 
-- **Explicit Outcomes**: `Result` (for void operations) and `Result<T>` (for value-returning operations).
-- **Immutable**: Thread-safe, readonly record structs.
-- **Multiple Errors**: Support for aggregating multiple errors (e.g., for validation).
-- **Functional Extensions**: Rich set of methods like `Map`, `Bind`, `Match`, `Tap`, `Ensure`, and `Then` for chaining operations.
-- **Async Support**: Full support for async/await in extension methods.
-- **JSON Support**: Built-in attributes for proper serialization.
+- **Result & Result<T>** — Value-type results with implicit conversions from values and errors.
+- **Railway Oriented Programming** — Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
+- **Error Aggregation** — Collect multiple validation errors in one result.
+- **Async Support** — Full async/await across all extension methods.
+- **Safe Execution** — `TryCatch` to wrap exceptions into results.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Results
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Creating Results
-
-Return `Result.Success()` or `Result.Failure(...)`.
+### Creating Results
 
 ```csharp
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Errors;
 
-public Result DoSomething(bool fail)
+public Result<int> GetUser(int id)
 {
-    if (fail)
-    {
-        return Result.Failure(Error.Failure("Operation.Failed", "Something went wrong."));
-    }
-    
+    if (id <= 0)
+        return Error.Validation("Id.Invalid", "ID must be positive.");
+
+    return 42; // implicit conversion to Result<int>
+}
+
+public Result DeleteUser(int id)
+{
+    if (id <= 0)
+        return Error.Validation("Id.Invalid", "ID must be positive.");
+
     return Result.Success();
 }
-
-public Result<int> GetValue(int id)
-{
-    if (id < 0)
-    {
-        // Implicit conversion from Error to Result<T>
-        return Error.Validation("Id.Invalid", "ID cannot be negative"); 
-    }
-
-    // Implicit conversion from Value to Result<T>
-    return 42;
-}
 ```
 
-### 2. Functional Chaining (Railway Oriented Programming)
-
-Chain operations so that subsequent steps only run if the previous ones succeeded.
+### Chaining
 
 ```csharp
-public Result<Order> ProcessOrder(Request request)
+Result<int> Parse(string input)
 {
-    return ValidateRequest(request)
-        .Bind(CreateOrder)
-        .Bind(ProcessPayment)
-        .Tap(SendEmail) // Side effect (fire and forget, doesn't change result)
-        .Map(order => order);
+    if (int.TryParse(input, out int n))
+        return n;
+    return Error.Validation("Parse", "Not a number.");
 }
+
+Result<int> result = Parse("5")
+    .Then(n => n * 2)
+    .Then(n => n + 10);
 ```
 
-### 3. Handling the Result (Match)
-
-At the end of the chain, unwrap the result to handle success and failure cases explicitly.
+### Ensuring
 
 ```csharp
-var result = ProcessOrder(request);
-
-string response = result.Match(
-    onSuccess: order => $"Order {order.Id} processed!",
-    onFailure: errors => $"Failed: {errors[0].Description}"
-);
+Result<int> ensured = Result.Success(50)
+    .Ensure(v => v > 0, Error.Validation("Range", "Must be positive."))
+    .Ensure(v => v < 100, Error.Validation("Range", "Must be less than 100."));
 ```
 
-### 4. Combining Results
+### Matching
 
-Combine multiple results; if any fail, the whole operation is a failure.
+```csharp
+string message = GetUser(10).Match(
+    onSuccess: user => $"User: {user}",
+    onError: errors => $"Failed: {errors[0].Description}");
+```
+
+### Combining Results
 
 ```csharp
 var r1 = Result.Success();
 var r2 = Result.Success();
-var r3 = Result.Failure(Error.Unexpected());
+var r3 = Result.Failure(Error.NotFound());
 
-var combined = Result.And(r1, r2, r3); // Returns Failure
+Result combined = Result.And(r1, r2, r3); // Failure
 ```
 
-### 5. Safe Execution (TryCatch)
-
-Wrap risky code that might throw exceptions into a Result.
+### Safe Execution
 
 ```csharp
-var result = Result.TryCatch(() => 
-{
-    // Code that might throw
-    return File.ReadAllText("config.json");
-});
+Result<int> result = Result.Try(() => 10 / 0, ex => Error.Exception(ex));
+```
 
-// result is Result<string>, capturing any exception as an Error
+### Async
+
+```csharp
+Result<int> result = await FetchUserAsync(id)
+    .ThenAsync(user => EnrichAsync(user))
+    .EnsureAsync(v => IsValidAsync(v), Error.Validation("Invalid", "Not valid."));
 ```
