@@ -15,7 +15,7 @@ public class BaseDbContextTests
 
     private sealed class ListLoggerProvider : ILoggerProvider
     {
-        public List<string> Logs { get; } = new();
+        public List<string> Logs { get; } = [];
         public ILogger CreateLogger(string categoryName) => new ListLogger(Logs);
         public void Dispose() { }
         private sealed class ListLogger : ILogger
@@ -37,9 +37,9 @@ public class BaseDbContextTests
         var services = new ServiceCollection();
         services.AddSingleton<ILoggerProvider>(loggerProvider);
         services.AddLogging();
-        var provider = services.BuildServiceProvider();
-        var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
-        var options = new DbContextOptionsBuilder<ConcreteDbContext>()
+        ServiceProvider provider = services.BuildServiceProvider();
+        IServiceScopeFactory scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
+        DbContextOptions<ConcreteDbContext> options = new DbContextOptionsBuilder<ConcreteDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         var context = new ConcreteDbContext(options, scopeFactory);
@@ -49,7 +49,7 @@ public class BaseDbContextTests
     [Fact]
     public void Constructor_ShouldCreateContextSuccessfully()
     {
-        var (context, logs) = CreateContext();
+        (ConcreteDbContext? context, List<string>? logs) = CreateContext();
         logs.Should().ContainSingle(s => s.Contains("created"));
         context.Dispose();
     }
@@ -57,7 +57,7 @@ public class BaseDbContextTests
     [Fact]
     public void Dispose_ShouldLogDisposal()
     {
-        var (context, logs) = CreateContext();
+        (ConcreteDbContext? context, List<string>? logs) = CreateContext();
         context.Dispose();
         logs.Should().Contain(s => s.Contains("disposed"));
     }
@@ -65,7 +65,7 @@ public class BaseDbContextTests
     [Fact]
     public void Dispose_ShouldNotThrow()
     {
-        var (context, _) = CreateContext();
+        (ConcreteDbContext? context, List<string> _) = CreateContext();
         Action act = () => context.Dispose();
         act.Should().NotThrow();
     }

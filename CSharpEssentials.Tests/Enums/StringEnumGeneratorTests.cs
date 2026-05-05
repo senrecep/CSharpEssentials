@@ -163,7 +163,7 @@ public class StringEnumGeneratorTests
     [Fact]
     public void Fallback_Should_Handle_Unknown_Value()
     {
-        HttpStatus unknown = (HttpStatus)999;
+        var unknown = (HttpStatus)999;
         unknown.ToSnakeCase().Should().Be("999");
         unknown.ToKebabCase().Should().Be("999");
     }

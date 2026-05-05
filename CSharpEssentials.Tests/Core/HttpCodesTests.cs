@@ -1,5 +1,5 @@
-using FluentAssertions;
 using CSharpEssentials.Core;
+using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Core;
 

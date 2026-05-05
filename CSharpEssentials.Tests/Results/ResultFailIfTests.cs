@@ -142,7 +142,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIf_ConditionTrue_WithSuccess_ShouldReturnFailure()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<int> failIfResult = await task.FailIf(
             value => value > 5,
@@ -155,7 +155,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIf_ConditionFalse_WithSuccess_ShouldReturnOriginal()
     {
-        var task = Task.FromResult(Result<int>.Success(3));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(3));
 
         Result<int> failIfResult = await task.FailIf(
             value => value > 5,
@@ -168,7 +168,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIf_WithFailure_ShouldReturnOriginalFailure()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
 
         Result<int> failIfResult = await task.FailIf(
             value => value > 5,
@@ -181,7 +181,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIf_WithErrorFunc_ConditionTrue_ShouldReturnComputedError()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<int> failIfResult = await task.FailIf(
             value => value > 5,
@@ -194,7 +194,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIfAsync_ConditionTrue_WithSuccess_ShouldReturnFailure()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<int> failIfResult = await task.FailIfAsync(
             value => Task.FromResult(value > 5),
@@ -207,7 +207,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIfAsync_ConditionFalse_WithSuccess_ShouldReturnOriginal()
     {
-        var task = Task.FromResult(Result<int>.Success(3));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(3));
 
         Result<int> failIfResult = await task.FailIfAsync(
             value => Task.FromResult(value > 5),
@@ -220,7 +220,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIfAsync_WithFailure_ShouldReturnOriginalFailure()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
 
         Result<int> failIfResult = await task.FailIfAsync(
             value => Task.FromResult(value > 5),
@@ -233,7 +233,7 @@ public class ResultFailIfTests
     [Fact]
     public async Task TaskResultT_FailIfAsync_WithErrorFunc_ConditionTrue_ShouldReturnComputedError()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<int> failIfResult = await task.FailIfAsync(
             value => Task.FromResult(value > 5),

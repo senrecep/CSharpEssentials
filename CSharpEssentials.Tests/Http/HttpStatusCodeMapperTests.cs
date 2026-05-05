@@ -36,7 +36,7 @@ public class HttpStatusCodeMapperTests
     [Fact]
     public void ToError_Should_Create_Structured_Error()
     {
-        Error error = HttpStatusCodeMapper.ToError(HttpStatusCode.NotFound);
+        var error = HttpStatusCodeMapper.ToError(HttpStatusCode.NotFound);
 
         error.Type.Should().Be(ErrorType.NotFound);
         error.Code.Should().Be("Http.404");
@@ -45,7 +45,7 @@ public class HttpStatusCodeMapperTests
     [Fact]
     public void ToError_WithDescription_Should_Use_Custom_Description()
     {
-        Error error = HttpStatusCodeMapper.ToError(HttpStatusCode.BadRequest, "Custom bad request");
+        var error = HttpStatusCodeMapper.ToError(HttpStatusCode.BadRequest, "Custom bad request");
 
         error.Description.Should().Be("Custom bad request");
     }

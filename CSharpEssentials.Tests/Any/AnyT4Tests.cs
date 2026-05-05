@@ -1,6 +1,6 @@
+using System.Text.Json;
 using CSharpEssentials.Any;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace CSharpEssentials.Tests.Any;
 
@@ -115,7 +115,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> any = 42;
         bool executed = false;
-        var status = any.Switch(first: _ => executed = true);
+        AnyActionStatus status = any.Switch(first: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -125,7 +125,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> any = "hello";
         bool executed = false;
-        var status = any.Switch(second: _ => executed = true);
+        AnyActionStatus status = any.Switch(second: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -135,7 +135,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> any = true;
         bool executed = false;
-        var status = any.Switch(third: _ => executed = true);
+        AnyActionStatus status = any.Switch(third: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -145,7 +145,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> any = 3.14;
         bool executed = false;
-        var status = any.Switch(fourth: _ => executed = true);
+        AnyActionStatus status = any.Switch(fourth: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -154,7 +154,7 @@ public class AnyT4Tests
     public void Switch_WithNoMatchingAction_ShouldReturnNotExecuted()
     {
         Any<int, string, bool, double> any = 42;
-        var status = any.Switch(second: _ => { });
+        AnyActionStatus status = any.Switch(second: _ => { });
         status.Should().Be(AnyActionStatus.NotExecuted);
     }
 
@@ -169,7 +169,7 @@ public class AnyT4Tests
     public void Match_WhenFirst_ShouldReturnFirstResult()
     {
         Any<int, string, bool, double> any = 42;
-        var result = any.Match(first: x => x * 2, second: _ => 0, third: _ => 0, fourth: _ => 0);
+        AnyActionResult<int> result = any.Match(first: x => x * 2, second: _ => 0, third: _ => 0, fourth: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(84);
     }
@@ -178,7 +178,7 @@ public class AnyT4Tests
     public void Match_WhenSecond_ShouldReturnSecondResult()
     {
         Any<int, string, bool, double> any = "hello";
-        var result = any.Match(first: _ => 0, second: x => x.Length, third: _ => 0, fourth: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: x => x.Length, third: _ => 0, fourth: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(5);
     }
@@ -187,7 +187,7 @@ public class AnyT4Tests
     public void Match_WhenThird_ShouldReturnThirdResult()
     {
         Any<int, string, bool, double> any = true;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: x => x ? 1 : 0, fourth: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: x => x ? 1 : 0, fourth: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(1);
     }
@@ -196,7 +196,7 @@ public class AnyT4Tests
     public void Match_WhenFourth_ShouldReturnFourthResult()
     {
         Any<int, string, bool, double> any = 3.14;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: x => (int)x);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: x => (int)x);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(3);
     }
@@ -205,7 +205,7 @@ public class AnyT4Tests
     public void Match_WithNoMatchingFunction_ShouldReturnNotExecuted()
     {
         Any<int, string, bool, double> any = 42;
-        var result = any.Match(second: _ => 0);
+        AnyActionResult<int> result = any.Match(second: _ => 0);
         result.Status.Should().Be(AnyActionStatus.NotExecuted);
     }
 
@@ -228,7 +228,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> original = 42;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
+        Any<int, string, bool, double> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetFirst().Should().Be(42);
     }
@@ -238,7 +238,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> original = "hello";
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
+        Any<int, string, bool, double> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetSecond().Should().Be("hello");
     }
@@ -248,7 +248,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> original = true;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
+        Any<int, string, bool, double> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetThird().Should().BeTrue();
     }
@@ -258,7 +258,7 @@ public class AnyT4Tests
     {
         Any<int, string, bool, double> original = 3.14;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
+        Any<int, string, bool, double> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetFourth().Should().Be(3.14);
     }

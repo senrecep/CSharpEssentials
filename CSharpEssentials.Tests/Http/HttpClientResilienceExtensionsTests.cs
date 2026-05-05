@@ -64,10 +64,7 @@ public class HttpClientResilienceExtensionsTests
     {
         ResiliencePipeline pipeline = HttpClientResilienceExtensions.CreateTimeoutPipeline(TimeSpan.FromSeconds(1));
 
-        Func<Task> act = async () => await pipeline.ExecuteAsync(async token =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(5), token);
-        });
+        Func<Task> act = async () => await pipeline.ExecuteAsync(async token => await Task.Delay(TimeSpan.FromSeconds(5), token));
 
         await act.Should().ThrowAsync<Polly.Timeout.TimeoutRejectedException>();
     }

@@ -127,7 +127,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_Then_WithSuccess_ShouldExecuteFunction()
     {
-        var task = Task.FromResult(Result.Success());
+        Task<Result> task = Task.FromResult(Result.Success());
         bool called = false;
 
         Result thenResult = await task.Then(() => { called = true; return Result.Success(); }, CancellationToken.None);
@@ -139,7 +139,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_Then_WithFailure_ShouldNotExecuteFunction()
     {
-        var task = Task.FromResult(Result.Failure(TestError));
+        Task<Result> task = Task.FromResult(Result.Failure(TestError));
         bool called = false;
 
         Result thenResult = await task.Then(() => { called = true; return Result.Success(); }, CancellationToken.None);
@@ -151,7 +151,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_ThenDo_WithSuccess_ShouldExecuteAction()
     {
-        var task = Task.FromResult(Result.Success());
+        Task<Result> task = Task.FromResult(Result.Success());
         bool called = false;
 
         Result thenResult = await task.ThenDo(() => called = true, CancellationToken.None);
@@ -163,7 +163,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_ThenDo_WithFailure_ShouldNotExecuteAction()
     {
-        var task = Task.FromResult(Result.Failure(TestError));
+        Task<Result> task = Task.FromResult(Result.Failure(TestError));
         bool called = false;
 
         Result thenResult = await task.ThenDo(() => called = true, CancellationToken.None);
@@ -175,7 +175,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_ThenAsync_WithSuccess_ShouldExecuteFunction()
     {
-        var task = Task.FromResult(Result.Success());
+        Task<Result> task = Task.FromResult(Result.Success());
         bool called = false;
 
         Result thenResult = await task.ThenAsync(() => { called = true; return Task.FromResult(Result.Success()); }, CancellationToken.None);
@@ -187,7 +187,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_ThenAsync_WithFailure_ShouldNotExecuteFunction()
     {
-        var task = Task.FromResult(Result.Failure(TestError));
+        Task<Result> task = Task.FromResult(Result.Failure(TestError));
         bool called = false;
 
         Result thenResult = await task.ThenAsync(() => { called = true; return Task.FromResult(Result.Success()); }, CancellationToken.None);
@@ -199,7 +199,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_ThenDoAsync_WithSuccess_ShouldExecuteAction()
     {
-        var task = Task.FromResult(Result.Success());
+        Task<Result> task = Task.FromResult(Result.Success());
         bool called = false;
 
         Result thenResult = await task.ThenDoAsync(() => { called = true; return Task.CompletedTask; }, CancellationToken.None);
@@ -211,7 +211,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResult_ThenDoAsync_WithFailure_ShouldNotExecuteAction()
     {
-        var task = Task.FromResult(Result.Failure(TestError));
+        Task<Result> task = Task.FromResult(Result.Failure(TestError));
         bool called = false;
 
         Result thenResult = await task.ThenDoAsync(() => { called = true; return Task.CompletedTask; }, CancellationToken.None);
@@ -422,7 +422,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_Then_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<string> thenResult = await task.Then(
             value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
@@ -435,7 +435,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_Then_ToResult_WithFailure_ShouldNotExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
         Result<string> thenResult = await task.Then(
@@ -453,7 +453,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_Then_ToValue_WithSuccess_ShouldExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<string> thenResult = await task.Then(
             value => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -466,7 +466,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_Then_ToValue_WithFailure_ShouldNotExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
         Result<string> thenResult = await task.Then(
@@ -484,7 +484,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenDo_WithSuccess_ShouldExecuteAction()
     {
-        var task = Task.FromResult(Result<int>.Success(42));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(42));
         int captured = 0;
 
         Result<int> thenResult = await task.ThenDo(value => captured = value, CancellationToken.None);
@@ -496,7 +496,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenDo_WithFailure_ShouldNotExecuteAction()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
         Result<int> thenResult = await task.ThenDo(_ => called = true, CancellationToken.None);
@@ -508,7 +508,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenAsync_ToResult_WithSuccess_ShouldExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<string> thenResult = await task.ThenAsync(
             value => Task.FromResult(Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture))),
@@ -521,7 +521,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenAsync_ToResult_WithFailure_ShouldNotExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
         Result<string> thenResult = await task.ThenAsync(
@@ -539,7 +539,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenAsync_ToValue_WithSuccess_ShouldExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Success(10));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(10));
 
         Result<string> thenResult = await task.ThenAsync(
             value => Task.FromResult(value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
@@ -552,7 +552,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenAsync_ToValue_WithFailure_ShouldNotExecuteFunction()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
         Result<string> thenResult = await task.ThenAsync(
@@ -570,7 +570,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenDoAsync_WithSuccess_ShouldExecuteAction()
     {
-        var task = Task.FromResult(Result<int>.Success(42));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Success(42));
         int captured = 0;
 
         Result<int> thenResult = await task.ThenDoAsync(
@@ -588,7 +588,7 @@ public class ResultThenTests
     [Fact]
     public async Task TaskResultT_ThenDoAsync_WithFailure_ShouldNotExecuteAction()
     {
-        var task = Task.FromResult(Result<int>.Failure(TestError));
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
         Result<int> thenResult = await task.ThenDoAsync(

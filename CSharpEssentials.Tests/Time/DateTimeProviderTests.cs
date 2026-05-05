@@ -131,7 +131,7 @@ public class DateTimeProviderTests
     public void IDateTimeProvider_Interface_ShouldBeImplementedCorrectly()
     {
         FakeTimeProvider fakeTimeProvider = new();
-        DateTimeProvider provider = new DateTimeProvider(fakeTimeProvider);
+        var provider = new DateTimeProvider(fakeTimeProvider);
 
         provider.TimeZone.Should().Be(TimeZoneInfo.Local);
         provider.TimeZoneUtc.Should().Be(TimeZoneInfo.Utc);

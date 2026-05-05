@@ -148,7 +148,7 @@ public class AuditInterceptorTests
     [Fact]
     public void AddAuditUserIdProvider_GenericWithGuid_ShouldResolveAsString()
     {
-        Guid userId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
         ServiceCollection services = new();
         services.AddAuditUserIdProvider(() => userId);
         ServiceProvider provider = services.BuildServiceProvider();

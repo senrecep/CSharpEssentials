@@ -1,14 +1,11 @@
-using System.Text.Json;
 using CSharpEssentials.GcpSecretManager;
 using CSharpEssentials.GcpSecretManager.Configuration;
 using CSharpEssentials.GcpSecretManager.Infrastructure;
 using FluentAssertions;
 using Google.Api.Gax;
 using Google.Api.Gax.Grpc;
-using Google.Api.Gax.ResourceNames;
 using Google.Cloud.SecretManager.V1;
 using Google.Protobuf;
-using Grpc.Core;
 using Microsoft.Extensions.Configuration;
 using Moq;
 
@@ -37,7 +34,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.Create()).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         provider.Should().NotBeNull();
         provider.Load();
@@ -60,7 +57,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.Create()).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         provider.Should().NotBeNull();
     }
@@ -85,7 +82,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.Create()).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         provider.Should().NotBeNull();
     }
@@ -105,7 +102,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.CreateWithRegion("us-central1")).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         mockHelper.Verify(x => x.CreateWithRegion("us-central1"), Times.Once);
         provider.Should().NotBeNull();
@@ -125,7 +122,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.Create("/path/to/creds.json")).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         mockHelper.Verify(x => x.Create("/path/to/creds.json"), Times.Once);
         provider.Should().NotBeNull();
@@ -149,7 +146,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.CreateWithRegion("/path/to/creds.json", "europe-west1")).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         mockHelper.Verify(x => x.CreateWithRegion("/path/to/creds.json", "europe-west1"), Times.Once);
         provider.Should().NotBeNull();
@@ -166,7 +163,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.Create()).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         mockHelper.Verify(x => x.Create(), Times.Once);
         provider.Should().NotBeNull();
@@ -185,7 +182,7 @@ public class SecretManagerConfigurationSourceTests
         mockHelper.Setup(x => x.CreateWithRegion("us-central1")).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
 
         mockHelper.Verify(x => x.Create(), Times.Once);
         mockHelper.Verify(x => x.CreateWithRegion("us-central1"), Times.Once);
@@ -205,11 +202,11 @@ public class SecretManagerConfigurationSourceTests
         };
 
         var mockHelper = new Mock<IServiceClientHelper>();
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         mockHelper.Setup(x => x.Create()).Returns(mockClient.Object);
 
         var source = new SecretManagerConfigurationSource(options, mockHelper.Object);
-        var provider = source.Build(new ConfigurationBuilder());
+        IConfigurationProvider provider = source.Build(new ConfigurationBuilder());
         provider.Load();
 
         provider.TryGet("secret1", out string? loadedValue).Should().BeTrue();
