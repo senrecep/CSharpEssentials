@@ -1,164 +1,108 @@
 # CSharpEssentials.Core
 
-`CSharpEssentials.Core` is the foundational package of the **CSharpEssentials** ecosystem. It provides a rich set of extension methods, utilities, and constants designed to simplify common programming tasks in .NET applications. This library focuses on improving code readability, reducing boilerplate, and providing high-performance utilities for daily development.
+Foundational utilities and extensions for everyday .NET development. Zero internal dependencies.
 
-## 🚀 Features
+## Features
 
-- **Advanced Collection Extensions**: Fluent methods for conditional additions, filtering, and null handling.
-- **String Manipulations**: Comprehensive case conversion utilities (Pascal, Camel, Kebab, Snake, etc.).
-- **Functional-Style Extensions**: `IfTrue`, `IfNull`, `IfNotNull` extensions to write cleaner, more expressive code.
-- **Task Extensions**: Simplified `WithCancellation` support for `Task` and `ValueTask`.
-- **Optimized GUID Utilities**: High-performance, URL-friendly Base64 string conversions for GUIDs and Version 7 GUID generation.
-- **Randomization**: Extensions for retrieving random items from collections and arrays.
-- **Exception Handling**: Utilities to flatten and retrieve inner exceptions.
-- **Constants**: Standard HTTP status codes available as constants.
+- **String Conversions** — Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
+- **Collection Helpers** — Conditional add, null filtering, random selection, set comparison.
+- **Functional Extensions** — Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`).
+- **Task Helpers** — `WithCancellation`, `AsTask`, `AsValueTask`.
+- **GUID Utilities** — URL-safe Base64 encoding, Version 7 GUID generation on .NET 9+.
+- **Exception Helpers** — Flatten inner exceptions and messages.
+- **HTTP Constants** — Common status codes as typed constants.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Core
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. String Extensions (Case Conversion)
-
-Convert strings between various naming conventions easily.
+### String Case Conversions
 
 ```csharp
 using CSharpEssentials.Core;
 
 string text = "helloWorld";
 
-string pascal = text.ToPascalCase();          // "HelloWorld"
-string kebab = text.ToKebabCase();            // "hello-world"
-string snake = text.ToSnakeCase();            // "hello_world"
-string macro = text.ToMacroCase();            // "HELLO_WORLD"
-string train = text.ToTrainCase();            // "Hello-World"
-string title = text.ToTitleCase();            // "Hello World"
-string underscoreCamel = text.ToUnderscoreCamelCase(); // "_helloWorld"
-
-// All case conversions support optional CultureInfo
-string turkish = text.ToPascalCase(new CultureInfo("tr-TR"));
+text.ToPascalCase();          // "HelloWorld"
+text.ToCamelCase();           // "helloWorld"
+text.ToSnakeCase();           // "hello_world"
+text.ToKebabCase();           // "hello-world"
+text.ToMacroCase();           // "HELLO_WORLD"
+text.ToTrainCase();           // "Hello-World"
+text.ToTitleCase();           // "Hello World"
+text.ToUnderscoreCamelCase(); // "_helloWorld"
 ```
 
-### 2. Collection Extensions
-
-Simplify list and enumerable operations.
+### Collection Extensions
 
 ```csharp
-using CSharpEssentials.Core;
+var list = new List<string> { "a", "b" };
 
-var list = new List<string> { "Apple", "Banana" };
+list.IfAdd(true, "c");
+list.IfAddRange(true, ["d", "e"]);
 
-// Conditional Add
-list.IfAdd(condition: true, "Cherry");
+list.ForEach(Console.WriteLine);
 
-// Conditional AddRange
-list.IfAddRange(condition: true, "Date", "Elderberry");
+var filtered = list.WhereIf(true, x => x != "a");
+var clean = new List<string?> { "a", null, "b" }.WithoutNulls();
 
-// Fluent ForEach
-list.ForEach(item => Console.WriteLine(item));
-
-// Conditional Where (Clean LINQ)
-var filtered = list.WhereIf(condition: true, item => item.StartsWith("A"));
-
-// Remove Nulls safely
-var nullableList = new List<string?> { "A", null, "B" };
-var cleanList = nullableList.WithoutNulls(); // ["A", "B"]
+var numbers = new[] { 1, 2, 3 };
+numbers.GetRandomItem();
+numbers.GetRandomItems(2);
 ```
 
-### 3. Functional & Logical Extensions
-
-Reduce `if` statements and improve flow control visibility.
+### Functional Extensions
 
 ```csharp
-using CSharpEssentials.Core;
+object? data = GetData();
 
-object? data = GetSomeData();
+if (data.IsNull()) { /* ... */ }
+if (data.IsNotNull()) { /* ... */ }
 
-// Null Checks
-if (data.IsNull()) { /* handle null */ }
-if (data.IsNotNull()) { /* handle data */ }
-
-// Functional 'If' Execution
 data.IfNotNull(d => Process(d));
-data.IfNull(() => InitializeDefaults());
+data.IfNull(() => Initialize());
 
-data.IfNotNull(
-    action: d => Log("Data exists"),
-    elseAction: () => Log("Data is missing")
-);
-
-bool isValid = true;
-isValid.IfTrue(() => Console.WriteLine("Valid!"));
-isValid.IfFalse(() => Console.WriteLine("Invalid!"));
+true.IfTrue(() => Console.WriteLine("yes"));
+false.IfFalse(() => Console.WriteLine("no"));
 ```
 
-### 4. Task & Async Extensions
-
-Easily add cancellation support to tasks.
+### Task Helpers
 
 ```csharp
-using CSharpEssentials.Core;
+await SomeTask().WithCancellation(cts.Token);
 
-CancellationTokenSource cts = new();
-
-// Safe cancellation handling
-await SomeLongRunningTask().WithCancellation(cts.Token);
+string value = "hello";
+Task<string> task = value.AsTask();
+ValueTask<string> vt = value.AsValueTask();
 ```
 
-### 5. GUID Utilities
-
-Work with GUIDs more efficiently, especially for APIs and URLs.
+### GUID Utilities
 
 ```csharp
-using CSharpEssentials.Core;
-
-// Generate New Version 7 GUID (Time-ordered)
-Guid newId = Guider.NewGuid();
-
-// Convert to URL-safe Base64 string (Shorter than standard Guid string)
-string urlFriendlyId = newId.ToStringFromGuid(); 
-
-// Convert back from URL-safe string
-Guid parsedId = urlFriendlyId.ToGuidFromString();
+Guid id = Guider.NewGuid();          // Version 7 on .NET 9+
+string shortId = id.ToStringFromGuid(); // URL-safe Base64 (22 chars)
+Guid parsed = shortId.ToGuidFromString();
 ```
 
-### 6. Random Extensions
-
-Pick random items from collections or arrays efficiently.
+### Exception Helpers
 
 ```csharp
-using CSharpEssentials.Core;
-
-var numbers = new [] { 1, 2, 3, 4, 5 };
-
-int randomItem = numbers.GetRandomItem();
-int[] randomSubset = numbers.GetRandomItems(3);
-```
-
-### 7. Exception Extensions
-
-Flatten nested exceptions to get to the root cause or collect all messages.
-
-```csharp
-using CSharpEssentials.Core;
-
-try 
-{
-    // ... code that throws nested exceptions
-}
+try { /* ... */ }
 catch (Exception ex)
 {
-    // Get all inner exceptions
-    IEnumerable<Exception> allExceptions = ex.GetInnerExceptions();
-
-    // Get all messages
-    IEnumerable<string?> messages = ex.GetInnerExceptionsMessages();
+    var innerExceptions = ex.GetInnerExceptions();
+    var messages = ex.GetInnerExceptionsMessages();
 }
 ```
 
-## 🧩 Dependencies
+### HTTP Status Codes
 
-`CSharpEssentials.Core` has **zero dependencies** on other packages, making it extremely lightweight and safe to include in any project.
+```csharp
+int ok = HttpCodes.Ok;
+int notFound = HttpCodes.NotFound;
+int badRequest = HttpCodes.BadRequest;
+```

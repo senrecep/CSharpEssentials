@@ -7,214 +7,108 @@
 [![GitHub Stars](https://img.shields.io/github/stars/senrecep/CSharpEssentials.svg)](https://github.com/senrecep/CSharpEssentials)
 [![License](https://img.shields.io/github/license/senrecep/CSharpEssentials)](LICENSE)
 
-**CSharpEssentials** is a comprehensive ecosystem of .NET libraries designed to modernize C# development. It bridges the gap between Object-Oriented and Functional Programming, providing robust tools for error handling, domain modeling, and enterprise application development.
+**CSharpEssentials** is a modular .NET ecosystem that bridges Object-Oriented and Functional Programming. It provides type-safe tools for error handling, optional values, business rules, DDD, and web development.
 
-> **Goal:** Make C# code more expressive, safer, and easier to test without sacrificing performance.
+Multi-targets: **.NET 9 / .NET 10 / .NET 11 / netstandard2.1 / netstandard2.0**.
 
-## 📦 Ecosystem Overview
+## Ecosystem
 
-CSharpEssentials is modular. You can use the meta-package to get everything, or install specific modules to keep dependencies light.
+| Package | Description |
+|---------|-------------|
+| **[CSharpEssentials](CSharpEssentials/Readme.MD)** | Meta-package with all core functional modules. |
+| **[CSharpEssentials.Core](CSharpEssentials.Core/README.MD)** | String conversions, collection helpers, GUID utilities, task extensions. |
+| **[CSharpEssentials.Errors](CSharpEssentials.Errors/Readme.MD)** | Structured errors with codes, types, and metadata. |
+| **[CSharpEssentials.Results](CSharpEssentials.Results/Readme.MD)** | `Result` and `Result<T>` for explicit success/failure handling. |
+| **[CSharpEssentials.Maybe](CSharpEssentials.Maybe/Readme.MD)** | `Maybe<T>` for null-safe optional values. |
+| **[CSharpEssentials.Json](CSharpEssentials.Json/Readme.MD)** | Polymorphic serialization, multi-format dates, conditional string enums. |
+| **[CSharpEssentials.Enums](CSharpEssentials.Enums/Readme.MD)** | Source generator for fast enum operations via `[StringEnum]`. |
+| **[CSharpEssentials.Any](CSharpEssentials.Any/Readme.MD)** | Discriminated Unions (`Any<T1, T2, ...>`). |
+| **[CSharpEssentials.Rules](CSharpEssentials.Rules/Readme.MD)** | Composable business rule engine. |
+| **[CSharpEssentials.Entity](CSharpEssentials.Entity/Readme.MD)** | DDD base classes with auditing, soft delete, and domain events. |
+| **[CSharpEssentials.EntityFrameworkCore](CSharpEssentials.EntityFrameworkCore/Readme.MD)** | EF Core interceptors, pagination, CQRS helpers. |
+| **[CSharpEssentials.AspNetCore](CSharpEssentials.AspNetCore/Readme.MD)** | Exception handling, ProblemDetails, API versioning, Swagger. |
+| **[CSharpEssentials.Http](CSharpEssentials.Http/Readme.MD)** | `HttpClient` extensions returning `Result<T>`. |
+| **[CSharpEssentials.Time](CSharpEssentials.Time/Readme.MD)** | Testable `IDateTimeProvider` abstraction. |
+| **[CSharpEssentials.Clone](CSharpEssentials.Clone/Readme.MD)** | Type-safe generic cloning interface. |
+| **[CSharpEssentials.Mediator](CSharpEssentials.Mediator/Readme.MD)** | Source-generated CQRS with pipeline behaviors. |
+| **[CSharpEssentials.GcpSecretManager](CSharpEssentials.GcpSecretManager/Readme.MD)** | Google Cloud Secret Manager configuration provider. |
+| **[CSharpEssentials.RequestResponseLogging](CSharpEssentials.RequestResponseLogging/Readme.MD)** | Configurable HTTP request/response logging middleware. |
 
-| Package | Description | NuGet |
-|---------|-------------|-------|
-| **[CSharpEssentials](CSharpEssentials/Readme.MD)** | The meta-package including all core functional modules and exclusive bridge extensions. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
-| **[CSharpEssentials.Core](CSharpEssentials.Core/README.MD)** | Foundational extensions, guard clauses, and utilities (Strings, Collections, GUIDs). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
-| **[CSharpEssentials.Results](CSharpEssentials.Results/Readme.MD)** | Railway-oriented programming with `Result` and `Result<T>` patterns. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
-| **[CSharpEssentials.Maybe](CSharpEssentials.Maybe/Readme.MD)** | `Maybe<T>` monad for null-safe optional value handling. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
-| **[CSharpEssentials.Errors](CSharpEssentials.Errors/Readme.MD)** | Structured error handling with unique codes and standard types (NotFound, Validation, etc.). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
-| **[CSharpEssentials.Rules](CSharpEssentials.Rules/Readme.MD)** | Composable business rule engine (And, Or, Linear, Conditional logic). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
-| **[CSharpEssentials.Any](CSharpEssentials.Any/Readme.MD)** | Discriminated Unions (`Any<T1, T2, ...>`) for type-safe polymorphic returns. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
-| **[CSharpEssentials.Entity](CSharpEssentials.Entity/Readme.MD)** | Domain-Driven Design base classes (`EntityBase`, `SoftDeletableEntityBase`). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
-| **[CSharpEssentials.EntityFrameworkCore](CSharpEssentials.EntityFrameworkCore/Readme.MD)** | EF Core extensions, Audit/Domain-Event/Slow-Query interceptors, and Pagination (offset + cursor). | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
-| **[CSharpEssentials.AspNetCore](CSharpEssentials.AspNetCore/Readme.MD)** | Web API utilities: Global Exception Handler, Problem Details, API Versioning. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
-| **[CSharpEssentials.Json](CSharpEssentials.Json/Readme.MD)** | Advanced JSON serialization: Polymorphism, String Enums, Multi-format Dates. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
-| **[CSharpEssentials.Time](CSharpEssentials.Time/Readme.MD)** | Testable `IDateTimeProvider` abstraction and extensions. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
-| **[CSharpEssentials.RequestResponseLogging](CSharpEssentials.RequestResponseLogging/Readme.MD)** | Highly configurable HTTP traffic logging middleware. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
-| **[CSharpEssentials.GcpSecretManager](CSharpEssentials.GcpSecretManager/Readme.MD)** | Google Cloud Secret Manager integration for IConfiguration. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
-| **[CSharpEssentials.Clone](CSharpEssentials.Clone/Readme.MD)** | Type-safe deep cloning interfaces and extensions. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
-| **[CSharpEssentials.Enums](CSharpEssentials.Enums/Readme.MD)** | Attributes for controlling Enum serialization behavior. | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
-
-## 🚀 Getting Started
-
-Install the main package to get the core functional tools:
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials
 ```
 
-Or pick individual packages as needed (e.g., `dotnet add package CSharpEssentials.Results`).
+Or install individual packages as needed.
 
-### Target Framework Support
+## Quick Start
 
-| Package | .NET 9 | .NET 8 | .NET Standard 2.1 | .NET Standard 2.0 |
-|---------|--------|--------|-------------------|-------------------|
-| CSharpEssentials.Core | ✅ | ✅ | ✅ | ✅ |
-| CSharpEssentials.Enums | ✅ | ✅ | ✅ | ✅ |
-| CSharpEssentials.Errors | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Results | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Maybe | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Any | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Json | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Time | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Clone | ✅ | ✅ | ✅ | ✅ |
-| CSharpEssentials.Entity | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.Rules | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.GcpSecretManager | ✅ | ✅ | ✅ | — |
-| CSharpEssentials.AspNetCore | ✅ | ✅ | — | — |
-| CSharpEssentials.EntityFrameworkCore | ✅ | ✅ | — | — |
-| CSharpEssentials.RequestResponseLogging | ✅ | ✅ | — | — |
-| **CSharpEssentials (Meta)** | ✅ | ✅ | ✅ | — |
-
-## 💡 Feature Highlights
-
-### 1. Functional Error Handling (Results & Errors)
-Stop throwing exceptions for flow control. Use `Result<T>` to express success or failure explicitly.
+### Result Pattern
 
 ```csharp
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Errors;
 
-public Result<User> RegisterUser(string email)
+public Result<int> Parse(string input)
 {
-    if (string.IsNullOrEmpty(email))
-        return Error.Validation("User.EmailRequired", "Email cannot be empty.");
+    if (int.TryParse(input, out int n))
+        return n;
 
-    if (_repo.Exists(email))
-        return Error.Conflict("User.Exists", "User already exists.");
-
-    var user = new User(email);
-    return user; // Implicit conversion to Result<User>
+    return Error.Validation("Parse.Failed", "Not a number.");
 }
+
+Result<int> result = Parse("42");
+
+string message = result.Match(
+    onSuccess: value => $"Parsed: {value}",
+    onError: errors => $"Error: {errors[0].Description}");
 ```
 
-### 2. Safe Optionals (Maybe)
-Eliminate `NullReferenceException` by explicitly modeling the absence of a value.
+### Maybe Pattern
 
 ```csharp
 using CSharpEssentials.Maybe;
 
-public Maybe<User> GetUserById(Guid id)
+public Maybe<User> FindUser(Guid id)
 {
-    var user = _repo.Find(id);
-    return user; // Implicit conversion from User?
+    User? user = _repo.Find(id);
+    return user; // implicit from T? to Maybe<T>
 }
 
-// Chaining with LINQ
-var zipCode = GetUserById(id)
+string city = FindUser(id)
     .Map(u => u.Address)
-    .Map(a => a.ZipCode)
-    .GetValueOrDefault("00000");
+    .Map(a => a.City)
+    .GetValueOrDefault("Unknown");
 ```
 
-### 3. Business Rules Engine
-Compose complex logic from simple, reusable rules.
+### Maybe + Result
 
 ```csharp
-var rule = Rule.And(
-    new MinimumAgeRule(18),
-    new KycCompletedRule()
-);
-
-var result = RuleEngine.Evaluate(rule, userContext);
+Maybe<User> maybe = FindUser(id);
+Result<User> result = maybe.ToResult(Error.NotFound("User.Missing", "User not found."));
 ```
 
-### 4. Robust Web APIs (AspNetCore)
-Automatically convert `Result` failures into standard RFC 7807 Problem Details responses using the Global Exception Handler.
+### Rules Engine
 
 ```csharp
-// Program.cs
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddEnhancedProblemDetails();
+using CSharpEssentials.Rules;
 
-// Controller
-[HttpPost]
-public IActionResult Create(CreateUserRequest request)
-{
-    Result<User> result = _service.Create(request);
-    
-    // Returns 200 OK with data, or 400/404/409 ProblemDetails based on Error Type
-    return result.ToActionResult(); 
-}
+IRule<Context> ageRule = (ctx => ctx.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be 18.")).ToRule();
+
+Result result = RuleEngine.And(new[] { ageRule, licenseRule }, context);
 ```
 
-### 5. Domain Modeling (Entity)
-Build rich domain models with built-in Audit logs and Domain Events.
+### HTTP with Result
 
 ```csharp
-public class Order : EntityBase<Guid>
-{
-    public void MarkAsPaid()
-    {
-        Status = OrderStatus.Paid;
-        Raise(new OrderPaidEvent(Id)); // Domain Event
-        SetUpdatedInfo(DateTimeOffset.UtcNow, "System"); // Auditing
-    }
-}
+using CSharpEssentials.Http;
+
+HttpClient client = new() { BaseAddress = new Uri("https://api.example.com") };
+
+Result<User> user = await client.GetFromJsonAsResultAsync<User>(new Uri("/users/1", UriKind.Relative));
 ```
 
-## 🔮 Roadmap
+## License
 
-CSharpEssentials is designed with future .NET versions in mind.
-
-### .NET 9 (Current Baseline)
-Full support with all modern optimizations:
-- `lock` objects
-- `OverloadResolutionPriority`
-- Inline arrays
-- `params ReadOnlySpan<T>`
-- `Task.WhenEach`
-
-### .NET 10 (Planned)
-- **Params collections** expansion — cleaner APIs across `Result`, `Maybe`, `Any` factory methods.
-- **Extension types** (if available) — static extension methods for `IEnumerable<Result<T>>` batch operations.
-- **Improved JSON serialization** — leverage any new `System.Text.Json` source-generator features.
-
-### .NET 11 (Future-Proof)
-- **Native `union` types** — The big one. All discriminated-union-style types (`Result<T>`, `Maybe<T>`, `Any<...>`, `Error`) are structured so they can be migrated to `readonly union` with **zero breaking changes** when the language feature arrives.
-- **Field keyword** — Simplify property declarations in `EntityBase` and error types.
-
-```csharp
-// Today (.NET 9)
-public readonly struct Result<T> { /* ... */ }
-
-// Tomorrow (.NET 11)
-public readonly union Result<T>(T Value, Error Error);
-// Your code: no changes needed!
-```
-
-### Migration Strategy
-We follow a **conditional-compilation bridge** pattern:
-1. Keep the `struct` implementation as the fallback for all targets.
-2. When .NET 11 ships, add a new target and gate the `union` syntax behind `#if NET11_0_OR_GREATER`.
-3. The public API surface (`IsSuccess`, `Value`, `Error`, `Match`, `Map`, `Bind`) remains **100 % identical**.
-4. Consumers simply upgrade their TFM — no code changes required.
-
-## 🛠️ Development & Publishing
-
-This repository includes a smart build script (`build-and-publish-nugets.sh`) that manages dependency orders and versioning for all packages.
-
-```bash
-# Build and Test all packages
-./build-and-publish-nugets.sh
-
-# Publish to NuGet (requires API Key)
-./build-and-publish-nugets.sh --parallel YOUR_API_KEY
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) guide.
-
-## 📄 License
-
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-Inspired by excellent community projects like [ErrorOr](https://github.com/amantinband/error-or), [CSharpFunctionalExtensions](https://github.com/vkhorikov/CSharpFunctionalExtensions), and [OneOf](https://github.com/mcintyre321/OneOf).
-
-
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=senrecep/CSharpEssentials&type=date&legend=top-left)](https://www.star-history.com/#senrecep/CSharpEssentials&type=date&legend=top-left)
+MIT — see [LICENSE](LICENSE).

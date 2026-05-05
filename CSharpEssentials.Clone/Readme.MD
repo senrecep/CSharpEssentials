@@ -1,56 +1,71 @@
 # CSharpEssentials.Clone
 
-`CSharpEssentials.Clone` provides a type-safe generic cloning interface and extension methods. It addresses the limitations of the legacy `System.ICloneable` by providing a strongly-typed `ICloneable<T>`.
+Type-safe generic cloning for .NET. Provides a strongly-typed `ICloneable<T>` alternative to the legacy `System.ICloneable`, plus extension methods for cloning collections.
 
-## 🚀 Features
+## Features
 
-- **Generic `ICloneable<T>`**: Type-safe interface for implementing clone behavior.
-- **Collection Extensions**: Easily clone `IEnumerable<T>` and `IQueryable<T>` collections where items implement `ICloneable<T>`.
+- **Generic `ICloneable<T>`** — Type-safe cloning interface.
+- **Collection Extensions** — Clone `IEnumerable<T>` and `IQueryable<T>` in one call.
+- **Deep Copy Support** — Compose clones for nested objects.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Clone
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Implementing ICloneable\<T\>
-
-Implement the interface in your classes to define how they should be copied.
+### Implementing `ICloneable<T>`
 
 ```csharp
 using CSharpEssentials.Clone;
 
 public class User : ICloneable<User>
 {
-    public string Name { get; set; }
-    public Address Address { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public Address Address { get; set; } = new();
 
-    public User Clone()
+    public User Clone() => new()
     {
-        return new User
-        {
-            Name = this.Name,
-            Address = this.Address.Clone() // Assuming Address also implements ICloneable<Address>
-        };
-    }
+        Name = Name,
+        Address = Address.Clone()
+    };
+}
+
+public class Address : ICloneable<Address>
+{
+    public string City { get; set; } = string.Empty;
+
+    public Address Clone() => new() { City = City };
 }
 ```
 
-### 2. Cloning Collections
-
-Use the `Clone()` extension method to deeply copy collections of cloneable items.
+### Cloning a Single Object
 
 ```csharp
-using CSharpEssentials.Clone;
+User original = new() { Name = "Alice", Address = new Address { City = "NYC" } };
+User clone = original.Clone();
 
+clone.Name = "Bob";
+clone.Address.City = "LA";
+
+// original is unaffected
+```
+
+### Cloning Collections
+
+```csharp
 var users = new List<User>
 {
-    new User { Name = "Alice" },
-    new User { Name = "Bob" }
+    new() { Name = "Alice" },
+    new() { Name = "Bob" }
 };
 
-// Creates a new IEnumerable where each User is cloned
-var clonedUsers = users.Clone();
+// Clone all items
+var cloned = users.Clone().ToList();
+
+// Clone from IQueryable
+IQueryable<User> query = users.AsQueryable();
+var clonedQuery = query.Clone();
 ```

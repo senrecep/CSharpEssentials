@@ -1,90 +1,71 @@
 # CSharpEssentials.Any
 
-`CSharpEssentials.Any` provides a robust implementation of **Discriminated Unions** (also known as Sum Types or Coproducts) for .NET. It allows you to define a type that can hold a value of one of several fixed types, providing type safety and exhaustive pattern matching.
+Discriminated Unions (Sum Types) for .NET. A type-safe way to represent a value that can be one of several fixed types.
 
-## 🚀 Features
+## Features
 
-- **Discriminated Unions**: Support for unions of 2 up to 8 types (`Any<T0, T1>`, `Any<T0, T1, T2>`, etc.).
-- **Type Safety**: Compiler-checked access to values.
-- **Pattern Matching**: `Switch` and `Match` methods to handle each case.
-- **Implicit Conversions**: Seamlessly convert values to their union type.
-- **JSON Support**: Built-in serialization handling.
+- **Unions of 2–8 types** — `Any<T0, T1>` through `Any<T0, ..., T7>`.
+- **Implicit Conversions** — Assign values directly to the union type.
+- **Pattern Matching** — `Switch` and `Match` for exhaustive handling.
+- **Type Helpers** — `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
+- **JSON Support** — Built-in serialization.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Any
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Defining a Union
-
-You can use `Any<T0, T1>` as a return type or property.
+### Creating Unions
 
 ```csharp
 using CSharpEssentials.Any;
 
-public Any<string, int> ParseOrReturnOriginal(string input)
+Any<string, int> ParseInput(string input)
 {
-    if (int.TryParse(input, out int result))
-    {
-        return result; // Implicit conversion to Any<string, int>
-    }
-    return input; // Implicit conversion
+    if (int.TryParse(input, out int n))
+        return n; // implicit to Any<string, int>
+    return input;
 }
 ```
 
-### 2. Pattern Matching (Match)
-
-Use `Match` to transform the value based on which type it holds.
+### Pattern Matching
 
 ```csharp
-Any<string, int> result = ParseOrReturnOriginal("123");
+Any<string, int> result = ParseInput("123");
 
 string output = result.Match(
-    first: str => $"It's a string: {str}",
-    second: num => $"It's a number: {num}"
-);
-```
+    first: str => $"String: {str}",
+    second: num => $"Number: {num}");
 
-### 3. Executing Actions (Switch)
-
-Use `Switch` to execute code based on the type.
-
-```csharp
 result.Switch(
-    first: str => Console.WriteLine("String"),
-    second: num => Console.WriteLine("Number")
-);
+    first: str => Console.WriteLine("It's a string"),
+    second: num => Console.WriteLine("It's a number"));
 ```
 
-### 4. Checking and Accessing
+### Type Checking
 
 ```csharp
 if (result.IsSecond)
 {
     int val = result.GetSecond();
 }
+
+// Generic helpers
+bool isInt = result.Is<int, string, int>();
+int? asInt = result.As<int, string, int>();
+bool found = result.TryAs<int, string, int>(out int value);
 ```
 
-### 5. Handling more types
-
-You can handle up to 8 variations.
+### Multiple Types
 
 ```csharp
-// A result that can be Success (string), NotFound (int code), or Error (Exception)
-public Any<string, int, Exception> GetData(int id)
-{
-    // ... logic
-    return new Exception("Failed"); 
-}
+Any<string, int, Exception> response = GetData(5);
 
-var data = GetData(5);
-
-data.Switch(
+response.Switch(
     first: s => Console.WriteLine($"Success: {s}"),
-    second: i => Console.WriteLine($"Not Found: {i}"),
-    third: e => Console.WriteLine($"Error: {e.Message}")
-);
+    second: i => Console.WriteLine($"NotFound: {i}"),
+    third: e => Console.WriteLine($"Error: {e.Message}"));
 ```

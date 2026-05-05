@@ -1,95 +1,76 @@
 # CSharpEssentials.Errors
 
-`CSharpEssentials.Errors` provides a structured, type-safe error handling system for .NET applications. It encapsulates errors as data rather than exceptions, promoting the Result pattern and making failure flows explicit and manageable.
+Structured, type-safe error handling for .NET. Errors are data, not exceptions.
 
-## 🚀 Features
+## Features
 
-- **Structured Errors**: `Error` struct with unique codes, descriptions, and types (NotFound, Validation, Conflict, etc.).
-- **Rich Metadata**: Attach additional context (`ErrorMetadata`) to errors.
-- **Standard Error Types**: predefined types like `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden`.
-- **Exception Integration**: Convert exceptions to `Error` objects or wrap `Error` objects in `DomainException`.
+- **Error Struct** — Value-type error with code, description, type, and metadata.
+- **Standard Error Types** — Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected.
+- **ErrorMetadata** — Attach contextual data to errors fluently.
+- **Exception Bridge** — Convert exceptions to `Error` or throw `DomainException` / `EnhancedValidationException`.
+- **HTTP Mapping** — Built-in conversion between `ErrorType` and HTTP status codes.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Errors
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Creating Errors
-
-Use the static factory methods on the `Error` struct to create standard errors.
+### Creating Errors
 
 ```csharp
 using CSharpEssentials.Errors;
 
-// Common error types
-var notFound = Error.NotFound("User.NotFound", "The user with the specified ID was not found.");
-var validation = Error.Validation("User.EmailInvalid", "The email address is in an invalid format.");
-var conflict = Error.Conflict("User.AlreadyExists", "A user with this email already exists.");
-var failure = Error.Failure("Payment.Failed", "The payment gateway rejected the transaction.");
+Error notFound = Error.NotFound("User.NotFound", "User was not found.");
+Error validation = Error.Validation("Email.Invalid", "Email format is invalid.");
+Error conflict = Error.Conflict("User.Duplicate", "User already exists.");
+Error failure = Error.Failure("Payment.Failed", "Payment was rejected.");
 ```
 
-### 2. Error Metadata
-
-You can attach extra information to an error for debugging or client responses.
+### Error Metadata
 
 ```csharp
-var metadata = new ErrorMetadata 
-{
-    { "RetryCount", 3 },
-    { "Gateway", "Stripe" }
-};
-
-var error = Error.Failure(
-    code: "Payment.Failed", 
-    description: "Transaction failed", 
-    metadata: metadata
-);
+Error withMeta = Error.NotFound(
+    "User.NotFound",
+    "User was not found.",
+    new ErrorMetadata()
+        .AddMetadata("TraceId", Guid.NewGuid().ToString())
+        .AddMetadata("RequestPath", "/api/users/123"));
 ```
 
-### 3. Converting Exceptions to Errors
-
-Capture exception details into a structured error.
+### Combining Errors
 
 ```csharp
-try 
-{
-    // ... risky code ...
-}
+Error a = Error.Validation("Name.Empty", "Name is required.");
+Error b = Error.Validation("Email.Invalid", "Email is invalid.");
+
+Error[] combined = a + b;
+```
+
+### Converting from Exceptions
+
+```csharp
+try { /* ... */ }
 catch (Exception ex)
 {
-    var error = Error.Exception(
-        code: "System.Unhandled", 
-        exception: ex
-    );
-    // error.Description will be ex.Message
-    // error.Metadata will contain exception details
+    Error error = Error.Exception(ex);
 }
 ```
 
-### 4. Domain Exceptions
-
-If you must throw an exception but want to keep the structured error format (e.g., to be caught by a global handler), use `DomainException`.
+### Domain Exceptions
 
 ```csharp
 using CSharpEssentials.Exceptions;
 
-public void DoSomething()
-{
-    var error = Error.Validation("Input.Invalid", "Value cannot be negative");
-    throw new DomainException(error);
-}
+Error error = Error.Validation("Order.Invalid", "Total must be greater than zero.");
+throw new DomainException(error);
 ```
 
-### 5. Error Equality
-
-Errors are value types and check for equality based on their content (Code, Description, Type, Metadata).
+### HTTP Status Mapping
 
 ```csharp
-var e1 = Error.NotFound("Item.Missing");
-var e2 = Error.NotFound("Item.Missing");
-
-bool areEqual = (e1 == e2); // True
+int status = ErrorType.NotFound.ToHttpStatusCode();     // 404
+ErrorType type = 401.ToErrorType();                      // Unauthorized
 ```
