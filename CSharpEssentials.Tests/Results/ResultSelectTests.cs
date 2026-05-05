@@ -13,7 +13,7 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_Select_Func_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> selected = result.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -40,9 +40,9 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_Select_ResultFunc_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> selected = result.Select(value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> selected = result.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         selected.IsSuccess.Should().BeTrue();
         selected.Value.Should().Be("10");
@@ -57,7 +57,7 @@ public class ResultSelectTests
         Result<string> selected = result.Select(value =>
         {
             called = true;
-            return Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         selected.IsFailure.Should().BeTrue();
@@ -71,7 +71,7 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_SelectMany_Func_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> selected = result.SelectMany(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -98,9 +98,9 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_SelectMany_ResultFunc_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> selected = result.SelectMany(value => Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> selected = result.SelectMany(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         selected.IsSuccess.Should().BeTrue();
         selected.Value.Should().Be("10");
@@ -115,7 +115,7 @@ public class ResultSelectTests
         Result<string> selected = result.SelectMany(value =>
         {
             called = true;
-            return Result<string>.Success(value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         selected.IsFailure.Should().BeTrue();
@@ -125,10 +125,10 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_SelectMany_WithProjector_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> selected = result.SelectMany(
-            value => Result<string>.Success("intermediate"),
+            value => "intermediate".ToResult(),
             (value, intermediate) => $"{value}-{intermediate}");
 
         selected.IsSuccess.Should().BeTrue();
@@ -138,7 +138,7 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_SelectMany_WithProjector_SelectorFailure_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> selected = result.SelectMany(
             _ => Result<string>.Failure(TestError),
@@ -155,7 +155,7 @@ public class ResultSelectTests
         bool called = false;
 
         Result<string> selected = result.SelectMany(
-            value => { called = true; return Result<string>.Success("intermediate"); },
+            value => { called = true; return "intermediate".ToResult(); },
             (value, intermediate) => $"{value}-{intermediate}");
 
         selected.IsFailure.Should().BeTrue();
@@ -169,7 +169,7 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_Select_Chained_ShouldWorkLikeMap()
     {
-        Result<string> result = Result<int>.Success(10)
+        Result<string> result = 10.ToResult()
             .Select(v => v * 2)
             .Select(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -180,9 +180,9 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_SelectMany_Chained_ShouldWorkLikeBindThenMap()
     {
-        Result<int> result = Result<int>.Success(10)
-            .SelectMany(v => Result<int>.Success(v + 5))
-            .SelectMany(v => Result<int>.Success(v * 2));
+        Result<int> result = 10.ToResult()
+            .SelectMany(v => (v + 5).ToResult())
+            .SelectMany(v => (v * 2).ToResult());
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(30);
@@ -191,12 +191,12 @@ public class ResultSelectTests
     [Fact]
     public void ResultT_SelectMany_WithProjector_Chained_ShouldFlattenCorrectly()
     {
-        Result<string> result = Result<int>.Success(10)
+        Result<string> result = 10.ToResult()
             .SelectMany(
-                v => Result<int>.Success(v + 5),
+                v => (v + 5).ToResult(),
                 (a, b) => $"{a}:{b}")
             .SelectMany(
-                v => Result<string>.Success(v.ToUpperInvariant()),
+                v => v.ToUpperInvariant().ToResult(),
                 (a, b) => $"{a}|{b}");
 
         result.IsSuccess.Should().BeTrue();

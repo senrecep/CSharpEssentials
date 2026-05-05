@@ -13,7 +13,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_Ensure_WithSuccess_PredicateTrue_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<int> ensured = result.Ensure(v => v > 5, TestError);
 
@@ -24,7 +24,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_Ensure_WithSuccess_PredicateFalse_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(3);
+        var result = 3.ToResult();
 
         Result<int> ensured = result.Ensure(v => v > 5, TestError);
 
@@ -46,7 +46,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_Ensure_ErrorFactory_WithSuccess_PredicateTrue_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<int> ensured = result.Ensure(
             v => v > 5,
@@ -58,7 +58,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_Ensure_ErrorFactory_WithSuccess_PredicateFalse_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(3);
+        var result = 3.ToResult();
 
         Result<int> ensured = result.Ensure(
             v => v > 5,
@@ -75,7 +75,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_EnsureNotNull_WithSuccess_NotNull_ShouldReturnOriginal()
     {
-        var result = Result<string>.Success("hello");
+        var result = "hello".ToResult();
 
         Result<string> ensured = result.EnsureNotNull(TestError);
 
@@ -108,7 +108,7 @@ public class ResultEnsureTests
     [Fact]
     public void ResultT_EnsureNotNull_ErrorFactory_WithSuccess_NotNull_ShouldReturnOriginal()
     {
-        var result = Result<string>.Success("hello");
+        var result = "hello".ToResult();
 
         Result<string> ensured = result.EnsureNotNull(v => Error.Validation("Factory", v ?? "null"));
 
@@ -133,7 +133,7 @@ public class ResultEnsureTests
     [Fact]
     public async Task ResultT_EnsureAsync_WithSuccess_PredicateTrue_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<int> ensured = await result.EnsureAsync(v => Task.FromResult(v > 5), TestError);
 
@@ -144,7 +144,7 @@ public class ResultEnsureTests
     [Fact]
     public async Task ResultT_EnsureAsync_WithSuccess_PredicateFalse_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(3);
+        var result = 3.ToResult();
 
         Result<int> ensured = await result.EnsureAsync(v => Task.FromResult(v > 5), TestError);
 
@@ -168,7 +168,7 @@ public class ResultEnsureTests
     [Fact]
     public async Task ResultT_EnsureAsync_ErrorFactory_WithSuccess_PredicateTrue_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<int> ensured = await result.EnsureAsync(
             v => Task.FromResult(v > 5),
@@ -180,7 +180,7 @@ public class ResultEnsureTests
     [Fact]
     public async Task ResultT_EnsureAsync_ErrorFactory_WithSuccess_PredicateFalse_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(3);
+        var result = 3.ToResult();
 
         Result<int> ensured = await result.EnsureAsync(
             v => Task.FromResult(v > 5),
@@ -198,7 +198,7 @@ public class ResultEnsureTests
     public async Task ResultT_EnsureAsync_Task_WithSuccess_PredicateTrue_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await task.EnsureAsync(v => Task.FromResult(v > 5), TestError);
@@ -211,7 +211,7 @@ public class ResultEnsureTests
     public async Task ResultT_EnsureAsync_Task_WithSuccess_PredicateFalse_ShouldReturnFailure()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(3));
+        var task = Task.FromResult(3.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await task.EnsureAsync(v => Task.FromResult(v > 5), TestError);
@@ -224,7 +224,7 @@ public class ResultEnsureTests
     public async Task ResultT_EnsureAsync_ValueTask_WithSuccess_PredicateTrue_ShouldReturnOriginal()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(10));
+        var valueTask = ValueTask.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await valueTask.EnsureAsync(v => Task.FromResult(v > 5), TestError);
@@ -237,7 +237,7 @@ public class ResultEnsureTests
     public async Task ResultT_EnsureAsync_ValueTask_WithSuccess_PredicateFalse_ShouldReturnFailure()
     {
 #pragma warning disable IDE0008
-        var valueTask = ValueTask.FromResult(Result<int>.Success(3));
+        var valueTask = ValueTask.FromResult(3.ToResult());
 #pragma warning restore IDE0008
 
         Result<int> ensured = await valueTask.EnsureAsync(v => Task.FromResult(v > 5), TestError);

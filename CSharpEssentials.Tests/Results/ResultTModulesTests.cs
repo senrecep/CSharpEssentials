@@ -14,9 +14,9 @@ public class ResultTModulesTests
     [Fact]
     public void Bind_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> bound = result.Bind(value => Result<string>.Success(value.ToString(CultureInfo.InvariantCulture)));
+        Result<string> bound = result.Bind(value => value.ToString(CultureInfo.InvariantCulture).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -31,7 +31,7 @@ public class ResultTModulesTests
         Result<string> bound = result.Bind(value =>
         {
             functionCalled = true;
-            return Result<string>.Success(value.ToString(CultureInfo.InvariantCulture));
+            return value.ToString(CultureInfo.InvariantCulture).ToResult();
         });
 
         bound.IsFailure.Should().BeTrue();
@@ -41,7 +41,7 @@ public class ResultTModulesTests
     [Fact]
     public void Bind_ToNonGenericResult_ShouldWork()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result bound = result.Bind(value => value > 5 ? Result.Success() : Result.Failure(TestError));
 
@@ -52,10 +52,10 @@ public class ResultTModulesTests
     public async Task BindAsync_WithSuccess_ShouldExecuteFunction()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
-        Result<string> bound = await task.BindAsync(value => Result<string>.Success(value.ToString(CultureInfo.InvariantCulture)));
+        Result<string> bound = await task.BindAsync(value => value.ToString(CultureInfo.InvariantCulture).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -65,11 +65,11 @@ public class ResultTModulesTests
     public async Task BindAsync_WithTaskFunc_ShouldWork()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(10));
+        var task = Task.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
         Result<string> bound = await task.BindAsync(
-            value => Task.FromResult(Result<string>.Success(value.ToString(CultureInfo.InvariantCulture))));
+            value => Task.FromResult(value.ToString(CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -79,10 +79,10 @@ public class ResultTModulesTests
     public async Task BindAsync_WithValueTaskFunc_ShouldWork()
     {
 #pragma warning disable IDE0008
-        var task = ValueTask.FromResult(Result<int>.Success(10));
+        var task = ValueTask.FromResult(10.ToResult());
 #pragma warning restore IDE0008
 
-        Result<string> bound = await task.BindAsync(value => Result<string>.Success(value.ToString(CultureInfo.InvariantCulture)));
+        Result<string> bound = await task.BindAsync(value => value.ToString(CultureInfo.InvariantCulture).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -95,7 +95,7 @@ public class ResultTModulesTests
     [Fact]
     public void Map_WithSuccess_ShouldTransformValue()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> mapped = result.Map(value => value.ToString(CultureInfo.InvariantCulture));
 
@@ -126,7 +126,7 @@ public class ResultTModulesTests
     [Fact]
     public void Match_WithSuccess_ShouldCallSuccessFunc()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = result.Match(
             value => $"Success: {value}",
@@ -154,7 +154,7 @@ public class ResultTModulesTests
     [Fact]
     public void Tap_WithSuccess_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int capturedValue = 0;
 
         Result<int> tapped = result.Tap(value => capturedValue = value);
@@ -182,9 +182,9 @@ public class ResultTModulesTests
     [Fact]
     public void TryCatch_WithNoException_ShouldReturnSuccess()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> tryResult = result.TryCatch(value => Result<string>.Success(value.ToString(CultureInfo.InvariantCulture)));
+        Result<string> tryResult = result.TryCatch(value => value.ToString(CultureInfo.InvariantCulture).ToResult());
 
         tryResult.IsSuccess.Should().BeTrue();
         tryResult.Value.Should().Be("10");
@@ -193,7 +193,7 @@ public class ResultTModulesTests
     [Fact]
     public void TryCatch_WithException_ShouldReturnFailure()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> tryResult = result.TryCatch<string>(value => throw new InvalidOperationException("Test"));
 
@@ -207,7 +207,7 @@ public class ResultTModulesTests
     [Fact]
     public void GetValueOrDefault_WithSuccess_ShouldReturnValue()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         int value = result.GetValueOrDefault(0);
 
@@ -231,7 +231,7 @@ public class ResultTModulesTests
     [Fact]
     public void Select_ShouldWorkLikeMap()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> selected = result.Select(value => value.ToString(CultureInfo.InvariantCulture));
 

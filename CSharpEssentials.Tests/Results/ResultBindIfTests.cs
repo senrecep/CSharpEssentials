@@ -100,9 +100,9 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_BoolTrue_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(true, value => Result<int>.Success(value * 2));
+        Result<int> bound = result.BindIf(true, value => (value * 2).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(20);
@@ -111,9 +111,9 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_BoolFalse_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(false, _ => Result<int>.Success(99));
+        Result<int> bound = result.BindIf(false, _ => 99.ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(10);
@@ -125,7 +125,7 @@ public class ResultBindIfTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result<int> bound = result.BindIf(true, value => { called = true; return Result<int>.Success(value * 2); });
+        Result<int> bound = result.BindIf(true, value => { called = true; return (value * 2).ToResult(); });
 
         bound.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
@@ -134,9 +134,9 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_FuncBoolTrue_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(() => true, value => Result<int>.Success(value * 2));
+        Result<int> bound = result.BindIf(() => true, value => (value * 2).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(20);
@@ -145,9 +145,9 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_FuncBoolFalse_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(() => false, _ => Result<int>.Success(99));
+        Result<int> bound = result.BindIf(() => false, _ => 99.ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(10);
@@ -159,7 +159,7 @@ public class ResultBindIfTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result<int> bound = result.BindIf(() => true, value => { called = true; return Result<int>.Success(value * 2); });
+        Result<int> bound = result.BindIf(() => true, value => { called = true; return (value * 2).ToResult(); });
 
         bound.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
@@ -168,9 +168,9 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_ValuePredicateTrue_WithSuccess_ShouldExecuteFunction()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<int> bound = result.BindIf(value => value > 5, value => Result<int>.Success(value * 2));
+        Result<int> bound = result.BindIf(value => value > 5, value => (value * 2).ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(20);
@@ -179,9 +179,9 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_ValuePredicateFalse_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(3);
+        var result = 3.ToResult();
 
-        Result<int> bound = result.BindIf(value => value > 5, _ => Result<int>.Success(99));
+        Result<int> bound = result.BindIf(value => value > 5, _ => 99.ToResult());
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(3);
@@ -193,7 +193,7 @@ public class ResultBindIfTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result<int> bound = result.BindIf(value => value > 5, value => { called = true; return Result<int>.Success(value * 2); });
+        Result<int> bound = result.BindIf(value => value > 5, value => { called = true; return (value * 2).ToResult(); });
 
         bound.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
@@ -202,10 +202,10 @@ public class ResultBindIfTests
     [Fact]
     public void ResultT_BindIf_Chained_ShouldApplyConditionally()
     {
-        Result<int> result = Result<int>.Success(10)
-            .BindIf(true, v => Result<int>.Success(v + 1))
-            .BindIf(v => v > 5, v => Result<int>.Success(v + 1))
-            .BindIf(false, v => Result<int>.Success(v + 100));
+        Result<int> result = 10.ToResult()
+            .BindIf(true, v => (v + 1).ToResult())
+            .BindIf(v => v > 5, v => (v + 1).ToResult())
+            .BindIf(false, v => (v + 100).ToResult());
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(12);

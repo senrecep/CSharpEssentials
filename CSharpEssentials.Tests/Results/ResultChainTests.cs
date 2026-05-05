@@ -39,9 +39,9 @@ public class ResultChainTests
     [Fact]
     public void ResultT_Bind_Chained_ShouldTransformThroughChain()
     {
-        Result<string> result = Result<int>.Success(10)
-            .Bind(v => Result<int>.Success(v * 2))
-            .Bind(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> result = 10.ToResult()
+            .Bind(v => (v * 2).ToResult())
+            .Bind(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("20");
@@ -50,10 +50,10 @@ public class ResultChainTests
     [Fact]
     public void ResultT_Bind_Chained_ShouldStopOnFailureAndPreserveError()
     {
-        Result<string> result = Result<int>.Success(10)
-            .Bind(v => Result<int>.Success(v * 2))
+        Result<string> result = 10.ToResult()
+            .Bind(v => (v * 2).ToResult())
             .Bind(_ => Result<int>.Failure(TestError))
-            .Bind(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            .Bind(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
@@ -78,7 +78,7 @@ public class ResultChainTests
     [Fact]
     public void ResultT_Map_Chained_ShouldTransformThroughChain()
     {
-        Result<string> result = Result<int>.Success(5)
+        Result<string> result = 5.ToResult()
             .Map(v => v * 2)
             .Map(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -91,7 +91,7 @@ public class ResultChainTests
     {
         int callCount = 0;
 
-        Result<string> result = Result<int>.Success(5)
+        Result<string> result = 5.ToResult()
             .Map(v => { callCount++; return v * 2; })
             .Map(_ => Result<int>.Failure(TestError))
             .Map(v => { callCount++; return v.ToString(System.Globalization.CultureInfo.InvariantCulture); });
@@ -131,7 +131,7 @@ public class ResultChainTests
     [Fact]
     public void ResultT_Then_Chained_ShouldTransformThroughChain()
     {
-        Result<string> result = Result<int>.Success(5)
+        Result<string> result = 5.ToResult()
             .Then(v => v * 2)
             .Then(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -175,7 +175,7 @@ public class ResultChainTests
     {
         int sum = 0;
 
-        Result<int> result = Result<int>.Success(10)
+        Result<int> result = 10.ToResult()
             .Tap(v => sum += v)
             .Tap(v => sum += v);
 
@@ -211,7 +211,7 @@ public class ResultChainTests
     [Fact]
     public void ResultT_Else_Chained_ShouldNotTriggerOnSuccess()
     {
-        Result<int> result = Result<int>.Success(42)
+        Result<int> result = 42.ToResult()
             .Else(99)
             .Else(errors => 99);
 
@@ -247,7 +247,7 @@ public class ResultChainTests
     [Fact]
     public void ResultT_Match_Chained_ShouldTransformBasedOnState()
     {
-        string result = Result<int>.Success(42)
+        string result = 42.ToResult()
             .Then(v => v * 2)
             .Finally(r => r.Match(v => $"value:{v}", _ => "fail"));
 
@@ -278,7 +278,7 @@ public class ResultChainTests
         int captured = 0;
         bool failureCalled = false;
 
-        Result<int>.Success(42)
+        42.ToResult()
             .Tap(v => captured = v)
             .Switch(v => { }, _ => failureCalled = true);
 
@@ -295,10 +295,10 @@ public class ResultChainTests
     {
         int tapValue = 0;
 
-        Result<string> result = Result<int>.Success(5)
-            .Bind(v => Result<int>.Success(v + 5))
+        Result<string> result = 5.ToResult()
+            .Bind(v => (v + 5).ToResult())
             .Map(v => v * 2)
-            .Then(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+            .Then(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult())
             .Tap(v => tapValue = int.Parse(v, CultureInfo.InvariantCulture));
 
         result.IsSuccess.Should().BeTrue();
@@ -311,10 +311,10 @@ public class ResultChainTests
     {
         int tapCount = 0;
 
-        Result<string> result = Result<int>.Success(5)
+        Result<string> result = 5.ToResult()
             .Bind(v => Result<int>.Failure(TestError))
             .Map(v => v * 2)
-            .Then(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)))
+            .Then(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult())
             .Tap(_ => tapCount++);
 
         result.IsFailure.Should().BeTrue();
@@ -325,7 +325,7 @@ public class ResultChainTests
     [Fact]
     public void Mixed_Chain_FailIfThenElse_ShouldWorkTogether()
     {
-        Result<int> result = Result<int>.Success(150)
+        Result<int> result = 150.ToResult()
             .FailIf(v => v > 100, TestError)
             .Else(99);
 
@@ -336,9 +336,9 @@ public class ResultChainTests
     [Fact]
     public void Mixed_Chain_TryCatchThenBind_ShouldWorkTogether()
     {
-        Result<string> result = Result<int>.Success(10)
-            .TryCatch(v => Result<int>.Success(v * 2))
-            .Bind(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> result = 10.ToResult()
+            .TryCatch(v => (v * 2).ToResult())
+            .Bind(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("20");

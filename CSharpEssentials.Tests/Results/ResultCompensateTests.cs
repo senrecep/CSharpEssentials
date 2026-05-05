@@ -58,7 +58,7 @@ public class ResultCompensateTests
     [Fact]
     public void ResultT_Compensate_ErrorsFunc_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> compensated = result.Compensate((Error[] errors) => Result<int>.Failure(AnotherError));
 
@@ -71,7 +71,7 @@ public class ResultCompensateTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> compensated = result.Compensate((Error[] errors) => Result<int>.Success(99));
+        Result<int> compensated = result.Compensate((Error[] errors) => 99.ToResult());
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -80,7 +80,7 @@ public class ResultCompensateTests
     [Fact]
     public void ResultT_Compensate_FirstErrorFunc_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> compensated = result.CompensateFirst(error => Result<int>.Failure(AnotherError));
 
@@ -93,7 +93,7 @@ public class ResultCompensateTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> compensated = result.CompensateFirst(error => Result<int>.Success(99));
+        Result<int> compensated = result.CompensateFirst(error => 99.ToResult());
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -150,7 +150,7 @@ public class ResultCompensateTests
     [Fact]
     public async Task ResultT_CompensateAsync_ErrorsFunc_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(Result<int>.Failure(AnotherError)));
 
@@ -163,7 +163,7 @@ public class ResultCompensateTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(Result<int>.Success(99)));
+        Result<int> compensated = await result.CompensateAsync((Error[] errors) => Task.FromResult(99.ToResult()));
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -172,7 +172,7 @@ public class ResultCompensateTests
     [Fact]
     public async Task ResultT_CompensateAsync_FirstErrorFunc_WithSuccess_ShouldReturnOriginal()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         Result<int> compensated = await result.CompensateFirstAsync(error => Task.FromResult(Result<int>.Failure(AnotherError)));
 
@@ -185,7 +185,7 @@ public class ResultCompensateTests
     {
         var result = Result<int>.Failure(TestError);
 
-        Result<int> compensated = await result.CompensateFirstAsync(error => Task.FromResult(Result<int>.Success(99)));
+        Result<int> compensated = await result.CompensateFirstAsync(error => Task.FromResult(99.ToResult()));
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -250,7 +250,7 @@ public class ResultCompensateTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> compensated = await task.CompensateAsync((Error[] errors) => Task.FromResult(Result<int>.Success(99)));
+        Result<int> compensated = await task.CompensateAsync((Error[] errors) => Task.FromResult(99.ToResult()));
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -263,7 +263,7 @@ public class ResultCompensateTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> compensated = await task.CompensateFirstAsync(error => Task.FromResult(Result<int>.Success(99)));
+        Result<int> compensated = await task.CompensateFirstAsync(error => Task.FromResult(99.ToResult()));
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -276,7 +276,7 @@ public class ResultCompensateTests
         var valueTask = ValueTask.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> compensated = await valueTask.CompensateAsync((Error[] errors) => Task.FromResult(Result<int>.Success(99)));
+        Result<int> compensated = await valueTask.CompensateAsync((Error[] errors) => Task.FromResult(99.ToResult()));
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);
@@ -289,7 +289,7 @@ public class ResultCompensateTests
         var valueTask = ValueTask.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> compensated = await valueTask.CompensateFirstAsync(error => Task.FromResult(Result<int>.Success(99)));
+        Result<int> compensated = await valueTask.CompensateFirstAsync(error => Task.FromResult(99.ToResult()));
 
         compensated.IsSuccess.Should().BeTrue();
         compensated.Value.Should().Be(99);

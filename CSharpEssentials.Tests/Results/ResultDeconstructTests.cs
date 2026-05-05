@@ -39,7 +39,7 @@ public class ResultDeconstructTests
     [Fact]
     public void ResultT_Deconstruct_WithSuccess_ShouldReturnIsSuccessTrueValueAndEmptyErrors()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         result.Deconstruct(out bool isSuccess, out int value, out Error[] errors);
 

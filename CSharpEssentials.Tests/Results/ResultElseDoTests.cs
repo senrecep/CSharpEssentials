@@ -65,7 +65,7 @@ public class ResultElseDoTests
     [Fact]
     public void ResultT_ElseDo_ErrorsAction_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> elseResult = result.ElseDo((Error[] errors) => called = true);
@@ -89,7 +89,7 @@ public class ResultElseDoTests
     [Fact]
     public void ResultT_ElseDo_FirstErrorAction_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> elseResult = result.ElseDoFirst(error => called = true);
@@ -169,7 +169,7 @@ public class ResultElseDoTests
     [Fact]
     public async Task ResultT_ElseDoAsync_ErrorsFunc_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> elseResult = await result.ElseDoAsync((Error[] errors) => { called = true; return Task.CompletedTask; });
@@ -193,7 +193,7 @@ public class ResultElseDoTests
     [Fact]
     public async Task ResultT_ElseDoAsync_FirstErrorFunc_WithSuccess_ShouldNotExecute()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> elseResult = await result.ElseDoFirstAsync(error => { called = true; return Task.CompletedTask; });

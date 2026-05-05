@@ -113,7 +113,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_ValueAction_WithSuccess_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int captured = 0;
 
         Result<int> tapped = result.Tap(v => captured = v);
@@ -137,7 +137,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_Action_WithSuccess_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(() => called = true);
@@ -161,7 +161,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_BoolCondition_ValueAction_WithSuccess_True_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int captured = 0;
 
         Result<int> tapped = result.Tap(true, v => captured = v);
@@ -173,7 +173,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_BoolCondition_ValueAction_WithSuccess_False_ShouldNotExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(false, _ => called = true);
@@ -197,7 +197,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_BoolCondition_Action_WithSuccess_True_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(true, () => called = true);
@@ -209,7 +209,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_BoolCondition_Action_WithSuccess_False_ShouldNotExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(false, () => called = true);
@@ -233,7 +233,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_FuncCondition_ValueAction_WithSuccess_True_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         int captured = 0;
 
         Result<int> tapped = result.Tap(() => true, v => captured = v);
@@ -245,7 +245,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_FuncCondition_ValueAction_WithSuccess_False_ShouldNotExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(() => false, _ => called = true);
@@ -269,7 +269,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_FuncCondition_Action_WithSuccess_True_ShouldExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(() => true, () => called = true);
@@ -281,7 +281,7 @@ public class ResultTapTests
     [Fact]
     public void ResultT_Tap_FuncCondition_Action_WithSuccess_False_ShouldNotExecuteAction()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool called = false;
 
         Result<int> tapped = result.Tap(() => false, () => called = true);

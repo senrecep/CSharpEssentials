@@ -42,7 +42,7 @@ public class ResultMapTests
     {
         var result = Result.Success();
 
-        Result<int> mapped = result.Map(() => Result<int>.Success(42));
+        Result<int> mapped = result.Map(() => 42.ToResult());
 
         mapped.IsSuccess.Should().BeTrue();
         mapped.Value.Should().Be(42);
@@ -57,7 +57,7 @@ public class ResultMapTests
         Result<int> mapped = result.Map(() =>
         {
             called = true;
-            return Result<int>.Success(42);
+            return 42.ToResult();
         });
 
         mapped.IsFailure.Should().BeTrue();
@@ -71,7 +71,7 @@ public class ResultMapTests
     [Fact]
     public void ResultT_Map_Func_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
         Result<string> mapped = result.Map(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
@@ -98,9 +98,9 @@ public class ResultMapTests
     [Fact]
     public void ResultT_Map_ResultFunc_WithSuccess_ShouldTransform()
     {
-        var result = Result<int>.Success(10);
+        var result = 10.ToResult();
 
-        Result<string> mapped = result.Map(v => Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Result<string> mapped = result.Map(v => v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
 
         mapped.IsSuccess.Should().BeTrue();
         mapped.Value.Should().Be("10");
@@ -115,7 +115,7 @@ public class ResultMapTests
         Result<string> mapped = result.Map(v =>
         {
             called = true;
-            return Result<string>.Success(v.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult();
         });
 
         mapped.IsFailure.Should().BeTrue();

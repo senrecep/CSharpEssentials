@@ -418,7 +418,7 @@ public class ResultSwitchTests
     [Fact]
     public void ResultT_Switch_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool successCalled = false;
         bool failureCalled = false;
         int captured = 0;
@@ -450,7 +450,7 @@ public class ResultSwitchTests
     [Fact]
     public async Task ResultT_SwitchAsync_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool successCalled = false;
         bool failureCalled = false;
         int captured = 0;
@@ -482,7 +482,7 @@ public class ResultSwitchTests
     [Fact]
     public void ResultT_SwitchFirst_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool successCalled = false;
         bool failureCalled = false;
         int captured = 0;
@@ -514,7 +514,7 @@ public class ResultSwitchTests
     [Fact]
     public async Task ResultT_SwitchFirstAsync_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool successCalled = false;
         bool failureCalled = false;
         int captured = 0;
@@ -546,7 +546,7 @@ public class ResultSwitchTests
     [Fact]
     public void ResultT_SwitchLast_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool successCalled = false;
         bool failureCalled = false;
         int captured = 0;
@@ -578,7 +578,7 @@ public class ResultSwitchTests
     [Fact]
     public async Task ResultT_SwitchLastAsync_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
         bool successCalled = false;
         bool failureCalled = false;
         int captured = 0;
@@ -615,7 +615,7 @@ public class ResultSwitchTests
     public async Task ResultT_Switch_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
         bool successCalled = false;
         bool failureCalled = false;
@@ -651,7 +651,7 @@ public class ResultSwitchTests
     public async Task ResultT_SwitchAsync_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
         bool successCalled = false;
         bool failureCalled = false;
@@ -687,7 +687,7 @@ public class ResultSwitchTests
     public async Task ResultT_SwitchFirst_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
         bool successCalled = false;
         bool failureCalled = false;
@@ -723,7 +723,7 @@ public class ResultSwitchTests
     public async Task ResultT_SwitchFirstAsync_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
         bool successCalled = false;
         bool failureCalled = false;
@@ -759,7 +759,7 @@ public class ResultSwitchTests
     public async Task ResultT_SwitchLast_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
         bool successCalled = false;
         bool failureCalled = false;
@@ -795,7 +795,7 @@ public class ResultSwitchTests
     public async Task ResultT_SwitchLastAsync_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
         bool successCalled = false;
         bool failureCalled = false;

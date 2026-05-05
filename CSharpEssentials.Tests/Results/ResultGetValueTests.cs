@@ -13,7 +13,7 @@ public class ResultGetValueTests
     [Fact]
     public void ResultT_GetValueOrDefault_WithSuccess_ShouldReturnValue()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         int value = result.GetValueOrDefault();
 
@@ -43,7 +43,7 @@ public class ResultGetValueTests
     [Fact]
     public void ResultT_GetValueOrDefault_WithDefaultValue_Success_ShouldReturnValue()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         int value = result.GetValueOrDefault(99);
 
@@ -77,7 +77,7 @@ public class ResultGetValueTests
     [Fact]
     public void ResultT_GetValueOrThrow_WithSuccess_ShouldReturnValue()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         int value = result.GetValueOrThrow();
 

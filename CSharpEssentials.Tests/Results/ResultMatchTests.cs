@@ -336,7 +336,7 @@ public class ResultMatchTests
     [Fact]
     public void ResultT_Match_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = result.Match(
             v => $"success:{v}",
@@ -360,7 +360,7 @@ public class ResultMatchTests
     [Fact]
     public async Task ResultT_MatchAsync_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = await result.MatchAsync(
             v => Task.FromResult($"success:{v}"),
@@ -384,7 +384,7 @@ public class ResultMatchTests
     [Fact]
     public void ResultT_MatchFirst_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = result.MatchFirst(
             v => $"success:{v}",
@@ -408,7 +408,7 @@ public class ResultMatchTests
     [Fact]
     public void ResultT_MatchLast_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = result.MatchLast(
             v => $"success:{v}",
@@ -432,7 +432,7 @@ public class ResultMatchTests
     [Fact]
     public async Task ResultT_MatchFirstAsync_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = await result.MatchFirstAsync(
             v => Task.FromResult($"success:{v}"),
@@ -456,7 +456,7 @@ public class ResultMatchTests
     [Fact]
     public async Task ResultT_MatchLastAsync_WithSuccess_ShouldCallOnSuccess()
     {
-        var result = Result<int>.Success(42);
+        var result = 42.ToResult();
 
         string matched = await result.MatchLastAsync(
             v => Task.FromResult($"success:{v}"),
@@ -485,7 +485,7 @@ public class ResultMatchTests
     public async Task ResultT_Match_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         string matched = await task.Match(
@@ -513,7 +513,7 @@ public class ResultMatchTests
     public async Task ResultT_MatchAsync_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         string matched = await task.MatchAsync(
@@ -541,7 +541,7 @@ public class ResultMatchTests
     public async Task ResultT_MatchFirst_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         string matched = await task.MatchFirst(
@@ -569,7 +569,7 @@ public class ResultMatchTests
     public async Task ResultT_MatchFirstAsync_Task_WithSuccess_ShouldCallOnSuccess()
     {
 #pragma warning disable IDE0008
-        var task = Task.FromResult(Result<int>.Success(42));
+        var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
         string matched = await task.MatchFirstAsync(
