@@ -1,0 +1,23 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "AOT",
+    "CQRS",
+    "CSharpEssentials",
+    "EFCore",
+    "Gcp",
+    "ICacheable",
+    "ILoggable",
+    "ITransactional",
+    "Loggable",
+    "netstandard",
+    "Npgsql",
+    "nupkg",
+    "RequestLoggable",
+    "ResponseLoggable",
+    "ResultPattern",
+    "snupkg",
+    "SonarAnalyzer"
+  ]
+}
