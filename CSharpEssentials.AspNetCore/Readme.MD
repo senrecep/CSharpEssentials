@@ -51,6 +51,16 @@ using CSharpEssentials.AspNetCore;
 builder.Services.AddAndConfigureApiVersioning();
 ```
 
+Create versioned endpoint groups easily:
+
+```csharp
+var app = builder.Build();
+
+RouteGroupBuilder usersGroup = app.CreateVersionedGroup("users", version: 1);
+
+usersGroup.MapGet("/{id}", (int id) => Results.Ok(new { Id = id }));
+```
+
 ### 3. Swagger with Versioning
 
 Simplify Swagger configuration, especially when using API versioning.
