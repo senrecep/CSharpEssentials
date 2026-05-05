@@ -198,31 +198,19 @@ public static class HttpClientResilienceExtensions
         return Error.Exception(ex, ErrorType.Unexpected);
     }
 
-    private static async Task<Result> ExecuteResilienceAsync(Func<Task<Result>> action)
+    private static Task<Result> ExecuteResilienceAsync(Func<Task<Result>> action)
     {
-        try
-        {
-            return await action();
-        }
-        catch (TimeoutRejectedException ex)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
-        catch (HttpRequestException ex)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
-        catch (IOException ex)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
-        catch (TaskCanceledException ex) when (!ex.CancellationToken.IsCancellationRequested)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException and not BrokenCircuitException)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
+        return Result.TryAsync(
+            action,
+            ex =>
+            {
+                if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
+                    throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
+
+                if (ex is BrokenCircuitException)
+                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
+
+                return Error.Exception(ex, ErrorType.Unexpected);
+            });
     }
 }
