@@ -26,7 +26,15 @@
         <PackageVersion Include="System.Net.Http.Json" Version="[9.0.0,)" />
         <PackageVersion Include="System.Text.Json" Version="[9.0.0,)" />
         <PackageVersion Include="System.Threading.Tasks.Extensions" Version="[4.5.4,)" />
+        <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="[9.0.4,)" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[9.0.4,)" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[9.0.4,)" />
+    </ItemGroup>
+
+    <!-- Mediator -->
+    <ItemGroup Label="Mediator">
+        <PackageVersion Include="Mediator.Abstractions" Version="[3.0.1,)" />
     </ItemGroup>
 
     <!-- Infrastructure -->
@@ -37,6 +45,7 @@
         <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="[8.0.0,)" />
         <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="[3.0.1,)" />
         <PackageVersion Include="Polly" Version="[8.0.0,)" />
+        <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="[11.0.0,)" />
     </ItemGroup>
 
     <!-- CSharpEssentials Internal Packages -->
@@ -50,6 +59,7 @@
         <PackageVersion Include="CSharpEssentials.Http" Version="[3.0.2]" />
         <PackageVersion Include="CSharpEssentials.Json" Version="[3.0.2]" />
         <PackageVersion Include="CSharpEssentials.Maybe" Version="[3.0.2]" />
+        <PackageVersion Include="CSharpEssentials.Mediator" Version="[3.0.2]" />
         <PackageVersion Include="CSharpEssentials.Results" Version="[3.0.2]" />
         <PackageVersion Include="CSharpEssentials.Rules" Version="[3.0.2]" />
         <PackageVersion Include="CSharpEssentials.Time" Version="[3.0.2]" />
