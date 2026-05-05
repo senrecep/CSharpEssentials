@@ -15,7 +15,7 @@ using Moq;
 
 namespace CSharpEssentials.Tests.Mediator;
 
-public sealed record TestCacheableQuery(string Id) : IQuery<Result<string>>, ICacheable
+internal sealed record TestCacheableQuery(string Id) : IQuery<Result<string>>, ICacheable
 {
     public string CacheKey => $"test:{Id}";
     public TimeSpan Expiration => TimeSpan.FromMinutes(5);
@@ -23,7 +23,7 @@ public sealed record TestCacheableQuery(string Id) : IQuery<Result<string>>, ICa
     public bool CacheFailures => false;
 }
 
-public sealed record TestCacheableQueryWithFailureCache(string Id) : IQuery<Result<string>>, ICacheable
+internal sealed record TestCacheableQueryWithFailureCache(string Id) : IQuery<Result<string>>, ICacheable
 {
     public string CacheKey => $"test:{Id}";
     public TimeSpan Expiration => TimeSpan.FromMinutes(5);
@@ -31,7 +31,7 @@ public sealed record TestCacheableQueryWithFailureCache(string Id) : IQuery<Resu
     public bool CacheFailures => true;
 }
 
-public sealed record TestBypassCacheQuery(string Id) : IQuery<Result<string>>, ICacheable
+internal sealed record TestBypassCacheQuery(string Id) : IQuery<Result<string>>, ICacheable
 {
     public string CacheKey => $"test:{Id}";
     public TimeSpan Expiration => TimeSpan.FromMinutes(5);
@@ -39,7 +39,7 @@ public sealed record TestBypassCacheQuery(string Id) : IQuery<Result<string>>, I
     public bool CacheFailures => false;
 }
 
-public sealed record TestZeroExpirationQuery(string Id) : IQuery<Result<string>>, ICacheable
+internal sealed record TestZeroExpirationQuery(string Id) : IQuery<Result<string>>, ICacheable
 {
     public string CacheKey => $"test:{Id}";
     public TimeSpan Expiration => TimeSpan.Zero;
@@ -61,12 +61,12 @@ public class CachingBehaviorTests
     [Fact]
     public async Task Handle_Should_Return_Cached_Value_On_Cache_Hit()
     {
-        var logger = new Mock<ILogger<CachingBehavior<TestCacheableQuery, Result<string>>>>();
+        var logger = new CapturingLogger<CachingBehavior<TestCacheableQuery, Result<string>>>();
         var cache = new Mock<IDistributedCache>();
         byte[] cachedBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(Result.Success<string>("cached")));
         cache.Setup(c => c.GetAsync("test:1", It.IsAny<CancellationToken>())).ReturnsAsync(cachedBytes);
 
-        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger.Object, cache.Object);
+        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger, cache.Object);
         var query = new TestCacheableQuery("1");
 
         Result<string> result = await behavior.Handle(query, SuccessNext, default);
@@ -79,11 +79,11 @@ public class CachingBehaviorTests
     [Fact]
     public async Task Handle_Should_Call_Handler_And_Set_Cache_On_Miss()
     {
-        var logger = new Mock<ILogger<CachingBehavior<TestCacheableQuery, Result<string>>>>();
+        var logger = new CapturingLogger<CachingBehavior<TestCacheableQuery, Result<string>>>();
         var cache = new Mock<IDistributedCache>();
         cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
 
-        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger.Object, cache.Object);
+        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger, cache.Object);
         var query = new TestCacheableQuery("1");
 
         Result<string> result = await behavior.Handle(query, SuccessNext, default);
@@ -96,11 +96,11 @@ public class CachingBehaviorTests
     [Fact]
     public async Task Handle_Should_Not_Cache_Failures_When_CacheFailures_Is_False()
     {
-        var logger = new Mock<ILogger<CachingBehavior<TestCacheableQuery, Result<string>>>>();
+        var logger = new CapturingLogger<CachingBehavior<TestCacheableQuery, Result<string>>>();
         var cache = new Mock<IDistributedCache>();
         cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
 
-        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger.Object, cache.Object);
+        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger, cache.Object);
         var query = new TestCacheableQuery("1");
 
         Result<string> result = await behavior.Handle(query, FailureNext, default);
@@ -112,10 +112,10 @@ public class CachingBehaviorTests
     [Fact]
     public async Task Handle_Should_Skip_Cache_Lookup_When_BypassCache_Is_True()
     {
-        var logger = new Mock<ILogger<CachingBehavior<TestBypassCacheQuery, Result<string>>>>();
+        var logger = new CapturingLogger<CachingBehavior<TestBypassCacheQuery, Result<string>>>();
         var cache = new Mock<IDistributedCache>();
 
-        var behavior = new CachingBehavior<TestBypassCacheQuery, Result<string>>(logger.Object, cache.Object);
+        var behavior = new CachingBehavior<TestBypassCacheQuery, Result<string>>(logger, cache.Object);
         var query = new TestBypassCacheQuery("1");
 
         Result<string> result = await behavior.Handle(
@@ -131,11 +131,11 @@ public class CachingBehaviorTests
     [Fact]
     public async Task Handle_Should_Not_Set_AbsoluteExpiration_When_Expiration_Is_Zero()
     {
-        var logger = new Mock<ILogger<CachingBehavior<TestZeroExpirationQuery, Result<string>>>>();
+        var logger = new CapturingLogger<CachingBehavior<TestZeroExpirationQuery, Result<string>>>();
         var cache = new Mock<IDistributedCache>();
         cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
 
-        var behavior = new CachingBehavior<TestZeroExpirationQuery, Result<string>>(logger.Object, cache.Object);
+        var behavior = new CachingBehavior<TestZeroExpirationQuery, Result<string>>(logger, cache.Object);
         var query = new TestZeroExpirationQuery("1");
 
         await behavior.Handle(
@@ -153,11 +153,11 @@ public class CachingBehaviorTests
     [Fact]
     public async Task Handle_Should_Cache_Failures_When_CacheFailures_Is_True()
     {
-        var logger = new Mock<ILogger<CachingBehavior<TestCacheableQueryWithFailureCache, Result<string>>>>();
+        var logger = new CapturingLogger<CachingBehavior<TestCacheableQueryWithFailureCache, Result<string>>>();
         var cache = new Mock<IDistributedCache>();
         cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
 
-        var behavior = new CachingBehavior<TestCacheableQueryWithFailureCache, Result<string>>(logger.Object, cache.Object);
+        var behavior = new CachingBehavior<TestCacheableQueryWithFailureCache, Result<string>>(logger, cache.Object);
         var query = new TestCacheableQueryWithFailureCache("1");
 
         Result<string> result = await behavior.Handle(query, FailureNextWithFailureCache, default);
