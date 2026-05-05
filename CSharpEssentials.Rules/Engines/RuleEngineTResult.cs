@@ -48,9 +48,7 @@ public static partial class RuleEngine
                 if (rule.Next is null)
                     return result;
 
-#pragma warning disable S6966
                 return InternalEvaluate(rule.Next, context, cancellationToken);
-#pragma warning restore S6966
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.LinearAsyncRule, ex),
             cancellationToken));
@@ -66,15 +64,11 @@ public static partial class RuleEngine
                     if (rule.Failure is null)
                         return result;
                     else
-#pragma warning disable S6966
                         return InternalEvaluate(rule.Failure, context, cancellationToken);
-#pragma warning restore S6966
 
                 if (rule.Success is null)
                     return result;
-#pragma warning disable S6966
                 return InternalEvaluate(rule.Success, context, cancellationToken);
-#pragma warning restore S6966
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.ConditionalRule, ex));
     }
@@ -89,15 +83,11 @@ public static partial class RuleEngine
                     if (rule.Failure is null)
                         return result;
                     else
-#pragma warning disable S6966
                         return InternalEvaluate(rule.Failure, context, cancellationToken);
-#pragma warning restore S6966
 
                 if (rule.Success is null)
                     return result;
-#pragma warning disable S6966
                 return InternalEvaluate(rule.Success, context, cancellationToken);
-#pragma warning restore S6966
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.ConditionalAsyncRule, ex),
             cancellationToken));

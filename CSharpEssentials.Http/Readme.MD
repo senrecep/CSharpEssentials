@@ -10,6 +10,7 @@
 - **Null-safe deserialization**: Empty or null response bodies yield a structured `NotFound` error
 - **Fluent request builder**: Chain methods to build and execute requests declaratively
 - **Query string helpers**: Build URIs with query parameters from dictionaries or anonymous objects
+- **Manual redirect following**: Follow 3xx redirects manually with full request cloning, configurable limits, and Result-based error handling
 - **Polly resilience**: Retry, timeout, and circuit breaker pipelines ready to use
 
 ## 📦 Installation
@@ -128,7 +129,22 @@ ResiliencePipeline retryOnly = HttpClientResilienceExtensions.CreateRetryPipelin
 ResiliencePipeline timeoutOnly = HttpClientResilienceExtensions.CreateTimeoutPipeline(TimeSpan.FromSeconds(10));
 ```
 
-### 8. HttpContent Extensions
+### 8. Redirect Following
+
+```csharp
+using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("/legacy-url", UriKind.Relative));
+
+// Manual redirect following with Result-based error handling
+Result<User> result = await client.SendWithRedirectsAsResultAsync<User>(request, maxRedirects: 5);
+
+// HttpRequestBuilder with redirect support
+Result<User> result2 = await HttpRequestBuilder
+    .Get("/legacy-url")
+    .FollowRedirects(maxRedirects: 3)
+    .AsResultAsync<User>(client);
+```
+
+### 9. HttpContent Extensions
 
 ```csharp
 using HttpResponseMessage response = await client.GetAsync(uri);

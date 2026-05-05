@@ -13,6 +13,8 @@ public sealed class HttpRequestBuilder
     private readonly List<(string Key, string Value)> _headers = [];
     private readonly List<(string Key, string Value)> _queryParameters = [];
     private HttpContent? _content;
+    private bool _followRedirects;
+    private int _maxRedirects = 5;
 
     private HttpRequestBuilder() { }
 
@@ -86,6 +88,13 @@ public sealed class HttpRequestBuilder
         return this;
     }
 
+    public HttpRequestBuilder FollowRedirects(int maxRedirects = 5)
+    {
+        _followRedirects = true;
+        _maxRedirects = maxRedirects;
+        return this;
+    }
+
     public Result<HttpRequestMessage> Build()
     {
         if (_uri is null)
@@ -119,6 +128,9 @@ public sealed class HttpRequestBuilder
             return buildResult.Errors;
 
         using HttpRequestMessage request = buildResult.Value;
+        if (_followRedirects)
+            return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken);
+
         return await client.SendAsResultAsync(request, cancellationToken);
     }
 
@@ -132,6 +144,9 @@ public sealed class HttpRequestBuilder
             return buildResult.Errors;
 
         using HttpRequestMessage request = buildResult.Value;
+        if (_followRedirects)
+            return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken);
+
         return await client.SendAsResultAsync<T>(request, options, cancellationToken);
     }
 }

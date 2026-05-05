@@ -71,17 +71,17 @@ Console.WriteLine();
 Console.WriteLine("--- Query String Builder ---");
 
 Uri baseUri = new("https://api.example.com/search");
-var queryUriResult = baseUri.WithQueryString("q", "csharp").WithQueryString("page", "1");
+var queryUriResult = baseUri.WithQueryString(new Dictionary<string, string?> { { "q", "csharp" }, { "page", "1" } });
 queryUriResult.Switch(
     onSuccess: uri => Console.WriteLine($"Query URI: {uri}"),
-    onFailure: errs => Console.WriteLine($"Query Failed: {errs[0].Description}")
+    onError: errs => Console.WriteLine($"Query Failed: {errs[0].Description}")
 );
 
 var dict = new Dictionary<string, string?> { { "sort", "desc" }, { "limit", "10" } };
 var dictUriResult = baseUri.WithQueryString(dict);
 dictUriResult.Switch(
     onSuccess: uri => Console.WriteLine($"Dict URI: {uri}"),
-    onFailure: errs => Console.WriteLine($"Dict Failed: {errs[0].Description}")
+    onError: errs => Console.WriteLine($"Dict Failed: {errs[0].Description}")
 );
 
 Console.WriteLine();
@@ -122,6 +122,35 @@ resilientResult.Switch(
 );
 
 Console.WriteLine();
+
+// ============================================================================
+// REDIRECT FOLLOWING
+// ============================================================================
+Console.WriteLine("--- Redirect Following ---");
+
+var redirectHandler = new RedirectMockHandler();
+HttpClient redirectClient = new(redirectHandler) { BaseAddress = new Uri("https://api.example.com") };
+
+Result<User> redirectResult = await redirectClient.SendWithRedirectsAsResultAsync<User>(
+    new HttpRequestMessage(HttpMethod.Get, new Uri("/old-users/1", UriKind.Relative)),
+    maxRedirects: 3);
+
+redirectResult.Switch(
+    onSuccess: u => Console.WriteLine($"Redirect GET: {u.Name}"),
+    onError: errs => Console.WriteLine($"Redirect GET Failed: {errs[0].Description}")
+);
+
+Result<User> builderRedirectResult = await HttpRequestBuilder
+    .Get("/old-users/1")
+    .FollowRedirects(maxRedirects: 3)
+    .AsResultAsync<User>(redirectClient);
+
+builderRedirectResult.Switch(
+    onSuccess: u => Console.WriteLine($"Builder Redirect GET: {u.Name}"),
+    onError: errs => Console.WriteLine($"Builder Redirect GET Failed: {errs[0].Description}")
+);
+
+Console.WriteLine();
 Console.WriteLine("=== Done ===");
 
 public sealed record User(string Name, string Email);
@@ -148,5 +177,23 @@ public sealed class MockHttpHandler : HttpMessageHandler
             _ => new HttpResponseMessage(HttpStatusCode.NotFound)
         };
         return Task.FromResult(response);
+    }
+}
+
+public sealed class RedirectMockHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        if (request.RequestUri!.ToString().Contains("/old-users/"))
+        {
+            var redirectResponse = new HttpResponseMessage(HttpStatusCode.MovedPermanently);
+            redirectResponse.Headers.Location = new Uri("/users/1", UriKind.Relative);
+            return Task.FromResult(redirectResponse);
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("""{"name":"Redirected Bob","email":"bob@example.com"}""")
+        });
     }
 }
