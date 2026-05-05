@@ -74,7 +74,7 @@
 
     <!-- Examples -->
     <ItemGroup Label="Examples">
-        <PackageVersion Include="Asp.Versioning.Abstractions" Version="10.0.0" />
+        <PackageVersion Include="Asp.Versioning.Abstractions" Version="[8.1.0,)" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
     </ItemGroup>
