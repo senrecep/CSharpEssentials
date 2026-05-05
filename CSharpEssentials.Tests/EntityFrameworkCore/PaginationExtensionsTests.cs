@@ -1,5 +1,6 @@
 using CSharpEssentials.EntityFrameworkCore.Pagination;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 
@@ -54,7 +55,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new PaginationRequest { PageNumber = 2, PageSize = 3 };
-        var result = await context.PaginatedEntities.PaginateAsync(request, null, includeTotalCount: true);
+        PaginationResponse<PaginatedEntity> result = await context.PaginatedEntities.PaginateAsync(request, null, includeTotalCount: true);
 
         result.Items.Should().HaveCount(3);
         result.PageNumber.Should().Be(2);
@@ -69,7 +70,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new PaginationRequest { PageNumber = 1, PageSize = 10, Search = "Item05" };
-        var result = await context.PaginatedEntities.PaginateAsync(
+        PaginationResponse<PaginatedEntity> result = await context.PaginatedEntities.PaginateAsync(
             request,
             term => e => e.Name.Contains(term),
             includeTotalCount: true);
@@ -86,7 +87,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new PaginationRequest { PageNumber = 0, PageSize = -1, Search = "  Item01  " };
-        var result = await context.PaginatedEntities.PaginateAsync(
+        PaginationResponse<PaginatedEntity> result = await context.PaginatedEntities.PaginateAsync(
             request,
             term => e => e.Name.Contains(term),
             includeTotalCount: true);
@@ -103,7 +104,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new PaginationRequest { PageNumber = 1, PageSize = 5 };
-        var result = await context.PaginatedEntities.PaginateAsync(request, null, includeTotalCount: false);
+        PaginationResponse<PaginatedEntity> result = await context.PaginatedEntities.PaginateAsync(request, null, includeTotalCount: false);
 
         result.TotalCount.Should().Be(-1);
     }
@@ -119,7 +120,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new CursorPaginationRequest<int> { Cursor = 3, Limit = 3 };
-        var result = await context.PaginatedEntities
+        CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(request, e => e.Id, isAscending: true);
 
         result.Items.Should().HaveCount(3);
@@ -135,7 +136,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new CursorPaginationRequest<int> { Cursor = 7, Limit = 3 };
-        var result = await context.PaginatedEntities
+        CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(request, e => e.Id, isAscending: false);
 
         result.Items.Should().HaveCount(3);
@@ -151,12 +152,12 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new CursorPaginationRequest<int> { Cursor = 8, Limit = 5 };
-        var result = await context.PaginatedEntities
+        CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(request, e => e.Id, isAscending: true);
 
         result.Items.Should().HaveCount(2);
         result.HasMore.Should().BeFalse();
-        result.Next.Should().Be(default(int));
+        result.Next.Should().Be(default);
     }
 
     [Fact]
@@ -166,7 +167,7 @@ public class PaginationExtensionsTests
         await SeedAsync(context);
 
         var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 10, Search = "Item09" };
-        var result = await context.PaginatedEntities
+        CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(
                 request,
                 e => e.Id,
@@ -194,7 +195,7 @@ public class PaginationExtensionsTests
         await context.SaveChangesAsync();
 
         var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 3 };
-        var result = await context.PaginatedEntities
+        CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(
                 request,
                 e => e.Id,

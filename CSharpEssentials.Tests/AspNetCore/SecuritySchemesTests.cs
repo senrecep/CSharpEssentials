@@ -9,7 +9,7 @@ public class SecuritySchemesTests
     [Fact]
     public void JwtBearerTokenSecurity_ShouldHaveCorrectConfiguration()
     {
-        var scheme = SecuritySchemes.JwtBearerTokenSecurity;
+        OpenApiSecurityScheme scheme = SecuritySchemes.JwtBearerTokenSecurity;
 
         scheme.Should().NotBeNull();
         scheme.Scheme.Should().Be("bearer");

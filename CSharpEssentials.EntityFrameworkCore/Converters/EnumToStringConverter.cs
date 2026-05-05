@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using CSharpEssentials.Core;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CSharpEssentials.EntityFrameworkCore.Converters;
 

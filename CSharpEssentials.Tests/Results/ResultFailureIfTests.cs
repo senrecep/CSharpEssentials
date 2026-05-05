@@ -13,7 +13,7 @@ public class ResultFailureIfTests
     [Fact]
     public void Result_FailureIf_Bool_True_ShouldReturnFailure()
     {
-        Result result = Result.FailureIf(true, TestError);
+        var result = Result.FailureIf(true, TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
@@ -22,7 +22,7 @@ public class ResultFailureIfTests
     [Fact]
     public void Result_FailureIf_Bool_False_ShouldReturnSuccess()
     {
-        Result result = Result.FailureIf(false, TestError);
+        var result = Result.FailureIf(false, TestError);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -34,7 +34,7 @@ public class ResultFailureIfTests
     [Fact]
     public void Result_FailureIf_Func_True_ShouldReturnFailure()
     {
-        Result result = Result.FailureIf(() => true, TestError);
+        var result = Result.FailureIf(() => true, TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
@@ -43,7 +43,7 @@ public class ResultFailureIfTests
     [Fact]
     public void Result_FailureIf_Func_False_ShouldReturnSuccess()
     {
-        Result result = Result.FailureIf(() => false, TestError);
+        var result = Result.FailureIf(() => false, TestError);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -55,7 +55,7 @@ public class ResultFailureIfTests
     [Fact]
     public void Result_FailureIfT_Bool_True_ShouldReturnFailure()
     {
-        Result<int> result = Result.FailureIf<int>(true, TestError);
+        var result = Result.FailureIf<int>(true, TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
@@ -64,7 +64,7 @@ public class ResultFailureIfTests
     [Fact]
     public void Result_FailureIfT_Bool_False_ShouldReturnSuccessWithDefaultValue()
     {
-        Result<int> result = Result.FailureIf<int>(false, TestError);
+        var result = Result.FailureIf<int>(false, TestError);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(0);

@@ -1,6 +1,6 @@
+using System.Text.Json;
 using CSharpEssentials.Any;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace CSharpEssentials.Tests.Any;
 

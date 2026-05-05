@@ -1,3 +1,4 @@
+
 using System.Text.Json.Serialization;
 using CSharpEssentials.Json;
 
@@ -77,7 +78,7 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
         Action<T6>? seventh = null,
         Action<T7>? eighth = null)
     {
-if (Value is null)
+        if (Value is null)
             throw new InvalidOperationException("Value cannot be null");
         switch (Index)
         {
@@ -120,7 +121,7 @@ if (Value is null)
         Func<T6, TResult>? seventh = null,
         Func<T7, TResult>? eighth = null)
     {
-if (Value is null)
+        if (Value is null)
             throw new InvalidOperationException("Value cannot be null");
         return Index switch
         {

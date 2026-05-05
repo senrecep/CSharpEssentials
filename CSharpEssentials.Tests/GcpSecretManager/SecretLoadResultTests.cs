@@ -47,7 +47,7 @@ public class SecretLoadResultTests
     {
         var result = new SecretLoadResult("path", "value", "key");
 
-        var (path, value, key) = result;
+        (string? path, string? value, string? key) = result;
 
         path.Should().Be("path");
         value.Should().Be("value");

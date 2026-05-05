@@ -1,7 +1,8 @@
-using CSharpEssentials.Enums;
 using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.Enums;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
@@ -38,13 +39,13 @@ public class ModelConfigurationExtensionsTests
     [Fact]
     public void ConfigureEnumConventions_ShouldApplyConverterAndMaxLength()
     {
-        var options = new DbContextOptionsBuilder<EnumConventionDbContext>()
+        DbContextOptions<EnumConventionDbContext> options = new DbContextOptionsBuilder<EnumConventionDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         using var context = new EnumConventionDbContext(options);
 
-        var entityType = context.Model.FindEntityType(typeof(EnumEntity))!;
-        var property = entityType.FindProperty(nameof(EnumEntity.Status))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(EnumEntity))!;
+        IProperty property = entityType.FindProperty(nameof(EnumEntity.Status))!;
 
         property.GetMaxLength().Should().Be(8); // "inactive".Length
         property.GetValueConverter().Should().NotBeNull();

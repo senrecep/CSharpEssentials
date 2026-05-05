@@ -1,7 +1,7 @@
+using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace CSharpEssentials.Tests.Results;
 

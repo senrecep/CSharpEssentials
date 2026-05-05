@@ -6,16 +6,15 @@ internal sealed class LogMessageWithContextCreator : BaseLogMessageCreator, ILog
 {
     private readonly LoggingOptions _loggingOptions;
 
-    public LogMessageWithContextCreator(LoggingOptions loggingOptions)
-    {
-        _loggingOptions = loggingOptions;
-    }
+    public LogMessageWithContextCreator(LoggingOptions loggingOptions) => _loggingOptions = loggingOptions;
 
     public (string logString, List<string?>? values) Create(RequestResponseContext requestResponseContext)
     {
 #if NET8_0_OR_GREATER
+#pragma warning disable IDE0028
         List<string?> valueList = _loggingOptions.LoggingFields.Count > 0 ?
-        new List<string?>(_loggingOptions.LoggingFields.Count) : [];
+        new List<string?>(_loggingOptions.LoggingFields.Count) : new List<string?>();
+#pragma warning restore IDE0028
 #else
         List<string?> valueList = _loggingOptions.LoggingFields.Count > 0 ?
         new List<string?>(_loggingOptions.LoggingFields.Count) : new List<string?>();

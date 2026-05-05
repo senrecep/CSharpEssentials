@@ -1,6 +1,6 @@
+using System.Globalization;
 using CSharpEssentials.Maybe;
 using FluentAssertions;
-using System.Globalization;
 
 namespace CSharpEssentials.Tests.Maybe;
 

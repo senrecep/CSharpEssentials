@@ -86,7 +86,7 @@ public readonly partial record struct Result
     /// <typeparam name="TValue"></typeparam>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static Result<TValue> Success<TValue>(TValue value) => Result<TValue>.Success(value);
+    public static Result<TValue> Success<TValue>(TValue value) => value;
     /// <summary>
     /// Creates a new failure result.
     /// </summary>
@@ -120,7 +120,7 @@ public readonly partial record struct Result
 #if NET8_0_OR_GREATER
     public static implicit operator Result(Error error) => new([error]);
 #else
-    public static implicit operator Result(Error error) => new(new[] { error });
+    public static implicit operator Result(Error error) => new([error]);
 #endif
     public static implicit operator Result(Error[] errors) => new(errors);
     public static implicit operator Result(List<Error> errors) => new(errors);

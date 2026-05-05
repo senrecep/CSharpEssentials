@@ -10,7 +10,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static Maybe<T> TryFirst<T>(this IEnumerable<T> source)
     {
-        return source.FirstOrDefault() is T result ? Maybe.From(result) : Maybe.None;
+        return source.FirstOrDefault() is T result ? result : Maybe.None;
     }
 
     /// <summary>
@@ -22,6 +22,6 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static Maybe<T> TryFirst<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
-        return source.FirstOrDefault(predicate) is T result ? Maybe.From(result) : Maybe.None;
+        return source.FirstOrDefault(predicate) is T result ? result : Maybe.None;
     }
 }

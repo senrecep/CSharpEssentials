@@ -1,6 +1,6 @@
+using System.Text.Json;
 using CSharpEssentials.Any;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace CSharpEssentials.Tests.Any;
 
@@ -216,7 +216,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 42;
         bool executed = false;
-        var status = any.Switch(first: _ => executed = true);
+        AnyActionStatus status = any.Switch(first: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -226,7 +226,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = "hello";
         bool executed = false;
-        var status = any.Switch(second: _ => executed = true);
+        AnyActionStatus status = any.Switch(second: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -236,7 +236,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = true;
         bool executed = false;
-        var status = any.Switch(third: _ => executed = true);
+        AnyActionStatus status = any.Switch(third: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -246,7 +246,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 3.14;
         bool executed = false;
-        var status = any.Switch(fourth: _ => executed = true);
+        AnyActionStatus status = any.Switch(fourth: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -256,7 +256,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 99L;
         bool executed = false;
-        var status = any.Switch(fifth: _ => executed = true);
+        AnyActionStatus status = any.Switch(fifth: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -266,7 +266,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 3.99m;
         bool executed = false;
-        var status = any.Switch(sixth: _ => executed = true);
+        AnyActionStatus status = any.Switch(sixth: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -276,7 +276,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> any = TestGuid;
         bool executed = false;
-        var status = any.Switch(seventh: _ => executed = true);
+        AnyActionStatus status = any.Switch(seventh: _ => executed = true);
         executed.Should().BeTrue();
         status.Should().Be(AnyActionStatus.Executed);
     }
@@ -285,7 +285,7 @@ public class AnyT7Tests
     public void Switch_WithNoMatchingAction_ShouldReturnNotExecuted()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 42;
-        var status = any.Switch(second: _ => { });
+        AnyActionStatus status = any.Switch(second: _ => { });
         status.Should().Be(AnyActionStatus.NotExecuted);
     }
 
@@ -300,7 +300,7 @@ public class AnyT7Tests
     public void Match_WhenFirst_ShouldReturnFirstResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 42;
-        var result = any.Match(first: x => x * 2, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
+        AnyActionResult<int> result = any.Match(first: x => x * 2, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(84);
     }
@@ -309,7 +309,7 @@ public class AnyT7Tests
     public void Match_WhenSecond_ShouldReturnSecondResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = "hello";
-        var result = any.Match(first: _ => 0, second: x => x.Length, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: x => x.Length, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(5);
     }
@@ -318,7 +318,7 @@ public class AnyT7Tests
     public void Match_WhenThird_ShouldReturnThirdResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = true;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: x => x ? 1 : 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: x => x ? 1 : 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(1);
     }
@@ -327,7 +327,7 @@ public class AnyT7Tests
     public void Match_WhenFourth_ShouldReturnFourthResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 3.14;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: x => (int)x, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: x => (int)x, fifth: _ => 0, sixth: _ => 0, seventh: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(3);
     }
@@ -336,7 +336,7 @@ public class AnyT7Tests
     public void Match_WhenFifth_ShouldReturnFifthResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 99L;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: x => (int)x, sixth: _ => 0, seventh: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: x => (int)x, sixth: _ => 0, seventh: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(99);
     }
@@ -345,7 +345,7 @@ public class AnyT7Tests
     public void Match_WhenSixth_ShouldReturnSixthResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 3.99m;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: x => (int)x, seventh: _ => 0);
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: x => (int)x, seventh: _ => 0);
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(3);
     }
@@ -354,7 +354,7 @@ public class AnyT7Tests
     public void Match_WhenSeventh_ShouldReturnSeventhResult()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = TestGuid;
-        var result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: x => x.GetHashCode());
+        AnyActionResult<int> result = any.Match(first: _ => 0, second: _ => 0, third: _ => 0, fourth: _ => 0, fifth: _ => 0, sixth: _ => 0, seventh: x => x.GetHashCode());
         result.Status.Should().Be(AnyActionStatus.Executed);
         result.Result.Should().Be(TestGuid.GetHashCode());
     }
@@ -363,7 +363,7 @@ public class AnyT7Tests
     public void Match_WithNoMatchingFunction_ShouldReturnNotExecuted()
     {
         Any<int, string, bool, double, long, decimal, Guid> any = 42;
-        var result = any.Match(second: _ => 0);
+        AnyActionResult<int> result = any.Match(second: _ => 0);
         result.Status.Should().Be(AnyActionStatus.NotExecuted);
     }
 
@@ -386,7 +386,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = 42;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetFirst().Should().Be(42);
     }
@@ -396,7 +396,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = "hello";
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetSecond().Should().Be("hello");
     }
@@ -406,7 +406,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = true;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetThird().Should().BeTrue();
     }
@@ -416,7 +416,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = 3.14;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetFourth().Should().Be(3.14);
     }
@@ -426,7 +426,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = 99L;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetFifth().Should().Be(99L);
     }
@@ -436,7 +436,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = 3.99m;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetSixth().Should().Be(3.99m);
     }
@@ -446,7 +446,7 @@ public class AnyT7Tests
     {
         Any<int, string, bool, double, long, decimal, Guid> original = TestGuid;
         string json = JsonSerializer.Serialize(original);
-        var deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
+        Any<int, string, bool, double, long, decimal, Guid> deserialized = JsonSerializer.Deserialize<Any<int, string, bool, double, long, decimal, Guid>>(json);
         deserialized.Index.Should().Be(original.Index);
         deserialized.GetSeventh().Should().Be(TestGuid);
     }

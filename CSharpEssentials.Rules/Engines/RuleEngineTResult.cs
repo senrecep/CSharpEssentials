@@ -1,6 +1,4 @@
 using CSharpEssentials.ResultPattern;
-using CSharpEssentials.Rules;
-using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Rules;
 
@@ -78,14 +76,14 @@ public static partial class RuleEngine
         {
             Result<TResult> result = rule.Evaluate(context, cancellationToken);
             if (result.IsFailure)
-                if (rule.Failure.IsNull())
+                if (rule.Failure is null)
                     return result;
                 else
 #pragma warning disable S6966
                     return InternalEvaluate(rule.Failure, context, cancellationToken);
 #pragma warning restore S6966
 
-            if (rule.Success.IsNull())
+            if (rule.Success is null)
                 return result;
 #pragma warning disable S6966
             return InternalEvaluate(rule.Success, context, cancellationToken);
@@ -103,14 +101,14 @@ public static partial class RuleEngine
         {
             Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken);
             if (result.IsFailure)
-                if (rule.Failure.IsNull())
+                if (rule.Failure is null)
                     return result;
                 else
 #pragma warning disable S6966
                     return InternalEvaluate(rule.Failure, context, cancellationToken);
 #pragma warning restore S6966
 
-            if (rule.Success.IsNull())
+            if (rule.Success is null)
                 return result;
 #pragma warning disable S6966
             return InternalEvaluate(rule.Success, context, cancellationToken);

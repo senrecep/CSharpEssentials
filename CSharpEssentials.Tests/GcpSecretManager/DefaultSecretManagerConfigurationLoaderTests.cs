@@ -17,7 +17,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void GetKey_FromSecret_ShouldReturnSecretId()
     {
-        var secret = CreateSecret("project", "my-secret");
+        Secret secret = CreateSecret("project", "my-secret");
 
         string key = _loader.GetKey(secret);
 
@@ -51,7 +51,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithNoFilters_ShouldReturnTrue()
     {
-        var secret = CreateSecret("project", "any-secret");
+        Secret secret = CreateSecret("project", "any-secret");
         var config = new ProjectSecretConfiguration { ProjectId = "project" };
 
         bool result = _loader.ShouldLoadSecret(secret, config);
@@ -62,7 +62,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithMatchingPrefix_ShouldReturnTrue()
     {
-        var secret = CreateSecret("project", "APP_SETTING_1");
+        Secret secret = CreateSecret("project", "APP_SETTING_1");
         var config = new ProjectSecretConfiguration
         {
             ProjectId = "project",
@@ -77,7 +77,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithNonMatchingPrefix_ShouldReturnFalse()
     {
-        var secret = CreateSecret("project", "DB_SETTING_1");
+        Secret secret = CreateSecret("project", "DB_SETTING_1");
         var config = new ProjectSecretConfiguration
         {
             ProjectId = "project",
@@ -92,7 +92,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithMatchingSecretId_ShouldReturnTrue()
     {
-        var secret = CreateSecret("project", "specific-secret");
+        Secret secret = CreateSecret("project", "specific-secret");
         var config = new ProjectSecretConfiguration
         {
             ProjectId = "project",
@@ -107,7 +107,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithNonMatchingSecretId_ShouldReturnFalse()
     {
-        var secret = CreateSecret("project", "other-secret");
+        Secret secret = CreateSecret("project", "other-secret");
         var config = new ProjectSecretConfiguration
         {
             ProjectId = "project",
@@ -122,9 +122,9 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithPrefixAndSecretId_ShouldReturnTrueForEitherMatch()
     {
-        var secret1 = CreateSecret("project", "APP_SETTING");
-        var secret2 = CreateSecret("project", "specific-secret");
-        var secret3 = CreateSecret("project", "other-secret");
+        Secret secret1 = CreateSecret("project", "APP_SETTING");
+        Secret secret2 = CreateSecret("project", "specific-secret");
+        Secret secret3 = CreateSecret("project", "other-secret");
         var config = new ProjectSecretConfiguration
         {
             ProjectId = "project",
@@ -151,7 +151,7 @@ public class DefaultSecretManagerConfigurationLoaderTests
     [Fact]
     public void ShouldLoadSecret_WithNullConfig_ShouldThrowArgumentNullException()
     {
-        var secret = CreateSecret("project", "secret");
+        Secret secret = CreateSecret("project", "secret");
 
         Action action = () => _loader.ShouldLoadSecret(secret, null!);
 

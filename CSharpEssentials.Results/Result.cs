@@ -10,24 +10,18 @@ public readonly partial record struct Result : IResult
     private readonly Error[]? _errors = null;
 
     [JsonConstructor]
-#pragma warning disable IDE0051
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Used by System.Text.Json")]
     private Result(bool isFailure, Error[]? errorsOrEmptyArray = null) => _errors = isFailure ? errorsOrEmptyArray : null;
-#pragma warning restore IDE0051
 
     private Result(IEnumerable<Error> errors)
     {
-        #if NET6_0_OR_GREATER
-
-            ArgumentNullException.ThrowIfNull(errors);
-
-        #else
-
-            if (errors is null)
-
-                throw new ArgumentNullException(nameof(errors));
-
-        #endif
-        Error[] errorArray = errors.ToArray();
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(errors);
+#else
+        if (errors is null)
+            throw new ArgumentNullException(nameof(errors));
+#endif
+        Error[] errorArray = [.. errors];
 
         if (errorArray.Length == 0)
             throw ResultLogic.CreateEmptyErrorArrayException();
@@ -42,21 +36,21 @@ public readonly partial record struct Result : IResult
     [MemberNotNullWhen(false, nameof(_errors))]
     public readonly bool IsSuccess => _errors is null;
     [JsonPropertyName("errors")]
-#if NET8_0_OR_GREATER
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors! : [];
-#else
-    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors! : Array.Empty<Error>();
-#endif
+    public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
     [JsonIgnore]
-#if NET8_0_OR_GREATER
-    public readonly Error[] Errors => IsFailure ? _errors! : [Error.NoErrors];
-#else
-    public readonly Error[] Errors => IsFailure ? _errors! : new[] { Error.NoErrors };
-#endif
+    public readonly Error[] Errors
+    {
+        get
+        {
+            if (IsFailure)
+                return _errors;
+            return Error.NoErrors;
+        }
+    }
     [JsonIgnore]
-    public readonly Error FirstError => IsFailure ? _errors![0] : Error.NoFirstError;
+    public readonly Error FirstError => IsFailure ? _errors[0] : Error.NoFirstError;
     [JsonIgnore]
-    public readonly Error LastError => IsFailure ? _errors![_errors!.Length - 1] : Error.NoLastError;
+    public readonly Error LastError => IsFailure ? _errors[_errors.Length - 1] : Error.NoLastError;
 
 
     public override string ToString()
@@ -84,4 +78,5 @@ public readonly partial record struct Result : IResult
             return IsSuccess.GetHashCode();
         return ResultLogic.CreateErrorCodeHash(ErrorsOrEmptyArray);
     }
+
 }

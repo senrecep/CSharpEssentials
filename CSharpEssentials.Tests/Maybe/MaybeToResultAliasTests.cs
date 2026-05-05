@@ -16,7 +16,7 @@ public class MaybeToResultAliasTests
     {
         Maybe<int> maybe = 42;
 
-        Result<int> result = maybe.ToResult<int>();
+        var result = maybe.ToResult<int>();
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -27,7 +27,7 @@ public class MaybeToResultAliasTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Result<int> result = maybe.ToResult<int>();
+        var result = maybe.ToResult<int>();
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Maybe.Result");
@@ -38,7 +38,7 @@ public class MaybeToResultAliasTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Result<int> result = maybe.ToResult<int>(TestError);
+        var result = maybe.ToResult<int>(TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
