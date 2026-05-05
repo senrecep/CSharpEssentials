@@ -2,6 +2,7 @@ using CSharpEssentials.EntityFrameworkCore;
 using CSharpEssentials.Maybe;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
@@ -50,7 +51,7 @@ public class PropertyBuilderExtensionsTests
         context.SaveChanges();
         context.ChangeTracker.Clear();
 
-        var loaded = context.JsonEntities.Find(entity.Id);
+        JsonEntity? loaded = context.JsonEntities.Find(entity.Id);
         loaded!.MaybeName.HasValue.Should().BeTrue();
         loaded.MaybeName.Value.Should().Be("hello");
     }
@@ -66,7 +67,7 @@ public class PropertyBuilderExtensionsTests
         context.SaveChanges();
         context.ChangeTracker.Clear();
 
-        var loaded = context.JsonEntities.Find(entity.Id);
+        JsonEntity? loaded = context.JsonEntities.Find(entity.Id);
         loaded!.JsonData.Should().NotBeNull();
         loaded.JsonData.Value.Should().Be("test");
     }
@@ -74,13 +75,13 @@ public class PropertyBuilderExtensionsTests
     [Fact]
     public void HasJsonConversion_ShouldSetColumnTypeAnnotation()
     {
-        var options = new DbContextOptionsBuilder<PropertyDbContext>()
+        DbContextOptions<PropertyDbContext> options = new DbContextOptionsBuilder<PropertyDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         using var context = new PropertyDbContext(options);
 
-        var entityType = context.Model.FindEntityType(typeof(JsonEntity))!;
-        var property = entityType.FindProperty(nameof(JsonEntity.JsonData))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(JsonEntity))!;
+        IProperty property = entityType.FindProperty(nameof(JsonEntity.JsonData))!;
         property.FindAnnotation("Relational:ColumnType")?.Value.Should().Be("jsonb");
     }
 }

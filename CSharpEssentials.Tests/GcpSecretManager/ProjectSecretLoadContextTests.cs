@@ -59,7 +59,7 @@ public class ProjectSecretLoadContextTests
         var config = new ProjectSecretConfiguration { ProjectId = "test-project" };
 
         var context = new ProjectSecretLoadContext(mockClient.Object, projectName, config);
-        var (client, proj, cfg) = context;
+        (SecretManagerServiceClient? client, ProjectName? proj, ProjectSecretConfiguration? cfg) = context;
 
         client.Should().Be(mockClient.Object);
         proj.Should().Be(projectName);

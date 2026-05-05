@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Http.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Http;
 using CSharpEssentials.ResultPattern;

@@ -20,10 +20,7 @@ public class EntityBaseExtensionsTests
     private sealed class TestDbContext<T> : DbContext where T : class
     {
         private readonly Action<ModelBuilder>? _configure;
-        public TestDbContext(DbContextOptions<TestDbContext<T>> options, Action<ModelBuilder>? configure = null) : base(options)
-        {
-            _configure = configure;
-        }
+        public TestDbContext(DbContextOptions<TestDbContext<T>> options, Action<ModelBuilder>? configure = null) : base(options) => _configure = configure;
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             _configure?.Invoke(modelBuilder);
@@ -88,13 +85,10 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void EntityBaseGuidIdMap_ShouldConfigureKeyAndProperties()
     {
-        var options = CreateOptions<GuidIdEntity>();
-        using var context = new TestDbContext<GuidIdEntity>(options, mb =>
-        {
-            mb.Entity<GuidIdEntity>().EntityBaseGuidIdMap();
-        });
+        DbContextOptions<TestDbContext<GuidIdEntity>> options = CreateOptions<GuidIdEntity>();
+        using var context = new TestDbContext<GuidIdEntity>(options, mb => mb.Entity<GuidIdEntity>().EntityBaseGuidIdMap());
 
-        var entityType = context.Model.FindEntityType(typeof(GuidIdEntity));
+        IEntityType? entityType = context.Model.FindEntityType(typeof(GuidIdEntity));
         entityType.Should().NotBeNull();
         entityType!.FindPrimaryKey()!.Properties.Should().ContainSingle(p => p.Name == nameof(GuidIdEntity.Id));
         GetProperty(entityType, nameof(GuidIdEntity.Id)).IsNullable.Should().BeFalse();
@@ -109,13 +103,10 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void SoftDeletableEntityBaseGuidIdMap_ShouldConfigureSoftDeleteProperties()
     {
-        var options = CreateOptions<SoftGuidIdEntity>();
-        using var context = new TestDbContext<SoftGuidIdEntity>(options, mb =>
-        {
-            mb.Entity<SoftGuidIdEntity>().SoftDeletableEntityBaseGuidIdMap();
-        });
+        DbContextOptions<TestDbContext<SoftGuidIdEntity>> options = CreateOptions<SoftGuidIdEntity>();
+        using var context = new TestDbContext<SoftGuidIdEntity>(options, mb => mb.Entity<SoftGuidIdEntity>().SoftDeletableEntityBaseGuidIdMap());
 
-        var entityType = context.Model.FindEntityType(typeof(SoftGuidIdEntity))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(SoftGuidIdEntity))!;
         entityType.FindPrimaryKey()!.Properties.Should().ContainSingle(p => p.Name == nameof(SoftGuidIdEntity.Id));
         GetProperty(entityType, nameof(SoftGuidIdEntity.DeletedAt)).IsNullable.Should().BeTrue();
         GetProperty(entityType, nameof(SoftGuidIdEntity.DeletedBy)).IsNullable.Should().BeTrue();
@@ -127,14 +118,14 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void EntityBaseMap_ShouldConfigureAuditProperties()
     {
-        var options = CreateOptions<AuditEntity>();
+        DbContextOptions<TestDbContext<AuditEntity>> options = CreateOptions<AuditEntity>();
         using var context = new TestDbContext<AuditEntity>(options, mb =>
         {
             mb.Entity<AuditEntity>().HasKey(x => x.Id);
             mb.Entity<AuditEntity>().EntityBaseMap();
         });
 
-        var entityType = context.Model.FindEntityType(typeof(AuditEntity))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(AuditEntity))!;
         GetProperty(entityType, nameof(AuditEntity.CreatedAt)).IsNullable.Should().BeFalse();
         GetProperty(entityType, nameof(AuditEntity.CreatedBy)).IsNullable.Should().BeFalse();
         GetProperty(entityType, nameof(AuditEntity.CreatedBy)).GetMaxLength().Should().Be(40);
@@ -147,14 +138,14 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void SoftDeletableEntityBaseMap_ShouldConfigureSoftDeleteAndAuditProperties()
     {
-        var options = CreateOptions<SoftAuditEntity>();
+        DbContextOptions<TestDbContext<SoftAuditEntity>> options = CreateOptions<SoftAuditEntity>();
         using var context = new TestDbContext<SoftAuditEntity>(options, mb =>
         {
             mb.Entity<SoftAuditEntity>().HasKey(x => x.Id);
             mb.Entity<SoftAuditEntity>().SoftDeletableEntityBaseMap();
         });
 
-        var entityType = context.Model.FindEntityType(typeof(SoftAuditEntity))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(SoftAuditEntity))!;
         GetProperty(entityType, nameof(SoftAuditEntity.DeletedAt)).IsNullable.Should().BeTrue();
         GetProperty(entityType, nameof(SoftAuditEntity.DeletedBy)).IsNullable.Should().BeTrue();
         GetProperty(entityType, nameof(SoftAuditEntity.DeletedBy)).GetMaxLength().Should().Be(40);
@@ -167,13 +158,10 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void EntityBaseMap_Generic_ShouldConfigureKeyAndAuditProperties()
     {
-        var options = CreateOptions<IntEntity>();
-        using var context = new TestDbContext<IntEntity>(options, mb =>
-        {
-            mb.Entity<IntEntity>().EntityBaseMap<IntEntity, int>();
-        });
+        DbContextOptions<TestDbContext<IntEntity>> options = CreateOptions<IntEntity>();
+        using var context = new TestDbContext<IntEntity>(options, mb => mb.Entity<IntEntity>().EntityBaseMap<IntEntity, int>());
 
-        var entityType = context.Model.FindEntityType(typeof(IntEntity))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(IntEntity))!;
         entityType.FindPrimaryKey()!.Properties.Should().ContainSingle(p => p.Name == nameof(IntEntity.Id));
         GetProperty(entityType, nameof(IntEntity.Id)).IsNullable.Should().BeFalse();
         GetProperty(entityType, nameof(IntEntity.CreatedAt)).IsNullable.Should().BeFalse();
@@ -182,13 +170,10 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void SoftDeletableEntityBaseMap_Generic_ShouldConfigureKeyAndSoftDeleteProperties()
     {
-        var options = CreateOptions<SoftIntEntity>();
-        using var context = new TestDbContext<SoftIntEntity>(options, mb =>
-        {
-            mb.Entity<SoftIntEntity>().SoftDeletableEntityBaseMap<SoftIntEntity, int>();
-        });
+        DbContextOptions<TestDbContext<SoftIntEntity>> options = CreateOptions<SoftIntEntity>();
+        using var context = new TestDbContext<SoftIntEntity>(options, mb => mb.Entity<SoftIntEntity>().SoftDeletableEntityBaseMap<SoftIntEntity, int>());
 
-        var entityType = context.Model.FindEntityType(typeof(SoftIntEntity))!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(SoftIntEntity))!;
         entityType.FindPrimaryKey()!.Properties.Should().ContainSingle(p => p.Name == nameof(SoftIntEntity.Id));
         GetProperty(entityType, nameof(SoftIntEntity.Id)).IsNullable.Should().BeFalse();
         GetProperty(entityType, nameof(SoftIntEntity.IsDeleted)).IsNullable.Should().BeFalse();
@@ -198,15 +183,15 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void OptimisticConcurrencyVersionMap_ShouldConfigureRowVersion()
     {
-        var options = CreateOptions<VersionedEntity>();
+        DbContextOptions<TestDbContext<VersionedEntity>> options = CreateOptions<VersionedEntity>();
         using var context = new TestDbContext<VersionedEntity>(options, mb =>
         {
             mb.Entity<VersionedEntity>().HasKey(x => x.Id);
             mb.Entity<VersionedEntity>().OptimisticConcurrencyVersionMap();
         });
 
-        var entityType = context.Model.FindEntityType(typeof(VersionedEntity))!;
-        var property = entityType.FindProperty("RowVersion")!;
+        IEntityType entityType = context.Model.FindEntityType(typeof(VersionedEntity))!;
+        IProperty property = entityType.FindProperty("RowVersion")!;
         property.IsConcurrencyToken.Should().BeTrue();
         property.ValueGenerated.Should().Be(ValueGenerated.OnAddOrUpdate);
         property.ClrType.Should().Be<byte[]>();
@@ -216,15 +201,15 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void AddQueryFilter_ShouldApplyFilter()
     {
-        var options = CreateOptions<FilteredMarker>();
+        DbContextOptions<TestDbContext<FilteredMarker>> options = CreateOptions<FilteredMarker>();
         using var context = new TestDbContext<FilteredMarker>(options, mb =>
         {
             mb.Entity<FilteredEntity>().HasKey(x => x.Id);
             mb.Entity<FilteredEntity>().AddQueryFilter<FilteredEntity>(e => e.IsActive);
         });
 
-        var entityType = context.Model.FindEntityType(typeof(FilteredEntity))!;
-        var filter = entityType.GetQueryFilter();
+        IEntityType entityType = context.Model.FindEntityType(typeof(FilteredEntity))!;
+        LambdaExpression? filter = entityType.GetQueryFilter();
         filter.Should().NotBeNull();
         var compiled = (Expression<Func<FilteredEntity, bool>>)filter!;
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true }).Should().BeTrue();
@@ -234,7 +219,7 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void AddQueryFilter_ShouldCombineFilters()
     {
-        var options = CreateOptions<FilteredCombineMarker>();
+        DbContextOptions<TestDbContext<FilteredCombineMarker>> options = CreateOptions<FilteredCombineMarker>();
         using var context = new TestDbContext<FilteredCombineMarker>(options, mb =>
         {
             mb.Entity<FilteredEntity>().HasKey(x => x.Id);
@@ -242,8 +227,8 @@ public class EntityBaseExtensionsTests
             mb.Entity<FilteredEntity>().AddQueryFilter<FilteredEntity>(e => e.Name != null);
         });
 
-        var entityType = context.Model.FindEntityType(typeof(FilteredEntity))!;
-        var filter = entityType.GetQueryFilter();
+        IEntityType entityType = context.Model.FindEntityType(typeof(FilteredEntity))!;
+        LambdaExpression? filter = entityType.GetQueryFilter();
         filter.Should().NotBeNull();
         var compiled = (Expression<Func<FilteredEntity, bool>>)filter!;
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true, Name = "A" }).Should().BeTrue();
@@ -254,7 +239,7 @@ public class EntityBaseExtensionsTests
     [Fact]
     public void ApplySoftDeleteQueryFilter_ShouldApplyToSoftDeletableEntitiesOnly()
     {
-        var options = CreateOptions<SoftDeleteMarker>();
+        DbContextOptions<TestDbContext<SoftDeleteMarker>> options = CreateOptions<SoftDeleteMarker>();
         using var context = new TestDbContext<SoftDeleteMarker>(options, mb =>
         {
             mb.Entity<DirectSoftEntity>().HasKey(x => x.Id);
@@ -262,8 +247,8 @@ public class EntityBaseExtensionsTests
             mb.ApplySoftDeleteQueryFilter();
         });
 
-        var softType = context.Model.FindEntityType(typeof(DirectSoftEntity))!;
-        var nonSoftType = context.Model.FindEntityType(typeof(NonSoftEntity))!;
+        IEntityType softType = context.Model.FindEntityType(typeof(DirectSoftEntity))!;
+        IEntityType nonSoftType = context.Model.FindEntityType(typeof(NonSoftEntity))!;
         softType.GetQueryFilter().Should().NotBeNull();
         nonSoftType.GetQueryFilter().Should().BeNull();
         _ = new DirectSoftEntity { Id = Guid.NewGuid() };

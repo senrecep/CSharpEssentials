@@ -1,6 +1,5 @@
 using CSharpEssentials.ResultPattern;
 using FluentAssertions;
-using CSharpEssentials.Core;
 
 
 namespace CSharpEssentials.Tests.Meta;

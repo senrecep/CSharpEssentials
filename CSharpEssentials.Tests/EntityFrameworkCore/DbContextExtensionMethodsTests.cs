@@ -89,7 +89,7 @@ public class DbContextExtensionMethodsTests
     private sealed class ChangeTrackerDbContext : DbContext
     {
         public DbSet<SoftMigrateEntity> SoftMigrates { get; set; } = null!;
-        public List<EntityEntry> EntriesBeforeSave { get; } = new();
+        public List<EntityEntry> EntriesBeforeSave { get; } = [];
         public ChangeTrackerDbContext(DbContextOptions<ChangeTrackerDbContext> options) : base(options) { }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -220,7 +220,7 @@ public class DbContextExtensionMethodsTests
     public async Task MigrateDataAsync_Simple_PreConditionTrue_ShouldNotAdd()
     {
         using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
-        var seeds = new[] { new SimpleSeed { Key = 1, Name = "A" } };
+        SimpleSeed[] seeds = new[] { new SimpleSeed { Key = 1, Name = "A" } };
         await context.MigrateDataAsync<SimpleEntity, SimpleSeed>(
             seeds,
             (dbSet, list) => true,
@@ -233,7 +233,7 @@ public class DbContextExtensionMethodsTests
     public async Task MigrateDataAsync_Simple_PreConditionFalse_ShouldAddAll()
     {
         using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
-        var seeds = new[] { new SimpleSeed { Key = 1, Name = "A" }, new SimpleSeed { Key = 2, Name = "B" } };
+        SimpleSeed[] seeds = new[] { new SimpleSeed { Key = 1, Name = "A" }, new SimpleSeed { Key = 2, Name = "B" } };
         await context.MigrateDataAsync<SimpleEntity, SimpleSeed>(
             seeds,
             (dbSet, list) => false,
@@ -249,7 +249,7 @@ public class DbContextExtensionMethodsTests
         context.SimpleEntities.Add(new SimpleEntity { Id = 1, Name = "Existing" });
         await context.SaveChangesAsync();
 
-        var seeds = new[] { new SimpleSeed { Key = 2, Name = "B" } };
+        SimpleSeed[] seeds = new[] { new SimpleSeed { Key = 2, Name = "B" } };
         await context.MigrateDataAsync(
             seeds,
             new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
@@ -270,7 +270,7 @@ public class DbContextExtensionMethodsTests
     public async Task MigrateDataAsync_Core_ShouldAddNewEntities()
     {
         using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
-        var seeds = new[] { new SimpleSeed { Key = 1, Name = "A" }, new SimpleSeed { Key = 2, Name = "B" } };
+        SimpleSeed[] seeds = new[] { new SimpleSeed { Key = 1, Name = "A" }, new SimpleSeed { Key = 2, Name = "B" } };
         await context.MigrateDataAsync(
             seeds,
             new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
@@ -293,7 +293,7 @@ public class DbContextExtensionMethodsTests
         context.SimpleEntities.Add(new SimpleEntity { Id = 1, Name = "Old" });
         await context.SaveChangesAsync();
 
-        var seeds = new[] { new SimpleSeed { Key = 1, Name = "New" } };
+        SimpleSeed[] seeds = new[] { new SimpleSeed { Key = 1, Name = "New" } };
         await context.MigrateDataAsync(
             seeds,
             new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
@@ -306,7 +306,7 @@ public class DbContextExtensionMethodsTests
                 Converter = s => new SimpleEntity { Id = s.Key, Name = s.Name }
             });
 
-        var entity = await context.SimpleEntities.FindAsync(1);
+        SimpleEntity? entity = await context.SimpleEntities.FindAsync(1);
         entity!.Name.Should().Be("New");
     }
 
@@ -318,7 +318,7 @@ public class DbContextExtensionMethodsTests
         context.SimpleEntities.Add(new SimpleEntity { Id = 2, Name = "B" });
         await context.SaveChangesAsync();
 
-        var seeds = new[] { new SimpleSeed { Key = 1, Name = "A" } };
+        SimpleSeed[] seeds = new[] { new SimpleSeed { Key = 1, Name = "A" } };
         await context.MigrateDataAsync(
             seeds,
             new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
@@ -342,7 +342,7 @@ public class DbContextExtensionMethodsTests
         context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
         await context.SaveChangesAsync();
 
-        var seeds = Array.Empty<SoftMigrateSeed>();
+        SoftMigrateSeed[] seeds = Array.Empty<SoftMigrateSeed>();
         await context.MigrateDataAsync(
             seeds,
             new MigrateDataOptions<SoftMigrateEntity, SoftMigrateSeed, int>

@@ -123,7 +123,7 @@ public class SecretManagerConfigurationOptionsTests
         {
             LoadFromAppSettings = false
         };
-        var configuration = new ConfigurationBuilder().Build();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
 
         options.LoadFromConfiguration(configuration);
 
@@ -137,7 +137,7 @@ public class SecretManagerConfigurationOptionsTests
         {
             LoadFromAppSettings = true
         };
-        var configuration = new ConfigurationBuilder().Build();
+        IConfigurationRoot configuration = new ConfigurationBuilder().Build();
 
         Action action = () => options.LoadFromConfiguration(configuration);
 
@@ -152,7 +152,7 @@ public class SecretManagerConfigurationOptionsTests
         {
             LoadFromAppSettings = true
         };
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["GoogleSecretManager:Projects:0:ProjectId"] = "",
@@ -173,7 +173,7 @@ public class SecretManagerConfigurationOptionsTests
         {
             LoadFromAppSettings = true
         };
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["GoogleSecretManager:Projects:0:Region"] = "us-central1"
@@ -193,7 +193,7 @@ public class SecretManagerConfigurationOptionsTests
         {
             LoadFromAppSettings = true
         };
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["GoogleSecretManager:Projects:0:ProjectId"] = "project1",
@@ -218,7 +218,7 @@ public class SecretManagerConfigurationOptionsTests
             LoadFromAppSettings = true,
             ConfigurationSectionName = "CustomSecrets"
         };
-        var configuration = new ConfigurationBuilder()
+        IConfigurationRoot configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["CustomSecrets:Projects:0:ProjectId"] = "project1"

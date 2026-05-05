@@ -123,7 +123,7 @@ public class ICloneableTests
             }
         };
 
-        var cloned = original.Clone();
+        DeepHierarchy cloned = original.Clone();
 
         cloned.Should().NotBeSameAs(original);
         cloned.Level.Should().Be(1);

@@ -51,10 +51,7 @@ public class EnhancedJsonSerializerOptionsTests
     {
         JsonSerializerOptions baseOptions = EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters;
 
-        JsonSerializerOptions newOptions = baseOptions.Create(opts =>
-        {
-            opts.WriteIndented = true;
-        });
+        JsonSerializerOptions newOptions = baseOptions.Create(opts => opts.WriteIndented = true);
 
         newOptions.WriteIndented.Should().BeTrue();
         newOptions.PropertyNameCaseInsensitive.Should().BeTrue();

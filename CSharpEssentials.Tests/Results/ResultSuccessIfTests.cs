@@ -13,7 +13,7 @@ public class ResultSuccessIfTests
     [Fact]
     public void Result_SuccessIf_Bool_True_ShouldReturnSuccess()
     {
-        Result result = Result.SuccessIf(true, TestError);
+        var result = Result.SuccessIf(true, TestError);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -21,7 +21,7 @@ public class ResultSuccessIfTests
     [Fact]
     public void Result_SuccessIf_Bool_False_ShouldReturnFailure()
     {
-        Result result = Result.SuccessIf(false, TestError);
+        var result = Result.SuccessIf(false, TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
@@ -34,7 +34,7 @@ public class ResultSuccessIfTests
     [Fact]
     public void Result_SuccessIf_Func_True_ShouldReturnSuccess()
     {
-        Result result = Result.SuccessIf(() => true, TestError);
+        var result = Result.SuccessIf(() => true, TestError);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -42,7 +42,7 @@ public class ResultSuccessIfTests
     [Fact]
     public void Result_SuccessIf_Func_False_ShouldReturnFailure()
     {
-        Result result = Result.SuccessIf(() => false, TestError);
+        var result = Result.SuccessIf(() => false, TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
@@ -55,7 +55,7 @@ public class ResultSuccessIfTests
     [Fact]
     public void Result_SuccessIfT_Bool_True_ShouldReturnSuccessWithValue()
     {
-        Result<int> result = Result.SuccessIf(true, 42, TestError);
+        var result = Result.SuccessIf(true, 42, TestError);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -64,7 +64,7 @@ public class ResultSuccessIfTests
     [Fact]
     public void Result_SuccessIfT_Bool_False_ShouldReturnFailure()
     {
-        Result<int> result = Result.SuccessIf(false, 42, TestError);
+        var result = Result.SuccessIf(false, 42, TestError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(TestError);
