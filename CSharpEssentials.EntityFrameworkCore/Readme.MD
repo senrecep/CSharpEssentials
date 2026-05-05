@@ -10,6 +10,9 @@
 - **Advanced Pagination**: Extension methods for **Offset-based** and **Cursor-based** pagination on `IQueryable`.
 - **BaseDbContext**: A base class (`BaseDbContext<T>`) with built-in logging and scope management.
 - **Model Configuration**: Extensions to apply configurations easily.
+- **CQRS Write/Read Separation**: Helper methods to register separate write and read DbContexts with appropriate tracking behavior.
+- **Pooled DbContext & Factory**: Simplified registration for `DbContextPool` and `DbContextFactory`.
+- **SQL Connection Factories**: `ISqlConnectionFactory` and `ISqlReadOnlyConnectionFactory` abstractions for raw SQL/Dapper scenarios.
 
 ## Installation
 
@@ -193,7 +196,80 @@ var nextCursor = response.NextCursor;
 
 Supports any `IComparable<T>` cursor type: `string`, `int`, `Guid`, `DateTimeOffset`, etc.
 
-### 6. Base DbContext
+### 6. CQRS Write/Read DbContexts
+
+Register separate write and read contexts for CQRS scenarios. Write contexts track changes; read contexts use `NoTracking` for performance.
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Extensions;
+
+// Register both write and read contexts
+services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
+    configureOptions: options =>
+    {
+        options.EnableDetailedErrors = true;
+        options.EnableSensitiveDataLogging = environment.IsDevelopment();
+        options.EnableAuditInterceptor = true;
+        options.EnableDomainEventInterceptor = true;
+        options.EnableSlowQueryInterceptor = true;
+    },
+    configureWrite: (sp, options) =>
+        options.UseNpgsql(connectionString, npgsql =>
+        {
+            npgsql.MigrationsAssembly(typeof(WriteDbContext).Assembly.GetName().Name);
+            npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
+        }),
+    configureRead: (sp, options) =>
+        options.UseNpgsql(connectionString));
+
+// Or register individually
+services.AddWriteDbContext<WriteDbContext>((sp, options) =>
+    options.UseNpgsql(connectionString));
+
+services.AddReadDbContext<ReadDbContext>((sp, options) =>
+    options.UseNpgsql(connectionString));
+```
+
+### 7. Pooled DbContext & Factory
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Extensions;
+
+// Pooled DbContext
+services.AddPooledDbContext<ShopDbContext>((sp, options) =>
+    options.UseNpgsql(connectionString));
+
+// DbContextFactory
+services.RegisterDbContextFactory<ShopDbContext>((sp, options) =>
+    options.UseNpgsql(connectionString));
+```
+
+### 8. SQL Connection Factories
+
+For raw SQL or Dapper scenarios alongside EF Core:
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore;
+
+// Register your own implementation
+services.AddSingleton<ISqlConnectionFactory>(
+    _ => new PostgreSqlConnectionFactory(connectionString));
+
+services.AddSingleton<ISqlReadOnlyConnectionFactory>(
+    _ => new PostgreSqlReadOnlyConnectionFactory(connectionString));
+
+// Usage
+public class ProductRepository(ISqlConnectionFactory connectionFactory)
+{
+    public async Task<IEnumerable<Product>> GetAllAsync()
+    {
+        using var connection = connectionFactory.Create();
+        return await connection.QueryAsync<Product>("SELECT * FROM products");
+    }
+}
+```
+
+### 9. Base DbContext
 
 Inherit from `BaseDbContext` for automatic logger injection and instance tracking.
 
@@ -229,4 +305,70 @@ services.AddDbContext<ShopDbContext>((sp, options) =>
                sp.GetRequiredService<AuditInterceptor>(),
                sp.GetRequiredService<DomainEventInterceptor>(),
                sp.GetRequiredService<SlowQueryInterceptor>()));
+```
+
+## Recommended Companion Packages
+
+The following community packages work well alongside `CSharpEssentials.EntityFrameworkCore`:
+
+| Package | Description |
+|---------|-------------|
+| [`EFCore.NamingConventions`](https://github.com/efcore/EFCore.NamingConventions) | Apply naming conventions such as `snake_case` to tables and columns automatically. |
+| [`EntityFramework.Exceptions`](https://github.com/Giorgi/EntityFramework.Exceptions) | Translate database-specific exceptions into typed exceptions (e.g., `UniqueConstraintException`, `CannotInsertNullException`) for clearer error handling. |
+| [`EFCore.CheckConstraints`](https://github.com/efcore/EFCore.CheckConventions) | Automatically generate database check constraints based on model configuration (e.g., enum constraints, range validations). |
+
+### Production-Ready Setup Example
+
+A reusable extension method that wires everything together — interceptors, companion packages, and PostgreSQL-specific options:
+
+```csharp
+public static class DependencyInjection
+{
+    public static IServiceCollection AddAppDbContext<TDbContext>(
+        this IServiceCollection services,
+        string connectionString,
+        Action<DbContextOptionsBuilder>? configure = null)
+        where TDbContext : DbContext
+    {
+        // CSharpEssentials interceptors
+        services.AddAuditInterceptor(() => "system-user");
+        services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));
+        services.AddSingleton<IDomainEventPublisher, MediatRDomainEventPublisher>();
+        services.AddSingleton<DomainEventInterceptor>();
+
+        services.AddDbContext<TDbContext>((sp, options) =>
+        {
+            options
+                .UseNpgsql(connectionString, npgsql =>
+                {
+                    npgsql.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null);
+                    npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+                    npgsql.MigrationsAssembly(typeof(TDbContext).Assembly.GetName().Name);
+                })
+                .EnableDetailedErrors()
+                .EnableSensitiveDataLogging()
+                // Companion packages
+                .UseSnakeCaseNamingConvention()
+                .UseExceptionProcessor()
+                .UseAllCheckConstraints()
+                // CSharpEssentials interceptors
+                .AddInterceptors(
+                    sp.GetRequiredService<AuditInterceptor>(),
+                    sp.GetRequiredService<DomainEventInterceptor>(),
+                    sp.GetRequiredService<SlowQueryInterceptor>());
+
+            configure?.Invoke(options);
+        });
+
+        return services;
+    }
+}
+```
+
+Usage:
+
+```csharp
+services.AddAppDbContext<ShopDbContext>(
+    configuration.GetConnectionString("Default")!);
+```
 ```
