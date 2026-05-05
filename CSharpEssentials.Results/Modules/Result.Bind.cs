@@ -38,7 +38,7 @@ public readonly partial record struct Result
     public Task<Result<TOut>> Bind<TOut>(Func<Task<Result<TOut>>> func)
     {
         if (IsFailure)
-            return ((Result<TOut>)Errors).AsTask();
+            return Errors.ToResult<TOut>().AsTask();
         return func();
     }
 

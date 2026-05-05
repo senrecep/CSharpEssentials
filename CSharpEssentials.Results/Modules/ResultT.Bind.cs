@@ -38,7 +38,7 @@ public readonly partial record struct Result<TValue>
     public Task<Result<TOut>> Bind<TOut>(Func<TValue, Task<Result<TOut>>> func)
     {
         if (IsFailure)
-            return ((Result<TOut>)Errors).AsTask();
+            return Errors.ToResult<TOut>().AsTask();
         return func(Value);
     }
 
@@ -63,7 +63,7 @@ public readonly partial record struct Result<TValue>
     public ValueTask<Result<TOut>> Bind<TOut>(Func<TValue, ValueTask<Result<TOut>>> valueTask)
     {
         if (IsFailure)
-            return ((Result<TOut>)Errors).AsValueTask();
+            return Errors.ToResult<TOut>().AsValueTask();
         return valueTask(Value);
     }
 
