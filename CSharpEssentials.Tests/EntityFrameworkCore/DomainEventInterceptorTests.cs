@@ -5,7 +5,6 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
@@ -146,7 +145,7 @@ public class DomainEventInterceptorTests
         publisher.Published.Should().HaveCount(5);
 
         // Entity1's events should maintain their relative order
-        List<string> names = publisher.Published.Cast<TestEvent>().Select(e => e.Name).ToList();
+        var names = publisher.Published.Cast<TestEvent>().Select(e => e.Name).ToList();
         int e1First = names.IndexOf("E1-First");
         int e1Second = names.IndexOf("E1-Second");
         int e1Third = names.IndexOf("E1-Third");

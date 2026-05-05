@@ -27,8 +27,10 @@ public class RequestResponseContext
     public int? ResponseLength => ResponseBody?.Length;
 
 
-    private string? url;
-    public string Url => url ??= BuildUrl().ToString();
+#pragma warning disable IDE0032 // Auto-property not possible due to BuildUrl() call
+    private string? _url;
+    public string Url => _url ??= BuildUrl().ToString();
+#pragma warning restore IDE0032
 
     internal Uri BuildUrl()
     {

@@ -14,8 +14,8 @@ public sealed class EnhancedProblemDetails : ProblemDetails
 #endif
 
     [JsonPropertyName("errorCodes")]
-    public HashSet<string> ErrorCodes { get; set; } = new HashSet<string>();
+    public HashSet<string> ErrorCodes { get; set; } = [];
 
     [JsonPropertyName("errorMessages")]
-    public HashSet<string> ErrorMessages { get; set; } = new HashSet<string>();
+    public HashSet<string> ErrorMessages { get; set; } = [];
 }

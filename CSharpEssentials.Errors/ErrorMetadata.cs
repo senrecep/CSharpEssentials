@@ -1,4 +1,6 @@
+#if NET6_0_OR_GREATER
 using System.Globalization;
+#endif
 using System.Text;
 
 namespace CSharpEssentials.Errors;
@@ -9,18 +11,10 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
     public ErrorMetadata(IDictionary<string, object?> dictionary) : base(dictionary) { }
     public ErrorMetadata(params IEnumerable<KeyValuePair<string, object?>> collection) : base(collection) { }
 
-#if NET8_0_OR_GREATER
     public ErrorMetadata(KeyValuePair<string, object?> keyValuePair) : this([keyValuePair]) { }
-#else
-    public ErrorMetadata(KeyValuePair<string, object?> keyValuePair) : this(new[] { keyValuePair }) { }
-#endif
     public ErrorMetadata(string key, object? value) : this(new KeyValuePair<string, object?>(key, value)) { }
 
-#if NET8_0_OR_GREATER
     public static ErrorMetadata CreateEmpty() => [];
-#else
-    public static ErrorMetadata CreateEmpty() => new ErrorMetadata();
-#endif
     public static ErrorMetadata CreateWithStackTrace() => new("stackTrace", Environment.StackTrace);
     public static ErrorMetadata CreateWithException(Exception ex) => new("exception", ex);
     public static ErrorMetadata CreateWithExceptionDetailed(Exception exception)

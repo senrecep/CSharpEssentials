@@ -10,6 +10,7 @@ using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore;
+
 public sealed class DefaultConfigureSwaggerOptions(
            IServiceProvider serviceProvider,
            IHostEnvironment environment,

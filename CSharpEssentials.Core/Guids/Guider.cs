@@ -1,6 +1,8 @@
 ﻿using System.Buffers.Text;
 using System.Runtime.CompilerServices;
+#if !NETSTANDARD
 using System.Runtime.InteropServices;
+#endif
 
 namespace CSharpEssentials.Core;
 

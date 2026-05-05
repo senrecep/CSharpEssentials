@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Text.Json;
 using CSharpEssentials.GcpSecretManager;
 using CSharpEssentials.GcpSecretManager.Configuration;
@@ -9,7 +8,6 @@ using Google.Api.Gax.Grpc;
 using Google.Api.Gax.ResourceNames;
 using Google.Cloud.SecretManager.V1;
 using Google.Protobuf;
-using Grpc.Core;
 using Moq;
 
 namespace CSharpEssentials.Tests.GcpSecretManager;
@@ -70,7 +68,7 @@ public class SecretManagerConfigurationProviderTests
     public void Load_WithNoProjects_ShouldReturnEmptyData()
     {
         var mockClient = new Mock<SecretManagerServiceClient>();
-        var provider = CreateProvider(mockClient, []);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, []);
 
         provider.Load();
 
@@ -88,13 +86,13 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/raw-secret/versions/latest"] = "plain-text-value"
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration
         {
             ProjectId = "project",
             RawSecretIds = new[] { "raw-secret" }
         };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -114,9 +112,9 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/app-settings/versions/latest"] = json
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration { ProjectId = "project" };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -137,9 +135,9 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/bad-json/versions/latest"] = "not-json-at-all"
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration { ProjectId = "project" };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -159,13 +157,13 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/RAW_config/versions/latest"] = json
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration
         {
             ProjectId = "project",
             RawSecretPrefixes = new[] { "RAW_" }
         };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -189,13 +187,13 @@ public class SecretManagerConfigurationProviderTests
             ["projects/project/secrets/DB_setting1/versions/latest"] = "db1",
             ["projects/project/secrets/APP_setting2/versions/latest"] = "app2"
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration
         {
             ProjectId = "project",
             PrefixFilters = new[] { "APP_" }
         };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -219,13 +217,13 @@ public class SecretManagerConfigurationProviderTests
             ["projects/project/secrets/secret2/versions/latest"] = "val2",
             ["projects/project/secrets/secret3/versions/latest"] = "val3"
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration
         {
             ProjectId = "project",
             SecretIds = new[] { "secret1", "secret3" }
         };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -248,8 +246,8 @@ public class SecretManagerConfigurationProviderTests
             ["projects/project2/secrets/secret2/versions/latest"] = "value2"
         };
 
-        var mockClient1 = CreateMockClient(secrets1, values1);
-        var mockClient2 = CreateMockClient(secrets2, values2);
+        Mock<SecretManagerServiceClient> mockClient1 = CreateMockClient(secrets1, values1);
+        Mock<SecretManagerServiceClient> mockClient2 = CreateMockClient(secrets2, values2);
 
         var loader = new DefaultSecretManagerConfigurationLoader();
         var options = new SecretManagerConfigurationOptions();
@@ -278,9 +276,9 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/array-secret/versions/latest"] = json
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration { ProjectId = "project" };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -304,9 +302,9 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/null-secret/versions/latest"] = json
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration { ProjectId = "project" };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -326,9 +324,9 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/nested-secret/versions/latest"] = json
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration { ProjectId = "project" };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 
@@ -348,9 +346,9 @@ public class SecretManagerConfigurationProviderTests
         {
             ["projects/project/secrets/my-secret/versions/latest"] = json
         };
-        var mockClient = CreateMockClient(secrets, values);
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
         var projectConfig = new ProjectSecretConfiguration { ProjectId = "project" };
-        var provider = CreateProvider(mockClient, [projectConfig]);
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [projectConfig]);
 
         provider.Load();
 

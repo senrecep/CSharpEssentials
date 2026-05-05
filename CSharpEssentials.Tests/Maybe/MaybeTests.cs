@@ -1,6 +1,6 @@
+using System.Text.Json;
 using CSharpEssentials.Maybe;
 using FluentAssertions;
-using System.Text.Json;
 
 namespace CSharpEssentials.Tests.Maybe;
 

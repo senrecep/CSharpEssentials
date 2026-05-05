@@ -10,7 +10,7 @@ public class ExtensionsTests
     {
         DateTime dateTime = new(2024, 6, 15, 14, 30, 45, 123, DateTimeKind.Utc);
 
-        TimeOnly result = dateTime.ToTimeOnly();
+        var result = dateTime.ToTimeOnly();
 
         result.Should().Be(new TimeOnly(14, 30, 45, 123));
     }
@@ -20,7 +20,7 @@ public class ExtensionsTests
     {
         DateTime dateTime = new(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        TimeOnly result = dateTime.ToTimeOnly();
+        var result = dateTime.ToTimeOnly();
 
         result.Should().Be(TimeOnly.MinValue);
     }
@@ -30,7 +30,7 @@ public class ExtensionsTests
     {
         DateTime dateTime = new(2024, 6, 15, 14, 30, 45, DateTimeKind.Utc);
 
-        DateOnly result = dateTime.ToDateOnly();
+        var result = dateTime.ToDateOnly();
 
         result.Should().Be(new DateOnly(2024, 6, 15));
     }
@@ -40,7 +40,7 @@ public class ExtensionsTests
     {
         DateTime dateTime = DateTime.MinValue;
 
-        DateOnly result = dateTime.ToDateOnly();
+        var result = dateTime.ToDateOnly();
 
         result.Should().Be(DateOnly.MinValue);
     }
@@ -50,7 +50,7 @@ public class ExtensionsTests
     {
         DateTime dateTime = DateTime.MaxValue;
 
-        DateOnly result = dateTime.ToDateOnly();
+        var result = dateTime.ToDateOnly();
 
         result.Should().Be(DateOnly.MaxValue);
     }
@@ -60,7 +60,7 @@ public class ExtensionsTests
     {
         DateTime dateTime = DateTime.MaxValue;
 
-        TimeOnly result = dateTime.ToTimeOnly();
+        var result = dateTime.ToTimeOnly();
 
         result.Should().Be(TimeOnly.MaxValue);
     }
@@ -70,8 +70,8 @@ public class ExtensionsTests
     {
         DateTime dateTime = new(2024, 12, 25, 8, 15, 30, DateTimeKind.Utc);
 
-        DateOnly date = dateTime.ToDateOnly();
-        TimeOnly time = dateTime.ToTimeOnly();
+        var date = dateTime.ToDateOnly();
+        var time = dateTime.ToTimeOnly();
 
         date.ToDateTime(time).Should().Be(dateTime);
     }

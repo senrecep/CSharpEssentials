@@ -24,7 +24,7 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 /// Before-save events are always published directly via <see cref="IDomainEventPublisher"/>.
 /// </para>
 /// </summary>
-public sealed class DomainEventInterceptor(
+public sealed partial class DomainEventInterceptor(
     ILogger<DomainEventInterceptor> logger,
     IServiceScopeFactory serviceScopeFactory) : SaveChangesInterceptor
 {
@@ -118,7 +118,7 @@ public sealed class DomainEventInterceptor(
 
         if (outbox is not null)
         {
-            logger.LogDebug("Storing {Count} domain events in outbox", events.Length);
+            LogStoringDomainEvents(events.Length);
             await outbox.StoreAsync(events, cancellationToken);
         }
         else
@@ -137,9 +137,15 @@ public sealed class DomainEventInterceptor(
     {
         IDomainEventPublisher publisher = provider.GetRequiredService<IDomainEventPublisher>();
 
-        logger.LogDebug("Publishing {Count} domain events", events.Length);
+        LogPublishingDomainEvents(events.Length);
 
         foreach (IDomainEvent domainEvent in events)
             await publisher.PublishAsync(domainEvent, cancellationToken);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Storing {Count} domain events in outbox")]
+    private partial void LogStoringDomainEvents(int count);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Publishing {Count} domain events")]
+    private partial void LogPublishingDomainEvents(int count);
 }

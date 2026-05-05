@@ -26,6 +26,7 @@ internal static class MockHelpers
             .Options;
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1873", Justification = "False positive: Moq verification expression, not an actual ILogger.Log call")]
     public static void VerifyLog<T>(Mock<ILogger<T>> loggerMock, LogLevel level, string? messageSubstring = null, Times? times = null)
     {
         times ??= Times.Once();

@@ -1,7 +1,7 @@
+using System.Globalization;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using FluentAssertions;
-using System.Globalization;
 
 namespace CSharpEssentials.Tests.Results;
 

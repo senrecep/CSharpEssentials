@@ -10,6 +10,6 @@ public readonly partial struct Maybe<T>
 #if NET8_0_OR_GREATER
         this.GetValueOrDefault<T, List<T>>(value => [value], []);
 #else
-        this.GetValueOrDefault<T, List<T>>(value => new List<T> { value }, new List<T>());
+        this.GetValueOrDefault<T, List<T>>(value => [value], []);
 #endif
 }

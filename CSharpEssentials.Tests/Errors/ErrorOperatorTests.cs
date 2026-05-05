@@ -34,8 +34,8 @@ public class ErrorOperatorTests
     [Fact]
     public void PlusOperator_TwoErrors_ShouldReturnArrayWithBoth()
     {
-        Error error1 = Error.Validation("ERR1", "First");
-        Error error2 = Error.Validation("ERR2", "Second");
+        var error1 = Error.Validation("ERR1", "First");
+        var error2 = Error.Validation("ERR2", "Second");
 
         Error[] result = error1 + error2;
 
@@ -57,8 +57,8 @@ public class ErrorOperatorTests
     [Fact]
     public void PlusOperator_DifferentTypes_ShouldReturnArrayWithBoth()
     {
-        Error validation = Error.Validation("VAL", "Validation");
-        Error notFound = Error.NotFound("NF", "Not found");
+        var validation = Error.Validation("VAL", "Validation");
+        var notFound = Error.NotFound("NF", "Not found");
 
         Error[] result = validation + notFound;
 

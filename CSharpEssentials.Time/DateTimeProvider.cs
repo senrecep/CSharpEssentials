@@ -4,10 +4,7 @@ public sealed class DateTimeProvider : IDateTimeProvider
 {
     private readonly TimeProvider _timeProvider;
 
-    public DateTimeProvider(TimeProvider timeProvider)
-    {
-        _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-    }
+    public DateTimeProvider(TimeProvider timeProvider) => _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
 
     public DateTimeOffset UtcNow => _timeProvider.GetUtcNow();
     public DateTime UtcNowDateTime => UtcNow.DateTime;
