@@ -150,24 +150,17 @@ public static class HttpClientResultExtensions
         return Error.Exception(ex, ErrorType.Unexpected);
     }
 
-    private static async Task<Result> ExecuteAsync(Func<Task<Result>> action)
+    private static Task<Result> ExecuteAsync(Func<Task<Result>> action)
     {
-        try
-        {
-            return await action();
-        }
-        catch (HttpRequestException ex)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
-        catch (IOException ex)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
-        catch (TaskCanceledException ex) when (!ex.CancellationToken.IsCancellationRequested)
-        {
-            return Error.Exception(ex, ErrorType.Unexpected);
-        }
+        return Result.TryAsync(
+            action,
+            ex =>
+            {
+                if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
+                    throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
+
+                return Error.Exception(ex, ErrorType.Unexpected);
+            });
     }
 
     private static async Task<Result<T>> HandleResponseAsync<T>(HttpResponseMessage response, JsonSerializerOptions? options, CancellationToken cancellationToken)
