@@ -1,85 +1,64 @@
 # CSharpEssentials.AspNetCore
 
-`CSharpEssentials.AspNetCore` provides essential utilities and middleware for building production-ready ASP.NET Core Web APIs. It integrates seamlessly with the **CSharpEssentials.Errors** ecosystem to provide structured error responses and simplifies common configurations like Swagger and API Versioning.
+Production-ready ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, Swagger setup, and Result endpoint filters.
 
-## 🚀 Features
+## Features
 
-- **Global Exception Handler**: Middleware (`IExceptionHandler`) that catches exceptions and converts them into standard RFC 7807 `ProblemDetails` responses.
-- **Enhanced Problem Details**: Extends `ProblemDetails` to include structured error codes and messages from `CSharpEssentials.Errors`.
-- **Swagger Configuration**: Easy setup for Swagger with support for API Versioning and custom schema filters.
-- **API Versioning**: Pre-configured extensions for setting up API versioning (URL segment + Header).
+- **Global Exception Handler** — Converts `DomainException`, `EnhancedValidationException`, and others into RFC 7807 `ProblemDetails`.
+- **Enhanced Problem Details** — Extend `ProblemDetails` with structured error codes and messages.
+- **Result Endpoint Filter** — Automatically convert `Result<T>` return values to `200 OK` or `400 BadRequest`.
+- **API Versioning** — Pre-configured URL segment and header-based versioning.
+- **Swagger** — Easy setup with versioning support, enum schema filters, and custom schema IDs.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.AspNetCore
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Global Exception Handling
-
-Register the global exception handler to automatically convert `DomainException`, `ValidationException`, and others into structured JSON error responses.
+### Global Exception Handling
 
 ```csharp
-using CSharpEssentials.AspNetCore;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add problem details support
 builder.Services.AddProblemDetails();
-
-// Register the handler
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-```
 
-Then, in your middleware pipeline:
-
-```csharp
 var app = builder.Build();
-
-app.UseExceptionHandler(); // Uses the registered GlobalExceptionHandler
+app.UseExceptionHandler();
 ```
 
-### 2. API Versioning
-
-Enable standard API versioning (URL Segment + Header support) with a single line.
+### API Versioning
 
 ```csharp
-using CSharpEssentials.AspNetCore;
-
 builder.Services.AddAndConfigureApiVersioning();
-```
 
-Create versioned endpoint groups easily:
-
-```csharp
 var app = builder.Build();
-
-RouteGroupBuilder usersGroup = app.CreateVersionedGroup("users", version: 1);
-
+var usersGroup = app.CreateVersionedGroup("users", version: 1);
 usersGroup.MapGet("/{id}", (int id) => Results.Ok(new { Id = id }));
 ```
 
-### 3. Swagger with Versioning
-
-Simplify Swagger configuration, especially when using API versioning.
+### Swagger with Versioning
 
 ```csharp
-using CSharpEssentials.AspNetCore;
+builder.Services.AddSwagger<ConfigureSwaggerOptions>(securityScheme: SecuritySchemes.Bearer);
 
-// Add Swagger services
-builder.Services.AddSwagger<ConfigureSwaggerOptions>(
-    securityScheme: SecuritySchemes.Bearer // Or your custom scheme
-);
-
-// Use Swagger Middleware
+var app = builder.Build();
 app.UseVersionableSwagger();
 ```
 
-### 4. Structured Error Responses
+### Result Endpoint Filter
 
-When an exception occurs (e.g., `DomainException` from `CSharpEssentials.Errors`), the response will look like this:
+```csharp
+builder.Services.AddScoped<ResultEndpointFilter>();
+
+app.MapGet("/users/{id}", (int id) => GetUser(id))
+   .AddEndpointFilter<ResultEndpointFilter>();
+
+// Returns 200 with value on success, 400 with errors on failure
+```
+
+### Structured Error Response
 
 ```json
 {
@@ -87,12 +66,7 @@ When an exception occurs (e.g., `DomainException` from `CSharpEssentials.Errors`
   "title": "Bad Request",
   "status": 400,
   "errors": [
-    {
-      "code": "User.InvalidEmail",
-      "description": "The email format is incorrect.",
-      "type": "Validation"
-    }
-  ],
-  "errorCodes": [ "User.InvalidEmail" ]
+    { "code": "User.InvalidEmail", "description": "Email format is incorrect.", "type": "Validation" }
+  ]
 }
 ```

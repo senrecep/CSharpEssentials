@@ -1,113 +1,78 @@
 # CSharpEssentials.Rules
 
-`CSharpEssentials.Rules` is a composable, functional rule engine for .NET. It allows you to define business logic as small, reusable rules and combine them into complex workflows using a fluent API.
+Composable, functional rule engine for .NET. Define business logic as small, reusable rules and combine them with a fluent API.
 
-## 🚀 Features
+## Features
 
-- **Composable Logic**: Build complex logic from simple, single-responsibility rules.
-- **Flow Control**: Support for **Linear** (sequences), **Conditional** (If/Else), **And**, and **Or** rule combinations.
-- **Async Support**: First-class support for asynchronous rules.
-- **Result Pattern**: Built on top of `CSharpEssentials.Results` to return success/failure status.
-- **Context-Driven**: Rules operate on a shared `TContext` state.
+- **Simple Rules** — Implement `IRule<TContext>` or use `Func<TContext, Result>.ToRule()`.
+- **Linear Sequences** — Run rules in order, stop on first failure.
+- **Conditional Rules** — If/Then/Else branching.
+- **And / Or Logic** — All must pass, or at least one must pass.
+- **Async Support** — First-class async rules.
+- **Result Integration** — Built on `CSharpEssentials.Results`.
 
-## 📦 Installation
+## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Rules
 ```
 
-## 🛠 Usage
+## Usage
 
-### 1. Defining Rules
-
-You can implement the `IRule<TContext>` interface or use functional adapters.
-
-**Using Interface:**
+### Defining Rules
 
 ```csharp
 using CSharpEssentials.Rules;
 using CSharpEssentials.ResultPattern;
-
-public class UserContext 
-{ 
-    public int Age { get; set; }
-    public bool HasLicense { get; set; }
-}
+using CSharpEssentials.Errors;
 
 public class AgeRule : IRule<UserContext>
 {
-    public Result Evaluate(UserContext context, CancellationToken ct = default)
+    public Result Evaluate(UserContext ctx, CancellationToken ct = default)
     {
-        if (context.Age < 18)
-            return Result.Failure("User.Underage", "User must be at least 18.");
+        if (ctx.Age < 18)
+            return Error.Validation("Age.Underage", "Must be at least 18.");
         return Result.Success();
     }
 }
+
+// Or with a Func
+IRule<UserContext> licenseRule = (Func<UserContext, Result>)(ctx =>
+    ctx.HasLicense ? Result.Success() : Error.Validation("License.Missing", "License required.")).ToRule();
 ```
 
-**Using Func:**
+### Evaluating Rules
 
 ```csharp
-Func<UserContext, Result> licenseCheck = ctx => 
-    ctx.HasLicense 
-        ? Result.Success() 
-        : Result.Failure("User.NoLicense", "User must have a license.");
-
-var rule = licenseCheck.ToRule();
+var ctx = new UserContext { Age = 20, HasLicense = true };
+Result result = RuleEngine.Evaluate(new AgeRule(), ctx);
 ```
 
-### 2. Executing Rules
-
-Use the `RuleEngine` to evaluate a rule against a context.
+### Combining Rules
 
 ```csharp
-var context = new UserContext { Age = 20, HasLicense = true };
-var rule = new AgeRule();
+// All must pass
+Result andResult = RuleEngine.And(new[] { new AgeRule(), licenseRule }, ctx);
 
-Result result = RuleEngine.Evaluate(rule, context);
+// At least one must pass
+Result orResult = RuleEngine.Or(new[] { passportRule, licenseRule }, ctx);
 
-if (result.IsSuccess)
+// Sequence (stop on first failure)
+Result linear = RuleEngine.Linear(new[] { step1, step2, step3 }, ctx);
+
+// Conditional
+Result conditional = RuleEngine.If(new AgeRule(), new GrantAccessRule(), new DenyAccessRule(), ctx);
+```
+
+### Rules with Values
+
+```csharp
+IRule<int, string> gradeRule = ((Func<int, Result<string>>)(score =>
 {
-    Console.WriteLine("Rule passed!");
-}
-```
+    if (score >= 90) return "A";
+    if (score >= 80) return "B";
+    return Error.Validation("Grade", "Failed.");
+})).ToRule();
 
-### 3. Composing Rules (Linear)
-
-Run rules in a sequence. If one fails, execution stops.
-
-```csharp
-var complexRule = Rule.Linear(new AgeRule())
-                      .Next(licenseCheck.ToRule());
-
-Result result = RuleEngine.Evaluate(complexRule, context);
-```
-
-### 4. Conditional Rules
-
-Execute different rules based on the result of a condition.
-
-```csharp
-var workflow = Rule.If(new AgeRule(),
-    then: new GrantAccessRule(),
-    @else: new DenyAccessRule());
-```
-
-### 5. And / Or Logic
-
-Combine multiple rules.
-
-- **And**: All rules must pass.
-- **Or**: At least one rule must pass.
-
-```csharp
-var combined = Rule.And(
-    new AgeRule(),
-    new CitizenshipRule()
-);
-
-var alternative = Rule.Or(
-    new PassportRule(),
-    new DriverLicenseRule()
-);
+Result<string> grade = gradeRule.Evaluate(85);
 ```
