@@ -16,6 +16,7 @@ CSharpEssentials is a modular .NET NuGet ecosystem (14+ packages) that bridges O
 - Test: `dotnet test`
 - Pack: `dotnet pack`
 - Publish: `./build-and-publish-nugets.sh`
+- First-time setup: `git config core.hooksPath .githooks` (activates pre-commit badge validation)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: One public type per file, filename matches type name
 - Tests live in `CSharpEssentials.Tests/`
