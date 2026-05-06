@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# pre-commit: README.MD badge sayılarının gerçek değerlerle eşleştiğini doğrular.
+# Kurulum: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+README="README.MD"
+MISMATCH=0
+
+# ── Test sayısı ────────────────────────────────────────────────────────────────
+ACTUAL_TESTS=$(grep -r "\[Fact\]\|\[Theory\]" CSharpEssentials.Tests/ --include="*.cs" | wc -l | tr -d ' ')
+BADGE_TESTS=$(grep -oE 'tests-[0-9]+%20passing' "$README" | sed 's/tests-\([0-9]*\)%20passing/\1/' || echo "")
+
+if [ -z "$BADGE_TESTS" ]; then
+    echo "⚠️  README.MD: tests badge bulunamadı."
+    MISMATCH=1
+elif [ "$ACTUAL_TESTS" != "$BADGE_TESTS" ]; then
+    echo "❌ Test sayısı uyuşmuyor — badge: $BADGE_TESTS, gerçek: $ACTUAL_TESTS"
+    echo "   README.MD'yi şu şekilde güncelleyin:"
+    echo "   tests-${ACTUAL_TESTS}%20passing"
+    MISMATCH=1
+fi
+
+# ── Package sayısı ─────────────────────────────────────────────────────────────
+ACTUAL_PACKAGES=$(find . -maxdepth 2 -name "CSharpEssentials.*.csproj" -o -name "CSharpEssentials.csproj" \
+    | grep -v -E "Tests|examples|Examples" \
+    | wc -l | tr -d ' ')
+BADGE_PACKAGES=$(grep -oE 'packages-[0-9]+-blue' "$README" | grep -oE '[0-9]+' || echo "")
+
+if [ -z "$BADGE_PACKAGES" ]; then
+    echo "⚠️  README.MD: packages badge bulunamadı."
+    MISMATCH=1
+elif [ "$ACTUAL_PACKAGES" != "$BADGE_PACKAGES" ]; then
+    echo "❌ Package sayısı uyuşmuyor — badge: $BADGE_PACKAGES, gerçek: $ACTUAL_PACKAGES"
+    echo "   README.MD'yi şu şekilde güncelleyin:"
+    echo "   packages-${ACTUAL_PACKAGES}-blue"
+    MISMATCH=1
+fi
+
+# ── Sonuç ──────────────────────────────────────────────────────────────────────
+if [ "$MISMATCH" -eq 1 ]; then
+    echo ""
+    echo "README.MD badge'lerini güncelleyip 'git add README.MD' yapın, ardından tekrar commit edin."
+    exit 1
+fi
+
+exit 0
