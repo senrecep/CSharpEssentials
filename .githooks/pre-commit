@@ -1,46 +1,46 @@
 #!/usr/bin/env bash
-# pre-commit: README.MD badge sayılarının gerçek değerlerle eşleştiğini doğrular.
-# Kurulum: git config core.hooksPath .githooks
+# pre-commit: Validates that README.MD badge counts match actual values.
+# Setup: git config core.hooksPath .githooks
 
 set -euo pipefail
 
 README="README.MD"
 MISMATCH=0
 
-# ── Test sayısı ────────────────────────────────────────────────────────────────
+# ── Test count ─────────────────────────────────────────────────────────────────
 ACTUAL_TESTS=$(grep -r "\[Fact\]\|\[Theory\]" CSharpEssentials.Tests/ --include="*.cs" | wc -l | tr -d ' ')
 BADGE_TESTS=$(grep -oE 'tests-[0-9]+%20passing' "$README" | sed 's/tests-\([0-9]*\)%20passing/\1/' || echo "")
 
 if [ -z "$BADGE_TESTS" ]; then
-    echo "⚠️  README.MD: tests badge bulunamadı."
+    echo "⚠️  README.MD: tests badge not found."
     MISMATCH=1
 elif [ "$ACTUAL_TESTS" != "$BADGE_TESTS" ]; then
-    echo "❌ Test sayısı uyuşmuyor — badge: $BADGE_TESTS, gerçek: $ACTUAL_TESTS"
-    echo "   README.MD'yi şu şekilde güncelleyin:"
+    echo "❌ Test count mismatch — badge: $BADGE_TESTS, actual: $ACTUAL_TESTS"
+    echo "   Update README.MD with:"
     echo "   tests-${ACTUAL_TESTS}%20passing"
     MISMATCH=1
 fi
 
-# ── Package sayısı ─────────────────────────────────────────────────────────────
+# ── Package count ──────────────────────────────────────────────────────────────
 ACTUAL_PACKAGES=$(find . -maxdepth 2 -name "CSharpEssentials.*.csproj" -o -name "CSharpEssentials.csproj" \
     | grep -v -E "Tests|examples|Examples" \
     | wc -l | tr -d ' ')
 BADGE_PACKAGES=$(grep -oE 'packages-[0-9]+-blue' "$README" | grep -oE '[0-9]+' || echo "")
 
 if [ -z "$BADGE_PACKAGES" ]; then
-    echo "⚠️  README.MD: packages badge bulunamadı."
+    echo "⚠️  README.MD: packages badge not found."
     MISMATCH=1
 elif [ "$ACTUAL_PACKAGES" != "$BADGE_PACKAGES" ]; then
-    echo "❌ Package sayısı uyuşmuyor — badge: $BADGE_PACKAGES, gerçek: $ACTUAL_PACKAGES"
-    echo "   README.MD'yi şu şekilde güncelleyin:"
+    echo "❌ Package count mismatch — badge: $BADGE_PACKAGES, actual: $ACTUAL_PACKAGES"
+    echo "   Update README.MD with:"
     echo "   packages-${ACTUAL_PACKAGES}-blue"
     MISMATCH=1
 fi
 
-# ── Sonuç ──────────────────────────────────────────────────────────────────────
+# ── Result ─────────────────────────────────────────────────────────────────────
 if [ "$MISMATCH" -eq 1 ]; then
     echo ""
-    echo "README.MD badge'lerini güncelleyip 'git add README.MD' yapın, ardından tekrar commit edin."
+    echo "Update the README.MD badges, run 'git add README.MD', then commit again."
     exit 1
 fi
 
