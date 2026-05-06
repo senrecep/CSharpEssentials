@@ -1,7 +1,6 @@
 # CSharpEssentials
 
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
-[![skills.sh](https://skills.sh/b/senrecep/CSharpEssentials)](https://skills.sh/senrecep/CSharpEssentials)
 
 Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
