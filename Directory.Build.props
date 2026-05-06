@@ -38,6 +38,7 @@
 		<Copyright>Copyright © senrecep 2024-2026</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
+		<PackageIcon>icon.png</PackageIcon>
 		<RepositoryType>git</RepositoryType>
 		<RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
 		<RepositoryBranch>main</RepositoryBranch>
