@@ -41,6 +41,29 @@ public Result DeleteUser(int id)
 }
 ```
 
+### Returning Failures
+
+Use `Result.Failure` or `Result<TValue>.Failure` to explicitly construct a failed result without throwing an exception:
+
+```csharp
+// Non-generic failure
+Result fail = Result.Failure(Error.Validation("Input.Invalid", "Input was invalid."));
+
+// Generic failure — no value, just an error
+Result<string> fail1 = Result.Failure<string>(Error.NotFound("User.NotFound", "User not found."));
+Result<string> fail2 = Result<string>.Failure(Error.Conflict("User.Duplicate", "User already exists."));
+
+// Multiple errors in one failure
+Result<int> multiError = Result.Failure<int>(
+    Error.Validation("Name.Empty", "Name is required."),
+    Error.Validation("Email.Invalid", "Email is invalid."));
+
+// Implicit conversion from Error (shorthand)
+Result<string> implicit1 = Error.Unauthorized("Token.Expired", "Token has expired.");
+```
+
+All three styles are equivalent — choose based on readability preference. `Result.Failure<T>` is the most explicit and self-documenting.
+
 ### Chaining
 
 ```csharp
