@@ -516,6 +516,45 @@
     letter-spacing: 0.02em;
   }
 
+  /* ─── PACKAGE ACTIONS ─── */
+  .pkg-actions {
+    display: flex;
+    gap: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-subtle);
+    margin-top: 2px;
+  }
+
+  .pkg-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 9px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    line-height: 1;
+    min-height: 26px;
+  }
+
+  .pkg-action:hover {
+    color: var(--accent);
+    border-color: rgba(88, 166, 255, 0.4);
+    background: var(--accent-dim);
+  }
+
+  .pkg-action--nuget:hover {
+    color: var(--green);
+    border-color: rgba(63, 185, 80, 0.4);
+    background: var(--green-dim);
+  }
+
   /* ─── AI SKILLS ─── */
   .skills-section {
     background: var(--surface);
@@ -1158,6 +1197,88 @@
   // ─── STAGGER PACKAGE CARDS ───
   document.querySelectorAll('.packages-grid .pkg-card').forEach(function (card, i) {
     card.style.transitionDelay = (i * 28) + 'ms';
+  });
+
+  // ─── PACKAGE ACTION BUTTONS ───
+  var BASE_GH    = 'https://github.com/senrecep/CSharpEssentials/tree/main/';
+  var BASE_NUGET = 'https://www.nuget.org/packages/';
+
+  var PKG_MAP = {
+    'Results':               { nuget: 'CSharpEssentials.Results',                docs: 'examples/Examples.Results' },
+    'Errors':                { nuget: 'CSharpEssentials.Errors',                 docs: 'examples/Examples.Errors' },
+    'Maybe':                 { nuget: 'CSharpEssentials.Maybe',                  docs: 'examples/Examples.Maybe' },
+    'Any':                   { nuget: 'CSharpEssentials.Any',                    docs: 'examples/Examples.Any' },
+    'Core':                  { nuget: 'CSharpEssentials.Core',                   docs: 'examples/Examples.Core' },
+    'Enums':                 { nuget: 'CSharpEssentials.Enums',                  docs: 'examples/Examples.Enums' },
+    'Rules':                 { nuget: 'CSharpEssentials.Rules',                  docs: 'examples/Examples.Rules' },
+    'Mediator':              { nuget: 'CSharpEssentials.Mediator',               docs: 'CSharpEssentials.Mediator/Readme.MD' },
+    'Entity':                { nuget: 'CSharpEssentials.Entity',                 docs: 'examples/Examples.Entity' },
+    'EntityFrameworkCore':   { nuget: 'CSharpEssentials.EntityFrameworkCore',    docs: 'examples/Examples.EntityFrameworkCore' },
+    'AspNetCore':            { nuget: 'CSharpEssentials.AspNetCore',             docs: 'examples/Examples.AspNetCore' },
+    'Http':                  { nuget: 'CSharpEssentials.Http',                   docs: 'CSharpEssentials.Http/Readme.MD' },
+    'Json':                  { nuget: 'CSharpEssentials.Json',                   docs: 'examples/Examples.Json' },
+    'RequestResponseLogging':{ nuget: 'CSharpEssentials.RequestResponseLogging', docs: 'examples/Examples.RequestResponseLogging' },
+    'GcpSecretManager':      { nuget: 'CSharpEssentials.GcpSecretManager',       docs: 'examples/Examples.GcpSecretManager' },
+    'Time':                  { nuget: 'CSharpEssentials.Time',                   docs: 'examples/Examples.Time' },
+    'Clone':                 { nuget: 'CSharpEssentials.Clone',                  docs: 'examples/Examples.Clone' },
+    'Meta':                  { nuget: 'CSharpEssentials',                        docs: 'examples/Examples.Main' }
+  };
+
+  // Build SVG element safely via createElementNS (no innerHTML)
+  function makeSvg(elems) {
+    var ns  = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('width', '11');
+    svg.setAttribute('height', '11');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    elems.forEach(function (e) {
+      var el = document.createElementNS(ns, e.tag);
+      Object.keys(e.attrs).forEach(function (k) { el.setAttribute(k, e.attrs[k]); });
+      svg.appendChild(el);
+    });
+    return svg;
+  }
+
+  var BOOK_SVG = [
+    { tag: 'path', attrs: { d: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20' } },
+    { tag: 'path', attrs: { d: 'M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z' } }
+  ];
+  var PKG_SVG = [
+    { tag: 'path',     attrs: { d: 'M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V10z' } },
+    { tag: 'polyline', attrs: { points: '3.27 6.96 12 12.01 20.73 6.96' } },
+    { tag: 'line',     attrs: { x1: '12', y1: '22.08', x2: '12', y2: '12' } }
+  ];
+
+  function makeAction(href, label, svgElems, extraClass) {
+    var a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.className = 'pkg-action' + (extraClass ? ' ' + extraClass : '');
+    a.setAttribute('aria-label', label);
+    a.appendChild(makeSvg(svgElems));
+    a.appendChild(document.createTextNode(extraClass ? 'NuGet' : 'Docs'));
+    return a;
+  }
+
+  document.querySelectorAll('.packages-grid .pkg-card').forEach(function (card) {
+    var nameEl = card.querySelector('.pkg-name');
+    if (!nameEl) return;
+    var name = nameEl.textContent.trim();
+    var pkg  = PKG_MAP[name];
+    if (!pkg) return;
+
+    var actions = document.createElement('div');
+    actions.className = 'pkg-actions';
+    actions.appendChild(makeAction(BASE_GH + pkg.docs,    'View ' + name + ' docs on GitHub', BOOK_SVG, ''));
+    actions.appendChild(makeAction(BASE_NUGET + pkg.nuget, 'View ' + name + ' on NuGet',      PKG_SVG,  'pkg-action--nuget'));
+    card.appendChild(actions);
   });
 }());
 </script>
