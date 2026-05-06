@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="CSharpEssentials — modular .NET NuGet ecosystem bridging OOP and Functional Programming in C#. 18 packages: Result, Maybe, Any, Rules, Mediator, Entity, EF Core, and more.">
+<meta name="keywords" content=".NET, NuGet, C#, functional programming, Result, Maybe, discriminated unions, railway-oriented programming">
+<meta property="og:title" content="CSharpEssentials">
+<meta property="og:description" content="Modular .NET library ecosystem bridging OOP and Functional Programming">
+<meta property="og:url" content="https://senrecep.github.io/CSharpEssentials">
+<title>CSharpEssentials — Modular .NET Functional Library</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface-raised: #1c2128;
+    --border: #30363d;
+    --border-subtle: #21262d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #58a6ff;
+    --accent-dim: #1f3a5c;
+    --green: #3fb950;
+    --green-dim: #1a3a22;
+    --orange: #d29922;
+    --purple: #bc8cff;
+    --font-mono: 'SFMono-Regular', 'Consolas', 'Liberation Mono', 'Menlo', monospace;
+    --font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --radius: 6px;
+    --radius-lg: 12px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── LAYOUT ─── */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  section { padding: 80px 0; }
+
+  /* ─── HEADER / NAV ─── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(13, 17, 23, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-brand svg { color: var(--accent); flex-shrink: 0; }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 14px;
+    transition: color 0.15s;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-github {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text) !important;
+    font-size: 13px !important;
+    transition: background 0.15s, border-color 0.15s !important;
+  }
+
+  .nav-github:hover {
+    background: var(--surface-raised) !important;
+    border-color: var(--accent) !important;
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    padding: 100px 0 80px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 0%, rgba(88, 166, 255, 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 80% 80%, rgba(63, 185, 80, 0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(88, 166, 255, 0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 {
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, #e6edf3 0%, #8b949e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, #79c0ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-subtitle {
+    font-size: clamp(16px, 2.5vw, 20px);
+    color: var(--muted);
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.5;
+  }
+
+  /* ─── CTA BLOCK ─── */
+  .cta-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .cmd-row {
+    display: flex;
+    align-items: center;
+    border-radius: var(--radius);
+    overflow: hidden;
+    max-width: 520px;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .cmd-row--primary {
+    background: var(--green-dim);
+    border: 1px solid rgba(63, 185, 80, 0.35);
+  }
+
+  .cmd-row--primary:hover {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(63, 185, 80, 0.12);
+  }
+
+  .cmd-row--secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .cmd-row--secondary:hover { border-color: var(--accent); }
+
+  .cmd-code {
+    flex: 1;
+    padding: 13px 16px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--green);
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+  }
+
+  .cmd-row--secondary .cmd-code {
+    font-size: 13px;
+    color: var(--muted);
+    padding: 11px 16px;
+  }
+
+  .cmd-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 0 16px;
+    height: 46px;
+    background: transparent;
+    border: none;
+    border-left: 1px solid rgba(63, 185, 80, 0.2);
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font-ui);
+    transition: color 0.15s, background 0.15s;
+    white-space: nowrap;
+  }
+
+  .cmd-row--primary .cmd-btn:hover { color: var(--green); background: rgba(63, 185, 80, 0.06); }
+  .cmd-row--secondary .cmd-btn { border-left-color: var(--border-subtle); }
+  .cmd-row--secondary .cmd-btn:hover { color: var(--accent); background: rgba(88, 166, 255, 0.06); }
+  .cmd-btn.copied { color: var(--green); }
+
+  /* ─── HERO LINKS ─── */
+  .hero-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .hero-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 14px;
+    transition: color 0.15s;
+  }
+
+  .hero-links a:hover { color: var(--text); }
+
+  .nuget-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .nuget-badge:hover { border-color: var(--accent); color: var(--accent) !important; }
+
+  .badge-label {
+    background: #004880;
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .badge-value { color: var(--accent); font-weight: 500; }
+
+  /* ─── STATS BAR ─── */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    padding: 32px 0;
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  .stat-label { font-size: 13px; color: var(--muted); }
+
+  /* ─── SECTION HEADINGS ─── */
+  .section-heading {
+    margin-bottom: 48px;
+    text-align: center;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .section-heading h2 {
+    font-size: clamp(24px, 3.5vw, 36px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .section-heading p {
+    color: var(--muted);
+    font-size: 16px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* ─── FEATURES ─── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    transition: border-color 0.2s, background 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--border);
+    background: var(--surface-raised);
+  }
+
+  .feature-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-dim);
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .feature-card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .feature-card p {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .feature-card code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  /* ─── PACKAGES GRID ─── */
+  .packages-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .pkg-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius);
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+  }
+
+  .pkg-card:hover {
+    border-color: var(--border);
+    background: var(--surface-raised);
+    transform: translateY(-1px);
+  }
+
+  .pkg-card--meta {
+    border-color: rgba(63, 185, 80, 0.2);
+    background: rgba(63, 185, 80, 0.04);
+  }
+
+  .pkg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .pkg-name {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  .pkg-card--meta .pkg-name { color: var(--green); }
+
+  .pkg-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .tag-core  { background: rgba(88, 166, 255, 0.12); color: var(--accent);  border: 1px solid rgba(88, 166, 255, 0.2); }
+  .tag-data  { background: rgba(210, 153, 34, 0.12); color: var(--orange);  border: 1px solid rgba(210, 153, 34, 0.2); }
+  .tag-infra { background: rgba(188, 140, 255, 0.12); color: var(--purple); border: 1px solid rgba(188, 140, 255, 0.2); }
+  .tag-meta  { background: rgba(63, 185, 80, 0.12);  color: var(--green);   border: 1px solid rgba(63, 185, 80, 0.2); }
+
+  .pkg-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .pkg-desc code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .pkg-type {
+    font-size: 11px;
+    color: rgba(139, 148, 158, 0.6);
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── AI SKILLS ─── */
+  .skills-section {
+    background: var(--surface);
+    border-top: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .skills-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+
+  .skills-copy h2 {
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 16px;
+  }
+
+  .skills-copy p {
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  .agent-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .agent-chip {
+    padding: 4px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .skills-commands {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .code-block-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .code-block-copy {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    font-family: var(--font-ui);
+  }
+
+  .code-block-copy:hover { color: var(--text); background: var(--surface); }
+  .code-block-copy.copied { color: var(--green); }
+
+  .code-block pre {
+    padding: 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--green);
+    overflow-x: auto;
+  }
+
+  .skills-note {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    padding: 48px 0;
+    border-top: 1px solid var(--border-subtle);
+  }
+
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .footer-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    list-style: none;
+  }
+
+  .footer-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    transition: color 0.15s;
+  }
+
+  .footer-links a:hover { color: var(--text); }
+
+  .footer-copy { font-size: 12px; color: rgba(139, 148, 158, 0.5); }
+
+  /* ─── DIVIDER ─── */
+  .divider { height: 1px; background: var(--border-subtle); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    section { padding: 56px 0; }
+    .hero { padding: 64px 0 56px; }
+    .nav-links { display: none; }
+    .skills-inner { grid-template-columns: 1fr; gap: 40px; }
+    .stats-bar { gap: 28px; }
+    .footer-inner { flex-direction: column; align-items: flex-start; }
+    .packages-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    .hero h1 { font-size: 34px; }
+    .cmd-code { font-size: 12px; }
+    .features-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ─── SCROLL ANIMATION ─── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<header>
+  <nav>
+    <a href="#" class="nav-brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+        <polyline points="2 17 12 22 22 17"/>
+        <polyline points="2 12 12 17 22 12"/>
+      </svg>
+      CSharpEssentials
+    </a>
+    <ul class="nav-links">
+      <li><a href="#packages">Packages</a></li>
+      <li><a href="#ai-skills">AI Skills</a></li>
+      <li>
+        <a href="https://github.com/senrecep/CSharpEssentials" target="_blank" rel="noopener" class="nav-github">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<!-- ─── HERO ─── -->
+<section class="hero" aria-label="Hero">
+  <div class="container">
+    <div class="hero-badge" aria-hidden="true">
+      <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+      18 packages &middot; .NET 9/8 &middot; NuGet
+    </div>
+    <h1>CSharp<span>Essentials</span></h1>
+    <p class="hero-subtitle">Modular .NET library ecosystem bridging OOP and Functional Programming — Result monads, discriminated unions, rules engine, and more.</p>
+
+    <div class="cta-block">
+      <div class="cmd-row cmd-row--primary" role="button" tabindex="0" aria-label="Copy: npx skills add senrecep/CSharpEssentials" data-copy="npx skills add senrecep/CSharpEssentials">
+        <span class="cmd-code">npx skills add senrecep/CSharpEssentials</span>
+        <button class="cmd-btn" tabindex="-1" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="btn-label">Copy</span>
+        </button>
+      </div>
+
+      <div class="cmd-row cmd-row--secondary" role="button" tabindex="0" aria-label="Copy: dotnet add package CSharpEssentials" data-copy="dotnet add package CSharpEssentials">
+        <span class="cmd-code">dotnet add package CSharpEssentials</span>
+        <button class="cmd-btn" tabindex="-1" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          <span class="btn-label">Copy</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="hero-links">
+      <a href="https://github.com/senrecep/CSharpEssentials" target="_blank" rel="noopener">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+        senrecep/CSharpEssentials
+      </a>
+      <span aria-hidden="true" style="color: var(--border);">&middot;</span>
+      <a href="https://www.nuget.org/packages/CSharpEssentials" target="_blank" rel="noopener" class="nuget-badge">
+        <span class="badge-label">NuGet</span>
+        <span class="badge-value">CSharpEssentials</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ─── STATS ─── -->
+<div class="container">
+  <div class="stats-bar reveal" role="list" aria-label="Key metrics">
+    <div class="stat-item" role="listitem">
+      <span class="stat-value">18</span>
+      <span class="stat-label">Packages</span>
+    </div>
+    <div class="stat-item" role="listitem">
+      <span class="stat-value">4</span>
+      <span class="stat-label">Target Frameworks</span>
+    </div>
+    <div class="stat-item" role="listitem">
+      <span class="stat-value">50+</span>
+      <span class="stat-label">AI Agent Skills</span>
+    </div>
+    <div class="stat-item" role="listitem">
+      <span class="stat-value">AOT</span>
+      <span class="stat-label">Safe Enums</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ─── FEATURES ─── -->
+<section aria-labelledby="features-heading">
+  <div class="container">
+    <div class="section-heading reveal">
+      <span class="section-label">Design Philosophy</span>
+      <h2 id="features-heading">Built for production .NET</h2>
+      <p>Every abstraction earns its place. No ceremony, no boilerplate — just composable, null-safe, type-driven primitives.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </div>
+        <h3>Railway-Oriented Error Handling</h3>
+        <p>Chain operations with <code>Result&lt;T&gt;</code> and <code>Error</code> — no exceptions leaking across boundaries.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+        </div>
+        <h3>Discriminated Unions</h3>
+        <p>First-class <code>Any&lt;T1,T2,...&gt;</code> types bring exhaustive pattern matching to C# without the ceremony.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <h3>Composable Rules Engine</h3>
+        <p>Build validation and business logic with <code>.And() .Or() .Next()</code> — readable, testable, reusable.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3>Null Safety by Design</h3>
+        <p>Full nullable annotations with <code>TreatWarningsAsErrors</code> — null reference bugs caught at compile time.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+        </div>
+        <h3>DDD Foundations</h3>
+        <p><code>EntityBase&lt;TId&gt;</code>, domain events, EF Core interceptors, and pagination out of the box.</p>
+      </div>
+      <div class="feature-card reveal">
+        <div class="feature-icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        </div>
+        <h3>Modular by Default</h3>
+        <p>Take only what you need. Each package is independently versioned and published. Or grab the meta-package for everything.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── PACKAGES ─── -->
+<section id="packages" style="padding-top: 0;" aria-labelledby="packages-heading">
+  <div class="container">
+    <div class="section-heading reveal">
+      <span class="section-label">Ecosystem</span>
+      <h2 id="packages-heading">18 focused packages</h2>
+      <p>Targeting .NET 9, .NET 8, netstandard2.1, and netstandard2.0. Central package management keeps versions consistent.</p>
+    </div>
+    <div class="packages-grid">
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Results</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Railway-oriented error handling with <code>Result&lt;T&gt;</code> — chain operations without throwing exceptions.</p>
+        <span class="pkg-type">Result&lt;T&gt; &middot; IResult</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Errors</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Structured <code>Error</code> values with codes and metadata — no exceptions as control flow.</p>
+        <span class="pkg-type">Error &middot; ErrorCode</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Maybe</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Explicit optionals with <code>Maybe&lt;T&gt;</code> — make the absence of a value visible in your type signatures.</p>
+        <span class="pkg-type">Maybe&lt;T&gt; &middot; None</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Any</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Discriminated unions <code>Any&lt;T1,T2&gt;</code> for exhaustive pattern matching without class hierarchies.</p>
+        <span class="pkg-type">Any&lt;T1,T2&gt; &middot; Match()</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Core</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">String, GUID, and collection utilities that should be in the BCL but aren't.</p>
+        <span class="pkg-type">Extensions &middot; Helpers</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Enums</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc"><code>[StringEnum]</code> source generator for AOT-safe, allocation-free enum-to-string conversion.</p>
+        <span class="pkg-type">[StringEnum] &middot; AOT-safe</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Rules</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Composable rule engine with <code>.And() .Or() .Next()</code> — build readable, testable validation trees.</p>
+        <span class="pkg-type">IRule&lt;T&gt; &middot; RuleSet</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Mediator</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Lightweight CQRS mediator with pipeline behaviors, logging via <code>ILoggableRequest</code>.</p>
+        <span class="pkg-type">IMessage &middot; IMediator</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Entity</span>
+          <span class="pkg-tag tag-data">Domain</span>
+        </div>
+        <p class="pkg-desc"><code>EntityBase&lt;TId&gt;</code> with domain event support — the foundation for DDD aggregates.</p>
+        <span class="pkg-type">EntityBase&lt;TId&gt; &middot; IDomainEvent</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">EntityFrameworkCore</span>
+          <span class="pkg-tag tag-data">Data</span>
+        </div>
+        <p class="pkg-desc">EF Core interceptors for domain events, soft delete, auditing, and cursor/offset pagination.</p>
+        <span class="pkg-type">Interceptors &middot; Pagination</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">AspNetCore</span>
+          <span class="pkg-tag tag-infra">Web</span>
+        </div>
+        <p class="pkg-desc"><code>GlobalExceptionHandler</code>, Result-aware action filters, and problem details mapping.</p>
+        <span class="pkg-type">GlobalExceptionHandler &middot; Filters</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Http</span>
+          <span class="pkg-tag tag-infra">Web</span>
+        </div>
+        <p class="pkg-desc"><code>HttpClient</code> extensions that return <code>Result&lt;T&gt;</code> instead of throwing on non-2xx responses.</p>
+        <span class="pkg-type">HttpResult &middot; TypedClient</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Json</span>
+          <span class="pkg-tag tag-infra">Infra</span>
+        </div>
+        <p class="pkg-desc">Pre-configured <code>System.Text.Json</code> options with Result/Maybe converters included.</p>
+        <span class="pkg-type">JsonOptions &middot; Converters</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">RequestResponseLogging</span>
+          <span class="pkg-tag tag-infra">Infra</span>
+        </div>
+        <p class="pkg-desc">ASP.NET Core middleware for structured request/response body logging with configurable filtering.</p>
+        <span class="pkg-type">Middleware &middot; ILogger</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">GcpSecretManager</span>
+          <span class="pkg-tag tag-infra">Infra</span>
+        </div>
+        <p class="pkg-desc">GCP Secret Manager integration that surfaces secrets as standard <code>IConfiguration</code> entries.</p>
+        <span class="pkg-type">IConfiguration &middot; GCP</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Time</span>
+          <span class="pkg-tag tag-infra">Infra</span>
+        </div>
+        <p class="pkg-desc">Testable <code>IDateTimeProvider</code> — swap real time for fixed time in unit tests without static hacks.</p>
+        <span class="pkg-type">IDateTimeProvider &middot; SystemClock</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Clone</span>
+          <span class="pkg-tag tag-core">Core</span>
+        </div>
+        <p class="pkg-desc">Strongly-typed deep copy via <code>ICloneable&lt;T&gt;</code> — explicit, type-safe, no object returns.</p>
+        <span class="pkg-type">ICloneable&lt;T&gt;</span>
+      </div>
+
+      <div class="pkg-card pkg-card--meta reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Meta</span>
+          <span class="pkg-tag tag-meta">Meta</span>
+        </div>
+        <p class="pkg-desc">The meta-package — includes all core functional modules in a single dependency for quick project setup.</p>
+        <span class="pkg-type">Results &middot; Errors &middot; Maybe &middot; Any &middot; Rules &middot; Mediator</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ─── AI SKILLS ─── -->
+<section id="ai-skills" class="skills-section" aria-labelledby="skills-heading">
+  <div class="container">
+    <div class="skills-inner">
+      <div class="skills-copy reveal">
+        <span class="section-label">AI Agent Skills</span>
+        <h2 id="skills-heading">AI skills for every agent</h2>
+        <p>18 per-package skills for Claude Code, Cursor, Codex, and 50+ compatible AI agents. Install once and every agent in your workflow gets structured, accurate knowledge of each package's API.</p>
+        <div class="agent-chips" aria-label="Compatible agents">
+          <span class="agent-chip">Claude Code</span>
+          <span class="agent-chip">Cursor</span>
+          <span class="agent-chip">Codex</span>
+          <span class="agent-chip">GitHub Copilot</span>
+          <span class="agent-chip">Windsurf</span>
+          <span class="agent-chip">50+ agents</span>
+        </div>
+      </div>
+      <div class="skills-commands reveal">
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-title">Install via package name</span>
+            <button class="code-block-copy" data-copy="npx skills add senrecep/CSharpEssentials">Copy</button>
+          </div>
+          <pre>npx skills add senrecep/CSharpEssentials</pre>
+        </div>
+        <div class="code-block">
+          <div class="code-block-header">
+            <span class="code-block-title">Install via GitHub Pages URL</span>
+            <button class="code-block-copy" data-copy="npx skills add https://senrecep.github.io/CSharpEssentials">Copy</button>
+          </div>
+          <pre>npx skills add https://senrecep.github.io/CSharpEssentials</pre>
+        </div>
+        <p class="skills-note">After install, your AI assistant knows the full API surface of each package — types, methods, patterns, and idiomatic usage — without hallucination.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── FOOTER ─── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+        CSharpEssentials
+      </div>
+      <ul class="footer-links">
+        <li><a href="https://github.com/senrecep/CSharpEssentials" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://www.nuget.org/packages/CSharpEssentials" target="_blank" rel="noopener">NuGet</a></li>
+        <li><a href="https://github.com/senrecep/CSharpEssentials/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+      </ul>
+      <span class="footer-copy">MIT License &middot; Built by Recep Sen</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ─── COPY HELPER (no innerHTML mutation) ───
+  function performCopy(text, btn) {
+    var label = btn.querySelector('.btn-label') || btn;
+    var originalText = label.textContent;
+
+    navigator.clipboard.writeText(text).then(function () {
+      btn.classList.add('copied');
+      label.textContent = 'Copied!';
+      setTimeout(function () {
+        btn.classList.remove('copied');
+        label.textContent = originalText;
+      }, 2000);
+    }).catch(function () {
+      // Fallback for older browsers
+      var el = document.createElement('textarea');
+      el.value = text;
+      el.setAttribute('readonly', '');
+      el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      btn.classList.add('copied');
+      label.textContent = 'Copied!';
+      setTimeout(function () {
+        btn.classList.remove('copied');
+        label.textContent = originalText;
+      }, 2000);
+    });
+  }
+
+  // ─── CMD ROW (hero) click/keyboard handlers ───
+  document.querySelectorAll('.cmd-row').forEach(function (row) {
+    var text = row.getAttribute('data-copy');
+    var btn = row.querySelector('.cmd-btn');
+
+    function activate() {
+      if (text) performCopy(text, btn);
+    }
+
+    row.addEventListener('click', activate);
+    row.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        activate();
+      }
+    });
+  });
+
+  // ─── CODE BLOCK copy buttons ───
+  document.querySelectorAll('.code-block-copy').forEach(function (btn) {
+    var text = btn.getAttribute('data-copy');
+    btn.addEventListener('click', function () {
+      if (text) performCopy(text, btn);
+    });
+  });
+
+  // ─── SCROLL REVEAL ───
+  var reveals = document.querySelectorAll('.reveal');
+  if ('IntersectionObserver' in window) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    reveals.forEach(function (el) { observer.observe(el); });
+  } else {
+    // Fallback: show all immediately
+    reveals.forEach(function (el) { el.classList.add('visible'); });
+  }
+
+  // ─── STAGGER PACKAGE CARDS ───
+  document.querySelectorAll('.packages-grid .pkg-card').forEach(function (card, i) {
+    card.style.transitionDelay = (i * 28) + 'ms';
+  });
+}());
+</script>
+</body>
+</html>
