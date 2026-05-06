@@ -1,0 +1,94 @@
+{
+  "skills": [
+    {
+      "name": "csharpessentials-any",
+      "description": "Use when a method can return one of several distinct types — Any<T1,T2> as a type-safe discriminated union, implicit assignment from any branch type, exhaustive Match() to handle all cases, and Is<T>/As<T> for type inspection.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-aspnetcore",
+      "description": "Use when wiring CSharpEssentials Result<T> into ASP.NET Core — GlobalExceptionHandler maps unhandled exceptions to ProblemDetails, ResultEndpointFilter converts Result<T> returns to HTTP responses, and ConfigureSwaggerOptions adds per-version Swagger docs.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-clone",
+      "description": "Use when entities need deep-copy semantics — implement ICloneable<T> on domain objects, then call .Clone() on IEnumerable<T> or IQueryable<T> collections to produce independent deep copies of every element.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-core",
+      "description": "Use for low-level C# utility helpers — string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), URL-safe and v7 GUID generation, null-safe collection helpers (WhereNotNull, AddIf), and async cancellation utilities.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-efcore",
+      "description": "Use when wiring EF Core with CSharpEssentials domain models — AuditInterceptor for automatic CreatedAt/UpdatedAt, DomainEventInterceptor for post-save event dispatch, SlowQueryInterceptor for query monitoring, and ToPagedListAsync for offset pagination.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-entity",
+      "description": "Use when building DDD domain models — EntityBase<TId> for aggregate roots with audit fields and domain events, SoftDeletableEntityBase for soft deletion lifecycle, and IDomainEvent for defining and raising domain events.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-enums",
+      "description": "Use when you need enum-to-string serialization without reflection — [StringEnum] source generator produces compile-time ToString(), Parse(), and TryParse() methods that are NativeAOT-safe and zero-allocation.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-errors",
+      "description": "Use when creating structured error values — Error factory methods (Failure/Validation/NotFound/Conflict/Unauthorized/Forbidden/Unexpected), ErrorMetadata for contextual data, HTTP status mapping, and domain-specific static error class hierarchies.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-gcpsecretmanager",
+      "description": "Use when loading secrets from Google Cloud Secret Manager into IConfiguration at startup — AddGcpSecretManager() registers a configuration provider that pulls named secrets so they are available as standard config values throughout the application.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-http",
+      "description": "Use when making HTTP calls that should return Result<T> instead of throwing exceptions — GetFromJsonResultAsync, PostAsJsonResultAsync, DeleteResultAsync on HttpClient, and HttpRequestBuilder for fluent multi-header/query-param requests with optional Polly resilience.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-json",
+      "description": "Use when configuring System.Text.Json for ASP.NET Core — JsonOptions.Default with camelCase/no-nulls/no-cycles, ConditionalStringEnumConverter for [StringEnum] enums, MultiFormatDateTimeConverter for flexible date parsing, and PolymorphicJsonConverterFactory for $type discriminator.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-logging",
+      "description": "Use when adding request/response body logging middleware to ASP.NET Core — AddRequestResponseLogging() with configurable body/header capture, UseRequestResponseLogging() pipeline registration, and [SkipRequestResponseLogging] / [SkipRequestLogging] / [SkipResponseLogging] attributes for per-endpoint opt-out.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-maybe",
+      "description": "Use when representing optional values explicitly — Maybe<T> as a null-safe container, Maybe.From() for creation, HasValue/HasNoValue, Map/Bind chaining, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-mediator",
+      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers — ValidationBehavior (auto FluentValidation), LoggingBehavior (ILoggableRequest), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-meta",
+      "description": "Use when deciding which CSharpEssentials package to use — overview of all 18 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-results",
+      "description": "Use when handling operation outcomes without exceptions — Result and Result<T> for success/failure, railway-oriented chaining with Then/ThenAsync/Ensure, Match for consumption, and Result.And/Or for combining multiple results.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-rules",
+      "description": "Use when composing business validation logic — define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(); branch with RuleEngine.If().",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-time",
+      "description": "Use when you need testable time — IDateTimeProvider wraps .NET's TimeProvider so production code uses TimeProvider.System while tests use FakeTimeProvider to freeze/advance the clock; also provides .ToDateOnly() and .ToTimeOnly() DateTime extension methods.",
+      "files": ["SKILL.md"]
+    }
+  ]
+}
