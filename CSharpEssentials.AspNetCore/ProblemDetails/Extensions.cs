@@ -276,11 +276,11 @@ public static partial class Extensions
         problemDetails.Extensions.TryAdd("requestId", httpContext.TraceIdentifier);
 
         System.Diagnostics.Activity? activity = httpContext.Features.Get<IHttpActivityFeature>()?.Activity;
-        activity.IfNotNull((activity) =>
+        activity.IfNotNull((act) =>
         {
-            activity.Id.IfNotNull((id) => problemDetails.Extensions.TryAdd("traceId", id));
-            activity.ParentId.IfNotNull((parentId) => problemDetails.Extensions.TryAdd("parentSpanId", parentId));
-            activity.SpanId.IfNotNull((spanId) => problemDetails.Extensions.TryAdd("spanId", spanId.ToString()));
+            act.Id.IfNotNull((id) => problemDetails.Extensions.TryAdd("traceId", id));
+            act.ParentId.IfNotNull((parentId) => problemDetails.Extensions.TryAdd("parentSpanId", parentId));
+            act.SpanId.IfNotNull((spanId) => problemDetails.Extensions.TryAdd("spanId", spanId.ToString()));
         });
 
         httpContext.User.Identity?.IsAuthenticated.IfTrue(() =>

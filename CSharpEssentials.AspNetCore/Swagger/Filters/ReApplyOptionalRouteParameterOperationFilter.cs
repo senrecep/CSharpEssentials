@@ -15,7 +15,7 @@ public sealed partial class ReApplyOptionalRouteParameterOperationFilter : IOper
             .GetCustomAttributes(true)
             .OfType<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>();
 
-        Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute? httpMethodWithOptional = httpMethodAttributes?.FirstOrDefault(m => m.Template?.Contains('?') ?? false);
+        Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute? httpMethodWithOptional = httpMethodAttributes.FirstOrDefault(m => m.Template?.Contains('?') ?? false);
         if (httpMethodWithOptional?.Template == null)
             return;
 

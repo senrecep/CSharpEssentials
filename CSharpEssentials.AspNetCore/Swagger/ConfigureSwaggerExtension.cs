@@ -56,28 +56,28 @@ public static class ConfigureSwaggerExtension
             s.RouteTemplate = "swagger/{documentName}/swagger.json";
             options?.Invoke(s);
         })
-        .UseSwaggerUI(options =>
+        .UseSwaggerUI(swaggerUiOptions =>
         {
             if (apiVersionDescriptionProvider == null)
             {
-                options.SwaggerEndpoint("/swagger/v1/swagger.json", $"{serviceName} V1");
+                swaggerUiOptions.SwaggerEndpoint("/swagger/v1/swagger.json", $"{serviceName} V1");
             }
             else
             {
                 foreach (ApiVersionDescription description in apiVersionDescriptionProvider.ApiVersionDescriptions)
-                    options.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", $"{serviceName} {description.GroupName.ToUpperInvariant()}");
+                    swaggerUiOptions.SwaggerEndpoint($"/swagger/{description.GroupName}/swagger.json", $"{serviceName} {description.GroupName.ToUpperInvariant()}");
             }
 
 
-            options.DisplayOperationId();
-            options.DisplayRequestDuration();
-            options.EnableDeepLinking();
-            options.EnableFilter();
-            options.ShowExtensions();
-            options.ShowCommonExtensions();
-            options.EnableValidator();
+            swaggerUiOptions.DisplayOperationId();
+            swaggerUiOptions.DisplayRequestDuration();
+            swaggerUiOptions.EnableDeepLinking();
+            swaggerUiOptions.EnableFilter();
+            swaggerUiOptions.ShowExtensions();
+            swaggerUiOptions.ShowCommonExtensions();
+            swaggerUiOptions.EnableValidator();
 
-            uiOptions?.Invoke(options);
+            uiOptions?.Invoke(swaggerUiOptions);
         });
     }
 }
