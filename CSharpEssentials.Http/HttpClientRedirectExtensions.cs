@@ -10,8 +10,8 @@ namespace CSharpEssentials.Http;
 public static class HttpClientRedirectExtensions
 {
     public static async Task<Result> SendWithRedirectsAsResultAsync(
-        this HttpClient client,
-        HttpRequestMessage request,
+        this HttpClient? client,
+        HttpRequestMessage? request,
         int maxRedirects = 5,
         CancellationToken cancellationToken = default)
     {
@@ -74,8 +74,8 @@ public static class HttpClientRedirectExtensions
     }
 
     public static async Task<Result<T>> SendWithRedirectsAsResultAsync<T>(
-        this HttpClient client,
-        HttpRequestMessage request,
+        this HttpClient? client,
+        HttpRequestMessage? request,
         JsonSerializerOptions? options = null,
         int maxRedirects = 5,
         CancellationToken cancellationToken = default)

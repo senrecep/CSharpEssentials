@@ -17,7 +17,7 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
 
 
     public MultiFormatDateTimeConverterFactory(params string[] formats) =>
-        _formats = [.. _defaultFormats, .. formats ?? []];
+        _formats = [.. _defaultFormats, .. formats];
 
 
     public override bool CanConvert(Type typeToConvert) => typeToConvert == _dateTimeType || typeToConvert == _nullableDateTimeType;

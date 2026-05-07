@@ -98,8 +98,8 @@ internal abstract class BaseMiddleware
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = GetLoggingConfiguration(httpContext);
         string requestText;
         Stream originalBodyStream = httpContext.Response.Body;
-        TimeSpan executionTime = TimeSpan.Zero;
-        string responseText = DefaultResponseText;
+        TimeSpan executionTime;
+        string responseText;
 
         try
         {

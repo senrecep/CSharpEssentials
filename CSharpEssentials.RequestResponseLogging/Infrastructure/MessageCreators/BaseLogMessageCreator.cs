@@ -24,7 +24,7 @@ internal abstract class BaseLogMessageCreator
 
     private static string GetHeaders(RequestResponseContext requestResponseContext, HashSet<string> headerKeys)
     {
-        if (requestResponseContext?.Context?.Request?.Headers == null || headerKeys.Count == 0)
+        if (headerKeys.Count == 0)
             return string.Empty;
 
         IEnumerable<string> filteredHeaders = requestResponseContext.Context.Request.Headers
