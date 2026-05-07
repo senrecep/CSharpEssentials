@@ -217,10 +217,10 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         if (HasNoValue)
             return "No value";
 
-        return _value.ConvertToJson() ?? _value.GetType().Name;
+        return _value.ConvertToJson();
     }
 }
-public readonly partial record struct Maybe : IMaybe
+public readonly record struct Maybe : IMaybe
 {
     /// <summary>
     /// Represents a Maybe with no value.

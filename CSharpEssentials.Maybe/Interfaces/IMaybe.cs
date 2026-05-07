@@ -1,7 +1,7 @@
 namespace CSharpEssentials.Maybe.Interfaces;
 
 public interface IMaybe;
-public partial interface IMaybe<T> : IMaybe
+public interface IMaybe<T> : IMaybe
 {
     T Value { get; }
     bool HasValue { get; }

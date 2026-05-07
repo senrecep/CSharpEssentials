@@ -12,7 +12,7 @@ public static class JsonExtensions
     /// <param name="jsonElement"></param>
     /// <param name="propNames"></param>
     /// <returns></returns>
-    public static Result<JsonElement> TryGetProperty(this JsonElement jsonElement, params string[] propNames)
+    public static Result<JsonElement> TryGetProperty(this JsonElement jsonElement, params string[]? propNames)
     {
         if (propNames is null || propNames.Length == 0)
             return Error.Validation("NoPropertyNames", "At least one property name must be provided.");
@@ -32,7 +32,7 @@ public static class JsonExtensions
     /// <param name="document"></param>
     /// <param name="propNames"></param>
     /// <returns></returns>
-    public static Result<JsonElement?> TryGetNestedProperty(this JsonDocument document, params string[] propNames)
+    public static Result<JsonElement?> TryGetNestedProperty(this JsonDocument? document, params string[]? propNames)
     {
         if (document is null)
             return Error.Validation("DocumentIsNull", "The document is null or has no root element.");
