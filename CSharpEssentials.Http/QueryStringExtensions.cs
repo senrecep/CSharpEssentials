@@ -31,7 +31,7 @@ public static class QueryStringExtensions
         return builder.ToString();
     }
 
-    public static Result<string> ToQueryString(this object source)
+    public static Result<string> ToQueryString(this object? source)
     {
         if (source is null)
             return Error.Validation("QueryString.SourceRequired", "Source cannot be null.");
@@ -44,7 +44,7 @@ public static class QueryStringExtensions
         return properties.ToQueryString();
     }
 
-    public static Result<Uri> WithQueryString(this Uri uri, Dictionary<string, string?> parameters)
+    public static Result<Uri> WithQueryString(this Uri? uri, Dictionary<string, string?> parameters)
     {
         if (uri is null)
             return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
@@ -64,7 +64,7 @@ public static class QueryStringExtensions
         return builder.Uri;
     }
 
-    public static Result<Uri> WithQueryString(this Uri uri, object parameters)
+    public static Result<Uri> WithQueryString(this Uri? uri, object? parameters)
     {
         if (uri is null)
             return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
@@ -86,7 +86,7 @@ public static class QueryStringExtensions
         return builder.Uri;
     }
 
-    public static Result<Uri> WithQueryString(this Uri uri, string name, string value)
+    public static Result<Uri> WithQueryString(this Uri? uri, string name, string value)
     {
         if (uri is null)
             return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
