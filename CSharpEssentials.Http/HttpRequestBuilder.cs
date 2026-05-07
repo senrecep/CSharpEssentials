@@ -118,7 +118,7 @@ public sealed class HttpRequestBuilder
         return request;
     }
 
-    public async Task<Result> AsResultAsync(HttpClient client, CancellationToken cancellationToken = default)
+    public async Task<Result> AsResultAsync(HttpClient? client, CancellationToken cancellationToken = default)
     {
         if (client is null)
             return Error.Validation("HttpRequestBuilder.ClientRequired", "HttpClient cannot be null.");
@@ -134,7 +134,7 @@ public sealed class HttpRequestBuilder
         return await client.SendAsResultAsync(request, cancellationToken);
     }
 
-    public async Task<Result<T>> AsResultAsync<T>(HttpClient client, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default)
+    public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (client is null)
             return Error.Validation("HttpRequestBuilder.ClientRequired", "HttpClient cannot be null.");
