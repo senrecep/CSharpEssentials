@@ -266,7 +266,6 @@ using (var scope = provider.CreateScope())
 }
 
 Console.WriteLine("========================================");
-Console.WriteLine("Demo complete. Press any key to exit.");
+Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
-Console.ReadKey();
 

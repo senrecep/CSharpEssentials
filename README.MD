@@ -37,6 +37,10 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Time` | Testable `IDateTimeProvider` wrapping `TimeProvider` | [📖](examples/Examples.Time/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
 | `CSharpEssentials.Clone` | `ICloneable<T>` — typed deep-copy for entity collections | [📖](examples/Examples.Clone/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
 
+## Documentation
+
+**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 18 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+
 ## Installation
 
 ```bash
