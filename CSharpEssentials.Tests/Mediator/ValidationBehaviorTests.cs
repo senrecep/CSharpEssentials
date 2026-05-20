@@ -1,6 +1,7 @@
 using Mediator;
 
 using CSharpEssentials.Errors;
+using CSharpEssentials.Exceptions;
 using CSharpEssentials.Mediator;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Validation;
@@ -108,6 +109,19 @@ public class ValidationBehaviorTests
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Throw_EnhancedValidationException_When_TResponse_Is_Not_Result()
+    {
+        // When TResponse cannot carry error info (not Result/Result<T>), EnhancedValidationException is thrown.
+        ValidationBehavior<TestValidationCommand, string> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+        TestValidationCommand command = new("");
+
+        Func<Task> act = () => behavior.Handle(command, (_, _) => new ValueTask<string>("ok"), default).AsTask();
+
+        var assertion = await act.Should().ThrowAsync<EnhancedValidationException>();
+        assertion.Which.Errors.Should().ContainSingle(e => e.Code == "NameRequired");
     }
 
     [Fact]

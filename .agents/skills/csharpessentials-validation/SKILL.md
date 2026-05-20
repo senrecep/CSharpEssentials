@@ -343,9 +343,9 @@ services.AddMediatorValidationBehavior();
 services.AddMediatorBehaviors();
 ```
 
-Validation runs before the handler. On failure, the handler is never invoked and `Result.Failure` is returned with all collected errors. See `csharpessentials-mediator` skill for full pipeline docs.
+Validation runs before the handler. On failure, the handler is never invoked. Errors are surfaced based on the handler return type: `Result` and `Result<T>` handlers receive `Result.Failure` directly; handlers with any other return type cause `EnhancedValidationException` to be thrown (caught by `GlobalExceptionHandler`). See `csharpessentials-mediator` skill for full pipeline docs.
 
-**Exception isolation:** If a validator throws a non-`OperationCanceledException` exception, `ValidationBehavior` catches it and converts it to `Result.Failure(Error.Exception("Validator.Exception", ex))` — the pipeline never rethrows validator bugs. `OperationCanceledException` always propagates so cancellation is respected.
+**Exception isolation:** If a validator throws a non-`OperationCanceledException` exception, `ValidationBehavior` catches it and converts it to `Error.Exception("Validator.Exception", ex)` — the pipeline never rethrows validator bugs. `OperationCanceledException` always propagates so cancellation is respected.
 
 ---
 
