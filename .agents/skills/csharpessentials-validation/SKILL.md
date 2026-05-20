@@ -92,10 +92,12 @@ rules.For(() => model.Age)
 
 ---
 
-## Collection Validators (`IEnumerable<T>`)
+## Collection Validators
+
+Works with any nullable collection type: `List<T>?`, `IEnumerable<T>?`, `IList<T>?`, `IReadOnlyList<T>?`, `T[]?`, and any type implementing `IEnumerable`.
 
 ```csharp
-rules.For(() => model.Tags)
+rules.For(() => model.Tags)      // Tags can be List<string>?, IEnumerable<string>?, string[]?, etc.
     .NotEmpty()        // null or empty collection fails
     .NotNull()         // null fails
     .MinCount(1)       // fewer than 1 element fails
@@ -147,17 +149,19 @@ await rules.For(() => model.Email)
 
 ## Nested Object Validation
 
+Works with both non-nullable and nullable reference type properties — no null-forgiving operator needed.
+`SetValidatorAsync` skips `null` values automatically.
+
 ```csharp
-await rules.For(() => model.Address!).SetValidatorAsync(new AddressValidator(), ct);
+// Non-nullable property
+await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
+
+// Nullable reference type property — works directly, no ! required
+await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct);
+// model.BillingAddress is Address? — null is silently skipped
+
 // Error codes are prefixed: "Address.City.NotEmpty", "Address.ZipCode.Matches"
 // Note: must be inside an async Configure to use await.
-```
-
-When the property is nullable, use `!` (null-forgiving) — `SetValidatorAsync` skips null values internally:
-
-```csharp
-if (model.BillingAddress is not null)
-    await rules.For(() => model.BillingAddress!).SetValidatorAsync(new AddressValidator(), ct);
 ```
 
 ---
@@ -439,7 +443,8 @@ if (model.Age >= 18)
 RuleFor(x => x.Address).SetValidator(new AddressValidator());
 
 // CSharpEssentials.Validation — AFTER (inside async Configure)
-await rules.For(() => model.Address!).SetValidatorAsync(new AddressValidator(), ct);
+await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
+// Works for both Address and Address? — null is skipped automatically, no ! needed
 ```
 
 ### 5 — Collection Item Validation
