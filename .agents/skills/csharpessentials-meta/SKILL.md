@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use — overview of all 18 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use — overview of all 19 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.
 ---
 
 # CSharpEssentials — Package Index
@@ -27,11 +27,12 @@ dotnet add package CSharpEssentials
 | `CSharpEssentials.Core` | `dotnet add package CSharpEssentials.Core` | `csharpessentials-core` |
 | `CSharpEssentials.Enums` | `dotnet add package CSharpEssentials.Enums` | `csharpessentials-enums` |
 
-### Business Rules
+### Business Rules & Validation
 
 | Package | Install | Skill |
 |---------|---------|-------|
 | `CSharpEssentials.Rules` | `dotnet add package CSharpEssentials.Rules` | `csharpessentials-rules` |
+| `CSharpEssentials.Validation` | `dotnet add package CSharpEssentials.Validation` | `csharpessentials-validation` |
 
 ### CQRS / Mediator
 
@@ -73,6 +74,7 @@ dotnet add package CSharpEssentials
 | Represent optional values (no null) | `CSharpEssentials.Maybe` |
 | Return one of several distinct types | `CSharpEssentials.Any` |
 | Compose business validation rules | `CSharpEssentials.Rules` |
+| Model-first validation returning `Result<T>` | `CSharpEssentials.Validation` |
 | CQRS pipeline behaviors (validate, log, cache, transact) | `CSharpEssentials.Mediator` |
 | DDD aggregate base class + domain events | `CSharpEssentials.Entity` |
 | EF Core audit, slow queries, pagination | `CSharpEssentials.EntityFrameworkCore` |
@@ -98,6 +100,7 @@ using CSharpEssentials.Any;                 // Any<T1,T2,...>
 using CSharpEssentials.Core;                // string/GUID/collection helpers
 using CSharpEssentials.Enums;              // [StringEnum]
 using CSharpEssentials.Rules;              // IRule<T>, RuleEngine
+using CSharpEssentials.Validation;         // Validator<T>, RuleContext<T>, IValidator<T>
 using CSharpEssentials.Mediator;           // ICacheable, ILoggableRequest, ITransactionalRequest
 using CSharpEssentials.Entity;             // EntityBase, SoftDeletableEntityBase
 using CSharpEssentials.Entity.Interfaces;  // IDomainEvent

@@ -5,12 +5,12 @@
 # CSharpEssentials
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
-[![Tests](https://img.shields.io/badge/tests-2239%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-2414%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
-[![Packages](https://img.shields.io/badge/packages-18-blue)](https://www.nuget.org/profiles/senrecep)
+[![Packages](https://img.shields.io/badge/packages-19-blue)](https://www.nuget.org/profiles/senrecep)
 
 Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
@@ -35,11 +35,12 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.RequestResponseLogging` | Request/response body logging middleware | [📖](examples/Examples.RequestResponseLogging/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
 | `CSharpEssentials.GcpSecretManager` | GCP Secret Manager → `IConfiguration` provider | [📖](examples/Examples.GcpSecretManager/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
 | `CSharpEssentials.Time` | Testable `IDateTimeProvider` wrapping `TimeProvider` | [📖](examples/Examples.Time/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
+| `CSharpEssentials.Validation` | High-performance model-first validation with `Result<T>` integration | [📖](CSharpEssentials.Validation/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Validation.svg)](https://www.nuget.org/packages/CSharpEssentials.Validation) |
 | `CSharpEssentials.Clone` | `ICloneable<T>` — typed deep-copy for entity collections | [📖](examples/Examples.Clone/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 18 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 19 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
 
 ## Installation
 
