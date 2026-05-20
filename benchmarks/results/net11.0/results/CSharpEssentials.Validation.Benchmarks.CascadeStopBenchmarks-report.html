@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.CascadeStopBenchmarks-20260520-205736</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.3.1 (a) (25D771280a) [Darwin 25.3.0]
+Apple M3 Pro, 1 CPU, 12 logical and 12 physical cores
+.NET SDK 11.0.100-preview.3.26207.106
+  [Host]  : .NET 11.0.0 (11.0.26.20806), Arm64 RyuJIT AdvSIMD
+  default : .NET 11.0.0 (11.0.26.20806), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>Job=default  
+</code></pre>
+
+<table>
+<thead><tr><th>Method    </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>CSE-Cascade-Stop</td><td>113.6 ns</td><td>0.61 ns</td><td>0.51 ns</td><td>0.0861</td><td>0.0001</td><td>720 B</td>
+</tr><tr><td>FV-Cascade-Stop</td><td>696.3 ns</td><td>4.62 ns</td><td>4.10 ns</td><td>0.4015</td><td>0.0029</td><td>3360 B</td>
+</tr></tbody></table>
+</body>
+</html>

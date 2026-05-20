@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.DeepNestedBenchmarks-20260520-204450</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.3.1 (a) (25D771280a) [Darwin 25.3.0]
+Apple M3 Pro, 1 CPU, 12 logical and 12 physical cores
+.NET SDK 11.0.100-preview.3.26207.106
+  [Host]  : .NET 10.0.7 (10.0.726.21808), Arm64 RyuJIT AdvSIMD
+  default : .NET 10.0.7 (10.0.726.21808), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>Job=default  
+</code></pre>
+
+<table>
+<thead><tr><th>Method  </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>CSE-DeepNested</td><td>244.6 ns</td><td>1.17 ns</td><td>0.92 ns</td><td>0.1040</td><td>872 B</td>
+</tr><tr><td>FV-DeepNested</td><td>716.7 ns</td><td>3.99 ns</td><td>3.34 ns</td><td>0.2489</td><td>2088 B</td>
+</tr></tbody></table>
+</body>
+</html>

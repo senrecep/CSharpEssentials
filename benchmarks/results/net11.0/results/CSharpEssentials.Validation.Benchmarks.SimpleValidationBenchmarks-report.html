@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.SimpleValidationBenchmarks-20260520-211009</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, macOS 26.3.1 (a) (25D771280a) [Darwin 25.3.0]
+Apple M3 Pro, 1 CPU, 12 logical and 12 physical cores
+.NET SDK 11.0.100-preview.3.26207.106
+  [Host]  : .NET 11.0.0 (11.0.26.20806), Arm64 RyuJIT AdvSIMD
+  default : .NET 11.0.0 (11.0.26.20806), Arm64 RyuJIT AdvSIMD
+</code></pre>
+<pre><code>Job=default  
+</code></pre>
+
+<table>
+<thead><tr><th>Method      </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>CSE-Simple-Valid</td><td>184.5 ns</td><td>1.40 ns</td><td>1.17 ns</td><td>0.0725</td><td>-</td><td>608 B</td>
+</tr><tr><td>FV-Simple-Valid</td><td>313.9 ns</td><td>1.42 ns</td><td>1.19 ns</td><td>0.0839</td><td>-</td><td>704 B</td>
+</tr><tr><td>CSE-Simple-Invalid</td><td>260.1 ns</td><td>3.23 ns</td><td>3.02 ns</td><td>0.1845</td><td>-</td><td>1544 B</td>
+</tr><tr><td>FV-Simple-Invalid</td><td>2,113.1 ns</td><td>14.28 ns</td><td>11.92 ns</td><td>0.8659</td><td>0.0076</td><td>7264 B</td>
+</tr></tbody></table>
+</body>
+</html>

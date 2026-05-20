@@ -367,6 +367,12 @@ See [CSharpEssentials.Mediator](../CSharpEssentials.Mediator/Readme.MD) for full
 
 ## FluentValidation Comparison
 
+> **Benchmarks:** Head-to-head numbers across 23 scenarios (construction, invalid path, valid path,
+> collections, async, nested, cascade) are documented in [BENCHMARKS.md](./BENCHMARKS.md).
+> Key findings: validator construction is **776× faster**, invalid paths are **5–8× faster** with
+> **3–5× less memory**, complex/large-collection valid paths beat FV on both time and memory,
+> and large collections (50 items) run **3× faster** with **27% less allocation**.
+
 | | CSharpEssentials.Validation | FluentValidation |
 |---|---|---|
 | **Rule definition** | `ValueTask Configure(model, rules, ct)` — model is the live instance; sync validators `return ValueTask.CompletedTask` | Constructor — `RuleFor(x => x.Name)` stores expressions |
