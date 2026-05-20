@@ -6,7 +6,7 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 
 ## Features
 
-- **Validation Behavior** — CSharpEssentials.Validation integration; validation failures map to `Result.Failure` automatically.
+- **Validation Behavior** — CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type.
 - **Logging Behavior** — Opt-in request/response payload logging with elapsed-time tracking.
 - **Caching Behavior** — `IDistributedCache` integration with bypass and failure-cache control.
 - **Transaction Behavior** — Wraps handlers in `TransactionScope` with async flow enabled.
@@ -112,7 +112,15 @@ public class CreateUserCommandValidator : Validator<CreateUserCommand>
 }
 ```
 
-Validation errors map directly to `Result.Failure` with the property path in the error `Code` (e.g. `"Email.NotEmpty"`). Multiple validators are aggregated and deduplicated.
+On validation failure the handler is never invoked. Errors are surfaced based on the handler return type:
+
+| `TResponse` | Failure result |
+|-------------|---------------|
+| `Result` | `Result.Failure(errors)` returned directly |
+| `Result<T>` | `Result<T>.Failure(errors)` returned directly |
+| Any other type | `EnhancedValidationException` thrown — caught by `GlobalExceptionHandler` |
+
+Error codes use the property path (e.g. `"Email.NotEmpty"`). Multiple validators are aggregated and deduplicated.
 
 ### Caching Behavior
 

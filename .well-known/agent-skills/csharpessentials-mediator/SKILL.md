@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-mediator
-description: Use when adding cross-cutting pipeline behaviors to CQRS handlers — ValidationBehavior (auto FluentValidation), LoggingBehavior (ILoggableRequest), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).
+description: Use when adding cross-cutting pipeline behaviors to CQRS handlers — ValidationBehavior (CSharpEssentials.Validation, throws EnhancedValidationException), LoggingBehavior (ILoggableRequest), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).
 ---
 
 # CSharpEssentials.Mediator
@@ -40,17 +40,24 @@ Register `ValidationBehavior` first — invalid requests should never reach the 
 
 ---
 
-## ValidationBehavior — auto FluentValidation
+## ValidationBehavior — CSharpEssentials.Validation
 
-Runs registered validators before the handler. Returns `Result` with collected errors on failure.
+Runs registered validators before the handler. On failure, the handler is never invoked. Errors are surfaced based on the handler return type:
+
+| `TResponse` | Failure result |
+|-------------|---------------|
+| `Result` | `Result.Failure(errors)` returned directly |
+| `Result<T>` | `Result<T>.Failure(errors)` returned directly |
+| Any other type | `EnhancedValidationException` thrown — caught by `GlobalExceptionHandler` |
 
 ```csharp
-public class CreateOrderValidator : AbstractValidator<CreateOrderCommand>
+public class CreateOrderValidator : Validator<CreateOrderCommand>
 {
-    public CreateOrderValidator()
+    protected override ValueTask Configure(CreateOrderCommand model, RuleContext<CreateOrderCommand> rules, CancellationToken ct = default)
     {
-        RuleFor(x => x.CustomerId).NotEmpty();
-        RuleFor(x => x.Total).GreaterThan(0);
+        rules.For(() => model.CustomerId).NotEmpty();
+        rules.For(() => model.Total).GreaterThan(0);
+        return ValueTask.CompletedTask;
     }
 }
 
