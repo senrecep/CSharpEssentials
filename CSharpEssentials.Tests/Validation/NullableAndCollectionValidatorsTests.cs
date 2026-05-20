@@ -146,7 +146,7 @@ public class NullableAndCollectionValidatorsTests
     }
 
     // =========================================================================
-    // Collection validators
+    // Collection validators — IEnumerable<T>? (interface declared property)
     // =========================================================================
 
     private sealed record CollectionModel(IEnumerable<string>? Items);
@@ -165,7 +165,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task NotEmpty_ShouldFail_WhenCollectionIsNull()
     {
-        Result<CollectionModel> result = await ValidateCollection(null, c => c.NotEmpty<CollectionModel, string>());
+        Result<CollectionModel> result = await ValidateCollection(null, c => c.NotEmpty());
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Items.NotEmpty");
@@ -174,7 +174,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task NotEmpty_ShouldFail_WhenCollectionIsEmpty()
     {
-        Result<CollectionModel> result = await ValidateCollection([], c => c.NotEmpty<CollectionModel, string>());
+        Result<CollectionModel> result = await ValidateCollection([], c => c.NotEmpty());
 
         result.IsFailure.Should().BeTrue();
     }
@@ -182,7 +182,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task NotEmpty_ShouldPass_WhenCollectionHasItems()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a", "b"], c => c.NotEmpty<CollectionModel, string>());
+        Result<CollectionModel> result = await ValidateCollection(["a", "b"], c => c.NotEmpty());
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -190,7 +190,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task MinCount_ShouldFail_WhenBelowMinimum()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a"], c => c.MinCount<CollectionModel, string>(3));
+        Result<CollectionModel> result = await ValidateCollection(["a"], c => c.MinCount(3));
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Items.MinCount");
@@ -199,7 +199,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task MinCount_ShouldPass_WhenAtMinimum()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c"], c => c.MinCount<CollectionModel, string>(3));
+        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c"], c => c.MinCount(3));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -207,7 +207,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task MaxCount_ShouldFail_WhenAboveMaximum()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c", "d"], c => c.MaxCount<CollectionModel, string>(3));
+        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c", "d"], c => c.MaxCount(3));
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Items.MaxCount");
@@ -216,7 +216,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task MaxCount_ShouldPass_WhenAtMaximum()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c"], c => c.MaxCount<CollectionModel, string>(3));
+        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c"], c => c.MaxCount(3));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -224,7 +224,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task CountBetween_ShouldFail_WhenBelowRange()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a"], c => c.CountBetween<CollectionModel, string>(2, 5));
+        Result<CollectionModel> result = await ValidateCollection(["a"], c => c.CountBetween(2, 5));
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Items.CountBetween");
@@ -233,7 +233,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task CountBetween_ShouldFail_WhenAboveRange()
     {
-        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c", "d", "e", "f"], c => c.CountBetween<CollectionModel, string>(2, 5));
+        Result<CollectionModel> result = await ValidateCollection(["a", "b", "c", "d", "e", "f"], c => c.CountBetween(2, 5));
 
         result.IsFailure.Should().BeTrue();
     }
@@ -246,7 +246,7 @@ public class NullableAndCollectionValidatorsTests
     {
         IEnumerable<string> items = Enumerable.Repeat("x", count);
 
-        Result<CollectionModel> result = await ValidateCollection(items, c => c.CountBetween<CollectionModel, string>(2, 5));
+        Result<CollectionModel> result = await ValidateCollection(items, c => c.CountBetween(2, 5));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -254,7 +254,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task MinCount_ShouldSkip_WhenCollectionIsNull()
     {
-        Result<CollectionModel> result = await ValidateCollection(null, c => c.MinCount<CollectionModel, string>(1));
+        Result<CollectionModel> result = await ValidateCollection(null, c => c.MinCount(1));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -262,7 +262,7 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task MaxCount_ShouldSkip_WhenCollectionIsNull()
     {
-        Result<CollectionModel> result = await ValidateCollection(null, c => c.MaxCount<CollectionModel, string>(5));
+        Result<CollectionModel> result = await ValidateCollection(null, c => c.MaxCount(5));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -270,7 +270,101 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task CountBetween_ShouldSkip_WhenCollectionIsNull()
     {
-        Result<CollectionModel> result = await ValidateCollection(null, c => c.CountBetween<CollectionModel, string>(1, 5));
+        Result<CollectionModel> result = await ValidateCollection(null, c => c.CountBetween(1, 5));
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    // =========================================================================
+    // Collection validators — List<T>? (concrete collection type)
+    // =========================================================================
+
+    private sealed record ListModel(List<string>? Tags);
+    private sealed record ArrayModel(string[]? Codes);
+    private sealed record IListModel(IList<string>? Names);
+
+    [Fact]
+    public async Task NotEmpty_ShouldWork_WithListProperty()
+    {
+        Result<ListModel> result = await Validator.ValidateAsync(
+            new ListModel(null),
+            (m, rules) => rules.For(() => m.Tags).NotEmpty());
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Tags.NotEmpty");
+    }
+
+    [Fact]
+    public async Task NotEmpty_ShouldPass_WithNonEmptyList()
+    {
+        Result<ListModel> result = await Validator.ValidateAsync(
+            new ListModel(["tag1", "tag2"]),
+            (m, rules) => rules.For(() => m.Tags).NotEmpty());
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task MinCount_ShouldWork_WithListProperty()
+    {
+        Result<ListModel> result = await Validator.ValidateAsync(
+            new ListModel(["a"]),
+            (m, rules) => rules.For(() => m.Tags).MinCount(3));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Tags.MinCount");
+    }
+
+    [Fact]
+    public async Task MaxCount_ShouldWork_WithListProperty()
+    {
+        Result<ListModel> result = await Validator.ValidateAsync(
+            new ListModel(["a", "b", "c", "d"]),
+            (m, rules) => rules.For(() => m.Tags).MaxCount(3));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Tags.MaxCount");
+    }
+
+    [Fact]
+    public async Task CountBetween_ShouldWork_WithListProperty()
+    {
+        Result<ListModel> result = await Validator.ValidateAsync(
+            new ListModel(["only-one"]),
+            (m, rules) => rules.For(() => m.Tags).CountBetween(2, 5));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Tags.CountBetween");
+    }
+
+    [Fact]
+    public async Task NotEmpty_ShouldWork_WithArrayProperty()
+    {
+        Result<ArrayModel> result = await Validator.ValidateAsync(
+            new ArrayModel([]),
+            (m, rules) => rules.For(() => m.Codes).NotEmpty());
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Codes.NotEmpty");
+    }
+
+    [Fact]
+    public async Task NotEmpty_ShouldWork_WithIListProperty()
+    {
+        Result<IListModel> result = await Validator.ValidateAsync(
+            new IListModel(null),
+            (m, rules) => rules.For(() => m.Names).NotEmpty());
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Names.NotEmpty");
+    }
+
+    [Fact]
+    public async Task MinCount_ShouldSkip_WhenListIsNull()
+    {
+        Result<ListModel> result = await Validator.ValidateAsync(
+            new ListModel(null),
+            (m, rules) => rules.For(() => m.Tags).MinCount(1));
 
         result.IsSuccess.Should().BeTrue();
     }
