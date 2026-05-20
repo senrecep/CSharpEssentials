@@ -47,7 +47,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     /// Gets the value of the Maybe.
     /// </summary>
     [JsonIgnore]
-    public readonly T Value => GetValueOrThrow();
+    public readonly T Value => HasValue ? _value : throw new InvalidOperationException("Maybe has no value.");
 
     /// <summary>
     /// Gets the value of the Maybe.

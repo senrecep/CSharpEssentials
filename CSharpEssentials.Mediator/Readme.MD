@@ -6,7 +6,7 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 
 ## Features
 
-- **Validation Behavior** — FluentValidation integration; validation failures map to `Result.Failure` automatically.
+- **Validation Behavior** — CSharpEssentials.Validation integration; validation failures map to `Result.Failure` automatically.
 - **Logging Behavior** — Opt-in request/response payload logging with elapsed-time tracking.
 - **Caching Behavior** — `IDistributedCache` integration with bypass and failure-cache control.
 - **Transaction Behavior** — Wraps handlers in `TransactionScope` with async flow enabled.
@@ -99,20 +99,20 @@ public class GetUserQueryHandler : IQueryHandler<GetUserQuery, Result<User>>
 
 ### Validation Behavior
 
-Add FluentValidation validators to DI. The behavior intercepts requests before the handler runs.
+Add `CSharpEssentials.Validation` validators to DI. The behavior intercepts requests before the handler runs.
 
 ```csharp
-public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
+public class CreateUserCommandValidator : Validator<CreateUserCommand>
 {
-    public CreateUserCommandValidator()
+    protected override void Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules)
     {
-        RuleFor(x => x.Email).NotEmpty().EmailAddress();
-        RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
+        rules.For(() => model.Email).NotEmpty().EmailAddress();
+        rules.For(() => model.Name).NotEmpty().MaxLength(100);
     }
 }
 ```
 
-Validation errors are converted to `Error.Validation` with `PropertyName` preserved in metadata. Multiple validators are aggregated.
+Validation errors map directly to `Result.Failure` with the property path in the error `Code` (e.g. `"Email.NotEmpty"`). Multiple validators are aggregated and deduplicated.
 
 ### Caching Behavior
 
@@ -184,12 +184,12 @@ All requests log basic handling/handled messages and elapsed time regardless of 
 | `CachingBehavior<TRequest,TResponse>` | Always registered | `TRequest : ICacheable, IMessage` |
 | `TransactionScopeBehavior<TRequest,TResponse>` | Always registered | `TRequest : ITransactionalRequest, IMessage` |
 
-> Behaviors are registered as singletons for `IPipelineBehavior<,>`. The Mediator source-generator automatically includes them in the pipeline for matching request types.
+> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
 
 ## Dependencies
 
 - `CSharpEssentials.ResultPattern`
 - `CSharpEssentials.Errors`
 - `CSharpEssentials.Json`
-- `FluentValidation`
+- `CSharpEssentials.Validation`
 - `Mediator.Abstractions`

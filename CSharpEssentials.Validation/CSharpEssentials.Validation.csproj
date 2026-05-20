@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Multi-targeting support -->
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
+
+    <!-- Package-specific metadata -->
+    <PackageId>CSharpEssentials.Validation</PackageId>
+    <Title>CSharpEssentials.Validation</Title>
+    <Product>CSharpEssentials.Validation</Product>
+    <Description>
+      High-performance, model-first validation library for C#.
+      Provides eager, zero-reflection validation with a fluent API that integrates natively
+      with CSharpEssentials.Results. No expression trees, no deferred builds — just pure C#.
+    </Description>
+    <PackageTags>
+      Validation,FluentValidation,Result,ResultPattern,CSharpEssentials
+    </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+
+    <!-- Publishing settings -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <!-- Package content -->
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <!-- Dependencies: Validation depends on Results (which pulls in Errors) -->
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Results"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+</Project>
