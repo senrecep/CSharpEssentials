@@ -19,7 +19,11 @@ public static class NestedValidators
     /// </summary>
     /// <example>
     /// <code>
-    /// await rules.For(() => model.Address!).SetValidatorAsync(new AddressValidator(), ct);
+    /// // Non-nullable nested property
+    /// await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
+    ///
+    /// // Nullable reference type — no ! operator needed
+    /// await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct);
     /// </code>
     /// </example>
     public static async ValueTask<RuleChain<T, TProp>> SetValidatorAsync<T, TProp>(
@@ -32,19 +36,59 @@ public static class NestedValidators
 
         Result<TProp> result = await validator.ValidateAsync(chain.Value, ct).ConfigureAwait(false);
         if (result.IsFailure)
-        {
-            string prefix = chain.PropertyName + ".";
-            foreach (Error error in result.Errors)
-            {
-                chain.AppendToContext(error with
-                {
-                    Code = prefix + error.Code,
-                    Description = PrefixDescription(error.Description, prefix)
-                });
-            }
-            chain.MarkFailed();
-        }
+            PropagateErrors(chain, result.Errors);
         return chain;
+    }
+
+    /// <summary>
+    /// Asynchronously runs <paramref name="validator"/> against the chain's current value and
+    /// appends any validation errors to the parent <see cref="RuleContext{T}"/>.
+    /// <para>
+    /// Use this overload when the property is declared as a nullable reference type (<c>Address?</c>).
+    /// The validator is typed against the non-null form — no null-forgiving operator is required.
+    /// </para>
+    /// <para>
+    /// If the chain has already failed, or the value is <see langword="null"/>, the validator
+    /// is skipped automatically.
+    /// </para>
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// // model.BillingAddress is Address? — works directly, no ! required
+    /// await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct);
+    /// </code>
+    /// </example>
+    public static async ValueTask<RuleChain<T, TProp?>> SetValidatorAsync<T, TProp, TValidator>(
+        this RuleChain<T, TProp?> chain,
+        TValidator validator,
+        CancellationToken ct = default)
+        where TProp : class
+        where TValidator : IValidator<TProp>
+    {
+        TProp? value = chain.Value;
+        if (chain.HasFailed || value is null)
+            return chain;
+
+        Result<TProp> result = await validator.ValidateAsync(value, ct).ConfigureAwait(false);
+        if (result.IsFailure)
+            PropagateErrors(chain, result.Errors);
+        return chain;
+    }
+
+    private static void PropagateErrors<T, TChainProp>(
+        RuleChain<T, TChainProp> chain,
+        IReadOnlyList<Error> errors)
+    {
+        string prefix = chain.PropertyName + ".";
+        foreach (Error error in errors)
+        {
+            chain.AppendToContext(error with
+            {
+                Code = prefix + error.Code,
+                Description = PrefixDescription(error.Description, prefix)
+            });
+        }
+        chain.MarkFailed();
     }
 
     private static string PrefixDescription(string description, string prefix)

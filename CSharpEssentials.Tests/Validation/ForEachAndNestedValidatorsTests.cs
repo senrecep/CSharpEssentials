@@ -182,7 +182,7 @@ public class ForEachAndNestedValidatorsTests
         ShipmentModel model = new(new AddressModel("", "34000"));
 
         Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination!).SetValidatorAsync(new AddressValidator(), ct));
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Destination.City.NotEmpty");
@@ -194,7 +194,7 @@ public class ForEachAndNestedValidatorsTests
         ShipmentModel model = new(new AddressModel("Istanbul", "34000"));
 
         Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination!).SetValidatorAsync(new AddressValidator(), ct));
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -205,7 +205,7 @@ public class ForEachAndNestedValidatorsTests
         ShipmentModel model = new(null);
 
         Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination!).SetValidatorAsync(new AddressValidator(), ct));
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -216,7 +216,7 @@ public class ForEachAndNestedValidatorsTests
         ShipmentModel model = new(null);
 
         Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination!)
+            await rules.For(() => m.Destination)
                 .Must(v => v is not null, "Destination.Required", "Destination is required.")
                 .SetValidatorAsync(new AddressValidator(), ct));
 
@@ -230,10 +230,33 @@ public class ForEachAndNestedValidatorsTests
         ShipmentModel model = new(new AddressModel("", ""));
 
         Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination!).SetValidatorAsync(new AddressValidator(), ct));
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SetValidator_ShouldWork_WithNullableReferenceType_NullablePropertyValidated()
+    {
+        ShipmentModel model = new(new AddressModel("", "34000"));
+
+        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Destination.City.NotEmpty");
+    }
+
+    [Fact]
+    public async Task SetValidator_ShouldSkip_WithNullableReferenceType_WhenNull()
+    {
+        ShipmentModel model = new(null);
+
+        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
+
+        result.IsSuccess.Should().BeTrue();
     }
 
     // =========================================================================
@@ -242,7 +265,7 @@ public class ForEachAndNestedValidatorsTests
 
     private static ValueTask<Result<ShipmentModel>> ValidateShipmentAsync(ShipmentModel model)
         => Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination!).SetValidatorAsync(new AddressValidator(), ct));
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
 
     [Fact]
     public async Task SetValidatorAsync_ShouldPropagateNestedErrors_WhenNestedValidationFails()
