@@ -54,6 +54,30 @@ if (result.IsFailure)
         // e.g. "Email.NotEmpty: 'Email' must not be empty."
 ```
 
+### Inline (Static) Usage
+
+For one-off validations without a dedicated class, use the static `Validator.ValidateAsync`:
+
+```csharp
+// Sync delegate — zero heap allocation
+Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, rules) =>
+{
+    rules.For(() => m.Email).NotEmpty().EmailAddress();
+    rules.For(() => m.Name).NotEmpty().MaxLength(100);
+});
+
+// Async delegate — when MustAsync or SetValidatorAsync is needed
+Result<CreateUserCommand> result = await Validator.ValidateAsync(command, async (m, rules, ct) =>
+{
+    rules.For(() => m.Name).NotEmpty();
+    await rules.For(() => m.Email)
+               .MustAsync(async (email, c) => await _db.IsUniqueAsync(email, c),
+                          "Email.NotUnique", "Email is already taken.", c);
+}, cancellationToken);
+```
+
+`Validator.ValidateAsync` (static utility class) and `Validator<T>` (abstract base class) are two separate types defined in the same file. They are fully independent — the static form does not delegate to `Validator<T>` internally.
+
 ---
 
 ## String Validators

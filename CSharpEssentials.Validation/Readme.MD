@@ -44,6 +44,30 @@ if (result.IsFailure)
 
 > **Sync call site:** `validator.ValidateAsync(command).GetAwaiter().GetResult()` — safe when the validator has no actual async operations (returns a pre-completed `ValueTask`).
 
+### Inline (Static) Usage
+
+For one-off validations without a dedicated class, use the static `Validator.ValidateAsync`:
+
+```csharp
+// Sync delegate — zero heap allocation
+Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, rules) =>
+{
+    rules.For(() => m.Email).NotEmpty().EmailAddress();
+    rules.For(() => m.Name).NotEmpty().MaxLength(100);
+});
+
+// Async delegate — for MustAsync or SetValidatorAsync inside
+Result<CreateUserCommand> result = await Validator.ValidateAsync(command, async (m, rules, ct) =>
+{
+    rules.For(() => m.Name).NotEmpty();
+    await rules.For(() => m.Email)
+               .MustAsync(async (email, c) => await _db.IsUniqueAsync(email, c),
+                          "Email.NotUnique", "Email is already taken.", c);
+}, cancellationToken);
+```
+
+`Validator.ValidateAsync` and `Validator<T>` live in the same file (`Validator.cs`) as separate types — one static utility class, one abstract base class. They are independent; the static form does not use `Validator<T>` internally.
+
 ## Built-in Validators
 
 ### String
