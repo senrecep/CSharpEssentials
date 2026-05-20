@@ -44,9 +44,9 @@
 		<RepositoryBranch>main</RepositoryBranch>
 
 		<!-- Version management -->
-		<Version>3.0.7</Version>
+		<Version>3.0.8</Version>
 		<AssemblyVersion>3.0.0.0</AssemblyVersion>
-		<FileVersion>3.0.7.0</FileVersion>
+		<FileVersion>3.0.8.0</FileVersion>
 
 		<!-- Documentation -->
 		<IncludeSymbols>true</IncludeSymbols>
