@@ -20,4 +20,5 @@
   <Project Path="CSharpEssentials.Time/CSharpEssentials.Time.csproj" />
   <Project Path="CSharpEssentials.Validation/CSharpEssentials.Validation.csproj" />
   <Project Path="CSharpEssentials/CSharpEssentials.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>

@@ -96,6 +96,12 @@
         <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="[3.11.0,)" />
     </ItemGroup>
 
+    <!-- Benchmarks -->
+    <ItemGroup Label="Benchmarks">
+        <PackageVersion Include="BenchmarkDotNet" Version="[0.14.0,)" />
+        <PackageVersion Include="FluentValidation" Version="[11.11.0,)" />
+    </ItemGroup>
+
     <!-- Analyzers -->
     <ItemGroup Label="Analyzers">
         <PackageVersion Include="SonarAnalyzer.CSharp" Version="*" />
