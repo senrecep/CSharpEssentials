@@ -18,5 +18,6 @@
   <Project Path="CSharpEssentials.Rules/CSharpEssentials.Rules.csproj" />
   <Project Path="CSharpEssentials.Tests/CSharpEssentials.Tests.csproj" />
   <Project Path="CSharpEssentials.Time/CSharpEssentials.Time.csproj" />
+  <Project Path="CSharpEssentials.Validation/CSharpEssentials.Validation.csproj" />
   <Project Path="CSharpEssentials/CSharpEssentials.csproj" />
 </Solution>
