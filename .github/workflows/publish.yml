@@ -19,7 +19,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '11.0.x'
-          include-prerelease: true
 
       - name: Verify version alignment
         run: |
