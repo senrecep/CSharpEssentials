@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 
 using CSharpEssentials.Errors;
+using CSharpEssentials.Exceptions;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Validation;
 
@@ -161,20 +162,29 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
         }
     }
 
+    /// <summary>
+    /// Maps validation errors to <typeparamref name="TResponse"/>:
+    /// <list type="bullet">
+    ///   <item><see cref="Result"/> — <c>Result.Failure(errors)</c> returned directly.</item>
+    ///   <item><see cref="Result{T}"/> — <c>Result&lt;T&gt;.Failure(errors)</c> via compiled factory.</item>
+    ///   <item>Any other type — <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
+    /// </list>
+    /// </summary>
     private TResponse BuildFailureResponse(Error[] errors)
     {
         if (_responseType == ValidationBehaviorCache.ResultType)
             return (TResponse)(object)Result.Failure(errors);
-        return CreateResponse(errors);
+
+        if (_responseType.IsGenericType
+            && _responseType.GetGenericTypeDefinition() == ValidationBehaviorCache.GenericResultType)
+            return CreateGenericResultResponse(errors);
+
+        // TResponse cannot carry error information — delegate to GlobalExceptionHandler.
+        throw new EnhancedValidationException(errors);
     }
 
-    private TResponse CreateResponse(Error[] errors)
+    private TResponse CreateGenericResultResponse(Error[] errors)
     {
-        if (_responseType.GenericTypeArguments.Length == 0
-            || _responseType.GetGenericTypeDefinition() != ValidationBehaviorCache.GenericResultType)
-            throw new InvalidOperationException(
-                $"ValidationBehavior requires TResponse to be Result or Result<T>, but got {_responseType.Name}.");
-
         Type genericType = ValidationBehaviorCache.GenericResultType.MakeGenericType(_responseType.GenericTypeArguments[0]);
 
         Func<Error[], object> factory = ValidationBehaviorCache.FailureFactories.GetOrAdd(genericType, static type =>
