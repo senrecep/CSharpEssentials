@@ -35,27 +35,31 @@ internal static class PropertyPath
         if (arrowIdx < 0)
             return (memberExpr.Trim(), true);
 
-        string afterArrow = memberExpr[(arrowIdx + 2)..].Trim();
-
-        // Normalize null-conditional and null-forgiving operators: ?. → . and !. → .
-        // Then strip any remaining standalone ! (e.g. trailing null-forgiving: "model.Name!")
-        afterArrow = afterArrow.Replace("?.", ".", StringComparison.Ordinal)
-                               .Replace("!.", ".", StringComparison.Ordinal)
-                               .Replace("!", "", StringComparison.Ordinal);
+        // AsSpan avoids all intermediate string allocations.
+        // Trim() on ReadOnlySpan<char> is available on netstandard2.1+.
+        ReadOnlySpan<char> afterArrow = memberExpr.AsSpan(arrowIdx + 2).Trim();
 
         int dotIdx = FindFirstOuterDot(afterArrow);
         if (dotIdx < 0)
-            return (afterArrow, true);
+        {
+            // No dot: expression targets the variable itself (e.g. "() => item").
+            // TrimEnd('!') handles trailing null-forgiving operator (e.g. "() => item!").
+            return (afterArrow.TrimEnd('!').ToString(), true);
+        }
 
-        return (afterArrow[(dotIdx + 1)..], false);
+        // Slice after the dot, strip any trailing null-forgiving operator.
+        return (afterArrow[(dotIdx + 1)..].TrimEnd('!').ToString(), false);
     }
 
     /// <summary>
     /// Returns the index of the first <c>.</c> not inside parentheses.
     /// Handles cast expressions such as <c>((IFoo)model.Child).Name</c> —
     /// the dot inside the cast is at depth 1 and is skipped; the outer dot is returned.
+    /// Null-conditional (<c>?.</c>) and null-forgiving (<c>!.</c>) prefixes are handled
+    /// naturally: <c>?</c> and <c>!</c> are neither <c>(</c> nor <c>)</c> so depth stays
+    /// unchanged; the following <c>.</c> is found at the correct depth.
     /// </summary>
-    private static int FindFirstOuterDot(string expr)
+    private static int FindFirstOuterDot(ReadOnlySpan<char> expr)
     {
         int depth = 0;
         for (int i = 0; i < expr.Length; i++)

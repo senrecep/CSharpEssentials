@@ -11,7 +11,7 @@ namespace CSharpEssentials.Validation;
 /// <typeparam name="T">The model type being validated.</typeparam>
 public sealed class RuleContext<T>
 {
-    private readonly List<Error> _errors = [];
+    private List<Error>? _errors;
     private readonly string _propertyPrefix;
 
     /// <summary>Creates a root-level context with no property prefix.</summary>
@@ -19,18 +19,23 @@ public sealed class RuleContext<T>
 
     /// <summary>
     /// Creates a prefixed context used inside <see cref="ForEach{TElement}"/>.
-    /// The prefix is prepended to all property names resolved via <see cref="For{TProp}"/>.
+    /// The prefix is prepended to all property names resolved via <see cref="For{TProp}(System.Func{TProp},string)"/>.
     /// </summary>
     internal RuleContext(string propertyPrefix) => _propertyPrefix = propertyPrefix;
 
-    internal bool HasErrors => _errors.Count > 0;
-    internal IReadOnlyList<Error> Errors => _errors;
+    internal bool HasErrors => _errors is not null && _errors.Count > 0;
+    internal IReadOnlyList<Error> Errors => (IReadOnlyList<Error>?)_errors ?? [];
 
     /// <summary>Called by <see cref="RuleChain{T,TProp}.AddError"/> — not intended for direct use.</summary>
-    internal void Append(Error error) => _errors.Add(error);
+    internal void Append(Error error) => (_errors ??= []).Add(error);
 
     /// <summary>Appends all errors from a child context (used by ForEach and SetValidator).</summary>
-    internal void AppendRange(IReadOnlyList<Error> errors) => _errors.AddRange(errors);
+    internal void AppendRange(IReadOnlyList<Error> errors)
+    {
+        if (errors.Count == 0)
+            return;
+        (_errors ??= []).AddRange(errors);
+    }
 
     // -------------------------------------------------------------------------
     // Chain factory
@@ -62,6 +67,26 @@ public sealed class RuleContext<T>
         return new RuleChain<T, TProp>(this, expr(), PropertyPath.Extract(memberExpr));
     }
 
+    /// <summary>
+    /// Creates a validation chain from a pre-evaluated value and an explicit property name.
+    /// Use this overload in performance-critical validators to eliminate both the lambda delegate
+    /// allocation and the <see cref="PropertyPath"/> parsing overhead incurred by the
+    /// <c>For(() => ...)</c> overload.
+    /// </summary>
+    /// <example>
+    /// <code>
+    /// rules.For(model.Name, nameof(model.Name)).NotEmpty().MaxLength(100);
+    /// rules.For(model.Age, nameof(model.Age)).GreaterThan(0);
+    /// </code>
+    /// </example>
+    public RuleChain<T, TProp> For<TProp>(TProp value, string propertyName)
+    {
+        string fullName = _propertyPrefix.Length > 0
+            ? _propertyPrefix + propertyName
+            : propertyName;
+        return new RuleChain<T, TProp>(this, value, fullName);
+    }
+
     // -------------------------------------------------------------------------
     // ForEach
     // -------------------------------------------------------------------------
@@ -90,14 +115,16 @@ public sealed class RuleContext<T>
             return;
 
         string collectionName = PropertyPath.Extract(memberExpr);
+        string basePrefix = _propertyPrefix + collectionName;
         int index = 0;
         foreach (TElement item in collection)
         {
             // Prepend _propertyPrefix so nested ForEach produces fully-qualified paths:
             // e.g. outer prefix "Orders[0]." + "Items[1]." → "Orders[0].Items[1].City.NotEmpty"
-            RuleContext<TElement> itemCtx = new($"{_propertyPrefix}{collectionName}[{index}].");
+            RuleContext<TElement> itemCtx = new($"{basePrefix}[{index}].");
             configure(item, itemCtx);
-            AppendRange(itemCtx.Errors);
+            if (itemCtx.HasErrors)
+                AppendRange(itemCtx.Errors);
             index++;
         }
     }
@@ -121,13 +148,15 @@ public sealed class RuleContext<T>
             return;
 
         string collectionName = PropertyPath.Extract(memberExpr);
+        string basePrefix = _propertyPrefix + collectionName;
         int index = 0;
         foreach (TElement item in collection)
         {
             ct.ThrowIfCancellationRequested();
-            RuleContext<TElement> itemCtx = new($"{_propertyPrefix}{collectionName}[{index}].");
+            RuleContext<TElement> itemCtx = new($"{basePrefix}[{index}].");
             await configure(item, itemCtx, ct).ConfigureAwait(false);
-            AppendRange(itemCtx.Errors);
+            if (itemCtx.HasErrors)
+                AppendRange(itemCtx.Errors);
             index++;
         }
     }
@@ -142,7 +171,7 @@ public sealed class RuleContext<T>
     /// </summary>
     public RuleContext<T> AddFailure(Error error)
     {
-        _errors.Add(error);
+        (_errors ??= []).Add(error);
         return this;
     }
 

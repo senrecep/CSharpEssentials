@@ -8,7 +8,6 @@ namespace CSharpEssentials.ResultPattern;
 
 public readonly partial record struct Result<TValue> : IResult<TValue>
 {
-    private readonly EqualityComparer<TValue> _comparer = EqualityComparer<TValue>.Default;
     private readonly Error[]? _errors = null;
     private readonly TValue? _value = default;
     [JsonConstructor]
@@ -96,7 +95,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     public bool Equals(Result<TValue> other)
     {
         if (IsSuccess)
-            return other.IsSuccess && _comparer.Equals(_value, other._value);
+            return other.IsSuccess && EqualityComparer<TValue>.Default.Equals(_value, other._value);
         return other.IsFailure && ResultLogic.CheckIfErrorsAreEqual(ErrorsOrEmptyArray, other.ErrorsOrEmptyArray);
     }
 
