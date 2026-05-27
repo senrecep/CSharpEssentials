@@ -17,7 +17,7 @@ public class ApiVersioningExtensionsTests
         services.AddAndConfigureApiVersioning();
 
         var provider = services.BuildServiceProvider();
-        var apiVersioningOptions = provider.GetService<IApiVersioningFeature>();
+        provider.GetService<IApiVersioningFeature>();
         services.Should().NotBeEmpty();
     }
 

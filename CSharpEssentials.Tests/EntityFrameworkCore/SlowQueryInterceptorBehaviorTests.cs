@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Data.Common;
 using System.Reflection;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
@@ -13,6 +14,7 @@ public class SlowQueryInterceptorBehaviorTests
 {
     private sealed class FakeDbCommand(string commandText = "SELECT 1") : DbCommand
     {
+        [AllowNull]
         public override string CommandText { get; set; } = commandText;
         public override int CommandTimeout { get; set; }
         public override CommandType CommandType { get; set; }
@@ -77,7 +79,8 @@ public class SlowQueryInterceptorBehaviorTests
         return (CommandExecutedEventData)CommandExecutedEventDataCtor.Invoke(ctorArgs)!;
     }
 
-    private static DbCommand CreateFakeCommand(string commandText = "SELECT 1") =>
+    [SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Test-only helper; command text is controlled by tests, not user input.")]
+    private static FakeDbCommand CreateFakeCommand(string commandText = "SELECT 1") =>
         new FakeDbCommand(commandText);
 
     private static Mock<DbDataReader> CreateFakeReader()
@@ -96,7 +99,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(100) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
         var reader = CreateFakeReader().Object;
 
@@ -114,7 +117,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromSeconds(5) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(50));
         var reader = CreateFakeReader().Object;
 
@@ -135,7 +138,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(10) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand("SELECT * FROM Users");
+        using var command = CreateFakeCommand("SELECT * FROM Users");
         var elapsed = TimeSpan.FromMilliseconds(999);
         var eventData = CreateEventData(elapsed);
         var reader = CreateFakeReader().Object;
@@ -157,7 +160,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(100) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
         var reader = CreateFakeReader().Object;
 
@@ -175,7 +178,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromSeconds(5) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(10));
         var reader = CreateFakeReader().Object;
 
@@ -193,7 +196,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(100) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
 
         interceptor.ScalarExecuted(command, eventData, result: null);
@@ -210,7 +213,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromSeconds(5) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(10));
 
         interceptor.ScalarExecuted(command, eventData, result: null);
@@ -227,7 +230,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(100) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
 
         await interceptor.ScalarExecutedAsync(command, eventData, result: null);
@@ -244,7 +247,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(100) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
 
         interceptor.NonQueryExecuted(command, eventData, result: 1);
@@ -261,7 +264,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromSeconds(5) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(10));
 
         interceptor.NonQueryExecuted(command, eventData, result: 1);
@@ -278,7 +281,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(100) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
 
         await interceptor.NonQueryExecutedAsync(command, eventData, result: 1);
@@ -294,7 +297,7 @@ public class SlowQueryInterceptorBehaviorTests
         var handlerMock = new Mock<ISlowQueryHandler>();
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, slowQueryHandler: handlerMock.Object);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
 
         interceptor.NonQueryExecuted(command, CreateEventData(TimeSpan.FromMilliseconds(999)), result: 0);
         handlerMock.Verify(h => h.OnSlowQuery(It.IsAny<SlowQueryContext>()), Times.Never);
@@ -311,7 +314,7 @@ public class SlowQueryInterceptorBehaviorTests
         var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(10) };
         var interceptor = new SlowQueryInterceptor(loggerMock.Object, options);
 
-        var command = CreateFakeCommand();
+        using var command = CreateFakeCommand();
         var eventData = CreateEventData(TimeSpan.FromMilliseconds(500));
 
         Action act = () => interceptor.NonQueryExecuted(command, eventData, result: 0);

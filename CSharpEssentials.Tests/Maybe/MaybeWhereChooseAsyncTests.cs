@@ -1,5 +1,6 @@
 using CSharpEssentials.Maybe;
 using FluentAssertions;
+using System.Globalization;
 
 namespace CSharpEssentials.Tests.Maybe;
 
@@ -128,7 +129,7 @@ public class MaybeWhereChooseAsyncTests
         await foreach (int value in tasks.ChooseAsync())
             results.Add(value);
 
-        results.Should().BeEquivalentTo(new[] { 1, 3, 5 });
+        results.Should().Equal(1, 3, 5);
     }
 
     [Fact]
@@ -158,10 +159,10 @@ public class MaybeWhereChooseAsyncTests
         };
 
         var results = new List<string>();
-        await foreach (string value in tasks.ChooseAsync(v => v.ToString()))
+        await foreach (string value in tasks.ChooseAsync(v => v.ToString(CultureInfo.InvariantCulture)))
             results.Add(value);
 
-        results.Should().BeEquivalentTo(new[] { "2", "4" });
+        results.Should().Equal("2", "4");
     }
 
     #endregion

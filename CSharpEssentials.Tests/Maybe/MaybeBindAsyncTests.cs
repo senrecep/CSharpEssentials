@@ -1,5 +1,6 @@
 using CSharpEssentials.Maybe;
 using FluentAssertions;
+using System.Globalization;
 
 namespace CSharpEssentials.Tests.Maybe;
 
@@ -12,7 +13,7 @@ public class MaybeBindAsyncTests
     {
         var maybe = Maybe<int>.From(5);
 
-        Maybe<string> result = await maybe.BindAsync(v => Task.FromResult(Maybe<string>.From(v.ToString())));
+        Maybe<string> result = await maybe.BindAsync(v => Task.FromResult(Maybe<string>.From(v.ToString(CultureInfo.InvariantCulture))));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be("5");
@@ -23,7 +24,7 @@ public class MaybeBindAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<string> result = await maybe.BindAsync(v => Task.FromResult(Maybe<string>.From(v.ToString())));
+        Maybe<string> result = await maybe.BindAsync(v => Task.FromResult(Maybe<string>.From(v.ToString(CultureInfo.InvariantCulture))));
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -82,7 +83,7 @@ public class MaybeBindAsyncTests
     {
         ValueTask<Maybe<int>> maybeTask = ValueTask.FromResult(Maybe<int>.From(3));
 
-        Maybe<string> result = await maybeTask.BindAsync(v => ValueTask.FromResult(Maybe<string>.From(v.ToString())));
+        Maybe<string> result = await maybeTask.BindAsync(v => ValueTask.FromResult(Maybe<string>.From(v.ToString(CultureInfo.InvariantCulture))));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be("3");
@@ -93,7 +94,7 @@ public class MaybeBindAsyncTests
     {
         ValueTask<Maybe<int>> maybeTask = ValueTask.FromResult(Maybe<int>.None);
 
-        Maybe<string> result = await maybeTask.BindAsync(v => ValueTask.FromResult(Maybe<string>.From(v.ToString())));
+        Maybe<string> result = await maybeTask.BindAsync(v => ValueTask.FromResult(Maybe<string>.From(v.ToString(CultureInfo.InvariantCulture))));
 
         result.HasNoValue.Should().BeTrue();
     }

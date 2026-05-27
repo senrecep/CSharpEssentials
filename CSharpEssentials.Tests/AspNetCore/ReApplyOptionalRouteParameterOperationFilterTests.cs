@@ -21,12 +21,12 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
     }
 
     [HttpGet("{id?}")]
-    private static void MethodWithOptionalRoute(int id) { }
+    private static void MethodWithOptionalRoute(int id) { /* Test fixture — route attribute detection target. */ }
 
     [HttpGet("{id}")]
-    private static void MethodWithRequiredRoute(int id) { }
+    private static void MethodWithRequiredRoute(int id) { /* Test fixture — route attribute detection target. */ }
 
-    private static void MethodWithNoRoute() { }
+    private static void MethodWithNoRoute() { /* Test fixture — route attribute detection target. */ }
 
     [Fact]
     public void Apply_Should_MarkParameterAsOptional_When_RouteHasOptionalSegment()
