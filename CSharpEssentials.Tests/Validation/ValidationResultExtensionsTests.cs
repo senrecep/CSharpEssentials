@@ -226,6 +226,20 @@ public class ValidationResultExtensionsTests
     }
 
     [Fact]
+    public async Task TaskResult_ValidateWithAsync_Validator_ShouldCancel_WhileWaitingForTask()
+    {
+        var source = new TaskCompletionSource<Result<TestModel>>();
+        TestModelValidator validator = new();
+
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await source.Task.ValidateWithAsync(validator, cts.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(act);
+    }
+
+    [Fact]
     public async Task TaskResult_ValidateWithAsync_SyncDelegate_ShouldShortCircuit_WhenResultIsFailure()
     {
         Error expectedError = Error.Validation("Pre.Error", "Pre-existing error.");
@@ -255,6 +269,25 @@ public class ValidationResultExtensionsTests
         });
 
         result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TaskResult_ValidateWithAsync_SyncDelegate_ShouldCancel_WhileWaitingForTask()
+    {
+        var source = new TaskCompletionSource<Result<TestModel>>();
+        bool delegateCalled = false;
+
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await source.Task.ValidateWithAsync((model, rules) =>
+        {
+            delegateCalled = true;
+            rules.For(() => model.Name).NotEmpty();
+        }, cts.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(act);
+        delegateCalled.Should().BeFalse();
     }
 
     [Fact]
@@ -351,6 +384,25 @@ public class ValidationResultExtensionsTests
         });
 
         result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ValueTaskResult_ValidateWithAsync_SyncDelegate_ShouldCancel_WhileWaitingForTask()
+    {
+        var source = new TaskCompletionSource<Result<TestModel>>();
+        bool delegateCalled = false;
+
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await new ValueTask<Result<TestModel>>(source.Task).ValidateWithAsync((model, rules) =>
+        {
+            delegateCalled = true;
+            rules.For(() => model.Name).NotEmpty();
+        }, cts.Token);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(act);
+        delegateCalled.Should().BeFalse();
     }
 
     [Fact]

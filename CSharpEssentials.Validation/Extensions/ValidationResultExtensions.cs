@@ -1,3 +1,4 @@
+using CSharpEssentials.Core;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Validation;
@@ -59,9 +60,7 @@ public static class ValidationResultExtensions
 
         RuleContext<T> ctx = new();
         configure(result.Value, ctx);
-        return ctx.HasErrors
-            ? Result<T>.Failure(ctx.Errors)
-            : Result<T>.Success(result.Value);
+        return Validator.BuildResult(result.Value, ctx);
     }
 
     /// <summary>
@@ -134,7 +133,7 @@ public static class ValidationResultExtensions
             throw new ArgumentNullException(nameof(validator));
 #endif
 
-        Result<T> result = await resultTask.ConfigureAwait(false);
+        Result<T> result = await resultTask.WithCancellation(ct).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return result;
@@ -149,7 +148,8 @@ public static class ValidationResultExtensions
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this Task<Result<T>> resultTask,
-        Action<T, RuleContext<T>> configure)
+        Action<T, RuleContext<T>> configure,
+        CancellationToken ct = default)
     {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(resultTask);
@@ -161,7 +161,7 @@ public static class ValidationResultExtensions
             throw new ArgumentNullException(nameof(configure));
 #endif
 
-        Result<T> result = await resultTask.ConfigureAwait(false);
+        Result<T> result = await resultTask.WithCancellation(ct).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return result;
@@ -189,7 +189,7 @@ public static class ValidationResultExtensions
             throw new ArgumentNullException(nameof(configure));
 #endif
 
-        Result<T> result = await resultTask.ConfigureAwait(false);
+        Result<T> result = await resultTask.WithCancellation(ct).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return result;
@@ -218,7 +218,7 @@ public static class ValidationResultExtensions
             throw new ArgumentNullException(nameof(validator));
 #endif
 
-        Result<T> result = await resultTask.ConfigureAwait(false);
+        Result<T> result = await resultTask.WithCancellation(ct).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return result;
@@ -233,7 +233,8 @@ public static class ValidationResultExtensions
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this ValueTask<Result<T>> resultTask,
-        Action<T, RuleContext<T>> configure)
+        Action<T, RuleContext<T>> configure,
+        CancellationToken ct = default)
     {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(configure);
@@ -242,7 +243,7 @@ public static class ValidationResultExtensions
             throw new ArgumentNullException(nameof(configure));
 #endif
 
-        Result<T> result = await resultTask.ConfigureAwait(false);
+        Result<T> result = await resultTask.WithCancellation(ct).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return result;
@@ -267,7 +268,7 @@ public static class ValidationResultExtensions
             throw new ArgumentNullException(nameof(configure));
 #endif
 
-        Result<T> result = await resultTask.ConfigureAwait(false);
+        Result<T> result = await resultTask.WithCancellation(ct).ConfigureAwait(false);
         if (result.IsFailure)
         {
             return result;
