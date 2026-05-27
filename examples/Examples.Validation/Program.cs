@@ -245,6 +245,100 @@ composedResult.Switch(
     });
 
 Console.WriteLine();
+// ============================================================================
+// 11. ADVANCED COMPARABLE VALIDATORS
+// ============================================================================
+Console.WriteLine("--- 11. LessThan / LessThanOrEqualTo / ExclusiveBetween / InclusiveBetween / Equal / NotEqual ---");
+
+Result<ProductModel> ltResult = await Validator.ValidateAsync(
+    new ProductModel("SKU-1", 150m, 5, null),
+    (m, rules) => rules.For(() => m.Price).LessThan(100m));
+Console.WriteLine($"Price 150 LessThan(100): IsFailure={ltResult.IsFailure}");
+
+Result<ProductModel> lteResult = await Validator.ValidateAsync(
+    new ProductModel("SKU-1", 100m, 5, null),
+    (m, rules) => rules.For(() => m.Price).LessThanOrEqualTo(100m));
+Console.WriteLine($"Price 100 LessThanOrEqualTo(100): IsSuccess={lteResult.IsSuccess}");
+
+Result<ProductModel> excResult = await Validator.ValidateAsync(
+    new ProductModel("SKU-1", 10m, 5, null),
+    (m, rules) => rules.For(() => m.Price).ExclusiveBetween(0m, 100m));
+Console.WriteLine($"Price 10 ExclusiveBetween(0,100): IsSuccess={excResult.IsSuccess}");
+
+Result<ProductModel> incResult = await Validator.ValidateAsync(
+    new ProductModel("SKU-1", 100m, 5, null),
+    (m, rules) => rules.For(() => m.Price).InclusiveBetween(0m, 100m));
+Console.WriteLine($"Price 100 InclusiveBetween(0,100): IsSuccess={incResult.IsSuccess}");
+
+Result<ProductModel> eqResult = await Validator.ValidateAsync(
+    new ProductModel("EXPECTED-SKU", 10m, 5, null),
+    (m, rules) => rules.For(() => m.Sku).Equal("EXPECTED-SKU"));
+Console.WriteLine($"Sku Equal('EXPECTED-SKU'): IsSuccess={eqResult.IsSuccess}");
+
+Result<ProductModel> neResult = await Validator.ValidateAsync(
+    new ProductModel("RESERVED", 10m, 5, null),
+    (m, rules) => rules.For(() => m.Sku).NotEqual("RESERVED"));
+Console.WriteLine($"Sku NotEqual('RESERVED'): IsFailure={neResult.IsFailure}");
+
+Console.WriteLine();
+
+// ============================================================================
+// 12. STRING VALIDATORS (StartsWith, EndsWith, NotNull)
+// ============================================================================
+Console.WriteLine("--- 12. StartsWith / EndsWith / NotNull ---");
+
+Result<CreateUserCommand> swResult = await Validator.ValidateAsync(
+    new CreateUserCommand("user@example.com", "Dr. Smith", 30, "P@ssw0rd!"),
+    (m, rules) => rules.For(() => m.Name).StartsWith("Dr."));
+Console.WriteLine($"Name StartsWith('Dr.'): IsSuccess={swResult.IsSuccess}");
+
+Result<CreateUserCommand> ewResult = await Validator.ValidateAsync(
+    new CreateUserCommand("user@example.com", "Smith Jr.", 30, "P@ssw0rd!"),
+    (m, rules) => rules.For(() => m.Name).EndsWith("Jr."));
+Console.WriteLine($"Name EndsWith('Jr.'): IsSuccess={ewResult.IsSuccess}");
+
+Result<CreateUserCommand> notNullResult = await Validator.ValidateAsync(
+    new CreateUserCommand("user@example.com", null, 30, "P@ssw0rd!"),
+    (m, rules) => rules.For(() => m.Name).NotNull());
+Console.WriteLine($"Name=null NotNull: IsFailure={notNullResult.IsFailure}");
+
+Console.WriteLine();
+
+// ============================================================================
+// 13. VALIDATEWITH (RAILWAY BINDING)
+// ============================================================================
+Console.WriteLine("--- 13. ValidateWith / ValidateWithAsync ---");
+
+Result<CreateUserCommand> invalidPipeline = Result.Success(new CreateUserCommand("bad-email", "Alice", 30, "P@ssw0rd!"))
+    .ValidateWith((m, rules) =>
+    {
+        rules.For(() => m.Email).NotEmpty().EmailAddress();
+        rules.For(() => m.Name).NotEmpty().MinLength(2);
+    });
+
+invalidPipeline.Switch(
+    onSuccess: v => Console.WriteLine($"ValidateWith success: {v.Email}"),
+    onError: errors =>
+    {
+        Console.WriteLine($"ValidateWith failed with {errors.Length} error(s):");
+        foreach (var e in errors)
+            Console.WriteLine($"  [{e.Code}] {e.Description}");
+    });
+
+Result<CreateUserCommand> validPipeline = Result.Success(new CreateUserCommand("alice@example.com", "Alice", 30, "P@ssw0rd!"))
+    .ValidateWith((m, rules) =>
+    {
+        rules.For(() => m.Email).NotEmpty().EmailAddress();
+        rules.For(() => m.Name).NotEmpty().MinLength(2);
+    });
+Console.WriteLine($"ValidateWith (valid): IsSuccess={validPipeline.IsSuccess}");
+
+Result<CreateUserCommand> alreadyFailed = Result.Failure<CreateUserCommand>(CSharpEssentials.Errors.Error.Validation("Pre", "Already failed"))
+    .ValidateWith((m, rules) => rules.For(() => m.Email).NotEmpty());
+Console.WriteLine($"ValidateWith short-circuits on pre-existing failure: IsFailure={alreadyFailed.IsFailure}");
+
+Console.WriteLine();
+
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
