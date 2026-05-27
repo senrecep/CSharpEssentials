@@ -14,7 +14,7 @@ public readonly partial record struct Result<TValue>
         if (IsFailure)
             return this;
         Result result = validator(Value);
-        return result.IsSuccess ? this : result.Errors.ToResult<TValue>();
+        return result.IsSuccess ? this : Result<TValue>.Failure(result.ErrorsOrEmptyArray);
     }
 
     public async Task<Result<TValue>> ThenEnsureAsync(Func<TValue, Task<Result<TValue>>> validator, CancellationToken cancellationToken = default)
@@ -31,7 +31,7 @@ public readonly partial record struct Result<TValue>
             return this;
         cancellationToken.ThrowIfCancellationRequested();
         Result result = await validator(Value);
-        return result.IsSuccess ? this : result.Errors.ToResult<TValue>();
+        return result.IsSuccess ? this : Result<TValue>.Failure(result.ErrorsOrEmptyArray);
     }
 }
 
