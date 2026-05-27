@@ -1,5 +1,6 @@
 using CSharpEssentials.Maybe;
 using FluentAssertions;
+using System.Globalization;
 
 namespace CSharpEssentials.Tests.Maybe;
 
@@ -37,7 +38,7 @@ public class MaybeGetValueAsyncTests
         var maybe = Maybe<int>.From(5);
 
         string result = await maybe.GetValueOrDefaultAsync(
-            v => v.ToString(),
+            v => v.ToString(CultureInfo.InvariantCulture),
             () => Task.FromResult("none"));
 
         result.Should().Be("5");
@@ -49,7 +50,7 @@ public class MaybeGetValueAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
 
         string result = await maybe.GetValueOrDefaultAsync(
-            v => v.ToString(),
+            v => v.ToString(CultureInfo.InvariantCulture),
             () => Task.FromResult("none"));
 
         result.Should().Be("none");
@@ -65,7 +66,7 @@ public class MaybeGetValueAsyncTests
         var maybe = Maybe<int>.From(7);
 
         string result = await maybe.GetValueOrDefaultAsync(
-            v => Task.FromResult(v.ToString()),
+            v => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             "none");
 
         result.Should().Be("7");
@@ -77,7 +78,7 @@ public class MaybeGetValueAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
 
         string result = await maybe.GetValueOrDefaultAsync(
-            v => Task.FromResult(v.ToString()),
+            v => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             "none");
 
         result.Should().Be("none");
@@ -116,7 +117,7 @@ public class MaybeGetValueAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(3));
 
-        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(), "none");
+        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(CultureInfo.InvariantCulture), "none");
 
         result.Should().Be("3");
     }
@@ -126,7 +127,7 @@ public class MaybeGetValueAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
 
-        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(), "none");
+        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(CultureInfo.InvariantCulture), "none");
 
         result.Should().Be("none");
     }
@@ -140,7 +141,7 @@ public class MaybeGetValueAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(8));
 
-        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(), () => "none");
+        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(CultureInfo.InvariantCulture), () => "none");
 
         result.Should().Be("8");
     }
@@ -150,7 +151,7 @@ public class MaybeGetValueAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
 
-        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(), () => "none");
+        string result = await maybeTask.GetValueOrDefaultAsync(v => v.ToString(CultureInfo.InvariantCulture), () => "none");
 
         result.Should().Be("none");
     }

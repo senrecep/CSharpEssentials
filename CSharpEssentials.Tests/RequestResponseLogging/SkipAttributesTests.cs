@@ -90,10 +90,10 @@ public sealed class SkipAttributesTests
     private sealed class FakeController
     {
         [SkipResponseLogging]
-        public void SkippedResponseAction() { }
+        public void SkippedResponseAction() { /* Test fixture — attribute detection target. */ }
 
         [SkipRequestResponseLogging]
-        public void FullySkippedAction() { }
+        public void FullySkippedAction() { /* Test fixture — attribute detection target. */ }
     }
 
     [SkipRequestResponseLogging]
