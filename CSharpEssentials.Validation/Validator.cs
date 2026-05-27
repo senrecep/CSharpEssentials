@@ -22,14 +22,14 @@ public abstract class Validator<T> : IValidator<T>
         RuleContext<T> ctx = new();
         ValueTask configTask = Configure(instance, ctx, ct);
         if (configTask.IsCompletedSuccessfully)
-            return new ValueTask<Result<T>>(BuildResult(instance, ctx));
+            return new ValueTask<Result<T>>(Validator.BuildResult(instance, ctx));
         return FinishAsync(instance, ctx, configTask);
     }
 
     private static async ValueTask<Result<T>> FinishAsync(T instance, RuleContext<T> ctx, ValueTask configTask)
     {
         await configTask.ConfigureAwait(false);
-        return BuildResult(instance, ctx);
+        return Validator.BuildResult(instance, ctx);
     }
 
     /// <inheritdoc cref="IValidator{T}.Order"/>
@@ -77,11 +77,6 @@ public abstract class Validator<T> : IValidator<T>
     /// </example>
     protected ValueTask Include(Validator<T> other, T model, RuleContext<T> rules, CancellationToken ct = default)
         => other.Configure(model, rules, ct);
-
-    private static Result<T> BuildResult(T instance, RuleContext<T> ctx) =>
-        ctx.HasErrors
-            ? Result<T>.Failure(ctx.Errors)
-            : Result<T>.Success(instance);
 }
 
 /// <summary>
@@ -107,6 +102,11 @@ public abstract class Validator<T> : IValidator<T>
 /// </example>
 public static class Validator
 {
+    internal static Result<T> BuildResult<T>(T instance, RuleContext<T> ctx) =>
+        ctx.HasErrors
+            ? Result<T>.Failure(ctx.Errors)
+            : Result<T>.Success(instance);
+
     /// <summary>
     /// Validates <paramref name="instance"/> inline with a synchronous configuration delegate.
     /// Returns a synchronously-completed <see cref="ValueTask"/> — no heap allocation.
@@ -124,10 +124,7 @@ public static class Validator
 #endif
         RuleContext<T> ctx = new();
         configure(instance, ctx);
-        Result<T> result = ctx.HasErrors
-            ? Result<T>.Failure(ctx.Errors)
-            : Result<T>.Success(instance);
-        return new ValueTask<Result<T>>(result);
+        return new ValueTask<Result<T>>(BuildResult(instance, ctx));
     }
 
     /// <summary>
@@ -149,8 +146,6 @@ public static class Validator
 #endif
         RuleContext<T> ctx = new();
         await configure(instance, ctx, ct).ConfigureAwait(false);
-        return ctx.HasErrors
-            ? Result<T>.Failure(ctx.Errors)
-            : Result<T>.Success(instance);
+        return BuildResult(instance, ctx);
     }
 }
