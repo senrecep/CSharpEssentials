@@ -164,6 +164,21 @@ public class ResultSelectTests
 
     #endregion
 
+    #region SelectAsync (Task<Result<T>> overloads)
+
+    [Fact]
+    public async Task SelectAsync_Task_OnFailure_ShouldReturnFailure()
+    {
+        Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
+
+        Result<string> result = await task.SelectAsync(x => Task.FromResult(x.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Should().Be(TestError);
+    }
+
+    #endregion
+
     #region Chaining (LINQ query syntax compatibility)
 
     [Fact]
