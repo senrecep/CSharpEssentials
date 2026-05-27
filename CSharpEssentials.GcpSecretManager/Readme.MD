@@ -27,7 +27,7 @@ builder.Configuration.AddGcpSecretManager(options =>
     options.AddProject(new ProjectSecretConfiguration
     {
         ProjectId = "my-gcp-project",
-        Prefix = "MyApp"
+        PrefixFilters = new[] { "MyApp__" }
     });
 });
 
@@ -40,7 +40,7 @@ string connectionString = builder.Configuration["MyApp:ConnectionStrings:Default
 {
   "GoogleSecretManager": {
     "Projects": [
-      { "ProjectId": "my-project", "Prefix": "Prod" }
+      { "ProjectId": "my-project", "PrefixFilters": ["Prod__"] }
     ]
   }
 }

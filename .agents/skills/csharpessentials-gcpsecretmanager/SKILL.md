@@ -27,8 +27,11 @@ using CSharpEssentials.GcpSecretManager;
 // Program.cs — add before building the app
 builder.Configuration.AddGcpSecretManager(options =>
 {
-    options.ProjectId = "my-gcp-project";
-    options.Secrets   = ["db-connection-string", "stripe-api-key", "jwt-secret"];
+    options.AddProject(new ProjectSecretConfiguration
+    {
+        ProjectId = "my-gcp-project",
+        SecretIds = ["db-connection-string", "stripe-api-key", "jwt-secret"]
+    });
 });
 
 // Secrets available anywhere via IConfiguration
