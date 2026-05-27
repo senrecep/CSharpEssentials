@@ -4,6 +4,21 @@ namespace CSharpEssentials.ResultPattern;
 
 internal static class ResultLogic
 {
+    internal static Error[] ValidateErrorsArray(Error[] errors)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(errors);
+#else
+        if (errors is null)
+            throw new ArgumentNullException(nameof(errors));
+#endif
+
+        if (errors.Length == 0)
+            throw CreateEmptyErrorArrayException();
+
+        return errors;
+    }
+
     internal static bool CheckIfErrorsAreEqual(Error[] left, Error[] right)
     {
         if (ReferenceEquals(left, right))

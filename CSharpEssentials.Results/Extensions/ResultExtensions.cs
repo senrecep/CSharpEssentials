@@ -18,6 +18,13 @@ public static partial class ResultExtensions
     public static Result ToResult(this IEnumerable<Error> errors) => errors.ToArray();
 
     /// <summary>
+    /// Converts an array of errors to a result directly without copying.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result ToResult(this Error[] errors) => Result.Failure(errors);
+
+    /// <summary>
     /// Converts a value to a result.
     /// </summary>
     /// <typeparam name="TValue"></typeparam>
@@ -40,4 +47,12 @@ public static partial class ResultExtensions
     /// <param name="errors"></param>
     /// <returns></returns>
     public static Result<TValue> ToResult<TValue>(this IEnumerable<Error> errors) => errors.ToArray();
+
+    /// <summary>
+    /// Converts an array of errors to a result directly without copying.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result<TValue> ToResult<TValue>(this Error[] errors) => Result<TValue>.Failure(errors);
 }

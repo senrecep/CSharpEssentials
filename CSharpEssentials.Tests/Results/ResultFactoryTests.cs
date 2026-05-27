@@ -34,6 +34,22 @@ public class ResultFactoryTests
     }
 
     [Fact]
+    public void Failure_WithEmptyErrorsArray_ShouldThrow()
+    {
+        Action act = () => Result.Failure([]);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Failure_WithNullErrorsArray_ShouldThrow()
+    {
+        Action act = () => Result.Failure((Error[]?)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void From_WithErrors_ShouldCreateFailureResult()
     {
         Error[] errors = new[] { TestData.Errors.Failure };
@@ -72,6 +88,22 @@ public class ResultFactoryTests
     }
 
     [Fact]
+    public void FailureT_WithEmptyErrorsArray_ShouldThrow()
+    {
+        Action act = () => Result.Failure<int>([]);
+
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void FailureT_WithNullErrorsArray_ShouldThrow()
+    {
+        Action act = () => Result.Failure<int>((Error[]?)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void FromT_WithError_ShouldCreateFailureResult()
     {
         var result = Result.From<int>(TestData.Errors.Failure);
@@ -90,4 +122,3 @@ public class ResultFactoryTests
         result.Errors.Should().Contain(TestData.Errors.Failure);
     }
 }
-

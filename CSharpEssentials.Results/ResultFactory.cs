@@ -26,6 +26,13 @@ public readonly partial record struct Result
     public static Result Failure(params IEnumerable<Error> errors) => From(errors);
 
     /// <summary>
+    /// Creates a new failure result directly using the specified errors array without copying.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result Failure(Error[] errors) => new(true, ResultLogic.ValidateErrorsArray(errors));
+
+    /// <summary>
     /// Converts a collection of errors to a result.
     /// </summary>
     /// <param name="errors"></param>
@@ -49,7 +56,7 @@ public readonly partial record struct Result
         foreach (IResultBase result in results)
         {
             if (result.IsFailure)
-                return result.Errors;
+                return Failure(result.ErrorsOrEmptyArray);
         }
         return Success();
     }
@@ -102,6 +109,13 @@ public readonly partial record struct Result
     /// <returns></returns>
     public static Result<TValue> Failure<TValue>(params IEnumerable<Error> errors) => Result<TValue>.From(errors);
     /// <summary>
+    /// Creates a new failure result directly using the specified errors array without copying.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result<TValue> Failure<TValue>(Error[] errors) => Result<TValue>.Failure(errors);
+    /// <summary>
     /// Converts an error to a result.
     /// </summary>
     /// <typeparam name="TValue"></typeparam>
@@ -122,7 +136,7 @@ public readonly partial record struct Result
 #else
     public static implicit operator Result(Error error) => new([error]);
 #endif
-    public static implicit operator Result(Error[] errors) => new(errors);
+    public static implicit operator Result(Error[] errors) => Failure(errors);
     public static implicit operator Result(List<Error> errors) => new(errors);
     public static implicit operator Result(HashSet<Error> errors) => new(errors);
     public static implicit operator Result(bool isSuccess) => isSuccess ? Success() : Error.False;
