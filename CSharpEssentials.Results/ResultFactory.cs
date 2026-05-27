@@ -30,7 +30,7 @@ public readonly partial record struct Result
     /// </summary>
     /// <param name="errors"></param>
     /// <returns></returns>
-    public static Result Failure(Error[] errors) => new(true, errors);
+    public static Result Failure(Error[] errors) => new(true, ResultLogic.ValidateErrorsArray(errors));
 
     /// <summary>
     /// Converts a collection of errors to a result.
@@ -136,7 +136,7 @@ public readonly partial record struct Result
 #else
     public static implicit operator Result(Error error) => new([error]);
 #endif
-    public static implicit operator Result(Error[] errors) => new(errors);
+    public static implicit operator Result(Error[] errors) => Failure(errors);
     public static implicit operator Result(List<Error> errors) => new(errors);
     public static implicit operator Result(HashSet<Error> errors) => new(errors);
     public static implicit operator Result(bool isSuccess) => isSuccess ? Success() : Error.False;

@@ -52,6 +52,23 @@ public class ResultZeroAllocationTests
     }
 
     [Fact]
+    public void ResultImplicitConversions_WithErrorsArray_ShouldNotCopyArray()
+    {
+        // Arrange
+        Error[] errors = [Error.Validation("Code", "Message")];
+
+        // Act
+        Result result = errors;
+        Result<int> resultGeneric = errors;
+
+        // Assert
+        Assert.True(result.IsFailure);
+        Assert.Same(errors, result.ErrorsOrEmptyArray);
+        Assert.True(resultGeneric.IsFailure);
+        Assert.Same(errors, resultGeneric.ErrorsOrEmptyArray);
+    }
+
+    [Fact]
     public void ResultBind_OnFailure_ShouldReturnOriginalErrorsArrayReference()
     {
         // Arrange
