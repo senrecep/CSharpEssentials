@@ -217,6 +217,64 @@ public class ResultCollectionBatchTests
     }
 
     [Fact]
+    public void Traverse_WithFailures_ShouldAggregateErrors()
+    {
+        int[] source = [1, 2, 3];
+
+        Result<string[]> result = source.Traverse(value =>
+            value == 2
+                ? Result<string>.Failure(Error.Validation("Traverse.Error", "Bad value"))
+                : $"item-{value}".ToResult());
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Should().ContainSingle(x => x.Code == "Traverse.Error");
+    }
+
+    [Fact]
+    public void Partition_IResult_ShouldReturnSuccessesAndErrors()
+    {
+        IResult<int>[] source =
+        [
+            (Result<int>)10,
+            (Result<int>)Error.Validation("First.Error", "First"),
+            (Result<int>)20,
+            (Result<int>)Error.Validation("Second.Error", "Second")
+        ];
+
+        (int[] successes, Error[] errors) = source.Partition();
+
+        successes.Should().Equal(10, 20);
+        errors.Select(x => x.Code).Should().Equal("First.Error", "Second.Error");
+    }
+
+    [Fact]
+    public void FirstFailureOrSuccesses_AllSuccesses_ShouldReturnSuccessWithValues()
+    {
+        Result<int>[] source = [1, 2, 3];
+
+        Result<int[]> result = source.FirstFailureOrSuccesses();
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Equal(1, 2, 3);
+    }
+
+    [Fact]
+    public void FirstFailureOrSuccesses_IResult_AllSuccesses_ShouldReturnSuccessWithValues()
+    {
+        IResult<int>[] source =
+        [
+            (Result<int>)1,
+            (Result<int>)2,
+            (Result<int>)3
+        ];
+
+        Result<int[]> result = source.FirstFailureOrSuccesses();
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Equal(1, 2, 3);
+    }
+
+    [Fact]
     public void Traverse_WithNullSelector_ShouldThrowArgumentNullException()
     {
         int[] values = [1];
