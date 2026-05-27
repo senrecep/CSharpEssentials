@@ -150,6 +150,71 @@ bool t3Try = tripleThird.TryAs<bool, string, int, bool>(out bool t3Bool);
 Console.WriteLine($"tripleThird.TryAs<bool>(): success={t3Try}, value={t3Bool}");
 Console.WriteLine();
 
+// ============================================================================
+// INDEX PROPERTY
+// ============================================================================
+Console.WriteLine("--- Index Property ---");
+
+Any<string, int> anyStringIdx = Any<string, int>.First("hello");
+Any<string, int> anyIntIdx = Any<string, int>.Second(42);
+Console.WriteLine($"anyString.Index: {anyStringIdx.Index}");
+Console.WriteLine($"anyInt.Index: {anyIntIdx.Index}");
+Console.WriteLine();
+
+// ============================================================================
+// ANYACTIONSTATUS (FROM SWITCH RETURN VALUE)
+// ============================================================================
+Console.WriteLine("--- AnyActionStatus ---");
+
+Any<string, int> switchTarget = Any<string, int>.First("world");
+AnyActionStatus switchStatus = switchTarget.Switch(
+    first: v => Console.WriteLine($"  Switched first: {v}"),
+    second: v => Console.WriteLine($"  Switched second: {v}")
+);
+Console.WriteLine($"AnyActionStatus.Executed: {switchStatus == AnyActionStatus.Executed}");
+
+Any<string, int> emptyAny = default;
+AnyActionStatus emptyStatus = emptyAny.Switch(
+    first: v => Console.WriteLine($"  This won't run"),
+    second: v => Console.WriteLine($"  This won't run")
+);
+Console.WriteLine($"AnyActionStatus.NotExecuted: {emptyStatus == AnyActionStatus.NotExecuted}");
+Console.WriteLine();
+
+// ============================================================================
+// ANY<T0,T1,T2,T3> — FOUR-TYPE VARIANT (AnyT4)
+// ============================================================================
+Console.WriteLine("--- Any<T0,T1,T2,T3> (AnyT4) ---");
+
+Any<string, int, bool, Guid> quadThird = Any<string, int, bool, Guid>.Third(true);
+Console.WriteLine($"AnyT4.IsThird: {quadThird.IsThird}");
+Console.WriteLine($"AnyT4.IsFourth: {quadThird.IsFourth}");
+Console.WriteLine($"AnyT4.Index: {quadThird.Index}");
+Console.WriteLine($"AnyT4.GetThird(): {quadThird.GetThird()}");
+
+Any<string, int, bool, Guid> quadFourth = Any<string, int, bool, Guid>.Fourth(Guid.Empty);
+Console.WriteLine($"AnyT4 Fourth: IsFirst={quadFourth.IsFirst}, IsFourth={quadFourth.IsFourth}, Index={quadFourth.Index}");
+
+(string? q1, int? q2, bool? q3, Guid? q4) = quadFourth.ToTuple();
+Console.WriteLine($"AnyT4 ToTuple: q4={q4}");
+
+AnyActionResult<string> quadMatch = quadThird.Match(
+    first: s => $"string:{s}",
+    second: i => $"int:{i}",
+    third: b => $"bool:{b}",
+    fourth: g => $"guid:{g}"
+);
+Console.WriteLine($"AnyT4 Match: Result={quadMatch.Result}, Status={quadMatch.Status}");
+
+AnyActionStatus quadSwitch = quadFourth.Switch(
+    first: s => Console.WriteLine($"  quad first: {s}"),
+    second: i => Console.WriteLine($"  quad second: {i}"),
+    third: b => Console.WriteLine($"  quad third: {b}"),
+    fourth: g => Console.WriteLine($"  quad fourth: {g}")
+);
+Console.WriteLine($"AnyT4 Switch status: {quadSwitch}");
+Console.WriteLine();
+
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");

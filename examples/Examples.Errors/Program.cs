@@ -140,6 +140,98 @@ catch (EnhancedValidationException vex)
 }
 Console.WriteLine();
 
+// ============================================================================
+// FAILURE / UNEXPECTED / UNAUTHORIZED / FORBIDDEN / EXCEPTION
+// ============================================================================
+Console.WriteLine("--- Failure / Unexpected / Unauthorized / Forbidden / Exception ---");
+
+Error failure = Error.Failure("Op.Failed", "The operation failed.");
+Console.WriteLine($"Failure: Code={failure.Code}, Type={failure.Type}");
+
+Error unexpected = Error.Unexpected("Sys.Crash", "An unexpected error occurred.");
+Console.WriteLine($"Unexpected: Code={unexpected.Code}, Type={unexpected.Type}");
+
+Error unauthorized = Error.Unauthorized("Auth.NoToken", "Access token is missing.");
+Console.WriteLine($"Unauthorized: Code={unauthorized.Code}, Type={unauthorized.Type}");
+
+Error forbidden = Error.Forbidden("Perm.Denied", "Insufficient permissions.");
+Console.WriteLine($"Forbidden: Code={forbidden.Code}, Type={forbidden.Type}");
+
+try { throw new InvalidOperationException("Disk full"); }
+catch (Exception ex)
+{
+    Error fromEx = Error.Exception(ex);
+    Console.WriteLine($"Exception: Code={fromEx.Code}, Description={fromEx.Description}");
+
+    Error fromExWithCode = Error.Exception("Storage.Full", ex);
+    Console.WriteLine($"Exception with code: Code={fromExWithCode.Code}");
+}
+Console.WriteLine();
+
+// ============================================================================
+// CREATE MANY
+// ============================================================================
+Console.WriteLine("--- CreateMany ---");
+
+Error[] many = Error.CreateMany(
+    Error.Validation("Name.Empty", "Name is required"),
+    Error.Validation("Email.Invalid", "Email is invalid"),
+    Error.Validation("Age.Range", "Age out of range")
+);
+Console.WriteLine($"CreateMany: {many.Length} errors");
+foreach (Error e in many)
+    Console.WriteLine($"  {e.Code}");
+Console.WriteLine();
+
+// ============================================================================
+// SENTINEL VALUES: NOFIRSTERROR / NOERRORS / FALSE
+// ============================================================================
+Console.WriteLine("--- Sentinel Values ---");
+
+Console.WriteLine($"NoFirstError: Code={Error.NoFirstError.Code}, Type={Error.NoFirstError.Type}");
+Console.WriteLine($"NoErrors: Code={Error.NoErrors.Code}");
+Console.WriteLine($"False: Code={Error.False.Code}, Type={Error.False.Type}");
+Console.WriteLine();
+
+// ============================================================================
+// ERRORTYPE ENUM / TOINTTYPE / TOERRORTYPE / TOHTTPSTATUSCODE
+// ============================================================================
+Console.WriteLine("--- ErrorType Enum / ToIntType / ToErrorType ---");
+
+ErrorType[] types =
+{
+    ErrorType.Failure, ErrorType.Validation, ErrorType.NotFound,
+    ErrorType.Unauthorized, ErrorType.Forbidden, ErrorType.Conflict, ErrorType.Unexpected
+};
+
+foreach (ErrorType t in types)
+{
+    int intType = t.ToIntType();
+    int httpCode = t.ToHttpStatusCode();
+    Console.WriteLine($"  {t}: numeric={intType}, http={httpCode}");
+}
+
+ErrorType fromHttp404 = 404.ToErrorType();
+Console.WriteLine($"404.ToErrorType(): {fromHttp404}");
+
+ErrorType fromHttp400 = 400.ToErrorType();
+Console.WriteLine($"400.ToErrorType(): {fromHttp400}");
+Console.WriteLine();
+
+// ============================================================================
+// IERROR INTERFACE
+// ============================================================================
+Console.WriteLine("--- IError Interface ---");
+
+Error sample = Error.NotFound("Sample.Missing", "Sample not found");
+IError asInterface = sample;
+Console.WriteLine($"IError.Code={asInterface.Code}");
+Console.WriteLine($"IError.Description={asInterface.Description}");
+Console.WriteLine($"IError.Type={asInterface.Type}");
+Console.WriteLine($"IError.NumericType={asInterface.NumericType}");
+Console.WriteLine($"IError.Metadata={asInterface.Metadata}");
+Console.WriteLine();
+
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");

@@ -170,6 +170,43 @@ RuleEngine.Evaluate(new[] { notEmpty, maxLength }.And(), "").Switch(
 );
 Console.WriteLine();
 
+// ============================================================================
+// NEXT COMBINATOR (PIPELINE CHAIN)
+// ============================================================================
+Console.WriteLine("--- Next Combinator ---");
+
+IRule<int> mustBePositive = ((Func<int, Result>)(x =>
+    x > 0 ? Result.Success() : Result.Failure(Error.Validation("Positive", "Must be positive")))).ToRule();
+
+IRule<int> mustBeEven = ((Func<int, Result>)(x =>
+    x % 2 == 0 ? Result.Success() : Result.Failure(Error.Validation("Even", "Must be even")))).ToRule();
+
+IRule<int> mustBeLessThan100 = ((Func<int, Result>)(x =>
+    x < 100 ? Result.Success() : Result.Failure(Error.Validation("Range", "Must be less than 100")))).ToRule();
+
+IRuleBase<int> chain = mustBePositive.Next(mustBeEven).Next(mustBeLessThan100);
+
+RuleEngine.Evaluate(chain, 4).Switch(
+    onSuccess: () => Console.WriteLine("4: passes all chained rules"),
+    onFailure: errors => Console.WriteLine($"4 failed: {errors[0].Description}")
+);
+
+RuleEngine.Evaluate(chain, -2).Switch(
+    onSuccess: () => Console.WriteLine("-2 passed"),
+    onFailure: errors => Console.WriteLine($"-2 failed at first rule: {errors[0].Code}")
+);
+
+RuleEngine.Evaluate(chain, 3).Switch(
+    onSuccess: () => Console.WriteLine("3 passed"),
+    onFailure: errors => Console.WriteLine($"3 (odd) failed: {errors[0].Code}")
+);
+
+RuleEngine.Evaluate(chain, 200).Switch(
+    onSuccess: () => Console.WriteLine("200 passed"),
+    onFailure: errors => Console.WriteLine($"200 (>=100) failed: {errors[0].Code}")
+);
+Console.WriteLine();
+
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
