@@ -1,5 +1,6 @@
 using CSharpEssentials.Maybe;
 using FluentAssertions;
+using System.Globalization;
 
 namespace CSharpEssentials.Tests.Maybe;
 
@@ -12,7 +13,7 @@ public class MaybeMapAsyncTests
     {
         var maybe = Maybe<int>.From(5);
 
-        Maybe<string> result = await maybe.MapAsync(v => Task.FromResult(v.ToString()));
+        Maybe<string> result = await maybe.MapAsync(v => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be("5");
@@ -23,7 +24,7 @@ public class MaybeMapAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<string> result = await maybe.MapAsync(v => Task.FromResult(v.ToString()));
+        Maybe<string> result = await maybe.MapAsync(v => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)));
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -87,7 +88,7 @@ public class MaybeMapAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(7));
 
-        Maybe<string> result = await maybeTask.MapAsync(v => Task.FromResult(v.ToString()));
+        Maybe<string> result = await maybeTask.MapAsync(v => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be("7");
@@ -98,7 +99,7 @@ public class MaybeMapAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
 
-        Maybe<string> result = await maybeTask.MapAsync(v => Task.FromResult(v.ToString()));
+        Maybe<string> result = await maybeTask.MapAsync(v => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)));
 
         result.HasNoValue.Should().BeTrue();
     }

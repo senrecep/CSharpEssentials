@@ -24,7 +24,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public void MessageCreator_Should_BeLogMessageCreator_When_UseSeparateContextIsFalse()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = new LoggingOptions
         {
             UseSeparateContext = false,
@@ -39,7 +39,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public void MessageCreator_Should_BeLogMessageWithContextCreator_When_UseSeparateContextIsTrue()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = new LoggingOptions
         {
             UseSeparateContext = true,
@@ -54,7 +54,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_CompleteSuccessfully_When_UseSeparateContextIsFalse()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = new LoggingOptions
         {
             UseSeparateContext = false,
@@ -71,7 +71,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_CompleteSuccessfully_When_UseSeparateContextIsTrue()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = new LoggingOptions
         {
             UseSeparateContext = true,
@@ -88,7 +88,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_CompleteSuccessfully_When_LoggingFieldsIsEmpty()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = new LoggingOptions
         {
             UseSeparateContext = true,
@@ -105,7 +105,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_NotThrow_When_AllFieldsLogged_WithSeparateContext()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = LoggingOptions.CreateAllFields();
         var writer = new LoggerFactoryLogWriter(loggerFactory, options);
         var context = CreateContext("req", "resp");
@@ -118,7 +118,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_NotThrow_When_AllFieldsLogged_WithoutSeparateContext()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = LoggingOptions.CreateAllFields();
         options.UseSeparateContext = false;
         var writer = new LoggerFactoryLogWriter(loggerFactory, options);
@@ -156,7 +156,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_RespectLogLevel_When_LevelIsWarning()
     {
-        var loggerFactory = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Warning));
+        using var loggerFactory = LoggerFactory.Create(b => b.SetMinimumLevel(LogLevel.Warning));
         var options = new LoggingOptions
         {
             UseSeparateContext = false,
@@ -174,7 +174,7 @@ public sealed class LoggerFactoryLogWriterTests
     [Fact]
     public async Task Write_Should_IncludeHeaderValues_When_HeaderKeysConfigured()
     {
-        var loggerFactory = LoggerFactory.Create(_ => { });
+        using var loggerFactory = LoggerFactory.Create(_ => { });
         var options = new LoggingOptions
         {
             UseSeparateContext = false,
