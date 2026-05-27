@@ -72,7 +72,7 @@
     },
     {
       "name": "csharpessentials-meta",
-      "description": "Use when deciding which CSharpEssentials package to use — overview of all 18 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.",
+      "description": "Use when deciding which CSharpEssentials package to use — overview of all 19 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.",
       "files": ["SKILL.md"]
     },
     {
@@ -88,6 +88,11 @@
     {
       "name": "csharpessentials-time",
       "description": "Use when you need testable time — IDateTimeProvider wraps .NET's TimeProvider so production code uses TimeProvider.System while tests use FakeTimeProvider to freeze/advance the clock; also provides .ToDateOnly() and .ToTimeOnly() DateTime extension methods.",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-validation",
+      "description": "Use when writing model validation with Result<T> integration — Validator<T> base class, rules.For().NotEmpty()/.MaxLength()/.GreaterThan() chains, SetValidator for nested objects, ForEach for collections, native C# if/switch for conditional rules. Also use when migrating FROM FluentValidation — this skill contains a full side-by-side migration guide.",
       "files": ["SKILL.md"]
     }
   ]

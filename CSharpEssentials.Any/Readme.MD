@@ -69,3 +69,20 @@ response.Switch(
     second: i => Console.WriteLine($"NotFound: {i}"),
     third: e => Console.WriteLine($"Error: {e.Message}"));
 ```
+
+### Collection Extensions
+
+Scatter a sequence of unions into typed arrays in one pass:
+
+```csharp
+// Classify API responses into successes and errors
+var (users, errors) = responses
+    .Traverse(r => ClassifyResponse(r));  // returns Any<UserDto, ApiError>
+
+// Or partition an existing sequence of unions
+var (drafts, published) = articles
+    .Select(a => GetState(a))             // returns Any<Draft, Published>
+    .Partition();
+```
+
+`Partition` and `Traverse` are available for all arities (`Any<T0,T1>` through `Any<T0,...,T7>`), returning a tuple with one typed array per variant.
