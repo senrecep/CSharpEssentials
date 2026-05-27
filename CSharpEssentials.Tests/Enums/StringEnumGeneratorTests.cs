@@ -178,10 +178,21 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
-    public void Nested_Enum_Should_Not_Generate_Extensions()
+    public void StringEnumGenerator_Should_Not_Generate_Extensions_When_Enum_Is_Nested_In_Class()
+    {
+        AssertExtensionsTypeIsMissing("NestedClassStatusExtensions");
+    }
+
+    [Fact]
+    public void StringEnumGenerator_Should_Not_Generate_Extensions_When_Enum_Is_Nested_In_Struct()
+    {
+        AssertExtensionsTypeIsMissing("NestedStructStatusExtensions");
+    }
+
+    private static void AssertExtensionsTypeIsMissing(string generatedTypeName)
     {
         typeof(StringEnumGeneratorTests).Assembly
-            .GetType("CSharpEssentials.Tests.Enums.NestedStatusExtensions")
+            .GetType($"CSharpEssentials.Tests.Enums.{generatedTypeName}")
             .Should()
             .BeNull();
     }
@@ -214,7 +225,17 @@ internal enum HttpStatus
 internal static class NestedEnumContainer
 {
     [StringEnum]
-    public enum NestedStatus
+    public enum NestedClassStatus
+    {
+        Pending,
+        Completed
+    }
+}
+
+internal struct NestedEnumStructContainer
+{
+    [StringEnum]
+    public enum NestedStructStatus
     {
         Pending,
         Completed
