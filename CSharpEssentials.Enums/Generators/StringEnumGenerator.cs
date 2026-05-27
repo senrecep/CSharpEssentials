@@ -17,7 +17,9 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
                 static (node, _) => node is EnumDeclarationSyntax,
                 static (ctx, _) =>
                     (INamedTypeSymbol)ctx.TargetSymbol)
-            .Where(static symbol => symbol.DeclaredAccessibility != Accessibility.Private);
+            .Where(static symbol =>
+                symbol.DeclaredAccessibility != Accessibility.Private &&
+                symbol.ContainingType is null);
 
         context.RegisterSourceOutput(enumSymbols, static (spc, enumSymbol) =>
         {
