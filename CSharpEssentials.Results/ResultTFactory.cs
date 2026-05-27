@@ -27,6 +27,13 @@ public readonly partial record struct Result<TValue>
     public static Result<TValue> Failure(params IEnumerable<Error> errors) => From(errors);
 
     /// <summary>
+    /// Creates a new failure result directly using the specified errors array without copying.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result<TValue> Failure(Error[] errors) => new(false, default, ResultLogic.ValidateErrorsArray(errors));
+
+    /// <summary>
     /// Converts a collection of errors to a result.
     /// </summary>
     /// <param name="errors"></param>
@@ -96,7 +103,7 @@ public readonly partial record struct Result<TValue>
 #else
     public static implicit operator Result<TValue>(Error error) => new([error]);
 #endif
-    public static implicit operator Result<TValue>(Error[] errors) => new(errors);
+    public static implicit operator Result<TValue>(Error[] errors) => Failure(errors);
     public static implicit operator Result<TValue>(List<Error> errors) => new(errors);
     public static implicit operator Result<TValue>(HashSet<Error> errors) => new(errors);
 
