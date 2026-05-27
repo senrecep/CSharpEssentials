@@ -78,7 +78,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
     [Fact]
     public async Task InvokeAsync_Should_LogRequest_When_LoggerFactoryConfigured()
     {
-        var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+        using var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
         _host = await CreateHostBuilder(opts =>
             opts.UseLogger(loggerFactory, loggingOpts =>

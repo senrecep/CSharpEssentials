@@ -281,7 +281,7 @@ public class NullableAndCollectionValidatorsTests
 
     private sealed record ListModel(List<string>? Tags);
     private sealed record ArrayModel(string[]? Codes);
-    private sealed record IListModel(IList<string>? Names);
+    private sealed record ListCollectionModel(IList<string>? Names);
 
     [Fact]
     public async Task NotEmpty_ShouldWork_WithListProperty()
@@ -351,8 +351,8 @@ public class NullableAndCollectionValidatorsTests
     [Fact]
     public async Task NotEmpty_ShouldWork_WithIListProperty()
     {
-        Result<IListModel> result = await Validator.ValidateAsync(
-            new IListModel(null),
+        Result<ListCollectionModel> result = await Validator.ValidateAsync(
+            new ListCollectionModel(null),
             (m, rules) => rules.For(() => m.Names).NotEmpty());
 
         result.IsFailure.Should().BeTrue();

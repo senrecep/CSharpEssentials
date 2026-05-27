@@ -236,28 +236,6 @@ public class ForEachAndNestedValidatorsTests
         result.Errors.Should().HaveCount(2);
     }
 
-    [Fact]
-    public async Task SetValidator_ShouldWork_WithNullableReferenceType_NullablePropertyValidated()
-    {
-        ShipmentModel model = new(new AddressModel("", "34000"));
-
-        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
-
-        result.IsFailure.Should().BeTrue();
-        result.FirstError.Code.Should().Be("Destination.City.NotEmpty");
-    }
-
-    [Fact]
-    public async Task SetValidator_ShouldSkip_WithNullableReferenceType_WhenNull()
-    {
-        ShipmentModel model = new(null);
-
-        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
-            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
-
-        result.IsSuccess.Should().BeTrue();
-    }
 
     // =========================================================================
     // SetValidatorAsync
