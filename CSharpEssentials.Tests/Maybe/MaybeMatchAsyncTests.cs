@@ -1,5 +1,6 @@
 using CSharpEssentials.Maybe;
 using FluentAssertions;
+using System.Globalization;
 
 namespace CSharpEssentials.Tests.Maybe;
 
@@ -13,7 +14,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(5);
 
         string result = await maybe.Match(
-            (v, ct) => Task.FromResult(v.ToString()),
+            (v, ct) => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => Task.FromResult("none"));
 
         result.Should().Be("5");
@@ -25,7 +26,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
 
         string result = await maybe.Match(
-            (v, ct) => Task.FromResult(v.ToString()),
+            (v, ct) => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => Task.FromResult("none"));
 
         result.Should().Be("none");
@@ -127,7 +128,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(42);
 
         string result = await maybe.Match(
-            (v, ct) => ValueTask.FromResult(v.ToString()),
+            (v, ct) => ValueTask.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => ValueTask.FromResult("none"));
 
         result.Should().Be("42");
@@ -139,7 +140,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
 
         string result = await maybe.Match(
-            (v, ct) => ValueTask.FromResult(v.ToString()),
+            (v, ct) => ValueTask.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => ValueTask.FromResult("none"));
 
         result.Should().Be("none");

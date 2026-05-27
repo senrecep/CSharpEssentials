@@ -40,9 +40,8 @@ public class JsonExtensionsTests
     public void ConfigureSystemTextJson_Should_InvokeConfigureCallback_When_CallbackProvided()
     {
         var services = new ServiceCollection();
-        bool callbackInvoked = false;
 
-        services.ConfigureSystemTextJson(configureOptions: _ => { callbackInvoked = true; });
+        services.ConfigureSystemTextJson(configureOptions: _ => { });
 
         var provider = services.BuildServiceProvider();
         var mvcOptions = provider.GetService<Microsoft.Extensions.Options.IOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>>();

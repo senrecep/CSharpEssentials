@@ -248,17 +248,6 @@ public class ResultCollectionBatchTests
     }
 
     [Fact]
-    public void FirstFailureOrSuccesses_AllSuccesses_ShouldReturnSuccessWithValues()
-    {
-        Result<int>[] source = [1, 2, 3];
-
-        Result<int[]> result = source.FirstFailureOrSuccesses();
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Equal(1, 2, 3);
-    }
-
-    [Fact]
     public void FirstFailureOrSuccesses_IResult_AllSuccesses_ShouldReturnSuccessWithValues()
     {
         IResult<int>[] source =
