@@ -177,6 +177,34 @@ public class AnyCollectionExtensionsTests
     }
 
     [Fact]
+    public void Traverse_T3_ShouldProjectAndPartition()
+    {
+        int[] source = [0, 1, 2, 3, 4];
+
+        var result = source.Traverse<int, int, string, bool>(value => value switch
+        {
+            0 => value,
+            1 => value.ToString(CultureInfo.InvariantCulture),
+            _ => true
+        });
+
+        result.First.Should().Equal(0);
+        result.Second.Should().Equal("1");
+        result.Third.Should().Equal(true, true, true);
+    }
+
+    [Fact]
+    public void Traverse_T4_WithNullSelector_ShouldThrowArgumentNullException()
+    {
+        int[] values = [1];
+        Func<int, Any<int, string, bool, decimal>> selector = null!;
+
+        Action action = () => values.Traverse<int, int, string, bool, decimal>(selector);
+
+        action.Should().Throw<ArgumentNullException>().WithParameterName("selector");
+    }
+
+    [Fact]
     public void Traverse_WithNullSelector_ShouldThrowArgumentNullException()
     {
         int[] values = [1];
