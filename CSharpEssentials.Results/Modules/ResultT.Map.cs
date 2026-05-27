@@ -12,7 +12,7 @@ public readonly partial record struct Result<TValue>
     public Result<TOut> Map<TOut>(Func<TValue, TOut> map)
     {
         if (IsFailure)
-            return Errors;
+            return Result<TOut>.Failure(_errors);
         return map(Value);
     }
 
@@ -25,7 +25,7 @@ public readonly partial record struct Result<TValue>
     public Result<TOut> Map<TOut>(Func<TValue, Result<TOut>> map)
     {
         if (IsFailure)
-            return Errors;
+            return Result<TOut>.Failure(_errors);
         return map(Value);
     }
 }
@@ -60,7 +60,7 @@ public static partial class ResultExtensions
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         if (result.IsFailure)
-            return result.Errors;
+            return Result<TOut>.Failure(result.ErrorsOrEmptyArray);
         return await map(result.Value).WithCancellation(cancellationToken);
     }
 
