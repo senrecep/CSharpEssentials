@@ -26,6 +26,13 @@ public readonly partial record struct Result
     public static Result Failure(params IEnumerable<Error> errors) => From(errors);
 
     /// <summary>
+    /// Creates a new failure result directly using the specified errors array without copying.
+    /// </summary>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result Failure(Error[] errors) => new(true, errors);
+
+    /// <summary>
     /// Converts a collection of errors to a result.
     /// </summary>
     /// <param name="errors"></param>
@@ -101,6 +108,13 @@ public readonly partial record struct Result
     /// <param name="errors"></param>
     /// <returns></returns>
     public static Result<TValue> Failure<TValue>(params IEnumerable<Error> errors) => Result<TValue>.From(errors);
+    /// <summary>
+    /// Creates a new failure result directly using the specified errors array without copying.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="errors"></param>
+    /// <returns></returns>
+    public static Result<TValue> Failure<TValue>(Error[] errors) => Result<TValue>.Failure(errors);
     /// <summary>
     /// Converts an error to a result.
     /// </summary>
