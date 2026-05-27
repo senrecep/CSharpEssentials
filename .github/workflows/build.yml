@@ -27,7 +27,7 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --filter "FullyQualifiedName!~GcpSecretManager" --collect:"XPlat Code Coverage" --results-directory ./coverage
+        run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
