@@ -176,6 +176,15 @@ public class StringEnumGeneratorTests
         HttpStatusExtensions.HTTPResponseSnakeCase.Should().Be("httpresponse");
         HttpStatusExtensions.HTTPResponseKebabCase.Should().Be("httpresponse");
     }
+
+    [Fact]
+    public void Nested_Enum_Should_Not_Generate_Extensions()
+    {
+        typeof(StringEnumGeneratorTests).Assembly
+            .GetType("CSharpEssentials.Tests.Enums.NestedStatusExtensions")
+            .Should()
+            .BeNull();
+    }
 }
 
 [StringEnum]
@@ -200,4 +209,14 @@ internal enum HttpStatus
     OK,
     NotFound,
     HTTPResponse
+}
+
+internal static class NestedEnumContainer
+{
+    [StringEnum]
+    public enum NestedStatus
+    {
+        Pending,
+        Completed
+    }
 }
