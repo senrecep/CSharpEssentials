@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 CSharpEssentials - Public API Example Coverage Analyzer
-Her kütüphanedeki public API'leri (tip, metod, property) çıkarıp
-ilgili example projesinde kullanılıp kullanılmadığını kontrol eder.
+
+Extracts public APIs (types, methods, properties) from each library
+and checks whether they are used in the corresponding example project.
 """
 
 import os
@@ -10,9 +11,9 @@ import re
 from pathlib import Path
 from collections import defaultdict
 
-PROJECT_ROOT = Path("/Users/recepsen/Documents/projects/recep/CSharpEssentials")
+PROJECT_ROOT = Path(__file__).parent.parent
 
-# Kütüphane -> Example klasörü eşleştirmesi
+# Library -> Example directory mapping
 LIB_EXAMPLE_MAP = {
     "CSharpEssentials.Any": "Examples.Any",
     "CSharpEssentials.AspNetCore": "Examples.AspNetCore",
@@ -29,15 +30,16 @@ LIB_EXAMPLE_MAP = {
     "CSharpEssentials.Results": "Examples.Results",
     "CSharpEssentials.Rules": "Examples.Rules",
     "CSharpEssentials.Time": "Examples.Time",
+    "CSharpEssentials.Validation": "Examples.Validation",
     "CSharpEssentials": "Examples.Main",
 }
 
 
 def get_cs_files(directory):
-    """Dizindeki tüm .cs dosyalarını döndürür (bin/obj hariç)."""
+    """Returns all .cs files in the directory (excluding bin/obj)."""
     files = []
     for root, dirs, filenames in os.walk(directory):
-        # bin/obj klasörlerini atla
+        # Skip bin/obj directories
         dirs[:] = [d for d in dirs if d not in ('bin', 'obj')]
         for f in filenames:
             if f.endswith('.cs'):
@@ -47,9 +49,9 @@ def get_cs_files(directory):
 
 def extract_types_and_members(file_path):
     """
-    Bir C# dosyasından public tip ve üye isimlerini çıkarır.
-    Dönüş: [(kategori, isim, dosya_ismi), ...]
-    kategori: 'type' | 'method' | 'property' | 'field' | 'enum_value'
+    Extracts public type and member names from a C# file.
+    Returns: [(category, name, filename), ...]
+    category: 'type' | 'method' | 'property' | 'field' | 'enum_value'
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
@@ -60,7 +62,7 @@ def extract_types_and_members(file_path):
     results = []
     lines = content.split('\n')
 
-    # Dosyadaki tip isimlerini bul (constructor tespiti için)
+    # Find type names in file (for constructor detection)
     type_names = set()
     type_pattern = re.compile(
         r'^\s*public\s+(?:static\s+|abstract\s+|sealed\s+|readonly\s+|partial\s+)*'
@@ -71,7 +73,7 @@ def extract_types_and_members(file_path):
         if m:
             type_names.add(m.group(1))
 
-    # Satır satır parse et
+    # Parse line by line
     for line in lines:
         stripped = line.strip()
         if not stripped.startswith('public '):
@@ -79,25 +81,25 @@ def extract_types_and_members(file_path):
         if stripped.startswith('public override string ToString'):
             continue
 
-        # --- Enum değerleri ---
-        # public const X veya sadece public enum member'ları
-        # Basitçe: public ile başlayan ve = veya , içeren satırlar
+        # --- Enum values ---
+        # public const X or plain public enum members
+        # Simplified: lines starting with public containing = or ,
         enum_val_match = re.match(r'^\s*public\s+const\s+\w+\s+(\w+)\s*[=;]', stripped)
         if enum_val_match:
             results.append(('field', enum_val_match.group(1), os.path.basename(file_path)))
             continue
 
-        # --- Tip tanımları ---
+        # --- Type definitions ---
         type_match = type_pattern.match(stripped)
         if type_match:
             results.append(('type', type_match.group(1), os.path.basename(file_path)))
             continue
 
-        # --- Metodlar ---
+        # --- Methods ---
         # public [static|async|override|virtual|readonly|partial|implicit|explicit] <return_type> Name(<params>)
-        # Ama constructor hariç: Name == tip_ismi ve parantez varsa
+        # Exclude constructors: Name == type_name with parentheses
         if ' operator ' in stripped:
-            continue  # implicit/explicit operator'leri atla
+            continue  # Skip implicit/explicit operators
         method_match = re.match(
             r'^\s*public\s+(?:static\s+|async\s+|override\s+|virtual\s+|abstract\s+|readonly\s+|partial\s+)*'
             r'[\w<>,\[\]\s>?]+?\s+(\w+)(?:<[^>]+>)?\s*\(',
@@ -105,19 +107,19 @@ def extract_types_and_members(file_path):
         )
         if method_match:
             name = method_match.group(1)
-            # Constructor filtrele
+            # Filter out constructors
             if name in type_names:
                 continue
-            # Object metodlarını atla
+            # Skip Object base methods
             if name in ('ToString', 'Equals', 'GetHashCode', 'CompareTo', 'Clone'):
                 continue
-            # Genel C# keyword'lerini atla
+            # Skip C# keywords
             if name in ('if', 'while', 'for', 'switch', 'using', 'return', 'new', 'await'):
                 continue
             results.append(('method', name, os.path.basename(file_path)))
             continue
 
-        # --- Property'ler ---
+        # --- Properties ---
         # public [static|override|...] <type> Name { get; set; }
         prop_match = re.match(
             r'^\s*public\s+(?:static\s+|override\s+|virtual\s+|abstract\s+|readonly\s+)*'
@@ -126,13 +128,13 @@ def extract_types_and_members(file_path):
         )
         if prop_match:
             name = prop_match.group(1)
-            # Indexer atla
+            # Skip indexers
             if name == 'this':
                 continue
             results.append(('property', name, os.path.basename(file_path)))
             continue
 
-        # --- Field'ler ---
+        # --- Fields ---
         # public [static|readonly] <type> Name = ...;
         field_match = re.match(
             r'^\s*public\s+(?:static\s+|readonly\s+)*[\w<>,\[\]\s>?]+?\s+(\w+)\s*[=;]',
@@ -147,7 +149,7 @@ def extract_types_and_members(file_path):
 
 
 def read_example_content(example_dir):
-    """Example klasöründeki tüm .cs dosyalarının içeriğini birleştirir."""
+    """Concatenates the contents of all .cs files in the example directory."""
     if not os.path.exists(example_dir):
         return ""
     content_parts = []
@@ -162,28 +164,28 @@ def read_example_content(example_dir):
 
 def check_usage(api_name, example_content):
     """
-    API isminin example içeriğinde kullanılıp kullanılmadığını kontrol eder.
-    Tam kelime eşleşmesi arar.
+    Checks if the API name is used in the example content.
+    Searches for whole-word matches.
     """
     pattern = r'\b' + re.escape(api_name) + r'\b'
     return bool(re.search(pattern, example_content))
 
 
 def analyze_library(lib_name, example_name):
-    """Bir kütüphane için analiz yapar."""
+    """Performs analysis for a library."""
     lib_dir = PROJECT_ROOT / lib_name
     example_dir = PROJECT_ROOT / "examples" / example_name
 
     if not lib_dir.exists():
         return None
 
-    # Tüm public API'leri topla
-    all_apis = []  # [(kategori, isim, dosya), ...]
+    # Collect all public APIs
+    all_apis = []  # [(category, name, file), ...]
     for cs_file in get_cs_files(lib_dir):
         apis = extract_types_and_members(cs_file)
         all_apis.extend(apis)
 
-    # Tekilleştir (aynı isim farklı dosyalarda olabilir)
+    # Deduplicate (same name may appear in multiple files)
     seen = set()
     unique_apis = []
     for cat, name, fname in all_apis:
@@ -192,11 +194,11 @@ def analyze_library(lib_name, example_name):
             seen.add(key)
             unique_apis.append((cat, name, fname))
 
-    # Example içeriğini oku
+    # Read example content
     example_content = read_example_content(example_dir)
     has_example = example_content != ""
 
-    # Kullanım kontrolü
+    # Usage check
     results = []
     for cat, name, fname in unique_apis:
         used = check_usage(name, example_content) if has_example else False
@@ -216,15 +218,15 @@ def analyze_library(lib_name, example_name):
 
 
 def generate_markdown_report(analyses):
-    """Analiz sonuçlarından Markdown raporu üretir."""
+    """Generates a Markdown report from analysis results."""
     lines = []
-    lines.append("# CSharpEssentials - Detaylı Example Coverage Raporu")
+    lines.append("# CSharpEssentials - Detailed Example Coverage Report")
     lines.append("")
-    lines.append("> Bu rapor, **her bir public API öğesinin** (tip, metod, property, field)")
-    lines.append("> ilgili example projesinde kullanılıp kullanılmadığını gösterir.")
+    lines.append("> This report shows whether each **public API element** (type, method, property, field)")
+    lines.append("> is used in the corresponding example project.")
     lines.append(">")
-    lines.append("> ✅ = Example'da kullanılıyor")
-    lines.append("> ❌ = Example'da kullanılmıyor")
+    lines.append("> ✅ = Used in example")
+    lines.append("> ❌ = Not used in example")
     lines.append("")
 
     total_apis = 0
@@ -246,16 +248,16 @@ def generate_markdown_report(analyses):
         lines.append(f"## {lib}")
         lines.append("")
         if not has_ex:
-            lines.append("⚠️ **Example projesi bulunamadı!**")
+            lines.append("⚠️ **Example project not found!**")
             lines.append("")
             continue
 
-        lines.append(f"**Kapsam:** {used_count}/{total_count} ({used_count*100//total_count if total_count else 0}%)")
+        lines.append(f"**Coverage:** {used_count}/{total_count} ({used_count*100//total_count if total_count else 0}%)")
         lines.append("")
-        lines.append("| Kategori | API İsmi | Example'da Kullanım |")
-        lines.append("|----------|----------|---------------------|")
+        lines.append("| Category | API Name | Used in Example |")
+        lines.append("|----------|----------|-----------------|")
 
-        # Alfabetik sırala
+        # Sort alphabetically
         for api in sorted(apis, key=lambda x: (x['category'], x['name'])):
             icon = "✅" if api['used'] else "❌"
             cat = api['category']
@@ -264,14 +266,14 @@ def generate_markdown_report(analyses):
 
         lines.append("")
 
-    # Genel özet
+    # Overall summary
     lines.append("---")
     lines.append("")
-    lines.append("## 📊 Genel Example Coverage Özeti")
+    lines.append("## 📊 Overall Example Coverage Summary")
     lines.append("")
-    lines.append(f"- **Toplam Public API:** {total_apis}")
-    lines.append(f"- **Example'da Kullanılan:** {total_used}")
-    lines.append(f"- **Kapsam:** {total_used*100//total_apis if total_apis else 0}%")
+    lines.append(f"- **Total Public APIs:** {total_apis}")
+    lines.append(f"- **Used in Examples:** {total_used}")
+    lines.append(f"- **Coverage:** {total_used*100//total_apis if total_apis else 0}%")
     lines.append("")
 
     return "\n".join(lines)
@@ -289,7 +291,7 @@ def main():
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(report)
 
-    print(f"\nRapor oluşturuldu: {output_path}")
+    print(f"Report generated: {output_path}")
 
 
 if __name__ == "__main__":

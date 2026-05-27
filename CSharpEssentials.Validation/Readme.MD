@@ -465,6 +465,36 @@ The trade-off: a new `RuleContext<T>` is created per `ValidateAsync` call. This 
 - Expression trees limit Native AOT compatibility
 - `When()` blocks create implicit coupling between rule registration and condition evaluation
 
+## Railway Integration
+
+`ValidateWith` / `ValidateWithAsync` plug validators directly into `Result<T>` pipelines. If the result is already a failure, the validator is skipped entirely.
+
+```csharp
+// Named validator in a pipeline
+Result<CreateUserCommand> result = await ParseCommand(input)
+    .ValidateWithAsync(new CreateUserCommandValidator(), ct);
+
+// Inline validation — no dedicated class
+Result<CreateUserCommand> result = await ParseCommand(input)
+    .ValidateWithAsync(command, (m, rules) =>
+    {
+        rules.For(() => m.Email).NotEmpty().EmailAddress();
+        rules.For(() => m.Name).NotEmpty().MaxLength(100);
+    });
+
+// Works on Task<Result<T>> and ValueTask<Result<T>>
+Result<Order> order = await GetOrderAsync(id)
+    .ValidateWithAsync(new OrderValidator(), ct);
+```
+
+| Overload | Source type |
+|----------|-------------|
+| `result.ValidateWith(configure)` | `Result<T>` → `Result<T>` (sync) |
+| `result.ValidateWithAsync(validator, ct)` | `Result<T>` → `ValueTask<Result<T>>` |
+| `result.ValidateWithAsync(configure)` | `Result<T>` → `ValueTask<Result<T>>` |
+| `resultTask.ValidateWithAsync(validator, ct)` | `Task<Result<T>>` → `ValueTask<Result<T>>` |
+| `resultValueTask.ValidateWithAsync(validator, ct)` | `ValueTask<Result<T>>` → `ValueTask<Result<T>>` |
+
 ## Dependencies
 
 - `CSharpEssentials.Results`

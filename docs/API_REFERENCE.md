@@ -252,6 +252,36 @@ Result<User> result = await GetUserAsync(id)
     .Tap(_ => _logger.LogInformation("User retrieved"));
 ```
 
+### Collection Extensions
+
+Batch operations on sequences of results — without manually looping.
+
+| Method | Strategy | What It Does |
+|--------|----------|-------------|
+| `CombineAll(IEnumerable<Result>)` | Collect all errors | Success if all succeed; accumulates ALL errors if any fail |
+| `CombineAll<T>(IEnumerable<Result<T>>)` | Collect all errors | Same as `Sequence` — success array or all errors |
+| `Sequence<T>(IEnumerable<Result<T>>)` | Collect all | Returns `Result<T[]>` with all values, or all errors |
+| `Traverse<TSource, TOut>(source, selector)` | Map + sequence | Applies selector to each element, then sequences |
+| `Partition<T>(IEnumerable<Result<T>>)` | Split | Returns `(T[] Successes, Error[] Errors)` — never fails |
+| `FirstFailureOrSuccesses(IEnumerable<Result>)` | Short-circuit | Returns first failure immediately; otherwise success |
+| `FirstFailureOrSuccesses<T>(IEnumerable<Result<T>>)` | Short-circuit | Returns first failure or `Result<T[]>` of all values |
+
+```csharp
+// Validate a batch — collect ALL errors
+Result validation = validationResults.CombineAll();
+
+// Map each item and collect all successes, or all errors
+Result<OrderDto[]> orders = orderIds
+    .Traverse(id => GetOrder(id));
+
+// Split a mixed batch without short-circuiting
+var (succeeded, failed) = results.Partition();
+Console.WriteLine($"{succeeded.Length} succeeded, {failed.Length} errors");
+
+// Stop at first failure — useful for sequential pipeline steps
+Result pipeline = steps.FirstFailureOrSuccesses();
+```
+
 ---
 
 ## 3. CSharpEssentials.Maybe — Explicit Optionals
@@ -349,6 +379,23 @@ Result<User> result = FindUser(id)   // returns Maybe<User>
     .ToMaybeResult(Error.NotFound("User.NotFound", "User does not exist"));
 ```
 
+### Collection Extensions
+
+| Method | What It Does |
+|--------|-------------|
+| `Sequence<T>(IEnumerable<Maybe<T>>)` | `Maybe<T[]>` — `None` if any element is `None` |
+| `Traverse<TSource, TOut>(source, selector)` | Applies selector then sequences — `None` if any is `None` |
+| `Partition<T>(IEnumerable<Maybe<T>>)` | Returns `(T[] Values, int NoneCount)` — never returns `None` |
+
+```csharp
+// Require ALL lookups to succeed
+Maybe<User[]> allUsers = userIds
+    .Traverse(id => _cache.TryFind(id));  // None if any id is missing
+
+// Collect present values, count absences
+var (values, missingCount) = maybes.Partition();
+```
+
 ---
 
 ## 4. CSharpEssentials.Any — Discriminated Unions
@@ -401,6 +448,24 @@ articleState.Switch(
     second: published => UpdateSearchIndex(published),
     third: archived => LogAccess(archived)
 );
+```
+
+### Collection Extensions
+
+Scatter a sequence of unions into per-type arrays. Works for all arities (`Any<T0,T1>` through `Any<T0,...,T7>`).
+
+| Method | What It Does |
+|--------|-------------|
+| `Partition<T0,T1>(IEnumerable<Any<T0,T1>>)` | Returns `(T0[] First, T1[] Second)` |
+| `Traverse<TSource,T0,T1>(source, selector)` | Applies selector then partitions |
+| *(up to 8-arity)* | `Partition` and `Traverse` overloads for `Any<T0,...,T7>` |
+
+```csharp
+// Classify API responses into successes and errors in one pass
+var (users, errors) = responses
+    .Traverse(r => ClassifyResponse(r));   // returns Any<UserDto, ApiError>
+
+Console.WriteLine($"{users.Length} succeeded, {errors.Length} failed");
 ```
 
 ---
@@ -1069,6 +1134,39 @@ services.AddMediatorBehaviors();
 ```
 
 Validation runs before the handler. On failure the handler is never invoked. `Result` / `Result<T>` handlers receive `Result.Failure` directly; all other handler return types trigger `EnhancedValidationException` (caught by `GlobalExceptionHandler`). Non-cancellation exceptions thrown by a validator are caught and converted to `Error.Exception("Validator.Exception", ex)` so validator bugs never rethrow through the pipeline.
+
+### Railway Validation Bindings
+
+`ValidateWith` / `ValidateWithAsync` plug validators directly into a `Result<T>` railway. If the result is already a failure, the validator is skipped entirely.
+
+| Method | Input | Returns | When to Use |
+|--------|-------|---------|-------------|
+| `result.ValidateWith(configure)` | `Result<T>` | `Result<T>` | Inline sync validation in a pipeline |
+| `result.ValidateWithAsync(validator, ct)` | `Result<T>` | `ValueTask<Result<T>>` | Named validator in a pipeline |
+| `result.ValidateWithAsync(configure)` | `Result<T>` | `ValueTask<Result<T>>` | Inline sync delegate, async context |
+| `result.ValidateWithAsync(asyncConfigure, ct)` | `Result<T>` | `ValueTask<Result<T>>` | Inline async delegate |
+| `taskResult.ValidateWithAsync(validator, ct)` | `Task<Result<T>>` | `ValueTask<Result<T>>` | Awaited task pipeline |
+| `valueTaskResult.ValidateWithAsync(validator, ct)` | `ValueTask<Result<T>>` | `ValueTask<Result<T>>` | ValueTask pipeline |
+
+```csharp
+// Named validator — plugs straight into a Result<T> chain
+Result<CreateUserCommand> result = await ParseCommand(input)
+    .ValidateWithAsync(new CreateUserCommandValidator(), ct);
+
+// Inline validation — no dedicated class needed
+Result<CreateUserCommand> result = await ParseCommand(input)
+    .ValidateWithAsync(command, (m, rules) =>
+    {
+        rules.For(() => m.Email).NotEmpty().EmailAddress();
+        rules.For(() => m.Name).NotEmpty().MaxLength(100);
+    });
+
+// Works on Task<Result<T>> — no intermediate await
+Result<Order> order = await GetOrderAsync(id)           // Task<Result<Order>>
+    .ValidateWithAsync(new OrderValidator(), ct);        // skips if already failed
+```
+
+Short-circuits immediately: if `result.IsFailure` before validation runs, the existing errors pass through and the validator is never invoked. This makes it safe to chain multiple `ValidateWithAsync` calls without nested null/failure checks.
 
 ---
 

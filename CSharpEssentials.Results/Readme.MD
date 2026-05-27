@@ -118,3 +118,31 @@ Result<int> result = await FetchUserAsync(id)
     .ThenAsync(user => EnrichAsync(user))
     .EnsureAsync(v => IsValidAsync(v), Error.Validation("Invalid", "Not valid."));
 ```
+
+### Collection Extensions
+
+Batch operations on sequences of results:
+
+```csharp
+// Collect ALL errors from multiple results
+Result validation = new[] { ValidateName(input), ValidateEmail(input), ValidateAge(input) }
+    .CombineAll();
+
+// Map each item and collect — success array or all errors
+Result<OrderDto[]> orders = orderIds.Traverse(id => GetOrder(id));
+
+// Split into successes and errors without short-circuiting
+var (succeeded, failed) = results.Partition();
+
+// Stop at first failure
+Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
+    .FirstFailureOrSuccesses();
+```
+
+| Method | Strategy | Returns |
+|--------|----------|---------|
+| `CombineAll()` | Collect all errors | `Result` or `Result<T[]>` |
+| `Sequence()` | Collect all | `Result<T[]>` with all values or all errors |
+| `Traverse(selector)` | Map then sequence | `Result<TOut[]>` |
+| `Partition()` | Split | `(T[] Successes, Error[] Errors)` |
+| `FirstFailureOrSuccesses()` | Short-circuit | `Result` or `Result<T[]>` |
