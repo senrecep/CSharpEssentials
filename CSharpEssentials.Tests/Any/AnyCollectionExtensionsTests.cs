@@ -139,6 +139,15 @@ public class AnyCollectionExtensionsTests
     }
 
     [Fact]
+    public void Partition_WithEmptySource_ShouldReturnEmptyArrays()
+    {
+        var result = Array.Empty<Any<int, string>>().Partition();
+
+        result.First.Should().BeEmpty();
+        result.Second.Should().BeEmpty();
+    }
+
+    [Fact]
     public void CollectionExtensions_WithNullSource_ShouldThrowArgumentNullException()
     {
         IEnumerable<Any<int, string>> any2 = null!;
@@ -165,5 +174,16 @@ public class AnyCollectionExtensionsTests
 
         foreach (Action action in actions)
             action.Should().Throw<ArgumentNullException>().WithParameterName("source");
+    }
+
+    [Fact]
+    public void Traverse_WithNullSelector_ShouldThrowArgumentNullException()
+    {
+        int[] values = [1];
+        Func<int, Any<int, string>> selector = null!;
+
+        Action action = () => values.Traverse<int, int, string>(selector);
+
+        action.Should().Throw<ArgumentNullException>().WithParameterName("selector");
     }
 }

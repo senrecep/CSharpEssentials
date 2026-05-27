@@ -17,6 +17,18 @@ public static partial class ResultExtensions
         return source;
     }
 
+    private static Func<TSource, TResult> EnsureSelector<TSource, TResult>(Func<TSource, TResult> selector)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(selector);
+#else
+        if (selector is null)
+            throw new ArgumentNullException(nameof(selector));
+#endif
+
+        return selector;
+    }
+
     public static Result CombineAll(this IEnumerable<Result> source)
     {
         source = EnsureSource(source);
@@ -84,7 +96,7 @@ public static partial class ResultExtensions
     }
 
     public static Result<TOut[]> Traverse<TSource, TOut>(this IEnumerable<TSource> source, Func<TSource, Result<TOut>> selector) =>
-        EnsureSource(source).Select(selector).Sequence();
+        EnsureSource(source).Select(EnsureSelector(selector)).Sequence();
 
     public static (TValue[] Successes, Error[] Errors) Partition<TValue>(this IEnumerable<Result<TValue>> source)
     {

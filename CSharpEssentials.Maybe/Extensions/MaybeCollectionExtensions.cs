@@ -14,6 +14,18 @@ public static partial class MaybeExtensions
         return source;
     }
 
+    private static Func<TSource, TResult> EnsureSelector<TSource, TResult>(Func<TSource, TResult> selector)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(selector);
+#else
+        if (selector is null)
+            throw new ArgumentNullException(nameof(selector));
+#endif
+
+        return selector;
+    }
+
     public static Maybe<TValue[]> Sequence<TValue>(this IEnumerable<Maybe<TValue>> source)
     {
         source = EnsureSource(source);
@@ -31,7 +43,7 @@ public static partial class MaybeExtensions
     }
 
     public static Maybe<TOut[]> Traverse<TSource, TOut>(this IEnumerable<TSource> source, Func<TSource, Maybe<TOut>> selector) =>
-        EnsureSource(source).Select(selector).Sequence();
+        EnsureSource(source).Select(EnsureSelector(selector)).Sequence();
 
     public static (TValue[] Values, int NoneCount) Partition<TValue>(this IEnumerable<Maybe<TValue>> source)
     {

@@ -49,6 +49,18 @@ public class MaybeCollectionExtensionsTests
     }
 
     [Fact]
+    public void CollectionExtensions_WithEmptySource_ShouldReturnEmptyValues()
+    {
+        Maybe<int[]> sequence = Array.Empty<Maybe<int>>().Sequence();
+        (int[] values, int noneCount) = Array.Empty<Maybe<int>>().Partition();
+
+        sequence.HasValue.Should().BeTrue();
+        sequence.Value.Should().BeEmpty();
+        values.Should().BeEmpty();
+        noneCount.Should().Be(0);
+    }
+
+    [Fact]
     public void CollectionExtensions_WithNullSource_ShouldThrowArgumentNullException()
     {
         IEnumerable<Maybe<int>> maybes = null!;
@@ -63,5 +75,16 @@ public class MaybeCollectionExtensionsTests
 
         foreach (Action action in actions)
             action.Should().Throw<ArgumentNullException>().WithParameterName("source");
+    }
+
+    [Fact]
+    public void Traverse_WithNullSelector_ShouldThrowArgumentNullException()
+    {
+        int[] values = [1];
+        Func<int, Maybe<int>> selector = null!;
+
+        Action action = () => values.Traverse(selector);
+
+        action.Should().Throw<ArgumentNullException>().WithParameterName("selector");
     }
 }

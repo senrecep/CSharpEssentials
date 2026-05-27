@@ -14,8 +14,20 @@ public static partial class AnyExtensions
         return source;
     }
 
+    private static Func<TSource, TResult> EnsureSelector<TSource, TResult>(Func<TSource, TResult> selector)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(selector);
+#else
+        if (selector is null)
+            throw new ArgumentNullException(nameof(selector));
+#endif
+
+        return selector;
+    }
+
     public static (T0[] First, T1[] Second) Traverse<TSource, T0, T1>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second) Partition<T0, T1>(this IEnumerable<Any<T0, T1>> source)
     {
@@ -30,7 +42,7 @@ public static partial class AnyExtensions
     }
 
     public static (T0[] First, T1[] Second, T2[] Third) Traverse<TSource, T0, T1, T2>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third) Partition<T0, T1, T2>(this IEnumerable<Any<T0, T1, T2>> source)
     {
@@ -46,7 +58,7 @@ public static partial class AnyExtensions
     }
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth) Traverse<TSource, T0, T1, T2, T3>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth) Partition<T0, T1, T2, T3>(this IEnumerable<Any<T0, T1, T2, T3>> source)
     {
@@ -63,7 +75,7 @@ public static partial class AnyExtensions
     }
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth) Traverse<TSource, T0, T1, T2, T3, T4>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth) Partition<T0, T1, T2, T3, T4>(this IEnumerable<Any<T0, T1, T2, T3, T4>> source)
     {
@@ -81,7 +93,7 @@ public static partial class AnyExtensions
     }
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth) Traverse<TSource, T0, T1, T2, T3, T4, T5>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4, T5>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth) Partition<T0, T1, T2, T3, T4, T5>(this IEnumerable<Any<T0, T1, T2, T3, T4, T5>> source)
     {
@@ -100,7 +112,7 @@ public static partial class AnyExtensions
     }
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh) Traverse<TSource, T0, T1, T2, T3, T4, T5, T6>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4, T5, T6>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh) Partition<T0, T1, T2, T3, T4, T5, T6>(this IEnumerable<Any<T0, T1, T2, T3, T4, T5, T6>> source)
     {
@@ -120,7 +132,7 @@ public static partial class AnyExtensions
     }
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh, T7[] Eighth) Traverse<TSource, T0, T1, T2, T3, T4, T5, T6, T7>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4, T5, T6, T7>> selector) =>
-        EnsureSource(source).Select(selector).Partition();
+        EnsureSource(source).Select(EnsureSelector(selector)).Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh, T7[] Eighth) Partition<T0, T1, T2, T3, T4, T5, T6, T7>(this IEnumerable<Any<T0, T1, T2, T3, T4, T5, T6, T7>> source)
     {

@@ -99,6 +99,8 @@ public class ResultCollectionBatchTests
     {
         Array.Empty<Result>().CombineAll().IsSuccess.Should().BeTrue();
         Array.Empty<IResultBase>().CombineAll().IsSuccess.Should().BeTrue();
+        Array.Empty<Result<int>>().CombineAll().Value.Should().BeEmpty();
+        Array.Empty<IResult<int>>().CombineAll().Value.Should().BeEmpty();
     }
 
     [Fact]
@@ -197,6 +199,8 @@ public class ResultCollectionBatchTests
         [
             () => results.CombineAll(),
             () => resultBases.CombineAll(),
+            () => genericResults.CombineAll(),
+            () => genericInterfaces.CombineAll(),
             () => genericResults.Sequence(),
             () => genericInterfaces.Sequence(),
             () => genericResults.Partition(),
@@ -210,5 +214,16 @@ public class ResultCollectionBatchTests
 
         foreach (Action action in actions)
             action.Should().Throw<ArgumentNullException>().WithParameterName("source");
+    }
+
+    [Fact]
+    public void Traverse_WithNullSelector_ShouldThrowArgumentNullException()
+    {
+        int[] values = [1];
+        Func<int, Result<int>> selector = null!;
+
+        Action action = () => values.Traverse(selector);
+
+        action.Should().Throw<ArgumentNullException>().WithParameterName("selector");
     }
 }
