@@ -1,6 +1,6 @@
 namespace CSharpEssentials.Any;
 
-public static class AnyExtensions
+public static partial class AnyExtensions
 {
     #region Any<T0, T1>
 
