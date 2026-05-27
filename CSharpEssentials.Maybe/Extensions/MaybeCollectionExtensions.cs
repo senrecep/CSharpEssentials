@@ -2,8 +2,21 @@ namespace CSharpEssentials.Maybe;
 
 public static partial class MaybeExtensions
 {
+    private static IEnumerable<T> EnsureSource<T>(IEnumerable<T> source)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(source);
+#else
+        if (source is null)
+            throw new ArgumentNullException(nameof(source));
+#endif
+
+        return source;
+    }
+
     public static Maybe<TValue[]> Sequence<TValue>(this IEnumerable<Maybe<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> values = [];
 
         foreach (Maybe<TValue> maybe in source)
@@ -18,10 +31,11 @@ public static partial class MaybeExtensions
     }
 
     public static Maybe<TOut[]> Traverse<TSource, TOut>(this IEnumerable<TSource> source, Func<TSource, Maybe<TOut>> selector) =>
-        source.Select(selector).Sequence();
+        EnsureSource(source).Select(selector).Sequence();
 
     public static (TValue[] Values, int NoneCount) Partition<TValue>(this IEnumerable<Maybe<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> values = [];
         int noneCount = 0;
 

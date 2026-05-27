@@ -5,8 +5,21 @@ namespace CSharpEssentials.ResultPattern;
 
 public static partial class ResultExtensions
 {
+    private static IEnumerable<T> EnsureSource<T>(IEnumerable<T> source)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(source);
+#else
+        if (source is null)
+            throw new ArgumentNullException(nameof(source));
+#endif
+
+        return source;
+    }
+
     public static Result CombineAll(this IEnumerable<Result> source)
     {
+        source = EnsureSource(source);
         List<Error> errors = [];
 
         foreach (Result result in source)
@@ -20,6 +33,7 @@ public static partial class ResultExtensions
 
     public static Result CombineAll(this IEnumerable<IResultBase> source)
     {
+        source = EnsureSource(source);
         List<Error> errors = [];
 
         foreach (IResultBase result in source)
@@ -33,10 +47,11 @@ public static partial class ResultExtensions
 
     public static Result<TValue[]> CombineAll<TValue>(this IEnumerable<Result<TValue>> source) => source.Sequence();
 
-    public static Result<TValue[]> CombineAll<TValue>(this IEnumerable<IResult<TValue>> source) => source.Sequence();
+    public static Result<TValue[]> CombineAll<TValue>(this IEnumerable<IResult<TValue>> source) => EnsureSource(source).Sequence();
 
     public static Result<TValue[]> Sequence<TValue>(this IEnumerable<Result<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> successes = [];
         List<Error> errors = [];
 
@@ -53,6 +68,7 @@ public static partial class ResultExtensions
 
     public static Result<TValue[]> Sequence<TValue>(this IEnumerable<IResult<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> successes = [];
         List<Error> errors = [];
 
@@ -68,10 +84,11 @@ public static partial class ResultExtensions
     }
 
     public static Result<TOut[]> Traverse<TSource, TOut>(this IEnumerable<TSource> source, Func<TSource, Result<TOut>> selector) =>
-        source.Select(selector).Sequence();
+        EnsureSource(source).Select(selector).Sequence();
 
     public static (TValue[] Successes, Error[] Errors) Partition<TValue>(this IEnumerable<Result<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> successes = [];
         List<Error> errors = [];
 
@@ -88,6 +105,7 @@ public static partial class ResultExtensions
 
     public static (TValue[] Successes, Error[] Errors) Partition<TValue>(this IEnumerable<IResult<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> successes = [];
         List<Error> errors = [];
 
@@ -104,6 +122,7 @@ public static partial class ResultExtensions
 
     public static Result FirstFailureOrSuccesses(this IEnumerable<Result> source)
     {
+        source = EnsureSource(source);
         foreach (Result result in source)
         {
             if (result.IsFailure)
@@ -115,6 +134,7 @@ public static partial class ResultExtensions
 
     public static Result FirstFailureOrSuccesses(this IEnumerable<IResultBase> source)
     {
+        source = EnsureSource(source);
         foreach (IResultBase result in source)
         {
             if (result.IsFailure)
@@ -126,6 +146,7 @@ public static partial class ResultExtensions
 
     public static Result<TValue[]> FirstFailureOrSuccesses<TValue>(this IEnumerable<Result<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> successes = [];
 
         foreach (Result<TValue> result in source)
@@ -141,6 +162,7 @@ public static partial class ResultExtensions
 
     public static Result<TValue[]> FirstFailureOrSuccesses<TValue>(this IEnumerable<IResult<TValue>> source)
     {
+        source = EnsureSource(source);
         List<TValue> successes = [];
 
         foreach (IResult<TValue> result in source)

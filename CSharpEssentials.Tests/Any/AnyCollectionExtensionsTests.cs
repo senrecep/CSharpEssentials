@@ -1,5 +1,6 @@
 using CSharpEssentials.Any;
 using FluentAssertions;
+using System.Globalization;
 
 namespace CSharpEssentials.Tests.Any;
 
@@ -135,5 +136,34 @@ public class AnyCollectionExtensionsTests
         result.Sixth.Should().Equal(5L);
         result.Seventh.Should().Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"));
         result.Eighth.Should().Equal(new DateTime(2026, 5, 27, 0, 0, 0, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public void CollectionExtensions_WithNullSource_ShouldThrowArgumentNullException()
+    {
+        IEnumerable<Any<int, string>> any2 = null!;
+        IEnumerable<Any<int, string, bool, decimal, Guid, long, DateTime, TimeSpan>> any8 = null!;
+        IEnumerable<int> values = null!;
+
+        Action[] actions =
+        [
+            () => any2.Partition(),
+            () => any8.Partition(),
+            () => values.Traverse<int, int, string>(value => value),
+            () => values.Traverse<int, int, string, bool, decimal, Guid, long, DateTime, TimeSpan>(value => value switch
+            {
+                0 => value,
+                1 => value.ToString(CultureInfo.InvariantCulture),
+                2 => true,
+                3 => 3.5m,
+                4 => Guid.Empty,
+                5 => 5L,
+                6 => DateTime.UnixEpoch,
+                _ => TimeSpan.Zero
+            })
+        ];
+
+        foreach (Action action in actions)
+            action.Should().Throw<ArgumentNullException>().WithParameterName("source");
     }
 }

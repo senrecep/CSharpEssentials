@@ -47,4 +47,21 @@ public class MaybeCollectionExtensionsTests
         values.Should().Equal(1, 3);
         noneCount.Should().Be(2);
     }
+
+    [Fact]
+    public void CollectionExtensions_WithNullSource_ShouldThrowArgumentNullException()
+    {
+        IEnumerable<Maybe<int>> maybes = null!;
+        IEnumerable<int> values = null!;
+
+        Action[] actions =
+        [
+            () => maybes.Sequence(),
+            () => maybes.Partition(),
+            () => values.Traverse(value => Maybe<int>.From(value))
+        ];
+
+        foreach (Action action in actions)
+            action.Should().Throw<ArgumentNullException>().WithParameterName("source");
+    }
 }
