@@ -363,7 +363,60 @@ services.AddMediatorBehaviors(); // registers all behaviors
 
 **Exception isolation:** If a validator throws a non-`OperationCanceledException` exception, `ValidationBehavior` catches it and converts it to a `Result.Failure` error (code `"Validator.Exception"`). `OperationCanceledException` always propagates — cancellation is never swallowed.
 
-See [CSharpEssentials.Mediator](../CSharpEssentials.Mediator/Readme.MD) for full pipeline documentation.
+## Railway Validation Bindings
+
+Integrate model validation natively into your functional railway-oriented programming (ROP) pipelines using `ValidateWith` (synchronous) and `ValidateWithAsync` (asynchronous). 
+
+These extension methods are available on `Result<T>`, `Task<Result<T>>`, and `ValueTask<Result<T>>`. If the source result is a failure, they **short-circuit immediately** without executing the validator, passing the errors down the chain. If the source result is a success, validation is executed against the value.
+
+### 1. Purely Synchronous Pipeline (`ValidateWith`)
+
+Use `ValidateWith` with a synchronous inline delegate to perform validations without introducing any asynchronous `ValueTask` or task context, maintaining a fully synchronous railway pipeline:
+
+```csharp
+Result<User> result = GetUserCommand() // returns Result<CreateUserCommand>
+    .ValidateWith((cmd, rules) =>
+    {
+        rules.For(() => cmd.Email).NotEmpty().EmailAddress();
+        rules.For(() => cmd.Age).GreaterThan(18);
+    })
+    .Map(cmd => new User(cmd)); // returns Result<User> synchronously
+```
+
+### 2. Class-Based Validator (`ValidateWithAsync`)
+
+Pass a concrete `IValidator<T>` instance to run validations as part of an asynchronous pipeline:
+
+```csharp
+Result<User> result = await GetUserCommand() // returns Result<CreateUserCommand>
+    .ValidateWithAsync(new CreateUserCommandValidator())
+    .BindAsync(cmd => _userService.CreateUserAsync(cmd));
+```
+
+### 3. Inline Delegate Validation (`ValidateWithAsync`)
+
+Perform one-off validations using synchronous or asynchronous inline delegates inside an asynchronous pipeline:
+
+```csharp
+// Synchronous inline delegate
+Result<User> result = await GetUserCommand()
+    .ValidateWithAsync((cmd, rules) =>
+    {
+        rules.For(() => cmd.Email).NotEmpty().EmailAddress();
+    })
+    .BindAsync(cmd => _userService.CreateUserAsync(cmd));
+
+// Asynchronous inline delegate (e.g. database unique check)
+Result<User> result = await GetUserCommand()
+    .ValidateWithAsync(async (cmd, rules, ct) =>
+    {
+        rules.For(() => cmd.Email).NotEmpty();
+        await rules.For(() => cmd.Username)
+                   .MustAsync(async (name, c) => await _db.IsUniqueAsync(name, c), 
+                              "Username.Taken", "Username is already taken.", ct);
+    })
+    .BindAsync(cmd => _userService.CreateUserAsync(cmd));
+```
 
 ## FluentValidation Comparison
 
