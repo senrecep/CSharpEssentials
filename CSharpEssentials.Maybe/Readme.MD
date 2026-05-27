@@ -79,3 +79,22 @@ Maybe<Order> order = await FindUserAsync(1)
     .BindAsync(user => GetOrderAsync(user.Id))
     .MapAsync(order => EnrichAsync(order));
 ```
+
+### Collection Extensions
+
+```csharp
+// Require ALL lookups to succeed — None if any is missing
+Maybe<User[]> allUsers = userIds.Traverse(id => FindUser(id));
+
+// Collect present values and count absences
+var (values, missingCount) = maybes.Partition();
+
+// Sequence: None if any element is None
+Maybe<Config[]> configs = configMaybes.Sequence();
+```
+
+| Method | Returns | Behavior |
+|--------|---------|----------|
+| `Sequence()` | `Maybe<T[]>` | `None` if any element is `None` |
+| `Traverse(selector)` | `Maybe<TOut[]>` | Applies selector then sequences |
+| `Partition()` | `(T[] Values, int NoneCount)` | Never returns `None` — always splits |
