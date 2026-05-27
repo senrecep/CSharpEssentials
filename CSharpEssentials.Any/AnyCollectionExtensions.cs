@@ -2,8 +2,6 @@ namespace CSharpEssentials.Any;
 
 public static partial class AnyExtensions
 {
-    public static (T0[] First, T1[] Second) Sequence<T0, T1>(this IEnumerable<Any<T0, T1>> source) => source.Partition();
-
     public static (T0[] First, T1[] Second) Traverse<TSource, T0, T1>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1>> selector) =>
         source.Select(selector).Partition();
 
@@ -17,8 +15,6 @@ public static partial class AnyExtensions
 
         return (first.ToArray(), second.ToArray());
     }
-
-    public static (T0[] First, T1[] Second, T2[] Third) Sequence<T0, T1, T2>(this IEnumerable<Any<T0, T1, T2>> source) => source.Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third) Traverse<TSource, T0, T1, T2>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2>> selector) =>
         source.Select(selector).Partition();
@@ -34,8 +30,6 @@ public static partial class AnyExtensions
 
         return (first.ToArray(), second.ToArray(), third.ToArray());
     }
-
-    public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth) Sequence<T0, T1, T2, T3>(this IEnumerable<Any<T0, T1, T2, T3>> source) => source.Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth) Traverse<TSource, T0, T1, T2, T3>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3>> selector) =>
         source.Select(selector).Partition();
@@ -53,8 +47,6 @@ public static partial class AnyExtensions
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray());
     }
 
-    public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth) Sequence<T0, T1, T2, T3, T4>(this IEnumerable<Any<T0, T1, T2, T3, T4>> source) => source.Partition();
-
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth) Traverse<TSource, T0, T1, T2, T3, T4>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4>> selector) =>
         source.Select(selector).Partition();
 
@@ -71,8 +63,6 @@ public static partial class AnyExtensions
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray());
     }
-
-    public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth) Sequence<T0, T1, T2, T3, T4, T5>(this IEnumerable<Any<T0, T1, T2, T3, T4, T5>> source) => source.Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth) Traverse<TSource, T0, T1, T2, T3, T4, T5>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4, T5>> selector) =>
         source.Select(selector).Partition();
@@ -92,8 +82,6 @@ public static partial class AnyExtensions
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray(), sixth.ToArray());
     }
 
-    public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh) Sequence<T0, T1, T2, T3, T4, T5, T6>(this IEnumerable<Any<T0, T1, T2, T3, T4, T5, T6>> source) => source.Partition();
-
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh) Traverse<TSource, T0, T1, T2, T3, T4, T5, T6>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4, T5, T6>> selector) =>
         source.Select(selector).Partition();
 
@@ -112,8 +100,6 @@ public static partial class AnyExtensions
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray(), sixth.ToArray(), seventh.ToArray());
     }
-
-    public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh, T7[] Eighth) Sequence<T0, T1, T2, T3, T4, T5, T6, T7>(this IEnumerable<Any<T0, T1, T2, T3, T4, T5, T6, T7>> source) => source.Partition();
 
     public static (T0[] First, T1[] Second, T2[] Third, T3[] Fourth, T4[] Fifth, T5[] Sixth, T6[] Seventh, T7[] Eighth) Traverse<TSource, T0, T1, T2, T3, T4, T5, T6, T7>(this IEnumerable<TSource> source, Func<TSource, Any<T0, T1, T2, T3, T4, T5, T6, T7>> selector) =>
         source.Select(selector).Partition();

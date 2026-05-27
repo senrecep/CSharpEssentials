@@ -17,15 +17,97 @@ public class AnyCollectionExtensionsTests
     }
 
     [Fact]
-    public void Sequence_T3_ShouldSplitAllBranches()
+    public void Partition_T3_ShouldSplitAllBranches()
     {
         Any<int, string, bool>[] source = [1, "two", true, 3, false];
 
-        (int[] first, string[] second, bool[] third) = source.Sequence();
+        (int[] first, string[] second, bool[] third) = source.Partition();
 
         first.Should().Equal(1, 3);
         second.Should().Equal("two");
         third.Should().Equal(true, false);
+    }
+
+    [Fact]
+    public void Partition_T4_ShouldSplitAllBranches()
+    {
+        Any<int, string, bool, decimal>[] source = [1, "two", true, 4.5m];
+
+        var result = source.Partition();
+
+        result.First.Should().Equal(1);
+        result.Second.Should().Equal("two");
+        result.Third.Should().Equal(true);
+        result.Fourth.Should().Equal(4.5m);
+    }
+
+    [Fact]
+    public void Partition_T5_ShouldSplitAllBranches()
+    {
+        Any<int, string, bool, decimal, Guid>[] source =
+        [
+            1,
+            "two",
+            true,
+            4.5m,
+            Guid.Parse("11111111-1111-1111-1111-111111111111")
+        ];
+
+        var result = source.Partition();
+
+        result.First.Should().Equal(1);
+        result.Second.Should().Equal("two");
+        result.Third.Should().Equal(true);
+        result.Fourth.Should().Equal(4.5m);
+        result.Fifth.Should().Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+    }
+
+    [Fact]
+    public void Partition_T6_ShouldSplitAllBranches()
+    {
+        Any<int, string, bool, decimal, Guid, long>[] source =
+        [
+            1,
+            "two",
+            true,
+            4.5m,
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            6L
+        ];
+
+        var result = source.Partition();
+
+        result.First.Should().Equal(1);
+        result.Second.Should().Equal("two");
+        result.Third.Should().Equal(true);
+        result.Fourth.Should().Equal(4.5m);
+        result.Fifth.Should().Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+        result.Sixth.Should().Equal(6L);
+    }
+
+    [Fact]
+    public void Partition_T7_ShouldSplitAllBranches()
+    {
+        Any<int, string, bool, decimal, Guid, long, DateTime>[] source =
+        [
+            1,
+            "two",
+            true,
+            4.5m,
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            6L,
+            new DateTime(2026, 5, 27, 0, 0, 0, DateTimeKind.Utc)
+        ];
+
+        var result = source.Partition();
+
+        result.First.Should().Equal(1);
+        result.Second.Should().Equal("two");
+        result.Third.Should().Equal(true);
+        result.Fourth.Should().Equal(4.5m);
+        result.Fifth.Should().Equal(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+        result.Sixth.Should().Equal(6L);
+        result.Seventh.Should().Equal(new DateTime(2026, 5, 27, 0, 0, 0, DateTimeKind.Utc));
     }
 
     [Fact]
