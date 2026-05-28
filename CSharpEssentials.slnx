@@ -14,6 +14,7 @@
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
   <Project Path="CSharpEssentials.Mediator/CSharpEssentials.Mediator.csproj" />
   <Project Path="CSharpEssentials.RequestResponseLogging/CSharpEssentials.RequestResponseLogging.csproj" />
+  <Project Path="CSharpEssentials.Resilience/CSharpEssentials.Resilience.csproj" />
   <Project Path="CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
   <Project Path="CSharpEssentials.Rules/CSharpEssentials.Rules.csproj" />
   <Project Path="CSharpEssentials.Tests/CSharpEssentials.Tests.csproj" />
