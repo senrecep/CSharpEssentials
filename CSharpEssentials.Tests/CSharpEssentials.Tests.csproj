@@ -39,6 +39,7 @@
       Include="..\CSharpEssentials.GcpSecretManager\CSharpEssentials.GcpSecretManager.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.RequestResponseLogging\CSharpEssentials.RequestResponseLogging.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Resilience\CSharpEssentials.Resilience.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Mediator\CSharpEssentials.Mediator.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Validation\CSharpEssentials.Validation.csproj" />

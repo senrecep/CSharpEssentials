@@ -17,16 +17,17 @@ A comprehensive guide to every package, method, and pattern in the CSharpEssenti
 - [Rules — Composable Business Rules](#6-csharpessentialsrules--composable-business-rules)
 - [Entity — DDD Building Blocks](#7-csharpessentialsentity--ddd-building-blocks)
 - [Http — Result-Returning HTTP Client](#8-csharpessentialshttp--result-returning-http-client)
-- [EntityFrameworkCore — EF Core Integration](#9-csharpessentialsentityframeworkcore--ef-core-integration)
-- [Json — Serialization Defaults](#10-csharpessentialsjson--serialization-defaults)
-- [AspNetCore — API Layer](#11-csharpessentialsaspnetcore--api-layer)
-- [Mediator — Pipeline Behaviors](#12-csharpessentialsmediator--pipeline-behaviors)
-- [Enums — Source-Generated String Enums](#13-csharpessentialsenums--source-generated-string-enums)
-- [Time — Testable Clock](#14-csharpessentialstime--testable-clock)
-- [Clone — Deep Copy](#15-csharpessentialsclone--deep-copy)
-- [RequestResponseLogging — HTTP Logging Middleware](#16-csharpessentialsrequestresponselogging--http-logging-middleware)
-- [GcpSecretManager — Secret Configuration](#17-csharpessentialsgcpsecretmanager--secret-configuration)
-- [Validation — Model-First Validation](#18-csharpessentialsvalidation--model-first-validation)
+- [Resilience — Transient Fault Handling](#9-csharpessentialsresilience--transient-fault-handling)
+- [EntityFrameworkCore — EF Core Integration](#10-csharpessentialsentityframeworkcore--ef-core-integration)
+- [Json — Serialization Defaults](#11-csharpessentialsjson--serialization-defaults)
+- [AspNetCore — API Layer](#12-csharpessentialsaspnetcore--api-layer)
+- [Mediator — Pipeline Behaviors](#13-csharpessentialsmediator--pipeline-behaviors)
+- [Enums — Source-Generated String Enums](#14-csharpessentialsenums--source-generated-string-enums)
+- [Time — Testable Clock](#15-csharpessentialstime--testable-clock)
+- [Clone — Deep Copy](#16-csharpessentialsclone--deep-copy)
+- [RequestResponseLogging — HTTP Logging Middleware](#17-csharpessentialsrequestresponselogging--http-logging-middleware)
+- [GcpSecretManager — Secret Configuration](#18-csharpessentialsgcpsecretmanager--secret-configuration)
+- [Validation — Model-First Validation](#19-csharpessentialsvalidation--model-first-validation)
 - [Ecosystem Design Patterns](#ecosystem-design-patterns)
 
 ---
@@ -706,7 +707,109 @@ HTTP status codes are automatically mapped to `ErrorType`:
 
 ---
 
-## 9. CSharpEssentials.EntityFrameworkCore — EF Core Integration
+## 9. CSharpEssentials.Resilience — Transient Fault Handling
+
+**What it is:** HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) with `Result<T>` integration. Composable `ResiliencePolicy` builder backed by Polly v8.
+
+**Why it exists:** Transient faults are inevitable in distributed systems. This package provides a clean, composable API for handling retries, timeouts, circuit breakers, and fallbacks without coupling to any specific transport (HTTP, database, message queue, etc.).
+
+### Quick Start
+
+```csharp
+using CSharpEssentials.Resilience;
+
+// Simple retry
+Result<User> user = await ResiliencePolicy
+    .Create()
+    .WithRetry(maxAttempts: 3, delay: TimeSpan.FromSeconds(1))
+    .ExecuteAsync(() => _db.GetUser(id));
+
+// Retry + Timeout
+Result<Order> order = await ResiliencePolicy
+    .Create()
+    .WithRetry(3)
+    .WithTimeout(TimeSpan.FromSeconds(5))
+    .ExecuteAsync(() => _orderService.GetOrder(id));
+
+// Circuit Breaker + Fallback
+Result<Product> product = await ResiliencePolicy
+    .Create()
+    .WithCircuitBreaker(minimumThroughput: 10, failureRatio: 0.5)
+    .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
+    .ExecuteAsync(() => _productService.GetProduct(id));
+```
+
+### ResiliencePolicy
+
+| Method | What It Does |
+|--------|-------------|
+| `ResiliencePolicy.Create()` | Creates an empty policy |
+| `.WithRetry(maxAttempts, delay, exponentialBackoff)` | Adds retry strategy |
+| `.WithTimeout(timeout)` | Adds timeout strategy |
+| `.WithCircuitBreaker(minThroughput, samplingDuration, breakDuration, failureRatio)` | Adds circuit breaker |
+| `.ExecuteAsync(action)` | Executes action through the pipeline, returns `Result` |
+| `.ExecuteAsync<T>(action)` | Executes typed action, returns `Result<T>` |
+
+### ResiliencePolicy\<T\> (Result-Aware)
+
+The generic variant automatically filters retryable errors — `Unauthorized`, `Forbidden`, `NotFound`, and `Validation` errors are **not** retried.
+
+| Method | What It Does |
+|--------|-------------|
+| `ResiliencePolicy<T>.Create()` | Creates an empty typed policy |
+| `.WithRetry(...)` | Adds retry with Result error filtering |
+| `.WithTimeout(...)` | Adds timeout |
+| `.WithCircuitBreaker(...)` | Adds circuit breaker with Result error filtering |
+| `.WithFallback(fallbackAsync)` | Adds fallback that returns `T` or `Result<T>` |
+| `.ExecuteAsync(action)` | Executes through pipeline, returns `Result<T>` |
+
+### Delegate Extensions
+
+```csharp
+Result<User> user = await (() => _db.GetUser(id))
+    .WithRetry(3)
+    .WithTimeout(TimeSpan.FromSeconds(5))
+    .ExecuteAsync();
+```
+
+### Retry Extensions
+
+```csharp
+Func<CancellationToken, Task<Result<User>>> getUser = ct => _db.GetUser(id, ct);
+Result<User> result = await getUser.RetryIfFailed(maxAttempts: 3);
+```
+
+### Error Handling
+
+| Error Code | When |
+|-----------|------|
+| `Resilience.Timeout` | Operation exceeded timeout |
+| `Resilience.RetryExhausted` | All retry attempts failed |
+| `Resilience.CircuitBroken` | Circuit breaker is open |
+
+### Configuration Options
+
+```csharp
+var options = new ResiliencePolicyOptions
+{
+    Retry = new RetryOptions { MaxAttempts = 3, Delay = TimeSpan.FromSeconds(1) },
+    Timeout = new TimeoutOptions { Timeout = TimeSpan.FromSeconds(5) },
+    CircuitBreaker = new CircuitBreakerOptions
+    {
+        MinimumThroughput = 10,
+        FailureRatio = 0.5,
+        BreakDuration = TimeSpan.FromSeconds(30)
+    }
+};
+
+Result<User> user = await ResiliencePolicy
+    .Create(options)
+    .ExecuteAsync(() => _db.GetUser(id));
+```
+
+---
+
+## 10. CSharpEssentials.EntityFrameworkCore — EF Core Integration
 
 **What it is:** EF Core extensions that bring the Result pattern to database operations, plus pagination, audit interceptors, and CQRS context separation.
 
@@ -759,7 +862,7 @@ HTTP status codes are automatically mapped to `ErrorType`:
 
 ---
 
-## 10. CSharpEssentials.Json — Serialization Defaults
+## 11. CSharpEssentials.Json — Serialization Defaults
 
 **What it is:** Pre-configured `System.Text.Json` options and custom converters.
 
@@ -779,7 +882,7 @@ HTTP status codes are automatically mapped to `ErrorType`:
 
 ---
 
-## 11. CSharpEssentials.AspNetCore — API Layer
+## 12. CSharpEssentials.AspNetCore — API Layer
 
 **What it is:** ASP.NET Core integration that automatically maps `Result`/`Error` types to proper HTTP responses using ProblemDetails.
 
@@ -814,7 +917,7 @@ HTTP status codes are automatically mapped to `ErrorType`:
 
 ---
 
-## 12. CSharpEssentials.Mediator — Pipeline Behaviors
+## 13. CSharpEssentials.Mediator — Pipeline Behaviors
 
 **What it is:** MediatR pipeline behaviors for cross-cutting concerns: validation, logging, caching, and transactions.
 
@@ -841,7 +944,7 @@ HTTP status codes are automatically mapped to `ErrorType`:
 
 ---
 
-## 13. CSharpEssentials.Enums — Source-Generated String Enums
+## 14. CSharpEssentials.Enums — Source-Generated String Enums
 
 **What it is:** A Roslyn source generator that produces fast, AOT-safe enum-to-string and string-to-enum methods.
 
@@ -866,7 +969,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 ---
 
-## 14. CSharpEssentials.Time — Testable Clock
+## 15. CSharpEssentials.Time — Testable Clock
 
 **What it is:** An `IDateTimeProvider` interface that wraps the system clock for testability.
 
@@ -881,7 +984,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 ---
 
-## 15. CSharpEssentials.Clone — Deep Copy
+## 16. CSharpEssentials.Clone — Deep Copy
 
 **What it is:** Deep cloning via JSON serialization.
 
@@ -893,7 +996,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 ---
 
-## 16. CSharpEssentials.RequestResponseLogging — HTTP Logging Middleware
+## 17. CSharpEssentials.RequestResponseLogging — HTTP Logging Middleware
 
 **What it is:** ASP.NET Core middleware that logs HTTP request and response bodies.
 
@@ -906,7 +1009,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 ---
 
-## 17. CSharpEssentials.GcpSecretManager — Secret Configuration
+## 18. CSharpEssentials.GcpSecretManager — Secret Configuration
 
 **What it is:** Plugs Google Cloud Secret Manager into the .NET `IConfiguration` system.
 
@@ -918,7 +1021,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 ---
 
-## 18. CSharpEssentials.Validation — Model-First Validation
+## 19. CSharpEssentials.Validation — Model-First Validation
 
 **What it is:** A high-performance, model-first validation library that returns `Result<T>` natively.
 

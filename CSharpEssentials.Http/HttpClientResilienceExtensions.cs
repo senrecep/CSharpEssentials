@@ -1,216 +1,72 @@
-using CSharpEssentials.Errors;
+using CSharpEssentials.Resilience;
 using CSharpEssentials.ResultPattern;
-using Polly;
-using Polly.CircuitBreaker;
-using Polly.Retry;
-using Polly.Timeout;
 
 namespace CSharpEssentials.Http;
 
 public static class HttpClientResilienceExtensions
 {
-    public static ResiliencePipeline CreateRetryPipeline(int maxRetryAttempts = 3, TimeSpan? delay = null)
-    {
-        TimeSpan baseDelay = delay ?? TimeSpan.FromSeconds(1);
+    public static ResiliencePolicy CreateRetryPipeline(int maxRetryAttempts = 3, TimeSpan? delay = null)
+        => ResiliencePolicy.Create().WithRetry(maxRetryAttempts, delay);
 
-        return new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions
-            {
-                MaxRetryAttempts = maxRetryAttempts,
-                Delay = baseDelay,
-                BackoffType = DelayBackoffType.Exponential,
-                ShouldHandle = new PredicateBuilder()
-                    .Handle<HttpRequestException>()
-                    .Handle<IOException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<TaskCanceledException>(ex => !ex.CancellationToken.IsCancellationRequested)
-            })
-            .Build();
+    public static ResiliencePolicy<T> CreateRetryPipeline<T>(int maxRetryAttempts = 3, TimeSpan? delay = null)
+        => ResiliencePolicy<T>.Create().WithRetry(maxRetryAttempts, delay);
+
+    public static ResiliencePolicy CreateTimeoutPipeline(TimeSpan timeout)
+        => ResiliencePolicy.Create().WithTimeout(timeout);
+
+    public static ResiliencePolicy CreateCircuitBreakerPipeline(int minimumThroughput = 5, TimeSpan? samplingDuration = null, TimeSpan? breakDuration = null)
+        => ResiliencePolicy.Create().WithCircuitBreaker(minimumThroughput, samplingDuration, breakDuration);
+
+    public static ResiliencePolicy<T> CreateCircuitBreakerPipeline<T>(int minimumThroughput = 5, TimeSpan? samplingDuration = null, TimeSpan? breakDuration = null)
+        => ResiliencePolicy<T>.Create().WithCircuitBreaker(minimumThroughput, samplingDuration, breakDuration);
+
+    public static ResiliencePolicy CreateResiliencePipeline(int maxRetryAttempts = 3, TimeSpan? timeout = null, TimeSpan? retryDelay = null)
+    {
+        ResiliencePolicy policy = ResiliencePolicy.Create()
+            .WithRetry(maxRetryAttempts, retryDelay);
+
+        if (timeout.HasValue)
+        {
+            policy = policy.WithTimeout(timeout.Value);
+        }
+
+        return policy;
     }
 
-    public static ResiliencePipeline<Result<T>> CreateRetryPipeline<T>(int maxRetryAttempts = 3, TimeSpan? delay = null)
+    public static ResiliencePolicy<T> CreateResiliencePipeline<T>(int maxRetryAttempts = 3, TimeSpan? timeout = null, TimeSpan? retryDelay = null)
     {
-        TimeSpan baseDelay = delay ?? TimeSpan.FromSeconds(1);
+        ResiliencePolicy<T> policy = ResiliencePolicy<T>.Create()
+            .WithRetry(maxRetryAttempts, retryDelay);
 
-        return new ResiliencePipelineBuilder<Result<T>>()
-            .AddRetry(new RetryStrategyOptions<Result<T>>
-            {
-                MaxRetryAttempts = maxRetryAttempts,
-                Delay = baseDelay,
-                BackoffType = DelayBackoffType.Exponential,
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(IsRetryable)
-                    .Handle<HttpRequestException>()
-                    .Handle<IOException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<TaskCanceledException>(ex => !ex.CancellationToken.IsCancellationRequested)
-            })
-            .Build();
+        if (timeout.HasValue)
+        {
+            policy = policy.WithTimeout(timeout.Value);
+        }
+
+        return policy;
     }
 
-    public static ResiliencePipeline CreateTimeoutPipeline(TimeSpan timeout)
-    {
-        return new ResiliencePipelineBuilder()
-            .AddTimeout(new TimeoutStrategyOptions
-            {
-                Timeout = timeout
-            })
-            .Build();
-    }
-
-    public static ResiliencePipeline CreateCircuitBreakerPipeline(int minimumThroughput = 5, TimeSpan? samplingDuration = null, TimeSpan? breakDuration = null)
-    {
-        return new ResiliencePipelineBuilder()
-            .AddCircuitBreaker(new CircuitBreakerStrategyOptions
-            {
-                FailureRatio = 0.5,
-                MinimumThroughput = minimumThroughput,
-                SamplingDuration = samplingDuration ?? TimeSpan.FromMinutes(1),
-                BreakDuration = breakDuration ?? TimeSpan.FromSeconds(30),
-                ShouldHandle = new PredicateBuilder()
-                    .Handle<HttpRequestException>()
-                    .Handle<IOException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<TaskCanceledException>(ex => !ex.CancellationToken.IsCancellationRequested)
-            })
-            .Build();
-    }
-
-    public static ResiliencePipeline<Result<T>> CreateCircuitBreakerPipeline<T>(int minimumThroughput = 5, TimeSpan? samplingDuration = null, TimeSpan? breakDuration = null)
-    {
-        return new ResiliencePipelineBuilder<Result<T>>()
-            .AddCircuitBreaker(new CircuitBreakerStrategyOptions<Result<T>>
-            {
-                FailureRatio = 0.5,
-                MinimumThroughput = minimumThroughput,
-                SamplingDuration = samplingDuration ?? TimeSpan.FromMinutes(1),
-                BreakDuration = breakDuration ?? TimeSpan.FromSeconds(30),
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(IsRetryable)
-                    .Handle<HttpRequestException>()
-                    .Handle<IOException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<TaskCanceledException>(ex => !ex.CancellationToken.IsCancellationRequested)
-            })
-            .Build();
-    }
-
-    public static ResiliencePipeline CreateResiliencePipeline(int maxRetryAttempts = 3, TimeSpan? timeout = null, TimeSpan? retryDelay = null)
-    {
-        TimeSpan effectiveTimeout = timeout ?? TimeSpan.FromSeconds(30);
-        TimeSpan effectiveDelay = retryDelay ?? TimeSpan.FromSeconds(1);
-
-        return new ResiliencePipelineBuilder()
-            .AddTimeout(new TimeoutStrategyOptions
-            {
-                Timeout = effectiveTimeout
-            })
-            .AddRetry(new RetryStrategyOptions
-            {
-                MaxRetryAttempts = maxRetryAttempts,
-                Delay = effectiveDelay,
-                BackoffType = DelayBackoffType.Exponential,
-                ShouldHandle = new PredicateBuilder()
-                    .Handle<HttpRequestException>()
-                    .Handle<IOException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<TaskCanceledException>(ex => !ex.CancellationToken.IsCancellationRequested)
-            })
-            .Build();
-    }
-
-    public static ResiliencePipeline<Result<T>> CreateResiliencePipeline<T>(int maxRetryAttempts = 3, TimeSpan? timeout = null, TimeSpan? retryDelay = null)
-    {
-        TimeSpan effectiveTimeout = timeout ?? TimeSpan.FromSeconds(30);
-        TimeSpan effectiveDelay = retryDelay ?? TimeSpan.FromSeconds(1);
-
-        return new ResiliencePipelineBuilder<Result<T>>()
-            .AddTimeout(new TimeoutStrategyOptions
-            {
-                Timeout = effectiveTimeout
-            })
-            .AddRetry(new RetryStrategyOptions<Result<T>>
-            {
-                MaxRetryAttempts = maxRetryAttempts,
-                Delay = effectiveDelay,
-                BackoffType = DelayBackoffType.Exponential,
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(r => IsRetryable(r))
-                    .Handle<HttpRequestException>()
-                    .Handle<IOException>()
-                    .Handle<TimeoutRejectedException>()
-                    .Handle<TaskCanceledException>(ex => !ex.CancellationToken.IsCancellationRequested)
-            })
-            .Build();
-    }
-
-    public static async Task<Result> ExecuteAsResultAsync(
-        this ResiliencePipeline pipeline,
+    public static Task<Result> ExecuteAsResultAsync(
+        this ResiliencePolicy policy,
         Func<CancellationToken, Task<Result>> callback,
         CancellationToken cancellationToken = default)
     {
-        return await ExecuteResilienceAsync(async () =>
-            await pipeline.ExecuteAsync(async token => await callback(token), cancellationToken));
+        return policy.ExecuteAsync(callback, cancellationToken);
     }
 
     public static Task<Result<T>> ExecuteAsResultAsync<T>(
-        this ResiliencePipeline pipeline,
+        this ResiliencePolicy policy,
         Func<CancellationToken, Task<Result<T>>> callback,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            () => pipeline.ExecuteAsync(async token => await callback(token), cancellationToken).AsTask(),
-            HandleException,
-            cancellationToken);
+        return policy.ExecuteAsync(callback, cancellationToken);
     }
 
     public static Task<Result<T>> ExecuteAsResultAsync<T>(
-        this ResiliencePipeline<Result<T>> pipeline,
+        this ResiliencePolicy<T> policy,
         Func<CancellationToken, Task<Result<T>>> callback,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            () => pipeline.ExecuteAsync(async token => await callback(token), cancellationToken).AsTask(),
-            HandleException,
-            cancellationToken);
-    }
-
-    private static bool IsRetryable<T>(Result<T> result)
-    {
-        if (result.IsSuccess)
-            return false;
-
-        ErrorType type = result.FirstError.Type;
-        return type is not ErrorType.Unauthorized
-            and not ErrorType.Forbidden
-            and not ErrorType.NotFound
-            and not ErrorType.Validation;
-    }
-
-    private static Error HandleException(Exception ex)
-    {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
-        if (ex is BrokenCircuitException)
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-
-        return Error.Exception(ex, ErrorType.Unexpected);
-    }
-
-    private static Task<Result> ExecuteResilienceAsync(Func<Task<Result>> action)
-    {
-        return Result.TryAsync(
-            action,
-            ex =>
-            {
-                if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-                    throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
-                if (ex is BrokenCircuitException)
-                    System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(ex).Throw();
-
-                return Error.Exception(ex, ErrorType.Unexpected);
-            });
+        return policy.ExecuteAsync(callback, cancellationToken);
     }
 }
