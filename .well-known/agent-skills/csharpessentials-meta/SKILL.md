@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use — overview of all 19 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use — overview of all 20 packages organized by concern, the meta-package that bundles core functional modules, and a quick-reference table mapping problems to packages.
 ---
 
 # CSharpEssentials — Package Index
@@ -57,6 +57,12 @@ dotnet add package CSharpEssentials
 | `CSharpEssentials.RequestResponseLogging` | `dotnet add package CSharpEssentials.RequestResponseLogging` | `csharpessentials-logging` |
 | `CSharpEssentials.GcpSecretManager` | `dotnet add package CSharpEssentials.GcpSecretManager` | `csharpessentials-gcpsecretmanager` |
 
+### Resilience
+
+| Package | Install | Skill |
+|---------|---------|-------|
+| `CSharpEssentials.Resilience` | `dotnet add package CSharpEssentials.Resilience` | `csharpessentials-resilience` |
+
 ### Utilities
 
 | Package | Install | Skill |
@@ -83,6 +89,7 @@ dotnet add package CSharpEssentials
 | JSON serialization with string enums + polymorphism | `CSharpEssentials.Json` |
 | Log request/response bodies | `CSharpEssentials.RequestResponseLogging` |
 | Load secrets from GCP Secret Manager | `CSharpEssentials.GcpSecretManager` |
+| Transient fault handling (retry, timeout, circuit breaker, fallback) | `CSharpEssentials.Resilience` |
 | Testable time / freeze clock in tests | `CSharpEssentials.Time` |
 | Deep-copy entity collections | `CSharpEssentials.Clone` |
 | Fast enum-to-string (NativeAOT-safe) | `CSharpEssentials.Enums` |
@@ -107,6 +114,7 @@ using CSharpEssentials.Entity.Interfaces;  // IDomainEvent
 using CSharpEssentials.EntityFrameworkCore; // interceptors, pagination
 using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter
 using CSharpEssentials.Http;               // HttpClientResultExtensions, HttpRequestBuilder
+using CSharpEssentials.Resilience;          // ResiliencePolicy, ResiliencePolicy<T>
 using CSharpEssentials.Json;               // JsonOptions, converters
 using CSharpEssentials.RequestResponseLogging; // LoggingOptions, SkipLoggingAttributes
 using CSharpEssentials.GcpSecretManager;   // AddGcpSecretManager()
