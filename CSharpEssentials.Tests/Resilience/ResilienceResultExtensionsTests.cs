@@ -173,4 +173,115 @@ public class ResilienceResultExtensionsTests
         result.Value.Should().Be(42);
         attempts.Should().Be(2);
     }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Use_Constant_Backoff()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            attempts++;
+            if (attempts < 2)
+                return Task.FromResult(Result<int>.Failure(Error.Unexpected()));
+            return Task.FromResult(Result<int>.Success(42));
+        };
+
+        Result<int> result = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(10), exponentialBackoff: false);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_NonGeneric_Should_Use_Constant_Backoff()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result>> operation = _ =>
+        {
+            attempts++;
+            if (attempts < 2)
+                return Task.FromResult(Result.Failure(Error.Unexpected()));
+            return Task.FromResult(Result.Success());
+        };
+
+        Result result = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(10), exponentialBackoff: false);
+
+        result.IsSuccess.Should().BeTrue();
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_NonGeneric_Should_Retry_On_Conflict()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result>> operation = _ =>
+        {
+            attempts++;
+            if (attempts < 2)
+                return Task.FromResult(Result.Failure(Error.Conflict()));
+            return Task.FromResult(Result.Success());
+        };
+
+        Result result = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
+
+        result.IsSuccess.Should().BeTrue();
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_NonGeneric_Should_Retry_On_Unauthorized()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result>> operation = _ =>
+        {
+            attempts++;
+            if (attempts < 2)
+                return Task.FromResult(Result.Failure(Error.Unauthorized()));
+            return Task.FromResult(Result.Success());
+        };
+
+        Result result = await operation.RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromMilliseconds(10));
+
+        result.IsSuccess.Should().BeTrue();
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Retry_On_Failure_Type()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            attempts++;
+            if (attempts < 2)
+                return Task.FromResult(Result<int>.Failure(Error.Failure()));
+            return Task.FromResult(Result<int>.Success(42));
+        };
+
+        Result<int> result = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Retry_On_Unexpected_Type()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            attempts++;
+            if (attempts < 2)
+                return Task.FromResult(Result<int>.Failure(Error.Unexpected()));
+            return Task.FromResult(Result<int>.Success(42));
+        };
+
+        Result<int> result = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+        attempts.Should().Be(2);
+    }
 }
