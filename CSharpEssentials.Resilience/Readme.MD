@@ -74,7 +74,7 @@ var options = new ResiliencePolicyOptions
 
 Result<User> user = await ResiliencePolicy
     .Create(options)
-    .ExecuteAsync(() => _db.GetUser(id));
+    .ExecuteAsync(_ => _db.GetUser(id));
 ```
 
 ## Error Handling
@@ -94,8 +94,8 @@ Result<Data> result = await ResiliencePolicy
     .Create()
     .WithRetry(3)
     .WithTimeout(TimeSpan.FromSeconds(5))
-    .WithCircuitBreaker(samplingDuration: 10)
-    .ExecuteAsync(() => _api.GetData());
+    .WithCircuitBreaker(minimumThroughput: 10)
+    .ExecuteAsync(_ => _api.GetData());
 ```
 
 ## Polly Integration
@@ -114,5 +114,5 @@ Result<Data> result = await ResiliencePolicy
             BackoffType = DelayBackoffType.Exponential
         });
     })
-    .ExecuteAsync(() => _api.GetData());
+    .ExecuteAsync(_ => _api.GetData());
 ```
