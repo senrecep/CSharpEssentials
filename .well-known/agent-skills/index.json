@@ -81,6 +81,11 @@
       "files": ["SKILL.md"]
     },
     {
+      "name": "csharpessentials-resilience",
+      "description": "Use when adding transient fault handling around Result-based operations — ResiliencePolicy/ResiliencePolicy<T> for retry, timeout, circuit breaker, and fallback composition backed by Polly v8 with Result-aware retry filtering.",
+      "files": ["SKILL.md"]
+    },
+    {
       "name": "csharpessentials-rules",
       "description": "Use when composing business validation logic — define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(); branch with RuleEngine.If().",
       "files": ["SKILL.md"]
