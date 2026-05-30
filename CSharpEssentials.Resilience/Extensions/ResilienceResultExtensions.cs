@@ -24,12 +24,20 @@ public static class ResilienceResultExtensions
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result<T>>()
                     .HandleResult(r => IsRetryable(r))
+                    .Handle<Exception>()
             })
             .Build();
 
-        return await pipeline.ExecuteAsync(
-            async token => await operation(token),
-            cancellationToken);
+        try
+        {
+            return await pipeline.ExecuteAsync(
+                async token => await operation(token),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return Error.Exception(ex, ErrorType.Unexpected);
+        }
     }
 
     public static async ValueTask<Result> RetryIfFailed(
@@ -49,12 +57,20 @@ public static class ResilienceResultExtensions
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result>()
                     .HandleResult(r => IsRetryable(r))
+                    .Handle<Exception>()
             })
             .Build();
 
-        return await pipeline.ExecuteAsync(
-            async token => await operation(token),
-            cancellationToken);
+        try
+        {
+            return await pipeline.ExecuteAsync(
+                async token => await operation(token),
+                cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return Error.Exception(ex, ErrorType.Unexpected);
+        }
     }
 
     private static bool IsRetryable(Result result)

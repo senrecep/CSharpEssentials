@@ -39,14 +39,11 @@ Result<Product> product = await ResiliencePolicy
 ```csharp
 using CSharpEssentials.Resilience;
 
-// Fluent builder on delegates
-Result<User> user = await (() => _db.GetUser(id))
-    .WithRetry(3)
-    .WithTimeout(TimeSpan.FromSeconds(5))
-    .ExecuteAsync();
-
-// Direct execution
+// Direct execution — wraps any Func<Task<T>> in a Result
 Result<User> user = await (() => _db.GetUser(id)).ExecuteAsync();
+
+// With CancellationToken
+Result<User> user = await ((ct) => _db.GetUser(id, ct)).ExecuteAsync(cancellationToken);
 ```
 
 ## Result Retry
@@ -84,9 +81,10 @@ Result<User> user = await ResiliencePolicy
 
 Resilience-specific errors are returned as `Error` values:
 
-- `Error.Failure("Resilience.RetryExhausted", "All retry attempts exhausted.")`
 - `Error.Failure("Resilience.Timeout", "Operation timed out.")`
 - `Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.")`
+
+When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
 
 ## Pipeline Composition
 

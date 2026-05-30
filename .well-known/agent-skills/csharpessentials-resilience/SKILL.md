@@ -67,11 +67,10 @@ Result<int> result = await policy.ExecuteAsync(ct => _api.GetValue(ct));
 ## Delegate Extensions
 
 ```csharp
-Result<User> user = await (() => _db.GetUser(id))
-    .WithRetry(3)
-    .WithTimeout(TimeSpan.FromSeconds(5))
-    .ExecuteAsync();
+// Direct execution — wraps any Func<Task<T>> in a Result
+Result<User> user = await (() => _db.GetUser(id)).ExecuteAsync();
 
+// RetryIfFailed — retries on transient Result failures
 Func<CancellationToken, Task<Result<User>>> operation = ct => _db.GetUser(id, ct);
 Result<User> retried = await operation.RetryIfFailed(maxAttempts: 3);
 ```

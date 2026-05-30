@@ -768,10 +768,11 @@ The generic variant automatically filters retryable errors — `Unauthorized`, `
 ### Delegate Extensions
 
 ```csharp
-Result<User> user = await (() => _db.GetUser(id))
-    .WithRetry(3)
-    .WithTimeout(TimeSpan.FromSeconds(5))
-    .ExecuteAsync();
+// Direct execution — wraps any Func<Task<T>> in a Result
+Result<User> user = await (() => _db.GetUser(id)).ExecuteAsync();
+
+// With CancellationToken
+Result<User> user = await ((ct) => _db.GetUser(id, ct)).ExecuteAsync(cancellationToken);
 ```
 
 ### Retry Extensions
@@ -786,8 +787,9 @@ Result<User> result = await getUser.RetryIfFailed(maxAttempts: 3);
 | Error Code | When |
 |-----------|------|
 | `Resilience.Timeout` | Operation exceeded timeout |
-| `Resilience.RetryExhausted` | All retry attempts failed |
 | `Resilience.CircuitBroken` | Circuit breaker is open |
+
+When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
 
 ### Configuration Options
 
