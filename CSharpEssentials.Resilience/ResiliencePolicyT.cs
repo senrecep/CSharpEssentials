@@ -94,8 +94,9 @@ public readonly partial struct ResiliencePolicy<T>
 
     private ResiliencePolicy<T> Merge(ResiliencePipeline<Result<T>> additionalPipeline)
     {
+        ResiliencePipeline<Result<T>> existing = _pipeline ?? new ResiliencePipelineBuilder<Result<T>>().Build();
         ResiliencePipeline<Result<T>> merged = new ResiliencePipelineBuilder<Result<T>>()
-            .AddPipeline(_pipeline)
+            .AddPipeline(existing)
             .AddPipeline(additionalPipeline)
             .Build();
 
