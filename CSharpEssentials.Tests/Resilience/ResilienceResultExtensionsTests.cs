@@ -230,21 +230,20 @@ public class ResilienceResultExtensionsTests
     }
 
     [Fact]
-    public async Task RetryIfFailed_NonGeneric_Should_Retry_On_Unauthorized()
+    public async Task RetryIfFailed_NonGeneric_Should_Not_Retry_On_Unauthorized()
     {
         int attempts = 0;
         Func<CancellationToken, Task<Result>> operation = _ =>
         {
             attempts++;
-            if (attempts < 2)
-                return Task.FromResult(Result.Failure(Error.Unauthorized()));
-            return Task.FromResult(Result.Success());
+            return Task.FromResult(Result.Failure(Error.Unauthorized()));
         };
 
         Result result = await operation.RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromMilliseconds(10));
 
-        result.IsSuccess.Should().BeTrue();
-        attempts.Should().Be(2);
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Unauthorized);
+        attempts.Should().Be(1);
     }
 
     [Fact]

@@ -29,7 +29,7 @@ Result<Order> order = await ResiliencePolicy
 // Circuit Breaker + Fallback
 Result<Product> product = await ResiliencePolicy
     .Create()
-    .WithCircuitBreaker(samplingWindow: 10, failureRatio: 0.5)
+    .WithCircuitBreaker(samplingDuration: 10, failureRatio: 0.5)
     .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
     .ExecuteAsync(() => _productService.GetProduct(id));
 ```
@@ -96,7 +96,7 @@ Result<Data> result = await ResiliencePolicy
     .Create()
     .WithRetry(3)
     .WithTimeout(TimeSpan.FromSeconds(5))
-    .WithCircuitBreaker(samplingWindow: 10)
+    .WithCircuitBreaker(samplingDuration: 10)
     .ExecuteAsync(() => _api.GetData());
 ```
 
