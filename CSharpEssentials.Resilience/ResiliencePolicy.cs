@@ -16,6 +16,9 @@ public readonly partial struct ResiliencePolicy
     public static ResiliencePolicy Create() =>
         new(ResiliencePipeline.Empty);
 
+    public static ResiliencePolicy FromPipeline(ResiliencePipeline pipeline) =>
+        new(pipeline);
+
     public static ResiliencePolicy Create(ResiliencePolicyOptions options)
     {
         ResiliencePolicy policy = Create();

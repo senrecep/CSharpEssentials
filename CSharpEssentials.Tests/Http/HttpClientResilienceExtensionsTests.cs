@@ -9,33 +9,33 @@ namespace CSharpEssentials.Tests.Http;
 public class HttpClientResilienceExtensionsTests
 {
     [Fact]
-    public async Task ExecuteAsResultAsync_Should_Return_Success_When_No_Failure()
+    public async Task CreateRetryPolicy_Should_Return_Success()
     {
-        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPipeline(maxRetryAttempts: 1);
+        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPolicy(maxRetryAttempts: 1);
 
-        Result result = await policy.ExecuteAsResultAsync(_ => Task.FromResult(Result.Success()));
+        Result result = await policy.ExecuteAsync(_ => Task.FromResult(Result.Success()));
 
         result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public async Task ExecuteAsResultAsync_Generic_Should_Return_Value()
+    public async Task CreateRetryPolicy_Generic_Should_Return_Value()
     {
-        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPipeline(maxRetryAttempts: 1);
+        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPolicy<int>(maxRetryAttempts: 1);
 
-        Result<int> result = await policy.ExecuteAsResultAsync(_ => Task.FromResult(Result<int>.Success(42)));
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Success(42)));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
     }
 
     [Fact]
-    public async Task ExecuteAsResultAsync_Should_Retry_On_Exception()
+    public async Task CreateRetryPolicy_Should_Retry_On_Exception()
     {
         int attempts = 0;
-        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPipeline(maxRetryAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
+        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPolicy(maxRetryAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
 
-        Result result = await policy.ExecuteAsResultAsync(_ =>
+        Result result = await policy.ExecuteAsync(_ =>
         {
             attempts++;
             if (attempts < 2)
@@ -48,23 +48,23 @@ public class HttpClientResilienceExtensionsTests
     }
 
     [Fact]
-    public async Task ExecuteAsResultAsync_Should_Return_Failure_On_Persistent_Exception()
+    public async Task CreateRetryPolicy_Should_Return_Failure_On_Persistent_Exception()
     {
-        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPipeline(maxRetryAttempts: 1, delay: TimeSpan.FromMilliseconds(10));
+        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateRetryPolicy(maxRetryAttempts: 1, delay: TimeSpan.FromMilliseconds(10));
 
-        Result result = await policy.ExecuteAsResultAsync(_ => throw new HttpRequestException("Persistent failure"));
+        Result result = await policy.ExecuteAsync(_ => throw new HttpRequestException("Persistent failure"));
 
         result.IsFailure.Should().BeTrue();
         result.Errors[0].Type.Should().Be(ErrorType.Unexpected);
     }
 
     [Fact]
-    public async Task ExecuteAsResultAsync_With_GenericPipeline_Should_Return_Value()
+    public async Task CreateRetryPolicy_Generic_Should_Retry_On_Failure()
     {
-        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPipeline<int>(maxRetryAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
+        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPolicy<int>(maxRetryAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
 
         int attempts = 0;
-        Result<int> result = await policy.ExecuteAsResultAsync(_ =>
+        Result<int> result = await policy.ExecuteAsync(_ =>
         {
             attempts++;
             if (attempts < 2)
@@ -78,12 +78,12 @@ public class HttpClientResilienceExtensionsTests
     }
 
     [Fact]
-    public async Task CreateRetryPipeline_Generic_Should_Not_Retry_On_Success()
+    public async Task CreateRetryPolicy_Generic_Should_Not_Retry_On_Success()
     {
-        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPipeline<int>(maxRetryAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
+        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPolicy<int>(maxRetryAttempts: 2, delay: TimeSpan.FromMilliseconds(10));
 
         int attempts = 0;
-        Result<int> result = await policy.ExecuteAsResultAsync(_ =>
+        Result<int> result = await policy.ExecuteAsync(_ =>
         {
             attempts++;
             return Task.FromResult(Result<int>.Success(42));
@@ -95,14 +95,31 @@ public class HttpClientResilienceExtensionsTests
     }
 
     [Fact]
-    public async Task CreateResiliencePipeline_Generic_Should_Retry_And_Timeout()
+    public async Task CreateResiliencePolicy_Should_Apply_Default_Timeout()
     {
-        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateResiliencePipeline<int>(
+        ResiliencePolicy policy = HttpClientResilienceExtensions.CreateResiliencePolicy(
+            maxRetryAttempts: 1,
+            timeout: TimeSpan.FromSeconds(1));
+
+        Result result = await policy.ExecuteAsync(async ct =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            return Result.Success();
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Resilience.Timeout");
+    }
+
+    [Fact]
+    public async Task CreateResiliencePolicy_Generic_Should_Retry_And_Timeout()
+    {
+        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateResiliencePolicy<int>(
             maxRetryAttempts: 1,
             timeout: TimeSpan.FromSeconds(1),
             retryDelay: TimeSpan.FromMilliseconds(10));
 
-        Result<int> result = await policy.ExecuteAsResultAsync(_ => Task.FromResult(Result<int>.Success(7)));
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Success(7)));
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(7);
@@ -113,14 +130,14 @@ public class HttpClientResilienceExtensionsTests
     [InlineData(ErrorType.Forbidden)]
     [InlineData(ErrorType.NotFound)]
     [InlineData(ErrorType.Validation)]
-    public async Task CreateRetryPipeline_Generic_Should_Not_Retry_NonRetryable_Errors(ErrorType errorType)
+    public async Task CreateRetryPolicy_Generic_Should_Not_Retry_NonRetryable_Errors(ErrorType errorType)
     {
-        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPipeline<int>(
+        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPolicy<int>(
             maxRetryAttempts: 2,
             delay: TimeSpan.FromMilliseconds(10));
 
         int attempts = 0;
-        Result<int> result = await policy.ExecuteAsResultAsync(_ =>
+        Result<int> result = await policy.ExecuteAsync(_ =>
         {
             attempts++;
             return Task.FromResult(Result<int>.Failure(CreateError(errorType)));
@@ -131,14 +148,14 @@ public class HttpClientResilienceExtensionsTests
     }
 
     [Fact]
-    public async Task CreateRetryPipeline_Generic_Should_Retry_On_Conflict()
+    public async Task CreateRetryPolicy_Generic_Should_Retry_On_Conflict()
     {
-        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPipeline<int>(
+        ResiliencePolicy<int> policy = HttpClientResilienceExtensions.CreateRetryPolicy<int>(
             maxRetryAttempts: 2,
             delay: TimeSpan.FromMilliseconds(10));
 
         int attempts = 0;
-        Result<int> result = await policy.ExecuteAsResultAsync(_ =>
+        Result<int> result = await policy.ExecuteAsync(_ =>
         {
             attempts++;
             if (attempts < 2)
@@ -152,11 +169,40 @@ public class HttpClientResilienceExtensionsTests
     }
 
     [Fact]
-    public void CreateCircuitBreakerPipeline_Should_Have_Sensible_Defaults()
+    public void CreateCircuitBreakerPolicy_Should_Have_Sensible_Defaults()
     {
-        ResiliencePolicy pipeline = HttpClientResilienceExtensions.CreateCircuitBreakerPipeline(minimumThroughput: 5);
+        ResiliencePolicy pipeline = HttpClientResilienceExtensions.CreateCircuitBreakerPolicy(minimumThroughput: 5);
 
         pipeline.Should().NotBeNull();
+    }
+
+    // ── Legacy API tests ──
+
+    [Fact]
+    public async Task Legacy_CreateRetryPipeline_Should_Return_Success()
+    {
+        Polly.ResiliencePipeline pipeline = HttpClientResilienceExtensions.CreateRetryPipeline(maxRetryAttempts: 1);
+
+        Result result = await pipeline.ExecuteAsResultAsync(_ => Task.FromResult(Result.Success()));
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Legacy_CreateResiliencePipeline_Should_Apply_Default_Timeout()
+    {
+        Polly.ResiliencePipeline pipeline = HttpClientResilienceExtensions.CreateResiliencePipeline(
+            maxRetryAttempts: 1,
+            timeout: TimeSpan.FromSeconds(1));
+
+        Result result = await pipeline.ExecuteAsResultAsync(async ct =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10), ct);
+            return Result.Success();
+        });
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Resilience.Timeout");
     }
 
     private static Error CreateError(ErrorType type) => type switch
