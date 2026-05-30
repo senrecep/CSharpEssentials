@@ -66,9 +66,10 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task> action,
         CancellationToken cancellationToken = default)
     {
+        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
         try
         {
-            await _pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
             return Result.Success();
         }
         catch (Exception ex)
@@ -81,9 +82,10 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task<T>> action,
         CancellationToken cancellationToken = default)
     {
+        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
         try
         {
-            return await _pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -95,9 +97,10 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task<Result<T>>> action,
         CancellationToken cancellationToken = default)
     {
+        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
         try
         {
-            return await _pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
         }
         catch (Exception ex)
         {
@@ -109,9 +112,10 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task<Result>> action,
         CancellationToken cancellationToken = default)
     {
+        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
         try
         {
-            return await _pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
         }
         catch (Exception ex)
         {
