@@ -16,6 +16,9 @@ public readonly partial struct ResiliencePolicy<T>
     public static ResiliencePolicy<T> Create() =>
         new(new ResiliencePipelineBuilder<Result<T>>().Build());
 
+    public static ResiliencePolicy<T> FromPipeline(ResiliencePipeline<Result<T>> pipeline) =>
+        new(pipeline);
+
     public static ResiliencePolicy<T> Create(Action<ResiliencePipelineBuilder<Result<T>>> configure)
     {
 #if NET6_0_OR_GREATER
