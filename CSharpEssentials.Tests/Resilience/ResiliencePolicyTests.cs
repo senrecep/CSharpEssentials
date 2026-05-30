@@ -292,6 +292,7 @@ public class ResiliencePolicyTests
         Result result = await policy.ExecuteAsync(_ => Task.FromResult(Result.Success()));
 
         result.IsSuccess.Should().BeTrue();
+        result.IsFailure.Should().BeFalse();
     }
 
     [Fact]
@@ -338,6 +339,7 @@ public class ResiliencePolicyTests
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("Resilience.Timeout");
+        result.Errors.Should().HaveCount(1);
     }
 
     [Fact]
