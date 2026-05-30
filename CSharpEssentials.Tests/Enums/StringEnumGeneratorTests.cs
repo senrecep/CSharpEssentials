@@ -225,7 +225,7 @@ internal enum HttpStatus
 internal static class NestedEnumContainer
 {
     [StringEnum]
-    public enum NestedClassStatus
+    internal enum NestedClassStatus
     {
         Pending,
         Completed
@@ -235,7 +235,7 @@ internal static class NestedEnumContainer
 internal struct NestedEnumStructContainer
 {
     [StringEnum]
-    public enum NestedStructStatus
+    internal enum NestedStructStatus
     {
         Pending,
         Completed
