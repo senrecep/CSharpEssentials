@@ -724,21 +724,21 @@ using CSharpEssentials.Resilience;
 Result<User> user = await ResiliencePolicy
     .Create()
     .WithRetry(maxAttempts: 3, delay: TimeSpan.FromSeconds(1))
-    .ExecuteAsync(() => _db.GetUser(id));
+    .ExecuteAsync(_ => _db.GetUser(id));
 
 // Retry + Timeout
 Result<Order> order = await ResiliencePolicy
     .Create()
     .WithRetry(3)
     .WithTimeout(TimeSpan.FromSeconds(5))
-    .ExecuteAsync(() => _orderService.GetOrder(id));
+    .ExecuteAsync(_ => _orderService.GetOrder(id));
 
 // Circuit Breaker + Fallback
 Result<Product> product = await ResiliencePolicy
     .Create()
     .WithCircuitBreaker(minimumThroughput: 10, failureRatio: 0.5)
     .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
-    .ExecuteAsync(() => _productService.GetProduct(id));
+    .ExecuteAsync(_ => _productService.GetProduct(id));
 ```
 
 ### ResiliencePolicy
@@ -808,7 +808,7 @@ var options = new ResiliencePolicyOptions
 
 Result<User> user = await ResiliencePolicy
     .Create(options)
-    .ExecuteAsync(() => _db.GetUser(id));
+    .ExecuteAsync(_ => _db.GetUser(id));
 ```
 
 ---

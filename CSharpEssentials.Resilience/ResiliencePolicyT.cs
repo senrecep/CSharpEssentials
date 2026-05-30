@@ -40,9 +40,10 @@ public readonly partial struct ResiliencePolicy<T>
         Func<CancellationToken, Task<T>> action,
         CancellationToken cancellationToken = default)
     {
+        ResiliencePipeline<Result<T>> pipeline = _pipeline ?? new ResiliencePipelineBuilder<Result<T>>().Build();
         try
         {
-            return await _pipeline.ExecuteAsync(
+            return await pipeline.ExecuteAsync(
                 async token =>
                 {
                     T value = await action(token);
@@ -60,9 +61,10 @@ public readonly partial struct ResiliencePolicy<T>
         Func<CancellationToken, Task<Result<T>>> action,
         CancellationToken cancellationToken = default)
     {
+        ResiliencePipeline<Result<T>> pipeline = _pipeline ?? new ResiliencePipelineBuilder<Result<T>>().Build();
         try
         {
-            return await _pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
         }
         catch (Exception ex)
         {
