@@ -697,6 +697,8 @@ HTTP status codes are automatically mapped to `ErrorType`:
 
 ### Resilience (Polly Integration)
 
+> **Moved:** These methods have been replaced by the dedicated `CSharpEssentials.Resilience` package (Section 9). Prefer `ResiliencePolicy` / `ResiliencePolicy<T>` for new code.
+
 | Method | What It Does |
 |--------|-------------|
 | `CreateRetryPipeline` | Polly retry policy |

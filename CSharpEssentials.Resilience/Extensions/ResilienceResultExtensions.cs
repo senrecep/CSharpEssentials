@@ -1,4 +1,3 @@
-#pragma warning disable IDE0390
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Polly;
@@ -49,13 +48,27 @@ public static class ResilienceResultExtensions
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result>()
-                    .HandleResult(r => r.IsFailure)
+                    .HandleResult(r => IsRetryable(r))
             })
             .Build();
 
         return await pipeline.ExecuteAsync(
             async token => await operation(token),
             cancellationToken);
+    }
+
+    private static bool IsRetryable(Result result)
+    {
+        if (result.IsSuccess)
+        {
+            return false;
+        }
+
+        ErrorType type = result.FirstError.Type;
+        return type is not ErrorType.Unauthorized
+            and not ErrorType.Forbidden
+            and not ErrorType.NotFound
+            and not ErrorType.Validation;
     }
 
     private static bool IsRetryable<T>(Result<T> result)

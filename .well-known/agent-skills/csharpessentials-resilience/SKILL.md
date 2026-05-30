@@ -21,6 +21,31 @@ using CSharpEssentials.Resilience;
 
 ---
 
+## When to Use / When NOT to Use
+
+| Scenario | Use this package? |
+|----------|-------------------|
+| Transient fault handling (retry, timeout, circuit breaker) | ✅ Yes |
+| Composing resilience policies around `Result<T>` pipelines | ✅ Yes |
+| Fallback values after retries are exhausted | ✅ Yes |
+| HTTP-specific resilience (redirects, status code mapping) | ❌ No — use `CSharpEssentials.Http` |
+| Non-Result exception-only retry logic | ⚠️ Consider Polly directly for simpler scenarios |
+
+---
+
+## Key Types
+
+| Type | Description |
+|------|-------------|
+| `ResiliencePolicy` | Non-generic policy for `Result` (unit) operations |
+| `ResiliencePolicy<T>` | Generic policy for `Result<T>` operations; supports fallback |
+| `ResiliencePolicyOptions` | Options record combining Retry, Timeout, CircuitBreaker |
+| `RetryOptions` | MaxAttempts, Delay, ExponentialBackoff |
+| `TimeoutOptions` | Timeout duration |
+| `CircuitBreakerOptions` | MinimumThroughput, SamplingDuration, BreakDuration, FailureRatio |
+
+---
+
 ## Builder Pattern
 
 ```csharp
