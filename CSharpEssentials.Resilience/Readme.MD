@@ -50,8 +50,8 @@ Result<User> user = await ((ct) => _db.GetUser(id, ct)).ExecuteAsync(cancellatio
 
 ```csharp
 // Retry a failed Result directly
-Result<User> result = await _db.GetUser(id)
-    .RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromSeconds(1));
+Func<CancellationToken, Task<Result<User>>> operation = ct => _db.GetUser(id);
+Result<User> result = await operation.RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromSeconds(1));
 ```
 
 ## Configuration Options
