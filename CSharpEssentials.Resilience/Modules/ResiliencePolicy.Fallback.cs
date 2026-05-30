@@ -1,3 +1,4 @@
+using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Polly;
 using Polly.Fallback;
@@ -23,8 +24,15 @@ public readonly partial struct ResiliencePolicy<T>
                     .Handle<Exception>(),
                 FallbackAction = async args =>
                 {
-                    T fallbackValue = await fallbackAsync(args.Context.CancellationToken);
-                    return Outcome.FromResult(Result<T>.Success(fallbackValue));
+                    try
+                    {
+                        T fallbackValue = await fallbackAsync(args.Context.CancellationToken);
+                        return Outcome.FromResult(Result<T>.Success(fallbackValue));
+                    }
+                    catch (Exception ex)
+                    {
+                        return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
+                    }
                 }
             })
             .Build();
@@ -54,8 +62,15 @@ public readonly partial struct ResiliencePolicy<T>
                     .Handle<Exception>(),
                 FallbackAction = async args =>
                 {
-                    Result<T> fallbackResult = await fallbackAsync(args.Context.CancellationToken);
-                    return Outcome.FromResult(fallbackResult);
+                    try
+                    {
+                        Result<T> fallbackResult = await fallbackAsync(args.Context.CancellationToken);
+                        return Outcome.FromResult(fallbackResult);
+                    }
+                    catch (Exception ex)
+                    {
+                        return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
+                    }
                 }
             })
             .Build();
