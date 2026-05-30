@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="CSharpEssentials — modular .NET NuGet ecosystem bridging OOP and Functional Programming in C#. 19 packages: Result, Maybe, Any, Rules, Mediator, Validation, Entity, EF Core, and more.">
+<meta name="description" content="CSharpEssentials — modular .NET NuGet ecosystem bridging OOP and Functional Programming in C#. 20 packages: Result, Maybe, Any, Rules, Mediator, Validation, Entity, EF Core, Resilience, and more.">
 <meta name="keywords" content=".NET, NuGet, C#, functional programming, Result, Maybe, discriminated unions, railway-oriented programming">
 <meta property="og:title" content="CSharpEssentials">
 <meta property="og:description" content="Modular .NET library ecosystem bridging OOP and Functional Programming">
@@ -762,7 +762,7 @@
   <div class="container">
     <div class="hero-badge" aria-hidden="true">
       <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-      19 packages &middot; .NET 9/8 &middot; NuGet
+      20 packages &middot; .NET 9/8 &middot; NuGet
     </div>
     <h1>CSharp<span>Essentials</span></h1>
     <p class="hero-subtitle">Modular .NET library ecosystem bridging OOP and Functional Programming — Result monads, discriminated unions, rules engine, and more.</p>
@@ -805,7 +805,7 @@
 <div class="container">
   <div class="stats-bar reveal" role="list" aria-label="Key metrics">
     <div class="stat-item" role="listitem">
-      <span class="stat-value">19</span>
+      <span class="stat-value">20</span>
       <span class="stat-label">Packages</span>
     </div>
     <div class="stat-item" role="listitem">
@@ -885,7 +885,7 @@
   <div class="container">
     <div class="section-heading reveal">
       <span class="section-label">Ecosystem</span>
-      <h2 id="packages-heading">19 focused packages</h2>
+      <h2 id="packages-heading">20 focused packages</h2>
       <p>Targeting .NET 9, .NET 8, netstandard2.1, and netstandard2.0. Central package management keeps versions consistent.</p>
     </div>
     <div class="packages-grid">
@@ -1052,6 +1052,15 @@
         <span class="pkg-type">Validator&lt;T&gt; &middot; RuleChain</span>
       </div>
 
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">Resilience</span>
+          <span class="pkg-tag tag-infra">Infra</span>
+        </div>
+        <p class="pkg-desc">Modular resilience policies — <code>Retry</code>, <code>Timeout</code>, <code>CircuitBreaker</code>, <code>Fallback</code> — composable via fluent API.</p>
+        <span class="pkg-type">ResiliencePolicy &middot; Polly</span>
+      </div>
+
       <div class="pkg-card pkg-card--meta reveal">
         <div class="pkg-header">
           <span class="pkg-name">Meta</span>
@@ -1072,7 +1081,7 @@
       <div class="skills-copy reveal">
         <span class="section-label">AI Agent Skills</span>
         <h2 id="skills-heading">AI skills for every agent</h2>
-        <p>19 per-package skills for Claude Code, Cursor, Codex, and 50+ compatible AI agents. Install once and every agent in your workflow gets structured, accurate knowledge of each package's API.</p>
+        <p>20 per-package skills for Claude Code, Cursor, Codex, and 50+ compatible AI agents. Install once and every agent in your workflow gets structured, accurate knowledge of each package's API.</p>
         <div class="agent-chips" aria-label="Compatible agents">
           <span class="agent-chip">Claude Code</span>
           <span class="agent-chip">Cursor</span>
@@ -1231,6 +1240,7 @@
     'Time':                  { nuget: 'CSharpEssentials.Time',                   docs: 'examples/Examples.Time' },
     'Clone':                 { nuget: 'CSharpEssentials.Clone',                  docs: 'examples/Examples.Clone' },
     'Validation':            { nuget: 'CSharpEssentials.Validation',             docs: 'examples/Examples.Validation' },
+    'Resilience':            { nuget: 'CSharpEssentials.Resilience',             docs: 'examples/Examples.Resilience' },
     'Meta':                  { nuget: 'CSharpEssentials',                        docs: 'examples/Examples.Main' }
   };
 

@@ -59,6 +59,7 @@
         <PackageVersion Include="CSharpEssentials.Json" Version="[3.1.0]" />
         <PackageVersion Include="CSharpEssentials.Maybe" Version="[3.1.0]" />
         <PackageVersion Include="CSharpEssentials.Mediator" Version="[3.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Resilience" Version="[3.1.0]" />
         <PackageVersion Include="CSharpEssentials.Results" Version="[3.1.0]" />
         <PackageVersion Include="CSharpEssentials.Rules" Version="[3.1.0]" />
         <PackageVersion Include="CSharpEssentials.Time" Version="[3.1.0]" />
