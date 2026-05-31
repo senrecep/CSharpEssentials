@@ -220,6 +220,34 @@ result.Match(
 
 ---
 
+## Predicate Factories
+
+Create `IRule<T>` or `IAsyncRule<T>` directly from a predicate — no class needed.
+
+```csharp
+// Static error
+IRule<int> rule = RuleEngine.FromPredicate<int>(
+    x => x > 0,
+    Error.Validation("Value.Negative", "Must be positive"));
+
+// Error factory — error message references the failing context
+IRule<string> rule = RuleEngine.FromPredicate<string>(
+    s => s.Length >= 3,
+    s => Error.Validation("String.TooShort", $"'{s}' must be at least 3 characters"));
+
+// Async predicate (e.g., DB uniqueness check)
+IAsyncRule<string> rule = RuleEngine.FromPredicateAsync<string>(
+    async s => await _db.IsUniqueAsync(s),
+    s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
+
+// Evaluate and compose normally
+Result r = RuleEngine.Evaluate(rule, context);
+Result composed = RuleEngine.Evaluate(
+    new IRuleBase<int>[] { ruleA, ruleB }.And(), value);
+```
+
+---
+
 ## Best Practices
 
 - `array.And()` collects **all** failures; `array.Linear()` stops at the **first** failure

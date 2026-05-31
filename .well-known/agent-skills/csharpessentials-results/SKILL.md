@@ -108,6 +108,24 @@ Result<int> safe = Result.Try(() => int.Parse(input), ex => Error.Exception(ex))
 Result<Data> data = await Result.TryAsync(() => _db.GetAsync(id), ex => Error.Exception(ex));
 ```
 
+## Conditional Side Effects
+
+```csharp
+// TapIf — predicate-gated tap, only fires when Success AND predicate is true
+result.TapIf(v => v > 0, v => Audit(v));
+
+// Bool condition shorthand
+result.TapIf(featureEnabled, v => Track(v));
+
+// Async — instance methods
+await result.TapIfAsync(v => v > 0, async v => await AuditAsync(v));
+await result.TapIfAsync(isEnabled,   async v => await TrackAsync(v));
+
+// Extension variants — Task<Result<T>> and ValueTask<Result<T>>
+await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
+await GetValueTaskResultAsync().TapIfAsync(true, async v => await LogAsync(v));
+```
+
 ## Best Practices
 
 - Never access `.Value` without checking `.IsSuccess` first

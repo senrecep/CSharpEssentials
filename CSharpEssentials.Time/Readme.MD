@@ -41,16 +41,29 @@ builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 ```
 
-### Testing with FakeTimeProvider
+### Test with FakeDateTimeProvider
+
+`CSharpEssentials.Time` ships a built-in `FakeDateTimeProvider` — no extra package needed.
 
 ```csharp
-using Microsoft.Extensions.Time.Testing;
+using CSharpEssentials.Time;
 
-FakeTimeProvider fakeTime = new();
-fakeTime.SetUtcNow(new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero));
+var fixed = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
+var fake  = new FakeDateTimeProvider(fixed);
 
-IDateTimeProvider provider = new DateTimeProvider(fakeTime);
-provider.UtcNow.Year.Should().Be(2025);
+var svc = new OrderService(fake);
+var order = svc.Create(cart);
+
+// Advance the clock — no Thread.Sleep needed
+fake.Advance(TimeSpan.FromHours(2));
+fake.UtcNow.Should().Be(fixed.AddHours(2));
+
+// Set to a specific time
+fake.SetTime(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+// NET6+ only
+fake.UtcNowDate.Should().Be(new DateOnly(2026, 1, 1));
+fake.UtcNowTime.Should().Be(new TimeOnly(0, 0, 0));
 ```
 
 ### Extensions

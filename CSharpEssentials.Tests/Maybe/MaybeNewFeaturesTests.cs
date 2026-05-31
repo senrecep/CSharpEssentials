@@ -71,6 +71,94 @@ public class MaybeNewFeaturesTests
         called.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task TapNoneAsync_Task_SyncAction_Should_ExecuteAction_When_HasNoValue()
+    {
+        bool called = false;
+        Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
+
+        await maybeTask.TapNoneAsync(() => called = true);
+
+        called.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_Task_SyncAction_Should_NotExecuteAction_When_HasValue()
+    {
+        bool called = false;
+        Task<Maybe<int>> maybeTask = Task.FromResult<Maybe<int>>(42);
+
+        await maybeTask.TapNoneAsync(() => called = true);
+
+        called.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_Task_AsyncAction_Should_ExecuteAction_When_HasNoValue()
+    {
+        bool called = false;
+        Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
+
+        await maybeTask.TapNoneAsync(async () => { await Task.Yield(); called = true; });
+
+        called.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_ValueTask_SyncAction_Should_ExecuteAction_When_HasNoValue()
+    {
+        bool called = false;
+        ValueTask<Maybe<int>> maybeTask = new(Maybe<int>.None);
+
+        await maybeTask.TapNoneAsync(() => called = true);
+
+        called.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_ValueTask_SyncAction_Should_NotExecuteAction_When_HasValue()
+    {
+        bool called = false;
+        ValueTask<Maybe<int>> maybeTask = new((Maybe<int>)42);
+
+        await maybeTask.TapNoneAsync(() => called = true);
+
+        called.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_ValueTask_AsyncAction_Should_ExecuteAction_When_HasNoValue()
+    {
+        bool called = false;
+        ValueTask<Maybe<int>> maybeTask = new(Maybe<int>.None);
+
+        await maybeTask.TapNoneAsync(async () => { await Task.Yield(); called = true; });
+
+        called.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_ValueTask_AsyncAction_Should_NotExecuteAction_When_HasValue()
+    {
+        bool called = false;
+        ValueTask<Maybe<int>> maybeTask = new((Maybe<int>)42);
+
+        await maybeTask.TapNoneAsync(async () => { await Task.Yield(); called = true; });
+
+        called.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task TapNoneAsync_Task_AsyncAction_Should_NotExecuteAction_When_HasValue()
+    {
+        bool called = false;
+        Task<Maybe<int>> maybeTask = Task.FromResult<Maybe<int>>(42);
+
+        await maybeTask.TapNoneAsync(async () => { await Task.Yield(); called = true; });
+
+        called.Should().BeFalse();
+    }
+
     // GetValueOrElse
     [Fact]
     public void GetValueOrElse_Should_ReturnValue_When_HasValue()

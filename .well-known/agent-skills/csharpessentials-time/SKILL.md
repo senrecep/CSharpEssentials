@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-time
-description: Use when you need testable time — IDateTimeProvider wraps .NET's TimeProvider so production code uses TimeProvider.System while tests use FakeTimeProvider to freeze/advance the clock; also provides .ToDateOnly() and .ToTimeOnly() DateTime extension methods.
+description: Use when you need testable time — IDateTimeProvider wraps clock access so production code uses DateTimeProvider while tests use the built-in FakeDateTimeProvider to freeze/advance/set the clock; also provides .ToDateOnly() and .ToTimeOnly() DateTime extension methods.
 ---
 
 # CSharpEssentials.Time
@@ -69,24 +69,27 @@ public class OrderService
 
 ---
 
-## Test with FakeTimeProvider
+## Test with FakeDateTimeProvider
+
+`CSharpEssentials.Time` ships a built-in `FakeDateTimeProvider` — no extra NuGet package needed.
 
 ```csharp
-// Install: dotnet add package Microsoft.Extensions.TimeProvider.Testing
-using Microsoft.Extensions.Time.Testing;
+var fixed = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
+var fake  = new FakeDateTimeProvider(fixed);
 
-var fake = new FakeTimeProvider();
-fake.SetUtcNow(new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero));
+// Inject as IDateTimeProvider
+var svc   = new OrderService(fake);
 
-var provider = new DateTimeProvider(fake);
-var svc      = new OrderService(provider);
-
-var order = svc.Create(cart);
-Assert.Equal(new DateOnly(2025, 1, 15), order.DueDate.AddDays(-7));
-
-// Advance the clock
+// Advance the clock without Thread.Sleep
 fake.Advance(TimeSpan.FromHours(2));
-Assert.Equal(new TimeOnly(12, 0, 0), provider.UtcNowTime);
+fake.UtcNow // → 2025-01-15 12:00:00
+
+// Jump to a specific instant
+fake.SetTime(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+// NET6+ only
+DateOnly date = fake.UtcNowDate;
+TimeOnly time = fake.UtcNowTime;
 ```
 
 ---
