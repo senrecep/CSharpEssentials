@@ -933,9 +933,9 @@ Result<User> user = await ResiliencePolicy
 
 ## 13. CSharpEssentials.Mediator — Pipeline Behaviors
 
-**What it is:** MediatR pipeline behaviors for cross-cutting concerns: validation, logging, caching, and transactions.
+**What it is:** MediatR pipeline behaviors for cross-cutting concerns: validation, logging, exception handling, caching, and transactions.
 
-**Why it exists:** CQRS handlers often need the same cross-cutting logic — validate input, log execution, cache results, wrap in a transaction. Pipeline behaviors apply these concerns declaratively via marker interfaces rather than repeating code in every handler.
+**Why it exists:** CQRS handlers often need the same cross-cutting logic — validate input, log execution, convert exceptions to Result failures, cache results, wrap in a transaction. Pipeline behaviors apply these concerns declaratively via marker interfaces rather than repeating code in every handler.
 
 ### Behaviors
 
@@ -943,16 +943,63 @@ Result<User> user = await ResiliencePolicy
 |----------|-----------------|-------------|
 | `ValidationBehavior` | — (auto for all) | Runs CSharpEssentials.Validation before handler; returns `Result.Failure` with validation errors |
 | `LoggingBehavior` | `ILoggableRequest` | Logs request/response details |
+| `ExceptionHandlingBehavior` | — (auto for `Result` / `Result<T>`) | Catches handler exceptions; converts to `Result.Failure(Error.Exception(ex))`; `OperationCanceledException` always propagates |
 | `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `CacheDuration` |
 | `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope` |
+
+### ExceptionHandlingBehavior
+
+Singleton behavior that sits between `LoggingBehavior` and `CachingBehavior`. No interface or attribute needed — it activates automatically when `TResponse` is `Result` or `Result<T>`. Handlers returning other types pass through with zero overhead.
+
+`Error.Exception(ex)` shape:
+
+| Property | Value |
+|----------|-------|
+| `ErrorType` | `Failure` |
+| `Code` | Exception type name (e.g. `"InvalidOperationException"`) |
+| `Description` | Exception message |
+
+```csharp
+// Registration
+builder.Services.AddMediatorExceptionHandlingBehavior(); // singleton
+
+// Handler — no try/catch needed; exceptions become Result.Failure
+public record ProcessPaymentCommand(Guid OrderId, decimal Amount)
+    : ICommand<Result>;
+
+public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Result>
+{
+    private readonly IPaymentGateway _paymentGateway;
+
+    public ProcessPaymentHandler(IPaymentGateway paymentGateway)
+        => _paymentGateway = paymentGateway;
+
+    public async ValueTask<Result> Handle(ProcessPaymentCommand command, CancellationToken ct)
+    {
+        // Unhandled exceptions are caught by ExceptionHandlingBehavior
+        // and returned as Result.Failure(Error.Exception(ex))
+        await _paymentGateway.ChargeAsync(command.OrderId, command.Amount, ct);
+        return Result.Success();
+    }
+}
+
+// Caller — stays on the Result railway; no try/catch required
+Result result = await mediator.Send(new ProcessPaymentCommand(orderId, 99.99m));
+if (result.IsFailure)
+{
+    // result.Error.Code        => "HttpRequestException"
+    // result.Error.Description => "Payment gateway timed out"
+}
+```
 
 ### Registration
 
 | Method | What It Does |
 |--------|-------------|
-| `AddMediatorBehaviors()` | Registers all four behaviors |
+| `AddMediatorBehaviors()` | Registers all five behaviors |
 | `AddMediatorValidationBehavior()` | Registers validation only |
 | `AddMediatorLoggingBehavior()` | Registers logging only |
+| `AddMediatorExceptionHandlingBehavior()` | Registers exception handling only (singleton) |
 | `AddMediatorCachingBehavior()` | Registers caching only |
 | `AddMediatorTransactionBehavior()` | Registers transaction only |
 
