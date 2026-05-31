@@ -59,7 +59,7 @@ curl -s -X POST https://localhost:5001/api/demo/validation \
 curl -s https://localhost:5001/api/demo/slow
 ```
 
-### 6. Health Check (excluded from logging by PathFilter)
+### 6. Health Check (excluded from logging by IgnorePaths)
 
 ```bash
 curl -s https://localhost:5001/health
@@ -93,41 +93,19 @@ curl -s https://localhost:5001/health
 ## Configuration Options
 
 ```csharp
-builder.Services.AddRequestResponseLogging(options =>
+app.AddRequestResponseLogging(opt =>
 {
-    options.UseLogWriter<StructuredJsonLogWriter>();
-
-    // Toggle what gets captured
-    options.LogRequestBody = true;
-    options.LogResponseBody = true;
-    options.LogRequestHeaders = true;
-    options.LogResponseHeaders = true;
-
-    // Exclude certain paths from logging
-    options.PathFilter = path => !path.StartsWith("/health");
-
-    // Limit body size to prevent memory issues
-    options.MaxBodyLength = 1024 * 64; // 64 KB
+    opt.IgnorePaths("/health", "/metrics");
+    opt.UseLogger(loggerFactory, options =>
+    {
+        options.LoggingLevel = LogLevel.Information;
+    });
 });
 ```
 
-## Custom Log Writer
+## Custom Handler
 
-The `ILogWriter` interface allows complete control over how logs are persisted:
-
-```csharp
-public interface ILogWriter
-{
-    Task WriteAsync(RequestResponseContext context, CancellationToken cancellationToken = default);
-}
-```
-
-Implementations can write to:
-- Console / Structured JSON (shown here)
-- Files with rotation
-- Databases (SQL Server, PostgreSQL, MongoDB)
-- Message queues (RabbitMQ, Kafka, Azure Service Bus)
-- Cloud logging services (AWS CloudWatch, Azure Application Insights, GCP Logging)
+`ILogWriter` interface'i internal'dır — custom implementasyon için `UseHandler(Func<RequestResponseContext, Task> handler)` kullan.
 
 ## Security Considerations
 
