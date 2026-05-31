@@ -298,6 +298,39 @@ public class TheseTests
     }
 
     [Fact]
+    public void ToResultLenient_Should_ReturnSuccess_When_IsRight()
+    {
+        These<Error, int> these = These<Error, int>.Right(42);
+
+        Result<int> result = these.ToResultLenient();
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public void ToResultLenient_Should_ReturnFailure_When_IsLeft()
+    {
+        These<Error, int> these = These<Error, int>.Left(Error.Failure("E", "fail"));
+
+        Result<int> result = these.ToResultLenient();
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Partition_Should_HandleEmptyCollection()
+    {
+        var items = Array.Empty<These<string, int>>();
+
+        var (lefts, rights, boths) = items.Partition();
+
+        lefts.Should().BeEmpty();
+        rights.Should().BeEmpty();
+        boths.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Partition_Should_SeparateIntoThreeGroups()
     {
         var items = new[]

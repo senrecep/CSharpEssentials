@@ -54,4 +54,20 @@ public class FakeDateTimeProviderTests
         provider.TimeZone.Should().Be(TimeZoneInfo.Utc);
         provider.TimeZoneUtc.Should().Be(TimeZoneInfo.Utc);
     }
+
+#if NET6_0_OR_GREATER
+    [Fact]
+    public void UtcNowDate_Should_ReturnDateOnly()
+    {
+        var provider = new FakeDateTimeProvider(FixedTime);
+        provider.UtcNowDate.Should().Be(DateOnly.FromDateTime(FixedTime.UtcDateTime));
+    }
+
+    [Fact]
+    public void UtcNowTime_Should_ReturnTimeOnly()
+    {
+        var provider = new FakeDateTimeProvider(FixedTime);
+        provider.UtcNowTime.Should().Be(TimeOnly.FromDateTime(FixedTime.UtcDateTime));
+    }
+#endif
 }

@@ -146,3 +146,22 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 | `Traverse(selector)` | Map then sequence | `Result<TOut[]>` |
 | `Partition()` | Split | `(T[] Successes, Error[] Errors)` |
 | `FirstFailureOrSuccesses()` | Short-circuit | `Result` or `Result<T[]>` |
+
+### TapIf — Conditional Side Effects
+
+```csharp
+Result<int> result = Result<int>.Success(42);
+
+// Predicate-based tap — action fires only when Success AND predicate is true
+result.TapIf(v => v > 10, v => logger.Log($"Large value: {v}"));
+
+// Bool condition
+result.TapIf(featureEnabled, v => Audit(v));
+
+// Async variants
+await result.TapIfAsync(v => v > 10, async v => await AuditAsync(v));
+await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
+
+// Works on Task<Result<T>> and ValueTask<Result<T>>
+await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
+```

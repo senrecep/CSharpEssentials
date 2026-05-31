@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-maybe
-description: Use when representing optional values explicitly — Maybe<T> as a null-safe container, Maybe.From() for creation, HasValue/HasNoValue, Map/Bind chaining, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.
+description: Use when representing optional values explicitly — Maybe<T> as a null-safe container, Maybe.From()/FromTry() for creation, HasValue/HasNoValue, Map/Bind chaining, TapNone for None-side effects, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.
 ---
 
 # CSharpEssentials.Maybe
@@ -39,6 +39,14 @@ string val  = maybe.GetValueOrDefault("fallback");
 string val  = maybe.GetValueOrThrow();             // throws if None
 ```
 
+## Exception-safe Creation
+
+```csharp
+// Returns None if the factory throws — never propagates the exception
+Maybe<int>  n = Maybe<int>.FromTry(() => int.Parse(input));
+Maybe<User> u = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json));
+```
+
 ## Pattern Match
 
 ```csharp
@@ -58,6 +66,24 @@ string display = Maybe.From(user?.Email)
 // Bind: flatMap — when the transform itself returns Maybe<T>
 Maybe<Address> address = Maybe.From(user)
     .Bind(u => Maybe.From(u?.Address));
+```
+
+## None-side Effects
+
+```csharp
+// TapNone — runs only when None; returns the same Maybe unchanged
+maybe.TapNone(() => logger.LogWarning("Value was absent"));
+
+// Async — instance and extension variants
+await maybe.TapNoneAsync(async () => await NotifyAsync());
+await GetMaybeAsync().TapNoneAsync(() => fallback());
+
+// GetValueOrElse — lazy factory, only called when None
+int v = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
+
+// OrElse — lazy Maybe chain, alias for Or(Func<Maybe<T>>)
+Maybe<Config> cfg = GetCached().OrElse(() => LoadFromDisk());
+await GetCached().OrElseAsync(() => Task.FromResult(LoadFromDisk()));
 ```
 
 ## Bridge to Result
