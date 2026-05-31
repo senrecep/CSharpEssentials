@@ -8,6 +8,7 @@ public static class MediatorExtensions
     [
         typeof(CSharpEssentials.Mediator.ValidationBehavior<,>),
         typeof(CSharpEssentials.Mediator.LoggingBehavior<,>),
+        typeof(CSharpEssentials.Mediator.ExceptionHandlingBehavior<,>),
         typeof(CSharpEssentials.Mediator.CachingBehavior<,>),
         typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>)
     ];
@@ -16,6 +17,7 @@ public static class MediatorExtensions
     {
         services.AddScoped(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.ValidationBehavior<,>));
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.LoggingBehavior<,>));
+        services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.ExceptionHandlingBehavior<,>));
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.CachingBehavior<,>));
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>));
         return services;
@@ -30,6 +32,12 @@ public static class MediatorExtensions
     public static IServiceCollection AddMediatorLoggingBehavior(this IServiceCollection services)
     {
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.LoggingBehavior<,>));
+        return services;
+    }
+
+    public static IServiceCollection AddMediatorExceptionHandlingBehavior(this IServiceCollection services)
+    {
+        services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.ExceptionHandlingBehavior<,>));
         return services;
     }
 
