@@ -32,6 +32,18 @@ public class MediatorExtensionsTests
     }
 
     [Fact]
+    public void AddMediatorExceptionHandlingBehavior_Should_Register_ExceptionHandlingBehavior()
+    {
+        var services = new ServiceCollection();
+
+        services.AddMediatorExceptionHandlingBehavior();
+
+        services.Should().ContainSingle(sd => sd.ServiceType == typeof(IPipelineBehavior<,>)
+            && sd.ImplementationType == typeof(ExceptionHandlingBehavior<,>)
+            && sd.Lifetime == ServiceLifetime.Singleton);
+    }
+
+    [Fact]
     public void AddMediatorCachingBehavior_Should_Register_CachingBehavior()
     {
         var services = new ServiceCollection();
@@ -62,6 +74,7 @@ public class MediatorExtensionsTests
 
         services.Should().Contain(sd => sd.ImplementationType == typeof(ValidationBehavior<,>));
         services.Should().Contain(sd => sd.ImplementationType == typeof(LoggingBehavior<,>));
+        services.Should().Contain(sd => sd.ImplementationType == typeof(ExceptionHandlingBehavior<,>));
         services.Should().Contain(sd => sd.ImplementationType == typeof(CachingBehavior<,>));
         services.Should().Contain(sd => sd.ImplementationType == typeof(TransactionScopeBehavior<,>));
     }

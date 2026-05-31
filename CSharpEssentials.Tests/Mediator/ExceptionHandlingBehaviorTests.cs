@@ -124,6 +124,23 @@ public class ExceptionHandlingBehaviorTests
     }
 
     [Fact]
+    public async Task Handle_Should_Propagate_OperationCanceledException_When_AsyncHandler_Throws_OCE()
+    {
+        var behavior = new ExceptionHandlingBehavior<TestExceptionCommand, Result>();
+        var command = new TestExceptionCommand("test");
+        MessageHandlerDelegate<TestExceptionCommand, Result> asyncOceNext =
+            async (_, _) =>
+            {
+                await Task.Yield();
+                throw new OperationCanceledException();
+            };
+
+        Func<Task> act = () => behavior.Handle(command, asyncOceNext, default).AsTask();
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public async Task Handle_Should_Propagate_OperationCanceledException_When_Token_Is_Cancelled()
     {
         var behavior = new ExceptionHandlingBehavior<TestExceptionCommand, Result>();
