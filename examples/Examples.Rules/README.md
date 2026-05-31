@@ -6,7 +6,7 @@ This console application demonstrates the rule engine from `CSharpEssentials.Rul
 
 | Feature | Description |
 |---------|-------------|
-| **Simple Rules** | Create individual validation rules with `Rule.Create<T>` |
+| **Simple Rules** | Create individual validation rules with `Func<T, Result>.ToRule()` |
 | **Rule Engine** | Evaluate multiple rules where ALL must pass (AND) |
 | **Or Rules** | Combine rules where AT LEAST ONE must pass |
 | **Result Integration** | Rules return `Result` for composable validation |

@@ -74,7 +74,7 @@ public User GetUser(Guid id)
 public Result<User> GetUser(Guid id)
 {
     var user = _db.Find(id);
-    if (user is null) return Error.NotFound("User not found");
+    if (user is null) return Error.NotFound("User.NotFound", "User not found");
     return Result.Success(user);
 }
 
@@ -94,11 +94,11 @@ Model the absence of a value without null references.
 string display = user?.Profile?.DisplayName?.Trim()?.ToUpper() ?? "ANONYMOUS";
 
 // ✅ Maybe<T>: pipeline that handles absence at every step
-string display = Maybe.Return(user)
-    .Bind(u  => Maybe.Return(u.Profile))
-    .Bind(p  => Maybe.Return(p.DisplayName))
+string display = Maybe.From(user)
+    .Bind(u  => Maybe.From(u.Profile))
+    .Bind(p  => Maybe.From(p.DisplayName))
     .Map(n   => n.Trim().ToUpper())
-    .Fallback("ANONYMOUS");
+    .GetValueOrDefault("ANONYMOUS");
 ```
 
 ### Any\<T1,T2,...\> — Discriminated Unions
@@ -108,7 +108,7 @@ A value that is exactly one of several types — exhaustively matched at compile
 ```csharp
 Any<Circle, Rectangle, Triangle> shape = new Circle(radius: 5);
 
-double area = shape.Match(
+AnyActionResult<double> area = shape.Match(
     circle    => Math.PI * circle.Radius * circle.Radius,
     rectangle => rectangle.Width * rectangle.Height,
     triangle  => 0.5 * triangle.Base * triangle.Height
@@ -121,20 +121,17 @@ double area = shape.Match(
 Build complex validation logic from simple, reusable rules that return `Result<T>`.
 
 ```csharp
-var minAge     = Rule.Create<User>(u => u.Age >= 18,          Error.Validation("Must be 18+"));
-var validEmail = Rule.Create<User>(u => u.Email.Contains('@'), Error.Validation("Invalid email"));
-var verified   = Rule.Create<User>(u => u.IsVerified,          Error.Validation("Account not verified"));
+Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() : Result.Failure(Error.Validation("Age.MinAge", "Must be 18+"));
+Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : Result.Failure(Error.Validation("Email.Invalid", "Invalid email"));
+Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Result.Failure(Error.Validation("Account.NotVerified", "Account not verified"));
 
 // AND — all rules must pass, collects every failure
-Result<User> result = RuleEngine
-    .Create(minAge, validEmail, verified)
-    .Evaluate(user);
+Result<User> result = RuleEngine.And(
+    new IRule<User>[] { minAge.ToRule(), validEmail.ToRule(), verified.ToRule() }, user);
 
 // OR — at least one rule must pass
-Result<User> adminOrMod = RuleEngine
-    .Create(isAdmin, isModerator)
-    .Or()
-    .Evaluate(user);
+Result<User> adminOrMod = RuleEngine.Or(
+    new IRule<User>[] { isAdmin.ToRule(), isModerator.ToRule() }, user);
 ```
 
 ### AspNetCore — Result → HTTP, Automatically
@@ -143,14 +140,14 @@ Map `Result<T>` to correct HTTP status codes without writing any error-mapping b
 
 ```csharp
 // Program.cs
-app.AddCSharpEssentials(); // registers GlobalExceptionHandler + ProblemDetails
+builder.Services.AddEnhancedProblemDetails(); // registers ProblemDetails
 
 // Controller — business logic returns Result<T>, HTTP mapping is automatic
 [HttpGet("{id:guid}")]
 public IActionResult GetProduct(Guid id)
     => _productService.GetProduct(id).Match(
         onSuccess: product => Ok(product),
-        onFailure: errors  => errors.ToActionResult() // 404 / 400 / 409 based on ErrorType
+        onError: errors  => errors.ToActionResult() // 404 / 400 / 409 based on ErrorType
     );
 
 // Service — chain multiple steps, first failure short-circuits

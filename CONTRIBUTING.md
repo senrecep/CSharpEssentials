@@ -12,6 +12,30 @@ We love your input! We want to make contributing to CSharpEssentials as easy and
 
 By participating in this project, you are expected to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 
+## Getting Started
+
+### Prerequisites
+
+- **.NET SDK**: .NET 9 SDK (or .NET 8 SDK for netstandard targets)
+- **Git**: For version control
+
+### First-Time Setup
+
+```bash
+# Clone your fork
+git clone https://github.com/senrecep/CSharpEssentials.git
+cd CSharpEssentials
+
+# Configure git hooks (enables pre-commit badge validation)
+git config core.hooksPath .githooks
+
+# Build the solution
+dotnet build
+
+# Run the test suite
+dotnet test
+```
+
 ## Development Workflow
 
 Here's how you can contribute to the project using Git:
@@ -81,7 +105,7 @@ Here's how you can contribute to the project using Git:
 
 We use GitHub to host code, to track issues and feature requests, as well as accept pull requests.
 
-## We Use [Github Flow](https://guides.github.com/introduction/flow/index.html)
+## We Use [Github Flow](https://docs.github.com/en/get-started/using-github/github-flow)
 
 Pull requests are the best way to propose changes to the codebase. We actively welcome your pull requests:
 

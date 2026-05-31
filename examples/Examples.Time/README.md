@@ -7,8 +7,7 @@ This console application demonstrates date/time utilities from `CSharpEssentials
 | Feature | Description |
 |---------|-------------|
 | **DateTimeProvider** | Abstraction over `DateTime.UtcNow` for testability |
-| **DateTime Extensions** | `StartOfDay`, `EndOfDay`, `StartOfMonth`, `EndOfMonth`, `StartOfWeek`, `ToUnixTimestamp` |
-| **TimeZone Conversions** | Convert between UTC and local time |
+| **DateTime Extensions** | `ToDateOnly()` (NET6+), `ToTimeOnly()` (NET6+) |
 | **Custom Provider** | Fixed provider for unit testing |
 
 ## Running

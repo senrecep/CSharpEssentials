@@ -97,6 +97,8 @@ Error[] allErrors = validationError + conflictError;
 
 ## 2. CSharpEssentials.Results — Railway-Oriented Programming
 
+> **Note:** The NuGet package is named `CSharpEssentials.Results`, but the actual C# namespace is `CSharpEssentials.ResultPattern`. Add `using CSharpEssentials.ResultPattern;` in your code.
+
 **What it is:** A Result monad that makes success and failure explicit in your type signatures.
 
 **Why it exists:** Traditional C# uses exceptions for flow control and null for absence — both are invisible in method signatures and break composability. `Result<T>` forces every caller to handle both paths, enables method chaining that short-circuits on failure, and makes error accumulation trivial.
@@ -113,9 +115,17 @@ Two core types: `Result` (no value, just success/failure) and `Result<T>` (carri
 | `Result.Failure(errors)` | `Result` | Multiple errors failure |
 | `Result<T>.Failure(error)` | `Result<T>` | Typed failure |
 | `Result.SuccessIf(condition, error)` | `Result` | Guard clause — success if condition holds |
+| `Result.SuccessIf(condition, value, error)` | `Result<T>` | Guard clause — success with value if condition holds |
 | `Result.FailureIf(condition, error)` | `Result` | Guard clause — failure if condition holds |
-| `Result.Try(action, handler)` | `Result` | Wraps try/catch, converts exception to Error |
-| `Result.Try(func, handler)` | `Result<T>` | Typed try/catch wrapper |
+| `Result.FailureIf<TValue>(condition, error)` | `Result<T>` | Guard clause — typed failure if condition holds |
+| `Result.Try(action, handler)` | `Result` | Wraps try/catch around `Action`, converts exception to Error |
+| `Result.Try(func, handler)` | `Result<T>` | Wraps try/catch around `Func<T>`, returns value on success |
+| `Result.Try(func, handler)` | `Result<T>` | Wraps try/catch around `Func<Result<T>>`, propagates inner result |
+| `Result.Try(func, handler)` | `Result` | Wraps try/catch around `Func<Result>`, propagates inner result |
+| `Result.TryAsync(action, handler)` | `Task<Result>` | Async try/catch around `Func<Task>` |
+| `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<T>>` |
+| `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<Result<T>>>` |
+| `Result.TryAsync(func, handler)` | `Task<Result>` | Async try/catch around `Func<Task<Result>>` |
 | `Result.From(errors)` | `Result` | Success if errors empty, failure otherwise |
 | `Result<int> r = 42;` | `Result<int>` | Implicit operator for ergonomic creation |
 
@@ -428,8 +438,8 @@ var (values, missingCount) = maybes.Partition();
 
 | Method | Returns | What It Does |
 |--------|---------|-------------|
-| `Match(first:, second:, ...)` | `AnyActionResult<T>` | Transforms the active variant — exhaustive |
-| `Switch(first:, second:, ...)` | `AnyActionStatus` | Executes action for active variant — exhaustive |
+| `Match(first:, second:, ...)` | `AnyActionResult<T>` | Transforms the active variant — partial (delegates are optional) |
+| `Switch(first:, second:, ...)` | `AnyActionStatus` | Executes action for active variant — partial (delegates are optional) |
 | `Deconstruct(out index, out value)` | void | C# deconstruction support |
 
 ```csharp
@@ -931,7 +941,7 @@ Result<User> user = await ResiliencePolicy
 
 | Behavior | Marker Interface | What It Does |
 |----------|-----------------|-------------|
-| `ValidationBehavior` | — (auto for all) | Runs FluentValidation before handler; returns `Result.Failure` with validation errors |
+| `ValidationBehavior` | — (auto for all) | Runs CSharpEssentials.Validation before handler; returns `Result.Failure` with validation errors |
 | `LoggingBehavior` | `ILoggableRequest` | Logs request/response details |
 | `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `CacheDuration` |
 | `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope` |
