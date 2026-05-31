@@ -65,6 +65,8 @@
     <PackageReference Include="CSharpEssentials.Rules"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
+    <PackageReference Include="CSharpEssentials.These"
+      Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Time"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
@@ -91,6 +93,8 @@
     <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
 
+    <ProjectReference Include="..\CSharpEssentials.These\CSharpEssentials.These.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Time\CSharpEssentials.Time.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
