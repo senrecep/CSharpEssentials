@@ -10,6 +10,7 @@ Meta-package that bundles the core functional modules of the ecosystem. Install 
 - `CSharpEssentials.Maybe`
 - `CSharpEssentials.Json`
 - `CSharpEssentials.Any`
+- `CSharpEssentials.These`
 - `CSharpEssentials.Rules`
 - `CSharpEssentials.Entity`
 - `CSharpEssentials.Http`
