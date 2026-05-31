@@ -158,6 +158,23 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         return new(value, value is not null);
     }
 
+    /// <summary>
+    /// Creates a Maybe from the specified factory function, catching any exceptions.
+    /// </summary>
+    /// <param name="factory"></param>
+    /// <returns></returns>
+    public static Maybe<T> FromTry(Func<T> factory)
+    {
+        try
+        {
+            return From(factory());
+        }
+        catch
+        {
+            return None;
+        }
+    }
+
     public static bool operator ==(Maybe<T> maybe, T? value)
     {
         if (value is Maybe<T> maybeValue)
@@ -260,4 +277,12 @@ public readonly record struct Maybe : IMaybe
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public static Task<Maybe<T>> From<T>(Func<Task<T?>> valueTaskFunc, CancellationToken cancellationToken = default) => Maybe<T>.FromAsync(valueTaskFunc, cancellationToken);
+
+    /// <summary>
+    /// Creates a Maybe from the specified factory function, catching any exceptions.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="factory"></param>
+    /// <returns></returns>
+    public static Maybe<T> FromTry<T>(Func<T> factory) => Maybe<T>.FromTry(factory);
 }

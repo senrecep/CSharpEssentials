@@ -89,6 +89,31 @@ public readonly partial struct Maybe<T>
             await action().WithCancellation(cancellationToken);
         return this;
     }
+
+    /// <summary>
+    /// Executes the specified action if the Maybe has no value.
+    /// </summary>
+    /// <param name="action"></param>
+    /// <returns></returns>
+    public Maybe<T> TapNone(Action action)
+    {
+        if (HasNoValue)
+            action();
+        return this;
+    }
+
+    /// <summary>
+    /// Asynchronously executes the specified action if the Maybe has no value.
+    /// </summary>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<Maybe<T>> TapNoneAsync(Func<Task> action, CancellationToken cancellationToken = default)
+    {
+        if (HasNoValue)
+            await action().WithCancellation(cancellationToken);
+        return this;
+    }
 }
 
 public static partial class MaybeExtensions
@@ -293,5 +318,61 @@ public static partial class MaybeExtensions
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
         return await maybe.TapAsync(action, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the specified action if the Maybe has no value.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="maybeTask"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Maybe<T>> TapNoneAsync<T>(this Task<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
+    {
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        return maybe.TapNone(action);
+    }
+
+    /// <summary>
+    /// Asynchronously executes the specified action if the Maybe has no value.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="maybeTask"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async Task<Maybe<T>> TapNoneAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task> action, CancellationToken cancellationToken = default)
+    {
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        return await maybe.TapNoneAsync(action, cancellationToken);
+    }
+
+    /// <summary>
+    /// Executes the specified action if the Maybe has no value.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="maybeTask"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Maybe<T>> TapNoneAsync<T>(this ValueTask<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
+    {
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        return maybe.TapNone(action);
+    }
+
+    /// <summary>
+    /// Asynchronously executes the specified action if the Maybe has no value.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="maybeTask"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Maybe<T>> TapNoneAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<Task> action, CancellationToken cancellationToken = default)
+    {
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        return await maybe.TapNoneAsync(action, cancellationToken);
     }
 }
