@@ -7,9 +7,8 @@ This console application demonstrates enum utilities from `CSharpEssentials.Enum
 | Feature | Description |
 |---------|-------------|
 | **StringEnumAttribute** | Decorate enum values with string representations |
-| **GetStringValue** | Extract the string value from enum members |
-| **Enum Extensions** | `GetCount<T>()`, `ParseEnum<T>`, `GetValues<T>` |
-| **String Parsing** | Parse enums from their string attribute values |
+| **Enum Extensions** | `ToOptimizedString()`, `ToSnakeCase()`, `ToKebabCase()`, `Parse()`, `TryParse()`, `IsDefined()`, `GetNames()`, `GetValues()` |
+| **String Parsing** | Parse enums from their member names using source-generated extensions |
 
 ## Running
 
