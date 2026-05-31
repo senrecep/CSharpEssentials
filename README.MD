@@ -19,11 +19,12 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 | Package | Description | Docs | NuGet |
 |---------|-------------|------|-------|
-| `CSharpEssentials` | Meta-package: Results + Errors + Maybe + Any + Core + Enums | [📖](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
+| `CSharpEssentials` | Meta-package: Results + Errors + Maybe + Any + These + Core + Enums | [📖](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
 | `CSharpEssentials.Results` | `Result<T>` — railway-oriented error handling without exceptions | [📖](examples/Examples.Results/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
 | `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata | [📖](examples/Examples.Errors/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
 | `CSharpEssentials.Maybe` | `Maybe<T>` — explicit optionals, no null reference exceptions | [📖](examples/Examples.Maybe/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
 | `CSharpEssentials.Any` | `Any<T1,T2,...>` — type-safe discriminated unions | [📖](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
+| `CSharpEssentials.These` | `These<TError,TValue>` — 3-state union: Left, Right, Both (error + value simultaneously) | [📖](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
 | `CSharpEssentials.Core` | String/GUID/collection utilities | [📖](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
 | `CSharpEssentials.Enums` | `[StringEnum]` source generator — AOT-safe enum↔string | [📖](examples/Examples.Enums/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [📖](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
@@ -42,7 +43,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 20 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 21 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
 
 ## Installation
 
