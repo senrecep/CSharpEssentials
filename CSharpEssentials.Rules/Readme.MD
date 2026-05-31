@@ -250,3 +250,28 @@ result.Match(
 ```
 
 Rules return `Result` / `Result<T>` — the same type used throughout CSharpEssentials — so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
+
+### FromPredicate / FromPredicateAsync — Inline Rules Without Classes
+
+```csharp
+// Static error — reuse the same error for any failing context
+IRule<int> positiveRule = RuleEngine.FromPredicate<int>(
+    x => x > 0,
+    Error.Validation("Value.Negative", "Must be positive"));
+
+// Error factory — error message can reference the failing value
+IRule<int> rangeRule = RuleEngine.FromPredicate<int>(
+    x => x is >= 1 and <= 100,
+    x => Error.Validation("Value.OutOfRange", $"Value {x} must be between 1 and 100"));
+
+// Async predicate
+IAsyncRule<string> uniqueRule = RuleEngine.FromPredicateAsync<string>(
+    async s => await _db.IsUniqueAsync(s),
+    s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
+
+// Evaluate normally — works with all composition methods
+Result r = RuleEngine.Evaluate(positiveRule, 42);
+Result composed = RuleEngine.Evaluate(
+    new IRuleBase<int>[] { positiveRule, rangeRule }.And(),
+    value);
+```

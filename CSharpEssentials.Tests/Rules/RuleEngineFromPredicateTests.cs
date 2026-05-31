@@ -58,6 +58,17 @@ public class RuleEngineFromPredicateTests
     }
 
     [Fact]
+    public void FromPredicateAsync_WithFactory_Should_UseContextInError()
+    {
+        IAsyncRule<int> rule = RuleEngine.FromPredicateAsync<int>(
+            async x => { await Task.Yield(); return x > 0; },
+            x => Error.Failure("Negative.Value", $"Value {x} is not positive"));
+        Result result = RuleEngine.Evaluate(rule, -3);
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Description.Should().Contain("-3");
+    }
+
+    [Fact]
     public void FromPredicate_Should_WorkWithComplexContext()
     {
         IRule<string> rule = RuleEngine.FromPredicate<string>(

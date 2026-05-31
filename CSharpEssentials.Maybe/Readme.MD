@@ -98,3 +98,42 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 | `Sequence()` | `Maybe<T[]>` | `None` if any element is `None` |
 | `Traverse(selector)` | `Maybe<TOut[]>` | Applies selector then sequences |
 | `Partition()` | `(T[] Values, int NoneCount)` | Never returns `None` — always splits |
+
+### Exception-safe Creation
+
+```csharp
+// Returns None if the factory throws
+Maybe<int> result = Maybe<int>.FromTry(() => int.Parse(userInput));
+Maybe<User> user  = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json));
+```
+
+### TapNone — Side Effect on Absence
+
+```csharp
+Maybe<int> maybe = Maybe<int>.None;
+
+maybe.TapNone(() => logger.LogWarning("Value missing"));  // called when None
+
+// Async
+await maybe.TapNoneAsync(async () => await NotifyAsync("Missing"));
+
+// Via Task<Maybe<T>> / ValueTask<Maybe<T>>
+await GetMaybeAsync().TapNoneAsync(() => fallback());
+```
+
+### GetValueOrElse — Lazy Fallback
+
+```csharp
+// Factory only called when None (unlike GetValueOrDefault which always evaluates)
+int value = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
+```
+
+### OrElse — Lazy Maybe Chain
+
+```csharp
+// Alias for Or(Func<Maybe<T>>) — returns self if Some, calls factory if None
+Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
+
+// Async
+Maybe<Config> config = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
+```
