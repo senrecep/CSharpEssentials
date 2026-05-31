@@ -57,14 +57,14 @@ public class FakeDateTimeProviderTests
 
 #if NET6_0_OR_GREATER
     [Fact]
-    public void UtcNowDate_Should_ReturnDateOnly()
+    public void UtcNowDate_Should_ReturnDateOnly_When_ProviderInitialized()
     {
         var provider = new FakeDateTimeProvider(FixedTime);
         provider.UtcNowDate.Should().Be(DateOnly.FromDateTime(FixedTime.UtcDateTime));
     }
 
     [Fact]
-    public void UtcNowTime_Should_ReturnTimeOnly()
+    public void UtcNowTime_Should_ReturnTimeOnly_When_ProviderInitialized()
     {
         var provider = new FakeDateTimeProvider(FixedTime);
         provider.UtcNowTime.Should().Be(TimeOnly.FromDateTime(FixedTime.UtcDateTime));

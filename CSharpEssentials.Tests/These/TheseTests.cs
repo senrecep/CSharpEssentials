@@ -1,3 +1,4 @@
+using System.Globalization;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.These;
@@ -65,7 +66,7 @@ public class TheseTests
     [Fact]
     public void MapLeft_Should_TransformError_When_IsLeft()
     {
-        var these = These<string, int>.Left("err").MapLeft(e => e.ToUpper());
+        var these = These<string, int>.Left("err").MapLeft(e => e.ToUpper(CultureInfo.InvariantCulture));
 
         these.GetLeft().Value.Should().Be("ERR");
     }
@@ -73,7 +74,7 @@ public class TheseTests
     [Fact]
     public void MapLeft_Should_TransformError_When_IsBoth()
     {
-        var these = These<string, int>.Both("err", 5).MapLeft(e => e.ToUpper());
+        var these = These<string, int>.Both("err", 5).MapLeft(e => e.ToUpper(CultureInfo.InvariantCulture));
 
         these.IsBoth.Should().BeTrue();
         these.GetLeft().Value.Should().Be("ERR");
@@ -82,7 +83,7 @@ public class TheseTests
     [Fact]
     public void MapLeft_Should_PassThrough_When_IsRight()
     {
-        var these = These<string, int>.Right(1).MapLeft(e => e.ToUpper());
+        var these = These<string, int>.Right(1).MapLeft(e => e.ToUpper(CultureInfo.InvariantCulture));
 
         these.IsRight.Should().BeTrue();
     }
@@ -91,7 +92,7 @@ public class TheseTests
     public void FlatMap_Should_Chain_When_IsRight()
     {
         var these = These<string, int>.Right(5)
-            .FlatMap(x => These<string, string>.Right(x.ToString()));
+            .FlatMap(x => These<string, string>.Right(x.ToString(CultureInfo.InvariantCulture)));
 
         these.GetRight().Value.Should().Be("5");
     }
@@ -100,7 +101,7 @@ public class TheseTests
     public void FlatMap_Should_Chain_When_IsBoth()
     {
         var these = These<string, int>.Both("w", 5)
-            .FlatMap(x => These<string, string>.Right(x.ToString()));
+            .FlatMap(x => These<string, string>.Right(x.ToString(CultureInfo.InvariantCulture)));
 
         these.IsRight.Should().BeTrue();
         these.GetRight().Value.Should().Be("5");
@@ -110,7 +111,7 @@ public class TheseTests
     public void FlatMap_Should_ReturnLeft_When_IsLeft()
     {
         var these = These<string, int>.Left("err")
-            .FlatMap(x => These<string, string>.Right(x.ToString()));
+            .FlatMap(x => These<string, string>.Right(x.ToString(CultureInfo.InvariantCulture)));
 
         these.IsLeft.Should().BeTrue();
     }
@@ -280,6 +281,16 @@ public class TheseTests
     public void ToResult_Should_ReturnFailure_When_IsLeft()
     {
         These<Error, int> these = These<Error, int>.Left(Error.Failure("E", "fail"));
+
+        Result<int> result = these.ToResult();
+
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToResult_Should_ReturnFailure_When_IsBoth()
+    {
+        These<Error, int> these = These<Error, int>.Both(Error.Failure("E", "warn"), 42);
 
         Result<int> result = these.ToResult();
 
