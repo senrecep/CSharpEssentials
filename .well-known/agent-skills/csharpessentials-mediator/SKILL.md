@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-mediator
-description: Use when adding cross-cutting pipeline behaviors to CQRS handlers — ValidationBehavior (CSharpEssentials.Validation, throws EnhancedValidationException), LoggingBehavior (ILoggableRequest), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).
+description: Use when adding cross-cutting pipeline behaviors to CQRS handlers — ValidationBehavior (CSharpEssentials.Validation, throws EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (auto-converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).
 ---
 
 # CSharpEssentials.Mediator
@@ -27,11 +27,12 @@ using Microsoft.Extensions.DependencyInjection;
 ```csharp
 // Program.cs
 builder.Services.AddMediator();           // Mediator source generator
-builder.Services.AddMediatorBehaviors();  // all 4 behaviors
+builder.Services.AddMediatorBehaviors();  // all 5 behaviors
 
 // Or selectively
 builder.Services.AddMediatorValidationBehavior();
 builder.Services.AddMediatorLoggingBehavior();
+builder.Services.AddMediatorExceptionHandlingBehavior();
 builder.Services.AddMediatorCachingBehavior();
 builder.Services.AddMediatorTransactionBehavior();
 ```
@@ -87,6 +88,61 @@ public record SendEmailCommand(string To, string Body)
 
 ---
 
+## ExceptionHandlingBehavior — automatic for Result-returning handlers
+
+Registered as a singleton pipeline behavior between `LoggingBehavior` and `CachingBehavior`. When a handler throws, the behavior catches the exception and converts it to `Result.Failure(Error.Exception(ex))` — keeping the caller on the Result railway instead of forcing a try/catch at every call site. `OperationCanceledException` always propagates and is never caught.
+
+No interface needed — the behavior activates automatically for any handler whose `TResponse` is `Result` or `Result<T>`. Handlers returning other types (plain DTOs, etc.) pass through with zero overhead.
+
+### Pipeline execution order
+
+| Position | Behavior | Activation |
+|----------|----------|-----------|
+| 1 | `ValidationBehavior` | Auto (all handlers) |
+| 2 | `LoggingBehavior` | `ILoggableRequest` |
+| 3 | `ExceptionHandlingBehavior` | Auto (`Result` / `Result<T>` return types) |
+| 4 | `CachingBehavior` | `ICacheable` |
+| 5 | `TransactionScopeBehavior` | `ITransactionalRequest` |
+
+### Error shape
+
+`Error.Exception(ex)` produces an error with:
+- `ErrorType`: `Failure`
+- `Code`: exception type name (e.g. `"InvalidOperationException"`)
+- `Description`: exception message
+
+```csharp
+// No interface needed — automatically applied to all handlers returning Result or Result<T>
+public record ProcessPaymentCommand(Guid OrderId, decimal Amount)
+    : ICommand<Result>;
+
+public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Result>
+{
+    private readonly IPaymentGateway _paymentGateway;
+
+    public ProcessPaymentHandler(IPaymentGateway paymentGateway)
+        => _paymentGateway = paymentGateway;
+
+    public async ValueTask<Result> Handle(ProcessPaymentCommand command, CancellationToken ct)
+    {
+        // If this throws, ExceptionHandlingBehavior converts it to Result.Failure(Error.Exception(ex))
+        // instead of letting the exception propagate to the caller.
+        await _paymentGateway.ChargeAsync(command.OrderId, command.Amount, ct);
+        return Result.Success();
+    }
+}
+
+// Caller always receives a Result — no try/catch needed
+Result result = await mediator.Send(new ProcessPaymentCommand(orderId, 99.99m));
+if (result.IsFailure)
+{
+    // result.Error.Code        => "HttpRequestException"
+    // result.Error.Description => "Payment gateway timed out"
+}
+```
+
+---
+
 ## CachingBehavior — ICacheable
 
 Requires `IDistributedCache` registration.
@@ -124,6 +180,7 @@ public record PlaceOrderCommand(OrderDto Order)
 ## Best Practices
 
 - Register `ValidationBehavior` first — invalid requests should never reach the handler
+- `ExceptionHandlingBehavior` requires no setup; it activates automatically for `Result` / `Result<T>` handlers — do not add try/catch inside handlers that already return `Result`
 - Set `CacheFailures = false` — transient failures should not be cached
 - `ITransactionalRequest` only on commands writing to multiple tables in one operation
 - Use `IRequestLoggable` (not `IRequestResponseLoggable`) when the response contains PII
