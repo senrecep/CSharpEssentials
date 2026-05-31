@@ -1,6 +1,3 @@
-using System.Linq.Expressions;
-using System.Reflection;
-
 using Mediator;
 
 using CSharpEssentials.Errors;
@@ -30,8 +27,8 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
     public ExceptionHandlingBehavior()
     {
         Type t = typeof(TResponse);
-        _canHandleResponse = t == ValidationBehaviorCache.ResultType
-            || t.IsGenericType && t.GetGenericTypeDefinition() == ValidationBehaviorCache.GenericResultType;
+        _canHandleResponse = t == BehaviorCache.ResultType
+            || t.IsGenericType && t.GetGenericTypeDefinition() == BehaviorCache.GenericResultType;
     }
 
     public ValueTask<TResponse> Handle(
@@ -86,23 +83,9 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
     /// </summary>
     private static TResponse BuildFailureResponse(Error error, Type responseType)
     {
-        if (responseType == ValidationBehaviorCache.ResultType)
+        if (responseType == BehaviorCache.ResultType)
             return (TResponse)(object)Result.Failure(error);
 
-        // Result<T> — use compiled factory cached per concrete closed generic type.
-        Type genericType = ValidationBehaviorCache.GenericResultType.MakeGenericType(responseType.GenericTypeArguments[0]);
-
-        Func<Error[], object> factory = ValidationBehaviorCache.FailureFactories.GetOrAdd(genericType, static type =>
-        {
-            MethodInfo method = type.GetMethod(nameof(Result.Failure), [typeof(IEnumerable<Error>)])
-                ?? throw new InvalidOperationException($"Method {nameof(Result.Failure)} not found on {type.FullName}.");
-            ParameterExpression param = Expression.Parameter(typeof(Error[]), "errors");
-            UnaryExpression asEnumerable = Expression.Convert(param, typeof(IEnumerable<Error>));
-            MethodCallExpression call = Expression.Call(method, asEnumerable);
-            UnaryExpression boxed = Expression.Convert(call, typeof(object));
-            return Expression.Lambda<Func<Error[], object>>(boxed, param).Compile();
-        });
-
-        return (TResponse)factory([error]);
+        return (TResponse)BehaviorCache.GetOrCreateFactory(responseType)([error]);
     }
 }
