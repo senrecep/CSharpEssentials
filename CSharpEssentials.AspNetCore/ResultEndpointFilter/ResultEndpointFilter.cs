@@ -2,10 +2,11 @@
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.AspNetCore;
 
-public sealed class ResultEndpointFilter(IResultErrorMapper? mapper = null) : IEndpointFilter
+public sealed class ResultEndpointFilter : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
@@ -13,6 +14,7 @@ public sealed class ResultEndpointFilter(IResultErrorMapper? mapper = null) : IE
         if (result is null)
             return result;
 
+        IResultErrorMapper? mapper = context.HttpContext.RequestServices?.GetService<IResultErrorMapper>();
         Type resultType = result.GetType();
         if (resultType.IsGenericType && resultType.GetGenericTypeDefinition() == typeof(Result<>))
         {
