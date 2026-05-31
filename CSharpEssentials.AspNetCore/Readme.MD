@@ -50,12 +50,12 @@ app.UseVersionableSwagger();
 ### Result Endpoint Filter
 
 ```csharp
-builder.Services.AddScoped<ResultEndpointFilter>();
+builder.Services.AddSingleton<IResultErrorMapper, DomainErrorMapper>(); // Optional
 
 app.MapGet("/users/{id}", (int id) => GetUser(id))
    .AddEndpointFilter<ResultEndpointFilter>();
 
-// Returns 200 with value on success, 400 with errors on failure
+// Returns 200 with value on success, mapped error result on failure
 ```
 
 ### Structured Error Response
