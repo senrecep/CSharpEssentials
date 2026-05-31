@@ -28,6 +28,7 @@ A comprehensive guide to every package, method, and pattern in the CSharpEssenti
 - [RequestResponseLogging — HTTP Logging Middleware](#17-csharpessentialsrequestresponselogging--http-logging-middleware)
 - [GcpSecretManager — Secret Configuration](#18-csharpessentialsgcpsecretmanager--secret-configuration)
 - [Validation — Model-First Validation](#19-csharpessentialsvalidation--model-first-validation)
+- [These — 3-State Union](#20-csharpessentialsthese--3-state-union)
 - [Ecosystem Design Patterns](#ecosystem-design-patterns)
 
 ---
@@ -1331,6 +1332,100 @@ Result<Order> order = await GetOrderAsync(id)           // Task<Result<Order>>
 ```
 
 Short-circuits immediately: if `result.IsFailure` before validation runs, the existing errors pass through and the validator is never invoked. This makes it safe to chain multiple `ValidateWithAsync` calls without nested null/failure checks.
+
+---
+
+## 20. CSharpEssentials.These — 3-State Union
+
+**What it is:** A `readonly record struct` that holds Left (error only), Right (value only), or Both (error + value simultaneously) — the only functional type in the ecosystem that can carry both sides at once.
+
+**Why it exists:** `Result<T>` models binary outcomes: success or failure. `These<TError, TValue>` models partial success — scenarios where an operation produces a useful value *and* a warning/error simultaneously. Classic example: importing a CSV where valid rows succeed and invalid rows produce errors, but both results are needed by the caller.
+
+### Creating
+
+| Method | State | Meaning |
+|--------|-------|---------|
+| `These<TError, TValue>.Left(error)` | Left | Error only — no value |
+| `These<TError, TValue>.Right(value)` | Right | Value only — no error |
+| `These<TError, TValue>.Both(error, value)` | Both | Error + value simultaneously |
+
+### Inspecting
+
+| Property | What It Does |
+|----------|-------------|
+| `IsLeft` | True when error only (`HasLeft && !HasRight`) |
+| `IsRight` | True when value only (`!HasLeft && HasRight`) |
+| `IsBoth` | True when both present (`HasLeft && HasRight`) |
+| `GetLeft()` | Returns `Maybe<TError>` — `None` if no error |
+| `GetRight()` | Returns `Maybe<TValue>` — `None` if no value |
+
+### Transforming
+
+| Method | What It Does |
+|--------|-------------|
+| `Map(mapper)` | Transforms the value; passes Left through unchanged |
+| `MapLeft(mapper)` | Transforms the error; passes Right through unchanged |
+| `FlatMap(mapper)` | Chains into a new `These` — only if Right or Both |
+| `Tap(action)` | Side-effect on value when Right or Both |
+| `TapLeft(action)` | Side-effect on error when Left or Both |
+| `Match(onLeft, onRight, onBoth)` | Exhaustive pattern match — all three branches required |
+
+### Converting to Result
+
+| Method | Both behavior | Use when |
+|--------|--------------|----------|
+| `ToResult()` | Both → **failure** (strict) | Warning = blocking |
+| `ToResultLenient()` | Both → **success** (lenient) | Warning = non-blocking |
+
+### Collection Extensions
+
+| Method | What It Does |
+|--------|-------------|
+| `Partition(IEnumerable<These<TError,TValue>>)` | Returns `(lefts, rights, boths)` tuple |
+| `FromResult(Result<TValue>)` | Wraps a `Result` into `These` |
+
+```csharp
+// Partial success: import CSV rows, collect errors without stopping
+These<List<ImportError>, List<User>> result = ImportCsv(csv);
+
+result.Match(
+    onLeft:  errors        => Log("All rows failed", errors),
+    onRight: users         => db.SaveAll(users),
+    onBoth:  (errors, users) =>
+    {
+        Log($"{errors.Count} rows skipped", errors);
+        db.SaveAll(users);
+    });
+
+// Chain transformations
+These<string, int> doubled = These<string, int>.Both("warn", 5)
+    .Map(x => x * 2);          // Both("warn", 10)
+
+// Partition a mixed sequence
+var (lefts, rights, boths) = items.Partition();
+```
+
+### JSON Support
+
+`These<TError, TValue>` is fully serializable via `System.Text.Json`. The `[JsonConstructor]` private constructor enables round-trip without a custom converter.
+
+| JSON key | Maps to | Serialized |
+|----------|---------|-----------|
+| `isLeft` | `HasLeft` | Always |
+| `isRight` | `HasRight` | Always |
+| `left` | `LeftOrDefault` | When non-null |
+| `right` | `RightOrDefault` | When non-null |
+| `isBoth` | *(not present)* | `[JsonIgnore]` — derived from `isLeft && isRight` |
+
+```csharp
+// Both state round-trips cleanly
+var these = These<string, int>.Both("warning", 42);
+string json = JsonSerializer.Serialize(these);
+// {"isLeft":true,"isRight":true,"left":"warning","right":42}
+
+These<string, int> back = JsonSerializer.Deserialize<These<string, int>>(json);
+back.IsBoth   // true
+```
 
 ---
 
