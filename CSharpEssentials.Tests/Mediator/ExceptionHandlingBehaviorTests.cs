@@ -40,7 +40,7 @@ public class ExceptionHandlingBehaviorTests
         var behavior = new ExceptionHandlingBehavior<TestExceptionCommand, Result<int>>();
         var command = new TestExceptionCommand("test");
         MessageHandlerDelegate<TestExceptionCommand, Result<int>> next =
-            (_, _) => new ValueTask<Result<int>>(Result<int>.Success(42));
+            (_, _) => new ValueTask<Result<int>>(42);
 
         Result<int> result = await behavior.Handle(command, next, default);
 
@@ -129,7 +129,7 @@ public class ExceptionHandlingBehaviorTests
         var behavior = new ExceptionHandlingBehavior<TestExceptionCommand, Result>();
         var command = new TestExceptionCommand("test");
         using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         MessageHandlerDelegate<TestExceptionCommand, Result> cancellingNext =
             (_, ct) =>
