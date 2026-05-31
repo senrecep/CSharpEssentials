@@ -19,23 +19,29 @@ namespace CSharpEssentials.Mediator;
 /// </summary>
 internal static class BehaviorCache
 {
-    public static readonly Type ResultType = typeof(Result);
-    public static readonly Type GenericResultType = typeof(Result<>);
+    internal static readonly Type ResultType = typeof(Result);
+    internal static readonly Type GenericResultType = typeof(Result<>);
 
     /// <summary>
     /// Compiled <c>Result&lt;T&gt;.Failure(errors)</c> factories, keyed by concrete closed generic type.
     /// Bounded by the number of distinct <c>Result&lt;T&gt;</c> handler response types in the assembly.
     /// </summary>
-    public static readonly ConcurrentDictionary<Type, Func<Error[], object>> FailureFactories = new();
+    internal static readonly ConcurrentDictionary<Type, Func<Error[], object>> FailureFactories = new();
 
     /// <summary>
     /// Returns (or compiles and caches) a delegate that invokes <c>Result&lt;T&gt;.Failure(errors)</c>
-    /// for the closed generic type derived from <paramref name="responseType"/>.
+    /// for the closed generic <paramref name="responseType"/>.
     /// </summary>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="responseType"/> is not a generic type.
+    /// Callers must verify <see cref="Type.IsGenericType"/> before calling.
+    /// </exception>
     internal static Func<Error[], object> GetOrCreateFactory(Type responseType)
     {
-        Type genericType = GenericResultType.MakeGenericType(responseType.GenericTypeArguments[0]);
-        return FailureFactories.GetOrAdd(genericType, static type =>
+        if (!responseType.IsGenericType)
+            throw new ArgumentException($"Expected a generic type, but got {responseType.FullName}.", nameof(responseType));
+
+        return FailureFactories.GetOrAdd(responseType, static type =>
         {
             MethodInfo method = type.GetMethod(nameof(Result.Failure), [typeof(IEnumerable<Error>)])
                 ?? throw new InvalidOperationException($"Method {nameof(Result.Failure)} not found on {type.FullName}.");
