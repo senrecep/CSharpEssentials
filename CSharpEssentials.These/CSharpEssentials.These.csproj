@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
+    <PackageId>CSharpEssentials.These</PackageId>
+    <Title>CSharpEssentials.These</Title>
+    <Product>CSharpEssentials.These</Product>
+    <Description>
+      These&lt;E, A&gt; — a third result type that can carry Left (error), Right (value), or Both.
+      Ideal for partial success scenarios, batch validation, and warning systems.
+    </Description>
+    <PackageTags>These,Result,Either,Functional,FunctionalProgramming,CSharpEssentials</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Results" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Maybe" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Errors" Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
+</Project>

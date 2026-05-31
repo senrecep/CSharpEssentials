@@ -113,6 +113,23 @@ public readonly partial struct Maybe<T>
         return this;
     }
 
+    /// <summary>
+    /// Returns the value if it exists, otherwise returns the result of the factory function. Alias for Or.
+    /// </summary>
+    /// <param name="factory"></param>
+    /// <returns></returns>
+    public Maybe<T> OrElse(Func<Maybe<T>> factory)
+        => Or(factory);
+
+    /// <summary>
+    /// Returns the value if it exists, otherwise returns the result of the factory function. Alias for Or.
+    /// </summary>
+    /// <param name="factory"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task<Maybe<T>> OrElseAsync(Func<Task<Maybe<T>>> factory, CancellationToken cancellationToken = default)
+        => await Or(factory, cancellationToken);
+
 }
 
 public static partial class MaybeExtensions

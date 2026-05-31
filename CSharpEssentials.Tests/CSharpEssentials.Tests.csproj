@@ -43,6 +43,7 @@
     <ProjectReference Include="..\CSharpEssentials.Rules\CSharpEssentials.Rules.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Mediator\CSharpEssentials.Mediator.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Validation\CSharpEssentials.Validation.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.These\CSharpEssentials.These.csproj" />
   </ItemGroup>
 
   <ItemGroup>

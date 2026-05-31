@@ -51,6 +51,14 @@ public readonly partial struct Maybe<T>
 
         return await selector(Value).WithCancellation(cancellationToken);
     }
+
+    /// <summary>
+    /// Returns the value if the Maybe has a value, otherwise returns the result of the factory function.
+    /// </summary>
+    /// <param name="factory"></param>
+    /// <returns></returns>
+    public T GetValueOrElse(Func<T> factory)
+        => HasValue ? Value : factory();
 }
 
 public static partial class MaybeExtensions
