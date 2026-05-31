@@ -39,19 +39,16 @@ The demo performs the following steps automatically:
 `ShopDbContext` inherits from `BaseDbContext`:
 
 ```csharp
-public class ShopDbContext : BaseDbContext
+public class ShopDbContext : BaseDbContext<ShopDbContext>
 {
-    public ShopDbContext(DbContextOptions<ShopDbContext> options) : base(options) { }
+    public ShopDbContext(
+        DbContextOptions<ShopDbContext> options,
+        IServiceScopeFactory serviceScopeFactory) : base(options, serviceScopeFactory) { }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
-        base.OnModelCreating(modelBuilder);
-
-        // Convert table/column names to snake_case automatically
-        modelBuilder.UseSnakeCaseNamingConvention();
-
-        // Store enums as snake_case strings (e.g. "electronics")
-        modelBuilder.UseEnumToStringConversion(StringCase.SnakeCase);
+        base.ConfigureConventions(configurationBuilder);
+        configurationBuilder.ConfigureEnumConventions(typeof(ShopDbContext).Assembly);
     }
 }
 ```
@@ -86,11 +83,13 @@ var all = db.Products.IgnoreQueryFilters().ToList();
 ### Offset-based
 
 ```csharp
-var page = _dbContext.Products
-    .OrderBy(p => p.Name)
-    .ToPaginatedList(pageNumber: 1, pageSize: 10);
+var request = new PaginationRequest { PageNumber = 1, PageSize = 10 };
 
-// page.Items        -> List<Product> for current page
+var page = await _dbContext.Products
+    .OrderBy(p => p.Name)
+    .PaginateAsync(request);
+
+// page.Items        -> IReadOnlyList<Product> for current page
 // page.TotalCount   -> Total items across all pages
 // page.TotalPages   -> Total number of pages
 // page.HasNextPage  -> bool
@@ -110,7 +109,7 @@ var request = new CursorPaginationRequest<DateTimeOffset>
 var response = await _dbContext.Logs
     .PaginateAsync(request, cursorSelector: x => x.CreatedAt);
 
-// response.NextCursor -> Continue from here
+// response.Next -> Continue from here
 ```
 
 ## Enum String Conversion

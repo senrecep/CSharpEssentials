@@ -6,11 +6,11 @@ This console application demonstrates the core utility extensions provided by `C
 
 | Feature | Description |
 |---------|-------------|
-| **Guid Generation** | `Guider.NewGuid()`, `NewGuidAsString()`, URL-safe encoding |
+| **Guid Generation** | `Guider.NewGuid()`, `Guider.ToStringFromGuid()`, `Guider.ToGuidFromString()` |
 | **String Extensions** | `ToPascalCase`, `ToCamelCase`, `ToSnakeCase`, `ToKebabCase`, `ToTrainCase`, `ToTitleCase`, `IsNumeric` (with optional `CultureInfo`) |
-| **Collection Extensions** | `IsNullOrEmpty`, `IsNotNullOrEmpty`, `AddRange` with params |
+| **Collection Extensions** | `IfAdd`, `IfAddRange`, `HasSameElements`, `AllTrue`, `AllFalse`, `WithoutNulls` |
 | **General Extensions** | `IsNull`, `IsNotNull`, `AsValueTask`, `In` |
-| **Random Items** | `RandomItem`, `RandomItems` from collections |
+| **Random Items** | `GetRandomItem`, `GetRandomItems` from collections |
 
 ## Running
 

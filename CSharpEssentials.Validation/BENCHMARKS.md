@@ -1,6 +1,6 @@
 # CSharpEssentials.Validation — Performance Benchmarks
 
-**vs. FluentValidation 11.x · BenchmarkDotNet v0.14.0 · Apple M3 Pro · .NET 9 / 10 / 11**
+**vs. FluentValidation 11.x · BenchmarkDotNet v0.14.0 · Apple M3 Pro · .NET 9 / 10 / 11 (preview)**
 
 ---
 
@@ -21,7 +21,7 @@ validation requirements, exercising equivalent logic on identical input data.
 | Machine | Apple M3 Pro — 12 cores (arm64) |
 | OS | macOS 26.3.1 / Darwin 25.3.0 |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser] |
-| Runtimes tested | .NET 9.0.4, .NET 10.0.7, .NET 11.0.0 |
+| Runtimes tested | .NET 9.0.4, .NET 10.0.7, .NET 11.0.0-preview.X |
 | FluentValidation | 11.11.0 |
 | CSharpEssentials.Validation | 3.0.x (lazy Configure + Span-based property parsing + lazy error list) |
 
