@@ -911,7 +911,7 @@ Reading accepts both formats, so existing rows still load. See [Migrating from 3
 | `ConvertFromJson<T>()` | Extension — deserialize from JSON string |
 | `PolymorphicJsonConverterFactory` | Handles polymorphic serialization |
 | `MultiFormatDateTimeConverter` | Parses multiple date/time formats |
-| `ConditionalStringEnumConverter` | Conditional enum to/from string |
+| `ConditionalStringEnumConverter` | Conditional enum to/from string (`AllowUndefinedValues = false` rejects undefined numbers) |
 | `StringEnumNaming` | Single naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
 
 ### StringEnumNaming
@@ -965,6 +965,7 @@ StringEnumNaming.TryParse<HttpKind>("HTTPStatus", out var kind);      // true
 | `AddErrorStatusCodeMapper<T>(lifetime = Singleton)` | Replaces the `IErrorStatusCodeMapper` |
 | `AddExceptionProblemMapper<T>(lifetime = Singleton)` | Adds an `IExceptionProblemMapper` (tried before the default mapper) |
 | `ConfigureModelValidatorResponse()` | Model validation errors as ProblemDetails |
+| `ConfigureInvalidModelStateResponse(Func<string, ModelError, Error>? = null)` | `[ApiController]` automatic 400 as an enhanced problem (code = model state key) |
 | `ConfigureSystemTextJson()` | Configures JSON serialization |
 
 ### EnhancedProblemDetailsOptions
@@ -1024,7 +1025,7 @@ app.UseEnhancedProblemDetails();
 
 | Method | What It Does |
 |--------|-------------|
-| `AddEnumBinding(Action<EnumBindingOptions>? = null)` | Optional configuration (`CanBind`, `NamingPolicy`, `AllowIntegerValues`) |
+| `AddEnumBinding(Action<EnumBindingOptions>? = null)` | Optional configuration (`CanBind`, `NamingPolicy`, `AllowIntegerValues`, `ErrorFactory`) |
 | `UseEnumBinding()` | Middleware that normalizes enum query/route values before binding (Minimal API incl. `[AsParameters]`, and MVC) |
 
 `[StringEnum]` enums accept the snake_case name, the C# member name (case-insensitive) or the number of a defined member (flags enums: comma-separated list). Invalid values return a 400 ProblemDetails response. Call it after routing selected the endpoint.

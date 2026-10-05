@@ -170,14 +170,14 @@ Configure the output with `AddEnhancedProblemDetails(o => ...)`. Minimal API (`T
 
 | Changed behavior | 3.x | 4.0 default | Restore with |
 |---|---|---|---|
-| `traceId` | `traceparent` value (`00-…-…-01`) | W3C trace id (32 hex) | `o.TraceId = TraceIdFormat.TraceparentHeader` |
+| `traceId` | `traceparent` value (`00-…-…-01`) | W3C trace id (32 hex); `HttpContext.TraceIdentifier` when there is no W3C activity | `o.TraceId = TraceIdFormat.TraceparentHeader` |
 | `requestId` | written | omitted | `o.IncludeRequestId = true` |
 | `user` | written | omitted | `o.IncludeUser = true` |
 | `spanId` / `parentSpanId` | written | omitted | `o.IncludeSpanIds = true` |
 | `instance` | `"GET /path"` | `"/path"` | `o.Instance = ProblemInstanceFormat.MethodAndPath` |
 | `type` | RFC 7231 URIs | RFC 9110 URIs (`null` for unlisted status codes) | `o.TypeUriResolver = ProblemTypeUris.Rfc7231` |
 | `errorMessages` | written | omitted | `o.ErrorFields \|= ProblemErrorFields.Messages` |
-| `errors` | every `Error` (code, description, type, metadata) | `ErrorType.Validation` errors only, as `{ code, description }` | `o.ErrorFields \|= ProblemErrorFields.AllErrors` |
+| `errors` | every `Error` (code, description, type, metadata) | `ErrorType.Validation` errors only, as `{ code, description }`; a response with only non-validation errors has no `errors` (use `errorCodes`) | `o.ErrorFields \|= ProblemErrorFields.AllErrors` |
 | Exception message in a 500 | written (via `Error.Exception`) | logged only | `o.ExposeExceptionDetails = env.IsDevelopment()` |
 
 `o.UseLegacyDefaults()` restores all of the rows above except the last one.
@@ -197,7 +197,7 @@ Other ProblemDetails changes:
 
   - In 3.x, `InvalidOperationException`, `ApplicationException` and `ValidationException` returned 400. To keep that, register a mapper with `services.AddExceptionProblemMapper<MyMapper>()`.
 - The status code for an `ErrorType` comes from `IErrorStatusCodeMapper`. Replace it with `services.AddErrorStatusCodeMapper<MyMapper>()`, for example to return 401 or 403 for authentication errors.
-- `ResultEndpointFilter` now returns a ProblemDetails response on failure. In 3.x it returned `400` with the raw `Error[]`. A registered `IResultErrorMapper` still takes precedence.
+- `ResultEndpointFilter` now returns a ProblemDetails response on failure. In 3.x it returned `400` with the raw `Error[]`. A registered `IResultErrorMapper` still takes precedence. It is now resolved from the request services on each request, so a scoped mapper works; the `ResultEndpointFilter(IResultErrorMapper?)` constructor is gone (use `new ResultEndpointFilter()` and register the mapper in DI).
 - The return types changed:
   - `ToProblemResult` returns `EnhancedProblemHttpResult`.
   - `ToActionResult` returns `EnhancedProblemObjectResult`, which derives from `ObjectResult`.
@@ -212,10 +212,12 @@ Other ProblemDetails changes:
 - Minimal API writes with `Microsoft.AspNetCore.Http.Json.JsonOptions`, MVC with `Microsoft.AspNetCore.Mvc.JsonOptions`. The output is identical only when both have the same JSON settings; `ConfigureSystemTextJson()` sets both.
 - Call `app.UseEnhancedProblemDetails()`. It runs `UseExceptionHandler()` and `UseStatusCodePages()`.
 - Without `AddEnhancedProblemDetails`, the library does not use `IProblemDetailsService` and writes the response itself. A plain `AddProblemDetails()` would replace `traceId` with the `traceparent` value, and Minimal API and MVC output would differ.
+- The automatic 400 of `[ApiController]` (invalid model state, for example an unknown value of an enum that is not handled by `UseEnumBinding`) is still MVC's `ValidationProblemDetails`. Call `services.ConfigureInvalidModelStateResponse()` to write it as an enhanced problem with `errorCodes`/`errors` (code = model state key) that honors `ErrorFields`. The description is MVC's model error message; for malformed JSON that is the System.Text.Json parser message (as in MVC's default response). Pass an `errorFactory` or set `JsonOptions.AllowInputFormatterExceptionMessages = false` to hide it.
 - `EnhancedProblemDetails.ErrorCodes` and `ErrorMessages` are now stored in `Extensions["errorCodes"]` and `Extensions["errorMessages"]`. Writers that serialize the declared `ProblemDetails` type, such as MVC's `[ApiController]` writer, now include them.
 
 ### JSON (`CSharpEssentials.Json`)
 
+- New: `new ConditionalStringEnumConverter { AllowUndefinedValues = false }` rejects numbers that are not a defined member (for example `999`) when reading. The default still accepts them, like `JsonStringEnumConverter`.
 - `PolymorphicJsonConverterFactory` no longer handles collection or dictionary interfaces (`IEnumerable<T>`, `IDictionary<,>`, `IReadOnlyList<T>`, …). In 3.x it wrapped them in a `$type` envelope, which also broke `ProblemDetails.Extensions`.
 - `JsonOptions.ApplyTo` (used by `ConfigureSystemTextJson()`) keeps the target's `TypeInfoResolver` when the source has none. In 3.x the resolver was set to `null`, and Minimal API failed at startup.
 
@@ -240,7 +242,14 @@ Names with a single word or plain PascalCase did not change. Enums with acronyms
 - the C# member name, case-insensitive;
 - the number of a defined member.
 
-Invalid values return a 400 ProblemDetails response.
+Invalid values return a 400 ProblemDetails response with the key as the error code; change the code or message with `o.ErrorFactory`. MVC query models are read recursively (`?filter.inner.status=…`, up to 8 levels).
+
+Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; otherwise an invalid enum value of an unauthenticated request returns 400 instead of 401.
+
+### Package dependencies
+
+- `Swashbuckle.AspNetCore` is now `[8.1.0, 10)` (3.x: `[8.1.0, )`, unbounded). Apps on Swashbuckle 7.x must upgrade to 8.x.
+- Building the library from source (or referencing it with `ProjectReference`) needs the .NET 11 preview SDK. The NuGet packages work with the SDKs of their target frameworks.
 
 ## AI Skills
 

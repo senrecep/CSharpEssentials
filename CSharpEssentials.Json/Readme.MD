@@ -49,6 +49,9 @@ public enum Level { Low, High }
 
 var data = new { S = Status.Active, L = Level.High };
 string json = data.ConvertToJson(); // {"s":"active","l":1}
+
+// Reject numbers that are not a defined member ("999") when reading. Default: accepted, like JsonStringEnumConverter.
+options.Converters.Add(new ConditionalStringEnumConverter { AllowUndefinedValues = false });
 ```
 
 ### StringEnumNaming

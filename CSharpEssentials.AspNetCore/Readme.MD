@@ -51,6 +51,10 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler + UseStatusCodePages
 
 `o.UseLegacyDefaults()` restores the 3.x output. See the migration notes in the repository README.
 
+With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpContext.TraceIdentifier`. `errors` lists only `ErrorType.Validation` errors; every code is in `errorCodes`.
+
+`services.ConfigureInvalidModelStateResponse()` writes the automatic 400 of `[ApiController]` (invalid model state) through the same pipeline, with the model state key as the error code.
+
 `errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 
 ### API Versioning
@@ -75,26 +79,27 @@ app.UseVersionableSwagger();
 ### Result Endpoint Filter
 
 ```csharp
-builder.Services.AddScoped<ResultEndpointFilter>();
+builder.Services.AddScoped<IResultErrorMapper, DomainErrorMapper>(); // optional, any lifetime
 
 app.MapGet("/users/{id}", (int id) => GetUser(id))
    .AddEndpointFilter<ResultEndpointFilter>();
 
-// Returns 200 with value on success, a ProblemDetails response on failure
+// Returns 200 with value on success; on failure the mapper's result (resolved per request),
+// or a ProblemDetails response when no mapper is registered
 ```
 
 ### Enum Query/Route Binding
 
 ```csharp
 builder.Services.AddEnumBinding(o => o.AllowIntegerValues = true); // optional
-app.UseEnumBinding(); // after routing
+app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization (otherwise a 400 hides the 401)
 
 // [StringEnum] enum OrderStatus { InProgress, Done }
 // ?status=in_progress, ?status=InProgress, ?status=inprogress, ?status=0 all bind to OrderStatus.InProgress
 app.MapGet("/orders", (OrderStatus? status) => ...);
 ```
 
-This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, `[FromRoute]`, and one level of query DTO properties).
+This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, `[FromRoute]`, and query DTO properties, nested up to 8 levels: `?filter.inner.status=…`).
 
 - Nullable, array, `List<T>` and `[Flags]` parameters are supported. Flags values are a comma-separated list.
 - These values return a 400 ProblemDetails response:
@@ -102,6 +107,7 @@ This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, 
   - unknown names;
   - commas on enums without `[Flags]`;
   - empty values for non-nullable parameters.
+- The error code is the query/route key (`status`, `filter.status`). Change the code or message with `o.ErrorFactory = (key, enumType, names) => Error.Validation($"validation.{key}", ...)`.
 - Empty values of nullable or collection parameters are dropped, so they bind as `null` or are skipped.
 - Matched values are rewritten to the C# member name before binding. Link generation that reuses the current route values (ambient values, such as `CreatedAtRoute` without explicit values) therefore emits the member name (`/items/HttpStatus`). Pass the value explicitly to get the JSON spelling.
 
