@@ -84,9 +84,9 @@ dotnet add package CSharpEssentials
 | CQRS pipeline behaviors (validate, log, cache, transact) | `CSharpEssentials.Mediator` |
 | DDD aggregate base class + domain events | `CSharpEssentials.Entity` |
 | EF Core audit, slow queries, pagination | `CSharpEssentials.EntityFrameworkCore` |
-| Map errors to HTTP ProblemDetails | `CSharpEssentials.AspNetCore` |
+| Map errors to HTTP ProblemDetails (privacy-first defaults in 4.0, `UseLegacyDefaults()` for 3.x output) | `CSharpEssentials.AspNetCore` |
 | HttpClient that returns Result<T> | `CSharpEssentials.Http` |
-| JSON serialization with string enums + polymorphism | `CSharpEssentials.Json` |
+| JSON serialization with string enums + polymorphism (`StringEnumNaming` is the shared enum naming for JSON, EF Core, Swagger and binding) | `CSharpEssentials.Json` |
 | Log request/response bodies | `CSharpEssentials.RequestResponseLogging` |
 | Load secrets from GCP Secret Manager | `CSharpEssentials.GcpSecretManager` |
 | Transient fault handling (retry, timeout, circuit breaker, fallback) | `CSharpEssentials.Resilience` |
@@ -112,7 +112,7 @@ using CSharpEssentials.Mediator;           // ICacheable, ILoggableRequest, ITra
 using CSharpEssentials.Entity;             // EntityBase, SoftDeletableEntityBase
 using CSharpEssentials.Entity.Interfaces;  // IDomainEvent
 using CSharpEssentials.EntityFrameworkCore; // interceptors, pagination
-using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter
+using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter, AddEnhancedProblemDetails
 using CSharpEssentials.Http;               // HttpClientResultExtensions, HttpRequestBuilder
 using CSharpEssentials.Resilience;          // ResiliencePolicy, ResiliencePolicy<T>
 using CSharpEssentials.Json;               // JsonOptions, converters

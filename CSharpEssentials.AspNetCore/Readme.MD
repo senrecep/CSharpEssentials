@@ -4,9 +4,10 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 
 ## Features
 
-- **Global Exception Handler** — Converts `DomainException`, `EnhancedValidationException`, and others into RFC 7807 `ProblemDetails`.
-- **Enhanced Problem Details** — Extend `ProblemDetails` with structured error codes and messages.
-- **Result Endpoint Filter** — Automatically convert `Result<T>` return values to `200 OK` or `400 BadRequest`.
+- **Enhanced Problem Details** — One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
+- **Global Exception Handler** — Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
+- **Result Endpoint Filter** — Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
+- **Enum Binding** — Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
 - **API Versioning** — Pre-configured URL segment and header-based versioning.
 - **Swagger** — Easy setup with versioning support, enum schema filters, and custom schema IDs.
 
@@ -18,15 +19,39 @@ dotnet add package CSharpEssentials.AspNetCore
 
 ## Usage
 
-### Global Exception Handling
+### Problem Details
 
 ```csharp
-builder.Services.AddProblemDetails();
+builder.Services.AddEnhancedProblemDetails(o =>
+{
+    o.TraceId = TraceIdFormat.W3CTraceId;                 // default
+    o.ErrorFields = ProblemErrorFields.Codes | ProblemErrorFields.ValidationErrors; // default
+    o.ExposeExceptionDetails = builder.Environment.IsDevelopment();
+});
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
+// Optional extension points
+builder.Services.AddProblemDetailsEnricher<TenantEnricher>();     // add fields to every problem response
+builder.Services.AddErrorStatusCodeMapper<AuthAwareStatusMapper>(); // Error -> status code / title
+builder.Services.AddExceptionProblemMapper<PaymentExceptionMapper>(); // Exception -> problem
+
 var app = builder.Build();
-app.UseExceptionHandler();
+app.UseEnhancedProblemDetails(); // UseExceptionHandler + UseStatusCodePages
 ```
+
+| Option | Default | Notes |
+|---|---|---|
+| `TraceId` | `W3CTraceId` | `TraceparentHeader` or `None` |
+| `IncludeRequestId` / `IncludeUser` / `IncludeSpanIds` | `false` | |
+| `Instance` | `Path` | `MethodAndPath` or `None` |
+| `ErrorFields` | `Codes \| ValidationErrors` | `Messages`, `AllErrors`, `All`, `None` |
+| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code |
+| `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `ProblemTypeUris.Rfc7231` or a custom function |
+| `ExposeExceptionDetails` | `false` | Enable only in Development |
+
+`o.UseLegacyDefaults()` restores the 3.x output. See the migration notes in the repository README.
+
+`errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 
 ### API Versioning
 
@@ -55,8 +80,30 @@ builder.Services.AddScoped<ResultEndpointFilter>();
 app.MapGet("/users/{id}", (int id) => GetUser(id))
    .AddEndpointFilter<ResultEndpointFilter>();
 
-// Returns 200 with value on success, 400 with errors on failure
+// Returns 200 with value on success, a ProblemDetails response on failure
 ```
+
+### Enum Query/Route Binding
+
+```csharp
+builder.Services.AddEnumBinding(o => o.AllowIntegerValues = true); // optional
+app.UseEnumBinding(); // after routing
+
+// [StringEnum] enum OrderStatus { InProgress, Done }
+// ?status=in_progress, ?status=InProgress, ?status=inprogress, ?status=0 all bind to OrderStatus.InProgress
+app.MapGet("/orders", (OrderStatus? status) => ...);
+```
+
+This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, `[FromRoute]`, and one level of query DTO properties).
+
+- Nullable, array, `List<T>` and `[Flags]` parameters are supported. Flags values are a comma-separated list.
+- These values return a 400 ProblemDetails response:
+  - undefined numbers;
+  - unknown names;
+  - commas on enums without `[Flags]`;
+  - empty values for non-nullable parameters.
+- Empty values of nullable or collection parameters are dropped, so they bind as `null` or are skipped.
+- Matched values are rewritten to the C# member name before binding. Link generation that reuses the current route values (ambient values, such as `CreatedAtRoute` without explicit values) therefore emits the member name (`/items/HttpStatus`). Pass the value explicitly to get the JSON spelling.
 
 ### Structured Error Response
 
@@ -65,8 +112,12 @@ app.MapGet("/users/{id}", (int id) => GetUser(id))
   "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
   "title": "Bad Request",
   "status": 400,
+  "detail": "Email format is incorrect.",
+  "instance": "/users",
+  "traceId": "0af7651916cd43dd8448eb211c80319c",
+  "errorCodes": ["User.InvalidEmail"],
   "errors": [
-    { "code": "User.InvalidEmail", "description": "Email format is incorrect.", "type": "Validation" }
+    { "code": "User.InvalidEmail", "description": "Email format is incorrect." }
   ]
 }
 ```

@@ -49,7 +49,7 @@ Runs registered validators before the handler. On failure, the handler is never 
 |-------------|---------------|
 | `Result` | `Result.Failure(errors)` returned directly |
 | `Result<T>` | `Result<T>.Failure(errors)` returned directly |
-| Any other type | `EnhancedValidationException` thrown — caught by `GlobalExceptionHandler` |
+| Any other type | `EnhancedValidationException` thrown — caught by `GlobalExceptionHandler` (400 ProblemDetails) |
 
 ```csharp
 public class CreateOrderValidator : Validator<CreateOrderCommand>
