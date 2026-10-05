@@ -19,7 +19,7 @@ using Microsoft.OpenApi.Models;
 namespace CSharpEssentials.Tests.AspNetCore;
 
 [StringEnum]
-public enum SwStatus
+internal enum SwStatus
 {
     Active = 0,
     InProgress = 1,
@@ -27,13 +27,13 @@ public enum SwStatus
 }
 
 /// <summary>Not marked with [StringEnum]: must stay an integer schema.</summary>
-public enum SwPlain
+internal enum SwPlain
 {
     First = 0,
     Second = 1,
 }
 
-public sealed class SwQueryDto
+internal sealed class SwQueryDto
 {
     public SwStatus Status { get; set; }
 
@@ -43,13 +43,13 @@ public sealed class SwQueryDto
 }
 
 /// <summary>
-/// Nested so the default <c>ControllerFeatureProvider</c> never discovers the controller in other test hosts.
+/// Internal so the default <c>ControllerFeatureProvider</c> never discovers the controller in other test hosts.
 /// </summary>
-public static class SwaggerParameterControllers
+internal static class SwaggerParameterControllers
 {
     [ApiController]
     [Route("")]
-    public sealed class SwApiController : ControllerBase
+    internal sealed class SwApiController : ControllerBase
     {
         [HttpGet("items/{status}")]
         public string Route(SwStatus status) => status.ToString();

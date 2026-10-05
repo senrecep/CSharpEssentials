@@ -76,7 +76,7 @@ public class SlowQueryInterceptorBehaviorTests
                 _ => null
             };
         }
-        return (CommandExecutedEventData)CommandExecutedEventDataCtor.Invoke(ctorArgs)!;
+        return (CommandExecutedEventData)CommandExecutedEventDataCtor.Invoke(ctorArgs);
     }
 
     [SuppressMessage("Security", "CA2100:Review SQL queries for security vulnerabilities", Justification = "Test-only helper; command text is controlled by tests, not user input.")]
@@ -146,7 +146,7 @@ public class SlowQueryInterceptorBehaviorTests
         interceptor.ReaderExecuted(command, eventData, reader);
 
         capturedContext.Should().NotBeNull();
-        capturedContext!.CommandText.Should().Be("SELECT * FROM Users");
+        capturedContext.CommandText.Should().Be("SELECT * FROM Users");
         capturedContext.ElapsedTime.Should().Be(elapsed);
         capturedContext.MethodName.Should().NotBeNullOrEmpty();
     }

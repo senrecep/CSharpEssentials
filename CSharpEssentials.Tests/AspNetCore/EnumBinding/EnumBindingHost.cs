@@ -24,7 +24,7 @@ public enum EbHostKind
 /// <summary>
 /// A TestServer host exposing the same echo routes as Minimal API endpoints or as one MVC controller.
 /// </summary>
-public sealed class EnumBindingHost : IAsyncDisposable
+internal sealed class EnumBindingHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
 

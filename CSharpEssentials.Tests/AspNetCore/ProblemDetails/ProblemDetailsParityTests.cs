@@ -118,11 +118,8 @@ public class ProblemDetailsParityTests
         Action<EnhancedProblemDetailsOptions> configure = OptionCases[option];
         var responses = new List<ProblemResponse>();
         foreach (HostKind kind in AllKinds)
-        {
-            await using ProblemTestHost host = await ProblemTestHost.StartAsync(
-                kind, services => services.AddEnhancedProblemDetails(configure), useLibraryJson: false);
-            responses.Add(await host.SendAsync(path));
-        }
+            responses.Add(await SendOneAsync(
+                kind, services => services.AddEnhancedProblemDetails(configure), path, "application/json", useLibraryJson: false));
 
         AssertAllIdentical([.. responses]);
     }
@@ -151,9 +148,10 @@ public class ProblemDetailsParityTests
         HostKind kind,
         Action<IServiceCollection> configureServices,
         string path,
-        string? accept)
+        string? accept,
+        bool useLibraryJson = true)
     {
-        await using ProblemTestHost host = await ProblemTestHost.StartAsync(kind, configureServices);
+        await using ProblemTestHost host = await ProblemTestHost.StartAsync(kind, configureServices, useLibraryJson: useLibraryJson);
         return await host.SendAsync(path, accept: accept);
     }
 

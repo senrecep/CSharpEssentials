@@ -47,7 +47,7 @@ public class StringEnumAttributeTests
             .FirstOrDefault() as AttributeUsageAttribute;
 
         usageAttribute.Should().NotBeNull();
-        usageAttribute!.ValidOn.Should().Be(AttributeTargets.Enum);
+        usageAttribute.ValidOn.Should().Be(AttributeTargets.Enum);
         usageAttribute.AllowMultiple.Should().BeFalse();
         usageAttribute.Inherited.Should().BeFalse();
     }

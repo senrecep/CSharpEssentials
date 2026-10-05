@@ -53,7 +53,7 @@ public class PolymorphicJsonConverterFactoryTests
         BaseShape? shape = JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions);
 
         shape.Should().BeOfType<Circle>();
-        ((Circle)shape!).Radius.Should().Be(5.0);
+        ((Circle)shape).Radius.Should().Be(5.0);
     }
 
     [Fact]
@@ -63,7 +63,7 @@ public class PolymorphicJsonConverterFactoryTests
         BaseShape? shape = JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions);
 
         shape.Should().BeOfType<Rectangle>();
-        var rect = (Rectangle)shape!;
+        var rect = (Rectangle)shape;
         rect.Width.Should().Be(10.0);
         rect.Height.Should().Be(20.0);
     }
@@ -124,10 +124,9 @@ public class PolymorphicJsonConverterFactoryTests
     [Fact]
     public void Serialize_DictionaryInterface_ShouldNotWrapWithTypeDiscriminator()
     {
-        JsonSerializerOptions options = new() { Converters = { new PolymorphicJsonConverterFactory() } };
         IDictionary<string, object?> value = new Dictionary<string, object?> { ["a"] = 1 };
 
-        JsonSerializer.Serialize(value, options).Should().Be("{\"a\":1}");
+        JsonSerializer.Serialize(value, PolymorphicOptions).Should().Be("{\"a\":1}");
     }
 
     [Fact]

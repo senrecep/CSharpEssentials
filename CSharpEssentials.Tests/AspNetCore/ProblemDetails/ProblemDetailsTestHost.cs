@@ -74,7 +74,7 @@ internal static class ProblemScenarios
 
 [ApiController]
 [Route("problem")]
-public sealed class ApiProblemController : ControllerBase
+internal sealed class ApiProblemController : ControllerBase
 {
     [HttpGet]
     public IActionResult Get([FromQuery] string? s, [FromQuery] bool ext = false, [FromQuery] int? status = null) =>
@@ -85,7 +85,7 @@ public sealed class ApiProblemController : ControllerBase
 }
 
 [Route("problem")]
-public sealed class PlainProblemController : Controller
+internal sealed class PlainProblemController : Controller
 {
     [HttpGet]
     public IActionResult Get([FromQuery] string? s, [FromQuery] bool ext = false, [FromQuery] int? status = null) =>

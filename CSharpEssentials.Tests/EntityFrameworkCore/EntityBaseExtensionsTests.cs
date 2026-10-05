@@ -90,7 +90,7 @@ public class EntityBaseExtensionsTests
 
         IEntityType? entityType = context.Model.FindEntityType(typeof(GuidIdEntity));
         entityType.Should().NotBeNull();
-        entityType!.FindPrimaryKey()!.Properties.Should().ContainSingle(p => p.Name == nameof(GuidIdEntity.Id));
+        entityType.FindPrimaryKey()!.Properties.Should().ContainSingle(p => p.Name == nameof(GuidIdEntity.Id));
         GetProperty(entityType, nameof(GuidIdEntity.Id)).IsNullable.Should().BeFalse();
         GetProperty(entityType, nameof(GuidIdEntity.CreatedAt)).IsNullable.Should().BeFalse();
         GetProperty(entityType, nameof(GuidIdEntity.CreatedBy)).IsNullable.Should().BeFalse();
@@ -211,7 +211,7 @@ public class EntityBaseExtensionsTests
         IEntityType entityType = context.Model.FindEntityType(typeof(FilteredEntity))!;
         LambdaExpression? filter = entityType.GetQueryFilter();
         filter.Should().NotBeNull();
-        var compiled = (Expression<Func<FilteredEntity, bool>>)filter!;
+        var compiled = (Expression<Func<FilteredEntity, bool>>)filter;
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true }).Should().BeTrue();
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = false }).Should().BeFalse();
     }
@@ -230,7 +230,7 @@ public class EntityBaseExtensionsTests
         IEntityType entityType = context.Model.FindEntityType(typeof(FilteredEntity))!;
         LambdaExpression? filter = entityType.GetQueryFilter();
         filter.Should().NotBeNull();
-        var compiled = (Expression<Func<FilteredEntity, bool>>)filter!;
+        var compiled = (Expression<Func<FilteredEntity, bool>>)filter;
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true, Name = "A" }).Should().BeTrue();
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = false, Name = "A" }).Should().BeFalse();
         compiled.Compile()(new FilteredEntity { Id = 1, IsActive = true, Name = null }).Should().BeFalse();

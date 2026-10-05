@@ -64,11 +64,13 @@ public sealed class SoftDeleteBatchTests : IDisposable
         await SeedAsync("a1", "a2", "b1");
         DateTimeOffset deletedAt = new(2025, 5, 5, 10, 0, 0, TimeSpan.Zero);
 
+        // The Sqlite provider cannot translate the StartsWith(char) overload CA1866 suggests; a string variable keeps it in SQL.
+        string prefix = "a";
         int affected;
         using (var context = new DocumentDbContext(_options))
         {
             affected = await context.Documents
-                .Where(d => d.Name.StartsWith("a"))
+                .Where(d => d.Name.StartsWith(prefix))
                 .SoftDeleteAsync(deletedAt, "admin");
         }
 
@@ -156,7 +158,7 @@ public sealed class SoftDeleteBatchTests : IDisposable
         using var verify = new DocumentDbContext(_options);
         Document document = await verify.Documents.IgnoreQueryFilters().SingleAsync();
         document.DeletedAt.Should().NotBeNull();
-        document.DeletedAt!.Value.Should().BeOnOrAfter(before);
+        document.DeletedAt.Value.Should().BeOnOrAfter(before);
     }
 
     [Fact]

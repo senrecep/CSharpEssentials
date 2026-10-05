@@ -69,7 +69,7 @@ public class AuditInterceptorTests
 
         entity.UpdatedBy.Should().Be("modifier-user");
         entity.UpdatedAt.Should().NotBeNull();
-        entity.UpdatedAt!.Value.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
+        entity.UpdatedAt.Value.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(5));
 
         db.Dispose();
         provider.Dispose();

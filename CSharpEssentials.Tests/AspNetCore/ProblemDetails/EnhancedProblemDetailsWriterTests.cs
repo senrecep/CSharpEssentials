@@ -107,6 +107,6 @@ public class EnhancedProblemDetailsWriterTests
         }
 
         buffer.Position = 0;
-        await buffer.CopyToAsync(original.Stream);
+        await buffer.CopyToAsync(original.Stream, context.RequestAborted);
     }
 }

@@ -13,7 +13,7 @@ public class AttributesTests
             .FirstOrDefault() as AttributeUsageAttribute;
 
         usageAttribute.Should().NotBeNull();
-        usageAttribute!.ValidOn.Should().HaveFlag(AttributeTargets.Class);
+        usageAttribute.ValidOn.Should().HaveFlag(AttributeTargets.Class);
         usageAttribute.ValidOn.Should().HaveFlag(AttributeTargets.Method);
         usageAttribute.AllowMultiple.Should().BeFalse();
         usageAttribute.Inherited.Should().BeFalse();

@@ -65,7 +65,7 @@ public class NullPathToleranceTests
 
         Result<OuterModel> result = await Validator.ValidateAsync(model, (m, rules) =>
             rules.ForEach(() => m.Inner.Tags, (tag, tagRules) =>
-                tagRules.For(() => tag).NotEmpty()));
+                tagRules.For<string?>(() => tag).NotEmpty()));
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -78,7 +78,7 @@ public class NullPathToleranceTests
         Result<OuterModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
             await rules.ForEachAsync(() => m.Inner.Tags, (tag, tagRules, token) =>
             {
-                tagRules.For(() => tag).NotEmpty();
+                tagRules.For<string?>(() => tag).NotEmpty();
                 return ValueTask.CompletedTask;
             }, ct));
 
@@ -92,7 +92,7 @@ public class NullPathToleranceTests
 
         Result<OuterModel> result = await Validator.ValidateAsync(model, (m, rules) =>
             rules.ForEach(() => m.Inner.Tags, (tag, tagRules) =>
-                tagRules.For(() => tag).NotEmpty()));
+                tagRules.For<string?>(() => tag).NotEmpty()));
 
         result.IsFailure.Should().BeTrue();
         result.Errors.Should().HaveCount(1);
