@@ -75,4 +75,84 @@ public class ExtensionsTests
 
         date.ToDateTime(time).Should().Be(dateTime);
     }
+
+    [Theory]
+    [InlineData(DayOfWeek.Monday, false, 2024, 6, 17)]
+    [InlineData(DayOfWeek.Saturday, false, 2024, 6, 22)]
+    [InlineData(DayOfWeek.Saturday, true, 2024, 6, 15)]
+    [InlineData(DayOfWeek.Sunday, false, 2024, 6, 16)]
+    public void NextDayOfWeek_DateOnly_ShouldReturnExpectedDate(DayOfWeek dayOfWeek, bool includeCurrent, int year, int month, int day)
+    {
+        DateOnly saturday = new(2024, 6, 15);
+
+        saturday.NextDayOfWeek(dayOfWeek, includeCurrent).Should().Be(new DateOnly(year, month, day));
+    }
+
+    [Theory]
+    [InlineData(DayOfWeek.Monday, false, 2024, 6, 10)]
+    [InlineData(DayOfWeek.Friday, false, 2024, 6, 14)]
+    [InlineData(DayOfWeek.Saturday, false, 2024, 6, 8)]
+    [InlineData(DayOfWeek.Saturday, true, 2024, 6, 15)]
+    [InlineData(DayOfWeek.Sunday, false, 2024, 6, 9)]
+    public void PreviousDayOfWeek_DateOnly_ShouldReturnExpectedDate(DayOfWeek dayOfWeek, bool includeCurrent, int year, int month, int day)
+    {
+        DateOnly saturday = new(2024, 6, 15);
+
+        saturday.PreviousDayOfWeek(dayOfWeek, includeCurrent).Should().Be(new DateOnly(year, month, day));
+    }
+
+    [Fact]
+    public void NextDayOfWeek_DateTime_ShouldKeepTimeComponent()
+    {
+        DateTime saturday = new(2024, 12, 28, 9, 30, 0, DateTimeKind.Utc);
+
+        saturday.NextDayOfWeek(DayOfWeek.Wednesday).Should().Be(new DateTime(2025, 1, 1, 9, 30, 0, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public void PreviousDayOfWeek_DateTime_ShouldCrossMonthBoundary()
+    {
+        DateTime monday = new(2024, 7, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        monday.PreviousDayOfWeek(DayOfWeek.Friday).Should().Be(new DateTime(2024, 6, 28, 0, 0, 0, DateTimeKind.Utc));
+    }
+
+    [Theory]
+    [InlineData(2000, 6, 15, 2024, 6, 15, 24)]
+    [InlineData(2000, 6, 15, 2024, 6, 14, 23)]
+    [InlineData(2000, 6, 15, 2024, 6, 16, 24)]
+    [InlineData(2000, 12, 31, 2024, 1, 1, 23)]
+    [InlineData(2024, 6, 15, 2024, 6, 15, 0)]
+    [InlineData(2000, 2, 29, 2023, 2, 28, 22)]
+    [InlineData(2000, 2, 29, 2023, 3, 1, 23)]
+    [InlineData(2000, 2, 29, 2024, 2, 29, 24)]
+    public void GetAge_ShouldCountCompletedYears(int birthYear, int birthMonth, int birthDay, int year, int month, int day, int expected)
+    {
+        new DateOnly(birthYear, birthMonth, birthDay).GetAge(new DateOnly(year, month, day)).Should().Be(expected);
+    }
+
+    [Fact]
+    public void GetAge_WhenBirthDateIsInFuture_ShouldThrow()
+    {
+        Action act = () => new DateOnly(2025, 1, 1).GetAge(new DateOnly(2024, 1, 1));
+
+        act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("birthDate");
+    }
+
+    [Fact]
+    public void GetAge_WithDateTimeProvider_ShouldUseProviderDate()
+    {
+        var provider = new FakeDateTimeProvider(new DateTimeOffset(2024, 6, 15, 10, 0, 0, TimeSpan.Zero));
+
+        new DateOnly(2000, 6, 15).GetAge(provider).Should().Be(24);
+        new DateOnly(2000, 6, 16).GetAge(provider).Should().Be(23);
+    }
+
+    [Fact]
+    public void GetAge_WithNullProvider_ShouldThrow()
+    {
+        Action act = () => new DateOnly(2000, 1, 1).GetAge((IDateTimeProvider)null!);
+
+        act.Should().Throw<ArgumentNullException>();
+    }
 }
