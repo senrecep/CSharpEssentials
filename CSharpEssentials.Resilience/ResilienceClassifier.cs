@@ -7,14 +7,14 @@ namespace CSharpEssentials.Resilience;
 
 internal static class ResilienceClassifier
 {
-    internal static bool IsCancellation(Exception ex) =>
-        ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested;
+    internal static bool IsCallerCancellation(Exception ex, CancellationToken callerToken) =>
+        ex is OperationCanceledException && callerToken.IsCancellationRequested;
 
-    internal static Error HandleException(Exception ex)
+    internal static Error HandleException(Exception ex, CancellationToken callerToken)
     {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
+        if (IsCallerCancellation(ex, callerToken))
         {
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
+            throw new OperationCanceledException(ex.Message, ex, callerToken);
         }
 
         if (ex is BrokenCircuitException)

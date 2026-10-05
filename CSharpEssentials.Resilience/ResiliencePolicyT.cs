@@ -52,7 +52,7 @@ public readonly partial struct ResiliencePolicy<T>
         }
         catch (Exception ex)
         {
-            return ResilienceClassifier.HandleException(ex);
+            return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
     }
 
@@ -67,7 +67,7 @@ public readonly partial struct ResiliencePolicy<T>
         }
         catch (Exception ex)
         {
-            return ResilienceClassifier.HandleException(ex);
+            return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
     }
 
