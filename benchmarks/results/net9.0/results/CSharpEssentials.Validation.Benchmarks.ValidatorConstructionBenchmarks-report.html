@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Validation.Benchmarks.ValidatorConstructionBenchmarks-20260520-203246</title>
+<title>CSharpEssentials.Validation.Benchmarks.ValidatorConstructionBenchmarks-20260912-125920</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -13,20 +13,22 @@
 </head>
 <body>
 <pre><code>
-BenchmarkDotNet v0.14.0, macOS 26.3.1 (a) (25D771280a) [Darwin 25.3.0]
+BenchmarkDotNet v0.14.0, macOS 26.6.2 (25G83) [Darwin 25.6.0]
 Apple M3 Pro, 1 CPU, 12 logical and 12 physical cores
 .NET SDK 11.0.100-preview.3.26207.106
-  [Host]  : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
-  default : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
+  [Host]   : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
+  ShortRun : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
+  default  : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
 </code></pre>
-<pre><code>Job=default  
-</code></pre>
+<pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+<thead><tr><th>Method</th><th>Job</th><th>IterationCount</th><th>LaunchCount</th><th>WarmupCount</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
 </tr>
-</thead><tbody><tr><td>CSE-Ctor</td><td>2.449 ns</td><td>0.0149 ns</td><td>0.0124 ns</td><td>0.0029</td><td>-</td><td>24 B</td>
-</tr><tr><td>FV-Ctor</td><td>1,938.622 ns</td><td>10.2142 ns</td><td>9.0546 ns</td><td>1.1444</td><td>0.0153</td><td>9624 B</td>
+</thead><tbody><tr><td>CSE-Ctor</td><td>ShortRun</td><td>3</td><td>1</td><td>3</td><td>2.537 ns</td><td>0.8897 ns</td><td>0.0488 ns</td><td>0.0029</td><td>-</td><td>24 B</td>
+</tr><tr><td>FV-Ctor</td><td>ShortRun</td><td>3</td><td>1</td><td>3</td><td>1,979.259 ns</td><td>169.5594 ns</td><td>9.2941 ns</td><td>1.1444</td><td>0.0153</td><td>9624 B</td>
+</tr><tr><td>CSE-Ctor</td><td>default</td><td>Default</td><td>Default</td><td>Default</td><td>2.467 ns</td><td>0.0178 ns</td><td>0.0158 ns</td><td>0.0029</td><td>-</td><td>24 B</td>
+</tr><tr><td>FV-Ctor</td><td>default</td><td>Default</td><td>Default</td><td>Default</td><td>1,995.479 ns</td><td>27.0149 ns</td><td>25.2698 ns</td><td>1.1444</td><td>0.0153</td><td>9624 B</td>
 </tr></tbody></table>
 </body>
 </html>

@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Validation.Benchmarks.SimpleValidationBenchmarks-20260520-202827</title>
+<title>CSharpEssentials.Validation.Benchmarks.SimpleValidationBenchmarks-20260912-125058</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -13,22 +13,26 @@
 </head>
 <body>
 <pre><code>
-BenchmarkDotNet v0.14.0, macOS 26.3.1 (a) (25D771280a) [Darwin 25.3.0]
+BenchmarkDotNet v0.14.0, macOS 26.6.2 (25G83) [Darwin 25.6.0]
 Apple M3 Pro, 1 CPU, 12 logical and 12 physical cores
 .NET SDK 11.0.100-preview.3.26207.106
-  [Host]  : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
-  default : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
+  [Host]   : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
+  ShortRun : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
+  default  : .NET 9.0.4 (9.0.425.16305), Arm64 RyuJIT AdvSIMD
 </code></pre>
-<pre><code>Job=default  
-</code></pre>
+<pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method      </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+<thead><tr><th>Method      </th><th>Job</th><th>IterationCount</th><th>LaunchCount</th><th>WarmupCount</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
 </tr>
-</thead><tbody><tr><td>CSE-Simple-Valid</td><td>206.2 ns</td><td>2.15 ns</td><td>2.01 ns</td><td>0.0880</td><td>-</td><td>736 B</td>
-</tr><tr><td>FV-Simple-Valid</td><td>362.1 ns</td><td>2.25 ns</td><td>1.99 ns</td><td>0.0839</td><td>-</td><td>704 B</td>
-</tr><tr><td>CSE-Simple-Invalid</td><td>292.3 ns</td><td>1.44 ns</td><td>1.20 ns</td><td>0.1922</td><td>-</td><td>1608 B</td>
-</tr><tr><td>FV-Simple-Invalid</td><td>2,413.8 ns</td><td>21.10 ns</td><td>18.71 ns</td><td>0.9041</td><td>0.0076</td><td>7584 B</td>
+</thead><tbody><tr><td>CSE-Simple-Valid</td><td>ShortRun</td><td>3</td><td>1</td><td>3</td><td>202.2 ns</td><td>12.99 ns</td><td>0.71 ns</td><td>0.0782</td><td>-</td><td>656 B</td>
+</tr><tr><td>FV-Simple-Valid</td><td>ShortRun</td><td>3</td><td>1</td><td>3</td><td>375.9 ns</td><td>31.67 ns</td><td>1.74 ns</td><td>0.0839</td><td>-</td><td>704 B</td>
+</tr><tr><td>CSE-Simple-Invalid</td><td>ShortRun</td><td>3</td><td>1</td><td>3</td><td>297.4 ns</td><td>81.16 ns</td><td>4.45 ns</td><td>0.1826</td><td>-</td><td>1528 B</td>
+</tr><tr><td>FV-Simple-Invalid</td><td>ShortRun</td><td>3</td><td>1</td><td>3</td><td>2,455.6 ns</td><td>206.07 ns</td><td>11.30 ns</td><td>0.9041</td><td>0.0076</td><td>7584 B</td>
+</tr><tr><td>CSE-Simple-Valid</td><td>default</td><td>Default</td><td>Default</td><td>Default</td><td>206.8 ns</td><td>1.60 ns</td><td>1.49 ns</td><td>0.0782</td><td>-</td><td>656 B</td>
+</tr><tr><td>FV-Simple-Valid</td><td>default</td><td>Default</td><td>Default</td><td>Default</td><td>371.4 ns</td><td>2.56 ns</td><td>2.14 ns</td><td>0.0839</td><td>-</td><td>704 B</td>
+</tr><tr><td>CSE-Simple-Invalid</td><td>default</td><td>Default</td><td>Default</td><td>Default</td><td>302.3 ns</td><td>1.15 ns</td><td>0.96 ns</td><td>0.1826</td><td>-</td><td>1528 B</td>
+</tr><tr><td>FV-Simple-Invalid</td><td>default</td><td>Default</td><td>Default</td><td>Default</td><td>2,498.2 ns</td><td>10.77 ns</td><td>9.55 ns</td><td>0.9041</td><td>0.0076</td><td>7584 B</td>
 </tr></tbody></table>
 </body>
 </html>
