@@ -398,7 +398,7 @@ public sealed class FvStringValidator : AbstractValidator<User>
         RuleFor(x => x.Email)
             .NotEmpty()
             .EmailAddress()
-            .Must(e => e!.EndsWith(".com", StringComparison.Ordinal));
+            .Must(e => e.EndsWith(".com", StringComparison.Ordinal));
     }
 }
 
@@ -425,7 +425,7 @@ public sealed class FvCollectionValidator : AbstractValidator<User>
             .NotEmpty()
             .Must(t => t!.Count >= 1)
             .Must(t => t!.Count <= 10)
-            .Must(t => t!.Count >= 1 && t!.Count <= 10);
+            .Must(t => t!.Count >= 1 && t.Count <= 10);
     }
 }
 
