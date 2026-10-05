@@ -11,6 +11,19 @@ public static class ResilienceResultExtensions
 {
     private static readonly TimeSpan DefaultDelay = TimeSpan.FromSeconds(1);
 
+    /// <summary>
+    /// Retries <paramref name="operation"/> while it returns a retryable failure or throws. Failures of type
+    /// <see cref="ErrorType.Unauthorized"/>, <see cref="ErrorType.Forbidden"/>, <see cref="ErrorType.NotFound"/> and
+    /// <see cref="ErrorType.Validation"/> are not retried. Cancellation of <paramref name="cancellationToken"/> is never
+    /// retried and throws <see cref="OperationCanceledException"/>.
+    /// </summary>
+    /// <param name="operation">The operation to run.</param>
+    /// <param name="maxAttempts">Number of retries after the first attempt, so the operation runs at most
+    /// <c>maxAttempts + 1</c> times.</param>
+    /// <param name="delay">Delay before the first retry. Defaults to one second.</param>
+    /// <param name="exponentialBackoff">When <see langword="true"/>, the delay doubles after each retry.</param>
+    /// <param name="cancellationToken">Caller token. Cancelling it stops retrying and throws
+    /// <see cref="OperationCanceledException"/>.</param>
     public static async ValueTask<Result<T>> RetryIfFailed<T>(
         this Func<CancellationToken, Task<Result<T>>> operation,
         int maxAttempts = 3,
@@ -36,6 +49,7 @@ public static class ResilienceResultExtensions
         return ResilienceClassifier.ThrowIfCallerCancelled(result, cancellationToken);
     }
 
+    /// <inheritdoc cref="RetryIfFailed{T}(Func{CancellationToken, Task{Result{T}}}, int, TimeSpan?, bool, CancellationToken)"/>
     public static async ValueTask<Result> RetryIfFailed(
         this Func<CancellationToken, Task<Result>> operation,
         int maxAttempts = 3,
@@ -68,6 +82,19 @@ public static class ResilienceResultExtensions
     /// predicate as well. Cancellation of <paramref name="cancellationToken"/> is never retried and throws
     /// <see cref="OperationCanceledException"/>, as in the overload without a predicate.
     /// </summary>
+    /// <remarks>
+    /// The predicate can be called more than once for the same attempt (for example, again after the last attempt
+    /// when the caller has cancelled), so keep it pure and cheap. If the predicate throws while an attempt is being
+    /// classified, retrying stops and the exception is returned as an <see cref="ErrorType.Unexpected"/> error.
+    /// </remarks>
+    /// <param name="operation">The operation to run.</param>
+    /// <param name="shouldRetry">Returns <see langword="true"/> for errors that should be retried.</param>
+    /// <param name="maxAttempts">Number of retries after the first attempt, so the operation runs at most
+    /// <c>maxAttempts + 1</c> times.</param>
+    /// <param name="delay">Delay before the first retry. Defaults to one second.</param>
+    /// <param name="exponentialBackoff">When <see langword="true"/>, the delay doubles after each retry.</param>
+    /// <param name="cancellationToken">Caller token. Cancelling it stops retrying and throws
+    /// <see cref="OperationCanceledException"/>.</param>
     public static async ValueTask<Result<T>> RetryIfFailed<T>(
         this Func<CancellationToken, Task<Result<T>>> operation,
         Func<Error, bool> shouldRetry,
