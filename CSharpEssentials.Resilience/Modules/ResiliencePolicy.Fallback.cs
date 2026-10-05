@@ -21,7 +21,7 @@ public readonly partial struct ResiliencePolicy<T>
             {
                 ShouldHandle = new PredicateBuilder<Result<T>>()
                     .HandleResult(static result => result.IsFailure)
-                    .Handle<Exception>(),
+                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex)),
                 FallbackAction = async args =>
                 {
                     try
@@ -29,7 +29,7 @@ public readonly partial struct ResiliencePolicy<T>
                         T fallbackValue = await fallbackAsync(args.Context.CancellationToken);
                         return Outcome.FromResult(Result<T>.Success(fallbackValue));
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (!ResilienceClassifier.IsCancellation(ex))
                     {
                         return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
                     }
@@ -39,7 +39,7 @@ public readonly partial struct ResiliencePolicy<T>
 
         ResiliencePipeline<Result<T>> merged = new ResiliencePipelineBuilder<Result<T>>()
             .AddPipeline(pipeline)
-            .AddPipeline(_pipeline)
+            .AddPipeline(GetPipeline())
             .Build();
 
         return new(merged);
@@ -59,7 +59,7 @@ public readonly partial struct ResiliencePolicy<T>
             {
                 ShouldHandle = new PredicateBuilder<Result<T>>()
                     .HandleResult(static result => result.IsFailure)
-                    .Handle<Exception>(),
+                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex)),
                 FallbackAction = async args =>
                 {
                     try
@@ -67,7 +67,7 @@ public readonly partial struct ResiliencePolicy<T>
                         Result<T> fallbackResult = await fallbackAsync(args.Context.CancellationToken);
                         return Outcome.FromResult(fallbackResult);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (!ResilienceClassifier.IsCancellation(ex))
                     {
                         return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
                     }
@@ -77,7 +77,7 @@ public readonly partial struct ResiliencePolicy<T>
 
         ResiliencePipeline<Result<T>> merged = new ResiliencePipelineBuilder<Result<T>>()
             .AddPipeline(pipeline)
-            .AddPipeline(_pipeline)
+            .AddPipeline(GetPipeline())
             .Build();
 
         return new(merged);

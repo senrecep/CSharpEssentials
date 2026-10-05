@@ -1,4 +1,3 @@
-using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Polly;
 using Polly.Retry;
@@ -24,7 +23,7 @@ public static class ResilienceResultExtensions
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result<T>>()
                     .HandleResult(ResilienceClassifier.IsRetryable)
-                    .Handle<Exception>()
+                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex))
             })
             .Build();
 
@@ -36,7 +35,7 @@ public static class ResilienceResultExtensions
         }
         catch (Exception ex)
         {
-            return Error.Exception(ex, ErrorType.Unexpected);
+            return ResilienceClassifier.HandleException(ex);
         }
     }
 
@@ -57,7 +56,7 @@ public static class ResilienceResultExtensions
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result>()
                     .HandleResult(ResilienceClassifier.IsRetryable)
-                    .Handle<Exception>()
+                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex))
             })
             .Build();
 
@@ -69,7 +68,7 @@ public static class ResilienceResultExtensions
         }
         catch (Exception ex)
         {
-            return Error.Exception(ex, ErrorType.Unexpected);
+            return ResilienceClassifier.HandleException(ex);
         }
     }
 }

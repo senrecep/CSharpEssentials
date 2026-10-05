@@ -7,6 +7,9 @@ namespace CSharpEssentials.Resilience;
 
 internal static class ResilienceClassifier
 {
+    internal static bool IsCancellation(Exception ex) =>
+        ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested;
+
     internal static Error HandleException(Exception ex)
     {
         if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
