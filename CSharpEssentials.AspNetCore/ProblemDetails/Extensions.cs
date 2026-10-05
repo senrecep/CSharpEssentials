@@ -3,6 +3,7 @@ using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -101,6 +102,44 @@ public static partial class Extensions
         services.Configure<ApiBehaviorOptions>(options => options.SuppressModelStateInvalidFilter = true);
         return services;
     }
+
+    /// <summary>
+    /// Writes the automatic 400 of <see cref="ApiControllerAttribute"/> controllers (invalid model state, including
+    /// binding failures such as an unknown enum value) as an enhanced problem response, so it carries the same
+    /// <c>errorCodes</c>/<c>errors</c> fields (and honors <see cref="EnhancedProblemDetailsOptions.ErrorFields"/>)
+    /// as every other problem response. Each model error becomes an <see cref="ErrorType.Validation"/> error whose
+    /// code is the model state key (for example <c>status</c>, <c>dto.status</c> or <c>$.status</c>).
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="errorFactory">
+    /// Creates the error of one model error from its model state key; <see langword="null"/> uses the default
+    /// (code: key, description: the model error message).
+    /// </param>
+    public static IServiceCollection ConfigureInvalidModelStateResponse(
+        this IServiceCollection services,
+        Func<string, ModelError, Error>? errorFactory = null)
+    {
+        Func<string, ModelError, Error> factory = errorFactory ?? CreateModelStateError;
+        services.Configure<ApiBehaviorOptions>(options => options.InvalidModelStateResponseFactory = context =>
+        {
+            Error[] errors = [.. context.ModelState
+                .Where(static entry => entry.Value is { Errors.Count: > 0 })
+                .SelectMany(entry => entry.Value!.Errors.Select(error => factory(entry.Key, error)))];
+            if (errors.Length == 0)
+                errors = [Error.Validation(code: InvalidModelStateCode, description: InvalidModelStateDescription)];
+            return errors.ToActionResult(context.HttpContext, statusCode: StatusCodes.Status400BadRequest);
+        });
+        return services;
+    }
+
+    private const string InvalidModelStateCode = "request";
+    private const string InvalidModelStateDescription = "The request is invalid.";
+
+    // Exception messages of model errors are not written: they may expose implementation details.
+    private static Error CreateModelStateError(string key, ModelError error) =>
+        Error.Validation(
+            code: string.IsNullOrEmpty(key) ? InvalidModelStateCode : key,
+            description: string.IsNullOrEmpty(error.ErrorMessage) ? InvalidModelStateDescription : error.ErrorMessage);
 
     /// <summary>
     /// Converts a successful result to a <see cref="ProblemDetails"/> object.
