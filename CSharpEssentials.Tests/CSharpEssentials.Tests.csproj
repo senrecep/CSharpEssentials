@@ -29,8 +29,9 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" ExcludeAssets="all" />
   </ItemGroup>
 
-  <!-- Copy the resolved Enums analyzer (netstandard2.0 ProjectReference output) next to the tests for NestedStringEnumAnalyzerTests. -->
-  <Target Name="CopyEnumsAnalyzerForTests" AfterTargets="ResolveProjectReferences">
+  <!-- Copy the resolved Enums analyzer (netstandard2.0 ProjectReference output) next to the tests for NestedStringEnumAnalyzerTests.
+       Runs after the reference is resolved and before AssignTargetPaths, so the None item is always copied. -->
+  <Target Name="CopyEnumsAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
     <ItemGroup>
       <None Include="@(Analyzer)"
             Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.Enums.dll'"
