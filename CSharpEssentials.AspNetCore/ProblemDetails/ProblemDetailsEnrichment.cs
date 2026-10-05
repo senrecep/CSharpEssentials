@@ -96,7 +96,7 @@ internal static class ProblemDetailsEnrichment
         string? traceId = format switch
         {
             TraceIdFormat.W3CTraceId when activity is { IdFormat: ActivityIdFormat.W3C } => activity.TraceId.ToHexString(),
-            TraceIdFormat.W3CTraceId => null,
+            TraceIdFormat.W3CTraceId => httpContext.TraceIdentifier,
             TraceIdFormat.TraceparentHeader => activity?.Id ?? httpContext.TraceIdentifier,
             TraceIdFormat.None => null,
             _ => null,

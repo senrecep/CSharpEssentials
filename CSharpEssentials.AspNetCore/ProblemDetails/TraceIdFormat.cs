@@ -6,7 +6,8 @@ namespace CSharpEssentials.AspNetCore;
 public enum TraceIdFormat
 {
     /// <summary>
-    /// The 32 hex character W3C trace id (<c>Activity.TraceId</c>). Omitted when there is no activity.
+    /// The 32 hex character W3C trace id (<c>Activity.TraceId</c>). Falls back to <c>HttpContext.TraceIdentifier</c>
+    /// when there is no W3C activity (for example when tracing is disabled), so the response always carries a trace id.
     /// </summary>
     W3CTraceId = 0,
 
