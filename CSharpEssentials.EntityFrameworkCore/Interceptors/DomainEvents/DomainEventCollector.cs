@@ -34,6 +34,53 @@ internal static class DomainEventCollector
         return [.. collected];
     }
 
+    /// <summary>
+    /// Collects and clears domain events from all tracked entities, keeping each entity with its events
+    /// so they can be put back with <see cref="Restore"/>.
+    /// </summary>
+    internal static List<(IDomainEventHolder Entity, IDomainEvent[] Events)> CollectByEntity(DbContext context)
+    {
+        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected = [];
+
+        foreach (IDomainEventHolder entity in context.ChangeTracker
+            .Entries<IDomainEventHolder>()
+            .Select(e => e.Entity))
+        {
+            IDomainEvent[] events = [.. entity.DomainEvents];
+            if (events.Length == 0)
+                continue;
+
+            collected.Add((entity, events));
+            entity.ClearDomainEvents();
+        }
+
+        return collected;
+    }
+
+    /// <summary>
+    /// Puts the collected events that are in <paramref name="toRestore"/> back on their entities, ahead of any
+    /// event raised since they were collected, keeping their original order.
+    /// </summary>
+    internal static void Restore(
+        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected, IDomainEvent[] toRestore)
+    {
+        if (toRestore.Length == 0)
+            return;
+
+        HashSet<IDomainEvent> restore = new(toRestore, ReferenceEqualityComparer.Instance);
+        foreach ((IDomainEventHolder entity, IDomainEvent[] events) in collected)
+        {
+            IDomainEvent[] restored = [.. events.Where(restore.Contains)];
+            if (restored.Length == 0)
+                continue;
+
+            IDomainEvent[] raisedSince = [.. entity.DomainEvents];
+            entity.ClearDomainEvents();
+            foreach (IDomainEvent domainEvent in restored.Concat(raisedSince))
+                entity.Raise(domainEvent);
+        }
+    }
+
     internal static (IDomainEvent[] BeforeSave, IDomainEvent[] AfterSave) SplitByTiming(IDomainEvent[] events)
     {
         ILookup<bool, IDomainEvent> grouped = events

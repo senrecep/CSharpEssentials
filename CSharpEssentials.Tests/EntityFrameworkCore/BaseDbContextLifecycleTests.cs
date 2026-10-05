@@ -43,6 +43,8 @@ public class BaseDbContextLifecycleTests
     {
         public DbSet<EventEntity> Entities => Set<EventEntity>();
 
+        public T ResolveFromContextScope<T>() where T : notnull => ServiceProvider.GetRequiredService<T>();
+
         protected override DbContextInterceptors InterceptorsFromServices => interceptors;
 
         protected override bool DispatchDomainEventsOnSaveChanges => dispatchDomainEvents;
@@ -78,6 +80,39 @@ public class BaseDbContextLifecycleTests
         {
             Stored.AddRange(domainEvents);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ScopedDisposable : IDisposable
+    {
+        public bool Disposed { get; private set; }
+
+        public void Dispose() => Disposed = true;
+    }
+
+    private sealed class FailOnceInterceptor : SaveChangesInterceptor
+    {
+        private bool _failed;
+
+        public override InterceptionResult<int> SavingChanges(DbContextEventData eventData, InterceptionResult<int> result)
+        {
+            FailFirstSave();
+            return base.SavingChanges(eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
+        {
+            FailFirstSave();
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+
+        private void FailFirstSave()
+        {
+            if (_failed)
+                return;
+            _failed = true;
+            throw new DbUpdateException("Simulated save failure.");
         }
     }
 
@@ -369,5 +404,111 @@ public class BaseDbContextLifecycleTests
 
         publisher.Published.Should().ContainSingle();
         entity.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void OnConfiguring_Should_NotAttachDomainEventInterceptor_When_ContextDispatchEnabled()
+    {
+        using ServiceProvider provider = BuildProvider(RegisterAllInterceptors);
+        using LifecycleDbContext context = CreateContext(provider, DbContextInterceptors.All, dispatchDomainEvents: true);
+
+        IInterceptor[] attached = AttachedInterceptors(context);
+
+        attached.Should().HaveCount(2);
+        attached.Should().NotContain(i => i is DomainEventInterceptor);
+    }
+
+    // ── Save failure ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_RestoreAfterSaveEvents_When_SaveFails()
+    {
+        using ServiceProvider provider = BuildProvider();
+        List<DispatchCall> calls = [];
+        using LifecycleDbContext context = CreateContext(
+            provider, dispatchDomainEvents: true, recordedCalls: calls,
+            configureOptions: options => options.AddInterceptors(new FailOnceInterceptor()));
+        var entity = new EventEntity();
+        var before = new BeforeEvent("before");
+        var after = new AfterEvent("after");
+        entity.Raise(before);
+        entity.Raise(after);
+        context.Entities.Add(entity);
+
+        Func<Task> act = () => context.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<DbUpdateException>();
+        calls.Should().ContainSingle().Which.Timing.Should().Be(DomainEventTiming.BeforeSave);
+        entity.DomainEvents.Should().Equal(after);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_DispatchRestoredAfterSaveEvents_When_RetriedAfterFailure()
+    {
+        using ServiceProvider provider = BuildProvider();
+        List<DispatchCall> calls = [];
+        using LifecycleDbContext context = CreateContext(
+            provider, dispatchDomainEvents: true, recordedCalls: calls,
+            configureOptions: options => options.AddInterceptors(new FailOnceInterceptor()));
+        var entity = new EventEntity();
+        var after = new AfterEvent("after");
+        var raisedLater = new AfterEvent("later");
+        entity.Raise(after);
+        context.Entities.Add(entity);
+        await FluentActions.Invoking(() => context.SaveChangesAsync()).Should().ThrowAsync<DbUpdateException>();
+        entity.Raise(raisedLater);
+
+        await context.SaveChangesAsync();
+
+        calls.Should().ContainSingle();
+        calls[0].Timing.Should().Be(DomainEventTiming.AfterSave);
+        calls[0].Events.Should().Equal(after, raisedLater);
+        entity.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SaveChanges_Should_RestoreAfterSaveEvents_When_SaveFails()
+    {
+        using ServiceProvider provider = BuildProvider();
+        List<DispatchCall> calls = [];
+        using LifecycleDbContext context = CreateContext(
+            provider, dispatchDomainEvents: true, recordedCalls: calls,
+            configureOptions: options => options.AddInterceptors(new FailOnceInterceptor()));
+        var entity = new EventEntity();
+        var after = new AfterEvent("after");
+        entity.Raise(after);
+        context.Entities.Add(entity);
+
+        Action act = () => context.SaveChanges();
+
+        act.Should().Throw<DbUpdateException>();
+        calls.Should().BeEmpty();
+        entity.DomainEvents.Should().Equal(after);
+    }
+
+    // ── Service scope ───────────────────────────────────────────────
+
+    [Fact]
+    public void Dispose_Should_DisposeContextServiceScope()
+    {
+        using ServiceProvider provider = BuildProvider(services => services.AddScoped<ScopedDisposable>());
+        LifecycleDbContext context = CreateContext(provider);
+        ScopedDisposable scoped = context.ResolveFromContextScope<ScopedDisposable>();
+
+        context.Dispose();
+
+        scoped.Disposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DisposeAsync_Should_DisposeContextServiceScope()
+    {
+        await using ServiceProvider provider = BuildProvider(services => services.AddScoped<ScopedDisposable>());
+        LifecycleDbContext context = CreateContext(provider);
+        ScopedDisposable scoped = context.ResolveFromContextScope<ScopedDisposable>();
+
+        await context.DisposeAsync();
+
+        scoped.Disposed.Should().BeTrue();
     }
 }
