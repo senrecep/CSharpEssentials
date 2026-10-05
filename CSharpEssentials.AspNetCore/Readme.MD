@@ -53,7 +53,7 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler + UseStatusCodePages
 
 With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpContext.TraceIdentifier`. `errors` lists only `ErrorType.Validation` errors; every code is in `errorCodes`.
 
-`services.ConfigureInvalidModelStateResponse()` writes the automatic 400 of `[ApiController]` (invalid model state) through the same pipeline, with the model state key as the error code.
+`services.ConfigureInvalidModelStateResponse()` writes the automatic 400 of `[ApiController]` (invalid model state) through the same pipeline, with the model state key as the error code. It can be called before or after `AddControllers()`. It has no effect together with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off (`SuppressModelStateInvalidFilter = true`); use one or the other.
 
 `errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 

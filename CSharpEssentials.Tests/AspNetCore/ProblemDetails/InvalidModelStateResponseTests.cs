@@ -96,6 +96,20 @@ public class InvalidModelStateResponseTests
     }
 
     [Fact]
+    public async Task InvalidQueryValue_Should_WriteEnhancedProblem_When_ExtensionIsConfiguredBeforeAddControllers()
+    {
+        await using ModelStateHost host = await ModelStateHost.StartAsync(
+            _ => { },
+            configureBeforeControllers: s => s.ConfigureInvalidModelStateResponse());
+
+        (int status, string? mediaType, JsonObject json) = await host.GetAsync("/plain?plain=7x");
+
+        status.Should().Be(400);
+        mediaType.Should().Be("application/problem+json");
+        json["errorCodes"]!.AsArray().Select(n => n!.GetValue<string>()).Should().Contain("plain");
+    }
+
+    [Fact]
     public async Task InvalidModelState_Should_ReturnFrameworkValidationProblem_When_ExtensionIsNotConfigured()
     {
         await using ModelStateHost host = await ModelStateHost.StartAsync(_ => { });
@@ -136,12 +150,15 @@ public class InvalidModelStateResponseTests
 
         private HttpClient Client { get; }
 
-        public static async Task<ModelStateHost> StartAsync(Action<IServiceCollection> configureServices)
+        public static async Task<ModelStateHost> StartAsync(
+            Action<IServiceCollection> configureServices,
+            Action<IServiceCollection>? configureBeforeControllers = null)
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder();
             builder.WebHost.UseTestServer();
             builder.Logging.ClearProviders();
             builder.Services.AddEnhancedProblemDetails();
+            configureBeforeControllers?.Invoke(builder.Services);
             builder.Services.AddControllers().ConfigureApplicationPartManager(manager =>
             {
                 foreach (IApplicationFeatureProvider<ControllerFeature> provider in
