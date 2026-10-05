@@ -1,3 +1,4 @@
+using System.Reflection;
 using CSharpEssentials.EntityFrameworkCore;
 using CSharpEssentials.EntityFrameworkCore.Converters;
 using CSharpEssentials.Enums;
@@ -65,6 +66,15 @@ public class ModelConfigurationExtensionsTests
         public DbSet<AcronymEntity> Entities { get; set; } = null!;
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
             configurationBuilder.ConfigureEnumConventions(o => o.CanConvert = type => type == typeof(PlainColor), typeof(PredicateConventionDbContext).Assembly);
+    }
+
+    private sealed class PartiallyLoadableAssemblyDbContext(DbContextOptions<PartiallyLoadableAssemblyDbContext> options) : DbContext(options)
+    {
+        public static readonly Assembly BrokenAssembly = PartiallyLoadableAssembly.Create("EnumConventionScan.Broken");
+
+        public DbSet<AcronymEntity> Entities { get; set; } = null!;
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+            configurationBuilder.ConfigureEnumConventions(BrokenAssembly, typeof(PartiallyLoadableAssemblyDbContext).Assembly);
     }
 
     private sealed class EnumEntity
@@ -179,6 +189,17 @@ public class ModelConfigurationExtensionsTests
 
         entity.Status.Should().Be(AcronymStatus.HTTPStatus);
         entity.Color.Should().Be(PlainColor.Green);
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_WithPartiallyLoadableAssembly_ShouldScanLoadableTypes()
+    {
+        using PartiallyLoadableAssemblyDbContext context = new(CreateOptions<PartiallyLoadableAssemblyDbContext>());
+
+        IProperty property = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
+
+        PartiallyLoadableAssemblyDbContext.BrokenAssembly.Invoking(a => a.GetTypes()).Should().Throw<ReflectionTypeLoadException>();
+        property.GetValueConverter().Should().BeOfType<EnumToFormattedStringConverter<AcronymStatus>>();
     }
 
     private static DbContextOptions<TContext> CreateOptions<TContext>() where TContext : DbContext =>

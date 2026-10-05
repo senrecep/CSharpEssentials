@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json;
 using CSharpEssentials.Json;
 using FluentAssertions;
@@ -18,6 +19,13 @@ internal sealed class Rectangle : BaseShape
 {
     public double Width { get; set; }
     public double Height { get; set; }
+}
+
+internal abstract class ScannedShape;
+
+internal sealed class Triangle : ScannedShape
+{
+    public double Base { get; set; }
 }
 
 public class PolymorphicJsonConverterFactoryTests
@@ -129,5 +137,18 @@ public class PolymorphicJsonConverterFactoryTests
 
         factory.CanConvert(typeof(Circle)).Should().BeFalse();
         factory.CanConvert(typeof(string)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Deserialize_WithPartiallyLoadableAssemblyInAppDomain_ShouldUseLoadableTypes()
+    {
+        Assembly brokenAssembly = PartiallyLoadableAssembly.Create("PolymorphicScan.Broken");
+        brokenAssembly.Invoking(a => a.GetTypes()).Should().Throw<ReflectionTypeLoadException>();
+        string json = $"{{\"$type\":\"{typeof(Triangle).FullName}\",\"Base\":3}}";
+
+        ScannedShape? shape = JsonSerializer.Deserialize<ScannedShape>(json, PolymorphicOptions);
+
+        shape.Should().BeOfType<Triangle>().Which.Base.Should().Be(3);
+        GC.KeepAlive(brokenAssembly);
     }
 }
