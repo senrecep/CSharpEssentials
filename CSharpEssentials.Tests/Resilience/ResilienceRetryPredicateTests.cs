@@ -210,6 +210,27 @@ public sealed class ResilienceRetryPredicateTests
     }
 
     [Fact]
+    public async Task RetryIfFailed_Should_Return_Unexpected_Error_When_Predicate_Throws()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            attempts++;
+            return Task.FromResult(Result<int>.Failure(Error.Failure("Transient")));
+        };
+
+        Result<int> result = await operation.RetryIfFailed(
+            shouldRetry: _ => throw new InvalidOperationException("predicate failed"),
+            maxAttempts: 3,
+            delay: ShortDelay);
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
+        result.FirstError.Code.Should().Be(nameof(InvalidOperationException));
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
     public async Task RetryIfFailed_Should_Throw_When_Predicate_Is_Null()
     {
         Func<CancellationToken, Task<Result<int>>> operation = _ => Task.FromResult(Result<int>.Success(1));
