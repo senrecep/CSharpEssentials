@@ -6,7 +6,7 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-2973%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-3186%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
@@ -141,7 +141,7 @@ Map `Result<T>` to correct HTTP status codes without writing any error-mapping b
 
 ```csharp
 // Program.cs
-builder.Services.AddEnhancedProblemDetails(); // registers ProblemDetails
+builder.Services.AddEnhancedProblemDetails(); // registers ProblemDetails (see "Migrating from 3.x to 4.0")
 
 // Controller — business logic returns Result<T>, HTTP mapping is automatic
 [HttpGet("{id:guid}")]
@@ -158,6 +158,89 @@ public Result<Order> PlaceOrder(Guid productId, int quantity)
         .Then(p => ReserveStock(p, quantity))
         .Then(p => CreateOrder(p, quantity));
 ```
+
+## Migrating from 3.x to 4.0
+
+4.0 changes default behavior in `CSharpEssentials.AspNetCore` and `CSharpEssentials.EntityFrameworkCore`.
+The new defaults expose less request data and name enums the same way everywhere. Each old behavior can be turned back on with a setting.
+
+### ProblemDetails (`CSharpEssentials.AspNetCore`)
+
+Configure the output with `AddEnhancedProblemDetails(o => ...)`. Minimal API (`ToProblemResult`), MVC (`ToActionResult`), `GlobalExceptionHandler`, status code pages and framework 404/405 responses all go through `IProblemDetailsService` and produce the same JSON.
+
+| Changed behavior | 3.x | 4.0 default | Restore with |
+|---|---|---|---|
+| `traceId` | `traceparent` value (`00-…-…-01`) | W3C trace id (32 hex) | `o.TraceId = TraceIdFormat.TraceparentHeader` |
+| `requestId` | written | omitted | `o.IncludeRequestId = true` |
+| `user` | written | omitted | `o.IncludeUser = true` |
+| `spanId` / `parentSpanId` | written | omitted | `o.IncludeSpanIds = true` |
+| `instance` | `"GET /path"` | `"/path"` | `o.Instance = ProblemInstanceFormat.MethodAndPath` |
+| `type` | RFC 7231 URIs | RFC 9110 URIs (`null` for unlisted status codes) | `o.TypeUriResolver = ProblemTypeUris.Rfc7231` |
+| `errorMessages` | written | omitted | `o.ErrorFields \|= ProblemErrorFields.Messages` |
+| `errors` | every `Error` (code, description, type, metadata) | `ErrorType.Validation` errors only, as `{ code, description }` | `o.ErrorFields \|= ProblemErrorFields.AllErrors` |
+| Exception message in a 500 | written (via `Error.Exception`) | logged only | `o.ExposeExceptionDetails = env.IsDevelopment()` |
+
+`o.UseLegacyDefaults()` restores all of the rows above except the last one.
+
+Other ProblemDetails changes:
+
+- `GlobalExceptionHandler` maps exceptions with `IExceptionProblemMapper`.
+  - Defaults:
+
+    | Exception | Response |
+    |---|---|
+    | `OperationCanceledException` while the client aborted the request | 499 (other cancellations, such as timeouts: 500) |
+    | `BadHttpRequestException` | its own status code |
+    | `EnhancedValidationException` | 400 |
+    | `DomainException` | the status of its `ErrorType` (3.x: always 400) |
+    | Anything else | 500 |
+
+  - In 3.x, `InvalidOperationException`, `ApplicationException` and `ValidationException` returned 400. To keep that, register a mapper with `services.AddExceptionProblemMapper<MyMapper>()`.
+- The status code for an `ErrorType` comes from `IErrorStatusCodeMapper`. Replace it with `services.AddErrorStatusCodeMapper<MyMapper>()`, for example to return 401 or 403 for authentication errors.
+- `ResultEndpointFilter` now returns a ProblemDetails response on failure. In 3.x it returned `400` with the raw `Error[]`. A registered `IResultErrorMapper` still takes precedence.
+- The return types changed:
+  - `ToProblemResult` returns `EnhancedProblemHttpResult`.
+  - `ToActionResult` returns `EnhancedProblemObjectResult`, which derives from `ObjectResult`.
+  - Both resolve the registered options when they execute. Code that cast the result to `ProblemHttpResult` or `BadRequestObjectResult` has to change.
+- `ToProblemDetails` builds the object with the default options because it has no request context.
+- `EnhancedProblemDetails`:
+  - `ErrorCodes` and `ErrorMessages` are `null` when they are not emitted (3.x: never `null`). Code such as `pd.ErrorMessages.Contains(...)` needs a null check.
+  - `Errors` is no longer serialized; `ErrorFields` decides what is written.
+- The static `ProblemDetails` enhancer is gone. `AddEnhancedProblemDetails(Action<ProblemDetails, HttpContext>)` still works and is registered as an `IProblemDetailsEnricher`. You can also add enrichers with `AddProblemDetailsEnricher<T>()`.
+- `AddEnhancedProblemDetails(null)` no longer compiles because two overloads now accept a delegate. Call `AddEnhancedProblemDetails()` instead.
+- `GlobalExceptionHandler` resolves mappers and options from the request services for each exception, so mappers can be scoped. Its constructor takes only `IProblemDetailsService` and `ILogger`.
+- Minimal API writes with `Microsoft.AspNetCore.Http.Json.JsonOptions`, MVC with `Microsoft.AspNetCore.Mvc.JsonOptions`. The output is identical only when both have the same JSON settings; `ConfigureSystemTextJson()` sets both.
+- Call `app.UseEnhancedProblemDetails()`. It runs `UseExceptionHandler()` and `UseStatusCodePages()`.
+- Without `AddEnhancedProblemDetails`, the library does not use `IProblemDetailsService` and writes the response itself. A plain `AddProblemDetails()` would replace `traceId` with the `traceparent` value, and Minimal API and MVC output would differ.
+- `EnhancedProblemDetails.ErrorCodes` and `ErrorMessages` are now stored in `Extensions["errorCodes"]` and `Extensions["errorMessages"]`. Writers that serialize the declared `ProblemDetails` type, such as MVC's `[ApiController]` writer, now include them.
+
+### JSON (`CSharpEssentials.Json`)
+
+- `PolymorphicJsonConverterFactory` no longer handles collection or dictionary interfaces (`IEnumerable<T>`, `IDictionary<,>`, `IReadOnlyList<T>`, …). In 3.x it wrapped them in a `$type` envelope, which also broke `ProblemDetails.Extensions`.
+- `JsonOptions.ApplyTo` (used by `ConfigureSystemTextJson()`) keeps the target's `TypeInfoResolver` when the source has none. In 3.x the resolver was set to `null`, and Minimal API failed at startup.
+
+### Enum names (`CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`)
+
+`StringEnumNaming` is now the single naming source. JSON, EF Core storage, Swagger schemas and query/route binding all use the JSON naming policy (`snake_case_lower`, with `[JsonStringEnumMemberName]` respected).
+
+| Changed behavior | 3.x | 4.0 default | Restore with |
+|---|---|---|---|
+| EF Core `ConfigureEnumConventions` stored value | `Core.ToSnakeCase()` (`HTTPStatus` → `httpstatus`, `Value1` → `value_1`) | JSON policy (`http_status`, `value1`) | `ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, assemblies)` |
+| Swagger enum schema names | `Core.ToSnakeCase()` | JSON policy names | — (schema follows JSON) |
+
+Names with a single word or plain PascalCase did not change. Enums with acronyms or digits in member names did. When reading, the new EF converter also accepts the old stored values, so existing rows still load.
+
+> **Warning:** loading is the only part that is tolerant. Queries, joins, unique indexes and `GroupBy` compare against the new spelling, so `Where(x => x.Status == Status.HTTPStatus)` does not match a row stored as `httpstatus`. If an enum changed spelling, either migrate the stored values (`UPDATE … SET status = 'http_status' WHERE status = 'httpstatus'`) or keep `UseLegacySnakeCase = true`.
+
+### New in 4.0: enum query/route binding
+
+`services.AddEnumBinding()` (optional) and `app.UseEnumBinding()` make Minimal API (including `[AsParameters]`) and MVC accept the same spellings as JSON for `[StringEnum]` enums in query and route values:
+
+- the snake_case name;
+- the C# member name, case-insensitive;
+- the number of a defined member.
+
+Invalid values return a 400 ProblemDetails response.
 
 ## AI Skills
 

@@ -19,6 +19,15 @@ internal enum RegularEnumType
     Second
 }
 
+[StringEnum]
+internal enum ConverterAcronymKind
+{
+    HTTPStatus,
+    IOError,
+    Value1,
+    PendingApproval
+}
+
 public class ConditionalStringEnumConverterTests
 {
     private static readonly JsonSerializerOptions StringEnumOptions = new()
@@ -111,5 +120,56 @@ public class ConditionalStringEnumConverterTests
 
         converter.CanConvert(typeof(RegularEnumType)).Should().BeTrue();
         converter.CanConvert(typeof(TestStringEnumType)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Serialize_ShouldWriteSameNamesAsStringEnumNaming()
+    {
+        foreach (ConverterAcronymKind value in Enum.GetValues<ConverterAcronymKind>())
+        {
+            string json = JsonSerializer.Serialize(value, StringEnumOptions);
+
+            json.Should().Be($"\"{StringEnumNaming.GetName(value)}\"");
+        }
+    }
+
+    [Fact]
+    public void Serialize_AcronymMember_ShouldWriteSnakeCaseName()
+    {
+        string json = JsonSerializer.Serialize(ConverterAcronymKind.HTTPStatus, StringEnumOptions);
+
+        json.Should().Be("\"http_status\"");
+    }
+
+    [Fact]
+    public void Serialize_WithCamelCasePolicy_ShouldMatchStringEnumNamingWithSamePolicy()
+    {
+        string json = JsonSerializer.Serialize(ConverterAcronymKind.PendingApproval, CamelCaseOptions);
+
+        json.Should().Be($"\"{StringEnumNaming.GetName(ConverterAcronymKind.PendingApproval, JsonNamingPolicy.CamelCase)}\"");
+    }
+
+    [Theory]
+    [InlineData("\"http_status\"", nameof(ConverterAcronymKind.HTTPStatus))]
+    [InlineData("\"HTTPStatus\"", nameof(ConverterAcronymKind.HTTPStatus))]
+    [InlineData("\"io_error\"", nameof(ConverterAcronymKind.IOError))]
+    [InlineData("\"pending_approval\"", nameof(ConverterAcronymKind.PendingApproval))]
+    [InlineData("\"PendingApproval\"", nameof(ConverterAcronymKind.PendingApproval))]
+    public void Deserialize_ShouldReadSnakeCaseAndPascalCase(string json, string expected)
+    {
+        ConverterAcronymKind value = JsonSerializer.Deserialize<ConverterAcronymKind>(json, StringEnumOptions);
+
+        value.Should().Be(Enum.Parse<ConverterAcronymKind>(expected));
+    }
+
+    [Fact]
+    public void Deserialize_ShouldReadEveryNameProducedByStringEnumNaming()
+    {
+        foreach (ConverterAcronymKind expected in Enum.GetValues<ConverterAcronymKind>())
+        {
+            string json = $"\"{StringEnumNaming.GetName(expected)}\"";
+
+            JsonSerializer.Deserialize<ConverterAcronymKind>(json, StringEnumOptions).Should().Be(expected);
+        }
     }
 }
