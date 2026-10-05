@@ -317,4 +317,25 @@ public class StringEnumNamingTests
             parsed.Should().Be(value);
         }
     }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(2, true)]
+    [InlineData(99, false)]
+    [InlineData(-1, false)]
+    public void IsDefined_ShouldReportWhetherValueIsAMember(int value, bool expected)
+    {
+        StringEnumNaming.IsDefined((NamingStatus)value).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(3, true)]
+    [InlineData(7, true)]
+    [InlineData(8, false)]
+    [InlineData(9, false)]
+    public void IsDefined_ShouldAcceptCombinationsOfDefinedFlags(int value, bool expected)
+    {
+        StringEnumNaming.IsDefined((Permissions)value).Should().Be(expected);
+    }
 }
