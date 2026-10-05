@@ -236,6 +236,59 @@ public class ForEachAndNestedValidatorsTests
         result.Errors.Should().HaveCount(2);
     }
 
+    [Fact]
+    public async Task SetValidator_ShouldPrefixDescription_WithParentPropertyName()
+    {
+        ShipmentModel model = new(new AddressModel("", "34000"));
+
+        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Destination).SetValidatorAsync(new AddressValidator(), ct));
+
+        result.FirstError.Description.Should().Be("'Destination.City' must not be empty.");
+    }
+
+    private sealed class QuotedCustomMessageValidator : Validator<AddressModel>
+    {
+        protected override ValueTask Configure(AddressModel model, RuleContext<AddressModel> rules, CancellationToken ct = default)
+        {
+            rules.For(() => model.City).NotEmpty("'city field' for 'City' is required.");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task SetValidator_ShouldPrefixCorrectQuotedToken_WhenMessageContainsOtherQuotes()
+    {
+        ShipmentModel model = new(new AddressModel("", "34000"));
+
+        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Destination).SetValidatorAsync(new QuotedCustomMessageValidator(), ct));
+
+        result.FirstError.Code.Should().Be("Destination.City.NotEmpty");
+        result.FirstError.Description.Should().Be("'city field' for 'Destination.City' is required.");
+    }
+
+    private sealed class UnquotedCustomMessageValidator : Validator<AddressModel>
+    {
+        protected override ValueTask Configure(AddressModel model, RuleContext<AddressModel> rules, CancellationToken ct = default)
+        {
+            rules.For(() => model.City).NotEmpty("Custom failure text.");
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    [Fact]
+    public async Task SetValidator_ShouldLeaveDescriptionUntouched_WhenPropertyNameIsNotQuoted()
+    {
+        ShipmentModel model = new(new AddressModel("", "34000"));
+
+        Result<ShipmentModel> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Destination).SetValidatorAsync(new UnquotedCustomMessageValidator(), ct));
+
+        result.FirstError.Code.Should().Be("Destination.City.NotEmpty");
+        result.FirstError.Description.Should().Be("Custom failure text.");
+    }
+
 
     // =========================================================================
     // SetValidatorAsync

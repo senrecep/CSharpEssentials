@@ -85,23 +85,26 @@ public static class NestedValidators
             chain.AppendToContext(error with
             {
                 Code = prefix + error.Code,
-                Description = PrefixDescription(error.Description, prefix)
+                Description = PrefixDescription(error, prefix)
             });
         }
         chain.MarkFailed();
     }
 
-    private static string PrefixDescription(string description, string prefix)
+    // A nested error code looks like "City.NotEmpty" — the part before the rule suffix is the
+    // property name the nested validator quoted in its description ("'City' must not be empty.").
+    // Prefix exactly that quoted occurrence so the message matches the new fully-qualified code.
+    // Messages that do not quote the property name (custom messages) are left untouched.
+    private static string PrefixDescription(Error error, string prefix)
     {
-        int open = description.IndexOf('\'');
-        if (open < 0)
+        string description = error.Description;
+        int lastDot = error.Code.LastIndexOf('.');
+        if (lastDot <= 0)
             return description;
-        int close = description.IndexOf('\'', open + 1);
-        if (close <= open)
+        string quoted = string.Concat("'", error.Code[..lastDot], "'");
+        int idx = description.IndexOf(quoted, StringComparison.Ordinal);
+        if (idx < 0)
             return description;
-        string token = description[(open + 1)..close];
-        if (token.Contains(' '))
-            return description;
-        return description[..open] + '\'' + prefix + token + '\'' + description[(close + 1)..];
+        return description[..(idx + 1)] + prefix + description[(idx + 1)..];
     }
 }
