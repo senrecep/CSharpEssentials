@@ -11,7 +11,7 @@
         <PackageVersion Include="Asp.Versioning.Http" Version="[8.1.0,)" />
         <PackageVersion Include="Asp.Versioning.Mvc" Version="[8.1.0,)" />
         <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="[8.1.0,)" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="[8.1.0,)" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="[8.1.0,10)" />
     </ItemGroup>
 
     <!-- EntityFrameworkCore -->
