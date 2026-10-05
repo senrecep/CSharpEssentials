@@ -858,6 +858,24 @@ Result<User> user = await ResiliencePolicy
 | `MaybeConversion<T>()` | EF value conversion for `Maybe<T>` properties |
 | `HasJsonConversion<T>()` | Stores complex properties as JSON |
 
+### Enum Conventions
+
+| Method | What It Does |
+|--------|-------------|
+| `ConfigureEnumConventions(params Assembly[])` | Stores `[StringEnum]` enums as strings using the JSON name (`StringEnumNaming`), e.g. `HTTPStatus` → `http_status` |
+| `ConfigureEnumConventions(Action<EnumConventionOptions>, params Assembly[])` | Same, configured via options |
+
+| `EnumConventionOptions` | Default | Notes |
+|---|---|---|
+| `CanConvert` | `StringEnumNaming.IsStringEnum` | `Predicate<Type>` selecting enums to store as strings |
+| `UseLegacySnakeCase` | `false` | `true` writes the 3.x format (`ToSnakeCase()`: `HTTPStatus` → `httpstatus`) via `LegacySnakeCaseEnumConverter<TEnum>` |
+
+```csharp
+configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(AppDbContext).Assembly);
+```
+
+Reading accepts both formats, so existing rows still load. See [Migrating from 3.x to 4.0](../README.MD#migrating-from-3x-to-40).
+
 ### Interceptors
 
 | Method | What It Does |
@@ -894,6 +912,24 @@ Result<User> user = await ResiliencePolicy
 | `PolymorphicJsonConverterFactory` | Handles polymorphic serialization |
 | `MultiFormatDateTimeConverter` | Parses multiple date/time formats |
 | `ConditionalStringEnumConverter` | Conditional enum to/from string |
+| `StringEnumNaming` | Single naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
+
+### StringEnumNaming
+
+Names resolve as `[JsonStringEnumMemberName]` when present, otherwise `JsonNamingPolicy.SnakeCaseLower` (the default policy).
+
+| Member | What It Does |
+|--------|-------------|
+| `DefaultPolicy` | `JsonNamingPolicy.SnakeCaseLower` |
+| `IsStringEnum(Type)` | `true` for enums marked with `[StringEnum]` |
+| `GetName<TEnum>(value, policy?)` / `GetName(Type, object, policy?)` | String form of a value (flags joined with `", "`) |
+| `GetNames<TEnum>(policy?)` / `GetNames(Type, policy?)` | String forms of all members, in declaration order |
+| `TryParse<TEnum>(string?, out result, policy?, allowIntegerValues = true)` / `TryParse(Type, ...)` | Case-insensitive; accepts the policy name, the C# member name and (optionally) the number of a defined member |
+
+```csharp
+StringEnumNaming.GetName(HttpKind.HTTPStatus);                        // "http_status"
+StringEnumNaming.TryParse<HttpKind>("HTTPStatus", out var kind);      // true
+```
 
 ---
 
@@ -913,13 +949,85 @@ Result<User> user = await ResiliencePolicy
 | `ResultEndpointFilter` | Minimal API filter that maps Result to HTTP automatically |
 | `GlobalExceptionHandler` | Catches unhandled exceptions, returns ProblemDetails |
 
+`ResultEndpointFilter` returns `200 OK` on success. On failure it returns a ProblemDetails response (3.x: `400` with the raw `Error[]`); a registered `IResultErrorMapper` takes precedence. `ToProblemResult` returns `EnhancedProblemHttpResult` and `ToActionResult` returns `EnhancedProblemObjectResult` (derives from `ObjectResult`); both read the registered options when they execute. `ToProblemDetails` uses default options because it has no request context.
+
+> Upgrading from 3.x? Defaults changed (trace id, error fields, exception mapping, enum names). See [Migrating from 3.x to 4.0](../README.MD#migrating-from-3x-to-40).
+
 ### Configuration
 
 | Method | What It Does |
 |--------|-------------|
 | `AddEnhancedProblemDetails()` | Configures ProblemDetails in DI |
+| `AddEnhancedProblemDetails(Action<EnhancedProblemDetailsOptions>)` | Same, with options (below) |
+| `AddEnhancedProblemDetails(Action<ProblemDetails, HttpContext>)` | Default options plus a delegate registered as an `IProblemDetailsEnricher` |
+| `UseEnhancedProblemDetails()` | Runs `UseExceptionHandler()` and `UseStatusCodePages()` |
+| `AddProblemDetailsEnricher<T>(lifetime = Singleton)` | Adds an `IProblemDetailsEnricher` |
+| `AddErrorStatusCodeMapper<T>(lifetime = Singleton)` | Replaces the `IErrorStatusCodeMapper` |
+| `AddExceptionProblemMapper<T>(lifetime = Singleton)` | Adds an `IExceptionProblemMapper` (tried before the default mapper) |
 | `ConfigureModelValidatorResponse()` | Model validation errors as ProblemDetails |
 | `ConfigureSystemTextJson()` | Configures JSON serialization |
+
+### EnhancedProblemDetailsOptions
+
+All problem responses (Minimal API, MVC, `GlobalExceptionHandler`, status code pages, framework 404/405) go through `IProblemDetailsService` and share this configuration.
+
+| Option | Default | Values / Notes |
+|--------|---------|----------------|
+| `TraceId` | `TraceIdFormat.W3CTraceId` | `TraceparentHeader` (3.x), `None` |
+| `IncludeRequestId` | `false` | Writes `requestId` |
+| `IncludeUser` | `false` | Writes `user` |
+| `IncludeSpanIds` | `false` | Writes `spanId` / `parentSpanId` |
+| `Instance` | `ProblemInstanceFormat.Path` | `MethodAndPath` (3.x), `None` |
+| `ErrorFields` | `Codes \| ValidationErrors` | `ProblemErrorFields`: `None`, `Codes`, `ValidationErrors`, `Messages`, `AllErrors`, `All` |
+| `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code |
+| `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Func<int, string?>`; `ProblemTypeUris.Rfc7231` restores 3.x |
+| `ExposeExceptionDetails` | `false` | Writes an `exception` extension; enable only in Development |
+| `UseLegacyDefaults()` | | Restores the 3.x output (everything above except `ExposeExceptionDetails`) |
+
+```csharp
+builder.Services.AddEnhancedProblemDetails(o =>
+{
+    o.IncludeRequestId = true;
+    o.ErrorFields |= ProblemErrorFields.Messages;
+    o.ExposeExceptionDetails = builder.Environment.IsDevelopment();
+});
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+app.UseEnhancedProblemDetails();
+```
+
+### Extension Points
+
+| Interface | Purpose | Register with |
+|-----------|---------|---------------|
+| `IProblemDetailsEnricher` | `void Enrich(ProblemDetailsContext)` — add or change fields on every problem response | `AddProblemDetailsEnricher<T>()` |
+| `IErrorStatusCodeMapper` | `GetStatusCode(Error)`, `SelectPrimaryError(IReadOnlyList<Error>)`, `GetTitle(Error, int)` — status/title for error-based problems (derive from `DefaultErrorStatusCodeMapper` to override part) | `AddErrorStatusCodeMapper<T>()` |
+| `IExceptionProblemMapper` | `bool TryMap(HttpContext, Exception, out ExceptionProblem?)` — first mapper returning `true` wins | `AddExceptionProblemMapper<T>()` |
+
+`ExceptionProblem(int? StatusCode, string? Title, string? Detail, IReadOnlyList<Error>? Errors)` is the result of a mapper.
+
+### GlobalExceptionHandler Mapping
+
+`DefaultExceptionProblemMapper` runs after any registered mapper:
+
+| Exception | Response |
+|-----------|----------|
+| `OperationCanceledException` | 499 |
+| `BadHttpRequestException` | its own status code |
+| `EnhancedValidationException` | status from its errors (validation: 400) |
+| `DomainException` | status of its `ErrorType` (3.x: always 400) |
+| Anything else | 500, message logged only |
+
+`InvalidOperationException`, `ApplicationException` and `ValidationException` no longer return 400; register an `IExceptionProblemMapper` to restore that.
+
+### Enum Binding
+
+| Method | What It Does |
+|--------|-------------|
+| `AddEnumBinding(Action<EnumBindingOptions>? = null)` | Optional configuration (`CanBind`, `NamingPolicy`, `AllowIntegerValues`) |
+| `UseEnumBinding()` | Middleware that normalizes enum query/route values before binding (Minimal API incl. `[AsParameters]`, and MVC) |
+
+`[StringEnum]` enums accept the snake_case name, the C# member name (case-insensitive) or the number of a defined member (flags enums: comma-separated list). Invalid values return a 400 ProblemDetails response. Call it after routing selected the endpoint.
 
 ### API Versioning
 

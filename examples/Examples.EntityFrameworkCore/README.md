@@ -11,7 +11,7 @@ This console application demonstrates the complete feature set of `CSharpEssenti
 | **Audit Interceptor** | Built into BaseDbContext | Auto-sets `CreatedAt` and `UpdatedAt` |
 | **Domain Event Interceptor** | Built into BaseDbContext | Dispatches entity domain events BeforeSave / AfterSave |
 | **Pagination** | `Services/ProductCatalogService.cs` | Offset-based `ToPaginatedList()` and cursor-based `PaginateAsync()` |
-| **Enum to String** | `Data/ShopDbContext.cs` | Stores enums as snake_case strings in the database |
+| **Enum to String** | `Data/ShopDbContext.cs` | Stores enums as JSON-named (snake_case) strings in the database |
 | **Snake Case Naming** | `Data/ShopDbContext.cs` | Automatic `PascalCase` -> `snake_case` conversion |
 
 ## Running the Project
@@ -123,3 +123,9 @@ The `EnumToStringConverter` stores enum values as human-readable strings:
 | `ProductCategory.Food` | `"food"` |
 
 This makes the database self-documenting and avoids magic numbers.
+
+Since 4.0 the stored value is the JSON name from `StringEnumNaming` (`snake_case_lower`, `[JsonStringEnumMemberName]` respected), so it matches JSON and Swagger. This differs from 3.x only for acronyms and digits (`HTTPStatus` → `http_status`, was `httpstatus`). Reading also accepts the old values. To keep writing the 3.x format:
+
+```csharp
+configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(ShopDbContext).Assembly);
+```

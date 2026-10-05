@@ -23,23 +23,36 @@ using CSharpEssentials.AspNetCore;
 
 ## GlobalExceptionHandler + ProblemDetails
 
-Catches unhandled exceptions and converts them to RFC 9457 ProblemDetails responses using `ErrorType → HTTP status` mapping.
+`AddEnhancedProblemDetails` configures one ProblemDetails pipeline (RFC 9457) shared by `ToProblemResult` (Minimal API), `ToActionResult` (MVC), `GlobalExceptionHandler`, status code pages and framework 404/405 responses.
 
 ```csharp
 // Program.cs
+builder.Services.AddEnhancedProblemDetails(o =>
+{
+    o.ExposeExceptionDetails = builder.Environment.IsDevelopment(); // default false
+    // o.UseLegacyDefaults();  // restore the 3.x output
+});
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddProblemDetails();
 
-app.UseExceptionHandler();
+app.UseEnhancedProblemDetails(); // UseExceptionHandler() + UseStatusCodePages()
+```
 
-// ErrorType → HTTP status mapping:
-// Validation    → 400
-// Unauthorized  → 401
-// Forbidden     → 403
-// NotFound      → 404
-// Conflict      → 409
-// Failure       → 422
-// Unexpected    → 500
+4.0 defaults: `traceId` is the 32-hex W3C trace id; `requestId`, `user`, `spanId`/`parentSpanId` and `errorMessages` are omitted; `instance` is `"/path"`; `type` uses RFC 9110 URIs; `errors` holds only `ErrorType.Validation` errors as `{ code, description }`. Options: `TraceId`, `IncludeRequestId`, `IncludeUser`, `IncludeSpanIds`, `Instance`, `ErrorFields` (`ProblemErrorFields` flags), `ValidationErrorsFormat`, `TypeUriResolver`, `ExposeExceptionDetails`.
+
+```csharp
+// ErrorType → HTTP status (default IErrorStatusCodeMapper):
+// Validation → 400, Unauthorized → 401, Forbidden → 403, NotFound → 404, Conflict → 409
+// Failure / Unexpected / Unknown → 500
+```
+
+Exception mapping (`DefaultExceptionProblemMapper`): `OperationCanceledException` → 499, `BadHttpRequestException` → its status, `EnhancedValidationException` → 400, `DomainException` → status of its `ErrorType`, anything else → 500 (message logged, not returned).
+
+Extension points:
+
+```csharp
+builder.Services.AddProblemDetailsEnricher<TenantEnricher>();         // IProblemDetailsEnricher
+builder.Services.AddErrorStatusCodeMapper<AuthAwareStatusMapper>();   // IErrorStatusCodeMapper (replaces default)
+builder.Services.AddExceptionProblemMapper<PaymentExceptionMapper>(); // IExceptionProblemMapper (tried before default)
 ```
 
 ---
@@ -57,10 +70,10 @@ app.MapGet("/users/{id}", async (Guid id, UserService svc) =>
     await svc.GetUserAsync(id));   // returns Result<User>
 
 // IsSuccess  → 200 OK with JSON body
-// IsFailure  → ProblemDetails with status from ErrorType
+// IsFailure  → ProblemDetails response (4.0; 3.x returned 400 with raw Error[])
 ```
 
-Custom error mapping:
+A registered `IResultErrorMapper` takes precedence over the ProblemDetails response:
 
 ```csharp
 public class MyErrorMapper : IResultErrorMapper
@@ -75,6 +88,17 @@ public class MyErrorMapper : IResultErrorMapper
 
 builder.Services.AddSingleton<IResultErrorMapper, MyErrorMapper>();
 ```
+
+---
+
+## Enum Query/Route Binding
+
+```csharp
+builder.Services.AddEnumBinding();   // optional: EnumBindingOptions (CanBind, NamingPolicy, AllowIntegerValues)
+app.UseEnumBinding();                // after routing selected the endpoint
+```
+
+`[StringEnum]` enums in query/route values (Minimal API incl. `[AsParameters]`, and MVC) accept the snake_case name, the C# member name (case-insensitive) or the number of a defined member. Invalid values return a 400 ProblemDetails response. Swagger enum schemas use the same JSON names.
 
 ---
 
@@ -107,6 +131,7 @@ app.UseSwaggerUI(options =>
 
 ## Best Practices
 
-- Register `GlobalExceptionHandler` before `AddProblemDetails`
+- Call `AddEnhancedProblemDetails()` (not plain `AddProblemDetails()`) and `app.UseEnhancedProblemDetails()`
+- `ToProblemResult` / `ToActionResult` return `EnhancedProblemHttpResult` / `EnhancedProblemObjectResult`, not `ProblemHttpResult` / `BadRequestObjectResult`
 - Apply `ResultEndpointFilter` at the group level, not per-endpoint
 - `error.Description` is the field name — not `error.Message`

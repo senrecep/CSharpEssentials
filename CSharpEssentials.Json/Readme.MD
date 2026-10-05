@@ -51,6 +51,21 @@ var data = new { S = Status.Active, L = Level.High };
 string json = data.ConvertToJson(); // {"s":"active","l":1}
 ```
 
+### StringEnumNaming
+
+`StringEnumNaming` is the single naming source for enum strings. JSON, EF Core storage, Swagger schemas and query/route binding in the other packages all use it, so a member is spelled the same everywhere. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
+
+```csharp
+using CSharpEssentials.Json;
+
+[StringEnum]
+public enum Http { OK, HTTPStatus }
+
+StringEnumNaming.GetName(Http.HTTPStatus);                    // "http_status"
+StringEnumNaming.GetNames<Http>();                            // ["ok", "http_status"]
+StringEnumNaming.TryParse<Http>("HTTPStatus", out var value); // true (policy name, member name or number)
+```
+
 ### Polymorphic Serialization
 
 ```csharp
