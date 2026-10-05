@@ -9,6 +9,7 @@ using Google.Api.Gax.Grpc;
 using Google.Api.Gax.ResourceNames;
 using Google.Cloud.SecretManager.V1;
 using Google.Protobuf;
+using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -17,6 +18,7 @@ namespace CSharpEssentials.Tests.GcpSecretManager;
 public class SecretManagerConfigurationProviderTests
 {
     private static readonly string[] TestArrayItems = { "a", "b", "c" };
+    private static readonly TimeSpan TestRetryDelay = TimeSpan.FromMilliseconds(1);
 
     private static Secret CreateSecret(string projectId, string secretId)
     {
@@ -63,7 +65,7 @@ public class SecretManagerConfigurationProviderTests
             new ProjectName(pc.ProjectId),
             pc)).ToList();
 
-        return new SecretManagerConfigurationProvider(contexts, loader, options);
+        return new SecretManagerConfigurationProvider(contexts, loader, options, TestRetryDelay);
     }
 
     [Fact]
@@ -259,7 +261,7 @@ public class SecretManagerConfigurationProviderTests
             new(mockClient2.Object, new ProjectName("project2"), new ProjectSecretConfiguration { ProjectId = "project2" })
         };
 
-        var provider = new SecretManagerConfigurationProvider(contexts, loader, options);
+        var provider = new SecretManagerConfigurationProvider(contexts, loader, options, TestRetryDelay);
         provider.Load();
 
         provider.TryGet("secret1", out _).Should().BeTrue();
@@ -440,6 +442,179 @@ public class SecretManagerConfigurationProviderTests
 
         outWriter.ToString().Should().BeEmpty();
         errorWriter.ToString().Should().BeEmpty();
+    }
+
+    private static PagedAsyncEnumerable<ListSecretsResponse, Secret> CreatePagedSecrets(List<Secret> secrets)
+    {
+        var mockPaged = new Mock<PagedAsyncEnumerable<ListSecretsResponse, Secret>>();
+        mockPaged.Setup(x => x.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
+            .Returns(() => new FakeAsyncEnumerator(secrets));
+        return mockPaged.Object;
+    }
+
+    [Theory]
+    [InlineData(StatusCode.Unavailable)]
+    [InlineData(StatusCode.ResourceExhausted)]
+    public void Load_Should_Retry_Listing_When_Transient_RpcException_Is_Thrown(StatusCode statusCode)
+    {
+        var secrets = new List<Secret> { CreateSecret("project", "raw-secret") };
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/raw-secret/versions/latest"] = "plain-text-value"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        mockClient.SetupSequence(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Throws(new RpcException(new Status(statusCode, "transient")))
+            .Throws(new RpcException(new Status(statusCode, "transient")))
+            .Returns(CreatePagedSecrets(secrets));
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        provider.TryGet("raw-secret", out string? value).Should().BeTrue();
+        value.Should().Be("plain-text-value");
+        mockClient.Verify(
+            x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()),
+            Times.Exactly(3));
+    }
+
+    [Fact]
+    public void Load_Should_Log_Original_RpcException_Once_When_Listing_Retries_Are_Exhausted()
+    {
+        var mockClient = new Mock<SecretManagerServiceClient>();
+        var exception = new RpcException(new Status(StatusCode.Unavailable, "down"));
+        mockClient.Setup(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Throws(exception);
+        var logger = new CapturingLogger();
+        var options = new SecretManagerConfigurationOptions { LoggerFactory = new CapturingLoggerFactory(logger) };
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+
+        provider.Load();
+
+        mockClient.Verify(
+            x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()),
+            Times.Exactly(4));
+        logger.Entries.Where(e => e.Level == LogLevel.Error).Should().ContainSingle()
+            .Which.Exception.Should().BeSameAs(exception);
+    }
+
+    [Fact]
+    public void Load_Should_Not_Retry_Listing_When_PermissionDenied()
+    {
+        var mockClient = new Mock<SecretManagerServiceClient>();
+        mockClient.Setup(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Throws(new RpcException(new Status(StatusCode.PermissionDenied, "denied")));
+        var logger = new CapturingLogger();
+        var options = new SecretManagerConfigurationOptions { LoggerFactory = new CapturingLoggerFactory(logger) };
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+
+        provider.Load();
+
+        mockClient.Verify(
+            x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()),
+            Times.Once);
+        logger.Entries.Should().Contain(e =>
+            e.Level == LogLevel.Error && e.Exception is RpcException && e.Message.Contains("project"));
+    }
+
+    [Theory]
+    [InlineData(StatusCode.Unavailable)]
+    [InlineData(StatusCode.ResourceExhausted)]
+    public void Load_Should_Retry_Secret_Access_When_Transient_RpcException_Is_Thrown(StatusCode statusCode)
+    {
+        const string path = "projects/project/secrets/raw-secret/versions/latest";
+        var secrets = new List<Secret> { CreateSecret("project", "raw-secret") };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, []);
+        mockClient.SetupSequence(x => x.AccessSecretVersionAsync(
+                It.Is<AccessSecretVersionRequest>(r => r.Name == path),
+                It.IsAny<CallSettings>()))
+            .ThrowsAsync(new RpcException(new Status(statusCode, "transient")))
+            .ReturnsAsync(new AccessSecretVersionResponse
+            {
+                Payload = new SecretPayload { Data = ByteString.CopyFromUtf8("plain-text-value") }
+            });
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        provider.TryGet("raw-secret", out string? value).Should().BeTrue();
+        value.Should().Be("plain-text-value");
+        mockClient.Verify(
+            x => x.AccessSecretVersionAsync(It.IsAny<AccessSecretVersionRequest>(), It.IsAny<CallSettings>()),
+            Times.Exactly(2));
+    }
+
+    [Fact]
+    public void Load_Should_Skip_Secret_Without_Retry_When_Access_Is_PermissionDenied()
+    {
+        const string deniedPath = "projects/project/secrets/denied-secret/versions/latest";
+        var secrets = new List<Secret>
+        {
+            CreateSecret("project", "denied-secret"),
+            CreateSecret("project", "raw-secret")
+        };
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/raw-secret/versions/latest"] = "plain-text-value"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        mockClient.Setup(x => x.AccessSecretVersionAsync(
+                It.Is<AccessSecretVersionRequest>(r => r.Name == deniedPath),
+                It.IsAny<CallSettings>()))
+            .ThrowsAsync(new RpcException(new Status(StatusCode.PermissionDenied, "denied")));
+        var logger = new CapturingLogger();
+        var options = new SecretManagerConfigurationOptions { LoggerFactory = new CapturingLoggerFactory(logger) };
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+
+        provider.Load();
+
+        provider.TryGet("denied-secret", out _).Should().BeFalse();
+        provider.TryGet("raw-secret", out _).Should().BeTrue();
+        mockClient.Verify(
+            x => x.AccessSecretVersionAsync(
+                It.Is<AccessSecretVersionRequest>(r => r.Name == deniedPath),
+                It.IsAny<CallSettings>()),
+            Times.Once);
+        logger.Entries.Should().Contain(e => e.Exception is RpcException && e.Message.Contains("denied-secret"));
+    }
+
+    [Fact]
+    public void Load_Should_Load_All_Secrets_When_Batches_Run_Concurrently()
+    {
+        const int secretCount = 200;
+        var secrets = Enumerable.Range(0, secretCount)
+            .Select(i => CreateSecret("project", $"secret-{i}"))
+            .ToList();
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, []);
+        mockClient.Setup(x => x.AccessSecretVersionAsync(It.IsAny<AccessSecretVersionRequest>(), It.IsAny<CallSettings>()))
+            .ReturnsAsync((AccessSecretVersionRequest request, CallSettings _) => new AccessSecretVersionResponse
+            {
+                Payload = new SecretPayload
+                {
+                    Data = ByteString.CopyFromUtf8(
+                        $"{{\"Index\":{SecretVersionName.Parse(request.Name).SecretId["secret-".Length..]}}}")
+                }
+            });
+        var options = new SecretManagerConfigurationOptions { BatchSize = 50 };
+
+        for (int run = 0; run < 5; run++)
+        {
+            SecretManagerConfigurationProvider provider = CreateProvider(
+                mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+
+            provider.Load();
+
+            for (int i = 0; i < secretCount; i++)
+            {
+                provider.TryGet($"secret-{i}:Index", out string? index).Should().BeTrue();
+                index.Should().Be(i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            }
+        }
     }
 
     private sealed class CapturingLoggerFactory(ILogger logger) : ILoggerFactory
