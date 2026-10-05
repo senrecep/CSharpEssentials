@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
 
 namespace CSharpEssentials.AspNetCore;
@@ -25,4 +26,11 @@ public sealed class EnumBindingOptions
     /// Defaults to <see langword="true"/>.
     /// </summary>
     public bool AllowIntegerValues { get; set; } = true;
+
+    /// <summary>
+    /// Creates the error of an invalid value from the query/route key, the enum type and the accepted names.
+    /// <see langword="null"/> (default) creates <c>Error.Validation(code: key, description: "'key' must be one of: ...")</c>.
+    /// Use it to normalize the code (for example <c>"validation.status"</c>) or localize the message.
+    /// </summary>
+    public Func<string, Type, IReadOnlyList<string>, Error>? ErrorFactory { get; set; }
 }

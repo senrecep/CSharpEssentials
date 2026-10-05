@@ -1,4 +1,5 @@
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Errors;
 using FluentAssertions;
 using static CSharpEssentials.Tests.AspNetCore.EnumBinding.EnumBindingAssertions;
 
@@ -472,5 +473,81 @@ public class EnumBindingMiddlewareTests
         var response = await host.GetAsync("/does-not-exist?status=garbage");
 
         response.Status.Should().Be(404);
+    }
+
+    // ---------- ErrorFactory ----------
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task ErrorFactory_Should_ReplaceCodeAndDescription_When_Configured(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await Start(kind,
+            o => o.ErrorFactory = (key, _, names) => Error.Validation($"validation.{key}", $"allowed={string.Join('/', names)}"));
+
+        var response = await host.GetAsync("/status?status=garbage");
+
+        response.ShouldBeEnumBindingProblem().Should().ContainSingle()
+            .Which.Should().Be(("validation.status", "allowed=active/in_progress/http_error"));
+    }
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task ErrorFactory_Should_ReceiveKeyEnumTypeAndSnakeCaseNames_When_ValueIsInvalid(EbHostKind kind)
+    {
+        string? capturedKey = null;
+        Type? capturedType = null;
+        string[]? capturedNames = null;
+        await using EnumBindingHost host = await Start(kind, o => o.ErrorFactory = (key, type, names) =>
+        {
+            (capturedKey, capturedType, capturedNames) = (key, type, [.. names]);
+            return Error.Validation(key, "x");
+        });
+
+        await host.GetAsync("/status?status=garbage");
+
+        capturedKey.Should().Be("status");
+        capturedType.Should().Be<EbStatus>();
+        capturedNames.Should().Equal("active", "in_progress", "http_error");
+    }
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task ErrorFactory_Should_NotBeCalled_When_ValueIsValid(EbHostKind kind)
+    {
+        bool called = false;
+        await using EnumBindingHost host = await Start(kind, o => o.ErrorFactory = (key, _, _) =>
+        {
+            called = true;
+            return Error.Validation(key, "x");
+        });
+
+        var response = await host.GetAsync("/status?status=in_progress");
+
+        response.Body.Should().Be("InProgress");
+        called.Should().BeFalse();
+    }
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task ErrorFactory_Should_BeUsedPerInvalidValue_When_SeveralValuesAreInvalid(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await Start(kind,
+            o => o.ErrorFactory = (key, _, _) => Error.Validation($"validation.{key}", "bad"));
+
+        var response = await host.GetAsync("/multi?a=garbage&b=garbage");
+
+        response.ShouldBeEnumBindingProblem().Select(e => e.Code).Should().BeEquivalentTo("validation.a", "validation.b");
+    }
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task ErrorFactory_Should_KeepDefaultError_When_NotConfigured(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await Start(kind);
+
+        var response = await host.GetAsync("/status?status=garbage");
+
+        response.ShouldBeEnumBindingProblem().Should().ContainSingle()
+            .Which.Should().Be(("status", "'status' must be one of: active, in_progress, http_error."));
     }
 }
