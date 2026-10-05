@@ -2,33 +2,97 @@ using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.AspNetCore;
 
 public static partial class Extensions
 {
-    private static Action<ProblemDetails, HttpContext>? _problemDetailsEnhancer;
     /// <summary>
-    /// Adds the <see cref="ProblemDetails"/> to the pipeline.
+    /// Registers ProblemDetails with the CSharpEssentials enrichment and default options. Every problem response
+    /// (CSharpEssentials results, <see cref="GlobalExceptionHandler"/>, status code pages, the framework exception
+    /// handler) then goes through the same <see cref="IProblemDetailsEnricher"/> pipeline.
     /// </summary>
-    /// <param name="services"></param>
-    /// <param name="configure"></param>
-    /// <returns></returns>
+    public static IServiceCollection AddEnhancedProblemDetails(this IServiceCollection services) =>
+        services.AddEnhancedProblemDetails(static _ => { });
+
+    /// <summary>
+    /// Registers ProblemDetails with the CSharpEssentials enrichment, configured by <paramref name="configure"/>.
+    /// </summary>
     public static IServiceCollection AddEnhancedProblemDetails(
         this IServiceCollection services,
-        Action<ProblemDetails, HttpContext>? configure = null)
+        Action<EnhancedProblemDetailsOptions> configure)
     {
-        _problemDetailsEnhancer = configure;
-#if NET7_0_OR_GREATER
-        services.AddProblemDetails(options => options.CustomizeProblemDetails = context => context.ProblemDetails.AddHttpContextDetails(context.HttpContext));
-#else
-        // AddProblemDetails is not available in .NET 6
-        // This method is not functional in .NET 6
-#endif
+        ArgumentNullException.ThrowIfNull(configure);
+        services.AddProblemDetails();
+        services.Configure(configure);
+        services.TryAddSingleton<EnhancedProblemDetailsMarker>();
+        services.TryAddSingleton<IErrorStatusCodeMapper>(DefaultErrorStatusCodeMapper.Instance);
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProblemDetailsOptions>, EnhancedProblemDetailsPostConfigure>());
         return services;
+    }
+
+    /// <summary>
+    /// Registers ProblemDetails with default options and runs <paramref name="configure"/> on every problem response
+    /// (as an <see cref="IProblemDetailsEnricher"/>, after the built-in enrichment).
+    /// </summary>
+    public static IServiceCollection AddEnhancedProblemDetails(
+        this IServiceCollection services,
+        Action<ProblemDetails, HttpContext> configure)
+    {
+        services.AddSingleton<IProblemDetailsEnricher>(new DelegateProblemDetailsEnricher(configure));
+        return services.AddEnhancedProblemDetails();
+    }
+
+    /// <summary>
+    /// Adds an <see cref="IProblemDetailsEnricher"/>. Enrichers run after the built-in enrichment, in registration order.
+    /// </summary>
+    public static IServiceCollection AddProblemDetailsEnricher<TEnricher>(
+        this IServiceCollection services,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TEnricher : class, IProblemDetailsEnricher
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Describe(typeof(IProblemDetailsEnricher), typeof(TEnricher), lifetime));
+        return services;
+    }
+
+    /// <summary>
+    /// Adds an <see cref="IExceptionProblemMapper"/> for <see cref="GlobalExceptionHandler"/>. Mappers are tried in
+    /// registration order before <see cref="DefaultExceptionProblemMapper"/>.
+    /// </summary>
+    public static IServiceCollection AddExceptionProblemMapper<TMapper>(
+        this IServiceCollection services,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TMapper : class, IExceptionProblemMapper
+    {
+        services.TryAddEnumerable(ServiceDescriptor.Describe(typeof(IExceptionProblemMapper), typeof(TMapper), lifetime));
+        return services;
+    }
+
+    /// <summary>
+    /// Replaces the <see cref="IErrorStatusCodeMapper"/>.
+    /// </summary>
+    public static IServiceCollection AddErrorStatusCodeMapper<TMapper>(
+        this IServiceCollection services,
+        ServiceLifetime lifetime = ServiceLifetime.Singleton)
+        where TMapper : class, IErrorStatusCodeMapper
+    {
+        services.Replace(ServiceDescriptor.Describe(typeof(IErrorStatusCodeMapper), typeof(TMapper), lifetime));
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the exception handler and status code pages middleware, so unhandled exceptions and empty error
+    /// responses (404, 405, ...) are written as problem details.
+    /// </summary>
+    public static IApplicationBuilder UseEnhancedProblemDetails(this IApplicationBuilder app)
+    {
+        app.UseExceptionHandler();
+        app.UseStatusCodePages();
+        return app;
     }
 
     public static IServiceCollection ConfigureModelValidatorResponse(this IServiceCollection services)
@@ -60,11 +124,7 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-#if NET8_0_OR_GREATER
     public static IResult ToProblemResult(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemResult([error], extensions, statusCode);
-#else
-    public static IResult ToProblemResult(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemResult(new[] { error }, extensions, statusCode);
-#endif
 
     /// <summary>
     /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
@@ -73,11 +133,8 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-    public static IResult ToProblemResult(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null)
-    {
-        EnhancedProblemDetails problemDetails = errors.ToProblemDetails(extensions, statusCode);
-        return Results.Problem(problemDetails);
-    }
+    public static IResult ToProblemResult(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null) =>
+        new EnhancedProblemHttpResult(errors, extensions, statusCode);
 
     /// <summary>
     /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
@@ -103,13 +160,8 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-#if NET8_0_OR_GREATER
     public static IActionResult ToActionResult(this Error error, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
         ToActionResult([error], httpContext, extensions, statusCode);
-#else
-    public static IActionResult ToActionResult(this Error error, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
-        ToActionResult(new[] { error }, httpContext, extensions, statusCode);
-#endif
 
     /// <summary>
     /// Converts an array of <see cref="Error"/> to an <see cref="IActionResult"/>.
@@ -119,22 +171,8 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-    public static IActionResult ToActionResult(this Error[] errors, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null)
-    {
-        EnhancedProblemDetails problemDetails = errors.ToProblemDetails(extensions, statusCode);
-        if (httpContext is null)
-            return new ObjectResult(problemDetails)
-            {
-                StatusCode = problemDetails.Status
-            };
-
-        problemDetails.AddHttpContextDetails(httpContext);
-
-        return new ObjectResult(problemDetails)
-        {
-            StatusCode = problemDetails.Status
-        };
-    }
+    public static IActionResult ToActionResult(this Error[] errors, HttpContext? httpContext = null, ErrorMetadata? extensions = null, int? statusCode = null) =>
+        new EnhancedProblemObjectResult(errors, extensions, statusCode, httpContext);
 
     /// <summary>
     /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
@@ -189,11 +227,7 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-#if NET8_0_OR_GREATER
     public static EnhancedProblemDetails ToProblemDetails(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemDetails([error], extensions, statusCode);
-#else
-    public static EnhancedProblemDetails ToProblemDetails(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemDetails(new[] { error }, extensions, statusCode);
-#endif
     /// <summary>
     /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
     /// </summary>
@@ -201,44 +235,14 @@ public static partial class Extensions
     /// <param name="extensions"></param>
     /// <param name="statusCode"></param>
     /// <returns></returns>
-    public static EnhancedProblemDetails ToProblemDetails(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null)
-    {
-        ErrorMetadata metadata = [];
-        if (extensions.IsNotNull())
-            foreach (KeyValuePair<string, object?> item in extensions)
-                metadata[item.Key] = item.Value;
-        Error error = errors.MaxBy(e => e.Type.ToHttpStatusCode());
-        statusCode ??= error.Type.ToHttpStatusCode();
+    /// <remarks>
+    /// Built with <see cref="DefaultErrorStatusCodeMapper"/> and default <see cref="EnhancedProblemDetailsOptions"/>,
+    /// without request details. Use <see cref="ToProblemResult(Error[], ErrorMetadata?, int?)"/> or
+    /// <see cref="ToActionResult(Error[], HttpContext?, ErrorMetadata?, int?)"/> to honor the registered configuration.
+    /// </remarks>
+    public static EnhancedProblemDetails ToProblemDetails(this Error[] errors, ErrorMetadata? extensions = null, int? statusCode = null) =>
+        EnhancedProblemDetailsFactory.Create(errors, extensions, statusCode, services: null);
 
-#pragma warning disable IDE0028
-        var errorCodes = errors.Select(e => e.Code).ToHashSet();
-        var errorMessages = errors.Select(e => e.Description).ToHashSet();
-#pragma warning restore IDE0028
-
-        var problemDetails = new EnhancedProblemDetails
-        {
-            Status = statusCode,
-            Title = error.Type.GetProblemTitle(),
-            Detail = error.Description,
-            Type = GetProblemRfcType(statusCode.Value),
-            Errors = errors,
-            ErrorCodes = errorCodes,
-            ErrorMessages = errorMessages
-        };
-#if NET7_0_OR_GREATER
-        problemDetails.Extensions = metadata;
-#else
-        // Extensions is read-only in .NET 6, use TryAdd instead
-        if (metadata != null)
-        {
-            foreach (KeyValuePair<string, object?> kvp in metadata)
-            {
-                problemDetails.Extensions.TryAdd(kvp.Key, kvp.Value);
-            }
-        }
-#endif
-        return problemDetails;
-    }
     /// <summary>
     /// Produces a <see cref="ProblemDetails"/> object.
     /// </summary>
@@ -261,37 +265,6 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Adds the HTTP context details to the <see cref="ProblemDetails"/> object.
-    /// </summary>
-    /// <param name="problemDetails"></param>
-    /// <param name="httpContext"></param>
-    /// <param name="configure"></param>
-    /// <returns></returns>
-    internal static ProblemDetails AddHttpContextDetails(this ProblemDetails problemDetails, HttpContext? httpContext, Action<ProblemDetails, HttpContext>? configure = null)
-    {
-        if (httpContext is null)
-            return problemDetails;
-
-        problemDetails.Instance = $"{httpContext.Request.Method} {httpContext.Request.Path}";
-        problemDetails.Extensions.TryAdd("requestId", httpContext.TraceIdentifier);
-
-        System.Diagnostics.Activity? activity = httpContext.Features.Get<IHttpActivityFeature>()?.Activity;
-        activity.IfNotNull((act) =>
-        {
-            act.Id.IfNotNull((id) => problemDetails.Extensions.TryAdd("traceId", id));
-            act.ParentId.IfNotNull((parentId) => problemDetails.Extensions.TryAdd("parentSpanId", parentId));
-            act.SpanId.IfNotNull((spanId) => problemDetails.Extensions.TryAdd("spanId", spanId.ToString()));
-        });
-
-        httpContext.User.Identity?.IsAuthenticated.IfTrue(() =>
-                problemDetails.Extensions.TryAdd("user", httpContext.User.Identity.Name));
-
-        (configure ?? _problemDetailsEnhancer)?.Invoke(problemDetails, httpContext);
-        return problemDetails;
-    }
-
-
-    /// <summary>
     /// Gets the title for the <see cref="ProblemDetails"/> object.
     /// </summary>
     /// <param name="errorType"></param>
@@ -307,22 +280,5 @@ public static partial class Extensions
         ErrorType.Failure => "Server Failure",
         ErrorType.Unknown => "Unknown Error",
         _ => throw new NotImplementedException(),
-    };
-
-    /// <summary>
-    /// Gets the RFC type for the <see cref="ProblemDetails"/> object.
-    /// </summary>
-    /// <param name="statusCode"></param>
-    /// <returns></returns>
-    internal static string GetProblemRfcType(int statusCode) => statusCode switch
-    {
-        HttpCodes.BadRequest => "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-        HttpCodes.Forbidden => "https://tools.ietf.org/html/rfc7231#section-6.5.3",
-        HttpCodes.Unauthorized => "https://tools.ietf.org/html/rfc7235#section-3.1",
-        HttpCodes.NotFound => "https://tools.ietf.org/html/rfc7231#section-6.5.4",
-        HttpCodes.MethodNotAllowed => "https://tools.ietf.org/html/rfc7231#section-6.5.5",
-        HttpCodes.Conflict => "https://tools.ietf.org/html/rfc7231#section-6.5.8",
-        HttpCodes.NotImplemented => "https://tools.ietf.org/html/rfc7231#section-6.6.2",
-        _ => "https://tools.ietf.org/html/rfc7231#section-6.6.1",
     };
 }

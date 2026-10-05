@@ -82,7 +82,7 @@ public class ProblemDetailsExtensionsTests
 
         IActionResult result = error.ToActionResult();
 
-        result.Should().BeOfType<ObjectResult>();
+        result.Should().BeAssignableTo<ObjectResult>();
         var objectResult = (ObjectResult)result;
         objectResult.StatusCode.Should().Be(400);
     }
@@ -103,7 +103,9 @@ public class ProblemDetailsExtensionsTests
 
         IActionResult result = error.ToActionResult(httpContext);
 
-        result.Should().BeOfType<ObjectResult>();
+        ProblemDetails value = result.Should().BeAssignableTo<ObjectResult>().Subject.Value.Should().BeAssignableTo<ProblemDetails>().Subject;
+        value.Instance.Should().Be("/test");
+        value.Extensions.Should().NotContainKey("requestId");
     }
 
     [Fact]

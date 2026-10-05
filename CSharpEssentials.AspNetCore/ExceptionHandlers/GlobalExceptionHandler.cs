@@ -1,14 +1,22 @@
-using System.ComponentModel.DataAnnotations;
-using CSharpEssentials.Errors;
-using CSharpEssentials.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.AspNetCore;
 
-#if NET7_0_OR_GREATER
-public sealed class GlobalExceptionHandler(
+/// <summary>
+/// Writes unhandled exceptions as problem details. The exception is mapped by the registered
+/// <see cref="IExceptionProblemMapper"/>s (in registration order) and finally by <see cref="DefaultExceptionProblemMapper"/>.
+/// Unknown exceptions become a 500 whose message and stack trace go only to the log.
+/// </summary>
+/// <remarks>
+/// Mappers and options are resolved from <see cref="HttpContext.RequestServices"/> for each exception, so they may be
+/// registered with any lifetime even though the handler itself is a singleton.
+/// </remarks>
+public sealed partial class GlobalExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<GlobalExceptionHandler> logger
 ) : IExceptionHandler
@@ -18,46 +26,71 @@ public sealed class GlobalExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        int statusCode = exception switch
-        {
-            ApplicationException or
-            ValidationException or
-            BadHttpRequestException or
-            BadHttpRequestException or
-            EnhancedValidationException or
-            DomainException or
-            InvalidOperationException => StatusCodes.Status400BadRequest,
-            _ => StatusCodes.Status500InternalServerError
-        };
+        IServiceProvider? services = httpContext.RequestServices;
+        ExceptionProblem problem = Map(httpContext, exception, services?.GetServices<IExceptionProblemMapper>());
+        ProblemDetails problemDetails = CreateProblemDetails(
+            problem,
+            services?.GetService<IErrorStatusCodeMapper>(),
+            services?.GetService<IOptions<EnhancedProblemDetailsOptions>>()?.Value);
+        int statusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
 
-        logger.LogError(exception, "An error occurred while processing the request. Status code: {StatusCode}", statusCode);
+        if (statusCode >= StatusCodes.Status500InternalServerError)
+            LogServerError(logger, exception, statusCode);
+        else
+            LogClientError(logger, exception, statusCode);
 
-        httpContext.Response.StatusCode = statusCode;
-
-        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
-        {
-            HttpContext = httpContext,
-            Exception = exception,
-            ProblemDetails = CreateProblemDetails(exception, statusCode)
-        });
+        await EnhancedProblemDetailsWriter.WriteAsync(
+            new ProblemDetailsContext
+            {
+                HttpContext = httpContext,
+                Exception = exception,
+                ProblemDetails = problemDetails,
+            },
+            problemDetailsService);
+        return true;
     }
-    private static EnhancedProblemDetails CreateProblemDetails(Exception exception, int statusCode) =>
-        exception switch
-        {
-            EnhancedValidationException validationException => validationException.Errors.ToProblemDetails(statusCode: statusCode),
-            DomainException domainException => domainException.Error.ToProblemDetails(statusCode: statusCode),
-            _ => Error.Exception(exception).ToProblemDetails(statusCode: statusCode)
-        };
-#else
-public sealed class GlobalExceptionHandler
-{
-    // IExceptionHandler is not available in .NET 6
-    // This class is not functional in .NET 6
-#pragma warning disable IDE0060 // Remove unused parameter
-    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+
+    private static ExceptionProblem Map(HttpContext httpContext, Exception exception, IEnumerable<IExceptionProblemMapper>? exceptionMappers)
     {
-        // Constructor required for DI, but class is not functional in .NET 6
+        if (exceptionMappers is not null)
+            foreach (IExceptionProblemMapper mapper in exceptionMappers)
+                if (mapper.TryMap(httpContext, exception, out ExceptionProblem? mapped))
+                    return mapped;
+        DefaultExceptionProblemMapper.Instance.TryMap(httpContext, exception, out ExceptionProblem? fallback);
+        return fallback!;
     }
-#pragma warning restore IDE0060
-#endif
+
+    private static ProblemDetails CreateProblemDetails(
+        ExceptionProblem problem,
+        IErrorStatusCodeMapper? statusCodeMapper,
+        EnhancedProblemDetailsOptions? options)
+    {
+        if (problem.Errors is { Count: > 0 } errors)
+        {
+            EnhancedProblemDetails fromErrors = EnhancedProblemDetailsFactory.Create(
+                errors,
+                extensions: null,
+                problem.StatusCode,
+                statusCodeMapper ?? DefaultErrorStatusCodeMapper.Instance,
+                options ?? new EnhancedProblemDetailsOptions());
+            if (problem.Title is not null)
+                fromErrors.Title = problem.Title;
+            if (problem.Detail is not null)
+                fromErrors.Detail = problem.Detail;
+            return fromErrors;
+        }
+
+        return new ProblemDetails
+        {
+            Status = problem.StatusCode ?? StatusCodes.Status500InternalServerError,
+            Title = problem.Title,
+            Detail = problem.Detail,
+        };
+    }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "An unhandled exception occurred while processing the request. Status code: {StatusCode}")]
+    private static partial void LogServerError(ILogger logger, Exception exception, int statusCode);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "A request failed with a handled exception. Status code: {StatusCode}")]
+    private static partial void LogClientError(ILogger logger, Exception exception, int statusCode);
 }

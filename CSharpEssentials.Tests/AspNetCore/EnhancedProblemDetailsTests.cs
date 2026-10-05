@@ -15,19 +15,19 @@ public class EnhancedProblemDetailsTests
     }
 
     [Fact]
-    public void EnhancedProblemDetails_ShouldHaveEmptyErrorCodes_ByDefault()
+    public void EnhancedProblemDetails_ShouldHaveNoErrorCodes_ByDefault()
     {
         EnhancedProblemDetails problemDetails = new();
 
-        problemDetails.ErrorCodes.Should().BeEmpty();
+        problemDetails.ErrorCodes.Should().BeNull();
     }
 
     [Fact]
-    public void EnhancedProblemDetails_ShouldHaveEmptyErrorMessages_ByDefault()
+    public void EnhancedProblemDetails_ShouldHaveNoErrorMessages_ByDefault()
     {
         EnhancedProblemDetails problemDetails = new();
 
-        problemDetails.ErrorMessages.Should().BeEmpty();
+        problemDetails.ErrorMessages.Should().BeNull();
     }
 
     [Fact]
@@ -100,7 +100,7 @@ public class EnhancedProblemDetailsTests
     [Fact]
     public void ErrorCodes_ShouldBeUniqueSet()
     {
-        EnhancedProblemDetails problemDetails = new();
+        EnhancedProblemDetails problemDetails = new() { ErrorCodes = [] };
         problemDetails.ErrorCodes.Add("CODE1");
         problemDetails.ErrorCodes.Add("CODE1");
         problemDetails.ErrorCodes.Add("CODE2");
@@ -111,7 +111,7 @@ public class EnhancedProblemDetailsTests
     [Fact]
     public void ErrorMessages_ShouldBeUniqueSet()
     {
-        EnhancedProblemDetails problemDetails = new();
+        EnhancedProblemDetails problemDetails = new() { ErrorMessages = [] };
         problemDetails.ErrorMessages.Add("Message 1");
         problemDetails.ErrorMessages.Add("Message 1");
         problemDetails.ErrorMessages.Add("Message 2");
