@@ -19,17 +19,18 @@ public readonly partial struct ResiliencePolicy<T>
         ResiliencePipeline<Result<T>> pipeline = new ResiliencePipelineBuilder<Result<T>>()
             .AddFallback(new FallbackStrategyOptions<Result<T>>
             {
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(static result => result.IsFailure)
-                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex)),
+                ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    : args.Outcome.Result is { IsFailure: true }),
                 FallbackAction = async args =>
                 {
+                    args.Context.CancellationToken.ThrowIfCancellationRequested();
                     try
                     {
                         T fallbackValue = await fallbackAsync(args.Context.CancellationToken);
                         return Outcome.FromResult(Result<T>.Success(fallbackValue));
                     }
-                    catch (Exception ex) when (!ResilienceClassifier.IsCancellation(ex))
+                    catch (Exception ex) when (!ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken))
                     {
                         return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
                     }
@@ -57,17 +58,18 @@ public readonly partial struct ResiliencePolicy<T>
         ResiliencePipeline<Result<T>> pipeline = new ResiliencePipelineBuilder<Result<T>>()
             .AddFallback(new FallbackStrategyOptions<Result<T>>
             {
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(static result => result.IsFailure)
-                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex)),
+                ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    : args.Outcome.Result is { IsFailure: true }),
                 FallbackAction = async args =>
                 {
+                    args.Context.CancellationToken.ThrowIfCancellationRequested();
                     try
                     {
                         Result<T> fallbackResult = await fallbackAsync(args.Context.CancellationToken);
                         return Outcome.FromResult(fallbackResult);
                     }
-                    catch (Exception ex) when (!ResilienceClassifier.IsCancellation(ex))
+                    catch (Exception ex) when (!ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken))
                     {
                         return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
                     }

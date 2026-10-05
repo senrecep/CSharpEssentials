@@ -171,4 +171,140 @@ public class ResiliencePolicyRegressionTests
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Propagate_Cancellation_When_Caller_Cancels_Before_Retry()
+    {
+        using CancellationTokenSource cts = new();
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = async _ =>
+        {
+            attempts++;
+            await cts.CancelAsync();
+            return Result<int>.Failure(Error.Unexpected());
+        };
+
+        Func<Task> act = async () => await operation.RetryIfFailed(
+            maxAttempts: 2,
+            delay: TimeSpan.FromMilliseconds(1),
+            cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_NonGeneric_Should_Propagate_Cancellation_When_Caller_Cancels_Before_Retry()
+    {
+        using CancellationTokenSource cts = new();
+        int attempts = 0;
+        Func<CancellationToken, Task<Result>> operation = async _ =>
+        {
+            attempts++;
+            await cts.CancelAsync();
+            return Result.Failure(Error.Unexpected());
+        };
+
+        Func<Task> act = async () => await operation.RetryIfFailed(
+            maxAttempts: 2,
+            delay: TimeSpan.FromMilliseconds(1),
+            cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Retry_NonCaller_Cancellation()
+    {
+        using CancellationTokenSource callerCts = new();
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            attempts++;
+            if (attempts == 1)
+                ThrowInternalCancellation();
+            return Task.FromResult(Result<int>.Success(42));
+        };
+
+        Result<int> result = await operation.RetryIfFailed(
+            maxAttempts: 2,
+            delay: TimeSpan.FromMilliseconds(1),
+            cancellationToken: callerCts.Token);
+
+        result.IsSuccess.Should().BeTrue();
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_NonGeneric_Should_Retry_NonCaller_Cancellation()
+    {
+        using CancellationTokenSource callerCts = new();
+        int attempts = 0;
+        Func<CancellationToken, Task<Result>> operation = _ =>
+        {
+            attempts++;
+            if (attempts == 1)
+                ThrowInternalCancellation();
+            return Task.FromResult(Result.Success());
+        };
+
+        Result result = await operation.RetryIfFailed(
+            maxAttempts: 2,
+            delay: TimeSpan.FromMilliseconds(1),
+            cancellationToken: callerCts.Token);
+
+        result.IsSuccess.Should().BeTrue();
+        attempts.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Generic_WithFallback_Should_Propagate_Cancellation_When_Caller_Cancels_Before_Retry()
+    {
+        using CancellationTokenSource cts = new();
+        int attempts = 0;
+        bool fallbackCalled = false;
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithRetry(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(1))
+            .WithFallback(_ =>
+            {
+                fallbackCalled = true;
+                return Task.FromResult(99);
+            });
+
+        Func<Task> act = () => policy.ExecuteAsync(async _ =>
+        {
+            attempts++;
+            await cts.CancelAsync();
+            return Result<int>.Failure(Error.Unexpected());
+        }, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        attempts.Should().Be(1);
+        fallbackCalled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Generic_WithFallback_Should_Run_Fallback_On_NonCaller_Cancellation()
+    {
+        using CancellationTokenSource callerCts = new();
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithFallback(_ => Task.FromResult(99));
+
+        Result<int> result = await policy.ExecuteAsync(_ =>
+        {
+            ThrowInternalCancellation();
+            return Task.FromResult(Result<int>.Success(42));
+        }, callerCts.Token);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(99);
+    }
+
+    private static void ThrowInternalCancellation()
+    {
+        using CancellationTokenSource internalCts = new();
+        internalCts.Cancel();
+        throw new TaskCanceledException("Internal timeout.", null, internalCts.Token);
+    }
 }

@@ -17,16 +17,25 @@ public static class ResilienceResultExtensions
     {
         ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff);
 
+        Result<T> result;
         try
         {
-            return await pipeline.ExecuteAsync(
+            result = await pipeline.ExecuteAsync(
                 async token => await operation(token),
                 cancellationToken);
         }
         catch (Exception ex)
         {
-            return ResilienceClassifier.HandleException(ex);
+            return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
+
+        // Polly stops retrying once the caller cancels and returns the last outcome; surface that as cancellation.
+        if (cancellationToken.IsCancellationRequested && ResilienceClassifier.IsRetryable(result))
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        return result;
     }
 
     public static async ValueTask<Result> RetryIfFailed(
@@ -38,21 +47,32 @@ public static class ResilienceResultExtensions
     {
         ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff);
 
+        Result result;
         try
         {
-            return await pipeline.ExecuteAsync(
+            result = await pipeline.ExecuteAsync(
                 async token => await operation(token),
                 cancellationToken);
         }
         catch (Exception ex)
         {
-            return ResilienceClassifier.HandleException(ex);
+            return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
+
+        // Polly stops retrying once the caller cancels and returns the last outcome; surface that as cancellation.
+        if (cancellationToken.IsCancellationRequested && ResilienceClassifier.IsRetryable(result))
+        {
+            throw new OperationCanceledException(cancellationToken);
+        }
+
+        return result;
     }
 
     private static class RetryPipelineCache<TResult>
         where TResult : IResultBase
     {
+        // The cap applies per closed generic type (Result and each Result<T>). The Count check is not atomic,
+        // so concurrent callers can overshoot it slightly, which is acceptable for a cache bound.
         private const int MaxEntries = 64;
 
         private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff), ResiliencePipeline<TResult>> Pipelines = new();
@@ -71,9 +91,9 @@ public static class ResilienceResultExtensions
                     MaxRetryAttempts = key.MaxAttempts,
                     Delay = key.Delay,
                     BackoffType = key.ExponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                    ShouldHandle = new PredicateBuilder<TResult>()
-                        .HandleResult(ResilienceClassifier.IsRetryable)
-                        .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex))
+                    ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                        ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                        : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result))
                 })
                 .Build();
 
