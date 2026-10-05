@@ -283,4 +283,21 @@ public class ResilienceResultExtensionsTests
         result.Value.Should().Be(42);
         attempts.Should().Be(2);
     }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Retry_Independently_When_Called_Repeatedly_With_Same_Options()
+    {
+        int totalAttempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            totalAttempts++;
+            return Task.FromResult(totalAttempts % 2 == 1 ? Result<int>.Failure(Error.Unexpected()) : Result<int>.Success(totalAttempts));
+        };
+
+        Result<int> first = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(1));
+        Result<int> second = await operation.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(1));
+
+        first.Value.Should().Be(2);
+        second.Value.Should().Be(4);
+    }
 }

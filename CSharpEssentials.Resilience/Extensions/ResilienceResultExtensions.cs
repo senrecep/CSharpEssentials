@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Interfaces;
 using Polly;
 using Polly.Retry;
 
@@ -13,19 +15,7 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff = true,
         CancellationToken cancellationToken = default)
     {
-        TimeSpan effectiveDelay = delay ?? TimeSpan.FromSeconds(1);
-
-        ResiliencePipeline<Result<T>> pipeline = new ResiliencePipelineBuilder<Result<T>>()
-            .AddRetry(new RetryStrategyOptions<Result<T>>
-            {
-                MaxRetryAttempts = maxAttempts,
-                Delay = effectiveDelay,
-                BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(ResilienceClassifier.IsRetryable)
-                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex))
-            })
-            .Build();
+        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff);
 
         try
         {
@@ -46,19 +36,7 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff = true,
         CancellationToken cancellationToken = default)
     {
-        TimeSpan effectiveDelay = delay ?? TimeSpan.FromSeconds(1);
-
-        ResiliencePipeline<Result> pipeline = new ResiliencePipelineBuilder<Result>()
-            .AddRetry(new RetryStrategyOptions<Result>
-            {
-                MaxRetryAttempts = maxAttempts,
-                Delay = effectiveDelay,
-                BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = new PredicateBuilder<Result>()
-                    .HandleResult(ResilienceClassifier.IsRetryable)
-                    .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex))
-            })
-            .Build();
+        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff);
 
         try
         {
@@ -69,6 +47,37 @@ public static class ResilienceResultExtensions
         catch (Exception ex)
         {
             return ResilienceClassifier.HandleException(ex);
+        }
+    }
+
+    private static class RetryPipelineCache<TResult>
+        where TResult : IResultBase
+    {
+        private const int MaxEntries = 64;
+
+        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff), ResiliencePipeline<TResult>> Pipelines = new();
+
+        internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff)
+        {
+            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff) key = (maxAttempts, delay ?? TimeSpan.FromSeconds(1), exponentialBackoff);
+            if (Pipelines.TryGetValue(key, out ResiliencePipeline<TResult>? cached))
+            {
+                return cached;
+            }
+
+            ResiliencePipeline<TResult> pipeline = new ResiliencePipelineBuilder<TResult>()
+                .AddRetry(new RetryStrategyOptions<TResult>
+                {
+                    MaxRetryAttempts = key.MaxAttempts,
+                    Delay = key.Delay,
+                    BackoffType = key.ExponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
+                    ShouldHandle = new PredicateBuilder<TResult>()
+                        .HandleResult(ResilienceClassifier.IsRetryable)
+                        .Handle<Exception>(static ex => !ResilienceClassifier.IsCancellation(ex))
+                })
+                .Build();
+
+            return Pipelines.Count < MaxEntries ? Pipelines.GetOrAdd(key, pipeline) : pipeline;
         }
     }
 }
