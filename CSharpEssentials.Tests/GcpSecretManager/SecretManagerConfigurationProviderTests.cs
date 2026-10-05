@@ -592,13 +592,18 @@ public class SecretManagerConfigurationProviderTests
             .ToList();
         Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, []);
         mockClient.Setup(x => x.AccessSecretVersionAsync(It.IsAny<AccessSecretVersionRequest>(), It.IsAny<CallSettings>()))
-            .ReturnsAsync((AccessSecretVersionRequest request, CallSettings _) => new AccessSecretVersionResponse
+            .Returns(async (AccessSecretVersionRequest request, CallSettings _) =>
             {
-                Payload = new SecretPayload
+                // Yield so each load completes on the thread pool and the loads in a batch really overlap.
+                await Task.Yield();
+                return new AccessSecretVersionResponse
                 {
-                    Data = ByteString.CopyFromUtf8(
-                        $"{{\"Index\":{SecretVersionName.Parse(request.Name).SecretId["secret-".Length..]}}}")
-                }
+                    Payload = new SecretPayload
+                    {
+                        Data = ByteString.CopyFromUtf8(
+                            $"{{\"Index\":{SecretVersionName.Parse(request.Name).SecretId["secret-".Length..]}}}")
+                    }
+                };
             });
         var options = new SecretManagerConfigurationOptions { BatchSize = 50 };
 
@@ -615,6 +620,72 @@ public class SecretManagerConfigurationProviderTests
                 index.Should().Be(i.ToString(System.Globalization.CultureInfo.InvariantCulture));
             }
         }
+    }
+
+    [Theory]
+    [InlineData(new[] { "a__b", "a" }, "raw")]
+    [InlineData(new[] { "a", "a__b" }, "json")]
+    public void Load_Should_Keep_First_Value_By_List_Order_When_Keys_Collide(string[] secretIds, string expected)
+    {
+        var secrets = secretIds.Select(id => CreateSecret("project", id)).ToList();
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/a__b/versions/latest"] = "raw",
+            ["projects/project/secrets/a/versions/latest"] = "{\"b\":\"json\"}"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        var options = new SecretManagerConfigurationOptions { BatchSize = 10 };
+
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+        provider.Load();
+
+        provider.TryGet("a:b", out string? value).Should().BeTrue();
+        value.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Load_Should_Not_Retry_Listing_When_Non_Rpc_Exception_Is_Thrown()
+    {
+        var mockClient = new Mock<SecretManagerServiceClient>();
+        mockClient.Setup(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Throws(new InvalidOperationException("boom"));
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        mockClient.Verify(
+            x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public void Load_Should_Retry_Listing_When_Transient_RpcException_Is_Thrown_During_Enumeration()
+    {
+        var secrets = new List<Secret> { CreateSecret("project", "raw-secret") };
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/raw-secret/versions/latest"] = "plain-text-value"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        var failingEnumerator = new Mock<IAsyncEnumerator<Secret>>();
+        failingEnumerator.Setup(x => x.MoveNextAsync())
+            .Throws(new RpcException(new Status(StatusCode.Unavailable, "stream dropped")));
+        var mockPaged = new Mock<PagedAsyncEnumerable<ListSecretsResponse, Secret>>();
+        mockPaged.SetupSequence(x => x.GetAsyncEnumerator(It.IsAny<CancellationToken>()))
+            .Returns(failingEnumerator.Object)
+            .Returns(() => new FakeAsyncEnumerator(secrets));
+        mockClient.Setup(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Returns(mockPaged.Object);
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        provider.TryGet("raw-secret", out string? value).Should().BeTrue();
+        value.Should().Be("plain-text-value");
+        failingEnumerator.Verify(x => x.MoveNextAsync(), Times.Once);
     }
 
     private sealed class CapturingLoggerFactory(ILogger logger) : ILoggerFactory
