@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
 
@@ -7,6 +6,7 @@ namespace CSharpEssentials.Json;
 
 /// <summary>
 /// Converts enums with a <see cref="StringEnumAttribute"/> to strings.
+/// Names follow <see cref="StringEnumNaming"/> (snake_case by default, <c>[JsonStringEnumMemberName]</c> wins).
 /// </summary>
 public class ConditionalStringEnumConverter : JsonConverterFactory
 {
@@ -19,9 +19,9 @@ public class ConditionalStringEnumConverter : JsonConverterFactory
         bool allowIntegerValues = true,
         Predicate<Type>? canConvert = null)
     {
-        _namingPolicy = namingPolicy ?? JsonNamingPolicy.SnakeCaseLower;
+        _namingPolicy = namingPolicy ?? StringEnumNaming.DefaultPolicy;
         _allowIntegerValues = allowIntegerValues;
-        _canConvert = canConvert ?? (type => type.IsEnum && type.GetCustomAttribute<StringEnumAttribute>() != null);
+        _canConvert = canConvert ?? StringEnumNaming.IsStringEnum;
     }
     public override bool CanConvert(Type typeToConvert) => _canConvert(typeToConvert);
 
