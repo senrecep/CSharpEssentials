@@ -36,7 +36,7 @@ Result<Product> product = await ResiliencePolicy
 
 ## Retrying Failed Results
 
-Both `ResiliencePolicy` and `ResiliencePolicy<T>` retry exceptions and failed `Result` / `Result<T>` values. The circuit breaker counts the same failures.
+Both `ResiliencePolicy` and `ResiliencePolicy<T>` retry exceptions and failed `Result` / `Result<T>` values. The circuit breaker counts the same failures. The non-generic `ResiliencePolicy` checks any return value that implements `IResultBase`; other return values count only when the delegate throws.
 
 Errors of type `Unauthorized`, `Forbidden`, `NotFound` and `Validation` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict`, …) is treated as transient. When the retries run out, the last failed result is returned.
 
@@ -99,7 +99,7 @@ Resilience-specific errors are returned as `Error` values:
 
 When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
 
-Cancellation is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled, the `OperationCanceledException` is rethrown, and `WithFallback` does not run the fallback for it.
+Cancellation of the caller's token is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback. If the caller cancels after a failed attempt, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException`; a `WithRetry` policy without a fallback stops retrying and returns the last failed result. An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is treated as a normal failure: it is retried and it triggers the fallback.
 
 A `default(ResiliencePolicy)` or `default(ResiliencePolicy<T>)` behaves like `Create()`.
 
