@@ -55,6 +55,20 @@ UserStatusExtensions.GetNames();   // ["Active", "Inactive", "Suspended"]
 UserStatusExtensions.GetValues();  // [Active, Inactive, Suspended]
 ```
 
+### Nested Enums
+
+Extension methods are only generated for top-level enums (enums declared directly in a namespace). A `[StringEnum]` enum nested inside a class or struct is skipped, and the analyzer reports `CSE0001` (Info severity) on it so the skip is not silent:
+
+```csharp
+public class Order
+{
+    [StringEnum] // CSE0001: no extension methods are generated for Order.State
+    public enum State { Pending, Shipped }
+}
+```
+
+Move the enum out of its containing type to get the generated extensions. `CSE0001` is informational, so it does not fail builds that use `TreatWarningsAsErrors`; set its severity in `.editorconfig` if you want it stricter (`dotnet_diagnostic.CSE0001.severity = warning`).
+
 ### Integration
 
 `CSharpEssentials.Json` and `CSharpEssentials.EntityFrameworkCore` recognize `[StringEnum]` to automatically serialize enums as strings.
