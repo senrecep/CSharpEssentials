@@ -34,6 +34,25 @@ builder.Configuration.AddGcpSecretManager(options =>
 string connectionString = builder.Configuration["MyApp:ConnectionStrings:Default"]!;
 ```
 
+### Logging
+
+Configuration providers are built before dependency injection exists, so the provider does not
+resolve a logger on its own and writes nothing to the console by default. Pass an `ILoggerFactory`
+to get diagnostics (per-secret progress at `Debug`, failures at `Error`):
+
+```csharp
+using ILoggerFactory loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+
+builder.Configuration.AddGcpSecretManager(options =>
+{
+    options.LoggerFactory = loggerFactory;
+    options.AddProject(new ProjectSecretConfiguration { ProjectId = "my-gcp-project" });
+});
+```
+
+`SecretManagerConfigurationOptions` is a `sealed record`; `CredentialsPath`, `Loader`, `LoggerFactory`
+and `Projects` are settable and `AddProject` returns the options for chaining.
+
 ### Setup via AppSettings
 
 ```json

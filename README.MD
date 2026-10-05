@@ -6,7 +6,7 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-3186%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-3178%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
@@ -250,6 +250,12 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 
 - `Swashbuckle.AspNetCore` is now `[8.1.0, 10)` (3.x: `[8.1.0, )`, unbounded). Apps on Swashbuckle 7.x must upgrade to 8.x.
 - Building the library from source (or referencing it with `ProjectReference`) needs the .NET 11 preview SDK. The NuGet packages work with the SDKs of their target frameworks.
+
+### GCP Secret Manager (`CSharpEssentials.GcpSecretManager`)
+
+- `SecretManagerConfigurationOptions` is now a `sealed record`. `CredentialsPath` and `Loader` are settable inside the `AddGcpSecretManager(options => ...)` lambda and `AddProject` returns the options for chaining. Existing `AddProject` calls keep compiling; code that relied on reference-type class semantics (for example `ReferenceEquals` or a derived class, which was never possible because it was sealed) is the only thing affected.
+- The provider no longer writes to `Console`. Set `options.LoggerFactory` to receive logs (default: no logging).
+- New dependency: `Microsoft.Extensions.Logging.Abstractions`.
 
 ## AI Skills
 

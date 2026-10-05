@@ -6,12 +6,14 @@ using Google.Api.Gax;
 using Google.Cloud.SecretManager.V1;
 using Grpc.Core;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Polly;
 using Polly.Retry;
 
 namespace CSharpEssentials.GcpSecretManager.Configuration;
 
-internal sealed class SecretManagerConfigurationProvider(
+internal sealed partial class SecretManagerConfigurationProvider(
     List<ProjectSecretLoadContext> projectConfigs,
     ISecretManagerConfigurationLoader loader,
     SecretManagerConfigurationOptions options
@@ -24,6 +26,8 @@ internal sealed class SecretManagerConfigurationProvider(
         .WaitAndRetryAsync(3, retryAttempt =>
             TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
     private readonly ConcurrentDictionary<string, string?> _data = new();
+    private readonly ILogger _logger = options.LoggerFactory?.CreateLogger<SecretManagerConfigurationProvider>()
+        ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
 
     public override void Load()
         => LoadAsync().ConfigureAwait(false).GetAwaiter().GetResult();
@@ -49,7 +53,7 @@ internal sealed class SecretManagerConfigurationProvider(
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync($"Critical error during secret loading: {ex}");
+            LogLoadFailed(ex);
             throw;
         }
     }
@@ -88,7 +92,7 @@ internal sealed class SecretManagerConfigurationProvider(
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync($"Error loading secrets for {parent}: {ex}");
+            LogProjectLoadFailed(ex, parent);
             return [];
         }
     }
@@ -105,7 +109,7 @@ internal sealed class SecretManagerConfigurationProvider(
                     context.Config.Region,
                 secret.SecretName.SecretId);
 
-            Console.WriteLine($"Started loading secret: {secretPath}");
+            LogSecretLoadStarted(secretPath);
 
             SecretLoadResult result = await LoadSecretValueAsync(context, secret, secretPath).ConfigureAwait(false);
             string jsonValue = result.Value;
@@ -115,12 +119,12 @@ internal sealed class SecretManagerConfigurationProvider(
             if (!context.Config.IsRawSecret(secret.SecretName.SecretId))
                 TryParseAndFlattenJson(resultDict, result, jsonValue);
 
-            Console.WriteLine($"Completed loading secret: {secretPath}");
+            LogSecretLoadCompleted(secretPath);
 
         }
         catch (RpcException ex)
         {
-            await Console.Error.WriteLineAsync($"Failed to load secret {secret.SecretName.SecretId}: {ex.StatusCode}");
+            LogSecretFailed(ex, secret.SecretName.SecretId, ex.StatusCode);
         }
     }
 
@@ -164,10 +168,28 @@ internal sealed class SecretManagerConfigurationProvider(
         }
         catch (Exception ex)
         {
-            await Console.Error.WriteLineAsync($"Error listing secrets: {ex.Message}");
+            LogListFailed(ex, parent);
             return [];
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Critical error during secret loading")]
+    private partial void LogLoadFailed(Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error loading secrets for {Parent}")]
+    private partial void LogProjectLoadFailed(Exception exception, string parent);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Started loading secret {SecretPath}")]
+    private partial void LogSecretLoadStarted(string secretPath);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Completed loading secret {SecretPath}")]
+    private partial void LogSecretLoadCompleted(string secretPath);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Failed to load secret {SecretId}: {StatusCode}")]
+    private partial void LogSecretFailed(Exception exception, string secretId, StatusCode statusCode);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Error listing secrets for {Parent}")]
+    private partial void LogListFailed(Exception exception, string parent);
 
     private async Task<SecretLoadResult> LoadSecretValueAsync(
         ProjectSecretLoadContext context,

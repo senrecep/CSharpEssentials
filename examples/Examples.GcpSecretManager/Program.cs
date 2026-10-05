@@ -35,6 +35,7 @@ IConfigurationBuilder builder = new ConfigurationBuilder();
 // builder.AddGcpSecretManager(gcpOptions =>
 // {
 //     gcpOptions.CredentialsPath = "/path/to/service-account.json";
+//     gcpOptions.LoggerFactory = loggerFactory; // optional; nothing is logged by default
 //     gcpOptions.AddProject(new ProjectSecretConfiguration
 //     {
 //         ProjectId = "my-gcp-project",
