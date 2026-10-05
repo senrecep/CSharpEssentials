@@ -67,6 +67,18 @@ Func<CancellationToken, Task<Result<User>>> operation = ct => _db.GetUser(id);
 Result<User> result = await operation.RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromSeconds(1));
 ```
 
+By default every failure is retried except `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors. Pass a `shouldRetry` predicate to decide yourself:
+
+```csharp
+// Retry only errors you classify as transient
+Result<User> result = await operation.RetryIfFailed(
+    shouldRetry: error => error.Code == "Db.Timeout",
+    maxAttempts: 3,
+    delay: TimeSpan.FromSeconds(1));
+```
+
+The predicate replaces the default classification. An exception thrown by the operation is converted to the error that would be returned for it (`ErrorType.Unexpected`) and passed to the predicate too, so an exception the predicate rejects is not retried. Caller cancellation works as without a predicate: it is never retried and throws `OperationCanceledException`.
+
 ## Configuration Options
 
 ```csharp

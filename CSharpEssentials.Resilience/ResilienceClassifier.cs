@@ -17,6 +17,11 @@ internal static class ResilienceClassifier
             throw new OperationCanceledException(ex.Message, ex, callerToken);
         }
 
+        return ToError(ex);
+    }
+
+    internal static Error ToError(Exception ex)
+    {
         if (ex is BrokenCircuitException)
         {
             return Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.");
@@ -44,6 +49,17 @@ internal static class ResilienceClassifier
         return result;
     }
 
+    internal static TResult ThrowIfCallerCancelled<TResult>(TResult result, Func<Error, bool> shouldRetry, CancellationToken callerToken)
+        where TResult : IResultBase
+    {
+        if (callerToken.IsCancellationRequested && IsRetryable(result, shouldRetry))
+        {
+            throw new OperationCanceledException(callerToken);
+        }
+
+        return result;
+    }
+
     internal static bool IsRetryable<TResult>(TResult result)
         where TResult : IResultBase
     {
@@ -58,4 +74,8 @@ internal static class ResilienceClassifier
             and not ErrorType.NotFound
             and not ErrorType.Validation;
     }
+
+    internal static bool IsRetryable<TResult>(TResult result, Func<Error, bool> shouldRetry)
+        where TResult : IResultBase =>
+        result.IsFailure && shouldRetry(result.FirstError);
 }
