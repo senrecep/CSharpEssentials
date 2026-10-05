@@ -23,7 +23,7 @@ public static class ResilienceResultExtensions
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(r => IsRetryable(r))
+                    .HandleResult(ResilienceClassifier.IsRetryable)
                     .Handle<Exception>()
             })
             .Build();
@@ -56,7 +56,7 @@ public static class ResilienceResultExtensions
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result>()
-                    .HandleResult(r => IsRetryable(r))
+                    .HandleResult(ResilienceClassifier.IsRetryable)
                     .Handle<Exception>()
             })
             .Build();
@@ -71,33 +71,5 @@ public static class ResilienceResultExtensions
         {
             return Error.Exception(ex, ErrorType.Unexpected);
         }
-    }
-
-    private static bool IsRetryable(Result result)
-    {
-        if (result.IsSuccess)
-        {
-            return false;
-        }
-
-        ErrorType type = result.FirstError.Type;
-        return type is not ErrorType.Unauthorized
-            and not ErrorType.Forbidden
-            and not ErrorType.NotFound
-            and not ErrorType.Validation;
-    }
-
-    private static bool IsRetryable<T>(Result<T> result)
-    {
-        if (result.IsSuccess)
-        {
-            return false;
-        }
-
-        ErrorType type = result.FirstError.Type;
-        return type is not ErrorType.Unauthorized
-            and not ErrorType.Forbidden
-            and not ErrorType.NotFound
-            and not ErrorType.Validation;
     }
 }

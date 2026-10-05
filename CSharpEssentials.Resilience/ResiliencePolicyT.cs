@@ -1,8 +1,5 @@
-using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Polly;
-using Polly.CircuitBreaker;
-using Polly.Timeout;
 
 namespace CSharpEssentials.Resilience;
 
@@ -53,7 +50,7 @@ public readonly partial struct ResiliencePolicy<T>
         }
         catch (Exception ex)
         {
-            return HandleException(ex);
+            return ResilienceClassifier.HandleException(ex);
         }
     }
 
@@ -68,28 +65,8 @@ public readonly partial struct ResiliencePolicy<T>
         }
         catch (Exception ex)
         {
-            return HandleException(ex);
+            return ResilienceClassifier.HandleException(ex);
         }
-    }
-
-    private static Result<T> HandleException(Exception ex)
-    {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-        {
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-        }
-
-        if (ex is BrokenCircuitException)
-        {
-            return Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.");
-        }
-
-        if (ex is TimeoutRejectedException)
-        {
-            return Error.Failure("Resilience.Timeout", "Operation timed out.");
-        }
-
-        return Error.Exception(ex, ErrorType.Unexpected);
     }
 
     private ResiliencePolicy<T> Merge(ResiliencePipeline<Result<T>> additionalPipeline)
@@ -101,19 +78,5 @@ public readonly partial struct ResiliencePolicy<T>
             .Build();
 
         return new(merged);
-    }
-
-    private static bool IsRetryable(Result<T> result)
-    {
-        if (result.IsSuccess)
-        {
-            return false;
-        }
-
-        ErrorType type = result.FirstError.Type;
-        return type is not ErrorType.Unauthorized
-            and not ErrorType.Forbidden
-            and not ErrorType.NotFound
-            and not ErrorType.Validation;
     }
 }

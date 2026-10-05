@@ -59,7 +59,7 @@ public readonly partial struct ResiliencePolicy<T>
                 SamplingDuration = samplingDuration ?? TimeSpan.FromMinutes(1),
                 BreakDuration = breakDuration ?? TimeSpan.FromSeconds(30),
                 ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(IsRetryable)
+                    .HandleResult(ResilienceClassifier.IsRetryable)
                     .Handle<Exception>()
             })
             .Build();
