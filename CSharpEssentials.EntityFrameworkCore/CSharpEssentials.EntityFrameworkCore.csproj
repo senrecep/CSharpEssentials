@@ -42,14 +42,24 @@
     </None>
   </ItemGroup>
 
-  <!-- EF Core packages - version varies by target framework -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' or '$(TargetFramework)' == 'net9.0'">
+  <!-- EF Core packages - each target framework is compiled against (and capped to) its own EF major,
+       because EF APIs such as ExecuteUpdate are not binary compatible across majors. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[10.0.0,11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[10.0.1,11)" />
+    <!-- EF 10 needs the 10.x Microsoft.Extensions packages; lift the central (transitively pinned) 9.x versions. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="[10.0.1,)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[8.0.0,)" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.0,)" />
+    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[8.0.0,9)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.0,9)" />
   </ItemGroup>
 
   <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, and Json -->
