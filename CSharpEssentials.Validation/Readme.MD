@@ -215,6 +215,12 @@ The same applies to `ForEach` / `ForEachAsync`: a null collection path produces 
 (Only paths whose target type can be null are tolerated; for non-nullable value types the
 `NullReferenceException` still propagates.)
 
+### ValueTask-Based Async Predicates
+
+`MustAsync` also accepts `ValueTask<bool>` predicates (extension overload in
+`CSharpEssentials.Validation`), avoiding the `Task` allocation for ValueTask-based sources.
+Async lambdas keep binding to the built-in `Task<bool>` overload — no call-site changes needed.
+
 ### CSharpEssentials.Core Integration
 
 `CSharpEssentials.Core` is transitively available (via `CSharpEssentials.Errors`) and ships a rich set of conditional helpers that compose naturally with validators.

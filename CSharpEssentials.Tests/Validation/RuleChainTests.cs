@@ -103,6 +103,37 @@ public class RuleChainTests
         result.IsSuccess.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task MustAsync_ValueTaskPredicate_ShouldAddError_WhenPredicateReturnsFalse()
+    {
+        Model model = new("hello", 5);
+
+        Result<Model> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Text).MustAsync(
+                (v, _) => ValueTask.FromResult(v == "world"),
+                "Text.Wrong",
+                "Must be 'world'.",
+                ct));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Text.Wrong");
+    }
+
+    [Fact]
+    public async Task MustAsync_ValueTaskPredicate_ShouldNotAddError_WhenPredicateReturnsTrue()
+    {
+        Model model = new("world", 5);
+
+        Result<Model> result = await Validator.ValidateAsync(model, async (m, rules, ct) =>
+            await rules.For(() => m.Text).MustAsync(
+                (v, _) => ValueTask.FromResult(v == "world"),
+                "Text.Wrong",
+                "Must be 'world'.",
+                ct));
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
     // -------------------------------------------------------------------------
     // PropertyName extraction
     // -------------------------------------------------------------------------
