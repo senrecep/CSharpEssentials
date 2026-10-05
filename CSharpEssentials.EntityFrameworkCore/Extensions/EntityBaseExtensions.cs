@@ -66,7 +66,12 @@ public static class EntityBaseExtensions
         ParameterExpression parameterType = Expression.Parameter(entityTypeBuilder.Metadata.ClrType);
         Expression expressionFilter = ReplacingExpressionVisitor.Replace(
             expression.Parameters.Single(), parameterType, expression.Body);
+#if NET10_0_OR_GREATER
+        LambdaExpression? currentQueryFilter = entityTypeBuilder.Metadata.GetDeclaredQueryFilters()
+            .FirstOrDefault(static filter => filter.IsAnonymous)?.Expression;
+#else
         LambdaExpression? currentQueryFilter = entityTypeBuilder.Metadata.GetQueryFilter();
+#endif
         if (currentQueryFilter != null)
         {
             Expression currentExpressionFilter = ReplacingExpressionVisitor.Replace(

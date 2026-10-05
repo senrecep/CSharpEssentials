@@ -16,8 +16,8 @@
 
     <!-- EntityFrameworkCore -->
     <ItemGroup Label="EntityFrameworkCore">
-        <PackageVersion Include="EFCore.NamingConventions" Version="[9.0.0,)" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="[9.0.4,)" />
+        <PackageVersion Include="EFCore.NamingConventions" Version="[9.0.0,10)" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="[9.0.4,10)" />
     </ItemGroup>
 
     <!-- System -->
