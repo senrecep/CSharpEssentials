@@ -6,7 +6,7 @@ Testable time abstraction built on .NET `TimeProvider`. Decouple your code from 
 
 - **IDateTimeProvider** — Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, and `UtcNowTime`.
 - **TimeProvider Integration** — Works with .NET's built-in `TimeProvider` and `FakeTimeProvider` for testing.
-- **DateTime Extensions** — Convert `DateTime` to `DateOnly` and `TimeOnly`.
+- **DateTime Extensions** — Convert `DateTime` to `DateOnly` and `TimeOnly`, next/previous weekday, age calculation.
 
 ## Installation
 
@@ -73,4 +73,14 @@ DateTime now = DateTime.UtcNow;
 
 DateOnly date = now.ToDateOnly();
 TimeOnly time = now.ToTimeOnly();
+
+DateOnly today = new(2024, 6, 15);                     // Saturday
+today.NextDayOfWeek(DayOfWeek.Monday);                 // 2024-06-17
+today.PreviousDayOfWeek(DayOfWeek.Saturday);           // 2024-06-08
+today.NextDayOfWeek(DayOfWeek.Saturday, includeCurrent: true); // 2024-06-15
+
+new DateOnly(2000, 6, 16).GetAge(today);               // 23
+birthDate.GetAge(dateTimeProvider);                    // uses the provider's time zone
 ```
+
+`DateOnly` overloads and `GetAge` require .NET 6+; on netstandard2.1 only the `DateTime` weekday overloads are available.
