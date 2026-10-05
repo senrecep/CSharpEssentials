@@ -4,6 +4,7 @@ using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.Tests.AspNetCore;
 
@@ -78,5 +79,56 @@ public class ResultEndpointFilterTests
         object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>("hello")))!;
 
         result.Should().Be("hello");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithFailureResultTAndRegisteredMapper_Should_ResolveMapperFromRequestServices()
+    {
+        var filter = new ResultEndpointFilter();
+        await using ServiceProvider services = new ServiceCollection()
+            .AddSingleton<IResultErrorMapper, NotFoundErrorMapper>()
+            .BuildServiceProvider();
+        var context = CreateContext(services);
+
+        object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result<int>.Failure(Error.NotFound("X", "Missing")))))!;
+
+        var notFound = (NotFound<Error[]>)result;
+        notFound.Value![0].Type.Should().Be(ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithFailureResultAndScopedMapper_Should_ResolveMapperFromRequestScope()
+    {
+        var filter = new ResultEndpointFilter();
+        await using ServiceProvider root = new ServiceCollection()
+            .AddScoped<IResultErrorMapper, NotFoundErrorMapper>()
+            .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        await using AsyncServiceScope scope = root.CreateAsyncScope();
+        var context = CreateContext(scope.ServiceProvider);
+
+        object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result.Failure(Error.Validation("V", "Invalid")))))!;
+
+        var notFound = (NotFound<Error[]>)result;
+        notFound.Value![0].Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_WithFailureResultAndNoMapperRegistered_Should_Return_ProblemResult()
+    {
+        var filter = new ResultEndpointFilter();
+        await using ServiceProvider services = new ServiceCollection().BuildServiceProvider();
+        var context = CreateContext(services);
+
+        object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result.Failure(Error.Conflict("C", "Conflict")))))!;
+
+        ((EnhancedProblemHttpResult)result).StatusCode.Should().Be(StatusCodes.Status409Conflict);
+    }
+
+    private static DefaultEndpointFilterInvocationContext CreateContext(IServiceProvider services) =>
+        new(new DefaultHttpContext { RequestServices = services });
+
+    private sealed class NotFoundErrorMapper : IResultErrorMapper
+    {
+        public Microsoft.AspNetCore.Http.IResult Map(Error[] errors) => TypedResults.NotFound(errors);
     }
 }
