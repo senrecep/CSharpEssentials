@@ -45,6 +45,15 @@ public static class EnumBindingControllers
 
         [HttpGet("dto")]
         public string Dto([FromQuery] EbQueryDto dto) => $"{dto.Status}|{EbEcho.Of(dto.Optional)}";
+
+        [HttpGet("nested")]
+        public string Nested([FromQuery] EbNestedDto dto) => EbEcho.Describe(dto);
+
+        [HttpGet("cycle")]
+        public string Cycle([FromQuery] EbCycleDto dto) => $"{dto.Status}";
+
+        [HttpGet("excluded")]
+        public string Excluded([FromQuery] EbExcludedDto dto) => $"{dto.Status}|{dto.Hidden}";
     }
 
     [Route("")]
@@ -84,5 +93,14 @@ public static class EnumBindingControllers
 
         [HttpGet("dto")]
         public string Dto([FromQuery] EbQueryDto dto) => Echo($"{dto.Status}|{EbEcho.Of(dto.Optional)}");
+
+        [HttpGet("nested")]
+        public string Nested([FromQuery] EbNestedDto dto) => Echo(EbEcho.Describe(dto));
+
+        [HttpGet("cycle")]
+        public string Cycle([FromQuery] EbCycleDto dto) => Echo($"{dto.Status}");
+
+        [HttpGet("excluded")]
+        public string Excluded([FromQuery] EbExcludedDto dto) => Echo($"{dto.Status}|{dto.Hidden}");
     }
 }

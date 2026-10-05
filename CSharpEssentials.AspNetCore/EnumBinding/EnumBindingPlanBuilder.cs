@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Microsoft.AspNetCore.Http;
@@ -13,10 +14,13 @@ namespace CSharpEssentials.AspNetCore;
 /// <summary>
 /// Finds the query and route values an endpoint binds to enums. Minimal API endpoints are read from their
 /// handler <see cref="MethodInfo"/> (including <see cref="AsParametersAttribute"/> types), MVC actions from their
-/// <see cref="ControllerActionDescriptor"/> (including one level of complex type properties).
+/// <see cref="ControllerActionDescriptor"/> (including nested complex type properties, up to 8 levels).
 /// </summary>
 internal sealed class EnumBindingPlanBuilder(Predicate<Type> canBind)
 {
+    // Nested query models deeper than this are left to the MVC binder (and its own error response).
+    private const int MaxComplexTypeDepth = 8;
+
     private readonly List<EnumBindingTarget> _targets = [];
     private readonly HashSet<(EnumBindingSource, string)> _keys = [];
 
@@ -135,41 +139,68 @@ internal sealed class EnumBindingPlanBuilder(Predicate<Type> canBind)
         }
     }
 
-    private void AddMvcComplexType(Type type, string prefix)
+    private void AddMvcComplexType(Type type, string prefix) =>
+        AddMvcComplexType(type, prefix, path: null, depth: 0, visiting: []);
+
+    private void AddMvcComplexType(Type type, string prefix, string? path, int depth, HashSet<Type> visiting)
     {
+        if (depth >= MaxComplexTypeDepth || !visiting.Add(type))
+            return;
+
         foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (property.SetMethod?.IsPublic != true ||
-                !TryGetEnumType(property.PropertyType, out Type? enumType, out bool allowEmpty))
+            if (property.SetMethod?.IsPublic != true || property.GetIndexParameters().Length > 0)
                 continue;
 
-            string name = property.Name;
-            EnumBindingSource? source = null;
-            foreach (object attribute in property.GetCustomAttributes(inherit: true))
+            (string name, EnumBindingSource? source, bool excluded) = GetMvcPropertyBinding(property);
+            if (excluded)
+                continue;
+
+            string propertyPath = path is null ? name : $"{path}.{name}";
+            if (TryGetEnumType(property.PropertyType, out Type? enumType, out bool allowEmpty))
             {
-                if (attribute is IFromQueryMetadata query)
-                {
-                    (name, source) = (query.Name ?? name, EnumBindingSource.Query);
-                    break;
-                }
-                if (attribute is IFromRouteMetadata route)
-                {
-                    (name, source) = (route.Name ?? name, EnumBindingSource.Route);
-                    break;
-                }
+                AddMvcPropertyValue(prefix, propertyPath, source, enumType, allowEmpty);
+                continue;
             }
 
-            // MVC binds "prefix.Name" when the request has a value under the prefix, otherwise "Name".
-            foreach ((string key, string? skipWhenPrefixPresent) in ((string, string?)[])[($"{prefix}.{name}", null), (name, prefix)])
+            if (source is null && IsComplexType(property.PropertyType))
+                AddMvcComplexType(property.PropertyType, prefix, propertyPath, depth + 1, visiting);
+        }
+
+        visiting.Remove(type);
+    }
+
+    private static (string Name, EnumBindingSource? Source, bool Excluded) GetMvcPropertyBinding(PropertyInfo property)
+    {
+        foreach (object attribute in property.GetCustomAttributes(inherit: true))
+        {
+            switch (attribute)
             {
-                if (source is { } explicitSource)
-                {
-                    Add(explicitSource, key, enumType, allowEmpty, skipWhenPrefixPresent);
-                    continue;
-                }
-                Add(EnumBindingSource.Route, key, enumType, allowEmpty, skipWhenPrefixPresent);
-                Add(EnumBindingSource.Query, key, enumType, allowEmpty, skipWhenPrefixPresent);
+                case IFromQueryMetadata query:
+                    return (query.Name ?? property.Name, EnumBindingSource.Query, false);
+                case IFromRouteMetadata route:
+                    return (route.Name ?? property.Name, EnumBindingSource.Route, false);
+                case IFromBodyMetadata or IFromHeaderMetadata or IFromFormMetadata or IFromServiceMetadata or BindNeverAttribute:
+                    return (property.Name, null, true);
+                default:
+                    break;
             }
+        }
+        return (property.Name, null, false);
+    }
+
+    private void AddMvcPropertyValue(string prefix, string path, EnumBindingSource? source, Type enumType, bool allowEmpty)
+    {
+        // MVC binds "prefix.path" when the request has a value under the prefix, otherwise "path".
+        foreach ((string key, string? skipWhenPrefixPresent) in ((string, string?)[])[($"{prefix}.{path}", null), (path, prefix)])
+        {
+            if (source is { } explicitSource)
+            {
+                Add(explicitSource, key, enumType, allowEmpty, skipWhenPrefixPresent);
+                continue;
+            }
+            Add(EnumBindingSource.Route, key, enumType, allowEmpty, skipWhenPrefixPresent);
+            Add(EnumBindingSource.Query, key, enumType, allowEmpty, skipWhenPrefixPresent);
         }
     }
 
@@ -215,6 +246,8 @@ internal sealed class EnumBindingPlanBuilder(Predicate<Type> canBind)
         return enumerable.IsAssignableFrom(type) ? arguments[0] : null;
     }
 
+    // Mirrors MVC: a type with a string TypeConverter (Uri, Version, ...) is bound as a simple value, not by its properties.
     private static bool IsComplexType(Type type) =>
-        type.IsClass && type != typeof(string) && !type.IsArray && !typeof(System.Collections.IEnumerable).IsAssignableFrom(type);
+        type.IsClass && type != typeof(string) && !type.IsArray && !typeof(System.Collections.IEnumerable).IsAssignableFrom(type) &&
+        !TypeDescriptor.GetConverter(type).CanConvertFrom(typeof(string));
 }

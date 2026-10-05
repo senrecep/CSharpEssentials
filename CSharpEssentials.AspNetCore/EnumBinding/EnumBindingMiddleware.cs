@@ -120,8 +120,11 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, IOptions<EnumB
         key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) &&
         (key.Length == prefix.Length || key[prefix.Length] is '.' or '[');
 
-    private static Error CreateError(EnumBindingTarget target, JsonNamingPolicy policy) =>
-        Error.Validation(
-            code: target.Key,
-            description: $"'{target.Key}' must be one of: {string.Join(", ", StringEnumNaming.GetNames(target.EnumType, policy))}.");
+    private Error CreateError(EnumBindingTarget target, JsonNamingPolicy policy)
+    {
+        IReadOnlyList<string> names = StringEnumNaming.GetNames(target.EnumType, policy);
+        return _options.ErrorFactory is { } factory
+            ? factory(target.Key, target.EnumType, names)
+            : Error.Validation(code: target.Key, description: $"'{target.Key}' must be one of: {string.Join(", ", names)}.");
+    }
 }

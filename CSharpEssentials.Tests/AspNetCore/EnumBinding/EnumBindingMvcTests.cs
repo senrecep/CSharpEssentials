@@ -108,4 +108,92 @@ public class EnumBindingMvcTests
         response.Status.Should().Be(200);
         response.Body.Should().EndWith("|HTTPError");
     }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task Nested_Should_BindProperty_When_KeyIsUnprefixed(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/nested?inner.status=in_progress");
+
+        response.Body.Should().Be("InProgress|null");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task Nested_Should_BindProperty_When_KeyIsPrefixed(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/nested?dto.inner.status=in_progress&dto.inner.optional=http_error");
+
+        response.Body.Should().Be("InProgress|HTTPError");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task Nested_Should_UseUnprefixedPathAsErrorCode_When_ValueIsInvalid(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/nested?inner.status=garbage");
+
+        response.ShouldBeEnumBindingProblem().Should().ContainSingle().Which.Code.Should().Be("Inner.Status");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task Nested_Should_UsePrefixedPathAsErrorCode_When_ValueIsInvalid(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/nested?dto.inner.status=garbage");
+
+        response.ShouldBeEnumBindingProblem().Should().ContainSingle().Which.Code.Should().Be("dto.Inner.Status");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task Nested_Should_IgnoreUnprefixedPath_When_PrefixedKeyIsPresent(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/nested?dto.inner.status=in_progress&inner.status=garbage");
+
+        response.Body.Should().Be("InProgress|null");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task SelfReferencingType_Should_BindFirstLevelEnum_When_RequestIsValid(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/cycle?status=http_error");
+
+        response.Body.Should().Be("HTTPError");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task SelfReferencingType_Should_Return400Problem_When_FirstLevelValueIsInvalid(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/cycle?status=garbage");
+
+        response.ShouldBeEnumBindingProblem().Should().ContainSingle().Which.Code.Should().Be("Status");
+    }
+
+    [Theory]
+    [MemberData(nameof(MvcHostKinds))]
+    public async Task BindNeverProperty_Should_NotBeValidated_When_ValueIsInvalid(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await EnumBindingHost.StartAsync(kind);
+
+        var response = await host.GetAsync("/excluded?status=in_progress&hidden=garbage");
+
+        response.Body.Should().Be("InProgress|Active");
+    }
 }
