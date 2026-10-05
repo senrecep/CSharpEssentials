@@ -44,7 +44,6 @@
         <PackageVersion Include="Microsoft.Extensions.Configuration" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="[3.0.1,)" />
-        <PackageVersion Include="Polly" Version="[8.0.0,9.0.0)" />
         <PackageVersion Include="Polly.Core" Version="[8.0.0,9.0.0)" />
     </ItemGroup>
 
