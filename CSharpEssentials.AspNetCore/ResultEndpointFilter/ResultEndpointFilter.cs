@@ -5,6 +5,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace CSharpEssentials.AspNetCore;
 
+/// <summary>
+/// Converts <c>Result</c>/<c>Result&lt;T&gt;</c> return values: success → 200, failure → <see cref="IResultErrorMapper"/>
+/// when registered, otherwise a problem response (<see cref="Extensions.ToProblemResult(Error[], ErrorMetadata?, int?)"/>).
+/// </summary>
 public sealed class ResultEndpointFilter(IResultErrorMapper? mapper = null) : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
@@ -25,14 +29,14 @@ public sealed class ResultEndpointFilter(IResultErrorMapper? mapper = null) : IE
                 return TypedResults.Ok(value);
             }
 
-            return mapper?.Map(errors) ?? Results.BadRequest(errors);
+            return mapper?.Map(errors) ?? errors.ToProblemResult();
         }
 
         if (result is CSharpEssentials.ResultPattern.Interfaces.IResult r)
         {
             return r.IsSuccess
                 ? Results.Ok()
-                : mapper?.Map(r.Errors) ?? Results.BadRequest(r.Errors);
+                : mapper?.Map(r.Errors) ?? r.Errors.ToProblemResult();
         }
 
         return result;

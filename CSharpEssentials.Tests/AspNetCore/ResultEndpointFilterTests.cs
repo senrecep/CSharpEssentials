@@ -22,15 +22,16 @@ public class ResultEndpointFilterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithFailureResultT_Should_Return_BadRequest()
+    public async Task InvokeAsync_WithFailureResultT_Should_Return_ProblemResult()
     {
         var filter = new ResultEndpointFilter();
         var context = new DefaultEndpointFilterInvocationContext(new DefaultHttpContext());
 
         object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result<int>.Failure(Error.NotFound("X", "Missing")))))!;
 
-        var badRequest = (BadRequest<Error[]>)result;
-        badRequest.Value![0].Type.Should().Be(ErrorType.NotFound);
+        var problem = (EnhancedProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        problem.ProblemDetails.Errors[0].Type.Should().Be(ErrorType.NotFound);
     }
 
     [Fact]
@@ -45,15 +46,16 @@ public class ResultEndpointFilterTests
     }
 
     [Fact]
-    public async Task InvokeAsync_WithFailureResult_Should_Return_BadRequest()
+    public async Task InvokeAsync_WithFailureResult_Should_Return_ProblemResult()
     {
         var filter = new ResultEndpointFilter();
         var context = new DefaultEndpointFilterInvocationContext(new DefaultHttpContext());
 
         object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result.Failure(Error.Validation("V", "Invalid")))))!;
 
-        var badRequest = (BadRequest<Error[]>)result;
-        badRequest.Value![0].Type.Should().Be(ErrorType.Validation);
+        var problem = (EnhancedProblemHttpResult)result;
+        problem.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        problem.ProblemDetails.Errors[0].Type.Should().Be(ErrorType.Validation);
     }
 
     [Fact]
