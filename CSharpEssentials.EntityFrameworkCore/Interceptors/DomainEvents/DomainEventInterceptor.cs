@@ -1,8 +1,5 @@
-using System.Collections.Concurrent;
-using System.Reflection;
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,19 +25,17 @@ public sealed partial class DomainEventInterceptor(
     ILogger<DomainEventInterceptor> logger,
     IServiceScopeFactory serviceScopeFactory) : SaveChangesInterceptor
 {
-    private static readonly ConcurrentDictionary<Type, DomainEventTiming> TimingCache = new();
-
     public override InterceptionResult<int> SavingChanges(
         DbContextEventData eventData, InterceptionResult<int> result)
     {
         if (eventData.Context is null)
             return base.SavingChanges(eventData, result);
 
-        IDomainEvent[] allEvents = CollectDomainEvents(eventData.Context);
+        IDomainEvent[] allEvents = DomainEventCollector.Collect(eventData.Context);
         if (allEvents.Length == 0)
             return base.SavingChanges(eventData, result);
 
-        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = SplitByTiming(allEvents);
+        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming(allEvents);
 
         if (beforeSave.Length > 0)
             PublishEventsAsync(beforeSave, CancellationToken.None).GetAwaiter().GetResult();
@@ -60,11 +55,11 @@ public sealed partial class DomainEventInterceptor(
         if (eventData.Context is null)
             return await base.SavingChangesAsync(eventData, result, cancellationToken);
 
-        IDomainEvent[] allEvents = CollectDomainEvents(eventData.Context);
+        IDomainEvent[] allEvents = DomainEventCollector.Collect(eventData.Context);
         if (allEvents.Length == 0)
             return await base.SavingChangesAsync(eventData, result, cancellationToken);
 
-        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = SplitByTiming(allEvents);
+        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming(allEvents);
 
         if (beforeSave.Length > 0)
             await PublishEventsAsync(beforeSave, cancellationToken);
@@ -75,40 +70,6 @@ public sealed partial class DomainEventInterceptor(
             await DispatchAfterSaveEventsAsync(afterSave, cancellationToken);
 
         return returnValue;
-    }
-
-    /// <summary>
-    /// Collects domain events from all tracked entities, preserving per-entity list order.
-    /// Events are returned entity-by-entity in ChangeTracker order; within each entity
-    /// they appear in the order they were raised (list index).
-    /// </summary>
-    private static IDomainEvent[] CollectDomainEvents(DbContext context)
-    {
-        List<IDomainEvent> collected = [];
-
-        foreach (IDomainEventHolder entity in context.ChangeTracker
-            .Entries<IDomainEventHolder>()
-            .Select(e => e.Entity))
-        {
-            collected.AddRange(entity.DomainEvents);
-            entity.ClearDomainEvents();
-        }
-
-        return [.. collected];
-    }
-
-    private static (IDomainEvent[] BeforeSave, IDomainEvent[] AfterSave) SplitByTiming(IDomainEvent[] events)
-    {
-        ILookup<bool, IDomainEvent> grouped = events
-            .ToLookup(e => ResolveTiming(e) == DomainEventTiming.BeforeSave);
-
-        return ([.. grouped[true]], [.. grouped[false]]);
-    }
-
-    private static DomainEventTiming ResolveTiming(IDomainEvent domainEvent)
-    {
-        return TimingCache.GetOrAdd(domainEvent.GetType(), static type =>
-            type.GetCustomAttribute<DomainEventTimingAttribute>()?.Timing ?? DomainEventTiming.AfterSave);
     }
 
     private async Task DispatchAfterSaveEventsAsync(IDomainEvent[] events, CancellationToken cancellationToken)

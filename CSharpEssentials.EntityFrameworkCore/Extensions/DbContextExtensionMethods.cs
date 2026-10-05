@@ -67,6 +67,51 @@ public static class DbContextExtensionMethods
     }
 
 
+    /// <summary>
+    /// Soft-deletes every row matched by <paramref name="source"/> with a single <c>UPDATE</c> statement
+    /// (<c>ExecuteUpdate</c>), setting <see cref="ISoftDeletableBase.IsDeleted"/>, <see cref="ISoftDeletable.DeletedAt"/>
+    /// and <see cref="ISoftDeletable.DeletedBy"/>. Rows that are already soft-deleted are left untouched.
+    /// <para>
+    /// The statement bypasses the change tracker and <c>SaveChanges</c> interceptors (audit, domain events),
+    /// and already tracked entities are not refreshed. Requires a relational provider.
+    /// </para>
+    /// </summary>
+    /// <returns>The number of rows soft-deleted.</returns>
+    public static Task<int> SoftDeleteAsync<TEntity>(
+        this IQueryable<TEntity> source,
+        DateTimeOffset deletedAt,
+        string deletedBy,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, ISoftDeletable
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(deletedBy);
+
+        DateTimeOffset? deletedAtValue = deletedAt;
+        return source
+            .Where(entity => !EF.Property<bool>(entity, nameof(ISoftDeletableBase.IsDeleted)))
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(entity => EF.Property<bool>(entity, nameof(ISoftDeletableBase.IsDeleted)), true)
+                .SetProperty(entity => EF.Property<DateTimeOffset?>(entity, nameof(ISoftDeletable.DeletedAt)), deletedAtValue)
+                .SetProperty(entity => EF.Property<string?>(entity, nameof(ISoftDeletable.DeletedBy)), deletedBy),
+                cancellationToken);
+    }
+
+    /// <summary>
+    /// Soft-deletes every row matched by <paramref name="source"/> with a single <c>UPDATE</c> statement,
+    /// using <paramref name="timeProvider"/> (or <see cref="TimeProvider.System"/>) for the deletion time.
+    /// See <see cref="SoftDeleteAsync{TEntity}(IQueryable{TEntity}, DateTimeOffset, string, CancellationToken)"/>.
+    /// </summary>
+    /// <returns>The number of rows soft-deleted.</returns>
+    public static Task<int> SoftDeleteAsync<TEntity>(
+        this IQueryable<TEntity> source,
+        string deletedBy,
+        TimeProvider? timeProvider = null,
+        CancellationToken cancellationToken = default)
+        where TEntity : class, ISoftDeletable =>
+        source.SoftDeleteAsync(
+            (timeProvider ?? TimeProvider.System).GetUtcNow(), deletedBy, cancellationToken);
+
     public static async Task MigrateDataAsync<TEntity, TSeedData>(
         this DbContext dbContext,
         IEnumerable<TSeedData> data,
