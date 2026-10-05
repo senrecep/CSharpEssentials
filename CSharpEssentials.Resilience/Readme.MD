@@ -1,6 +1,6 @@
 # CSharpEssentials.Resilience
 
-HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) with `Result<T>` integration. Composable `ResiliencePolicy` builder backed by Polly v8 for transient fault handling without exceptions.
+HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) with `Result<T>` integration. Composable `ResiliencePolicy` builder backed by Polly v8 (`Polly.Core`) for transient fault handling without exceptions.
 
 ## Installation
 
@@ -32,6 +32,19 @@ Result<Product> product = await ResiliencePolicy
     .WithCircuitBreaker(minimumThroughput: 10, failureRatio: 0.5)
     .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
     .ExecuteAsync(_ => _productService.GetProduct(id));
+```
+
+## Retrying Failed Results
+
+Both `ResiliencePolicy` and `ResiliencePolicy<T>` retry exceptions and failed `Result` / `Result<T>` values. The circuit breaker counts the same failures.
+
+Errors of type `Unauthorized`, `Forbidden`, `NotFound` and `Validation` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict`, …) is treated as transient. When the retries run out, the last failed result is returned.
+
+```csharp
+Result<Order> order = await ResiliencePolicy
+    .Create()
+    .WithRetry(maxAttempts: 3)
+    .ExecuteAsync(ct => _orderService.TryGetOrder(id, ct)); // returns Result<Order>
 ```
 
 ## Delegate Extensions
@@ -86,6 +99,10 @@ Resilience-specific errors are returned as `Error` values:
 
 When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
 
+Cancellation is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled, the `OperationCanceledException` is rethrown, and `WithFallback` does not run the fallback for it.
+
+A `default(ResiliencePolicy)` or `default(ResiliencePolicy<T>)` behaves like `Create()`.
+
 ## Pipeline Composition
 
 ```csharp
@@ -100,7 +117,7 @@ Result<Data> result = await ResiliencePolicy
 
 ## Polly Integration
 
-Under the hood, uses Polly v8 `ResiliencePipeline`:
+Under the hood, uses the Polly v8 `ResiliencePipeline` from the `Polly.Core` package. The package does not reference the full `Polly` package; add it yourself if you use the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …).
 
 ```csharp
 // Advanced: Direct Polly configuration
