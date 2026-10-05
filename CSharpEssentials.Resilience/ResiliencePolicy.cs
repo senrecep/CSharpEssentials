@@ -1,8 +1,5 @@
-using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Polly;
-using Polly.CircuitBreaker;
-using Polly.Timeout;
 
 namespace CSharpEssentials.Resilience;
 
@@ -74,7 +71,7 @@ public readonly partial struct ResiliencePolicy
         }
         catch (Exception ex)
         {
-            return HandleException(ex);
+            return ResilienceClassifier.HandleException(ex);
         }
     }
 
@@ -89,7 +86,7 @@ public readonly partial struct ResiliencePolicy
         }
         catch (Exception ex)
         {
-            return HandleException<T>(ex);
+            return ResilienceClassifier.HandleException(ex);
         }
     }
 
@@ -104,7 +101,7 @@ public readonly partial struct ResiliencePolicy
         }
         catch (Exception ex)
         {
-            return HandleException<T>(ex);
+            return ResilienceClassifier.HandleException(ex);
         }
     }
 
@@ -119,48 +116,8 @@ public readonly partial struct ResiliencePolicy
         }
         catch (Exception ex)
         {
-            return HandleException(ex);
+            return ResilienceClassifier.HandleException(ex);
         }
-    }
-
-    private static Result HandleException(Exception ex)
-    {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-        {
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-        }
-
-        if (ex is BrokenCircuitException)
-        {
-            return Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.");
-        }
-
-        if (ex is TimeoutRejectedException)
-        {
-            return Error.Failure("Resilience.Timeout", "Operation timed out.");
-        }
-
-        return Error.Exception(ex, ErrorType.Unexpected);
-    }
-
-    private static Result<T> HandleException<T>(Exception ex)
-    {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-        {
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-        }
-
-        if (ex is BrokenCircuitException)
-        {
-            return Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.");
-        }
-
-        if (ex is TimeoutRejectedException)
-        {
-            return Error.Failure("Resilience.Timeout", "Operation timed out.");
-        }
-
-        return Error.Exception(ex, ErrorType.Unexpected);
     }
 
     private ResiliencePolicy Merge(ResiliencePipeline additionalPipeline)

@@ -49,7 +49,7 @@ public readonly partial struct ResiliencePolicy<T>
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
                 ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(IsRetryable)
+                    .HandleResult(ResilienceClassifier.IsRetryable)
                     .Handle<Exception>()
             })
             .Build();
