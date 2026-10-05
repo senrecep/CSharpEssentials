@@ -9,6 +9,8 @@ namespace CSharpEssentials.Resilience;
 
 public static class ResilienceResultExtensions
 {
+    private static readonly TimeSpan DefaultDelay = TimeSpan.FromSeconds(1);
+
     public static async ValueTask<Result<T>> RetryIfFailed<T>(
         this Func<CancellationToken, Task<Result<T>>> operation,
         int maxAttempts = 3,
@@ -140,16 +142,27 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff,
         Func<Error, bool> shouldRetry)
         where TResult : IResultBase =>
+        BuildRetryPipeline<TResult>(
+            maxAttempts,
+            delay ?? DefaultDelay,
+            exponentialBackoff,
+            args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    && shouldRetry(ResilienceClassifier.ToError(ex))
+                : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result, shouldRetry)));
+
+    private static ResiliencePipeline<TResult> BuildRetryPipeline<TResult>(
+        int maxAttempts,
+        TimeSpan delay,
+        bool exponentialBackoff,
+        Func<RetryPredicateArguments<TResult>, ValueTask<bool>> shouldHandle) =>
         new ResiliencePipelineBuilder<TResult>()
             .AddRetry(new RetryStrategyOptions<TResult>
             {
                 MaxRetryAttempts = maxAttempts,
-                Delay = delay ?? TimeSpan.FromSeconds(1),
+                Delay = delay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = args => new ValueTask<bool>(args.Outcome.Exception is { } ex
-                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                        && shouldRetry(ResilienceClassifier.ToError(ex))
-                    : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result, shouldRetry))
+                ShouldHandle = shouldHandle
             })
             .Build();
 
@@ -164,23 +177,19 @@ public static class ResilienceResultExtensions
 
         internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff)
         {
-            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff) key = (maxAttempts, delay ?? TimeSpan.FromSeconds(1), exponentialBackoff);
+            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff) key = (maxAttempts, delay ?? DefaultDelay, exponentialBackoff);
             if (Pipelines.TryGetValue(key, out ResiliencePipeline<TResult>? cached))
             {
                 return cached;
             }
 
-            ResiliencePipeline<TResult> pipeline = new ResiliencePipelineBuilder<TResult>()
-                .AddRetry(new RetryStrategyOptions<TResult>
-                {
-                    MaxRetryAttempts = key.MaxAttempts,
-                    Delay = key.Delay,
-                    BackoffType = key.ExponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                    ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
-                        ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                        : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result))
-                })
-                .Build();
+            ResiliencePipeline<TResult> pipeline = BuildRetryPipeline<TResult>(
+                key.MaxAttempts,
+                key.Delay,
+                key.ExponentialBackoff,
+                static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result)));
 
             return Pipelines.Count < MaxEntries ? Pipelines.GetOrAdd(key, pipeline) : pipeline;
         }
