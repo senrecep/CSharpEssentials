@@ -17,9 +17,9 @@ public readonly partial struct ResiliencePolicy
                 MaxRetryAttempts = maxAttempts,
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = new PredicateBuilder()
-                    .HandleResult(static result => result is IResultBase resultBase && ResilienceClassifier.IsRetryable(resultBase))
-                    .Handle<Exception>()
+                ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    : args.Outcome.Result is IResultBase result && ResilienceClassifier.IsRetryable(result))
             })
             .Build();
 
@@ -51,9 +51,9 @@ public readonly partial struct ResiliencePolicy<T>
                 MaxRetryAttempts = maxAttempts,
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = new PredicateBuilder<Result<T>>()
-                    .HandleResult(ResilienceClassifier.IsRetryable)
-                    .Handle<Exception>()
+                ShouldHandle = static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
+                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    : ResilienceClassifier.IsRetryable(args.Outcome.Result))
             })
             .Build();
 

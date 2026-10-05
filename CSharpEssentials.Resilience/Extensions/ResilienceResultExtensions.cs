@@ -30,12 +30,7 @@ public static class ResilienceResultExtensions
         }
 
         // Polly stops retrying once the caller cancels and returns the last outcome; surface that as cancellation.
-        if (cancellationToken.IsCancellationRequested && ResilienceClassifier.IsRetryable(result))
-        {
-            throw new OperationCanceledException(cancellationToken);
-        }
-
-        return result;
+        return ResilienceClassifier.ThrowIfCallerCancelled(result, cancellationToken);
     }
 
     public static async ValueTask<Result> RetryIfFailed(
@@ -60,12 +55,7 @@ public static class ResilienceResultExtensions
         }
 
         // Polly stops retrying once the caller cancels and returns the last outcome; surface that as cancellation.
-        if (cancellationToken.IsCancellationRequested && ResilienceClassifier.IsRetryable(result))
-        {
-            throw new OperationCanceledException(cancellationToken);
-        }
-
-        return result;
+        return ResilienceClassifier.ThrowIfCallerCancelled(result, cancellationToken);
     }
 
     private static class RetryPipelineCache<TResult>
