@@ -29,12 +29,16 @@
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" ExcludeAssets="all" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\CSharpEssentials.Enums\bin\$(Configuration)\netstandard2.0\CSharpEssentials.Enums.dll"
-          Link="Analyzers\CSharpEssentials.Enums.dll"
-          CopyToOutputDirectory="PreserveNewest"
-          Visible="false" />
-  </ItemGroup>
+  <!-- Copy the resolved Enums analyzer (netstandard2.0 ProjectReference output) next to the tests for NestedStringEnumAnalyzerTests. -->
+  <Target Name="CopyEnumsAnalyzerForTests" AfterTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.Enums.dll'"
+            Link="Analyzers\CSharpEssentials.Enums.dll"
+            CopyToOutputDirectory="PreserveNewest"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <ProjectReference Include="..\CSharpEssentials\CSharpEssentials.csproj" />

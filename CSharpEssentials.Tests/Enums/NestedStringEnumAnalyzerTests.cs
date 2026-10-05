@@ -12,6 +12,8 @@ namespace CSharpEssentials.Tests.Enums;
 
 public class NestedStringEnumAnalyzerTests
 {
+    private static readonly Lazy<ImmutableArray<DiagnosticAnalyzer>> Analyzers = new(LoadAnalyzers);
+
     [Fact]
     public async Task Analyzer_Should_Report_CSE0001_When_StringEnum_Is_Nested_In_Class()
     {
@@ -33,6 +35,7 @@ public class NestedStringEnumAnalyzerTests
         diagnostic.Id.Should().Be("CSE0001");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Info);
         diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Contain("'Color'").And.Contain("Sample.Container").And.Contain("top-level");
+        LocationText(diagnostic).Should().Be("Color");
     }
 
     [Fact]
@@ -52,7 +55,9 @@ public class NestedStringEnumAnalyzerTests
 
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(source);
 
-        diagnostics.Should().ContainSingle(d => d.Id == "CSE0001" && d.GetMessage(CultureInfo.InvariantCulture).Contains("'Status'"));
+        Diagnostic diagnostic = diagnostics.Should().ContainSingle(d => d.Id == "CSE0001").Subject;
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Contain("'Status'");
+        LocationText(diagnostic).Should().Be("Status");
     }
 
     [Fact]
@@ -108,7 +113,7 @@ public class NestedStringEnumAnalyzerTests
         compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
 
         return await compilation
-            .WithAnalyzers(LoadAnalyzers())
+            .WithAnalyzers(Analyzers.Value)
             .GetAnalyzerDiagnosticsAsync();
     }
 
@@ -121,6 +126,9 @@ public class NestedStringEnumAnalyzerTests
         analyzers.Should().ContainSingle(a => a.SupportedDiagnostics.Any(d => d.Id == "CSE0001"));
         return analyzers;
     }
+
+    private static string LocationText(Diagnostic diagnostic) =>
+        diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan);
 
     private sealed class IsolatedAnalyzerAssemblyLoader : IAnalyzerAssemblyLoader
     {
