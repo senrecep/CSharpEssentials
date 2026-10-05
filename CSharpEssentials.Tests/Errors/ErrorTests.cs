@@ -144,7 +144,7 @@ public class ErrorTests
         var error = Error.Failure("TEST", "Test", metadata);
 
         error.Metadata.Should().NotBeNull();
-        error.Metadata!["key"].Should().Be("value");
+        error.Metadata["key"].Should().Be("value");
     }
 
     #endregion

@@ -121,10 +121,13 @@ public class PaginationOverloadsTests
     {
         using ItemDbContext context = await CreateSeededContextAsync();
 
-        PaginationResponse<Item> syncResult = context.Items.OrderBy(i => i.Id).Paginate(2, 3);
+        PaginationResponse<Item> syncResult = PaginateSynchronously(context.Items.OrderBy(i => i.Id));
         PaginationResponse<Item> asyncResult = await context.Items.OrderBy(i => i.Id).PaginateAsync(2, 3);
 
         syncResult.Items.Select(i => i.Id).Should().Equal(asyncResult.Items.Select(i => i.Id));
         syncResult.TotalCount.Should().Be(asyncResult.TotalCount);
+
+        // The synchronous overload is the subject under test, so it runs outside the async method.
+        static PaginationResponse<Item> PaginateSynchronously(IQueryable<Item> items) => items.Paginate(2, 3);
     }
 }

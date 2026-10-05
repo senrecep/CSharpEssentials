@@ -130,7 +130,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         await client.GetAsync("/test");
 
         capturedContext.Should().NotBeNull();
-        capturedContext!.ResponseBody.Should().Be("hello world");
+        capturedContext.ResponseBody.Should().Be("hello world");
     }
 
     [Fact]
@@ -208,7 +208,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         await client.GetAsync("/skip-all");
 
         capturedContext.Should().NotBeNull();
-        capturedContext!.RequestBody.Should().Contain("Skipped");
+        capturedContext.RequestBody.Should().Contain("Skipped");
         capturedContext.ResponseBody.Should().Contain("Skipped");
     }
 
@@ -245,7 +245,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         await client.GetAsync("/skip-response");
 
         capturedContext.Should().NotBeNull();
-        capturedContext!.ResponseBody.Should().Contain("Skipped");
+        capturedContext.ResponseBody.Should().Contain("Skipped");
     }
 
     [Fact]

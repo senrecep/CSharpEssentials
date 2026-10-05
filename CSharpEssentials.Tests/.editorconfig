@@ -1,0 +1,4 @@
+# Test project overrides; root .editorconfig still applies
+[*.cs]
+# xunit test classes and [Theory] parameter/MemberData types must be public
+dotnet_diagnostic.CA1515.severity = none

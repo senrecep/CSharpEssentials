@@ -29,7 +29,7 @@ public class ResultTryGetTests
         success.Should().BeFalse();
         value.Should().Be(0);
         errors.Should().NotBeNull();
-        errors!.Should().ContainSingle();
+        errors.Should().ContainSingle();
         errors[0].Code.Should().Be("Test.Code");
     }
 
@@ -54,7 +54,7 @@ public class ResultTryGetTests
 
         success.Should().BeFalse();
         errors.Should().NotBeNull();
-        errors!.Should().ContainSingle();
+        errors.Should().ContainSingle();
         errors[0].Code.Should().Be("Test.Code");
     }
 }

@@ -3,15 +3,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace CSharpEssentials.Tests.AspNetCore.EnumBinding;
 
 /// <summary>
-/// MVC controllers used only by the enum binding tests. They are nested (not public top-level types) so the
-/// default <c>ControllerFeatureProvider</c> never discovers them in other test hosts; the enum binding hosts
+/// MVC controllers used only by the enum binding tests. They are internal so the default
+/// <c>ControllerFeatureProvider</c> never discovers them in other test hosts; the enum binding hosts
 /// register them explicitly through <see cref="EnumBindingHost"/>.
 /// </summary>
-public static class EnumBindingControllers
+internal static class EnumBindingControllers
 {
     [ApiController]
     [Route("")]
-    public sealed class EbApiController : ControllerBase
+    internal sealed class EbApiController : ControllerBase
     {
         [HttpGet("status")]
         public string Status(EbStatus status) => EbEcho.Of<EbStatus>(status);
@@ -57,7 +57,7 @@ public static class EnumBindingControllers
     }
 
     [Route("")]
-    public sealed class EbMvcController : ControllerBase
+    internal sealed class EbMvcController : ControllerBase
     {
         private string Echo(string value) => ModelState.IsValid ? value : "invalid";
 

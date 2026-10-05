@@ -128,9 +128,9 @@ public class ICloneableTests
         cloned.Should().NotBeSameAs(original);
         cloned.Level.Should().Be(1);
         cloned.Child.Should().NotBeSameAs(original.Child);
-        cloned.Child!.Level.Should().Be(2);
+        cloned.Child.Level.Should().Be(2);
         cloned.Child.Child.Should().NotBeSameAs(original.Child.Child);
-        cloned.Child.Child!.Level.Should().Be(3);
+        cloned.Child.Child.Level.Should().Be(3);
     }
 
     private sealed class DeepHierarchy : ICloneable<DeepHierarchy>

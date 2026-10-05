@@ -121,7 +121,7 @@ public class InvalidModelStateResponseTests
         json.ContainsKey("errorCodes").Should().BeFalse();
     }
 
-    public sealed class MsBody
+    internal sealed class MsBody
     {
         [Required]
         public string? Name { get; set; }
@@ -129,7 +129,7 @@ public class InvalidModelStateResponseTests
 
     [ApiController]
     [Route("")]
-    public sealed class MsApiController : ControllerBase
+    internal sealed class MsApiController : ControllerBase
     {
         [HttpGet("plain")]
         public string Plain(EbPlain plain) => plain.ToString();

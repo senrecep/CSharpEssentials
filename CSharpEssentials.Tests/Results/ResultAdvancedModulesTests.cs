@@ -232,7 +232,7 @@ public class ResultAdvancedModulesTests
             error => capturedError = error);
 
         capturedError.Should().NotBeNull();
-        capturedError!.Value.Code.Should().Be("ERR1");
+        capturedError.Value.Code.Should().Be("ERR1");
     }
 
     [Fact]
@@ -248,7 +248,7 @@ public class ResultAdvancedModulesTests
             error => capturedError = error);
 
         capturedError.Should().NotBeNull();
-        capturedError!.Value.Code.Should().Be("ERR2");
+        capturedError.Value.Code.Should().Be("ERR2");
     }
 
     #endregion

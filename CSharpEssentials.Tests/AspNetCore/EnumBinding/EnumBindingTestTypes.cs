@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 namespace CSharpEssentials.Tests.AspNetCore.EnumBinding;
 
 [StringEnum]
-public enum EbStatus
+internal enum EbStatus
 {
     Active = 0,
     InProgress = 1,
@@ -14,7 +14,7 @@ public enum EbStatus
 }
 
 [StringEnum]
-public enum EbCustom
+internal enum EbCustom
 {
     [JsonStringEnumMemberName("custom")]
     Original = 0,
@@ -23,7 +23,7 @@ public enum EbCustom
 
 [StringEnum]
 [Flags]
-public enum EbPermission
+internal enum EbPermission
 {
     None = 0,
     Read = 1,
@@ -32,13 +32,13 @@ public enum EbPermission
 }
 
 /// <summary>Not marked with [StringEnum]: untouched by the default CanBind predicate.</summary>
-public enum EbPlain
+internal enum EbPlain
 {
     Active = 0,
     InProgress = 1,
 }
 
-public sealed class EbAsParametersClass
+internal sealed class EbAsParametersClass
 {
     public EbStatus Status { get; set; }
 
@@ -46,28 +46,28 @@ public sealed class EbAsParametersClass
     public EbPermission Perm { get; set; }
 }
 
-public sealed record EbAsParametersRecord([FromQuery(Name = "st")] EbStatus Status, EbStatus? Other);
+internal sealed record EbAsParametersRecord([FromQuery(Name = "st")] EbStatus Status, EbStatus? Other);
 
-public sealed class EbQueryDto
+internal sealed class EbQueryDto
 {
     public EbStatus Status { get; set; }
 
     public EbStatus? Optional { get; set; }
 }
 
-public sealed class EbNestedDto
+internal sealed class EbNestedDto
 {
     public EbQueryDto? Inner { get; set; }
 }
 
-public sealed class EbCycleDto
+internal sealed class EbCycleDto
 {
     public EbStatus Status { get; set; }
 
     public EbCycleDto? Next { get; set; }
 }
 
-public sealed class EbExcludedDto
+internal sealed class EbExcludedDto
 {
     public EbStatus Status { get; set; }
 
