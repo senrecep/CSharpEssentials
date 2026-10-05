@@ -6,6 +6,7 @@ Foundational utilities and extensions for everyday .NET development. Zero intern
 
 - **String Conversions** — Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
 - **Collection Helpers** — Conditional add, null filtering, random selection, set comparison.
+- **Range Checks** — `IsBetween` / `IsBetweenExclusive` for any `IComparable<T>`.
 - **Functional Extensions** — Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`).
 - **Task Helpers** — `WithCancellation`, `AsTask`, `AsValueTask`.
 - **GUID Utilities** — URL-safe Base64 encoding, Version 7 GUID generation on .NET 9+.
@@ -53,6 +54,14 @@ var clean = new List<string?> { "a", null, "b" }.WithoutNulls();
 var numbers = new[] { 1, 2, 3 };
 numbers.GetRandomItem();
 numbers.GetRandomItems(2);
+```
+
+### Range Checks
+
+```csharp
+5.IsBetween(1, 10);            // true  (inclusive)
+10.IsBetweenExclusive(1, 10);  // false (exclusive)
+orderDate.IsBetween(start, end);
 ```
 
 ### Functional Extensions
