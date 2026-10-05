@@ -34,7 +34,7 @@ validation requirements, exercising equivalent logic on identical input data.
 | Finding | Details |
 |---|---|
 | **Construction is 776× faster** | CSE validators use lazy init — `new()` costs 2 ns / 24 B; FV eagerly builds the rule tree on `new()` at ~1,918 ns / 9.6 KB |
-| **Invalid-path is 5–8× faster** | CSE returns a `Result<T>` value; FV throws/accumulates exception objects — the allocation difference dominates on failure |
+| **Invalid-path is 5–8× faster** | CSE appends a lightweight `Error` to a plain list. FV builds a `ValidationFailure` object per failed rule with message interpolation through its expression-based rule pipeline — the per-failure allocation difference dominates on invalid input |
 | **Valid-path wins on complex models** | CSE beats FV on both time and memory for Complex and LargeCollection valid paths; Simple-Valid gap is just 32 B |
 | **Collections: 3× faster, 27% less memory** | CSE allocates 34.1 KB vs FV's 46.6 KB on 50-item collections and processes them 3× faster on net9 |
 | **Memory advantage is consistent** | On invalid paths CSE allocates 2.5×–4.7× less; on valid paths FV is leaner only for wide models (10+ fields) |
@@ -191,9 +191,11 @@ CSE uses a lazy `Configure()` pattern — the rule chain is built once on the fi
 | FV-Cascade-Continue | 1,656 ns | 1,424 ns | 1,464 ns | 5.91 KB |
 | **CSE advantage** | **7.1×** | **5.9×** | **6.3×** | **4.7× less** |
 
-This is the most impactful scenario for real applications. When a form has 10 invalid fields,
-CSE collects all errors via a `Result<T>` chain; FV builds and propagates a `ValidationException`
-with full stack traces per failure.
+This is the most impactful scenario for real applications. When a form has several invalid fields,
+CSE collects all errors into a plain list inside a `Result<T>`. FV allocates a `ValidationFailure`
+per failed rule — each carrying the interpolated message, severity, and metadata — inside its
+rule pipeline. (Neither side throws: FV's `Validate()` returns a `ValidationResult`; the gap is
+purely per-failure object allocation and pipeline overhead, not exception handling.)
 
 ---
 
@@ -387,7 +389,7 @@ chmod +x run-benchmarks.sh
 
 Results are stored per-framework under `benchmarks/results/{tfm}/`.
 
-Quick run (~3–5 min, net9 only, key scenarios):
+Quick run (~10 min, net9 only, key scenarios, Short job):
 
 ```bash
 ./run-benchmarks.sh --quick
@@ -403,3 +405,9 @@ dotnet run -c Release --framework net9.0 -- \
 ```
 
 Raw JSON + HTML + GitHub Markdown reports are in `benchmarks/results/{tfm}/results/`.
+
+> **Harness note:** CSE benchmark methods previously consumed the returned `ValueTask` via
+> `.AsTask().GetAwaiter().GetResult()`, which allocates a `Task` even on the sync-completed
+> fast path. They now use a `Run()` helper (`ValueTaskRunner.cs`) that consumes completed
+> `ValueTask`s directly — matching real `await` usage. The numbers above were captured with
+> the previous harness, so re-running may show slightly better CSE figures than reported here.

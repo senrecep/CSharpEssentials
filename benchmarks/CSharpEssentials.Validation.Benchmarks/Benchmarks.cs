@@ -208,13 +208,13 @@ public class SimpleValidationBenchmarks
     }
 
     [Benchmark(Description = "CSE-Simple-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Simple-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-Simple-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Simple-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -235,7 +235,7 @@ public class StringValidationBenchmarks
     public void Setup() => _valid = TestData.ValidUser;
 
     [Benchmark(Description = "CSE-String")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-String")]
     public object Fv() => _fv.Validate(_valid);
@@ -256,7 +256,7 @@ public class ComparableValidationBenchmarks
     public void Setup() => _valid = TestData.ValidUser;
 
     [Benchmark(Description = "CSE-Comparable")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Comparable")]
     public object Fv() => _fv.Validate(_valid);
@@ -277,7 +277,7 @@ public class CollectionValidationBenchmarks
     public void Setup() => _valid = TestData.ValidUser;
 
     [Benchmark(Description = "CSE-Collection")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Collection")]
     public object Fv() => _fv.Validate(_valid);
@@ -298,7 +298,7 @@ public class NestedValidationBenchmarks
     public void Setup() => _valid = TestData.ValidOrder;
 
     [Benchmark(Description = "CSE-Nested")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Nested")]
     public object Fv() => _fv.Validate(_valid);
@@ -319,7 +319,7 @@ public class CollectionItemValidationBenchmarks
     public void Setup() => _valid = TestData.ValidOrder;
 
     [Benchmark(Description = "CSE-CollectionItem")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-CollectionItem")]
     public object Fv() => _fv.Validate(_valid);
@@ -345,13 +345,13 @@ public class ConditionalValidationBenchmarks
     }
 
     [Benchmark(Description = "CSE-Conditional-Business")]
-    public object CseBusiness() => _cse.ValidateAsync(_business).AsTask().GetAwaiter().GetResult();
+    public object CseBusiness() => _cse.ValidateAsync(_business).Run();
 
     [Benchmark(Description = "FV-Conditional-Business")]
     public object FvBusiness() => _fv.Validate(_business);
 
     [Benchmark(Description = "CSE-Conditional-Personal")]
-    public object CsePersonal() => _cse.ValidateAsync(_personal).AsTask().GetAwaiter().GetResult();
+    public object CsePersonal() => _cse.ValidateAsync(_personal).Run();
 
     [Benchmark(Description = "FV-Conditional-Personal")]
     public object FvPersonal() => _fv.Validate(_personal);
@@ -377,13 +377,13 @@ public class CustomPredicateBenchmarks
     }
 
     [Benchmark(Description = "CSE-Must-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Must-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-Must-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Must-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -425,7 +425,7 @@ public class CascadeContinueBenchmarks
     public void Setup() => _invalid = TestData.WeakPasswordUser;
 
     [Benchmark(Description = "CSE-Cascade-Continue")]
-    public object Cse() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Cascade-Continue")]
     public object Fv() => _fv.Validate(_invalid);
@@ -451,13 +451,13 @@ public class ComplexValidationBenchmarks
     }
 
     [Benchmark(Description = "CSE-Complex-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Complex-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-Complex-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Complex-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -483,13 +483,13 @@ public class StringLengthRangeBenchmarks
     }
 
     [Benchmark(Description = "CSE-LengthRange-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-LengthRange-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-LengthRange-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-LengthRange-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -511,7 +511,7 @@ public class StringContentBenchmarks
     public void Setup() => _valid = TestData.ValidUser;
 
     [Benchmark(Description = "CSE-StringContent")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-StringContent")]
     public object Fv() => _fv.Validate(_valid);
@@ -532,7 +532,7 @@ public class ExclusiveBetweenBenchmarks
     public void Setup() => _valid = TestData.ValidUser;
 
     [Benchmark(Description = "CSE-ExclusiveBetween")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-ExclusiveBetween")]
     public object Fv() => _fv.Validate(_valid);
@@ -558,13 +558,13 @@ public class NullableValidationBenchmarks
     }
 
     [Benchmark(Description = "CSE-Nullable-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Nullable-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-Nullable-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Nullable-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -585,7 +585,7 @@ public class StringEqualityBenchmarks
     public void Setup() => _valid = TestData.ValidProduct;
 
     [Benchmark(Description = "CSE-Equality")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Equality")]
     public object Fv() => _fv.Validate(_valid);
@@ -606,7 +606,7 @@ public class LargeCollectionBenchmarks
     public void Setup() => _large = TestData.LargeOrder;
 
     [Benchmark(Description = "CSE-LargeCollection")]
-    public object Cse() => _cse.ValidateAsync(_large).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_large).Run();
 
     [Benchmark(Description = "FV-LargeCollection")]
     public object Fv() => _fv.Validate(_large);
@@ -632,13 +632,13 @@ public class WideModelBenchmarks
     }
 
     [Benchmark(Description = "CSE-Wide-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Wide-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-Wide-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Wide-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -659,7 +659,7 @@ public class DeepNestedBenchmarks
     public void Setup() => _valid = TestData.ValidDeepOrder;
 
     [Benchmark(Description = "CSE-DeepNested")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-DeepNested")]
     public object Fv() => _fv.Validate(_valid);
@@ -680,7 +680,7 @@ public class CascadeStopBenchmarks
     public void Setup() => _invalid = TestData.WeakPasswordUser;
 
     [Benchmark(Description = "CSE-Cascade-Stop")]
-    public object Cse() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-Cascade-Stop")]
     public object Fv() => _fv.Validate(_invalid);
@@ -722,13 +722,13 @@ public class MultipleRegexBenchmarks
     }
 
     [Benchmark(Description = "CSE-MultiRegex-Valid")]
-    public object CseValid() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object CseValid() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-MultiRegex-Valid")]
     public object FvValid() => _fv.Validate(_valid);
 
     [Benchmark(Description = "CSE-MultiRegex-Invalid")]
-    public object CseInvalid() => _cse.ValidateAsync(_invalid).AsTask().GetAwaiter().GetResult();
+    public object CseInvalid() => _cse.ValidateAsync(_invalid).Run();
 
     [Benchmark(Description = "FV-MultiRegex-Invalid")]
     public object FvInvalid() => _fv.Validate(_invalid);
@@ -749,7 +749,7 @@ public class PrecompiledRegexBenchmarks
     public void Setup() => _valid = TestData.ValidUserWithPassword;
 
     [Benchmark(Description = "CSE-Regex-Precompiled")]
-    public object Cse() => _cse.ValidateAsync(_valid).AsTask().GetAwaiter().GetResult();
+    public object Cse() => _cse.ValidateAsync(_valid).Run();
 
     [Benchmark(Description = "FV-Regex-Precompiled")]
     public object Fv() => _fv.Validate(_valid);

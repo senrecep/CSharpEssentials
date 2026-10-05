@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./run-benchmarks.sh                      # full run — all TFMs, all scenarios, max precision (~60 min)
-#   ./run-benchmarks.sh --quick              # fast run — net9 only, key scenarios, Short job (~3-5 min)
+#   ./run-benchmarks.sh --quick              # fast run — net9 only, key scenarios, Short job (~10 min)
 #   ./run-benchmarks.sh --quick --tfm net10.0  # fast run on a specific TFM
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
 set -euo pipefail
@@ -31,7 +31,9 @@ if [[ "$QUICK" == "true" ]]; then
     # Quick mode: single TFM, representative scenarios, Short job (~3-5 min total)
     DEFAULT_TFM="net9.0"
     FRAMEWORKS=("${CUSTOM_TFM:-$DEFAULT_TFM}")
-    FILTER="*Simple*|*Wide*|*Complex*|*Cascade*|*Construction*|*LargeCollection*"
+    # BenchmarkDotNet treats the whole --filter value as a single glob (no '|' union),
+    # so key scenarios are run one pattern at a time.
+    PATTERNS=("*Simple*" "*Wide*" "*Complex*" "*Cascade*" "*Construction*" "*LargeCollection*")
     JOB_ARGS=(--job Short)
     MODE_LABEL="QUICK (${FRAMEWORKS[0]}, key scenarios, Short job)"
 else
@@ -40,7 +42,7 @@ else
     if [[ -n "$CUSTOM_TFM" ]]; then
         FRAMEWORKS=("$CUSTOM_TFM")
     fi
-    FILTER="*"
+    PATTERNS=("*")
     JOB_ARGS=()
     MODE_LABEL="FULL (${FRAMEWORKS[*]})"
 fi
@@ -58,16 +60,26 @@ for TFM in "${FRAMEWORKS[@]}"; do
     ARTIFACTS="$RESULTS_DIR/$TFM"
     mkdir -p "$ARTIFACTS"
 
-    if dotnet run -c Release \
-        --framework "$TFM" \
-        --project "$PROJECT" \
-        -- \
-        --filter "$FILTER" \
-        --exporters json github \
-        --artifacts "$ARTIFACTS" \
-        "${JOB_ARGS[@]}" \
-        "${EXTRA_ARGS[@]}" \
-        2>&1 | tee "$ARTIFACTS/run.log"; then
+    FAILED=false
+    for PATTERN in "${PATTERNS[@]}"; do
+        echo "  → filter: $PATTERN"
+        if dotnet run -c Release \
+            --framework "$TFM" \
+            --project "$PROJECT" \
+            -- \
+            --filter "$PATTERN" \
+            --exporters json github \
+            --artifacts "$ARTIFACTS" \
+            "${JOB_ARGS[@]}" \
+            "${EXTRA_ARGS[@]}" \
+            2>&1 | tee -a "$ARTIFACTS/run.log"; then
+            :
+        else
+            FAILED=true
+        fi
+    done
+
+    if [[ "$FAILED" == "false" ]]; then
         echo "  ✓ $TFM completed — results in $ARTIFACTS/results/"
     else
         echo "  ✗ $TFM failed — see $ARTIFACTS/run.log"
