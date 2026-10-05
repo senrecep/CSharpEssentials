@@ -33,7 +33,7 @@ public static class ModelConfigurationExtensions
         if (assemblies.Length == 0)
             assemblies = AppDomain.CurrentDomain.GetAssemblies();
         foreach (Type enumType in assemblies
-            .SelectMany(assembly => assembly.GetTypes())
+            .SelectMany(GetLoadableTypes)
             .Where(type => type.IsEnum && options.CanConvert(type)))
         {
             Type converterType = options.UseLegacySnakeCase ? LegacySnakeCaseEnumConverterType : EnumToFormattedStringConverterType;
@@ -44,6 +44,19 @@ public static class ModelConfigurationExtensions
                 .Properties(enumType)
                 .HaveConversion(converterType.MakeGenericType(enumType))
                 .HaveMaxLength(enumMaxLength);
+        }
+    }
+
+    // A partially loadable assembly (e.g. a proxy assembly still emitting types) must not break the scan
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            return ex.Types.OfType<Type>();
         }
     }
 }

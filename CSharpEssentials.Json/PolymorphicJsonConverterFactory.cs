@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -29,10 +30,23 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
     {
         Type baseType = typeof(T);
         return AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(a => a.GetTypes())
+            .SelectMany(GetLoadableTypes)
             .Where(t => baseType.IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
             .ToDictionary(t => t.FullName ?? t.Name);
     });
+
+    // A partially loadable assembly (e.g. a proxy assembly still emitting types) must not break discovery
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            return ex.Types.OfType<Type>();
+        }
+    }
 
     private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> InnerOptionsCache = [];
 
