@@ -18,7 +18,12 @@ public sealed record SecretManagerConfigurationOptions
     /// The list is treated as immutable (copy-on-write): <see cref="AddProject"/> replaces it,
     /// so copies made with <c>with</c> never observe each other's changes.
     /// </summary>
-    public IReadOnlyList<ProjectSecretConfiguration> Projects { get; set; } = [];
+    /// <exception cref="ArgumentNullException">The value is <see langword="null"/>.</exception>
+    public IReadOnlyList<ProjectSecretConfiguration> Projects
+    {
+        get;
+        set => field = value ?? throw new ArgumentNullException(nameof(value));
+    } = [];
 
     /// <summary>
     /// Gets or sets the logger factory used for diagnostics. Configuration providers are built

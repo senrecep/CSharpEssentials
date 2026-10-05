@@ -25,6 +25,17 @@ public class SecretManagerConfigurationOptionsTests
     }
 
     [Fact]
+    public void Projects_Should_ThrowArgumentNullException_When_SetToNull()
+    {
+        var options = new SecretManagerConfigurationOptions();
+
+        Action act = () => options.Projects = null!;
+
+        act.Should().Throw<ArgumentNullException>();
+        options.Projects.Should().BeEmpty();
+    }
+
+    [Fact]
     public void AddProject_ShouldAddProject()
     {
         var options = new SecretManagerConfigurationOptions();
