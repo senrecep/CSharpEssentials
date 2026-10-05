@@ -57,6 +57,13 @@ public static class StringEnumNaming
         where TEnum : struct, Enum => GetTable(typeof(TEnum), namingPolicy).Names;
 
     /// <summary>
+    /// Whether <paramref name="value"/> is a defined member or, for <see cref="FlagsAttribute"/> enums,
+    /// a combination of defined flags.
+    /// </summary>
+    public static bool IsDefined<TEnum>(TEnum value)
+        where TEnum : struct, Enum => GetTable(typeof(TEnum), DefaultPolicy).ContainsValue(value);
+
+    /// <summary>
     /// Parses a value written by <see cref="GetName{TEnum}"/>. Matching is case-insensitive and accepts
     /// the policy name, the C# member name and (optionally) the numeric value of a defined member.
     /// For <see cref="FlagsAttribute"/> enums a comma separated list is accepted.
@@ -181,6 +188,8 @@ public static class StringEnumNaming
             value = 0;
             return false;
         }
+
+        public bool ContainsValue(object value) => IsDefinedValue(ToUInt64(value));
 
         private bool IsDefinedValue(ulong value)
         {

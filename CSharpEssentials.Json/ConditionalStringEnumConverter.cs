@@ -23,11 +23,44 @@ public class ConditionalStringEnumConverter : JsonConverterFactory
         _allowIntegerValues = allowIntegerValues;
         _canConvert = canConvert ?? StringEnumNaming.IsStringEnum;
     }
+
+    /// <summary>
+    /// Whether a number that is not a defined member (or, for <see cref="FlagsAttribute"/> enums, a combination of
+    /// defined flags) is accepted when reading. Defaults to <see langword="true"/> (the <see cref="JsonStringEnumConverter"/>
+    /// behavior); set it to <see langword="false"/> to reject such values with a <see cref="JsonException"/>.
+    /// Writing is unaffected.
+    /// </summary>
+    public bool AllowUndefinedValues { get; set; } = true;
+
     public override bool CanConvert(Type typeToConvert) => _canConvert(typeToConvert);
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new JsonStringEnumConverter(_namingPolicy, _allowIntegerValues)
+        JsonConverter converter = new JsonStringEnumConverter(_namingPolicy, _allowIntegerValues)
             .CreateConverter(typeToConvert, options);
+        if (AllowUndefinedValues)
+            return converter;
+        return (JsonConverter)Activator.CreateInstance(typeof(DefinedEnumConverter<>).MakeGenericType(typeToConvert), converter)!;
+    }
+
+    private sealed class DefinedEnumConverter<TEnum>(JsonConverter<TEnum> inner) : JsonConverter<TEnum>
+        where TEnum : struct, Enum
+    {
+        public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            EnsureDefined(inner.Read(ref reader, typeToConvert, options));
+
+        public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options) =>
+            inner.Write(writer, value, options);
+
+        public override TEnum ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+            EnsureDefined(inner.ReadAsPropertyName(ref reader, typeToConvert, options));
+
+        public override void WriteAsPropertyName(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options) =>
+            inner.WriteAsPropertyName(writer, value, options);
+
+        private static TEnum EnsureDefined(TEnum value) =>
+            StringEnumNaming.IsDefined(value)
+                ? value
+                : throw new JsonException($"The value '{value:D}' is not defined in enum '{typeof(TEnum).Name}'.");
     }
 }

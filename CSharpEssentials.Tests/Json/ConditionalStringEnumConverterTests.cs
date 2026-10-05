@@ -28,8 +28,23 @@ internal enum ConverterAcronymKind
     PendingApproval
 }
 
+[StringEnum]
+[Flags]
+internal enum ConverterFlagsKind
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Delete = 4
+}
+
 public class ConditionalStringEnumConverterTests
 {
+    private static JsonSerializerOptions Strict(bool allowIntegerValues = true) => new()
+    {
+        Converters = { new ConditionalStringEnumConverter(allowIntegerValues: allowIntegerValues) { AllowUndefinedValues = false } }
+    };
+
     private static readonly JsonSerializerOptions StringEnumOptions = new()
     {
         Converters = { new ConditionalStringEnumConverter() }
@@ -171,5 +186,132 @@ public class ConditionalStringEnumConverterTests
 
             JsonSerializer.Deserialize<ConverterAcronymKind>(json, StringEnumOptions).Should().Be(expected);
         }
+    }
+
+    [Fact]
+    public void Deserialize_ShouldAcceptUndefinedNumber_ByDefault()
+    {
+        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("999", AllowIntegerOptions);
+
+        ((int)value).Should().Be(999);
+    }
+
+    [Fact]
+    public void Serialize_ShouldRoundTripUndefinedNumber_ByDefault()
+    {
+        string json = JsonSerializer.Serialize((TestStringEnumType)999, StringEnumOptions);
+        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>(json, StringEnumOptions);
+
+        ((int)value).Should().Be(999);
+    }
+
+    [Fact]
+    public void AllowUndefinedValues_ShouldDefaultToTrue()
+    {
+        new ConditionalStringEnumConverter().AllowUndefinedValues.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Deserialize_ShouldThrowJsonException_WhenUndefinedNumberAndUndefinedValuesAreDisallowed()
+    {
+        Action act = () => JsonSerializer.Deserialize<TestStringEnumType>("999", Strict());
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Deserialize_ShouldAcceptDefinedNumber_WhenUndefinedValuesAreDisallowed()
+    {
+        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("1", Strict());
+
+        value.Should().Be(TestStringEnumType.SecondValue);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldAcceptName_WhenUndefinedValuesAreDisallowed()
+    {
+        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("\"third_value\"", Strict());
+
+        value.Should().Be(TestStringEnumType.ThirdValue);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldThrowJsonException_WhenIntegerValuesAreDisallowed_AndNumberIsDefined()
+    {
+        Action act = () => JsonSerializer.Deserialize<TestStringEnumType>("1", Strict(allowIntegerValues: false));
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Theory]
+    [InlineData("3", 3)]
+    [InlineData("7", 7)]
+    [InlineData("\"read, delete\"", 5)]
+    public void Deserialize_ShouldAcceptCombinationOfDefinedFlags_WhenUndefinedValuesAreDisallowed(string json, int expected)
+    {
+        ConverterFlagsKind value = JsonSerializer.Deserialize<ConverterFlagsKind>(json, Strict());
+
+        ((int)value).Should().Be(expected);
+    }
+
+    [Fact]
+    public void Deserialize_ShouldThrowJsonException_WhenFlagsNumberContainsUndefinedBit()
+    {
+        Action act = () => JsonSerializer.Deserialize<ConverterFlagsKind>("8", Strict());
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Deserialize_ShouldReadDictionaryKeys_WhenKeysAreDefined()
+    {
+        Dictionary<TestStringEnumType, int>? value = JsonSerializer.Deserialize<Dictionary<TestStringEnumType, int>>(
+            "{\"first_value\":1,\"2\":2}", Strict());
+
+        value.Should().Equal(new Dictionary<TestStringEnumType, int>
+        {
+            [TestStringEnumType.FirstValue] = 1,
+            [TestStringEnumType.ThirdValue] = 2
+        });
+    }
+
+    [Fact]
+    public void Deserialize_ShouldThrowJsonException_WhenDictionaryKeyIsUndefinedNumber()
+    {
+        Action act = () => JsonSerializer.Deserialize<Dictionary<TestStringEnumType, int>>("{\"999\":1}", Strict());
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Serialize_ShouldWriteUndefinedNumber_WhenUndefinedValuesAreDisallowed()
+    {
+        string json = JsonSerializer.Serialize((TestStringEnumType)999, Strict());
+
+        json.Should().Be("999");
+    }
+
+    [Fact]
+    public void Serialize_ShouldWriteName_WhenUndefinedValuesAreDisallowed()
+    {
+        string json = JsonSerializer.Serialize(TestStringEnumType.SecondValue, Strict());
+
+        json.Should().Be("\"second_value\"");
+    }
+
+    [Fact]
+    public void Serialize_ShouldWriteDictionaryKeyName_WhenUndefinedValuesAreDisallowed()
+    {
+        string json = JsonSerializer.Serialize(new Dictionary<TestStringEnumType, int> { [TestStringEnumType.SecondValue] = 1 }, Strict());
+
+        json.Should().Be("{\"second_value\":1}");
+    }
+
+    [Fact]
+    public void Deserialize_ShouldIgnoreNonStringEnums_WhenUndefinedValuesAreDisallowed()
+    {
+        RegularEnumType value = JsonSerializer.Deserialize<RegularEnumType>("999", Strict());
+
+        ((int)value).Should().Be(999);
     }
 }
