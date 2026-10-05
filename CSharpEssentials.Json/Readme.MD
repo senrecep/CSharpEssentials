@@ -37,6 +37,17 @@ var parsed = json.ConvertFromJson<User>();
 JsonDocument doc = json.ConvertToJsonDocument();
 ```
 
+### JsonElement to CLR Values
+
+`Dictionary<string, object>` and `object` deserialize to `JsonElement`. `ToClrObject` turns them into plain values: objects become `Dictionary<string, object?>`, arrays `List<object?>`, numbers `int`, `long`, `decimal` or `double` (first that fits).
+
+```csharp
+using JsonDocument doc = JsonDocument.Parse("""{"id":1,"price":9.99,"tags":["a"]}""");
+
+var data = (Dictionary<string, object?>)doc.RootElement.ToClrObject()!;
+// data["id"] is int, data["price"] is decimal, data["tags"] is List<object?>
+```
+
 ### String Enum Serialization
 
 ```csharp

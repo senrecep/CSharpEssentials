@@ -44,6 +44,51 @@ public static class Extensions
         JsonSerializer.Deserialize(json, returnType, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
 
     /// <summary>
+    /// Converts a JSON element to plain CLR values: objects become <see cref="Dictionary{TKey, TValue}"/>,
+    /// arrays become <see cref="List{T}"/>, numbers become int, long, decimal or double (first that fits).
+    /// </summary>
+    /// <param name="element"></param>
+    /// <returns></returns>
+    public static object? ToClrObject(this JsonElement element) => element.ValueKind switch
+    {
+        JsonValueKind.Object => ToClrDictionary(element),
+        JsonValueKind.Array => ToClrList(element),
+        JsonValueKind.String => element.GetString(),
+        JsonValueKind.Number => ToClrNumber(element),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Null or JsonValueKind.Undefined => null,
+        _ => throw new ArgumentOutOfRangeException(nameof(element), element.ValueKind, "Unsupported JSON value kind.")
+    };
+
+    private static Dictionary<string, object?> ToClrDictionary(JsonElement element)
+    {
+        var result = new Dictionary<string, object?>(StringComparer.Ordinal);
+        foreach (JsonProperty property in element.EnumerateObject())
+            result[property.Name] = property.Value.ToClrObject();
+        return result;
+    }
+
+    private static List<object?> ToClrList(JsonElement element)
+    {
+        var result = new List<object?>(element.GetArrayLength());
+        foreach (JsonElement item in element.EnumerateArray())
+            result.Add(item.ToClrObject());
+        return result;
+    }
+
+    private static object ToClrNumber(JsonElement element)
+    {
+        if (element.TryGetInt32(out int intValue))
+            return intValue;
+        if (element.TryGetInt64(out long longValue))
+            return longValue;
+        if (element.TryGetDecimal(out decimal decimalValue))
+            return decimalValue;
+        return element.GetDouble();
+    }
+
+    /// <summary>
     /// Converts a JSON string to a JSON document.
     /// </summary>
     private static readonly Func<string, JsonDocument?>[] _deserializers = [
