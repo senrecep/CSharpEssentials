@@ -25,6 +25,15 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.Extensions.Configuration" VersionOverride="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" VersionOverride="9.0.4" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" ExcludeAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\CSharpEssentials.Enums\bin\$(Configuration)\netstandard2.0\CSharpEssentials.Enums.dll"
+          Link="Analyzers\CSharpEssentials.Enums.dll"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
   </ItemGroup>
 
   <ItemGroup>
