@@ -26,7 +26,7 @@
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <PackageReference Include="CSharpEssentials.Errors" Condition="'$(UseProjectReferences)' != 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
-    <PackageReference Include="Polly" />
+    <PackageReference Include="Polly.Core" />
   </ItemGroup>
 
 </Project>
