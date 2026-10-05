@@ -26,6 +26,11 @@
     <PackageReference Include="System.Net.Http.Json" />
   </ItemGroup>
 
+  <!-- The .NET 11 SDK adds System.Net.Http.Json to implicit usings; declare it once for every TFM -->
+  <ItemGroup>
+    <Using Include="System.Net.Http.Json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CSharpEssentials.Results" Condition="'$(UseProjectReferences)' != 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
