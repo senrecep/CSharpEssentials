@@ -212,7 +212,7 @@ Other ProblemDetails changes:
 - Minimal API writes with `Microsoft.AspNetCore.Http.Json.JsonOptions`, MVC with `Microsoft.AspNetCore.Mvc.JsonOptions`. The output is identical only when both have the same JSON settings; `ConfigureSystemTextJson()` sets both.
 - Call `app.UseEnhancedProblemDetails()`. It runs `UseExceptionHandler()` and `UseStatusCodePages()`.
 - Without `AddEnhancedProblemDetails`, the library does not use `IProblemDetailsService` and writes the response itself. A plain `AddProblemDetails()` would replace `traceId` with the `traceparent` value, and Minimal API and MVC output would differ.
-- The automatic 400 of `[ApiController]` (invalid model state, for example an unknown value of an enum that is not handled by `UseEnumBinding`) is still MVC's `ValidationProblemDetails`. Call `services.ConfigureInvalidModelStateResponse()` to write it as an enhanced problem with `errorCodes`/`errors` (code = model state key) that honors `ErrorFields`. The description is MVC's model error message; for malformed JSON that is the System.Text.Json parser message (as in MVC's default response). Pass an `errorFactory` or set `JsonOptions.AllowInputFormatterExceptionMessages = false` to hide it.
+- The automatic 400 of `[ApiController]` (invalid model state, for example an unknown value of an enum that is not handled by `UseEnumBinding`) is still MVC's `ValidationProblemDetails`. Call `services.ConfigureInvalidModelStateResponse()` to write it as an enhanced problem with `errorCodes`/`errors` (code = model state key) that honors `ErrorFields`. The description is MVC's model error message; for malformed JSON that is the System.Text.Json parser message (as in MVC's default response). Pass an `errorFactory` or set `JsonOptions.AllowInputFormatterExceptionMessages = false` to hide it. It can be called before or after `AddControllers()`. It has no effect together with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off; use one or the other.
 - `EnhancedProblemDetails.ErrorCodes` and `ErrorMessages` are now stored in `Extensions["errorCodes"]` and `Extensions["errorMessages"]`. Writers that serialize the declared `ProblemDetails` type, such as MVC's `[ApiController]` writer, now include them.
 
 ### JSON (`CSharpEssentials.Json`)
@@ -244,6 +244,8 @@ Names with a single word or plain PascalCase did not change. Enums with acronyms
 
 Invalid values return a 400 ProblemDetails response with the key as the error code; change the code or message with `o.ErrorFactory`. MVC query models are read recursively (`?filter.inner.status=…`, up to 8 levels).
 
+- MVC enum binding now also validates enum properties of nested query DTOs (up to 8 levels). A request with an invalid value in a nested query property that bound silently in 3.x may now get a 400.
+
 Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; otherwise an invalid enum value of an unauthenticated request returns 400 instead of 401.
 
 ### Package dependencies
@@ -253,7 +255,7 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 
 ### GCP Secret Manager (`CSharpEssentials.GcpSecretManager`)
 
-- `SecretManagerConfigurationOptions` is now a `sealed record`. `CredentialsPath` and `Loader` are settable inside the `AddGcpSecretManager(options => ...)` lambda and `AddProject` returns the options for chaining. Existing `AddProject` calls keep compiling; code that relied on reference-type class semantics (for example `ReferenceEquals` or a derived class, which was never possible because it was sealed) is the only thing affected.
+- `SecretManagerConfigurationOptions` is now a `sealed record`. `CredentialsPath` and `Loader` are settable inside the `AddGcpSecretManager(options => ...)` lambda and `AddProject` returns the options for chaining. The `AddProject` return-type change is source-compatible but binary-breaking: existing calls keep compiling, but assemblies compiled against 3.x must be recompiled. Code that relied on reference-type class semantics (for example `ReferenceEquals`) is also affected. `Projects` rejects `null` (`ArgumentNullException`).
 - The provider no longer writes to `Console`. Set `options.LoggerFactory` to receive logs (default: no logging).
 - New dependency: `Microsoft.Extensions.Logging.Abstractions`.
 
