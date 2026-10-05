@@ -8,6 +8,7 @@ Integrates Google Cloud Secret Manager into the .NET Configuration system. Load 
 - **Multi-Project** — Load from multiple GCP projects.
 - **AppSettings Support** — Configure via `appsettings.json` or fluent API.
 - **Batch Processing** — Efficient retrieval with configurable batch sizes.
+- **Transient Retry** — Listing and per-secret access are retried on transient gRPC failures (uses `CSharpEssentials.Resilience`).
 
 ## Installation
 
@@ -52,6 +53,15 @@ builder.Configuration.AddGcpSecretManager(options =>
 
 `SecretManagerConfigurationOptions` is a `sealed record`; `CredentialsPath`, `Loader`, `LoggerFactory`
 and `Projects` are settable and `AddProject` returns the options for chaining.
+
+### Retries
+
+Listing a project's secrets and accessing each secret version use `CSharpEssentials.Resilience`
+(`RetryIfFailed` with a `shouldRetry` predicate). Only `ResourceExhausted` and `Unavailable` are
+retried: 3 retries with exponential backoff (2s, 4s, 8s). Any other status, such as
+`PermissionDenied` or `NotFound`, fails immediately. When retries are exhausted the original
+`RpcException` is logged once at `Error`: a listing failure skips that project, an access failure
+skips that secret, and loading continues.
 
 ### Setup via AppSettings
 

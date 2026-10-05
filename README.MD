@@ -252,7 +252,7 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 
 - `Swashbuckle.AspNetCore` is now `[8.1.0, 10)` (3.x: `[8.1.0, )`, unbounded). Apps on Swashbuckle 7.x must upgrade to 8.x.
 - `CSharpEssentials.EntityFrameworkCore` now pins each target framework to its own EF Core major: `net8.0` → EF `[8, 9)`, `net9.0` → EF `[9.0.4, 10)`, `net10.0` → EF `[10.0.1, 11)` (3.x: open-ended). EF APIs such as `ExecuteUpdate` are not binary compatible across majors, so an app must use the EF major that matches its target framework (e.g. a `net8.0` app on EF 9 should target `net9.0`).
-- `CSharpEssentials.Resilience` now depends on `Polly.Core` `[8.0.0, 9.0.0)` instead of the full `Polly` package (3.x: `Polly` `[8.0.0, )`). `CSharpEssentials.Resilience` and `CSharpEssentials.Http` no longer bring `Polly` transitively, so code that uses the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …) must reference `Polly` itself. The v8 `ResiliencePipeline` API is in `Polly.Core` and still works. `CSharpEssentials.GcpSecretManager` still depends on `Polly`, now `[8.0.0, 9.0.0)` (3.x: `[8.0.0, )`).
+- `CSharpEssentials.Resilience` now depends on `Polly.Core` `[8.0.0, 9.0.0)` instead of the full `Polly` package (3.x: `Polly` `[8.0.0, )`). `CSharpEssentials.Resilience` and `CSharpEssentials.Http` no longer bring `Polly` transitively, so code that uses the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …) must reference `Polly` itself. The v8 `ResiliencePipeline` API is in `Polly.Core` and still works. `CSharpEssentials.GcpSecretManager` no longer depends on `Polly`; it depends on `CSharpEssentials.Resilience` (and `Polly.Core` transitively).
 - Building the library from source (or referencing it with `ProjectReference`) needs the .NET 11 preview SDK. The NuGet packages work with the SDKs of their target frameworks.
 
 ### Resilience (`CSharpEssentials.Resilience`)
@@ -267,7 +267,10 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 
 - `SecretManagerConfigurationOptions` is now a `sealed record`. `CredentialsPath` and `Loader` are settable inside the `AddGcpSecretManager(options => ...)` lambda and `AddProject` returns the options for chaining. The `AddProject` return-type change is source-compatible but binary-breaking: existing calls keep compiling, but assemblies compiled against 3.x must be recompiled. Code that relied on reference-type class semantics (for example `ReferenceEquals`) is also affected. `Projects` rejects `null` (`ArgumentNullException`).
 - The provider no longer writes to `Console`. Set `options.LoggerFactory` to receive logs (default: no logging).
-- New dependency: `Microsoft.Extensions.Logging.Abstractions`.
+- New dependencies: `Microsoft.Extensions.Logging.Abstractions` and `CSharpEssentials.Resilience` (replaces `Polly`).
+- Listing secrets is now actually retried on `ResourceExhausted`/`Unavailable`. In 3.x the listing swallowed the exception, so the retry never fired and a transient failure silently loaded no secrets for that project. Accessing each secret version is now retried the same way (3 retries, 2s/4s/8s backoff), and the failure is logged once after retries are exhausted.
+- Creating the client no longer wraps `Build` in a retry. Client creation makes no RPC, so that retry could never trigger.
+- Concurrent secret loading within a batch no longer writes to a shared `Dictionary`. Results are merged in secret order, so the first value wins deterministically on key collisions.
 
 ## AI Skills
 
