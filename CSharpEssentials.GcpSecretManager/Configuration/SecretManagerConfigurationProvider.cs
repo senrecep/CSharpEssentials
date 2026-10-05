@@ -1,30 +1,32 @@
 using System.Collections.Concurrent;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using CSharpEssentials.GcpSecretManager.Infrastructure;
 using CSharpEssentials.GcpSecretManager.Models.Internal;
+using CSharpEssentials.Resilience;
+using CSharpEssentials.ResultPattern;
 using Google.Api.Gax;
 using Google.Cloud.SecretManager.V1;
 using Grpc.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Polly;
-using Polly.Retry;
 
 namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 internal sealed partial class SecretManagerConfigurationProvider(
     List<ProjectSecretLoadContext> projectConfigs,
     ISecretManagerConfigurationLoader loader,
-    SecretManagerConfigurationOptions options
+    SecretManagerConfigurationOptions options,
+    TimeSpan? retryBaseDelay = null
 ) : ConfigurationProvider
 {
     private const char _separator = ':';
 
-    private static readonly AsyncRetryPolicy _retryPolicy = Policy
-        .Handle<RpcException>(ex => ex.StatusCode is StatusCode.ResourceExhausted or StatusCode.Unavailable)
-        .WaitAndRetryAsync(3, retryAttempt =>
-            TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+    private const int MaxRetryAttempts = 3;
+    private static readonly TimeSpan DefaultRetryBaseDelay = TimeSpan.FromSeconds(2);
+
+    private readonly TimeSpan _retryBaseDelay = retryBaseDelay ?? DefaultRetryBaseDelay;
     private readonly ConcurrentDictionary<string, string?> _data = new();
     private readonly ILogger _logger = options.LoggerFactory?.CreateLogger<SecretManagerConfigurationProvider>()
         ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
@@ -64,8 +66,8 @@ internal sealed partial class SecretManagerConfigurationProvider(
 
         try
         {
-            List<Secret> secrets = await _retryPolicy.ExecuteAsync(() =>
-                ListSecretsAsync(context, parent)).ConfigureAwait(false);
+            List<Secret> secrets = await ExecuteWithRetryAsync(
+                () => ListSecretsAsync(context, parent)).ConfigureAwait(false);
 
             if (secrets.Count == 0)
                 return [];
@@ -77,15 +79,23 @@ internal sealed partial class SecretManagerConfigurationProvider(
             if (filteredSecrets.Count == 0)
                 return [];
 
-            Dictionary<string, string?> resultDict = [];
+            var resultDict = new Dictionary<string, string?>(StringComparer.Ordinal);
 
             for (int i = 0; i < filteredSecrets.Count; i += options.BatchSize)
             {
                 IEnumerable<Secret> batch = filteredSecrets.Skip(i).Take(options.BatchSize);
-                IEnumerable<Task> loadTasks = batch.Select(secret =>
-                    LoadSecretAndAddToDictionaryAsync(context, secret, resultDict));
+                IEnumerable<Task<Dictionary<string, string?>>> loadTasks = batch.Select(secret =>
+                    LoadSecretAsync(context, secret));
 
-                await Task.WhenAll(loadTasks).ConfigureAwait(false);
+                Dictionary<string, string?>[] batchResults = await Task.WhenAll(loadTasks).ConfigureAwait(false);
+
+                foreach (Dictionary<string, string?> secretValues in batchResults)
+                {
+                    foreach ((string key, string? value) in secretValues)
+                    {
+                        resultDict.TryAdd(key, value);
+                    }
+                }
             }
 
             return resultDict;
@@ -97,11 +107,12 @@ internal sealed partial class SecretManagerConfigurationProvider(
         }
     }
 
-    private async Task LoadSecretAndAddToDictionaryAsync(
+    private async Task<Dictionary<string, string?>> LoadSecretAsync(
         ProjectSecretLoadContext context,
-        Secret secret,
-        IDictionary<string, string?> resultDict)
+        Secret secret)
     {
+        var resultDict = new Dictionary<string, string?>(StringComparer.Ordinal);
+
         try
         {
             string secretPath = SecretManagerPaths.BuildSecretPath(
@@ -120,12 +131,13 @@ internal sealed partial class SecretManagerConfigurationProvider(
                 TryParseAndFlattenJson(resultDict, result, jsonValue);
 
             LogSecretLoadCompleted(secretPath);
-
         }
         catch (RpcException ex)
         {
             LogSecretFailed(ex, secret.SecretName.SecretId, ex.StatusCode);
         }
+
+        return resultDict;
     }
 
     private static void TryParseAndFlattenJson(IDictionary<string, string?> resultDict, SecretLoadResult result, string jsonValue)
@@ -140,7 +152,7 @@ internal sealed partial class SecretManagerConfigurationProvider(
                 foreach ((string key, string value) in tempData)
                     resultDict.TryAdd(key, value);
         }
-        catch
+        catch (JsonException)
         {
             // If JSON parsing fails, we already have the raw value saved, so just continue
         }
@@ -148,29 +160,21 @@ internal sealed partial class SecretManagerConfigurationProvider(
 
     private async Task<List<Secret>> ListSecretsAsync(ProjectSecretLoadContext context, string parent)
     {
-        try
+        var request = new ListSecretsRequest
         {
-            var request = new ListSecretsRequest
-            {
-                Parent = parent,
-                PageSize = options.PageSize
-            };
+            Parent = parent,
+            PageSize = options.PageSize
+        };
 
-            PagedAsyncEnumerable<ListSecretsResponse, Secret> response = context.Client.ListSecretsAsync(request);
-            var secrets = new List<Secret>();
+        PagedAsyncEnumerable<ListSecretsResponse, Secret> response = context.Client.ListSecretsAsync(request);
+        var secrets = new List<Secret>();
 
-            await foreach (Secret? secret in response.ConfigureAwait(false))
-            {
-                secrets.Add(secret);
-            }
-
-            return secrets;
-        }
-        catch (Exception ex)
+        await foreach (Secret? secret in response.ConfigureAwait(false))
         {
-            LogListFailed(ex, parent);
-            return [];
+            secrets.Add(secret);
         }
+
+        return secrets;
     }
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Critical error during secret loading")]
@@ -188,16 +192,14 @@ internal sealed partial class SecretManagerConfigurationProvider(
     [LoggerMessage(Level = LogLevel.Error, Message = "Failed to load secret {SecretId}: {StatusCode}")]
     private partial void LogSecretFailed(Exception exception, string secretId, StatusCode statusCode);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Error listing secrets for {Parent}")]
-    private partial void LogListFailed(Exception exception, string parent);
-
     private async Task<SecretLoadResult> LoadSecretValueAsync(
         ProjectSecretLoadContext context,
         Secret secret,
         string secretPath)
     {
         var request = new AccessSecretVersionRequest { Name = secretPath };
-        AccessSecretVersionResponse response = await context.Client.AccessSecretVersionAsync(request).ConfigureAwait(false);
+        AccessSecretVersionResponse response = await ExecuteWithRetryAsync(
+            () => context.Client.AccessSecretVersionAsync(request)).ConfigureAwait(false);
 
         return new SecretLoadResult(
             secretPath,
@@ -205,39 +207,61 @@ internal sealed partial class SecretManagerConfigurationProvider(
             loader.GetKey(secret));
     }
 
+    // Retries transient gRPC failures (ResourceExhausted, Unavailable) with exponential backoff and rethrows the
+    // original exception once retries are exhausted or the failure is not transient, so callers log it as before.
+    private async Task<T> ExecuteWithRetryAsync<T>(Func<Task<T>> call)
+    {
+        Exception? lastException = null;
+        Func<CancellationToken, Task<Result<T>>> operation = async _ =>
+        {
+            try
+            {
+                return await call().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                lastException = ex;
+                return SecretManagerErrors.FromException(ex);
+            }
+        };
+
+        Result<T> result = await operation.RetryIfFailed(
+            SecretManagerErrors.IsTransient,
+            MaxRetryAttempts,
+            _retryBaseDelay).ConfigureAwait(false);
+
+        if (result.IsFailure && lastException is not null)
+            ExceptionDispatchInfo.Capture(lastException).Throw();
+
+        return result.Value;
+    }
+
     private static void FlattenJson(IDictionary<string, string?> data, JsonElement element, string parentPath)
     {
+        JsonValueKind kind = element.ValueKind;
 
-#pragma warning disable IDE0010
-        switch (element.ValueKind)
+        if (kind == JsonValueKind.Object)
         {
-            case JsonValueKind.Object:
-                foreach (JsonProperty property in element.EnumerateObject())
-                {
-                    string newPath = string.IsNullOrEmpty(parentPath)
-                        ? property.Name
-                        : string.Concat(parentPath, _separator, property.Name);
-                    FlattenJson(data, property.Value, newPath);
-                }
-                break;
-
-            case JsonValueKind.Array:
-                int index = 0;
-                foreach (JsonElement item in element.EnumerateArray())
-                {
-                    string newPath = string.Concat(parentPath, _separator, index++);
-                    FlattenJson(data, item, newPath);
-                }
-                break;
-
-            case JsonValueKind.Null:
-                data[parentPath] = null;
-                break;
-
-            default:
-                data[parentPath] = element.ToString();
-                break;
+            foreach (JsonProperty property in element.EnumerateObject())
+            {
+                string newPath = string.IsNullOrEmpty(parentPath)
+                    ? property.Name
+                    : string.Concat(parentPath, _separator, property.Name);
+                FlattenJson(data, property.Value, newPath);
+            }
         }
-#pragma warning restore IDE0010
+        else if (kind == JsonValueKind.Array)
+        {
+            int index = 0;
+            foreach (JsonElement item in element.EnumerateArray())
+            {
+                string newPath = string.Concat(parentPath, _separator, index++);
+                FlattenJson(data, item, newPath);
+            }
+        }
+        else
+        {
+            data[parentPath] = kind == JsonValueKind.Null ? null : element.ToString();
+        }
     }
 }
