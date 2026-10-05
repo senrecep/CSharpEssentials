@@ -8,6 +8,7 @@ This console application demonstrates enum utilities from `CSharpEssentials.Enum
 |---------|-------------|
 | **StringEnumAttribute** | Decorate enum values with string representations |
 | **Enum Extensions** | `ToOptimizedString()`, `ToSnakeCase()`, `ToKebabCase()`, `Parse()`, `TryParse()`, `IsDefined()`, `GetNames()`, `GetValues()` |
+| **DeliveryStatus** | `[StringEnum]` enum showing the generated API next to `StringEnumNaming.GetName` / `GetNames` from `CSharpEssentials.Json` |
 | **String Parsing** | Parse enums from their member names using source-generated extensions |
 
 ## Running

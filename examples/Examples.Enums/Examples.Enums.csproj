@@ -15,6 +15,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Enums/CSharpEssentials.Enums.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="true"

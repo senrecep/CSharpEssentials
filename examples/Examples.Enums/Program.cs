@@ -1,4 +1,5 @@
 using CSharpEssentials.Enums;
+using CSharpEssentials.Json;
 
 namespace Examples.Enums;
 
@@ -95,6 +96,32 @@ public class Program
         Console.WriteLine($"StatusExtensions.GetValues() = [{string.Join(", ", values)}]");
         Console.WriteLine();
 
+        // ============================================================================
+        // DELIVERY STATUS: GENERATOR API + JSON NAMING
+        // ============================================================================
+        Console.WriteLine("--- DeliveryStatus ---");
+
+        DeliveryStatus delivery = DeliveryStatus.Shipped;
+        Console.WriteLine($"ToOptimizedString() = {delivery.ToOptimizedString()}");
+        Console.WriteLine($"ToSnakeCase()       = {delivery.ToSnakeCase()}");
+        Console.WriteLine($"ToKebabCase()       = {delivery.ToKebabCase()}");
+        Console.WriteLine($"GetNames()          = [{string.Join(", ", DeliveryStatusExtensions.GetNames())}]");
+        Console.WriteLine($"GetValues()         = [{string.Join(", ", DeliveryStatusExtensions.GetValues())}]");
+
+        if (DeliveryStatusExtensions.TryParse("Delivered", out DeliveryStatus delivered))
+        {
+            Console.WriteLine($"TryParse(\"Delivered\") = {delivered}");
+        }
+
+        Console.WriteLine($"Parse(\"Returned\")    = {DeliveryStatusExtensions.Parse("Returned")}");
+
+        // StringEnumNaming (CSharpEssentials.Json) gives the wire name used by the JSON converters
+        // (snake_case by default), so APIs and generated code agree on the same spelling.
+        Console.WriteLine($"StringEnumNaming.GetName(Shipped) = {StringEnumNaming.GetName(delivery)}");
+        Console.WriteLine($"StringEnumNaming.GetNames<DeliveryStatus>() = [{string.Join(", ", StringEnumNaming.GetNames<DeliveryStatus>())}]");
+        Console.WriteLine($"StringEnumNaming.IsStringEnum(typeof(DeliveryStatus)) = {StringEnumNaming.IsStringEnum(typeof(DeliveryStatus))}");
+        Console.WriteLine();
+
         Console.WriteLine("========================================");
         Console.WriteLine("Demo complete.");
         Console.WriteLine("Note: The StringEnumAttribute is used by");
@@ -117,6 +144,15 @@ public enum Status
     Inactive,
     Pending,
     Deleted
+}
+
+[StringEnum]
+public enum DeliveryStatus
+{
+    Pending,
+    Shipped,
+    Delivered,
+    Returned
 }
 
 [StringEnum]
