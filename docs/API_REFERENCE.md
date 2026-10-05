@@ -845,7 +845,19 @@ Result<User> user = await ResiliencePolicy
 | Method | What It Does |
 |--------|-------------|
 | `PaginateAsync(query, request)` | Offset-based pagination → `PaginationResponse<T>` |
+| `PaginateAsync(query, pageNumber, pageSize, includeTotalCount = true)` | Same, without building a `PaginationRequest` |
+| `Paginate(query, request)` / `Paginate(query, pageNumber, pageSize)` | Synchronous offset pagination; also works on non-EF `IQueryable` (e.g. `list.AsQueryable()`) |
 | `PaginateAsync(query, cursorRequest)` | Cursor-based pagination → `CursorPaginationResponse<T>` |
+
+### Batch Operations
+
+| Method | What It Does |
+|--------|-------------|
+| `SoftDeleteAsync(query, deletedAt, deletedBy)` | Soft-deletes all matching `ISoftDeletable` rows in one `UPDATE` (`ExecuteUpdate`); skips rows already deleted; returns the affected row count |
+| `SoftDeleteAsync(query, deletedBy, timeProvider = null)` | Same, taking the time from `TimeProvider` (default `TimeProvider.System`) |
+| `HardDelete(entities)` | Marks tracked soft-deletable entities as hard-deleted and removes them on the next `SaveChanges` |
+
+Batch updates bypass the change tracker and `SaveChanges` interceptors (audit, domain events), and require a relational provider.
 
 ### Entity Configuration
 
@@ -882,6 +894,18 @@ Reading accepts both formats, so existing rows still load. See [Migrating from 3
 |--------|-------------|
 | `AddAuditInterceptor` | Auto-fills `CreatedAt/By`, `UpdatedAt/By` on SaveChanges |
 | `AddSlowQueryInterceptor` | Logs queries exceeding a threshold |
+
+### BaseDbContext\<TContext\>
+
+Opt-in hooks; both are off by default.
+
+| Member | Default | What It Does |
+|--------|---------|-------------|
+| `protected virtual DbContextInterceptors InterceptorsFromServices` | `None` | `OnConfiguring` attaches the selected interceptors (`Audit`, `DomainEvents`, `SlowQuery`, `All`) when registered in DI; skips ones already on the options |
+| `protected virtual bool DispatchDomainEventsOnSaveChanges` | `false` | `SaveChanges`/`SaveChangesAsync` collect domain events, dispatch `BeforeSave` events before saving and `AfterSave` events after a successful save |
+| `protected virtual Task DispatchDomainEventsAsync(IReadOnlyList<IDomainEvent>, DomainEventTiming, CancellationToken)` | outbox / publisher | Override to customize dispatch. Default: `AfterSave` → `IDomainEventOutbox` if registered, else `IDomainEventPublisher`; `BeforeSave` → `IDomainEventPublisher` |
+
+Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interceptor attachment. Use either `DispatchDomainEventsOnSaveChanges` or `DomainEventInterceptor`, not both; events collected by the context are cleared before the interceptor runs, so they are never dispatched twice.
 
 ### CQRS Context Registration
 
