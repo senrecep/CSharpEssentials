@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CSharpEssentials.Validation.Extensions;
 
@@ -11,6 +12,8 @@ public static class ValidatorServiceCollectionExtensions
 {
     /// <summary>
     /// Registers a single validator explicitly.
+    /// Registering the same implementation type more than once is a no-op —
+    /// multiple <b>different</b> implementations for the same <typeparamref name="T"/> are all kept.
     /// </summary>
     /// <example>
     /// <code>
@@ -28,7 +31,7 @@ public static class ValidatorServiceCollectionExtensions
         if (services is null)
             throw new ArgumentNullException(nameof(services));
 #endif
-        services.Add(ServiceDescriptor.Describe(
+        services.TryAddEnumerable(ServiceDescriptor.Describe(
             typeof(IValidator<T>),
             typeof(TValidator),
             lifetime));
@@ -38,6 +41,7 @@ public static class ValidatorServiceCollectionExtensions
     /// <summary>
     /// Scans <paramref name="assembly"/> and registers all concrete, non-abstract
     /// <see cref="IValidator{T}"/> implementations found within it.
+    /// Scanning the same assembly more than once does not produce duplicate registrations.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="assembly">The assembly to scan.</param>
@@ -87,7 +91,7 @@ public static class ValidatorServiceCollectionExtensions
                 if (iface.GetGenericTypeDefinition() != validatorInterface)
                     continue;
 
-                services.Add(ServiceDescriptor.Describe(iface, type, lifetime));
+                services.TryAddEnumerable(ServiceDescriptor.Describe(iface, type, lifetime));
             }
         }
 
