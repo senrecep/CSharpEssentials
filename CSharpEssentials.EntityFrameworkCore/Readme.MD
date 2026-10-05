@@ -92,7 +92,17 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IServic
 }
 ```
 
-Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` (if registered) or `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change this. Use either this hook or `DomainEventInterceptor`, not both. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
+Both hooks are off by default. Interceptors that are not registered in DI, or are already on the options, are skipped. When dispatch is on, `BeforeSave` events go to `IDomainEventPublisher` before the save, and `AfterSave` events go to `IDomainEventOutbox` (if registered) or `IDomainEventPublisher` after the save succeeds. Override `DispatchDomainEventsAsync` to change this. If you override `OnConfiguring`, call `base.OnConfiguring(optionsBuilder)`.
+
+The two domain event paths differ in when `AfterSave` events are handled:
+
+| | `DispatchDomainEventsOnSaveChanges` | `DomainEventInterceptor` |
+|---|---|---|
+| `AfterSave` events | after the save completes | in `SavingChanges`, before the database write |
+| Outbox write | not atomic with the save: the save is already committed when `StoreAsync` runs; inside an explicit transaction it runs before that transaction commits | before the save, in the same `SaveChanges` call |
+| Save fails | `AfterSave` events are put back on their entities, so a retry dispatches them | events are already dispatched |
+
+Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
 ### CQRS Write/Read
 

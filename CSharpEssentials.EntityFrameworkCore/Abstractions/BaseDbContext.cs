@@ -14,21 +14,24 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     where TContext : DbContext
 {
     private readonly Guid _instanceId = Guider.NewGuid();
+    private readonly IServiceScope _serviceScope;
     protected readonly ILogger<TContext> Logger;
     protected readonly IServiceProvider ServiceProvider;
 
     protected BaseDbContext(
         DbContextOptions<TContext> options, IServiceScopeFactory serviceScopeFactory) : base(options)
     {
-        IServiceProvider serviceProvider = serviceScopeFactory.CreateScope().ServiceProvider;
-        Logger = serviceProvider.GetRequiredService<ILogger<TContext>>();
-        ServiceProvider = serviceProvider;
+        _serviceScope = serviceScopeFactory.CreateScope();
+        ServiceProvider = _serviceScope.ServiceProvider;
+        Logger = ServiceProvider.GetRequiredService<ILogger<TContext>>();
         LogContextCreated(_instanceId);
     }
 
     /// <summary>
     /// Interceptors resolved from DI and attached in <see cref="OnConfiguring"/>.
     /// Interceptors that are not registered in DI, or that are already present on the options, are skipped.
+    /// <see cref="DbContextInterceptors.DomainEvents"/> is ignored when <see cref="DispatchDomainEventsOnSaveChanges"/>
+    /// is <c>true</c>, so domain events are dispatched by one path only.
     /// Defaults to <see cref="DbContextInterceptors.None"/>.
     /// </summary>
     protected virtual DbContextInterceptors InterceptorsFromServices => DbContextInterceptors.None;
@@ -39,8 +42,16 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     /// <see cref="DomainEventTiming.BeforeSave"/> events before the save, <see cref="DomainEventTiming.AfterSave"/>
     /// events after it succeeds. Defaults to <c>false</c>.
     /// <para>
-    /// Do not combine with <see cref="DomainEventInterceptor"/>; once collected here, events are cleared
-    /// from the entities and the interceptor will not see them.
+    /// After-save events are dispatched once the save has completed, so storing them in an
+    /// <see cref="IDomainEventOutbox"/> is not atomic with the save. Inside an explicit transaction they are
+    /// dispatched before that transaction commits. When the save fails, the after-save events are put back on
+    /// their entities so a retry dispatches them.
+    /// </para>
+    /// <para>
+    /// Do not combine with <see cref="DomainEventInterceptor"/>; when this is <c>true</c>,
+    /// <see cref="DbContextInterceptors.DomainEvents"/> in <see cref="InterceptorsFromServices"/> is ignored.
+    /// An interceptor added to the options directly still runs but sees no events, because they are
+    /// collected here first.
     /// </para>
     /// </summary>
     protected virtual bool DispatchDomainEventsOnSaveChanges => false;
@@ -60,7 +71,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         if (interceptors.HasFlag(DbContextInterceptors.Audit))
             TryAddInterceptor<AuditInterceptor>(optionsBuilder, attached);
 
-        if (interceptors.HasFlag(DbContextInterceptors.DomainEvents))
+        if (interceptors.HasFlag(DbContextInterceptors.DomainEvents) && !DispatchDomainEventsOnSaveChanges)
             TryAddInterceptor<DomainEventInterceptor>(optionsBuilder, attached);
 
         if (interceptors.HasFlag(DbContextInterceptors.SlowQuery))
@@ -72,14 +83,24 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         if (!DispatchDomainEventsOnSaveChanges)
             return base.SaveChanges(acceptAllChangesOnSuccess);
 
+        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected = DomainEventCollector.CollectByEntity(this);
         (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) =
-            DomainEventCollector.SplitByTiming(DomainEventCollector.Collect(this));
+            DomainEventCollector.SplitByTiming([.. collected.SelectMany(static c => c.Events)]);
 
-        if (beforeSave.Length > 0)
-            DispatchDomainEventsAsync(beforeSave, DomainEventTiming.BeforeSave, CancellationToken.None)
-                .GetAwaiter().GetResult();
+        int result;
+        try
+        {
+            if (beforeSave.Length > 0)
+                DispatchDomainEventsAsync(beforeSave, DomainEventTiming.BeforeSave, CancellationToken.None)
+                    .GetAwaiter().GetResult();
 
-        int result = base.SaveChanges(acceptAllChangesOnSuccess);
+            result = base.SaveChanges(acceptAllChangesOnSuccess);
+        }
+        catch
+        {
+            DomainEventCollector.Restore(collected, afterSave);
+            throw;
+        }
 
         if (afterSave.Length > 0)
             DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, CancellationToken.None)
@@ -94,13 +115,23 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         if (!DispatchDomainEventsOnSaveChanges)
             return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
 
+        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected = DomainEventCollector.CollectByEntity(this);
         (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) =
-            DomainEventCollector.SplitByTiming(DomainEventCollector.Collect(this));
+            DomainEventCollector.SplitByTiming([.. collected.SelectMany(static c => c.Events)]);
 
-        if (beforeSave.Length > 0)
-            await DispatchDomainEventsAsync(beforeSave, DomainEventTiming.BeforeSave, cancellationToken);
+        int result;
+        try
+        {
+            if (beforeSave.Length > 0)
+                await DispatchDomainEventsAsync(beforeSave, DomainEventTiming.BeforeSave, cancellationToken);
 
-        int result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        }
+        catch
+        {
+            DomainEventCollector.Restore(collected, afterSave);
+            throw;
+        }
 
         if (afterSave.Length > 0)
             await DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, cancellationToken);
@@ -147,6 +178,17 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     {
         LogContextDisposed(_instanceId);
         base.Dispose();
+        _serviceScope.Dispose();
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        LogContextDisposed(_instanceId);
+        await base.DisposeAsync();
+        if (_serviceScope is IAsyncDisposable asyncScope)
+            await asyncScope.DisposeAsync();
+        else
+            _serviceScope.Dispose();
     }
 
     private void TryAddInterceptor<TInterceptor>(
