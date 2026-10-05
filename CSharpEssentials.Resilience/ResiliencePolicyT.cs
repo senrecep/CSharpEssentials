@@ -10,6 +10,8 @@ public readonly partial struct ResiliencePolicy<T>
     private ResiliencePolicy(ResiliencePipeline<Result<T>> pipeline) =>
         _pipeline = pipeline;
 
+    private ResiliencePipeline<Result<T>> GetPipeline() => _pipeline ?? ResiliencePipeline<Result<T>>.Empty;
+
     public static ResiliencePolicy<T> Create() =>
         new(new ResiliencePipelineBuilder<Result<T>>().Build());
 
@@ -31,13 +33,13 @@ public readonly partial struct ResiliencePolicy<T>
     }
 
     public ResiliencePipeline<Result<T>> ToPipeline() =>
-        _pipeline;
+        GetPipeline();
 
     public async Task<Result<T>> ExecuteAsync(
         Func<CancellationToken, Task<T>> action,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline<Result<T>> pipeline = _pipeline ?? new ResiliencePipelineBuilder<Result<T>>().Build();
+        ResiliencePipeline<Result<T>> pipeline = GetPipeline();
         try
         {
             return await pipeline.ExecuteAsync(
@@ -58,7 +60,7 @@ public readonly partial struct ResiliencePolicy<T>
         Func<CancellationToken, Task<Result<T>>> action,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline<Result<T>> pipeline = _pipeline ?? new ResiliencePipelineBuilder<Result<T>>().Build();
+        ResiliencePipeline<Result<T>> pipeline = GetPipeline();
         try
         {
             return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
@@ -71,7 +73,7 @@ public readonly partial struct ResiliencePolicy<T>
 
     private ResiliencePolicy<T> Merge(ResiliencePipeline<Result<T>> additionalPipeline)
     {
-        ResiliencePipeline<Result<T>> existing = _pipeline ?? new ResiliencePipelineBuilder<Result<T>>().Build();
+        ResiliencePipeline<Result<T>> existing = GetPipeline();
         ResiliencePipeline<Result<T>> merged = new ResiliencePipelineBuilder<Result<T>>()
             .AddPipeline(existing)
             .AddPipeline(additionalPipeline)

@@ -10,6 +10,8 @@ public readonly partial struct ResiliencePolicy
     private ResiliencePolicy(ResiliencePipeline pipeline) =>
         _pipeline = pipeline;
 
+    private ResiliencePipeline GetPipeline() => _pipeline ?? ResiliencePipeline.Empty;
+
     public static ResiliencePolicy Create() =>
         new(ResiliencePipeline.Empty);
 
@@ -57,13 +59,13 @@ public readonly partial struct ResiliencePolicy
     }
 
     public ResiliencePipeline ToPipeline() =>
-        _pipeline;
+        GetPipeline();
 
     public async Task<Result> ExecuteAsync(
         Func<CancellationToken, Task> action,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
+        ResiliencePipeline pipeline = GetPipeline();
         try
         {
             await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
@@ -79,7 +81,7 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task<T>> action,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
+        ResiliencePipeline pipeline = GetPipeline();
         try
         {
             return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
@@ -94,7 +96,7 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task<Result<T>>> action,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
+        ResiliencePipeline pipeline = GetPipeline();
         try
         {
             return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
@@ -109,7 +111,7 @@ public readonly partial struct ResiliencePolicy
         Func<CancellationToken, Task<Result>> action,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline pipeline = _pipeline ?? ResiliencePipeline.Empty;
+        ResiliencePipeline pipeline = GetPipeline();
         try
         {
             return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
@@ -122,13 +124,14 @@ public readonly partial struct ResiliencePolicy
 
     private ResiliencePolicy Merge(ResiliencePipeline additionalPipeline)
     {
-        if (_pipeline == ResiliencePipeline.Empty)
+        ResiliencePipeline existing = GetPipeline();
+        if (existing == ResiliencePipeline.Empty)
         {
             return new(additionalPipeline);
         }
 
         ResiliencePipeline merged = new ResiliencePipelineBuilder()
-            .AddPipeline(_pipeline)
+            .AddPipeline(existing)
             .AddPipeline(additionalPipeline)
             .Build();
 
