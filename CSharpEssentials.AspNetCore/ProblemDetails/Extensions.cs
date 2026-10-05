@@ -109,6 +109,11 @@ public static partial class Extensions
     /// <c>errorCodes</c>/<c>errors</c> fields (and honors <see cref="EnhancedProblemDetailsOptions.ErrorFields"/>)
     /// as every other problem response. Each model error becomes an <see cref="ErrorType.Validation"/> error whose
     /// code is the model state key (for example <c>status</c>, <c>dto.status</c> or <c>$.status</c>).
+    /// <para>
+    /// Registered as a post-configuration, so it can be called before or after <c>AddControllers()</c>.
+    /// It has no effect together with <see cref="ConfigureModelValidatorResponse"/>, which turns the automatic 400
+    /// off (<see cref="ApiBehaviorOptions.SuppressModelStateInvalidFilter"/>); use one or the other.
+    /// </para>
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="errorFactory">
@@ -120,7 +125,7 @@ public static partial class Extensions
         Func<string, ModelError, Error>? errorFactory = null)
     {
         Func<string, ModelError, Error> factory = errorFactory ?? CreateModelStateError;
-        services.Configure<ApiBehaviorOptions>(options => options.InvalidModelStateResponseFactory = context =>
+        services.PostConfigure<ApiBehaviorOptions>(options => options.InvalidModelStateResponseFactory = context =>
         {
             Error[] errors = [.. context.ModelState
                 .Where(static entry => entry.Value is { Errors.Count: > 0 })
