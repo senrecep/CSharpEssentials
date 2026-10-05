@@ -102,7 +102,7 @@ public sealed class HttpRequestBuilder
 
         Result<Uri> uriResult = _queryParameters.Count > 0
             ? _uri.WithQueryString(_queryParameters.ToDictionary(p => p.Key, p => (string?)p.Value))
-            : _uri!;
+            : _uri;
 
         if (uriResult.IsFailure)
             return uriResult.Errors;

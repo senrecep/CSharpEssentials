@@ -158,9 +158,9 @@ internal abstract class BaseMiddleware
             buffer = _arrayPool.Rent(_bufferSize);
 
             int bytesRead;
-            while ((bytesRead = await context.Request.Body.ReadAsync(buffer.AsMemory(0, _bufferSize)).ConfigureAwait(false)) > 0)
+            while ((bytesRead = await context.Request.Body.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
             {
-                await requestStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+                await requestStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
             }
 
             if (requestStream.Length == 0)
@@ -170,7 +170,7 @@ internal abstract class BaseMiddleware
 
             requestStream.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(requestStream, Encoding.UTF8, leaveOpen: true);
-            string requestBody = await reader.ReadToEndAsync().ConfigureAwait(false);
+            string requestBody = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
 
             context.Request.Body.Seek(0, SeekOrigin.Begin);
             return requestBody;
@@ -235,13 +235,13 @@ internal abstract class BaseMiddleware
         {
             buffer = _arrayPool.Rent(_bufferSize);
             using var reader = new StreamReader(responseBody, leaveOpen: true);
-            responseText = await reader.ReadToEndAsync().ConfigureAwait(false);
+            responseText = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
 
             responseBody.Seek(0, SeekOrigin.Begin);
             int bytesRead;
-            while ((bytesRead = await responseBody.ReadAsync(buffer.AsMemory(0, _bufferSize)).ConfigureAwait(false)) > 0)
+            while ((bytesRead = await responseBody.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
             {
-                await originalBodyStream.WriteAsync(buffer.AsMemory(0, bytesRead)).ConfigureAwait(false);
+                await originalBodyStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
             }
         }
         catch (Exception ex)
@@ -300,7 +300,7 @@ internal abstract class BaseMiddleware
 
         try
         {
-            await Task.Run(() => _logWriter.Write(errorContext)).ConfigureAwait(false);
+            await Task.Run(() => _logWriter.Write(errorContext), CancellationToken.None).ConfigureAwait(false);
         }
         catch
         {
