@@ -98,7 +98,28 @@ public class PolymorphicJsonConverterFactoryTests
     {
         PolymorphicJsonConverterFactory factory = new();
 
-        factory.CanConvert(typeof(IEnumerable<>)).Should().BeTrue();
+        factory.CanConvert(typeof(IDisposable)).Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(typeof(IEnumerable<int>))]
+    [InlineData(typeof(IDictionary<string, object?>))]
+    [InlineData(typeof(IReadOnlyList<BaseShape>))]
+    [InlineData(typeof(System.Collections.IEnumerable))]
+    public void CanConvert_WithCollectionInterface_ShouldReturnFalse(Type type)
+    {
+        PolymorphicJsonConverterFactory factory = new();
+
+        factory.CanConvert(type).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Serialize_DictionaryInterface_ShouldNotWrapWithTypeDiscriminator()
+    {
+        JsonSerializerOptions options = new() { Converters = { new PolymorphicJsonConverterFactory() } };
+        IDictionary<string, object?> value = new Dictionary<string, object?> { ["a"] = 1 };
+
+        JsonSerializer.Serialize(value, options).Should().Be("{\"a\":1}");
     }
 
     [Fact]

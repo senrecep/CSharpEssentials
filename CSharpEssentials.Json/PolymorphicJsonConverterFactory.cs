@@ -6,8 +6,13 @@ namespace CSharpEssentials.Json;
 
 public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
 {
+    /// <summary>
+    /// Abstract classes and interfaces, except collections and dictionaries (<see cref="System.Collections.IEnumerable"/>),
+    /// which keep the built-in array/object serialization.
+    /// </summary>
     public override bool CanConvert(Type typeToConvert) =>
-        typeToConvert.IsAbstract || typeToConvert.IsInterface;
+        (typeToConvert.IsAbstract || typeToConvert.IsInterface) &&
+        !typeof(System.Collections.IEnumerable).IsAssignableFrom(typeToConvert);
 
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {

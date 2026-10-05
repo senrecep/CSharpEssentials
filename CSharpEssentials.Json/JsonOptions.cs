@@ -98,7 +98,8 @@ public static class EnhancedJsonSerializerOptions
         target.PropertyNamingPolicy = source.PropertyNamingPolicy;
         target.ReadCommentHandling = source.ReadCommentHandling;
         target.ReferenceHandler = source.ReferenceHandler;
-        target.TypeInfoResolver = source.TypeInfoResolver;
+        // A null resolver would make the target unusable (ASP.NET Core requires one), so keep the target's own.
+        target.TypeInfoResolver = source.TypeInfoResolver ?? target.TypeInfoResolver;
         target.UnknownTypeHandling = source.UnknownTypeHandling;
         target.UnmappedMemberHandling = source.UnmappedMemberHandling;
         target.WriteIndented = source.WriteIndented;
