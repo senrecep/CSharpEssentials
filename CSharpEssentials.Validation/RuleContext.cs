@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Errors;
 
@@ -45,6 +46,13 @@ public sealed class RuleContext<T>
     /// Creates a validation chain for a property expression.
     /// The property is evaluated immediately; its value is captured for the chain lifetime.
     /// </summary>
+    /// <remarks>
+    /// A <see langword="null"/> intermediate segment in a member path is tolerated:
+    /// <c>() => model.Address.City</c> with a <see langword="null"/> <c>Address</c> is treated
+    /// as the property itself being <see langword="null"/> (guards such as <c>NotEmpty()</c> will fire).
+    /// This tolerance only applies when <typeparamref name="TProp"/> can itself be null;
+    /// for non-nullable value types the <see cref="NullReferenceException"/> propagates.
+    /// </remarks>
     /// <example>
     /// <code>
     /// rules.For(() => model.Name).NotEmpty().MaxLength(100);
@@ -55,16 +63,33 @@ public sealed class RuleContext<T>
         Func<TProp> expr,
         [CallerArgumentExpression(nameof(expr))] string memberExpr = "")
     {
+        TProp value = EvaluateSafely(expr);
         if (_propertyPrefix.Length > 0)
         {
             (string extracted, bool isItemSelf) = PropertyPath.ExtractWithMeta(memberExpr);
             string fullName = isItemSelf
                 ? _propertyPrefix[..^1]          // strip trailing dot: "Items[0]"
                 : _propertyPrefix + extracted;   // "Items[0].PropertyName"
-            return new RuleChain<T, TProp>(this, expr(), fullName);
+            return new RuleChain<T, TProp>(this, value, fullName);
         }
 
-        return new RuleChain<T, TProp>(this, expr(), PropertyPath.Extract(memberExpr));
+        return new RuleChain<T, TProp>(this, value, PropertyPath.Extract(memberExpr));
+    }
+
+    [SuppressMessage("Major Bug", "S1696:NullReferenceException should not be caught",
+        Justification = "The expression is an opaque member-access delegate; a null intermediate " +
+        "segment cannot be tested for null upfront. Catching NRE mirrors FluentValidation's " +
+        "null-tolerant member paths and only applies when TProp can itself be null.")]
+    private static TProp EvaluateSafely<TProp>(Func<TProp> expr)
+    {
+        try
+        {
+            return expr();
+        }
+        catch (NullReferenceException) when (default(TProp) is null)
+        {
+            return default!;
+        }
     }
 
     /// <summary>
@@ -94,7 +119,8 @@ public sealed class RuleContext<T>
     /// <summary>
     /// Iterates <paramref name="collectionExpr"/> and runs <paramref name="configure"/> for each element.
     /// Errors produced per element are accumulated with an indexed prefix, e.g. <c>"Tags[0].Name"</c>.
-    /// A <see langword="null"/> or empty collection produces no errors.
+    /// A <see langword="null"/> or empty collection produces no errors; a <see langword="null"/>
+    /// intermediate segment in the collection path is treated as a <see langword="null"/> collection.
     /// </summary>
     /// <example>
     /// <code>
@@ -110,7 +136,7 @@ public sealed class RuleContext<T>
         Action<TElement, RuleContext<TElement>> configure,
         [CallerArgumentExpression(nameof(collectionExpr))] string memberExpr = "")
     {
-        IEnumerable<TElement>? collection = collectionExpr();
+        IEnumerable<TElement>? collection = EvaluateCollectionSafely(collectionExpr);
         if (collection is null)
             return;
 
@@ -129,6 +155,23 @@ public sealed class RuleContext<T>
         }
     }
 
+    [SuppressMessage("Major Bug", "S1696:NullReferenceException should not be caught",
+        Justification = "The expression is an opaque member-access delegate; a null intermediate " +
+        "segment cannot be tested for null upfront and is treated as a null collection, " +
+        "which ForEach already defines as producing no errors.")]
+    private static IEnumerable<TElement>? EvaluateCollectionSafely<TElement>(
+        Func<IEnumerable<TElement>?> collectionExpr)
+    {
+        try
+        {
+            return collectionExpr();
+        }
+        catch (NullReferenceException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>
     /// Asynchronous variant of <see cref="ForEach{TElement}"/>.
     /// </summary>
@@ -143,7 +186,7 @@ public sealed class RuleContext<T>
         CancellationToken ct = default,
         [CallerArgumentExpression(nameof(collectionExpr))] string memberExpr = "")
     {
-        IEnumerable<TElement>? collection = collectionExpr();
+        IEnumerable<TElement>? collection = EvaluateCollectionSafely(collectionExpr);
         if (collection is null)
             return;
 

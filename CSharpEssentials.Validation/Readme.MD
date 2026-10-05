@@ -206,6 +206,15 @@ if (model.ShippingAddress is not null)
     await rules.For(() => model.ShippingAddress!).SetValidatorAsync(new AddressValidator(), ct);
 ```
 
+### Null-Tolerant Member Paths
+
+A `null` intermediate segment in a member path is tolerated: `rules.For(() => model.Address.City)`
+with a `null` `Address` does not throw — the property is treated as `null`, so guards like
+`NotEmpty()` fire normally and null-tolerant validators (`MaxLength`, `EmailAddress`, …) are skipped.
+The same applies to `ForEach` / `ForEachAsync`: a null collection path produces no errors.
+(Only paths whose target type can be null are tolerated; for non-nullable value types the
+`NullReferenceException` still propagates.)
+
 ### CSharpEssentials.Core Integration
 
 `CSharpEssentials.Core` is transitively available (via `CSharpEssentials.Errors`) and ships a rich set of conditional helpers that compose naturally with validators.
