@@ -1,7 +1,11 @@
 using System.Net;
+using System.Text;
+using CSharpEssentials.AspNetCore;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Http;
 using CSharpEssentials.ResultPattern;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 
 Console.WriteLine("=== CSharpEssentials.Http Examples ===");
 Console.WriteLine();
@@ -151,6 +155,44 @@ builderRedirectResult.Switch(
 );
 
 Console.WriteLine();
+
+// ============================================================================
+// CUSTOM IResultErrorMapper
+// ============================================================================
+Console.WriteLine("--- Custom IResultErrorMapper ---");
+
+// In a minimal API app you register the mapper once; ResultEndpointFilter resolves it
+// per request from HttpContext.RequestServices:
+//   builder.Services.AddSingleton<IResultErrorMapper, ApiErrorMapper>();
+//   app.MapGet("/users/{id}", GetUser).AddEndpointFilter<ResultEndpointFilter>();
+// Without a registered mapper the filter falls back to a ProblemDetails response.
+ServiceProvider services = new ServiceCollection()
+    .AddLogging()
+    .AddSingleton<IResultErrorMapper, ApiErrorMapper>()
+    .BuildServiceProvider();
+
+IResultErrorMapper mapper = services.GetRequiredService<IResultErrorMapper>();
+
+Error[][] samples =
+[
+    [Error.NotFound("User.NotFound", "User 42 was not found.")],
+    [Error.Validation("User.Email", "Email is invalid."), Error.Validation("User.Name", "Name is required.")],
+    [Error.Conflict("User.Exists", "User already exists.")]
+];
+
+foreach (Error[] errors in samples)
+{
+    var httpContext = new DefaultHttpContext { RequestServices = services };
+    httpContext.Response.Body = new MemoryStream();
+
+    await mapper.Map(errors).ExecuteAsync(httpContext);
+
+    httpContext.Response.Body.Position = 0;
+    string body = await new StreamReader(httpContext.Response.Body, Encoding.UTF8).ReadToEndAsync();
+    Console.WriteLine($"{errors[0].Type} -> {httpContext.Response.StatusCode} {body}");
+}
+
+Console.WriteLine();
 Console.WriteLine("=== Done ===");
 
 public sealed record User(string Name, string Email);
@@ -195,5 +237,29 @@ public sealed class RedirectMockHandler : HttpMessageHandler
         {
             Content = new StringContent("""{"name":"Redirected Bob","email":"bob@example.com"}""")
         });
+    }
+}
+
+/// <summary>
+/// Maps a failed Result's errors to an HTTP response. The first error decides the status code;
+/// all errors are returned in a compact { errors: [...] } envelope.
+/// </summary>
+public sealed class ApiErrorMapper : IResultErrorMapper
+{
+    public IResult Map(Error[] errors)
+    {
+        int status = errors[0].Type switch
+        {
+            ErrorType.Validation => StatusCodes.Status400BadRequest,
+            ErrorType.NotFound => StatusCodes.Status404NotFound,
+            ErrorType.Conflict => StatusCodes.Status409Conflict,
+            ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
+            _ => StatusCodes.Status500InternalServerError
+        };
+
+        return Results.Json(
+            new { errors = errors.Select(e => new { e.Code, e.Description }) },
+            statusCode: status);
     }
 }
