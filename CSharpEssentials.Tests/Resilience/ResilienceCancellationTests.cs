@@ -179,6 +179,36 @@ public sealed class ResilienceCancellationTests
     }
 
     [Fact]
+    public async Task Generic_CircuitBreaker_Only_Policy_Should_Throw_When_Caller_Cancels_After_Retryable_Failure()
+    {
+        using CancellationTokenSource cts = new();
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create().WithCircuitBreaker();
+
+        Func<Task> act = () => policy.ExecuteAsync(async _ =>
+        {
+            await cts.CancelAsync();
+            return Result<int>.Failure(Error.Unexpected());
+        }, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task NonGeneric_Timeout_Only_Policy_Should_Throw_When_Caller_Cancels_After_Retryable_Failure()
+    {
+        using CancellationTokenSource cts = new();
+        ResiliencePolicy policy = ResiliencePolicy.Create().WithTimeout(TimeSpan.FromSeconds(30));
+
+        Func<Task> act = () => policy.ExecuteAsync(async _ =>
+        {
+            await cts.CancelAsync();
+            return Result.Failure(Error.Unexpected());
+        }, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public async Task Generic_WithResultFallback_Should_Throw_And_Skip_Fallback_When_Caller_Cancels()
     {
         using CancellationTokenSource cts = new();
