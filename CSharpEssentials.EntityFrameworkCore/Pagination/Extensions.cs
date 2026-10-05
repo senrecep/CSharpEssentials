@@ -37,6 +37,61 @@ public static class Extensions
         return new PaginationResponse<T>(data, paginationRequest.PageNumber, paginationRequest.PageSize, count);
     }
 
+    /// <summary>
+    /// Offset-paginates <paramref name="query"/> using a page number and page size.
+    /// Values below 1 are normalized to 1. Apply an ordering before paging for stable results.
+    /// </summary>
+    public static Task<PaginationResponse<T>> PaginateAsync<T>(
+        this IQueryable<T> query,
+        int pageNumber,
+        int pageSize,
+        bool includeTotalCount = true,
+        CancellationToken cancellationToken = default) =>
+        query.PaginateAsync(
+            new PaginationRequest { PageNumber = pageNumber, PageSize = pageSize },
+            search: null,
+            includeTotalCount,
+            cancellationToken);
+
+    /// <summary>
+    /// Synchronous counterpart of
+    /// <see cref="PaginateAsync{T}(IQueryable{T}, IPaginationRequest, Func{string, Expression{Func{T, bool}}}?, bool, CancellationToken)"/>.
+    /// Also works on non-EF queryables (e.g. <c>list.AsQueryable()</c>).
+    /// </summary>
+    public static PaginationResponse<T> Paginate<T>(
+        this IQueryable<T> query,
+        IPaginationRequest paginationRequest,
+        Func<string, Expression<Func<T, bool>>>? search = null,
+        bool includeTotalCount = true)
+    {
+        paginationRequest.Normalize();
+
+        if (search.IsNotNull() && paginationRequest.Search.IsNotEmpty())
+            query = query
+                .Where(search(paginationRequest.Search));
+
+        int count = includeTotalCount ? query.Count() : -1;
+
+        IReadOnlyList<T> data = [.. query
+            .Skip(paginationRequest.SkipCount())
+            .Take(paginationRequest.PageSize)];
+
+        return new PaginationResponse<T>(data, paginationRequest.PageNumber, paginationRequest.PageSize, count);
+    }
+
+    /// <summary>
+    /// Synchronous counterpart of <see cref="PaginateAsync{T}(IQueryable{T}, int, int, bool, CancellationToken)"/>.
+    /// </summary>
+    public static PaginationResponse<T> Paginate<T>(
+        this IQueryable<T> query,
+        int pageNumber,
+        int pageSize,
+        bool includeTotalCount = true) =>
+        query.Paginate(
+            new PaginationRequest { PageNumber = pageNumber, PageSize = pageSize },
+            search: null,
+            includeTotalCount);
+
     private static readonly ConcurrentDictionary<LambdaExpression, Delegate> _cursorSelectorCache = new(
         Environment.ProcessorCount * 2,
         31
