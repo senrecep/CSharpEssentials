@@ -99,7 +99,7 @@ Resilience-specific errors are returned as `Error` values:
 
 When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
 
-Cancellation of the caller's token is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback. If the caller cancels after a failed attempt, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException`; a `WithRetry` policy without a fallback stops retrying and returns the last failed result. An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is treated as a normal failure: it is retried and it triggers the fallback.
+Cancellation of the caller's token is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback. If the caller cancels after a failed attempt, `ExecuteAsync`, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException` instead of returning the failed result. This is the same whether the cancel lands during an attempt or during the backoff delay, and it also applies right after the final attempt: cancellation wins over returning the last failure. An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is treated as a normal failure: it is retried and it triggers the fallback.
 
 A `default(ResiliencePolicy)` or `default(ResiliencePolicy<T>)` behaves like `Create()`.
 

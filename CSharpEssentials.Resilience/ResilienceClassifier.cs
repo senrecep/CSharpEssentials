@@ -30,6 +30,20 @@ internal static class ResilienceClassifier
         return Error.Exception(ex, ErrorType.Unexpected);
     }
 
+    // A retryable failure observed while the caller's token is cancelled surfaces as cancellation, whether the
+    // cancel landed during an attempt or during the backoff delay. This also applies right after the final
+    // attempt: cancellation wins over returning the last failure.
+    internal static TResult ThrowIfCallerCancelled<TResult>(TResult result, CancellationToken callerToken)
+        where TResult : IResultBase
+    {
+        if (callerToken.IsCancellationRequested && IsRetryable(result))
+        {
+            throw new OperationCanceledException(callerToken);
+        }
+
+        return result;
+    }
+
     internal static bool IsRetryable<TResult>(TResult result)
         where TResult : IResultBase
     {

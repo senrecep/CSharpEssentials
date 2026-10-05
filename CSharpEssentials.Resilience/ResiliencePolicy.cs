@@ -97,14 +97,17 @@ public readonly partial struct ResiliencePolicy
         CancellationToken cancellationToken = default)
     {
         ResiliencePipeline pipeline = GetPipeline();
+        Result<T> result;
         try
         {
-            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            result = await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
         }
         catch (Exception ex)
         {
             return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
+
+        return ResilienceClassifier.ThrowIfCallerCancelled(result, cancellationToken);
     }
 
     public async Task<Result> ExecuteAsync(
@@ -112,14 +115,17 @@ public readonly partial struct ResiliencePolicy
         CancellationToken cancellationToken = default)
     {
         ResiliencePipeline pipeline = GetPipeline();
+        Result result;
         try
         {
-            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            result = await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
         }
         catch (Exception ex)
         {
             return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
+
+        return ResilienceClassifier.ThrowIfCallerCancelled(result, cancellationToken);
     }
 
     private ResiliencePolicy Merge(ResiliencePipeline additionalPipeline)
