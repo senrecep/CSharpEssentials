@@ -1,7 +1,4 @@
 using Google.Cloud.SecretManager.V1;
-using Grpc.Core;
-using Polly;
-using Polly.Retry;
 
 namespace CSharpEssentials.GcpSecretManager.Infrastructure;
 
@@ -15,13 +12,8 @@ internal interface IServiceClientHelper
 
 internal sealed class ServiceClientHelper : IServiceClientHelper
 {
-    private static readonly AsyncRetryPolicy<SecretManagerServiceClient> RetryPolicy = Policy<SecretManagerServiceClient>
-        .Handle<RpcException>(ex => ex.StatusCode is StatusCode.ResourceExhausted or StatusCode.Unavailable)
-        .WaitAndRetryAsync(3, retryAttempt =>
-            TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
-
     public SecretManagerServiceClient Create()
-        => RetryPolicy.ExecuteAsync(() => SecretManagerServiceClient.CreateAsync()).GetAwaiter().GetResult();
+        => SecretManagerServiceClient.Create();
 
     public SecretManagerServiceClient Create(string credentialsPath)
     {
@@ -37,7 +29,7 @@ internal sealed class ServiceClientHelper : IServiceClientHelper
             CredentialsPath = credentialsPath
         };
 
-        return RetryPolicy.ExecuteAsync(() => clientBuilder.BuildAsync()).GetAwaiter().GetResult();
+        return clientBuilder.Build();
     }
 
     public SecretManagerServiceClient CreateWithRegion(string? region)
@@ -49,7 +41,7 @@ internal sealed class ServiceClientHelper : IServiceClientHelper
             builder.Endpoint = $"secretmanager.{region}.rep.googleapis.com";
         }
 
-        return RetryPolicy.ExecuteAsync(() => builder.BuildAsync()).GetAwaiter().GetResult();
+        return builder.Build();
     }
 
     public SecretManagerServiceClient CreateWithRegion(string credentialsPath, string? region)
@@ -64,6 +56,6 @@ internal sealed class ServiceClientHelper : IServiceClientHelper
             clientBuilder.Endpoint = $"secretmanager.{region}.rep.googleapis.com";
         }
 
-        return RetryPolicy.ExecuteAsync(() => clientBuilder.BuildAsync()).GetAwaiter().GetResult();
+        return clientBuilder.Build();
     }
 }
