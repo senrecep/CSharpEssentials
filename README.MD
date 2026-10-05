@@ -251,6 +251,7 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 ### Package dependencies
 
 - `Swashbuckle.AspNetCore` is now `[8.1.0, 10)` (3.x: `[8.1.0, )`, unbounded). Apps on Swashbuckle 7.x must upgrade to 8.x.
+- `CSharpEssentials.EntityFrameworkCore` now pins each target framework to its own EF Core major: `net8.0` → EF `[8, 9)`, `net9.0` → EF `[9.0.4, 10)`, `net10.0` → EF `[10.0.1, 11)` (3.x: open-ended). EF APIs such as `ExecuteUpdate` are not binary compatible across majors, so an app must use the EF major that matches its target framework (e.g. a `net8.0` app on EF 9 should target `net9.0`).
 - Building the library from source (or referencing it with `ProjectReference`) needs the .NET 11 preview SDK. The NuGet packages work with the SDKs of their target frameworks.
 
 ### GCP Secret Manager (`CSharpEssentials.GcpSecretManager`)
