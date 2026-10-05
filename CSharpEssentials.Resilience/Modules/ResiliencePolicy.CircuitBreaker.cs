@@ -1,4 +1,5 @@
 using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Interfaces;
 using Polly;
 using Polly.CircuitBreaker;
 
@@ -19,7 +20,9 @@ public readonly partial struct ResiliencePolicy
                 MinimumThroughput = minimumThroughput,
                 SamplingDuration = samplingDuration ?? TimeSpan.FromMinutes(1),
                 BreakDuration = breakDuration ?? TimeSpan.FromSeconds(30),
-                ShouldHandle = new PredicateBuilder().Handle<Exception>()
+                ShouldHandle = new PredicateBuilder()
+                    .HandleResult(static result => result is IResultBase resultBase && ResilienceClassifier.IsRetryable(resultBase))
+                    .Handle<Exception>()
             })
             .Build();
 

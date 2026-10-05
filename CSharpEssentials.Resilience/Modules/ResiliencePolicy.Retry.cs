@@ -1,4 +1,5 @@
 using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern.Interfaces;
 using Polly;
 using Polly.Retry;
 
@@ -16,7 +17,9 @@ public readonly partial struct ResiliencePolicy
                 MaxRetryAttempts = maxAttempts,
                 Delay = effectiveDelay,
                 BackoffType = exponentialBackoff ? DelayBackoffType.Exponential : DelayBackoffType.Constant,
-                ShouldHandle = new PredicateBuilder().Handle<Exception>()
+                ShouldHandle = new PredicateBuilder()
+                    .HandleResult(static result => result is IResultBase resultBase && ResilienceClassifier.IsRetryable(resultBase))
+                    .Handle<Exception>()
             })
             .Build();
 
