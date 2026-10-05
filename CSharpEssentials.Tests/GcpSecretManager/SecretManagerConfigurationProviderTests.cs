@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using CSharpEssentials.GcpSecretManager;
 using CSharpEssentials.GcpSecretManager.Configuration;
@@ -8,6 +9,7 @@ using Google.Api.Gax.Grpc;
 using Google.Api.Gax.ResourceNames;
 using Google.Cloud.SecretManager.V1;
 using Google.Protobuf;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace CSharpEssentials.Tests.GcpSecretManager;
@@ -374,5 +376,86 @@ public class SecretManagerConfigurationProviderTests
         }
 
         public ValueTask DisposeAsync() => default;
+    }
+
+    [Fact]
+    public void Load_WhenListingFails_ShouldLogErrorToConfiguredLogger()
+    {
+        var mockClient = new Mock<SecretManagerServiceClient>();
+        mockClient.Setup(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Throws(new InvalidOperationException("boom"));
+        var logger = new CapturingLogger();
+        var options = new SecretManagerConfigurationOptions { LoggerFactory = new CapturingLoggerFactory(logger) };
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+
+        provider.Load();
+
+        logger.Entries.Should().Contain(e => e.Level == LogLevel.Error && e.Exception != null && e.Message.Contains("project"));
+    }
+
+    [Fact]
+    public void Load_WithLoggerFactory_ShouldLogSecretLoadingAtDebug()
+    {
+        var secrets = new List<Secret> { CreateSecret("project", "raw-secret") };
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/raw-secret/versions/latest"] = "v"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        var logger = new CapturingLogger();
+        var options = new SecretManagerConfigurationOptions { LoggerFactory = new CapturingLoggerFactory(logger) };
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }], options: options);
+
+        provider.Load();
+
+        logger.Entries.Count(e => e.Level == LogLevel.Debug).Should().Be(2);
+    }
+
+    [Fact]
+    public void Load_WithoutLoggerFactory_ShouldNotWriteToConsole()
+    {
+        var mockClient = new Mock<SecretManagerServiceClient>();
+        mockClient.Setup(x => x.ListSecretsAsync(It.IsAny<ListSecretsRequest>(), It.IsAny<CallSettings>()))
+            .Throws(new InvalidOperationException("boom"));
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+        TextWriter originalOut = Console.Out;
+        TextWriter originalError = Console.Error;
+        using var outWriter = new StringWriter();
+        using var errorWriter = new StringWriter();
+        try
+        {
+            Console.SetOut(outWriter);
+            Console.SetError(errorWriter);
+
+            provider.Load();
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+            Console.SetError(originalError);
+        }
+
+        outWriter.ToString().Should().BeEmpty();
+        errorWriter.ToString().Should().BeEmpty();
+    }
+
+    private sealed class CapturingLoggerFactory(ILogger logger) : ILoggerFactory
+    {
+        public void AddProvider(ILoggerProvider provider) { }
+        public ILogger CreateLogger(string categoryName) => logger;
+        public void Dispose() { }
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public ConcurrentQueue<(LogLevel Level, Exception? Exception, string Message)> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+            => Entries.Enqueue((logLevel, exception, formatter(state, exception)));
     }
 }

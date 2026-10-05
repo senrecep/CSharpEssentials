@@ -1,28 +1,36 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace CSharpEssentials.GcpSecretManager.Configuration;
 
 /// <summary>
 /// Configuration options for Google Cloud Secret Manager integration.
 /// </summary>
-public sealed class SecretManagerConfigurationOptions
+public sealed record SecretManagerConfigurationOptions
 {
     /// <summary>
     /// Gets or sets the path to the Google Cloud credentials JSON file.
     /// </summary>
-    public string? CredentialsPath { get; init; }
-
-    private readonly List<ProjectSecretConfiguration> _projects = [];
+    public string? CredentialsPath { get; set; }
 
     /// <summary>
-    /// Gets the list of project configurations.
+    /// Gets or sets the list of project configurations.
+    /// The list is treated as immutable (copy-on-write): <see cref="AddProject"/> replaces it,
+    /// so copies made with <c>with</c> never observe each other's changes.
     /// </summary>
-    public IReadOnlyList<ProjectSecretConfiguration> Projects => _projects;
+    public IReadOnlyList<ProjectSecretConfiguration> Projects { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the logger factory used for diagnostics. Configuration providers are built
+    /// before dependency injection exists, so pass a factory explicitly.
+    /// When null, nothing is logged.
+    /// </summary>
+    public ILoggerFactory? LoggerFactory { get; set; }
 
     /// <summary>
     /// Gets or sets the custom configuration loader.
     /// </summary>
-    public ISecretManagerConfigurationLoader? Loader { get; init; }
+    public ISecretManagerConfigurationLoader? Loader { get; set; }
 
     /// <summary>
     /// Gets or sets whether to load configuration from appsettings.json.
@@ -48,7 +56,8 @@ public sealed class SecretManagerConfigurationOptions
     /// Adds a project configuration.
     /// </summary>
     /// <param name="project">The project configuration to add.</param>
-    public void AddProject(ProjectSecretConfiguration project)
+    /// <returns>This options instance for chaining.</returns>
+    public SecretManagerConfigurationOptions AddProject(ProjectSecretConfiguration project)
     {
 #if NET6_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(project);
@@ -56,7 +65,8 @@ public sealed class SecretManagerConfigurationOptions
         if (project is null)
             throw new ArgumentNullException(nameof(project));
 #endif
-        _projects.Add(project);
+        Projects = [.. Projects, project];
+        return this;
     }
 
     internal void LoadFromConfiguration(IConfiguration configuration)

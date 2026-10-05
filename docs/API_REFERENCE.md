@@ -1188,7 +1188,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 |------|-------------|
 | `SecretManagerConfigurationSource` | `IConfigurationSource` for Secret Manager |
 | `SecretManagerConfigurationProvider` | Loads secrets as configuration values |
-| `SecretManagerConfigurationOptions` | Options: project ID, filters, refresh interval |
+| `SecretManagerConfigurationOptions` | `sealed record` options: `Projects` / `AddProject(...)` (fluent), `CredentialsPath`, `Loader`, `LoggerFactory` (optional `ILoggerFactory`; no console output), `BatchSize`, `PageSize` |
 
 ---
 

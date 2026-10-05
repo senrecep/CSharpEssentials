@@ -2,6 +2,8 @@ using CSharpEssentials.GcpSecretManager;
 using CSharpEssentials.GcpSecretManager.Configuration;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Moq;
 
 namespace CSharpEssentials.Tests.GcpSecretManager;
 
@@ -237,4 +239,68 @@ public class SecretManagerConfigurationOptionsTests
         public string GetKey(string keyId) => keyId;
         public bool ShouldLoadSecret(Google.Cloud.SecretManager.V1.Secret secret, ProjectSecretConfiguration projectConfig) => true;
     }
+
+    [Fact]
+    public void AddProject_ShouldReturnSameInstanceForChaining()
+    {
+        var options = new SecretManagerConfigurationOptions();
+
+        SecretManagerConfigurationOptions result = options
+            .AddProject(new ProjectSecretConfiguration { ProjectId = "a" })
+            .AddProject(new ProjectSecretConfiguration { ProjectId = "b" });
+
+        result.Should().BeSameAs(options);
+        options.Projects.Select(p => p.ProjectId).Should().Equal("a", "b");
+    }
+
+    [Fact]
+    public void ConfigureLambda_ShouldSetAllOptions()
+    {
+        var factory = new Mock<ILoggerFactory>().Object;
+        var loader = new DefaultSecretManagerConfigurationLoader();
+        var options = new SecretManagerConfigurationOptions();
+        Action<SecretManagerConfigurationOptions> configure = o =>
+        {
+            o.CredentialsPath = "/path/creds.json";
+            o.Loader = loader;
+            o.LoggerFactory = factory;
+            o.AddProject(new ProjectSecretConfiguration { ProjectId = "p" });
+        };
+
+        configure(options);
+
+        options.CredentialsPath.Should().Be("/path/creds.json");
+        options.Loader.Should().BeSameAs(loader);
+        options.LoggerFactory.Should().BeSameAs(factory);
+        options.Projects.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void Projects_ShouldBeInitializable()
+    {
+        var options = new SecretManagerConfigurationOptions
+        {
+            Projects = [new ProjectSecretConfiguration { ProjectId = "p1" }]
+        };
+
+        options.Projects.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void WithExpression_ShouldNotShareProjectsAfterAddProject()
+    {
+        var original = new SecretManagerConfigurationOptions()
+            .AddProject(new ProjectSecretConfiguration { ProjectId = "p1" });
+
+        SecretManagerConfigurationOptions copy = original with { BatchSize = 5 };
+        copy.AddProject(new ProjectSecretConfiguration { ProjectId = "p2" });
+
+        copy.BatchSize.Should().Be(5);
+        copy.Projects.Should().HaveCount(2);
+        original.Projects.Should().HaveCount(1);
+    }
+
+    [Fact]
+    public void LoggerFactory_ShouldDefaultToNull()
+        => new SecretManagerConfigurationOptions().LoggerFactory.Should().BeNull();
 }
