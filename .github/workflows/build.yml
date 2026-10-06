@@ -33,6 +33,10 @@ jobs:
       - name: Test
         run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
 
+      # Examples stay out of CSharpEssentials.slnx; CI builds the ones that need guarding explicitly.
+      - name: Build Enums end-to-end example
+        run: dotnet build examples/Examples.Enums.EndToEnd/Examples.Enums.EndToEnd.csproj --configuration Release -warnaserror
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
         with:
