@@ -30,9 +30,9 @@ public enum StoredShipment
 [StringEnum(Storage = EnumStorage.Integer)]
 public enum StoredPriority
 {
-    Low,
-    Medium,
-    High,
+    Low = 0,
+    Medium = 1,
+    High = 2,
 }
 
 [Flags]
