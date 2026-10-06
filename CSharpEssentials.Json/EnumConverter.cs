@@ -157,8 +157,14 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     private TEnum ReadNumber(ref Utf8JsonReader reader)
     {
+        // "-0" is not canonical; the string form rejects it as well.
+        bool negativeZero = reader.TryGetInt64(out long signed) && signed == 0 && FirstByte(ref reader) == (byte)'-';
         EnumValueError? error;
-        if (reader.TryGetInt64(out long signed))
+        if (negativeZero)
+        {
+            error = info.CreateError("-0", mode);
+        }
+        else if (reader.TryGetInt64(out signed))
         {
             if (info.TryParseNumber(signed, mode, conventions, out TEnum value, out error))
                 return value;
@@ -170,11 +176,20 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         }
         else
         {
-            byte[] utf8 = reader.HasValueSequence ? reader.ValueSequence.ToArray() : reader.ValueSpan.ToArray();
-            error = info.CreateError(Encoding.UTF8.GetString(utf8), mode);
+            int byteLength = reader.HasValueSequence ? (int)Math.Min(reader.ValueSequence.Length, int.MaxValue) : reader.ValueSpan.Length;
+            error = info.CreateError(Preview(ref reader, byteLength), mode);
         }
 
         throw new EnumValueJsonException(error);
+    }
+
+    private static byte FirstByte(ref Utf8JsonReader reader)
+    {
+        if (!reader.HasValueSequence)
+            return reader.ValueSpan[0];
+        Span<byte> first = stackalloc byte[1];
+        reader.ValueSequence.Slice(0, 1).CopyTo(first);
+        return first[0];
     }
 
     private TEnum ReadFlagsArray(ref Utf8JsonReader reader)
