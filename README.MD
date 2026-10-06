@@ -19,7 +19,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 | Package | Description | Docs | NuGet |
 |---------|-------------|------|-------|
-| `CSharpEssentials` | Meta-package: Results + Errors + Maybe + Any + These + Core + Enums | [📖](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
+| `CSharpEssentials` | Meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http, Time | [📖](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
 | `CSharpEssentials.Results` | `Result<T>` — railway-oriented error handling without exceptions | [📖](examples/Examples.Results/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
 | `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata | [📖](examples/Examples.Errors/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
 | `CSharpEssentials.Maybe` | `Maybe<T>` — explicit optionals, no null reference exceptions | [📖](examples/Examples.Maybe/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
@@ -32,6 +32,8 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [📖](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [📖](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
 | `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, Swagger versioning | [📖](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001–CSE1007 | [📖](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
+| `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001–CSE2008 | [📖](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
 | `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [📖](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
 | `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [📖](CSharpEssentials.Resilience/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
 | `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [📖](examples/Examples.Json/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
@@ -43,7 +45,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 21 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 23 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
 
 ## Installation
 
@@ -160,6 +162,54 @@ public Result<Order> PlaceOrder(Guid productId, int quantity)
         .Then(p => CreateOrder(p, quantity));
 ```
 
+### Endpoints — Source-Generated Minimal APIs
+
+Each endpoint is a type with a static `Map` method. A source generator collects them into one registry per assembly, so mapping uses no reflection and works with Native AOT.
+
+```csharp
+public sealed class ProductsGroup : IEndpointGroup
+{
+    public static string Prefix => "products";
+
+    public static void Configure(RouteGroupBuilder group) => group.WithTags("Products");
+}
+
+[EndpointGroup<ProductsGroup>]
+public sealed class GetProduct : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapGet("/{id:guid}", (Guid id, IProductService service) =>
+            service.GetProduct(id).Match(product => Results.Ok(product), errors => errors.ToProblemResult()));
+}
+
+// Program.cs
+app.MapAllEndpoints(); // every generated registry of the app and its referenced assemblies
+```
+
+### DependencyInjection — Attribute-Based Registration
+
+Mark a class with its lifetime. A source generator writes the registrations, and decorators are applied in order.
+
+```csharp
+[RegisterScoped] // registered as IOrderService, by the I{TypeName} rule
+public sealed class OrderService : IOrderService { }
+
+[Decorates(typeof(IOrderService), Order = 1)]
+public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
+
+// Program.cs
+builder.Services.AddAllServices(); // every generated registry of the app and its referenced assemblies
+```
+
+## What's new in 4.1
+
+- New package `CSharpEssentials.Endpoints`: source-generated endpoint registries (`IEndpoint`, `IEndpointGroup`, `[EndpointGroup]`), a reflection fallback (`MapEndpointsFromAssemblies`), `RouteOf<TEndpoint>`, `RequireRoles`/`RequirePolicies`/`RequireAuthSchemes`, and analyzers CSE1001–CSE1007 with a code fix for CSE1004. See the [Readme](CSharpEssentials.Endpoints/Readme.MD), including a migration guide from Carter.
+- New package `CSharpEssentials.DependencyInjection`: `[RegisterScoped]`/`[RegisterSingleton]`/`[RegisterTransient]` with keys, `As` and `Strategy`, `[Decorates]`, runtime `Decorate`/`TryDecorate`, a reflection fallback (`AddServicesFromAssemblies`), and analyzers CSE2001–CSE2008 with a code fix for CSE2003. See the [Readme](CSharpEssentials.DependencyInjection/Readme.MD), including a migration guide from Scrutor.
+- `CSharpEssentials.AspNetCore`: `MapVersionedGroup(version)` and the `WithValidation<T>()` endpoint filter for `CSharpEssentials.Validation` validators.
+- `CSharpEssentials.Core`: `IsBetween` (inclusive) and `IsBetweenExclusive` for any `IComparable<T>`.
+- `CSharpEssentials.Time`: `NextDayOfWeek`/`PreviousDayOfWeek` for `DateTime` and `DateOnly`, and `GetAge(DateOnly, DateOnly)`/`GetAge(DateOnly, IDateTimeProvider)`.
+- `CSharpEssentials.Json`: `JsonElement.ToClrObject()` converts a `JsonElement` to dictionaries, lists and CLR primitives.
+
 ## Migrating from 3.x to 4.0
 
 4.0 changes default behavior in `CSharpEssentials.AspNetCore` and `CSharpEssentials.EntityFrameworkCore`.
@@ -273,6 +323,14 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 - Listing secrets is now actually retried on `ResourceExhausted`/`Unavailable`. In 3.x the listing swallowed the exception, so the retry never fired and a transient failure silently loaded no secrets for that project. Accessing each secret version is now retried the same way (3 retries, 2s/4s/8s backoff), and the failure is logged once after retries are exhausted.
 - Creating the client no longer wraps `Build` in a retry. Client creation makes no RPC, so that retry could never trigger.
 - Concurrent secret loading within a batch no longer writes to a shared `Dictionary`. Results are merged in secret order, so the first value wins deterministically on key collisions.
+
+### Validation (`CSharpEssentials.Validation`)
+
+- `AddValidator` and `AddValidatorsFromAssembly` use `TryAddEnumerable`, so calling them twice for the same validator no longer registers it twice. Code that resolved `IEnumerable<IValidator<T>>` and relied on the duplicates gets one instance.
+
+### Enums (`CSharpEssentials.Enums`)
+
+- New analyzer CSE0001 (Info): a `[StringEnum]` enum nested in a class or struct gets no generated extension methods, and the analyzer now reports it instead of skipping it silently.
 
 ## AI Skills
 
