@@ -35,6 +35,10 @@ public sealed record EnumConventions
     /// <summary>Whether data layers add check constraints for enum columns.</summary>
     public bool CheckConstraints { get; init; } = true;
 
-    /// <summary>Which enum types the conventions apply to. Default: enums with generated metadata.</summary>
-    public Func<Type, bool> CanHandle { get; init; } = EnumMetadata.IsRegistered;
+    /// <summary>
+    /// Which enum types the conventions apply to. Default: enums with generated metadata and <see cref="StringEnumAttribute"/> enums
+    /// without it, so a missing generator fails loudly instead of silently writing numbers.
+    /// </summary>
+    public Func<Type, bool> CanHandle { get; init; } = static type =>
+        EnumMetadata.IsRegistered(type) || type is not null && type.IsEnum && type.IsDefined(typeof(StringEnumAttribute), inherit: false);
 }
