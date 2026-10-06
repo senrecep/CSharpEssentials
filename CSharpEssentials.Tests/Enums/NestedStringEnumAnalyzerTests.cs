@@ -119,7 +119,7 @@ public class NestedStringEnumAnalyzerTests
 
     private static ImmutableArray<DiagnosticAnalyzer> LoadAnalyzers()
     {
-        string analyzerPath = Path.Combine(AppContext.BaseDirectory, "Analyzers", "CSharpEssentials.Enums.dll");
+        string analyzerPath = Path.Combine(AppContext.BaseDirectory, "Analyzers", "CSharpEssentials.Enums.Generators.dll");
         AnalyzerFileReference reference = new(analyzerPath, new IsolatedAnalyzerAssemblyLoader());
 
         ImmutableArray<DiagnosticAnalyzer> analyzers = reference.GetAnalyzers(LanguageNames.CSharp);

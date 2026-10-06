@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace CSharpEssentials.Enums;
+namespace CSharpEssentials.Enums.Generators;
 
 [Generator(LanguageNames.CSharp)]
 public sealed class StringEnumGenerator : IIncrementalGenerator
