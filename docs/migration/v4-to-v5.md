@@ -109,3 +109,36 @@ The obsolete 4.x `ConfigureEnumConventions(params Assembly[])` and `ConfigureEnu
 - A `CanConvert` predicate that selects an enum without generated metadata now throws `InvalidOperationException` when the model is built. In 4.x such an enum was stored through reflection as a string. Silently falling back to `int` would change the column type in the next migration and lose the stored names, so add `[StringEnum]` to the enum (keep it public or internal), or call `ConfigureEnumConventionsWithReflection`.
 - The new `ConfigureEnumConventions(EnumConventions, EnumStoredAs?)` leaves enums without generated metadata to EF Core.
 - Compiled models (`dbcontext optimize`) are not supported for properties with enum conventions in 5.0.
+
+## EF Core enum columns: converting existing data (`CSharpEssentials.EntityFrameworkCore`)
+
+5.0 stores `[StringEnum]` enums by wire name with a check constraint. Existing columns keep their format with `existingStorage` or `HasLegacyEnumStorage` until you convert them. Convert one column at a time:
+
+1. **Audit.** Run `EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer)` in production (pass `provider: "Microsoft.EntityFrameworkCore.Sqlite"` for SQLite). Fix or map every value it returns.
+2. **Change the model.** Remove `HasLegacyEnumStorage` (or opt the property in with `HasEnumStorage(EnumStorage.String)`) and run `dotnet ef migrations add`.
+3. **Edit the migration.** Delete the generated `AlterColumn` for the column and put `ConvertEnumColumn` in its place, after `DropCheckConstraint` and before `AddCheckConstraint`. Build errors with CSE0014 if you forget to delete the `AlterColumn`.
+
+```csharp
+protected override void Up(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
+    migrationBuilder.AddCheckConstraint(name: "ck_orders_Status_enum", table: "orders", sql: "...");   // as generated
+}
+
+protected override void Down(MigrationBuilder migrationBuilder)
+{
+    migrationBuilder.DropCheckConstraint(name: "ck_orders_Status_enum", table: "orders");
+    migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "Status", from: EnumStoredAs.Text, to: EnumStorage.Integer);
+}
+```
+
+| Old column | `from:` |
+|---|---|
+| EF default integers | `EnumStoredAs.Integer` |
+| `HasConversion<string>()` member names, 3.x `ToSnakeCase` names, camelCase, mixed spellings | `EnumStoredAs.Text` (accepts every known spelling) |
+| `[Flags]` stored as `"Read, Write"` | `EnumStoredAs.FlagsText` with `to: EnumStorage.Integer` |
+| Enum inside a PostgreSQL `jsonb` document | `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` |
+
+4. **Deploy** after every pre-5.0 instance is drained; older instances cannot read the new format.
+
+`Down()` restores the format, not the original bytes: a column that held mixed spellings comes back in the one format you name. On PostgreSQL drop a column default that cannot be cast to the new type before the conversion and recreate it after. SQL is generated for PostgreSQL and SQLite only.
