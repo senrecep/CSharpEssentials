@@ -84,7 +84,8 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 | Swashbuckle | in `CSharpEssentials.AspNetCore` | `CSharpEssentials.AspNetCore.Swashbuckle` | add the package, same `AddSwagger` API |
 | JSON undefined numbers | accepted (`AllowUndefinedValues = true`) | rejected; `ConditionalStringEnumConverter.AllowUndefinedValues` removed (compile break) | none for valid data; `[EnumFallback]` for consumers |
 | `[StringEnum]` without metadata | snake_case string through reflection | CSE0015 warning, converter creation throws | make the enum internal/public, not nested in a generic type; rebuild contracts with 5.0 |
-| Enums without `[StringEnum]` | handled through reflection when the predicate selected them | not handled unless the reflection fallback is opted in | add `[StringEnum]`, or opt in (not AOT safe) |
+| Enums without `[StringEnum]` | handled through reflection when the predicate selected them | JSON: not handled unless `AddEnumConventionsWithReflection` / `CreateWithReflectionFallback` is used. EF conventions, enum binding and `StringEnumNaming`: throw until #62/#64 move them onto `EnumConventions` with the same opt-in | add `[StringEnum]`, or opt in (not AOT safe) |
+| Json AOT annotations | none | `EnhancedJsonSerializerOptions`, `PolymorphicJsonConverterFactory`/`PolymorphicJsonConverter<T>` and `ConvertTo*`/`ConvertFrom*` carry `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]` | trim/AOT consumers with warnings as errors see IL2026/IL3050 on these calls; pass a source-generated `JsonSerializerContext` or opt out explicitly |
 | JSON flags | `"read, write"` | `["read","write"]` (comma string still read) | clients that parse flags strings must read arrays |
 | JSON member names | case-sensitive policy name or C# name | any casing, aliases | none |
 | EF manual `HasConversion` | untouched | untouched (skipped by the convention) | remove it when ready to convert |
@@ -106,7 +107,7 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 
 **Negative**
 - A runtime naming policy is no longer possible. Teams that used a custom `JsonNamingPolicy` set the MSBuild property, the enum attribute, or `[JsonStringEnumMemberName]` per member.
-- Enums that are not marked `[StringEnum]` take the reflection path, which is not AOT safe. CSE0010 (info, opt-in) points to them.
+- Enums that are not marked `[StringEnum]` are not handled unless the reflection fallback is opted in, and that path is not AOT safe. CSE0010 (info, opt-in) points to them.
 - Check constraints must be dropped and recreated when members change. The convention does it automatically, but the migration is no longer empty for an enum change.
 - New dependencies `Microsoft.AspNetCore.OpenApi` and `Microsoft.OpenApi` 2.x (approved 2026-10-06), confined to `CSharpEssentials.AspNetCore.OpenApi`. There is no Refit package: HTTP client libraries get a ten-line adapter over the public non-generic `EnumValueFormatter` (design section 13.1).
 
