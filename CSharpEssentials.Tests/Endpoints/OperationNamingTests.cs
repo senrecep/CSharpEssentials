@@ -1,5 +1,6 @@
 using System.Reflection;
 using CSharpEssentials.Endpoints;
+using CSharpEssentials.Tests.Generators;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -28,6 +29,33 @@ public class OperationNamingTests
         public sealed class Ping : IEndpoint
         {
             public static void Map(IEndpointRouteBuilder app) => app.MapGet("/ROUTE", () => "pong");
+        }
+        """;
+
+    private const string ReservedSource = """
+        using CSharpEssentials.Endpoints;
+        using Microsoft.AspNetCore.Builder;
+        using Microsoft.AspNetCore.Routing;
+
+        namespace Sample.Reserved;
+
+        public sealed class Items : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/items", () => "items");
+        }
+
+        public sealed class Archive : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/archive", () => "archive").WithName("ArchiveItems");
+        }
+
+        public static class Startup
+        {
+            public static void Configure(IEndpointRouteBuilder app)
+            {
+                app.MapSampleReservedEndpoints(static options => options.OperationNaming = OperationNaming.TypeName);
+                app.MapGet("/x", () => "x").WithName("Items");
+            }
         }
         """;
 
@@ -150,6 +178,43 @@ public class OperationNamingTests
         links.GetPathByRouteValues("NamingEndpoints_Items_Post", new RouteValueDictionary()).Should().Be("/naming/items");
     }
 
+    [Fact]
+    public async Task TypeName_Should_Suffix_Generated_Name_When_Plain_Endpoint_Name_Is_Reserved_At_Build_Time()
+    {
+        Assembly assembly = LoadGenerated("Sample.Reserved", ReservedSource);
+        await using WebApplication app = CreateDocumentedApp();
+        assembly.GetType("Sample.Reserved.Startup", throwOnError: true)!.GetMethod("Configure")!.Invoke(null, [app]);
+        await app.StartAsync();
+        LinkGenerator links = app.Services.GetRequiredService<LinkGenerator>();
+
+        Names(app).Should().BeEquivalentTo([("/archive", "ArchiveItems"), ("/items", "Items_2"), ("/x", "Items")]);
+        links.GetPathByName("Items", new RouteValueDictionary()).Should().Be("/x");
+        links.GetPathByName("Items_2", new RouteValueDictionary()).Should().Be("/items");
+        links.GetPathByName("ArchiveItems", new RouteValueDictionary()).Should().Be("/archive");
+    }
+
+    [Fact]
+    public void ReserveEndpointNames_Should_Ignore_Names_When_OperationNaming_Is_Not_TypeName()
+    {
+        using WebApplication app = EndpointTestApp.Create();
+
+        EndpointMapper.ReserveEndpointNames(app, new EndpointMappingOptions(), ["NamingEndpoints_Echo"]);
+        Map<NamingEndpoints.Echo>(app);
+
+        Names(app).Should().Equal(("/naming/echo", "NamingEndpoints_Echo"));
+    }
+
+    [Fact]
+    public void ReserveEndpointNames_Should_Suffix_Generated_Name_When_Name_Is_Reserved()
+    {
+        using WebApplication app = EndpointTestApp.Create();
+
+        Map<NamingEndpoints.Echo>(app);
+        EndpointMapper.ReserveEndpointNames(app, new EndpointMappingOptions { OperationNaming = OperationNaming.TypeName }, ["NamingEndpoints_Echo"]);
+
+        Names(app).Should().Equal(("/naming/echo", "NamingEndpoints_Echo_2"));
+    }
+
     private static void Map<TEndpoint>(IEndpointRouteBuilder app)
         where TEndpoint : IEndpoint =>
         EndpointMapper.MapEndpoint<TEndpoint>(app, null, new EndpointMappingOptions { OperationNaming = OperationNaming.TypeName });
@@ -179,6 +244,15 @@ public class OperationNamingTests
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(static options => options.SwaggerDoc("v1", new OpenApiInfo { Title = "Naming", Version = "v1" }));
         return builder.Build();
+    }
+
+    private static Assembly LoadGenerated(string assemblyName, string source)
+    {
+        using MemoryStream stream = new();
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(assemblyName, OutputKind.DynamicallyLinkedLibrary, source));
+        EmitResult result = run.OutputCompilation.Emit(stream);
+        result.Success.Should().BeTrue(string.Join(Environment.NewLine, result.Diagnostics));
+        return Assembly.Load(stream.ToArray());
     }
 
     private static Assembly Load(string assemblyName, string source)

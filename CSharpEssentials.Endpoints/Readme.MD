@@ -99,6 +99,8 @@ Every endpoint gets `EndpointTypeMetadata`, which identifies the endpoint type a
 
 `TypeName` names are not stable across changes to the application. Adding an endpoint or type with the same name can qualify an existing name with its namespace or give it a numeric suffix, which renames the generated operationId and the method names of NSwag or Kiota clients. Set the name with `WithName(...)` in `Map` for endpoints whose client method names must not change.
 
+Explicit names are reserved at build time. The generator collects constant names set with `WithName(...)` or with `WithMetadata(new EndpointNameAttribute(...))`, `new EndpointNameMetadata(...)` or `new RouteNameMetadata(...)` anywhere in the project, including plain `app.MapGet(...).WithName("Items")` calls outside endpoint types. The generated registry reserves them before it maps, and `MapAllEndpoints` reserves the host project's names even when the host has no endpoint types. With `TypeName`, a generated name that would collide with a reserved one gets a numeric suffix (`Items_2`); the explicit name never changes. Not reserved: names that are not constants (CSE1011), `[EndpointName]` attributes on handlers outside endpoint types, endpoints mapped with the `MapEndpointsFromAssemblies` reflection fallback, and names of a project whose registry is not called (calling only a library's `Map{Asm}Endpoints` reserves only that library's names). A reserved name stays reserved even when its endpoint is not mapped.
+
 ## Typed routes
 
 `RouteOf<TEndpoint>` builds a request path from the endpoint type, which keeps tests independent of route strings:
@@ -143,7 +145,7 @@ Failed validation returns a 400 problem response and the handler does not run. S
 
 ## Diagnostics
 
-The bundled analyzer reports types the generator cannot map. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed.
+The bundled analyzer reports types the generator cannot map and explicit endpoint names that repeat or cannot be reserved. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed, except by the endpoint name rules CSE1010 and CSE1011.
 
 | ID | Severity | Rule |
 |---|---|---|
@@ -156,6 +158,8 @@ The bundled analyzer reports types the generator cannot map. Invalid types are s
 | CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct. |
 | CSE1008 | Error | Endpoint or group type is a `ref struct`. Generated code passes it as a generic type argument, which ref structs cannot be, so it is not mapped. |
 | CSE1009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiEndpointRegistry`. `MapAllEndpoints` skips both registries so the project still compiles. The project's own registry counts too: when it has the same name as a referenced one, only the own registry is mapped. Give one of them a distinct name with `[assembly: EndpointRegistryName("...")]`. Reported only in projects that generate the aggregate. |
+| CSE1010 | Warning | The same constant endpoint name is set at two call sites with `WithName(...)` or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` in `WithMetadata(...)`. Duplicate names produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately, so `WithMetadata(new EndpointNameMetadata("X"))` and `WithMetadata(new RouteNameMetadata("X"))` on one endpoint are not reported. Reported on each call site. |
+| CSE1011 | Info | An explicit endpoint name outside an `IEndpoint` or `IEndpointGroup` type is not a compile-time constant, so the generated registry cannot reserve it and `OperationNaming.TypeName` can generate the same name. Use a constant. Names set inside endpoint and group types are seen at runtime and are not reported. |
 
 The bundled code fix for CSE1004 ("Remove instance state") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
 

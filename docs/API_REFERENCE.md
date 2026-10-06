@@ -1697,7 +1697,7 @@ app.MapAppsEndpoints(options =>
 |--------|-------------|
 | `Filter(predicate)` | Skips endpoint types for which the predicate returns `false`. Multiple predicates are AND-combined |
 | `ConfigureEach((builder, type) => ...)` | Runs once per endpoint type after group `Configure`, in registration order |
-| `OperationNaming` | `None` (default), `TypeName` or `Custom(...)`. `TypeName` builds unique names from the type and its containing types (`Orders_Endpoint`), adds the HTTP method when a type maps several routes (`Items_Get`, `Items_Post`) and qualifies colliding names with the namespace. An explicit `WithName(...)` always wins |
+| `OperationNaming` | `None` (default), `TypeName` or `Custom(...)`. `TypeName` builds unique names from the type and its containing types (`Orders_Endpoint`), adds the HTTP method when a type maps several routes (`Items_Get`, `Items_Post`) and qualifies colliding names with the namespace. An explicit `WithName(...)` always wins: constant explicit names anywhere in the project are reserved at build time, so a colliding generated name gets a numeric suffix (`Items_2`). Generated names can change when same-named types are added; use `WithName(...)` where client method names must stay stable |
 | `AutoTagFromGroup` | Tags untagged endpoints with the innermost group name (`UsersGroup` → `Users`) |
 | `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints` |
 
@@ -1729,6 +1729,8 @@ group.RequireRoles("admin", "editor");
 | CSE1007 | Error | `[EndpointGroup(typeof(X))]` target is not a concrete, non-ref struct `IEndpointGroup` |
 | CSE1008 | Error | Endpoint or group type is a `ref struct` and is not mapped |
 | CSE1009 | Warning | Registries (referenced or the project's own) share a sanitized name; `MapAllEndpoints` skips the referenced ones (use `[assembly: EndpointRegistryName]`) |
+| CSE1010 | Warning | The same constant endpoint name is set at two call sites (`WithName`, or `EndpointNameAttribute`/`EndpointNameMetadata`/`RouteNameMetadata` in `WithMetadata`); endpoint and route names are compared separately |
+| CSE1011 | Info | An explicit endpoint name outside an `IEndpoint`/`IEndpointGroup` type is not a constant, so it cannot be reserved at build time |
 
 ---
 

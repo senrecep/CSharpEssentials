@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace CSharpEssentials.Endpoints.Generators;
 
 /// <summary>
-/// Reports endpoint and group types that the endpoints generator cannot map and duplicate routes (CSE1001–CSE1009).
+/// Reports endpoint and group types that the endpoints generator cannot map, duplicate routes and explicit endpoint names that cannot be reserved or repeat (CSE1001–CSE1011).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
@@ -24,7 +24,9 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         EndpointDiagnostics.SkippedType,
         EndpointDiagnostics.InvalidGroupTarget,
         EndpointDiagnostics.RefStructType,
-        EndpointDiagnostics.RegistryNameCollision);
+        EndpointDiagnostics.RegistryNameCollision,
+        EndpointDiagnostics.DuplicateEndpointName,
+        EndpointDiagnostics.NonConstantEndpointName);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -46,16 +48,21 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
                 SymbolKind.NamedType);
             start.RegisterCompilationEndAction(end => ReportRegistryCollisions(end, !ownEndpoints.IsEmpty));
             ConcurrentBag<EndpointRoute> routes = [];
+            ConcurrentBag<EndpointNameUse> names = [];
             start.RegisterOperationAction(
                 operationContext =>
                 {
-                    foreach (EndpointRoute route in EndpointRouteReader.Read((IInvocationOperation)operationContext.Operation, operationContext.ContainingSymbol))
+                    var invocation = (IInvocationOperation)operationContext.Operation;
+                    foreach (EndpointRoute route in EndpointRouteReader.Read(invocation, operationContext.ContainingSymbol))
                     {
                         routes.Add(route);
                     }
+
+                    AnalyzeEndpointNames(operationContext, invocation, names);
                 },
                 OperationKind.Invocation);
             start.RegisterCompilationEndAction(end => ReportDuplicateRoutes(end, routes));
+            start.RegisterCompilationEndAction(end => ReportDuplicateEndpointNames(end, names));
         });
     }
 
@@ -108,6 +115,46 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
                     route.Method,
                     route.Pattern,
                     other.EndpointName));
+            }
+        }
+    }
+
+    private static void AnalyzeEndpointNames(OperationAnalysisContext context, IInvocationOperation invocation, ConcurrentBag<EndpointNameUse> names)
+    {
+        foreach (EndpointNameUse use in EndpointNameReader.Read(invocation))
+        {
+            if (use.Name is not null)
+            {
+                names.Add(use);
+            }
+            else if (context.ContainingSymbol.ContainingType is not { } type ||
+                !EndpointSymbolRules.IsEndpoint(type) && !EndpointSymbolRules.IsGroup(type))
+            {
+                context.ReportDiagnostic(Diagnostic.Create(EndpointDiagnostics.NonConstantEndpointName, use.Location));
+            }
+        }
+    }
+
+    private static void ReportDuplicateEndpointNames(CompilationAnalysisContext context, ConcurrentBag<EndpointNameUse> names)
+    {
+        HashSet<Location> reported = [];
+        ReportDuplicateEndpointNames(context, names.Where(static use => use.IsEndpointName), reported);
+        ReportDuplicateEndpointNames(context, names.Where(static use => use.IsRouteName), reported);
+    }
+
+    private static void ReportDuplicateEndpointNames(CompilationAnalysisContext context, IEnumerable<EndpointNameUse> names, HashSet<Location> reported)
+    {
+        IEnumerable<IGrouping<string, EndpointNameUse>> duplicates = names
+            .GroupBy(static use => use.Name!, StringComparer.Ordinal)
+            .Where(static group => group.Count() > 1);
+        foreach (IGrouping<string, EndpointNameUse> duplicate in duplicates)
+        {
+            foreach (EndpointNameUse use in duplicate)
+            {
+                if (reported.Add(use.Location))
+                {
+                    context.ReportDiagnostic(Diagnostic.Create(EndpointDiagnostics.DuplicateEndpointName, use.Location, duplicate.Key));
+                }
             }
         }
     }

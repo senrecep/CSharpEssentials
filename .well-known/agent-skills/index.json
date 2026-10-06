@@ -32,7 +32,7 @@
     },
     {
       "name": "csharpessentials-endpoints",
-      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1009.",
+      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1011.",
       "files": ["SKILL.md"]
     },
     {

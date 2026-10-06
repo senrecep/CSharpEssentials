@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-endpoints
-description: Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1009.
+description: Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1011.
 ---
 
 # CSharpEssentials.Endpoints
@@ -89,7 +89,7 @@ app.MapAppsEndpoints(options =>
 });
 ```
 
-Every endpoint gets `EndpointTypeMetadata` (`EndpointType` property) so middleware and tests can identify the endpoint type at runtime. An explicit `WithName(...)` always wins over `OperationNaming`. `TypeName` names are unique per application: containing types are part of the name (`Orders_Endpoint`), a type with several routes gets the HTTP method as a suffix (`Items_Get`, `Items_Post`), colliding names are qualified with the namespace, and two types with the same full name throw at map time. Generated names can change when a same-named endpoint or type is added (an existing name gets the namespace or a numeric suffix), which renames NSwag/Kiota client methods; use `WithName(...)` for endpoints that need stable names.
+Every endpoint gets `EndpointTypeMetadata` (`EndpointType` property) so middleware and tests can identify the endpoint type at runtime. An explicit `WithName(...)` always wins over `OperationNaming`. `TypeName` names are unique per application: containing types are part of the name (`Orders_Endpoint`), a type with several routes gets the HTTP method as a suffix (`Items_Get`, `Items_Post`), colliding names are qualified with the namespace, and two types with the same full name throw at map time. Generated names can change when a same-named endpoint or type is added (an existing name gets the namespace or a numeric suffix), which renames NSwag/Kiota client methods; use `WithName(...)` for endpoints that need stable names. Constant explicit names (`WithName`, or `EndpointNameAttribute`/`EndpointNameMetadata`/`RouteNameMetadata` in `WithMetadata`) anywhere in the project, including plain `app.MapGet(...).WithName("Items")`, are reserved at build time by the generated registry and `MapAllEndpoints`, so a colliding `TypeName` name gets a suffix (`Items_2`) and the explicit name never changes. Non-constant names (CSE1011) and the `MapEndpointsFromAssemblies` fallback are not reserved.
 
 ---
 
@@ -138,6 +138,8 @@ Same discovery rules, ordering and options as the generated registries. Types th
 | CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct. |
 | CSE1008 | Error | Endpoint or group type is a `ref struct`. Generated code passes it as a generic type argument, which ref structs cannot be, so it is not mapped. |
 | CSE1009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiEndpointRegistry`. `MapAllEndpoints` skips both registries so the project still compiles. The project's own registry counts too: when it has the same name as a referenced one, only the own registry is mapped. Give one of them a distinct name with `[assembly: EndpointRegistryName("...")]`. Reported only in projects that generate the aggregate. |
+| CSE1010 | Warning | The same constant endpoint name is set at two call sites (`WithName`, or `EndpointNameAttribute`/`EndpointNameMetadata`/`RouteNameMetadata` in `WithMetadata`). Endpoint names and route names are compared separately. |
+| CSE1011 | Info | An explicit endpoint name outside an `IEndpoint`/`IEndpointGroup` type is not a constant, so it cannot be reserved at build time. |
 
 ---
 

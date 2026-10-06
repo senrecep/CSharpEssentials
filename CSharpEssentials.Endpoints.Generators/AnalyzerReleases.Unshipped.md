@@ -14,3 +14,5 @@ CSE1006 | CSharpEssentials.Endpoints | Info | EndpointsAnalyzer
 CSE1007 | CSharpEssentials.Endpoints | Error | EndpointsAnalyzer
 CSE1008 | CSharpEssentials.Endpoints | Error | EndpointsAnalyzer
 CSE1009 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
+CSE1010 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
+CSE1011 | CSharpEssentials.Endpoints | Info | EndpointsAnalyzer

@@ -130,6 +130,25 @@ public static class EndpointMapper
         }
     }
 
+    /// <summary>
+    /// Reserves endpoint names set explicitly in the application, so that <see cref="OperationNaming.TypeName"/>
+    /// gives a numeric suffix to a generated name that would collide with one of them.
+    /// </summary>
+    /// <param name="app">The builder the endpoints are mapped on.</param>
+    /// <param name="options">The mapping options.</param>
+    /// <param name="names">The explicit endpoint names found at build time.</param>
+    public static void ReserveEndpointNames(IEndpointRouteBuilder app, EndpointMappingOptions options, IReadOnlyList<string> names)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(names);
+
+        if (options.OperationNaming.IsTypeName)
+        {
+            OperationNameRegistry.For(app.ServiceProvider).Reserve(names);
+        }
+    }
+
     private static bool Includes(EndpointMappingOptions options, Type endpointType, ILogger? logger)
     {
         bool included = options.Includes(endpointType, out bool evaluated);
