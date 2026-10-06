@@ -44,4 +44,27 @@ public class EnumNameConverterTests
     [InlineData("Value1", "value_1")]
     public void LegacySnakeCase_Should_Keep_The_4x_Output(string name, string expected) =>
         EnumNameConverter.ToLegacySnakeCase(name).Should().Be(expected);
+
+    // Member names never hold spaces, but the converters are ports of JsonNamingPolicy and must stay in step with it.
+    public static readonly TheoryData<string> SpacedNames =
+    [
+        "Foo Bar", "Foo bar", "foo bar", " Leading", "Trailing ", "Two  Spaces", "AB C", "ABC Def", "A B", "HTTP status", "Value 1", "",
+    ];
+
+    [Theory]
+    [MemberData(nameof(SpacedNames))]
+    public void Separated_Names_With_Spaces_Should_Match_JsonNamingPolicy(string name)
+    {
+        EnumNameConverter.Convert(name, EnumNaming.SnakeCaseLower).Should().Be(JsonNamingPolicy.SnakeCaseLower.ConvertName(name));
+        EnumNameConverter.Convert(name, EnumNaming.KebabCaseUpper).Should().Be(JsonNamingPolicy.KebabCaseUpper.ConvertName(name));
+    }
+
+    [Theory]
+    [MemberData(nameof(SpacedNames))]
+    public void CamelCase_With_Spaces_Should_Match_JsonNamingPolicy(string name) =>
+        EnumNameConverter.Convert(name, EnumNaming.CamelCase).Should().Be(JsonNamingPolicy.CamelCase.ConvertName(name));
+
+    [Fact]
+    public void Undefined_Naming_Should_Fall_Back_To_SnakeCaseLower() =>
+        EnumNameConverter.Convert("PendingApproval", (EnumNaming)99).Should().Be("pending_approval");
 }

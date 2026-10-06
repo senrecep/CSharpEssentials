@@ -67,4 +67,27 @@ public class EnumInfoFormatterTests
         Info<SignedValue>().Format(SignedValue.Min, EnumWireFormat.Number).Should().Be("-9223372036854775808");
         Info<TinyValue>().Format(TinyValue.Low, EnumWireFormat.Number).Should().Be("-128");
     }
+
+    [Fact]
+    public void Format_Should_Throw_For_Flags_With_Bits_Outside_Every_Member()
+    {
+        Action act = () => Info<ParserPermissions>().Format(ParserPermissions.Read | (ParserPermissions)8, EnumWireFormat.String);
+
+        act.Should().Throw<EnumValueException>().Which.Error.Value.Should().Be("9");
+    }
+
+    [Fact]
+    public void Format_Should_Write_The_Composite_For_Bits_Without_A_Single_Flag()
+    {
+        Info<ParserCompositeAccess>().Format(ParserCompositeAccess.Read | ParserCompositeAccess.WriteDelete, EnumWireFormat.String)
+            .Should().Be("read,write_delete");
+    }
+
+    [Fact]
+    public void Format_Should_Throw_When_Only_Part_Of_A_Composite_Is_Set()
+    {
+        Action act = () => Info<ParserCompositeAccess>().Format((ParserCompositeAccess)5, EnumWireFormat.String);
+
+        act.Should().Throw<EnumValueException>().Which.Error.Value.Should().Be("5");
+    }
 }
