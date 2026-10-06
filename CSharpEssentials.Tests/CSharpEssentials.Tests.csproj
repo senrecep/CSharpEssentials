@@ -79,6 +79,7 @@
     <ProjectReference Include="..\CSharpEssentials.Endpoints.CodeFixes\CSharpEssentials.Endpoints.CodeFixes.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsA\CSharpEssentials.Tests.Fixtures.EndpointsA.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsB\CSharpEssentials.Tests.Fixtures.EndpointsB.csproj" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EnumsContracts\CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
     <ProjectReference
