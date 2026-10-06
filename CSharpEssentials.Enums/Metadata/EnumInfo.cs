@@ -210,7 +210,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
 
     /// <summary>
     /// Formats a value. <see cref="FlagsAttribute"/> values are written as their single flags joined with <c>,</c> for
-    /// <see cref="EnumWireFormat.String"/>. Undefined values throw <see cref="EnumValueException"/>.
+    /// <see cref="EnumWireFormat.String"/>; zero is written as the zero member, or as <c>0</c> when there is none. Undefined values throw <see cref="EnumValueException"/>.
     /// </summary>
     public string Format(TEnum value, EnumWireFormat format)
     {
@@ -226,8 +226,9 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
             throw Undefined(raw);
         if (format == EnumWireFormat.Number)
             return EnumTypeTraits<TEnum>.FormatRaw(raw);
+        // Without a zero member the empty set is written as "0", which reads back as the same value.
         if (raw == 0)
-            return _byRaw.TryGetValue(0, out EnumMemberInfo<TEnum>? none) ? none.WireName : string.Empty;
+            return _byRaw.TryGetValue(0, out EnumMemberInfo<TEnum>? none) ? none.WireName : "0";
 
         List<string> names = [];
         Decompose(raw, names);

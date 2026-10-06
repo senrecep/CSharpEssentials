@@ -44,6 +44,13 @@ public enum ParserPermissions : byte
     ReadWrite = Read | Write,
 }
 
+[Flags]
+public enum ParserAccess
+{
+    Read = 1,
+    Write = 2,
+}
+
 public enum HugeValue : ulong
 {
     Zero = 0,
