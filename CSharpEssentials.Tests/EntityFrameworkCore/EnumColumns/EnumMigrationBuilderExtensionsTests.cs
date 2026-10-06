@@ -39,6 +39,29 @@ public sealed class EnumMigrationBuilderExtensionsTests
     }
 
     [Fact]
+    public void ConvertEnumColumn_Should_UseAShortDeterministicTemporaryColumn_When_FlagsTextGoesToIntegerOnPostgres()
+    {
+        string column = new('p', 60);
+
+        string[] first = Sql(column);
+        string[] second = Sql(column);
+
+        string temporary = first[0].Split('"')[3];
+        temporary.Should().MatchRegex("^cse_tmp_[0-9a-f]{8}$");
+        first.Should().HaveCount(4).And.AllSatisfy(sql => sql.Should().NotContain(column + "__"));
+        first[3].Should().Be($"ALTER TABLE \"orders\" DROP COLUMN \"{temporary}\";");
+        second.Should().Equal(first);
+        Sql("Permissions")[0].Should().NotContain(temporary);
+
+        static string[] Sql(string column)
+        {
+            MigrationBuilder builder = new(Postgres);
+            builder.ConvertEnumColumn<StoredPermissions>("orders", column, from: EnumStoredAs.FlagsText, to: EnumStorage.Integer);
+            return [.. builder.Operations.Cast<SqlOperation>().Select(static operation => operation.Sql)];
+        }
+    }
+
+    [Fact]
     public void ConvertEnumColumn_Should_QuoteSchemaAndNames()
     {
         MigrationBuilder builder = new(Postgres);
