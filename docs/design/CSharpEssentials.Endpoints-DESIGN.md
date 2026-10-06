@@ -381,7 +381,7 @@ Reported by `EndpointsAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssentials.Endp
 | CSE1002 | Group nesting cycle (`[EndpointGroup]` chain returns to a type already in the chain) | Error | Mapping cannot terminate |
 | CSE1003 | More than one group attribute on one type (`typeof` form and generic form both present) | Error | Ambiguous parent |
 | CSE1004 | Endpoint declares instance state (instance fields or auto-properties) or a constructor with parameters | Warning | It is never instantiated, so the state and dependencies are dead code |
-| CSE1005 | Duplicate verb + route literal in the same group (best effort, constant strings only) | Warning | **P3 (#58)**, ID reserved |
+| CSE1005 | Duplicate HTTP method + route literal in the same group (best effort, constant strings only) | Warning | Ambiguous match at runtime. Compares `MapGet/Post/Put/Delete/Patch` and `MapMethods` with a constant pattern and a constant method array, called directly on the `Map` parameter. Patterns compare case-insensitively without leading/trailing `/`. Ungrouped endpoints form one group. Reported on each pattern argument at compilation end. |
 | CSE1006 | Abstract or open-generic `IEndpoint`/`IEndpointGroup` type is skipped | Info | Deliberate skip, made visible |
 | CSE1007 | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract or open-generic | Error | Generated `MapGroup<X>` would not compile |
 
@@ -391,7 +391,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 
 ## 8. P3 Follow-ups (#58, optional)
 
-- CSE1005 duplicate verb+route literal (warning).
+- Shipped: CSE1005 duplicate HTTP method + route literal (warning, §7).
 - Typed route helper `app.RouteOf<CreateApp>(new { id })`, resolved through `EndpointTypeMetadata`.
 - Validation endpoint filter on `CSharpEssentials.Validation` `IValidator<T>` → `ToProblemResult`.
 - Security shortcuts (`Roles`, `Policies`, `AuthSchemes`) over `RequireAuthorization`.
@@ -436,7 +436,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Generator snapshots (#52) | Registry, nested groups, empty assembly (no output), `EndpointRegistryName`, sanitized names, aggregate on/off (Exe, library, test project, opt-in, opt-out), Verify.SourceGenerators |
 | Incremental caching | Second run with an unrelated edit → tracked steps `Cached`/`Unchanged` |
 | Behavior (`TestServer`) | `MapGroup("")` yields an identical `RoutePattern`, ApiExplorer group, tags and operationId vs. direct mapping; convention order (§5.5); filters and `RequireAuthorization` in `Map` still apply; nested groups; aggregate across two fixture assemblies (`CSharpEssentials.Tests.Fixtures.EndpointsA/B`); no duplicate mapping with module + aggregate; MVC controllers coexist |
-| Analyzer (#53) | Positive and negative per ID (CSE1001–1004, 1006, 1007) |
+| Analyzer (#53, #58) | Positive and negative per ID (CSE1001–1007) |
 | Fallback (#54) | Parity with generated registry; `ReflectionTypeLoadException` logging; versioned group routing + ApiExplorer; AspNetCore has no Endpoints reference |
 | Pack | Generator dll is under `analyzers/dotnet/cs` in `CSharpEssentials.Endpoints.nupkg`, with no `*.Generators` package |
 | AOT (#57) | `examples/Examples.Endpoints` publishes with `PublishAot=true` and zero trim/AOT warnings (CI `aot` job) |
