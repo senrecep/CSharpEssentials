@@ -19,18 +19,17 @@ The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle h
 
 ## Package references
 
-The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository. The same app outside the repository references the packages:
+The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` never carries analyzers. The same app outside the repository references the packages:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="CSharpEssentials.Enums" Version="5.0.0" />           <!-- generator, analyzers, code fixes -->
   <PackageReference Include="CSharpEssentials.AspNetCore" Version="5.0.0" />
   <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="5.0.0" />
   <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="5.0.0" />
 </ItemGroup>
 ```
 
-Keep the direct `CSharpEssentials.Enums` reference: the other packages bring the library but not its generator, so without it `[StringEnum]` enums get no metadata.
+No direct `CSharpEssentials.Enums` reference is needed: `CSharpEssentials.AspNetCore` and `CSharpEssentials.EntityFrameworkCore` bring it with its generator, analyzers and code fixes.
 
 ## Running
 

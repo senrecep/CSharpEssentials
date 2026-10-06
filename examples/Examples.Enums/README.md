@@ -13,16 +13,15 @@ This console application shows the helpers that the `CSharpEssentials.Enums` sou
 
 ## Package references
 
-The project references the library projects and the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository. In your own project reference the package, which contains the generator, the analyzers and the code fixes:
+The project references the library projects and the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` never carries analyzers. In your own project reference the package:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="CSharpEssentials.Enums" Version="5.0.0" />
   <PackageReference Include="CSharpEssentials.Json" Version="5.0.0" />
 </ItemGroup>
 ```
 
-Reference `CSharpEssentials.Enums` directly in every project that declares a `[StringEnum]` enum; the generator does not flow through other packages.
+`CSharpEssentials.Json` brings `CSharpEssentials.Enums` with its generator, analyzers and code fixes, as do `.EntityFrameworkCore`, `.AspNetCore`, `.Http` and the `CSharpEssentials` meta-package. Reference `CSharpEssentials.Enums` directly only in a project that uses none of them.
 
 ## Running
 

@@ -8,17 +8,19 @@ One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core
 dotnet add package CSharpEssentials.Enums
 ```
 
-The package contains the source generator, the analyzers and the code fixes. **Reference it directly in every project that declares a `[StringEnum]` enum.** Analyzers do not flow through other packages: `CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`, `.Http` and the `CSharpEssentials` meta-package bring the `CSharpEssentials.Enums` library but not its generator, so an enum declared in a project without the direct reference gets no metadata and no analyzer warning, and its converter throws `InvalidOperationException` at run time.
+The package contains the source generator, the analyzers and the code fixes. They also flow through `CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`, `.Http` and the `CSharpEssentials` meta-package: a project that references one of them gets `[StringEnum]` metadata, the CSE analyzers and the `CSharpEssentialsEnumNaming` property without a direct `CSharpEssentials.Enums` reference. Reference `CSharpEssentials.Enums` directly only when the project uses none of them.
 
 | Scenario | Packages |
 |---|---|
 | Enums only (generated helpers, `EnumMetadata`) | `CSharpEssentials.Enums` |
-| System.Text.Json (workers, message buses, clients) | `CSharpEssentials.Enums` + `CSharpEssentials.Json` |
-| ASP.NET Core API (JSON, binding, responses) | `CSharpEssentials.Enums` + `CSharpEssentials.AspNetCore` |
+| System.Text.Json (workers, message buses, clients) | `CSharpEssentials.Json` |
+| ASP.NET Core API (JSON, binding, responses) | `CSharpEssentials.AspNetCore` |
 | OpenAPI document | add `CSharpEssentials.AspNetCore.OpenApi` (net10.0) **or** `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
-| EF Core storage and migrations | `CSharpEssentials.Enums` + `CSharpEssentials.EntityFrameworkCore` |
-| Outgoing HTTP | `CSharpEssentials.Enums` + `CSharpEssentials.Http` |
-| Enums declared in a shared domain library | `CSharpEssentials.Enums` in the library; consumers need it only if they declare enums too |
+| EF Core storage and migrations | `CSharpEssentials.EntityFrameworkCore` |
+| Outgoing HTTP | `CSharpEssentials.Http` |
+| Enums declared in a shared domain library | `CSharpEssentials.Enums` (or one of the packages above) in the library; consumers need it only if they declare enums too |
+
+Inside this repository the samples and tests use `ProjectReference`s, which never carry analyzers: they reference `CSharpEssentials.Enums.Generators` with `OutputItemType="Analyzer"` themselves (the tests also import `build/CSharpEssentials.Enums.props` for `CSharpEssentialsEnumNaming`).
 
 Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` and `netstandard2.0`. Registration needs C# 9 or later.
 

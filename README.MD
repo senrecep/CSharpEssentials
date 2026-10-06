@@ -227,16 +227,17 @@ public enum OrderStatus
 | Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
 | Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
 
-Install `CSharpEssentials.Enums` directly in every project that declares a `[StringEnum]` enum: it carries the source generator, and analyzers do not flow through the other packages (including the `CSharpEssentials` meta-package). Without it the enum gets no metadata and its converter throws.
+`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. They flow to your project through `CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`, `.Http` and the `CSharpEssentials` meta-package, so a direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses none of them.
 
 | Scenario | Packages |
 |---|---|
-| ASP.NET Core API | `CSharpEssentials.Enums` + `CSharpEssentials.AspNetCore` |
+| ASP.NET Core API | `CSharpEssentials.AspNetCore` |
 | + OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` (net10.0) or `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
 | + EF Core | `CSharpEssentials.EntityFrameworkCore` |
-| Worker or console with EF Core | `CSharpEssentials.Enums` + `CSharpEssentials.EntityFrameworkCore` |
-| JSON only (message bus, client) | `CSharpEssentials.Enums` + `CSharpEssentials.Json` |
-| Outgoing HTTP | `CSharpEssentials.Enums` + `CSharpEssentials.Http` |
+| Worker or console with EF Core | `CSharpEssentials.EntityFrameworkCore` |
+| JSON only (message bus, client) | `CSharpEssentials.Json` |
+| Outgoing HTTP | `CSharpEssentials.Http` |
+| Generated helpers and `EnumMetadata` only | `CSharpEssentials.Enums` |
 
 One-time setup per host:
 
