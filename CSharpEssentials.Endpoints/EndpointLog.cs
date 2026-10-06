@@ -11,4 +11,10 @@ internal static partial class EndpointLog
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Skipped endpoint type {EndpointType} because a mapping filter excluded it")]
     public static partial void Filtered(ILogger logger, Type endpointType);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not load type {TypeName} from assembly {AssemblyName}; its endpoints are not mapped")]
+    public static partial void TypeLoadFailed(ILogger logger, string typeName, string assemblyName, Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Skipped endpoint type {EndpointType}: {Reason}")]
+    public static partial void InvalidType(ILogger logger, Type endpointType, string reason);
 }
