@@ -41,19 +41,26 @@ internal static class ServiceGeneration
             .AddReferences(references);
     }
 
-    public static GeneratorDriver CreateDriver(bool isTestProject = false)
+    public static CSharpCompilation WithLanguageVersion(CSharpCompilation compilation, LanguageVersion languageVersion)
+    {
+        CSharpParseOptions parseOptions = new(languageVersion);
+        return compilation.RemoveAllSyntaxTrees().AddSyntaxTrees(
+            compilation.SyntaxTrees.Select(tree => CSharpSyntaxTree.ParseText(tree.GetText(), parseOptions, tree.FilePath)));
+    }
+
+    public static GeneratorDriver CreateDriver(bool isTestProject = false, LanguageVersion languageVersion = LanguageVersion.Latest)
     {
         Dictionary<string, string> options = isTestProject ? new() { [IsTestProjectProperty] = "true" } : [];
         return CSharpGeneratorDriver.Create(
             Generators,
-            parseOptions: new CSharpParseOptions(LanguageVersion.Latest),
+            parseOptions: new CSharpParseOptions(languageVersion),
             optionsProvider: new ServiceGeneratorOptionsProvider(options),
             driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
     }
 
-    public static GeneratorRun Run(Compilation compilation, bool isTestProject = false)
+    public static GeneratorRun Run(Compilation compilation, bool isTestProject = false, LanguageVersion languageVersion = LanguageVersion.Latest)
     {
-        GeneratorDriver driver = CreateDriver(isTestProject)
+        GeneratorDriver driver = CreateDriver(isTestProject, languageVersion)
             .RunGeneratorsAndUpdateCompilation(compilation, out Compilation outputCompilation, out ImmutableArray<Diagnostic> diagnostics);
 
         return new GeneratorRun(driver, driver.GetRunResult(), outputCompilation, diagnostics);

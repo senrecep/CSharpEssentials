@@ -207,13 +207,13 @@ internal static class ServiceSourceWriter
         if (service.Forwarded && key is null)
         {
             sb.Append(Descriptor).Append('.').Append(lifetime).Append('<').Append(service.ServiceType)
-                .Append(">(static sp => ").Append(Resolve).Append(".GetRequiredService<").Append(registration.ImplementationType)
+                .Append(">(sp => ").Append(Resolve).Append(".GetRequiredService<").Append(registration.ImplementationType)
                 .Append(">(sp))");
         }
         else if (service.Forwarded)
         {
             sb.Append(Descriptor).Append(".Keyed").Append(lifetime).Append('<').Append(service.ServiceType).Append(">(")
-                .Append(key).Append(", static (sp, _) => ").Append(ResolveKeyed).Append(".GetRequiredKeyedService<")
+                .Append(key).Append(", (sp, _) => ").Append(ResolveKeyed).Append(".GetRequiredKeyedService<")
                 .Append(registration.ImplementationType).Append(">(sp, ").Append(key).Append("))");
         }
         else if (key is null)
@@ -233,7 +233,7 @@ internal static class ServiceSourceWriter
     {
         sb.Append("                    ").Append(Decoration).Append(".Decorate<").Append(decorator.ServiceType).Append(">(\n");
         sb.Append("                        services,\n");
-        sb.Append("                        static (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
+        sb.Append("                        (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
         for (int index = 0; index < decorator.Parameters.Count; index++)
         {
             sb.Append(index == 0 ? "\n" : ",\n");
