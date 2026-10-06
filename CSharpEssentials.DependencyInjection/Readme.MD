@@ -80,7 +80,7 @@ The analyzer reports invalid declarations at compile time:
 | ID | Severity | Rule |
 |---|---|---|
 | CSE2001 | Error | The class does not implement the service type. |
-| CSE2002 | Error | Two registrations of the same service type and key, one with `RegistrationStrategy.Throw`. |
+| CSE2002 | Error | A `RegistrationStrategy.Throw` registration whose service type and key an earlier registration in the same assembly already registers. The generated registry registers types in metadata name order, so a `Throw` registration that comes first does not fail. |
 | CSE2003 | Info | The class has interfaces, but none matches `I{TypeName}`, so it is registered as itself. |
 | CSE2004 | Error | The decorator has no constructor parameter of the decorated type, or more than one. |
 | CSE2005 | Error | The decorator does not have exactly one public constructor. |

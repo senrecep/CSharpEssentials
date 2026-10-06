@@ -18,7 +18,7 @@ internal static class DependencyInjectionDiagnostics
     public static readonly DiagnosticDescriptor DuplicateThrowRegistration = new(
         "CSE2002",
         "Duplicate registration under RegistrationStrategy.Throw",
-        "'{0}' registers '{1}'{2} with RegistrationStrategy.Throw, but '{3}' registers the same service type and key in this compilation",
+        "'{0}' registers '{1}'{2} with RegistrationStrategy.Throw, but '{3}' registers the same service type and key earlier in this compilation",
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,

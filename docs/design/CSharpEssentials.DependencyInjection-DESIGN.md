@@ -107,7 +107,7 @@ All strategies are **key-aware**: a match means the same `ServiceType` **and** a
 | `TryAdd` | Appends if no descriptor matches (service, key). |
 | `TryAddEnumerable` | Appends if no descriptor matches (service, key, implementation type). |
 | `Replace` | Removes **all** descriptors matching (service, key), then appends. Unlike `ServiceCollectionDescriptorExtensions.Replace`, it is key-aware and removes every match, not only the first. |
-| `Throw` | Throws `InvalidOperationException` (service, key, existing implementation) if a descriptor matches. Duplicates within one compilation are reported at compile time (CSE2002). |
+| `Throw` | Throws `InvalidOperationException` (service, key, existing implementation) if a descriptor matches. A `Throw` registration that follows a registration of the same (service, key) within one compilation is reported at compile time (CSE2002); registration order is metadata type name, then attribute order. |
 
 ### 4.4 `DecoratesAttribute`
 
@@ -381,7 +381,7 @@ Reported by `DependencyInjectionAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssen
 | ID | Rule | Severity | Rationale |
 |---|---|---|---|
 | CSE2001 | Service type not implemented by the class (also covers `[Decorates]` targets and invalid open-generic mappings) | Error | MS.DI would throw at registration or resolution |
-| CSE2002 | Duplicate (service, key) under `Throw` within the same compilation | Error | Certain runtime failure |
+| CSE2002 | `Throw` registration whose (service, key) an earlier registration in the same compilation already registers | Error | Certain runtime failure |
 | CSE2003 | Class implements interfaces but none matched the default rule, so it is registered as self | Info | Deliberate fallback, made visible |
 | CSE2004 | Decorator has no usable constructor parameter of the decorated service | Error | Generated factory would not compile |
 | CSE2005 | Decorator has multiple public constructors | Error | Generated factory needs exactly one |

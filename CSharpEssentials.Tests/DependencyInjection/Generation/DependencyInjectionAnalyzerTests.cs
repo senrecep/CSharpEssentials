@@ -25,7 +25,8 @@ public class DependencyInjectionAnalyzerTests
     {
         { "CSE2001", DiagnosticSeverity.Error, "[RegisterScoped(typeof(IFoo))] public sealed class Foo;" },
         { "CSE2001", DiagnosticSeverity.Error, "[Decorates(typeof(IFoo))] public sealed class FooDecorator(IClock clock);" },
-        { "CSE2002", DiagnosticSeverity.Error, "[RegisterScoped(typeof(IFoo), Strategy = RegistrationStrategy.Throw)] public sealed class First : IFoo; [RegisterScoped(typeof(IFoo))] public sealed class Second : IFoo;" },
+        { "CSE2002", DiagnosticSeverity.Error, "[RegisterScoped(typeof(IFoo))] public sealed class First : IFoo; [RegisterScoped(typeof(IFoo), Strategy = RegistrationStrategy.Throw)] public sealed class Second : IFoo;" },
+        { "CSE2002", DiagnosticSeverity.Error, "[RegisterScoped(typeof(IFoo), Key = \"k\")] [RegisterSingleton(typeof(IFoo), Key = \"k\", Strategy = RegistrationStrategy.Throw)] public sealed class Foo : IFoo;" },
         { "CSE2001", DiagnosticSeverity.Error, "[RegisterScoped(typeof(IFoo))] public sealed record FooRecord;" },
         { "CSE2003", DiagnosticSeverity.Info, "[RegisterScoped] public sealed class Worker : IFoo;" },
         { "CSE2003", DiagnosticSeverity.Info, "[RegisterScoped] public sealed record WorkerRecord : IFoo;" },
@@ -46,6 +47,7 @@ public class DependencyInjectionAnalyzerTests
     {
         { "CSE2001", "[RegisterScoped(typeof(IFoo))] public sealed class Foo : IFoo; [Decorates(typeof(IFoo))] public sealed class FooDecorator(IFoo inner) : IFoo;" },
         { "CSE2002", "[RegisterScoped(typeof(IFoo), Strategy = RegistrationStrategy.Throw)] public sealed class First : IFoo; [RegisterScoped(typeof(IFoo), Key = \"second\")] public sealed class Second : IFoo;" },
+        { "CSE2002", "[RegisterScoped(typeof(IFoo), Strategy = RegistrationStrategy.Throw)] public sealed class First : IFoo; [RegisterScoped(typeof(IFoo))] public sealed class Second : IFoo;" },
         { "CSE2003", "[RegisterScoped] public sealed class Foo : IFoo;" },
         { "CSE2003", "[RegisterScoped] public sealed record PlainRecord;" },
         { "CSE2005", "[RegisterScoped(typeof(IFoo))] public sealed record FooRecord : IFoo; [Decorates(typeof(IFoo))] public sealed record FooRecordDecorator(IFoo Inner) : IFoo;" },
@@ -98,6 +100,19 @@ public class DependencyInjectionAnalyzerTests
             .Should().Be("Singleton 'Sample.Foo' depends on 'Sample.IClock' through parameter 'clock', but 'Sample.Clock' registers it as Scoped");
         diagnostic.Location.SourceTree!.ToString().Substring(diagnostic.Location.SourceSpan.Start, diagnostic.Location.SourceSpan.Length)
             .Should().Be("RegisterSingleton(typeof(IFoo))");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE2002_Only_On_Throw_Registration_Generated_After_Duplicate()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(
+            Prelude +
+            "[RegisterScoped(typeof(IFoo), Strategy = RegistrationStrategy.Throw)] public sealed class Zeta : IFoo; " +
+            "[RegisterScoped(typeof(IFoo), Strategy = RegistrationStrategy.Throw)] public sealed class Alpha : IFoo;");
+
+        Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE2002").Subject;
+        diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be("'Sample.Zeta' registers 'Sample.IFoo' with RegistrationStrategy.Throw, but 'Sample.Alpha' registers the same service type and key earlier in this compilation");
     }
 
     [Fact]

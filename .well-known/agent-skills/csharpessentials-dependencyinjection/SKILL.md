@@ -107,7 +107,7 @@ Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. An overload tak
 | ID | Severity | Rule |
 |---|---|---|
 | CSE2001 | Error | Class does not implement the service type |
-| CSE2002 | Error | Two registrations of the same service and key, one with `RegistrationStrategy.Throw` |
+| CSE2002 | Error | A `RegistrationStrategy.Throw` registration whose service and key an earlier registration in the same assembly already registers (types in metadata name order) |
 | CSE2003 | Info | Class has interfaces but none matches `I{TypeName}`, so it registers as itself. Code fix adds `typeof(IFoo)` or `As = ServiceAs.Self` |
 | CSE2004 | Error | Decorator has zero or several constructor parameters of the decorated type |
 | CSE2005 | Error | Decorator does not have exactly one public constructor |
