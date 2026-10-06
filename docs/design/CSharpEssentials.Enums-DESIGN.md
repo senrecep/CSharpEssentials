@@ -41,7 +41,7 @@
 | Project | TFMs | New dependencies | Contents |
 |---|---|---|---|
 | `CSharpEssentials.Enums` | `net11.0;net10.0;net9.0;netstandard2.1;netstandard2.0` (unchanged) | none | attributes, `EnumInfo<TEnum>`, `EnumMetadata`, `EnumConventions`, parser, formatter, `EnumValueError` |
-| `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0014, packed into `CSharpEssentials.Enums` |
+| `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0015, packed into `CSharpEssentials.Enums` |
 | `CSharpEssentials.Enums.CodeFixes` (new, not packable) | `netstandard2.0` | Roslyn 4.8 | code fixes for CSE0005 and CSE0006 |
 | `CSharpEssentials.Json` | unchanged | none | `EnumConverterFactory`, `JsonSerializerOptions.AddEnumConventions` |
 | `CSharpEssentials.AspNetCore` | unchanged | **removes** `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
@@ -727,6 +727,7 @@ Error: `Error.Validation(code: "enum.invalid" | "enum.not_allowed", description:
 | CSE0012 | Warning | Invalid `CSharpEssentialsEnumNaming` MSBuild value |
 | CSE0013 | Warning | `[EnumAlias]`, `[EnumFallback]` or `[StringEnum(Naming)]`-dependent attributes on an enum without `[StringEnum]` (no effect) |
 | CSE0014 | Error | A migration's `Up` or `Down` contains both EF's `AlterColumn` and `ConvertEnumColumn` for the same table and column (section 12.1). Symbols are matched by metadata name, so the analyzer is inert without `CSharpEssentials.EntityFrameworkCore` |
+| CSE0015 | Warning | `[StringEnum]` enum the generator cannot reach (private/protected nested, nested in a generic type): no metadata; JSON converter creation throws instead of writing integers |
 
 When an error diagnostic applies, the generator skips metadata for that enum (ADR-006 rule), so the only error the user sees is the analyzer's.
 
@@ -743,7 +744,8 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 ## 17. AOT and Trimming
 
 - `[StringEnum]` path: no reflection, no `MakeGenericType`, no `Activator`. The JSON factory, EF converters and model binders obtain typed instances through generated `IEnumInfo` factory methods.
-- Reflection fallback (`EnumMetadata.GetOrCreateWithReflection`) is annotated; any public API that may reach it carries the same annotations or a `[StringEnum]`-only overload.
+- Reflection fallback (`EnumMetadata.GetOrCreateWithReflection`) is annotated and off by default. It is reached only through an explicit opt-in that carries the same annotations; the default path never touches it. `CSharpEssentials.Enums` and `CSharpEssentials.Json` set `IsAotCompatible` so the trim analyzer enforces this.
+- A `[StringEnum]` enum without metadata fails loudly (CSE0015, converter creation throws); it never silently falls back to integers.
 - AOT smoke test: a `PublishAot=true` console sample in `examples/` that serializes, parses and formats every matrix row with `TrimmerSingleWarn=false` and warnings as errors.
 
 ## 18. Testing Strategy
@@ -751,7 +753,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | Area | Tests |
 |---|---|
 | Naming | generator vs `JsonNamingPolicy` corpus test for every built-in policy |
-| Generator | snapshot per feature (aliases, fallback, flags, nested, descriptions, obsolete, every underlying type including `ulong` and negative `long`), incremental caching test, CSE0002 to CSE0014 positive and negative |
+| Generator | snapshot per feature (aliases, fallback, flags, nested, descriptions, obsolete, every underlying type including `ulong` and negative `long`), incremental caching test, CSE0002 to CSE0015 positive and negative |
 | Parser | every matrix row in `Input` and `Data` mode, each `EnumConventions` switch; registration from a separate type-only assembly |
 | JSON | every matrix row, flags, nullable, dictionary key, collection, alias, fallback, source generated context |
 | ASP.NET Core | TestServer: matrix rows for route, query, header, form, body; minimal API and MVC in one host; v1 Number + v2 String groups |
