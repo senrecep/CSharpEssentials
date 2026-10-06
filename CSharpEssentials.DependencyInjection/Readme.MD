@@ -67,7 +67,7 @@ builder.Services.AddSampleBillingServices();
 builder.Services.AddSampleBillingServices(logger); // logs duplicate (service, key) registrations at Debug
 ```
 
-Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`. It registers the services of every referenced assembly that has a generated registry, and of the application itself, before it applies any decorator, so a decorator can wrap a service from another assembly. Decorators of all assemblies are applied together in ascending `Order`; decorators with the same `Order` follow assembly order (referenced assemblies by name, the application last), then type name. `AddServicesFromAssemblies` uses the same rule with the assemblies in the order you pass them.
+Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`. It registers the services of every referenced assembly that has a generated registry, and of the application itself, before it applies any decorator, so a decorator can wrap a service from another assembly. Decorators of all assemblies are applied together in ascending `Order`; decorators with the same `Order` follow assembly order (referenced assemblies by name, the application last), then type name. `AddServicesFromAssemblies` uses the same rule with the assemblies in the order you pass them. Registration is idempotent per assembly: calling `Add{Assembly}Services` twice, or after `AddAllServices`, does nothing, and `AddAllServices` and `AddServicesFromAssemblies` skip assemblies that are already registered. The generated and reflection paths share one marker per assembly in the collection, so mixing them does not register a service or apply a decorator twice.
 
 | Assembly attribute | Effect |
 |---|---|

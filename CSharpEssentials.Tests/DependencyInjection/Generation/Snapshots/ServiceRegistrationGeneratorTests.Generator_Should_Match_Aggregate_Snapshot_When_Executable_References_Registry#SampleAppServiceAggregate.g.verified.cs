@@ -10,15 +10,33 @@ namespace Microsoft.Extensions.DependencyInjection
             this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
             global::Microsoft.Extensions.Logging.ILogger? logger = null)
         {
-            global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.RegisterServices(services, logger);
-            global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.RegisterServices(services, logger);
+            bool register0 = global::CSharpEssentials.DependencyInjection.ServiceRegistration.TryMarkRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry).Assembly);
+            bool register1 = global::CSharpEssentials.DependencyInjection.ServiceRegistration.TryMarkRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry).Assembly);
             global::System.Collections.Generic.SortedSet<int> orders = new global::System.Collections.Generic.SortedSet<int>();
-            orders.UnionWith(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.DecoratorOrders);
-            orders.UnionWith(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.DecoratorOrders);
+
+            if (register0)
+            {
+                global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.RegisterServices(services, logger);
+                orders.UnionWith(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.DecoratorOrders);
+            }
+
+            if (register1)
+            {
+                global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.RegisterServices(services, logger);
+                orders.UnionWith(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.DecoratorOrders);
+            }
+
             foreach (int order in orders)
             {
-                global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.ApplyDecorators(services, order);
-                global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.ApplyDecorators(services, order);
+                if (register0)
+                {
+                    global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.ApplyDecorators(services, order);
+                }
+
+                if (register1)
+                {
+                    global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.ApplyDecorators(services, order);
+                }
             }
             return services;
         }

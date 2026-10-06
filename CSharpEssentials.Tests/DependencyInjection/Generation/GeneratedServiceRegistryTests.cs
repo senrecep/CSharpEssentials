@@ -141,6 +141,77 @@ public class GeneratedServiceRegistryTests
         services.Count(static descriptor => descriptor.ServiceType == typeof(IFixtureMessage)).Should().Be(1);
     }
 
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Register_Once_When_Called_Twice()
+    {
+        ServiceCollection once = new();
+        once.AddCSharpEssentialsTestsServices();
+        ServiceCollection twice = new();
+
+        twice.AddCSharpEssentialsTestsServices().AddCSharpEssentialsTestsServices();
+
+        twice.Should().HaveCount(once.Count);
+        GreetingOf(twice).Should().Be("outer(inner(hi))");
+    }
+
+    [Fact]
+    public void AddAllServices_Should_Skip_Registry_Already_Added_By_Assembly_Method()
+    {
+        ServiceCollection services = new();
+
+        services.AddCSharpEssentialsTestsServices();
+        services.AddAllServices();
+
+        GreetingOf(services).Should().Be("outer(inner(hi))");
+        services.Count(static descriptor => descriptor.ServiceType == typeof(IFixtureGreeter)).Should().Be(1);
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Do_Nothing_After_AddAllServices()
+    {
+        ServiceCollection services = new();
+        services.AddAllServices();
+        int count = services.Count;
+
+        services.AddCSharpEssentialsTestsServices();
+
+        services.Should().HaveCount(count);
+        GreetingOf(services).Should().Be("outer(inner(hi))");
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_Register_Once_When_Called_Twice()
+    {
+        ServiceCollection once = new();
+        once.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
+        ServiceCollection twice = new();
+
+        twice.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly).AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
+
+        twice.Should().HaveCount(once.Count);
+        GreetingOf(twice).Should().Be("outer(inner(hi))");
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_Skip_Assembly_Registered_By_Generated_Registry()
+    {
+        ServiceCollection services = new();
+        services.AddCSharpEssentialsTestsServices();
+        int count = services.Count;
+
+        services.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
+
+        services.Should().HaveCount(count);
+        GreetingOf(services).Should().Be("outer(inner(hi))");
+    }
+
+    private static string GreetingOf(ServiceCollection services)
+    {
+        using ServiceProvider provider = services.BuildServiceProvider(Validated);
+        using IServiceScope scope = provider.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<IScanGreeter>().Greet();
+    }
+
     private static (Type ServiceType, object? Key, ServiceLifetime Lifetime, Type? Implementation) Describe(ServiceDescriptor descriptor) =>
         (descriptor.ServiceType,
             descriptor.ServiceKey,

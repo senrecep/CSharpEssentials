@@ -244,6 +244,7 @@ internal static class {Asm}EndpointAggregate
 | Reference filtering | Referenced assemblies are filtered **by name** before their attributes are read: skip `System*`, `Microsoft*`, `mscorlib`, `netstandard`, and any assembly whose identity does not reference `CSharpEssentials.Endpoints`. Only the survivors have `GetAttributes()` evaluated. |
 | No duplicate mapping | Registries are deduplicated by registry type. An assembly that has both its own module and the aggregate maps its endpoints exactly once. |
 | Order | Own registry first, then referenced registries by assembly name (ordinal). |
+| Repeated calls | Not guarded. A second `MapAllEndpoints` or `Map{Asm}Endpoints` call maps every route again, because mapping one registry onto several route builders (such as version groups) is legitimate and cannot be told apart from an accidental repeat. Unlike DI registration, the route builder has no shared state to mark. Documented in the README. |
 | Exclusions | Runtime selection uses `options.Filter` (for example, by `type.Assembly`). |
 | Empty aggregate | An eligible assembly gets `MapAllEndpoints` even when it has no own registry and no referenced module. The method is then a no-op, so `app.MapAllEndpoints()` compiles before the first endpoint exists. *(Added during #52: emitting it conditionally would break the host build whenever all endpoints are removed or excluded.)* |
 
