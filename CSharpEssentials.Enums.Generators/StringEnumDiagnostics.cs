@@ -111,6 +111,17 @@ internal static class StringEnumDiagnostics
         description: "[EnumAlias] and [EnumFallback] are read from generated metadata, and from the reflection fallback only when it is opted in. " +
             "Add [StringEnum] to the enum or remove the attribute.");
 
+    public static readonly DiagnosticDescriptor AlterColumnWithEnumConversion = new(
+        "CSE0014",
+        "AlterColumn and ConvertEnumColumn change the same column",
+        "AlterColumn changes '{0}', which ConvertEnumColumn converts in the same {1} method; remove the generated AlterColumn",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "ConvertEnumColumn drops nothing and adds nothing: it changes the column type and converts the data in one step. " +
+            "The AlterColumn that EF generated for the same column would change the type again without converting the data, " +
+            "so keep the generated DropCheckConstraint before the conversion and the AddCheckConstraint after it, and delete the AlterColumn.");
+
     public static readonly DiagnosticDescriptor MissingMetadata = new(
         "CSE0015",
         "[StringEnum] enum gets no generated metadata",
