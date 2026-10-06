@@ -25,7 +25,7 @@ public class Product : SoftDeletableEntityBase<Guid>
 }
 
 /// <summary>
-/// Enum demonstrating storage as snake_case string via ConfigureEnumConventions.
+/// Enum demonstrating storage as its wire name via ConfigureEnumConventions.
 /// The [StringEnum] attribute ensures enums are stored as readable strings in the database.
 /// </summary>
 [StringEnum]
