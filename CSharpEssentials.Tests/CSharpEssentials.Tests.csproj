@@ -50,6 +50,7 @@
                       ReferenceOutputAssembly="false"
                       SetTargetFramework="TargetFramework=netstandard2.0" />
     <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints\CSharpEssentials.Endpoints.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
     <ProjectReference

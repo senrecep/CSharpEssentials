@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;net8.0</TargetFrameworks>
+
+    <PackageId>CSharpEssentials.Endpoints</PackageId>
+    <Title>CSharp Essentials Endpoints</Title>
+    <Product>CSharp Essentials Endpoints</Product>
+    <Authors>senrecep</Authors>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>
+      AspNetCore,MinimalApi,Endpoints,EndpointGroups,SourceGenerator,AOT,Trimming,Carter,RouteGroups,CSharpEssentials</PackageTags>
+    <Description>Source-generated endpoint organization for ASP.NET Core Minimal APIs. Implement
+      IEndpoint with a static Map method, group endpoints with IEndpointGroup and EndpointGroup
+      attributes, and map every endpoint of an assembly with one generated, reflection-free call.
+      Route calls stay in user code, so binding, filters, OpenAPI and the Request Delegate
+      Generator work unchanged. Trim and AOT friendly.</Description>
+    <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENCE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="Readme.MD">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+</Project>

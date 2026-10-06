@@ -141,6 +141,7 @@ It is added to every endpoint produced by an `IEndpoint` type. It identifies the
 public static class EndpointMapper
 {
     public static EndpointMappingOptions CreateOptions(Action<EndpointMappingOptions>? configure);
+    public static bool ShouldMapAny(IEndpointRouteBuilder app, EndpointMappingOptions options, params Type[] endpointTypes);
     public static RouteGroupBuilder MapGroup<TGroup>(IEndpointRouteBuilder parent) where TGroup : IEndpointGroup;
     public static void MapEndpoint<TEndpoint>(IEndpointRouteBuilder parent, Type? innermostGroup, EndpointMappingOptions options)
         where TEndpoint : IEndpoint;
@@ -148,6 +149,8 @@ public static class EndpointMapper
 ```
 
 This is the only place that implements wrapping, ordering, naming, tagging, filtering and logging. Generated code stays small, and the reflection fallback reuses exactly the same logic (via `MakeGenericMethod`). This gives parity by construction.
+
+`ShouldMapAny` (added during implementation of #51) returns `true` when at least one of the given endpoint types passes `options.Filter`. Generated code and the fallback wrap each group in it (passing every endpoint type under that group, directly or through nested groups), so a group whose endpoints are all filtered out is never created and its `Configure` never runs. Filter results are memoized per type inside the options instance, so each filter predicate runs once per type and a filtered type is logged once, even though both `ShouldMapAny` and `MapEndpoint` consult the filter.
 
 ## 5. Generated Code (#52)
 
@@ -274,11 +277,11 @@ namespace Microsoft.AspNetCore.Builder
     [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.Endpoints.Generators", "4.1.0")]
     public static class SampleApiEndpointRegistry
     {
-        public static global::System.Collections.Generic.IReadOnlyList<global::System.Type> EndpointTypes { get; } =
-        [
+        public static global::System.Collections.Generic.IReadOnlyList<global::System.Type> EndpointTypes { get; } = new global::System.Type[]
+        {
             typeof(global::Sample.Api.Health),
             typeof(global::Sample.Api.CreateApp),
-        ];
+        };
 
         public static global::Microsoft.AspNetCore.Routing.IEndpointRouteBuilder MapSampleApiEndpoints(
             this global::Microsoft.AspNetCore.Routing.IEndpointRouteBuilder app,
@@ -295,8 +298,11 @@ namespace Microsoft.AspNetCore.Builder
         {
             global::CSharpEssentials.Endpoints.EndpointMapper.MapEndpoint<global::Sample.Api.Health>(app, null, options);
 
-            var appsGroup = global::CSharpEssentials.Endpoints.EndpointMapper.MapGroup<global::Sample.Api.AppsGroup>(app);
-            global::CSharpEssentials.Endpoints.EndpointMapper.MapEndpoint<global::Sample.Api.CreateApp>(appsGroup, typeof(global::Sample.Api.AppsGroup), options);
+            if (global::CSharpEssentials.Endpoints.EndpointMapper.ShouldMapAny(app, options, typeof(global::Sample.Api.CreateApp)))
+            {
+                var appsGroup = global::CSharpEssentials.Endpoints.EndpointMapper.MapGroup<global::Sample.Api.AppsGroup>(app);
+                global::CSharpEssentials.Endpoints.EndpointMapper.MapEndpoint<global::Sample.Api.CreateApp>(appsGroup, typeof(global::Sample.Api.AppsGroup), options);
+            }
         }
     }
 }
