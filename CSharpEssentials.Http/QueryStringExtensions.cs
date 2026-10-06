@@ -22,6 +22,10 @@ public static class QueryStringExtensions
     public static Result<string> ToQueryString(this object? source) =>
         source.ToQueryString(EnumConventions.Default);
 
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
     public static Result<string> ToQueryString(this object? source, EnumConventions conventions, EnumWireFormat? format = null)
     {
         if (source is null)
@@ -50,9 +54,17 @@ public static class QueryStringExtensions
         return uri.AppendQuery(parameters.ToQueryString());
     }
 
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
     public static Result<Uri> WithQueryString(this Uri? uri, object? parameters) =>
         uri.WithQueryString(parameters, EnumConventions.Default);
 
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
     public static Result<Uri> WithQueryString(this Uri? uri, object? parameters, EnumConventions conventions, EnumWireFormat? format = null)
     {
         if (uri is null)
