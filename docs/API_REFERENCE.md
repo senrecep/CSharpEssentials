@@ -29,6 +29,9 @@ A comprehensive guide to every package, method, and pattern in the CSharpEssenti
 - [GcpSecretManager — Secret Configuration](#18-csharpessentialsgcpsecretmanager--secret-configuration)
 - [Validation — Model-First Validation](#19-csharpessentialsvalidation--model-first-validation)
 - [These — 3-State Union](#20-csharpessentialsthese--3-state-union)
+- [Endpoints — Source-Generated Endpoint Mapping](#21-csharpessentialsendpoints--source-generated-endpoint-mapping)
+- [DependencyInjection — Attribute-Based Registration](#22-csharpessentialsdependencyinjection--attribute-based-registration)
+- [CSharpEssentials — Meta Package](#23-csharpessentials--meta-package)
 - [Ecosystem Design Patterns](#ecosystem-design-patterns)
 
 ---
@@ -87,8 +90,9 @@ var error = Error.NotFound("User.NotFound", "User does not exist",
     new ErrorMetadata { ["UserId"] = userId.ToString() });
 
 // Bridging exceptions
-try { /* external call */ }
-catch (Exception ex) { return Error.Exception(ex); }
+Result outcome;
+try { /* external call */ outcome = Result.Success(); }
+catch (Exception ex) { outcome = Error.Exception(ex).ToResult(); }
 
 // Composing multiple errors
 Error[] allErrors = validationError + conflictError;
@@ -149,7 +153,7 @@ Result<OrderDto> result = GetUser(userId)
     .Ensure(u => u.IsActive, Error.Failure("User.Inactive", "Account is deactivated"))
     .Bind(u => GetOrder(u.LatestOrderId))
     .Ensure(o => o.Status != OrderStatus.Cancelled, Error.Failure("Order.Cancelled", "Order was cancelled"))
-    .Map(o => new OrderDto(o.Id, o.Total, o.Items.Count));
+    .Map(o => new OrderDto(o.Id, o.Total));
 ```
 
 ### Side Effects — Observe Without Changing the Railway
@@ -195,8 +199,8 @@ Result result = InternalOperation()
 
 | Method | Safety | What It Does |
 |--------|--------|-------------|
-| `Match(onSuccess, onFailure)` | Safe | Exhaustive fold — handles both cases, returns a value |
-| `MatchFirst(onSuccess, onFailure)` | Safe | Match using only the first error |
+| `Match(onSuccess, onFailure)` / `Result<T>.Match(onSuccess, onError)` | Safe | Exhaustive fold — handles both cases, returns a value |
+| `MatchFirst(onSuccess, onFirstError)` | Safe | Match using only the first error |
 | `Switch(onSuccess, onFailure)` | Safe | Imperative branching (void) |
 | `Unwrap()` | Unsafe | Returns value or throws `ResultUnwrapException` |
 | `UnwrapOrDefault(fallback)` | Safe | Returns value or specified default |
@@ -208,7 +212,7 @@ Result result = InternalOperation()
 // Exhaustive matching — compiler ensures both paths are handled
 string message = result.Match(
     onSuccess: order => $"Order {order.Id} placed successfully",
-    onFailure: errors => $"Failed: {errors.First().Description}"
+    onError: errors => $"Failed: {errors.First().Description}"
 );
 
 // Finally — always runs (logging, cleanup)
@@ -220,8 +224,8 @@ result.Finally(r => _metrics.Record(r.IsSuccess ? "success" : "failure"));
 | Method | Strategy | What It Does |
 |--------|----------|-------------|
 | `Result.And(results)` | All must succeed | Collects ALL errors if any fail |
-| `Result.Or(results)` | Any can succeed | Returns first success; errors only if all fail |
-| `Result.Combine(r1, r2, ..., r8)` | Applicative product | Combines up to 8 results into a tuple |
+| `Result.Or(results)` / `Result<T>.Or(results)` | Any can succeed | Returns first success; errors only if all fail |
+| `Result<T1>.Combine(r1, r2, ..., r8)` | Applicative product | Combines up to 8 results into a tuple `Result<(T1, ..., T8)>` |
 
 ```csharp
 // Validate multiple fields independently, collect all errors
@@ -233,12 +237,10 @@ Result validation = Result.And(new[]
 });
 
 // Try multiple providers, use first that works
-Result<Config> config = Result.Or(new[]
-{
+Result<Config> config = Result<Config>.Or(
     LoadFromEnvironment(),
     LoadFromFile(),
-    LoadFromDefaults()
-});
+    LoadFromDefaults());
 ```
 
 ### LINQ Query Syntax
@@ -255,13 +257,13 @@ var result =
 
 ### Async Support
 
-Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. Async methods follow the naming pattern of their sync counterparts:
+Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. On a `Task<Result<T>>` the chain methods take the `Async` suffix (`BindAsync`, `MapAsync`, `TapAsync`):
 
 ```csharp
-Result<User> result = await GetUserAsync(id)
-    .Bind(user => ValidateAsync(user, ct))
-    .Map(user => new UserDto(user))
-    .Tap(_ => _logger.LogInformation("User retrieved"));
+Result<UserDto> result = await GetUserAsync(id)
+    .BindAsync(user => ValidateAsync(user, ct))
+    .MapAsync(user => new UserDto(user))
+    .TapAsync(_ => _logger.LogInformation("User retrieved"));
 ```
 
 ### Collection Extensions
@@ -333,8 +335,8 @@ Maybe<string> displayName = GetUser(id)
 
 | Method | Safety | What It Does |
 |--------|--------|-------------|
-| `Match(hasValue, hasNoValue)` | Safe | Exhaustive fold over both cases |
-| `Or(fallback)` | Safe | Returns value or fallback |
+| `Match(some, none)` | Safe | Exhaustive fold over both cases |
+| `Or(() => fallback)` | Safe | Returns self, or a `Maybe` of the fallback when empty |
 | `Or(Maybe<T> fallback)` | Safe | Returns self or fallback Maybe |
 | `GetValueOrDefault(value)` | Safe | Returns value or default |
 | `GetValueOrDefault()` | Safe | Returns `default(T)` |
@@ -344,17 +346,17 @@ Maybe<string> displayName = GetUser(id)
 ```csharp
 string name = GetUser(id)
     .Map(u => u.DisplayName)
-    .Or("Anonymous");
+    .GetValueOrDefault("Anonymous");
 ```
 
 ### Side Effects
 
 | Method | Runs On | What It Does |
 |--------|---------|-------------|
-| `Execute(action)` | Has value | Runs action with value, returns self |
-| `ExecuteNoValue(action)` | No value | Runs action when empty |
-| `Tap(action)` | Has value | Side effect with value |
-| `TapIf(cond, action)` | Has value + condition | Conditional side effect |
+| `Execute(action)` | Has value | Runs action with value (`void`, or `Task` for async actions) |
+| `ExecuteNoValue(action)` | No value | Runs action when empty (`void`, or `Task` for async actions) |
+| `Tap(action)` | Has value | Side effect with value, returns self |
+| `TapIf(cond, action)` | Has value + condition | Conditional side effect, returns self |
 
 ### Collection Helpers
 
@@ -441,7 +443,7 @@ var (values, missingCount) = maybes.Partition();
 |--------|---------|-------------|
 | `Match(first:, second:, ...)` | `AnyActionResult<T>` | Transforms the active variant — partial (delegates are optional) |
 | `Switch(first:, second:, ...)` | `AnyActionStatus` | Executes action for active variant — partial (delegates are optional) |
-| `Deconstruct(out index, out value)` | void | C# deconstruction support |
+| `Deconstruct(out first, out second, ...)` | void | C# deconstruction; the inactive slots are `default` |
 
 ```csharp
 // API that returns either data or a structured error
@@ -531,8 +533,15 @@ All methods accept an optional `CultureInfo` parameter.
 | `WithoutNulls()` | Removes null entries from a collection |
 | `HasSameElements(other)` | Order-independent element equality |
 | `IfAdd(condition, item)` | Conditionally adds item to collection |
-| `ForEach(action)` | Eager foreach on `IEnumerable<T>` |
+| `ForEach(action)` | Lazy: yields each item and runs the action while the sequence is enumerated |
 | `AllTrue()` / `AllFalse()` | Checks bool collections |
+
+### Comparison Helpers
+
+| Method | What It Does |
+|--------|-------------|
+| `value.IsBetween(min, max)` | `true` when `min <= value <= max` (any `IComparable<T>`) |
+| `value.IsBetweenExclusive(min, max)` | `true` when `min < value < max` |
 
 ### Async Helpers
 
@@ -665,7 +674,7 @@ Result<UserDto> result = await HttpRequestBuilder
     .Get("https://api.example.com/users")
     .WithQuery("page", "1")
     .WithQuery("limit", "10")
-    .WithBearerToken(token)
+    .WithHeader("Authorization", $"Bearer {token}")
     .WithHeader("X-Request-Id", correlationId)
     .AsResultAsync<UserDto>(httpClient);
 ```
@@ -674,13 +683,17 @@ Result<UserDto> result = await HttpRequestBuilder
 |--------|-------------|
 | `HttpRequestBuilder.Get(url)` | Creates GET builder |
 | `.Post(url)` / `.Put(url)` / `.Patch(url)` / `.Delete(url)` | Other HTTP methods |
-| `.WithHeader(name, value)` | Adds request header |
-| `.WithQuery(key, value)` | Adds query parameter |
-| `.WithJsonContent(body)` | Sets JSON request body |
-| `.WithBearerToken(token)` | Sets Authorization: Bearer header |
+| `.WithHeader(name, value)` / `.WithHeaders(dictionary)` | Adds request headers |
+| `.WithQuery(key, value)` / `.WithQuery(dictionary)` | Adds query parameters |
+| `.WithJsonContent(body, options?)` | Sets JSON request body |
+| `.WithContent(httpContent)` | Sets any `HttpContent` body |
+| `.WithMethod(method)` / `.WithUri(uri)` | Changes the HTTP method or target URI |
+| `.FollowRedirects(maxRedirects = 5)` | Follows redirect responses |
 | `.Build()` | Returns `Result<HttpRequestMessage>` |
 | `.AsResultAsync(client)` | Builds, sends, returns `Result` |
-| `.AsResultAsync<T>(client)` | Builds, sends, deserializes to `Result<T>` |
+| `.AsResultAsync<T>(client, jsonOptions?, ct)` | Builds, sends, deserializes to `Result<T>` |
+
+There is no bearer-token shortcut; set the header with `.WithHeader("Authorization", $"Bearer {token}")`.
 
 ### HttpClient Extensions
 
@@ -744,8 +757,8 @@ Result<Order> order = await ResiliencePolicy
     .WithTimeout(TimeSpan.FromSeconds(5))
     .ExecuteAsync(_ => _orderService.GetOrder(id));
 
-// Circuit Breaker + Fallback
-Result<Product> product = await ResiliencePolicy
+// Circuit Breaker + Fallback (fallback needs the typed policy)
+Result<Product> product = await ResiliencePolicy<Product>
     .Create()
     .WithCircuitBreaker(minimumThroughput: 10, failureRatio: 0.5)
     .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
@@ -756,12 +769,17 @@ Result<Product> product = await ResiliencePolicy
 
 | Method | What It Does |
 |--------|-------------|
-| `ResiliencePolicy.Create()` | Creates an empty policy |
-| `.WithRetry(maxAttempts, delay, exponentialBackoff)` | Adds retry strategy |
-| `.WithTimeout(timeout)` | Adds timeout strategy |
-| `.WithCircuitBreaker(minThroughput, samplingDuration, breakDuration, failureRatio)` | Adds circuit breaker |
-| `.ExecuteAsync(action)` | Executes action through the pipeline, returns `Result` |
-| `.ExecuteAsync<T>(action)` | Executes typed action, returns `Result<T>` |
+| `ResiliencePolicy.Create()` | Creates an empty policy (`default(ResiliencePolicy)` behaves the same) |
+| `ResiliencePolicy.Create(options)` | Builds from `ResiliencePolicyOptions` |
+| `ResiliencePolicy.Create(Action<ResiliencePipelineBuilder>)` | Configures the Polly builder directly |
+| `ResiliencePolicy.FromPipeline(pipeline)` / `.ToPipeline()` | Wraps or exposes a Polly `ResiliencePipeline` |
+| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true)` / `.WithRetry(RetryOptions)` | Adds retry strategy |
+| `.WithTimeout(timeout)` / `.WithTimeout(TimeoutOptions)` | Adds timeout strategy |
+| `.WithCircuitBreaker(minThroughput, samplingDuration, breakDuration, failureRatio)` / `.WithCircuitBreaker(CircuitBreakerOptions)` | Adds circuit breaker |
+| `.ExecuteAsync(ct => Task)` / `.ExecuteAsync(ct => Task<Result>)` | Executes through the pipeline, returns `Result` |
+| `.ExecuteAsync<T>(ct => Task<T>)` / `.ExecuteAsync<T>(ct => Task<Result<T>>)` | Executes typed action, returns `Result<T>` |
+
+The non-generic policy has no `WithFallback`; use `ResiliencePolicy<T>`. Retry handles exceptions and failed `Result`s with the same rule as the typed policy (below), so a `Func<CancellationToken, Task<Result>>` that returns a retryable failure is retried. The package depends on `Polly.Core` `[8.0.0, 9.0.0)`.
 
 ### ResiliencePolicy\<T\> (Result-Aware)
 
@@ -769,7 +787,7 @@ The generic variant automatically filters retryable errors — `Unauthorized`, `
 
 | Method | What It Does |
 |--------|-------------|
-| `ResiliencePolicy<T>.Create()` | Creates an empty typed policy |
+| `ResiliencePolicy<T>.Create()` / `Create(Action<ResiliencePipelineBuilder<Result<T>>>)` / `FromPipeline(pipeline)` | Creates a typed policy |
 | `.WithRetry(...)` | Adds retry with Result error filtering |
 | `.WithTimeout(...)` | Adds timeout |
 | `.WithCircuitBreaker(...)` | Adds circuit breaker with Result error filtering |
@@ -780,10 +798,12 @@ The generic variant automatically filters retryable errors — `Unauthorized`, `
 
 ```csharp
 // Direct execution — wraps any Func<Task<T>> in a Result
-Result<User> user = await (() => _db.GetUser(id)).ExecuteAsync();
+Func<Task<User>> load = () => _db.GetUser(id);
+Result<User> user = await load.ExecuteAsync();
 
 // With CancellationToken
-Result<User> user = await ((ct) => _db.GetUser(id, ct)).ExecuteAsync(cancellationToken);
+Func<CancellationToken, Task<User>> loadWithToken = ct => _db.GetUser(id, ct);
+Result<User> sameUser = await loadWithToken.ExecuteAsync(cancellationToken);
 ```
 
 ### Retry Extensions
@@ -791,7 +811,19 @@ Result<User> user = await ((ct) => _db.GetUser(id, ct)).ExecuteAsync(cancellatio
 ```csharp
 Func<CancellationToken, Task<Result<User>>> getUser = ct => _db.GetUser(id, ct);
 Result<User> result = await getUser.RetryIfFailed(maxAttempts: 3);
+
+// Custom retry predicate: retry only the errors you choose
+Result<User> retried = await getUser.RetryIfFailed(
+    shouldRetry: error => error.Type == ErrorType.Unexpected,
+    maxAttempts: 5,
+    delay: TimeSpan.FromMilliseconds(200));
 ```
+
+| Method | What It Does |
+|--------|-------------|
+| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
+| `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
+| `func.ExecuteAsync(ct)` | Runs a `Func<Task>`, `Func<Task<T>>`, `Func<Task<Result<T>>>` (or their `CancellationToken` forms) and returns `Result` / `Result<T>` |
 
 ### Error Handling
 
@@ -800,7 +832,9 @@ Result<User> result = await getUser.RetryIfFailed(maxAttempts: 3);
 | `Resilience.Timeout` | Operation exceeded timeout |
 | `Resilience.CircuitBroken` | Circuit breaker is open |
 
-When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
+When retries exhaust, the last exception is returned as `ErrorType.Unexpected`. Both are created with `Error.Failure`.
+
+Cancellation: when the caller's `CancellationToken` is cancelled, `ExecuteAsync` and `RetryIfFailed` throw `OperationCanceledException` instead of returning a failed `Result`. This also applies when the cancellation lands during a retry delay or right after the last attempt.
 
 ### Configuration Options
 
@@ -838,7 +872,7 @@ Result<User> user = await ResiliencePolicy
 | `SingleOrDefaultAsResultAsync<T>` | Returns `Result<T>` (NotFound on null) | `SingleOrDefaultAsync` + null check |
 | `FindAsResultAsync<T>` | Returns `Result<T>` from `Find` | `FindAsync` + null check |
 | `SaveChangesAsResultAsync` | Returns `Result` wrapping save | try/catch around `SaveChangesAsync` |
-| `MigrateDataAsync` | Runs migrations returning `Result` | Manual migration + exception handling |
+| `MigrateDataAsync<TEntity, TSeedData>(data, preCondition, converter)` | Seeds data rows when a precondition holds (returns `Task`) | Hand-written seeding code |
 
 ### Pagination
 
@@ -930,11 +964,13 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `EnhancedJsonSerializerOptions.DefaultOptions` | Pre-configured (camelCase, lenient) |
 | `EnhancedJsonSerializerOptions.StrictOptions` | Strict mode options |
 | `.DefaultOptionsWithDateTimeConverter` | Options with multi-format date parsing |
-| `.Create(...)` | Factory with customization parameters |
+| `options.Create(configure)` | Copies options and applies a configuration delegate |
+| `CreateOptionsWithConverters(params JsonConverter[])` | Default options plus the given converters |
 | `ConvertToJson<T>()` | Extension — serialize to JSON string |
 | `ConvertFromJson<T>()` | Extension — deserialize from JSON string |
+| `jsonElement.ToClrObject()` | Converts a `JsonElement` to plain CLR values: objects to `Dictionary<string, object?>`, arrays to `List<object?>`, numbers to `int`/`long`/`decimal`/`double`, plus `string`, `bool` and `null` |
 | `PolymorphicJsonConverterFactory` | Handles polymorphic serialization |
-| `MultiFormatDateTimeConverter` | Parses multiple date/time formats |
+| `MultiFormatDateTimeConverterFactory` / `MultiFormatDateTimeConverter<T>` | Parses multiple date/time formats |
 | `ConditionalStringEnumConverter` | Conditional enum to/from string (`AllowUndefinedValues = false` rejects undefined numbers) |
 | `StringEnumNaming` | Single naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
 
@@ -1059,15 +1095,16 @@ app.UseEnhancedProblemDetails();
 | Method | What It Does |
 |--------|-------------|
 | `AddAndConfigureApiVersioning()` | Registers API versioning services |
-| `CreateVersionSet()` | Creates version set for Minimal APIs |
-| `CreateVersionedGroup()` | Creates versioned route group |
+| `CreateVersionSet(version = 1)` | Creates version set for Minimal APIs |
+| `CreateVersionedGroup(route, version = 1)` | Creates versioned route group |
+| `MapVersionedGroup(version)` | `MapGroup("v{version:apiVersion}")` with a version set for `version`; works for any endpoints, including a `CSharpEssentials.Endpoints` registry (`app.MapVersionedGroup(2).MapAppsEndpoints()`) |
 | `AddSwagger()` / `UseVersionableSwagger()` | Swagger with version support |
 
 ---
 
 ## 13. CSharpEssentials.Mediator — Pipeline Behaviors
 
-**What it is:** MediatR pipeline behaviors for cross-cutting concerns: validation, logging, exception handling, caching, and transactions.
+**What it is:** Pipeline behaviors for the source-generated [Mediator](https://github.com/martinothamar/Mediator) library (`Mediator.Abstractions`) for cross-cutting concerns: validation, logging, exception handling, caching, and transactions.
 
 **Why it exists:** CQRS handlers often need the same cross-cutting logic — validate input, log execution, convert exceptions to Result failures, cache results, wrap in a transaction. Pipeline behaviors apply these concerns declaratively via marker interfaces rather than repeating code in every handler.
 
@@ -1078,7 +1115,7 @@ app.UseEnhancedProblemDetails();
 | `ValidationBehavior` | — (auto for all) | Runs CSharpEssentials.Validation before handler; returns `Result.Failure` with validation errors |
 | `LoggingBehavior` | `ILoggableRequest` | Logs request/response details |
 | `ExceptionHandlingBehavior` | — (auto for `Result` / `Result<T>`) | Catches handler exceptions; converts to `Result.Failure(Error.Exception(ex))`; `OperationCanceledException` always propagates |
-| `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `CacheDuration` |
+| `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `Expiration` (`BypassCache`, `CacheFailures` control the lookup) |
 | `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope` |
 
 ### ExceptionHandlingBehavior
@@ -1156,11 +1193,23 @@ public enum OrderStatus
 }
 
 // Generated methods (no reflection):
-string str = OrderStatus.Pending.ToStringFast();     // "Pending"
+string str = OrderStatus.Pending.ToOptimizedString(); // "Pending"
+string snake = OrderStatus.Pending.ToSnakeCase();     // "pending"
 bool ok = OrderStatusExtensions.TryParse("Shipped", out var status);
 bool defined = OrderStatusExtensions.IsDefined("Processing");
-IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
+OrderStatus[] all = OrderStatusExtensions.GetValues();
 ```
+
+| Generated member | What It Does |
+|------------------|-------------|
+| `value.ToOptimizedString()` | Member name without reflection |
+| `value.ToSnakeCase()` / `ToKebabCase()` / `ToLowerCase()` / `ToUpperCase()` | Member name in the given casing |
+| `value.AsUnderlyingType()` | Underlying numeric value |
+| `{Enum}Extensions.Parse(name)` / `TryParse(name, out value)` | Name to value |
+| `{Enum}Extensions.IsDefined(name)` | `true` for a member name |
+| `{Enum}Extensions.GetNames()` / `GetValues()` | All member names / values as arrays |
+
+Extensions are generated only for top-level enums. A `[StringEnum]` enum nested in a class or struct is skipped, and analyzer `CSE0001` (Info) reports it. Move the enum to namespace level to get the extensions.
 
 ---
 
@@ -1172,10 +1221,20 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 | Type/Method | What It Does |
 |-------------|-------------|
-| `IDateTimeProvider` | Interface: `DateTimeOffset UtcNow { get; }` |
+| `IDateTimeProvider` | Interface: `UtcNow` (`DateTimeOffset`), `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
 | `DateTimeProvider` | Default implementation using system clock |
-| `ToTimeOnly()` | Extension: `DateTime`/`DateTimeOffset` to `TimeOnly` |
-| `ToDateOnly()` | Extension: `DateTime`/`DateTimeOffset` to `DateOnly` |
+| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)` |
+| `ToTimeOnly()` | Extension: `DateTime` to `TimeOnly` |
+| `ToDateOnly()` | Extension: `DateTime` to `DateOnly` |
+| `NextDayOfWeek(dayOfWeek, includeCurrent = false)` | Next given weekday for a `DateTime` or `DateOnly`; `includeCurrent` returns the date itself when it already matches |
+| `PreviousDayOfWeek(dayOfWeek, includeCurrent = false)` | Previous given weekday, same rules |
+| `birthDate.GetAge(today)` / `birthDate.GetAge(dateTimeProvider)` | Age in whole years for a `DateOnly` birth date; the provider form uses its `TimeZone`. Throws `ArgumentOutOfRangeException` when the birth date is after the reference date |
+
+```csharp
+var clock = new FakeDateTimeProvider(new DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero));
+DateOnly nextMonday = clock.UtcNowDate.NextDayOfWeek(DayOfWeek.Monday);   // 2026-10-12
+int age = new DateOnly(1990, 5, 1).GetAge(clock);                          // 36
+```
 
 ---
 
@@ -1197,7 +1256,7 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 
 | Member | What It Does |
 |--------|-------------|
-| `AddRequestResponseLogging()` | Registers the middleware in DI and pipeline |
+| `app.AddRequestResponseLogging(options => ...)` | Adds the middleware to the pipeline (`IApplicationBuilder`); options: `LoggingLevel`, `HeaderKeys`, `LoggingFields`, `UseSeparateContext`, `LoggerCategoryName` |
 | `[SkipRequestLogging]` | Attribute to opt out of request body logging |
 | `[SkipResponseLogging]` | Attribute to opt out of response body logging |
 | `[SkipRequestResponseLogging]` | Attribute to opt out of both |
@@ -1212,7 +1271,22 @@ IReadOnlyList<OrderStatus> all = OrderStatusExtensions.GetValues();
 |------|-------------|
 | `SecretManagerConfigurationSource` | `IConfigurationSource` for Secret Manager |
 | `SecretManagerConfigurationProvider` | Loads secrets as configuration values |
-| `SecretManagerConfigurationOptions` | `sealed record` options: `Projects` / `AddProject(...)` (fluent), `CredentialsPath`, `Loader`, `LoggerFactory` (optional `ILoggerFactory`; no console output), `BatchSize`, `PageSize` |
+| `SecretManagerConfigurationOptions` | `sealed record` options: `Projects` / `AddProject(...)` (fluent), `CredentialsPath`, `Loader`, `LoggerFactory` (optional `ILoggerFactory`; no console output), `LoadFromAppSettings`, `ConfigurationSectionName`, `BatchSize` (default 10), `PageSize` (default 300) |
+| `ProjectSecretConfiguration` | `sealed record` per project: `ProjectId`, `Region` (null = global endpoint), `PrefixFilters`, `SecretIds`, `RawSecretIds`, `RawSecretPrefixes` (raw secrets are not parsed as JSON) |
+| `configuration.AddGcpSecretManager(options => ...)` | Adds the source to an `IConfigurationManager` (for example `builder.Configuration`) |
+
+```csharp
+builder.Configuration.AddGcpSecretManager(options =>
+{
+    options.AddProject(new ProjectSecretConfiguration
+    {
+        ProjectId = "my-gcp-project",
+        PrefixFilters = ["MyApp__"]
+    });
+});
+```
+
+`AddProject(null)` and `Projects = null` throw `ArgumentNullException`. `Projects` is copy-on-write, so copies made with `with` never share changes. Listing and reading secrets retry through `CSharpEssentials.Resilience` (`RetryIfFailed` with a `shouldRetry` predicate): only `ResourceExhausted` and `Unavailable` are retried, 3 times with exponential backoff; any other status fails at once. A failed listing skips that project, a failed read skips that secret, and loading continues.
 
 ---
 
@@ -1240,7 +1314,7 @@ public class CreateUserCommandValidator : Validator<CreateUserCommand>
     }
 }
 
-Result<CreateUserCommand> result = await validator.ValidateAsync(command);
+Result<CreateUserCommand> result = await new CreateUserCommandValidator().ValidateAsync(command);
 // error codes: "Email.NotEmpty", "Name.MaxLength", "Age.GreaterThan"
 ```
 
@@ -1255,12 +1329,12 @@ Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, ru
 });
 
 // Async delegate — when MustAsync or SetValidatorAsync is needed
-Result<CreateUserCommand> result = await Validator.ValidateAsync(command, async (m, rules, ct) =>
+Result<CreateUserCommand> checkedAsync = await Validator.ValidateAsync(command, async (m, rules, ct) =>
 {
     rules.For(() => m.Name).NotEmpty();
     await rules.For(() => m.Email)
                .MustAsync(async (email, c) => await _db.IsUniqueAsync(email, c),
-                          "Email.NotUnique", "Email is already taken.", c);
+                          "Email.NotUnique", "Email is already taken.", ct);
 }, cancellationToken);
 ```
 
@@ -1381,29 +1455,32 @@ await rules.ForEachAsync(() => model.Items, async (item, itemRules, ct) =>
 `Configure` receives the live model — any C# control flow works directly. No `When()`/`Unless()` DSL needed.
 
 ```csharp
-protected override ValueTask Configure(Order model, RuleContext<Order> rules, CancellationToken ct = default)
+public class CheckoutValidator : Validator<Checkout>
 {
-    rules.For(() => model.CustomerId).NotEmpty();
+    protected override ValueTask Configure(Checkout model, RuleContext<Checkout> rules, CancellationToken ct = default)
+    {
+        rules.For(() => model.CustomerId).NotEmpty();
 
-    if (model.OrderType == OrderType.Business)
-        rules.For(() => model.CompanyName).NotEmpty().MaxLength(200);
-    else
-        rules.For(() => model.FirstName).NotEmpty().MaxLength(100);
+        if (model.OrderType == OrderType.Business)
+            rules.For(() => model.CompanyName).NotEmpty().MaxLength(200);
+        else
+            rules.For(() => model.FirstName).NotEmpty().MaxLength(100);
 
-    if (!model.AcceptsTerms) return ValueTask.CompletedTask;
-    rules.For(() => model.Signature).NotEmpty();
-    return ValueTask.CompletedTask;
+        if (!model.AcceptsTerms) return ValueTask.CompletedTask;
+        rules.For(() => model.Signature).NotEmpty();
+        return ValueTask.CompletedTask;
+    }
 }
 ```
 
 ### Validator Composition
 
 ```csharp
-public class PaidOrderValidator : Validator<Order>
+public class PaidCheckoutValidator : Validator<Checkout>
 {
-    protected override async ValueTask Configure(Order model, RuleContext<Order> rules, CancellationToken ct = default)
+    protected override async ValueTask Configure(Checkout model, RuleContext<Checkout> rules, CancellationToken ct = default)
     {
-        await Include(new BaseOrderValidator(), model, rules, ct);   // merge base rules
+        await Include(new CheckoutValidator(), model, rules, ct);   // merge base rules
         rules.For(() => model.PaymentReference).NotEmpty();
     }
 }
@@ -1417,7 +1494,7 @@ public class PaidOrderValidator : Validator<Order>
 | `AddValidatorsFromAssembly(assembly)` | Registers all validators in an assembly |
 | `AddValidatorsFromAssemblies(assemblies)` | Registers validators across multiple assemblies |
 
-Default lifetime: `Scoped`. Pass a `lifetime` parameter to override. Multiple `IValidator<T>` registrations for the same `T` are supported — `ValidationBehavior` aggregates and deduplicates results from all of them.
+Default lifetime: `Scoped`. Pass a `lifetime` parameter to override. Registration uses `TryAddEnumerable`, so registering the same validator type twice (for example `AddValidator` and an assembly scan) adds it only once. Different validator types for the same `T` are all registered — `ValidationBehavior` aggregates and deduplicates results from all of them.
 
 ### Validator Ordering
 
@@ -1443,8 +1520,8 @@ Validation runs before the handler. On failure the handler is never invoked. `Re
 | `result.ValidateWithAsync(validator, ct)` | `Result<T>` | `ValueTask<Result<T>>` | Named validator in a pipeline |
 | `result.ValidateWithAsync(configure)` | `Result<T>` | `ValueTask<Result<T>>` | Inline sync delegate, async context |
 | `result.ValidateWithAsync(asyncConfigure, ct)` | `Result<T>` | `ValueTask<Result<T>>` | Inline async delegate |
-| `taskResult.ValidateWithAsync(validator, ct)` | `Task<Result<T>>` | `ValueTask<Result<T>>` | Awaited task pipeline |
-| `valueTaskResult.ValidateWithAsync(validator, ct)` | `ValueTask<Result<T>>` | `ValueTask<Result<T>>` | ValueTask pipeline |
+| `taskResult.ValidateWithAsync(validator \| configure \| asyncConfigure, ct)` | `Task<Result<T>>` | `ValueTask<Result<T>>` | Awaited task pipeline |
+| `valueTaskResult.ValidateWithAsync(validator \| configure \| asyncConfigure, ct)` | `ValueTask<Result<T>>` | `ValueTask<Result<T>>` | ValueTask pipeline |
 
 ```csharp
 // Named validator — plugs straight into a Result<T> chain
@@ -1452,16 +1529,16 @@ Result<CreateUserCommand> result = await ParseCommand(input)
     .ValidateWithAsync(new CreateUserCommandValidator(), ct);
 
 // Inline validation — no dedicated class needed
-Result<CreateUserCommand> result = await ParseCommand(input)
-    .ValidateWithAsync(command, (m, rules) =>
+Result<CreateUserCommand> inline = ParseCommand(input)
+    .ValidateWith((m, rules) =>
     {
         rules.For(() => m.Email).NotEmpty().EmailAddress();
         rules.For(() => m.Name).NotEmpty().MaxLength(100);
     });
 
 // Works on Task<Result<T>> — no intermediate await
-Result<Order> order = await GetOrderAsync(id)           // Task<Result<Order>>
-    .ValidateWithAsync(new OrderValidator(), ct);        // skips if already failed
+Result<Checkout> checkout = await GetCheckoutAsync(id)  // Task<Result<Checkout>>
+    .ValidateWithAsync(new CheckoutValidator(), ct);     // skips if already failed
 ```
 
 Short-circuits immediately: if `result.IsFailure` before validation runs, the existing errors pass through and the validator is never invoked. This makes it safe to chain multiple `ValidateWithAsync` calls without nested null/failure checks.
@@ -1510,25 +1587,23 @@ Short-circuits immediately: if `result.IsFailure` before validation runs, the ex
 | `ToResult()` | Both → **failure** (strict) | Warning = blocking |
 | `ToResultLenient()` | Both → **success** (lenient) | Warning = non-blocking |
 
+Both are extensions on `These<Error, TValue>`.
+
 ### Collection Extensions
 
 | Method | What It Does |
 |--------|-------------|
-| `Partition(IEnumerable<These<TError,TValue>>)` | Returns `(lefts, rights, boths)` tuple |
-| `FromResult(Result<TValue>)` | Wraps a `Result` into `These` |
+| `Partition(IEnumerable<These<TError,TValue>>)` | Returns `(Lefts, Rights, Boths)` as read-only lists |
+| `TheseExtensions.FromResult(Result<TValue>)` | Wraps a `Result` into `These<Error, TValue>` |
 
 ```csharp
 // Partial success: import CSV rows, collect errors without stopping
 These<List<ImportError>, List<User>> result = ImportCsv(csv);
 
-result.Match(
-    onLeft:  errors        => Log("All rows failed", errors),
-    onRight: users         => db.SaveAll(users),
-    onBoth:  (errors, users) =>
-    {
-        Log($"{errors.Count} rows skipped", errors);
-        db.SaveAll(users);
-    });
+string summary = result.Match(
+    onLeft:  errors          => $"All {errors.Count} rows failed",
+    onRight: users           => $"{users.Count} rows imported",
+    onBoth:  (errors, users) => $"{users.Count} rows imported, {errors.Count} skipped");
 
 // Chain transformations
 These<string, int> doubled = These<string, int>.Both("warn", 5)
@@ -1557,8 +1632,176 @@ string json = JsonSerializer.Serialize(these);
 // {"isLeft":true,"isRight":true,"left":"warning","right":42}
 
 These<string, int> back = JsonSerializer.Deserialize<These<string, int>>(json);
-back.IsBoth   // true
+bool isBoth = back.IsBoth;   // true
 ```
+
+---
+
+## 21. CSharpEssentials.Endpoints — Source-Generated Endpoint Mapping
+
+**What it is:** Organizes ASP.NET Core Minimal API endpoints into types and groups. A bundled source generator writes a reflection-free registry per assembly. Route calls stay in your code, so binding, filters, `IResult`, OpenAPI and the Request Delegate Generator work unchanged. Targets `net11.0`, `net10.0`, `net9.0`, `net8.0`.
+
+```csharp
+public sealed class AppsGroup : IEndpointGroup
+{
+    public static string Prefix => "apps";
+
+    public static void Configure(RouteGroupBuilder group) => group.WithTags("Apps").RequireAuthorization();
+}
+
+[EndpointGroup<AppsGroup>]
+public sealed class CreateApp : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapPost("/", (CreateAppRequest request, IAppService service) => service.CreateAsync(request))
+           .WithValidation<CreateAppRequest>();
+}
+```
+
+### Declaring Endpoints
+
+| Type/Attribute | What It Does |
+|----------------|-------------|
+| `IEndpoint` | `static void Map(IEndpointRouteBuilder app)`. Endpoint types are never instantiated; dependencies come from handler parameters |
+| `IEndpointGroup` | `static string Prefix` (passed to `MapGroup`) and `static void Configure(RouteGroupBuilder group)` for group-wide conventions |
+| `[EndpointGroup(typeof(TGroup))]` / `[EndpointGroup<TGroup>]` | Places an endpoint or a group under a group. Groups can nest |
+| `[ExcludeFromMapping]` | Excludes an endpoint, a group (with everything under it) or an assembly |
+
+### Mapping
+
+| Member | What It Does |
+|--------|-------------|
+| `app.Map{Asm}Endpoints(options?)` | Generated per assembly in `Microsoft.AspNetCore.Builder`. `{Asm}` is the sanitized assembly name or the `[assembly: EndpointRegistryName("...")]` value |
+| `app.MapAllEndpoints(options?)` | `internal`; maps the own registry, then every referenced registry once. Generated in `Exe`/`WinExe` projects that are not test projects |
+| `[assembly: GenerateEndpointAggregate]` / `[assembly: DisableEndpointAggregate]` | Opt in to `MapAllEndpoints` from a library or test project / opt out in an application |
+| `{Asm}EndpointRegistry.EndpointTypes` | Endpoint types in mapping order |
+| `app.MapEndpointsFromAssemblies(assemblies)` / `(configure, assemblies)` | Reflection fallback for assemblies without a registry (plugins). Same rules and options; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
+| `app.MapVersionedGroup(version).Map{Asm}Endpoints()` | Versioned routes (`/v2/...`) via `CSharpEssentials.AspNetCore` |
+
+Each endpoint type is mapped inside its own `MapGroup("")`, so routes, metadata, filters and authorization match direct mapping.
+
+```csharp
+app.MapAppsEndpoints(options =>
+{
+    options.Filter(type => type.Namespace != "Sample.Internal");
+    options.OperationNaming = OperationNaming.TypeName;
+    options.AutoTagFromGroup = true;
+    options.LogDiscovered = true;
+});
+```
+
+### `EndpointMappingOptions`
+
+| Option | What It Does |
+|--------|-------------|
+| `Filter(predicate)` | Skips endpoint types for which the predicate returns `false`. Multiple predicates are AND-combined |
+| `ConfigureEach((builder, type) => ...)` | Runs once per endpoint type after group `Configure`, in registration order |
+| `OperationNaming` | `None` (default), `TypeName` or `Custom(...)`. An explicit `WithName(...)` always wins |
+| `AutoTagFromGroup` | Tags untagged endpoints with the innermost group name (`UsersGroup` → `Users`) |
+| `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints` |
+
+### Routes and Authorization
+
+| Member | What It Does |
+|--------|-------------|
+| `EndpointTypeMetadata` | Added to every endpoint; identifies the endpoint type at runtime |
+| `app.RouteOf<TEndpoint>(values?)` / `RouteOf<TEndpoint>(nameOrMethod, values?)` | Builds a request path from the endpoint type (group prefixes included). Extra values become query string entries. Throws `InvalidOperationException` when no single route matches or a route value is missing |
+| `RequireRoles(...)` | Any listed role |
+| `RequirePolicies(...)` | Every listed policy |
+| `RequireAuthSchemes(...)` | Any listed scheme |
+
+```csharp
+string path = app.RouteOf<GetApp>(new { id = 42 });   // "/apps/42"
+group.RequireRoles("admin", "editor");
+```
+
+### Diagnostics
+
+| ID | Severity | Rule |
+|----|----------|------|
+| CSE1001 | Error | Endpoint or group type is not accessible from generated code |
+| CSE1002 | Error | Group nesting cycle |
+| CSE1003 | Error | More than one group attribute on one type |
+| CSE1004 | Warning | Endpoint declares instance state (code fix removes it) |
+| CSE1005 | Warning | Two endpoints in one group map the same HTTP method and constant route |
+| CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped |
+| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target is not a concrete `IEndpointGroup` |
+
+---
+
+## 22. CSharpEssentials.DependencyInjection — Attribute-Based Registration
+
+**What it is:** Attribute-based service registration and decoration for `Microsoft.Extensions.DependencyInjection`. A bundled source generator writes a reflection-free `Add{Assembly}Services` method; every strategy is key-aware. Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` (generic attribute forms need `net7.0` or later).
+
+```csharp
+[RegisterScoped]                                     // IOrderService, by the I{TypeName} rule
+public sealed class OrderService : IOrderService { }
+
+[RegisterSingleton<IPaymentGateway>(Key = "stripe")] // keyed, generic form
+public sealed class StripeGateway : IPaymentGateway { }
+
+[RegisterTransient(typeof(IRepository<>))]           // open generic
+public sealed class Repository<T> : IRepository<T> { }
+
+[Decorates(typeof(IOrderService), Order = 1)]
+public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
+```
+
+### Attributes
+
+| Attribute | What It Does |
+|-----------|-------------|
+| `[RegisterScoped]` / `[RegisterSingleton]` / `[RegisterTransient]` | Registers the class. Optional service type: `(typeof(IFoo))` or `<IFoo>`. Without one (and without `As`), registers as the interface named `I{TypeName}`, otherwise as itself |
+| `Key` | Registers a keyed service (`null` = non-keyed) |
+| `As` | `ServiceAs.Self`, `ServiceAs.SelfWithInterfaces` (one shared instance), `ServiceAs.ImplementedInterfaces` |
+| `Strategy` | `RegistrationStrategy.Add` (default), `TryAdd`, `TryAddEnumerable`, `Replace`, `Throw` |
+| `[Decorates(typeof(TService), Order = n)]` / `[Decorates<TService>]` | Decorates every matching registration in ascending `Order`, keeping lifetime and key |
+| `[ExcludeFromRegistration]` | Opts a class or an assembly out |
+
+### Registration and Decoration
+
+| Member | What It Does |
+|--------|-------------|
+| `services.Add{Asm}Services(logger?)` | Generated per assembly: registers services, then applies decorators. The logger reports duplicate (service, key) registrations at `Debug` |
+| `services.AddAllServices()` | `internal`; registers every referenced registry and the application's own, then applies all decorators. Generated in applications |
+| `[assembly: ServiceRegistryName("...")]` / `GenerateServiceAggregate` / `DisableServiceAggregate` | Rename the method / opt in to `AddAllServices` in a library or test project / opt out |
+| `services.AddServicesFromAssemblies(assemblies)` / `(logger, assemblies)` | Reflection fallback; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
+| `services.Decorate<TService, TDecorator>(serviceKey?)` | Runtime decoration; throws `InvalidOperationException` when nothing matches |
+| `services.Decorate<TService>((inner, sp) => ...)` | Factory decoration |
+| `services.TryDecorate<TService, TDecorator>()` | Returns `false` when nothing matches |
+| `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` | Decorates the closed registrations of an open generic |
+
+```csharp
+builder.Services.AddSampleBillingServices();
+builder.Services.TryDecorate<IOrderService, LoggingOrderService>();
+```
+
+Decorated originals move to a hidden registration under a private key, so they never appear in `GetServices<T>()`. If decoration fails, the collection is left unchanged.
+
+### Diagnostics
+
+| ID | Severity | Rule |
+|----|----------|------|
+| CSE2001 | Error | The class does not implement the service type |
+| CSE2002 | Error | Duplicate service type and key where one uses `RegistrationStrategy.Throw` |
+| CSE2003 | Info | No interface matches `I{TypeName}`, so the class registers as itself (code fix adds the service type) |
+| CSE2004 | Error | Decorator has zero or several constructor parameters of the decorated type |
+| CSE2005 | Error | Decorator does not have exactly one public constructor |
+| CSE2006 | Info | Captive dependency between attribute registrations |
+| CSE2007 | Error | Generated code cannot construct the class |
+| CSE2008 | Warning | Open-generic decorators are not generated; call `Decorate(Type, Type)` |
+
+---
+
+## 23. CSharpEssentials — Meta Package
+
+**What it is:** One package reference that brings in the core libraries:
+
+```bash
+dotnet add package CSharpEssentials
+```
+
+It references `CSharpEssentials.Any`, `Clone`, `Core`, `Entity`, `Enums`, `Errors`, `Http`, `Json`, `Maybe`, `Results`, `Rules`, `These` and `Time`. Install `AspNetCore`, `DependencyInjection`, `Endpoints`, `EntityFrameworkCore`, `GcpSecretManager`, `Mediator`, `RequestResponseLogging`, `Resilience` and `Validation` separately when you need them.
 
 ---
 
