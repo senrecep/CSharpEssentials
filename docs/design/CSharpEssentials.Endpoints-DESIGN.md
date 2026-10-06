@@ -394,7 +394,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 - Shipped: CSE1005 duplicate HTTP method + route literal (warning, §7).
 - Shipped: typed route helper `app.RouteOf<CreateApp>(new { id })` and `app.RouteOf<CreateApp>(nameOrMethod, values)` in `EndpointRouteLookupExtensions`. It selects `RouteEndpoint`s by `EndpointTypeMetadata` (optionally by `WithName` or HTTP method), binds values with `TemplateBinderFactory` and checks route constraints. No route, an ambiguous route or a missing/invalid value throws `InvalidOperationException`. It is `[RequiresUnreferencedCode]` because `RouteValueDictionary(object)` reads properties by reflection.
 - Shipped: validation endpoint filter `ValidationEndpointFilter<T>` + `RouteHandlerBuilder.WithValidation<T>()` in **`CSharpEssentials.AspNetCore`**, not in Endpoints. Endpoints stays dependency-light, and AspNetCore must not reference Endpoints. `ToProblemResult` already lives in AspNetCore, so the filter needs one new edge, AspNetCore → Validation (Validation depends only on Results and DI abstractions, so no cycle). It works for any Minimal API handler, inside or outside `IEndpoint.Map`. Missing validators throw `InvalidOperationException`; a handler without a `T` parameter fails when the endpoint is built.
-- Security shortcuts (`Roles`, `Policies`, `AuthSchemes`) over `RequireAuthorization`.
+- Shipped: security shortcuts `RequireRoles`, `RequirePolicies` and `RequireAuthSchemes` (`params string[]`, any `IEndpointConventionBuilder`) in `EndpointAuthorizationExtensions`. Roles and schemes are joined into one `AuthorizeAttribute` (any of them), policies add one `AuthorizeAttribute` each (all of them). The names do not collide with ASP.NET Core 8 to 11, which only ship `RequireAuthorization` and `AllowAnonymous`.
 - Code fix for CSE1004 (needs `Microsoft.CodeAnalysis.CSharp.Workspaces` in a separate `*.CodeFixes` project; owner approval required).
 
 ## 9. Explicitly Skipped Features
@@ -415,7 +415,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | REPR base classes (`Endpoint<TReq,TRes>`) with their own binding and serialization pipeline | Replaces Minimal APIs instead of layering on them. |
 | Pre/post processors and the built-in validation pipeline | Endpoint filters already provide this. Validation is an endpoint filter in `CSharpEssentials.AspNetCore` (§8). |
 | Command bus, event bus, job queues | Out of scope. `CSharpEssentials.Mediator` covers in-process messaging. |
-| Permission code generation and security DSL | Native `RequireAuthorization`. P3 adds only thin shortcuts. |
+| Permission code generation and security DSL | Native `RequireAuthorization`. Only the thin shortcuts in `EndpointAuthorizationExtensions` ship. |
 | NSwag-based Swagger generation | Native ApiExplorer/OpenAPI, verified identical with wrapping. |
 | Route and verb declared in a `Configure()` override | Routes stay in `Map` bodies so RDG interceptors apply. |
 | Test fixtures (`AppFixture`) | `WebApplicationFactory`/`TestServer` are sufficient. |
