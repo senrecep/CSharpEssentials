@@ -71,6 +71,7 @@
     <ProjectReference Include="..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.Enums.CodeFixes\CSharpEssentials.Enums.CodeFixes.csproj" />
     <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Endpoints\CSharpEssentials.Endpoints.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Endpoints.Generators\CSharpEssentials.Endpoints.Generators.csproj"

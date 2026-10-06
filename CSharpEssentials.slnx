@@ -12,6 +12,7 @@
   <Project Path="CSharpEssentials.Endpoints.CodeFixes/CSharpEssentials.Endpoints.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.Endpoints.Generators/CSharpEssentials.Endpoints.Generators.csproj" />
   <Project Path="CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
+  <Project Path="CSharpEssentials.Enums.CodeFixes/CSharpEssentials.Enums.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.Enums.Generators/CSharpEssentials.Enums.Generators.csproj" />
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
   <Project Path="CSharpEssentials.GcpSecretManager/CSharpEssentials.GcpSecretManager.csproj" />
