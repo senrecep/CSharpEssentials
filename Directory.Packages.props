@@ -49,24 +49,24 @@
 
     <!-- CSharpEssentials Internal Packages -->
     <ItemGroup Label="CSharpEssentials">
-        <PackageVersion Include="CSharpEssentials.Any" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Clone" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Core" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Entity" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Endpoints" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Enums" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Errors" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Http" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Json" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Maybe" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Mediator" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Resilience" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Results" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Rules" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.These" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Time" Version="[4.0.0]" />
-        <PackageVersion Include="CSharpEssentials.Validation" Version="[4.0.0]" />
+        <PackageVersion Include="CSharpEssentials.Any" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Clone" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Core" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Entity" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Endpoints" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Enums" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Errors" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Http" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Json" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Maybe" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Mediator" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Resilience" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Results" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Rules" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.These" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Time" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Validation" Version="[4.1.0]" />
     </ItemGroup>
 
     <!-- Test -->
