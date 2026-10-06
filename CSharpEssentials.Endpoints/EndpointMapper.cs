@@ -108,7 +108,13 @@ public static class EndpointMapper
         }
 
         OperationNaming naming = options.OperationNaming;
-        if (!naming.IsNone)
+        if (naming.IsTypeName)
+        {
+            var registry = OperationNameRegistry.For(parent.ServiceProvider);
+            int mapping = registry.Register(endpointType);
+            conventions.Finally(endpoint => registry.Apply(endpoint, endpointType, mapping));
+        }
+        else if (!naming.IsNone)
         {
             conventions.Finally(endpoint => ApplyName(endpoint, endpointType, naming));
         }

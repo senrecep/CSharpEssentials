@@ -90,7 +90,7 @@ app.MapAppsEndpoints(options =>
 |---|---|
 | `Filter` | Skips endpoint types for which a predicate returns `false`. Multiple predicates are AND-combined. Groups whose endpoints are all filtered out are not created. |
 | `ConfigureEach` | Runs once per endpoint type after group `Configure` and per-type metadata, in registration order. |
-| `OperationNaming` | `None` (default), `TypeName` or `Custom(...)`. An explicit `WithName(...)` always wins. |
+| `OperationNaming` | `None` (default), `TypeName` or `Custom(...)`. `TypeName` builds unique names from the type and its containing types (`Orders_Endpoint`), adds the HTTP method when a type maps several routes (`Items_Get`, `Items_Post`), qualifies colliding names with the namespace and throws when two types share a full name. An explicit `WithName(...)` always wins. |
 | `AutoTagFromGroup` | Tags endpoints without explicit tags with the innermost group name (`UsersGroup` → `Users`). |
 | `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints`. |
 

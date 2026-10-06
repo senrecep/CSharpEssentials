@@ -121,9 +121,14 @@ public sealed class OperationNaming
 ```
 
 - `None`: names are not changed.
-- `TypeName`: endpoint name = endpoint type name (`CreateApp`). Generic arity suffixes do not apply because generic endpoints are skipped (CSE1006).
+- `TypeName`: the endpoint name is built from the endpoint type name and its containing types, joined with `_` (`CreateApp`, `Orders_Endpoint`). Characters other than ASCII letters and digits become `_`. Generic arity suffixes do not apply because generic endpoints are skipped (CSE1006). The rules that keep names unique within one application:
+  - A type that maps several routes gets the HTTP method as a suffix (`Items_Get`, `Items_Post`, `Any` when no method is set). When a method repeats inside the type, a 1-based index follows (`Reports_Get_1`, `Reports_Get_2`).
+  - Types that end up with the same name are qualified with their namespace (`Billing_Invoices_Lookup`, `Sales_Invoices_Lookup`).
+  - A name already taken by an explicit `WithName(...)` on a mapped endpoint, or by an earlier generated name, gets a numeric suffix (`Echo_2`).
+  - Two different types with the same full name (the same namespace and type name in different assemblies) cannot be told apart, so mapping throws an `InvalidOperationException` that names both types.
 - `Custom`: the delegate receives the endpoint type and the endpoint builder (HTTP methods and route available). Returning `null` leaves the endpoint unnamed.
-- Naming is applied through `IEndpointConventionBuilder.Finally`, so an explicit `WithName(...)` in the user's `Map` body always wins. A type that maps several routes under `TypeName` naming must name them explicitly. Otherwise, ASP.NET Core rejects the duplicate endpoint names at startup.
+- Naming is applied through `IEndpointConventionBuilder.Finally`, so an explicit `WithName(...)` in the user's `Map` body always wins.
+- `TypeName` adds one name metadata object (`IEndpointNameMetadata` and `IRouteNameMetadata`) per route. The object resolves its name on first read, after every endpoint of the application has been built, because `Finally` runs per endpoint and cannot know how many routes the type maps. The state lives in a registry kept per `IServiceProvider`. Routes are keyed by mapping call, HTTP methods and route pattern, so rebuilding a data source (route groups rebuild on every `Endpoints` read) yields the same names. Explicit names only count when they are on endpoints mapped through the mapper; a `WithName(...)` on an endpoint mapped elsewhere is not seen.
 
 ### 4.6 `EndpointTypeMetadata`
 
