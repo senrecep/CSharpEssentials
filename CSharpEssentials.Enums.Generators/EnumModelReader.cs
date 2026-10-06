@@ -29,11 +29,7 @@ internal static class EnumModelReader
         if (!TryGetAccessibility(symbol, out bool isPublic))
             return null;
 
-        List<string> names = [symbol.Name];
-        for (INamedTypeSymbol? containing = symbol.ContainingType; containing is not null; containing = containing.ContainingType)
-        {
-            names.Insert(0, containing.Name);
-        }
+        List<string> names = TypeNames(symbol);
 
         SpecialType underlying = symbol.EnumUnderlyingType?.SpecialType ?? SpecialType.System_Int32;
         bool isSigned = underlying is SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_Int32 or SpecialType.System_Int64;
@@ -49,6 +45,7 @@ internal static class EnumModelReader
         return new EnumModel(
             symbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : symbol.ContainingNamespace.ToDisplayString(),
             string.Join("_", names) + "Extensions",
+            string.Join("+", names),
             symbol.ToDisplayString(FullyQualifiedFormat),
             isPublic,
             Keyword(underlying),
@@ -104,6 +101,20 @@ internal static class EnumModelReader
     /// generic containing type.
     /// </summary>
     public static bool IsReachable(INamedTypeSymbol symbol) => TryGetAccessibility(symbol, out _);
+
+    /// <summary>The name of the generated extensions class (<c>Order_StateExtensions</c> for <c>Order.State</c>).</summary>
+    public static string ExtensionsClassName(INamedTypeSymbol symbol) => string.Join("_", TypeNames(symbol)) + "Extensions";
+
+    private static List<string> TypeNames(INamedTypeSymbol symbol)
+    {
+        List<string> names = [symbol.Name];
+        for (INamedTypeSymbol? containing = symbol.ContainingType; containing is not null; containing = containing.ContainingType)
+        {
+            names.Insert(0, containing.Name);
+        }
+
+        return names;
+    }
 
     private static bool TryGetAccessibility(INamedTypeSymbol symbol, out bool isPublic)
     {

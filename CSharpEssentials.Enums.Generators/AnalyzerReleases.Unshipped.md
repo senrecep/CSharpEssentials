@@ -6,6 +6,7 @@
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
 CSE0015 | Usage | Warning | StringEnumAnalyzer
+CSE0016 | Usage | Error | StringEnumAnalyzer
 
 ### Removed Rules
 

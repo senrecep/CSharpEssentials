@@ -5,6 +5,7 @@ namespace CSharpEssentials.Enums.Generators;
 /// </summary>
 /// <param name="Namespace">The containing namespace, empty for the global namespace.</param>
 /// <param name="ExtensionsClassName">The generated class name (<c>Order_StateExtensions</c> for a nested enum).</param>
+/// <param name="MetadataName">The type name without namespace, nested types joined with <c>+</c> (<c>Order+State</c>); unique per enum.</param>
 /// <param name="FullyQualifiedName">The <c>global::</c> qualified enum name.</param>
 /// <param name="IsPublic">Whether the enum is accessible outside its assembly.</param>
 /// <param name="UnderlyingType">The C# keyword of the underlying type.</param>
@@ -16,6 +17,7 @@ namespace CSharpEssentials.Enums.Generators;
 internal sealed record EnumModel(
     string Namespace,
     string ExtensionsClassName,
+    string MetadataName,
     string FullyQualifiedName,
     bool IsPublic,
     string UnderlyingType,

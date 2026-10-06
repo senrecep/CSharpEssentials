@@ -111,6 +111,64 @@ public class StringEnumAnalyzerTests
         diagnostics.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task CSE0016_Should_Report_StringEnums_Whose_Extensions_Classes_Collide()
+    {
+        const string colliding = """
+            using CSharpEssentials.Enums;
+
+            namespace Sample;
+
+            public class Order
+            {
+                [StringEnum]
+                public enum State { A }
+            }
+
+            [StringEnum]
+            public enum Order_State { B }
+
+            [StringEnum]
+            public enum Order_Kind { C }
+
+            public enum Order_Plain { D }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(colliding, LanguageVersion.Latest);
+
+        diagnostics.Should().OnlyContain(static d => d.Id == "CSE0016" && d.Severity == DiagnosticSeverity.Error);
+        diagnostics.Select(static d => d.GetMessage()).Should().BeEquivalentTo(
+            "'Sample.Order.State' generates the extensions class 'Order_StateExtensions', which 'Sample.Order_State' generates as well; rename one of the enums or its containing type",
+            "'Sample.Order_State' generates the extensions class 'Order_StateExtensions', which 'Sample.Order.State' generates as well; rename one of the enums or its containing type");
+    }
+
+    [Fact]
+    public async Task CSE0016_Should_Not_Report_The_Same_Name_In_Different_Namespaces()
+    {
+        const string separate = """
+            using CSharpEssentials.Enums;
+
+            namespace Orders
+            {
+                public class Order
+                {
+                    [StringEnum]
+                    public enum State { A }
+                }
+            }
+
+            namespace Legacy
+            {
+                [StringEnum]
+                public enum Order_State { B }
+            }
+            """;
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(separate, LanguageVersion.Latest);
+
+        diagnostics.Should().BeEmpty();
+    }
+
     private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source, LanguageVersion languageVersion)
     {
         CSharpCompilation compilation = GeneratorHarness.CreateCompilation([], [typeof(StringEnumAttribute).Assembly])
