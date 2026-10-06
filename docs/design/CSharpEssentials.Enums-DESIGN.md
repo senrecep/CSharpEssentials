@@ -657,7 +657,7 @@ There is no Refit (or RestEase, Flurl) package and no new dependency. Bodies are
 
 - Request bodies: `AddEnumConventions(conventions, EnumReadMode.Data, writeAs)` on the client's `JsonSerializerOptions`.
 - Responses: `Data` mode. The client keeps working while the server moves from integer to string output, and maps newer server values to the fallback member.
-- Route/query in `CSharpEssentials.Http`: `HttpRequestBuilder` and `QueryStringExtensions` format enums with `EnumValueFormatter` (wire name or number by `writeAs`); flags and collections become repeated keys.
+- Route/query in `CSharpEssentials.Http`: `HttpRequestBuilder` (`WithRoute`, `WithQuery(name, object?)`, `WithEnumConventions`) and `QueryStringExtensions` format enums with `EnumValueFormatter` (wire name or number by `writeAs`); flags and collections become repeated keys. Plain enums without metadata keep `ToString()` and the default JSON number.
 - `WriteAs = Number` per client for servers that accept only integers.
 
 ### 13.1 HTTP client recipes (guide, #68)
@@ -686,7 +686,97 @@ services.AddRefitClient<IOrdersApi>(new RefitSettings
 
 Refit expands collection and flags query values itself and calls `Format` once per item, so the Refit adapter needs only `TryFormat`; `TryFormatMany` is for libraries that pass the whole value.
 
-The guide also shows RestEase (`IRequestQueryParamSerializer`/`RequestPathParamSerializer` delegating to `TryFormat`/`TryFormatMany`), Flurl (format before `SetQueryParam`, `ISerializer` over the options), and `HttpClient` with `CSharpEssentials.Http`. Generated clients (Kiota, NSwag) need nothing: they send the wire names from the OpenAPI `enum` list, and their response readers accept names.
+RestEase (`RequestQueryParamSerializer` and `RequestPathParamSerializer` over `TryFormatMany`/`TryFormat`):
+
+```csharp
+public sealed class EnumQueryParamSerializer(EnumConventions conventions, EnumWireFormat? format = null)
+    : RequestQueryParamSerializer
+{
+    public override IEnumerable<KeyValuePair<string, string?>> SerializeQueryParam<T>(
+        string name, T value, RequestQueryParamSerializerInfo info)
+    {
+        List<string> values = [];
+        if (EnumValueFormatter.TryFormatMany(value, conventions, values, format))
+            return values.Select(text => new KeyValuePair<string, string?>(name, text));
+
+        return [new KeyValuePair<string, string?>(name, value?.ToString())];
+    }
+
+    public override IEnumerable<KeyValuePair<string, string?>> SerializeQueryCollectionParam<T>(
+        string name, IEnumerable<T> items, RequestQueryParamSerializerInfo info)
+    {
+        List<string> values = [];
+        if (EnumValueFormatter.TryFormatMany(items, conventions, values, format))
+            return values.Select(text => new KeyValuePair<string, string?>(name, text));
+
+        return items.Select(item => new KeyValuePair<string, string?>(name, item?.ToString()));
+    }
+}
+
+public sealed class EnumPathParamSerializer(EnumConventions conventions, EnumWireFormat? format = null)
+    : RequestPathParamSerializer
+{
+    public override string? SerializePathParam<T>(T value, RequestPathParamSerializerInfo info) =>
+        EnumValueFormatter.TryFormat(value, conventions, out string? text, format) ? text : value?.ToString();
+}
+
+IOrdersApi api = new RestClient("https://api.example.com")
+{
+    RequestQueryParamSerializer = new EnumQueryParamSerializer(conventions),
+    RequestPathParamSerializer = new EnumPathParamSerializer(conventions),
+}.For<IOrdersApi>();
+```
+
+RestEase serializes bodies with Newtonsoft.Json unless `RequestBodySerializer` and `ResponseDeserializer` are replaced. The body half of the adapter is a System.Text.Json pair over `new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(conventions)`.
+
+Flurl (format before `SetQueryParam`; the body goes through the options):
+
+```csharp
+public static class FlurlEnumExtensions
+{
+    public static IFlurlRequest SetEnumQueryParam(
+        this IFlurlRequest request, string name, object? value, EnumConventions conventions, EnumWireFormat? format = null)
+    {
+        List<string> values = [];
+        return EnumValueFormatter.TryFormatMany(value, conventions, values, format)
+            ? request.SetQueryParam(name, values)   // a list becomes repeated keys
+            : request.SetQueryParam(name, value);
+    }
+
+    public static IFlurlRequest AppendEnumPathSegment(
+        this IFlurlRequest request, object value, EnumConventions conventions, EnumWireFormat? format = null) =>
+        request.AppendPathSegment(EnumValueFormatter.TryFormat(value, conventions, out string? text, format) ? text : value.ToString());
+}
+
+JsonSerializerOptions json = new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(conventions);
+IFlurlClient client = new FlurlClient("https://api.example.com")
+    .WithSettings(s => s.JsonSerializer = new DefaultJsonSerializer(json));
+
+Order order = await client.Request()
+    .AppendEnumPathSegment(OrderStatus.PendingApproval, conventions)
+    .SetEnumQueryParam("permissions", Permissions.Read | Permissions.Write, conventions)
+    .GetJsonAsync<Order>();
+```
+
+`HttpClient` with `CSharpEssentials.Http` (no adapter, no extra package):
+
+```csharp
+JsonSerializerOptions json = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+    .AddEnumConventions(conventions, EnumReadMode.Data, EnumWireFormat.String);   // Number for a legacy server
+
+Result<Order> order = await HttpRequestBuilder
+    .Get("https://api.example.com/orders/{status}")
+    .WithEnumConventions(conventions, EnumWireFormat.String)
+    .WithRoute("status", OrderStatus.PendingApproval)
+    .WithQuery("permissions", Permissions.Read | Permissions.Write)               // ?permissions=read&permissions=write
+    .AsResultAsync<Order>(httpClient, json);
+```
+
+`HttpRequestBuilder` returns a validation error for an undefined enum value (it maps `EnumValueException` to `HttpRequestBuilder.InvalidEnumValue`) and keeps the `ToString()` and number behavior for plain enums without `[StringEnum]` metadata. Reflection is an explicit opt-in on the JSON side only (`AddEnumConventionsWithReflection`); route and query formatting never use it.
+
+These recipes are text. The repository references no Refit, RestEase or Flurl package, so the test suite does not compile them. The behavior they depend on (`TryFormat`, `TryFormatMany`, the JSON options) is covered by `EnumValueFormatterTests`, `HttpEnumConventionsTests` and `HttpEnumPeerTests`.
+
+Generated clients (Kiota, NSwag) need nothing: they send the wire names from the OpenAPI `enum` list, and their response readers accept names.
 
 Rollout rule for HTTP, the same as for the bus: **every consumer before any producer**. A server switches its output from `Number` to `String` only after all of its clients run 5.0 (tolerant reads) or another reader that accepts names. A pre-5.0 Refit client fails on `pending_approval`, because the Refit default converter knows only its own naming. Mobile apps that cannot be updated keep the `Number` group or the header selector (section 9.4) for as long as they are supported.
 

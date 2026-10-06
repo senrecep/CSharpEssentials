@@ -50,6 +50,23 @@ Result created = await HttpRequestBuilder
     .AsResultAsync(client);
 ```
 
+### Enums in route, query and body
+
+Enums with `[StringEnum]` are written as wire names; `WithEnumConventions(conventions, EnumWireFormat.Number)` writes numbers for servers that accept only integers. Flags and enum collections become repeated query keys, and an undefined value is never sent.
+
+```csharp
+Result<Order> result = await HttpRequestBuilder
+    .Get("https://api.example.com/orders/{status}")
+    .WithEnumConventions(EnumConventions.Default)
+    .WithRoute("status", OrderStatus.PendingApproval)          // /orders/pending_approval
+    .WithQuery("permissions", Permissions.Read | Permissions.Write) // ?permissions=read&permissions=write
+    .AsResultAsync<Order>(client, options);
+```
+
+Build `options` once with `new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(conventions, EnumReadMode.Data, writeAs)`. Responses are then read tolerantly: wire names, member names, aliases and numbers, with the `[EnumFallback]` member for values a newer server adds. Plain enums without `[StringEnum]` keep the framework behavior.
+
+Roll out consumers before producers: a server moves its output from `Number` to `String` only after every client reads names.
+
 ### Query String Builder
 
 ```csharp
