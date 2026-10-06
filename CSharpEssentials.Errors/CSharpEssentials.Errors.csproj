@@ -44,6 +44,10 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
+    <!-- The Enums package ships the generator; project references need it explicitly for ErrorType's metadata. -->
+    <ProjectReference Include="..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+      OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all"
+      Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
   <!-- System.Text.Json for .NET Standard 2.1 -->
