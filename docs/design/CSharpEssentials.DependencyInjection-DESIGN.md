@@ -362,7 +362,7 @@ Reported by `DependencyInjectionAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssen
 | CSE2003 | Class implements interfaces but none matched the default rule, so it is registered as self | Info | Deliberate fallback, made visible |
 | CSE2004 | Decorator has no usable constructor parameter of the decorated service | Error | Generated factory would not compile |
 | CSE2005 | Decorator has multiple public constructors | Error | Generated factory needs exactly one |
-| CSE2006 | Captive dependency (singleton depends on scoped/transient), single-constructor types only | Info | **P3 (#58)**, ID reserved |
+| CSE2006 | Captive dependency: a singleton depends on a scoped/transient service, or a scoped service on a transient one. Single-constructor, non-generic classes only; matches attribute registrations in the same compilation by service type and `[FromKeyedServices]` key, including open-generic registrations for closed parameter types | Info | The dependency lives longer than its registration intends. Reported on the consumer's attribute at compilation end. |
 | CSE2007 | Registration or decoration attribute on an abstract or static class | Error | Cannot be constructed |
 | CSE2008 | Open-generic decorator on the generated path; use runtime `Decorate(Type, Type)` | Warning | Not generated. The user must register it at runtime. |
 
@@ -370,7 +370,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 
 ## 8. P3 Follow-ups (#58, optional)
 
-- CSE2006 captive dependency (info, single-constructor types).
+- Shipped: CSE2006 captive dependency (info, single-constructor types, §7).
 - Code fix for CSE2003 (add explicit `typeof`). Needs a `*.CodeFixes` project with `Microsoft.CodeAnalysis.CSharp.Workspaces`, which requires owner approval.
 
 ## 9. Explicitly Skipped Scrutor Features
@@ -400,7 +400,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Incremental caching | Second run → tracked steps `Cached`/`Unchanged` |
 | Aggregate | Two fixture assemblies (`CSharpEssentials.Tests.Fixtures.DependencyInjectionA/B`); cross-assembly decorator; no duplicate registration |
 | Debug log (#56) | Duplicate (service, key) logged at `Debug`; nothing logged when the logger is null |
-| Analyzer (#56) | Positive and negative per ID (CSE2001–2005, 2007, 2008) |
+| Analyzer (#56, #58) | Positive and negative per ID (CSE2001–2008) |
 | AOT (#57) | `examples/Examples.Endpoints` uses `Add{Asm}Services` and publishes with zero trim/AOT warnings |
 
 Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentials.Tests/Generators/`. xUnit + FluentAssertions, `Method_Should_Behavior`.
@@ -415,6 +415,7 @@ Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentia
 | Open-generic `Decorate(Type, Type)` decorates closed registrations of every key | The API has no key parameter. Each registration keeps its own key, and the decorator receives that key through `[ServiceKey]`. The fallback restricts it to the attribute's `Key`. |
 | CSE2007 also covers file-local types, types nested in a `private`/`protected` type, and types nested in a generic type | Generated code lives in another file and namespace and cannot name these types, so the generator would emit code that does not compile. Reporting them keeps the rule "the error comes from the analyzer, not from generated code" (§6.1). |
 | CSE2005 also reports a decorator with zero public constructors | The generated factory needs exactly one public constructor, and the runtime activator rejects zero as well. |
+| CSE2006 also reports a scoped service that depends on a transient one | The transient instance is held for the whole scope, which is the same capture problem one level down. Registrations made outside attributes (manual `services.Add*`, other assemblies) are not visible to the analyzer, so the rule stays best effort and `Info`. |
 | A generated decorator with nothing to decorate does not name the decorator type in its exception | Generated code uses the `Decorate<TService>(Func<TService, IServiceProvider, TService>, serviceKey)` overload so it needs no reflection; that overload has no decorator type to report. The service type and key are still named. |
 | The `[ServiceKey]` argument is emitted as `(T)(object)key`, or `default(T)!` for a non-keyed decorator | The key constant and the parameter type can differ (for example an `object` parameter or a boxed enum). The double cast compiles for every combination the runtime activator accepts. |
 | The analyzer reports nothing in an assembly marked `[ExcludeFromRegistration]` | The generator emits no registry for such an assembly, so its declarations cannot fail at registration. |

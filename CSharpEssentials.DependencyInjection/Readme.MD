@@ -80,6 +80,7 @@ The analyzer reports invalid declarations at compile time:
 | CSE2003 | Info | The class has interfaces, but none matches `I{TypeName}`, so it is registered as itself. |
 | CSE2004 | Error | The decorator has no constructor parameter of the decorated type, or more than one. |
 | CSE2005 | Error | The decorator does not have exactly one public constructor. |
+| CSE2006 | Info | Captive dependency: a singleton takes a scoped or transient service (or a scoped one takes a transient) registered by attribute in the same project. Checked for single-constructor classes only. |
 | CSE2007 | Error | The class cannot be constructed by generated code (abstract, static, file-local, inaccessible, or nested in a generic type). |
 | CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))`. |
 
