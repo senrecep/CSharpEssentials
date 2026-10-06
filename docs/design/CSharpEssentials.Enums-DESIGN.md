@@ -354,6 +354,8 @@ public static class EnumValueFormatter
     public static void FormatFlags<TEnum>(TEnum value, IList<string> names) where TEnum : struct, Enum;
 
     // Non-generic entry points for HTTP client adapters (section 13.1) and other code that only has object + Type.
+    // "Try" means only "is this a handled enum?": false for null, non-enums and enums without metadata.
+    // An undefined value of a handled enum always throws EnumValueException; it is never sent as a raw number.
     // Stable public API. Flags and collections are not handled here: adapters expand them through FormatFlags/TryFormatMany.
     public static string Format(object value, EnumConventions conventions, EnumWireFormat? format = null);
     public static bool TryFormat(object? value, EnumConventions conventions, [NotNullWhen(true)] out string? text, EnumWireFormat? format = null);
@@ -678,6 +680,8 @@ services.AddRefitClient<IOrdersApi>(new RefitSettings
     UrlParameterFormatter = new EnumUrlParameterFormatter(conventions),
 });
 ```
+
+`TryFormat` returns `false` only for values that are not handled enums; an undefined enum value throws `EnumValueException`. The adapter deliberately does not catch it, so an undefined value fails the call instead of being sent as `99`.
 
 Refit expands collection and flags query values itself and calls `Format` once per item, so the Refit adapter needs only `TryFormat`; `TryFormatMany` is for libraries that pass the whole value.
 
