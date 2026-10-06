@@ -157,16 +157,13 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     private TEnum ReadNumber(ref Utf8JsonReader reader)
     {
-        // "-0" is not canonical; the string form rejects it as well.
-        bool negativeZero = reader.TryGetInt64(out long signed) && signed == 0 && FirstByte(ref reader) == (byte)'-';
         EnumValueError? error;
-        if (negativeZero)
+        if (reader.TryGetInt64(out long signed))
         {
-            error = info.CreateError("-0", mode);
-        }
-        else if (reader.TryGetInt64(out signed))
-        {
-            if (info.TryParseNumber(signed, mode, conventions, out TEnum value, out error))
+            // "-0" is not canonical; the string form rejects it as well.
+            if (signed == 0 && FirstByte(ref reader) == (byte)'-')
+                error = info.CreateError("-0", mode);
+            else if (info.TryParseNumber(signed, mode, conventions, out TEnum value, out error))
                 return value;
         }
         else if (reader.TryGetUInt64(out ulong unsigned))
