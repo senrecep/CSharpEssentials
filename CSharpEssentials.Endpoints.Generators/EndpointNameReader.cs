@@ -29,17 +29,13 @@ internal static class EndpointNameReader
     public static IReadOnlyList<EndpointNameUse> Read(IInvocationOperation invocation)
     {
         IMethodSymbol target = invocation.TargetMethod;
-        if (!string.Equals(target.ContainingType?.ToDisplayString(), ConventionExtensions, StringComparison.Ordinal))
+        if (target.Name is not (WithName or WithMetadata)
+            || !string.Equals(target.ContainingType?.ToDisplayString(), ConventionExtensions, StringComparison.Ordinal))
         {
             return [];
         }
 
-        return target.Name switch
-        {
-            WithName => ReadWithName(invocation),
-            WithMetadata => ReadWithMetadata(invocation),
-            _ => [],
-        };
+        return target.Name == WithName ? ReadWithName(invocation) : ReadWithMetadata(invocation);
     }
 
     private static IReadOnlyList<EndpointNameUse> ReadWithName(IInvocationOperation invocation)
