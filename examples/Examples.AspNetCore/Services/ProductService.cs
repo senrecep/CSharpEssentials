@@ -27,7 +27,7 @@ public sealed class ProductService : IProductService
             return Error.NotFound($"Product with id '{id}' was not found.");
         }
 
-        return Result.Success(product);
+        return product;
     }
 
     public Result<Product> Create(CreateProductRequest request)
@@ -51,7 +51,7 @@ public sealed class ProductService : IProductService
             errors.Add(Error.Validation("Product.StockQuantity", "Stock quantity cannot be negative."));
 
         if (errors.Count > 0)
-            return Result.Failure<Product>(errors.ToArray());
+            return errors;
 
         var product = new Product(
             Guid.NewGuid(),
@@ -64,7 +64,7 @@ public sealed class ProductService : IProductService
         );
 
         _products.Add(product);
-        return Result.Success(product);
+        return product;
     }
 
     public Result<Product> Update(Guid id, UpdateProductRequest request)
@@ -82,7 +82,7 @@ public sealed class ProductService : IProductService
             errors.Add(Error.Validation("Product.Price", "Price must be greater than zero."));
 
         if (errors.Count > 0)
-            return Result.Failure<Product>(errors.ToArray());
+            return errors;
 
         var updated = existing with
         {
@@ -93,7 +93,7 @@ public sealed class ProductService : IProductService
         };
 
         _products[_products.IndexOf(existing)] = updated;
-        return Result.Success(updated);
+        return updated;
     }
 
     public Result Delete(Guid id)
@@ -110,12 +110,12 @@ public sealed class ProductService : IProductService
     {
         // Empty search returns all products — still a success.
         if (string.IsNullOrWhiteSpace(name))
-            return Result.Success<IReadOnlyList<Product>>(_products);
+            return _products;
 
         var filtered = _products
             .Where(p => p.Name.Contains(name, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        return Result.Success<IReadOnlyList<Product>>(filtered);
+        return filtered;
     }
 }

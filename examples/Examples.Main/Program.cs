@@ -24,7 +24,7 @@ Maybe<User> user = Services.FindUserByEmail("alice@example.com");
 
 Result<Order> result = user.Match(
     some: u => Services.PlaceOrder(u, 99.99m),
-    none: () => Result.Failure<Order>(Error.NotFound("User.NotFound", "User not found"))
+    none: () => Error.NotFound("User.NotFound", "User not found")
 );
 
 result.Switch(
@@ -169,12 +169,12 @@ Console.WriteLine("--- Error Handling Pipeline ---");
 Result<int> ParseAndValidate(string value)
 {
     if (!int.TryParse(value, out int number))
-        return Result.Failure<int>(Error.Validation("Input.Numeric", "Input must be numeric"));
+        return Error.Validation("Input.Numeric", "Input must be numeric");
 
     if (number <= 0)
-        return Result.Failure<int>(Error.Validation("Input.Positive", "Input must be positive"));
+        return Error.Validation("Input.Positive", "Input must be positive");
 
-    return Result.Success(number);
+    return number;
 }
 
 ParseAndValidate("42").Switch(

@@ -13,13 +13,14 @@ Console.WriteLine("--- Basic Result Creation ---");
 Result success = Result.Success();
 Console.WriteLine($"Success: IsSuccess={success.IsSuccess}, IsFailure={success.IsFailure}");
 
+// Explicit factories are available too; implicit conversions (below) are preferred.
 Result failure = Result.Failure(Error.Validation("Code", "Something went wrong"));
 Console.WriteLine($"Failure: IsSuccess={failure.IsSuccess}, Errors={failure.Errors.Length}");
 
-Result<int> intSuccess = Result.Success(42);
+Result<int> intSuccess = 42;
 Console.WriteLine($"Int Success: Value={intSuccess.Value}");
 
-Result<int> intFailure = Result.Failure<int>(Error.NotFound("Item not found"));
+Result<int> intFailure = Error.NotFound("Item not found");
 Console.WriteLine($"Int Failure: IsFailure={intFailure.IsFailure}");
 Console.WriteLine();
 
@@ -47,7 +48,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- MapError ---");
 
-Result<int> originalError = Result.Failure<int>(Error.Validation("Old", "Original error"));
+Result<int> originalError = Error.Validation("Old", "Original error");
 Result<int> mappedError = originalError.MapError(e => Error.NotFound("New", $"Mapped: {e.Description}"));
 Console.WriteLine($"MapError: {mappedError.FirstError.Code} - {mappedError.FirstError.Description}");
 
@@ -110,11 +111,11 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Deconstruct ---");
 
-Result<int> deconstructSuccess = Result.Success(123);
+Result<int> deconstructSuccess = 123;
 (bool isSuccess, int value, Error[] errors) = deconstructSuccess;
 Console.WriteLine($"Deconstruct success: isSuccess={isSuccess}, value={value}, errors={errors.Length}");
 
-Result<int> deconstructFail = Result.Failure<int>(Error.NotFound("X", "Missing"));
+Result<int> deconstructFail = Error.NotFound("X", "Missing");
 (bool isFail, int failValue, Error[] failErrors) = deconstructFail;
 Console.WriteLine($"Deconstruct failure: isSuccess={isFail}, value={failValue}, errors={failErrors.Length}");
 Console.WriteLine();
@@ -181,12 +182,12 @@ Console.WriteLine("--- Result Chaining (Then) ---");
 Result<int> ParseNumber(string input)
 {
     if (int.TryParse(input, out int number))
-        return Result.Success(number);
-    return Result.Failure<int>(Error.Validation("Parse", $"'{input}' is not a valid number"));
+        return number;
+    return Error.Validation("Parse", $"'{input}' is not a valid number");
 }
 
-Result<int> Double(int value) => Result.Success(value * 2);
-Result<int> AddTen(int value) => Result.Success(value + 10);
+Result<int> Double(int value) => value * 2;
+Result<int> AddTen(int value) => value + 10;
 
 Result<int> chained = ParseNumber("5")
     .Then(Double)
@@ -207,8 +208,8 @@ Console.WriteLine("--- Match and Switch ---");
 Result<string> GetUserName(int id)
 {
     if (id <= 0)
-        return Result.Failure<string>(Error.Validation("Id", "Id must be positive"));
-    return Result.Success($"User_{id}");
+        return Error.Validation("Id", "Id must be positive");
+    return $"User_{id}";
 }
 
 string result = GetUserName(10).Match(
@@ -409,16 +410,16 @@ Console.WriteLine("--- Collection Extensions ---");
 
 List<Result<int>> allOkResults = new()
 {
-    Result.Success(1), Result.Success(2), Result.Success(3)
+    1, 2, 3
 };
 Result<int[]> sequenced = allOkResults.Sequence();
 Console.WriteLine($"Sequence (all ok): [{string.Join(", ", sequenced.Value)}]");
 
 List<Result<int>> withFailure = new()
 {
-    Result.Success(1),
-    Result.Failure<int>(Error.Validation("X", "Bad")),
-    Result.Success(3)
+    1,
+    Error.Validation("X", "Bad"),
+    3
 };
 Result<int[]> sequencedFail = withFailure.Sequence();
 Console.WriteLine($"Sequence (has failure): IsFailure={sequencedFail.IsFailure}, errors={sequencedFail.Errors.Length}");
@@ -432,7 +433,7 @@ Console.WriteLine($"Partition: {successes.Length} successes, {errs.Length} error
 
 List<Result> mixedResults = new()
 {
-    Result.Success(), Result.Failure(Error.NotFound("X", "Missing")), Result.Success()
+    Result.Success(), Error.NotFound("X", "Missing"), Result.Success()
 };
 Result firstFail = mixedResults.FirstFailureOrSuccesses();
 Console.WriteLine($"FirstFailureOrSuccesses: {firstFail.FirstError.Code}");

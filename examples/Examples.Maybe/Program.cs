@@ -11,7 +11,7 @@ Console.WriteLine("========================================\n");
 // ============================================================================
 Console.WriteLine("--- Maybe Creation ---");
 
-Maybe<string> some = Maybe<string>.From("hello");
+Maybe<string> some = "hello";
 Maybe<string> none = Maybe<string>.None;
 
 Console.WriteLine($"Some: HasValue={some.HasValue}, Value={some.Value}");
@@ -23,7 +23,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Tap / TapIf ---");
 
-Maybe<int> number = 10.AsMaybe();
+Maybe<int> number = 10;
 number.Tap(v => Console.WriteLine($"  Tap with value: {v}"));
 number.Tap(() => Console.WriteLine("  Tap without value"));
 
@@ -94,7 +94,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Select / SelectMany (LINQ) ---");
 
-Maybe<int> linqNumber = 5.AsMaybe();
+Maybe<int> linqNumber = 5;
 Maybe<int> linqResult = from n in linqNumber
                         select n * 4;
 Console.WriteLine($"Select: {linqResult.Value}");
@@ -127,7 +127,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Match ---");
 
-Maybe<int> score = 95.AsMaybe();
+Maybe<int> score = 95;
 score.Match(
     some: val => Console.WriteLine($"Great score: {val}"),
     none: () => Console.WriteLine("No score available")
@@ -149,7 +149,7 @@ Maybe<string> emptyName = Maybe<string>.None;
 Maybe<string> fallbackName = emptyName.Or(() => "Default Name");
 Console.WriteLine($"Fallback name: {fallbackName.Value}");
 
-Maybe<string> existingName = "Alice".AsMaybe();
+Maybe<string> existingName = "Alice";
 Maybe<string> keptName = existingName.Or(() => "Default Name");
 Console.WriteLine($"Kept name: {keptName.Value}");
 Console.WriteLine();
@@ -159,7 +159,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Choose ---");
 
-List<Maybe<int>> maybes = new() { 1.AsMaybe(), Maybe<int>.None, 3.AsMaybe(), Maybe<int>.None, 5.AsMaybe() };
+List<Maybe<int>> maybes = new() { 1, Maybe<int>.None, 3, Maybe<int>.None, 5 };
 List<int> chosen = maybes.Choose().ToList();
 Console.WriteLine($"Choose: [{string.Join(", ", chosen)}]");
 Console.WriteLine();
@@ -169,7 +169,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Bind ---");
 
-Maybe<string> bindName = "alice".AsMaybe();
+Maybe<string> bindName = "alice";
 Maybe<int> nameLength = bindName.Bind(n => n.Length > 0 ? Maybe<int>.From(n.Length) : Maybe<int>.None);
 Console.WriteLine($"Bind Some: {nameLength.Value}");
 
@@ -182,7 +182,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- GetValueOrDefault / GetValueOrThrow ---");
 
-Maybe<int> someInt = 42.AsMaybe();
+Maybe<int> someInt = 42;
 Maybe<int> noneInt = Maybe<int>.None;
 
 int gvod = noneInt.GetValueOrDefault(-1);
@@ -296,11 +296,11 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Collection: Sequence / Traverse / Partition ---");
 
-List<Maybe<int>> allSome = new() { 1.AsMaybe(), 2.AsMaybe(), 3.AsMaybe() };
+List<Maybe<int>> allSome = new() { 1, 2, 3 };
 Maybe<int[]> sequenced = allSome.Sequence();
 Console.WriteLine($"Sequence (all Some): [{string.Join(", ", sequenced.Value)}]");
 
-List<Maybe<int>> withNone = new() { 1.AsMaybe(), Maybe<int>.None, 3.AsMaybe() };
+List<Maybe<int>> withNone = new() { 1, Maybe<int>.None, 3 };
 Maybe<int[]> sequencedNone = withNone.Sequence();
 Console.WriteLine($"Sequence (has None): HasValue={sequencedNone.HasValue}");
 

@@ -135,9 +135,9 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Multiple Typed Values (AnyT3) ---");
 
-Any<string, int, bool> triple = Any<string, int, bool>.First("Age");
-Any<string, int, bool> tripleSecond = Any<string, int, bool>.Second(95);
-Any<string, int, bool> tripleThird = Any<string, int, bool>.Third(true);
+Any<string, int, bool> triple = "Age";
+Any<string, int, bool> tripleSecond = 95;
+Any<string, int, bool> tripleThird = true;
 
 (string? t3First, int? t3Second, bool? t3Third) = tripleSecond.ToTuple();
 Console.WriteLine($"AnyT3 ToTuple: First={t3First}, Second={t3Second}, Third={t3Third}");
@@ -155,8 +155,8 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Index Property ---");
 
-Any<string, int> anyStringIdx = Any<string, int>.First("hello");
-Any<string, int> anyIntIdx = Any<string, int>.Second(42);
+Any<string, int> anyStringIdx = "hello";
+Any<string, int> anyIntIdx = 42;
 Console.WriteLine($"anyString.Index: {anyStringIdx.Index}");
 Console.WriteLine($"anyInt.Index: {anyIntIdx.Index}");
 Console.WriteLine();
@@ -166,7 +166,7 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- AnyActionStatus ---");
 
-Any<string, int> switchTarget = Any<string, int>.First("world");
+Any<string, int> switchTarget = "world";
 AnyActionStatus switchStatus = switchTarget.Switch(
     first: v => Console.WriteLine($"  Switched first: {v}"),
     second: v => Console.WriteLine($"  Switched second: {v}")
@@ -186,13 +186,13 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Any<T0,T1,T2,T3> (AnyT4) ---");
 
-Any<string, int, bool, Guid> quadThird = Any<string, int, bool, Guid>.Third(true);
+Any<string, int, bool, Guid> quadThird = true;
 Console.WriteLine($"AnyT4.IsThird: {quadThird.IsThird}");
 Console.WriteLine($"AnyT4.IsFourth: {quadThird.IsFourth}");
 Console.WriteLine($"AnyT4.Index: {quadThird.Index}");
 Console.WriteLine($"AnyT4.GetThird(): {quadThird.GetThird()}");
 
-Any<string, int, bool, Guid> quadFourth = Any<string, int, bool, Guid>.Fourth(Guid.Empty);
+Any<string, int, bool, Guid> quadFourth = Guid.Empty;
 Console.WriteLine($"AnyT4 Fourth: IsFirst={quadFourth.IsFirst}, IsFourth={quadFourth.IsFourth}, Index={quadFourth.Index}");
 
 (string? q1, int? q2, bool? q3, Guid? q4) = quadFourth.ToTuple();
