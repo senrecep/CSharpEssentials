@@ -391,6 +391,96 @@ public class EnumConverterFactoryTests
     }
 
     [Fact]
+    public void Read_Should_Reject_A_Value_Longer_Than_Every_Spelling_With_A_Truncated_Message()
+    {
+        string json = "\"" + new string('x', 100_000) + "\"";
+
+        Action act = () => Read<JsonOrderStatus>(json, EnumReadMode.Input);
+
+        EnumValueJsonException exception = act.Should().Throw<EnumValueJsonException>().Which;
+        exception.Error.Value.Should().Be(new string('x', 64) + "…");
+        exception.Message.Length.Should().BeLessThan(200);
+    }
+
+    [Fact]
+    public void Read_Should_Reject_A_Long_Escaped_Value()
+    {
+        string json = "\"" + string.Concat(Enumerable.Repeat("\\u0078", 1_000)) + "\"";
+
+        Action act = () => Read<JsonOrderStatus>(json, EnumReadMode.Input);
+
+        act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().StartWith("\\u0078").And.EndWith("…");
+    }
+
+    [Fact]
+    public void Read_Should_Reject_A_Value_Just_Longer_Than_Every_Spelling()
+    {
+        string value = new('x', 21);
+
+        Action act = () => Read<JsonOrderStatus>("\"" + value + "\"", EnumReadMode.Input);
+
+        act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be(value);
+    }
+
+    [Fact]
+    public void Read_Should_Read_A_Long_Value_As_The_Fallback_Member_In_Data_Mode()
+    {
+        JsonOrderStatus value = Read<JsonOrderStatus>("\"" + new string('x', 10_000) + "\"", EnumReadMode.Data);
+
+        value.Should().Be(JsonOrderStatus.Unknown);
+    }
+
+    [Theory]
+    [InlineData("\"\\u0070ending_approval\"")]
+    [InlineData("\"\\u0041pproval\"")]
+    public void Read_Should_Unescape_A_Value_Before_The_Lookup(string json)
+    {
+        JsonOrderStatus value = Read<JsonOrderStatus>(json, EnumReadMode.Input);
+
+        value.Should().Be(JsonOrderStatus.PendingApproval);
+    }
+
+    [Fact]
+    public async Task Read_Should_Handle_Values_Split_Across_Buffers()
+    {
+        JsonSerializerOptions options = new JsonSerializerOptions { DefaultBufferSize = 1 }
+            .AddEnumConventions(EnumConventions.Default, EnumReadMode.Input);
+        string valid = "{\"Status\":\"pending_approval\",\"Permissions\":\"read, write\"}";
+        string tooLong = "{\"Status\":\"" + new string('x', 5_000) + "\"}";
+
+        JsonOrder? order = await JsonSerializer.DeserializeAsync<JsonOrder>(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(valid)), options);
+        Func<Task> act = async () =>
+            await JsonSerializer.DeserializeAsync<JsonOrder>(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(tooLong)), options);
+
+        order!.Status.Should().Be(JsonOrderStatus.PendingApproval);
+        order.Permissions.Should().Be(JsonPermissions.ReadWrite);
+        (await act.Should().ThrowAsync<EnumValueJsonException>()).Which.Error.Value.Should().Be(new string('x', 64) + "…");
+    }
+
+    [Fact]
+    public void Read_Should_Reject_A_Long_Dictionary_Key()
+    {
+        string json = "{\"" + new string('x', 10_000) + "\":1}";
+
+        Action act = () => JsonSerializer.Deserialize<Dictionary<JsonOrderStatus, int>>(json, Options(EnumReadMode.Input));
+
+        act.Should().Throw<EnumValueJsonException>();
+    }
+
+    [Fact]
+    public void Errors_Should_Truncate_Long_Values()
+    {
+        EnumInfo<JsonOrderStatus> info = EnumMetadata.Get<JsonOrderStatus>();
+
+        bool ok = info.TryParse(new string('z', 100), EnumReadMode.Input, EnumConventions.Default, out _, out EnumValueError? error);
+
+        ok.Should().BeFalse();
+        error!.Value.Should().Be(new string('z', 64) + "…");
+        info.CreateError(new string('z', 65), EnumReadMode.Data).Value.Should().Be(new string('z', 64) + "…");
+        info.CreateError(new string('z', 64), EnumReadMode.Data).Value.Should().Be(new string('z', 64));
+    }
+
+    [Fact]
     public void Enums_Rejected_By_CanHandle_Should_Use_The_Default_Serializer()
     {
         string json = JsonSerializer.Serialize(DayOfWeek.Monday, Options());
