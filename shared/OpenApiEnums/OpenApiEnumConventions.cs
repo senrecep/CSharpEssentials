@@ -166,6 +166,8 @@ internal sealed partial class OpenApiEnumConventions
         {
             foreach (JsonPropertyInfo property in typeInfo.Properties)
                 CollectEnums(property.PropertyType, jsonOptions, enums, visited);
+            foreach (JsonDerivedType derived in typeInfo.PolymorphismOptions?.DerivedTypes ?? [])
+                CollectEnums(derived.DerivedType, jsonOptions, enums, visited);
         }
         else if (typeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary)
         {

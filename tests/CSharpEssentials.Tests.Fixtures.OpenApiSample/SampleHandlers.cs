@@ -30,4 +30,6 @@ internal static class SampleHandlers
     public static SampleStatus EchoStatus([FromBody] SampleStatus? status) => status ?? SampleStatus.Unknown;
 
     public static SamplePlain GetPlain(SamplePlain plain) => plain;
+
+    public static SampleChange GetChange() => new SampleGrantChange { Granted = SamplePermissions.Read | SamplePermissions.Write };
 }

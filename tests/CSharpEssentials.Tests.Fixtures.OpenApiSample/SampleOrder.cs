@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Text.Json.Serialization;
 
 namespace CSharpEssentials.Tests.Fixtures.OpenApiSample;
 
@@ -27,4 +28,17 @@ public sealed class SampleOrder
     public SampleSize Size { get; init; }
 
     public SamplePlain Plain { get; init; }
+}
+
+/// <summary>A polymorphic body: the enum property lives on the derived type only.</summary>
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(SampleGrantChange), "grant")]
+public class SampleChange
+{
+    public string? Note { get; init; }
+}
+
+public sealed class SampleGrantChange : SampleChange
+{
+    public SamplePermissions Granted { get; init; }
 }

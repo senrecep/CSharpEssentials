@@ -26,7 +26,9 @@ public static class SampleApi
         ArgumentNullException.ThrowIfNull(app);
 
         MapOrders(app.MapGroup("/v1").WithGroupName("v1").WithEnumWireFormat(EnumWireFormat.Number));
-        MapOrders(app.MapGroup("/v2").WithGroupName("v2"));
+        RouteGroupBuilder v2 = app.MapGroup("/v2").WithGroupName("v2");
+        MapOrders(v2);
+        v2.MapGet("/changes/latest", SampleHandlers.GetChange);
         MapOrders(app.MapGroup("/header").WithGroupName("header").WithEnumWireFormat(FormatHeader, SelectFormat));
 
         RouteGroupBuilder mixed = app.MapGroup("/mixed").WithGroupName("mixed");

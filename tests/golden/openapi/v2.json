@@ -1,5 +1,16 @@
 {
   "components": {
+    "SampleChangeSampleGrantChange": {
+      "properties": {
+        "granted": {
+          "items": {
+            "$ref": "#/components/schemas/SamplePermissions"
+          },
+          "type": "array",
+          "uniqueItems": true
+        }
+      }
+    },
     "SampleNaming": {
       "description": "| value | number | description |\n|---|---|---|\n| \u0060custom-name\u0060 | 0 |  |\n| \u0060plain_value\u0060 | 1 |  |",
       "enum": [
