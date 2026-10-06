@@ -30,17 +30,21 @@ public class EnumBindingMiddlewareTests
         ("IN_PROGRESS", "InProgress"),
         ("1", "InProgress"),
         ("http_error", "HTTPError"),
-        ("HTTPError", "HTTPError"));
+        ("HTTPError", "HTTPError"),
+        ("%20in_progress", "InProgress"),
+        ("in_progress%20", "InProgress"),
+        ("%20in_progress%20", "InProgress"));
 
-    // Like a JSON body: no trimming, undefined numbers and other spellings are rejected.
+    // Surrounding whitespace is trimmed; undefined numbers and other spellings are rejected.
     public static TheoryData<EbHostKind, string> RejectedScalarValues => Cross(AllHosts,
-        "99", "garbage", "Active,InProgress", "in-progress", "%20in_progress%20", "in_progress%20");
+        "99", "garbage", "Active,InProgress", "in-progress", "%20bogus%20");
 
     public static TheoryData<EbHostKind, string, string> AcceptedRouteSpellings => Cross(AllHosts,
         ("in_progress", "InProgress"),
         ("inprogress", "InProgress"),
         ("http_error", "HTTPError"),
-        ("2", "HTTPError"));
+        ("2", "HTTPError"),
+        ("%20in_progress%20", "InProgress"));
 
     public static TheoryData<EbHostKind, string, string> AcceptedFlagSpellings => Cross(AllHosts,
         ("read,write", "Read, Write"),

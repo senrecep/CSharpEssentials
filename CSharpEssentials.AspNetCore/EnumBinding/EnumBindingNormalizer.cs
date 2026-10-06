@@ -4,9 +4,10 @@ namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
 /// Turns one route, query, header or form value into the text the framework binders accept (the C# member name), with
-/// the rules of the JSON converter in <see cref="EnumReadMode.Input"/> mode: one token per value, no trimming, numbers
-/// only when <see cref="EnumConventions.AcceptNumbers"/>, never the fallback member. A comma separated value of a flags
-/// enum or of a collection is split and each part trimmed, like the 4.x flags text the JSON converter still reads.
+/// the rules of the JSON converter in <see cref="EnumReadMode.Input"/> mode: one token per value, numbers only when
+/// <see cref="EnumConventions.AcceptNumbers"/>, never the fallback member. Unlike a JSON string, leading and trailing
+/// whitespace of a value is trimmed first (route, query, header and form text is routinely padded). A comma separated value
+/// of a flags enum or of a collection is split and each part trimmed, like the 4.x flags text the JSON converter still reads.
 /// </summary>
 internal abstract class EnumBindingNormalizer
 {
@@ -33,6 +34,7 @@ internal abstract class EnumBindingNormalizer
     {
         public override bool TryNormalize(string value, bool isCollection, List<string> output)
         {
+            value = value.Trim();
             if (value.IndexOf(',', StringComparison.Ordinal) < 0)
                 return TryAdd(value, output);
             if (!isCollection && !info.IsFlags)
