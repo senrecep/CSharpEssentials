@@ -62,8 +62,10 @@ Reads accept the wire name, the C# name, any casing, declared aliases and the nu
 
 `CSharpEssentials.AspNetCore` stops depending on Swashbuckle. Two packages produce the same enum schema (no package is added for HTTP client libraries such as Refit; see the design, section 13):
 
-- `CSharpEssentials.AspNetCore.OpenApi` for `Microsoft.AspNetCore.OpenApi` (net9.0+).
-- `CSharpEssentials.AspNetCore.Swashbuckle` for the existing `AddSwagger` code.
+- `CSharpEssentials.AspNetCore.OpenApi` for `Microsoft.AspNetCore.OpenApi` and Microsoft.OpenApi 2.x, net10.0+ only. Microsoft.OpenApi 1.x and 2.x differ in the schema type, enum values, extensions and schema model, so a net9.0 target would duplicate the package core; net8.0/net9.0 reach end of support on 2026-11-10. Adding net9.0 later is non-breaking.
+- `CSharpEssentials.AspNetCore.Swashbuckle` for the existing `AddSwagger` code (Swashbuckle 8.x/9.x, Microsoft.OpenApi 1.x, net8.0+). It carries the net9.0 story.
+
+A host references one of the two, never both: Microsoft.OpenApi 2.x would replace the 1.x that Swashbuckle 8/9 needs and break it at runtime. No other package depends on Microsoft.OpenApi, and a test pins that the two dependency closures stay apart.
 
 Both describe an enum as its wire names plus `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` and a `value | number | description` table, and both follow the output format of the endpoint group.
 
@@ -106,7 +108,7 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 - A runtime naming policy is no longer possible. Teams that used a custom `JsonNamingPolicy` set the MSBuild property, the enum attribute, or `[JsonStringEnumMemberName]` per member.
 - Enums that are not marked `[StringEnum]` take the reflection path, which is not AOT safe. CSE0010 (info, opt-in) points to them.
 - Check constraints must be dropped and recreated when members change. The convention does it automatically, but the migration is no longer empty for an enum change.
-- New dependencies need owner approval: `Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x. There is no Refit package: HTTP client libraries get a ten-line adapter over the public non-generic `EnumValueFormatter` (design section 13.1).
+- New dependencies `Microsoft.AspNetCore.OpenApi` and `Microsoft.OpenApi` 2.x (approved 2026-10-06), confined to `CSharpEssentials.AspNetCore.OpenApi`. There is no Refit package: HTTP client libraries get a ten-line adapter over the public non-generic `EnumValueFormatter` (design section 13.1).
 
 **Neutral**
 - Newtonsoft.Json is not supported. Newtonsoft producers that write integers are read correctly by STJ consumers through tolerant reads; the migration guide covers the transition.
