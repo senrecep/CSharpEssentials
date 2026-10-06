@@ -6,7 +6,7 @@
 namespace Microsoft.Extensions.DependencyInjection
 {
     /// <summary>Registers the services and decorators declared in this assembly.</summary>
-    [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "4.1.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "{version}")]
     public static class GeneratorTestsServiceRegistry
     {
         /// <summary>Registers the services declared in this assembly, then applies its decorators. Calling it again, or after <c>AddAllServices</c>, does nothing.</summary>
