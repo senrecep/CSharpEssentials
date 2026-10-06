@@ -1,7 +1,8 @@
 using CSharpEssentials.Errors;
 using CSharpEssentials.Mediator;
 using CSharpEssentials.ResultPattern;
-using FluentValidation;
+using CSharpEssentials.Validation;
+using CSharpEssentials.Validation.Validators;
 using Mediator;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
@@ -140,22 +141,16 @@ Console.WriteLine("========================================");
 // ============================================================================
 
 // IRequestLoggable  → request payload is logged by LoggingBehavior
-public sealed record CreateProductCommand(string Name, decimal Price)
+public sealed record CreateProductCommand(string? Name, decimal Price)
     : ICommand<Result<int>>, IRequestLoggable;
 
-public sealed class CreateProductCommandValidator : AbstractValidator<CreateProductCommand>
+public sealed class CreateProductCommandValidator : Validator<CreateProductCommand>
 {
-    public CreateProductCommandValidator()
+    protected override ValueTask Configure(CreateProductCommand model, RuleContext<CreateProductCommand> rules, CancellationToken ct = default)
     {
-        RuleFor(x => x.Name)
-            .NotEmpty()
-            .WithErrorCode("NameRequired")
-            .WithMessage("Name is required");
-
-        RuleFor(x => x.Price)
-            .GreaterThan(0)
-            .WithErrorCode("PriceInvalid")
-            .WithMessage("Price must be positive");
+        rules.For(() => model.Name).NotEmpty(Error.Validation("NameRequired", "Name is required"));
+        rules.For(() => model.Price).GreaterThan(0m, Error.Validation("PriceInvalid", "Price must be positive"));
+        return ValueTask.CompletedTask;
     }
 }
 
