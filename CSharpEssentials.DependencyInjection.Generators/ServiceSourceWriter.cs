@@ -272,9 +272,14 @@ internal static class ServiceSourceWriter
         DecoratorParameterKind.ServiceKey => key is null
             ? "default(" + parameter.Type + ")!"
             : "(" + parameter.Type + ")(object)" + key,
-        DecoratorParameterKind.Keyed => ResolveKeyed + ".GetRequiredKeyedService<" + parameter.Type + ">(sp, " + parameter.Value + ")",
+        DecoratorParameterKind.Keyed => ResolveDependency(parameter.Type, parameter.Value),
+        DecoratorParameterKind.InheritedKey => ResolveDependency(parameter.Type, key),
         DecoratorParameterKind.Optional => "(" + parameter.Type + ")(sp.GetService(typeof(" + parameter.Type + ")) ?? (object?)" + parameter.Value + ")!",
         DecoratorParameterKind.Required => Resolve + ".GetRequiredService<" + parameter.Type + ">(sp)",
         _ => throw new ArgumentOutOfRangeException(nameof(parameter), parameter.Kind, "Unknown decorator parameter kind."),
     };
+
+    private static string ResolveDependency(string type, string? key) => key is null or "null"
+        ? Resolve + ".GetRequiredService<" + type + ">(sp)"
+        : ResolveKeyed + ".GetRequiredKeyedService<" + type + ">(sp, " + key + ")";
 }

@@ -297,6 +297,51 @@ public class ServiceRegistrationGeneratorTests
     }
 
     [Fact]
+    public void Generator_Should_Inherit_Decorator_Key_When_FromKeyedServices_Has_No_Key()
+    {
+        const string source = """
+            using CSharpEssentials.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace Microsoft.Extensions.DependencyInjection
+            {
+                [System.AttributeUsage(System.AttributeTargets.Parameter)]
+                public sealed class FromKeyedServicesAttribute : System.Attribute
+                {
+                    public FromKeyedServicesAttribute() { }
+
+                    public FromKeyedServicesAttribute(object? key) => Key = key;
+
+                    public object? Key { get; }
+                }
+            }
+
+            namespace Sample
+            {
+                public interface IGreeter;
+
+                public interface IAudit;
+
+                [RegisterSingleton(typeof(IGreeter), Key = "loud")]
+                public sealed class Greeter : IGreeter;
+
+                [Decorates(typeof(IGreeter), Key = "loud")]
+                public sealed class KeyedDecorator(IGreeter inner, [FromKeyedServices] IAudit inherited, [FromKeyedServices(null)] IAudit unkeyed) : IGreeter;
+
+                [Decorates(typeof(IGreeter))]
+                public sealed class PlainDecorator(IGreeter inner, [FromKeyedServices] IAudit inherited) : IGreeter;
+            }
+            """;
+
+        GeneratorRun run = ServiceGeneration.Run(ServiceGeneration.CreateCompilation(source));
+
+        run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+        string registry = ServiceGeneration.GeneratedSources(run)["GeneratorTestsServiceRegistry.g.cs"];
+        registry.Should().Contain("new global::Sample.KeyedDecorator(\n                            inner,\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, \"loud\"),\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))")
+            .And.Contain("new global::Sample.PlainDecorator(\n                            inner,\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))");
+    }
+
+    [Fact]
     public void Generator_Should_Ignore_Record_Structs()
     {
         const string source = """

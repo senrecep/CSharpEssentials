@@ -199,6 +199,11 @@ internal static class ServiceTypeInspector
         AttributeData? fromKeyed = attributes.FirstOrDefault(static attribute => IsContainerAttribute(attribute, "FromKeyedServicesAttribute"));
         if (fromKeyed is not null)
         {
+            if (fromKeyed.ConstructorArguments.Length == 0)
+            {
+                return new DecoratorParameterModel(DecoratorParameterKind.InheritedKey, type, null);
+            }
+
             string key = fromKeyed.ConstructorArguments.Length == 1 &&
                 fromKeyed.AttributeConstructor?.Parameters[0].Type.SpecialType == SpecialType.System_Object
                     ? ConstantFormatter.Format(fromKeyed.ConstructorArguments[0])

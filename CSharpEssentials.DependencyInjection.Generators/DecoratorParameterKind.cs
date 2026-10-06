@@ -5,6 +5,7 @@ internal enum DecoratorParameterKind
     Inner,
     ServiceKey,
     Keyed,
+    InheritedKey,
     Optional,
     Required,
 }

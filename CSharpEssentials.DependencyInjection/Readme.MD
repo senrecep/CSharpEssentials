@@ -58,6 +58,8 @@ services.TryDecorate<IOrderService, AuditingOrderService>();         // returns 
 
 Attribute decorators are applied in ascending `Order`. Every matching registration is decorated, and its lifetime and key are kept. The original is moved to a hidden registration under a private key and a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The container disposes both the decorator and the original. If decoration fails, the collection is left unchanged.
 
+A decorator's other constructor parameters are resolved like the container does: `[ServiceKey]` receives the decorated key, `[FromKeyedServices("k")]` resolves the `k` registration, `[FromKeyedServices(null)]` the non-keyed one, and the parameterless `[FromKeyedServices]` (.NET 10) inherits the decorated key.
+
 ## Generated registry
 
 The package ships a source generator. Each assembly with marked classes gets an `Add{Assembly}Services` method (dots removed, so `Sample.Billing` becomes `AddSampleBillingServices`). It registers the assembly's services, then applies its decorators. It uses no reflection, so it is trim and Native AOT safe.
