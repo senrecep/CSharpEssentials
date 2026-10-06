@@ -1,6 +1,6 @@
 # CSharpEssentials.AspNetCore
 
-Production-ready ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, Swagger setup, and Result endpoint filters.
+Production-ready ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, enum conventions, and Result endpoint filters.
 
 ## Features
 
@@ -10,7 +10,7 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 - **Validation Endpoint Filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
 - **Enum Binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
 - **API Versioning**: Pre-configured URL segment and header-based versioning.
-- **Swagger**: Setup with versioning support, enum schema filters, and custom schema IDs.
+- **OpenAPI**: Not part of this package. Add `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swagger), one per host.
 
 ## Installation
 
@@ -78,14 +78,9 @@ v2.MapGet("/ping", () => "pong");             // GET /v2/ping
 v2.MapAppsEndpoints();                        // CSharpEssentials.Endpoints registry under /v2
 ```
 
-### Swagger with Versioning
+### OpenAPI Documents
 
-```csharp
-builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(securityScheme: SecuritySchemes.JwtBearerTokenSecurity);
-
-var app = builder.Build();
-app.UseVersionableSwagger();
-```
+`AddSwagger`, `UseVersionableSwagger` and the Swagger filters moved to `CSharpEssentials.AspNetCore.Swashbuckle` in 5.0 (same namespaces). For `Microsoft.AspNetCore.OpenApi` use `CSharpEssentials.AspNetCore.OpenApi`. A host references one of them, never both.
 
 ### Result Endpoint Filter
 

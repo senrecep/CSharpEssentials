@@ -57,6 +57,7 @@
     <!-- CSharpEssentials Internal Packages -->
     <ItemGroup Label="CSharpEssentials">
         <PackageVersion Include="CSharpEssentials.Any" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.AspNetCore" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Clone" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Core" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[$(Version)]" />
