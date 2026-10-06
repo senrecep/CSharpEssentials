@@ -13,7 +13,7 @@ public readonly partial record struct Result<TValue>
     public Result<T> Then<T>(Func<TValue, Result<T>> onSuccess)
     {
         if (IsFailure)
-            return Result<T>.Failure(_errors);
+            return _errors;
         return onSuccess(Value);
     }
 
@@ -39,8 +39,8 @@ public readonly partial record struct Result<TValue>
     public Result<T> Then<T>(Func<TValue, T> onSuccess)
     {
         if (IsFailure)
-            return Result<T>.Failure(_errors);
-        return onSuccess(Value).ToResult<T>();
+            return _errors;
+        return onSuccess(Value);
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<T>> ThenAsync<T>(Func<TValue, Task<Result<T>>> onSuccess, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return Result<T>.Failure(_errors);
+            return _errors;
         return await onSuccess(Value).WithCancellation(cancellationToken);
     }
 
@@ -81,9 +81,9 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<T>> ThenAsync<T>(Func<TValue, Task<T>> onSuccess, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            return Result<T>.Failure(_errors);
+            return _errors;
         T? result = await onSuccess(Value).WithCancellation(cancellationToken);
-        return result.ToResult();
+        return result;
     }
 }
 

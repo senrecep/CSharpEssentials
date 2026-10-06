@@ -9,7 +9,7 @@ internal sealed class DelegateRuleAdapter<TContext>(
 ) : IRule<TContext>
 {
     public Result Evaluate(TContext context, CancellationToken cancellationToken = default)
-        => predicate(context) ? Result.Success() : Result.Failure(errorFactory(context));
+        => predicate(context) ? Result.Success() : errorFactory(context);
 }
 
 internal sealed class AsyncDelegateRuleAdapter<TContext>(
@@ -20,5 +20,5 @@ internal sealed class AsyncDelegateRuleAdapter<TContext>(
     public async ValueTask<Result> EvaluateAsync(TContext context, CancellationToken cancellationToken = default)
         => await predicate(context).ConfigureAwait(false)
             ? Result.Success()
-            : Result.Failure(errorFactory(context));
+            : errorFactory(context);
 }

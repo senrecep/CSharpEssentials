@@ -13,7 +13,7 @@ public readonly partial record struct Result
     public Result<TOut> Bind<TOut>(Func<Result<TOut>> func)
     {
         if (IsFailure)
-            return Result<TOut>.Failure(_errors);
+            return _errors;
         return func();
     }
 

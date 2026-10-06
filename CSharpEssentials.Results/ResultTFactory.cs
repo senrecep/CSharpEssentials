@@ -90,7 +90,7 @@ public readonly partial record struct Result<TValue>
         foreach (IResult<TValue> result in results)
         {
             if (result.IsSuccess)
-                return Success(result.Value);
+                return result.Value;
             errors.AddRange(result.ErrorsOrEmptyArray);
         }
 

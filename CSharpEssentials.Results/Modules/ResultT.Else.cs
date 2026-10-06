@@ -14,7 +14,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        return Result<TValue>.Failure(onFailure(Errors));
+        return onFailure(Errors);
     }
 
     /// <summary>
@@ -26,7 +26,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        return Result<TValue>.Failure(onFailure(Errors));
+        return onFailure(Errors);
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return Value;
-        return Result<TValue>.Failure(error);
+        return error;
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public readonly partial record struct Result<TValue>
         if (IsSuccess)
             return Value;
         Error result = await onFailure(Errors).WithCancellation(cancellationToken);
-        return Result<TValue>.Failure(result);
+        return result;
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public readonly partial record struct Result<TValue>
         if (IsSuccess)
             return Value;
         Error[] result = await onFailure(Errors).WithCancellation(cancellationToken);
-        return Result<TValue>.Failure(result);
+        return result;
     }
 
     /// <summary>
@@ -118,7 +118,7 @@ public readonly partial record struct Result<TValue>
         if (IsSuccess)
             return Value;
         Error result = await error.WithCancellation(cancellationToken);
-        return Result<TValue>.Failure(result);
+        return result;
     }
 
     /// <summary>

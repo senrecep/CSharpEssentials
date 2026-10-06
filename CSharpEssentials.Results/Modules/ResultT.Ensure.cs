@@ -9,42 +9,42 @@ public readonly partial record struct Result<TValue>
     {
         if (IsFailure)
             return this;
-        return predicate(Value) ? this : Result<TValue>.Failure(error);
+        return predicate(Value) ? this : error;
     }
 
     public Result<TValue> Ensure(Func<TValue, bool> predicate, Func<TValue, Error> errorFactory)
     {
         if (IsFailure)
             return this;
-        return predicate(Value) ? this : Result<TValue>.Failure(errorFactory(Value));
+        return predicate(Value) ? this : errorFactory(Value);
     }
 
     public Result<TValue> EnsureNotNull(Error error)
     {
         if (IsFailure)
             return this;
-        return Value is not null ? this : Result<TValue>.Failure(error);
+        return Value is not null ? this : error;
     }
 
     public Result<TValue> EnsureNotNull(Func<TValue, Error> errorFactory)
     {
         if (IsFailure)
             return this;
-        return Value is not null ? this : Result<TValue>.Failure(errorFactory(Value));
+        return Value is not null ? this : errorFactory(Value);
     }
 
     public async Task<Result<TValue>> EnsureAsync(Func<TValue, Task<bool>> predicate, Error error, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
             return this;
-        return await predicate(Value).WithCancellation(cancellationToken) ? this : Result<TValue>.Failure(error);
+        return await predicate(Value).WithCancellation(cancellationToken) ? this : error;
     }
 
     public async Task<Result<TValue>> EnsureAsync(Func<TValue, Task<bool>> predicate, Func<TValue, Error> errorFactory, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
             return this;
-        return await predicate(Value).WithCancellation(cancellationToken) ? this : Result<TValue>.Failure(errorFactory(Value));
+        return await predicate(Value).WithCancellation(cancellationToken) ? this : errorFactory(Value);
     }
 }
 

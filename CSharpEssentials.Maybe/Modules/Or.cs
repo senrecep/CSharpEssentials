@@ -11,7 +11,7 @@ public readonly partial struct Maybe<T>
     /// <param name="fallbackOperation"></param>
     /// <returns></returns>
     public Maybe<T> Or(Func<T> fallbackOperation) =>
-        HasNoValue ? (Maybe<T>)fallbackOperation() : this;
+        HasNoValue ? fallbackOperation() : this;
 
     /// <summary>
     /// Returns the value if it exists, otherwise returns the fallback value.

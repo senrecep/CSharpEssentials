@@ -147,7 +147,7 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
             }
             catch (Exception ex)
             {
-                return Result<TRequest>.Failure(Error.Exception("Validator.Exception", ex));
+                return Error.Exception("Validator.Exception", ex);
             }
         }
     }
