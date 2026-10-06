@@ -679,6 +679,8 @@ services.AddRefitClient<IOrdersApi>(new RefitSettings
 });
 ```
 
+Refit expands collection and flags query values itself and calls `Format` once per item, so the Refit adapter needs only `TryFormat`; `TryFormatMany` is for libraries that pass the whole value.
+
 The guide also shows RestEase (`IRequestQueryParamSerializer`/`RequestPathParamSerializer` delegating to `TryFormat`/`TryFormatMany`), Flurl (format before `SetQueryParam`, `ISerializer` over the options), and `HttpClient` with `CSharpEssentials.Http`. Generated clients (Kiota, NSwag) need nothing: they send the wire names from the OpenAPI `enum` list, and their response readers accept names.
 
 Rollout rule for HTTP, the same as for the bus: **every consumer before any producer**. A server switches its output from `Number` to `String` only after all of its clients run 5.0 (tolerant reads) or another reader that accepts names. A pre-5.0 Refit client fails on `pending_approval`, because the Refit default converter knows only its own naming. Mobile apps that cannot be updated keep the `Number` group or the header selector (section 9.4) for as long as they are supported.
