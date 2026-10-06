@@ -238,9 +238,9 @@ Result result = RuleEngine.Evaluate(
     }.And(),
     applicant);
 
-result.Match(
+result.Switch(
     onSuccess: () => Console.WriteLine("Approved"),
-    onError: errors =>
+    onFailure: errors =>
     {
         foreach (Error e in errors)
             Console.WriteLine($"[{e.Type}] {e.Code}: {e.Description}");

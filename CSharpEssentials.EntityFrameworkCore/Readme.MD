@@ -38,10 +38,17 @@ services.AddSingleton<IDomainEventPublisher, MyPublisher>();
 services.AddSingleton<DomainEventInterceptor>();
 
 // In your entity
-public void UpdatePrice(decimal newPrice)
+public sealed record PriceChangedEvent(Guid ProductId, decimal NewPrice) : IDomainEvent;
+
+public class Product : EntityBase<Guid>
 {
-    Price = newPrice;
-    Raise(new PriceChangedEvent(Id, newPrice));
+    public decimal Price { get; private set; }
+
+    public void UpdatePrice(decimal newPrice)
+    {
+        Price = newPrice;
+        Raise(new PriceChangedEvent(Id, newPrice));
+    }
 }
 ```
 
@@ -52,7 +59,7 @@ using CSharpEssentials.EntityFrameworkCore.Pagination;
 
 // Offset-based
 var response = await dbContext.Users.PaginateAsync(
-    new PaginationRequest { PageNumber = 1, PageSize = 10 }, ct);
+    new PaginationRequest { PageNumber = 1, PageSize = 10 }, cancellationToken: ct);
 
 // Offset-based with page number and size
 var page = await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(pageNumber: 2, pageSize: 20, cancellationToken: ct);

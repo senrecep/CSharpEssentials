@@ -42,6 +42,8 @@ resolve a logger on its own and writes nothing to the console by default. Pass a
 to get diagnostics (per-secret progress at `Debug`, failures at `Error`):
 
 ```csharp
+using CSharpEssentials.GcpSecretManager;
+
 using ILoggerFactory loggerFactory = LoggerFactory.Create(b => b.AddConsole());
 
 builder.Configuration.AddGcpSecretManager(options =>

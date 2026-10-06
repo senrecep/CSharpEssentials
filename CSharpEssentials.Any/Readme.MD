@@ -36,9 +36,11 @@ Any<string, int> ParseInput(string input)
 ```csharp
 Any<string, int> result = ParseInput("123");
 
-string output = result.Match(
+// Match returns AnyActionResult<TResult>: Status tells whether a handler ran, Result holds its value
+AnyActionResult<string> output = result.Match(
     first: str => $"String: {str}",
     second: num => $"Number: {num}");
+Console.WriteLine(output.Result);
 
 result.Switch(
     first: str => Console.WriteLine("It's a string"),

@@ -26,33 +26,42 @@ var app = builder.Build();
 
 app.AddRequestResponseLogging(opt =>
 {
-    opt.LoggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
-    opt.LoggingOptions = LoggingOptions.CreateAllFields();
-    opt.IgnoredPaths = ["/health", "/metrics"];
+    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), LoggingOptions.CreateAllFields());
+    opt.IgnorePaths("/health", "/metrics");
 });
 ```
+
+Without `UseLogger` (or `UseHandler`), the middleware runs but writes nothing.
 
 ### Per-Endpoint Control
 
 ```csharp
-using CSharpEssentials.RequestResponseLogging.Attributes;
+using CSharpEssentials.RequestResponseLogging;
+using Microsoft.AspNetCore.Mvc;
 
-[HttpPost("login")]
-[SkipRequestLogging] // Don't log passwords
-public IActionResult Login(LoginRequest request) { /* ... */ }
+[ApiController]
+[Route("auth")]
+public sealed class AuthController : ControllerBase
+{
+    [HttpPost("login")]
+    [SkipRequestLogging] // don't log the request body (passwords)
+    public IActionResult Login(LoginRequest request) => Ok();
 
-[HttpGet("large-data")]
-[SkipResponseLogging] // Don't log large bodies
-public IActionResult GetData() { /* ... */ }
+    [HttpGet("large-data")]
+    [SkipResponseLogging] // don't log the response body
+    public IActionResult GetData() => Ok();
+}
 ```
+
+The attributes are read from endpoint metadata, so Minimal APIs use `.WithMetadata(new SkipRequestLoggingAttribute())`. A skipped body is logged as `Skipped logging request body` / `Skipped logging response body`.
 
 ### Custom Fields
 
 ```csharp
-opt.LoggingOptions.LoggingFields =
-[
-    LogFields.Method,
-    LogFields.Path,
-    LogFields.ResponseTiming
-];
+app.AddRequestResponseLogging(opt =>
+    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), logging =>
+    {
+        logging.LoggingFields = [LogFields.Method, LogFields.Path, LogFields.ResponseTiming];
+        logging.LoggingLevel = LogLevel.Debug;
+    }));
 ```

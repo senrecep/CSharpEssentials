@@ -36,9 +36,9 @@ These<string, int> both  = These<string, int>.Both("partial failure", 42);
 ### State Flags
 
 ```csharp
-these.IsLeft  // true when Left only
-these.IsRight // true when Right only
-these.IsBoth  // true when Both
+bool isLeft  = these.IsLeft;  // true when Left only
+bool isRight = these.IsRight; // true when Right only
+bool isBoth  = these.IsBoth;  // true when Both
 ```
 
 ### Map — Transform the Value

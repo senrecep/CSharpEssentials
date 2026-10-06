@@ -81,7 +81,7 @@ v2.MapAppsEndpoints();                        // CSharpEssentials.Endpoints regi
 ### Swagger with Versioning
 
 ```csharp
-builder.Services.AddSwagger<ConfigureSwaggerOptions>(securityScheme: SecuritySchemes.Bearer);
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(securityScheme: SecuritySchemes.JwtBearerTokenSecurity);
 
 var app = builder.Build();
 app.UseVersionableSwagger();
@@ -121,7 +121,7 @@ app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization (
 
 // [StringEnum] enum OrderStatus { InProgress, Done }
 // ?status=in_progress, ?status=InProgress, ?status=inprogress, ?status=0 all bind to OrderStatus.InProgress
-app.MapGet("/orders", (OrderStatus? status) => ...);
+app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status));
 ```
 
 This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, `[FromRoute]`, and query DTO properties, nested up to 8 levels: `?filter.inner.status=…`).

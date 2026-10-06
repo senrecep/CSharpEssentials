@@ -57,12 +57,12 @@ Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, ru
 });
 
 // Async delegate — for MustAsync or SetValidatorAsync inside
-Result<CreateUserCommand> result = await Validator.ValidateAsync(command, async (m, rules, ct) =>
+Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, async (m, rules, ct) =>
 {
     rules.For(() => m.Name).NotEmpty();
     await rules.For(() => m.Email)
                .MustAsync(async (email, c) => await _db.IsUniqueAsync(email, c),
-                          "Email.NotUnique", "Email is already taken.", c);
+                          "Email.NotUnique", "Email is already taken.", ct);
 }, cancellationToken);
 ```
 
@@ -326,13 +326,13 @@ public class FormatValidator : Validator<CreateUserCommand>
     }
 }
 
-public class BusinessRulesValidator : Validator<CreateUserCommand>
+public class BusinessRulesValidator(IReadOnlySet<string> blocklist) : Validator<CreateUserCommand>
 {
     public override int Order => 1;  // runs after Order=0 group completes
 
     protected override ValueTask Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules, CancellationToken ct = default)
     {
-        rules.For(() => model.Email).Must(email => !_blocklist.Contains(email), "Email.Blocked", "Email is blocked.");
+        rules.For(() => model.Email).Must(email => !blocklist.Contains(email!), "Email.Blocked", "Email is blocked.");
         return ValueTask.CompletedTask;
     }
 }
@@ -405,7 +405,7 @@ Pass a concrete `IValidator<T>` instance to run validations as part of an asynch
 ```csharp
 Result<User> result = await GetUserCommand() // returns Result<CreateUserCommand>
     .ValidateWithAsync(new CreateUserCommandValidator())
-    .BindAsync(cmd => _userService.CreateUserAsync(cmd));
+    .BindAsync(async cmd => await _userService.CreateUserAsync(cmd)); // ValueTask chain: await the Task-returning call
 ```
 
 ### 3. Inline Delegate Validation (`ValidateWithAsync`)
@@ -419,10 +419,10 @@ Result<User> result = await GetUserCommand()
     {
         rules.For(() => cmd.Email).NotEmpty().EmailAddress();
     })
-    .BindAsync(cmd => _userService.CreateUserAsync(cmd));
+    .BindAsync(async cmd => await _userService.CreateUserAsync(cmd)); // ValueTask chain: await the Task-returning call
 
 // Asynchronous inline delegate (e.g. database unique check)
-Result<User> result = await GetUserCommand()
+Result<User> asyncResult = await GetUserCommand()
     .ValidateWithAsync(async (cmd, rules, ct) =>
     {
         rules.For(() => cmd.Email).NotEmpty();
@@ -430,7 +430,7 @@ Result<User> result = await GetUserCommand()
                    .MustAsync(async (name, c) => await _db.IsUniqueAsync(name, c), 
                               "Username.Taken", "Username is already taken.", ct);
     })
-    .BindAsync(cmd => _userService.CreateUserAsync(cmd));
+    .BindAsync(async cmd => await _userService.CreateUserAsync(cmd)); // ValueTask chain: await the Task-returning call
 ```
 
 ## FluentValidation Comparison
@@ -490,8 +490,8 @@ Result<CreateUserCommand> result = await ParseCommand(input)
     .ValidateWithAsync(new CreateUserCommandValidator(), ct);
 
 // Inline validation — no dedicated class
-Result<CreateUserCommand> result = await ParseCommand(input)
-    .ValidateWithAsync(command, (m, rules) =>
+Result<CreateUserCommand> inlineResult = await ParseCommand(input)
+    .ValidateWithAsync((m, rules) =>
     {
         rules.For(() => m.Email).NotEmpty().EmailAddress();
         rules.For(() => m.Name).NotEmpty().MaxLength(100);

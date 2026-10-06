@@ -42,8 +42,8 @@ s.ToUpperCase();            // "ACTIVE"
 s.AsUnderlyingType();       // 0
 
 // Constants
-UserStatusExtensions.ActiveSnakeCase;    // "active"
-UserStatusExtensions.ActiveKebabCase;    // "active"
+string snake = UserStatusExtensions.ActiveSnakeCase;        // "active"
+string kebab = UserStatusExtensions.ActiveKebabCase;        // "active"
 
 // Lookup
 UserStatusExtensions.IsDefined("Active");              // true

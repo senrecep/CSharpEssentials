@@ -26,8 +26,8 @@ Result<Order> order = await ResiliencePolicy
     .WithTimeout(TimeSpan.FromSeconds(5))
     .ExecuteAsync(_ => _orderService.GetOrder(id));
 
-// Circuit Breaker + Fallback
-Result<Product> product = await ResiliencePolicy
+// Circuit Breaker + Fallback (fallback needs the typed ResiliencePolicy<T>)
+Result<Product> product = await ResiliencePolicy<Product>
     .Create()
     .WithCircuitBreaker(minimumThroughput: 10, failureRatio: 0.5)
     .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
@@ -53,17 +53,19 @@ Result<Order> order = await ResiliencePolicy
 using CSharpEssentials.Resilience;
 
 // Direct execution — wraps any Func<Task<T>> in a Result
-Result<User> user = await (() => _db.GetUser(id)).ExecuteAsync();
+Func<Task<User>> getUser = () => _db.GetUser(id);
+Result<User> user = await getUser.ExecuteAsync();
 
 // With CancellationToken
-Result<User> user = await ((ct) => _db.GetUser(id, ct)).ExecuteAsync(cancellationToken);
+Func<CancellationToken, Task<User>> getUserWithToken = ct => _db.GetUser(id, ct);
+Result<User> userWithToken = await getUserWithToken.ExecuteAsync(cancellationToken);
 ```
 
 ## Result Retry
 
 ```csharp
 // Retry a failed Result directly
-Func<CancellationToken, Task<Result<User>>> operation = ct => _db.GetUser(id);
+Func<CancellationToken, Task<Result<User>>> operation = ct => _db.TryGetUser(id, ct); // returns Result<User>
 Result<User> result = await operation.RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromSeconds(1));
 ```
 
@@ -133,6 +135,9 @@ Under the hood, uses the Polly v8 `ResiliencePipeline` from the `Polly.Core` pac
 
 ```csharp
 // Advanced: Direct Polly configuration
+using Polly;
+using Polly.Retry;
+
 Result<Data> result = await ResiliencePolicy
     .Create(builder =>
     {

@@ -75,9 +75,10 @@ Maybe<Order> maybe = result2.AsMaybe();
 ### Async
 
 ```csharp
-Maybe<Order> order = await FindUserAsync(1)
-    .BindAsync(user => GetOrderAsync(user.Id))
-    .MapAsync(order => EnrichAsync(order));
+Maybe<User> user = await FindUserAsync(1);
+Maybe<Order> order = await user
+    .BindAsync(u => GetOrderAsync(u.Id))
+    .MapAsync(o => EnrichAsync(o));
 ```
 
 ### Collection Extensions
@@ -102,6 +103,8 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 ### Exception-safe Creation
 
 ```csharp
+using System.Text.Json;
+
 // Returns None if the factory throws
 Maybe<int> result = Maybe<int>.FromTry(() => int.Parse(userInput));
 Maybe<User> user  = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json));
@@ -118,7 +121,7 @@ maybe.TapNone(() => logger.LogWarning("Value missing"));  // called when None
 await maybe.TapNoneAsync(async () => await NotifyAsync("Missing"));
 
 // Via Task<Maybe<T>> / ValueTask<Maybe<T>>
-await GetMaybeAsync().TapNoneAsync(() => fallback());
+await GetMaybeAsync().TapNoneAsync(() => logger.LogWarning("Value missing"));
 ```
 
 ### GetValueOrElse — Lazy Fallback
@@ -135,5 +138,5 @@ int value = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
 Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 
 // Async
-Maybe<Config> config = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
+Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
 ```

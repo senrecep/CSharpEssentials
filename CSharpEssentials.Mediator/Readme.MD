@@ -43,7 +43,7 @@ When targeting Native AOT, pass behaviors via `AddMediator` options instead of r
 ```csharp
 services.AddMediator(options =>
 {
-    options.PipelineBehaviors = CSharpEssentials.Mediator.MediatorExtensions.DefaultPipelineBehaviors;
+    options.PipelineBehaviors = MediatorExtensions.DefaultPipelineBehaviors; // namespace Microsoft.Extensions.DependencyInjection
 });
 ```
 
@@ -62,11 +62,11 @@ using CSharpEssentials.ResultPattern;
 // Unit command
 public record DeleteUserCommand(Guid Id) : ICommand<Result>;
 
-public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand, Result>
+public class DeleteUserCommandHandler(IUserRepository repo) : ICommandHandler<DeleteUserCommand, Result>
 {
     public async ValueTask<Result> Handle(DeleteUserCommand command, CancellationToken ct)
     {
-        await _repo.DeleteAsync(command.Id, ct);
+        await repo.DeleteAsync(command.Id, ct);
         return Result.Success();
     }
 }
@@ -74,12 +74,12 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand, Resul
 // Command with response
 public record CreateUserCommand(string Email, string Name) : ICommand<Result<Guid>>;
 
-public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, Result<Guid>>
+public class CreateUserCommandHandler(IUserRepository repo) : ICommandHandler<CreateUserCommand, Result<Guid>>
 {
     public async ValueTask<Result<Guid>> Handle(CreateUserCommand command, CancellationToken ct)
     {
         var user = new User { Email = command.Email, Name = command.Name };
-        await _repo.AddAsync(user, ct);
+        await repo.AddAsync(user, ct);
         return user.Id;
     }
 }
@@ -87,11 +87,11 @@ public class CreateUserCommandHandler : ICommandHandler<CreateUserCommand, Resul
 // Query
 public record GetUserQuery(Guid Id) : IQuery<Result<User>>;
 
-public class GetUserQueryHandler : IQueryHandler<GetUserQuery, Result<User>>
+public class GetUserQueryHandler(IUserRepository repo) : IQueryHandler<GetUserQuery, Result<User>>
 {
     public async ValueTask<Result<User>> Handle(GetUserQuery query, CancellationToken ct)
     {
-        var user = await _repo.FindAsync(query.Id, ct);
+        var user = await repo.FindAsync(query.Id, ct);
         return user ?? Result.Failure<User>(Error.NotFound("User.NotFound", "User not found"));
     }
 }
@@ -104,10 +104,11 @@ Add `CSharpEssentials.Validation` validators to DI. The behavior intercepts requ
 ```csharp
 public class CreateUserCommandValidator : Validator<CreateUserCommand>
 {
-    protected override void Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules)
+    protected override ValueTask Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules, CancellationToken ct = default)
     {
         rules.For(() => model.Email).NotEmpty().EmailAddress();
         rules.For(() => model.Name).NotEmpty().MaxLength(100);
+        return ValueTask.CompletedTask;
     }
 }
 ```
