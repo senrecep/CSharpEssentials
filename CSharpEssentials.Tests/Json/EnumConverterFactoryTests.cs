@@ -649,6 +649,96 @@ public class EnumConverterFactoryTests
 
         json.Should().Be("\"http-shipped\"");
     }
+
+    [Fact]
+    public void Read_Should_Treat_A_Long_Value_In_A_Multi_Segment_Sequence_As_The_Fallback_Member()
+    {
+        string json = "\"" + new string('x', 5_000) + "\"";
+
+        JsonOrderStatus value = ReadSegmented<JsonOrderStatus>(json, EnumReadMode.Data);
+
+        value.Should().Be(JsonOrderStatus.Unknown);
+    }
+
+    [Fact]
+    public void Read_Should_Reject_A_Long_Number_Like_Value_In_A_Multi_Segment_Sequence()
+    {
+        string json = "\"1" + new string('x', 5_000) + "\"";
+
+        Action act = () => ReadSegmented<JsonOrderStatus>(json, EnumReadMode.Data);
+
+        act.Should().Throw<EnumValueJsonException>();
+    }
+
+    [Fact]
+    public void Read_Should_Preview_A_Rejected_Long_Value_From_A_Multi_Segment_Sequence()
+    {
+        string json = "\"" + new string('y', 5_000) + "\"";
+
+        Action act = () => ReadSegmented<JsonOrderStatus>(json, EnumReadMode.Input);
+
+        act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be(new string('y', 64) + "…");
+    }
+
+    [Fact]
+    public void Read_Should_Reject_Negative_Zero_Split_Across_Segments()
+    {
+        Action act = () => ReadSegmented<JsonOrderStatus>("-0", EnumReadMode.Data, segmentSize: 1);
+
+        act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be("-0");
+    }
+
+    [Fact]
+    public void Read_Should_Accept_Zero_Split_Across_Segments()
+    {
+        ReadSegmented<JsonOrderStatus>(" 0 ", EnumReadMode.Data, segmentSize: 1).Should().Be(JsonOrderStatus.Pending);
+    }
+
+    [Fact]
+    public void Read_Should_Treat_A_Long_Escaped_Value_As_The_Fallback_Member()
+    {
+        string json = "\"" + string.Concat(Enumerable.Repeat("\\u0078", 2_000)) + "\"";
+
+        Read<JsonOrderStatus>(json, EnumReadMode.Data).Should().Be(JsonOrderStatus.Unknown);
+    }
+
+    [Fact]
+    public void Read_Should_Split_Escaped_Legacy_Flags_Longer_Than_The_Stack_Buffer()
+    {
+        string text = "read," + new string(' ', 40) + "write";
+        string json = "\"" + string.Concat(text.Select(static c => $"\\u{(int)c:x4}")) + "\"";
+
+        Read<JsonPermissions>(json, EnumReadMode.Input).Should().Be(JsonPermissions.ReadWrite);
+    }
+
+    private static T? ReadSegmented<T>(string json, EnumReadMode mode, int segmentSize = 7)
+    {
+        Utf8JsonReader reader = new(ByteSegment.Split(System.Text.Encoding.UTF8.GetBytes(json), segmentSize));
+        return JsonSerializer.Deserialize<T>(ref reader, Options(mode));
+    }
+}
+
+internal sealed class ByteSegment : System.Buffers.ReadOnlySequenceSegment<byte>
+{
+    private ByteSegment(ReadOnlyMemory<byte> memory, long runningIndex)
+    {
+        Memory = memory;
+        RunningIndex = runningIndex;
+    }
+
+    public static System.Buffers.ReadOnlySequence<byte> Split(byte[] bytes, int segmentSize)
+    {
+        ByteSegment first = new(bytes.AsMemory(0, Math.Min(segmentSize, bytes.Length)), 0);
+        ByteSegment last = first;
+        for (int offset = segmentSize; offset < bytes.Length; offset += segmentSize)
+        {
+            ByteSegment next = new(bytes.AsMemory(offset, Math.Min(segmentSize, bytes.Length - offset)), offset);
+            last.Next = next;
+            last = next;
+        }
+
+        return new System.Buffers.ReadOnlySequence<byte>(first, 0, last, last.Memory.Length);
+    }
 }
 
 internal sealed class ChunkedStream(Stream inner) : Stream
