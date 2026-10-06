@@ -921,7 +921,7 @@ Batch updates bypass the change tracker and `SaveChanges` interceptors (audit, d
 configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(AppDbContext).Assembly);
 ```
 
-Reading accepts both formats, so existing rows still load. See [Migrating from 3.x to 4.0](../README.MD#migrating-from-3x-to-40).
+Reading accepts both formats, so existing rows still load. See [Migrating from 3.x to 4.0](migration/v3-to-v4.md).
 
 ### Interceptors
 
@@ -1012,7 +1012,7 @@ StringEnumNaming.TryParse<HttpKind>("HTTPStatus", out var kind);      // true
 
 `ResultEndpointFilter` returns `200 OK` on success. On failure it returns a ProblemDetails response (3.x: `400` with the raw `Error[]`); a registered `IResultErrorMapper` takes precedence. `ToProblemResult` returns `EnhancedProblemHttpResult` and `ToActionResult` returns `EnhancedProblemObjectResult` (derives from `ObjectResult`); both read the registered options when they execute. `ToProblemDetails` uses default options because it has no request context.
 
-> Upgrading from 3.x? Defaults changed (trace id, error fields, exception mapping, enum names). See [Migrating from 3.x to 4.0](../README.MD#migrating-from-3x-to-40).
+> Upgrading from 3.x? Defaults changed (trace id, error fields, exception mapping, enum names). See [Migrating from 3.x to 4.0](migration/v3-to-v4.md).
 
 ### Configuration
 
