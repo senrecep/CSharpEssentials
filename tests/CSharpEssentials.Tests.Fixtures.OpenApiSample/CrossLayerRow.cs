@@ -34,8 +34,14 @@ public sealed record CrossLayerRow
     /// <summary>The stored EF Core column value as text; <see langword="null"/>: SQL <c>NULL</c>.</summary>
     public required string? Column { get; init; }
 
-    /// <summary>The schema of the <c>value</c> query parameter, keys sorted (both OpenAPI 3.0 outputs).</summary>
+    /// <summary>The schema of the bound value parameter (route, query and header), keys sorted (both OpenAPI 3.0 outputs).</summary>
     public required string OpenApiParameter { get; init; }
+
+    /// <summary>
+    /// The Microsoft.AspNetCore.OpenApi parameter schema in an OpenAPI 3.1 document where it differs from <see cref="OpenApiParameter"/>:
+    /// only for nullable rows, which 3.1 describes with <c>oneOf</c> and <c>{"type":"null"}</c> instead of <c>nullable</c>.
+    /// </summary>
+    public string? OpenApi31Parameter { get; init; }
 
     /// <summary>The <c>type</c> and <c>enum</c> of the enum component (both OpenAPI 3.0 outputs unless <see cref="MicrosoftOpenApiComponent"/> is set).</summary>
     public required string OpenApiComponent { get; init; }
