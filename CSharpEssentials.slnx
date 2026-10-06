@@ -33,5 +33,6 @@
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.EndpointsB/CSharpEssentials.Tests.Fixtures.EndpointsB.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionA/CSharpEssentials.Tests.Fixtures.DependencyInjectionA.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionB/CSharpEssentials.Tests.Fixtures.DependencyInjectionB.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.EnumsContracts/CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>
