@@ -6,7 +6,7 @@ namespace CSharpEssentials.AspNetCore;
 /// <param name="Source">Where the value is read from.</param>
 /// <param name="Key">The route, query, header or form key.</param>
 /// <param name="Normalizer">Parses the value with the enum conventions.</param>
-/// <param name="AllowEmpty">Nullable or collection: blank values are dropped instead of rejected.</param>
+/// <param name="AllowEmpty">Nullable or collection: empty and whitespace-only values are dropped instead of rejected.</param>
 /// <param name="IsCollection">An array or collection: a comma separated value is split into several values.</param>
 /// <param name="SkipWhenPrefixPresent">
 /// MVC complex type fallback key: skipped when the request has a value under this model prefix, because MVC then

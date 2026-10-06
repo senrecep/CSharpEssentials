@@ -121,6 +121,29 @@ public class EnumConventionsBindingMatrixTests
     }
 
     [Theory]
+    [MemberData(nameof(WhitespaceNullableRows))]
+    public async Task Nullable_Should_BindNull_When_ValueIsWhitespace(string api, string source)
+    {
+        await using EnumConventionsHost host = await EnumConventionsHost.StartMatrixAsync();
+
+        EcResponse response = await Send(host, api, source, "-nullable", "  ");
+
+        response.Status.Should().Be(200, response.Body);
+        response.Body.Should().Be("null");
+    }
+
+    [Theory]
+    [MemberData(nameof(ScalarRows))]
+    public async Task Scalar_Should_Return400_When_ValueIsWhitespace(string api, string source)
+    {
+        await using EnumConventionsHost host = await EnumConventionsHost.StartMatrixAsync();
+
+        EcResponse response = await Send(host, api, source, "", "  ");
+
+        response.Status.Should().Be(400, response.Body);
+    }
+
+    [Theory]
     [MemberData(nameof(NullableRows))]
     public async Task Nullable_Should_Return400_When_ValueIsInvalid(string api, string source)
     {
@@ -246,6 +269,8 @@ public class EnumConventionsBindingMatrixTests
     public static TheoryData<string> Apis => new() { "min", "mvc" };
 
     public static TheoryData<string, string> NullableRows => Rows(["query", "header", "form"]);
+
+    public static TheoryData<string, string> WhitespaceNullableRows => Rows(["route", "query", "header", "form"]);
 
     public static TheoryData<string, string> RequiredRows => Rows(["query", "header", "form"]);
 

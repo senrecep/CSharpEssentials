@@ -38,7 +38,7 @@ app.UseEnumBinding();
 ### Behavior changes
 
 - Route, query, header and form values follow the accept rules of a JSON body. Header (`[FromHeader]`) and form (`[FromForm]`) values are new sources.
-- Leading and trailing whitespace of route, query, header and form values is trimmed before parsing, as in 4.x: `?status=%20pending` binds to `Pending`. A value that is still invalid after trimming returns 400. JSON bodies are not trimmed.
+- Leading and trailing whitespace of route, query, header and form values is trimmed before parsing, as in 4.x: `?status=%20pending` binds to `Pending`. A value that is still invalid after trimming returns 400. An empty or whitespace-only value (`?status=%20`) binds `null` for a nullable parameter and returns 400 for a non-nullable one. JSON bodies are not trimmed.
 - The default error message lists the allowed values: `'99' is not a valid OrderStatus. Allowed values: pending, pending_approval.`
 - Arrays accept repeated keys and comma-separated values (`?s=a&s=b`, `?s=a,b`).
 - `AddEnumConventions` also applies the conventions to the Minimal API and MVC `JsonOptions` (in 4.x a separate converter registration). Enums without generated metadata keep the framework's behavior; `AddEnumConventionsWithReflection` opts them in.
