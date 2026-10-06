@@ -109,6 +109,19 @@ string remove = app.RouteOf<AppCommands>("DELETE", new { id = 42 }); // select b
 - Throws `InvalidOperationException` when the type has no route, has more than one route and no selector is given, or a route value is missing or fails its constraint.
 - Reads values from object properties, so it is marked `[RequiresUnreferencedCode]`.
 
+## Authorization shortcuts
+
+Thin wrappers over `RequireAuthorization` for any endpoint, group or route handler builder:
+
+```csharp
+group.RequireRoles("admin", "editor");       // any listed role
+group.RequirePolicies("CanRead", "CanWrite"); // every listed policy
+group.RequireAuthSchemes("Bearer");           // any listed scheme
+```
+
+- Each call adds `AuthorizeAttribute` metadata, so it combines with `RequireAuthorization`, `[Authorize]` and `AllowAnonymous` as usual.
+- Empty lists and null, blank or comma-separated entries throw `ArgumentException`.
+
 ## Diagnostics
 
 The bundled analyzer reports types the generator cannot map. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed.
