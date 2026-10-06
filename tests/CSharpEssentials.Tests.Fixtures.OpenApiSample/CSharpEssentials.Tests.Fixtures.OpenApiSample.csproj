@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The API both OpenAPI packages describe in the golden tests: CSharpEssentials.Tests (Swashbuckle, net9.0) and
+       CSharpEssentials.AspNetCore.OpenApi.Tests (Microsoft.AspNetCore.OpenApi, net10.0 and net11.0). No OpenAPI package here. -->
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <!-- The sample enums need an obsolete member (S1133) and a long enum beyond int (CA1028) on purpose. -->
+    <NoWarn>$(NoWarn);S1133;CA1028</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\CSharpEssentials.Enums\build\CSharpEssentials.Enums.props" />
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
