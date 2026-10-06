@@ -4,7 +4,7 @@
 
 Suggested order:
 
-1. Packages: add `CSharpEssentials.AspNetCore.Swashbuckle` or `CSharpEssentials.AspNetCore.OpenApi` ([OpenAPI](#openapi-csharpessentialsaspnetcoreswashbuckle-csharpessentialsaspnetcoreopenapi)).
+1. Packages: add `CSharpEssentials.AspNetCore.Swashbuckle` or `CSharpEssentials.AspNetCore.OpenApi` ([OpenAPI](#openapi-csharpessentialsaspnetcoreswashbuckle-csharpessentialsaspnetcoreopenapi)). Reference `CSharpEssentials.Enums` directly in every project that declares `[StringEnum]` enums: the source generator does not flow through `CSharpEssentials.Json`, `.AspNetCore`, `.EntityFrameworkCore` or the `CSharpEssentials` meta-package.
 2. Registration: `AddEnumBinding` → `AddEnumConventions`, `ConditionalStringEnumConverter` → `AddEnumConventions`, `EnumConventionOptions` → `EnumConventions`.
 3. Build and fix the obsolete warnings (generated helpers, `StringEnumNaming`).
 4. Keep old clients on numbers where needed ([Legacy numeric output](#legacy-numeric-output)).
@@ -49,9 +49,14 @@ Plain enums fall through to the framework defaults in every layer; nothing throw
 
 The old helpers stay as obsolete members whose message names the replacement. `ToSnakeCase()` keeps its 4.x output, which can differ from the wire name for acronyms and digits: `ToWireName()` matches `JsonNamingPolicy.SnakeCaseLower` (`HTTPStatus` → `http_status`). Check values you stored or compared from `ToSnakeCase()` before switching; reads accept the old spelling.
 
+Changing a wire name later (renaming a member, changing `Naming`) changes the EF check constraint too. See [Renaming a member safely](../../CSharpEssentials.Enums/Readme.MD#renaming-a-member-safely).
+
 ## JSON (`CSharpEssentials.Json`)
 
 ```csharp
+using CSharpEssentials.Enums; // EnumConventions
+using CSharpEssentials.Json;  // AddEnumConventions
+
 // 4.x
 options.Converters.Add(new ConditionalStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: true));
 
@@ -71,6 +76,10 @@ options.AddEnumConventions(EnumConventions.Default);
 `AddEnumBinding` and `EnumBindingOptions` are obsolete forwarders. `UseEnumBinding()` stays and now requires `AddEnumConventions()`; without it the app throws at startup.
 
 ```csharp
+using CSharpEssentials.AspNetCore; // AddEnumConventions, UseEnumBinding
+using CSharpEssentials.Enums;      // EnumConventions
+using CSharpEssentials.Errors;     // Error
+
 // 4.x
 builder.Services.AddEnumBinding(o =>
 {
@@ -148,6 +157,9 @@ Remove the holder registration (`AddScoped<EnumData<T>>()`) and the filter. The 
 Clients that still expect numbers keep them per group, controller or action; the host's `JsonOptions` are not changed:
 
 ```csharp
+using CSharpEssentials.AspNetCore; // WithEnumWireFormat, [EnumWireFormat]
+using CSharpEssentials.Enums;      // EnumWireFormat
+
 app.MapGroup("/api/v1").WithEnumWireFormat(EnumWireFormat.Number);
 
 [EnumWireFormat(EnumWireFormat.Number)]
@@ -182,12 +194,15 @@ The obsolete 4.x `ConfigureEnumConventions(params Assembly[])` and `ConfigureEnu
 
 5.0 stores `[StringEnum]` enums by wire name in a `text` column (provider length elsewhere) with a check constraint, and `[Flags]` as an integer bitmask. Columns with a manual `HasConversion` are skipped until you remove it. Roll out one column at a time:
 
-1. **Audit.** Run the read-only query of `EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer)` in production (pass `provider: "Microsoft.EntityFrameworkCore.Sqlite"` for SQLite). Fix or map every value it returns. Do this before the first 5.0 migration if the column was managed by the 4.x `ConfigureEnumConventions`: that migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint.
+1. **Audit.** Run the read-only query of `EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer)` in production (pass `provider: "Microsoft.EntityFrameworkCore.Sqlite"` for SQLite) with psql or `Database.SqlQueryRaw` ([how](../../CSharpEssentials.EntityFrameworkCore/Readme.MD#auditing-the-data)). Fix or map every value it returns. Do this before the first 5.0 migration if the column was managed by the 4.x `ConfigureEnumConventions`: that migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint.
 2. **Deploy tolerant reads.** Upgrade to 5.0 without changing what is written: `ConfigureEnumConventions(conventions, existingStorage: EnumStoredAs.Integer)` for plain integer columns, or `HasLegacyEnumStorage(EnumStoredAs.MemberName)` (`Integer`, `CamelCase`, `LegacySnakeCase`, `FlagsText`) per property. Reads accept every known spelling from now on; writes and query parameters keep the old format, so filters still match and older instances still read new rows. `dotnet ef migrations add Upgrade5` should produce an empty migration.
 3. **Convert.** Remove `HasLegacyEnumStorage` from the property, or, if the column follows the global `existingStorage` setting, opt it in with `HasEnumStorage(EnumStorage.String)`: `existingStorage` applies to every column without an explicit `HasEnumStorage`, so each column you convert needs its own `HasEnumStorage(EnumStorage.String)`. Then run `dotnet ef migrations add`. In the generated migration, delete the `AlterColumn` for the column and put `ConvertEnumColumn` in its place, after `DropCheckConstraint` when the column already has one. CSE0014 fails the build if the `AlterColumn` is left in.
 4. **Add the constraint.** Keep the generated `AddCheckConstraint` after `ConvertEnumColumn`, so every converted row is checked. Deploy after every pre-5.0 instance is drained; older instances cannot read the new format.
 
 ```csharp
+using CSharpEssentials.Enums;               // EnumStorage
+using CSharpEssentials.EntityFrameworkCore; // ConvertEnumColumn, EnumStoredAs
+
 protected override void Up(MigrationBuilder migrationBuilder)
 {
     migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
@@ -204,7 +219,7 @@ protected override void Down(MigrationBuilder migrationBuilder)
 | Old column | `from:` |
 |---|---|
 | EF default integers | `EnumStoredAs.Integer` |
-| `HasConversion<string>()` member names, 3.x `ToSnakeCase` names, camelCase, mixed spellings | `EnumStoredAs.Text` (accepts every known spelling) |
+| `HasConversion<string>()` member names, 3.x/4.x `ToSnakeCase` names, camelCase, mixed spellings | `EnumStoredAs.Text` (accepts every known spelling) |
 | `[Flags]` stored as `"Read, Write"` | `EnumStoredAs.FlagsText` with `to: EnumStorage.Integer` |
 | Enum inside a PostgreSQL `jsonb` document | `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` (optional: reads are tolerant) |
 

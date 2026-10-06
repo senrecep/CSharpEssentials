@@ -15,6 +15,8 @@ Targets net8.0, net9.0, net10.0 and net11.0 with `Swashbuckle.AspNetCore` 8.1 or
 ## Swagger with Versioning
 
 ```csharp
+using CSharpEssentials.AspNetCore; // AddSwagger, DefaultConfigureSwaggerOptions, SecuritySchemes, UseVersionableSwagger
+
 builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(securityScheme: SecuritySchemes.JwtBearerTokenSecurity);
 
 var app = builder.Build();
@@ -26,6 +28,8 @@ app.UseVersionableSwagger();
 ## Enum schemas
 
 ```csharp
+using CSharpEssentials.AspNetCore; // AddEnumConventions for IServiceCollection and SwaggerGenOptions
+
 builder.Services.AddEnumConventions();
 builder.Services.AddSwaggerGen(o => o.AddEnumConventions()); // AddSwagger calls it
 ```
