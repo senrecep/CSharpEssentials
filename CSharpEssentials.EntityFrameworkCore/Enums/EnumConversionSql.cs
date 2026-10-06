@@ -94,7 +94,7 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
                 $"FROM unnest(string_to_array({qualifiedColumn}, {EnumSqlDialect.Literal(",")})) AS cse_token(value))";
         }
 
-        // SQLite has no bitwise aggregate: split through json_each, then fold the tokens in order with |.
+        // SQLite has no bitwise aggregate: split the tokens, then fold them in order with |.
         return "(WITH RECURSIVE " +
             $"cse_tokens(position, number) AS (SELECT cse_item.key, {TokenToNumber("cse_item.value")} FROM {SqliteTokens(qualifiedColumn)} AS cse_item), " +
             "cse_fold(position, number) AS (SELECT -1, 0 UNION ALL SELECT cse_tokens.position, cse_fold.number | cse_tokens.number " +
@@ -130,10 +130,16 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
         return format is null ? canonical.WireName : EnumColumnCodec<TEnum>.LegacyName(canonical.MemberName, format.Value);
     }
 
+    // The comma separated tokens of the column as (key, value) rows, key counting from 0. A recursive split with instr/substr
+    // reads any text as is; building a JSON array for json_each would fail on control characters and need escaping.
     private static string SqliteTokens(string qualifiedColumn)
     {
-        string escaped = $"replace(replace({qualifiedColumn}, {EnumSqlDialect.Literal("\\")}, {EnumSqlDialect.Literal("\\\\")}), {EnumSqlDialect.Literal("\"")}, {EnumSqlDialect.Literal("\\\"")})";
-        return $"json_each({EnumSqlDialect.Literal("[\"")} || replace({escaped}, {EnumSqlDialect.Literal(",")}, {EnumSqlDialect.Literal("\",\"")}) || {EnumSqlDialect.Literal("\"]")})";
+        string comma = EnumSqlDialect.Literal(",");
+        return "(WITH RECURSIVE cse_split(key, value, rest) AS (" +
+            $"SELECT -1, NULL, {qualifiedColumn} || {comma} " +
+            $"UNION ALL SELECT key + 1, substr(rest, 1, instr(rest, {comma}) - 1), substr(rest, instr(rest, {comma}) + 1) " +
+            $"FROM cse_split WHERE rest <> {EnumSqlDialect.Literal(string.Empty)}) " +
+            "SELECT key, value FROM cse_split WHERE key >= 0)";
     }
 
     private string NumberWhens() =>
