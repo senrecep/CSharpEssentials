@@ -29,6 +29,10 @@ public class DependencyInjectionAnalyzerTests
         { "CSE2003", DiagnosticSeverity.Info, "[RegisterScoped] public sealed class Worker : IFoo;" },
         { "CSE2004", DiagnosticSeverity.Error, "[Decorates(typeof(IFoo))] public sealed class FooDecorator(IClock clock) : IFoo;" },
         { "CSE2005", DiagnosticSeverity.Error, "[Decorates(typeof(IFoo))] public sealed class FooDecorator : IFoo { public FooDecorator(IFoo inner) { } public FooDecorator(IFoo inner, IClock clock) { } }" },
+        { "CSE2006", DiagnosticSeverity.Info, "[RegisterScoped(typeof(IClock))] public sealed class Clock : IClock; [RegisterSingleton(typeof(IFoo))] public sealed class Foo(IClock clock) : IFoo;" },
+        { "CSE2006", DiagnosticSeverity.Info, "[RegisterTransient(typeof(IClock))] public sealed class Clock : IClock; [RegisterScoped(typeof(IFoo))] public sealed class Foo : IFoo { public Foo(IClock clock) { } }" },
+        { "CSE2006", DiagnosticSeverity.Info, "[RegisterScoped(typeof(IRepository<>))] public sealed class Repository<T> : IRepository<T>; [RegisterSingleton(typeof(IFoo))] public sealed class Foo(IRepository<int> repository) : IFoo;" },
+        { "CSE2006", DiagnosticSeverity.Info, "[RegisterTransient(typeof(IClock), Key = \"utc\")] public sealed class Clock : IClock; [RegisterSingleton(typeof(IFoo))] public sealed class Foo([Microsoft.Extensions.DependencyInjection.FromKeyedServices(\"utc\")] IClock clock) : IFoo;" },
         { "CSE2007", DiagnosticSeverity.Error, "[RegisterScoped] public abstract class Foo : IFoo;" },
         { "CSE2007", DiagnosticSeverity.Error, "[RegisterScoped] public static class Foo;" },
         { "CSE2007", DiagnosticSeverity.Error, "public sealed class Outer { [RegisterScoped] private sealed class Foo : IFoo; }" },
@@ -42,6 +46,10 @@ public class DependencyInjectionAnalyzerTests
         { "CSE2003", "[RegisterScoped] public sealed class Foo : IFoo;" },
         { "CSE2004", "[Decorates(typeof(IFoo))] public sealed class FooDecorator(IFoo inner, IClock clock) : IFoo;" },
         { "CSE2005", "[Decorates(typeof(IFoo))] public sealed class FooDecorator : IFoo { public FooDecorator(IFoo inner) { } private FooDecorator() { } }" },
+        { "CSE2006", "[RegisterSingleton(typeof(IClock))] public sealed class Clock : IClock; [RegisterSingleton(typeof(IFoo))] public sealed class Foo(IClock clock) : IFoo;" },
+        { "CSE2006", "[RegisterScoped(typeof(IClock))] public sealed class Clock : IClock; [RegisterTransient(typeof(IFoo))] public sealed class Foo(IClock clock) : IFoo;" },
+        { "CSE2006", "[RegisterScoped(typeof(IClock))] public sealed class Clock : IClock; [RegisterSingleton(typeof(IFoo))] public sealed class Foo : IFoo { public Foo(IClock clock) { } public Foo() { } }" },
+        { "CSE2006", "[RegisterTransient(typeof(IClock), Key = \"utc\")] public sealed class Clock : IClock; [RegisterSingleton(typeof(IFoo))] public sealed class Foo(IClock clock) : IFoo;" },
         { "CSE2007", "[RegisterScoped] public sealed class Foo : IFoo; public sealed class Outer { [RegisterScoped] internal sealed class Nested : IClock; }" },
         { "CSE2008", "[Decorates(typeof(IRepository<int>))] public sealed class RepositoryDecorator(IRepository<int> inner) : IRepository<int>;" },
     };
@@ -72,6 +80,19 @@ public class DependencyInjectionAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Location.SourceTree!.ToString().Substring(diagnostic.Location.SourceSpan.Start, diagnostic.Location.SourceSpan.Length)
             .Should().Be("RegisterScoped(typeof(IFoo))");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE2006_With_Lifetimes_At_Consumer_Attribute()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(
+            Prelude + "[RegisterScoped(typeof(IClock))] public sealed class Clock : IClock; [RegisterSingleton(typeof(IFoo))] public sealed class Foo(IClock clock) : IFoo;");
+
+        Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE2006").Subject;
+        diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture)
+            .Should().Be("Singleton 'Sample.Foo' depends on 'Sample.IClock' through parameter 'clock', but 'Sample.Clock' registers it as Scoped");
+        diagnostic.Location.SourceTree!.ToString().Substring(diagnostic.Location.SourceSpan.Start, diagnostic.Location.SourceSpan.Length)
+            .Should().Be("RegisterSingleton(typeof(IFoo))");
     }
 
     [Fact]

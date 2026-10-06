@@ -52,6 +52,16 @@ internal static class DependencyInjectionDiagnostics
         isEnabledByDefault: true,
         description: "The generated factory calls the single public constructor of the decorator.");
 
+    public static readonly DiagnosticDescriptor CaptiveDependency = new(
+        "CSE2006",
+        "Registered service captures a shorter-lived dependency",
+        "{0} '{1}' depends on '{2}' through parameter '{3}', but '{4}' registers it as {5}",
+        Category,
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true,
+        description: "A service keeps the instances it receives for its whole lifetime. A singleton that receives a scoped or transient service, or a scoped service that receives a transient one, holds that dependency longer than its registration intends. Only classes with a single constructor and attribute registrations in the same compilation are checked.",
+        customTags: WellKnownDiagnosticTags.CompilationEnd);
+
     public static readonly DiagnosticDescriptor NotConstructible = new(
         "CSE2007",
         "Type cannot be constructed by the generated registry",

@@ -71,6 +71,11 @@ internal static class ServiceTypeInspector
         string.Equals(attributeClass.Name, name, StringComparison.Ordinal) &&
         string.Equals(attributeClass.ContainingNamespace?.ToDisplayString(), AttributeNamespace, StringComparison.Ordinal);
 
+    public static bool IsContainerAttribute(AttributeData attribute, string name) =>
+        attribute.AttributeClass is { } attributeClass &&
+        string.Equals(attributeClass.Name, name, StringComparison.Ordinal) &&
+        string.Equals(attributeClass.ContainingNamespace?.ToDisplayString(), ContainerNamespace, StringComparison.Ordinal);
+
     private static bool TryGetLifetime(INamedTypeSymbol? attributeClass, out string lifetime)
     {
         foreach (string candidate in Lifetimes)
@@ -205,11 +210,6 @@ internal static class ServiceTypeInspector
             ? new DecoratorParameterModel(DecoratorParameterKind.Optional, type, ConstantFormatter.FormatDefault(parameter.Type, parameter.ExplicitDefaultValue))
             : new DecoratorParameterModel(DecoratorParameterKind.Required, type, null);
     }
-
-    private static bool IsContainerAttribute(AttributeData attribute, string name) =>
-        attribute.AttributeClass is { } attributeClass &&
-        string.Equals(attributeClass.Name, name, StringComparison.Ordinal) &&
-        string.Equals(attributeClass.ContainingNamespace?.ToDisplayString(), ContainerNamespace, StringComparison.Ordinal);
 
     private static bool CheckConstructible(INamedTypeSymbol type, AttributeData attribute, List<InspectionIssue> issues)
     {

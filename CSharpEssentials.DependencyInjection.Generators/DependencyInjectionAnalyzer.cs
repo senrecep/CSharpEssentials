@@ -6,11 +6,13 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace CSharpEssentials.DependencyInjection.Generators;
 
 /// <summary>
-/// Reports invalid service registrations and decorators (CSE2001–CSE2005, CSE2007, CSE2008).
+/// Reports invalid service registrations and decorators and captive dependencies (CSE2001–CSE2008).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
 {
+    private const string Transient = "Transient";
+
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(
         DependencyInjectionDiagnostics.ServiceNotImplemented,
@@ -18,6 +20,7 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
         DependencyInjectionDiagnostics.RegisteredAsSelf,
         DependencyInjectionDiagnostics.DecoratorWithoutInner,
         DependencyInjectionDiagnostics.DecoratorConstructorCount,
+        DependencyInjectionDiagnostics.CaptiveDependency,
         DependencyInjectionDiagnostics.NotConstructible,
         DependencyInjectionDiagnostics.OpenGenericDecorator);
 
@@ -34,12 +37,20 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
             }
 
             ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations = [];
-            start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, registrations), SymbolKind.NamedType);
-            start.RegisterCompilationEndAction(end => ReportDuplicateThrows(end, registrations));
+            ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers = [];
+            start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, registrations, consumers), SymbolKind.NamedType);
+            start.RegisterCompilationEndAction(end =>
+            {
+                ReportDuplicateThrows(end, registrations);
+                ReportCaptiveDependencies(end, registrations, consumers);
+            });
         });
     }
 
-    private static void AnalyzeType(SymbolAnalysisContext context, ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations)
+    private static void AnalyzeType(
+        SymbolAnalysisContext context,
+        ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations,
+        ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers)
     {
         var type = (INamedTypeSymbol)context.Symbol;
         ServiceTypeInspection inspection = ServiceTypeInspector.Inspect(type, context.CancellationToken);
@@ -53,11 +64,63 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
+        IReadOnlyList<ServiceDependency>? dependencies = null;
         foreach (InspectedRegistration registration in inspection.Registrations)
         {
             registrations.Add((type.ToDisplayString(), registration));
+            if (LifetimeRank(registration.Model.Lifetime) < LifetimeRank(Transient))
+            {
+                dependencies ??= ServiceDependencyReader.Read(type);
+                consumers.Add((type.ToDisplayString(), registration, dependencies));
+            }
         }
     }
+
+    private static void ReportCaptiveDependencies(
+        CompilationAnalysisContext context,
+        ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations,
+        ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers)
+    {
+        ILookup<string, (string TypeName, string Lifetime)> providers = registrations
+            .SelectMany(static entry => entry.Registration.Model.Services.Select(service => (
+                ServiceKey: service.ServiceType + "|" + entry.Registration.Model.Key,
+                entry.TypeName,
+                entry.Registration.Model.Lifetime)))
+            .OrderBy(static entry => entry.TypeName, StringComparer.Ordinal)
+            .ToLookup(static entry => entry.ServiceKey, static entry => (entry.TypeName, entry.Lifetime), StringComparer.Ordinal);
+
+        foreach ((string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies) consumer in consumers)
+        {
+            int consumerRank = LifetimeRank(consumer.Registration.Model.Lifetime);
+            foreach (ServiceDependency dependency in consumer.Dependencies)
+            {
+                (string TypeName, string Lifetime) provider = providers[dependency.ServiceType + "|" + dependency.Key]
+                    .Concat(dependency.OpenServiceType is { } open ? providers[open + "|" + dependency.Key] : [])
+                    .FirstOrDefault(candidate => LifetimeRank(candidate.Lifetime) > consumerRank);
+                if (provider.TypeName is null)
+                {
+                    continue;
+                }
+
+                context.ReportDiagnostic(Diagnostic.Create(
+                    DependencyInjectionDiagnostics.CaptiveDependency,
+                    GetLocation(consumer.Registration.Attribute, null, context.CancellationToken),
+                    consumer.Registration.Model.Lifetime,
+                    consumer.TypeName,
+                    dependency.ServiceType.Replace("global::", string.Empty),
+                    dependency.ParameterName,
+                    provider.TypeName,
+                    provider.Lifetime));
+            }
+        }
+    }
+
+    private static int LifetimeRank(string lifetime) => lifetime switch
+    {
+        "Singleton" => 0,
+        "Scoped" => 1,
+        _ => 2,
+    };
 
     private static void ReportDuplicateThrows(
         CompilationAnalysisContext context,
