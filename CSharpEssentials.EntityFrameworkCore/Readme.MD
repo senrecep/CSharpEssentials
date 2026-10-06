@@ -19,6 +19,8 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 dotnet add package CSharpEssentials.EntityFrameworkCore
 ```
 
+Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
+
 ## Usage
 
 ### Audit Interceptor
@@ -116,6 +118,9 @@ Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `
 `ConfigureEnumConventions` stores `[StringEnum]` enums by their wire name (the same spelling as JSON and binding) and adds a check constraint per column:
 
 ```csharp
+using CSharpEssentials.Enums;               // EnumConventions, EnumStorage, [StringEnum]
+using CSharpEssentials.EntityFrameworkCore; // ConfigureEnumConventions, HasEnumStorage, HasEnumCheckConstraint
+
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
@@ -144,12 +149,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 - Properties with your own `HasConversion` are skipped.
 - Adding a member changes only the constraint, so the migration is `DropCheckConstraint` + `AddCheckConstraint`.
 - Opt out of constraints per property with `HasEnumCheckConstraint(false)`, or globally with `EnumConventions.CheckConstraints = false`.
+- Renaming a member also changes the constraint; see [Renaming a member safely](../CSharpEssentials.Enums/Readme.MD#renaming-a-member-safely).
 
 #### Upgrading an existing database
 
 Existing enum columns hold integers (EF's default) or an older text format. Keep them as they are, so the first 5.0 migration is empty:
 
 ```csharp
+using CSharpEssentials.Enums;               // EnumConventions, EnumStorage
+using CSharpEssentials.EntityFrameworkCore; // EnumStoredAs, HasLegacyEnumStorage
+
 configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
 
 // opt in one column at a time
@@ -166,6 +175,9 @@ modelBuilder.Entity<Order>().Property(o => o.Kind).HasLegacyEnumStorage(EnumStor
 When you drop `HasLegacyEnumStorage` (or `existingStorage`) for a column, `dotnet ef migrations add` generates an `AlterColumn` that changes the type without converting the data. Replace it with `ConvertEnumColumn`, and keep the constraint operations around it:
 
 ```csharp
+using CSharpEssentials.Enums;               // EnumStorage
+using CSharpEssentials.EntityFrameworkCore; // ConvertEnumColumn, EnumStoredAs
+
 protected override void Up(MigrationBuilder migrationBuilder)
 {
     migrationBuilder.DropCheckConstraint(name: "ck_orders_Status_enum", table: "orders");   // when one exists
@@ -192,8 +204,31 @@ protected override void Down(MigrationBuilder migrationBuilder)
 - SQL is generated for PostgreSQL and SQLite (`MigrationBuilder.ActiveProvider`); other providers throw. On SQLite EF rebuilds the table.
 - `type:` sets a non-default target store type (for example `varchar(32)`); `schema:` the table schema.
 - `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` rewrites one path of a PostgreSQL `jsonb` column (`to: EnumStorage.Integer` for `Down`); unknown values are left untouched.
-- `EnumDataAudit.Sql<TEnum>("orders", "Status", storedAs: ..., provider: ...)` returns a read-only query that lists the values a conversion or constraint would reject, with their counts. Run it in production before you deploy the migration.
+- `EnumDataAudit.Sql<TEnum>("orders", "Status", storedAs: ..., provider: ...)` returns a read-only query that lists the values a conversion or constraint would reject, with their counts. Run it in production before you deploy the migration (see below).
 - CSE0014 (build error) reports a generated `AlterColumn` that you forgot to delete next to `ConvertEnumColumn` for the same column.
+
+#### Auditing the data
+
+`EnumDataAudit.Sql` only builds the SQL (`SELECT "Status" AS "Value", count(*) AS "Count" ... GROUP BY ... ORDER BY ...`); it changes nothing. Print it and run it with psql or your SQL client, or run it through EF Core:
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore; // EnumDataAudit, EnumStoredAs
+
+string sql = EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer, provider: db.Database.ProviderName);
+
+List<EnumAuditRow> rejected = await db.Database.SqlQueryRaw<EnumAuditRow>(sql).ToListAsync(ct);
+foreach (EnumAuditRow row in rejected)
+    logger.LogWarning("orders.Status holds {Value} in {Count} rows", row.Value, row.Count);
+
+// Value has the column's type: int for EnumStoredAs.Integer, string for text columns
+public sealed class EnumAuditRow
+{
+    public int Value { get; init; }
+    public long Count { get; init; }
+}
+```
+
+An empty result means every row converts and passes the new constraint. Pass `schema:` for a table outside the default schema.
 
 ### CQRS Write/Read
 
