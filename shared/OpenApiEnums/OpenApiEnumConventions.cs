@@ -29,6 +29,7 @@ internal sealed partial class OpenApiEnumConventions
 
     // Keyed by the host's logger factory (a root singleton): the conventions can be created per request scope.
     private static readonly ConditionalWeakTable<ILoggerFactory, ConcurrentDictionary<(string Document, Type EnumType), bool>> _mixedWarnings = [];
+    private static readonly ConditionalWeakTable<ILoggerFactory, ConcurrentDictionary<string, bool>> _selectorWarnings = [];
 
     private readonly IServiceProvider _services;
     private readonly EnumConventionsRegistration? _registration;
@@ -208,10 +209,33 @@ internal sealed partial class OpenApiEnumConventions
         if (FindMetadata(action, endpoints) is not { } metadata)
             return new OperationEnumFormat(WriteAs, null);
 
-        // A header selector is described by its default branch: the format of a request without the header.
-        EnumWireFormat format = metadata.SelectFormat(new DefaultHttpContext { RequestServices = _services });
-        return new OperationEnumFormat(format, metadata.VaryHeader);
+        // A header selector is described by its default branch: the format of a request without the header. It runs in its own
+        // scope, so scoped services resolve as in a request; a selector that throws is described with WriteAs.
+        using IServiceScope scope = _services.CreateScope();
+        try
+        {
+            EnumWireFormat format = metadata.SelectFormat(new DefaultHttpContext { RequestServices = scope.ServiceProvider });
+            return new OperationEnumFormat(format, metadata.VaryHeader);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            WarnSelectorFailed(action, exception);
+            return new OperationEnumFormat(WriteAs, metadata.VaryHeader);
+        }
     }
+
+    private void WarnSelectorFailed(ActionDescriptor action, Exception exception)
+    {
+        if (_services.GetService<ILoggerFactory>() is not { } loggerFactory)
+            return;
+        if (_selectorWarnings.GetValue(loggerFactory, static _ => new(StringComparer.Ordinal)).TryAdd(action.Id, true))
+            LogSelectorFailed(loggerFactory.CreateLogger<OpenApiEnumConventions>(), exception, action.DisplayName ?? action.Id, WriteAs);
+    }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "The enum wire format selector of {Operation} threw while the OpenAPI document was generated; the operation is described with the global format {WriteAs}.")]
+    private static partial void LogSelectorFailed(ILogger logger, Exception exception, string operation, EnumWireFormat writeAs);
 
     private static IEnumWireFormatMetadata? FindMetadata(ActionDescriptor action, Dictionary<ActionDescriptor, Endpoint> endpoints)
     {

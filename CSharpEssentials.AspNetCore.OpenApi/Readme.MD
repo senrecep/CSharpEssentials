@@ -40,7 +40,7 @@ app.MapOpenApi();
 - `[Flags]` enums are arrays with `uniqueItems: true`; collections are arrays of the component.
 - Nullable is written where the enum is used, by the document's OpenAPI version: `allOf` + `nullable: true` for 3.0, `oneOf` with `{ "type": "null" }` for 3.1.
 - A document whose operations all write numbers (`WithEnumWireFormat(EnumWireFormat.Number)` on the group, `[EnumWireFormat]` on the controller) describes the enums as `integer` (`int32`/`int64` by underlying type). A document that mixes formats describes strings and marks each number operation with `x-enum-wire-format: number` and a description note; it also logs one warning per enum used in both formats (once per document). One document per API version never mixes.
-- Operations with a header selected format (`WithEnumWireFormat("X-Enum-Format", ...)`) show the format of a request without the header, plus `x-enum-wire-format-header` and a note.
+- Operations with a header selected format (`WithEnumWireFormat("X-Enum-Format", ...)`) show the format of a request without the header, plus `x-enum-wire-format-header` and a note. A selector that throws for such a request is described with the global `WriteAs` format and logged once as a warning.
 - Enums without `[StringEnum]` or metadata keep the framework schema; nothing throws.
 
 The Swashbuckle package produces the same enum schemas (both are compared with the same golden files).
