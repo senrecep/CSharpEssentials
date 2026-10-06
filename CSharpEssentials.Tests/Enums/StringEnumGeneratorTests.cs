@@ -307,6 +307,15 @@ public class StringEnumGeneratorTests
         huge.TypedMembers.Select(static m => m.NumericText).Should().Equal("0", "18446744073709551615");
         GeneratedHugeExtensions.ParseWire("18446744073709551615").Should().Be(GeneratedHuge.Max);
     }
+
+    [Fact]
+    public void Generated_Code_Should_Escape_Keyword_Member_Names()
+    {
+        GeneratedKeywords.@class.ToWireName().Should().Be("class");
+        GeneratedKeywords.@event.ToWireName().Should().Be("event");
+        GeneratedKeywordsExtensions.ParseWire("event").Should().Be(GeneratedKeywords.@event);
+        EnumMetadata.Get<GeneratedKeywords>().TypedMembers.Select(static m => m.MemberName).Should().Equal("class", "event");
+    }
 }
 
 [StringEnum]
@@ -409,4 +418,11 @@ internal enum GeneratedHuge : ulong
 {
     Zero = 0,
     Max = ulong.MaxValue,
+}
+
+[StringEnum]
+internal enum GeneratedKeywords
+{
+    @class,
+    @event,
 }
