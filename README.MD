@@ -6,7 +6,7 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-3575%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-3579%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
@@ -33,7 +33,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [📖](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
 | `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, Swagger versioning | [📖](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
 | `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001–CSE1008 | [📖](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
-| `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001–CSE2008 | [📖](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
+| `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001–CSE2009 | [📖](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
 | `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [📖](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
 | `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [📖](CSharpEssentials.Resilience/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
 | `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [📖](examples/Examples.Json/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
@@ -204,7 +204,7 @@ builder.Services.AddAllServices(); // every generated registry of the app and it
 ## What's new in 4.1
 
 - New package `CSharpEssentials.Endpoints`: source-generated endpoint registries (`IEndpoint`, `IEndpointGroup`, `[EndpointGroup]`), a reflection fallback (`MapEndpointsFromAssemblies`), `RouteOf<TEndpoint>`, `RequireRoles`/`RequirePolicies`/`RequireAuthSchemes`, and analyzers CSE1001–CSE1008 with a code fix for CSE1004. See the [Readme](CSharpEssentials.Endpoints/Readme.MD), including a migration guide from Carter.
-- New package `CSharpEssentials.DependencyInjection`: `[RegisterScoped]`/`[RegisterSingleton]`/`[RegisterTransient]` with keys, `As` and `Strategy`, `[Decorates]`, runtime `Decorate`/`TryDecorate`, a reflection fallback (`AddServicesFromAssemblies`), and analyzers CSE2001–CSE2008 with a code fix for CSE2003. See the [Readme](CSharpEssentials.DependencyInjection/Readme.MD), including a migration guide from Scrutor.
+- New package `CSharpEssentials.DependencyInjection`: `[RegisterScoped]`/`[RegisterSingleton]`/`[RegisterTransient]` with keys, `As` and `Strategy`, `[Decorates]`, runtime `Decorate`/`TryDecorate`, a reflection fallback (`AddServicesFromAssemblies`), and analyzers CSE2001–CSE2009 with a code fix for CSE2003. See the [Readme](CSharpEssentials.DependencyInjection/Readme.MD), including a migration guide from Scrutor.
 - `CSharpEssentials.AspNetCore`: `MapVersionedGroup(version)` and the `WithValidation<T>()` endpoint filter for `CSharpEssentials.Validation` validators.
 - `CSharpEssentials.Core`: `IsBetween` (inclusive) and `IsBetweenExclusive` for any `IComparable<T>`.
 - `CSharpEssentials.Time`: `NextDayOfWeek`/`PreviousDayOfWeek` for `DateTime` and `DateOnly`, and `GetAge(DateOnly, DateOnly)`/`GetAge(DateOnly, IDateTimeProvider)`.

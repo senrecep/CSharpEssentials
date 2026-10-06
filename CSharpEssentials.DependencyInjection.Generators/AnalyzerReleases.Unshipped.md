@@ -13,3 +13,4 @@ CSE2005 | CSharpEssentials.DependencyInjection | Error | DependencyInjectionAnal
 CSE2006 | CSharpEssentials.DependencyInjection | Info | DependencyInjectionAnalyzer
 CSE2007 | CSharpEssentials.DependencyInjection | Error | DependencyInjectionAnalyzer
 CSE2008 | CSharpEssentials.DependencyInjection | Warning | DependencyInjectionAnalyzer
+CSE2009 | CSharpEssentials.DependencyInjection | Warning | DependencyInjectionAnalyzer

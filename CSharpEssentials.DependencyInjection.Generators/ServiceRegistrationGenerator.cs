@@ -27,8 +27,6 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
 
     private const string IsTestProjectProperty = "build_property.IsTestProject";
 
-    private const string RuntimeAssemblyName = "CSharpEssentials.DependencyInjection";
-
     private static readonly string[] AttributeMetadataNames =
     [
         AttributePrefix + "RegisterScopedAttribute",
@@ -117,33 +115,9 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             .Select(static attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string)
             .FirstOrDefault(static name => !string.IsNullOrWhiteSpace(name));
 
-        List<ReferencedRegistry> registries = [];
-        HashSet<string> seen = [with(StringComparer.Ordinal)];
-        foreach (IAssemblySymbol reference in compilation.SourceModule.ReferencedAssemblySymbols)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (IsFrameworkAssembly(reference.Name) || !ReferencesRuntime(reference))
-            {
-                continue;
-            }
-
-            foreach (AttributeData attribute in reference.GetAttributes())
-            {
-                if (ServiceTypeInspector.IsAttribute(attribute.AttributeClass, "ServiceModuleAttribute") &&
-                    attribute.ConstructorArguments.FirstOrDefault().Value is INamedTypeSymbol registry)
-                {
-                    string name = TypeNames.FullyQualified(registry);
-                    if (seen.Add(name))
-                    {
-                        registries.Add(new ReferencedRegistry(reference.Name, name));
-                    }
-                }
-            }
-        }
-
-        ReferencedRegistry[] ordered = [.. registries
-            .OrderBy(static registry => registry.AssemblyName, StringComparer.Ordinal)
-            .ThenBy(static registry => registry.FullyQualifiedName, StringComparer.Ordinal)];
+        IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(compilation, cancellationToken);
+        HashSet<string> colliding = [.. ReferencedRegistryReader.FindCollisions(registries).Select(static group => group.Key)];
+        ReferencedRegistry[] ordered = [.. registries.Where(registry => !colliding.Contains(registry.FullyQualifiedName))];
 
         return new HostModel(
             RegistryNames.Sanitize(customName ?? assembly.Name),
@@ -153,16 +127,6 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             ServiceTypeInspector.HasAttribute(attributes, "DisableServiceAggregateAttribute"),
             new EquatableArray<ReferencedRegistry>(ordered));
     }
-
-    private static bool IsFrameworkAssembly(string name) =>
-        name.StartsWith("System", StringComparison.Ordinal) ||
-        name.StartsWith("Microsoft", StringComparison.Ordinal) ||
-        string.Equals(name, "mscorlib", StringComparison.Ordinal) ||
-        string.Equals(name, "netstandard", StringComparison.Ordinal);
-
-    private static bool ReferencesRuntime(IAssemblySymbol assembly) =>
-        assembly.Modules.Any(static module => module.ReferencedAssemblies.Any(static identity =>
-            string.Equals(identity.Name, RuntimeAssemblyName, StringComparison.Ordinal)));
 
     private static bool IsTestProject(AnalyzerConfigOptionsProvider provider) =>
         provider.GlobalOptions.TryGetValue(IsTestProjectProperty, out string? value) &&

@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-dependencyinjection
-description: Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning — [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001–CSE2008 diagnostics.
+description: Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning — [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001–CSE2009 diagnostics.
 ---
 
 # CSharpEssentials.DependencyInjection
@@ -114,6 +114,7 @@ Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. An overload tak
 | CSE2006 | Info | Captive dependency: a singleton takes a scoped/transient service (or scoped takes transient) registered by attribute in the same project |
 | CSE2007 | Error | Class cannot be constructed by generated code (abstract, static, file-local, inaccessible, nested in a generic type) |
 | CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` |
+| CSE2009 | Warning | Two referenced assemblies produce the same registry name (`Foo.Api` and `FooApi` → `FooApiServiceRegistry`); `AddAllServices` skips both until one sets `[assembly: ServiceRegistryName("...")]` |
 
 ---
 

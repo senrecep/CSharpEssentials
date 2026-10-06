@@ -135,10 +135,13 @@ internal static class ServiceSourceWriter
 
     public static string WriteAggregate(HostModel host, bool includeOwnRegistry)
     {
-        List<string> registries = [.. host.ReferencedRegistries.Select(static registry => registry.FullyQualifiedName)];
+        string ownRegistry = "global::Microsoft.Extensions.DependencyInjection." + host.RegistryName + "ServiceRegistry";
+        List<string> registries = [.. host.ReferencedRegistries
+            .Select(static registry => registry.FullyQualifiedName)
+            .Where(registry => !includeOwnRegistry || !string.Equals(registry, ownRegistry, StringComparison.Ordinal))];
         if (includeOwnRegistry)
         {
-            registries.Add("global::Microsoft.Extensions.DependencyInjection." + host.RegistryName + "ServiceRegistry");
+            registries.Add(ownRegistry);
         }
 
         StringBuilder sb = new();
