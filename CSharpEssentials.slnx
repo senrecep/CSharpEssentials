@@ -6,6 +6,7 @@
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
   <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
+  <Project Path="CSharpEssentials.Endpoints.Generators/CSharpEssentials.Endpoints.Generators.csproj" />
   <Project Path="CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
   <Project Path="CSharpEssentials.GcpSecretManager/CSharpEssentials.GcpSecretManager.csproj" />
@@ -23,5 +24,7 @@
   <Project Path="CSharpEssentials.Time/CSharpEssentials.Time.csproj" />
   <Project Path="CSharpEssentials.Validation/CSharpEssentials.Validation.csproj" />
   <Project Path="CSharpEssentials/CSharpEssentials.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.EndpointsA/CSharpEssentials.Tests.Fixtures.EndpointsA.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.EndpointsB/CSharpEssentials.Tests.Fixtures.EndpointsB.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>
