@@ -256,6 +256,16 @@ public class HttpEnumConventionsTests
     }
 
     [Fact]
+    public async Task Builder_Should_Apply_Enum_Conventions_Set_After_WithJsonContent()
+    {
+        string json = await BodyAsync(HttpRequestBuilder.Post("http://localhost/orders")
+            .WithJsonContent(new HttpOrderPayload(HttpOrderStatus.PendingApproval, HttpPermissions.ReadWrite, [HttpOrderStatus.Pending]))
+            .WithEnumConventions(Conventions, EnumWireFormat.Number));
+
+        json.Should().Be("""{"status":1,"permissions":3,"history":[0]}""");
+    }
+
+    [Fact]
     public async Task Builder_Should_Write_Numbers_In_Json_Bodies_When_The_Client_Is_Configured_With_Number()
     {
         string json = await BodyAsync(HttpRequestBuilder.Post("http://localhost/orders")
