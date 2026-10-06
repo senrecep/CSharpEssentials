@@ -36,6 +36,10 @@
     <None Include="build\CSharpEssentials.Enums.props" Pack="true" PackagePath="build;buildTransitive" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
   <Import Project="..\build\PackGenerator.targets" />
 
 </Project>

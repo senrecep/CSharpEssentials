@@ -402,6 +402,10 @@ dotnet_diagnostic.IDE0022.severity = none
 
 dotnet_diagnostic.CA1815.severity = none
 
+# The enum contract names its formats after the wire types (EnumStorage.String, EnumWireFormat.Integer), see ADR-007.
+[CSharpEssentials.Enums/Conventions/{EnumStorage,EnumWireFormat}.cs]
+dotnet_diagnostic.CA1720.severity = none
+
 [*.{received,verified}.{cs,txt}]
 charset = utf-8-bom
 end_of_line = lf
