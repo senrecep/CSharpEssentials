@@ -50,13 +50,14 @@ internal static class ServiceSourceWriter
         sb.Append("            this ").Append(Services).Append(" services,\n");
         sb.Append("            ").Append(Logger).Append("? logger = null)\n");
         sb.Append("        {\n");
-        sb.Append("            if (!").Append(Registration).Append(".TryMarkRegistered(services, typeof(").Append(className).Append(").Assembly))\n");
+        sb.Append("            if (").Append(Registration).Append(".IsRegistered(services, typeof(").Append(className).Append(").Assembly))\n");
         sb.Append("            {\n");
         sb.Append("                return services;\n");
         sb.Append("            }\n");
         sb.Append('\n');
         sb.Append("            RegisterServices(services, logger);\n");
         sb.Append("            ApplyDecorators(services);\n");
+        sb.Append("            ").Append(Registration).Append(".MarkRegistered(services, typeof(").Append(className).Append(").Assembly);\n");
         sb.Append("            return services;\n");
         sb.Append("        }\n");
         sb.Append('\n');
@@ -164,7 +165,7 @@ internal static class ServiceSourceWriter
         for (int index = 0; index < registries.Count; index++)
         {
             string flag = "register" + index.ToString(CultureInfo.InvariantCulture);
-            sb.Append("            bool ").Append(flag).Append(" = ").Append(Registration).Append(".TryMarkRegistered(services, typeof(")
+            sb.Append("            bool ").Append(flag).Append(" = !").Append(Registration).Append(".IsRegistered(services, typeof(")
                 .Append(registries[index]).Append(").Assembly);\n");
         }
 
@@ -199,6 +200,16 @@ internal static class ServiceSourceWriter
             }
 
             sb.Append("            }\n");
+            for (int index = 0; index < registries.Count; index++)
+            {
+                sb.Append('\n');
+                sb.Append("            if (register").Append(index.ToString(CultureInfo.InvariantCulture)).Append(")\n");
+                sb.Append("            {\n");
+                sb.Append("                ").Append(Registration).Append(".MarkRegistered(services, typeof(").Append(registries[index]).Append(").Assembly);\n");
+                sb.Append("            }\n");
+            }
+
+            sb.Append('\n');
         }
 
         sb.Append("            return services;\n");

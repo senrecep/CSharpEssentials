@@ -63,28 +63,17 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Marks the services of <paramref name="assembly"/> as registered in <paramref name="services"/>.
-    /// Generated registries and <c>AddServicesFromAssemblies</c> call it so that registering an assembly again is a no-op.
+    /// Determines whether the services of <paramref name="assembly"/> are already registered in <paramref name="services"/>.
+    /// Generated registries and <c>AddServicesFromAssemblies</c> check it so that registering an assembly again is a no-op.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <param name="assembly">The assembly whose services are about to be registered.</param>
-    /// <returns><see langword="true"/> when the assembly was not registered yet and is now marked; otherwise <see langword="false"/>.</returns>
-    public static bool TryMarkRegistered(IServiceCollection services, Assembly assembly)
+    /// <returns><see langword="true"/> when the assembly is marked as registered; otherwise <see langword="false"/>.</returns>
+    public static bool IsRegistered(IServiceCollection services, Assembly assembly)
     {
         Guard.NotNull(services);
         Guard.NotNull(assembly);
 
-        if (IsRegistered(services, assembly))
-        {
-            return false;
-        }
-
-        MarkRegistered(services, assembly);
-        return true;
-    }
-
-    internal static bool IsRegistered(IServiceCollection services, Assembly assembly)
-    {
         foreach (ServiceDescriptor descriptor in services)
         {
             if (descriptor.ServiceType == typeof(RegisteredAssemblyMarker) &&
@@ -99,8 +88,20 @@ public static class ServiceRegistration
         return false;
     }
 
-    internal static void MarkRegistered(IServiceCollection services, Assembly assembly) =>
+    /// <summary>
+    /// Marks the services of <paramref name="assembly"/> as registered in <paramref name="services"/> by adding a singleton
+    /// marker descriptor. Generated registries and <c>AddServicesFromAssemblies</c> call it only after the registrations of
+    /// the assembly succeeded, so a failed registration can be retried.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="assembly">The assembly whose services were registered.</param>
+    public static void MarkRegistered(IServiceCollection services, Assembly assembly)
+    {
+        Guard.NotNull(services);
+        Guard.NotNull(assembly);
+
         services.Add(ServiceDescriptor.Singleton(new RegisteredAssemblyMarker(assembly)));
+    }
 
     private static void LogDuplicate(ILogger logger, ServiceDescriptor existing, ServiceDescriptor descriptor, RegistrationStrategy strategy)
     {

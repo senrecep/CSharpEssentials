@@ -10,8 +10,8 @@ namespace Microsoft.Extensions.DependencyInjection
             this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
             global::Microsoft.Extensions.Logging.ILogger? logger = null)
         {
-            bool register0 = global::CSharpEssentials.DependencyInjection.ServiceRegistration.TryMarkRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry).Assembly);
-            bool register1 = global::CSharpEssentials.DependencyInjection.ServiceRegistration.TryMarkRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry).Assembly);
+            bool register0 = !global::CSharpEssentials.DependencyInjection.ServiceRegistration.IsRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry).Assembly);
+            bool register1 = !global::CSharpEssentials.DependencyInjection.ServiceRegistration.IsRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry).Assembly);
             global::System.Collections.Generic.SortedSet<int> orders = new global::System.Collections.Generic.SortedSet<int>();
 
             if (register0)
@@ -38,6 +38,17 @@ namespace Microsoft.Extensions.DependencyInjection
                     global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.ApplyDecorators(services, order);
                 }
             }
+
+            if (register0)
+            {
+                global::CSharpEssentials.DependencyInjection.ServiceRegistration.MarkRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry).Assembly);
+            }
+
+            if (register1)
+            {
+                global::CSharpEssentials.DependencyInjection.ServiceRegistration.MarkRegistered(services, typeof(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry).Assembly);
+            }
+
             return services;
         }
     }
