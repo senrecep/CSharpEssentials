@@ -113,28 +113,47 @@ app.MapPost("/users", (CreateUserRequest request) => CreateUser(request))
 - No registered `IValidator<T>` throws `InvalidOperationException` at request time, so unvalidated input never reaches the handler. A handler without a `T` parameter throws when the endpoint is built.
 - `ValidationEndpointFilter<T>` can also be added directly with `AddEndpointFilter<ValidationEndpointFilter<T>>()`, for example on a route group.
 
-### Enum Query/Route Binding
+### Enum Conventions: JSON, Binding and Wire Format
 
 ```csharp
-builder.Services.AddEnumBinding(o => o.AllowIntegerValues = true); // optional
+builder.Services.AddEnumConventions(); // JSON options, binding rules, body errors, output filters
 app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization (otherwise a 400 hides the 401)
 
-// [StringEnum] enum OrderStatus { InProgress, Done }
-// ?status=in_progress, ?status=InProgress, ?status=inprogress, ?status=0 all bind to OrderStatus.InProgress
+// [StringEnum] enum OrderStatus { Pending, PendingApproval }
+// ?status=pending_approval, ?status=PENDING_APPROVAL, ?status=PendingApproval, ?status=1 all bind to OrderStatus.PendingApproval
 app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status));
 ```
 
-This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, `[FromRoute]`, and query DTO properties, nested up to 8 levels: `?filter.inner.status=…`).
+`AddEnumConventions(c => c with { ... })` takes the `EnumConventions` of `CSharpEssentials.Enums` (`AcceptNumbers`, `CaseInsensitive`, `WriteAs`, `CanHandle`, ...). Route, query, header and form values follow the same accept rules as a JSON body. This works for Minimal API (including `[AsParameters]`) and MVC (`[FromQuery]`, `[FromRoute]`, `[FromHeader]`, `[FromForm]`, and DTO properties, nested up to 8 levels: `?filter.inner.status=…`). `UseEnumBinding()` throws at startup when `AddEnumConventions()` was not called.
 
-- Nullable, array, `List<T>` and `[Flags]` parameters are supported. Flags values are a comma-separated list.
-- These values return a 400 ProblemDetails response:
+- Nullable, array, `List<T>` and `[Flags]` parameters are supported. Arrays accept repeated keys and comma-separated values (`?s=a&s=b`, `?s=a,b`); flags values are a comma-separated list.
+- These values return a 400 ProblemDetails response that lists the allowed values (`'99' is not a valid OrderStatus. Allowed values: pending, pending_approval.`):
   - undefined numbers;
-  - unknown names;
+  - unknown names, and values with leading or trailing whitespace;
   - commas on enums without `[Flags]`;
   - empty values for non-nullable parameters.
-- The error code is the query/route key (`status`, `filter.status`). Change the code or message with `o.ErrorFactory = (key, enumType, names) => Error.Validation($"validation.{key}", ...)`.
+- A missing required value keeps the framework's handling.
+- The error code is the key (`status`, `filter.status`, `X-Status`). Change the code or message once for binding and JSON bodies with `.ConfigureErrors((error, key) => Error.Validation($"validation.{key}", error.Message))`.
+- Enums without generated metadata (no `[StringEnum]`) keep the framework's binding and output. `AddEnumConventionsWithReflection(c => c with { CanHandle = ... })` opts them in with reflection (not trimming or AOT safe).
+- A JSON body error of a Minimal API endpoint (with `RouteHandlerOptions.ThrowOnBadRequest`) is mapped by `GlobalExceptionHandler` to the same 400. MVC reports body errors through model state.
 - Empty values of nullable or collection parameters are dropped, so they bind as `null` or are skipped.
 - Matched values are rewritten to the C# member name before binding. Link generation that reuses the current route values (ambient values, such as `CreatedAtRoute` without explicit values) therefore emits the member name (`/items/HttpStatus`). Pass the value explicitly to get the JSON spelling.
+
+Legacy numeric output per group, controller or action, in both directions (`WriteAs` is the global default):
+
+```csharp
+app.MapGroup("/api/v1").WithEnumWireFormat(EnumWireFormat.Number);  // old clients: 1
+app.MapGroup("/api/v2");                                              // "pending_approval"
+app.MapGroup("/api/shared").WithEnumWireFormat("X-Enum-Format",       // per request, adds Vary: X-Enum-Format
+    ctx => ctx.Request.Headers["X-Enum-Format"] == "string" ? EnumWireFormat.String : EnumWireFormat.Number);
+
+[EnumWireFormat(EnumWireFormat.Number)] // MVC controller or action
+public sealed class LegacyOrdersController : ControllerBase { ... }
+```
+
+Precedence: action attribute > controller attribute > endpoint or group (`MapControllers().WithEnumWireFormat(...)` for MVC) > `WriteAs`. The host's `JsonOptions` are never changed; the other format is written with a copy. Status codes and headers of the result (`Created` + `Location`, `Results<Ok<T>, NotFound>`) are kept. Reading is not affected.
+
+`AddEnumBinding`/`EnumBindingOptions` are obsolete forwarders to `AddEnumConventions` (see the v4 to v5 migration guide).
 
 ### Structured Error Response
 

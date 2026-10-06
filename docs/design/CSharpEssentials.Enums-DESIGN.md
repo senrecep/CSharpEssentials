@@ -427,7 +427,9 @@ builder.Services.AddEnumConventions();   // EnumConventions, JSON options (Input
 app.UseEnumBinding();                     // route/query/header/form normalization, after routing
 ```
 
-`AddEnumConventions` configures `Microsoft.AspNetCore.Http.Json.JsonOptions` and `Microsoft.AspNetCore.Mvc.JsonOptions` with `AddEnumConventions(conventions, EnumReadMode.Input)` and registers the error mapping and the numeric output options of section 9.4.
+`AddEnumConventions` configures `Microsoft.AspNetCore.Http.Json.JsonOptions` and `Microsoft.AspNetCore.Mvc.JsonOptions` with `AddEnumConventions(conventions, EnumReadMode.Input)` (post-configure, so it runs after the app's own configuration) and registers the error mapping and the output filters of section 9.4. It returns an `EnumConventionsBuilder` (`ConfigureErrors`). Calling it again replaces the conventions.
+
+`AddEnumConventionsWithReflection(...)` (`[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`) is the explicit opt-in for enums without generated metadata: enums that `CanHandle` selects get metadata from `EnumMetadata.GetOrCreateWithReflection`, in binding and JSON alike. Without it an enum without metadata is left to the framework (`CanHandle` defaults to `EnumMetadata.IsRegistered`), and nothing throws.
 
 ### 9.2 Binding
 
@@ -438,12 +440,17 @@ Changes in 5.0:
 - Adds header and form sources to the 4.1 query/route plan. Flags and collections accept repeated keys and comma separated values.
 - Rewrites accepted spellings to the member name before binding and short-circuits with the 400 of section 8 for rejected values, so `Enum.TryParse` never sees an undefined number.
 - `UseEnumBinding()` without `AddEnumConventions()` throws at startup with a message naming the missing call.
+- Values are not trimmed (like a JSON string). An empty value of a nullable or collection target is dropped, so the framework binds `null` or skips the item; a missing value is never touched, so a missing required parameter keeps the framework's handling.
+- Each value is normalized by `EnumBindingNormalizer` (created once per enum type from `IEnumInfo`), which parses with `EnumInfo<TEnum>.TryParse(..., EnumReadMode.Input, conventions, ...)`: the exact accept rules of a JSON body. A comma on a scalar non-flags target is rejected; on a collection it splits items; on a flags target it combines members. A flags combination is written back as its number (`ToString("D")`) so comma-splitting binders (MVC header arrays) cannot split it again.
+- Header collections are written back as separate `StringValues`; form values replace `HttpRequest.Form` with a `FormCollection` that keeps the uploaded files.
 
 `CSharpEssentials.Endpoints` does not get its own mechanism. A per-group `Finally` convention was considered (it does run after the request delegate is created on net8.0+), but two mechanisms would double the test matrix for no behavior difference.
 
 ### 9.3 Errors
 
-The `GlobalExceptionHandler` maps `EnumValueJsonException` (and `BadHttpRequestException` whose inner exception is one) to the problem of section 8, so a body error and a query error for the same value look identical.
+The `GlobalExceptionHandler` maps `EnumValueJsonException` (and `BadHttpRequestException` whose inner exception is one) to the problem of section 8, so a body error and a query error for the same value look identical. The key is the JSON path without `$.` (`status`), and `ConfigureErrors` applies to it.
+
+Minimal APIs only throw a body error when `RouteHandlerOptions.ThrowOnBadRequest` is `true`; otherwise the framework writes its own 400 without a body. MVC catches the exception in the input formatter and reports it through model state (`[ApiController]` returns its validation problem), so the mapper does not see it.
 
 ### 9.4 Legacy numeric output per endpoint group
 
@@ -471,16 +478,16 @@ The default output format of ASP.NET Core is `EnumConventions.WriteAs`. Preceden
 
 Contract:
 
-- Global `JsonOptions` are never mutated. `AddEnumConventions` builds a second `JsonSerializerOptions` instance once at startup: a copy of the configured options with the format that is not the global default.
-- Minimal APIs: an endpoint filter replaces the returned value or `IValueHttpResult` with a JSON result that uses the second options instance and keeps the status code and content type. `Result`/`Result<T>` from `CSharpEssentials.Results` go through the same path after their normal mapping.
-- MVC: a result filter assigns a `SystemTextJsonOutputFormatter` built from the second options instance to `ObjectResult.Formatters`.
+- Global `JsonOptions` are never mutated. A second options instance per stack (minimal API and MVC) is built once, on first use, by `IOptionsFactory<TOptions>.Create`: the same configuration as the host's options with the format that is not the global default.
+- Minimal APIs: `WithEnumWireFormat` adds endpoint metadata and an endpoint filter. When the selected format is not the default, the filter wraps the returned value or `IValueHttpResult` in a result that executes the original result with `RequestServices` resolving `IOptions<JsonOptions>` to the second instance, so the result keeps its status code, content type and headers (`Location` of `Created`). `Result`/`Result<T>` from `CSharpEssentials.Results` go through the same path after their normal mapping. An endpoint's `WithEnumWireFormat` overrides its group's (endpoint metadata comes last). An `[EnumWireFormat]` attribute on a minimal API handler is only honored on an endpoint that also has `WithEnumWireFormat` (the filter is added there).
+- MVC: a global result filter (registered by `AddEnumConventions`) assigns a `SystemTextJsonOutputFormatter` built from the second options instance to `ObjectResult.Formatters`, and the second options to a `JsonResult` without its own settings. The attributes are read first, because endpoint conventions such as `MapControllers().WithEnumWireFormat(...)` are added to the endpoint metadata after them.
 - Reading is unaffected: a v1 group still accepts names, so new clients can send names to old endpoints.
-- Optional selector for apps that cannot version routes (for example mobile clients that share routes across app versions): `group.WithEnumWireFormat(ctx => ctx.Request.Headers["X-Enum-Format"] == "string" ? EnumWireFormat.String : EnumWireFormat.Number)`. The OpenAPI document of such a group shows the default branch (the value returned for a request without the header) and a description note. A selector group adds `Vary: X-Enum-Format` (the configured header name) to every response so caches keep the two formats apart.
+- Optional selector for apps that cannot version routes (for example mobile clients that share routes across app versions): `group.WithEnumWireFormat("X-Enum-Format", ctx => ctx.Request.Headers["X-Enum-Format"] == "string" ? EnumWireFormat.String : EnumWireFormat.Number)`. The header name is a parameter so the `Vary` value is explicit. The OpenAPI document of such a group shows the default branch (the value returned for a request without the header) and a description note. A selector group adds `Vary: X-Enum-Format` (the configured header name) to every response so caches keep the two formats apart.
 - The endpoint filter unwraps `Results<T1, ...>` through `INestedHttpResult` before looking for `IValueHttpResult`.
 
 ### 9.5 Replacing `EnumData<T>`-style holders
 
-The pattern "string route parameter + action filter + scoped holder" is replaced by a typed parameter (`OrderStatus status`). The migration guide shows the before/after.
+The pattern "string route parameter + action filter + scoped holder" is replaced by a typed parameter (`OrderStatus status`). The migration guide (`docs/migration/v4-to-v5.md`) shows the before/after.
 
 ## 10. OpenAPI (`CSharpEssentials.AspNetCore.OpenApi` and `.Swashbuckle`, #63)
 
