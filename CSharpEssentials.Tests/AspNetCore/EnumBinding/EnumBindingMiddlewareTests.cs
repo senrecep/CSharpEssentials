@@ -409,13 +409,13 @@ public class EnumBindingMiddlewareTests
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task NonStringEnum_Should_BeNormalized_When_CanBindAcceptsEveryEnum(EbHostKind kind)
+    public async Task NonStringEnum_Should_FailLoud_When_CanBindAcceptsEnumsWithoutGeneratedMetadata(EbHostKind kind)
     {
         await using EnumBindingHost host = await Start(kind, o => o.CanBind = t => t.IsEnum);
 
-        var response = await host.GetAsync("/plain?plain=in_progress");
+        Func<Task> request = () => host.GetAsync("/plain?plain=in_progress");
 
-        response.Body.Should().Be("InProgress");
+        await request.Should().ThrowAsync<InvalidOperationException>().WithMessage("*EbPlain*no generated metadata*");
     }
 
     [Theory]

@@ -14,7 +14,7 @@ public class StringEnumNamingTests
     };
 
     [StringEnum]
-    private enum NamingStatus
+    internal enum NamingStatus
     {
         Active,
         Inactive,
@@ -22,7 +22,7 @@ public class StringEnumNamingTests
     }
 
     [StringEnum]
-    private enum AcronymKind
+    internal enum AcronymKind
     {
         HTTPStatus,
         IOError,
@@ -31,7 +31,7 @@ public class StringEnumNamingTests
     }
 
     [StringEnum]
-    private enum CustomNamed
+    internal enum CustomNamed
     {
         [JsonStringEnumMemberName("custom")]
         Original,
@@ -40,7 +40,7 @@ public class StringEnumNamingTests
 
     [Flags]
     [StringEnum]
-    private enum Permissions
+    internal enum Permissions
     {
         None = 0,
         Read = 1,
@@ -287,13 +287,24 @@ public class StringEnumNamingTests
     }
 
     [Fact]
+    public void Enums_Without_Generated_Metadata_Should_Throw_Instead_Of_Using_Reflection()
+    {
+        Action getName = () => StringEnumNaming.GetName(PlainKind.First);
+        Action getNames = () => StringEnumNaming.GetNames<PlainKind>();
+        Action tryParse = () => StringEnumNaming.TryParse("first", out PlainKind _);
+
+        getName.Should().Throw<InvalidOperationException>().WithMessage("*PlainKind*no generated metadata*");
+        getNames.Should().Throw<InvalidOperationException>();
+        tryParse.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
     public void RoundTrip_GetNameThenTryParse_ShouldReturnOriginal()
     {
         AssertRoundTrip<NamingStatus>();
         AssertRoundTrip<AcronymKind>();
         AssertRoundTrip<CustomNamed>();
         AssertRoundTrip<Permissions>();
-        AssertRoundTrip<PlainKind>();
 
         StringEnumNaming.TryParse(StringEnumNaming.GetName(Permissions.Read | Permissions.Execute), out Permissions flags).Should().BeTrue();
         flags.Should().Be(Permissions.Read | Permissions.Execute);

@@ -4,9 +4,8 @@ using CSharpEssentials.Enums;
 namespace CSharpEssentials.Json;
 
 /// <summary>
-/// The 4.x naming helper, now a facade over <see cref="EnumMetadata"/>: names are the generated wire names (or reflection metadata
-/// for enums without <see cref="StringEnumAttribute"/>), so JSON, EF Core storage, OpenAPI schemas and binding spell every member
-/// the same way.
+/// The 4.x naming helper, now a facade over <see cref="EnumMetadata"/>: names are the generated wire names, so JSON, EF Core
+/// storage, OpenAPI schemas and binding spell every member the same way. Enums without generated metadata are not supported.
 /// </summary>
 /// <remarks>
 /// Use <see cref="EnumMetadata"/>, <see cref="EnumValueParser"/>, <see cref="EnumValueFormatter"/> or the generated
@@ -110,7 +109,11 @@ public static class StringEnumNaming
                 "MSBuild property, [StringEnum(Naming = ...)] or [JsonStringEnumMemberName] (enum conventions design, section 4.1).");
         }
 
-        return EnumMetadata.TryGet(enumType, out IEnumInfo? info) ? info : EnumMetadata.GetOrCreateWithReflection(enumType);
+        return EnumMetadata.TryGet(enumType, out IEnumInfo? info)
+            ? info
+            : throw new InvalidOperationException(
+                $"Enum '{enumType.FullName}' has no generated metadata. Mark it [StringEnum], keep it and its containing types public " +
+                "or internal (not private, protected, file-local or nested in a generic type), and build with C# 9 or newer.");
     }
 
     private static string FormatName<TEnum>(EnumInfo<TEnum> info, TEnum value) where TEnum : struct, Enum

@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CSharpEssentials.Core;
+using CSharpEssentials.Enums;
 using CSharpEssentials.EntityFrameworkCore.Converters;
 using CSharpEssentials.Json;
 using FluentAssertions;
@@ -9,7 +10,8 @@ namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
 public class EnumToStringConverterTests
 {
-    private enum TestStatus
+    [StringEnum]
+    internal enum TestStatus
     {
         Active,
         Inactive,
@@ -17,14 +19,16 @@ public class EnumToStringConverterTests
         InProgress
     }
 
-    private enum SimpleValue
+    [StringEnum]
+    internal enum SimpleValue
     {
         One,
         Two,
         Three
     }
 
-    private enum AcronymValue
+    [StringEnum]
+    internal enum AcronymValue
     {
         HTTPStatus,
         IOError,
@@ -32,7 +36,8 @@ public class EnumToStringConverterTests
         PendingApproval
     }
 
-    private enum CustomNamedValue
+    [StringEnum]
+    internal enum CustomNamedValue
     {
         [JsonStringEnumMemberName("custom_name")]
         Original,
