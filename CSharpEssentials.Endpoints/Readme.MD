@@ -97,6 +97,8 @@ app.MapAppsEndpoints(options =>
 
 Every endpoint gets `EndpointTypeMetadata`, which identifies the endpoint type at runtime.
 
+`TypeName` names are not stable across changes to the application. Adding an endpoint or type with the same name can qualify an existing name with its namespace or give it a numeric suffix, which renames the generated operationId and the method names of NSwag or Kiota clients. Set the name with `WithName(...)` in `Map` for endpoints whose client method names must not change.
+
 ## Typed routes
 
 `RouteOf<TEndpoint>` builds a request path from the endpoint type, which keeps tests independent of route strings:
