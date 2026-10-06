@@ -1153,7 +1153,18 @@ app.UseEnhancedProblemDetails();
 | `CreateVersionSet(version = 1)` | Creates version set for Minimal APIs |
 | `CreateVersionedGroup(route, version = 1)` | Creates versioned route group |
 | `MapVersionedGroup(version)` | `MapGroup("v{version:apiVersion}")` with a version set for `version`; works for any endpoints, including a `CSharpEssentials.Endpoints` registry (`app.MapVersionedGroup(2).MapAppsEndpoints()`) |
-| `AddSwagger()` / `UseVersionableSwagger()` | Swagger with version support |
+| `AddSwagger()` / `UseVersionableSwagger()` | Swagger with version support (5.0: in `CSharpEssentials.AspNetCore.Swashbuckle`, same namespace) |
+
+### OpenAPI Enum Schemas (5.0)
+
+Two packages describe the enums the way the enum conventions write them; a host references one of them, never both (Microsoft.OpenApi 2.x would replace the 1.x that Swashbuckle 8/9 needs).
+
+| Package | Method | Targets |
+|---------|--------|---------|
+| `CSharpEssentials.AspNetCore.OpenApi` | `services.AddOpenApi(o => o.AddEnumConventions())` (`OpenApiOptions`) | net10.0, net11.0; `Microsoft.AspNetCore.OpenApi` 10.x, `Microsoft.OpenApi` 2.x |
+| `CSharpEssentials.AspNetCore.Swashbuckle` | `AddSwaggerGen(o => o.AddEnumConventions())` (`SwaggerGenOptions`); `AddSwagger` calls it | net8.0 to net11.0; Swashbuckle 8.x/9.x, `Microsoft.OpenApi` 1.x |
+
+Both produce the same enum schemas (shared golden files): one component per enum with the wire names in `enum`, `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` and a value table appended to the description (deprecated members marked, the fallback member marked `Response only`). `default` is the wire name. Flags are arrays with `uniqueItems`; nullable is written where the enum is used (`allOf` + `nullable` in OpenAPI 3.0, `oneOf` with `type: null` in 3.1). A document whose operations all write numbers describes integers; a mixed document describes strings and marks the number operations with `x-enum-wire-format: number`; header selected operations get `x-enum-wire-format-header` and a note. Enums without `[StringEnum]` or metadata keep the framework schema.
 
 ---
 

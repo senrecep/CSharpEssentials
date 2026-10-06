@@ -31,7 +31,9 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Mediator` | CQRS pipeline behaviors: validation, logging, exception handling, caching, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
-| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, Swagger versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.AspNetCore.OpenApi` | Enum convention schemas for `Microsoft.AspNetCore.OpenApi` (net10.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.OpenApi/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.OpenApi.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.OpenApi) |
+| `CSharpEssentials.AspNetCore.Swashbuckle` | Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle (net8.0+, Microsoft.OpenApi 1.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.Swashbuckle.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.Swashbuckle) |
 | `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1011 | [Docs](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
 | `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001 to CSE2009 | [Docs](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
 | `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [Docs](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
@@ -45,7 +47,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers all 23 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers all 25 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
 
 ## Installation
 

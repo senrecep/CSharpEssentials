@@ -81,7 +81,8 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 
 | Area | 4.x | 5.0 | Migration |
 |---|---|---|---|
-| Swashbuckle | in `CSharpEssentials.AspNetCore` | `CSharpEssentials.AspNetCore.Swashbuckle` | add the package, same `AddSwagger` API |
+| Swashbuckle | in `CSharpEssentials.AspNetCore` | `CSharpEssentials.AspNetCore.Swashbuckle` (or `CSharpEssentials.AspNetCore.OpenApi` on net10.0+, never both) | add the package, same `AddSwagger` API and namespaces; `EnumSchemaFilter` takes an `IServiceProvider`, register it with `AddEnumConventions()` |
+| OpenAPI enum schemas | `Possible values:` description, snake_case strings | wire names, value table, `x-enum-*` extensions, integers in number documents, flags arrays, nullable where used | regenerate clients |
 | JSON undefined numbers | accepted (`AllowUndefinedValues = true`) | rejected; `ConditionalStringEnumConverter.AllowUndefinedValues` removed (compile break) | none for valid data; `[EnumFallback]` for consumers |
 | `[StringEnum]` without metadata | snake_case string through reflection | CSE0015 warning, converter creation throws | make the enum internal/public, not nested in a generic type; rebuild contracts with 5.0 |
 | Enums without `[StringEnum]` | handled through reflection when the predicate selected them | JSON: not handled unless `AddEnumConventionsWithReflection` / `CreateWithReflectionFallback` is used. EF conventions and enum binding: left to the framework default (EF int storage, stock MVC/minimal API binding and number output; nothing throws), reflection only through the same explicit opt-in (#62/#64) | none; add `[StringEnum]` to adopt the conventions |
