@@ -22,14 +22,14 @@ using CSharpEssentials.Maybe;
 ## Creating Maybe
 
 ```csharp
-Maybe<string> name    = Maybe.From(user?.Name);   // null → None, value → Some
-Maybe<string> none    = Maybe<string>.None;
-Maybe<string> some    = Maybe.From("Alice");
-Maybe<string> fromName = user.Name;               // implicit T? → Maybe<T>
+Maybe<string> name    = user?.Name;               // implicit T? → Maybe<T>: null → None, value → Some
+Maybe<string> none    = Maybe.None;               // implicit Maybe → Maybe<T>
+Maybe<string> some    = "Alice";
+var           viaFrom = Maybe.From(user?.Name);   // explicit factory where the type is not known (var, chains)
 Maybe<User>   viaExt  = user.AsMaybe();           // extension on T?
 ```
 
-`Maybe.From(null)` → `None`. `Maybe.From(value)` → `Some(value)`. `.AsMaybe()` does the same on any `T?` (and on `Result<T>`); there is no `.ToMaybe()`.
+Implicit conversion is the idiomatic style; `Maybe.From(null)` → `None`, `Maybe.From(value)` → `Some(value)`. `.AsMaybe()` does the same on any `T?` (and on `Result<T>`); there is no `.ToMaybe()`.
 
 ## Checking Value
 
@@ -97,7 +97,7 @@ Result<string> r = maybe.ToMaybeResult(
 
 ## Best Practices
 
-- Use `Maybe.From()` or `.AsMaybe()` — there is no `.ToMaybe()`
+- Prefer implicit conversion (`Maybe<T> m = value;`, `return value;`, `Maybe.None`); use `Maybe.From()` or `.AsMaybe()` where the target type is not known — there is no `.ToMaybe()`
 - Prefer `Match()` over `HasValue` + `GetValueOrThrow()` to avoid branches
 - Use `Bind()` when the transform itself can be absent (returns `Maybe<T>`)
 - Bridge to `Result` with `ToMaybeResult()` when the caller needs error information

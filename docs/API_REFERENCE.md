@@ -92,7 +92,7 @@ var error = Error.NotFound("User.NotFound", "User does not exist",
 // Bridging exceptions
 Result outcome;
 try { /* external call */ outcome = Result.Success(); }
-catch (Exception ex) { outcome = Error.Exception(ex).ToResult(); }
+catch (Exception ex) { outcome = Error.Exception(ex); }
 
 // Composing multiple errors
 Error[] allErrors = validationError + conflictError;
@@ -114,8 +114,9 @@ Two core types: `Result` (no value, just success/failure) and `Result<T>` (carri
 
 | Method | Returns | When to Use |
 |--------|---------|-------------|
+| `return value;` / `return error;` | `Result<T>` / `Result` | Recommended: implicit conversion from `T`, `Error`, `Error[]`, `List<Error>`, `HashSet<Error>` |
 | `Result.Success()` | `Result` | Void operations that succeeded |
-| `Result.Success(value)` | `Result<T>` | Operations that return a value |
+| `Result.Success(value)` | `Result<T>` | Where the target type cannot be inferred (`var`, inferred lambdas, generic arguments) |
 | `Result.Failure(error)` | `Result` | Single error failure |
 | `Result.Failure(errors)` | `Result` | Multiple errors failure |
 | `Result<T>.Failure(error)` | `Result<T>` | Typed failure |
@@ -308,9 +309,9 @@ Result pipeline = steps.FirstFailureOrSuccesses();
 
 | Method | Creates | When to Use |
 |--------|---------|-------------|
-| `Maybe<T>.None` | Absence | Explicit "no value" |
-| `Maybe<T>.From(value)` | Some if non-null, None if null | Converting nullable to Maybe |
-| `Maybe<int> m = 42;` | Some(42) via implicit operator | Ergonomic creation |
+| `Maybe<int> m = 42;` | Some(42) via implicit operator | Recommended; `T?` converts the same way (null → None) |
+| `Maybe.None` / `Maybe<T>.None` | Absence | Explicit "no value"; `Maybe.None` converts implicitly to any `Maybe<T>` |
+| `Maybe.From(value)` | Some if non-null, None if null | Where the target type is not known (`var`, start of a chain) |
 | `value.AsMaybe()` | Extension on nullable | Converting any nullable |
 
 ### Transformations

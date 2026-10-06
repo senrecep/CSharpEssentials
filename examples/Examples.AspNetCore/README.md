@@ -63,7 +63,7 @@ public Result<Product> GetById(Guid id)
     if (product is null)
         return Error.NotFound($"Product with id '{id}' was not found."); // Expected failure
 
-    return Result.Success(product);
+    return product;
 }
 ```
 

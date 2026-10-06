@@ -24,22 +24,21 @@ using CSharpEssentials.Errors;
 
 ```csharp
 // Success
-Result ok      = Result.Success();
-Result<int> v  = Result.Success(42);
+Result ok          = Result.Success();                              // non-generic: keep the factory
+Result<User> found = user;                                          // T → Result<T>
 
-// Failure — explicit factory
-Result fail    = Result.Failure(Error.Validation("Input.Invalid", "Input was invalid."));
-Result<string> fail1 = Result.Failure<string>(Error.NotFound("User.NotFound", "User not found."));
-Result<string> fail2 = Result<string>.Failure(Error.Conflict("User.Duplicate", "Duplicate."));
-
-// Multiple errors in one failure
-Result<int> multi = Result.Failure<int>(
+// Failure — Error, Error[], List<Error>, HashSet<Error> convert implicitly
+Result fail          = Error.Validation("Input.Invalid", "Input was invalid.");
+Result<User> missing = Error.NotFound("User.NotFound", "Not found.");
+Result<int> multi    = new[]
+{
     Error.Validation("Name.Empty", "Name is required."),
-    Error.Validation("Email.Invalid", "Email is invalid."));
+    Error.Validation("Email.Invalid", "Email is invalid.")
+};
 
-// Implicit conversions — shorthand
-Result<User> found   = user;                                       // T → Result<T>
-Result<User> missing = Error.NotFound("User.NotFound", "Not found."); // Error → Result<T>
+// Explicit factories — only where the target type cannot be inferred (var, inferred lambdas, generic arguments)
+var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "Duplicate."));
+Task<Result<int>> pending = Task.FromResult(Result.Success(42));
 ```
 
 ## Checking the Result
@@ -134,5 +133,5 @@ await GetValueTaskResultAsync().TapIfAsync(true, async v => await LogAsync(v));
 - Never access `.Value` without checking `.IsSuccess` first
 - `onError` in `Match` receives `Error[]` (array) — not a single `Error`
 - `Then()` short-circuits: once a failure occurs, subsequent `Then()` calls are skipped
-- Prefer `Result.Failure<T>` over the implicit `Error → Result<T>` conversion when self-documentation matters
+- Prefer implicit conversions (`return value;`, `return Error.NotFound(...);`); use `Result.Success(value)`/`Result.Failure<T>(error)` only where the target type cannot be inferred. Keep `Result.Success()` for non-generic success
 - Use `Ensure()` to add guard conditions without breaking the chain
