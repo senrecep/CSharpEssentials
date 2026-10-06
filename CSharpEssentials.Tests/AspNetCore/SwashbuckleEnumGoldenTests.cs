@@ -93,6 +93,9 @@ public class SwashbuckleEnumGoldenTests
                 options.SwaggerDoc(document, new OpenApiInfo { Title = document, Version = document });
             if (addEnumConventions)
                 options.AddEnumConventions();
+            // The derived types of SampleChange get their own components, named like Microsoft.AspNetCore.OpenApi names them.
+            options.UseOneOfForPolymorphism();
+            options.CustomSchemaIds(static type => type == typeof(SampleGrantChange) ? nameof(SampleChange) + type.Name : type.Name);
         });
 
         await using WebApplication app = builder.Build();

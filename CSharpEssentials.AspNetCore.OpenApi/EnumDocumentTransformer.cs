@@ -20,21 +20,25 @@ internal sealed class EnumDocumentTransformer : IOpenApiDocumentTransformer
             return Task.CompletedTask;
 
         var enumDocument = OpenApiEnumDocument.Create(context.ApplicationServices, context.DocumentName);
-        Dictionary<Type, JsonTypeInfo> types = CollectTypes(context.DescriptionGroups, enumDocument);
+        Dictionary<Type, JsonTypeInfo> types = [];
+        Dictionary<Type, List<JsonTypeInfo>> bases = [];
+        CollectTypes(context.DescriptionGroups, enumDocument, types, bases);
         foreach ((Type type, JsonTypeInfo typeInfo) in types)
         {
-            if (enumDocument.GetReferenceId(typeInfo) is not { } id || !components.TryGetValue(id, out IOpenApiSchema? component)
-                || component is not OpenApiSchema schema)
-                continue;
+            foreach (string id in GetComponentIds(type, typeInfo, bases, enumDocument))
+            {
+                if (!components.TryGetValue(id, out IOpenApiSchema? component) || component is not OpenApiSchema schema)
+                    continue;
 
-            if (type.IsEnum)
-            {
-                if (enumDocument.Conventions.Resolve(type) is { } info)
-                    OpenApiEnumSchemas.ApplyContent(schema, enumDocument.Conventions.GetContent(info, enumDocument.WireFormat));
-            }
-            else if (typeInfo.Kind == JsonTypeInfoKind.Object && schema.Properties is { Count: > 0 })
-            {
-                ApplyProperties(schema, typeInfo, enumDocument, document);
+                if (type.IsEnum)
+                {
+                    if (enumDocument.Conventions.Resolve(type) is { } info)
+                        OpenApiEnumSchemas.ApplyContent(schema, enumDocument.Conventions.GetContent(info, enumDocument.WireFormat));
+                }
+                else if (typeInfo.Kind == JsonTypeInfoKind.Object && schema.Properties is { Count: > 0 })
+                {
+                    ApplyProperties(schema, typeInfo, enumDocument, document);
+                }
             }
         }
 
@@ -70,21 +74,35 @@ internal sealed class EnumDocumentTransformer : IOpenApiDocumentTransformer
         _ => null,
     };
 
-    private static Dictionary<Type, JsonTypeInfo> CollectTypes(IReadOnlyList<ApiDescriptionGroup> groups, OpenApiEnumDocument document)
+    /// <summary>
+    /// The component ids of <paramref name="type"/>: its own, and for a derived type of a polymorphic base the id the framework
+    /// gives it under that base (the base id followed by its own).
+    /// </summary>
+    private static IEnumerable<string> GetComponentIds(Type type, JsonTypeInfo typeInfo, Dictionary<Type, List<JsonTypeInfo>> bases, OpenApiEnumDocument document)
     {
-        Dictionary<Type, JsonTypeInfo> types = [];
+        if (document.GetReferenceId(typeInfo) is not { } id)
+            yield break;
+        yield return id;
+        foreach (JsonTypeInfo baseType in bases.GetValueOrDefault(type) ?? [])
+        {
+            if (document.GetReferenceId(baseType) is { } baseId)
+                yield return baseId + id;
+        }
+    }
+
+    private static void CollectTypes(
+        IReadOnlyList<ApiDescriptionGroup> groups, OpenApiEnumDocument document, Dictionary<Type, JsonTypeInfo> types, Dictionary<Type, List<JsonTypeInfo>> bases)
+    {
         foreach (ApiDescription description in groups.SelectMany(static group => group.Items))
         {
             foreach (ApiParameterDescription parameter in description.ParameterDescriptions)
-                Collect(parameter.Type, types, document);
+                Collect(parameter.Type, types, bases, document);
             foreach (ApiResponseType response in description.SupportedResponseTypes)
-                Collect(response.Type, types, document);
+                Collect(response.Type, types, bases, document);
         }
-
-        return types;
     }
 
-    private static void Collect(Type? type, Dictionary<Type, JsonTypeInfo> types, OpenApiEnumDocument document)
+    private static void Collect(Type? type, Dictionary<Type, JsonTypeInfo> types, Dictionary<Type, List<JsonTypeInfo>> bases, OpenApiEnumDocument document)
     {
         if (type is null || type == typeof(void) || type.IsPointer || type.IsByRef || type.ContainsGenericParameters)
             return;
@@ -92,15 +110,26 @@ internal sealed class EnumDocumentTransformer : IOpenApiDocumentTransformer
         if (types.ContainsKey(type) || !TryGetTypeInfo(type, document, out JsonTypeInfo? typeInfo))
             return;
 
+        // Recorded before the walk, so a type reached again (a cycle, a derived type that refers to its base) is visited once.
         types[type] = typeInfo;
         if (typeInfo.Kind == JsonTypeInfoKind.Object)
         {
             foreach (JsonPropertyInfo property in typeInfo.Properties)
-                Collect(property.PropertyType, types, document);
+                Collect(property.PropertyType, types, bases, document);
+            // The derived types of a polymorphic type get their own components; their properties are not on the base type.
+            foreach (JsonDerivedType derived in typeInfo.PolymorphismOptions?.DerivedTypes ?? [])
+            {
+                if (derived.DerivedType == type)
+                    continue;
+                if (!bases.TryGetValue(derived.DerivedType, out List<JsonTypeInfo>? derivedBases))
+                    bases[derived.DerivedType] = derivedBases = [];
+                derivedBases.Add(typeInfo);
+                Collect(derived.DerivedType, types, bases, document);
+            }
         }
         else if (typeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary)
         {
-            Collect(typeInfo.ElementType, types, document);
+            Collect(typeInfo.ElementType, types, bases, document);
         }
     }
 
