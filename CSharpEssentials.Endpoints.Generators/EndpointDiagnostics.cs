@@ -92,11 +92,11 @@ internal static class EndpointDiagnostics
     public static readonly DiagnosticDescriptor RegistryNameCollision = new(
         "CSE1009",
         "Referenced endpoint registries share a name",
-        "Assemblies {0} all generate the endpoint registry '{1}', so MapAllEndpoints skips them; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]",
+        "Assemblies {0} all generate the endpoint registry '{1}', so MapAllEndpoints leaves out the referenced ones; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]",
         Category,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Registry names are derived from assembly names with separators removed, so 'Foo.Api' and 'FooApi' both produce 'FooApiEndpointRegistry'. The generated aggregate cannot refer to an ambiguous type and leaves those registries out until each has a distinct name.",
+        description: "Registry names are derived from assembly names with separators removed, so 'Foo.Api' and 'FooApi' both produce 'FooApiEndpointRegistry'. The generated aggregate cannot refer to an ambiguous type and leaves the referenced registries out until each has a distinct name. When the project's own registry has the same name, the aggregate maps only the project's own registry.",
         helpLinkUri: HelpLink,
         customTags: WellKnownDiagnosticTags.CompilationEnd);
 }

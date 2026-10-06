@@ -1,9 +1,21 @@
 using System.Text;
+using Microsoft.CodeAnalysis;
 
 namespace CSharpEssentials.DependencyInjection.Generators;
 
 internal static class RegistryNames
 {
+    public const string RegistryNamespace = "global::Microsoft.Extensions.DependencyInjection.";
+
+    public static string ForAssembly(IAssemblySymbol assembly)
+    {
+        string? customName = assembly.GetAttributes()
+            .Where(static attribute => ServiceTypeInspector.IsAttribute(attribute.AttributeClass, "ServiceRegistryNameAttribute"))
+            .Select(static attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string)
+            .FirstOrDefault(static name => !string.IsNullOrWhiteSpace(name));
+        return Sanitize(customName ?? assembly.Name);
+    }
+
     public static string Sanitize(string name)
     {
         StringBuilder builder = new(name.Length + 1);

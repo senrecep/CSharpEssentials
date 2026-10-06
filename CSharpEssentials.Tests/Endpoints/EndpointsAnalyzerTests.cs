@@ -532,7 +532,52 @@ public class EndpointsAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE1009").Subject;
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
         diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Be(
-            "Assemblies 'Foo.Api', 'FooApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.FooApiEndpointRegistry', so MapAllEndpoints skips them; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]");
+            "Assemblies 'Foo.Api', 'FooApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.FooApiEndpointRegistry', so MapAllEndpoints leaves out the referenced ones; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1009_When_Referenced_Registry_Name_Collides_With_Own_Registry()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "FooApi",
+            OutputKind.ConsoleApplication,
+            [RegistryReference("Foo.Api")],
+            "using CSharpEssentials.Endpoints; using Microsoft.AspNetCore.Builder; using Microsoft.AspNetCore.Routing; namespace Sample.Host; public sealed class Ping : IEndpoint { public static void Map(IEndpointRouteBuilder app) => app.MapGet(\"/own\", () => \"own\"); }");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE1009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith(
+                "Assemblies 'Foo.Api', 'FooApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.FooApiEndpointRegistry'");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1009_When_Custom_Registry_Name_Collides_With_Referenced_Registry()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [RegistryReference("Foo.Api")],
+            "using CSharpEssentials.Endpoints; using Microsoft.AspNetCore.Builder; using Microsoft.AspNetCore.Routing; [assembly: EndpointRegistryName(\"FooApi\")] namespace Sample.Host; public sealed class Ping : IEndpoint { public static void Map(IEndpointRouteBuilder app) => app.MapGet(\"/own\", () => \"own\"); }");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE1009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith("Assemblies 'Foo.Api', 'Sample.Host' all generate");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE1009_When_Host_Without_Endpoints_Shares_Referenced_Registry_Name()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "FooApi",
+            OutputKind.ConsoleApplication,
+            [RegistryReference("Foo.Api")],
+            "namespace Sample.Host; public sealed class Marker;");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE1009");
     }
 
     [Fact]

@@ -1728,7 +1728,7 @@ group.RequireRoles("admin", "editor");
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped |
 | CSE1007 | Error | `[EndpointGroup(typeof(X))]` target is not a concrete, non-ref struct `IEndpointGroup` |
 | CSE1008 | Error | Endpoint or group type is a `ref struct` and is not mapped |
-| CSE1009 | Warning | Referenced registries share a sanitized name; `MapAllEndpoints` skips them (use `[assembly: EndpointRegistryName]`) |
+| CSE1009 | Warning | Registries (referenced or the project's own) share a sanitized name; `MapAllEndpoints` skips the referenced ones (use `[assembly: EndpointRegistryName]`) |
 
 ---
 
@@ -1793,7 +1793,7 @@ Decorated originals move to a hidden registration under a private key, so they n
 | CSE2006 | Info | Captive dependency between attribute registrations |
 | CSE2007 | Error | Generated code cannot construct the class |
 | CSE2008 | Warning | Open-generic decorators are not generated; call `Decorate(Type, Type)` |
-| CSE2009 | Warning | Referenced registries share a sanitized name; `AddAllServices` skips them (use `[assembly: ServiceRegistryName]`) |
+| CSE2009 | Warning | Registries (referenced or the project's own) share a sanitized name; `AddAllServices` skips the referenced ones (use `[assembly: ServiceRegistryName]`) |
 
 ---
 

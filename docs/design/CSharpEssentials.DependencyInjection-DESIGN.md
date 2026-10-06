@@ -269,7 +269,7 @@ Same rules as `MapAllEndpoints`:
 - `internal`.
 - Auto-generated in `Exe`/`WinExe` when `IsTestProject` is not `true`. `[assembly: DisableServiceAggregate]` opts out, and `[assembly: GenerateServiceAggregate]` opts in libraries and test projects.
 - Referenced assemblies are filtered by name (skip `System*`, `Microsoft*`, `mscorlib`, `netstandard`, and assemblies not referencing `CSharpEssentials.DependencyInjection`) before `ServiceModule` attributes are read.
-- Modules are deduplicated, so there is no duplicate registration. Registries of different assemblies whose names collide after sanitizing (`Foo.Api`, `FooApi`) are skipped, because the aggregate cannot refer to an ambiguous type; the analyzer reports CSE2009. A referenced registry with the same name as the own registry is skipped too (the compiler resolves the name to the own type).
+- Modules are deduplicated, so there is no duplicate registration. Registries of different assemblies whose names collide after sanitizing (`Foo.Api`, `FooApi`) are skipped, because the aggregate cannot refer to an ambiguous type; the analyzer reports CSE2009. A referenced registry with the same name as the own registry is skipped too (the compiler resolves the name to the own type), and CSE2009 reports that case as well. The analyzer counts the own registry only when the project has at least one registration or decorator the generator emits, because only then is the own registry generated.
 - Phases: **all** `RegisterServices` (referenced modules by assembly name, own module last), then decorators across all modules: for each distinct `Order` in the union of every module's `DecoratorOrders` (ascending), `ApplyDecorators(services, order)` of each module in the same module order. `Order` is global; within one `Order`, module order and then type name decide, so the host's decorators are outermost among equal orders.
 
 ### 6.4 Sample generated code
@@ -388,7 +388,7 @@ Reported by `DependencyInjectionAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssen
 | CSE2006 | Captive dependency: a singleton depends on a scoped/transient service, or a scoped service on a transient one. Single-constructor, non-generic classes only; matches attribute registrations in the same compilation by service type and `[FromKeyedServices]` key, including open-generic registrations for closed parameter types | Info | The dependency lives longer than its registration intends. Reported on the consumer's attribute at compilation end. |
 | CSE2007 | Registration or decoration attribute on an abstract or static class | Error | Cannot be constructed |
 | CSE2008 | Open-generic decorator on the generated path; use runtime `Decorate(Type, Type)` | Warning | Not generated. The user must register it at runtime. |
-| CSE2009 | Two referenced registries have the same fully qualified name after sanitizing (`Foo.Api`, `FooApi`) | Warning | Reported only when the aggregate is generated. The aggregate skips the colliding registries so the project compiles. A referenced registry with the same name as the own registry is not called a second time. |
+| CSE2009 | Two registries, referenced or the project's own, have the same fully qualified name after sanitizing (`Foo.Api`, `FooApi`) | Warning | Reported only when the aggregate is generated. The aggregate skips the colliding referenced registries so the project compiles. When the own registry is part of the collision, only the own registry is called. |
 
 Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.Unshipped.md`.
 

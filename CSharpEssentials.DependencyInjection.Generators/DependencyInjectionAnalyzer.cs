@@ -32,26 +32,28 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterCompilationAction(ReportRegistryCollisions);
         context.RegisterCompilationStartAction(static start =>
         {
             if (ServiceTypeInspector.HasAttribute(start.Compilation.Assembly.GetAttributes(), ServiceTypeInspector.ExcludeAttribute))
             {
+                start.RegisterCompilationEndAction(static end => ReportRegistryCollisions(end, hasOwnRegistry: false));
                 return;
             }
 
             ConcurrentBag<(string TypeName, string SortName, int Index, InspectedRegistration Registration)> registrations = [];
             ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers = [];
-            start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, registrations, consumers), SymbolKind.NamedType);
+            ConcurrentBag<string> ownTypes = [];
+            start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, registrations, consumers, ownTypes), SymbolKind.NamedType);
             start.RegisterCompilationEndAction(end =>
             {
                 ReportDuplicateThrows(end, registrations);
                 ReportCaptiveDependencies(end, registrations, consumers);
+                ReportRegistryCollisions(end, hasOwnRegistry: !ownTypes.IsEmpty);
             });
         });
     }
 
-    private static void ReportRegistryCollisions(CompilationAnalysisContext context)
+    private static void ReportRegistryCollisions(CompilationAnalysisContext context, bool hasOwnRegistry)
     {
         ImmutableArray<AttributeData> attributes = context.Compilation.Assembly.GetAttributes();
         bool isExecutable = context.Compilation.Options.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication;
@@ -63,7 +65,13 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(context.Compilation, context.CancellationToken);
+        List<ReferencedRegistry> registries = [.. ReferencedRegistryReader.Read(context.Compilation, context.CancellationToken)];
+        if (hasOwnRegistry)
+        {
+            IAssemblySymbol assembly = context.Compilation.Assembly;
+            registries.Add(new ReferencedRegistry(assembly.Name, RegistryNames.RegistryNamespace + RegistryNames.ForAssembly(assembly) + "ServiceRegistry"));
+        }
+
         foreach (IGrouping<string, ReferencedRegistry> collision in ReferencedRegistryReader.FindCollisions(registries))
         {
             context.ReportDiagnostic(Diagnostic.Create(
@@ -77,10 +85,16 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
     private static void AnalyzeType(
         SymbolAnalysisContext context,
         ConcurrentBag<(string TypeName, string SortName, int Index, InspectedRegistration Registration)> registrations,
-        ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers)
+        ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers,
+        ConcurrentBag<string> ownTypes)
     {
         var type = (INamedTypeSymbol)context.Symbol;
         ServiceTypeInspection inspection = ServiceTypeInspector.Inspect(type, context.CancellationToken);
+        if (inspection.ToModel() is not null)
+        {
+            ownTypes.Add(type.ToDisplayString());
+        }
+
         foreach (InspectionIssue issue in inspection.Issues)
         {
             context.ReportDiagnostic(Diagnostic.Create(issue.Descriptor, GetLocation(issue.Attribute, type, context.CancellationToken), issue.Arguments));

@@ -79,17 +79,7 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
     private static EndpointModel? CreateModel(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
         if (context.SemanticModel.GetDeclaredSymbol(context.Node, cancellationToken) is not INamedTypeSymbol type ||
-            !EndpointSymbolRules.IsEndpoint(type) ||
-            !EndpointSymbolRules.IsAccessible(type) ||
-            EndpointSymbolRules.IsAbstractOrOpenGeneric(type) ||
-            type.IsRefLikeType ||
-            EndpointSymbolRules.HasAttribute(type, EndpointSymbolRules.ExcludeAttribute))
-        {
-            return null;
-        }
-
-        GroupChain chain = EndpointSymbolRules.ResolveGroupChain(type);
-        if (chain.Status != GroupChainStatus.Valid)
+            EndpointSymbolRules.GetGeneratedChain(type) is not { } chain)
         {
             return null;
         }
@@ -117,17 +107,13 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
     private static HostModel CreateHost(Compilation compilation, CancellationToken cancellationToken)
     {
         IAssemblySymbol assembly = compilation.Assembly;
-        string? customName = assembly.GetAttributes()
-            .Where(static attribute => EndpointSymbolRules.IsEndpointsType(attribute.AttributeClass, EndpointSymbolRules.RegistryNameAttribute))
-            .Select(static attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string)
-            .FirstOrDefault(static name => !string.IsNullOrWhiteSpace(name));
 
         IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(compilation, cancellationToken);
         HashSet<string> colliding = [.. ReferencedRegistryReader.FindCollisions(registries).Select(static group => group.Key)];
         ReferencedRegistry[] ordered = [.. registries.Where(registry => !colliding.Contains(registry.FullyQualifiedName))];
 
         return new HostModel(
-            RegistryNames.Sanitize(customName ?? assembly.Name),
+            RegistryNames.ForAssembly(assembly),
             EndpointSymbolRules.HasAttribute(assembly, EndpointSymbolRules.ExcludeAttribute),
             compilation.Options.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication,
             EndpointSymbolRules.HasAttribute(assembly, EndpointSymbolRules.GenerateAggregateAttribute),

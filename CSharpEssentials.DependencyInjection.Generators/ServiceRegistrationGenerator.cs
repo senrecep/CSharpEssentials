@@ -110,17 +110,13 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
     {
         IAssemblySymbol assembly = compilation.Assembly;
         ImmutableArray<AttributeData> attributes = assembly.GetAttributes();
-        string? customName = attributes
-            .Where(static attribute => ServiceTypeInspector.IsAttribute(attribute.AttributeClass, "ServiceRegistryNameAttribute"))
-            .Select(static attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string)
-            .FirstOrDefault(static name => !string.IsNullOrWhiteSpace(name));
 
         IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(compilation, cancellationToken);
         HashSet<string> colliding = [.. ReferencedRegistryReader.FindCollisions(registries).Select(static group => group.Key)];
         ReferencedRegistry[] ordered = [.. registries.Where(registry => !colliding.Contains(registry.FullyQualifiedName))];
 
         return new HostModel(
-            RegistryNames.Sanitize(customName ?? assembly.Name),
+            RegistryNames.ForAssembly(assembly),
             ServiceTypeInspector.HasAttribute(attributes, ServiceTypeInspector.ExcludeAttribute),
             compilation.Options.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication,
             ServiceTypeInspector.HasAttribute(attributes, "GenerateServiceAggregateAttribute"),
