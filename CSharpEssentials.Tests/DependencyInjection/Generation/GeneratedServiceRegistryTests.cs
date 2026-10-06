@@ -3,6 +3,7 @@ using CSharpEssentials.Tests.DependencyInjection.Scanning;
 using CSharpEssentials.Tests.Fixtures.DependencyInjectionA;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace CSharpEssentials.Tests.DependencyInjection.Generation;
@@ -202,6 +203,59 @@ public class GeneratedServiceRegistryTests
         services.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
 
         services.Should().HaveCount(count);
+        GreetingOf(services).Should().Be("outer(inner(hi))");
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Retry_When_Previous_Call_Threw()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IThrowingService, ThrowingService>();
+        Action act = () => services.AddCSharpEssentialsTestsServices();
+        act.Should().Throw<InvalidOperationException>();
+
+        Action retry = () => services.AddCSharpEssentialsTestsServices();
+
+        retry.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(IThrowingService).FullName}*");
+    }
+
+    [Fact]
+    public void AddAllServices_Should_Retry_When_Previous_Call_Threw()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IThrowingService, ThrowingService>();
+        Action act = () => services.AddAllServices();
+        act.Should().Throw<InvalidOperationException>();
+
+        Action retry = () => services.AddAllServices();
+
+        retry.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(IThrowingService).FullName}*");
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_Retry_When_Previous_Call_Threw()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IThrowingService, ThrowingService>();
+        Action act = () => services.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
+        act.Should().Throw<InvalidOperationException>();
+
+        Action retry = () => services.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
+
+        retry.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(IThrowingService).FullName}*");
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Register_After_Failed_Call_When_Conflict_Is_Removed()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IThrowingService, ThrowingService>();
+        Action act = () => services.AddCSharpEssentialsTestsServices();
+        act.Should().Throw<InvalidOperationException>();
+        services.RemoveAll<IThrowingService>();
+
+        services.AddCSharpEssentialsTestsServices();
+
         GreetingOf(services).Should().Be("outer(inner(hi))");
     }
 

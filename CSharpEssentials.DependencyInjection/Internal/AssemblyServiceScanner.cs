@@ -65,11 +65,6 @@ internal static class AssemblyServiceScanner
             assemblyIndex++;
         }
 
-        foreach (Assembly assembly in scanned)
-        {
-            ServiceRegistration.MarkRegistered(services, assembly);
-        }
-
         foreach ((ServiceDescriptor descriptor, RegistrationStrategy strategy) in registrations)
         {
             ServiceRegistration.Apply(services, logger, descriptor, strategy);
@@ -83,6 +78,11 @@ internal static class AssemblyServiceScanner
         foreach (Action<IServiceCollection> decorator in ordered)
         {
             decorator(services);
+        }
+
+        foreach (Assembly assembly in scanned)
+        {
+            ServiceRegistration.MarkRegistered(services, assembly);
         }
     }
 

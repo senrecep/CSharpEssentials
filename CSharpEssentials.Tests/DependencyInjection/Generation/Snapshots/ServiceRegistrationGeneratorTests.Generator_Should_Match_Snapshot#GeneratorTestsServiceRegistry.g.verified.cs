@@ -17,13 +17,14 @@ namespace Microsoft.Extensions.DependencyInjection
             this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
             global::Microsoft.Extensions.Logging.ILogger? logger = null)
         {
-            if (!global::CSharpEssentials.DependencyInjection.ServiceRegistration.TryMarkRegistered(services, typeof(GeneratorTestsServiceRegistry).Assembly))
+            if (global::CSharpEssentials.DependencyInjection.ServiceRegistration.IsRegistered(services, typeof(GeneratorTestsServiceRegistry).Assembly))
             {
                 return services;
             }
 
             RegisterServices(services, logger);
             ApplyDecorators(services);
+            global::CSharpEssentials.DependencyInjection.ServiceRegistration.MarkRegistered(services, typeof(GeneratorTestsServiceRegistry).Assembly);
             return services;
         }
 
