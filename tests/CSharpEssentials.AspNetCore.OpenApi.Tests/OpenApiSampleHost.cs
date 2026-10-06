@@ -16,7 +16,8 @@ internal static class OpenApiSampleHost
     public static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(
         OpenApiSpecVersion version,
         bool addEnumConventions = true,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        int passes = 1)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -46,8 +47,11 @@ internal static class OpenApiSampleHost
             string address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
             using var client = new HttpClient { BaseAddress = new Uri(address) };
             var documents = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (string document in SampleApi.Documents)
-                documents[document] = await client.GetStringAsync($"/openapi/{document}.json");
+            for (int pass = 0; pass < passes; pass++)
+            {
+                foreach (string document in SampleApi.Documents)
+                    documents[document] = await client.GetStringAsync($"/openapi/{document}.json");
+            }
             return documents;
         }
         finally

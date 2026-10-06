@@ -1,12 +1,27 @@
 using System.Text.Json.Nodes;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
 
 namespace CSharpEssentials.AspNetCore.OpenApi.Tests;
 
 public class OpenApiEnumSchemaTests
 {
+    [Fact]
+    public async Task Documents_Should_WarnOncePerEnum_When_ADocumentMixesNumbersAndStrings()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        await OpenApiSampleHost.GetDocumentsAsync(OpenApiSpecVersion.OpenApi3_0, configureServices: services => services.AddSingleton<ILoggerProvider>(logs), passes: 2);
+
+        string[] warnings = [.. logs.Messages.Where(static message => message.Contains("x-enum-wire-format: number", StringComparison.Ordinal))];
+        warnings.Should().OnlyHaveUniqueItems();
+        warnings.Should().ContainSingle(static message => message.StartsWith($"OpenAPI document 'mixed' writes enum {typeof(SampleStatus).FullName} ", StringComparison.Ordinal));
+        warnings.Should().NotContain(static message => message.StartsWith("OpenAPI document 'v1' ", StringComparison.Ordinal) || message.StartsWith("OpenAPI document 'v2' ", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Documents_Should_DescribeEnumsDifferently_When_GroupsWriteNumbersAndStrings()
     {
