@@ -411,13 +411,13 @@ internal static class StringEnumSourceWriter
         return [.. members.Where(member => seen.Add(member.RawValue))];
     }
 
-    /// <summary>
-    /// The member access, or a cast of the number for <c>[Obsolete]</c> members so generated code does not raise CS0618.
-    /// </summary>
     // A member declared as @class has the name "class"; member access needs the escape again.
     private static string Identifier(string name) =>
         SyntaxFacts.GetKeywordKind(name) == SyntaxKind.None ? name : "@" + name;
 
+    /// <summary>
+    /// The member access, or a cast of the number for <c>[Obsolete]</c> members so generated code does not raise CS0618.
+    /// </summary>
     private static string ValueExpression(EnumModel model, EnumMemberModel member)
     {
         if (!member.IsObsolete)
