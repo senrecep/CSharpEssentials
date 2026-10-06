@@ -70,13 +70,16 @@ public Result<Product> GetById(Guid id)
 ### Controller Mapping
 
 ```csharp
-[HttpGet("{id:guid}")]
-public IActionResult GetById(Guid id)
+public class ProductsController(IProductService productService) : ControllerBase
 {
-    return _productService.GetById(id).Match(
-        onSuccess: product => Ok(product),
-        onFailure: errors => errors.ToActionResult() // ProblemDetails automatically
-    );
+    [HttpGet("{id:guid}")]
+    public IActionResult GetById(Guid id)
+    {
+        return productService.GetById(id).Match(
+            onSuccess: product => Ok(product),
+            onError: errors => errors.ToActionResult() // ProblemDetails automatically
+        );
+    }
 }
 ```
 
@@ -85,10 +88,13 @@ public IActionResult GetById(Guid id)
 The `OrderService.PlaceOrder` method chains multiple business rules:
 
 ```csharp
-return _productService.GetById(productId)
-    .Then(product => ValidateQuantity(product, quantity))   // Must have stock
-    .Then(product => ReserveStock(product, quantity))       // Must be under $10k
-    .Then(product => CreateOrder(product, quantity));       // Persist order
+public Result<Order> PlaceOrder(Guid productId, int quantity)
+{
+    return _productService.GetById(productId)
+        .Then(product => ValidateQuantity(product, quantity))   // Must have stock
+        .Then(product => ReserveStock(product, quantity))       // Must be under $10k
+        .Then(product => CreateOrder(product, quantity));       // Persist order
+}
 ```
 
 If any step fails, the chain short-circuits and returns the first error set.
