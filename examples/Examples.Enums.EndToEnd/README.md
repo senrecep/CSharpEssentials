@@ -29,7 +29,7 @@ The project uses `ProjectReference`s, including the generator project with `Outp
 </ItemGroup>
 ```
 
-No direct `CSharpEssentials.Enums` reference is needed: `CSharpEssentials.AspNetCore` and `CSharpEssentials.EntityFrameworkCore` bring it with its generator, analyzers and code fixes.
+No direct `CSharpEssentials.Enums` reference is needed: any package that depends on Enums brings the generator, and `CSharpEssentials.AspNetCore`, `.AspNetCore.OpenApi` and `.EntityFrameworkCore` each bring it with its analyzers and code fixes.
 
 ## Running
 
