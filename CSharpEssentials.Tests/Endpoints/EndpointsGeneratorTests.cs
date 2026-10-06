@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using FluentAssertions;
 using CSharpEssentials.Tests.Generators;
 using Microsoft.CodeAnalysis;
@@ -6,7 +5,7 @@ using Microsoft.CodeAnalysis.CSharp;
 
 namespace CSharpEssentials.Tests.Endpoints;
 
-public partial class EndpointsGeneratorTests
+public class EndpointsGeneratorTests
 {
     private const string GeneratorTrackingEndpoints = "EndpointTypes";
 
@@ -136,7 +135,7 @@ public partial class EndpointsGeneratorTests
 
         ShouldCompile(run);
         EndpointCompilations.HintNames(run).Should().Equal("SampleApiEndpointRegistry.g.cs");
-        return Verify(run.Driver).ScrubLinesWithReplace(ScrubVersion);
+        return Verify(run.Driver);
     }
 
     [Fact]
@@ -149,7 +148,7 @@ public partial class EndpointsGeneratorTests
 
         ShouldCompile(run);
         EndpointCompilations.HintNames(run).Should().Equal("SampleNamedEndpointRegistry.g.cs");
-        return Verify(run.Driver).ScrubLinesWithReplace(ScrubVersion);
+        return Verify(run.Driver);
     }
 
     [Fact]
@@ -213,7 +212,7 @@ public partial class EndpointsGeneratorTests
 
         ShouldCompile(run);
         EndpointCompilations.HintNames(run).Should().Equal("SampleHostEndpointRegistry.g.cs", "SampleHostEndpointAggregate.g.cs");
-        return Verify(run.Driver).ScrubLinesWithReplace(ScrubVersion);
+        return Verify(run.Driver);
     }
 
     [Fact]
@@ -435,10 +434,4 @@ public partial class EndpointsGeneratorTests
         run.GeneratorDiagnostics.Should().BeEmpty();
         run.OutputDiagnostics.Where(static d => d.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
     }
-
-    private static string ScrubVersion(string line) =>
-        GeneratedCodeVersion().Replace(line, "\"CSharpEssentials.Endpoints.Generators\", \"{version}\"");
-
-    [GeneratedRegex("\"CSharpEssentials\\.Endpoints\\.Generators\", \"[0-9.]+\"")]
-    private static partial Regex GeneratedCodeVersion();
 }
