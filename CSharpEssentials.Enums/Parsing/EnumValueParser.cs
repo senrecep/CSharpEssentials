@@ -15,7 +15,8 @@ namespace CSharpEssentials.Enums;
 /// <see cref="EnumReadMode.Input"/> applies <see cref="EnumConventions.CaseInsensitive"/>, <see cref="EnumConventions.AcceptMemberNames"/>
 /// and <see cref="EnumConventions.AcceptNumbers"/> and never accepts the fallback member. <see cref="EnumReadMode.Data"/> accepts every
 /// known spelling and applies <see cref="EnumConventions.UnknownValue"/>. Malformed text (empty, surrounding whitespace, <c>1.0</c>,
-/// <c>0x1</c>, <c>+1</c>, <c>-0</c>, out of range) is always rejected.
+/// <c>0x1</c>, <c>+1</c>, <c>-0</c>, out of range, or numeric text longer than 20 characters even when padded with zeros)
+/// is always rejected, in JSON strings as well.
 /// </remarks>
 public static class EnumValueParser
 {
