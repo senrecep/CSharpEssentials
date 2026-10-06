@@ -37,5 +37,7 @@
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionA/CSharpEssentials.Tests.Fixtures.DependencyInjectionA.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionB/CSharpEssentials.Tests.Fixtures.DependencyInjectionB.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.EnumsContracts/CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.OpenApiSample/CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
+  <Project Path="tests/CSharpEssentials.AspNetCore.OpenApi.Tests/CSharpEssentials.AspNetCore.OpenApi.Tests.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>

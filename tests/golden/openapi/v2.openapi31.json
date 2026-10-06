@@ -1,0 +1,266 @@
+{
+  "components": {
+    "SampleNaming": {
+      "description": "| value | number | description |\n|---|---|---|\n| \u0060custom-name\u0060 | 0 |  |\n| \u0060plain_value\u0060 | 1 |  |",
+      "enum": [
+        "custom-name",
+        "plain_value"
+      ],
+      "type": "string",
+      "x-enum-descriptions": [
+        "",
+        ""
+      ],
+      "x-enum-numeric-values": [
+        0,
+        1
+      ],
+      "x-enum-varnames": [
+        "Original",
+        "PlainValue"
+      ]
+    },
+    "SampleOrder": {
+      "properties": {
+        "defaultPermissions": {
+          "default": [
+            "read",
+            "write"
+          ],
+          "items": {
+            "$ref": "#/components/schemas/SamplePermissions"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "gaps": {
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SampleStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "history": {
+          "items": {
+            "$ref": "#/components/schemas/SampleStatus"
+          },
+          "type": "array"
+        },
+        "naming": {
+          "$ref": "#/components/schemas/SampleNaming"
+        },
+        "next": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SampleStatus"
+            }
+          ],
+          "default": "pending_approval"
+        },
+        "optionalPermissions": {
+          "items": {
+            "$ref": "#/components/schemas/SamplePermissions"
+          },
+          "type": [
+            "null",
+            "array"
+          ],
+          "uniqueItems": true
+        },
+        "permissions": {
+          "items": {
+            "$ref": "#/components/schemas/SamplePermissions"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "previous": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/SampleStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "size": {
+          "$ref": "#/components/schemas/SampleSize"
+        },
+        "status": {
+          "$ref": "#/components/schemas/SampleStatus"
+        }
+      }
+    },
+    "SamplePermissions": {
+      "description": "| value | number | description |\n|---|---|---|\n| \u0060none\u0060 | 0 |  |\n| \u0060read\u0060 | 1 |  |\n| \u0060write\u0060 | 2 |  |\n| \u0060delete\u0060 | 4 |  |",
+      "enum": [
+        "none",
+        "read",
+        "write",
+        "delete"
+      ],
+      "type": "string",
+      "x-enum-descriptions": [
+        "",
+        "",
+        "",
+        ""
+      ],
+      "x-enum-numeric-values": [
+        0,
+        1,
+        2,
+        4
+      ],
+      "x-enum-varnames": [
+        "None",
+        "Read",
+        "Write",
+        "Delete"
+      ]
+    },
+    "SampleSize": {
+      "description": "| value | number | description |\n|---|---|---|\n| \u0060small\u0060 | 1 |  |\n| \u0060huge\u0060 | 5000000000 |  |",
+      "enum": [
+        "small",
+        "huge"
+      ],
+      "type": "string",
+      "x-enum-descriptions": [
+        "",
+        ""
+      ],
+      "x-enum-numeric-values": [
+        1,
+        5000000000
+      ],
+      "x-enum-varnames": [
+        "Small",
+        "Huge"
+      ]
+    },
+    "SampleStatus": {
+      "description": "Order lifecycle state.\n\n| value | number | description |\n|---|---|---|\n| \u0060pending\u0060 | 0 | Just created \\| not paid |\n| \u0060pending_approval\u0060 | 1 |  |\n| \u0060waiting\u0060 | 2 | Waiting for a reviewer (deprecated) |\n| \u0060unknown\u0060 | 99 | Response only: |",
+      "enum": [
+        "pending",
+        "pending_approval",
+        "waiting",
+        "unknown"
+      ],
+      "type": "string",
+      "x-enum-descriptions": [
+        "Just created | not paid",
+        "",
+        "Waiting for a reviewer (deprecated)",
+        "Response only:"
+      ],
+      "x-enum-numeric-values": [
+        0,
+        1,
+        2,
+        99
+      ],
+      "x-enum-varnames": [
+        "Pending",
+        "PendingApproval",
+        "Waiting",
+        "Unknown"
+      ]
+    }
+  },
+  "operations": {
+    "GET /v2/orders/{status}": {
+      "parameters": {
+        "history": {
+          "in": "query",
+          "schema": {
+            "items": {
+              "$ref": "#/components/schemas/SampleStatus"
+            },
+            "type": "array"
+          }
+        },
+        "naming": {
+          "in": "query",
+          "schema": {
+            "$ref": "#/components/schemas/SampleNaming"
+          }
+        },
+        "next": {
+          "in": "query",
+          "schema": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SampleStatus"
+              }
+            ],
+            "default": "pending_approval"
+          }
+        },
+        "permissions": {
+          "in": "query",
+          "schema": {
+            "items": {
+              "$ref": "#/components/schemas/SamplePermissions"
+            },
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "previous": {
+          "in": "query",
+          "schema": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/SampleStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "status": {
+          "in": "path",
+          "schema": {
+            "$ref": "#/components/schemas/SampleStatus"
+          }
+        }
+      }
+    },
+    "POST /v2/status": {
+      "requestBody": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/SampleStatus"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/components/schemas/SampleStatus"
+        }
+      }
+    },
+    "GET /v2/statuses": {
+      "responses": {
+        "200": {
+          "items": {
+            "$ref": "#/components/schemas/SampleStatus"
+          },
+          "type": "array"
+        }
+      }
+    }
+  }
+}
