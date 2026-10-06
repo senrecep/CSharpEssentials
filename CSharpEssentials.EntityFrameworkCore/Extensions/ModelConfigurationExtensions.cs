@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -24,6 +25,7 @@ public static class ModelConfigurationExtensions
     /// keeps it, as with <c>HasLegacyEnumStorage</c>, so the first migration after the upgrade is empty. New projects omit it.
     /// </param>
     /// <returns>The same builder.</returns>
+    [OverloadResolutionPriority(1)]
     public static ModelConfigurationBuilder ConfigureEnumConventions(
         this ModelConfigurationBuilder configurationBuilder,
         EnumConventions? conventions = null,

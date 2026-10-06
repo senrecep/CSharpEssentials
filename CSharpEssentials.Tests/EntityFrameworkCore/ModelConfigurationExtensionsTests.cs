@@ -32,6 +32,13 @@ public class ModelConfigurationExtensionsTests
         public PlainColor Color { get; set; }
     }
 
+    private sealed class NullConventionsDbContext(DbContextOptions<NullConventionsDbContext> options) : DbContext(options)
+    {
+        public DbSet<AcronymEntity> Entities { get; set; } = null!;
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+            configurationBuilder.ConfigureEnumConventions(null);
+    }
+
     private sealed class DefaultConventionDbContext(DbContextOptions<DefaultConventionDbContext> options) : DbContext(options)
     {
         public DbSet<AcronymEntity> Entities { get; set; } = null!;
@@ -69,6 +76,16 @@ public class ModelConfigurationExtensionsTests
 
         property.GetValueConverter().Should().BeOfType<EnumWireNameConverter<AcronymStatus>>();
         property.GetValueConverter()!.ConvertToProvider(AcronymStatus.HTTPStatus).Should().Be("http_status");
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_Bind_To_The_Convention_Overload_When_CalledWithNull()
+    {
+        using NullConventionsDbContext context = new(CreateOptions<NullConventionsDbContext>());
+
+        IProperty property = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
+
+        property.GetValueConverter().Should().BeOfType<EnumWireNameConverter<AcronymStatus>>();
     }
 
     [Fact]
