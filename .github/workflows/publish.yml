@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_call:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v4.2.0
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -13,6 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
       - name: Setup .NET
@@ -24,8 +31,10 @@ jobs:
             10.0.x
 
       - name: Verify version alignment
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${RELEASE_TAG#v}"
           PROP_VERSION=$(grep -oP '(?<=<Version>)[^<]+' Directory.Build.props)
 
           echo "Tag version:    $TAG_VERSION"
