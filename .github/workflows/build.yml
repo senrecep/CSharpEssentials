@@ -37,9 +37,9 @@ jobs:
       - name: Build Enums end-to-end example
         run: dotnet build examples/Examples.Enums.EndToEnd/Examples.Enums.EndToEnd.csproj --configuration Release -warnaserror
 
-      # A package consumer that references only Json, EntityFrameworkCore, AspNetCore (two hops from Enums)
-      # or AspNetCore.OpenApi must get the Enums generator: tests/PackageConsumer fails at run time when
-      # [StringEnum] metadata is missing.
+      # A package consumer that references any single CSharpEssentials package that depends on Enums (Json,
+      # EntityFrameworkCore, AspNetCore two hops away, AspNetCore.OpenApi, Validation through Results, Mediator)
+      # must get the Enums generator: tests/PackageConsumer fails at run time when [StringEnum] metadata is missing.
       - name: Pack to a local feed
         run: |
           dotnet build CSharpEssentials.slnx --no-restore --configuration Release -p:Version=0.0.0-ci.${{ github.run_id }}
@@ -51,6 +51,8 @@ jobs:
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.EntityFrameworkCore -p:CseVersion=0.0.0-ci.${{ github.run_id }}
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.AspNetCore -p:CseVersion=0.0.0-ci.${{ github.run_id }}
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.AspNetCore.OpenApi -p:CseVersion=0.0.0-ci.${{ github.run_id }}
+          dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Validation -p:CseVersion=0.0.0-ci.${{ github.run_id }}
+          dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Mediator -p:CseVersion=0.0.0-ci.${{ github.run_id }}
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7

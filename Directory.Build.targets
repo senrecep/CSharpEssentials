@@ -1,0 +1,16 @@
+<!-- Directory.Build.targets - Rules applied after each project has declared its items -->
+<Project>
+	<!-- Any CSharpEssentials package brings the CSharpEssentials.Enums generator and analyzers. A reference without PrivateAssets
+	     packs as exclude="Build,Analyzers", which would stop them one package before the consumer, so a packable project's
+	     references to other CSharpEssentials projects and packages default to PrivateAssets="contentfiles;build" (exclude="Build").
+	     Build stays private: buildTransitive/ already reaches transitive consumers. A reference that sets PrivateAssets keeps its
+	     value (the generator and code fix projects use "all"), and references that skip the output assembly are left alone. -->
+	<ItemGroup Condition="'$(IsPackable)' == 'true'">
+		<PackageReference Update="@(PackageReference)">
+			<PrivateAssets Condition="'%(PrivateAssets)' == '' and $([System.String]::Copy('%(Identity)').StartsWith('CSharpEssentials'))">contentfiles;build</PrivateAssets>
+		</PackageReference>
+		<ProjectReference Update="@(ProjectReference)">
+			<PrivateAssets Condition="'%(PrivateAssets)' == '' and '%(ReferenceOutputAssembly)' != 'false' and $([System.String]::Copy('%(Filename)').StartsWith('CSharpEssentials'))">contentfiles;build</PrivateAssets>
+		</ProjectReference>
+	</ItemGroup>
+</Project>

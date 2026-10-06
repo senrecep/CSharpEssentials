@@ -14,7 +14,7 @@
       helpers (ToWireName, TryParseWire, ParseWire, IsDefined, GetNames, GetValues).
       Includes EnumConventions, [EnumAlias], [EnumFallback], EnumValueParser, EnumValueFormatter,
       EnumMetadata, and analyzers with code fixes (CSE0002-CSE0016).
-      Any package that depends on Enums brings the generator: CSharpEssentials.Json, .Errors, .Results, .EntityFrameworkCore, .AspNetCore, .AspNetCore.OpenApi, .AspNetCore.Swashbuckle, .Http and the CSharpEssentials meta-package.
+      Any CSharpEssentials package brings the generator and analyzers.
     </Description>
     <PackageTags>
       Enums,StringEnum,EnumAttribute,EnumUtils,Serialization,SourceGenerator,CSharpEssentials
