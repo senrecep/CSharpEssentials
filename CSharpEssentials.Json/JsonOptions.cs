@@ -1,6 +1,7 @@
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Json;
 
@@ -40,7 +41,7 @@ public static class EnhancedJsonSerializerOptions
     /// </summary>
     public static readonly JsonSerializerOptions DefaultOptions = DefaultOptionsWithoutConverters.Create(options =>
     {
-        options.Converters.Add(new ConditionalStringEnumConverter());
+        options.AddEnumConventions(EnumConventions.Default);
         options.Converters.Add(new MultiFormatDateTimeConverterFactory());
         options.Converters.Add(new PolymorphicJsonConverterFactory());
     });

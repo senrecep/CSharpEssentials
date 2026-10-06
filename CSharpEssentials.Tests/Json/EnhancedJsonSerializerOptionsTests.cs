@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
 using FluentAssertions;
 
@@ -23,7 +24,7 @@ public class EnhancedJsonSerializerOptionsTests
     {
         JsonSerializerOptions options = EnhancedJsonSerializerOptions.DefaultOptions;
 
-        options.Converters.Should().Contain(c => c is ConditionalStringEnumConverter);
+        options.Converters.Should().Contain(c => c is EnumConverterFactory);
         options.Converters.Should().Contain(c => c is MultiFormatDateTimeConverterFactory);
         options.Converters.Should().Contain(c => c is PolymorphicJsonConverterFactory);
     }
@@ -34,16 +35,16 @@ public class EnhancedJsonSerializerOptionsTests
         JsonSerializerOptions options = EnhancedJsonSerializerOptions.DefaultOptionsWithDateTimeConverter;
 
         options.Converters.Should().Contain(c => c is MultiFormatDateTimeConverterFactory);
-        options.Converters.Should().NotContain(c => c is ConditionalStringEnumConverter);
+        options.Converters.Should().NotContain(c => c is EnumConverterFactory);
     }
 
     [Fact]
     public void CreateOptionsWithConverters_ShouldAddSpecifiedConverters()
     {
-        JsonSerializerOptions options = EnhancedJsonSerializerOptions.CreateOptionsWithConverters(new ConditionalStringEnumConverter());
+        JsonSerializerOptions options = EnhancedJsonSerializerOptions.CreateOptionsWithConverters(new EnumConverterFactory(EnumConventions.Default));
 
         options.Converters.Should().ContainSingle();
-        options.Converters[0].Should().BeOfType<ConditionalStringEnumConverter>();
+        options.Converters[0].Should().BeOfType<EnumConverterFactory>();
     }
 
     [Fact]
@@ -65,14 +66,14 @@ public class EnhancedJsonSerializerOptionsTests
             WriteIndented = true,
             PropertyNameCaseInsensitive = false
         };
-        source.Converters.Add(new ConditionalStringEnumConverter());
+        source.Converters.Add(new EnumConverterFactory(EnumConventions.Default));
 
         JsonSerializerOptions target = new();
         source.ApplyTo(target);
 
         target.WriteIndented.Should().BeTrue();
         target.PropertyNameCaseInsensitive.Should().BeFalse();
-        target.Converters.Should().Contain(c => c is ConditionalStringEnumConverter);
+        target.Converters.Should().Contain(c => c is EnumConverterFactory);
     }
 
     [Fact]
@@ -82,12 +83,12 @@ public class EnhancedJsonSerializerOptionsTests
         {
             WriteIndented = true
         };
-        source.Converters.Add(new ConditionalStringEnumConverter());
+        source.Converters.Add(new EnumConverterFactory(EnumConventions.Default));
 
         JsonSerializerOptions target = new();
         target.ApplyFrom(source);
 
         target.WriteIndented.Should().BeTrue();
-        target.Converters.Should().Contain(c => c is ConditionalStringEnumConverter);
+        target.Converters.Should().Contain(c => c is EnumConverterFactory);
     }
 }

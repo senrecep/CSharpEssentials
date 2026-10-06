@@ -129,7 +129,6 @@ public class StringEnumNamingTests
         StringEnumNaming.GetName(CustomNamed.Original).Should().Be("custom");
         StringEnumNaming.GetName(CustomNamed.Plain).Should().Be("plain");
         StringEnumNaming.GetNames<CustomNamed>().Should().Equal("custom", "plain");
-        StringEnumNaming.GetName(CustomNamed.Original, JsonNamingPolicy.CamelCase).Should().Be("custom");
     }
 
     [Fact]
@@ -142,19 +141,22 @@ public class StringEnumNamingTests
     }
 
     [Fact]
-    public void CustomPolicy_ShouldBeCachedSeparatelyFromDefault()
+    public void DefaultPolicy_ShouldBeAccepted()
     {
-        StringEnumNaming.GetNames<NamingStatus>().Should().Equal("active", "inactive", "pending_approval");
-        StringEnumNaming.GetNames<NamingStatus>(JsonNamingPolicy.CamelCase).Should().Equal("active", "inactive", "pendingApproval");
-        StringEnumNaming.GetName(NamingStatus.PendingApproval).Should().Be("pending_approval");
-        StringEnumNaming.GetName(NamingStatus.PendingApproval, JsonNamingPolicy.CamelCase).Should().Be("pendingApproval");
+        StringEnumNaming.GetName(NamingStatus.PendingApproval, JsonNamingPolicy.SnakeCaseLower).Should().Be("pending_approval");
+        StringEnumNaming.GetNames<NamingStatus>(StringEnumNaming.DefaultPolicy).Should().Equal("active", "inactive", "pending_approval");
     }
 
     [Fact]
-    public void CustomPolicy_TryParse_ShouldAcceptPolicyName()
+    public void CustomPolicy_ShouldThrowNotSupportedException()
     {
-        StringEnumNaming.TryParse("pendingApproval", out NamingStatus result, JsonNamingPolicy.CamelCase).Should().BeTrue();
-        result.Should().Be(NamingStatus.PendingApproval);
+        Action getName = () => StringEnumNaming.GetName(NamingStatus.PendingApproval, JsonNamingPolicy.CamelCase);
+        Action getNames = () => StringEnumNaming.GetNames<NamingStatus>(JsonNamingPolicy.KebabCaseLower);
+        Action tryParse = () => _ = StringEnumNaming.TryParse("pendingApproval", out NamingStatus _, JsonNamingPolicy.CamelCase);
+
+        getName.Should().Throw<NotSupportedException>().WithMessage("*CSharpEssentialsEnumNaming*");
+        getNames.Should().Throw<NotSupportedException>();
+        tryParse.Should().Throw<NotSupportedException>();
     }
 
     [Fact]
@@ -295,17 +297,6 @@ public class StringEnumNamingTests
 
         StringEnumNaming.TryParse(StringEnumNaming.GetName(Permissions.Read | Permissions.Execute), out Permissions flags).Should().BeTrue();
         flags.Should().Be(Permissions.Read | Permissions.Execute);
-    }
-
-    [Fact]
-    public void RoundTrip_WithCamelCasePolicy_ShouldReturnOriginal()
-    {
-        foreach (AcronymKind value in Enum.GetValues<AcronymKind>())
-        {
-            string name = StringEnumNaming.GetName(value, JsonNamingPolicy.CamelCase);
-            StringEnumNaming.TryParse(name, out AcronymKind parsed, JsonNamingPolicy.CamelCase).Should().BeTrue();
-            parsed.Should().Be(value);
-        }
     }
 
     private static void AssertRoundTrip<TEnum>() where TEnum : struct, Enum
