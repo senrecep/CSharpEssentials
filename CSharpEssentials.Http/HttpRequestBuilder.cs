@@ -18,6 +18,8 @@ public sealed class HttpRequestBuilder
     private EnumConventions? _enumConventions;
     private EnumWireFormat? _enumWriteAs;
     private HttpContent? _content;
+    private object? _jsonValue;
+    private JsonSerializerOptions? _jsonOptions;
     private bool _followRedirects;
     private int _maxRedirects = 5;
 
@@ -103,12 +105,15 @@ public sealed class HttpRequestBuilder
     public HttpRequestBuilder WithContent(HttpContent content)
     {
         _content = content;
+        _jsonValue = null;
         return this;
     }
 
     public HttpRequestBuilder WithJsonContent(object value, JsonSerializerOptions? options = null)
     {
-        _content = JsonContent.Create(value, options: options ?? ResolveJsonOptions());
+        _jsonValue = value;
+        _jsonOptions = options;
+        _content = null;
         return this;
     }
 
@@ -151,7 +156,9 @@ public sealed class HttpRequestBuilder
         foreach ((string key, string value) in _headers)
             request.Headers.TryAddWithoutValidation(key, value);
 
-        if (_content is not null)
+        if (_jsonValue is not null)
+            request.Content = JsonContent.Create(_jsonValue, options: _jsonOptions ?? ResolveJsonOptions());
+        else if (_content is not null)
             request.Content = _content;
 
         return request;
