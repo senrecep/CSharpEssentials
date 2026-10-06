@@ -362,6 +362,8 @@ services.AddValidatorsFromAssemblies([
 
 Default lifetime: `Scoped`. Pass a `ServiceLifetime` parameter to override.
 
+Registration uses `TryAddEnumerable`, so registering the same validator twice (for example, `AddValidator` and an assembly scan) adds it once.
+
 Validators with no scoped dependencies may be registered as `Singleton`. Validators that inject scoped services (e.g. `DbContext`, `ICurrentUser`) must be `Scoped`.
 
 ## Mediator Pipeline Integration
