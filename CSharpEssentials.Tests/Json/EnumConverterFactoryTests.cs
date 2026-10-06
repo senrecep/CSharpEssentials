@@ -589,6 +589,17 @@ public class EnumConverterFactoryTests
     }
 
     [Fact]
+    public void StringEnum_Without_Generated_Metadata_Excluded_By_CanHandle_Should_Not_Be_Claimed()
+    {
+        EnumConventions excluded = EnumConventions.Default with { CanHandle = static _ => false };
+        EnumConverterFactory factory = new(excluded);
+
+        factory.CanConvert(typeof(UnreachableHolder<int>.Status)).Should().BeFalse();
+        EnumConventions.Default.CanHandle(typeof(UnreachableHolder<int>.Status)).Should().BeTrue();
+        JsonSerializer.Serialize(UnreachableHolder<int>.Status.First, Options(conventions: excluded)).Should().Be("0");
+    }
+
+    [Fact]
     public void StringEnum_Without_Generated_Metadata_Should_Use_The_Reflection_Opt_In()
     {
         JsonSerializerOptions options = new JsonSerializerOptions().AddEnumConventionsWithReflection(EnumConventions.Default with

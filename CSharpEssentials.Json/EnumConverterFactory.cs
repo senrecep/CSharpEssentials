@@ -75,8 +75,9 @@ public class EnumConverterFactory : JsonConverterFactory
         if (ReflectionFallback is not null || EnumMetadata.TryGet(typeToConvert, out _))
             return Conventions.CanHandle(typeToConvert);
 
-        // A [StringEnum] enum without generated metadata is claimed so CreateConverter fails loudly instead of writing numbers.
-        return typeToConvert.IsDefined(typeof(StringEnumAttribute), inherit: false);
+        // A [StringEnum] enum without generated metadata is claimed so CreateConverter fails loudly instead of writing numbers,
+        // unless the conventions exclude it.
+        return typeToConvert.IsDefined(typeof(StringEnumAttribute), inherit: false) && Conventions.CanHandle(typeToConvert);
     }
 
     /// <inheritdoc />
