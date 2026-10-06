@@ -56,7 +56,7 @@ public readonly partial record struct Result
         foreach (IResultBase result in results)
         {
             if (result.IsFailure)
-                return Failure(result.ErrorsOrEmptyArray);
+                return result.ErrorsOrEmptyArray;
         }
         return Success();
     }

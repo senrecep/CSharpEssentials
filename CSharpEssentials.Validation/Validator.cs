@@ -105,7 +105,7 @@ public static class Validator
     internal static Result<T> BuildResult<T>(T instance, RuleContext<T> ctx) =>
         ctx.HasErrors
             ? Result<T>.Failure(ctx.Errors)
-            : Result<T>.Success(instance);
+            : instance;
 
     /// <summary>
     /// Validates <paramref name="instance"/> inline with a synchronous configuration delegate.

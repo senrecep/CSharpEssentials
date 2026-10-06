@@ -8,13 +8,13 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        return Result.Failure(errorMapper(Errors));
+        return errorMapper(Errors);
     }
 
     public Result MapError(Func<Error, Error> errorMapper)
     {
         if (IsSuccess)
             return this;
-        return Result.Failure(errorMapper(FirstError));
+        return errorMapper(FirstError);
     }
 }
