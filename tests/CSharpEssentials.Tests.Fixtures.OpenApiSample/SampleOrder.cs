@@ -27,6 +27,9 @@ public sealed class SampleOrder
 
     public SampleSize Size { get; init; }
 
+    [DefaultValue(SampleQuota.Unlimited)]
+    public SampleQuota Quota { get; init; } = SampleQuota.Unlimited;
+
     public SamplePlain Plain { get; init; }
 }
 

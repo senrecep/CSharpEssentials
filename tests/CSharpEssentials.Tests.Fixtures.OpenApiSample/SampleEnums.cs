@@ -47,6 +47,13 @@ public enum SampleSize : long
     Huge = 5_000_000_000,
 }
 
+[StringEnum]
+public enum SampleQuota : ulong
+{
+    Low = 1,
+    Unlimited = ulong.MaxValue,
+}
+
 /// <summary>No <see cref="StringEnumAttribute"/> and no metadata: the documents keep the framework schema.</summary>
 public enum SamplePlain
 {

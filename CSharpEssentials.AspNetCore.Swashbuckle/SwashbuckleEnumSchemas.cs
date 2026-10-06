@@ -1,7 +1,9 @@
 using System.Globalization;
 using CSharpEssentials.Enums;
+using Microsoft.OpenApi;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Writers;
 
 namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 
@@ -112,5 +114,16 @@ internal static class SwashbuckleEnumSchemas
     private static IOpenApiAny Number(string text) =>
         EnumUsage.TryParseNumber(text, out long number)
             ? new OpenApiLong(number)
-            : new OpenApiDouble(double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture));
+            : new OpenApiUnsignedLong(ulong.Parse(text, NumberStyles.None, CultureInfo.InvariantCulture));
+
+    // A ulong value above long.MaxValue: Microsoft.OpenApi 1.x has no unsigned primitive and OpenApiDouble would round it,
+    // so the exact value is written through the writer's decimal overload, which holds every ulong.
+    private sealed class OpenApiUnsignedLong(ulong value) : IOpenApiPrimitive
+    {
+        public AnyType AnyType => AnyType.Primitive;
+
+        public PrimitiveType PrimitiveType => PrimitiveType.Long;
+
+        public void Write(IOpenApiWriter writer, OpenApiSpecVersion specVersion) => writer.WriteValue(value);
+    }
 }

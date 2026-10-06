@@ -80,6 +80,14 @@
             }
           ]
         },
+        "quota": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/SampleQuota"
+            }
+          ],
+          "default": 18446744073709551615
+        },
         "size": {
           "$ref": "#/components/schemas/SampleSize"
         },
@@ -109,6 +117,23 @@
         "Read",
         "Write",
         "Delete"
+      ]
+    },
+    "SampleQuota": {
+      "description": "| value | number | description |\n|---|---|---|\n| \u0060low\u0060 | 1 |  |\n| \u0060unlimited\u0060 | 18446744073709551615 |  |",
+      "enum": [
+        1,
+        18446744073709551615
+      ],
+      "format": "int64",
+      "type": "integer",
+      "x-enum-descriptions": [
+        "",
+        ""
+      ],
+      "x-enum-varnames": [
+        "Low",
+        "Unlimited"
       ]
     },
     "SampleSize": {
