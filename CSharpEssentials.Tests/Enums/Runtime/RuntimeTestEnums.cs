@@ -1,10 +1,12 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Tests.Enums.Runtime;
 
+[SuppressMessage("Usage", "CSE0013", Justification = "Fixture for the reflection fallback, which reads the attributes.")]
 public enum ParserStatus
 {
     [Description("Waiting for work")]

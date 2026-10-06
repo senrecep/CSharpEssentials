@@ -378,19 +378,19 @@ internal enum GeneratedAttributes
     [Description("Waiting for work")]
     [EnumAlias("Started")]
     [JsonStringEnumMemberName("waiting")]
-    Pending,
+    Pending = 0,
 
     [JsonStringEnumMemberName("done")]
     [EnumMember(Value = "finished")]
-    Completed,
+    Completed = 1,
 
     [EnumMember(Value = "cancelled_by_user")]
-    Cancelled,
+    Cancelled = 2,
 
-    HTTPStatus,
+    HTTPStatus = 3,
 
     [Obsolete("Use Cancelled")]
-    Aborted,
+    Aborted = 4,
 
     [EnumFallback]
     Unknown = 100,

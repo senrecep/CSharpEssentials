@@ -16,7 +16,7 @@ namespace Sample
         public const string HTTPShippedWireName = "shipped";
         public const string OnHoldSnakeCase = "on_hold";
         public const string OnHoldKebabCase = "on-hold";
-        public const string OnHoldWireName = "on \"hold\"";
+        public const string OnHoldWireName = "on_\"hold\"";
         public const string PausedSnakeCase = "paused";
         public const string PausedKebabCase = "paused";
         public const string PausedWireName = "paused";

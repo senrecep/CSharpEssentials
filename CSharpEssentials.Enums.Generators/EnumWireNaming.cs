@@ -44,6 +44,19 @@ internal static class EnumWireNaming
         return Default;
     }
 
+    /// <summary>Whether the MSBuild property value is unset, empty or one of the naming names (case-insensitive).</summary>
+    public static bool IsValid(string? value)
+    {
+        if (value is null || value.Trim().Length == 0)
+            return true;
+
+        string trimmed = value.Trim();
+        return Names.Any(name => string.Equals(name, trimmed, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The names accepted by <see cref="Parse"/>.</summary>
+    public static string ValidNames => string.Join(", ", Names);
+
     /// <summary>The effective naming: the enum attribute, then the project setting, then <see cref="SnakeCaseLower"/>.</summary>
     public static int Resolve(int enumNaming, int projectNaming)
     {
