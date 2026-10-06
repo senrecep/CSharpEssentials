@@ -1,6 +1,68 @@
 # Migrating from 4.x to 5.0
 
-5.0 applies one set of enum conventions (`EnumConventions` from `CSharpEssentials.Enums`) to JSON, ASP.NET Core binding and output. The full outline is in section 19 of the [enum conventions design](../design/CSharpEssentials.Enums-DESIGN.md).
+5.0 applies one set of enum conventions (`EnumConventions` from `CSharpEssentials.Enums`) to JSON, ASP.NET Core binding and output, OpenAPI and EF Core. The full outline is in section 19 of the [enum conventions design](../design/CSharpEssentials.Enums-DESIGN.md); every breaking change is listed in [ADR-007](../adr/ADR-007-enum-conventions.md#breaking-changes-in-50). The [end-to-end sample](../../examples/Examples.Enums.EndToEnd/README.md) shows the finished setup.
+
+Suggested order:
+
+1. Packages: add `CSharpEssentials.AspNetCore.Swashbuckle` or `CSharpEssentials.AspNetCore.OpenApi` ([OpenAPI](#openapi-csharpessentialsaspnetcoreswashbuckle-csharpessentialsaspnetcoreopenapi)).
+2. Registration: `AddEnumBinding` → `AddEnumConventions`, `ConditionalStringEnumConverter` → `AddEnumConventions`, `EnumConventionOptions` → `EnumConventions`.
+3. Build and fix the obsolete warnings (generated helpers, `StringEnumNaming`).
+4. Keep old clients on numbers where needed ([Legacy numeric output](#legacy-numeric-output)).
+5. Deploy with tolerant reads and no storage change, then convert the database columns one at a time ([Database rollout](#ef-core-enum-columns-database-rollout-csharpessentialsentityframeworkcore)).
+
+## New defaults
+
+`EnumConventions.Default` is what every layer uses unless you pass your own instance (`AddEnumConventions(c => c with { ... })`, `ConfigureEnumConventions(conventions)`):
+
+| Setting | Default | Meaning |
+|---|---|---|
+| Wire name | snake_case lower (`PendingApproval` → `pending_approval`) | decided at build time: `[JsonStringEnumMemberName]` > `[EnumMember]` > `[StringEnum(Naming = ...)]` > `<CSharpEssentialsEnumNaming>` > snake_case lower |
+| `AcceptNumbers` | `true` | defined numbers (`1`, `"1"`) are read; undefined numbers never are |
+| `AcceptMemberNames` | `true` | `PendingApproval` is read next to `pending_approval`; aliases (`[EnumAlias]`) always are |
+| `CaseInsensitive` | `true` | `PENDING_APPROVAL` is read |
+| `UnknownValue` | `UseFallback` | tolerant reads (EF, client responses, consumers) map unknown values to the `[EnumFallback]` member; request input always rejects them |
+| `WriteAs` | `String` | JSON and responses write wire names; `Number` per group or globally |
+| `Storage` | `String` | EF stores the wire name (`text` on PostgreSQL) |
+| `FlagsStorage` | `Integer` | EF stores `[Flags]` as an integer bitmask |
+| `CheckConstraints` | `true` | EF adds `ck_{table}_{column}_enum` |
+| `CanHandle` | enums with generated metadata (`[StringEnum]`) | everything else keeps the framework default |
+
+## Enums without `[StringEnum]`
+
+Plain enums fall through to the framework defaults in every layer; nothing throws:
+
+- JSON: not handled by `AddEnumConventions`. A `JsonStringEnumConverter` the host registered still applies to them.
+- Binding and output: stock Minimal API and MVC binding, number output.
+- EF Core: EF's integer column, no converter, no check constraint.
+- OpenAPI: the generator's default schema.
+
+4.x handled them through reflection when a predicate (`CanBind`, `canConvert`, `CanConvert`) selected them. Add `[StringEnum]` to adopt the conventions. The reflection opt-ins (`AddEnumConventionsWithReflection`, `EnumConverterFactory.CreateWithReflectionFallback`, `ConfigureEnumConventionsWithReflection`) are not trimming or AOT safe. A `[StringEnum]` enum the generator cannot emit metadata for (private, or nested in a generic type) reports CSE0015, and its converter throws instead of falling back to numbers.
+
+## Naming and generated helpers (`CSharpEssentials.Enums`)
+
+| 4.x | 5.0 |
+|---|---|
+| `value.ToSnakeCase()` | `value.ToWireName()` |
+| `OrderStatusExtensions.TryParse(text, out status)`, `Parse(text)` | `OrderStatusExtensions.TryParseWire(text, out status)`, `ParseWire(text)` |
+| `StringEnumNaming` (runtime policy, reflection cache) | `EnumMetadata` and the generated helpers |
+| a custom `JsonNamingPolicy` for enums | `[StringEnum(Naming = EnumNaming.KebabCaseLower)]`, `<CSharpEssentialsEnumNaming>KebabCaseLower</CSharpEssentialsEnumNaming>` in `Directory.Build.props`, or `[JsonStringEnumMemberName]` per member |
+
+The old helpers stay as obsolete members whose message names the replacement. `ToSnakeCase()` keeps its 4.x output, which can differ from the wire name for acronyms and digits: `ToWireName()` matches `JsonNamingPolicy.SnakeCaseLower` (`HTTPStatus` → `http_status`). Check values you stored or compared from `ToSnakeCase()` before switching; reads accept the old spelling.
+
+## JSON (`CSharpEssentials.Json`)
+
+```csharp
+// 4.x
+options.Converters.Add(new ConditionalStringEnumConverter(JsonNamingPolicy.SnakeCaseLower, allowIntegerValues: true));
+
+// 5.0 (ASP.NET Core hosts: AddEnumConventions() does this for the Minimal API and MVC JsonOptions)
+options.AddEnumConventions(EnumConventions.Default);
+```
+
+- `ConditionalStringEnumConverter` is obsolete; `AllowUndefinedValues` is removed (compile break). Undefined numbers are rejected. Consumers that must survive newer producers add an `[EnumFallback]` member and read in `EnumReadMode.Data` (the default of `AddEnumConventions` on `JsonSerializerOptions`).
+- `[Flags]` values are written as arrays (`["read","write"]`); the comma string `"read, write"` is still read. Clients that parse the string must read arrays.
+- Member names are read in any casing, and aliases are read.
+- `EnhancedJsonSerializerOptions`, `PolymorphicJsonConverterFactory`/`PolymorphicJsonConverter<T>` and the `ConvertTo*`/`ConvertFrom*` helpers carry `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`. Trim and AOT builds with warnings as errors see IL2026/IL3050 there; pass a source-generated `JsonSerializerContext`.
 
 ## ASP.NET Core enum binding (`CSharpEssentials.AspNetCore`)
 
@@ -103,6 +165,12 @@ To keep numbers everywhere and opt new APIs into strings, set `AddEnumConvention
 
 ## EF Core enum storage (`CSharpEssentials.EntityFrameworkCore`)
 
+| 4.x | 5.0 |
+|---|---|
+| `ConfigureEnumConventions(params Assembly[])` | `ConfigureEnumConventions(conventions)`, no assembly scan |
+| `EnumConventionOptions.CanConvert` | `EnumConventions.CanHandle` |
+| `EnumConventionOptions.UseLegacySnakeCase = true` | `existingStorage: EnumStoredAs.LegacySnakeCase` or `HasLegacyEnumStorage(EnumStoredAs.LegacySnakeCase)` until the column is converted |
+
 The obsolete 4.x `ConfigureEnumConventions(params Assembly[])` and `ConfigureEnumConventions(Action<EnumConventionOptions>, ...)` forward to the 5.0 convention, with these changes:
 
 - They now add the check constraint like the new API, and `UseLegacySnakeCase = true` no longer applies a max length. The next migration adds the constraints; pass `existingStorage: EnumStoredAs.LegacySnakeCase` or call `HasLegacyEnumStorage` to keep the old column shape.
@@ -110,13 +178,14 @@ The obsolete 4.x `ConfigureEnumConventions(params Assembly[])` and `ConfigureEnu
 - The new `ConfigureEnumConventions(EnumConventions, EnumStoredAs?)` leaves enums without generated metadata to EF Core.
 - Compiled models (`dbcontext optimize`) are not supported for properties with enum conventions in 5.0.
 
-## EF Core enum columns: converting existing data (`CSharpEssentials.EntityFrameworkCore`)
+## EF Core enum columns: database rollout (`CSharpEssentials.EntityFrameworkCore`)
 
-5.0 stores `[StringEnum]` enums by wire name with a check constraint. Existing columns keep their format with `existingStorage` or `HasLegacyEnumStorage` until you convert them. Convert one column at a time:
+5.0 stores `[StringEnum]` enums by wire name in a `text` column (provider length elsewhere) with a check constraint, and `[Flags]` as an integer bitmask. Columns with a manual `HasConversion` are skipped until you remove it. Roll out one column at a time:
 
-1. **Audit.** Run `EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer)` in production (pass `provider: "Microsoft.EntityFrameworkCore.Sqlite"` for SQLite). Fix or map every value it returns.
-2. **Change the model.** Remove `HasLegacyEnumStorage` (or opt the property in with `HasEnumStorage(EnumStorage.String)`) and run `dotnet ef migrations add`.
-3. **Edit the migration.** Delete the generated `AlterColumn` for the column and put `ConvertEnumColumn` in its place, after `DropCheckConstraint` and before `AddCheckConstraint`. Build errors with CSE0014 if you forget to delete the `AlterColumn`.
+1. **Audit.** Run the read-only query of `EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer)` in production (pass `provider: "Microsoft.EntityFrameworkCore.Sqlite"` for SQLite). Fix or map every value it returns. Do this before the first 5.0 migration if the column was managed by the 4.x `ConfigureEnumConventions`: that migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint.
+2. **Deploy tolerant reads.** Upgrade to 5.0 without changing what is written: `ConfigureEnumConventions(conventions, existingStorage: EnumStoredAs.Integer)` for plain integer columns, or `HasLegacyEnumStorage(EnumStoredAs.MemberName)` (`Integer`, `CamelCase`, `LegacySnakeCase`, `FlagsText`) per property. Reads accept every known spelling from now on; writes and query parameters keep the old format, so filters still match and older instances still read new rows. `dotnet ef migrations add Upgrade5` should produce an empty migration.
+3. **Convert.** Remove `HasLegacyEnumStorage` (or opt the property in with `HasEnumStorage(EnumStorage.String)`) and run `dotnet ef migrations add`. In the generated migration, delete the `AlterColumn` for the column and put `ConvertEnumColumn` in its place, after `DropCheckConstraint` when the column already has one. CSE0014 fails the build if the `AlterColumn` is left in.
+4. **Add the constraint.** Keep the generated `AddCheckConstraint` after `ConvertEnumColumn`, so every converted row is checked. Deploy after every pre-5.0 instance is drained; older instances cannot read the new format.
 
 ```csharp
 protected override void Up(MigrationBuilder migrationBuilder)
@@ -137,11 +206,23 @@ protected override void Down(MigrationBuilder migrationBuilder)
 | EF default integers | `EnumStoredAs.Integer` |
 | `HasConversion<string>()` member names, 3.x `ToSnakeCase` names, camelCase, mixed spellings | `EnumStoredAs.Text` (accepts every known spelling) |
 | `[Flags]` stored as `"Read, Write"` | `EnumStoredAs.FlagsText` with `to: EnumStorage.Integer` |
-| Enum inside a PostgreSQL `jsonb` document | `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` |
+| Enum inside a PostgreSQL `jsonb` document | `ConvertEnumJsonPath<TEnum>("orders", "payload", ["status"])` (optional: reads are tolerant) |
 
-4. **Deploy** after every pre-5.0 instance is drained; older instances cannot read the new format.
+A value that matches no spelling is never written as `NULL`: text targets keep it and the constraint of step 4 rejects it, integer targets abort the migration with an error naming the value. `Down()` restores the format, not the original bytes: a column that held mixed spellings comes back in the one format you name. On PostgreSQL drop a column default that cannot be cast to the new type before the conversion and recreate it after. SQL is generated for PostgreSQL and SQLite only.
 
-`Down()` restores the format, not the original bytes: a column that held mixed spellings comes back in the one format you name. On PostgreSQL drop a column default that cannot be cast to the new type before the conversion and recreate it after. SQL is generated for PostgreSQL and SQLite only.
+## Validation (`CSharpEssentials.Validation`)
+
+New rules `IsDefinedEnum()`, `IsOneOf(...)` and `HasOnlyDefinedFlags()` report the codes `{Prop}.IsDefinedEnum`, `{Prop}.IsOneOf` and `{Prop}.HasOnlyDefinedFlags`; the message lists the allowed values like binding errors.
+
+## Outgoing HTTP clients (`CSharpEssentials.Http`)
+
+- `ToQueryString(object)`, `ToQueryString(object, EnumConventions, EnumWireFormat?)`, `WithQueryString(Uri, object)` and `WithQueryString(Uri, object, EnumConventions, EnumWireFormat?)` read public properties through reflection and carry `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]` on net8.0+. Trim and AOT builds see IL2026/IL3050; pass a `Dictionary<string, string?>` or use `WithQueryString(name, value)`.
+- `HttpRequestBuilder.WithEnumConventions(conventions)` formats enums in routes and queries; flags and collections become repeated keys. Use `WithEnumConventions(conventions, EnumWireFormat.Number)` for servers that accept only integers.
+- Refit, RestEase and Flurl are not referenced; put `AddEnumConventions(conventions)` on the client's `JsonSerializerOptions` and format route and query values with `EnumValueFormatter.TryFormat` (recipes in section 13.1 of the design).
+
+## Message bus
+
+There is no bus package. A bus that serializes with System.Text.Json takes the same JSON options, for example MassTransit: `cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumReadMode.Data, writeAs: EnumWireFormat.Number))`. Upgrade consumers first (they read numbers and names), then switch producers from `Number` to `String`.
 
 ## OpenAPI (`CSharpEssentials.AspNetCore.Swashbuckle`, `CSharpEssentials.AspNetCore.OpenApi`)
 
