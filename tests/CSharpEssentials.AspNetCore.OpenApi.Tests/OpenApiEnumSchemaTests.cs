@@ -213,6 +213,17 @@ public class OpenApiEnumSchemaTests
         orders["x-enum-wire-format"].Should().BeNull();
     }
 
+    [Fact]
+    public async Task Document_Should_StillCompleteEnumSchemas_When_AnEndpointHasNoResponseBody()
+    {
+        IReadOnlyDictionary<string, string> documents = await OpenApiSampleHost.GetDocumentsAsync(
+            OpenApiSpecVersion.OpenApi3_0,
+            configureApp: static app => app.MapPost("/v1/touch/{status}", static (SampleStatus status) => { }).WithGroupName("v1"));
+
+        Operation(documents["v1"], "/v1/touch/{status}", "post")["responses"]!["200"]!["content"].Should().BeNull();
+        Component(documents["v1"], "SampleStatus")["enum"]!.AsArray().Select(static value => value!.GetValue<string>()).Should().Equal("pending", "pending_approval", "waiting", "unknown");
+    }
+
     private static JsonNode Component(string json, string name) =>
         JsonNode.Parse(json)!["components"]!["schemas"]![name]!;
 
