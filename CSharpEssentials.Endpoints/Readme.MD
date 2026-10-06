@@ -62,7 +62,7 @@ app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAs
 ```
 
 - Uses the same discovery rules, ordering, conventions and options as the generated registries.
-- Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the loadable types are mapped and each loader exception is logged at `Warning`.
+- Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007, CSE1008) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the loadable types are mapped and each loader exception is logged at `Warning`.
 - Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Prefer the generated methods in trimmed and Native AOT apps.
 
 ## API versioning
@@ -150,7 +150,8 @@ The bundled analyzer reports types the generator cannot map. Invalid types are s
 | CSE1004 | Warning | Endpoint declares instance fields, auto-properties or a constructor with parameters. Endpoint types are never instantiated; take dependencies as handler parameters. Code fix: removes the state when nothing else uses it. |
 | CSE1005 | Warning | Two endpoints in the same group map the same HTTP method and constant route (`MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` on the `Map` parameter). Ungrouped endpoints count as one group. |
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped. |
-| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract or open-generic. |
+| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct. |
+| CSE1008 | Error | Endpoint or group type is a `ref struct`. Generated code passes it as a generic type argument, which ref structs cannot be, so it is not mapped. |
 
 The bundled code fix for CSE1004 ("Remove instance state") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
 

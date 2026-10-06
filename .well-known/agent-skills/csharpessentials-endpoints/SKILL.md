@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-endpoints
-description: Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1007.
+description: Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1008.
 ---
 
 # CSharpEssentials.Endpoints
@@ -135,7 +135,8 @@ Same discovery rules, ordering and options as the generated registries. Types th
 | CSE1004 | Warning | Endpoint declares instance state (fields, auto-properties, constructor parameters). Code fix removes unused state. |
 | CSE1005 | Warning | Two endpoints in the same group map the same HTTP method and constant route. |
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped. |
-| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract or open-generic. |
+| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct. |
+| CSE1008 | Error | Endpoint or group type is a `ref struct`. Generated code passes it as a generic type argument, which ref structs cannot be, so it is not mapped. |
 
 ---
 

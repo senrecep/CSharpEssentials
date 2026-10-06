@@ -72,10 +72,20 @@ internal static class EndpointDiagnostics
     public static readonly DiagnosticDescriptor InvalidGroupTarget = new(
         "CSE1007",
         "Invalid endpoint group target",
-        "Group target '{1}' of '{0}' must be a concrete, closed type that implements IEndpointGroup; '{0}' is not mapped",
+        "Group target '{1}' of '{0}' must be a concrete, closed, non-ref struct type that implements IEndpointGroup; '{0}' is not mapped",
         Category,
         DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         description: "The typeof form of [EndpointGroup] cannot constrain its argument, so the target is checked here instead of failing in generated code.",
+        helpLinkUri: HelpLink);
+
+    public static readonly DiagnosticDescriptor RefStructType = new(
+        "CSE1008",
+        "Ref struct endpoint type cannot be mapped",
+        "Type '{0}' is a ref struct and is not mapped; declare it as a class or a non-ref struct",
+        Category,
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        description: "Generated code passes endpoint and group types as generic type arguments to EndpointMapper, which does not allow ref struct type arguments, so ref struct endpoints and groups are skipped.",
         helpLinkUri: HelpLink);
 }

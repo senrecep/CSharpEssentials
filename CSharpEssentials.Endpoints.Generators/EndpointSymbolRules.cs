@@ -96,6 +96,7 @@ internal static class EndpointSymbolRules
         target is INamedTypeSymbol group &&
         group.TypeKind is not TypeKind.Error &&
         !group.IsUnboundGenericType &&
+        !group.IsRefLikeType &&
         IsGroup(group) &&
         !IsAbstractOrOpenGeneric(group);
 
