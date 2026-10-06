@@ -12,8 +12,13 @@ internal static class EnumInfoCache<TEnum> where TEnum : struct, Enum
         get
         {
             EnumInfo<TEnum>? value = Registered;
-            // A type-only reference does not run the module initializer of the declaring assembly; run it once and retry.
-            return value is null && EnumMetadata.TryRunModuleInitializer(typeof(TEnum).Module) ? Registered : value;
+            if (value is null && EnumMetadata.TryGet(typeof(TEnum), out IEnumInfo? info))
+            {
+                value = (EnumInfo<TEnum>)info;
+                Registered = value;
+            }
+
+            return value;
         }
     }
 

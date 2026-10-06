@@ -1,3 +1,4 @@
+using System.Runtime.Loader;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Tests.Fixtures.EnumsContracts;
 using FluentAssertions;
@@ -51,5 +52,37 @@ public class EnumRegistrationTests
 
         formatted.Should().BeTrue();
         text.Should().Be("http-shipped");
+    }
+
+    [Fact]
+    public void Parallel_First_Lookups_Should_All_Find_Metadata()
+    {
+        const int threads = 16;
+        string path = typeof(ContractStatus).Assembly.Location;
+
+        for (int round = 0; round < 20; round++)
+        {
+            // A fresh load context gives a module whose initializer has not run yet.
+            Type enumType = new AssemblyLoadContext("enum-registration-race-" + round)
+                .LoadFromAssemblyPath(path)
+                .GetType(typeof(ContractStatus).FullName!, throwOnError: true)!;
+            using Barrier barrier = new(threads);
+            Task<bool>[] lookups = new Task<bool>[threads];
+            for (int i = 0; i < threads; i++)
+            {
+                lookups[i] = Task.Factory.StartNew(
+                    () =>
+                    {
+                        barrier.SignalAndWait();
+                        return EnumMetadata.TryGet(enumType, out IEnumInfo? info) && info.EnumType == enumType;
+                    },
+                    CancellationToken.None,
+                    TaskCreationOptions.LongRunning,
+                    TaskScheduler.Default);
+            }
+
+            Task.WaitAll(lookups);
+            lookups.Select(static lookup => lookup.Result).Should().AllBeEquivalentTo(true);
+        }
     }
 }

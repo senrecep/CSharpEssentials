@@ -55,9 +55,9 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
         });
 
         IncrementalValueProvider<EquatableArray<string>> registry = enums
-            .Select(static (model, _) => QualifiedExtensionsClass(model))
+            .Select(static (model, _) => StringEnumSourceWriter.RegistryEntry(model.FullyQualifiedName, QualifiedExtensionsClass(model)))
             .Collect()
-            .Select(static (classes, _) => new EquatableArray<string>([.. classes.OrderBy(static name => name, StringComparer.Ordinal)]))
+            .Select(static (entries, _) => new EquatableArray<string>([.. entries.OrderBy(static entry => entry, StringComparer.Ordinal)]))
             .WithTrackingName(RegistryStep);
 
         IncrementalValueProvider<bool> hasModuleInitializer = context.CompilationProvider
@@ -66,11 +66,11 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(registry.Combine(settings).Combine(hasModuleInitializer), static (spc, input) =>
         {
-            ((EquatableArray<string> classes, GeneratorSettings generatorSettings), bool hasAttribute) = input;
-            if (classes.Count == 0 || !generatorSettings.SupportsRegistration)
+            ((EquatableArray<string> entries, GeneratorSettings generatorSettings), bool hasAttribute) = input;
+            if (entries.Count == 0 || !generatorSettings.SupportsRegistration)
                 return;
 
-            spc.AddSource(StringEnumSourceWriter.RegistryClassName + ".g.cs", StringEnumSourceWriter.WriteRegistry(classes));
+            spc.AddSource(StringEnumSourceWriter.RegistryClassName + ".g.cs", StringEnumSourceWriter.WriteRegistry(entries));
             if (!hasAttribute)
                 spc.AddSource("ModuleInitializerAttribute.g.cs", StringEnumSourceWriter.WriteModuleInitializerPolyfill());
         });
