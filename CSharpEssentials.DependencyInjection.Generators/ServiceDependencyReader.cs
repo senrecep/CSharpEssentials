@@ -21,13 +21,16 @@ internal static class ServiceDependencyReader
 
             AttributeData? fromKeyed = parameter.GetAttributes()
                 .FirstOrDefault(static attribute => ServiceTypeInspector.IsContainerAttribute(attribute, "FromKeyedServicesAttribute"));
-            string? key = fromKeyed is { ConstructorArguments.Length: 1 } && !fromKeyed.ConstructorArguments[0].IsNull
-                ? ConstantFormatter.Format(fromKeyed.ConstructorArguments[0])
-                : null;
+            bool inheritsKey = fromKeyed is { ConstructorArguments.Length: 0 };
+            string? key = fromKeyed is { ConstructorArguments.Length: 1 } &&
+                fromKeyed.AttributeConstructor?.Parameters[0].Type.SpecialType == SpecialType.System_Object &&
+                !fromKeyed.ConstructorArguments[0].IsNull
+                    ? ConstantFormatter.Format(fromKeyed.ConstructorArguments[0])
+                    : null;
             string? openServiceType = parameter.Type is INamedTypeSymbol { IsGenericType: true } named && !TypeNames.IsGenericDefinition(named)
                 ? TypeNames.FullyQualified(named.OriginalDefinition.ConstructUnboundGenericType())
                 : null;
-            dependencies.Add(new ServiceDependency(parameter.Name, TypeNames.FullyQualified(parameter.Type), openServiceType, key));
+            dependencies.Add(new ServiceDependency(parameter.Name, TypeNames.FullyQualified(parameter.Type), openServiceType, key, inheritsKey));
         }
 
         return dependencies;
