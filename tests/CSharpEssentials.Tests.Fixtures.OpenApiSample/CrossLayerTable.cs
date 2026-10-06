@@ -12,6 +12,7 @@ public static class CrossLayerTable
 {
     private const string StatusComponent = """{"enum":["pending","pending_approval","unknown"],"type":"string"}""";
     private const string NullableStatusParameter = """{"allOf":[{"$ref":"#/components/schemas/GoldenOrderStatus"}],"nullable":true}""";
+    private const string NullableStatusParameter31 = """{"oneOf":[{"$ref":"#/components/schemas/GoldenOrderStatus"},{"type":"null"}]}""";
 
     public static IReadOnlyList<CrossLayerRow> Rows { get; } =
     [
@@ -105,6 +106,7 @@ public static class CrossLayerTable
             Header = "pending",
             Column = "pending",
             OpenApiParameter = NullableStatusParameter,
+            OpenApi31Parameter = NullableStatusParameter31,
             OpenApiComponent = StatusComponent,
         },
         // Nullable without a value: JSON null, no route value, no query parameter, no header, SQL NULL.
@@ -120,6 +122,7 @@ public static class CrossLayerTable
             Header = null,
             Column = null,
             OpenApiParameter = NullableStatusParameter,
+            OpenApi31Parameter = NullableStatusParameter31,
             OpenApiComponent = StatusComponent,
         },
     ];

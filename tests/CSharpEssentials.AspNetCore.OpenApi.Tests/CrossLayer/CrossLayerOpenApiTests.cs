@@ -10,21 +10,35 @@ namespace CSharpEssentials.AspNetCore.OpenApi.Tests.CrossLayer;
 /// </summary>
 public class CrossLayerOpenApiTests
 {
-    private static readonly Lazy<Task<IReadOnlyDictionary<string, string>>> Documents = new(() =>
+    private static readonly Lazy<Task<IReadOnlyDictionary<string, string>>> Documents30 = new(() =>
         OpenApiSampleHost.GetDocumentsAsync(OpenApiSpecVersion.OpenApi3_0, configureApp: static app => app.MapCrossLayerApi()));
+
+    private static readonly Lazy<Task<IReadOnlyDictionary<string, string>>> Documents31 = new(() =>
+        OpenApiSampleHost.GetDocumentsAsync(OpenApiSpecVersion.OpenApi3_1, configureApp: static app => app.MapCrossLayerApi()));
 
     public static TheoryData<string> Rows() => [.. CrossLayerTable.Rows.Select(static row => row.Name)];
 
     [Theory]
     [MemberData(nameof(Rows))]
-    public async Task OpenApi_Should_DescribeTheParameterAndComponent(string name)
+    public async Task OpenApi30_Should_DescribeTheParametersAndComponent(string name)
     {
         CrossLayerRow row = CrossLayerTable.Get(name);
-        IReadOnlyDictionary<string, string> documents = await Documents.Value;
+        string document = (await Documents30.Value)[row.Document];
 
-        string document = documents[row.Document];
+        foreach (string endpoint in CrossLayerOpenApi.Endpoints)
+            CrossLayerOpenApi.Parameter(document, row, endpoint).Should().Be(row.OpenApiParameter, endpoint);
+        CrossLayerOpenApi.Component(document, row).Should().Be(row.MicrosoftOpenApiComponent ?? row.OpenApiComponent);
+    }
 
-        CrossLayerOpenApi.Parameter(document, row).Should().Be(row.OpenApiParameter);
+    [Theory]
+    [MemberData(nameof(Rows))]
+    public async Task OpenApi31_Should_DescribeTheParametersAndComponent(string name)
+    {
+        CrossLayerRow row = CrossLayerTable.Get(name);
+        string document = (await Documents31.Value)[row.Document];
+
+        foreach (string endpoint in CrossLayerOpenApi.Endpoints)
+            CrossLayerOpenApi.Parameter(document, row, endpoint).Should().Be(row.OpenApi31Parameter ?? row.OpenApiParameter, endpoint);
         CrossLayerOpenApi.Component(document, row).Should().Be(row.MicrosoftOpenApiComponent ?? row.OpenApiComponent);
     }
 }
