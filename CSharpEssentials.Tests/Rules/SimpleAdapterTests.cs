@@ -38,7 +38,7 @@ public class SimpleAdapterTests
     public void Evaluate_FuncTContextResult_Failure_ShouldReturnFailure()
     {
         var error = Error.Failure("CODE", "Message");
-        Func<TestContext, Result> rule = _ => Result.Failure(error);
+        Func<TestContext, Result> rule = _ => error;
         Result result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsFailure.Should().BeTrue();
         result.FirstError.Code.Should().Be("CODE");
@@ -96,7 +96,7 @@ public class SimpleAdapterTests
     [Fact]
     public void Evaluate_FuncTContextResultTResult_Success_ShouldReturnValue()
     {
-        Func<TestContext, Result<int>> rule = _ => Result.Success(42);
+        Func<TestContext, Result<int>> rule = _ => 42;
         Result<int> result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -117,7 +117,7 @@ public class SimpleAdapterTests
     {
         using CancellationTokenSource cts = new();
         CancellationToken captured = default;
-        Func<TestContext, CancellationToken, Result<int>> rule = (_, ct) => { captured = ct; return Result.Success(42); };
+        Func<TestContext, CancellationToken, Result<int>> rule = (_, ct) => { captured = ct; return 42; };
         Result<int> result = RuleEngine.Evaluate(rule, new TestContext(), cts.Token);
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);

@@ -152,7 +152,7 @@ public class ConditionalRuleAdapterTests
     {
         TestContext ctx = new();
         var error = Error.Failure("E1", "Fail");
-        Func<TestContext, Result> condition = _ => Result.Failure(error);
+        Func<TestContext, Result> condition = _ => error;
         Func<TestContext, Result> success = c => { c.ExecutedRules.Add("Success"); return Result.Success(); };
         Func<TestContext, Result> failure = c => { c.ExecutedRules.Add("Failure"); return Result.Success(); };
         Result result = RuleEngine.If(condition, success, failure, ctx);
@@ -163,9 +163,9 @@ public class ConditionalRuleAdapterTests
     [Fact]
     public void If_FuncTResult_Success_ShouldExecuteSuccessBranch()
     {
-        Func<TestContext, Result<int>> condition = _ => Result.Success(0);
-        Func<TestContext, Result<int>> success = _ => Result.Success(42);
-        Func<TestContext, Result<int>> failure = _ => Result.Success(-1);
+        Func<TestContext, Result<int>> condition = _ => 0;
+        Func<TestContext, Result<int>> success = _ => 42;
+        Func<TestContext, Result<int>> failure = _ => -1;
         Result<int> result = RuleEngine.If(condition, success, failure, new TestContext());
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -176,8 +176,8 @@ public class ConditionalRuleAdapterTests
     {
         var error = Error.Failure("E1", "Fail");
         Func<TestContext, Result<int>> condition = _ => Result.Failure<int>(error);
-        Func<TestContext, Result<int>> success = _ => Result.Success(42);
-        Func<TestContext, Result<int>> failure = _ => Result.Success(-1);
+        Func<TestContext, Result<int>> success = _ => 42;
+        Func<TestContext, Result<int>> failure = _ => -1;
         Result<int> result = RuleEngine.If(condition, success, failure, new TestContext());
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(-1);
@@ -205,9 +205,9 @@ public class ConditionalRuleAdapterTests
     [Fact]
     public void If_FuncWithTokenTResult_Success_ShouldReturnValue()
     {
-        Func<TestContext, CancellationToken, Result<int>> condition = (_, _) => Result.Success(0);
-        Func<TestContext, CancellationToken, Result<int>> success = (_, _) => Result.Success(42);
-        Func<TestContext, CancellationToken, Result<int>> failure = (_, _) => Result.Success(-1);
+        Func<TestContext, CancellationToken, Result<int>> condition = (_, _) => 0;
+        Func<TestContext, CancellationToken, Result<int>> success = (_, _) => 42;
+        Func<TestContext, CancellationToken, Result<int>> failure = (_, _) => -1;
         Result<int> result = RuleEngine.If(condition, success, failure, new TestContext());
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);

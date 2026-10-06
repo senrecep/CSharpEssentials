@@ -144,7 +144,7 @@ public sealed class ResilienceCancellationTests
         Func<CancellationToken, Task<Result<int>>> operation = async _ =>
         {
             await cts.CancelAsync();
-            return Result<int>.Success(42);
+            return 42;
         };
 
         Result<int> result = await operation.RetryIfFailed(

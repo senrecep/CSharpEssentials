@@ -41,7 +41,7 @@ public class ValidationResultExtensionsTests
     public async Task Result_ValidateWithAsync_Validator_ShouldReturnSuccess_WhenValidationPasses()
     {
         TestModel model = new("Alice", 30);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
         TestModelValidator validator = new();
 
         Result<TestModel> result = await source.ValidateWithAsync(validator);
@@ -54,7 +54,7 @@ public class ValidationResultExtensionsTests
     public async Task Result_ValidateWithAsync_Validator_ShouldReturnFailure_WhenValidationFails()
     {
         TestModel model = new("", -5);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
         TestModelValidator validator = new();
 
         Result<TestModel> result = await source.ValidateWithAsync(validator);
@@ -86,7 +86,7 @@ public class ValidationResultExtensionsTests
     public void Result_ValidateWith_ShouldReturnSuccess_WhenValidationPasses()
     {
         TestModel model = new("Alice", 30);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
 
         Result<TestModel> result = source.ValidateWith((m, rules) =>
         {
@@ -101,7 +101,7 @@ public class ValidationResultExtensionsTests
     public void Result_ValidateWith_ShouldReturnFailure_WhenValidationFails()
     {
         TestModel model = new("", 30);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
 
         Result<TestModel> result = source.ValidateWith((m, rules) =>
         {
@@ -134,7 +134,7 @@ public class ValidationResultExtensionsTests
     public async Task Result_ValidateWithAsync_SyncDelegate_ShouldReturnSuccess_WhenValidationPasses()
     {
         TestModel model = new("Alice", 30);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
 
         Result<TestModel> result = await source.ValidateWithAsync((m, rules) =>
         {
@@ -149,7 +149,7 @@ public class ValidationResultExtensionsTests
     public async Task Result_ValidateWithAsync_SyncDelegate_ShouldReturnFailure_WhenValidationFails()
     {
         TestModel model = new("", 30);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
 
         Result<TestModel> result = await source.ValidateWithAsync((m, rules) =>
         {
@@ -183,7 +183,7 @@ public class ValidationResultExtensionsTests
     public async Task Result_ValidateWithAsync_AsyncDelegate_ShouldReturnSuccess_WhenValidationPasses()
     {
         TestModel model = new("Alice", 30);
-        Result<TestModel> source = Result.Success(model);
+        Result<TestModel> source = model;
 
         Result<TestModel> result = await source.ValidateWithAsync((m, rules, _) =>
         {
