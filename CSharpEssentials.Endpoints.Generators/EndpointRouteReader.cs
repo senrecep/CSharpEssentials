@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
 namespace CSharpEssentials.Endpoints.Generators;
@@ -82,6 +83,11 @@ internal static class EndpointRouteReader
             value = conversion.Operand;
         }
 
+        if (value is { Syntax: CollectionExpressionSyntax collection, SemanticModel: { } semanticModel })
+        {
+            return GetConstantMethods(collection, semanticModel);
+        }
+
         if (value is not IArrayCreationOperation { Initializer: { } initializer })
         {
             return [];
@@ -91,6 +97,23 @@ internal static class EndpointRouteReader
         foreach (IOperation element in initializer.ElementValues)
         {
             if (element.ConstantValue is not { HasValue: true, Value: string method })
+            {
+                return [];
+            }
+
+            methods.Add(method.ToUpperInvariant());
+        }
+
+        return [.. methods.Distinct(StringComparer.Ordinal)];
+    }
+
+    private static IReadOnlyList<string> GetConstantMethods(CollectionExpressionSyntax collection, SemanticModel semanticModel)
+    {
+        List<string> methods = [];
+        foreach (CollectionElementSyntax element in collection.Elements)
+        {
+            if (element is not ExpressionElementSyntax { Expression: { } expression } ||
+                semanticModel.GetConstantValue(expression) is not { HasValue: true, Value: string method })
             {
                 return [];
             }

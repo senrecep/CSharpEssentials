@@ -237,6 +237,33 @@ public class EndpointsAnalyzerTests
         }
         """;
 
+    private const string Cse1005CollectionExpressionSource = """
+        public sealed class ReportsGroup : IEndpointGroup
+        {
+            public static string Prefix => "reports";
+        }
+
+        [EndpointGroup<ReportsGroup>]
+        public sealed class ReadReport : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapMethods("/x", ["get"], () => "read");
+        }
+
+        [EndpointGroup<ReportsGroup>]
+        public sealed class ReadReportAgain : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapMethods("/x", ["GET", "HEAD"], () => "again");
+        }
+
+        [EndpointGroup<ReportsGroup>]
+        public sealed class SpreadReport : IEndpoint
+        {
+            private static readonly string[] Methods = ["GET"];
+
+            public static void Map(IEndpointRouteBuilder app) => app.MapMethods("/x", [.. Methods], () => "spread");
+        }
+        """;
+
     private const string Cse1005NegativeSource = """
         public sealed class UsersGroup : IEndpointGroup
         {
@@ -445,6 +472,16 @@ public class EndpointsAnalyzerTests
             "\"/\"");
         duplicates.Select(static d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Should().Contain(
             "Endpoint 'Sample.Api.CreateOrderAgain' maps POST '/', which 'Sample.Api.CreateOrder' also maps in the same group");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1005_When_MapMethods_Uses_Collection_Expression()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1005CollectionExpressionSource);
+
+        diagnostics.Where(static d => d.Id == "CSE1005").Select(static d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Should().BeEquivalentTo(
+            "Endpoint 'Sample.Api.ReadReport' maps GET '/x', which 'Sample.Api.ReadReportAgain' also maps in the same group",
+            "Endpoint 'Sample.Api.ReadReportAgain' maps GET '/x', which 'Sample.Api.ReadReport' also maps in the same group");
     }
 
     [Fact]
