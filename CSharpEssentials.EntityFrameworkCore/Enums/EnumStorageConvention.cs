@@ -2,6 +2,7 @@ using System.Globalization;
 using CSharpEssentials.EntityFrameworkCore.Converters;
 using CSharpEssentials.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Metadata.Conventions;
@@ -193,6 +194,10 @@ internal sealed class EnumStorageConvention : IModelFinalizingConvention
                 element.Builder.HasConversion(converter);
             else
                 property.Builder.HasConversion(converter);
+
+            // A text[] provider mapping brings an array comparer; the property itself holds a single enum value.
+            if (flagsArray && convention.IsPostgres)
+                property.Builder.HasValueComparer(ValueComparer.CreateDefault<TEnum>(favorStructuralComparisons: false));
 
             if (inJson && element is null)
                 SetJsonReaderWriter(new EnumJsonValueReaderWriter<TEnum>(info, convention._conventions, storage, legacyFormat));
