@@ -36,8 +36,8 @@
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <PackageReference Include="CSharpEssentials.Errors" Condition="'$(UseProjectReferences)' != 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
-    <PackageReference Include="CSharpEssentials.Json" PrivateAssets="contentfiles;build" Condition="'$(UseProjectReferences)' != 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" PrivateAssets="contentfiles;build" Condition="'$(UseProjectReferences)' == 'true'" />
+    <PackageReference Include="CSharpEssentials.Json" Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <PackageReference Include="CSharpEssentials.Resilience" Condition="'$(UseProjectReferences)' != 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Resilience\CSharpEssentials.Resilience.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
