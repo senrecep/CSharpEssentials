@@ -56,7 +56,7 @@ services.Decorate<IClock>((inner, sp) => new CachedClock(inner));
 services.TryDecorate<IOrderService, AuditingOrderService>();         // returns false when nothing matches
 ```
 
-Attribute decorators are applied in ascending `Order`. Every matching registration is decorated, and its lifetime and key are kept. The original is moved to a hidden registration under a private key, so it never shows up in `GetServices<T>()` or `GetKeyedServices<T>(KeyedService.AnyKey)`. The container disposes both the decorator and the original. If decoration fails, the collection is left unchanged.
+Attribute decorators are applied in ascending `Order`. Every matching registration is decorated, and its lifetime and key are kept. The original is moved to a hidden registration under a private key and a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The container disposes both the decorator and the original. If decoration fails, the collection is left unchanged.
 
 ## Generated registry
 

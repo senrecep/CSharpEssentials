@@ -222,6 +222,24 @@ public class ServiceCollectionDecorationExtensionsTests
     }
 
     [Fact]
+    public void Decorate_Should_NotExposeInnerRegistration_When_ResolvingAllKeyedObjects()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IGreeter, Greeter>();
+        services.AddSingleton<IGreeter>(new NamedGreeter("instance"));
+        services.AddTransient<IGreeter>(static _ => new NamedGreeter("factory"));
+        services.AddKeyedTransient<IGreeter>("k", static (_, key) => new NamedGreeter("keyed-" + key));
+
+        services.Decorate<IGreeter, LoudGreeter>().Decorate<IGreeter, LoudGreeter>("k");
+
+        using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+        using IServiceScope scope = provider.CreateScope();
+        scope.ServiceProvider.GetKeyedServices<object>(KeyedService.AnyKey).Should().BeEmpty();
+        scope.ServiceProvider.GetKeyedServices<IGreeter>(KeyedService.AnyKey).Should().ContainSingle().Which.Greet().Should().Be("KEYED-K");
+        scope.ServiceProvider.GetServices<IGreeter>().Select(static greeter => greeter.Greet()).Should().Equal("HELLO", "INSTANCE", "FACTORY");
+    }
+
+    [Fact]
     public void Decorate_Should_DisposeDecoratorAndInner()
     {
         TrackingGreeter.Disposed.Clear();
