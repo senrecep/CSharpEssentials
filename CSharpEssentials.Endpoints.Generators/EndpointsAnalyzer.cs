@@ -31,10 +31,20 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
-        context.RegisterSymbolAction(AnalyzeType, SymbolKind.NamedType);
-        context.RegisterCompilationAction(ReportRegistryCollisions);
         context.RegisterCompilationStartAction(static start =>
         {
+            ConcurrentBag<string> ownEndpoints = [];
+            start.RegisterSymbolAction(
+                symbolContext =>
+                {
+                    AnalyzeType(symbolContext);
+                    if (symbolContext.Symbol is INamedTypeSymbol type && EndpointSymbolRules.GetGeneratedChain(type) is not null)
+                    {
+                        ownEndpoints.Add(type.ToDisplayString());
+                    }
+                },
+                SymbolKind.NamedType);
+            start.RegisterCompilationEndAction(end => ReportRegistryCollisions(end, !ownEndpoints.IsEmpty));
             ConcurrentBag<EndpointRoute> routes = [];
             start.RegisterOperationAction(
                 operationContext =>
@@ -49,7 +59,7 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         });
     }
 
-    private static void ReportRegistryCollisions(CompilationAnalysisContext context)
+    private static void ReportRegistryCollisions(CompilationAnalysisContext context, bool hasOwnEndpoints)
     {
         IAssemblySymbol assembly = context.Compilation.Assembly;
         bool isExecutable = context.Compilation.Options.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication;
@@ -61,7 +71,12 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(context.Compilation, context.CancellationToken);
+        List<ReferencedRegistry> registries = [.. ReferencedRegistryReader.Read(context.Compilation, context.CancellationToken)];
+        if (hasOwnEndpoints && !EndpointSymbolRules.HasAttribute(assembly, EndpointSymbolRules.ExcludeAttribute))
+        {
+            registries.Add(new ReferencedRegistry(assembly.Name, RegistryNames.RegistryNamespace + RegistryNames.ForAssembly(assembly) + "EndpointRegistry"));
+        }
+
         foreach (IGrouping<string, ReferencedRegistry> collision in ReferencedRegistryReader.FindCollisions(registries))
         {
             context.ReportDiagnostic(Diagnostic.Create(

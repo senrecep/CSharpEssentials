@@ -54,6 +54,21 @@ internal static class EndpointSymbolRules
         return true;
     }
 
+    public static GroupChain? GetGeneratedChain(INamedTypeSymbol type)
+    {
+        if (!IsEndpoint(type) ||
+            !IsAccessible(type) ||
+            IsAbstractOrOpenGeneric(type) ||
+            type.IsRefLikeType ||
+            HasAttribute(type, ExcludeAttribute))
+        {
+            return null;
+        }
+
+        GroupChain chain = ResolveGroupChain(type);
+        return chain.Status == GroupChainStatus.Valid ? chain : null;
+    }
+
     public static bool IsAbstractOrOpenGeneric(INamedTypeSymbol type)
     {
         if (type.IsAbstract)

@@ -149,7 +149,52 @@ public class DependencyInjectionAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE2009").Subject;
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
         diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Be(
-            "Assemblies 'Foo.Api', 'FooApi' all generate the service registry 'Microsoft.Extensions.DependencyInjection.FooApiServiceRegistry', so AddAllServices skips them; give each assembly a distinct name with [assembly: ServiceRegistryName(\"...\")]");
+            "Assemblies 'Foo.Api', 'FooApi' all generate the service registry 'Microsoft.Extensions.DependencyInjection.FooApiServiceRegistry', so AddAllServices leaves out the referenced ones; give each assembly a distinct name with [assembly: ServiceRegistryName(\"...\")]");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE2009_When_Referenced_Registry_Name_Collides_With_Own_Registry()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            "namespace Sample; [CSharpEssentials.DependencyInjection.RegisterScoped] public sealed class Worker; public static class Program { public static void Main() { } }",
+            OutputKind.ConsoleApplication,
+            "FooApi",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"));
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE2009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith(
+                "Assemblies 'Foo.Api', 'FooApi' all generate the service registry 'Microsoft.Extensions.DependencyInjection.FooApiServiceRegistry'");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE2009_When_Custom_Registry_Name_Collides_With_Referenced_Registry()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            "[assembly: CSharpEssentials.DependencyInjection.ServiceRegistryName(\"FooApi\")] namespace Sample; [CSharpEssentials.DependencyInjection.RegisterScoped] public sealed class Worker; public static class Program { public static void Main() { } }",
+            OutputKind.ConsoleApplication,
+            "Sample.App",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"));
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE2009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith("Assemblies 'Foo.Api', 'Sample.App' all generate");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE2009_When_Host_Without_Services_Shares_Referenced_Registry_Name()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            "public static class Program { public static void Main() { } }",
+            OutputKind.ConsoleApplication,
+            "FooApi",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"));
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE2009");
     }
 
     [Fact]

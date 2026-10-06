@@ -83,10 +83,10 @@ internal static class DependencyInjectionDiagnostics
     public static readonly DiagnosticDescriptor RegistryNameCollision = new(
         "CSE2009",
         "Referenced service registries share a name",
-        "Assemblies {0} all generate the service registry '{1}', so AddAllServices skips them; give each assembly a distinct name with [assembly: ServiceRegistryName(\"...\")]",
+        "Assemblies {0} all generate the service registry '{1}', so AddAllServices leaves out the referenced ones; give each assembly a distinct name with [assembly: ServiceRegistryName(\"...\")]",
         Category,
         DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "Registry names are derived from assembly names with separators removed, so 'Foo.Api' and 'FooApi' both produce 'FooApiServiceRegistry'. The generated aggregate cannot refer to an ambiguous type and leaves those registries out until each has a distinct name.",
+        description: "Registry names are derived from assembly names with separators removed, so 'Foo.Api' and 'FooApi' both produce 'FooApiServiceRegistry'. The generated aggregate cannot refer to an ambiguous type and leaves the referenced registries out until each has a distinct name. When the project's own registry has the same name, the aggregate calls only the project's own registry.",
         customTags: WellKnownDiagnosticTags.CompilationEnd);
 }

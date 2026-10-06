@@ -114,7 +114,7 @@ Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. An overload tak
 | CSE2006 | Info | Captive dependency: a singleton takes a scoped/transient service (or scoped takes transient) registered by attribute in the same project |
 | CSE2007 | Error | Class cannot be constructed by generated code (abstract, static, file-local, inaccessible, nested in a generic type) |
 | CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` |
-| CSE2009 | Warning | Two referenced assemblies produce the same registry name (`Foo.Api` and `FooApi` → `FooApiServiceRegistry`); `AddAllServices` skips both until one sets `[assembly: ServiceRegistryName("...")]` |
+| CSE2009 | Warning | Two referenced assemblies produce the same registry name (`Foo.Api` and `FooApi` → `FooApiServiceRegistry`); `AddAllServices` skips both until one sets `[assembly: ServiceRegistryName("...")]`. Also reported when the project's own registry has the same name as a referenced one; only the own registry is called |
 
 ---
 
