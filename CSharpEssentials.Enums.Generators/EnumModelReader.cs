@@ -10,13 +10,13 @@ namespace CSharpEssentials.Enums.Generators;
 /// </summary>
 internal static class EnumModelReader
 {
-    private const string JsonMemberNameAttribute = "System.Text.Json.Serialization.JsonStringEnumMemberNameAttribute";
-    private const string EnumMemberAttribute = "System.Runtime.Serialization.EnumMemberAttribute";
-    private const string EnumAliasAttribute = "CSharpEssentials.Enums.EnumAliasAttribute";
-    private const string EnumFallbackAttribute = "CSharpEssentials.Enums.EnumFallbackAttribute";
+    public const string JsonMemberNameAttribute = "System.Text.Json.Serialization.JsonStringEnumMemberNameAttribute";
+    public const string EnumMemberAttribute = "System.Runtime.Serialization.EnumMemberAttribute";
+    public const string EnumAliasAttribute = "CSharpEssentials.Enums.EnumAliasAttribute";
+    public const string EnumFallbackAttribute = "CSharpEssentials.Enums.EnumFallbackAttribute";
     private const string DescriptionAttribute = "System.ComponentModel.DescriptionAttribute";
     private const string ObsoleteAttribute = "System.ObsoleteAttribute";
-    private const string FlagsAttribute = "System.FlagsAttribute";
+    public const string FlagsAttribute = "System.FlagsAttribute";
 
     private static readonly SymbolDisplayFormat FullyQualifiedFormat = SymbolDisplayFormat.FullyQualifiedFormat;
 
@@ -32,14 +32,13 @@ internal static class EnumModelReader
         List<string> names = TypeNames(symbol);
 
         SpecialType underlying = symbol.EnumUnderlyingType?.SpecialType ?? SpecialType.System_Int32;
-        bool isSigned = underlying is SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_Int32 or SpecialType.System_Int64;
+        bool isSigned = IsSigned(symbol);
 
         List<EnumMemberModel> members = [];
-        foreach (ISymbol member in symbol.GetMembers())
+        foreach (IFieldSymbol field in ConstantFields(symbol))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (member is IFieldSymbol { HasConstantValue: true, ConstantValue: not null } field)
-                members.Add(ReadMember(field, isSigned, cancellationToken));
+            members.Add(ReadMember(field, isSigned, cancellationToken));
         }
 
         return new EnumModel(
@@ -56,7 +55,24 @@ internal static class EnumModelReader
             new EquatableArray<EnumMemberModel>([.. members]));
     }
 
-    private static EnumMemberModel ReadMember(IFieldSymbol field, bool isSigned, CancellationToken cancellationToken)
+    /// <summary>The enum members in declaration order, in the same order as <see cref="EnumModel.Members"/>.</summary>
+    public static List<IFieldSymbol> ConstantFields(INamedTypeSymbol symbol)
+    {
+        List<IFieldSymbol> fields = [];
+        foreach (ISymbol member in symbol.GetMembers())
+        {
+            if (member is IFieldSymbol { HasConstantValue: true, ConstantValue: not null } field)
+                fields.Add(field);
+        }
+
+        return fields;
+    }
+
+    public static bool IsSigned(INamedTypeSymbol symbol) =>
+        (symbol.EnumUnderlyingType?.SpecialType ?? SpecialType.System_Int32) is
+            SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_Int32 or SpecialType.System_Int64;
+
+    public static EnumMemberModel ReadMember(IFieldSymbol field, bool isSigned, CancellationToken cancellationToken)
     {
         object value = field.ConstantValue!;
         ulong raw = isSigned
@@ -154,7 +170,7 @@ internal static class EnumModelReader
         return type == SpecialType.System_UInt64 ? "ulong" : "int";
     }
 
-    private static bool HasAttribute(ISymbol symbol, string metadataName)
+    public static bool HasAttribute(ISymbol symbol, string metadataName)
     {
         foreach (AttributeData attribute in symbol.GetAttributes())
         {
@@ -165,7 +181,7 @@ internal static class EnumModelReader
         return false;
     }
 
-    private static int GetNamedInt(AttributeData attribute, string name)
+    public static int GetNamedInt(AttributeData attribute, string name)
     {
         foreach (KeyValuePair<string, TypedConstant> argument in attribute.NamedArguments)
         {

@@ -24,9 +24,9 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
     /// <summary>Tracking name of the <c>ModuleInitializerAttribute</c> availability check.</summary>
     public const string ModuleInitializerStep = "EnumModuleInitializer";
 
-    private const string AttributeName = "CSharpEssentials.Enums.StringEnumAttribute";
+    internal const string AttributeName = "CSharpEssentials.Enums.StringEnumAttribute";
 
-    private const string NamingProperty = "build_property.CSharpEssentialsEnumNaming";
+    internal const string NamingProperty = "build_property.CSharpEssentialsEnumNaming";
 
     private const string ModuleInitializerAttribute = "System.Runtime.CompilerServices.ModuleInitializerAttribute";
 
@@ -47,7 +47,12 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
             .Select(static (input, _) => CreateSettings(input.Left, input.Right))
             .WithTrackingName(SettingsStep);
 
-        context.RegisterSourceOutput(enums.Combine(settings), static (spc, input) =>
+        // An enum with an error diagnostic (CSE0002-CSE0004, CSE0008, CSE0009) gets no metadata, so the analyzer error is the one the user sees.
+        IncrementalValuesProvider<(EnumModel Model, GeneratorSettings Settings)> valid = enums
+            .Combine(settings)
+            .Where(static input => !EnumModelRules.HasErrors(input.Left, input.Right));
+
+        context.RegisterSourceOutput(valid, static (spc, input) =>
         {
             (EnumModel model, GeneratorSettings generatorSettings) = input;
             string prefix = model.Namespace.Length == 0 ? string.Empty : model.Namespace + ".";
@@ -55,8 +60,8 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
             spc.AddSource(prefix + model.MetadataName + "Extensions.g.cs", StringEnumSourceWriter.WriteExtensions(model, generatorSettings));
         });
 
-        IncrementalValueProvider<EquatableArray<string>> registry = enums
-            .Select(static (model, _) => StringEnumSourceWriter.RegistryEntry(model.FullyQualifiedName, QualifiedExtensionsClass(model)))
+        IncrementalValueProvider<EquatableArray<string>> registry = valid
+            .Select(static (input, _) => StringEnumSourceWriter.RegistryEntry(input.Model.FullyQualifiedName, QualifiedExtensionsClass(input.Model)))
             .Collect()
             .Select(static (entries, _) => new EquatableArray<string>([.. entries.OrderBy(static entry => entry, StringComparer.Ordinal)]))
             .WithTrackingName(RegistryStep);

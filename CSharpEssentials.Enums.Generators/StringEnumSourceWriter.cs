@@ -123,13 +123,16 @@ internal static class StringEnumSourceWriter
         return w.ToString();
     }
 
-    public static string[] WireNames(EnumModel model, GeneratorSettings settings)
+    public static string[] WireNames(EnumModel model, GeneratorSettings settings) =>
+        WireNames(model.Members, model.Naming, settings.ProjectNaming);
+
+    public static string[] WireNames(IReadOnlyList<EnumMemberModel> members, int enumNaming, int projectNaming)
     {
-        int naming = EnumWireNaming.Resolve(model.Naming, settings.ProjectNaming);
-        string[] names = new string[model.Members.Count];
+        int naming = EnumWireNaming.Resolve(enumNaming, projectNaming);
+        string[] names = new string[members.Count];
         for (int i = 0; i < names.Length; i++)
         {
-            EnumMemberModel member = model.Members[i];
+            EnumMemberModel member = members[i];
             names[i] = member.DeclaredWireName ?? EnumWireNaming.Convert(member.Name, naming);
         }
 

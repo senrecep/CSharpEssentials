@@ -48,7 +48,7 @@ public class StringEnumGeneratorHarnessTests
             [EnumMember(Value = "ignored")]
             HTTPShipped,
 
-            [EnumMember(Value = "on \"hold\"")]
+            [EnumMember(Value = "on_\"hold\"")]
             OnHold,
 
             [Obsolete("Use OnHold")]
@@ -293,14 +293,6 @@ public class StringEnumGeneratorHarnessTests
     public void Generated_Wire_Names_Should_Match_JsonNamingPolicy(EnumNaming naming)
     {
         string[] corpus = [.. ((IEnumerable<object[]>)EnumNameConverterTests.Corpus).Select(static row => (string)row[0])];
-        string source = $$"""
-            using CSharpEssentials.Enums;
-
-            namespace Corpus;
-
-            [StringEnum]
-            public enum Names { {{string.Join(", ", corpus)}} }
-            """;
         JsonNamingPolicy policy = naming switch
         {
             EnumNaming.SnakeCaseUpper => JsonNamingPolicy.SnakeCaseUpper,
@@ -310,10 +302,19 @@ public class StringEnumGeneratorHarnessTests
             _ => JsonNamingPolicy.SnakeCaseLower,
         };
 
-        Dictionary<string, string> wireNames = GenerateWireNames(
-            source,
-            new Dictionary<string, string> { ["build_property.CSharpEssentialsEnumNaming"] = naming.ToString() },
-            "Corpus.NamesExtensions");
+        // Wire names that differ only in case (Id and ID) collide (CSE0002), so they go to separate enums.
+        string[][] groups = [.. corpus
+            .GroupBy(name => policy.ConvertName(name), StringComparer.OrdinalIgnoreCase)
+            .SelectMany(static group => group.Select(static (name, index) => (name, index)))
+            .GroupBy(static entry => entry.index)
+            .Select(static group => group.Select(static entry => entry.name).ToArray())];
+        string source = "using CSharpEssentials.Enums;\n\nnamespace Corpus;\n\n" + string.Concat(
+            groups.Select(static (names, index) => $"[StringEnum]\npublic enum Names{index} {{ {string.Join(", ", names)} }}\n"));
+        Dictionary<string, string> options = new() { ["build_property.CSharpEssentialsEnumNaming"] = naming.ToString() };
+
+        Dictionary<string, string> wireNames = groups
+            .SelectMany((_, index) => GenerateWireNames(source, options, $"Corpus.Names{index}Extensions"))
+            .ToDictionary(static pair => pair.Key, static pair => pair.Value);
 
         wireNames.Should().HaveCount(corpus.Length);
         foreach (string name in corpus)
