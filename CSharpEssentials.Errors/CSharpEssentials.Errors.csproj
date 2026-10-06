@@ -37,12 +37,12 @@
   <ItemGroup>
     <PackageReference Include="CSharpEssentials.Core"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums"
+    <PackageReference Include="CSharpEssentials.Enums" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Core\CSharpEssentials.Core.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' == 'true'" />
     <!-- The Enums package ships the generator; project references need it explicitly for ErrorType's metadata. -->
     <ProjectReference Include="..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"

@@ -8,7 +8,7 @@ One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core
 dotnet add package CSharpEssentials.Enums
 ```
 
-The package contains the source generator, the analyzers and the code fixes. They also flow through `CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`, `.Http` and the `CSharpEssentials` meta-package: a project that references one of them gets `[StringEnum]` metadata, the CSE analyzers and the `CSharpEssentialsEnumNaming` property without a direct `CSharpEssentials.Enums` reference. Reference `CSharpEssentials.Enums` directly only when the project uses none of them.
+The package contains the source generator, the analyzers and the code fixes. Any package that depends on Enums brings the generator: `CSharpEssentials.Json`, `.Errors`, `.Results`, `.EntityFrameworkCore`, `.AspNetCore`, `.AspNetCore.OpenApi`, `.AspNetCore.Swashbuckle`, `.Http` and the `CSharpEssentials` meta-package. A project that references one of them gets `[StringEnum]` metadata, the CSE analyzers and the `CSharpEssentialsEnumNaming` property without a direct `CSharpEssentials.Enums` reference; `.Validation`, `.Mediator`, `.Any` and the other packages that reach it only further down their dependency graph do not. Reference `CSharpEssentials.Enums` directly only when the project uses none of the packages above.
 
 | Scenario | Packages |
 |---|---|

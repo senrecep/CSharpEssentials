@@ -54,9 +54,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.AspNetCore"
+    <PackageReference Include="CSharpEssentials.AspNetCore" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj"
+    <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 </Project>

@@ -1248,7 +1248,7 @@ if (result.IsFailure)
 
 **Why it exists:** `Enum.ToString()`, `Enum.Parse()` and `JsonStringEnumConverter` use reflection, disagree about naming between layers and are not NativeAOT friendly. `[StringEnum]` makes the generator write the metadata at compile time, and one `EnumConventions` instance decides how every layer reads and writes it.
 
-The generator, analyzers and code fixes of `CSharpEssentials.Enums` flow through `CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`, `.Http` and the `CSharpEssentials` meta-package; reference `CSharpEssentials.Enums` directly only in a project that uses none of them.
+The generator, analyzers and code fixes of `CSharpEssentials.Enums` flow through any package that depends on Enums: `CSharpEssentials.Json`, `.Errors`, `.Results`, `.EntityFrameworkCore`, `.AspNetCore`, `.AspNetCore.OpenApi`, `.AspNetCore.Swashbuckle`, `.Http` and the `CSharpEssentials` meta-package (`.Validation`, `.Mediator`, `.Any` and the other packages that reach it only further down their dependency graph do not); reference `CSharpEssentials.Enums` directly only in a project that uses none of them.
 
 ```csharp
 using System.Text.Json.Serialization;

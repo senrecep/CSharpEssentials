@@ -21,6 +21,10 @@ public class EnumsAnalyzerFlowTests
     [InlineData("CSharpEssentials.AspNetCore")]
     [InlineData("CSharpEssentials.Http")]
     [InlineData("CSharpEssentials")]
+    [InlineData("CSharpEssentials.AspNetCore.OpenApi")]
+    [InlineData("CSharpEssentials.AspNetCore.Swashbuckle")]
+    [InlineData("CSharpEssentials.Errors")]
+    [InlineData("CSharpEssentials.Results")]
     public void Dependent_Should_FlowEnumsAnalyzersToConsumers_When_Packed(string project)
     {
         string solution = FindSolutionDirectory();
