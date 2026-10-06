@@ -49,6 +49,12 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <!-- The OpenAPI packages read the enum conventions registration; both pin this package to the same version. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.AspNetCore.OpenApi" />
+    <InternalsVisibleTo Include="CSharpEssentials.AspNetCore.Swashbuckle" />
+  </ItemGroup>
+
   <!-- Package versions vary by target framework -->
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
     <PackageReference Include="Asp.Versioning.Http" />

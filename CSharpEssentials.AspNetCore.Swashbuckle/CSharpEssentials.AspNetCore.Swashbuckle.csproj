@@ -41,6 +41,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\shared\OpenApiEnums\*.cs" Link="OpenApiEnums\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
