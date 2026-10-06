@@ -16,6 +16,7 @@ CSE0009 | Usage | Error | StringEnumAnalyzer
 CSE0010 | Usage | Disabled | EnumUsageAnalyzer
 CSE0012 | Usage | Warning | StringEnumAnalyzer
 CSE0013 | Usage | Warning | StringEnumAnalyzer
+CSE0014 | Usage | Error | EnumMigrationAnalyzer
 CSE0015 | Usage | Warning | StringEnumAnalyzer
 CSE0016 | Usage | Error | StringEnumAnalyzer
 
