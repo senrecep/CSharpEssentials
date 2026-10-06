@@ -6,17 +6,22 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
 /// MVC result filter added by <see cref="EnumConventionsExtensions.AddEnumConventions"/>. When the action selects the format that is not
 /// <see cref="EnumConventions.WriteAs"/> (action <see cref="EnumWireFormatAttribute"/> &gt; controller attribute &gt; endpoint
-/// metadata such as <c>MapControllers().WithEnumWireFormat(...)</c>), an <see cref="ObjectResult"/> is written by an output
-/// formatter with the options of that format, and a <see cref="JsonResult"/> without its own settings gets those options.
+/// metadata such as <c>MapControllers().WithEnumWireFormat(...)</c>), an <see cref="ObjectResult"/> is written by the host's
+/// output formatters with the JSON formatter swapped for one with the options of that format (content negotiation, XML and
+/// 406 behave as before), and a <see cref="JsonResult"/> without its own settings gets those options.
 /// </summary>
-internal sealed class EnumWireFormatResultFilter(EnumWireFormatOutput output) : IResultFilter
+internal sealed class EnumWireFormatResultFilter(EnumWireFormatOutput output, IOptions<MvcOptions> mvcOptions) : IResultFilter
 {
+    private readonly Lazy<IOutputFormatter[]> _formatters = new(() => SwapJsonFormatter(mvcOptions.Value.OutputFormatters, output.MvcFormatter));
+
     // Action and controller attributes, read once per action.
     private readonly ConditionalWeakTable<ActionDescriptor, IEnumWireFormatMetadata?[]> _attributes = [];
 
@@ -32,7 +37,8 @@ internal sealed class EnumWireFormatResultFilter(EnumWireFormatOutput output) : 
         switch (context.Result)
         {
             case ObjectResult { Value: not (null or string) } objectResult when objectResult.Formatters.Count == 0:
-                objectResult.Formatters.Add(output.MvcFormatter);
+                foreach (IOutputFormatter formatter in _formatters.Value)
+                    objectResult.Formatters.Add(formatter);
                 break;
             case JsonResult { SerializerSettings: null } jsonResult:
                 jsonResult.SerializerSettings = output.MvcOptions;
@@ -45,6 +51,12 @@ internal sealed class EnumWireFormatResultFilter(EnumWireFormatOutput output) : 
     public void OnResultExecuted(ResultExecutedContext context)
     {
         // Nothing to do after the result is written.
+    }
+
+    private static IOutputFormatter[] SwapJsonFormatter(IEnumerable<IOutputFormatter> formatters, SystemTextJsonOutputFormatter replacement)
+    {
+        IOutputFormatter[] swapped = [.. formatters.Select(f => f is SystemTextJsonOutputFormatter ? replacement : f)];
+        return Array.IndexOf(swapped, replacement) >= 0 ? swapped : [replacement];
     }
 
     private IEnumWireFormatMetadata? Select(ActionDescriptor action, HttpContext httpContext)
