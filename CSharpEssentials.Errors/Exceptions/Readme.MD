@@ -104,11 +104,11 @@ public Result<User> CreateUser(UserDto dto)
     }
     catch (DomainException ex)
     {
-        return Result.Failure<User>(ex.Error);
+        return ex.Error;
     }
     catch (EnhancedValidationException ex)
     {
-        return Result.Failure<User>(ex.Errors);
+        return ex.Errors;
     }
 }
 ```

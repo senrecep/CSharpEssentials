@@ -91,8 +91,10 @@ public class GetUserQueryHandler(IUserRepository repo) : IQueryHandler<GetUserQu
 {
     public async ValueTask<Result<User>> Handle(GetUserQuery query, CancellationToken ct)
     {
-        var user = await repo.FindAsync(query.Id, ct);
-        return user ?? Result.Failure<User>(Error.NotFound("User.NotFound", "User not found"));
+        User? user = await repo.FindAsync(query.Id, ct);
+        if (user is null)
+            return Error.NotFound("User.NotFound", "User not found");
+        return user;
     }
 }
 ```

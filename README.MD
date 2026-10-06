@@ -78,7 +78,7 @@ public Result<User> GetUser(Guid id)
 {
     var user = _db.Find(id);
     if (user is null) return Error.NotFound("User.NotFound", "User not found");
-    return Result.Success(user);
+    return user;
 }
 
 // Chain operations — stops at first failure, no try/catch needed
@@ -124,9 +124,9 @@ AnyActionResult<double> area = shape.Match(
 Build complex validation logic from simple, reusable rules that return `Result<T>`.
 
 ```csharp
-Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() : Result.Failure(Error.Validation("Age.MinAge", "Must be 18+"));
-Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : Result.Failure(Error.Validation("Email.Invalid", "Invalid email"));
-Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Result.Failure(Error.Validation("Account.NotVerified", "Account not verified"));
+Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() : Error.Validation("Age.MinAge", "Must be 18+");
+Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email");
+Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Error.Validation("Account.NotVerified", "Account not verified");
 
 // AND — all rules must pass, collects every failure
 Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And(), user);

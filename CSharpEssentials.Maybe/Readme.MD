@@ -29,8 +29,8 @@ public Maybe<User> FindUser(int id)
     return user; // implicit from T? to Maybe<T>
 }
 
-Maybe<string> none = Maybe<string>.None;
-Maybe<int> value = Maybe<int>.From(42);
+Maybe<string> none = Maybe.None;
+Maybe<int> value = 42;
 ```
 
 ### Functional Chaining
@@ -68,7 +68,7 @@ Maybe<Order> order = FindOrder(1);
 Result<Order> result = order.ToResult(Error.NotFound("Order.Missing", "Order not found."));
 
 // Result -> Maybe
-Result<Order> result2 = Result.Success(new Order());
+Result<Order> result2 = new Order();
 Maybe<Order> maybe = result2.AsMaybe();
 ```
 
@@ -113,7 +113,7 @@ Maybe<User> user  = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(j
 ### TapNone — Side Effect on Absence
 
 ```csharp
-Maybe<int> maybe = Maybe<int>.None;
+Maybe<int> maybe = Maybe.None;
 
 maybe.TapNone(() => logger.LogWarning("Value missing"));  // called when None
 

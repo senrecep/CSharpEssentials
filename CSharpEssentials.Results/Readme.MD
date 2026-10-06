@@ -43,26 +43,27 @@ public Result DeleteUser(int id)
 
 ### Returning Failures
 
-Use `Result.Failure` or `Result<TValue>.Failure` to explicitly construct a failed result without throwing an exception:
+Return the `Error` itself. `Error`, `Error[]`, `List<Error>` and `HashSet<Error>` convert implicitly to `Result` and `Result<T>`, and a `T` value converts to `Result<T>`:
 
 ```csharp
-// Non-generic failure
-Result fail = Result.Failure(Error.Validation("Input.Invalid", "Input was invalid."));
-
-// Generic failure — no value, just an error
-Result<string> fail1 = Result.Failure<string>(Error.NotFound("User.NotFound", "User not found."));
-Result<string> fail2 = Result<string>.Failure(Error.Conflict("User.Duplicate", "User already exists."));
+// Single error
+Result fail = Error.Validation("Input.Invalid", "Input was invalid.");
+Result<string> notFound = Error.NotFound("User.NotFound", "User not found.");
 
 // Multiple errors in one failure
-Result<int> multiError = Result.Failure<int>(
+Result<int> multiError = new[]
+{
     Error.Validation("Name.Empty", "Name is required."),
-    Error.Validation("Email.Invalid", "Email is invalid."));
-
-// Implicit conversion from Error (shorthand)
-Result<string> implicit1 = Error.Unauthorized("Token.Expired", "Token has expired.");
+    Error.Validation("Email.Invalid", "Email is invalid.")
+};
 ```
 
-All three styles are equivalent — choose based on readability preference. `Result.Failure<T>` is the most explicit and self-documenting.
+Implicit conversion is the idiomatic style. Use the explicit factories when the compiler cannot infer the target type, for example with `var`, in a lambda whose return type is inferred, or as a generic argument:
+
+```csharp
+var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "User already exists."));
+Task<Result<int>> pending = Task.FromResult(Result.Success(42));
+```
 
 ### Chaining
 
@@ -100,7 +101,7 @@ string message = GetUser(10).Match(
 ```csharp
 var r1 = Result.Success();
 var r2 = Result.Success();
-var r3 = Result.Failure(Error.NotFound());
+Result r3 = Error.NotFound();
 
 Result combined = Result.And(r1, r2, r3); // Failure
 ```
@@ -150,7 +151,7 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 ### TapIf — Conditional Side Effects
 
 ```csharp
-Result<int> result = Result<int>.Success(42);
+Result<int> result = 42;
 
 // Predicate-based tap — action fires only when Success AND predicate is true
 result.TapIf(v => v > 10, v => logger.LogInformation("Large value: {Value}", v));
