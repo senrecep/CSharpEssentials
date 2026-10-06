@@ -38,6 +38,7 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
         List<Error>? errors = null;
         Dictionary<string, StringValues>? query = null;
         Dictionary<string, StringValues>? form = null;
+        HashSet<string>? claimed = null;
         IFormCollection? originalForm = request.HasFormContentType && Array.Exists(targets, static t => t.Source == EnumBindingSource.Form)
             ? await request.ReadFormAsync(context.RequestAborted)
             : null;
@@ -50,7 +51,8 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
             switch (target.Source)
             {
                 case EnumBindingSource.Route:
-                    if (request.RouteValues.TryGetValue(target.Key, out object? routeValue) && routeValue is string text)
+                    if (request.RouteValues.TryGetValue(target.Key, out object? routeValue) && routeValue is string text &&
+                        Claim(target, ref claimed))
                     {
                         if (!TryNormalize(target, text, out StringValues normalized))
                             (errors ??= []).Add(CreateError(target, text));
@@ -63,6 +65,7 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
 
                 case EnumBindingSource.Query:
                     if (request.Query.TryGetValue(target.Key, out StringValues queryValues) &&
+                        Claim(target, ref claimed) &&
                         Normalize(target, queryValues, ref errors) is { } queryResult)
                     {
                         query ??= request.Query.ToDictionary(static p => p.Key, static p => p.Value, StringComparer.OrdinalIgnoreCase);
@@ -83,6 +86,7 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
 
                 case EnumBindingSource.Form:
                     if (originalForm is not null && originalForm.TryGetValue(target.Key, out StringValues formValues) &&
+                        Claim(target, ref claimed) &&
                         Normalize(target, formValues, ref errors) is { } formResult)
                     {
                         form ??= originalForm.ToDictionary(static p => p.Key, static p => p.Value, StringComparer.OrdinalIgnoreCase);
@@ -146,6 +150,9 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
         normalized = new StringValues([.. output]);
         return true;
     }
+
+    private static bool Claim(EnumBindingTarget target, ref HashSet<string>? claimed) =>
+        !target.FirstSourceWins || (claimed ??= [with(StringComparer.OrdinalIgnoreCase)]).Add(target.Key);
 
     private static void Set(Dictionary<string, StringValues> values, string key, StringValues normalized)
     {

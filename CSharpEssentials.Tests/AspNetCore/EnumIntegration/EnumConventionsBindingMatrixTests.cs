@@ -233,6 +233,16 @@ public class EnumConventionsBindingMatrixTests
         response.ShouldBeProblem().Should().ContainSingle().Which.Description.Should().EndWith(AllowedStatuses);
     }
 
+    [Fact]
+    public async Task Mvc_Should_Validate_Only_The_First_Source_Of_An_Unannotated_Parameter()
+    {
+        await using EnumConventionsHost host = await EnumConventionsHost.StartMatrixAsync();
+
+        EcResponse response = await host.GetAsync("/mvc/route/Shipped?status=bogus");
+
+        response.Status.Should().Be(200);
+    }
+
     public static TheoryData<string> Apis => new() { "min", "mvc" };
 
     public static TheoryData<string, string> NullableRows => Rows(["query", "header", "form"]);
