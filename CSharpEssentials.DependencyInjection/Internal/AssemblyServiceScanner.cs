@@ -28,7 +28,8 @@ internal static class AssemblyServiceScanner
     public static void Scan(IServiceCollection services, ILogger? logger, IEnumerable<Assembly> assemblies)
     {
         List<(ServiceDescriptor Descriptor, RegistrationStrategy Strategy)> registrations = [];
-        List<Action<IServiceCollection>> decorators = [];
+        List<(int Order, int AssemblyIndex, string Name, Action<IServiceCollection> Apply)> decorators = [];
+        int assemblyIndex = 0;
 
         foreach (Assembly assembly in assemblies.Distinct())
         {
@@ -37,7 +38,6 @@ internal static class AssemblyServiceScanner
                 continue;
             }
 
-            List<(int Order, string Name, Action<IServiceCollection> Apply)> assemblyDecorators = [];
             IEnumerable<Type> candidates = GetLoadableTypes(assembly, logger)
                 .Where(static type => type.IsClass && !type.IsDefined(typeof(ExcludeFromRegistrationAttribute), inherit: false))
                 .OrderBy(static type => type.FullName, StringComparer.Ordinal);
@@ -53,15 +53,12 @@ internal static class AssemblyServiceScanner
                     else if (IsAttribute(attribute.AttributeType, "DecoratesAttribute"))
                     {
                         (int order, Action<IServiceCollection> apply) = CreateDecorator(type, attribute);
-                        assemblyDecorators.Add((order, type.FullName ?? type.Name, apply));
+                        decorators.Add((order, assemblyIndex, type.FullName ?? type.Name, apply));
                     }
                 }
             }
 
-            decorators.AddRange(assemblyDecorators
-                .OrderBy(static decorator => decorator.Order)
-                .ThenBy(static decorator => decorator.Name, StringComparer.Ordinal)
-                .Select(static decorator => decorator.Apply));
+            assemblyIndex++;
         }
 
         foreach ((ServiceDescriptor descriptor, RegistrationStrategy strategy) in registrations)
@@ -69,7 +66,12 @@ internal static class AssemblyServiceScanner
             ServiceRegistration.Apply(services, logger, descriptor, strategy);
         }
 
-        foreach (Action<IServiceCollection> decorator in decorators)
+        IEnumerable<Action<IServiceCollection>> ordered = decorators
+            .OrderBy(static decorator => decorator.Order)
+            .ThenBy(static decorator => decorator.AssemblyIndex)
+            .ThenBy(static decorator => decorator.Name, StringComparer.Ordinal)
+            .Select(static decorator => decorator.Apply);
+        foreach (Action<IServiceCollection> decorator in ordered)
         {
             decorator(services);
         }

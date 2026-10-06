@@ -12,8 +12,14 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.RegisterServices(services, logger);
             global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.RegisterServices(services, logger);
-            global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.ApplyDecorators(services);
-            global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.ApplyDecorators(services);
+            global::System.Collections.Generic.SortedSet<int> orders = new global::System.Collections.Generic.SortedSet<int>();
+            orders.UnionWith(global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.DecoratorOrders);
+            orders.UnionWith(global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.DecoratorOrders);
+            foreach (int order in orders)
+            {
+                global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.ApplyDecorators(services, order);
+                global::Microsoft.Extensions.DependencyInjection.SampleAppServiceRegistry.ApplyDecorators(services, order);
+            }
             return services;
         }
     }

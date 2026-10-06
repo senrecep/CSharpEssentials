@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace CSharpEssentials.DependencyInjection.Generators;
@@ -72,18 +73,58 @@ internal static class ServiceSourceWriter
 
         sb.Append("        }\n");
         sb.Append('\n');
+        DecoratorModel[] decorators = [.. types
+            .SelectMany(static type => type.Decorators)
+            .OrderBy(static decorator => decorator.Order)
+            .ThenBy(static decorator => decorator.SortName, StringComparer.Ordinal)];
+        int[] orders = [.. decorators.Select(static decorator => decorator.Order).Distinct()];
+
+        sb.Append("        /// <summary>Gets the distinct decorator orders declared in this assembly, ascending.</summary>\n");
+        sb.Append("        ").Append(NeverBrowsable).Append('\n');
+        sb.Append("        public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = ");
+        if (orders.Length == 0)
+        {
+            sb.Append("global::System.Array.Empty<int>();\n");
+        }
+        else
+        {
+            sb.Append("new int[] { ").Append(string.Join(", ", orders.Select(static order => order.ToString(CultureInfo.InvariantCulture)))).Append(" };\n");
+        }
+
+        sb.Append('\n');
         sb.Append("        /// <summary>Applies the decorators declared in this assembly.</summary>\n");
         sb.Append("        /// <param name=\"services\">The service collection.</param>\n");
         sb.Append("        ").Append(NeverBrowsable).Append('\n');
         sb.Append("        public static void ApplyDecorators(").Append(Services).Append(" services)\n");
         sb.Append("        {\n");
-        IEnumerable<DecoratorModel> decorators = types
-            .SelectMany(static type => type.Decorators)
-            .OrderBy(static decorator => decorator.Order)
-            .ThenBy(static decorator => decorator.SortName, StringComparer.Ordinal);
-        foreach (DecoratorModel decorator in decorators)
+        sb.Append("            foreach (int order in DecoratorOrders)\n");
+        sb.Append("            {\n");
+        sb.Append("                ApplyDecorators(services, order);\n");
+        sb.Append("            }\n");
+        sb.Append("        }\n");
+        sb.Append('\n');
+        sb.Append("        /// <summary>Applies the decorators declared in this assembly with the given order.</summary>\n");
+        sb.Append("        /// <param name=\"services\">The service collection.</param>\n");
+        sb.Append("        /// <param name=\"order\">The decorator order to apply.</param>\n");
+        sb.Append("        ").Append(NeverBrowsable).Append('\n');
+        sb.Append("        public static void ApplyDecorators(").Append(Services).Append(" services, int order)\n");
+        sb.Append("        {\n");
+        if (orders.Length > 0)
         {
-            WriteDecorator(sb, decorator);
+            sb.Append("            switch (order)\n");
+            sb.Append("            {\n");
+            foreach (int order in orders)
+            {
+                sb.Append("                case ").Append(order.ToString(CultureInfo.InvariantCulture)).Append(":\n");
+                foreach (DecoratorModel decorator in decorators.Where(decorator => decorator.Order == order))
+                {
+                    WriteDecorator(sb, decorator);
+                }
+
+                sb.Append("                    break;\n");
+            }
+
+            sb.Append("            }\n");
         }
 
         sb.Append("        }\n");
@@ -117,9 +158,22 @@ internal static class ServiceSourceWriter
             sb.Append("            ").Append(registry).Append(".RegisterServices(services, logger);\n");
         }
 
-        foreach (string registry in registries)
+        if (registries.Count > 0)
         {
-            sb.Append("            ").Append(registry).Append(".ApplyDecorators(services);\n");
+            sb.Append("            global::System.Collections.Generic.SortedSet<int> orders = new global::System.Collections.Generic.SortedSet<int>();\n");
+            foreach (string registry in registries)
+            {
+                sb.Append("            orders.UnionWith(").Append(registry).Append(".DecoratorOrders);\n");
+            }
+
+            sb.Append("            foreach (int order in orders)\n");
+            sb.Append("            {\n");
+            foreach (string registry in registries)
+            {
+                sb.Append("                ").Append(registry).Append(".ApplyDecorators(services, order);\n");
+            }
+
+            sb.Append("            }\n");
         }
 
         sb.Append("            return services;\n");
@@ -174,17 +228,17 @@ internal static class ServiceSourceWriter
 
     private static void WriteDecorator(StringBuilder sb, DecoratorModel decorator)
     {
-        sb.Append("            ").Append(Decoration).Append(".Decorate<").Append(decorator.ServiceType).Append(">(\n");
-        sb.Append("                services,\n");
-        sb.Append("                static (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
+        sb.Append("                    ").Append(Decoration).Append(".Decorate<").Append(decorator.ServiceType).Append(">(\n");
+        sb.Append("                        services,\n");
+        sb.Append("                        static (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
         for (int index = 0; index < decorator.Parameters.Count; index++)
         {
             sb.Append(index == 0 ? "\n" : ",\n");
-            sb.Append("                    ").Append(FormatArgument(decorator.Parameters[index], decorator.Key));
+            sb.Append("                            ").Append(FormatArgument(decorator.Parameters[index], decorator.Key));
         }
 
         sb.Append("),\n");
-        sb.Append("                serviceKey: ").Append(decorator.Key ?? "null").Append(");\n");
+        sb.Append("                        serviceKey: ").Append(decorator.Key ?? "null").Append(");\n");
     }
 
     private static string FormatArgument(DecoratorParameterModel parameter, string? key) => parameter.Kind switch

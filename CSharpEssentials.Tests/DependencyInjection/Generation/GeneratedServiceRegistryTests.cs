@@ -1,3 +1,4 @@
+using System.Reflection;
 using CSharpEssentials.Tests.DependencyInjection.Scanning;
 using CSharpEssentials.Tests.Fixtures.DependencyInjectionA;
 using FluentAssertions;
@@ -99,6 +100,34 @@ public class GeneratedServiceRegistryTests
         greeting.Should().Be("b(a)");
         message.Should().Be("a(b)");
         own.Should().Be("outer(inner(hi))");
+    }
+
+    [Fact]
+    public void AddAllServices_Should_Apply_Decorator_Order_Across_Assemblies()
+    {
+        ServiceCollection services = new();
+        services.AddAllServices();
+        using ServiceProvider provider = services.BuildServiceProvider(Validated);
+        using IServiceScope scope = provider.CreateScope();
+
+        string chain = scope.ServiceProvider.GetRequiredService<IFixtureOrdered>().Describe();
+
+        chain.Should().Be("a1(b0(a))");
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_Apply_Decorator_Order_Across_Assemblies()
+    {
+        ServiceCollection services = new();
+        services.AddServicesFromAssemblies(
+            typeof(IFixtureOrdered).Assembly,
+            Assembly.Load(new AssemblyName("CSharpEssentials.Tests.Fixtures.DependencyInjectionB")));
+        using ServiceProvider provider = services.BuildServiceProvider(Validated);
+        using IServiceScope scope = provider.CreateScope();
+
+        string chain = scope.ServiceProvider.GetRequiredService<IFixtureOrdered>().Describe();
+
+        chain.Should().Be("a1(b0(a))");
     }
 
     [Fact]

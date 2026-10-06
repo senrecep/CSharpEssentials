@@ -187,7 +187,7 @@ public static IServiceCollection AddServicesFromAssemblies(this IServiceCollecti
 public static IServiceCollection AddServicesFromAssemblies(this IServiceCollection services, ILogger? logger, params Assembly[] assemblies);
 ```
 
-It uses the same rules as the generator (§5): resolution, strategies, forwarding, decorators last ordered by `Order`. Attributes are read through `CustomAttributeData`, so an explicitly set `As` is detected. All assemblies' registrations are applied before any decorator, in the order the assemblies are passed. `ReflectionTypeLoadException` is handled and never swallowed: without a logger, an `InvalidOperationException` listing the loader errors is thrown before `services` changes; with a logger, a `Warning` (event 2002) lists the loader errors and the loadable types are processed. The logger also receives the duplicate `Debug` log (§5.5). An open-generic `[Decorates]` class is applied through `Decorate(Type, Type)` restricted to the attribute's `Key`. Invalid types that the analyzer would report as errors throw `InvalidOperationException` (fail fast, because this path has no compile-time check).
+It uses the same rules as the generator (§5): resolution, strategies, forwarding, decorators last ordered by `Order`. Attributes are read through `CustomAttributeData`, so an explicitly set `As` is detected. All assemblies' registrations are applied before any decorator, in the order the assemblies are passed. Decorators are sorted globally by `Order`, then by the position of their assembly, then by type name, which matches the aggregate. `ReflectionTypeLoadException` is handled and never swallowed: without a logger, an `InvalidOperationException` listing the loader errors is thrown before `services` changes; with a logger, a `Warning` (event 2002) lists the loader errors and the loadable types are processed. The logger also receives the duplicate `Debug` log (§5.5). An open-generic `[Decorates]` class is applied through `Decorate(Type, Type)` restricted to the attribute's `Key`. Invalid types that the analyzer would report as errors throw `InvalidOperationException` (fail fast, because this path has no compile-time check).
 
 ## 5. Semantics
 
@@ -242,13 +242,19 @@ public static class {Asm}ServiceRegistry
     public static void RegisterServices(IServiceCollection services, ILogger? logger);
 
     [EditorBrowsable(EditorBrowsableState.Never)]
+    public static IReadOnlyList<int> DecoratorOrders { get; }
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public static void ApplyDecorators(IServiceCollection services);
+
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static void ApplyDecorators(IServiceCollection services, int order);
 }
 
 [assembly: CSharpEssentials.DependencyInjection.ServiceModule(typeof(Microsoft.Extensions.DependencyInjection.{Asm}ServiceRegistry))]
 ```
 
-`{Asm}` sanitization is the same as in Endpoints (§5.2 of the Endpoints design). `Add{Asm}Services` = `RegisterServices` + `ApplyDecorators`.
+`{Asm}` sanitization is the same as in Endpoints (§5.2 of the Endpoints design). `Add{Asm}Services` = `RegisterServices` + `ApplyDecorators`. `ApplyDecorators(services)` calls `ApplyDecorators(services, order)` for each value of `DecoratorOrders` (the distinct `Order` values of the assembly, ascending).
 
 ### 6.3 Aggregate `AddAllServices`
 
@@ -264,7 +270,7 @@ Same rules as `MapAllEndpoints`:
 - Auto-generated in `Exe`/`WinExe` when `IsTestProject` is not `true`. `[assembly: DisableServiceAggregate]` opts out, and `[assembly: GenerateServiceAggregate]` opts in libraries and test projects.
 - Referenced assemblies are filtered by name (skip `System*`, `Microsoft*`, `mscorlib`, `netstandard`, and assemblies not referencing `CSharpEssentials.DependencyInjection`) before `ServiceModule` attributes are read.
 - Modules are deduplicated, so there is no duplicate registration.
-- Phases: **all** `RegisterServices` (referenced modules by assembly name, own module last), then **all** `ApplyDecorators` in the same module order. `Order` is scoped to the declaring assembly. Across assemblies, the host's decorators are outermost.
+- Phases: **all** `RegisterServices` (referenced modules by assembly name, own module last), then decorators across all modules: for each distinct `Order` in the union of every module's `DecoratorOrders` (ascending), `ApplyDecorators(services, order)` of each module in the same module order. `Order` is global; within one `Order`, module order and then type name decide, so the host's decorators are outermost among equal orders.
 
 ### 6.4 Sample generated code
 
@@ -335,15 +341,32 @@ namespace Microsoft.Extensions.DependencyInjection
         }
 
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+        public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 0 };
+
+        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
         public static void ApplyDecorators(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
         {
-            global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.Billing.IInvoiceService>(
-                services,
-                static (inner, sp) => new global::Sample.Billing.CachedInvoiceService(
-                    inner,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                        .GetRequiredService<global::Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp)),
-                serviceKey: null);
+            foreach (int order in DecoratorOrders)
+            {
+                ApplyDecorators(services, order);
+            }
+        }
+
+        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+        public static void ApplyDecorators(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services, int order)
+        {
+            switch (order)
+            {
+                case 0:
+                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.Billing.IInvoiceService>(
+                        services,
+                        static (inner, sp) => new global::Sample.Billing.CachedInvoiceService(
+                            inner,
+                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                                .GetRequiredService<global::Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp)),
+                        serviceKey: null);
+                    break;
+            }
         }
     }
 }

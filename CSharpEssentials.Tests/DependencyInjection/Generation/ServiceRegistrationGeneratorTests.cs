@@ -345,7 +345,7 @@ public class ServiceRegistrationGeneratorTests
         sources.Keys.Should().ContainSingle().Which.Should().Be("SampleAppServiceAggregate.g.cs");
         sources["SampleAppServiceAggregate.g.cs"].Should()
             .Contain("global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.RegisterServices(services, logger);")
-            .And.Contain("global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.ApplyDecorators(services);");
+            .And.Contain("global::Microsoft.Extensions.DependencyInjection.SampleLibraryServiceRegistry.ApplyDecorators(services, order);");
         run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
     }
 
