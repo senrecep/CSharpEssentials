@@ -64,7 +64,7 @@ Stop throwing exceptions for expected failures. Chain operations that short-circ
 
 ```csharp
 // ❌ Traditional: exceptions as control flow
-public User GetUser(Guid id)
+public User GetUserOrThrow(Guid id)
 {
     var user = _db.Find(id);
     if (user == null) throw new NotFoundException("User not found");
@@ -95,7 +95,7 @@ Model the absence of a value without null references.
 string display = user?.Profile?.DisplayName?.Trim()?.ToUpper() ?? "ANONYMOUS";
 
 // ✅ Maybe<T>: pipeline that handles absence at every step
-string display = Maybe.From(user)
+string displayName = Maybe.From(user)
     .Bind(u  => Maybe.From(u.Profile))
     .Bind(p  => Maybe.From(p.DisplayName))
     .Map(n   => n.Trim().ToUpper())
@@ -127,12 +127,10 @@ Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : 
 Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Result.Failure(Error.Validation("Account.NotVerified", "Account not verified"));
 
 // AND — all rules must pass, collects every failure
-Result<User> result = RuleEngine.And(
-    new IRule<User>[] { minAge.ToRule(), validEmail.ToRule(), verified.ToRule() }, user);
+Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And(), user);
 
 // OR — at least one rule must pass
-Result<User> adminOrMod = RuleEngine.Or(
-    new IRule<User>[] { isAdmin.ToRule(), isModerator.ToRule() }, user);
+Result adminOrMod = RuleEngine.Evaluate(new[] { isAdmin, isModerator }.Or(), user);
 ```
 
 ### AspNetCore — Result → HTTP, Automatically
@@ -144,12 +142,15 @@ Map `Result<T>` to correct HTTP status codes without writing any error-mapping b
 builder.Services.AddEnhancedProblemDetails(); // registers ProblemDetails (see "Migrating from 3.x to 4.0")
 
 // Controller — business logic returns Result<T>, HTTP mapping is automatic
-[HttpGet("{id:guid}")]
-public IActionResult GetProduct(Guid id)
-    => _productService.GetProduct(id).Match(
-        onSuccess: product => Ok(product),
-        onError: errors  => errors.ToActionResult() // 404 / 400 / 409 based on ErrorType
-    );
+public class ProductsController(IProductService productService) : ControllerBase
+{
+    [HttpGet("{id:guid}")]
+    public IActionResult GetProduct(Guid id)
+        => productService.GetProduct(id).Match(
+            onSuccess: product => Ok(product),
+            onError: errors  => errors.ToActionResult() // 404 / 400 / 409 based on ErrorType
+        );
+}
 
 // Service — chain multiple steps, first failure short-circuits
 public Result<Order> PlaceOrder(Guid productId, int quantity)
