@@ -927,19 +927,26 @@ Batch updates bypass the change tracker and `SaveChanges` interceptors (audit, d
 
 | Method | What It Does |
 |--------|-------------|
-| `ConfigureEnumConventions(params Assembly[])` | Stores `[StringEnum]` enums as strings using the JSON name (`StringEnumNaming`), e.g. `HTTPStatus` → `http_status` |
-| `ConfigureEnumConventions(Action<EnumConventionOptions>, params Assembly[])` | Same, configured via options |
+| `ConfigureEnumConventions(EnumConventions? conventions = null, EnumStoredAs? existingStorage = null)` | Stores `[StringEnum]` enums by wire name (or integer per `EnumStorage`) and adds `ck_{table}_{column}_enum` check constraints. `existingStorage` keeps existing columns in their current format |
+| `ConfigureEnumConventionsWithReflection(...)` | Same, and also handles enums without generated metadata through reflection (`[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`) |
+| `HasEnumStorage(EnumStorage)` | Per-property `String` or `Integer` storage; wins over `[StringEnum(Storage)]` and `EnumConventions.Storage` |
+| `HasLegacyEnumStorage(EnumStoredAs)` | Keeps writing an old format (`Integer`, `MemberName`, `CamelCase`, `LegacySnakeCase`, `FlagsText`), reads every spelling, no check constraint |
+| `HasEnumCheckConstraint(bool)` | Turns the property's check constraint off or on |
+| `ConfigureEnumConventions(params Assembly[])`, `ConfigureEnumConventions(Action<EnumConventionOptions>, params Assembly[])` | Obsolete 4.x forwarders; assemblies are ignored |
 
-| `EnumConventionOptions` | Default | Notes |
-|---|---|---|
-| `CanConvert` | `StringEnumNaming.IsStringEnum` | `Predicate<Type>` selecting enums to store as strings |
-| `UseLegacySnakeCase` | `false` | `true` writes the 3.x format (`ToSnakeCase()`: `HTTPStatus` → `httpstatus`) via `LegacySnakeCaseEnumConverter<TEnum>` |
+| Type | Notes |
+|---|---|
+| `EnumWireNameConverter<TEnum>` | String storage: canonical writes, tolerant reads, `[EnumFallback]` for unknown values |
+| `EnumIntegerConverter<TEnum, TNumber>` | Integer storage in the underlying type, with the defined check |
+| `EnumJsonValueReaderWriter<TEnum>` | Enum properties inside `ToJson()` columns |
+| `EnumStoredAs` | Format an existing column holds |
 
 ```csharp
-configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(AppDbContext).Assembly);
+configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
+modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);
 ```
 
-Reading accepts both formats, so existing rows still load. See [Migrating from 3.x to 4.0](migration/v3-to-v4.md).
+Properties with your own `HasConversion` are skipped. See the EF Core package README for column types per provider.
 
 ### Interceptors
 

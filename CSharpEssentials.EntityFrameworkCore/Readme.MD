@@ -113,24 +113,53 @@ Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `
 
 ### Enum Storage
 
-`ConfigureEnumConventions` stores every `[StringEnum]` enum as a string, with a max length that fits the longest name:
+`ConfigureEnumConventions` stores `[StringEnum]` enums by their wire name (the same spelling as JSON and binding) and adds a check constraint per column:
 
 ```csharp
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-    {
-        configurationBuilder.ConfigureEnumConventions(typeof(AppDbContext).Assembly);
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        configurationBuilder.ConfigureEnumConventions(EnumConventions.Default);
 
-        // 3.x storage format (Core ToSnakeCase) for existing data:
-        // configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(AppDbContext).Assembly);
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Order>().Property(o => o.Priority).HasEnumStorage(EnumStorage.Integer);
+        modelBuilder.Entity<Order>().Property(o => o.Note).HasEnumCheckConstraint(false);
     }
 }
 ```
 
-- Since 4.0 the stored value is the JSON name (`StringEnumNaming`, `snake_case_lower`, `[JsonStringEnumMemberName]` respected), the same spelling as JSON and query binding. Enums with acronyms or digits in member names changed spelling (`HTTPStatus` → `http_status`, 3.x: `httpstatus`).
-- `UseLegacySnakeCase = true` keeps writing the 3.x format. Reading accepts the old values, but queries compare against the configured spelling, so migrate the stored values or keep the legacy option.
-- `CanConvert` selects the enum types (default: enums marked `[StringEnum]`). Without assemblies, all loaded assemblies are scanned.
+| Shape | Column | Check constraint `ck_{table}_{column}_enum` |
+|---|---|---|
+| `String` (default) | `text` on PostgreSQL, `TEXT` on SQLite, otherwise `n` = longest wire name rounded up to 16 | `"Status" IN ('pending', 'shipped')` |
+| `Integer` (`[StringEnum(Storage = EnumStorage.Integer)]`, `HasEnumStorage`, `EnumConventions.Storage`) | underlying integer type | `"Priority" IN (0, 1, 2)` |
+| `[Flags]` (integer by default) | underlying integer type | `("Permissions" & ~7) = 0` |
+| `[Flags]` with `String` storage | `text[]` on PostgreSQL, JSON array text elsewhere | `<@ ARRAY[...]::text[]` on PostgreSQL |
+| `List<TEnum>` | `text[]`/`integer[]` on PostgreSQL, JSON text elsewhere | `<@ ARRAY[...]` on PostgreSQL |
+| `ToJson()` owned types | JSON column | none; `EnumJsonValueReaderWriter<TEnum>` writes wire names |
+
+- Precedence: `HasEnumStorage` per property, then `[StringEnum(Storage)]`, then `EnumConventions.Storage` (`FlagsStorage` for flags).
+- Reads are tolerant (wire name, member name, aliases, any case); writes are canonical. An unknown stored value maps to the `[EnumFallback]` member, otherwise the query throws and the message names the column.
+- Enums without generated metadata (no `[StringEnum]`) keep EF's default integer column. `ConfigureEnumConventionsWithReflection` opts them in through reflection (not trim or AOT safe).
+- Properties with your own `HasConversion` are skipped.
+- Adding a member changes only the constraint, so the migration is `DropCheckConstraint` + `AddCheckConstraint`.
+- Opt out of constraints per property with `HasEnumCheckConstraint(false)`, or globally with `EnumConventions.CheckConstraints = false`.
+
+#### Upgrading an existing database
+
+Existing enum columns hold integers (EF's default) or an older text format. Keep them as they are, so the first 5.0 migration is empty:
+
+```csharp
+configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
+
+// opt in one column at a time
+modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);
+
+// or keep a column's old text format (MemberName, CamelCase, LegacySnakeCase, FlagsText)
+modelBuilder.Entity<Order>().Property(o => o.Kind).HasLegacyEnumStorage(EnumStoredAs.MemberName);
+```
+
+`existingStorage` and `HasLegacyEnumStorage` keep writing the old format, read every spelling and add no check constraint. The 4.x overloads (`ConfigureEnumConventions(params Assembly[])`, `EnumConventionOptions`) are obsolete forwarders; `UseLegacySnakeCase = true` maps to `existingStorage: EnumStoredAs.LegacySnakeCase`.
 
 ### CQRS Write/Read
 
