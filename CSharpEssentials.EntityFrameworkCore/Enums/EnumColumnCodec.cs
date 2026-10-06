@@ -41,7 +41,16 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
     public string ToText(TEnum value)
     {
         if (_legacyNames is null)
-            return Guard(() => Info.Format(value, EnumWireFormat.String));
+        {
+            try
+            {
+                return Info.Format(value, EnumWireFormat.String);
+            }
+            catch (EnumValueException ex) when (NeedsColumn(ex))
+            {
+                throw WithColumn(ex);
+            }
+        }
         if (!Info.IsFlags)
             return _legacyNames.TryGetValue(value, out string? name) ? name : throw Undefined(value);
 
@@ -70,13 +79,19 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
     public TEnum FromNumber(ulong number) =>
         Info.TryParseNumber(number, EnumReadMode.Data, _conventions, out TEnum value, out EnumValueError? error) ? value : throw ReadError(error);
 
-    public string[] ToArray(TEnum value) =>
-        Guard(() =>
+    public string[] ToArray(TEnum value)
+    {
+        try
         {
             List<string> names = [];
             Info.FormatFlags(value, names);
-            return names.ToArray();
-        });
+            return [.. names];
+        }
+        catch (EnumValueException ex) when (NeedsColumn(ex))
+        {
+            throw WithColumn(ex);
+        }
+    }
 
     public TEnum FromArray(string[] names) => FromNames(names);
 
@@ -131,17 +146,9 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
     private TEnum Parse(string wireName) =>
         Info.TryParse(wireName, EnumReadMode.Data, _conventions, out TEnum value, out EnumValueError? error) ? value : throw ReadError(error);
 
-    private T Guard<T>(Func<T> format)
-    {
-        try
-        {
-            return format();
-        }
-        catch (EnumValueException ex) when (Column is not null && ex.Error.Path is null)
-        {
-            throw new EnumValueException(ex.Error with { Path = Column });
-        }
-    }
+    private bool NeedsColumn(EnumValueException ex) => Column is not null && ex.Error.Path is null;
+
+    private EnumValueException WithColumn(EnumValueException ex) => new(ex.Error with { Path = Column });
 
     private EnumValueException Undefined(TEnum value) =>
         new(Info.CreateError(value.ToString(), EnumReadMode.Data, Column));
