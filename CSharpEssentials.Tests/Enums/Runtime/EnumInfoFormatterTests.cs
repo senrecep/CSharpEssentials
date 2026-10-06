@@ -48,6 +48,18 @@ public class EnumInfoFormatterTests
     }
 
     [Fact]
+    public void Flags_Zero_Without_A_Zero_Member_Should_Be_Written_As_A_Number_That_Reads_Back()
+    {
+        EnumInfo<ParserAccess> info = Info<ParserAccess>();
+
+        string text = info.Format(default, EnumWireFormat.String);
+
+        text.Should().Be("0");
+        info.TryParse(text, EnumReadMode.Data, EnumConventions.Default, out ParserAccess value, out _).Should().BeTrue();
+        value.Should().Be(default(ParserAccess));
+    }
+
+    [Fact]
     public void Numeric_Text_Should_Use_The_Underlying_Sign()
     {
         Info<HugeValue>().Format(HugeValue.Max, EnumWireFormat.Number).Should().Be("18446744073709551615");
