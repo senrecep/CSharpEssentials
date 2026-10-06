@@ -115,27 +115,27 @@ public static class Extensions
             if (document != null)
                 return document;
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            Console.WriteLine(ex.Message);
+            // Not parseable this way; fall through to the next strategy.
         }
 
         try
         {
             return JsonDocument.Parse(json);
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            Console.WriteLine(ex.Message);
+            // Not parseable this way; fall through to the next strategy.
         }
 
         try
         {
             return json.ConvertToJsonDocument(EnhancedJsonSerializerOptions.DefaultOptions);
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            Console.WriteLine(ex.Message);
+            // Not parseable this way; fall through to the next strategy.
         }
 
         return null;
