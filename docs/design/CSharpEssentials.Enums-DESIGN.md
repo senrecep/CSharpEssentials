@@ -856,7 +856,7 @@ Error: `Error.Validation(code: "{Prop}.IsDefinedEnum" | "{Prop}.IsOneOf" | "{Pro
 | CSE0011 | (not used) | Folded into CSE0015: a compilation below C# 9 gets no registration and fails loudly like any other enum without metadata |
 | CSE0012 | Warning | Invalid `CSharpEssentialsEnumNaming` MSBuild value |
 | CSE0013 | Warning | `[EnumAlias]` or `[EnumFallback]` on a member of an enum without `[StringEnum]` (ignored; only the opt-in reflection fallback reads them). `[JsonStringEnumMemberName]` and `[EnumMember]` are not reported because System.Text.Json and other serializers read them |
-| CSE0014 | Error | A migration's `Up` or `Down` contains both EF's `AlterColumn` and `ConvertEnumColumn` for the same table and column (section 12.1). Symbols are matched by metadata name, so the analyzer is inert without `CSharpEssentials.EntityFrameworkCore` |
+| CSE0014 | Error | A migration's `Up` or `Down` contains both EF's `AlterColumn` and `ConvertEnumColumn` for the same table and column (section 12.1); a call without a schema matches any schema on the other call. Symbols are matched by metadata name, so the analyzer is inert without `CSharpEssentials.EntityFrameworkCore` |
 | CSE0015 | Warning | `[StringEnum]` enum without generated metadata: the generator cannot reach it (private/protected nested, nested in a generic type) or the compilation is below C# 9. JSON converter creation throws instead of writing integers |
 | CSE0016 | Error | Two `[StringEnum]` enums map to the same generated extensions class name (for example nested `Order.State` and top-level `Order_State`); rename one. Hint names use the metadata name, so only the class name collides |
 

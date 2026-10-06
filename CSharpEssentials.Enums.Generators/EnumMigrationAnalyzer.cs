@@ -44,7 +44,7 @@ public sealed class EnumMigrationAnalyzer : DiagnosticAnalyzer
             return;
 
         List<(ColumnKey Column, Location Location)> alters = [];
-        HashSet<ColumnKey> converted = [];
+        List<ColumnKey> converted = [];
         foreach (IInvocationOperation invocation in context.OperationBlocks.SelectMany(static block => block.DescendantsAndSelf()).OfType<IInvocationOperation>())
         {
             IMethodSymbol target = invocation.TargetMethod;
@@ -58,7 +58,7 @@ public sealed class EnumMigrationAnalyzer : DiagnosticAnalyzer
 
         foreach ((ColumnKey column, Location location) in alters)
         {
-            if (converted.Contains(column))
+            if (converted.Exists(conversion => conversion.Matches(column)))
                 context.ReportDiagnostic(Diagnostic.Create(StringEnumDiagnostics.AlterColumnWithEnumConversion, location, $"{column.Table}.{column.Column}", method.Name));
         }
     }
@@ -87,5 +87,11 @@ public sealed class EnumMigrationAnalyzer : DiagnosticAnalyzer
         return false;
     }
 
-    private readonly record struct ColumnKey(string? Schema, string Table, string Column);
+    private readonly record struct ColumnKey(string? Schema, string Table, string Column)
+    {
+        // No schema is the default schema, which is not known at analysis time: it matches any schema on the other side.
+        public bool Matches(ColumnKey other) =>
+            string.Equals(Table, other.Table, StringComparison.Ordinal) && string.Equals(Column, other.Column, StringComparison.Ordinal)
+            && (Schema is null || other.Schema is null || string.Equals(Schema, other.Schema, StringComparison.Ordinal));
+    }
 }
