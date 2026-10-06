@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using CSharpEssentials.Tests.Generators;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace CSharpEssentials.Tests.DependencyInjection.Generation;
 
@@ -131,6 +132,39 @@ public class DependencyInjectionAnalyzerTests
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Prelude + "[RegisterScoped(typeof(IFoo))] [ExcludeFromRegistration] public sealed class Foo;");
 
         diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE2009_When_Referenced_Registry_Names_Collide()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            "public static class Program { public static void Main() { } }",
+            OutputKind.ConsoleApplication,
+            "Sample.App",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"),
+            ServiceGeneration.CreateLibraryReference("FooApi"));
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+
+        Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE2009").Subject;
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
+        diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Be(
+            "Assemblies 'Foo.Api', 'FooApi' all generate the service registry 'Microsoft.Extensions.DependencyInjection.FooApiServiceRegistry', so AddAllServices skips them; give each assembly a distinct name with [assembly: ServiceRegistryName(\"...\")]");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE2009_When_Project_Does_Not_Generate_Aggregate()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            "namespace Sample; public sealed class Plain;",
+            OutputKind.DynamicallyLinkedLibrary,
+            "Sample.Library",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"),
+            ServiceGeneration.CreateLibraryReference("FooApi"));
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE2009");
     }
 
     private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source) =>

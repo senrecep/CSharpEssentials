@@ -6,12 +6,14 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace CSharpEssentials.DependencyInjection.Generators;
 
 /// <summary>
-/// Reports invalid service registrations and decorators and captive dependencies (CSE2001–CSE2008).
+/// Reports invalid service registrations and decorators and captive dependencies (CSE2001–CSE2009).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
 {
     private const string Transient = "Transient";
+
+    private const string IsTestProjectProperty = "build_property.IsTestProject";
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(
@@ -22,13 +24,15 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
         DependencyInjectionDiagnostics.DecoratorConstructorCount,
         DependencyInjectionDiagnostics.CaptiveDependency,
         DependencyInjectionDiagnostics.NotConstructible,
-        DependencyInjectionDiagnostics.OpenGenericDecorator);
+        DependencyInjectionDiagnostics.OpenGenericDecorator,
+        DependencyInjectionDiagnostics.RegistryNameCollision);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
+        context.RegisterCompilationAction(ReportRegistryCollisions);
         context.RegisterCompilationStartAction(static start =>
         {
             if (ServiceTypeInspector.HasAttribute(start.Compilation.Assembly.GetAttributes(), ServiceTypeInspector.ExcludeAttribute))
@@ -45,6 +49,29 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
                 ReportCaptiveDependencies(end, registrations, consumers);
             });
         });
+    }
+
+    private static void ReportRegistryCollisions(CompilationAnalysisContext context)
+    {
+        ImmutableArray<AttributeData> attributes = context.Compilation.Assembly.GetAttributes();
+        bool isExecutable = context.Compilation.Options.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication;
+        bool isTestProject = context.Options.AnalyzerConfigOptionsProvider.GlobalOptions.TryGetValue(IsTestProjectProperty, out string? value) &&
+            string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        if (ServiceTypeInspector.HasAttribute(attributes, "DisableServiceAggregateAttribute") ||
+            !(ServiceTypeInspector.HasAttribute(attributes, "GenerateServiceAggregateAttribute") || isExecutable && !isTestProject))
+        {
+            return;
+        }
+
+        IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(context.Compilation, context.CancellationToken);
+        foreach (IGrouping<string, ReferencedRegistry> collision in ReferencedRegistryReader.FindCollisions(registries))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                DependencyInjectionDiagnostics.RegistryNameCollision,
+                Location.None,
+                string.Join(", ", collision.Select(static registry => "'" + registry.AssemblyName + "'")),
+                collision.Key.Replace("global::", string.Empty)));
+        }
     }
 
     private static void AnalyzeType(

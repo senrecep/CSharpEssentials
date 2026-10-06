@@ -350,6 +350,41 @@ public class ServiceRegistrationGeneratorTests
     }
 
     [Fact]
+    public void Generator_Should_Skip_Referenced_Registries_When_Their_Names_Collide()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            ProgramSource,
+            OutputKind.ConsoleApplication,
+            "Sample.App",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"),
+            ServiceGeneration.CreateLibraryReference("FooApi"),
+            LibraryReference());
+
+        GeneratorRun run = ServiceGeneration.Run(compilation);
+
+        string aggregate = ServiceGeneration.GeneratedSources(run)["SampleAppServiceAggregate.g.cs"];
+        aggregate.Should().Contain("SampleLibraryServiceRegistry.RegisterServices(services, logger);")
+            .And.NotContain("FooApiServiceRegistry");
+        run.OutputCompilation.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact]
+    public void Generator_Should_Call_Own_Registry_Once_When_Referenced_Registry_Has_Same_Name()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            LibrarySource + ProgramSource,
+            OutputKind.ConsoleApplication,
+            "FooApi",
+            ServiceGeneration.CreateLibraryReference("Foo.Api"));
+
+        GeneratorRun run = ServiceGeneration.Run(compilation);
+
+        string aggregate = ServiceGeneration.GeneratedSources(run)["FooApiServiceAggregate.g.cs"];
+        aggregate.Split("FooApiServiceRegistry.RegisterServices(").Should().HaveCount(2);
+        run.OutputCompilation.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact]
     public void Generated_Code_Should_Not_Call_Members_Requiring_Unreferenced_Or_Dynamic_Code()
     {
         CSharpCompilation compilation =

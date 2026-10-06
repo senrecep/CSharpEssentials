@@ -87,6 +87,7 @@ The analyzer reports invalid declarations at compile time:
 | CSE2006 | Info | Captive dependency: a singleton takes a scoped or transient service (or a scoped one takes a transient) registered by attribute in the same project. Checked for single-constructor classes only. |
 | CSE2007 | Error | The class cannot be constructed by generated code (abstract, static, file-local, inaccessible, or nested in a generic type). |
 | CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))`, which decorates the closed registrations. |
+| CSE2009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiServiceRegistry`. `AddAllServices` skips both registries so the project still compiles. Give one of them a distinct name with `[assembly: ServiceRegistryName("...")]`. Reported only in projects that generate the aggregate. |
 
 The bundled code fix for CSE2003 offers one action per implemented interface, which adds `typeof(IFoo)` (`typeof(IFoo<>)` for a generic class) to the attribute, and one action that adds `As = ServiceAs.Self` to keep the registration as is and silence the diagnostic.
 

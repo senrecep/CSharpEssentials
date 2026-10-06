@@ -64,6 +64,21 @@ internal static class ServiceGeneration
             .SelectMany(static result => result.GeneratedSources)
             .ToDictionary(static source => source.HintName, static source => source.SourceText.ToString(), StringComparer.Ordinal);
 
+    public static MetadataReference CreateLibraryReference(string assemblyName)
+    {
+        string source = $$"""
+            using CSharpEssentials.DependencyInjection;
+
+            namespace {{assemblyName.Replace(".", "_", StringComparison.Ordinal)}}Library;
+
+            public interface IWorker;
+
+            [RegisterScoped]
+            public sealed class Worker : IWorker;
+            """;
+        return EmitReference(Run(CreateCompilation(source, assemblyName: assemblyName)).OutputCompilation);
+    }
+
     public static MetadataReference EmitReference(Compilation compilation)
     {
         using MemoryStream stream = new();

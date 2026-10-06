@@ -1792,6 +1792,7 @@ Decorated originals move to a hidden registration under a private key, so they n
 | CSE2006 | Info | Captive dependency between attribute registrations |
 | CSE2007 | Error | Generated code cannot construct the class |
 | CSE2008 | Warning | Open-generic decorators are not generated; call `Decorate(Type, Type)` |
+| CSE2009 | Warning | Referenced registries share a sanitized name; `AddAllServices` skips them (use `[assembly: ServiceRegistryName]`) |
 
 ---
 
