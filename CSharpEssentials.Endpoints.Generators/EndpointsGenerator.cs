@@ -122,33 +122,9 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
             .Select(static attribute => attribute.ConstructorArguments.FirstOrDefault().Value as string)
             .FirstOrDefault(static name => !string.IsNullOrWhiteSpace(name));
 
-        List<ReferencedRegistry> registries = [];
-        HashSet<string> seen = [with(StringComparer.Ordinal)];
-        foreach (IAssemblySymbol reference in compilation.SourceModule.ReferencedAssemblySymbols)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            if (IsFrameworkAssembly(reference.Name) || !ReferencesEndpoints(reference))
-            {
-                continue;
-            }
-
-            foreach (AttributeData attribute in reference.GetAttributes())
-            {
-                if (EndpointSymbolRules.IsEndpointsType(attribute.AttributeClass, EndpointSymbolRules.ModuleAttribute) &&
-                    attribute.ConstructorArguments.FirstOrDefault().Value is INamedTypeSymbol registry)
-                {
-                    string name = EndpointSymbolRules.GetFullyQualifiedName(registry);
-                    if (seen.Add(name))
-                    {
-                        registries.Add(new ReferencedRegistry(reference.Name, name));
-                    }
-                }
-            }
-        }
-
-        ReferencedRegistry[] ordered = [.. registries
-            .OrderBy(static registry => registry.AssemblyName, StringComparer.Ordinal)
-            .ThenBy(static registry => registry.FullyQualifiedName, StringComparer.Ordinal)];
+        IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(compilation, cancellationToken);
+        HashSet<string> colliding = [.. ReferencedRegistryReader.FindCollisions(registries).Select(static group => group.Key)];
+        ReferencedRegistry[] ordered = [.. registries.Where(registry => !colliding.Contains(registry.FullyQualifiedName))];
 
         return new HostModel(
             RegistryNames.Sanitize(customName ?? assembly.Name),
@@ -158,16 +134,6 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
             EndpointSymbolRules.HasAttribute(assembly, EndpointSymbolRules.DisableAggregateAttribute),
             new EquatableArray<ReferencedRegistry>(ordered));
     }
-
-    private static bool IsFrameworkAssembly(string name) =>
-        name.StartsWith("System", StringComparison.Ordinal) ||
-        name.StartsWith("Microsoft", StringComparison.Ordinal) ||
-        string.Equals(name, "mscorlib", StringComparison.Ordinal) ||
-        string.Equals(name, "netstandard", StringComparison.Ordinal);
-
-    private static bool ReferencesEndpoints(IAssemblySymbol assembly) =>
-        assembly.Modules.Any(static module => module.ReferencedAssemblies.Any(static identity =>
-            string.Equals(identity.Name, EndpointSymbolRules.EndpointsAssemblyName, StringComparison.Ordinal)));
 
     private static bool IsTestProject(AnalyzerConfigOptionsProvider provider) =>
         provider.GlobalOptions.TryGetValue(IsTestProjectProperty, out string? value) &&

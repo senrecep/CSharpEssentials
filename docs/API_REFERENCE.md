@@ -1728,6 +1728,7 @@ group.RequireRoles("admin", "editor");
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped |
 | CSE1007 | Error | `[EndpointGroup(typeof(X))]` target is not a concrete, non-ref struct `IEndpointGroup` |
 | CSE1008 | Error | Endpoint or group type is a `ref struct` and is not mapped |
+| CSE1009 | Warning | Referenced registries share a sanitized name; `MapAllEndpoints` skips them (use `[assembly: EndpointRegistryName]`) |
 
 ---
 

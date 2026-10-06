@@ -167,7 +167,7 @@ This is the only place that implements wrapping, ordering, naming, tagging, filt
 
 - `{Asm}` = sanitized assembly name, or the `EndpointRegistryName` value if present.
 - Sanitization: split on every character that is not `[A-Za-z0-9_]`, upper-case the first character of each segment, then concatenate. If the result starts with a digit, prefix it with `_`. Examples: `MyCompany.Apps.Api` → `MyCompanyAppsApi`, `web-api` → `WebApi`.
-- Two referenced assemblies that sanitize to the same name produce ambiguous registry types in an aggregate host. Fix this with `EndpointRegistryName` in one of them.
+- Two referenced assemblies that sanitize to the same name produce ambiguous registry types in an aggregate host. The aggregate skips those registries so the host compiles, and the analyzer reports CSE1009. Fix this with `EndpointRegistryName` in one of them. A referenced registry with the same name as the own registry is skipped too (the compiler resolves the name to the own type).
 
 ### 5.3 Per-assembly registry
 
@@ -385,6 +385,7 @@ Reported by `EndpointsAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssentials.Endp
 | CSE1006 | Abstract or open-generic `IEndpoint`/`IEndpointGroup` type is skipped | Info | Deliberate skip, made visible |
 | CSE1007 | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct | Error | Generated `MapGroup<X>` would not compile |
 | CSE1008 | Endpoint or group type is a `ref struct` | Error | Generated `MapEndpoint<X>`/`MapGroup<X>` would not compile (CS9244) |
+| CSE1009 | Two referenced registries have the same fully qualified name after sanitizing (`Foo.Api`, `FooApi`) | Warning | Reported only when the aggregate is generated. The aggregate skips the colliding registries so the project compiles. A referenced registry with the same name as the own registry is not mapped a second time. |
 
 CSE1007 is added by this design. The `typeof` form cannot carry the `IEndpointGroup` constraint that the generic form has, so this case would otherwise surface as a compile error in generated code. It ships with #53.
 

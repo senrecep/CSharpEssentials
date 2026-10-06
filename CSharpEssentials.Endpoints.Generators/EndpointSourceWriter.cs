@@ -85,13 +85,19 @@ internal static class EndpointSourceWriter
         sb.Append("            ").Append(Configure).Append(")\n");
         sb.Append("        {\n");
         sb.Append("            var options = ").Append(Mapper).Append(".CreateOptions(configure);\n");
+        string ownRegistry = "global::Microsoft.AspNetCore.Builder." + host.RegistryName + "EndpointRegistry";
         if (includeOwnRegistry)
         {
-            sb.Append("            global::Microsoft.AspNetCore.Builder.").Append(host.RegistryName).Append("EndpointRegistry.MapEndpoints(app, options);\n");
+            sb.Append("            ").Append(ownRegistry).Append(".MapEndpoints(app, options);\n");
         }
 
         foreach (ReferencedRegistry registry in host.ReferencedRegistries)
         {
+            if (includeOwnRegistry && string.Equals(registry.FullyQualifiedName, ownRegistry, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             sb.Append("            ").Append(registry.FullyQualifiedName).Append(".MapEndpoints(app, options);\n");
         }
 

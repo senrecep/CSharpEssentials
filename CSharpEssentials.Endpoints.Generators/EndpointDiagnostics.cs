@@ -88,4 +88,15 @@ internal static class EndpointDiagnostics
         isEnabledByDefault: true,
         description: "Generated code passes endpoint and group types as generic type arguments to EndpointMapper, which does not allow ref struct type arguments, so ref struct endpoints and groups are skipped.",
         helpLinkUri: HelpLink);
+
+    public static readonly DiagnosticDescriptor RegistryNameCollision = new(
+        "CSE1009",
+        "Referenced endpoint registries share a name",
+        "Assemblies {0} all generate the endpoint registry '{1}', so MapAllEndpoints skips them; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Registry names are derived from assembly names with separators removed, so 'Foo.Api' and 'FooApi' both produce 'FooApiEndpointRegistry'. The generated aggregate cannot refer to an ambiguous type and leaves those registries out until each has a distinct name.",
+        helpLinkUri: HelpLink,
+        customTags: WellKnownDiagnosticTags.CompilationEnd);
 }
