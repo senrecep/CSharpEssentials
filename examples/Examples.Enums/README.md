@@ -21,7 +21,7 @@ The project references the library projects and the generator project with `Outp
 </ItemGroup>
 ```
 
-Any package that depends on Enums brings the generator, the analyzers and the code fixes: `CSharpEssentials.Json`, `.Errors`, `.Results`, `.EntityFrameworkCore`, `.AspNetCore`, `.AspNetCore.OpenApi`, `.AspNetCore.Swashbuckle`, `.Http` and the `CSharpEssentials` meta-package. `.Validation`, `.Mediator`, `.Any` and the other packages that reach it only further down their dependency graph do not. Reference `CSharpEssentials.Enums` directly only in a project that uses none of the packages above.
+Any CSharpEssentials package brings the generator, the analyzers and the code fixes: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. Reference `CSharpEssentials.Enums` directly only in a project that uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints` and `.RequestResponseLogging` do not depend on it).
 
 ## Running
 

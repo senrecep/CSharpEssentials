@@ -227,7 +227,7 @@ public enum OrderStatus
 | Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
 | Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
 
-`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. Any package that depends on Enums brings the generator to your project: `CSharpEssentials.Json`, `.Errors`, `.Results`, `.EntityFrameworkCore`, `.AspNetCore`, `.AspNetCore.OpenApi`, `.AspNetCore.Swashbuckle`, `.Http` and the `CSharpEssentials` meta-package. `.Validation`, `.Mediator`, `.Any` and the other packages that reach it only further down their dependency graph do not. A direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses none of the packages above.
+`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. Any CSharpEssentials package brings the generator and analyzers to your project: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. A direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints` and `.RequestResponseLogging` do not depend on it).
 
 | Scenario | Packages |
 |---|---|
