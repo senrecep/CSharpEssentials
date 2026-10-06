@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -5,6 +6,14 @@ using System.Text.Json.Serialization;
 
 namespace CSharpEssentials.Json;
 
+internal static class PolymorphicJson
+{
+    internal const string Message =
+        "Polymorphic JSON discovers derived types by scanning the loaded assemblies and serializes them by reflection. Use [JsonPolymorphic] with source generation for trimmed or native AOT applications.";
+}
+
+[RequiresUnreferencedCode(PolymorphicJson.Message)]
+[RequiresDynamicCode(PolymorphicJson.Message)]
 public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
 {
     /// <summary>
@@ -22,7 +31,8 @@ public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
     }
 }
 
-
+[RequiresUnreferencedCode(PolymorphicJson.Message)]
+[RequiresDynamicCode(PolymorphicJson.Message)]
 public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
 {
     private const string TypePropertyName = "$type";
