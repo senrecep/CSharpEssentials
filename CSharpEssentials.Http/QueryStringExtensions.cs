@@ -1,4 +1,7 @@
 using System.Collections;
+#if NET7_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 using System.Globalization;
 using System.Text;
 using CSharpEssentials.Enums;
@@ -12,6 +15,10 @@ public static class QueryStringExtensions
     public static Result<string> ToQueryString(this Dictionary<string, string?> parameters) =>
         BuildQuery(parameters);
 
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
     public static Result<string> ToQueryString(this object? source) =>
         source.ToQueryString(EnumConventions.Default);
 
