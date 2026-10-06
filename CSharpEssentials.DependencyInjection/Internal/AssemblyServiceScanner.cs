@@ -29,14 +29,18 @@ internal static class AssemblyServiceScanner
     {
         List<(ServiceDescriptor Descriptor, RegistrationStrategy Strategy)> registrations = [];
         List<(int Order, int AssemblyIndex, string Name, Action<IServiceCollection> Apply)> decorators = [];
+        List<Assembly> scanned = [];
         int assemblyIndex = 0;
 
         foreach (Assembly assembly in assemblies.Distinct())
         {
-            if (assembly.IsDefined(typeof(ExcludeFromRegistrationAttribute), inherit: false))
+            if (assembly.IsDefined(typeof(ExcludeFromRegistrationAttribute), inherit: false) ||
+                ServiceRegistration.IsRegistered(services, assembly))
             {
                 continue;
             }
+
+            scanned.Add(assembly);
 
             IEnumerable<Type> candidates = GetLoadableTypes(assembly, logger)
                 .Where(static type => type.IsClass && !type.IsDefined(typeof(ExcludeFromRegistrationAttribute), inherit: false))
@@ -59,6 +63,11 @@ internal static class AssemblyServiceScanner
             }
 
             assemblyIndex++;
+        }
+
+        foreach (Assembly assembly in scanned)
+        {
+            ServiceRegistration.MarkRegistered(services, assembly);
         }
 
         foreach ((ServiceDescriptor descriptor, RegistrationStrategy strategy) in registrations)

@@ -1765,8 +1765,8 @@ public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
 
 | Member | What It Does |
 |--------|-------------|
-| `services.Add{Asm}Services(logger?)` | Generated per assembly: registers services, then applies decorators. The logger reports duplicate (service, key) registrations at `Debug` |
-| `services.AddAllServices()` | `internal`; registers every referenced registry and the application's own, then applies all decorators in ascending `Order` across assemblies (ties: assembly order, then type name). Generated in applications |
+| `services.Add{Asm}Services(logger?)` | Generated per assembly: registers services, then applies decorators; a repeated call does nothing. The logger reports duplicate (service, key) registrations at `Debug` |
+| `services.AddAllServices()` | `internal`; registers every referenced registry and the application's own, then applies all decorators in ascending `Order` across assemblies (ties: assembly order, then type name). Skips assemblies already registered, like a repeated `Add{Assembly}Services`. Generated in applications |
 | `[assembly: ServiceRegistryName("...")]` / `GenerateServiceAggregate` / `DisableServiceAggregate` | Rename the method / opt in to `AddAllServices` in a library or test project / opt out |
 | `services.AddServicesFromAssemblies(assemblies)` / `(logger, assemblies)` | Reflection fallback; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
 | `services.Decorate<TService, TDecorator>(serviceKey?)` | Runtime decoration; throws `InvalidOperationException` when nothing matches |

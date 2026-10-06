@@ -42,7 +42,7 @@ internal static class ServiceSourceWriter
         sb.Append("    ").Append(GeneratedCode).Append('\n');
         sb.Append("    public static class ").Append(className).Append('\n');
         sb.Append("    {\n");
-        sb.Append("        /// <summary>Registers the services declared in this assembly, then applies its decorators.</summary>\n");
+        sb.Append("        /// <summary>Registers the services declared in this assembly, then applies its decorators. Calling it again, or after <c>AddAllServices</c>, does nothing.</summary>\n");
         sb.Append("        /// <param name=\"services\">The service collection.</param>\n");
         sb.Append("        /// <param name=\"logger\">An optional logger. Registrations whose service type and key already exist are logged at Debug.</param>\n");
         sb.Append("        /// <returns>The same service collection.</returns>\n");
@@ -50,6 +50,11 @@ internal static class ServiceSourceWriter
         sb.Append("            this ").Append(Services).Append(" services,\n");
         sb.Append("            ").Append(Logger).Append("? logger = null)\n");
         sb.Append("        {\n");
+        sb.Append("            if (!").Append(Registration).Append(".TryMarkRegistered(services, typeof(").Append(className).Append(").Assembly))\n");
+        sb.Append("            {\n");
+        sb.Append("                return services;\n");
+        sb.Append("            }\n");
+        sb.Append('\n');
         sb.Append("            RegisterServices(services, logger);\n");
         sb.Append("            ApplyDecorators(services);\n");
         sb.Append("            return services;\n");
@@ -156,24 +161,41 @@ internal static class ServiceSourceWriter
         sb.Append("            this ").Append(Services).Append(" services,\n");
         sb.Append("            ").Append(Logger).Append("? logger = null)\n");
         sb.Append("        {\n");
-        foreach (string registry in registries)
+        for (int index = 0; index < registries.Count; index++)
         {
-            sb.Append("            ").Append(registry).Append(".RegisterServices(services, logger);\n");
+            string flag = "register" + index.ToString(CultureInfo.InvariantCulture);
+            sb.Append("            bool ").Append(flag).Append(" = ").Append(Registration).Append(".TryMarkRegistered(services, typeof(")
+                .Append(registries[index]).Append(").Assembly);\n");
         }
 
         if (registries.Count > 0)
         {
             sb.Append("            global::System.Collections.Generic.SortedSet<int> orders = new global::System.Collections.Generic.SortedSet<int>();\n");
-            foreach (string registry in registries)
+            for (int index = 0; index < registries.Count; index++)
             {
-                sb.Append("            orders.UnionWith(").Append(registry).Append(".DecoratorOrders);\n");
+                sb.Append('\n');
+                sb.Append("            if (register").Append(index.ToString(CultureInfo.InvariantCulture)).Append(")\n");
+                sb.Append("            {\n");
+                sb.Append("                ").Append(registries[index]).Append(".RegisterServices(services, logger);\n");
+                sb.Append("                orders.UnionWith(").Append(registries[index]).Append(".DecoratorOrders);\n");
+                sb.Append("            }\n");
             }
+
+            sb.Append('\n');
 
             sb.Append("            foreach (int order in orders)\n");
             sb.Append("            {\n");
-            foreach (string registry in registries)
+            for (int index = 0; index < registries.Count; index++)
             {
-                sb.Append("                ").Append(registry).Append(".ApplyDecorators(services, order);\n");
+                if (index > 0)
+                {
+                    sb.Append('\n');
+                }
+
+                sb.Append("                if (register").Append(index.ToString(CultureInfo.InvariantCulture)).Append(")\n");
+                sb.Append("                {\n");
+                sb.Append("                    ").Append(registries[index]).Append(".ApplyDecorators(services, order);\n");
+                sb.Append("                }\n");
             }
 
             sb.Append("            }\n");

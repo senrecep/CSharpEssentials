@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -60,6 +61,46 @@ public static class ServiceRegistration
                 throw new ArgumentOutOfRangeException(nameof(strategy), strategy, "Unknown registration strategy.");
         }
     }
+
+    /// <summary>
+    /// Marks the services of <paramref name="assembly"/> as registered in <paramref name="services"/>.
+    /// Generated registries and <c>AddServicesFromAssemblies</c> call it so that registering an assembly again is a no-op.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="assembly">The assembly whose services are about to be registered.</param>
+    /// <returns><see langword="true"/> when the assembly was not registered yet and is now marked; otherwise <see langword="false"/>.</returns>
+    public static bool TryMarkRegistered(IServiceCollection services, Assembly assembly)
+    {
+        Guard.NotNull(services);
+        Guard.NotNull(assembly);
+
+        if (IsRegistered(services, assembly))
+        {
+            return false;
+        }
+
+        MarkRegistered(services, assembly);
+        return true;
+    }
+
+    internal static bool IsRegistered(IServiceCollection services, Assembly assembly)
+    {
+        foreach (ServiceDescriptor descriptor in services)
+        {
+            if (descriptor.ServiceType == typeof(RegisteredAssemblyMarker) &&
+                !descriptor.IsKeyedService &&
+                descriptor.ImplementationInstance is RegisteredAssemblyMarker marker &&
+                marker.Assembly == assembly)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    internal static void MarkRegistered(IServiceCollection services, Assembly assembly) =>
+        services.Add(ServiceDescriptor.Singleton(new RegisteredAssemblyMarker(assembly)));
 
     private static void LogDuplicate(ILogger logger, ServiceDescriptor existing, ServiceDescriptor descriptor, RegistrationStrategy strategy)
     {

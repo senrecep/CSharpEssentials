@@ -50,6 +50,7 @@ app.MapAllEndpoints();    // own registry + every referenced assembly's registry
 - `Map{Asm}Endpoints` maps the endpoints of one assembly. `{Asm}` is the sanitized assembly name (`MyCompany.Apps.Api` → `MyCompanyAppsApi`) or the `[assembly: EndpointRegistryName("Apps")]` value.
 - `{Asm}EndpointRegistry.EndpointTypes` lists the endpoint types in mapping order.
 - `MapAllEndpoints` is `internal` and generated automatically in `Exe`/`WinExe` projects that are not test projects. Use `[assembly: GenerateEndpointAggregate]` to opt in from a library or test project, `[assembly: DisableEndpointAggregate]` to opt out. Each registry is mapped once, own registry first, then referenced registries by assembly name.
+- Mapping is not idempotent: calling `Map{Asm}Endpoints` or `MapAllEndpoints` twice on the same route builder maps every route twice, and ASP.NET Core reports an ambiguous match at request time. Mapping the same registry onto different route builders (for example two version groups) is legitimate, so call each method once per builder.
 - Each endpoint type is mapped inside its own `MapGroup("")`, so route patterns, OpenAPI metadata, filters and authorization are the same as direct mapping. Route calls such as `MapGet` stay in your `Map` method.
 
 ## Reflection fallback

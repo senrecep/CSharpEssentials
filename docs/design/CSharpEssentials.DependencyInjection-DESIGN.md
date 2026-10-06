@@ -254,7 +254,7 @@ public static class {Asm}ServiceRegistry
 [assembly: CSharpEssentials.DependencyInjection.ServiceModule(typeof(Microsoft.Extensions.DependencyInjection.{Asm}ServiceRegistry))]
 ```
 
-`{Asm}` sanitization is the same as in Endpoints (§5.2 of the Endpoints design). `Add{Asm}Services` = `RegisterServices` + `ApplyDecorators`. `ApplyDecorators(services)` calls `ApplyDecorators(services, order)` for each value of `DecoratorOrders` (the distinct `Order` values of the assembly, ascending).
+`{Asm}` sanitization is the same as in Endpoints (§5.2 of the Endpoints design). `Add{Asm}Services` = `RegisterServices` + `ApplyDecorators`, guarded by `ServiceRegistration.TryMarkRegistered(services, typeof({Asm}ServiceRegistry).Assembly)`: the first call adds a singleton marker for the assembly to the collection and returns `true`; later calls find it and return `false`, so `Add{Asm}Services` returns without changes. `RegisterServices` and `ApplyDecorators` stay unguarded building blocks for the aggregate. `ApplyDecorators(services)` calls `ApplyDecorators(services, order)` for each value of `DecoratorOrders` (the distinct `Order` values of the assembly, ascending).
 
 ### 6.3 Aggregate `AddAllServices`
 
@@ -271,6 +271,7 @@ Same rules as `MapAllEndpoints`:
 - Referenced assemblies are filtered by name (skip `System*`, `Microsoft*`, `mscorlib`, `netstandard`, and assemblies not referencing `CSharpEssentials.DependencyInjection`) before `ServiceModule` attributes are read.
 - Modules are deduplicated, so there is no duplicate registration. Registries of different assemblies whose names collide after sanitizing (`Foo.Api`, `FooApi`) are skipped, because the aggregate cannot refer to an ambiguous type; the analyzer reports CSE2009. A referenced registry with the same name as the own registry is skipped too (the compiler resolves the name to the own type), and CSE2009 reports that case as well. The analyzer counts the own registry only when the project has at least one registration or decorator the generator emits, because only then is the own registry generated.
 - Phases: **all** `RegisterServices` (referenced modules by assembly name, own module last), then decorators across all modules: for each distinct `Order` in the union of every module's `DecoratorOrders` (ascending), `ApplyDecorators(services, order)` of each module in the same module order. `Order` is global; within one `Order`, module order and then type name decide, so the host's decorators are outermost among equal orders.
+- Idempotent: every module is passed through `ServiceRegistration.TryMarkRegistered` first, and modules already registered (by `Add{Asm}Services`, an earlier `AddAllServices`, or `AddServicesFromAssemblies`) take part in neither phase. The reflection fallback (§4.8) checks and sets the same marker per assembly, after its scan has validated every type, so a failing scan leaves the collection untouched.
 
 ### 6.4 Sample generated code
 

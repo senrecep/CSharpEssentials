@@ -9,7 +9,7 @@ namespace Microsoft.Extensions.DependencyInjection
     [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "4.0.0.0")]
     public static class GeneratorTestsServiceRegistry
     {
-        /// <summary>Registers the services declared in this assembly, then applies its decorators.</summary>
+        /// <summary>Registers the services declared in this assembly, then applies its decorators. Calling it again, or after <c>AddAllServices</c>, does nothing.</summary>
         /// <param name="services">The service collection.</param>
         /// <param name="logger">An optional logger. Registrations whose service type and key already exist are logged at Debug.</param>
         /// <returns>The same service collection.</returns>
@@ -17,6 +17,11 @@ namespace Microsoft.Extensions.DependencyInjection
             this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
             global::Microsoft.Extensions.Logging.ILogger? logger = null)
         {
+            if (!global::CSharpEssentials.DependencyInjection.ServiceRegistration.TryMarkRegistered(services, typeof(GeneratorTestsServiceRegistry).Assembly))
+            {
+                return services;
+            }
+
             RegisterServices(services, logger);
             ApplyDecorators(services);
             return services;

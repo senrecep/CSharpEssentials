@@ -66,7 +66,7 @@ public sealed class CreateApp : IEndpoint
 
 ```csharp
 app.MapAppsEndpoints();   // one assembly's registry
-app.MapAllEndpoints();    // own registry + every referenced assembly's registry
+app.MapAllEndpoints();    // own registry + every referenced assembly's registry; call once per route builder, a repeat maps every route twice
 
 IReadOnlyList<Type> mapped = AppsEndpointRegistry.EndpointTypes;   // mapping order
 ```
