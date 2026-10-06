@@ -36,7 +36,7 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
                 return;
             }
 
-            ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations = [];
+            ConcurrentBag<(string TypeName, string SortName, int Index, InspectedRegistration Registration)> registrations = [];
             ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers = [];
             start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, registrations, consumers), SymbolKind.NamedType);
             start.RegisterCompilationEndAction(end =>
@@ -49,7 +49,7 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeType(
         SymbolAnalysisContext context,
-        ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations,
+        ConcurrentBag<(string TypeName, string SortName, int Index, InspectedRegistration Registration)> registrations,
         ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers)
     {
         var type = (INamedTypeSymbol)context.Symbol;
@@ -65,9 +65,10 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
         }
 
         IReadOnlyList<ServiceDependency>? dependencies = null;
-        foreach (InspectedRegistration registration in inspection.Registrations)
+        for (int index = 0; index < inspection.Registrations.Count; index++)
         {
-            registrations.Add((type.ToDisplayString(), registration));
+            InspectedRegistration registration = inspection.Registrations[index];
+            registrations.Add((type.ToDisplayString(), inspection.SortName, index, registration));
             if (LifetimeRank(registration.Model.Lifetime) < LifetimeRank(Transient))
             {
                 dependencies ??= ServiceDependencyReader.Read(type);
@@ -78,7 +79,7 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
 
     private static void ReportCaptiveDependencies(
         CompilationAnalysisContext context,
-        ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations,
+        ConcurrentBag<(string TypeName, string SortName, int Index, InspectedRegistration Registration)> registrations,
         ConcurrentBag<(string TypeName, InspectedRegistration Registration, IReadOnlyList<ServiceDependency> Dependencies)> consumers)
     {
         ILookup<string, (string TypeName, string Lifetime)> providers = registrations
@@ -124,23 +125,25 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
 
     private static void ReportDuplicateThrows(
         CompilationAnalysisContext context,
-        ConcurrentBag<(string TypeName, InspectedRegistration Registration)> registrations)
+        ConcurrentBag<(string TypeName, string SortName, int Index, InspectedRegistration Registration)> registrations)
     {
         List<(string TypeName, InspectedRegistration Registration, string ServiceKey)> entries = [.. registrations
+            .OrderBy(static entry => entry.SortName, StringComparer.Ordinal)
+            .ThenBy(static entry => entry.Index)
             .SelectMany(static entry => entry.Registration.Model.Services.Select(service => (
                 entry.TypeName,
                 entry.Registration,
-                ServiceKey: service.ServiceType + "|" + (entry.Registration.Model.Key ?? string.Empty))))
-            .OrderBy(static entry => entry.TypeName, StringComparer.Ordinal)];
+                ServiceKey: service.ServiceType + "|" + (entry.Registration.Model.Key ?? string.Empty))))];
 
-        foreach ((string TypeName, InspectedRegistration Registration, string ServiceKey) entry in entries)
+        for (int index = 0; index < entries.Count; index++)
         {
+            (string TypeName, InspectedRegistration Registration, string ServiceKey) entry = entries[index];
             if (!string.Equals(entry.Registration.Model.Strategy, ServiceTypeInspector.ThrowStrategy, StringComparison.Ordinal))
             {
                 continue;
             }
 
-            (string TypeName, InspectedRegistration Registration, string ServiceKey) other = entries.FirstOrDefault(candidate =>
+            (string TypeName, InspectedRegistration Registration, string ServiceKey) other = entries.Take(index).FirstOrDefault(candidate =>
                 !ReferenceEquals(candidate.Registration, entry.Registration) &&
                 string.Equals(candidate.ServiceKey, entry.ServiceKey, StringComparison.Ordinal));
             if (other.Registration is null)

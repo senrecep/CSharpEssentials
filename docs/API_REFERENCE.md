@@ -1785,7 +1785,7 @@ Decorated originals move to a hidden registration under a private key, so they n
 | ID | Severity | Rule |
 |----|----------|------|
 | CSE2001 | Error | The class does not implement the service type |
-| CSE2002 | Error | Duplicate service type and key where one uses `RegistrationStrategy.Throw` |
+| CSE2002 | Error | `RegistrationStrategy.Throw` registration that follows an earlier registration of the same service type and key |
 | CSE2003 | Info | No interface matches `I{TypeName}`, so the class registers as itself (code fix adds the service type) |
 | CSE2004 | Error | Decorator has zero or several constructor parameters of the decorated type |
 | CSE2005 | Error | Decorator does not have exactly one public constructor |
