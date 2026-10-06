@@ -100,3 +100,59 @@ public sealed class PlainOrder
     public PlainColor? PreviousColor { get; set; }
     public List<PlainColor> Colors { get; set; } = [];
 }
+
+[StringEnum]
+public enum StoredEmptyStatus
+{
+}
+
+public sealed class StoredNumericOrder
+{
+    public int Id { get; set; }
+    public StoredSByteLevel SByteLevel { get; set; }
+    public StoredByteLevel ByteLevel { get; set; }
+    public StoredShortLevel ShortLevel { get; set; }
+    public StoredUShortLevel UShortLevel { get; set; }
+    public StoredUIntLevel UIntLevel { get; set; }
+    public StoredLongLevel LongLevel { get; set; }
+    public StoredUIntMask UIntFlags { get; set; }
+    public StoredWideMask WideFlags { get; set; }
+    public StoredEmptyStatus Empty { get; set; }
+}
+
+public sealed class StoredAddress
+{
+    public StoredOrderStatus Status { get; set; }
+}
+
+public sealed class StoredComplexOrder
+{
+    public int Id { get; set; }
+    public StoredAddress Address { get; set; } = new();
+}
+
+public sealed class StoredUnreachableOrder
+{
+    public int Id { get; set; }
+    public CSharpEssentials.Tests.Fixtures.EnumsContracts.UnreachableHolder<int>.Status Status { get; set; }
+}
+
+public abstract class StoredParcel
+{
+    public int Id { get; set; }
+}
+
+public sealed class StoredLetter : StoredParcel
+{
+    public StoredOrderStatus Status { get; set; }
+}
+
+public sealed class StoredBox : StoredParcel
+{
+    public StoredOrderStatus Status { get; set; }
+}
+
+public sealed class StoredCrate : StoredParcel
+{
+    public StoredShipment Status { get; set; }
+}

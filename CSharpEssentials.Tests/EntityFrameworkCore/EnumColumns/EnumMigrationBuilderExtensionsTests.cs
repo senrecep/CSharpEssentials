@@ -216,4 +216,88 @@ public sealed class EnumMigrationBuilderExtensionsTests
         sql.Should().StartWith("SELECT \"Status\" AS \"Value\", count(*) AS \"Count\" FROM \"orders\" WHERE \"Status\" IS NOT NULL AND lower(trim(\"Status\")) NOT IN ('pending', 'pending_approval', 'shipped', ")
             .And.EndWith(") GROUP BY \"Status\" ORDER BY \"Status\";");
     }
+    [Fact]
+    public void ConvertEnumColumn_Should_Throw_When_SourceFormatIsUndefined()
+    {
+        Action convert = () => new MigrationBuilder(Postgres).ConvertEnumColumn<StoredOrderStatus>("orders", "Status", from: (EnumStoredAs)42, to: EnumStorage.String);
+
+        convert.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("from");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_Throw_When_TableIsMissing()
+    {
+        Action convert = () => new MigrationBuilder(Postgres).ConvertEnumColumn<StoredOrderStatus>(" ", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
+
+        convert.Should().Throw<ArgumentException>().WithParameterName("table");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_Throw_When_FlagsGoFromTextToText()
+    {
+        Action convert = () => new MigrationBuilder(Postgres).ConvertEnumColumn<StoredPermissions>("orders", "Permissions", from: EnumStoredAs.FlagsText, to: EnumStoredAs.MemberName);
+
+        convert.Should().Throw<NotSupportedException>().WithMessage("*between numbers and member name text only*");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_Throw_When_UlongFlagsGoToIntegerOnPostgres()
+    {
+        Action convert = () => new MigrationBuilder(Postgres).ConvertEnumColumn<StoredWideMask>("orders", "Flags", from: EnumStoredAs.FlagsText, to: EnumStorage.Integer);
+
+        convert.Should().Throw<NotSupportedException>().WithMessage("*ulong*no bitwise operators*");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_AllowUlongFlags_When_Sqlite()
+    {
+        MigrationBuilder builder = new(Sqlite);
+
+        builder.ConvertEnumColumn<StoredWideMask>("orders", "Flags", from: EnumStoredAs.FlagsText, to: EnumStorage.Integer);
+
+        string sql = string.Join("\n", builder.Operations.OfType<SqlOperation>().Select(static operation => operation.Sql));
+        builder.Operations.OfType<AlterColumnOperation>().Should().ContainSingle();
+        sql.Should().Contain("UPDATE \"orders\" SET \"Flags\"").And.Contain("9223372036854775808").And.Contain("1");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_AlterToTheRequestedType_When_TextIsRewrittenOnPostgres()
+    {
+        MigrationBuilder builder = new(Postgres);
+
+        builder.ConvertEnumColumn<StoredOrderStatus>("orders", "Status", from: EnumStoredAs.Text, to: EnumStorage.String, type: "varchar(32)");
+
+        string[] sql = [.. builder.Operations.Cast<SqlOperation>().Select(static operation => operation.Sql)];
+        sql.Should().HaveCount(3);
+        sql[0].Should().Be("ALTER TABLE \"orders\" ALTER COLUMN \"Status\" TYPE text;");
+        sql[1].Should().StartWith("UPDATE \"orders\" SET \"Status\" = ");
+        sql[2].Should().Be("ALTER TABLE \"orders\" ALTER COLUMN \"Status\" TYPE varchar(32);");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_KeepTextType_When_TextIsRewrittenOnPostgresWithoutAType()
+    {
+        MigrationBuilder builder = new(Postgres);
+
+        builder.ConvertEnumColumn<StoredOrderStatus>("orders", "Status", from: EnumStoredAs.Text, to: EnumStorage.String);
+
+        builder.Operations.Cast<SqlOperation>().Select(static operation => operation.Sql)
+            .Should().HaveCount(2).And.NotContain(sql => sql.Contains("varchar", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void ConvertEnumJsonPath_Should_Throw_When_TargetStorageIsDefault()
+    {
+        Action convert = () => new MigrationBuilder(Postgres).ConvertEnumJsonPath<StoredOrderStatus>("documents", "data", ["status"], to: EnumStorage.Default);
+
+        convert.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("to");
+    }
+
+    [Fact]
+    public void ConvertEnumJsonPath_Should_Throw_When_PathHasAnEmptyName()
+    {
+        Action convert = () => new MigrationBuilder(Postgres).ConvertEnumJsonPath<StoredOrderStatus>("documents", "data", ["details", ""]);
+
+        convert.Should().Throw<ArgumentException>().WithParameterName("path");
+    }
 }

@@ -255,6 +255,186 @@ public sealed class EnumStorageConventionTests
         property.GetValueConverter().Should().BeOfType<EnumWireNameConverter<StoredOrderStatus>>();
     }
 
+    [Fact]
+    public void EnumConventions_Should_UseStringAndIntegerStorage_When_ConventionStorageIsDefault()
+    {
+        StoredOrderModel model = StoredOrderContext.Default(
+            nameof(EnumConventions_Should_UseStringAndIntegerStorage_When_ConventionStorageIsDefault),
+            conventions: EnumConventions.Default with { Storage = EnumStorage.Default, FlagsStorage = EnumStorage.Default });
+
+        IEntityType orders = Orders(model);
+
+        orders.FindProperty(nameof(StoredOrder.Status))!.GetValueConverter().Should().BeOfType<EnumWireNameConverter<StoredOrderStatus>>();
+        orders.FindProperty(nameof(StoredOrder.Permissions))!.GetValueConverter().Should().BeOfType<EnumIntegerConverter<StoredPermissions, int>>();
+    }
+
+    [Theory]
+    [InlineData(nameof(StoredNumericOrder.SByteLevel), typeof(sbyte))]
+    [InlineData(nameof(StoredNumericOrder.ByteLevel), typeof(byte))]
+    [InlineData(nameof(StoredNumericOrder.ShortLevel), typeof(short))]
+    [InlineData(nameof(StoredNumericOrder.UShortLevel), typeof(ushort))]
+    [InlineData(nameof(StoredNumericOrder.UIntLevel), typeof(uint))]
+    [InlineData(nameof(StoredNumericOrder.LongLevel), typeof(long))]
+    [InlineData(nameof(StoredNumericOrder.UIntFlags), typeof(uint))]
+    [InlineData(nameof(StoredNumericOrder.WideFlags), typeof(ulong))]
+    public void IntegerStorage_Should_UseTheUnderlyingType_As_ProviderType(string propertyName, Type providerType)
+    {
+        IProperty property = Entity<StoredNumericOrder>(NumericModel()).FindProperty(propertyName)!;
+
+        property.GetValueConverter()!.ProviderClrType.Should().Be(providerType);
+    }
+
+    [Fact]
+    public void IntegerStorage_Should_KeepNegativeAndLargeValues_When_UnderlyingTypeIsNotInt()
+    {
+        IEntityType orders = Entity<StoredNumericOrder>(NumericModel());
+
+        orders.FindProperty(nameof(StoredNumericOrder.SByteLevel))!.GetValueConverter()!.ConvertToProvider(StoredSByteLevel.Below).Should().Be((sbyte)-1);
+        orders.FindProperty(nameof(StoredNumericOrder.LongLevel))!.GetValueConverter()!.ConvertFromProvider(-5_000_000_000L).Should().Be(StoredLongLevel.Below);
+        orders.FindProperty(nameof(StoredNumericOrder.WideFlags))!.GetValueConverter()!.ConvertToProvider(StoredWideMask.High | StoredWideMask.Low)
+            .Should().Be((1UL << 63) | 1UL);
+        orders.FindCheckConstraint("ck_numeric_orders_LongLevel_enum")!.Sql.Should().Be("\"LongLevel\" IN (-5000000000, 5000000000)");
+    }
+
+    [Theory]
+    [InlineData(nameof(StoredNumericOrder.UIntFlags))]
+    [InlineData(nameof(StoredNumericOrder.WideFlags))]
+    public void IntegerFlags_Should_GetNoMaskConstraint_When_UnderlyingTypeIsUnsigned32Or64Bit(string propertyName)
+    {
+        IEntityType orders = Entity<StoredNumericOrder>(NumericModel());
+
+        orders.FindCheckConstraint($"ck_numeric_orders_{propertyName}_enum").Should().BeNull();
+    }
+
+    [Fact]
+    public void CheckConstraint_Should_BeSkipped_When_TheEnumHasNoMembers()
+    {
+        IEntityType orders = Entity<StoredNumericOrder>(NumericModel());
+
+        orders.FindProperty(nameof(StoredNumericOrder.Empty))!.GetValueConverter().Should().BeOfType<EnumWireNameConverter<StoredEmptyStatus>>();
+        orders.FindCheckConstraint("ck_numeric_orders_Empty_enum").Should().BeNull();
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_ConfigureEnumsInComplexProperties()
+    {
+        StoredOrderModel model = new(
+            nameof(ConfigureEnumConventions_Should_ConfigureEnumsInComplexProperties),
+            builder => builder.ConfigureEnumConventions(),
+            modelBuilder =>
+            {
+                StoredOrderContext.ConfigureOrders(modelBuilder);
+                modelBuilder.Entity<StoredComplexOrder>(order =>
+                {
+                    order.ToTable("complex_orders");
+                    order.ComplexProperty(o => o.Address);
+                });
+            });
+
+        IEntityType orders = Entity<StoredComplexOrder>(model);
+        IProperty status = orders.FindComplexProperty(nameof(StoredComplexOrder.Address))!.ComplexType.FindProperty(nameof(StoredAddress.Status))!;
+
+        status.GetValueConverter()!.ConvertToProvider(StoredOrderStatus.PendingApproval).Should().Be("pending_approval");
+        orders.FindCheckConstraint("ck_complex_orders_Address_Status_enum")!.Sql.Should().Be("\"Address_Status\" IN ('pending', 'pending_approval', 'shipped')");
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_Throw_When_StringEnumHasNoGeneratedMetadata()
+    {
+        StoredOrderModel model = new(
+            nameof(ConfigureEnumConventions_Should_Throw_When_StringEnumHasNoGeneratedMetadata),
+            builder => builder.ConfigureEnumConventions(),
+            modelBuilder =>
+            {
+                StoredOrderContext.ConfigureOrders(modelBuilder);
+                modelBuilder.Entity<StoredUnreachableOrder>();
+            });
+
+        Action build = () => Entity<StoredUnreachableOrder>(model);
+
+        build.Should().Throw<InvalidOperationException>().WithMessage("*UnreachableHolder*Status*marked ?StringEnum? but has no generated metadata*");
+    }
+
+    [Fact]
+    public void CheckConstraint_Should_BeAddedOnce_When_SiblingTypesShareAColumnWithTheSameEnum()
+    {
+        IEntityType parcels = Entity<StoredParcel>(ParcelModel(
+            nameof(CheckConstraint_Should_BeAddedOnce_When_SiblingTypesShareAColumnWithTheSameEnum),
+            typeof(StoredLetter),
+            typeof(StoredBox)));
+
+        parcels.GetCheckConstraints().Select(constraint => constraint.Sql)
+            .Should().Equal("\"Status\" IN ('pending', 'pending_approval', 'shipped')");
+    }
+
+    [Fact]
+    public void CheckConstraint_Should_BeDropped_When_SiblingTypesShareAColumnWithDifferentEnums()
+    {
+        StoredOrderModel model = ParcelModel(
+            nameof(CheckConstraint_Should_BeDropped_When_SiblingTypesShareAColumnWithDifferentEnums),
+            typeof(StoredLetter),
+            typeof(StoredBox),
+            typeof(StoredCrate));
+
+        IEntityType parcels = Entity<StoredParcel>(model);
+
+        parcels.GetDerivedTypesInclusive().SelectMany(type => type.GetDeclaredCheckConstraints()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void CheckConstraint_Should_GetAHashedName_When_TheNameIsLongerThanTheProviderLimit()
+    {
+        StoredOrderModel model = new(
+            nameof(CheckConstraint_Should_GetAHashedName_When_TheNameIsLongerThanTheProviderLimit),
+            builder => builder.ConfigureEnumConventions(),
+            modelBuilder =>
+            {
+                StoredOrderContext.ConfigureOrders(modelBuilder);
+                modelBuilder.Entity<StoredOrderV1>().ToTable(new string('t', 80));
+            });
+
+        string first = PostgresCheckConstraint(model);
+        string second = PostgresCheckConstraint(model with { Key = model.Key + "_again" });
+
+        first.Should().HaveLength(63).And.StartWith("ck_ttt").And.MatchRegex("_[0-9a-f]{8}$");
+        second.Should().Be(first);
+
+        static string PostgresCheckConstraint(StoredOrderModel model)
+        {
+            using StoredOrderContext context = StoredOrderContext.Postgres("Host=localhost", model);
+            return context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(StoredOrderV1))!.GetCheckConstraints().Single().Name!;
+        }
+    }
+
+    private static StoredOrderModel NumericModel() =>
+        new(
+            "numeric_orders",
+            builder => builder.ConfigureEnumConventions(),
+            modelBuilder =>
+            {
+                StoredOrderContext.ConfigureOrders(modelBuilder);
+                modelBuilder.Entity<StoredNumericOrder>().ToTable("numeric_orders");
+            });
+
+    private static StoredOrderModel ParcelModel(string key, params Type[] derivedTypes) =>
+        new(
+            key,
+            builder => builder.ConfigureEnumConventions(),
+            modelBuilder =>
+            {
+                StoredOrderContext.ConfigureOrders(modelBuilder);
+                modelBuilder.Entity<StoredParcel>().ToTable("parcels");
+                foreach (Type derived in derivedTypes)
+                    modelBuilder.Entity(derived).Property(nameof(StoredLetter.Status)).HasColumnName("Status");
+            });
+
+    private static IEntityType Entity<T>(StoredOrderModel model)
+    {
+        using SqliteConnection connection = new("DataSource=:memory:");
+        using StoredOrderContext context = StoredOrderContext.Sqlite(connection, model);
+        return context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(T))!;
+    }
+
     private static IEntityType Orders(StoredOrderModel model)
     {
         using SqliteConnection connection = new("DataSource=:memory:");
