@@ -414,10 +414,14 @@ internal static class StringEnumSourceWriter
     /// <summary>
     /// The member access, or a cast of the number for <c>[Obsolete]</c> members so generated code does not raise CS0618.
     /// </summary>
+    // A member declared as @class has the name "class"; member access needs the escape again.
+    private static string Identifier(string name) =>
+        SyntaxFacts.GetKeywordKind(name) == SyntaxKind.None ? name : "@" + name;
+
     private static string ValueExpression(EnumModel model, EnumMemberModel member)
     {
         if (!member.IsObsolete)
-            return model.FullyQualifiedName + "." + member.Name;
+            return model.FullyQualifiedName + "." + Identifier(member.Name);
 
         string number;
         if (model.IsSigned)
