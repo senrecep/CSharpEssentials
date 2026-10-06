@@ -203,9 +203,77 @@ public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
 builder.Services.AddAllServices(); // every generated registry of the app and its referenced assemblies
 ```
 
+## Enums end to end
+
+Mark an enum with `[StringEnum]` and every layer reads and writes it the same way, driven by one `EnumConventions` instance (`CSharpEssentials.Enums`). The wire name is snake_case by default (`PendingApproval` → `pending_approval`); change it per enum (`[StringEnum(Naming = ...)]`), per member (`[JsonStringEnumMemberName]`) or per project (the `CSharpEssentialsEnumNaming` MSBuild property). Enums without `[StringEnum]` keep the framework defaults.
+
+```csharp
+[StringEnum]
+public enum OrderStatus
+{
+    Pending,
+    [EnumAlias("Approval")] PendingApproval,
+    [EnumFallback] Unknown = 99, // what tolerant readers map unknown values to
+}
+```
+
+| Layer | Package | Setup | Reads | Writes |
+|---|---|---|---|---|
+| JSON (System.Text.Json) | `CSharpEssentials.Json` | `options.AddEnumConventions(conventions)` | wire name, member name in any casing, alias, defined number; undefined numbers rejected | `"pending_approval"`, or `1` with `WriteAs = Number` |
+| Route, query, header, form | `CSharpEssentials.AspNetCore` | `AddEnumConventions()` + `UseEnumBinding()` | same rules as a JSON body, trimmed; invalid → 400 problem listing the allowed values | |
+| Responses | `CSharpEssentials.AspNetCore` | `WithEnumWireFormat(...)` per group, `[EnumWireFormat]` per controller | | string by default, number per group |
+| OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` or `.Swashbuckle` (one per host) | `o.AddEnumConventions()` | | string or integer schema, value table, `x-enum-*` |
+| EF Core | `CSharpEssentials.EntityFrameworkCore` | `ConfigureEnumConventions(conventions)` | tolerant: any known spelling, unknown → fallback member | `text` column + `ck_{table}_{column}_enum`; `[Flags]` as an integer bitmask |
+| Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
+| Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
+
+One-time setup per host:
+
+```csharp
+// Minimal API: JSON options, binding, body errors and output in one call
+builder.Services.AddEnumConventions();
+app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization
+app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status)); // ?status=pending_approval, approval or 1
+
+// MVC: the same two calls; [FromQuery], [FromRoute], [FromHeader], [FromForm] and DTO properties bind
+builder.Services.AddControllers();
+builder.Services.AddEnumConventions();
+app.UseEnumBinding();
+
+// OpenAPI: one document per version, v1 keeps numbers for old clients
+builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());          // or AddSwaggerGen(o => o.AddEnumConventions())
+builder.Services.AddOpenApi("v2", o => o.AddEnumConventions());
+app.MapGroup("/api/v1").WithGroupName("v1").WithEnumWireFormat(EnumWireFormat.Number);
+app.MapGroup("/api/v2").WithGroupName("v2");
+
+// EF Core only (worker, console): no ASP.NET Core package needed
+protected override void ConfigureConventions(ModelConfigurationBuilder builder) =>
+    builder.ConfigureEnumConventions(EnumConventions.Default);
+```
+
+There is no message bus package. A bus that serializes with System.Text.Json takes the JSON conventions in tolerant `Data` mode, for example MassTransit: `cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumReadMode.Data, writeAs: EnumWireFormat.Number))`. Upgrade consumers first, then switch producers to strings.
+
+`[Flags]` enums are JSON arrays on the wire (`["read","write"]`), repeated or comma-separated query values, and an integer bitmask in the database. Use them for a fixed, small set of independent on/off capabilities (permissions, feature toggles, days of week). Use `List<TEnum>` for a user-chosen multi-select, a set that grows often or past 64 members, or when a member needs data attached; use a single enum for one value at a time (statuses, types).
+
+The `v2` document of [the end-to-end sample](examples/Examples.Enums.EndToEnd/README.md) describes the enum like this (the `v1` document has `"type": "integer"` and `"enum": [0, 1, 2, 99]`):
+
+```json
+"OrderStatus": {
+  "enum": ["pending", "pending_approval", "shipped", "unknown"],
+  "type": "string",
+  "description": "Order lifecycle state.\n\n| value | number | description |\n|---|---|---|\n| `pending` | 0 | Created, waiting for payment. |\n| `pending_approval` | 1 | Paid, waiting for manual approval. |\n| `shipped` | 2 | Shipped to the customer. |\n| `unknown` | 99 | Response only: a value this API version does not know. |",
+  "x-enum-varnames": ["Pending", "PendingApproval", "Shipped", "Unknown"],
+  "x-enum-descriptions": ["Created, waiting for payment.", "Paid, waiting for manual approval.", "Shipped to the customer.", "Response only: a value this API version does not know."],
+  "x-enum-numeric-values": [0, 1, 2, 99]
+}
+```
+
+Details: [enum conventions design](docs/design/CSharpEssentials.Enums-DESIGN.md) (normative matrix, flags guidance, rollout) and [ADR-007](docs/adr/ADR-007-enum-conventions.md).
+
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- Coming from 4.x? Read [Migrating from 4.x to 5.0](docs/migration/v4-to-v5.md). 5.0 applies one set of enum conventions to JSON, binding, OpenAPI and EF Core, and moves the Swashbuckle support into its own package.
 - Coming from 3.x? Read [Migrating from 3.x to 4.0](docs/migration/v3-to-v4.md). 4.0 changed ProblemDetails defaults, enum naming and some package dependencies.
 
 ## AI Skills
