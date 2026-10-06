@@ -1,4 +1,4 @@
-﻿//HintName: OrderStatusExtensions.g.cs
+﻿//HintName: Sample.OrderStatusExtensions.g.cs
 #nullable enable
 namespace Sample;
 public static class OrderStatusExtensions
