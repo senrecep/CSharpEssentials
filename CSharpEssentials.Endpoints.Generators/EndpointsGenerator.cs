@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace CSharpEssentials.Endpoints.Generators;
 
@@ -19,6 +20,9 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
 
     /// <summary>Tracking name of the host (assembly) model.</summary>
     public const string HostStep = "Host";
+
+    /// <summary>Tracking name of the collected explicit endpoint names.</summary>
+    public const string ReservedNamesStep = "ReservedNames";
 
     /// <summary>Tracking name of the test-project flag.</summary>
     public const string IsTestProjectStep = "IsTestProject";
@@ -43,25 +47,32 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
             .Select(static (compilation, ct) => CreateHost(compilation, ct))
             .WithTrackingName(HostStep);
 
+        IncrementalValueProvider<EquatableArray<string>> reservedNames = context.SyntaxProvider
+            .CreateSyntaxProvider(static (node, _) => EndpointNameReader.IsCandidate(node), static (ctx, ct) => ReadNames(ctx, ct))
+            .Where(static names => names.Count > 0)
+            .Collect()
+            .Select(static (names, _) => Merge(names))
+            .WithTrackingName(ReservedNamesStep);
+
         IncrementalValueProvider<bool> isTestProject = context.AnalyzerConfigOptionsProvider
             .Select(static (provider, _) => IsTestProject(provider))
             .WithTrackingName(IsTestProjectStep);
 
-        context.RegisterSourceOutput(collected.Combine(host), static (spc, input) =>
+        context.RegisterSourceOutput(collected.Combine(host).Combine(reservedNames), static (spc, input) =>
         {
-            (EquatableArray<EndpointModel> models, HostModel model) = input;
+            ((EquatableArray<EndpointModel> models, HostModel model), EquatableArray<string> names) = input;
             if (model.ExcludeAll || models.Count == 0)
             {
                 return;
             }
 
-            spc.AddSource($"{model.RegistryName}EndpointRegistry.g.cs", EndpointSourceWriter.WriteRegistry(model.RegistryName, models));
+            spc.AddSource($"{model.RegistryName}EndpointRegistry.g.cs", EndpointSourceWriter.WriteRegistry(model.RegistryName, models, names));
         });
 
         IncrementalValueProvider<bool> hasOwnRegistry = collected.Select(static (models, _) => models.Count > 0);
-        context.RegisterSourceOutput(hasOwnRegistry.Combine(host).Combine(isTestProject), static (spc, input) =>
+        context.RegisterSourceOutput(hasOwnRegistry.Combine(host).Combine(isTestProject).Combine(reservedNames), static (spc, input) =>
         {
-            ((bool hasEndpoints, HostModel model), bool isTest) = input;
+            (((bool hasEndpoints, HostModel model), bool isTest), EquatableArray<string> names) = input;
             if (model.DisableAggregate || !(model.GenerateAggregate || model.IsExecutable && !isTest))
             {
                 return;
@@ -69,7 +80,7 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
 
             spc.AddSource(
                 $"{model.RegistryName}EndpointAggregate.g.cs",
-                EndpointSourceWriter.WriteAggregate(model, hasEndpoints && !model.ExcludeAll));
+                EndpointSourceWriter.WriteAggregate(model, hasEndpoints && !model.ExcludeAll, names));
         });
     }
 
@@ -93,6 +104,28 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
             EndpointSymbolRules.GetFullyQualifiedName(type),
             EndpointSymbolRules.GetMetadataFullName(type),
             new EquatableArray<GroupModel>(groups));
+    }
+
+    private static EquatableArray<string> ReadNames(GeneratorSyntaxContext context, CancellationToken cancellationToken)
+    {
+        if (context.SemanticModel.GetOperation(context.Node, cancellationToken) is not IInvocationOperation invocation)
+        {
+            return default;
+        }
+
+        string[] names = [.. EndpointNameReader.Read(invocation)
+            .Select(static use => use.Name)
+            .OfType<string>()];
+        return new EquatableArray<string>(names);
+    }
+
+    private static EquatableArray<string> Merge(ImmutableArray<EquatableArray<string>> names)
+    {
+        string[] merged = [.. names
+            .SelectMany(static group => group)
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(static name => name, StringComparer.Ordinal)];
+        return new EquatableArray<string>(merged);
     }
 
     private static EquatableArray<EndpointModel> Order(ImmutableArray<EndpointModel> models)

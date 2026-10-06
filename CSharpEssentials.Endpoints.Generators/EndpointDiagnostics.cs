@@ -99,4 +99,25 @@ internal static class EndpointDiagnostics
         description: "Registry names are derived from assembly names with separators removed, so 'Foo.Api' and 'FooApi' both produce 'FooApiEndpointRegistry'. The generated aggregate cannot refer to an ambiguous type and leaves the referenced registries out until each has a distinct name. When the project's own registry has the same name, the aggregate maps only the project's own registry.",
         helpLinkUri: HelpLink,
         customTags: WellKnownDiagnosticTags.CompilationEnd);
+
+    public static readonly DiagnosticDescriptor DuplicateEndpointName = new(
+        "CSE1010",
+        "Explicit endpoint name is set more than once",
+        "Endpoint name '{0}' is also set at another call site; endpoint names must be unique within an application",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Two call sites that set the same constant name with WithName(...) or with EndpointNameAttribute, EndpointNameMetadata or RouteNameMetadata in WithMetadata(...) produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately.",
+        helpLinkUri: HelpLink,
+        customTags: WellKnownDiagnosticTags.CompilationEnd);
+
+    public static readonly DiagnosticDescriptor NonConstantEndpointName = new(
+        "CSE1011",
+        "Explicit endpoint name is not a constant",
+        "This endpoint name is not a compile-time constant, so it cannot be reserved at build time and OperationNaming.TypeName can generate the same name",
+        Category,
+        DiagnosticSeverity.Info,
+        isEnabledByDefault: true,
+        description: "Generated registries reserve constant names set with WithName(...) or with EndpointNameAttribute, EndpointNameMetadata or RouteNameMetadata in WithMetadata(...). A name that is computed at runtime outside an IEndpoint or IEndpointGroup type is not known to OperationNaming.TypeName. Use a constant, or map the endpoint through an IEndpoint type.",
+        helpLinkUri: HelpLink);
 }

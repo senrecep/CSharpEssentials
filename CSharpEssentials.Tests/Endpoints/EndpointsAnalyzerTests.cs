@@ -319,6 +319,86 @@ public class EndpointsAnalyzerTests
         }
         """;
 
+    private const string Cse1010Source = """
+        public sealed class Items : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/items", () => "items").WithName("Items");
+        }
+
+        public static class LegacyRoutes
+        {
+            public const string RouteName = "LegacyRoute";
+
+            public static void MapLegacy(IEndpointRouteBuilder app)
+            {
+                app.MapGet("/legacy/items", () => "items").WithName("Items");
+                app.MapGet("/legacy/route", () => "route").WithMetadata(new RouteNameMetadata(RouteName));
+                app.MapGet("/legacy/route-again", () => "again").WithMetadata(new RouteNameMetadata("LegacyRoute"));
+            }
+        }
+        """;
+
+    private const string Cse1010NegativeSource = """
+        public sealed class Items : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/items", () => "items").WithName("Items");
+        }
+
+        public static class LegacyRoutes
+        {
+            public static void MapLegacy(IEndpointRouteBuilder app)
+            {
+                app.MapGet("/legacy/items", () => "items").WithName("LegacyItems");
+                app.MapGet("/legacy/split", () => "split")
+                    .WithMetadata(new EndpointNameMetadata("Split"))
+                    .WithMetadata(new RouteNameMetadata("Split"));
+                app.MapGet("/legacy/both", () => "both").WithMetadata(new EndpointNameAttribute("Both"), new RouteNameMetadata("Both"));
+            }
+        }
+        """;
+
+    private const string Cse1011Source = """
+        public static class LegacyRoutes
+        {
+            private static readonly string Computed = "Computed";
+
+            public static void MapLegacy(IEndpointRouteBuilder app, IEndpointNameMetadata metadata)
+            {
+                app.MapGet("/legacy/name", () => "name").WithName(Computed);
+                app.MapGet("/legacy/metadata", () => "metadata").WithMetadata(new EndpointNameMetadata(Computed));
+                app.MapGet("/legacy/instance", () => "instance").WithMetadata(metadata);
+            }
+        }
+        """;
+
+    private const string Cse1011NegativeSource = """
+        public sealed class Items : IEndpoint
+        {
+            private static readonly string Computed = "Computed";
+
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/items", () => "items").WithName(Computed);
+        }
+
+        public sealed class ItemsGroup : IEndpointGroup
+        {
+            private static readonly string Computed = "ItemsGroup";
+
+            public static string Prefix => "items";
+
+            public static void Configure(RouteGroupBuilder group) => group.MapGet("/count", () => 1).WithName(Computed);
+        }
+
+        public static class LegacyRoutes
+        {
+            public static void MapLegacy(IEndpointRouteBuilder app)
+            {
+                app.MapGet("/legacy/name", () => "name").WithName("Legacy");
+                app.MapGet("/legacy/null", () => "null").WithMetadata(new RouteNameMetadata(null));
+                app.MapGet("/legacy/tags", () => "tags").WithMetadata(new TagsAttribute("Legacy"));
+            }
+        }
+        """;
+
     [Fact]
     public async Task Analyzer_Should_Report_Nothing_When_Types_Are_Valid()
     {
@@ -592,6 +672,51 @@ public class EndpointsAnalyzerTests
         ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
 
         diagnostics.Should().NotContain(static d => d.Id == "CSE1009");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1010_When_Constant_Endpoint_Name_Repeats()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1010Source);
+
+        Diagnostic[] duplicates = [.. diagnostics.Where(static d => d.Id == "CSE1010")];
+        duplicates.Should().HaveCount(4).And.OnlyContain(static d => d.Severity == DiagnosticSeverity.Warning);
+        duplicates.Select(static d => d.Location.SourceTree!.GetText().ToString(d.Location.SourceSpan)).Should().BeEquivalentTo(
+            "\"Items\"",
+            "\"Items\"",
+            "new RouteNameMetadata(RouteName)",
+            "new RouteNameMetadata(\"LegacyRoute\")");
+        duplicates.Select(static d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Should().Contain(
+            "Endpoint name 'Items' is also set at another call site; endpoint names must be unique within an application");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE1010_When_Names_Differ_Or_Split_Endpoint_And_Route_Names()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1010NegativeSource);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE1010");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1011_When_Explicit_Name_Outside_Endpoint_Is_Not_Constant()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1011Source);
+
+        Diagnostic[] names = [.. diagnostics.Where(static d => d.Id == "CSE1011")];
+        names.Should().OnlyContain(static d => d.Severity == DiagnosticSeverity.Info);
+        names.Select(static d => d.Location.SourceTree!.GetText().ToString(d.Location.SourceSpan)).Should().BeEquivalentTo(
+            "Computed",
+            "new EndpointNameMetadata(Computed)",
+            "metadata");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE1011_When_Name_Is_Constant_Or_Set_Inside_Endpoint_Type()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1011NegativeSource);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE1011" || d.Id == "CSE1010");
     }
 
     private static CompilationReference RegistryReference(string assemblyName)

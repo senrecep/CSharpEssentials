@@ -95,6 +95,40 @@ public partial class EndpointsGeneratorTests
         }
         """;
 
+    private const string NamedSource = """
+        using CSharpEssentials.Endpoints;
+        using Microsoft.AspNetCore.Builder;
+        using Microsoft.AspNetCore.Http;
+        using Microsoft.AspNetCore.Routing;
+
+        namespace Sample.Named;
+
+        public sealed class Items : IEndpoint
+        {
+            public const string ArchiveName = "ArchiveItems";
+
+            public static void Map(IEndpointRouteBuilder app)
+            {
+                app.MapGet("/items", () => TypedResults.Ok());
+                app.MapGet("/items/archive", () => TypedResults.Ok()).WithName(ArchiveName);
+            }
+        }
+
+        public static class LegacyRoutes
+        {
+            private static readonly string Computed = "Computed";
+
+            public static void MapLegacy(IEndpointRouteBuilder app)
+            {
+                app.MapGet("/legacy/items", () => "items").WithName("Items");
+                app.MapGet("/legacy/attribute", () => "attribute").WithMetadata(new EndpointNameAttribute("Legacy\"Quoted"));
+                app.MapGet("/legacy/metadata", () => "metadata").WithMetadata(new EndpointNameMetadata("LegacyMetadata"), new RouteNameMetadata("LegacyRoute"));
+                app.MapGet("/legacy/computed", () => "computed").WithName(Computed);
+                app.MapGet("/legacy/again", () => "again").WithName("Items");
+            }
+        }
+        """;
+
     [Fact]
     public Task Generator_Should_Match_Registry_Snapshot()
     {
@@ -103,6 +137,66 @@ public partial class EndpointsGeneratorTests
         ShouldCompile(run);
         EndpointCompilations.HintNames(run).Should().Equal("SampleApiEndpointRegistry.g.cs");
         return Verify(run.Driver).ScrubLinesWithReplace(ScrubVersion);
+    }
+
+    [Fact]
+    public Task Generator_Should_Match_Registry_Snapshot_When_Explicit_Names_Are_Reserved()
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Named",
+            OutputKind.DynamicallyLinkedLibrary,
+            NamedSource));
+
+        ShouldCompile(run);
+        EndpointCompilations.HintNames(run).Should().Equal("SampleNamedEndpointRegistry.g.cs");
+        return Verify(run.Driver).ScrubLinesWithReplace(ScrubVersion);
+    }
+
+    [Fact]
+    public void Generator_Should_Not_Reserve_Names_When_Compilation_Has_No_Constant_Explicit_Names()
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create("Sample.Api", OutputKind.DynamicallyLinkedLibrary, LibrarySource));
+
+        ShouldCompile(run);
+        EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs").Should().NotContain("ReserveEndpointNames");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Host_Names_In_Aggregate_When_Host_Has_No_Endpoints()
+    {
+        CSharpCompilation api = Compile("Sample.Api", OutputKind.DynamicallyLinkedLibrary, LibrarySource);
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [api.ToMetadataReference()],
+            """
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Routing;
+
+            namespace Sample.Host;
+
+            public static class Routes
+            {
+                public static void MapRoutes(IEndpointRouteBuilder app) => app.MapGet("/legacy", () => "legacy").WithName("Legacy");
+            }
+            """));
+
+        ShouldCompile(run);
+        EndpointCompilations.HintNames(run).Should().Equal("SampleHostEndpointAggregate.g.cs");
+        EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs").Should().Contain(
+            "global::CSharpEssentials.Endpoints.EndpointMapper.ReserveEndpointNames(app, options, new string[] { \"Legacy\" });");
+    }
+
+    [Fact]
+    public void Generator_Should_Leave_Name_Reservation_To_Own_Registry_When_Aggregate_Maps_It()
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create("Sample.Named", OutputKind.ConsoleApplication, NamedSource));
+
+        ShouldCompile(run);
+        EndpointCompilations.GeneratedText(run, "SampleNamedEndpointAggregate.g.cs").Should().NotContain("ReserveEndpointNames");
+        EndpointCompilations.GeneratedText(run, "SampleNamedEndpointRegistry.g.cs").Should().Contain(
+            "global::CSharpEssentials.Endpoints.EndpointMapper.ReserveEndpointNames(app, options, ReservedEndpointNames);");
     }
 
     [Fact]
@@ -310,9 +404,9 @@ public partial class EndpointsGeneratorTests
             static c => GeneratorHarness.AddSource(c, "namespace Sample.Other; public sealed class Unrelated { }"),
             [.. EndpointCompilations.Generators.Value.Generators]);
 
-        IncrementalCaching.ShouldHaveCachedSteps(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "Host", "IsTestProject");
+        IncrementalCaching.ShouldHaveCachedSteps(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames", "Host", "IsTestProject");
         IncrementalCaching.ShouldHaveCachedSourceOutputs(second);
-        IncrementalCaching.ShouldNotCaptureCompilationObjects(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "Host", "IsTestProject");
+        IncrementalCaching.ShouldNotCaptureCompilationObjects(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames", "Host", "IsTestProject");
     }
 
     private static string PingSource(string @namespace) => $$"""

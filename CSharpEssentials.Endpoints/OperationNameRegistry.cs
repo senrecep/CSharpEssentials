@@ -103,6 +103,20 @@ internal sealed class OperationNameRegistry
         endpoint.Metadata.Add(new OperationNameMetadata(this, slot));
     }
 
+    public void Reserve(IReadOnlyList<string> names)
+    {
+        lock (_gate)
+        {
+            foreach (string name in names)
+            {
+                if (_explicitNames.Add(name))
+                {
+                    _resolved = false;
+                }
+            }
+        }
+    }
+
     public string Resolve(OperationNameSlot slot)
     {
         lock (_gate)
