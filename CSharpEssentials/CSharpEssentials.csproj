@@ -50,7 +50,7 @@
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Entity"
       Condition="'$(UseProjectReferences)' != 'true'" />
-    <PackageReference Include="CSharpEssentials.Enums"
+    <PackageReference Include="CSharpEssentials.Enums" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Errors"
       Condition="'$(UseProjectReferences)' != 'true'" />
@@ -78,7 +78,7 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Outside the solution. CI packs the repository into artifacts/feed and builds this project once per package in CsePackage,
+       each time with only that package referenced: Program.cs compiles only when the CSharpEssentials.Enums generator reached the
+       project through it. Build: dotnet build tests/PackageConsumer -p:CsePackage=CSharpEssentials.Json -p:CseVersion=<packed> -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <CSharpEssentialsEnumNaming>KebabCaseLower</CSharpEssentialsEnumNaming>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="$(CsePackage)" />
+  </ItemGroup>
+
+</Project>

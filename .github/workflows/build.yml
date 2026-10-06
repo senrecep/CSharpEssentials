@@ -37,6 +37,18 @@ jobs:
       - name: Build Enums end-to-end example
         run: dotnet build examples/Examples.Enums.EndToEnd/Examples.Enums.EndToEnd.csproj --configuration Release -warnaserror
 
+      # A package consumer that references only Json (or only EntityFrameworkCore) must get the
+      # Enums generator: tests/PackageConsumer fails at run time when [StringEnum] metadata is missing.
+      - name: Pack to a local feed
+        run: |
+          dotnet build CSharpEssentials.slnx --no-restore --configuration Release -p:Version=0.0.0-ci.${{ github.run_id }}
+          dotnet pack CSharpEssentials.slnx --no-build --configuration Release -o artifacts/feed -p:Version=0.0.0-ci.${{ github.run_id }}
+
+      - name: Run package consumers
+        run: |
+          dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Json -p:CseVersion=0.0.0-ci.${{ github.run_id }}
+          dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.EntityFrameworkCore -p:CseVersion=0.0.0-ci.${{ github.run_id }}
+
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v7
         with:
