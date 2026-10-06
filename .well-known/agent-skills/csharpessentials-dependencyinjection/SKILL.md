@@ -13,7 +13,7 @@ Attribute-based service registration with a source-generated, reflection-free re
 dotnet add package CSharpEssentials.DependencyInjection
 ```
 
-Target frameworks: `net11.0`, `net10.0`, `net9.0`, `netstandard2.1`. The generic attribute forms (`[RegisterScoped<TService>]`, `[Decorates<TService>]`) need `net7.0` or later; on `netstandard2.1` use the `typeof(...)` forms. The generator, analyzer and code fix ship in the package.
+Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`, `netstandard2.1`. The generic attribute forms (`[RegisterScoped<TService>]`, `[Decorates<TService>]`) need `net7.0` or later; on `netstandard2.1` use the `typeof(...)` forms. The generator, analyzer and code fix ship in the package.
 
 ## Namespace
 

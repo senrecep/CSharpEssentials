@@ -1733,7 +1733,7 @@ group.RequireRoles("admin", "editor");
 
 ## 22. CSharpEssentials.DependencyInjection — Attribute-Based Registration
 
-**What it is:** Attribute-based service registration and decoration for `Microsoft.Extensions.DependencyInjection`. A bundled source generator writes a reflection-free `Add{Assembly}Services` method; every strategy is key-aware. Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` (generic attribute forms need `net7.0` or later).
+**What it is:** Attribute-based service registration and decoration for `Microsoft.Extensions.DependencyInjection`. A bundled source generator writes a reflection-free `Add{Assembly}Services` method; every strategy is key-aware. Targets `net11.0`, `net10.0`, `net9.0`, `net8.0`, `netstandard2.1` (generic attribute forms need `net7.0` or later).
 
 ```csharp
 [RegisterScoped]                                     // IOrderService, by the I{TypeName} rule
