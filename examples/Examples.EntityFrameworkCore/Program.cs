@@ -256,7 +256,7 @@ using (var scope = provider.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
 
-    Console.WriteLine("--- DEMO: EnumToFormattedStringConverter ---");
+    Console.WriteLine("--- DEMO: EnumWireNameConverter ---");
 
     var electronicProduct = db.Products.First(p => p.Category == ProductCategory.Electronics);
     Console.WriteLine($"Product: {electronicProduct.Name}");

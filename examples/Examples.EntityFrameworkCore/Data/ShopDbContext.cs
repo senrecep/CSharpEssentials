@@ -1,6 +1,7 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,14 +23,13 @@ public class ShopDbContext : BaseDbContext<ShopDbContext>
 
     /// <summary>
     /// ConfigureConventions is called before OnModelCreating and applies
-    /// global conventions. ConfigureEnumConventions scans the assembly for
-    /// enums decorated with [StringEnum] and automatically registers
-    /// EnumToFormattedStringConverter + MaxLength for each.
+    /// global conventions. ConfigureEnumConventions stores every mapped [StringEnum]
+    /// enum as its wire name and adds a check constraint for its column.
     /// </summary>
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
-        configurationBuilder.ConfigureEnumConventions(typeof(ShopDbContext).Assembly);
+        configurationBuilder.ConfigureEnumConventions(EnumConventions.Default);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
