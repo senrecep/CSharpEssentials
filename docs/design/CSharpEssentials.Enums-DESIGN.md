@@ -661,7 +661,7 @@ No conversion ever writes `NULL` or loses a value. Every CASE has an `ELSE`:
 - **Text targets** keep the original value in the `ELSE`. A value that matches no spelling stays as it is and fails the constraint added in step 3, which is intended: `EnumDataAudit` lists such values before the migration runs.
 - **Integer targets** keep integer text as that number (undefined numbers survive, as they do in integer columns) and abort the statement for any other text with an error that names the column, the enum and the value: `CSharpEssentials: cannot convert orders.status to OrderStatus, unknown value: bogus`. PostgreSQL raises it through `CAST('<message>' || value AS integer)`, SQLite through `json_extract('{}', '<message>' || value)`; both roll back the migration transaction.
 
-Spellings are matched on `lower(trim(value))` in this priority (first wins when two members share one): wire name, member name, aliases, camelCase, legacy snake case, numeric text.
+Spellings are matched on `lower(trim(value))` in this priority (first wins when two members share one): wire name, member name, aliases, camelCase, legacy snake case, numeric text. SQL `trim` removes spaces only: a value or flags token with a leading or trailing tab, CR or LF is an unknown value, so the audit lists it and the conversion stops, unlike the .NET tolerant read, whose `string.Trim()` removes any whitespace around a flags token.
 
 | Conversion | SQL shape (PostgreSQL) |
 |---|---|
