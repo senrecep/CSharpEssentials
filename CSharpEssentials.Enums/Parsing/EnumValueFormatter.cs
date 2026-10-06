@@ -39,10 +39,11 @@ public static class EnumValueFormatter
 
     /// <summary>
     /// Formats a boxed enum value like <see cref="Format{TEnum}(TEnum, EnumWireFormat)"/>. Returns <see langword="false"/> when
-    /// <paramref name="value"/> is null, not an enum, rejected by <see cref="EnumConventions.CanHandle"/> or without generated
-    /// metadata, so the caller can fall back to its own formatting.
+    /// <paramref name="value"/> is null, not an enum, rejected by <see cref="EnumConventions.CanHandle"/>, so the caller can
+    /// fall back to its own formatting.
     /// </summary>
     /// <exception cref="EnumValueException"><paramref name="value"/> is a handled enum but not a defined value.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="value"/> is a handled enum without generated metadata.</exception>
     public static bool TryFormat(object? value, EnumConventions conventions, [NotNullWhen(true)] out string? text, EnumWireFormat? format = null)
     {
         _ = conventions ?? throw new ArgumentNullException(nameof(conventions));
@@ -106,7 +107,15 @@ public static class EnumValueFormatter
             return false;
 
         Type type = value.GetType();
-        return conventions.CanHandle(type) && EnumMetadata.TryGet(type, out info);
+        if (!conventions.CanHandle(type))
+            return false;
+        if (EnumMetadata.TryGet(type, out info))
+            return true;
+
+        throw new InvalidOperationException(
+            $"Enum '{type.FullName}' is handled by the enum conventions but has no generated metadata. Rebuild its project with the " +
+            "CSharpEssentials.Enums 5.0 generator (C# 9 or newer) and make the enum and its containing types public or internal " +
+            "(not private, protected, file-local or nested in a generic type).");
     }
 
     private sealed class FormatVisitor(object value, EnumWireFormat format) : IEnumInfoVisitor<string>
