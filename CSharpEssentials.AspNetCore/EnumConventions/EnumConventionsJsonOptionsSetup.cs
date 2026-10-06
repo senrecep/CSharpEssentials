@@ -21,7 +21,7 @@ internal sealed class EnumConventionsJsonOptionsSetup(EnumConventionsRegistratio
     private void Apply(JsonSerializerOptions options, EnumWireFormat writeAs) =>
         UseFactory(options, registration.CreateConverterFactory(writeAs));
 
-    // AddEnumConventions removes every other enum converter and inserts its factory at position 0; that slot then takes the
+    // AddEnumConventions removes earlier convention factories and inserts its factory at position 0 (other converters stay); that slot then takes the
     // registration's factory, which keeps the reflection opt-in.
     internal static void UseFactory(JsonSerializerOptions options, EnumConverterFactory factory)
     {

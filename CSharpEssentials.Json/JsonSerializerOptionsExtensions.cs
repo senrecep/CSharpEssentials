@@ -11,9 +11,10 @@ namespace CSharpEssentials.Json;
 public static class JsonSerializerOptionsExtensions
 {
     /// <summary>
-    /// Adds an <see cref="EnumConverterFactory"/> at position 0 and removes every other enum converter
-    /// (<see cref="JsonStringEnumConverter"/>, <see cref="JsonStringEnumConverter{TEnum}"/> and earlier
-    /// <see cref="EnumConverterFactory"/> instances, <c>ConditionalStringEnumConverter</c> included), so a host default cannot win by order.
+    /// Adds an <see cref="EnumConverterFactory"/> at position 0 and removes earlier <see cref="EnumConverterFactory"/>
+    /// instances (<c>ConditionalStringEnumConverter</c> included). Other converters such as <see cref="JsonStringEnumConverter"/>
+    /// stay: the factory is first, so it wins for the enums the conventions handle, and enums it does not handle keep the
+    /// converter the host configured.
     /// </summary>
     /// <param name="options">The options to change; they must not be in use yet.</param>
     /// <param name="conventions">The conventions.</param>
@@ -66,7 +67,5 @@ public static class JsonSerializerOptionsExtensions
         return options;
     }
 
-    private static bool IsEnumConverter(JsonConverter converter) =>
-        converter is EnumConverterFactory or JsonStringEnumConverter ||
-        converter.GetType() is { IsGenericType: true } type && type.GetGenericTypeDefinition() == typeof(JsonStringEnumConverter<>);
+    private static bool IsEnumConverter(JsonConverter converter) => converter is EnumConverterFactory;
 }
