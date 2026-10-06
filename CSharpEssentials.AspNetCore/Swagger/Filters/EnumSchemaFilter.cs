@@ -1,4 +1,4 @@
-using CSharpEssentials.Json;
+using CSharpEssentials.Enums;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -7,15 +7,15 @@ namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 
 /// <summary>
 /// Describes <see cref="CSharpEssentials.Enums.StringEnumAttribute"/> enums as string schemas whose values are
-/// the names used on the wire (<see cref="StringEnumNaming"/>), for bodies as well as query and route parameters.
+/// the names used on the wire (<see cref="EnumMetadata"/>), for bodies as well as query and route parameters.
 /// </summary>
 public class EnumSchemaFilter : ISchemaFilter
 {
     public void Apply(OpenApiSchema schema, SchemaFilterContext context)
     {
-        if (!StringEnumNaming.IsStringEnum(context.Type))
+        if (!EnumMetadata.TryGet(context.Type, out IEnumInfo? info))
             return;
-        IReadOnlyList<string> values = StringEnumNaming.GetNames(context.Type);
+        IReadOnlyList<string> values = info.WireNames;
 
         var enumValues = values
             .Select(name => new OpenApiString(name))

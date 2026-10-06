@@ -998,13 +998,15 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `PolymorphicJsonConverterFactory` | Handles polymorphic serialization |
 | `MultiFormatDateTimeConverterFactory` / `MultiFormatDateTimeConverter<T>` | Parses multiple date/time formats |
 | `ConditionalStringEnumConverter` | Conditional enum to/from string (`AllowUndefinedValues = false` rejects undefined numbers) |
-| `StringEnumNaming` | Single naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
+| `StringEnumNaming` | Obsolete facade over `EnumMetadata`; the naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
 | `options.AddEnumConventions(conventions, mode, writeAs)` | Adds `EnumConverterFactory` for enums with generated metadata and removes competing enum converters. A `[StringEnum]` enum without generated metadata fails with `InvalidOperationException` instead of becoming a number |
 | `EnumConverterFactory.CreateWithReflectionFallback(conventions, mode, writeAs)` | Opt-in factory that also converts enums without generated metadata that `EnumConventions.CanHandle` accepts, with metadata read by reflection. `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`: not AOT safe |
 | `options.AddEnumConventionsWithReflection(conventions, mode, writeAs)` | `AddEnumConventions` with the reflection fallback above. `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`: opt-in, not AOT safe |
 | `factory.UsesReflectionFallback` | `true` for a factory created with `CreateWithReflectionFallback` |
 
 ### StringEnumNaming
+
+`[Obsolete]` since 5.0, a working facade over `EnumMetadata`. Use `EnumMetadata`, `EnumValueFormatter`, `EnumValueParser` or the generated `ToWireName()` and `TryParseWire` helpers instead.
 
 Names resolve as `[JsonStringEnumMemberName]` when present, otherwise `JsonNamingPolicy.SnakeCaseLower` (the default policy).
 

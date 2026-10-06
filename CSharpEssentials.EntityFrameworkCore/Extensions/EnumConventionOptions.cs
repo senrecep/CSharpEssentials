@@ -11,7 +11,7 @@ public sealed class EnumConventionOptions
     /// <summary>
     /// Which enum types are stored as strings. Default: enums marked with <see cref="StringEnumAttribute"/>.
     /// </summary>
-    public Predicate<Type> CanConvert { get; set; } = CSharpEssentials.Json.StringEnumNaming.IsStringEnum;
+    public Predicate<Type> CanConvert { get; set; } = static type => EnumConventions.Default.CanHandle(type);
 
     /// <summary>
     /// When <see langword="true"/>, values are written in the 3.x format (Core <c>ToSnakeCase</c>) instead of the

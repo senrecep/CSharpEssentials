@@ -423,6 +423,10 @@ insert_final_newline = false
 tab_width = unset
 trim_trailing_whitespace = false
 
+# The 4.x naming helper stays as an obsolete facade over EnumMetadata for the 5.0 migration (design section 7).
+[CSharpEssentials.Json/StringEnumNaming.cs]
+dotnet_diagnostic.S1133.severity = none
+
 # The 4.x converter stays as an obsolete subclass for the 5.0 migration (design section 7).
 [CSharpEssentials.Json/ConditionalStringEnumConverter.cs]
 dotnet_diagnostic.S1133.severity = none

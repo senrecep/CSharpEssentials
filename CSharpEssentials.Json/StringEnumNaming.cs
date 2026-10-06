@@ -12,6 +12,7 @@ namespace CSharpEssentials.Json;
 /// <c>ToWireName()</c>/<c>TryParseWire</c> helpers in new code. Runtime naming policies other than
 /// <see cref="JsonNamingPolicy.SnakeCaseLower"/> are not supported; the naming is set at build time.
 /// </remarks>
+[Obsolete("Use EnumMetadata and the generated ToWireName() and TryParseWire helpers instead. Wire names are set at build time.")]
 public static class StringEnumNaming
 {
     private static readonly EnumConventions ReadConventions = EnumConventions.Default with { UnknownValue = UnknownEnumValueHandling.Reject };

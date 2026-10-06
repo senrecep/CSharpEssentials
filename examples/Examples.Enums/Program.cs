@@ -1,5 +1,4 @@
 using CSharpEssentials.Enums;
-using CSharpEssentials.Json;
 
 namespace Examples.Enums;
 
@@ -115,11 +114,12 @@ public class Program
 
         Console.WriteLine($"ParseWire(\"returned\") = {DeliveryStatusExtensions.ParseWire("returned")}");
 
-        // StringEnumNaming (CSharpEssentials.Json) gives the wire name used by the JSON converters
-        // (snake_case by default), so APIs and generated code agree on the same spelling.
-        Console.WriteLine($"StringEnumNaming.GetName(Shipped) = {StringEnumNaming.GetName(delivery)}");
-        Console.WriteLine($"StringEnumNaming.GetNames<DeliveryStatus>() = [{string.Join(", ", StringEnumNaming.GetNames<DeliveryStatus>())}]");
-        Console.WriteLine($"StringEnumNaming.IsStringEnum(typeof(DeliveryStatus)) = {StringEnumNaming.IsStringEnum(typeof(DeliveryStatus))}");
+        // EnumMetadata (CSharpEssentials.Enums) is the one source of the wire names the JSON converters use, so APIs
+        // and generated code agree on the same spelling.
+        IEnumInfo info = EnumMetadata.Get<DeliveryStatus>();
+        Console.WriteLine($"EnumValueFormatter.Format(Shipped) = {EnumValueFormatter.Format(delivery, EnumWireFormat.String)}");
+        Console.WriteLine($"EnumMetadata.Get<DeliveryStatus>().WireNames = [{string.Join(", ", info.WireNames)}]");
+        Console.WriteLine($"EnumMetadata.IsRegistered(typeof(DeliveryStatus)) = {EnumMetadata.IsRegistered(typeof(DeliveryStatus))}");
         Console.WriteLine();
 
         Console.WriteLine("========================================");

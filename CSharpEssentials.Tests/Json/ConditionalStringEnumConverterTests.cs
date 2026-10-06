@@ -178,13 +178,13 @@ public class ConditionalStringEnumConverterTests
     }
 
     [Fact]
-    public void Serialize_ShouldWriteSameNamesAsStringEnumNaming()
+    public void Serialize_ShouldWriteSameWireNamesAsEnumMetadata()
     {
         foreach (ConverterAcronymKind value in Enum.GetValues<ConverterAcronymKind>())
         {
             string json = JsonSerializer.Serialize(value, StringEnumOptions);
 
-            json.Should().Be($"\"{StringEnumNaming.GetName(value)}\"");
+            json.Should().Be($"\"{EnumValueFormatter.Format(value, EnumWireFormat.String)}\"");
         }
     }
 
@@ -210,11 +210,11 @@ public class ConditionalStringEnumConverterTests
     }
 
     [Fact]
-    public void Deserialize_ShouldReadEveryNameProducedByStringEnumNaming()
+    public void Deserialize_ShouldReadEveryWireNameFromEnumMetadata()
     {
         foreach (ConverterAcronymKind expected in Enum.GetValues<ConverterAcronymKind>())
         {
-            string json = $"\"{StringEnumNaming.GetName(expected)}\"";
+            string json = $"\"{EnumValueFormatter.Format(expected, EnumWireFormat.String)}\"";
 
             JsonSerializer.Deserialize<ConverterAcronymKind>(json, StringEnumOptions).Should().Be(expected);
         }
