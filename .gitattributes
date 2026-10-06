@@ -9,3 +9,5 @@
 *.md text eol=lf
 *.sh text eol=lf
 *.editorconfig text eol=lf
+*.verified.cs text eol=lf working-tree-encoding=UTF-8
+*.verified.txt text eol=lf working-tree-encoding=UTF-8

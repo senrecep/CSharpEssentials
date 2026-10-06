@@ -96,6 +96,29 @@ Users may change severities through `.editorconfig`. The defaults follow this po
 - `CSharpEssentials.Enums` keeps the ADR-004 mechanism. Moving it to this layout is possible later, but is out of scope for 4.1.
 - The publish script packs only packable projects, so `*.Generators` projects (`IsPackable=false`) are skipped automatically.
 
+### Implementation
+
+- A generator project imports the shared settings and adds nothing else to its `.csproj` except sources and its two release-tracking files:
+
+  ```xml
+  <Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\build\Generators.props" />
+  </Project>
+  ```
+
+  `build/Generators.props` sets `netstandard2.0`, `IsPackable=false`, `IncludeSymbols=false`, `IsRoslynComponent=true`, `EnforceExtendedAnalyzerRules=true` and `DebugType=embedded` (the pdb travels inside the analyzer dll, so no separate symbol file is needed in `analyzers/dotnet/cs`). It references `Microsoft.CodeAnalysis.CSharp` with `VersionOverride="4.8.0"` and `Microsoft.CodeAnalysis.Analyzers`, both `PrivateAssets="all"`, and adds `AnalyzerReleases.Shipped.md`/`AnalyzerReleases.Unshipped.md` as `AdditionalFiles`. SourceLink and SonarAnalyzer still come from `Directory.Build.props`; generator code satisfies Sonar instead of suppressing it.
+- Roslyn 4.8 brings `System.Collections.Immutable` 7.0, which has no collection builder for `ImmutableArray<T>`. Generator code uses `ImmutableArray.Create(...)` instead of collection expressions for immutable arrays (`CS9210` otherwise).
+- `build-and-publish-nugets.sh` skips directories named `*.Generators`, because it detects non-packable projects by text and the `IsPackable=false` setting lives in the imported props file.
+- Pack wiring (`build/PackGenerator.targets`) lands with the first runtime package that owns a generator (Endpoints, #52), where the nupkg layout is verified by a test.
+- In-repo consumers reference the generator project directly:
+
+  ```xml
+  <ProjectReference Include="..\CSharpEssentials.<Area>.Generators\CSharpEssentials.<Area>.Generators.csproj"
+                    OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  ```
+
+- Test harness: `CSharpEssentials.Tests/Generators/` (`GeneratorHarness`, `AnalyzerHarness`, `IncrementalCaching`, `AnalyzerAssembly`). Snapshots live in a `Snapshots/` folder next to the test file, `*.verified.*` files are committed and `*.received.*` files are ignored. Verify disables diff tools on build servers (it detects `GITHUB_ACTION`), so CI runs the snapshot tests without extra settings.
+
 ## Alternatives Considered
 
 | Alternative | Rejected because |

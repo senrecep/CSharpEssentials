@@ -763,3 +763,6 @@ $RECYCLE.BIN/
 
 plans/
 research/
+
+# Verify snapshot testing
+*.received.*
