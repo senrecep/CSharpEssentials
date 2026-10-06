@@ -467,6 +467,27 @@ public class EnumConverterFactoryTests
         act.Should().Throw<EnumValueJsonException>();
     }
 
+    [Theory]
+    [InlineData(EnumReadMode.Input)]
+    [InlineData(EnumReadMode.Data)]
+    public void Read_Should_Reject_Negative_Zero(EnumReadMode mode)
+    {
+        Action number = () => Read<JsonPlainStatus>("-0", mode);
+        Action text = () => Read<JsonPlainStatus>("\"-0\"", mode);
+
+        number.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be("-0");
+        text.Should().Throw<EnumValueJsonException>();
+        Read<JsonPlainStatus>("0", mode).Should().Be(JsonPlainStatus.Pending);
+    }
+
+    [Fact]
+    public void Read_Should_Report_A_Long_Number_With_A_Truncated_Value()
+    {
+        Action act = () => Read<JsonPlainStatus>("1" + new string('0', 1_000), EnumReadMode.Input);
+
+        act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be("1" + new string('0', 63) + "…");
+    }
+
     [Fact]
     public void Errors_Should_Truncate_Long_Values()
     {
