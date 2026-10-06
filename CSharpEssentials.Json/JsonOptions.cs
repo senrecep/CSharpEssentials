@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -5,6 +6,15 @@ using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Json;
 
+/// <summary>
+/// Shared <see cref="JsonSerializerOptions"/> presets and helpers.
+/// </summary>
+/// <remarks>
+/// <see cref="DefaultOptions"/> includes <see cref="PolymorphicJsonConverterFactory"/>, which discovers derived types by
+/// reflection, so the type is not trim or native AOT safe.
+/// </remarks>
+[RequiresUnreferencedCode(PolymorphicJson.Message)]
+[RequiresDynamicCode(PolymorphicJson.Message)]
 public static class EnhancedJsonSerializerOptions
 {
     /// <summary>

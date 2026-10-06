@@ -1,9 +1,13 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 namespace CSharpEssentials.Json;
 
 public static class Extensions
 {
+    private const string SerializationMessage =
+        "JSON serialization of arbitrary types might need types that cannot be statically analyzed. Use System.Text.Json source generation for trimmed or native AOT applications.";
+
     /// <summary>
     /// Tries to get a nested property from a JSON element.
     /// </summary>
@@ -11,6 +15,8 @@ public static class Extensions
     /// <param name="data"></param>
     /// <param name="options"></param>
     /// <returns></returns>
+    [RequiresUnreferencedCode(SerializationMessage)]
+    [RequiresDynamicCode(SerializationMessage)]
     public static JsonDocument ConvertToJsonDocument<T>(this T data, JsonSerializerOptions? options = null) =>
         JsonSerializer.SerializeToDocument(data, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
 
@@ -21,6 +27,8 @@ public static class Extensions
     /// <param name="data"></param>
     /// <param name="options"></param>
     /// <returns></returns>
+    [RequiresUnreferencedCode(SerializationMessage)]
+    [RequiresDynamicCode(SerializationMessage)]
     public static string ConvertToJson<T>(this T data, JsonSerializerOptions? options = null) =>
         JsonSerializer.Serialize(data, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
     /// <summary>
@@ -30,6 +38,8 @@ public static class Extensions
     /// <param name="json"></param>
     /// <param name="options"></param>
     /// <returns></returns>
+    [RequiresUnreferencedCode(SerializationMessage)]
+    [RequiresDynamicCode(SerializationMessage)]
     public static TClass? ConvertFromJson<TClass>(this string json, JsonSerializerOptions? options = null) =>
         JsonSerializer.Deserialize<TClass>(json, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
 
@@ -40,6 +50,8 @@ public static class Extensions
     /// <param name="returnType"></param>
     /// <param name="options"></param>
     /// <returns></returns>
+    [RequiresUnreferencedCode(SerializationMessage)]
+    [RequiresDynamicCode(SerializationMessage)]
     public static object? ConvertFromJson(this string json, Type returnType, JsonSerializerOptions? options = null) =>
         JsonSerializer.Deserialize(json, returnType, options ?? EnhancedJsonSerializerOptions.DefaultOptions);
 
@@ -91,19 +103,18 @@ public static class Extensions
     /// <summary>
     /// Converts a JSON string to a JSON document.
     /// </summary>
-    private static readonly Func<string, JsonDocument?>[] _deserializers = [
-        json => JsonSerializer.Deserialize<JsonDocument>(json, EnhancedJsonSerializerOptions.DefaultOptions),
-        json => JsonDocument.Parse(json),
-        json => json.ConvertToJsonDocument(EnhancedJsonSerializerOptions.DefaultOptions)];
-
-    /// <summary>
-    /// Converts a JSON string to a JSON document.
-    /// </summary>
     /// <param name="json"></param>
     /// <returns></returns>
+    [RequiresUnreferencedCode(SerializationMessage)]
+    [RequiresDynamicCode(SerializationMessage)]
     public static JsonDocument? ConvertToJsonDocument(this string json)
     {
-        foreach (Func<string, JsonDocument?> deserialize in _deserializers)
+        Func<string, JsonDocument?>[] deserializers = [
+            static json => JsonSerializer.Deserialize<JsonDocument>(json, EnhancedJsonSerializerOptions.DefaultOptions),
+            static json => JsonDocument.Parse(json),
+            static json => json.ConvertToJsonDocument(EnhancedJsonSerializerOptions.DefaultOptions)];
+
+        foreach (Func<string, JsonDocument?> deserialize in deserializers)
         {
             try
             {
