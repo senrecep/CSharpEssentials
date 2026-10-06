@@ -74,7 +74,7 @@ public class EnumSchemaFilterTests
     {
         var filter = new EnumSchemaFilter();
         var schema = new OpenApiSchema();
-        JsonSerializerOptions jsonOptions = new() { Converters = { new ConditionalStringEnumConverter() } };
+        JsonSerializerOptions jsonOptions = new() { Converters = { new EnumConverterFactory(EnumConventions.Default with { CanHandle = StringEnumNaming.IsStringEnum }) } };
 
         filter.Apply(schema, CreateContext(typeof(TestAcronym)));
 

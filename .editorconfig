@@ -414,3 +414,7 @@ indent_style = unset
 insert_final_newline = false
 tab_width = unset
 trim_trailing_whitespace = false
+
+# The 4.x converter stays as an obsolete subclass for the 5.0 migration (design section 7).
+[CSharpEssentials.Json/ConditionalStringEnumConverter.cs]
+dotnet_diagnostic.S1133.severity = none

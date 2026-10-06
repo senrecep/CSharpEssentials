@@ -38,32 +38,48 @@ internal enum ConverterFlagsKind
     Delete = 4
 }
 
+/// <summary>
+/// The 4.x converter as an obsolete <see cref="EnumConverterFactory"/>: snake_case wire names from enum metadata,
+/// <see cref="EnumReadMode.Input"/> reads and undefined values rejected in both directions.
+/// </summary>
+[Obsolete("Tests the obsolete 4.x converter.")]
 public class ConditionalStringEnumConverterTests
 {
-    private static JsonSerializerOptions Strict(bool allowIntegerValues = true) => new()
-    {
-        Converters = { new ConditionalStringEnumConverter(allowIntegerValues: allowIntegerValues) { AllowUndefinedValues = false } }
-    };
-
     private static readonly JsonSerializerOptions StringEnumOptions = new()
     {
         Converters = { new ConditionalStringEnumConverter() }
-    };
-
-    private static readonly JsonSerializerOptions CamelCaseOptions = new()
-    {
-        Converters = { new ConditionalStringEnumConverter(JsonNamingPolicy.CamelCase) }
-    };
-
-    private static readonly JsonSerializerOptions AllowIntegerOptions = new()
-    {
-        Converters = { new ConditionalStringEnumConverter(allowIntegerValues: true) }
     };
 
     private static readonly JsonSerializerOptions DisallowIntegerOptions = new()
     {
         Converters = { new ConditionalStringEnumConverter(allowIntegerValues: false) }
     };
+
+    [Fact]
+    public void Constructor_Should_Read_In_Input_Mode_With_The_Default_Conventions()
+    {
+        ConditionalStringEnumConverter converter = new();
+
+        converter.Mode.Should().Be(EnumReadMode.Input);
+        converter.WriteAs.Should().Be(EnumWireFormat.String);
+        converter.Conventions.AcceptNumbers.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_Should_Accept_The_SnakeCaseLower_Policy()
+    {
+        ConditionalStringEnumConverter converter = new(JsonNamingPolicy.SnakeCaseLower);
+
+        converter.CanConvert(typeof(TestStringEnumType)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void Constructor_Should_Throw_NotSupportedException_For_Another_Naming_Policy()
+    {
+        Action act = () => _ = new ConditionalStringEnumConverter(JsonNamingPolicy.CamelCase);
+
+        act.Should().Throw<NotSupportedException>().WithMessage("*CSharpEssentialsEnumNaming*");
+    }
 
     [Fact]
     public void Serialize_WithStringEnumAttribute_ShouldSerializeAsString()
@@ -90,25 +106,29 @@ public class ConditionalStringEnumConverterTests
     }
 
     [Fact]
-    public void Serialize_WithCustomNamingPolicy_ShouldUsePolicy()
-    {
-        string json = JsonSerializer.Serialize(TestStringEnumType.FirstValue, CamelCaseOptions);
-
-        json.Should().Be("\"firstValue\"");
-    }
-
-    [Fact]
     public void Deserialize_WithIntegerValue_ShouldWorkWhenAllowed()
     {
-        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("0", AllowIntegerOptions);
+        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("1", StringEnumOptions);
 
-        value.Should().Be(TestStringEnumType.FirstValue);
+        value.Should().Be(TestStringEnumType.SecondValue);
+    }
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("\"0\"")]
+    public void Deserialize_WithIntegerValue_ShouldFailWhenNotAllowed(string json)
+    {
+        Action act = () => JsonSerializer.Deserialize<TestStringEnumType>(json, DisallowIntegerOptions);
+
+        act.Should().Throw<EnumValueJsonException>();
     }
 
     [Fact]
-    public void Deserialize_WithIntegerValue_ShouldFailWhenNotAllowed()
+    public void Deserialize_WithName_ShouldWorkWhenIntegersAreNotAllowed()
     {
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<TestStringEnumType>("0", DisallowIntegerOptions));
+        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("\"third_value\"", DisallowIntegerOptions);
+
+        value.Should().Be(TestStringEnumType.ThirdValue);
     }
 
     [Fact]
@@ -130,11 +150,22 @@ public class ConditionalStringEnumConverterTests
     [Fact]
     public void CanConvert_WithCustomPredicate_ShouldUsePredicate()
     {
-        ConditionalStringEnumConverter converter = new(
-            canConvert: type => type == typeof(RegularEnumType));
+        ConditionalStringEnumConverter converter = new(canConvert: type => type == typeof(RegularEnumType));
 
         converter.CanConvert(typeof(RegularEnumType)).Should().BeTrue();
         converter.CanConvert(typeof(TestStringEnumType)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Serialize_WithCustomPredicate_ShouldUseReflectionMetadataForEnumsWithoutGeneratedMetadata()
+    {
+        JsonSerializerOptions options = new() { Converters = { new ConditionalStringEnumConverter(canConvert: type => type == typeof(RegularEnumType)) } };
+
+        string json = JsonSerializer.Serialize(RegularEnumType.Second, options);
+        RegularEnumType value = JsonSerializer.Deserialize<RegularEnumType>("\"Second\"", options);
+
+        json.Should().Be("\"second\"");
+        value.Should().Be(RegularEnumType.Second);
     }
 
     [Fact]
@@ -154,14 +185,6 @@ public class ConditionalStringEnumConverterTests
         string json = JsonSerializer.Serialize(ConverterAcronymKind.HTTPStatus, StringEnumOptions);
 
         json.Should().Be("\"http_status\"");
-    }
-
-    [Fact]
-    public void Serialize_WithCamelCasePolicy_ShouldMatchStringEnumNamingWithSamePolicy()
-    {
-        string json = JsonSerializer.Serialize(ConverterAcronymKind.PendingApproval, CamelCaseOptions);
-
-        json.Should().Be($"\"{StringEnumNaming.GetName(ConverterAcronymKind.PendingApproval, JsonNamingPolicy.CamelCase)}\"");
     }
 
     [Theory]
@@ -188,68 +211,33 @@ public class ConditionalStringEnumConverterTests
         }
     }
 
-    [Fact]
-    public void Deserialize_ShouldAcceptUndefinedNumber_ByDefault()
+    [Theory]
+    [InlineData("999")]
+    [InlineData("\"999\"")]
+    [InlineData("\"bogus\"")]
+    public void Deserialize_ShouldRejectUndefinedValues(string json)
     {
-        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("999", AllowIntegerOptions);
+        Action act = () => JsonSerializer.Deserialize<TestStringEnumType>(json, StringEnumOptions);
 
-        ((int)value).Should().Be(999);
+        act.Should().Throw<EnumValueJsonException>();
     }
 
     [Fact]
-    public void Serialize_ShouldRoundTripUndefinedNumber_ByDefault()
+    public void Serialize_ShouldThrow_ForUndefinedValue()
     {
-        string json = JsonSerializer.Serialize((TestStringEnumType)999, StringEnumOptions);
-        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>(json, StringEnumOptions);
+        Action act = () => JsonSerializer.Serialize((TestStringEnumType)999, StringEnumOptions);
 
-        ((int)value).Should().Be(999);
-    }
-
-    [Fact]
-    public void AllowUndefinedValues_ShouldDefaultToTrue()
-    {
-        new ConditionalStringEnumConverter().AllowUndefinedValues.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Deserialize_ShouldThrowJsonException_WhenUndefinedNumberAndUndefinedValuesAreDisallowed()
-    {
-        Action act = () => JsonSerializer.Deserialize<TestStringEnumType>("999", Strict());
-
-        act.Should().Throw<JsonException>();
-    }
-
-    [Fact]
-    public void Deserialize_ShouldAcceptDefinedNumber_WhenUndefinedValuesAreDisallowed()
-    {
-        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("1", Strict());
-
-        value.Should().Be(TestStringEnumType.SecondValue);
-    }
-
-    [Fact]
-    public void Deserialize_ShouldAcceptName_WhenUndefinedValuesAreDisallowed()
-    {
-        TestStringEnumType value = JsonSerializer.Deserialize<TestStringEnumType>("\"third_value\"", Strict());
-
-        value.Should().Be(TestStringEnumType.ThirdValue);
-    }
-
-    [Fact]
-    public void Deserialize_ShouldThrowJsonException_WhenIntegerValuesAreDisallowed_AndNumberIsDefined()
-    {
-        Action act = () => JsonSerializer.Deserialize<TestStringEnumType>("1", Strict(allowIntegerValues: false));
-
-        act.Should().Throw<JsonException>();
+        act.Should().Throw<EnumValueException>();
     }
 
     [Theory]
     [InlineData("3", 3)]
     [InlineData("7", 7)]
     [InlineData("\"read, delete\"", 5)]
-    public void Deserialize_ShouldAcceptCombinationOfDefinedFlags_WhenUndefinedValuesAreDisallowed(string json, int expected)
+    [InlineData("[\"read\",\"delete\"]", 5)]
+    public void Deserialize_ShouldAcceptCombinationOfDefinedFlags(string json, int expected)
     {
-        ConverterFlagsKind value = JsonSerializer.Deserialize<ConverterFlagsKind>(json, Strict());
+        ConverterFlagsKind value = JsonSerializer.Deserialize<ConverterFlagsKind>(json, StringEnumOptions);
 
         ((int)value).Should().Be(expected);
     }
@@ -257,16 +245,24 @@ public class ConditionalStringEnumConverterTests
     [Fact]
     public void Deserialize_ShouldThrowJsonException_WhenFlagsNumberContainsUndefinedBit()
     {
-        Action act = () => JsonSerializer.Deserialize<ConverterFlagsKind>("8", Strict());
+        Action act = () => JsonSerializer.Deserialize<ConverterFlagsKind>("8", StringEnumOptions);
 
         act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void Serialize_ShouldWriteFlagsAsArray()
+    {
+        string json = JsonSerializer.Serialize(ConverterFlagsKind.Read | ConverterFlagsKind.Delete, StringEnumOptions);
+
+        json.Should().Be("[\"read\",\"delete\"]");
     }
 
     [Fact]
     public void Deserialize_ShouldReadDictionaryKeys_WhenKeysAreDefined()
     {
         Dictionary<TestStringEnumType, int>? value = JsonSerializer.Deserialize<Dictionary<TestStringEnumType, int>>(
-            "{\"first_value\":1,\"2\":2}", Strict());
+            "{\"first_value\":1,\"2\":2}", StringEnumOptions);
 
         value.Should().Equal(new Dictionary<TestStringEnumType, int>
         {
@@ -278,39 +274,23 @@ public class ConditionalStringEnumConverterTests
     [Fact]
     public void Deserialize_ShouldThrowJsonException_WhenDictionaryKeyIsUndefinedNumber()
     {
-        Action act = () => JsonSerializer.Deserialize<Dictionary<TestStringEnumType, int>>("{\"999\":1}", Strict());
+        Action act = () => JsonSerializer.Deserialize<Dictionary<TestStringEnumType, int>>("{\"999\":1}", StringEnumOptions);
 
         act.Should().Throw<JsonException>();
     }
 
     [Fact]
-    public void Serialize_ShouldWriteUndefinedNumber_WhenUndefinedValuesAreDisallowed()
+    public void Serialize_ShouldWriteDictionaryKeyName()
     {
-        string json = JsonSerializer.Serialize((TestStringEnumType)999, Strict());
-
-        json.Should().Be("999");
-    }
-
-    [Fact]
-    public void Serialize_ShouldWriteName_WhenUndefinedValuesAreDisallowed()
-    {
-        string json = JsonSerializer.Serialize(TestStringEnumType.SecondValue, Strict());
-
-        json.Should().Be("\"second_value\"");
-    }
-
-    [Fact]
-    public void Serialize_ShouldWriteDictionaryKeyName_WhenUndefinedValuesAreDisallowed()
-    {
-        string json = JsonSerializer.Serialize(new Dictionary<TestStringEnumType, int> { [TestStringEnumType.SecondValue] = 1 }, Strict());
+        string json = JsonSerializer.Serialize(new Dictionary<TestStringEnumType, int> { [TestStringEnumType.SecondValue] = 1 }, StringEnumOptions);
 
         json.Should().Be("{\"second_value\":1}");
     }
 
     [Fact]
-    public void Deserialize_ShouldIgnoreNonStringEnums_WhenUndefinedValuesAreDisallowed()
+    public void Deserialize_ShouldIgnoreNonStringEnums()
     {
-        RegularEnumType value = JsonSerializer.Deserialize<RegularEnumType>("999", Strict());
+        RegularEnumType value = JsonSerializer.Deserialize<RegularEnumType>("999", StringEnumOptions);
 
         ((int)value).Should().Be(999);
     }
