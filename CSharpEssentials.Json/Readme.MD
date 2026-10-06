@@ -30,6 +30,8 @@ string json = JsonSerializer.Serialize(myObject, options);
 ### Quick Extensions
 
 ```csharp
+using System.Text.Json;
+
 var user = new { Name = "Alice", Age = 30 };
 
 string json = user.ConvertToJson();
@@ -42,6 +44,9 @@ JsonDocument doc = json.ConvertToJsonDocument();
 `Dictionary<string, object>` and `object` deserialize to `JsonElement`. `ToClrObject` turns them into plain values: objects become `Dictionary<string, object?>`, arrays `List<object?>`, numbers `int`, `long`, `decimal` or `double` (first that fits).
 
 ```csharp
+using System.Text.Json;
+using CSharpEssentials.Json;
+
 using JsonDocument doc = JsonDocument.Parse("""{"id":1,"price":9.99,"tags":["a"]}""");
 
 var data = (Dictionary<string, object?>)doc.RootElement.ToClrObject()!;
@@ -51,7 +56,9 @@ var data = (Dictionary<string, object?>)doc.RootElement.ToClrObject()!;
 ### String Enum Serialization
 
 ```csharp
+using System.Text.Json;
 using CSharpEssentials.Enums;
+using CSharpEssentials.Json;
 
 [StringEnum]
 public enum Status { Active, Inactive }
@@ -62,6 +69,8 @@ var data = new { S = Status.Active, L = Level.High };
 string json = data.ConvertToJson(); // {"s":"active","l":1}
 
 // Reject numbers that are not a defined member ("999") when reading. Default: accepted, like JsonStringEnumConverter.
+// DefaultOptions is shared and read-only once used, so customize a copy.
+var options = new JsonSerializerOptions(EnhancedJsonSerializerOptions.DefaultOptions);
 options.Converters.Add(new ConditionalStringEnumConverter { AllowUndefinedValues = false });
 ```
 

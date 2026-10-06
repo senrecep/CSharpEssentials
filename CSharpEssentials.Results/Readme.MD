@@ -108,15 +108,15 @@ Result combined = Result.And(r1, r2, r3); // Failure
 ### Safe Execution
 
 ```csharp
-Result<int> result = Result.Try(() => 10 / 0, ex => Error.Exception(ex));
+Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exception(ex));
 ```
 
 ### Async
 
 ```csharp
-Result<int> result = await FetchUserAsync(id)
+Result<UserDto> result = await FetchUserAsync(id)
     .ThenAsync(user => EnrichAsync(user))
-    .EnsureAsync(v => IsValidAsync(v), Error.Validation("Invalid", "Not valid."));
+    .EnsureAsync(dto => IsValidAsync(dto), Error.Validation("Invalid", "Not valid."));
 ```
 
 ### Collection Extensions
@@ -153,10 +153,7 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 Result<int> result = Result<int>.Success(42);
 
 // Predicate-based tap — action fires only when Success AND predicate is true
-result.TapIf(v => v > 10, v => logger.Log($"Large value: {v}"));
-
-// Bool condition
-result.TapIf(featureEnabled, v => Audit(v));
+result.TapIf(v => v > 10, v => logger.LogInformation("Large value: {Value}", v));
 
 // Async variants
 await result.TapIfAsync(v => v > 10, async v => await AuditAsync(v));

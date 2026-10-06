@@ -47,16 +47,18 @@ builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
 ```csharp
 using CSharpEssentials.Time;
+using FluentAssertions;
 
-var fixed = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
-var fake  = new FakeDateTimeProvider(fixed);
+var fixedTime = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
+var fake = new FakeDateTimeProvider(fixedTime);
 
 var svc = new OrderService(fake);
-var order = svc.Create(cart);
+Order order = svc.CreateOrder();
+order.CreatedAt.Should().Be(fixedTime);
 
 // Advance the clock — no Thread.Sleep needed
 fake.Advance(TimeSpan.FromHours(2));
-fake.UtcNow.Should().Be(fixed.AddHours(2));
+fake.UtcNow.Should().Be(fixedTime.AddHours(2));
 
 // Set to a specific time
 fake.SetTime(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));

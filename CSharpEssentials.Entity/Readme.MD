@@ -24,10 +24,12 @@ using CSharpEssentials.Entity;
 
 public class Product : EntityBase<Guid>
 {
+    public Product(Guid id) => Id = id; // Id has a protected setter
+
     public string Name { get; set; } = string.Empty;
 }
 
-var product = new Product { Id = Guid.NewGuid(), Name = "Laptop" };
+var product = new Product(Guid.NewGuid()) { Name = "Laptop" };
 product.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
 product.SetUpdatedInfo(DateTimeOffset.UtcNow, "admin");
 ```
@@ -58,6 +60,9 @@ public class Order : EntityBase<Guid>
         Raise(new OrderCreated(Id));
     }
 }
+
+var order = new Order();
+order.Create();
 
 // Later (e.g., in EF Core SaveChanges)
 foreach (var evt in order.DomainEvents)

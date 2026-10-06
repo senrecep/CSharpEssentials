@@ -66,7 +66,7 @@ var pipeline = HttpClientResilienceExtensions.CreateResiliencePipeline(
     timeout: TimeSpan.FromSeconds(30));
 
 Result<User> result = await pipeline.ExecuteAsResultAsync(async token =>
-    await client.GetFromJsonAsResultAsync<User>(new Uri("/users/1"), cancellationToken: token));
+    await client.GetFromJsonAsResultAsync<User>(new Uri("/users/1", UriKind.Relative), cancellationToken: token));
 ```
 
 ### Redirect Following
