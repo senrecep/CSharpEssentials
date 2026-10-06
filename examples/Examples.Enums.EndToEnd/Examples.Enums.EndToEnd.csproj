@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- net10.0 because CSharpEssentials.AspNetCore.OpenApi targets net10.0 only. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisMode>None</AnalysisMode>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <!-- Microsoft.AspNetCore.OpenApi 10 emits interceptors for XML doc comments. -->
+    <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- CSharpEssentials.EntityFrameworkCore compiles net10.0 against EF Core 10 (same overrides as its csproj),
+         so the provider and the transitively pinned EF packages follow it. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" VersionOverride="[10.0.1,11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[10.0.4,11)" />
+    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[10.0.0,11)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.AspNetCore.OpenApi\CSharpEssentials.AspNetCore.OpenApi.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
