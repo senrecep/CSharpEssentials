@@ -8,7 +8,7 @@ Attribute-based service registration and decoration for `Microsoft.Extensions.De
 dotnet add package CSharpEssentials.DependencyInjection
 ```
 
-Target frameworks: `net11.0`, `net10.0`, `net9.0`, `netstandard2.1`. The generic attribute forms (`[RegisterScoped<TService>]`, `[Decorates<TService>]`) need a `net7.0` or later target; on `netstandard2.1` use the `typeof(...)` forms. The source generator, analyzer and code fix are bundled in the package.
+Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`, `netstandard2.1`. The generic attribute forms (`[RegisterScoped<TService>]`, `[Decorates<TService>]`) need a `net7.0` or later target; on `netstandard2.1` use the `typeof(...)` forms. The source generator, analyzer and code fix are bundled in the package.
 
 ## Registering services
 

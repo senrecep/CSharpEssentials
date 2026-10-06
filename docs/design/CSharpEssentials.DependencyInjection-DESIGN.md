@@ -34,11 +34,11 @@
 
 | Project | TFMs | Dependencies | Packable |
 |---|---|---|---|
-| `CSharpEssentials.DependencyInjection` | `net11.0;net10.0;net9.0;netstandard2.1` (no `net8.0`, no `netstandard2.0`) | `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions` (duplicate debug log) | yes |
+| `CSharpEssentials.DependencyInjection` | `net11.0;net10.0;net9.0;net8.0;netstandard2.1` (no `netstandard2.0`) | `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions` (duplicate debug log) | yes |
 | `CSharpEssentials.DependencyInjection.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no — packed into the runtime nupkg at `analyzers/dotnet/cs` (ADR-006) |
 
 - Both dependencies already exist in `Directory.Packages.props` (`[9.0.4,)`). Keyed services are available on `netstandard2.1` through `Microsoft.Extensions.DependencyInjection.Abstractions` 8+.
-- **netstandard2.1 polyfills** (`internal`, compiled only for `netstandard2.1`): `RequiresUnreferencedCodeAttribute`, `RequiresDynamicCodeAttribute`, `DynamicallyAccessedMembersAttribute`, `DynamicallyAccessedMemberTypes`. Trim annotations are meaningful only on `net9.0+`.
+- **netstandard2.1 polyfills** (`internal`, compiled only for `netstandard2.1`): `RequiresUnreferencedCodeAttribute`, `RequiresDynamicCodeAttribute`, `DynamicallyAccessedMembersAttribute`, `DynamicallyAccessedMemberTypes`. Trim annotations are meaningful only on `net8.0+`.
 - Generic attribute forms are compiled only for `NET7_0_OR_GREATER` TFMs. The `netstandard2.1` asset has the `typeof` forms only.
 - Namespace: `CSharpEssentials.DependencyInjection`. Generated registries live in `Microsoft.Extensions.DependencyInjection`, so `services.Add{Asm}Services()` is discoverable without a `using`.
 
@@ -64,7 +64,7 @@ public sealed class RegisterScopedAttribute<TService> : Attribute { /* same name
 
 `RegisterSingletonAttribute` / `RegisterSingletonAttribute<TService>` and `RegisterTransientAttribute` / `RegisterTransientAttribute<TService>` have the same shape.
 
-- The `typeof` form is primary. The generic form is secondary (C# 11+, `net9.0+` assets only).
+- The `typeof` form is primary. The generic form is secondary (C# 11+, `net8.0+` assets only).
 - `Key`: any attribute-legal constant (`string`, numeric, `char`, `bool`, enum, `Type`). `null` = non-keyed. Generated code emits the constant with its original type (`global::Ns.Region.Eu`, `"primary"`, `42`).
 - `AllowMultiple = true`: one class may register under several lifetimes, keys or service types.
 - No `[Service(Lifetime)]` variant. The lifetime is in the attribute name, so it is visible at a glance and needs no extra argument.
