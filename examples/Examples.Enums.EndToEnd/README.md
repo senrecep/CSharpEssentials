@@ -20,11 +20,13 @@ The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle h
 ## Running
 
 ```bash
-docker run -d --name shop-postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17
-dotnet run --project examples/Examples.Enums.EndToEnd
+export PGPASSWORD='<choose-a-local-password>'
+docker run -d --name shop-postgres -e POSTGRES_PASSWORD="$PGPASSWORD" -p 5432:5432 postgres:17
+ConnectionStrings__Shop="Host=localhost;Port=5432;Database=shop;Username=postgres;Password=$PGPASSWORD" \
+  dotnet run --project examples/Examples.Enums.EndToEnd
 ```
 
-The connection string is in `appsettings.json`. The app creates the table on startup.
+`appsettings.json` holds the connection string without a password; supply the full string through the `ConnectionStrings__Shop` environment variable or `dotnet user-secrets`. The app creates the table on startup.
 
 ## Endpoints
 
