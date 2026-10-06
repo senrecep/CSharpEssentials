@@ -3,7 +3,7 @@
 #nullable enable
 namespace Microsoft.Extensions.DependencyInjection
 {
-    [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "4.0.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "4.1.0.0")]
     internal static class SampleAppServiceAggregate
     {
         internal static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddAllServices(
