@@ -218,8 +218,13 @@ internal sealed class EnumStorageConvention : IModelFinalizingConvention
         private void SetJsonReaderWriter(JsonValueReaderWriter readerWriter)
         {
             CoreTypeMapping? mapping = convention._typeMappingSource.FindMapping((IProperty)property);
-            if (mapping is not null)
-                property.Builder.HasTypeMapping(mapping.WithComposedConverter(null, jsonValueReaderWriter: readerWriter));
+            if (mapping is null)
+                return;
+
+            // EF sets a convention-level reader/writer on enum properties in JSON, which would win over the mapping's.
+            if (property.GetJsonValueReaderWriterTypeConfigurationSource() == ConfigurationSource.Convention)
+                property.SetJsonValueReaderWriterType(null);
+            property.Builder.HasTypeMapping(mapping.WithComposedConverter(null, jsonValueReaderWriter: readerWriter));
         }
 
         private string? CreateCheckSql<TEnum>(EnumInfo<TEnum> info, bool integer, string column) where TEnum : struct, Enum
