@@ -33,7 +33,7 @@ public static class EnumDataAudit
         EnumInfo<TEnum> info = EnumMetadata.Get<TEnum>();
         EnumConversionSql<TEnum> sql = new(info, dialect, $"{table}.{column}");
         string columnSql = EnumSqlDialect.Identifier(column);
-        return $"SELECT {columnSql} AS \"Value\", count(*) AS \"Count\" FROM {dialect.Table(table, schema)} " +
+        return $"SELECT {columnSql} AS {EnumSqlDialect.Identifier("Value")}, count(*) AS {EnumSqlDialect.Identifier("Count")} FROM {dialect.Table(table, schema)} " +
             $"WHERE {Condition(sql, info.IsFlags, storedAs, table, columnSql)} GROUP BY {columnSql} ORDER BY {columnSql};";
     }
 

@@ -173,8 +173,10 @@ public static class EnumMigrationBuilderExtensions
             string name = sql.TextToName(columnSql, textFormat);
             if (dialect.IsPostgres)
                 migrationBuilder.Sql($"{alter} text;");
-            string update = $"UPDATE {tableSql} SET {columnSql} = {name} WHERE {columnSql} IS NOT NULL AND {columnSql} <> {name};";
-            migrationBuilder.Sql(dialect.IsPostgres ? update : SqliteUpdate(update));
+            string where = $"{columnSql} IS NOT NULL AND {columnSql} <> {name}";
+            migrationBuilder.Sql(dialect.IsPostgres
+                ? $"UPDATE {tableSql} SET {columnSql} = {name} WHERE {where};"
+                : SqliteUpdate(tableSql, columnSql, name, where));
             if (dialect.IsPostgres && !string.Equals(targetType, "text", StringComparison.OrdinalIgnoreCase))
                 migrationBuilder.Sql($"{alter} {targetType};");
             return migrationBuilder;
@@ -204,7 +206,7 @@ public static class EnumMigrationBuilderExtensions
         }
 
         // SQLite cannot change a column type: convert in place, then let EF rebuild the table with the target model's column.
-        migrationBuilder.Sql(SqliteUpdate($"UPDATE {tableSql} SET {columnSql} = {converted} WHERE {columnSql} IS NOT NULL;"));
+        migrationBuilder.Sql(SqliteUpdate(tableSql, columnSql, converted, $"{columnSql} IS NOT NULL"));
         Type clrType = integer ? info.UnderlyingType : typeof(string);
         Type oldClrType = integer ? typeof(string) : info.UnderlyingType;
         migrationBuilder.Operations.Add(new AlterColumnOperation
@@ -230,8 +232,12 @@ public static class EnumMigrationBuilderExtensions
 
     // EF runs the SQLite table rebuilds of a migration after its SQL operations, so the old check constraint is still in place
     // during the update. The rebuild copies every row into a table with the target constraints, which then reject bad values.
-    private static string SqliteUpdate(string update) =>
-        $"PRAGMA ignore_check_constraints = ON; {update} PRAGMA ignore_check_constraints = OFF;";
+    // The pragma is per connection and survives a rollback, and SQL has no try/finally: an update that failed between ON and OFF
+    // would return the connection to the pool with check constraints ignored. The SELECT therefore evaluates the conversion of
+    // every row first, so a value that aborts the conversion fails the migration before the pragma is turned on.
+    private static string SqliteUpdate(string tableSql, string columnSql, string value, string where) =>
+        $"SELECT count({value}) FROM {tableSql} WHERE {where}; " +
+        $"PRAGMA ignore_check_constraints = ON; UPDATE {tableSql} SET {columnSql} = {value} WHERE {where}; PRAGMA ignore_check_constraints = OFF;";
 
     private static EnumSqlDialect Dialect(MigrationBuilder migrationBuilder, string table, string column)
     {
