@@ -533,7 +533,7 @@ Rules:
 
 ```csharp
 protected override void ConfigureConventions(ModelConfigurationBuilder builder) =>
-    builder.ConfigureEnumConventions(EnumConventions.Default);   // or the DI instance
+    builder.ConfigureEnumConventions(EnumConventions.Default);   // or the DI instance; null means EnumConventions.Default
 
 modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.Integer);
 modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumCheckConstraint(false);
@@ -551,13 +551,19 @@ builder.ConfigureEnumConventions(conventions, existingStorage: EnumStoredAs.Inte
 modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);   // opt in, one column at a time
 ```
 
+`EnumStoredAs` lives in `CSharpEssentials.EntityFrameworkCore` (namespace of the same name); it describes a column format, so `CSharpEssentials.Enums` does not need it. `Text` is valid only as a conversion source: `HasLegacyEnumStorage(EnumStoredAs.Text)` and `existingStorage: EnumStoredAs.Text` throw `ArgumentOutOfRangeException`.
+
 `existingStorage` applies `HasLegacyEnumStorage(existingStorage)` to every enum property the convention handles that has no property-level `HasEnumStorage`/`HasLegacyEnumStorage`; it wins over `[StringEnum(Storage)]` and `EnumConventions.Storage`. Without it, a `[StringEnum]` enum stored as an integer would get `Storage = String` and EF would generate an `int → text` `AlterColumn` (PostgreSQL's implicit cast writes `'1'`). With it, the first 5.0 migration is empty (section 12.3). New projects omit the argument.
 
 `HasLegacyEnumStorage(EnumStoredAs format)` writes the old format (`Integer`, `MemberName`, `CamelCase`, `LegacySnakeCase`, `FlagsText`), reads every spelling tolerantly, adds **no** check constraint and keeps the current column type. It affects the database only; JSON, OpenAPI and binding still use the wire name. Server-side filters keep matching existing rows because writes and query parameters use the same old format.
 
-Properties that already have a value converter configured by the user (`HasConversion<string>()`, `HasConversion<int>()`, a custom converter) are **skipped** by the convention: no converter replacement, no check constraint, no column change. Upgrading to 5.0 therefore never changes such a column on its own; the team opts in by removing the manual conversion (or replacing it with `HasLegacyEnumStorage`) when it is ready.
+Properties that already have a value converter or provider type configured by the user (`HasConversion<string>()`, `HasConversion<int>()`, a custom converter) are **skipped** by the convention: no converter replacement, no check constraint, no column change. Upgrading to 5.0 therefore never changes such a column on its own; the team opts in by removing the manual conversion (or replacing it with `HasLegacyEnumStorage`) when it is ready.
 
-`ConfigureEnumConventions` no longer scans assemblies. It adds a model convention (`IPropertyAddedConvention`, `IModelFinalizingConvention`) that recognizes enum properties through `EnumConventions.CanHandle` and metadata, so only enums that are actually mapped are configured. The 4.1 overload with `params Assembly[]` stays as an obsolete forwarder that ignores the assemblies.
+`ConfigureEnumConventions` no longer scans assemblies. It adds one model convention (`IModelFinalizingConvention`; a finalizing pass sees user `HasConversion` calls, table names and JSON mappings, which a property-added pass would not) that recognizes enum properties through `EnumConventions.CanHandle` and generated metadata, so only enums that are actually mapped are configured. It handles enum, nullable enum and enum collection properties (primitive collections, element converter), including properties of `ToJson()` owned types.
+
+Enums without generated metadata are left to EF's default (integer column, no converter, no constraint), so a model with only plain enums gets no change at all. `HasEnumStorage`, `HasLegacyEnumStorage` or `HasEnumCheckConstraint` on such an enum throws at model build time, naming the property and pointing at `[StringEnum]`. `ConfigureEnumConventionsWithReflection(conventions, existingStorage)` is the opt-in for those enums: it builds metadata through reflection and is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Configuring a non-enum property with these methods throws as well.
+
+The 4.x overloads (`params Assembly[]` and `Action<EnumConventionOptions>, params Assembly[]`) and `EnumConventionOptions` stay as obsolete forwarders. They ignore the assemblies, restrict the convention to `CanConvert` enums that have generated metadata, and map `UseLegacySnakeCase = true` to `existingStorage: EnumStoredAs.LegacySnakeCase`. Two behaviour changes for 4.x callers: the forwarders now add check constraints (none under `UseLegacySnakeCase`), and the 4.x `HasMaxLength` on legacy snake case columns is no longer applied (`HasLegacyEnumStorage` keeps the current column type).
 
 ### 11.2 Column types
 
@@ -569,14 +575,16 @@ Properties that already have a value converter configured by the user (`HasConve
 | Flags `String` | `text[]` | `nvarchar(max)` JSON array | `TEXT` JSON array | `json` | JSON text |
 | Collection | `text[]` / `integer[]` | `nvarchar(max)` JSON | `TEXT` JSON | `json` | JSON text |
 
-`n` is the longest wire name rounded up to the next multiple of 16 (so adding a slightly longer member usually does not alter the column). The provider is detected through `Database.ProviderName` known names; unknown providers get `n`. `.HasMaxLength(...)` set by the user always wins.
+`n` is the longest wire name rounded up to the next multiple of 16 (so adding a slightly longer member usually does not alter the column). The provider is detected through `IDatabaseProvider.Name`; PostgreSQL and SQLite get no max length (`text` / `TEXT`), every other relational provider gets `n`. `.HasMaxLength(...)` set by the user always wins. Flags and collection columns get no max length. Only PostgreSQL and SQLite are covered by integration tests.
 
 ### 11.3 Converters
 
-- String storage: `EnumWireNameConverter<TEnum>` (write: `ToWireName`; read: `EnumValueParser` in `Data` mode with the conventions of the model). Unknown value: fallback member, otherwise `EnumValueException` whose message names the entity, the property, the value and the allowed values.
-- Integer storage: `EnumIntegerConverter<TEnum>` (write: underlying value after the defined check; read: defined check, fallback, exception).
-- Writes of undefined values fail in the converter with `EnumValueException`, before the database reports a constraint violation.
-- JSON columns mapped by EF Core (`ToJson()` on owned types, EF 8+, and on complex types, EF 10+) use their own writer, not STJ converters. The convention sets a `JsonValueReaderWriter` (`EnumJsonValueReaderWriter<TEnum>`) on enum properties inside JSON-mapped types. Reads are tolerant (names and the integers EF wrote before). Writes follow the property's storage: `Integer` storage writes numbers, `String` writes wire names, and `HasLegacyEnumStorage` keeps the old format. Because EF Core writes enums in JSON columns as numbers by default, an existing JSON column must be configured with `HasLegacyEnumStorage(EnumStoredAs.Integer)` until `ConvertEnumJsonPath` has run; otherwise new rows get strings next to legacy integers and JSON predicates miss rows. The convention sets the instance, not the type (`HasJsonValueReaderWriterType` would create it through reflection).
+- String storage: `EnumWireNameConverter<TEnum>` (write: `ToWireName`; read: `EnumValueParser` in `Data` mode with the conventions of the model). Unknown value: fallback member, otherwise an `InvalidOperationException` whose message names the table, the column, the property, the value and the allowed values (`Cannot read column orders.Status (Order.Status): ...`), with an `EnumValueException` as inner exception whose `Error.Path` is the column.
+- Integer storage: `EnumIntegerConverter<TEnum, TNumber>` (`TNumber` is the underlying type; write: underlying value after the defined check; read: defined check, fallback, exception).
+- Flags with `String` storage: PostgreSQL uses a `string[]` provider type (`text[]`) with an enum value comparer on the property; other providers store a JSON array of wire names as text.
+- Writes of undefined values fail in the converter with `EnumValueException` (path = column), before the database reports a constraint violation. `SaveChanges` surfaces it as the inner exception of EF's `DbUpdateException`.
+- Converters capture the model's `EnumConventions` and metadata as instances, so compiled models (`dbcontext optimize`) are not supported for these properties in 5.0.
+- JSON columns mapped by EF Core (`ToJson()` on owned types, EF 8+, and on complex types, EF 10+) use their own writer, not STJ converters. The convention sets a `JsonValueReaderWriter` (`EnumJsonValueReaderWriter<TEnum>`) on enum properties inside JSON-mapped types. Reads are tolerant (names and the integers EF wrote before). Writes follow the property's storage: `Integer` storage writes numbers, `String` writes wire names, and `HasLegacyEnumStorage` keeps the old format. Because EF Core writes enums in JSON columns as numbers by default, an existing JSON column must be configured with `HasLegacyEnumStorage(EnumStoredAs.Integer)` until `ConvertEnumJsonPath` has run; otherwise new rows get strings next to legacy integers and JSON predicates miss rows. The convention sets the instance, not the type (`HasJsonValueReaderWriterType` would create it through reflection). EF Core 9 puts a convention-level `JsonWarningEnumReaderWriter` type on enum properties in JSON, which wins over the type mapping's instance; the convention clears it when the type was set by convention (a user-set type is kept).
 - Properties mapped to `jsonb` by a user value converter through `JsonSerializer` use the user's options; the guide shows `AddEnumConventions` there.
 - `UseFallback` on reads: an entity loaded with a fallback member and saved again writes the fallback member, overwriting the unknown stored value. The XML doc and the guide state it; teams that cannot accept it set `UnknownValue = Reject` for the model.
 
@@ -590,16 +598,17 @@ An `IModelFinalizingConvention` adds one constraint per enum column, named `ck_{
 | Integer | `"status" IN (0, 1, 99999)` |
 | Flags integer | `("permissions" & ~7) = 0` (7 = defined mask) |
 | Flags `text[]`, collection `text[]` | `"tags" <@ ARRAY['a', 'b']::text[]` |
+| Flags JSON text, collection JSON text (non-PostgreSQL) | no constraint; the converter guards writes |
 | Collection `integer[]` | `"tags" <@ ARRAY[0, 1]::integer[]` |
 | Collection with nullable elements | `array_remove("tags", NULL) <@ ARRAY['a', 'b']::text[]` (`NULL` elements are not contained in any array) |
 | Nullable column | the same expression; SQL `NULL IN (...)` is `NULL`, which a check constraint treats as passing |
 | JSON column, JSON text collections | no constraint (provider specific JSON validation is out of scope); the converter guards writes |
 
-SQL Server uses `[status] IN (N'pending', ...)` and `([permissions] & ~7) = 0`; SQLite and MySQL use the same `IN` form. Table splitting and TPH: the constraint is added once per table and column; for TPH columns shared by several enum properties (rare), no constraint is added and CSE0xxx is not involved (EF diagnostic log message instead).
+SQL Server uses `[status] IN (N'pending', ...)` and `([permissions] & ~7) = 0`; SQLite and MySQL use the same `IN` form. Flags with `uint`/`ulong` underlying types get no mask constraint (the convention does not emit a mask expression for unsigned types). Table splitting and TPH: the constraint is added once per table and column; when properties sharing a TPH column would produce different SQL (rare), no constraint is added for that column and nothing is logged.
 
 Properties with a user value converter or with `HasLegacyEnumStorage` get no constraint (section 11.1).
 
-Adding, removing or renaming a member changes the constraint SQL, so `dotnet ef migrations add` emits `DropCheckConstraint` + `AddCheckConstraint`. Nothing else changes in that migration (golden test).
+Adding, removing or renaming a member changes the constraint SQL, so `dotnet ef migrations add` emits `DropCheckConstraint` + `AddCheckConstraint`. Nothing else changes in that migration (`EnumStorageMigrationTests`, which also pins the empty first migration under `existingStorage: EnumStoredAs.Integer`).
 
 Opt-out: `HasEnumCheckConstraint(false)` per property, `CheckConstraints = false` globally.
 
@@ -902,7 +911,7 @@ Open item for such an app: confirm whether its jsonb enums are EF `ToJson()` own
 | Point | Issue | Decision rule |
 |---|---|---|
 | Converter precedence over `JsonSerializerContext` metadata (including `UseStringEnumConverter`) on net9.0 to net11.0 | #61 | pinned by a test; if a TFM differs, `AddEnumConventions` also sets the context's `TypeInfoResolver` modifier |
-| EF Core `JsonValueReaderWriter` on enum properties of `ToJson()` owned (EF 8+) and complex (EF 10+) types | #64 | covered by tests per EF major; a provider that bypasses it is documented |
+| EF Core `JsonValueReaderWriter` on enum properties of `ToJson()` owned (EF 8+) and complex (EF 10+) types | #64 | covered by SQLite and PostgreSQL tests on EF 9 (owned types); EF 9's convention-level `JsonWarningEnumReaderWriter` is cleared (section 11.3) |
 
 Deferred to 5.1: `EnumSchemaStyle.StringOrNumber`, a Scalar helper, a migration checklist test helper, a generated-client round trip test, JSON array paths in `ConvertEnumJsonPath`, `FlagsText` conversion for non-PostgreSQL providers.
 
