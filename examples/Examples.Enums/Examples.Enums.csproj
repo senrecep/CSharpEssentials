@@ -16,10 +16,10 @@
 
   <ItemGroup>
     <ProjectReference Include="../../CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
-    <ProjectReference Include="../../CSharpEssentials.Enums/CSharpEssentials.Enums.csproj"
+    <ProjectReference Include="../../CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Enums.Generators/CSharpEssentials.Enums.Generators.csproj"
                       OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="true"
-                      SetTargetFramework="TargetFramework=netstandard2.0" />
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 
-namespace CSharpEssentials.Enums;
+namespace CSharpEssentials.Enums.Generators;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class NestedStringEnumAnalyzer : DiagnosticAnalyzer
@@ -20,7 +20,7 @@ public sealed class NestedStringEnumAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "The StringEnum source generator only generates extension methods for enums declared directly in a namespace. Move the enum out of its containing type to get the generated extension methods.");
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [Rule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(Rule);
 
     public override void Initialize(AnalysisContext context)
     {

@@ -22,7 +22,7 @@ public class StringEnumGeneratorHarnessTests
         }
         """;
 
-    private static readonly Lazy<AnalyzerAssembly> EnumsAssembly = new(static () => AnalyzerAssembly.Load("CSharpEssentials.Enums.dll"));
+    private static readonly Lazy<AnalyzerAssembly> EnumsAssembly = new(static () => AnalyzerAssembly.Load("CSharpEssentials.Enums.Generators.dll"));
 
     [Fact]
     public Task StringEnumGenerator_Should_Match_Snapshot()
