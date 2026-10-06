@@ -24,7 +24,6 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
         context.RegisterSourceOutput(enumSymbols, static (spc, enumSymbol) =>
         {
             string source = GenerateExtensionsClass(enumSymbol);
-            // Namespace-qualified hint name: same-named enums in different namespaces must not collide.
             string ns = enumSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : enumSymbol.ContainingNamespace.ToDisplayString() + ".";
             spc.AddSource($"{ns}{enumSymbol.Name}Extensions.g.cs", source);
         });
