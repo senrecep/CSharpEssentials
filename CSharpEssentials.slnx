@@ -4,10 +4,12 @@
   <Project Path="CSharpEssentials.Clone/CSharpEssentials.Clone.csproj" />
   <Project Path="CSharpEssentials.Core/CSharpEssentials.Core.csproj" />
   <Project Path="CSharpEssentials.DependencyInjection/CSharpEssentials.DependencyInjection.csproj" />
+  <Project Path="CSharpEssentials.DependencyInjection.CodeFixes/CSharpEssentials.DependencyInjection.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.DependencyInjection.Generators/CSharpEssentials.DependencyInjection.Generators.csproj" />
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
   <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
+  <Project Path="CSharpEssentials.Endpoints.CodeFixes/CSharpEssentials.Endpoints.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.Endpoints.Generators/CSharpEssentials.Endpoints.Generators.csproj" />
   <Project Path="CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />

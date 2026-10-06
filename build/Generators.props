@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" VersionOverride="4.8.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
-    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" Condition="Exists('AnalyzerReleases.Shipped.md')" />
+    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" Condition="Exists('AnalyzerReleases.Unshipped.md')" />
   </ItemGroup>
 </Project>

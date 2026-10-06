@@ -348,8 +348,8 @@ get_all_packable_projects() {
     while IFS= read -r -d '' csproj; do
         local dir_name
         dir_name=$(basename "$(dirname "$csproj")")
-        # Skip test projects, examples and generator projects (packed into their runtime package)
-        if [[ "$dir_name" == *Tests* || "$dir_name" == *Test* || "$dir_name" == Example* || "$dir_name" == *.Generators ]]; then
+        # Skip test projects, examples, generator and code fix projects (packed into their runtime package)
+        if [[ "$dir_name" == *Tests* || "$dir_name" == *Test* || "$dir_name" == Example* || "$dir_name" == *.Generators || "$dir_name" == *.CodeFixes ]]; then
             continue
         fi
         # Check if explicitly marked as not packable

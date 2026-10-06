@@ -371,7 +371,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 ## 8. P3 Follow-ups (#58, optional)
 
 - Shipped: CSE2006 captive dependency (info, single-constructor types, §7).
-- Code fix for CSE2003 (add explicit `typeof`). Needs a `*.CodeFixes` project with `Microsoft.CodeAnalysis.CSharp.Workspaces`, which requires owner approval.
+- Shipped: code fix for CSE2003 in `CSharpEssentials.DependencyInjection.CodeFixes` (netstandard2.0, `Microsoft.CodeAnalysis.CSharp.Workspaces` 4.8.0, packed into `analyzers/dotnet/cs`). One action per implemented service interface adds `typeof(IFoo)` (`typeof(IFoo<>)` for generic classes), and one adds `As = ServiceAs.Self`. The analyzer assembly does not reference Workspaces (RS1038).
 
 ## 9. Explicitly Skipped Scrutor Features
 

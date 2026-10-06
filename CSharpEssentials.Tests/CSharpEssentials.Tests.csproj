@@ -30,6 +30,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" VersionOverride="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" VersionOverride="9.0.4" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" ExcludeAssets="all" />
   </ItemGroup>
 
@@ -73,6 +74,7 @@
     <ProjectReference Include="..\CSharpEssentials.Endpoints.Generators\CSharpEssentials.Endpoints.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.CodeFixes\CSharpEssentials.Endpoints.CodeFixes.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsA\CSharpEssentials.Tests.Fixtures.EndpointsA.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsB\CSharpEssentials.Tests.Fixtures.EndpointsB.csproj" />
     <ProjectReference
@@ -90,6 +92,7 @@
     <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Generators\CSharpEssentials.DependencyInjection.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.CodeFixes\CSharpEssentials.DependencyInjection.CodeFixes.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.DependencyInjectionA\CSharpEssentials.Tests.Fixtures.DependencyInjectionA.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.DependencyInjectionB\CSharpEssentials.Tests.Fixtures.DependencyInjectionB.csproj" />
   </ItemGroup>
