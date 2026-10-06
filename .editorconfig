@@ -406,6 +406,14 @@ dotnet_diagnostic.CA1815.severity = none
 [CSharpEssentials.Enums/Conventions/{EnumStorage,EnumWireFormat}.cs]
 dotnet_diagnostic.CA1720.severity = none
 
+# The 4.x registration stays as obsolete forwarders for the 5.0 migration (design section 11.1).
+[CSharpEssentials.EntityFrameworkCore/Extensions/{ModelConfigurationExtensions,EnumConventionOptions}.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# EnumStoredAs.Integer mirrors EnumStorage.Integer (design section 11.4).
+[CSharpEssentials.EntityFrameworkCore/Enums/EnumStoredAs.cs]
+dotnet_diagnostic.CA1720.severity = none
+
 [*.{received,verified}.{cs,txt}]
 charset = utf-8-bom
 end_of_line = lf

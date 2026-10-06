@@ -5,6 +5,7 @@ namespace CSharpEssentials.EntityFrameworkCore;
 /// <summary>
 /// Options for <see cref="ModelConfigurationExtensions.ConfigureEnumConventions(Microsoft.EntityFrameworkCore.ModelConfigurationBuilder, Action{EnumConventionOptions}, System.Reflection.Assembly[])"/>.
 /// </summary>
+[Obsolete("Use EnumConventions with ConfigureEnumConventions(EnumConventions, EnumStoredAs?) instead.")]
 public sealed class EnumConventionOptions
 {
     /// <summary>
