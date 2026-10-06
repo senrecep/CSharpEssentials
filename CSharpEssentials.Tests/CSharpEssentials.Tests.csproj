@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="..\CSharpEssentials.DependencyInjection\build\CSharpEssentials.DependencyInjection.props" />
+
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
@@ -43,6 +45,16 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CopyDependencyInjectionAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.DependencyInjection.Generators.dll'"
+            Link="Analyzers\CSharpEssentials.DependencyInjection.Generators.dll"
+            CopyToOutputDirectory="PreserveNewest"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\CSharpEssentials\CSharpEssentials.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
@@ -62,6 +74,11 @@
     <ProjectReference Include="..\CSharpEssentials.Validation\CSharpEssentials.Validation.csproj" />
     <ProjectReference Include="..\CSharpEssentials.These\CSharpEssentials.These.csproj" />
     <ProjectReference Include="..\CSharpEssentials.DependencyInjection\CSharpEssentials.DependencyInjection.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Generators\CSharpEssentials.DependencyInjection.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.DependencyInjectionA\CSharpEssentials.Tests.Fixtures.DependencyInjectionA.csproj" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.DependencyInjectionB\CSharpEssentials.Tests.Fixtures.DependencyInjectionB.csproj" />
   </ItemGroup>
 
   <ItemGroup>

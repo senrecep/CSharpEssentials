@@ -1,0 +1,109 @@
+using CSharpEssentials.Tests.DependencyInjection.Scanning;
+using CSharpEssentials.Tests.Fixtures.DependencyInjectionA;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+
+namespace CSharpEssentials.Tests.DependencyInjection.Generation;
+
+public class GeneratedServiceRegistryTests
+{
+    private static readonly ServiceProviderOptions Validated = new() { ValidateOnBuild = true, ValidateScopes = true };
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Register_Same_Descriptors_As_Assembly_Scanning()
+    {
+        ServiceCollection scanned = new();
+        scanned.AddServicesFromAssemblies(typeof(ScanGreeter).Assembly);
+
+        ServiceCollection generated = new();
+        generated.AddCSharpEssentialsTestsServices();
+
+        generated.Select(Describe).Should().BeEquivalentTo(scanned.Select(Describe));
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Apply_Decorators_In_Order()
+    {
+        ServiceCollection services = new();
+        services.AddCSharpEssentialsTestsServices();
+        using ServiceProvider provider = services.BuildServiceProvider(Validated);
+        using IServiceScope scope = provider.CreateScope();
+
+        string greeting = scope.ServiceProvider.GetRequiredService<IScanGreeter>().Greet();
+        string keyed = scope.ServiceProvider.GetRequiredKeyedService<IScanGreeter>("k").Greet();
+
+        greeting.Should().Be("outer(inner(hi))");
+        keyed.Should().Be("keyed-decorator(keyed)");
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Forward_Interfaces_To_Single_Instance()
+    {
+        ServiceCollection services = new();
+        services.AddCSharpEssentialsTestsServices();
+        using ServiceProvider provider = services.BuildServiceProvider(Validated);
+
+        object shared = provider.GetRequiredService<SharedService>();
+
+        provider.GetRequiredService<ISharedService>().Should().BeSameAs(shared);
+        provider.GetRequiredService<ISecondShared>().Should().BeSameAs(shared);
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Log_Duplicate_At_Debug_When_Logger_Is_Given()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IConventionalService, ConventionalService>();
+        CapturingLogger logger = new();
+
+        services.AddCSharpEssentialsTestsServices(logger);
+
+        logger.Entries.Should().Contain(entry => entry.Level == LogLevel.Debug && entry.Message.Contains(nameof(IConventionalService), StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Not_Throw_When_Logger_Is_Null()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IConventionalService, ConventionalService>();
+
+        Action act = () => services.AddCSharpEssentialsTestsServices(logger: null);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddAllServices_Should_Register_All_Assemblies_Before_Applying_Decorators()
+    {
+        ServiceCollection services = new();
+        services.AddAllServices();
+        using ServiceProvider provider = services.BuildServiceProvider(Validated);
+        using IServiceScope scope = provider.CreateScope();
+
+        string greeting = scope.ServiceProvider.GetRequiredService<IFixtureGreeter>().Greet();
+        string message = scope.ServiceProvider.GetRequiredService<IFixtureMessage>().Text();
+        string own = scope.ServiceProvider.GetRequiredService<IScanGreeter>().Greet();
+
+        greeting.Should().Be("b(a)");
+        message.Should().Be("a(b)");
+        own.Should().Be("outer(inner(hi))");
+    }
+
+    [Fact]
+    public void AddAllServices_Should_Register_Each_Module_Once()
+    {
+        ServiceCollection services = new();
+
+        services.AddAllServices();
+
+        services.Count(static descriptor => descriptor.ServiceType == typeof(IFixtureGreeter)).Should().Be(1);
+        services.Count(static descriptor => descriptor.ServiceType == typeof(IFixtureMessage)).Should().Be(1);
+    }
+
+    private static (Type ServiceType, object? Key, ServiceLifetime Lifetime, Type? Implementation) Describe(ServiceDescriptor descriptor) =>
+        (descriptor.ServiceType,
+            descriptor.ServiceKey,
+            descriptor.Lifetime,
+            descriptor.IsKeyedService ? descriptor.KeyedImplementationType : descriptor.ImplementationType);
+}
