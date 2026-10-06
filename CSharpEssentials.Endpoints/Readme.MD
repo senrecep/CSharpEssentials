@@ -96,6 +96,19 @@ app.MapAppsEndpoints(options =>
 
 Every endpoint gets `EndpointTypeMetadata`, which identifies the endpoint type at runtime.
 
+## Typed routes
+
+`RouteOf<TEndpoint>` builds a request path from the endpoint type, which keeps tests independent of route strings:
+
+```csharp
+string path = app.RouteOf<GetApp>(new { id = 42 });                  // "/apps/42"
+string remove = app.RouteOf<AppCommands>("DELETE", new { id = 42 }); // select by HTTP method or WithName(...)
+```
+
+- Uses `EndpointTypeMetadata` on the mapped endpoints, so group prefixes and versioned groups are included. Extra values become query string entries.
+- Throws `InvalidOperationException` when the type has no route, has more than one route and no selector is given, or a route value is missing or fails its constraint.
+- Reads values from object properties, so it is marked `[RequiresUnreferencedCode]`.
+
 ## Diagnostics
 
 The bundled analyzer reports types the generator cannot map. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed.
