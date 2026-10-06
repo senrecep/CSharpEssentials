@@ -40,7 +40,7 @@ public class EnumValidatorsTests
         Result<Model<ValidationOrderStatus>> result = await Validate((ValidationOrderStatus)42, static c => c.IsDefinedEnum());
 
         result.IsFailure.Should().BeTrue();
-        result.FirstError.Code.Should().Be("enum.invalid");
+        result.FirstError.Code.Should().Be("Value.IsDefinedEnum");
         result.FirstError.Type.Should().Be(ErrorType.Validation);
         result.FirstError.Description.Should().Be("'42' is not a valid ValidationOrderStatus. Allowed values: pending, in_progress.");
         result.FirstError.Description.Should().Be(
@@ -60,7 +60,7 @@ public class EnumValidatorsTests
     {
         Result<Model<ValidationChannels>> result = await Validate(ValidationChannels.Email | (ValidationChannels)8, static c => c.IsDefinedEnum());
 
-        result.FirstError.Code.Should().Be("enum.invalid");
+        result.FirstError.Code.Should().Be("Value.IsDefinedEnum");
         result.FirstError.Description.Should().Be("'9' is not a valid ValidationChannels. Allowed values: none, email, sms, push.");
     }
 
@@ -71,7 +71,7 @@ public class EnumValidatorsTests
         Error custom = Error.Validation("status.custom", "custom");
         Result<Model<ValidationOrderStatus>> withError = await Validate((ValidationOrderStatus)42, c => c.IsDefinedEnum(custom));
 
-        withMessage.FirstError.Code.Should().Be("enum.invalid");
+        withMessage.FirstError.Code.Should().Be("Value.IsDefinedEnum");
         withMessage.FirstError.Description.Should().Be("bad status");
         withError.FirstError.Should().Be(custom);
     }
@@ -83,7 +83,7 @@ public class EnumValidatorsTests
         Result<Model<PlainColor>> invalid = await Validate((PlainColor)7, static c => c.IsDefinedEnum());
 
         valid.IsSuccess.Should().BeTrue();
-        invalid.FirstError.Code.Should().Be("enum.invalid");
+        invalid.FirstError.Code.Should().Be("Value.IsDefinedEnum");
         invalid.FirstError.Description.Should().Be("'7' is not a valid PlainColor. Allowed values: Red, Green, Blue.");
     }
 
@@ -108,7 +108,7 @@ public class EnumValidatorsTests
 
         none.IsSuccess.Should().BeTrue();
         defined.IsSuccess.Should().BeTrue();
-        undefined.FirstError.Code.Should().Be("enum.invalid");
+        undefined.FirstError.Code.Should().Be("Value.IsDefinedEnum");
         undefined.FirstError.Description.Should().StartWith("'42' is not a valid ValidationOrderStatus.");
         withError.FirstError.Should().Be(custom);
     }
@@ -130,7 +130,7 @@ public class EnumValidatorsTests
             ValidationOrderStatus.Pending,
             static c => c.IsOneOf(ValidationOrderStatus.InProgress));
 
-        result.FirstError.Code.Should().Be("enum.not_allowed");
+        result.FirstError.Code.Should().Be("Value.IsOneOf");
         result.FirstError.Type.Should().Be(ErrorType.Validation);
         result.FirstError.Description.Should().Be("'pending' is not a valid ValidationOrderStatus. Allowed values: in_progress.");
     }
@@ -154,7 +154,7 @@ public class EnumValidatorsTests
     {
         Result<Model<PlainColor>> result = await Validate(PlainColor.Red, static c => c.IsOneOf(PlainColor.Green, PlainColor.Blue));
 
-        result.FirstError.Code.Should().Be("enum.not_allowed");
+        result.FirstError.Code.Should().Be("Value.IsOneOf");
         result.FirstError.Description.Should().Be("'Red' is not a valid PlainColor. Allowed values: Green, Blue.");
     }
 
@@ -168,7 +168,7 @@ public class EnumValidatorsTests
         Result<Model<ValidationOrderStatus>> withError = await Validate(ValidationOrderStatus.Pending, c => c.IsOneOf(allowed, custom));
         Result<Model<ValidationOrderStatus>> passing = await Validate(ValidationOrderStatus.InProgress, c => c.IsOneOf(allowed, custom));
 
-        withMessage.FirstError.Code.Should().Be("enum.not_allowed");
+        withMessage.FirstError.Code.Should().Be("Value.IsOneOf");
         withMessage.FirstError.Description.Should().Be("not now");
         withError.FirstError.Should().Be(custom);
         passing.IsSuccess.Should().BeTrue();
@@ -218,7 +218,7 @@ public class EnumValidatorsTests
     {
         Result<Model<ValidationChannels>> result = await Validate((ValidationChannels)17, static c => c.HasOnlyDefinedFlags());
 
-        result.FirstError.Code.Should().Be("enum.invalid");
+        result.FirstError.Code.Should().Be("Value.HasOnlyDefinedFlags");
         result.FirstError.Description.Should().Be("'17' is not a valid ValidationChannels. Allowed values: none, email, sms, push.");
     }
 
@@ -243,11 +243,11 @@ public class EnumValidatorsTests
         Result<Model<ValidationChannels?>> present = await Validate<ValidationChannels?>((ValidationChannels)8, static c => c.HasOnlyDefinedFlags());
         Result<Model<ValidationChannels?>> nullableError = await Validate<ValidationChannels?>((ValidationChannels)8, c => c.HasOnlyDefinedFlags(custom));
 
-        withMessage.FirstError.Code.Should().Be("enum.invalid");
+        withMessage.FirstError.Code.Should().Be("Value.HasOnlyDefinedFlags");
         withMessage.FirstError.Description.Should().Be("bad flags");
         withError.FirstError.Should().Be(custom);
         none.IsSuccess.Should().BeTrue();
-        present.FirstError.Code.Should().Be("enum.invalid");
+        present.FirstError.Code.Should().Be("Value.HasOnlyDefinedFlags");
         nullableError.FirstError.Should().Be(custom);
     }
 
@@ -258,7 +258,7 @@ public class EnumValidatorsTests
             (ValidationOrderStatus)42,
             static c => c.IsDefinedEnum().IsOneOf(ValidationOrderStatus.Pending).HasOnlyDefinedFlags());
 
-        result.Errors.Should().ContainSingle().Which.Code.Should().Be("enum.invalid");
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("Value.IsDefinedEnum");
     }
 
     [Fact]

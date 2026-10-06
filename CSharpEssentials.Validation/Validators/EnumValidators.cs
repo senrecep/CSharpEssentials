@@ -5,18 +5,12 @@ using CSharpEssentials.Errors;
 namespace CSharpEssentials.Validation.Validators;
 
 /// <summary>
-/// Extension validators for enum properties. Errors use code <c>enum.invalid</c> or <c>enum.not_allowed</c> and the
-/// <see cref="EnumValueError.Message"/> text that binding errors use. Enums with generated metadata (<see cref="StringEnumAttribute"/>)
+/// Extension validators for enum properties. Errors use the <c>{Property}.{Rule}</c> codes of the other validators (<c>Status.IsDefinedEnum</c>,
+/// <c>Status.IsOneOf</c>, <c>Status.HasOnlyDefinedFlags</c>) and the <see cref="EnumValueError.Message"/> text that binding errors use. Enums with generated metadata (<see cref="StringEnumAttribute"/>)
 /// list their input wire names; other enums list their C# member names. A <see langword="null"/> nullable value passes.
 /// </summary>
 public static class EnumValidators
 {
-    /// <summary>Error code for a value that is not a defined member or flags combination.</summary>
-    public const string InvalidCode = "enum.invalid";
-
-    /// <summary>Error code for a defined value outside the allowed subset.</summary>
-    public const string NotAllowedCode = "enum.not_allowed";
-
     /// <summary>
     /// Fails if the value is not a defined member. A <see cref="FlagsAttribute"/> enum also accepts any combination of defined flags.
     /// </summary>
@@ -24,7 +18,7 @@ public static class EnumValidators
         where TEnum : struct, Enum
     {
         if (!chain.HasFailed && !IsDefined(chain.Value))
-            chain.AddError(Invalid(chain.Value, chain.PropertyName, message));
+            chain.AddError(Invalid(chain.Value, chain.PropertyName, "IsDefinedEnum", message));
         return chain;
     }
 
@@ -42,7 +36,7 @@ public static class EnumValidators
         where TEnum : struct, Enum
     {
         if (!chain.HasFailed && chain.Value is TEnum value && !IsDefined(value))
-            chain.AddError(Invalid(value, chain.PropertyName, message));
+            chain.AddError(Invalid(value, chain.PropertyName, "IsDefinedEnum", message));
         return chain;
     }
 
@@ -110,7 +104,7 @@ public static class EnumValidators
         where TEnum : struct, Enum
     {
         if (!chain.HasFailed && !HasOnlyDefinedBits(chain.Value))
-            chain.AddError(Invalid(chain.Value, chain.PropertyName, message));
+            chain.AddError(Invalid(chain.Value, chain.PropertyName, "HasOnlyDefinedFlags", message));
         return chain;
     }
 
@@ -128,7 +122,7 @@ public static class EnumValidators
         where TEnum : struct, Enum
     {
         if (!chain.HasFailed && chain.Value is TEnum value && !HasOnlyDefinedBits(value))
-            chain.AddError(Invalid(value, chain.PropertyName, message));
+            chain.AddError(Invalid(value, chain.PropertyName, "HasOnlyDefinedFlags", message));
         return chain;
     }
 
@@ -151,17 +145,18 @@ public static class EnumValidators
             ? (info.ToRawValue(value) & ~info.DefinedMask) == 0
             : (PlainEnum<TEnum>.ToRaw(value) & ~PlainEnum<TEnum>.Mask) == 0;
 
-    private static Error Invalid<TEnum>(TEnum value, string propertyName, string? message) where TEnum : struct, Enum =>
-        Error.Validation(InvalidCode, message ?? CreateError(value, propertyName).Message);
+    private static Error Invalid<TEnum>(TEnum value, string propertyName, string rule, string? message) where TEnum : struct, Enum =>
+        Error.Validation($"{propertyName}.{rule}", message ?? CreateError(value, propertyName).Message);
 
     private static Error NotAllowed<TEnum>(TEnum value, TEnum[] allowed, string propertyName, string? message) where TEnum : struct, Enum
     {
+        string code = $"{propertyName}.IsOneOf";
         if (message is not null)
-            return Error.Validation(NotAllowedCode, message);
+            return Error.Validation(code, message);
         string[] allowedValues = new string[allowed.Length];
         for (int i = 0; i < allowed.Length; i++)
             allowedValues[i] = Text(allowed[i]);
-        return Error.Validation(NotAllowedCode, new EnumValueError(typeof(TEnum), Text(value), allowedValues, propertyName).Message);
+        return Error.Validation(code, new EnumValueError(typeof(TEnum), Text(value), allowedValues, propertyName).Message);
     }
 
     private static EnumValueError CreateError<TEnum>(TEnum value, string propertyName) where TEnum : struct, Enum =>
