@@ -74,3 +74,16 @@ app.MapAppsEndpoints(options =>
 | `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints`. |
 
 Every endpoint gets `EndpointTypeMetadata`, which identifies the endpoint type at runtime.
+
+## Diagnostics
+
+The bundled analyzer reports types the generator cannot map. Invalid types are skipped, so the generated registry always compiles. Types and assemblies marked `[ExcludeFromMapping]` are not analyzed.
+
+| ID | Severity | Rule |
+|---|---|---|
+| CSE1001 | Error | Endpoint or group type is not accessible from generated code (private/protected nested, `file`-local, or nested in an inaccessible type). |
+| CSE1002 | Error | Group nesting cycle: the `[EndpointGroup]` chain returns to the same group. Reported on each group in the cycle. |
+| CSE1003 | Error | More than one group attribute on one type (`[EndpointGroup(typeof(X))]` and `[EndpointGroup<Y>]`). |
+| CSE1004 | Warning | Endpoint declares instance fields, auto-properties or a constructor with parameters. Endpoint types are never instantiated; take dependencies as handler parameters. |
+| CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped. |
+| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract or open-generic. |
