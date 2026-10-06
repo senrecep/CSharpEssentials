@@ -34,6 +34,41 @@ public class StringEnumGeneratorHarnessTests
         return Verify(run.Driver);
     }
 
+    [Theory]
+    [InlineData(LanguageVersion.CSharp7_3, NullableContextOptions.Disable)]
+    [InlineData(LanguageVersion.CSharp8, NullableContextOptions.Enable)]
+    public void StringEnumGenerator_Should_Emit_Code_Compatible_With_Older_Language_Versions(
+        LanguageVersion languageVersion,
+        NullableContextOptions nullableOptions)
+    {
+        const string legacySource = """
+            using CSharpEssentials.Enums;
+
+            namespace Sample
+            {
+                [StringEnum]
+                public enum OrderStatus
+                {
+                    Pending,
+                    InProgress,
+                    Shipped
+                }
+            }
+            """;
+        CSharpParseOptions parseOptions = new(languageVersion);
+        CSharpCompilation compilation = GeneratorHarness.CreateCompilation([], [typeof(StringEnumAttribute).Assembly]);
+        compilation = compilation
+            .WithOptions(compilation.Options.WithNullableContextOptions(nullableOptions))
+            .AddSyntaxTrees(CSharpSyntaxTree.ParseText(legacySource, parseOptions, path: "Legacy.cs"));
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([.. EnumsAssembly.Value.Generators], parseOptions: parseOptions)
+            .RunGeneratorsAndUpdateCompilation(compilation, out Compilation output, out ImmutableArray<Diagnostic> generatorDiagnostics);
+
+        driver.GetRunResult().GeneratedTrees.Should().ContainSingle();
+        generatorDiagnostics.Should().BeEmpty();
+        output.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning);
+    }
+
     [Fact]
     public void StringEnumGenerator_Should_Return_Cached_Outputs_When_Compilation_Is_Identical()
     {

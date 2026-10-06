@@ -48,12 +48,12 @@ namespace Microsoft.Extensions.DependencyInjection
             global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
                 services,
                 logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Sample.IAudit>(static sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.Greeter>(sp)),
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Sample.IAudit>(sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.Greeter>(sp)),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.TryAdd);
             global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
                 services,
                 logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Sample.IGreeter>(static sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.Greeter>(sp)),
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped<global::Sample.IGreeter>(sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.Greeter>(sp)),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.TryAdd);
             global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
                 services,
@@ -83,12 +83,12 @@ namespace Microsoft.Extensions.DependencyInjection
             global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
                 services,
                 logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::Sample.IAudit>("shared", static (sp, _) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.SharedGreeter>(sp, "shared")),
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::Sample.IAudit>("shared", (sp, _) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.SharedGreeter>(sp, "shared")),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
             global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
                 services,
                 logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::Sample.IGreeter>("shared", static (sp, _) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.SharedGreeter>(sp, "shared")),
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.KeyedSingleton<global::Sample.IGreeter>("shared", (sp, _) => global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.SharedGreeter>(sp, "shared")),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
             global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
                 services,
@@ -123,7 +123,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 case 1:
                     global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
                         services,
-                        static (inner, sp) => new global::Sample.EuDecorator(
+                        (inner, sp) => new global::Sample.EuDecorator(
                             inner,
                             (global::Sample.Region)(object)global::Sample.Region.Eu),
                         serviceKey: global::Sample.Region.Eu);
@@ -131,7 +131,7 @@ namespace Microsoft.Extensions.DependencyInjection
                 case 2:
                     global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
                         services,
-                        static (inner, sp) => new global::Sample.LoudGreeter(
+                        (inner, sp) => new global::Sample.LoudGreeter(
                             inner,
                             global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IClock>(sp),
                             global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, "shared"),

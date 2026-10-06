@@ -121,6 +121,88 @@ public class ServiceRegistrationGeneratorTests
     }
 
     [Fact]
+    public void Generator_Should_Emit_CSharp8_Compatible_Code()
+    {
+        const string source = """
+            using CSharpEssentials.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection;
+
+            namespace Legacy
+            {
+                public enum Region { Us, Eu }
+
+                public interface IClock { }
+
+                public interface IAudit { }
+
+                public interface IGreeter
+                {
+                    string Greet();
+                }
+
+                [RegisterSingleton]
+                public sealed class Clock : IClock { }
+
+                [RegisterScoped(As = ServiceAs.SelfWithInterfaces)]
+                public sealed class Greeter : IGreeter, IAudit
+                {
+                    public string Greet() => "hi";
+                }
+
+                [RegisterTransient(typeof(IGreeter), Key = Region.Eu)]
+                public sealed class EuGreeter : IGreeter
+                {
+                    public string Greet() => "eu";
+                }
+
+                [RegisterSingleton(Key = "shared", As = ServiceAs.SelfWithInterfaces)]
+                public sealed class SharedGreeter : IGreeter, IAudit
+                {
+                    public string Greet() => "shared";
+                }
+
+                [Decorates(typeof(IGreeter), Order = 2)]
+                public sealed class LoudGreeter : IGreeter
+                {
+                    private readonly IGreeter inner;
+
+                    public LoudGreeter(IGreeter inner, IClock clock, [FromKeyedServices("shared")] IAudit shared, int retries = 3) =>
+                        this.inner = inner;
+
+                    public string Greet() => inner.Greet();
+                }
+
+                [Decorates(typeof(IGreeter), Key = Region.Eu, Order = 1)]
+                public sealed class EuDecorator : IGreeter
+                {
+                    private readonly IGreeter inner;
+
+                    public EuDecorator(IGreeter inner, [ServiceKey] Region region) => this.inner = inner;
+
+                    public string Greet() => inner.Greet();
+                }
+
+                public static class Program
+                {
+                    public static void Main()
+                    {
+                    }
+                }
+            }
+            """;
+        CSharpCompilation compilation = ServiceGeneration.WithLanguageVersion(
+            ServiceGeneration.CreateCompilation(source, OutputKind.ConsoleApplication, "Legacy.App", LibraryReference()),
+            LanguageVersion.CSharp8);
+
+        GeneratorRun run = ServiceGeneration.Run(compilation, languageVersion: LanguageVersion.CSharp8);
+
+        IReadOnlyDictionary<string, string> sources = ServiceGeneration.GeneratedSources(run);
+        sources.Should().ContainKeys("LegacyAppServiceRegistry.g.cs", "LegacyAppServiceAggregate.g.cs");
+        run.GeneratorDiagnostics.Should().BeEmpty();
+        run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Fact]
     public void Generator_Should_Cache_All_Steps_When_Unrelated_Source_Is_Added()
     {
         CSharpCompilation compilation = ServiceGeneration.CreateCompilation(Source);
