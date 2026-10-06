@@ -51,7 +51,8 @@ public sealed class StringEnumGenerator : IIncrementalGenerator
         {
             (EnumModel model, GeneratorSettings generatorSettings) = input;
             string prefix = model.Namespace.Length == 0 ? string.Empty : model.Namespace + ".";
-            spc.AddSource(prefix + model.ExtensionsClassName + ".g.cs", StringEnumSourceWriter.WriteExtensions(model, generatorSettings));
+            // The metadata name keeps Order.State and Order_State apart even though their class names collide (CSE0016).
+            spc.AddSource(prefix + model.MetadataName + "Extensions.g.cs", StringEnumSourceWriter.WriteExtensions(model, generatorSettings));
         });
 
         IncrementalValueProvider<EquatableArray<string>> registry = enums

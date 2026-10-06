@@ -136,8 +136,8 @@ public class StringEnumGeneratorHarnessTests
             "Sample.PermissionsExtensions.g.cs",
             "Sample.SignedExtensions.g.cs",
             "Sample.HugeExtensions.g.cs",
-            "Sample.Order_StateExtensions.g.cs",
-            "Sample.Order_Line_KindExtensions.g.cs",
+            "Sample.Order+StateExtensions.g.cs",
+            "Sample.Order+Line+KindExtensions.g.cs",
             "__CSharpEssentialsEnumRegistry.g.cs");
         return Verify(run.Driver);
     }
@@ -231,6 +231,34 @@ public class StringEnumGeneratorHarnessTests
         run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
         run.Result.GeneratedTrees.Select(static t => Path.GetFileName(t.FilePath))
             .Should().BeEquivalentTo("Orders.StatusExtensions.g.cs", "Users.StatusExtensions.g.cs", "__CSharpEssentialsEnumRegistry.g.cs");
+    }
+
+    [Fact]
+    public void StringEnumGenerator_Should_Use_Distinct_Hint_Names_When_Extensions_Class_Names_Collide()
+    {
+        const string source = """
+            using CSharpEssentials.Enums;
+
+            namespace Sample;
+
+            public class Order
+            {
+                [StringEnum]
+                public enum State { A }
+            }
+
+            [StringEnum]
+            public enum Order_State { B }
+            """;
+        CSharpCompilation compilation = GeneratorHarness.CreateCompilation([source], [typeof(StringEnumAttribute).Assembly]);
+
+        GeneratorRun run = GeneratorHarness.Run(compilation, [.. EnumsAssembly.Value.Generators]);
+
+        run.GeneratorDiagnostics.Should().BeEmpty();
+        run.Result.GeneratedTrees.Select(static t => Path.GetFileName(t.FilePath)).Should().BeEquivalentTo(
+            "Sample.Order+StateExtensions.g.cs",
+            "Sample.Order_StateExtensions.g.cs",
+            "__CSharpEssentialsEnumRegistry.g.cs");
     }
 
     [Theory]

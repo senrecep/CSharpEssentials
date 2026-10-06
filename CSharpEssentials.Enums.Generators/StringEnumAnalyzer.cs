@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -6,7 +7,8 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace CSharpEssentials.Enums.Generators;
 
 /// <summary>
-/// Reports <c>[StringEnum]</c> enums that the enum generator cannot give metadata to (CSE0015).
+/// Reports <c>[StringEnum]</c> enums that the enum generator cannot give metadata to (CSE0015) and enums whose generated
+/// extensions classes collide (CSE0016).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class StringEnumAnalyzer : DiagnosticAnalyzer
@@ -15,7 +17,7 @@ public sealed class StringEnumAnalyzer : DiagnosticAnalyzer
 
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } =
-        ImmutableArray.Create(StringEnumDiagnostics.MissingMetadata);
+        ImmutableArray.Create(StringEnumDiagnostics.MissingMetadata, StringEnumDiagnostics.ExtensionsClassCollision);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -30,28 +32,62 @@ public sealed class StringEnumAnalyzer : DiagnosticAnalyzer
 
             bool supportsRegistration = start.Compilation is not CSharpCompilation csharp ||
                 csharp.LanguageVersion >= LanguageVersion.CSharp9;
-            start.RegisterSymbolAction(symbolContext => AnalyzeEnum(symbolContext, attribute, supportsRegistration), SymbolKind.NamedType);
+            ConcurrentBag<INamedTypeSymbol> generated = [];
+            start.RegisterSymbolAction(
+                symbolContext => AnalyzeEnum(symbolContext, attribute, supportsRegistration, generated),
+                SymbolKind.NamedType);
+            start.RegisterCompilationEndAction(end => ReportCollisions(end, generated));
         });
     }
 
-    private static void AnalyzeEnum(SymbolAnalysisContext context, INamedTypeSymbol attribute, bool supportsRegistration)
+    private static void AnalyzeEnum(
+        SymbolAnalysisContext context,
+        INamedTypeSymbol attribute,
+        bool supportsRegistration,
+        ConcurrentBag<INamedTypeSymbol> generated)
     {
         if (context.Symbol is not INamedTypeSymbol { TypeKind: TypeKind.Enum } type || !HasAttribute(type, attribute))
             return;
 
         string reason;
         if (!EnumModelReader.IsReachable(type))
+        {
             reason = "it or a containing type is private, protected or file-local, or it is nested in a generic type";
-        else if (!supportsRegistration)
-            reason = "the project uses a C# version below 9";
+        }
         else
-            return;
+        {
+            generated.Add(type);
+            if (supportsRegistration)
+                return;
+            reason = "the project uses a C# version below 9";
+        }
 
         context.ReportDiagnostic(Diagnostic.Create(
             StringEnumDiagnostics.MissingMetadata,
             type.Locations.Length > 0 ? type.Locations[0] : Location.None,
             type.ToDisplayString(),
             reason));
+    }
+
+    private static void ReportCollisions(CompilationAnalysisContext context, ConcurrentBag<INamedTypeSymbol> generated)
+    {
+        IEnumerable<IGrouping<string, INamedTypeSymbol>> collisions = generated
+            .GroupBy(static type => type.ContainingNamespace.ToDisplayString() + "." + EnumModelReader.ExtensionsClassName(type), StringComparer.Ordinal)
+            .Where(static group => group.Count() > 1);
+        foreach (IGrouping<string, INamedTypeSymbol> group in collisions)
+        {
+            INamedTypeSymbol[] types = [.. group.OrderBy(static type => type.ToDisplayString(), StringComparer.Ordinal)];
+            foreach (INamedTypeSymbol type in types)
+            {
+                string others = string.Join("', '", types.Where(other => !SymbolEqualityComparer.Default.Equals(other, type)).Select(static other => other.ToDisplayString()));
+                context.ReportDiagnostic(Diagnostic.Create(
+                    StringEnumDiagnostics.ExtensionsClassCollision,
+                    type.Locations.Length > 0 ? type.Locations[0] : Location.None,
+                    type.ToDisplayString(),
+                    EnumModelReader.ExtensionsClassName(type),
+                    others));
+            }
+        }
     }
 
     private static bool HasAttribute(INamedTypeSymbol type, INamedTypeSymbol attribute)
