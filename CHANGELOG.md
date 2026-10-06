@@ -3,9 +3,7 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [4.1.0] - 2026-10-06
+## [4.1.0](https://github.com/senrecep/CSharpEssentials/compare/v4.0.0...v4.1.0) (2026-10-06)
 
 ### Added
 
@@ -21,7 +19,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - The `net11.0` assets are built with the .NET 11 RC1 SDK. A patch release rebuilt with the .NET 11 GA SDK follows the GA release.
 
-## [4.0.0] - 2026-10-06
+## [4.0.0](https://github.com/senrecep/CSharpEssentials/compare/v3.2.3...v4.0.0) (2026-10-06)
 
 4.0 changes default behavior in `CSharpEssentials.AspNetCore`, `CSharpEssentials.EntityFrameworkCore` and `CSharpEssentials.Resilience`. Each old behavior can be turned back on with a setting. Read [Migrating from 3.x to 4.0](docs/migration/v3-to-v4.md) before upgrading.
 
@@ -54,26 +52,26 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `AddValidator` and `AddValidatorsFromAssembly` no longer register the same validator twice.
 - `default(ResiliencePolicy)` behaves like `Create()`.
 
-## [3.2.3] - 2026-05-31
+## [3.2.3](https://github.com/senrecep/CSharpEssentials/compare/v3.2.2...v3.2.3) (2026-05-31)
 
 ### Added
 
 - `CSharpEssentials.These` is part of the meta-package.
 
-## [3.2.2] - 2026-05-31
+## [3.2.2](https://github.com/senrecep/CSharpEssentials/compare/v3.2.1...v3.2.2) (2026-05-31)
 
 ### Added
 
 - New package `CSharpEssentials.These` with JSON serialization.
 - More `Maybe` and `Result` extensions, `RuleEngine.FromPredicate` and `FakeDateTimeProvider`.
 
-## [3.2.1] - 2026-05-31
+## [3.2.1](https://github.com/senrecep/CSharpEssentials/compare/v3.2.0...v3.2.1) (2026-05-31)
 
 ### Added
 
 - `ExceptionHandlingBehavior` pipeline behavior in `CSharpEssentials.Mediator`.
 
-## [3.2.0] - 2026-05-31
+## [3.2.0](https://github.com/senrecep/CSharpEssentials/compare/v3.1.0...v3.2.0) (2026-05-31)
 
 ### Added
 
@@ -84,7 +82,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `CSharpEssentials.Http` restores the default 30 second timeout.
 - The `[StringEnum]` generator skips nested enums instead of producing invalid code.
 
-## [3.1.0] - 2026-05-27
+## [3.1.0](https://github.com/senrecep/CSharpEssentials/compare/v3.0.8...v3.1.0) (2026-05-27)
 
 ### Added
 
@@ -95,37 +93,37 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Failure paths of `Result` pipelines no longer allocate.
 
-## [3.0.8] - 2026-05-20
+## [3.0.8](https://github.com/senrecep/CSharpEssentials/compare/v3.0.7...v3.0.8) (2026-05-20)
 
 ### Changed
 
 - `CSharpEssentials.Validation` allocates less on the valid path.
 
-## [3.0.7] - 2026-05-20
+## [3.0.7](https://github.com/senrecep/CSharpEssentials/compare/v3.0.6...v3.0.7) (2026-05-20)
 
 ### Fixed
 
 - Validators support nullable types and concrete collections.
 
-## [3.0.6] - 2026-05-20
+## [3.0.6](https://github.com/senrecep/CSharpEssentials/compare/v3.0.5...v3.0.6) (2026-05-20)
 
 ### Added
 
 - New package `CSharpEssentials.Validation`. `CSharpEssentials.Mediator` uses it and surfaces validation errors based on `TResponse`.
 
-## [3.0.5] - 2026-05-07
+## [3.0.5](https://github.com/senrecep/CSharpEssentials/compare/v3.0.4...v3.0.5) (2026-05-07)
 
 ### Fixed
 
 - Static analysis warnings across the packages.
 
-## [3.0.4] - 2026-05-06
+## [3.0.4](https://github.com/senrecep/CSharpEssentials/compare/v3.0.3...v3.0.4) (2026-05-06)
 
 ### Added
 
 - GitHub Pages landing page and per-package AI agent skills under `.well-known/agent-skills`.
 
-## [3.0.3] - 2026-05-06
+## [3.0.3](https://github.com/senrecep/CSharpEssentials/compare/v3.0.2...v3.0.3) (2026-05-06)
 
 ### Added
 
@@ -135,7 +133,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Redirect following in `CSharpEssentials.Http`.
 - `Result.Try` and `Result.TryAsync` overloads.
 
-## [3.0.2] - 2026-05-05
+## [3.0.2](https://github.com/senrecep/CSharpEssentials/compare/v3.0.1...v3.0.2) (2026-05-05)
 
 ### Added
 
@@ -144,13 +142,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `ResultEndpointFilter` for Minimal APIs.
 - `Combine`, `Recover` and `Unwrap` for `Result`.
 
-## [3.0.1] - 2026-05-04
+## [3.0.1](https://github.com/senrecep/CSharpEssentials/compare/v3.0.0...v3.0.1) (2026-05-04)
 
 ### Fixed
 
 - Package metadata.
 
-## [3.0.0] - 2026-05-04
+## [3.0.0](https://github.com/senrecep/CSharpEssentials/releases/tag/v3.0.0) (2026-05-04)
 
 ### Added
 
@@ -159,21 +157,3 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - `Any`: `Deconstruct`, `ToTuple`, `Is<T>`, `As<T>`, `TryAs<T>`.
 - `Error`: implicit array conversion and an error combination operator.
 - SourceLink and symbol packages.
-
-[Unreleased]: https://github.com/senrecep/CSharpEssentials/compare/v4.1.0...HEAD
-[4.1.0]: https://github.com/senrecep/CSharpEssentials/compare/v4.0.0...v4.1.0
-[4.0.0]: https://github.com/senrecep/CSharpEssentials/compare/v3.2.3...v4.0.0
-[3.2.3]: https://github.com/senrecep/CSharpEssentials/compare/v3.2.2...v3.2.3
-[3.2.2]: https://github.com/senrecep/CSharpEssentials/compare/v3.2.1...v3.2.2
-[3.2.1]: https://github.com/senrecep/CSharpEssentials/compare/v3.2.0...v3.2.1
-[3.2.0]: https://github.com/senrecep/CSharpEssentials/compare/v3.1.0...v3.2.0
-[3.1.0]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.8...v3.1.0
-[3.0.8]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.7...v3.0.8
-[3.0.7]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.6...v3.0.7
-[3.0.6]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.5...v3.0.6
-[3.0.5]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.4...v3.0.5
-[3.0.4]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.3...v3.0.4
-[3.0.3]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.2...v3.0.3
-[3.0.2]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.1...v3.0.2
-[3.0.1]: https://github.com/senrecep/CSharpEssentials/compare/v3.0.0...v3.0.1
-[3.0.0]: https://github.com/senrecep/CSharpEssentials/releases/tag/v3.0.0
