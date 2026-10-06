@@ -1,0 +1,10 @@
+<!-- Versions of the packed packages under test: CseVersion is the version passed to dotnet pack. -->
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="$(CsePackage)" Version="$(CseVersion)" />
+  </ItemGroup>
+</Project>

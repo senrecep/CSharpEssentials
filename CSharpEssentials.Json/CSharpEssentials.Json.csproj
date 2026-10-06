@@ -36,10 +36,10 @@
 
   <!-- Dependencies: Json depends on Enums for enum converters -->
   <ItemGroup>
-    <PackageReference Include="CSharpEssentials.Enums"
+    <PackageReference Include="CSharpEssentials.Enums" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' != 'true'" />
 
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" PrivateAssets="contentfiles;build"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
