@@ -52,8 +52,8 @@ public class Program
         string text = s.ToOptimizedString();
         Console.WriteLine($"Status.Active.ToOptimizedString() = {text}");
 
-        string snake = s.ToSnakeCase();
-        Console.WriteLine($"Status.Active.ToSnakeCase() = {snake}");
+        string wire = s.ToWireName();
+        Console.WriteLine($"Status.Active.ToWireName() = {wire}");
 
         string kebab = s.ToKebabCase();
         Console.WriteLine($"Status.Active.ToKebabCase() = {kebab}");
@@ -84,9 +84,9 @@ public class Program
         bool notKnown = StatusExtensions.IsDefined("Deleted");
         Console.WriteLine($"StatusExtensions.IsDefined(\"Deleted\") = {notKnown}");
 
-        if (StatusExtensions.TryParse("Inactive", out Status parsedStatus))
+        if (StatusExtensions.TryParseWire("inactive", out Status parsedStatus))
         {
-            Console.WriteLine($"StatusExtensions.TryParse(\"Inactive\") = {parsedStatus}");
+            Console.WriteLine($"StatusExtensions.TryParseWire(\"inactive\") = {parsedStatus}");
         }
 
         string[] names = StatusExtensions.GetNames();
@@ -103,17 +103,17 @@ public class Program
 
         DeliveryStatus delivery = DeliveryStatus.Shipped;
         Console.WriteLine($"ToOptimizedString() = {delivery.ToOptimizedString()}");
-        Console.WriteLine($"ToSnakeCase()       = {delivery.ToSnakeCase()}");
+        Console.WriteLine($"ToWireName()        = {delivery.ToWireName()}");
         Console.WriteLine($"ToKebabCase()       = {delivery.ToKebabCase()}");
         Console.WriteLine($"GetNames()          = [{string.Join(", ", DeliveryStatusExtensions.GetNames())}]");
         Console.WriteLine($"GetValues()         = [{string.Join(", ", DeliveryStatusExtensions.GetValues())}]");
 
-        if (DeliveryStatusExtensions.TryParse("Delivered", out DeliveryStatus delivered))
+        if (DeliveryStatusExtensions.TryParseWire("delivered", out DeliveryStatus delivered))
         {
-            Console.WriteLine($"TryParse(\"Delivered\") = {delivered}");
+            Console.WriteLine($"TryParseWire(\"delivered\") = {delivered}");
         }
 
-        Console.WriteLine($"Parse(\"Returned\")    = {DeliveryStatusExtensions.Parse("Returned")}");
+        Console.WriteLine($"ParseWire(\"returned\") = {DeliveryStatusExtensions.ParseWire("returned")}");
 
         // StringEnumNaming (CSharpEssentials.Json) gives the wire name used by the JSON converters
         // (snake_case by default), so APIs and generated code agree on the same spelling.
