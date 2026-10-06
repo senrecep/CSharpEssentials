@@ -17,6 +17,8 @@ namespace CSharpEssentials.Enums;
 /// </remarks>
 public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
 {
+    private const int MaxErrorValueLength = 64;
+
     private readonly EnumMemberInfo<TEnum>[] _members;
     private readonly Func<TEnum, ulong> _toRaw;
     private readonly Func<ulong, TEnum> _fromRaw;
@@ -253,9 +255,12 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         Decompose(raw, names);
     }
 
-    /// <summary>Creates the error for a rejected value; input errors do not list the fallback member.</summary>
+    /// <summary>
+    /// Creates the error for a rejected value; input errors do not list the fallback member. A value longer than 64 chars is
+    /// cut to 64 chars followed by <c>…</c>.
+    /// </summary>
     public EnumValueError CreateError(string? value, EnumReadMode mode, string? path = null) =>
-        new(typeof(TEnum), value, mode == EnumReadMode.Input ? _inputWireNames : _wireNames, path);
+        new(typeof(TEnum), Truncate(value), mode == EnumReadMode.Input ? _inputWireNames : _wireNames, path);
 
     private EnumValueError CreateError(string? value, bool input) =>
         CreateError(value, input ? EnumReadMode.Input : EnumReadMode.Data);
@@ -341,9 +346,20 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
 
     private static KeyValuePair<string, EnumMemberInfo<TEnum>> Pair(string key, EnumMemberInfo<TEnum> member) => new(key, member);
 
-#if NETSTANDARD2_0
-    private static string ToText(string text) => text;
+#if NET9_0_OR_GREATER
+    private static string? Truncate(string? value) =>
+        value is { Length: > MaxErrorValueLength } ? string.Concat(value.AsSpan(0, MaxErrorValueLength), "…") : value;
+
+    private static string ToText(ReadOnlySpan<char> text) =>
+        text.Length > MaxErrorValueLength ? string.Concat(text[..MaxErrorValueLength], "…") : text.ToString();
 #else
-    private static string ToText(ReadOnlySpan<char> text) => text.ToString();
+    private static string? Truncate(string? value) =>
+        value is { Length: > MaxErrorValueLength } ? value.Substring(0, MaxErrorValueLength) + "…" : value;
+#if NETSTANDARD2_0
+    private static string ToText(string text) => Truncate(text)!;
+#else
+    private static string ToText(ReadOnlySpan<char> text) =>
+        text.Length > MaxErrorValueLength ? text.Slice(0, MaxErrorValueLength).ToString() + "…" : text.ToString();
+#endif
 #endif
 }

@@ -12,6 +12,20 @@ namespace CSharpEssentials.Json;
 internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions conventions, EnumReadMode mode, EnumWireFormat writeAs)
     : JsonConverter<TEnum> where TEnum : struct, Enum
 {
+    // Longest numeric token EnumNumberParser accepts: "-9223372036854775808" and "18446744073709551615".
+    private const int MaxNumberLength = 20;
+    private const int StackBufferLength = 256;
+    private const int PreviewLength = 64;
+
+    private readonly int _maxTokenLength = MaxSpelling(info);
+
+    // 4.x flags text ("read, write") holds every flag once, with a separator and a space between them.
+    private readonly int _maxLegacyFlagsLength = info.IsFlags ? (MaxSpelling(info) + 2) * Math.Max(info.TypedMembers.Count, 1) : 0;
+
+    // Unknown text maps to the fallback member here, so a long value is not rejected up front.
+    private readonly bool _acceptsAnyText =
+        mode == EnumReadMode.Data && conventions.UnknownValue == UnknownEnumValueHandling.UseFallback && info.Fallback is not null;
+
     public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType == JsonTokenType.StartArray && info.IsFlags)
@@ -43,7 +57,7 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
     }
 
     public override TEnum ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        ReadText(reader.GetString()!);
+        ReadString(ref reader, splitLegacyFlags: true);
 
     public override void WriteAsPropertyName(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options) =>
         writer.WritePropertyName(info.Format(value, writeAs));
@@ -55,30 +69,90 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         if (reader.TokenType != JsonTokenType.String)
             throw new EnumValueJsonException(info.CreateError(null, mode));
 
-        string text = reader.GetString()!;
-        return splitLegacyFlags ? ReadText(text) : ReadToken(text);
+        return ReadString(ref reader, splitLegacyFlags);
     }
 
-    private TEnum ReadText(string text) =>
-        info.IsFlags && text.Contains(',') ? ReadLegacyFlags(text) : ReadToken(text);
+    // The value is unescaped into a bounded buffer and looked up as a span; text longer than every accepted spelling is
+    // rejected before it is unescaped, so a large string never becomes a string.
+    private TEnum ReadString(ref Utf8JsonReader reader, bool splitLegacyFlags)
+    {
+        int limit = splitLegacyFlags && info.IsFlags ? _maxLegacyFlagsLength : _maxTokenLength;
+        int byteLength = reader.HasValueSequence ? (int)Math.Min(reader.ValueSequence.Length, int.MaxValue) : reader.ValueSpan.Length;
 
-    private TEnum ReadToken(string text) =>
+        // One char is at most 3 UTF-8 bytes, or 6 bytes when it is escaped (\uXXXX).
+        if (byteLength > limit * (reader.ValueIsEscaped ? 6 : 3))
+        {
+            if (_acceptsAnyText)
+                return ReadText(reader.GetString().AsSpan());
+            throw new EnumValueJsonException(info.CreateError(Preview(ref reader, byteLength), mode));
+        }
+
+        char[]? rented = byteLength > StackBufferLength ? ArrayPool<char>.Shared.Rent(byteLength) : null;
+        Span<char> buffer = rented is null ? stackalloc char[StackBufferLength] : rented;
+        try
+        {
+            ReadOnlySpan<char> text = buffer[..reader.CopyString(buffer)];
+            if (text.Length > limit && !_acceptsAnyText)
+                throw new EnumValueJsonException(info.CreateError(text.ToString(), mode));
+            return splitLegacyFlags ? ReadText(text) : ReadToken(text);
+        }
+        finally
+        {
+            if (rented is not null)
+                ArrayPool<char>.Shared.Return(rented);
+        }
+    }
+
+    private TEnum ReadText(ReadOnlySpan<char> text) =>
+        info.IsFlags && text.IndexOf(',') >= 0 ? ReadLegacyFlags(text) : ReadToken(text);
+
+    private TEnum ReadToken(ReadOnlySpan<char> text) =>
         info.TryParse(text, mode, conventions, out TEnum value, out EnumValueError? error)
             ? value
             : throw new EnumValueJsonException(error);
 
     // 4.x wrote flags as "read, write"; every part is one accepted token.
-    private TEnum ReadLegacyFlags(string text)
+    private TEnum ReadLegacyFlags(ReadOnlySpan<char> text)
     {
         ulong raw = 0;
-        foreach (string part in text.Split(','))
+        int start = 0;
+        while (start <= text.Length)
         {
-            if (!info.TryParse(part.Trim(), mode, conventions, out TEnum flag, out _))
-                throw new EnumValueJsonException(info.CreateError(text, mode));
+            int comma = text[start..].IndexOf(',');
+            int end = comma < 0 ? text.Length : start + comma;
+            if (!info.TryParse(text[start..end].Trim(), mode, conventions, out TEnum flag, out _))
+                throw new EnumValueJsonException(info.CreateError(text.ToString(), mode));
             raw |= info.ToRawValue(flag);
+            start = end + 1;
         }
 
         return info.FromRawValue(raw);
+    }
+
+    // The first bytes of a rejected value, for the error message; escapes are shown as written.
+    private static string Preview(ref Utf8JsonReader reader, int byteLength)
+    {
+        int count = Math.Min(byteLength, PreviewLength);
+        Span<byte> prefix = stackalloc byte[PreviewLength];
+        if (reader.HasValueSequence)
+            reader.ValueSequence.Slice(0, count).CopyTo(prefix);
+        else
+            reader.ValueSpan[..count].CopyTo(prefix);
+        string text = Encoding.UTF8.GetString(prefix[..count]);
+        return count < byteLength ? text + "…" : text;
+    }
+
+    private static int MaxSpelling(EnumInfo<TEnum> info)
+    {
+        int max = MaxNumberLength;
+        foreach (EnumMemberInfo<TEnum> member in info.TypedMembers)
+        {
+            max = Math.Max(max, Math.Max(member.WireName.Length, member.MemberName.Length));
+            foreach (string alias in member.Aliases)
+                max = Math.Max(max, alias.Length);
+        }
+
+        return max;
     }
 
     private TEnum ReadNumber(ref Utf8JsonReader reader)
