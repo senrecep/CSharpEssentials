@@ -111,6 +111,27 @@ The two domain event paths differ in when `AfterSave` events are handled:
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
+### Enum Storage
+
+`ConfigureEnumConventions` stores every `[StringEnum]` enum as a string, with a max length that fits the longest name:
+
+```csharp
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.ConfigureEnumConventions(typeof(AppDbContext).Assembly);
+
+        // 3.x storage format (Core ToSnakeCase) for existing data:
+        // configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(AppDbContext).Assembly);
+    }
+}
+```
+
+- Since 4.0 the stored value is the JSON name (`StringEnumNaming`, `snake_case_lower`, `[JsonStringEnumMemberName]` respected), the same spelling as JSON and query binding. Enums with acronyms or digits in member names changed spelling (`HTTPStatus` → `http_status`, 3.x: `httpstatus`).
+- `UseLegacySnakeCase = true` keeps writing the 3.x format. Reading accepts the old values, but queries compare against the configured spelling, so migrate the stored values or keep the legacy option.
+- `CanConvert` selects the enum types (default: enums marked `[StringEnum]`). Without assemblies, all loaded assemblies are scanned.
+
 ### CQRS Write/Read
 
 ```csharp
