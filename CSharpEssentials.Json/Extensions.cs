@@ -109,24 +109,35 @@ public static class Extensions
     [RequiresDynamicCode(SerializationMessage)]
     public static JsonDocument? ConvertToJsonDocument(this string json)
     {
-        Func<string, JsonDocument?>[] deserializers = [
-            static json => JsonSerializer.Deserialize<JsonDocument>(json, EnhancedJsonSerializerOptions.DefaultOptions),
-            static json => JsonDocument.Parse(json),
-            static json => json.ConvertToJsonDocument(EnhancedJsonSerializerOptions.DefaultOptions)];
-
-        foreach (Func<string, JsonDocument?> deserialize in deserializers)
+        try
         {
-            try
-            {
-                JsonDocument? document = deserialize(json);
-                if (document != null)
-                    return document;
-            }
-            catch (JsonException ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
+            JsonDocument? document = JsonSerializer.Deserialize<JsonDocument>(json, EnhancedJsonSerializerOptions.DefaultOptions);
+            if (document != null)
+                return document;
         }
+        catch (JsonException ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
+        try
+        {
+            return JsonDocument.Parse(json);
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
+        try
+        {
+            return json.ConvertToJsonDocument(EnhancedJsonSerializerOptions.DefaultOptions);
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+
         return null;
     }
 }
