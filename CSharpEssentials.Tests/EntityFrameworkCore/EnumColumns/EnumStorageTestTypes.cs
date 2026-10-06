@@ -118,6 +118,7 @@ public sealed class StoredNumericOrder
     public StoredUIntMask UIntFlags { get; set; }
     public StoredWideMask WideFlags { get; set; }
     public StoredEmptyStatus Empty { get; set; }
+    public StoredAccess Access { get; set; }
 }
 
 public sealed class StoredAddress

@@ -61,3 +61,12 @@ public enum StoredUIntMask : uint
     Low = 1,
     High = 1u << 31,
 }
+
+/// <summary>A flags enum without a zero member, so legacy text storage has no name for 0.</summary>
+[Flags]
+[StringEnum]
+public enum StoredAccess
+{
+    Read = 1,
+    Write = 2,
+}

@@ -22,3 +22,9 @@ dotnet_diagnostic.CS0618.severity = none
 # Non-int underlying types (byte, sbyte, short, ushort, uint, long, ulong) are the subject of these tests.
 [{Enums/EnumValueFormatterTests,Enums/Runtime/RuntimeTestEnums,EntityFrameworkCore/EnumColumns/EnumStorageNumericTypes}.cs]
 dotnet_diagnostic.CA1028.severity = none
+# StoredAccess has no zero member on purpose: legacy flags text must fall back to "0" for it.
+dotnet_diagnostic.CSE0006.severity = none
+
+# The reader/writer test compiles ConstructorExpression, which EF Core marks as evaluation-only, to prove compiled models rebuild it.
+[EntityFrameworkCore/EnumColumns/EnumJsonValueReaderWriterTests.cs]
+dotnet_diagnostic.EF9100.severity = none
