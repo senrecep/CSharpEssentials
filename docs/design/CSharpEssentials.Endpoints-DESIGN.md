@@ -393,7 +393,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 
 - Shipped: CSE1005 duplicate HTTP method + route literal (warning, §7).
 - Shipped: typed route helper `app.RouteOf<CreateApp>(new { id })` and `app.RouteOf<CreateApp>(nameOrMethod, values)` in `EndpointRouteLookupExtensions`. It selects `RouteEndpoint`s by `EndpointTypeMetadata` (optionally by `WithName` or HTTP method), binds values with `TemplateBinderFactory` and checks route constraints. No route, an ambiguous route or a missing/invalid value throws `InvalidOperationException`. It is `[RequiresUnreferencedCode]` because `RouteValueDictionary(object)` reads properties by reflection.
-- Validation endpoint filter on `CSharpEssentials.Validation` `IValidator<T>` → `ToProblemResult`.
+- Shipped: validation endpoint filter `ValidationEndpointFilter<T>` + `RouteHandlerBuilder.WithValidation<T>()` in **`CSharpEssentials.AspNetCore`**, not in Endpoints. Endpoints stays dependency-light, and AspNetCore must not reference Endpoints. `ToProblemResult` already lives in AspNetCore, so the filter needs one new edge, AspNetCore → Validation (Validation depends only on Results and DI abstractions, so no cycle). It works for any Minimal API handler, inside or outside `IEndpoint.Map`. Missing validators throw `InvalidOperationException`; a handler without a `T` parameter fails when the endpoint is built.
 - Security shortcuts (`Roles`, `Policies`, `AuthSchemes`) over `RequireAuthorization`.
 - Code fix for CSE1004 (needs `Microsoft.CodeAnalysis.CSharp.Workspaces` in a separate `*.CodeFixes` project; owner approval required).
 
@@ -404,7 +404,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 |---|---|
 | `ICarterModule` instances with constructor injection | Static abstract `Map` gives no instances and AOT-safe dispatch. Dependencies belong in handler parameters. |
 | `CarterModule` base class with fluent config in the constructor | `IEndpointGroup.Configure` is the single place for group conventions. Avoids base classes. |
-| Built-in FluentValidation (`IValidatorLocator`, `ValidateAsync`) | Not our validation stack. A P3 filter targets `CSharpEssentials.Validation`. |
+| Built-in FluentValidation (`IValidatorLocator`, `ValidateAsync`) | Not our validation stack. `WithValidation<T>()` in `CSharpEssentials.AspNetCore` targets `CSharpEssentials.Validation` (§8). |
 | Response negotiation (`IResponseNegotiator`) | ASP.NET Core `IResult`/`TypedResults` already cover it (thin-layer principle). |
 | Runtime assembly scanning (`DependencyContextAssemblyCatalog`) | Replaced by the generator. Reflection exists only as an explicit fallback. |
 | `CarterConfigurator` explicit module/validator lists | `EndpointMappingOptions.Filter` and `[ExcludeFromMapping]`. |
@@ -413,7 +413,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Feature | Reason skipped |
 |---|---|
 | REPR base classes (`Endpoint<TReq,TRes>`) with their own binding and serialization pipeline | Replaces Minimal APIs instead of layering on them. |
-| Pre/post processors and the built-in validation pipeline | Endpoint filters already provide this. Validation is a P3 filter. |
+| Pre/post processors and the built-in validation pipeline | Endpoint filters already provide this. Validation is an endpoint filter in `CSharpEssentials.AspNetCore` (§8). |
 | Command bus, event bus, job queues | Out of scope. `CSharpEssentials.Mediator` covers in-process messaging. |
 | Permission code generation and security DSL | Native `RequireAuthorization`. P3 adds only thin shortcuts. |
 | NSwag-based Swagger generation | Native ApiExplorer/OpenAPI, verified identical with wrapping. |
@@ -425,7 +425,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 |---|---|
 | Generated `MapGet`/`MapPost` from `[MapGet("/route")]` attributes on handlers | A parallel routing DSL. Generated calls would bypass user-code RDG interception, so the generator never emits verbs. |
 | Dependency on Immediate.Handlers behaviors pipeline | Coupling to a handler framework. Use Mediator or endpoint filters. |
-| Generated validation (Immediate.Validations) | P3 filter on `CSharpEssentials.Validation`. |
+| Generated validation (Immediate.Validations) | Endpoint filter on `CSharpEssentials.Validation` in `CSharpEssentials.AspNetCore` (§8). |
 | `CustomizeEndpoint` static hook | `Map` already holds the endpoint's conventions. |
 
 ## 10. Testing Strategy

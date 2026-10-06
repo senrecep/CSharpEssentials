@@ -7,6 +7,7 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 - **Enhanced Problem Details** — One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
 - **Global Exception Handler** — Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
 - **Result Endpoint Filter** — Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
+- **Validation Endpoint Filter** — Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
 - **Enum Binding** — Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
 - **API Versioning** — Pre-configured URL segment and header-based versioning.
 - **Swagger** — Easy setup with versioning support, enum schema filters, and custom schema IDs.
@@ -16,6 +17,8 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 ```bash
 dotnet add package CSharpEssentials.AspNetCore
 ```
+
+Depends on `CSharpEssentials.Errors`, `CSharpEssentials.Json`, `CSharpEssentials.Results` and `CSharpEssentials.Validation` (for the validation endpoint filter). None of them references this package, so there is no cycle.
 
 ## Usage
 
@@ -95,6 +98,20 @@ app.MapGet("/users/{id}", (int id) => GetUser(id))
 // Returns 200 with value on success; on failure the mapper's result (resolved per request),
 // or a ProblemDetails response when no mapper is registered
 ```
+
+### Validation Endpoint Filter
+
+```csharp
+builder.Services.AddValidator<CreateUserRequest, CreateUserRequestValidator>();
+
+app.MapPost("/users", (CreateUserRequest request) => CreateUser(request))
+   .WithValidation<CreateUserRequest>();
+```
+
+- Validates each non-null argument of type `T` with every registered `IValidator<T>`, in ascending `Order`. Errors are combined and returned with `ToProblemResult()` (validation errors → 400); the handler does not run.
+- A `null` argument (optional body) is passed through.
+- No registered `IValidator<T>` throws `InvalidOperationException` at request time, so unvalidated input never reaches the handler. A handler without a `T` parameter throws when the endpoint is built.
+- `ValidationEndpointFilter<T>` can also be added directly with `AddEndpointFilter<ValidationEndpointFilter<T>>()`, for example on a route group.
 
 ### Enum Query/Route Binding
 
