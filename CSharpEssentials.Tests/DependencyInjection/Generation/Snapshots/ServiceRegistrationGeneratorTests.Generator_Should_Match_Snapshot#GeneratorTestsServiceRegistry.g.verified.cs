@@ -97,25 +97,48 @@ namespace Microsoft.Extensions.DependencyInjection
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
         }
 
+        /// <summary>Gets the distinct decorator orders declared in this assembly, ascending.</summary>
+        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+        public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 1, 2 };
+
         /// <summary>Applies the decorators declared in this assembly.</summary>
         /// <param name="services">The service collection.</param>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
         public static void ApplyDecorators(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
         {
-            global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
-                services,
-                static (inner, sp) => new global::Sample.EuDecorator(
-                    inner,
-                    (global::Sample.Region)(object)global::Sample.Region.Eu),
-                serviceKey: global::Sample.Region.Eu);
-            global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
-                services,
-                static (inner, sp) => new global::Sample.LoudGreeter(
-                    inner,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IClock>(sp),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, "shared"),
-                    (int)(sp.GetService(typeof(int)) ?? (object?)3)!),
-                serviceKey: null);
+            foreach (int order in DecoratorOrders)
+            {
+                ApplyDecorators(services, order);
+            }
+        }
+
+        /// <summary>Applies the decorators declared in this assembly with the given order.</summary>
+        /// <param name="services">The service collection.</param>
+        /// <param name="order">The decorator order to apply.</param>
+        [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
+        public static void ApplyDecorators(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services, int order)
+        {
+            switch (order)
+            {
+                case 1:
+                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
+                        services,
+                        static (inner, sp) => new global::Sample.EuDecorator(
+                            inner,
+                            (global::Sample.Region)(object)global::Sample.Region.Eu),
+                        serviceKey: global::Sample.Region.Eu);
+                    break;
+                case 2:
+                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
+                        services,
+                        static (inner, sp) => new global::Sample.LoudGreeter(
+                            inner,
+                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IClock>(sp),
+                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, "shared"),
+                            (int)(sp.GetService(typeof(int)) ?? (object?)3)!),
+                        serviceKey: null);
+                    break;
+            }
         }
     }
 }

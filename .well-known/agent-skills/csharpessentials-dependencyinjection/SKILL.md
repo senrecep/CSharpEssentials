@@ -82,7 +82,7 @@ services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // open ge
 
 Each assembly with marked classes gets `services.Add{Assembly}Services()` (dots removed: `Sample.Billing` → `AddSampleBillingServices()`), plus an overload taking an `ILogger` that logs duplicate (service, key) registrations at `Debug`. It registers the assembly's services, then applies its decorators.
 
-Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`, which registers every referenced assembly's registry and the app's own before applying any decorator, so a decorator can wrap a service from another assembly.
+Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`, which registers every referenced assembly's registry and the app's own before applying any decorator, so a decorator can wrap a service from another assembly. `Order` is global across assemblies; ties follow assembly order (referenced by name, the app last), then type name. `AddServicesFromAssemblies` does the same with the assemblies in the order passed.
 
 | Assembly attribute | Effect |
 |---|---|
