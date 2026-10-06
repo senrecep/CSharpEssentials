@@ -1416,6 +1416,16 @@ rules.For(() => model.ExpiresAt).GreaterThan(DateTime.UtcNow);
 // null → no error   |   value < now → error
 ```
 
+### Enum Validators
+
+| Rule | Error code | Passes when |
+|---|---|---|
+| `IsDefinedEnum()` | `{Prop}.IsDefinedEnum` | The value is a defined member; a `[Flags]` enum also accepts any combination of defined flags |
+| `IsOneOf(params TEnum[])` | `{Prop}.IsOneOf` | The value equals one of the given members |
+| `HasOnlyDefinedFlags()` | `{Prop}.HasOnlyDefinedFlags` | Every set bit belongs to a defined member; zero passes |
+
+A `null` nullable value passes. The message is the binding error text and lists the allowed values (`'42' is not a valid OrderStatus. Allowed values: pending, in_progress.`). Each rule also takes a custom `message` or an `Error`.
+
 ### Collection Validators
 
 Works with any nullable collection: `List<T>?`, `IEnumerable<T>?`, `IList<T>?`, `IReadOnlyList<T>?`, `T[]?`, and any type implementing `IEnumerable`.

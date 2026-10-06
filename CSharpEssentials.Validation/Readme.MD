@@ -116,18 +116,18 @@ All comparable validators are available for nullable value types; `null` is skip
 
 | Validator | Null | Error code | Description |
 |-----------|------|------------|-------------|
-| `IsDefinedEnum()` | skip | `enum.invalid` | Value is a defined member; a `[Flags]` enum also accepts any combination of defined flags |
-| `IsOneOf(params TEnum[])` | skip | `enum.not_allowed` | Value equals one of the given members (exact match, flags are not decomposed) |
-| `HasOnlyDefinedFlags()` | skip | `enum.invalid` | Every set bit belongs to a defined member; zero passes |
+| `IsDefinedEnum()` | skip | `{Prop}.IsDefinedEnum` | Value is a defined member; a `[Flags]` enum also accepts any combination of defined flags |
+| `IsOneOf(params TEnum[])` | skip | `{Prop}.IsOneOf` | Value equals one of the given members (exact match, flags are not decomposed) |
+| `HasOnlyDefinedFlags()` | skip | `{Prop}.HasOnlyDefinedFlags` | Every set bit belongs to a defined member; zero passes |
 
 The description is the `EnumValueError.Message` text that binding and JSON errors use:
 
 ```csharp
 rules.For(() => order.Status).IsDefinedEnum();
-// enum.invalid: '42' is not a valid OrderStatus. Allowed values: pending, in_progress.
+// Status.IsDefinedEnum: '42' is not a valid OrderStatus. Allowed values: pending, in_progress.
 
 rules.For(() => command.Status).IsOneOf(OrderStatus.Approved, OrderStatus.Rejected);
-// enum.not_allowed: 'pending' is not a valid OrderStatus. Allowed values: approved, rejected.
+// Status.IsOneOf: 'pending' is not a valid OrderStatus. Allowed values: approved, rejected.
 ```
 
 - `[StringEnum]` enums use their generated metadata: values are written as wire names (flags as `a,b`), and `IsDefinedEnum`/`HasOnlyDefinedFlags` list the input wire names (the `[EnumFallback]` member is defined but not listed, as in binding errors).

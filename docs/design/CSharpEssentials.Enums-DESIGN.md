@@ -401,7 +401,7 @@ Every input rejection produces one `EnumValueError`. Every layer turns it into i
 |---|---|
 | JSON body | `EnumValueJsonException` → 400 validation problem, key = JSON path (`$.items[0].status` normalized to `items[0].status`) |
 | Route/query/header/form | 400 validation problem, key = parameter name |
-| Validation rules | `Error.Validation(code: "enum.invalid", description: error.Message)` |
+| Validation rules | `Error.Validation(code: "{Prop}.IsDefinedEnum", description: error.Message)` (the `{Prop}.{Rule}` format of the other Validation rules) |
 | Data reads | `EnumValueException` with table/column or JSON path added to the message by EF Core |
 
 The 400 body is the existing ProblemDetails format of `CSharpEssentials.AspNetCore` with one error per key:
@@ -819,7 +819,7 @@ cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumRe
 | `.IsOneOf(params TEnum[])` | subset of members allowed for an operation (`status` may only move to `Approved` or `Rejected`) |
 | `.HasOnlyDefinedFlags()` | flags values built with bitwise operations |
 
-Error: `Error.Validation(code: "enum.invalid" | "enum.not_allowed", description: EnumValueError.Message)`, the same text as binding errors.
+Error: `Error.Validation(code: "{Prop}.IsDefinedEnum" | "{Prop}.IsOneOf" | "{Prop}.HasOnlyDefinedFlags", description: EnumValueError.Message)`, the same `{Prop}.{Rule}` code format as `GreaterThan` or `NotNull` and the same text as binding errors.
 
 ### 15.2 Diagnostics (block `CSE0001` to `CSE0999`, ADR-006)
 
