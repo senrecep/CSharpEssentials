@@ -31,23 +31,6 @@
     <None Include="Readme.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
     <None Include="build\CSharpEssentials.DependencyInjection.props" Pack="true" PackagePath="build;buildTransitive" />
-    <None Include="..\CSharpEssentials.DependencyInjection.Generators\bin\$(Configuration)\netstandard2.0\CSharpEssentials.DependencyInjection.Generators.dll"
-          Pack="true"
-          PackagePath="analyzers/dotnet/cs"
-          Visible="false" />
-    <None Include="..\CSharpEssentials.DependencyInjection.CodeFixes\bin\$(Configuration)\netstandard2.0\CSharpEssentials.DependencyInjection.CodeFixes.dll"
-          Pack="true"
-          PackagePath="analyzers/dotnet/cs"
-          Visible="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Generators\CSharpEssentials.DependencyInjection.Generators.csproj"
-                      ReferenceOutputAssembly="false"
-                      PrivateAssets="all" />
-    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.CodeFixes\CSharpEssentials.DependencyInjection.CodeFixes.csproj"
-                      ReferenceOutputAssembly="false"
-                      PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -55,4 +38,5 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
+  <Import Project="..\build\PackGenerator.targets" />
 </Project>
