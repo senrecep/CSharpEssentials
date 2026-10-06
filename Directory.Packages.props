@@ -49,24 +49,24 @@
 
     <!-- CSharpEssentials Internal Packages -->
     <ItemGroup Label="CSharpEssentials">
-        <PackageVersion Include="CSharpEssentials.Any" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Clone" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Core" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Entity" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Endpoints" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Enums" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Errors" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Http" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Json" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Maybe" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Mediator" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Resilience" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Results" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Rules" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.These" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Time" Version="[4.1.0]" />
-        <PackageVersion Include="CSharpEssentials.Validation" Version="[4.1.0]" />
+        <PackageVersion Include="CSharpEssentials.Any" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Clone" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Core" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Entity" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Endpoints" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Enums" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Errors" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Http" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Json" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Maybe" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Mediator" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Resilience" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Results" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Rules" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.These" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Time" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Validation" Version="[$(Version)]" />
     </ItemGroup>
 
     <!-- Test -->
