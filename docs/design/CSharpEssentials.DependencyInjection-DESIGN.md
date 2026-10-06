@@ -373,7 +373,7 @@ namespace Microsoft.Extensions.DependencyInjection
 }
 ```
 
-`ServiceRegistration.Apply(IServiceCollection, ILogger?, ServiceDescriptor, RegistrationStrategy)` is the public, `[EditorBrowsable(Never)]` runtime helper that implements the key-aware strategies and the duplicate log. The fallback uses it too. Decorator constructor parameters are resolved as follows: the decorated service → `inner`; `[FromKeyedServices(k)]` → `GetRequiredKeyedService`; `[ServiceKey]` → the decorated key; parameters with defaults → `GetService` with a fallback to the default; others → `GetRequiredService`. `IDisposable` is excluded from `SystemClock`'s interface expansion. Snapshot tests pin the exact text.
+`ServiceRegistration.Apply(IServiceCollection, ILogger?, ServiceDescriptor, RegistrationStrategy)` is the public, `[EditorBrowsable(Never)]` runtime helper that implements the key-aware strategies and the duplicate log. The fallback uses it too. Decorator constructor parameters are resolved as follows: the decorated service → `inner`; `[FromKeyedServices(k)]` → `GetRequiredKeyedService`, or `GetRequiredService` when `k` is `null` (`ServiceKeyLookupMode.NullKey`); the parameterless `[FromKeyedServices]` (.NET 10 `ServiceKeyLookupMode.InheritKey`) → the decorated key, or `GetRequiredService` for a non-keyed decorator; `[ServiceKey]` → the decorated key; parameters with defaults → `GetService` with a fallback to the default; others → `GetRequiredService`. `IDisposable` is excluded from `SystemClock`'s interface expansion. Snapshot tests pin the exact text.
 
 ## 7. Diagnostics (#56)
 

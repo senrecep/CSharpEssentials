@@ -6,6 +6,8 @@ namespace CSharpEssentials.DependencyInjection;
 
 internal static class DecoratorActivator
 {
+    private static readonly PropertyInfo? LookupModeProperty = typeof(FromKeyedServicesAttribute).GetProperty("LookupMode");
+
     public static Func<object, IServiceProvider, object> Create(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type decoratorType,
         Type serviceType,
@@ -64,8 +66,10 @@ internal static class DecoratorActivator
 
         if (parameter.GetCustomAttribute<FromKeyedServicesAttribute>() is { } fromKeyed)
         {
-            object key = fromKeyed.Key;
-            return (_, provider) => provider.GetRequiredKeyedService(parameterType, key);
+            object? key = InheritsKey(fromKeyed) ? serviceKey : fromKeyed.Key;
+            return key is null
+                ? (_, provider) => provider.GetRequiredService(parameterType)
+                : (_, provider) => provider.GetRequiredKeyedService(parameterType, key);
         }
 
         if (parameter.HasDefaultValue)
@@ -76,4 +80,8 @@ internal static class DecoratorActivator
 
         return (_, provider) => provider.GetRequiredService(parameterType);
     }
+
+    private static bool InheritsKey(FromKeyedServicesAttribute attribute) =>
+        LookupModeProperty?.GetValue(attribute) is { } mode &&
+        string.Equals(mode.ToString(), "InheritKey", StringComparison.Ordinal);
 }

@@ -75,6 +75,7 @@ services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // open ge
 - Attribute decorators apply in ascending `Order`. Every matching registration is decorated; lifetime and key are kept.
 - The original moves to a hidden private key under a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The container disposes both.
 - A decorator needs exactly one public constructor with exactly one parameter of the decorated type.
+- Other decorator parameters: `[ServiceKey]` gets the decorated key; `[FromKeyedServices("k")]` resolves key `k`, `[FromKeyedServices(null)]` the non-keyed registration, and parameterless `[FromKeyedServices]` (.NET 10) inherits the decorated key.
 
 ---
 
