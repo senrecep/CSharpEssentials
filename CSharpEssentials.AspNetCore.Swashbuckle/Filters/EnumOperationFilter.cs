@@ -44,7 +44,8 @@ internal sealed class EnumOperationFilter(IServiceProvider services) : IOperatio
         {
             ApiParameterDescription? description = context.ApiDescription.ParameterDescriptions.FirstOrDefault(candidate =>
                 string.Equals(candidate.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) && candidate.Source != BindingSource.Body);
-            if (description is null || parameter.Schema is null || EnumUsage.Classify(description.Type, _conventions) is not { } usage)
+            // MVC reports string as the Type of a parameter whose type converts from string (enums do); its model type is the enum.
+            if (description is null || parameter.Schema is null || (EnumUsage.Classify(description.Type, _conventions) ?? EnumUsage.Classify(description.ModelMetadata?.ModelType, _conventions)) is not { } usage)
                 continue;
 
             OpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);

@@ -44,7 +44,8 @@ internal sealed class EnumOperationTransformer : IOpenApiOperationTransformer
 
             ApiParameterDescription? parameterDescription = description.ParameterDescriptions.FirstOrDefault(item =>
                 string.Equals(item.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) && item.Source != BindingSource.Body);
-            if (parameterDescription is null || EnumUsage.Classify(parameterDescription.Type, document.Conventions) is not { } usage)
+            // MVC reports string as the Type of a parameter whose type converts from string (enums do); its model type is the enum.
+            if (parameterDescription is null || (EnumUsage.Classify(parameterDescription.Type, document.Conventions) ?? EnumUsage.Classify(parameterDescription.ModelMetadata?.ModelType, document.Conventions)) is not { } usage)
                 continue;
 
             parameter.Schema = OpenApiEnumSchemas.CreateUsage(
