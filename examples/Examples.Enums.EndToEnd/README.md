@@ -17,6 +17,21 @@ One `[StringEnum]` enum and one `[Flags]` enum travel through every layer with a
 
 The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle host references `CSharpEssentials.AspNetCore.Swashbuckle` instead and calls `o.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does it for you). Never reference both packages in one host: they need different Microsoft.OpenApi major versions.
 
+## Package references
+
+The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository. The same app outside the repository references the packages:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="CSharpEssentials.Enums" Version="5.0.0" />           <!-- generator, analyzers, code fixes -->
+  <PackageReference Include="CSharpEssentials.AspNetCore" Version="5.0.0" />
+  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="5.0.0" />
+  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="5.0.0" />
+</ItemGroup>
+```
+
+Keep the direct `CSharpEssentials.Enums` reference: the other packages bring the library but not its generator, so without it `[StringEnum]` enums get no metadata.
+
 ## Running
 
 ```bash

@@ -26,7 +26,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Any` | `Any<T1,T2,...>`: type-safe discriminated unions | [Docs](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
 | `CSharpEssentials.These` | `These<TError,TValue>`: 3-state union with Left, Right, Both (error + value simultaneously) | [Docs](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
 | `CSharpEssentials.Core` | String/GUID/collection utilities | [Docs](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
-| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](examples/Examples.Enums/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
+| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
 | `CSharpEssentials.Mediator` | CQRS pipeline behaviors: validation, logging, exception handling, caching, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
@@ -227,12 +227,30 @@ public enum OrderStatus
 | Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
 | Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
 
+Install `CSharpEssentials.Enums` directly in every project that declares a `[StringEnum]` enum: it carries the source generator, and analyzers do not flow through the other packages (including the `CSharpEssentials` meta-package). Without it the enum gets no metadata and its converter throws.
+
+| Scenario | Packages |
+|---|---|
+| ASP.NET Core API | `CSharpEssentials.Enums` + `CSharpEssentials.AspNetCore` |
+| + OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` (net10.0) or `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
+| + EF Core | `CSharpEssentials.EntityFrameworkCore` |
+| Worker or console with EF Core | `CSharpEssentials.Enums` + `CSharpEssentials.EntityFrameworkCore` |
+| JSON only (message bus, client) | `CSharpEssentials.Enums` + `CSharpEssentials.Json` |
+| Outgoing HTTP | `CSharpEssentials.Enums` + `CSharpEssentials.Http` |
+
 One-time setup per host:
 
 ```csharp
 // Minimal API: JSON options, binding, body errors and output in one call
 builder.Services.AddEnumConventions();
 app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization
+
+// Body errors as the same 400 problem: Minimal APIs throw a body error only with ThrowOnBadRequest,
+// and GlobalExceptionHandler maps it. Without these lines the framework writes its own 400 without a body.
+// MVC reports body errors through model state instead.
+builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+app.UseEnhancedProblemDetails();
 app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status)); // ?status=pending_approval, approval or 1
 
 // MVC: the same two calls; [FromQuery], [FromRoute], [FromHeader], [FromForm] and DTO properties bind
@@ -253,7 +271,7 @@ protected override void ConfigureConventions(ModelConfigurationBuilder builder) 
 
 There is no message bus package. A bus that serializes with System.Text.Json takes the JSON conventions in tolerant `Data` mode, for example MassTransit: `cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumReadMode.Data, writeAs: EnumWireFormat.Number))`. Upgrade consumers first, then switch producers to strings.
 
-`[Flags]` enums are JSON arrays on the wire (`["read","write"]`), repeated or comma-separated query values, and an integer bitmask in the database. Use them for a fixed, small set of independent on/off capabilities (permissions, feature toggles, days of week). Use `List<TEnum>` for a user-chosen multi-select, a set that grows often or past 64 members, or when a member needs data attached; use a single enum for one value at a time (statuses, types).
+`[Flags]` enums are JSON arrays on the wire (`["read","write"]`), repeated or comma-separated query values, and an integer bitmask in the database. Give every member an explicit value and a `None = 0` member; the analyzers warn otherwise (CSE0005, CSE0006, and CSE0007 for a member that is neither a single bit nor a combination), and `[EnumFallback]` on flags is an error (CSE0008). Use them for a fixed, small set of independent on/off capabilities (permissions, feature toggles, days of week). Use `List<TEnum>` for a user-chosen multi-select, a set that grows often or past 64 members, or when a member needs data attached; use a single enum for one value at a time (statuses, types).
 
 The `v2` document of [the end-to-end sample](examples/Examples.Enums.EndToEnd/README.md) describes the enum like this (the `v1` document has `"type": "integer"` and `"enum": [0, 1, 2, 99]`):
 
@@ -268,7 +286,7 @@ The `v2` document of [the end-to-end sample](examples/Examples.Enums.EndToEnd/RE
 }
 ```
 
-Details: [enum conventions design](docs/design/CSharpEssentials.Enums-DESIGN.md) (normative matrix, flags guidance, rollout) and [ADR-007](docs/adr/ADR-007-enum-conventions.md).
+Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (generated API, diagnostics, renaming a member, AOT), [enum conventions design](docs/design/CSharpEssentials.Enums-DESIGN.md) (normative matrix, flags guidance, rollout) and [ADR-007](docs/adr/ADR-007-enum-conventions.md).
 
 ## Upgrading
 
