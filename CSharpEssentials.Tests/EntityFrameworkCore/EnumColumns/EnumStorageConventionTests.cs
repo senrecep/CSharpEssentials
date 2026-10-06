@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore.EnumColumns;
 
@@ -166,7 +167,7 @@ public sealed class EnumStorageConventionTests
             modelBuilder => modelBuilder.Entity<StoredOrder>().Property(o => o.Status).HasLegacyEnumStorage(EnumStoredAs.MemberName));
 
         IEntityType orders = Orders(model);
-        Microsoft.EntityFrameworkCore.Storage.ValueConversion.ValueConverter converter = orders.FindProperty(nameof(StoredOrder.Status))!.GetValueConverter()!;
+        ValueConverter converter = orders.FindProperty(nameof(StoredOrder.Status))!.GetValueConverter()!;
 
         converter.ConvertToProvider(StoredOrderStatus.PendingApproval).Should().Be("PendingApproval");
         converter.ConvertFromProvider("pending_approval").Should().Be(StoredOrderStatus.PendingApproval);
@@ -404,6 +405,102 @@ public sealed class EnumStorageConventionTests
             using StoredOrderContext context = StoredOrderContext.Postgres("Host=localhost", model);
             return context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(StoredOrderV1))!.GetCheckConstraints().Single().Name!;
         }
+    }
+
+    [Fact]
+    public void LegacyFlagsText_Should_WriteMemberNamesJoinedByComma()
+    {
+        ValueConverter converter = LegacyPermissions(nameof(LegacyFlagsText_Should_WriteMemberNamesJoinedByComma));
+
+        converter.ConvertToProvider(StoredPermissions.Read | StoredPermissions.Delete).Should().Be("Read, Delete");
+        converter.ConvertFromProvider("read, Delete").Should().Be(StoredPermissions.Read | StoredPermissions.Delete);
+    }
+
+    [Fact]
+    public void LegacyFlagsText_Should_WriteTheZeroMember_When_ValueIsZero()
+    {
+        ValueConverter converter = LegacyPermissions(nameof(LegacyFlagsText_Should_WriteTheZeroMember_When_ValueIsZero));
+
+        converter.ConvertToProvider(StoredPermissions.None).Should().Be("None");
+    }
+
+    [Fact]
+    public void LegacyFlagsText_Should_WriteZero_When_TheEnumHasNoZeroMember()
+    {
+        StoredOrderModel model = new(
+            nameof(LegacyFlagsText_Should_WriteZero_When_TheEnumHasNoZeroMember),
+            builder => builder.ConfigureEnumConventions(),
+            modelBuilder =>
+            {
+                StoredOrderContext.ConfigureOrders(modelBuilder);
+                modelBuilder.Entity<StoredNumericOrder>().ToTable("numeric_orders")
+                    .Property(o => o.Access).HasLegacyEnumStorage(EnumStoredAs.FlagsText);
+            });
+        ValueConverter converter = Entity<StoredNumericOrder>(model).FindProperty(nameof(StoredNumericOrder.Access))!.GetValueConverter()!;
+
+        converter.ConvertToProvider((StoredAccess)0).Should().Be("0");
+        converter.ConvertToProvider(StoredAccess.Read | StoredAccess.Write).Should().Be("Read, Write");
+    }
+
+    [Fact]
+    public void LegacyMemberName_Should_ThrowWithTheColumn_When_ValueIsUndefined()
+    {
+        StoredOrderModel model = StoredOrderContext.Default(
+            nameof(LegacyMemberName_Should_ThrowWithTheColumn_When_ValueIsUndefined),
+            modelBuilder => modelBuilder.Entity<StoredOrder>().Property(o => o.Status).HasLegacyEnumStorage(EnumStoredAs.MemberName));
+        ValueConverter converter = Orders(model).FindProperty(nameof(StoredOrder.Status))!.GetValueConverter()!;
+
+        Action write = () => converter.ConvertToProvider((StoredOrderStatus)42);
+
+        write.Should().Throw<EnumValueException>().Which.Error.Path.Should().StartWith("orders.Status");
+    }
+
+    [Fact]
+    public void IntegerStorage_Should_ThrowWithTheColumn_When_ValueIsUndefined()
+    {
+        ValueConverter converter = Entity<StoredNumericOrder>(NumericModel()).FindProperty(nameof(StoredNumericOrder.SByteLevel))!.GetValueConverter()!;
+
+        Action write = () => converter.ConvertToProvider((StoredSByteLevel)5);
+
+        write.Should().Throw<EnumValueException>().Which.Error.Path.Should().StartWith("numeric_orders.SByteLevel");
+    }
+
+    [Fact]
+    public void FlagsArrayStorage_Should_ThrowWithTheColumn_When_ValueHasUndefinedBits()
+    {
+        ValueConverter converter = Orders(StoredOrderContext.Default(nameof(FlagsArrayStorage_Should_ThrowWithTheColumn_When_ValueHasUndefinedBits)))
+            .FindProperty(nameof(StoredOrder.SharedPermissions))!.GetValueConverter()!;
+
+        Action write = () => converter.ConvertToProvider(StoredPermissions.Read | (StoredPermissions)64);
+
+        write.Should().Throw<EnumValueException>().Which.Error.Path.Should().StartWith("orders.SharedPermissions");
+    }
+
+    [Fact]
+    public void FlagsArrayStorage_Should_ReadCommaSeparatedText_When_TheSqliteValueIsNotAJsonArray()
+    {
+        ValueConverter converter = Orders(StoredOrderContext.Default(nameof(FlagsArrayStorage_Should_ReadCommaSeparatedText_When_TheSqliteValueIsNotAJsonArray)))
+            .FindProperty(nameof(StoredOrder.SharedPermissions))!.GetValueConverter()!;
+
+        converter.ConvertFromProvider("read, delete").Should().Be(StoredPermissions.Read | StoredPermissions.Delete);
+        converter.ConvertFromProvider("write").Should().Be(StoredPermissions.Write);
+    }
+
+    [Fact]
+    public void FlagsArrayStorage_Should_ReadNumbersInsideTheSqliteJsonArray()
+    {
+        ValueConverter converter = Orders(StoredOrderContext.Default(nameof(FlagsArrayStorage_Should_ReadNumbersInsideTheSqliteJsonArray)))
+            .FindProperty(nameof(StoredOrder.SharedPermissions))!.GetValueConverter()!;
+
+        converter.ConvertFromProvider("[1, \"delete\"]").Should().Be(StoredPermissions.Read | StoredPermissions.Delete);
+    }
+
+    private static ValueConverter LegacyPermissions(string key)
+    {
+        StoredOrderModel model = StoredOrderContext.Default(
+            key,
+            modelBuilder => modelBuilder.Entity<StoredOrder>().Property(o => o.Permissions).HasLegacyEnumStorage(EnumStoredAs.FlagsText));
+        return Orders(model).FindProperty(nameof(StoredOrder.Permissions))!.GetValueConverter()!;
     }
 
     private static StoredOrderModel NumericModel() =>
