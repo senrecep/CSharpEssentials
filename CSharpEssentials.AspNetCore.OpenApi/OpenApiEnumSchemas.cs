@@ -112,8 +112,10 @@ internal static class OpenApiEnumSchemas
 
     private static JsonArray Strings(IEnumerable<string> values) => [.. values.Select(static value => (JsonNode)JsonValue.Create(value))];
 
+    // A ulong value above long.MaxValue goes in as a decimal: the Microsoft.OpenApi 2.x writer has no ulong case and would
+    // drop it from enum and write an empty default.
     private static JsonNode Number(string text) =>
         EnumUsage.TryParseNumber(text, out long number)
             ? JsonValue.Create(number)
-            : JsonValue.Create(ulong.Parse(text, System.Globalization.CultureInfo.InvariantCulture));
+            : JsonValue.Create(decimal.Parse(text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture));
 }
