@@ -78,6 +78,8 @@ options.Converters.Add(new ConditionalStringEnumConverter { AllowUndefinedValues
 
 ## StringEnumNaming
 
+Obsolete in 5.0 (a working facade over `EnumMetadata`): use `EnumMetadata`, `EnumValueFormatter` or the generated `ToWireName()` and `TryParseWire` helpers in new code.
+
 The same names are used by JSON, EF Core storage, OpenAPI schemas and route/query binding.
 
 ```csharp

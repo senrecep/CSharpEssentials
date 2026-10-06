@@ -18,6 +18,8 @@
     <ProjectReference Include="../../CSharpEssentials/CSharpEssentials.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Enums.Generators/CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

@@ -1,36 +1,36 @@
 using System.Text.Json;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Json;
 
 namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
-/// Options for <see cref="EnumBindingExtensions.UseEnumBinding"/>.
+/// The 4.x options of <see cref="EnumBindingExtensions.AddEnumBinding"/>, forwarded to the enum conventions.
 /// </summary>
+[Obsolete("Use services.AddEnumConventions(c => c with { ... }) and EnumConventionsBuilder.ConfigureErrors.")]
 public sealed class EnumBindingOptions
 {
     /// <summary>
-    /// Selects the enum types whose query and route values are normalized.
-    /// Defaults to <see cref="StringEnumNaming.IsStringEnum"/> (enums marked with <c>[StringEnum]</c>).
+    /// Selects the enum types whose values are bound (<see cref="EnumConventions.CanHandle"/>). Defaults to enums with
+    /// generated metadata (<see cref="EnumMetadata.IsRegistered"/>, enums marked <c>[StringEnum]</c>).
     /// </summary>
-    public Predicate<Type> CanBind { get; set; } = StringEnumNaming.IsStringEnum;
+    public Predicate<Type> CanBind { get; set; } = EnumMetadata.IsRegistered;
 
     /// <summary>
-    /// The naming policy of the accepted string form. <see langword="null"/> uses
-    /// <see cref="StringEnumNaming.DefaultPolicy"/>, the same default as the JSON converter.
+    /// Only <see langword="null"/> or <see cref="JsonNamingPolicy.SnakeCaseLower"/> is supported; naming is set on the enum
+    /// with <c>[StringEnum(Naming = ...)]</c>.
     /// </summary>
     public JsonNamingPolicy? NamingPolicy { get; set; }
 
     /// <summary>
-    /// Whether the numeric value of a defined member is accepted. Undefined numbers are always rejected.
+    /// Whether the numeric value of a defined member is accepted (<see cref="EnumConventions.AcceptNumbers"/>).
     /// Defaults to <see langword="true"/>.
     /// </summary>
     public bool AllowIntegerValues { get; set; } = true;
 
     /// <summary>
-    /// Creates the error of an invalid value from the query/route key, the enum type and the accepted names.
-    /// <see langword="null"/> (default) creates <c>Error.Validation(code: key, description: "'key' must be one of: ...")</c>.
-    /// Use it to normalize the code (for example <c>"validation.status"</c>) or localize the message.
+    /// Creates the error of a rejected value from the key, the enum type and the allowed values.
+    /// <see langword="null"/> (default) uses the error of the enum conventions.
     /// </summary>
     public Func<string, Type, IReadOnlyList<string>, Error>? ErrorFactory { get; set; }
 }

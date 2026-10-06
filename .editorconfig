@@ -402,6 +402,18 @@ dotnet_diagnostic.IDE0022.severity = none
 
 dotnet_diagnostic.CA1815.severity = none
 
+# The enum contract names its formats after the wire types (EnumStorage.String, EnumWireFormat.Integer), see ADR-007.
+[CSharpEssentials.Enums/Conventions/{EnumStorage,EnumWireFormat}.cs]
+dotnet_diagnostic.CA1720.severity = none
+
+# The 4.x registration stays as obsolete forwarders for the 5.0 migration (design section 11.1).
+[CSharpEssentials.EntityFrameworkCore/Extensions/{ModelConfigurationExtensions,EnumConventionOptions}.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# EnumStoredAs.Integer mirrors EnumStorage.Integer (design section 11.4).
+[CSharpEssentials.EntityFrameworkCore/Enums/EnumStoredAs.cs]
+dotnet_diagnostic.CA1720.severity = none
+
 [*.{received,verified}.{cs,txt}]
 charset = utf-8-bom
 end_of_line = lf
@@ -410,3 +422,19 @@ indent_style = unset
 insert_final_newline = false
 tab_width = unset
 trim_trailing_whitespace = false
+
+# The 4.x naming helper stays as an obsolete facade over EnumMetadata for the 5.0 migration (design section 7).
+[CSharpEssentials.Json/StringEnumNaming.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# The 4.x converter stays as an obsolete subclass for the 5.0 migration (design section 7).
+[CSharpEssentials.Json/ConditionalStringEnumConverter.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# The 4.x enum binding registration stays as obsolete forwarders to AddEnumConventions (design section 9.2).
+[CSharpEssentials.AspNetCore/EnumBinding/{EnumBindingExtensions,EnumBindingOptions}.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# Tests of the obsolete 4.x enum binding registration.
+[CSharpEssentials.Tests/AspNetCore/EnumIntegration/EnumBindingForwarderTests.cs]
+dotnet_diagnostic.S1133.severity = none

@@ -132,7 +132,8 @@ public class EnumSchemaFilterParameterTests
 
         JsonElement schema = ResolveParameterSchema(document, path, name, isArray);
 
-        schema.GetProperty("description").GetString().Should().Be("Possible values: active, in_progress, http_status");
+        schema.GetProperty("description").GetString().Should().Be(
+            "| value | number | description |\n|---|---|---|\n| `active` | 0 |  |\n| `in_progress` | 1 |  |\n| `http_status` | 2 |  |");
     }
 
     [Theory]

@@ -1,73 +1,78 @@
-using System.Collections.Concurrent;
-using System.Globalization;
-using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Json;
 
 /// <summary>
-/// Single source of truth for the string form of enum members.
-/// JSON (<see cref="ConditionalStringEnumConverter"/>), EF Core storage, OpenAPI schemas and
-/// query/route binding all use this naming so the same member is spelled the same way everywhere.
+/// The 4.x naming helper, now a facade over <see cref="EnumMetadata"/>: names are the generated wire names, so JSON, EF Core
+/// storage, OpenAPI schemas and binding spell every member the same way. Enums without generated metadata are not supported.
 /// </summary>
 /// <remarks>
-/// A member name is resolved as <c>[JsonStringEnumMemberName]</c> when present, otherwise
-/// <c>namingPolicy.ConvertName(memberName)</c>. This mirrors <see cref="JsonStringEnumConverter"/>.
+/// Use <see cref="EnumMetadata"/>, <see cref="EnumValueParser"/>, <see cref="EnumValueFormatter"/> or the generated
+/// <c>ToWireName()</c>/<c>TryParseWire</c> helpers in new code. Runtime naming policies other than
+/// <see cref="JsonNamingPolicy.SnakeCaseLower"/> are not supported; the naming is set at build time.
 /// </remarks>
+[Obsolete("Use EnumMetadata and the generated ToWireName() and TryParseWire helpers instead. Wire names are set at build time.")]
 public static class StringEnumNaming
 {
+    private static readonly EnumConventions ReadConventions = EnumConventions.Default with { UnknownValue = UnknownEnumValueHandling.Reject };
+
     /// <summary>
-    /// The default naming policy (<see cref="JsonNamingPolicy.SnakeCaseLower"/>).
+    /// The only supported policy (<see cref="JsonNamingPolicy.SnakeCaseLower"/>); the wire names themselves come from enum metadata.
     /// </summary>
     public static JsonNamingPolicy DefaultPolicy { get; } = JsonNamingPolicy.SnakeCaseLower;
 
     /// <summary>
-    /// The default "is this a string enum" predicate: an enum type marked with <see cref="StringEnumAttribute"/>.
+    /// The 4.x "is this a string enum" predicate: an enum type marked with <see cref="StringEnumAttribute"/>.
     /// </summary>
     public static bool IsStringEnum(Type type) =>
         type is not null && type.IsEnum && type.IsDefined(typeof(StringEnumAttribute), inherit: false);
 
-    private static readonly ConcurrentDictionary<(Type EnumType, JsonNamingPolicy? Policy), EnumNameTable> _tables = new();
-
     /// <summary>
-    /// Gets the string form of an enum value.
-    /// Flag combinations are joined with <c>", "</c>; undefined values are written as their number.
+    /// Gets the wire name of an enum value. Flag combinations are their single flags joined with <c>", "</c>; undefined values are
+    /// written as their number.
     /// </summary>
+    /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
     public static string GetName<TEnum>(TEnum value, JsonNamingPolicy? namingPolicy = null)
-        where TEnum : struct, Enum => GetTable(typeof(TEnum), namingPolicy).Format(value);
+        where TEnum : struct, Enum => FormatName(GetInfo<TEnum>(namingPolicy), value);
 
     /// <summary>
-    /// Gets the string form of an enum value.
+    /// Gets the wire name of an enum value or of a number of the underlying type.
     /// </summary>
-    public static string GetName(Type enumType, object value, JsonNamingPolicy? namingPolicy = null) =>
-        GetTable(enumType, namingPolicy).Format(value);
+    /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
+    public static string GetName(Type enumType, object value, JsonNamingPolicy? namingPolicy = null)
+    {
+        _ = value ?? throw new ArgumentNullException(nameof(value));
+        return GetInfo(enumType, namingPolicy).Accept(new NameVisitor(value));
+    }
 
     /// <summary>
-    /// Gets the string forms of all members, in declaration order.
+    /// Gets the wire names of all members, in declaration order.
     /// </summary>
+    /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
     public static IReadOnlyList<string> GetNames(Type enumType, JsonNamingPolicy? namingPolicy = null) =>
-        GetTable(enumType, namingPolicy).Names;
+        GetInfo(enumType, namingPolicy).WireNames;
 
     /// <summary>
-    /// Gets the string forms of all members, in declaration order.
+    /// Gets the wire names of all members, in declaration order.
     /// </summary>
+    /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
     public static IReadOnlyList<string> GetNames<TEnum>(JsonNamingPolicy? namingPolicy = null)
-        where TEnum : struct, Enum => GetTable(typeof(TEnum), namingPolicy).Names;
+        where TEnum : struct, Enum => GetInfo<TEnum>(namingPolicy).WireNames;
 
     /// <summary>
     /// Whether <paramref name="value"/> is a defined member or, for <see cref="FlagsAttribute"/> enums,
     /// a combination of defined flags.
     /// </summary>
     public static bool IsDefined<TEnum>(TEnum value)
-        where TEnum : struct, Enum => GetTable(typeof(TEnum), DefaultPolicy).ContainsValue(value);
+        where TEnum : struct, Enum => GetInfo<TEnum>(null).IsDefined(value);
 
     /// <summary>
-    /// Parses a value written by <see cref="GetName{TEnum}"/>. Matching is case-insensitive and accepts
-    /// the policy name, the C# member name and (optionally) the numeric value of a defined member.
-    /// For <see cref="FlagsAttribute"/> enums a comma separated list is accepted.
+    /// Parses a value written by <see cref="GetName{TEnum}"/>. Matching is case-insensitive and accepts the wire name, the C# member
+    /// name, aliases and (optionally) the number of a defined value; surrounding whitespace is ignored. For
+    /// <see cref="FlagsAttribute"/> enums a comma separated list is accepted.
     /// </summary>
+    /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
     public static bool TryParse<TEnum>(string? value, out TEnum result, JsonNamingPolicy? namingPolicy = null, bool allowIntegerValues = true)
         where TEnum : struct, Enum
     {
@@ -83,152 +88,56 @@ public static class StringEnumNaming
     /// <summary>
     /// Non-generic variant of <see cref="TryParse{TEnum}"/>.
     /// </summary>
-    public static bool TryParse(Type enumType, string? value, out object? result, JsonNamingPolicy? namingPolicy = null, bool allowIntegerValues = true) =>
-        GetTable(enumType, namingPolicy).TryParseValue(value, allowIntegerValues, out result);
+    /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
+    public static bool TryParse(Type enumType, string? value, out object? result, JsonNamingPolicy? namingPolicy = null, bool allowIntegerValues = true)
+    {
+        IEnumInfo info = GetInfo(enumType, namingPolicy);
+        result = string.IsNullOrWhiteSpace(value) ? null : info.Accept(new ParseVisitor(value, allowIntegerValues));
+        return result is not null;
+    }
 
-    private static EnumNameTable GetTable(Type enumType, JsonNamingPolicy? namingPolicy)
+    private static EnumInfo<TEnum> GetInfo<TEnum>(JsonNamingPolicy? namingPolicy) where TEnum : struct, Enum =>
+        (EnumInfo<TEnum>)GetInfo(typeof(TEnum), namingPolicy);
+
+    private static IEnumInfo GetInfo(Type enumType, JsonNamingPolicy? namingPolicy)
     {
         if (enumType?.IsEnum != true)
             throw new ArgumentException($"Type '{enumType}' is not an enum.", nameof(enumType));
-        return _tables.GetOrAdd((enumType, namingPolicy ?? DefaultPolicy), static key => new EnumNameTable(key.EnumType, key.Policy!));
+        if (namingPolicy is not null && !ReferenceEquals(namingPolicy, DefaultPolicy))
+        {
+            throw new NotSupportedException(
+                "Runtime enum naming policies are not supported. Set the naming at build time with the CSharpEssentialsEnumNaming " +
+                "MSBuild property, [StringEnum(Naming = ...)] or [JsonStringEnumMemberName] (enum conventions design, section 4.1).");
+        }
+
+        return EnumMetadata.TryGet(enumType, out IEnumInfo? info)
+            ? info
+            : throw new InvalidOperationException(
+                $"Enum '{enumType.FullName}' has no generated metadata. Mark it [StringEnum], keep it and its containing types public " +
+                "or internal (not private, protected, file-local or nested in a generic type), and build with C# 9 or newer.");
     }
 
-    private sealed class EnumNameTable
+    private static string FormatName<TEnum>(EnumInfo<TEnum> info, TEnum value) where TEnum : struct, Enum
     {
-        private readonly Type _enumType;
-        private readonly bool _isFlags;
-        private readonly ulong[] _values;
-        private readonly string[] _names;
-        private readonly Dictionary<string, ulong> _lookup;
-
-        public EnumNameTable(Type enumType, JsonNamingPolicy policy)
+        if (info.TryGetMember(value, out EnumMemberInfo<TEnum>? member))
+            return member.WireName;
+        if (info.IsFlags && info.ToRawValue(value) != 0 && info.IsDefined(value))
         {
-            _enumType = enumType;
-            _isFlags = enumType.IsDefined(typeof(FlagsAttribute), inherit: false);
-            _lookup = [with(StringComparer.OrdinalIgnoreCase)];
-            FieldInfo[] fields = enumType.GetFields(BindingFlags.Public | BindingFlags.Static);
-            _values = new ulong[fields.Length];
-            _names = new string[fields.Length];
-            for (int i = 0; i < fields.Length; i++)
-            {
-                FieldInfo field = fields[i];
-                _values[i] = ToUInt64(Enum.Parse(enumType, field.Name));
-                _names[i] = GetCustomName(field) ?? policy.ConvertName(field.Name);
-                _lookup.TryAdd(_names[i], _values[i]);
-            }
-            // C# member names are accepted as a fallback, after every policy name is registered.
-            for (int i = 0; i < fields.Length; i++)
-                _lookup.TryAdd(fields[i].Name, _values[i]);
+            List<string> names = [];
+            info.FormatFlags(value, names);
+            return string.Join(", ", names);
         }
 
-        public IReadOnlyList<string> Names => _names;
+        return value.ToString("D");
+    }
 
-        public string Format(object value)
+    private sealed class NameVisitor(object value) : IEnumInfoVisitor<string>
+    {
+        public string Visit<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum =>
+            FormatName(info, value is TEnum typed ? typed : info.FromRawValue(ToRaw(value)));
+
+        private static ulong ToRaw(object number) => number switch
         {
-            ulong raw = ToUInt64(value);
-            int index = Array.IndexOf(_values, raw);
-            if (index >= 0)
-                return _names[index];
-
-            if (_isFlags && raw != 0)
-            {
-                List<string> parts = [];
-                ulong remaining = raw;
-                for (int i = 0; i < _values.Length; i++)
-                {
-                    ulong flag = _values[i];
-                    if (flag != 0 && (raw & flag) == flag && (remaining & flag) != 0)
-                    {
-                        parts.Add(_names[i]);
-                        remaining &= ~flag;
-                    }
-                }
-                if (remaining == 0)
-                    return string.Join(", ", parts);
-            }
-
-            return ((Enum)Enum.ToObject(_enumType, value)).ToString("D");
-        }
-
-        public bool TryParseValue(string? value, bool allowIntegerValues, out object? result)
-        {
-            result = null;
-            if (string.IsNullOrWhiteSpace(value))
-                return false;
-
-            if (!_isFlags)
-            {
-                if (!TryParseSingle(value.Trim(), allowIntegerValues, out ulong single))
-                    return false;
-                result = Enum.ToObject(_enumType, single);
-                return true;
-            }
-
-            ulong combined = 0;
-            foreach (string part in value.Split(','))
-            {
-                string token = part.Trim();
-                if (token.Length == 0 || !TryParseSingle(token, allowIntegerValues, out ulong flag))
-                    return false;
-                combined |= flag;
-            }
-            result = Enum.ToObject(_enumType, combined);
-            return true;
-        }
-
-        private bool TryParseSingle(string token, bool allowIntegerValues, out ulong value)
-        {
-            if (_lookup.TryGetValue(token, out value))
-                return true;
-
-            if (allowIntegerValues && IsNumeric(token) &&
-                ulong.TryParse(token, NumberStyles.None, CultureInfo.InvariantCulture, out value))
-                return IsDefinedValue(value);
-
-            value = 0;
-            return false;
-        }
-
-        public bool ContainsValue(object value) => IsDefinedValue(ToUInt64(value));
-
-        private bool IsDefinedValue(ulong value)
-        {
-            if (Array.IndexOf(_values, value) >= 0)
-                return true;
-            if (!_isFlags)
-                return false;
-            ulong remaining = value;
-            foreach (ulong flag in _values)
-                remaining &= ~flag;
-            return remaining == 0;
-        }
-
-        private static bool IsNumeric(string token)
-        {
-            foreach (char c in token)
-                if (c is < '0' or > '9')
-                    return false;
-            return true;
-        }
-
-        private static string? GetCustomName(FieldInfo field)
-        {
-#if NET9_0_OR_GREATER
-            return field.GetCustomAttribute<JsonStringEnumMemberNameAttribute>()?.Name;
-#else
-            // JsonStringEnumMemberNameAttribute ships with System.Text.Json 9+, read it by name
-            // so older package versions still compile.
-            foreach (CustomAttributeData attribute in field.CustomAttributes)
-                if (attribute.AttributeType.FullName == "System.Text.Json.Serialization.JsonStringEnumMemberNameAttribute" &&
-                    attribute.ConstructorArguments.Count == 1)
-                    return attribute.ConstructorArguments[0].Value as string;
-            return null;
-#endif
-        }
-
-        private static ulong ToUInt64(object value) => value switch
-        {
-            Enum e => ToUInt64(Convert.ChangeType(e, Enum.GetUnderlyingType(e.GetType()), CultureInfo.InvariantCulture)),
             sbyte v => unchecked((ulong)v),
             short v => unchecked((ulong)v),
             int v => unchecked((ulong)v),
@@ -237,7 +146,28 @@ public static class StringEnumNaming
             ushort v => v,
             uint v => v,
             ulong v => v,
-            _ => throw new ArgumentException($"Unsupported enum value type '{value.GetType()}'.", nameof(value)),
+            _ => throw new ArgumentException($"Unsupported enum value type '{number.GetType()}'.", nameof(number)),
         };
+    }
+
+    private sealed class ParseVisitor(string value, bool allowIntegerValues) : IEnumInfoVisitor<object?>
+    {
+        public object? Visit<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum
+        {
+            ulong raw = 0;
+            foreach (string part in info.IsFlags ? value.Split(',') : [value])
+            {
+                string token = part.Trim();
+                if (token.Length == 0 || !allowIntegerValues && IsNumber(token) ||
+                    !info.TryParse(token, EnumReadMode.Data, ReadConventions, out TEnum parsed, out _))
+                    return null;
+                raw |= info.ToRawValue(parsed);
+            }
+
+            return info.FromRawValue(raw);
+        }
+
+        private static bool IsNumber(string token) =>
+            char.IsDigit(token[0]) || token[0] == '-' || token[0] == '+';
     }
 }

@@ -1,4 +1,10 @@
+using System.Collections;
+#if NET7_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
+using System.Globalization;
 using System.Text;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 
@@ -6,11 +12,101 @@ namespace CSharpEssentials.Http;
 
 public static class QueryStringExtensions
 {
-    public static Result<string> ToQueryString(this Dictionary<string, string?> parameters)
-    {
-        if (parameters.Count == 0)
-            return string.Empty;
+    public static Result<string> ToQueryString(this Dictionary<string, string?> parameters) =>
+        BuildQuery(parameters);
 
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
+    public static Result<string> ToQueryString(this object? source) =>
+        source.ToQueryString(EnumConventions.Default);
+
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
+    public static Result<string> ToQueryString(this object? source, EnumConventions conventions, EnumWireFormat? format = null)
+    {
+        if (source is null)
+            return Error.Validation("QueryString.SourceRequired", "Source cannot be null.");
+        _ = conventions ?? throw new ArgumentNullException(nameof(conventions));
+
+        List<KeyValuePair<string, string?>> pairs = [];
+        try
+        {
+            foreach (System.Reflection.PropertyInfo property in source.GetType().GetProperties().Where(p => p.CanRead && p.GetIndexParameters().Length == 0))
+                AddValues(pairs, property.Name, property.GetValue(source), conventions, format);
+        }
+        catch (EnumValueException exception)
+        {
+            return Error.Validation("QueryString.InvalidEnumValue", exception.Message);
+        }
+
+        return BuildQuery(pairs);
+    }
+
+    public static Result<Uri> WithQueryString(this Uri? uri, Dictionary<string, string?> parameters)
+    {
+        if (uri is null)
+            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
+
+        return uri.AppendQuery(parameters.ToQueryString());
+    }
+
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
+    public static Result<Uri> WithQueryString(this Uri? uri, object? parameters) =>
+        uri.WithQueryString(parameters, EnumConventions.Default);
+
+#if NET7_0_OR_GREATER
+    [RequiresUnreferencedCode("Reads the public properties of the source type through reflection.")]
+    [RequiresDynamicCode("Reads the public properties of the source type through reflection.")]
+#endif
+    public static Result<Uri> WithQueryString(this Uri? uri, object? parameters, EnumConventions conventions, EnumWireFormat? format = null)
+    {
+        if (uri is null)
+            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
+        if (parameters is null)
+            return Error.Validation("QueryString.ParametersRequired", "Parameters cannot be null.");
+
+        return uri.AppendQuery(parameters.ToQueryString(conventions, format));
+    }
+
+    public static Result<Uri> WithQueryString(this Uri? uri, string name, string value)
+    {
+        if (uri is null)
+            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
+        if (string.IsNullOrEmpty(name))
+            return Error.Validation("QueryString.NameRequired", "Query parameter name cannot be null or empty.");
+
+        return uri.AppendQuery(Uri.EscapeDataString(name) + "=" + Uri.EscapeDataString(value));
+    }
+
+    public static Result<Uri> WithQueryString(this Uri? uri, string name, object? value, EnumConventions? conventions = null, EnumWireFormat? format = null)
+    {
+        if (uri is null)
+            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
+        if (string.IsNullOrEmpty(name))
+            return Error.Validation("QueryString.NameRequired", "Query parameter name cannot be null or empty.");
+
+        List<KeyValuePair<string, string?>> pairs = [];
+        try
+        {
+            AddValues(pairs, name, value, conventions ?? EnumConventions.Default, format);
+        }
+        catch (EnumValueException exception)
+        {
+            return Error.Validation("QueryString.InvalidEnumValue", exception.Message);
+        }
+
+        return uri.AppendQuery(BuildQuery(pairs));
+    }
+
+    internal static Result<string> BuildQuery(IEnumerable<KeyValuePair<string, string?>> parameters)
+    {
         var builder = new StringBuilder();
         foreach (KeyValuePair<string, string?> parameter in parameters)
         {
@@ -31,73 +127,70 @@ public static class QueryStringExtensions
         return builder.ToString();
     }
 
-    public static Result<string> ToQueryString(this object? source)
+    internal static void AddValues(
+        List<KeyValuePair<string, string?>> pairs,
+        string name,
+        object? value,
+        EnumConventions conventions,
+        EnumWireFormat? format)
     {
-        if (source is null)
-            return Error.Validation("QueryString.SourceRequired", "Source cannot be null.");
+        if (value is null)
+            return;
 
-        var properties = source.GetType().GetProperties()
-            .Where(p => p.CanRead)
-            .Select(p => new KeyValuePair<string, string?>(p.Name, p.GetValue(source)?.ToString()))
-            .ToDictionary(p => p.Key, p => p.Value);
+        if (value is not string)
+        {
+            List<string> formatted = [];
+            if (EnumValueFormatter.TryFormatMany(value, conventions, formatted, format))
+            {
+                foreach (string text in formatted)
+                    pairs.Add(new KeyValuePair<string, string?>(name, text));
+                return;
+            }
 
-        return properties.ToQueryString();
+            if (value is IEnumerable items)
+            {
+                foreach (object? item in items)
+                    AddItem(pairs, name, item, conventions, format);
+                return;
+            }
+        }
+
+        AddItem(pairs, name, value, conventions, format);
     }
 
-    public static Result<Uri> WithQueryString(this Uri? uri, Dictionary<string, string?> parameters)
+    private static void AddItem(
+        List<KeyValuePair<string, string?>> pairs,
+        string name,
+        object? value,
+        EnumConventions conventions,
+        EnumWireFormat? format)
     {
-        if (uri is null)
-            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
+        if (value is null)
+            return;
 
-        Result<string> queryResult = parameters.ToQueryString();
+        string? text = EnumValueFormatter.TryFormat(value, conventions, out string? formatted, format)
+            ? formatted
+            : Convert.ToString(value, CultureInfo.InvariantCulture);
+        pairs.Add(new KeyValuePair<string, string?>(name, text));
+    }
+
+    internal static Result<Uri> AppendQuery(this Uri uri, Result<string> queryResult)
+    {
         if (queryResult.IsFailure)
             return queryResult.Errors;
 
-        if (string.IsNullOrEmpty(queryResult.Value))
+        return uri.AppendQuery(queryResult.Value);
+    }
+
+    private static Result<Uri> AppendQuery(this Uri uri, string query)
+    {
+        if (string.IsNullOrEmpty(query))
             return uri;
 
         var builder = new UriBuilder(uri);
         builder.Query = string.IsNullOrEmpty(builder.Query)
-            ? queryResult.Value
-            : builder.Query.TrimStart('?') + "&" + queryResult.Value;
-
-        return builder.Uri;
-    }
-
-    public static Result<Uri> WithQueryString(this Uri? uri, object? parameters)
-    {
-        if (uri is null)
-            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
-        if (parameters is null)
-            return Error.Validation("QueryString.ParametersRequired", "Parameters cannot be null.");
-
-        Result<string> queryResult = parameters.ToQueryString();
-        if (queryResult.IsFailure)
-            return queryResult.Errors;
-
-        if (string.IsNullOrEmpty(queryResult.Value))
-            return uri;
-
-        var builder = new UriBuilder(uri);
-        builder.Query = string.IsNullOrEmpty(builder.Query)
-            ? queryResult.Value
-            : builder.Query.TrimStart('?') + "&" + queryResult.Value;
-
-        return builder.Uri;
-    }
-
-    public static Result<Uri> WithQueryString(this Uri? uri, string name, string value)
-    {
-        if (uri is null)
-            return Error.Validation("QueryString.UriRequired", "URI cannot be null.");
-        if (string.IsNullOrEmpty(name))
-            return Error.Validation("QueryString.NameRequired", "Query parameter name cannot be null or empty.");
-
-        var builder = new UriBuilder(uri);
-        string encoded = Uri.EscapeDataString(name) + "=" + Uri.EscapeDataString(value);
-        builder.Query = string.IsNullOrEmpty(builder.Query)
-            ? encoded
-            : builder.Query.TrimStart('?') + "&" + encoded;
+            ? query
+            : builder.Query.TrimStart('?') + "&" + query;
 
         return builder.Uri;
     }

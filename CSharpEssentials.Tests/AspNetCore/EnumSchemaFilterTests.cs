@@ -4,6 +4,7 @@ using CSharpEssentials.AspNetCore.Swagger.Filters;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -12,8 +13,10 @@ namespace CSharpEssentials.Tests.AspNetCore;
 
 public class EnumSchemaFilterTests
 {
+    private static readonly IServiceProvider _services = new ServiceCollection().BuildServiceProvider();
+
     [StringEnum]
-    private enum TestString
+    internal enum TestString
     {
         Active,
         Inactive,
@@ -21,7 +24,7 @@ public class EnumSchemaFilterTests
     }
 
     [StringEnum]
-    private enum TestAcronym
+    internal enum TestAcronym
     {
         HTTPStatus,
         IOError,
@@ -29,7 +32,7 @@ public class EnumSchemaFilterTests
     }
 
     [StringEnum]
-    private enum TestCustomNamed
+    internal enum TestCustomNamed
     {
         [JsonStringEnumMemberName("renamed")]
         Original,
@@ -45,7 +48,7 @@ public class EnumSchemaFilterTests
     [Fact]
     public void Apply_ForStringEnum_ShouldSetSchemaTypeToString()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema();
         SchemaFilterContext context = CreateContext(typeof(TestString));
 
@@ -53,13 +56,29 @@ public class EnumSchemaFilterTests
 
         schema.Type.Should().Be("string");
         schema.Enum.Should().HaveCount(3);
-        schema.Description.Should().Contain("active, inactive, pending");
+        schema.Description.Should().Contain("| `active` | 0 |").And.Contain("| `pending` | 2 |");
+        Strings(schema, "x-enum-varnames").Should().Equal("Active", "Inactive", "Pending");
+        schema.Extensions["x-enum-numeric-values"].Should().BeOfType<OpenApiArray>()
+            .Which.Cast<OpenApiLong>().Select(value => value.Value).Should().Equal(0L, 1L, 2L);
+    }
+
+    [Fact]
+    public void Apply_Twice_ShouldKeepOneTableAndTheUserDescription()
+    {
+        var filter = new EnumSchemaFilter(_services);
+        var schema = new OpenApiSchema { Description = "Account state." };
+
+        filter.Apply(schema, CreateContext(typeof(TestString)));
+        filter.Apply(schema, CreateContext(typeof(TestString)));
+
+        schema.Description.Should().StartWith("Account state.\n\n| value | number | description |");
+        schema.Description.Split("| value | number | description |").Should().HaveCount(2);
     }
 
     [Fact]
     public void Apply_ForIntEnum_ShouldNotModifySchema()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema { Type = "integer" };
         SchemaFilterContext context = CreateContext(typeof(TestInt));
 
@@ -72,9 +91,9 @@ public class EnumSchemaFilterTests
     [Fact]
     public void Apply_ForAcronymEnum_ShouldUseSameNamesAsJson()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema();
-        JsonSerializerOptions jsonOptions = new() { Converters = { new ConditionalStringEnumConverter() } };
+        JsonSerializerOptions jsonOptions = new() { Converters = { new EnumConverterFactory(EnumConventions.Default) } };
 
         filter.Apply(schema, CreateContext(typeof(TestAcronym)));
 
@@ -88,19 +107,20 @@ public class EnumSchemaFilterTests
     [Fact]
     public void Apply_ShouldHonorJsonStringEnumMemberName()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema();
 
         filter.Apply(schema, CreateContext(typeof(TestCustomNamed)));
 
         EnumValues(schema).Should().Equal("renamed", "plain_value");
-        schema.Description.Should().Be("Possible values: renamed, plain_value");
+        schema.Description.Should().Be(
+            "| value | number | description |\n|---|---|---|\n| `renamed` | 0 |  |\n| `plain_value` | 1 |  |");
     }
 
     [Fact]
     public void Apply_ForStringEnum_ShouldClearFormatAndReplaceExistingValues()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema
         {
             Type = "integer",
@@ -119,7 +139,7 @@ public class EnumSchemaFilterTests
     [Fact]
     public void Apply_ForNonStringEnum_ShouldLeaveSchemaUntouched()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema
         {
             Type = "integer",
@@ -139,7 +159,7 @@ public class EnumSchemaFilterTests
     [Fact]
     public void Apply_ForNonEnumType_ShouldLeaveSchemaUntouched()
     {
-        var filter = new EnumSchemaFilter();
+        var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema { Type = "string", Format = "uuid" };
 
         filter.Apply(schema, CreateContext(typeof(Guid)));
@@ -148,6 +168,9 @@ public class EnumSchemaFilterTests
         schema.Format.Should().Be("uuid");
         schema.Enum.Should().BeNullOrEmpty();
     }
+
+    private static IEnumerable<string> Strings(OpenApiSchema schema, string extension) =>
+        ((OpenApiArray)schema.Extensions[extension]).Cast<OpenApiString>().Select(value => value.Value);
 
     private static IEnumerable<string> EnumValues(OpenApiSchema schema) =>
         schema.Enum.Cast<OpenApiString>().Select(value => value.Value);

@@ -6,7 +6,7 @@ namespace CSharpEssentials.Tests.Enums;
 public class StringEnumAttributeTests
 {
     [StringEnum]
-    private enum TestStringValue
+    internal enum TestStringValue
     {
         Value1,
         Value2,

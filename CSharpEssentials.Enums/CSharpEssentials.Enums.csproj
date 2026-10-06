@@ -9,11 +9,12 @@
     <Title>CSharpEssentials.Enums</Title>
     <Product>CSharpEssentials.Enums</Product>
     <Description>
-      Enum utilities and attributes for enhanced enum functionality in C#.
-      Provides StringEnumAttribute, compile-time enum extensions (ToOptimizedString,
-      ToSnakeCase, ToKebabCase, Parse, TryParse, IsDefined, GetNames, GetValues),
-      and a source generator for fast enum operations.
-      Essential for working with enums in modern C# applications.
+      One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and HTTP.
+      Mark enums with [StringEnum]; the bundled source generator writes AOT-safe metadata and
+      helpers (ToWireName, TryParseWire, ParseWire, IsDefined, GetNames, GetValues).
+      Includes EnumConventions, [EnumAlias], [EnumFallback], EnumValueParser, EnumValueFormatter,
+      EnumMetadata, and analyzers with code fixes (CSE0002-CSE0016).
+      Any CSharpEssentials package brings the generator and analyzers.
     </Description>
     <PackageTags>
       Enums,StringEnum,EnumAttribute,EnumUtils,Serialization,SourceGenerator,CSharpEssentials
@@ -25,46 +26,22 @@
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <DebugType>portable</DebugType>
+    <IsAotCompatible Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">true</IsAotCompatible>
 
-    <!-- Declares this project as a Roslyn component so MSBuild picks netstandard2.0
-         as the analyzer TFM when referenced via OutputItemType="Analyzer" -->
-    <IsRoslynComponent>true</IsRoslynComponent>
   </PropertyGroup>
-
-  <!-- Only compile generator sources for netstandard2.0 (analyzer target) -->
-  <ItemGroup>
-    <Compile Remove="Generators\**" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <Compile Include="Generators\**" />
-  </ItemGroup>
 
   <!-- Package content -->
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <None Include="Readme.MD" Pack="true" PackagePath="\" />
     <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+    <None Include="build\CSharpEssentials.Enums.props" Pack="true" PackagePath="build;buildTransitive" />
   </ItemGroup>
 
-  <!-- Source generator dependencies (only for netstandard2.0 analyzer build) -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
-    <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
-    <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
-  </ItemGroup>
-
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
-  </PropertyGroup>
-
-  <!-- Pack the netstandard2.0 build output as an analyzer -->
   <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)bin\$(Configuration)\netstandard2.0\$(AssemblyName).dll"
-          Pack="true"
-          PackagePath="analyzers/dotnet/cs"
-          Visible="false" />
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
   </ItemGroup>
+
+  <Import Project="..\build\PackGenerator.targets" />
 
 </Project>

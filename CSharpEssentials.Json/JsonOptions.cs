@@ -1,9 +1,20 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CSharpEssentials.Enums;
 
 namespace CSharpEssentials.Json;
 
+/// <summary>
+/// Shared <see cref="JsonSerializerOptions"/> presets and helpers.
+/// </summary>
+/// <remarks>
+/// <see cref="DefaultOptions"/> includes <see cref="PolymorphicJsonConverterFactory"/>, which discovers derived types by
+/// reflection, so the type is not trim or native AOT safe.
+/// </remarks>
+[RequiresUnreferencedCode(PolymorphicJson.Message)]
+[RequiresDynamicCode(PolymorphicJson.Message)]
 public static class EnhancedJsonSerializerOptions
 {
     /// <summary>
@@ -40,7 +51,7 @@ public static class EnhancedJsonSerializerOptions
     /// </summary>
     public static readonly JsonSerializerOptions DefaultOptions = DefaultOptionsWithoutConverters.Create(options =>
     {
-        options.Converters.Add(new ConditionalStringEnumConverter());
+        options.AddEnumConventions(EnumConventions.Default);
         options.Converters.Add(new MultiFormatDateTimeConverterFactory());
         options.Converters.Add(new PolymorphicJsonConverterFactory());
     });

@@ -1,0 +1,64 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Microsoft.AspNetCore.OpenApi with Microsoft.OpenApi 2.x needs net10.0; net8.0/net9.0 hosts use the Swashbuckle package.
+         No net11.0 yet: Microsoft.AspNetCore.OpenApi 11.x needs Microsoft.OpenApi 3.x (see Directory.Packages.props). -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <!-- Pins Microsoft.OpenApi 2.x in Directory.Packages.props (see the OpenApi item group there). -->
+    <CSharpEssentialsUsesOpenApi2>true</CSharpEssentialsUsesOpenApi2>
+
+    <PackageId>CSharpEssentials.AspNetCore.OpenApi</PackageId>
+    <Title>CSharp Essentials AspNetCore OpenApi</Title>
+    <Product>CSharp Essentials AspNetCore OpenApi</Product>
+    <!-- Version inherited from Directory.Build.props -->
+    <Authors>senrecep</Authors>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>AspNetCore,OpenApi,Microsoft.AspNetCore.OpenApi,Enum,StringEnum,EnumConventions,Scalar</PackageTags>
+    <Description>Microsoft.AspNetCore.OpenApi integration for the CSharpEssentials enum conventions: enum schemas with
+      wire names, numeric groups, flags, collections, defaults and nullable usages, for OpenAPI 3.0 and 3.1 documents.
+      Use it instead of CSharpEssentials.AspNetCore.Swashbuckle, never together with it.</Description>
+    <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENCE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="Readme.MD">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\shared\OpenApiEnums\*.cs" Link="OpenApiEnums\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.OpenApi" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.AspNetCore"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+</Project>

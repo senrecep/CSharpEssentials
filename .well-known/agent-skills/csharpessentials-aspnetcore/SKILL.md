@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-aspnetcore
-description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumBinding/UseEnumBinding for [StringEnum] query/route values, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.
+description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.
 ---
 
 # CSharpEssentials.AspNetCore
@@ -127,20 +127,18 @@ builder.Services.AddScoped<IResultErrorMapper, LegacyErrorMapper>();
 
 ---
 
-## Enum Query/Route Binding
+## Enum Conventions and Binding
 
 ```csharp
-builder.Services.AddEnumBinding(o =>   // optional; UseEnumBinding works with the defaults
-{
-    o.AllowIntegerValues = false;
-    o.ErrorFactory = (key, enumType, names) =>
-        Error.Validation($"validation.{key}", $"Use one of: {string.Join(", ", names)}");
-});
+builder.Services.AddEnumConventions(c => c with { AcceptNumbers = false })   // required by UseEnumBinding
+    .ConfigureErrors((error, key) => Error.Validation($"validation.{key}", error.Message));
 
 app.UseEnumBinding();                  // after routing has selected the endpoint
+
+app.MapGroup("/api/v1").WithEnumWireFormat(EnumWireFormat.Number);   // legacy numeric output
 ```
 
-`[StringEnum]` enums in query/route values (Minimal API incl. `[AsParameters]`, and MVC) accept the snake_case name, the C# member name (case-insensitive) or, unless disabled, the number of a defined member. Invalid values return a 400 ProblemDetails response. `EnumBindingOptions` also has `CanBind` and `NamingPolicy`. Swagger enum schemas use the same names.
+`[StringEnum]` enums in route, query, header and form values (Minimal API incl. `[AsParameters]`, and MVC) accept the same spellings as a JSON body. Invalid values return a 400 ProblemDetails response listing the allowed values; the same error is used for Minimal API JSON body errors. Enums without generated metadata keep the framework's behavior unless `AddEnumConventionsWithReflection` opts them in. Use a typed enum parameter instead of a string parameter + action filter + scoped holder (`EnumData<T>`). `[EnumWireFormat]` sets the output format of an MVC controller or action (action > controller > group > `WriteAs`). `AddEnumBinding` is an obsolete forwarder.
 
 ## MVC Invalid Model State
 

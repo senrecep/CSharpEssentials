@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Multi-targeting support -->
+    <TargetFrameworks>net11.0;net10.0;net9.0;net8.0</TargetFrameworks>
+
+    <PackageId>CSharpEssentials.AspNetCore.Swashbuckle</PackageId>
+    <Title>CSharp Essentials AspNetCore Swashbuckle</Title>
+    <Product>CSharp Essentials AspNetCore Swashbuckle</Product>
+    <!-- Version inherited from Directory.Build.props -->
+    <Authors>senrecep</Authors>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageTags>AspNetCore,Swagger,Swashbuckle,OpenApi,ApiVersioning,Enum,StringEnum,EnumConventions</PackageTags>
+    <Description>Swashbuckle (Swagger) integration for CSharpEssentials.AspNetCore: versioned Swagger setup,
+      schema ids, security schemes and OpenAPI enum schemas that follow the CSharpEssentials enum conventions
+      (wire names, numeric groups, flags and nullable properties). Use it instead of
+      CSharpEssentials.AspNetCore.OpenApi, never together with it.</Description>
+    <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <RepositoryUrl>https://github.com/senrecep/CSharpEssentials</RepositoryUrl>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\LICENCE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="Readme.MD">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\shared\OpenApiEnums\*.cs" Link="OpenApiEnums\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.AspNetCore"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+</Project>

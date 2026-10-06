@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CSharpEssentials.Core;
+using CSharpEssentials.Enums;
 using CSharpEssentials.EntityFrameworkCore.Converters;
 using CSharpEssentials.Json;
 using FluentAssertions;
@@ -9,7 +10,8 @@ namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
 public class EnumToStringConverterTests
 {
-    private enum TestStatus
+    [StringEnum]
+    internal enum TestStatus
     {
         Active,
         Inactive,
@@ -17,14 +19,16 @@ public class EnumToStringConverterTests
         InProgress
     }
 
-    private enum SimpleValue
+    [StringEnum]
+    internal enum SimpleValue
     {
         One,
         Two,
         Three
     }
 
-    private enum AcronymValue
+    [StringEnum]
+    internal enum AcronymValue
     {
         HTTPStatus,
         IOError,
@@ -32,7 +36,8 @@ public class EnumToStringConverterTests
         PendingApproval
     }
 
-    private enum CustomNamedValue
+    [StringEnum]
+    internal enum CustomNamedValue
     {
         [JsonStringEnumMemberName("custom_name")]
         Original,
@@ -151,21 +156,21 @@ public class EnumToStringConverterTests
     }
 
     [Fact]
-    public void ConvertToProviderExpression_Compiled_ShouldWriteStringEnumNamingName()
+    public void ConvertToProviderExpression_Compiled_ShouldWriteWireName()
     {
         Func<AcronymValue, string> toProvider = new EnumToFormattedStringConverter<AcronymValue>().ConvertToProviderExpression.Compile();
 
         foreach (AcronymValue value in Enum.GetValues<AcronymValue>())
-            toProvider(value).Should().Be(StringEnumNaming.GetName(value));
+            toProvider(value).Should().Be(EnumValueFormatter.Format(value, EnumWireFormat.String));
     }
 
     [Fact]
-    public void ConvertFromProviderExpression_Compiled_ShouldReadStringEnumNamingName()
+    public void ConvertFromProviderExpression_Compiled_ShouldReadWireName()
     {
         Func<string, AcronymValue> fromProvider = new EnumToFormattedStringConverter<AcronymValue>().ConvertFromProviderExpression.Compile();
 
         foreach (AcronymValue value in Enum.GetValues<AcronymValue>())
-            fromProvider(StringEnumNaming.GetName(value)).Should().Be(value);
+            fromProvider(EnumValueFormatter.Format(value, EnumWireFormat.String)).Should().Be(value);
     }
 
     [Theory]
