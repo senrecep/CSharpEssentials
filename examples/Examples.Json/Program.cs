@@ -199,9 +199,9 @@ Console.WriteLine($"Null nullable DateTime: {nullDateDto?.OptionalDate.HasValue 
 Console.WriteLine();
 
 // ============================================================================
-// 9. CONDITIONAL STRING ENUM CONVERTER - COMPLEX SCENARIOS
+// 9. ENUM CONVENTIONS - COMPLEX SCENARIOS
 // ============================================================================
-Console.WriteLine("--- 9. ConditionalStringEnumConverter Complex ---");
+Console.WriteLine("--- 9. Enum Conventions Complex ---");
 
 // Mixed enums in same object
 MixedEnumDto mixed = new()

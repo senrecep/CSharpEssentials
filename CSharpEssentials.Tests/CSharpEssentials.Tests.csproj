@@ -36,14 +36,15 @@
   </ItemGroup>
 
   <Import Project="..\CSharpEssentials.Endpoints\build\CSharpEssentials.Endpoints.props" />
+  <Import Project="..\CSharpEssentials.Enums\build\CSharpEssentials.Enums.props" />
 
   <!-- Copy the resolved Enums and Endpoints analyzers (netstandard2.0 ProjectReference output) next to the tests for the generator and analyzer tests.
        Runs after the reference is resolved and before AssignTargetPaths, so the None item is always copied. -->
   <Target Name="CopyEnumsAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
     <ItemGroup>
       <None Include="@(Analyzer)"
-            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.Enums.dll'"
-            Link="Analyzers\CSharpEssentials.Enums.dll"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.Enums.Generators.dll'"
+            Link="Analyzers\CSharpEssentials.Enums.Generators.dll"
             CopyToOutputDirectory="PreserveNewest"
             Visible="false" />
       <None Include="@(Analyzer)"
@@ -66,11 +67,13 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CSharpEssentials\CSharpEssentials.csproj" />
-    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
+    <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
                       OutputItemType="Analyzer"
-                      ReferenceOutputAssembly="false"
-                      SetTargetFramework="TargetFramework=netstandard2.0" />
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.Enums.CodeFixes\CSharpEssentials.Enums.CodeFixes.csproj" />
     <ProjectReference Include="..\CSharpEssentials.AspNetCore\CSharpEssentials.AspNetCore.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.AspNetCore.Swashbuckle\CSharpEssentials.AspNetCore.Swashbuckle.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Endpoints\CSharpEssentials.Endpoints.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Endpoints.Generators\CSharpEssentials.Endpoints.Generators.csproj"
                       OutputItemType="Analyzer"
@@ -78,6 +81,8 @@
     <ProjectReference Include="..\CSharpEssentials.Endpoints.CodeFixes\CSharpEssentials.Endpoints.CodeFixes.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsA\CSharpEssentials.Tests.Fixtures.EndpointsA.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsB\CSharpEssentials.Tests.Fixtures.EndpointsB.csproj" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EnumsContracts\CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.OpenApiSample\CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
     <ProjectReference

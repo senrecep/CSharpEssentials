@@ -11,13 +11,14 @@
     <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
-      AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,ApiVersioning,Swagger,ProblemDetails,ExceptionHandling,GlobalExceptionHandler,JsonConfiguration,ValidationSupport</PackageTags>
+      AspNetCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,ApiVersioning,ProblemDetails,ExceptionHandling,GlobalExceptionHandler,JsonConfiguration,ValidationSupport</PackageTags>
     <Description>A comprehensive ASP.NET Core library that enhances functional programming
       capabilities in web applications. Features include API versioning, global exception handling
-      with enhanced problem details, advanced Swagger/OpenAPI configuration, model validation,
+      with enhanced problem details, enum binding and wire formats, model validation,
       optimized JSON handling, and seamless integration with CSharpEssentials core functional
       patterns (Result, Maybe, Rule Engine). Perfect for building robust, maintainable, and
-      type-safe web APIs following functional programming principles.</Description>
+      type-safe web APIs following functional programming principles. OpenAPI documents come from
+      CSharpEssentials.AspNetCore.OpenApi or CSharpEssentials.AspNetCore.Swashbuckle.</Description>
     <PackageProjectUrl>https://github.com/senrecep/CSharpEssentials</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -48,12 +49,17 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
+  <!-- The OpenAPI packages read the enum conventions registration; both pin this package to the same version. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.AspNetCore.OpenApi" />
+    <InternalsVisibleTo Include="CSharpEssentials.AspNetCore.Swashbuckle" />
+  </ItemGroup>
+
   <!-- Package versions vary by target framework -->
   <ItemGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
     <PackageReference Include="Asp.Versioning.Http" />
     <PackageReference Include="Asp.Versioning.Mvc" />
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
-    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
   <!-- Dependencies: AspNetCore depends on Errors, Json, and Results -->

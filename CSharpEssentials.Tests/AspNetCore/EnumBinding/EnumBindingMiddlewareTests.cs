@@ -1,4 +1,5 @@
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
 using FluentAssertions;
 using static CSharpEssentials.Tests.AspNetCore.EnumBinding.EnumBindingAssertions;
@@ -6,13 +7,16 @@ using static CSharpEssentials.Tests.AspNetCore.EnumBinding.EnumBindingAssertions
 namespace CSharpEssentials.Tests.AspNetCore.EnumBinding;
 
 /// <summary>
-/// <c>AddEnhancedProblemDetails()</c> + <c>UseEnumBinding()</c> behavior shared by Minimal API,
+/// <c>AddEnhancedProblemDetails()</c> + <c>AddEnumConventions()</c> + <c>UseEnumBinding()</c> behavior shared by Minimal API,
 /// MVC [ApiController] and plain MVC controllers.
 /// </summary>
 public class EnumBindingMiddlewareTests
 {
-    private static Task<EnumBindingHost> Start(EbHostKind kind, Action<EnumBindingOptions>? configure = null) =>
-        EnumBindingHost.StartAsync(kind, useEnumBinding: true, configure);
+    private static Task<EnumBindingHost> Start(
+        EbHostKind kind,
+        Func<EnumConventions, EnumConventions>? conventions = null,
+        Action<EnumConventionsBuilder>? configure = null) =>
+        EnumBindingHost.StartAsync(kind, useEnumBinding: true, configure, conventions);
 
     public static TheoryData<EbHostKind> AllHostKinds => Hosts(AllHosts);
 
@@ -27,16 +31,20 @@ public class EnumBindingMiddlewareTests
         ("1", "InProgress"),
         ("http_error", "HTTPError"),
         ("HTTPError", "HTTPError"),
+        ("%20in_progress", "InProgress"),
+        ("in_progress%20", "InProgress"),
         ("%20in_progress%20", "InProgress"));
 
+    // Surrounding whitespace is trimmed; undefined numbers and other spellings are rejected.
     public static TheoryData<EbHostKind, string> RejectedScalarValues => Cross(AllHosts,
-        "99", "garbage", "Active,InProgress", "in-progress");
+        "99", "garbage", "Active,InProgress", "in-progress", "%20bogus%20");
 
     public static TheoryData<EbHostKind, string, string> AcceptedRouteSpellings => Cross(AllHosts,
         ("in_progress", "InProgress"),
         ("inprogress", "InProgress"),
         ("http_error", "HTTPError"),
-        ("2", "HTTPError"));
+        ("2", "HTTPError"),
+        ("%20in_progress%20", "InProgress"));
 
     public static TheoryData<EbHostKind, string, string> AcceptedFlagSpellings => Cross(AllHosts,
         ("read,write", "Read, Write"),
@@ -82,7 +90,7 @@ public class EnumBindingMiddlewareTests
         var response = await host.GetAsync("/status?status=garbage");
 
         response.ShouldBeEnumBindingProblem().Single().Description
-            .Should().Be("'status' must be one of: active, in_progress, http_error.");
+            .Should().Be("'garbage' is not a valid EbStatus. Allowed values: active, in_progress, http_error.");
     }
 
     [Theory]
@@ -98,9 +106,9 @@ public class EnumBindingMiddlewareTests
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task Query_Should_Reject_DefinedNumber_When_AllowIntegerValuesIsFalse(EbHostKind kind)
+    public async Task Query_Should_Reject_DefinedNumber_When_AcceptNumbersIsFalse(EbHostKind kind)
     {
-        await using EnumBindingHost host = await Start(kind, o => o.AllowIntegerValues = false);
+        await using EnumBindingHost host = await Start(kind, c => c with { AcceptNumbers = false });
 
         var response = await host.GetAsync("/status?status=1");
 
@@ -109,9 +117,9 @@ public class EnumBindingMiddlewareTests
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task Query_Should_AcceptNames_When_AllowIntegerValuesIsFalse(EbHostKind kind)
+    public async Task Query_Should_AcceptNames_When_AcceptNumbersIsFalse(EbHostKind kind)
     {
-        await using EnumBindingHost host = await Start(kind, o => o.AllowIntegerValues = false);
+        await using EnumBindingHost host = await Start(kind, c => c with { AcceptNumbers = false });
 
         var response = await host.GetAsync("/status?status=in_progress");
 
@@ -227,9 +235,20 @@ public class EnumBindingMiddlewareTests
     {
         await using EnumBindingHost host = await Start(kind);
 
-        var response = await host.GetAsync("/nullable?status=%20");
+        var response = await host.GetAsync("/nullable?status=%20%09");
 
         response.Body.Should().Be("null");
+    }
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task Query_Should_Return400Problem_When_NonNullableValueIsWhitespace(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await Start(kind);
+
+        var response = await host.GetAsync("/status?status=%20");
+
+        response.ShouldBeEnumBindingProblem().Single().Code.Should().Be("status");
     }
 
     // ---------- arrays / List<T> ----------
@@ -312,7 +331,7 @@ public class EnumBindingMiddlewareTests
         var response = await host.GetAsync($"/flags?perms={value}");
 
         response.ShouldBeEnumBindingProblem().Single().Description
-            .Should().Be("'perms' must be one of: none, read, write, delete.");
+            .Should().Be($"'{value}' is not a valid EbPermission. Allowed values: none, read, write, delete.");
     }
 
     [Theory]
@@ -391,10 +410,11 @@ public class EnumBindingMiddlewareTests
 
         var response = await host.GetAsync("/custom?value=garbage");
 
-        response.ShouldBeEnumBindingProblem().Single().Description.Should().Be("'value' must be one of: custom, plain.");
+        response.ShouldBeEnumBindingProblem().Single().Description
+            .Should().Be("'garbage' is not a valid EbCustom. Allowed values: custom, plain.");
     }
 
-    // ---------- CanBind ----------
+    // ---------- CanHandle ----------
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
@@ -404,29 +424,29 @@ public class EnumBindingMiddlewareTests
 
         var response = await host.GetAsync("/plain?plain=in_progress");
 
-        response.Body.Should().NotBe("InProgress").And.NotContain("must be one of");
+        response.Body.Should().NotBe("InProgress").And.NotContain("Allowed values");
     }
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task NonStringEnum_Should_BeNormalized_When_CanBindAcceptsEveryEnum(EbHostKind kind)
+    public async Task NonStringEnum_Should_KeepFrameworkBinding_When_CanHandleAcceptsEnumsWithoutGeneratedMetadata(EbHostKind kind)
     {
-        await using EnumBindingHost host = await Start(kind, o => o.CanBind = t => t.IsEnum);
+        await using EnumBindingHost host = await Start(kind, c => c with { CanHandle = t => t.IsEnum });
 
-        var response = await host.GetAsync("/plain?plain=in_progress");
+        var response = await host.GetAsync("/plain?plain=InProgress");
 
         response.Body.Should().Be("InProgress");
     }
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task StringEnum_Should_NotBeNormalized_When_CanBindExcludesIt(EbHostKind kind)
+    public async Task StringEnum_Should_NotBeNormalized_When_CanHandleExcludesIt(EbHostKind kind)
     {
-        await using EnumBindingHost host = await Start(kind, o => o.CanBind = _ => false);
+        await using EnumBindingHost host = await Start(kind, c => c with { CanHandle = _ => false });
 
         var response = await host.GetAsync("/status?status=in_progress");
 
-        response.Body.Should().NotBe("InProgress").And.NotContain("must be one of");
+        response.Body.Should().NotBe("InProgress").And.NotContain("Allowed values");
     }
 
     // ---------- multiple errors / unaffected endpoints ----------
@@ -475,14 +495,14 @@ public class EnumBindingMiddlewareTests
         response.Status.Should().Be(404);
     }
 
-    // ---------- ErrorFactory ----------
+    // ---------- ConfigureErrors ----------
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
     public async Task ErrorFactory_Should_ReplaceCodeAndDescription_When_Configured(EbHostKind kind)
     {
-        await using EnumBindingHost host = await Start(kind,
-            o => o.ErrorFactory = (key, _, names) => Error.Validation($"validation.{key}", $"allowed={string.Join('/', names)}"));
+        await using EnumBindingHost host = await Start(kind, configure: b => b.ConfigureErrors(
+            (error, key) => Error.Validation($"validation.{key}", $"allowed={string.Join('/', error.AllowedValues)}")));
 
         var response = await host.GetAsync("/status?status=garbage");
 
@@ -492,22 +512,23 @@ public class EnumBindingMiddlewareTests
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task ErrorFactory_Should_ReceiveKeyEnumTypeAndSnakeCaseNames_When_ValueIsInvalid(EbHostKind kind)
+    public async Task ErrorFactory_Should_ReceiveKeyAndEnumValueError_When_ValueIsInvalid(EbHostKind kind)
     {
         string? capturedKey = null;
-        Type? capturedType = null;
-        string[]? capturedNames = null;
-        await using EnumBindingHost host = await Start(kind, o => o.ErrorFactory = (key, type, names) =>
+        EnumValueError? capturedError = null;
+        await using EnumBindingHost host = await Start(kind, configure: b => b.ConfigureErrors((error, key) =>
         {
-            (capturedKey, capturedType, capturedNames) = (key, type, [.. names]);
+            (capturedKey, capturedError) = (key, error);
             return Error.Validation(key, "x");
-        });
+        }));
 
         await host.GetAsync("/status?status=garbage");
 
         capturedKey.Should().Be("status");
-        capturedType.Should().Be<EbStatus>();
-        capturedNames.Should().Equal("active", "in_progress", "http_error");
+        capturedError!.EnumType.Should().Be<EbStatus>();
+        capturedError.Value.Should().Be("garbage");
+        capturedError.Path.Should().Be("status");
+        capturedError.AllowedValues.Should().Equal("active", "in_progress", "http_error");
     }
 
     [Theory]
@@ -515,11 +536,11 @@ public class EnumBindingMiddlewareTests
     public async Task ErrorFactory_Should_NotBeCalled_When_ValueIsValid(EbHostKind kind)
     {
         bool called = false;
-        await using EnumBindingHost host = await Start(kind, o => o.ErrorFactory = (key, _, _) =>
+        await using EnumBindingHost host = await Start(kind, configure: b => b.ConfigureErrors((_, key) =>
         {
             called = true;
             return Error.Validation(key, "x");
-        });
+        }));
 
         var response = await host.GetAsync("/status?status=in_progress");
 
@@ -532,7 +553,7 @@ public class EnumBindingMiddlewareTests
     public async Task ErrorFactory_Should_BeUsedPerInvalidValue_When_SeveralValuesAreInvalid(EbHostKind kind)
     {
         await using EnumBindingHost host = await Start(kind,
-            o => o.ErrorFactory = (key, _, _) => Error.Validation($"validation.{key}", "bad"));
+            configure: b => b.ConfigureErrors((_, key) => Error.Validation($"validation.{key}", "bad")));
 
         var response = await host.GetAsync("/multi?a=garbage&b=garbage");
 
@@ -548,6 +569,6 @@ public class EnumBindingMiddlewareTests
         var response = await host.GetAsync("/status?status=garbage");
 
         response.ShouldBeEnumBindingProblem().Should().ContainSingle()
-            .Which.Should().Be(("status", "'status' must be one of: active, in_progress, http_error."));
+            .Which.Should().Be(("status", "'garbage' is not a valid EbStatus. Allowed values: active, in_progress, http_error."));
     }
 }

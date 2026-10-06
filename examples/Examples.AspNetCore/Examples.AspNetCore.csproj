@@ -13,6 +13,7 @@
     <EnableNETAnalyzers>false</EnableNETAnalyzers>
   </PropertyGroup>  <ItemGroup>
     <ProjectReference Include="../../CSharpEssentials.AspNetCore/CSharpEssentials.AspNetCore.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.AspNetCore.Swashbuckle/CSharpEssentials.AspNetCore.Swashbuckle.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Results/CSharpEssentials.Results.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Core/CSharpEssentials.Core.csproj" />

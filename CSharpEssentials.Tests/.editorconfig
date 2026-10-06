@@ -2,3 +2,36 @@
 [*.cs]
 # xunit test classes and [Theory] parameter/MemberData types must be public
 dotnet_diagnostic.CA1515.severity = none
+
+# Fixtures that deliberately carry [Obsolete] members to prove the generators and converters keep them working.
+[{Enums/StringEnumGeneratorTests,Enums/Runtime/RuntimeTestEnums,Json/JsonSerializerOptionsExtensionsTests,Json/ConditionalStringEnumConverterTests}.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# The parser test feeds the obsolete ParserStatus.Aborted alias on purpose.
+[Enums/Runtime/EnumInfoParserTests.cs]
+dotnet_diagnostic.CS0618.severity = none
+
+# These tests cover the obsolete 4.x StringEnumNaming facade on purpose.
+[Json/StringEnumNamingTests.cs]
+dotnet_diagnostic.CS0618.severity = none
+
+# These tests cover the obsolete 4.x ConfigureEnumConventions forwarders on purpose.
+[EntityFrameworkCore/ModelConfigurationExtensionsTests.cs]
+dotnet_diagnostic.CS0618.severity = none
+
+# Non-int underlying types (byte, sbyte, short, ushort, uint, long, ulong) are the subject of these tests.
+[{Enums/EnumValueFormatterTests,Enums/Runtime/RuntimeTestEnums,EntityFrameworkCore/EnumColumns/EnumStorageNumericTypes}.cs]
+dotnet_diagnostic.CA1028.severity = none
+
+# StoredAccess has no zero member on purpose: legacy flags text must fall back to "0" for it.
+[EntityFrameworkCore/EnumColumns/EnumStorageNumericTypes.cs]
+dotnet_diagnostic.CSE0006.severity = none
+
+# The reader/writer test compiles ConstructorExpression, which EF Core marks as evaluation-only, to prove compiled models rebuild it.
+[EntityFrameworkCore/EnumColumns/EnumJsonValueReaderWriterTests.cs]
+dotnet_diagnostic.EF9100.severity = none
+
+# A flags enum whose composite member covers bits without a single flag, so formatting has to fall back to the composite.
+[Enums/Runtime/ParserCompositeAccess.cs]
+dotnet_diagnostic.CA2217.severity = none
+dotnet_diagnostic.S4070.severity = none

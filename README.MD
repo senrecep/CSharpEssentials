@@ -6,12 +6,12 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-3621%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-4082%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
-[![Packages](https://img.shields.io/badge/packages-23-blue)](https://www.nuget.org/profiles/senrecep)
+[![Packages](https://img.shields.io/badge/packages-25-blue)](https://www.nuget.org/profiles/senrecep)
 
 Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
@@ -26,12 +26,14 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Any` | `Any<T1,T2,...>`: type-safe discriminated unions | [Docs](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
 | `CSharpEssentials.These` | `These<TError,TValue>`: 3-state union with Left, Right, Both (error + value simultaneously) | [Docs](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
 | `CSharpEssentials.Core` | String/GUID/collection utilities | [Docs](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
-| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](examples/Examples.Enums/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
+| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
 | `CSharpEssentials.Mediator` | CQRS pipeline behaviors: validation, logging, exception handling, caching, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
-| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, Swagger versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.AspNetCore.OpenApi` | Enum convention schemas for `Microsoft.AspNetCore.OpenApi` (net10.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.OpenApi/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.OpenApi.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.OpenApi) |
+| `CSharpEssentials.AspNetCore.Swashbuckle` | Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle (net8.0+, Microsoft.OpenApi 1.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.Swashbuckle.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.Swashbuckle) |
 | `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1011 | [Docs](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
 | `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001 to CSE2009 | [Docs](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
 | `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [Docs](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
@@ -45,7 +47,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers all 23 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers all 25 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
 
 ## Installation
 
@@ -201,9 +203,96 @@ public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
 builder.Services.AddAllServices(); // every generated registry of the app and its referenced assemblies
 ```
 
+## Enums end to end
+
+Mark an enum with `[StringEnum]` and every layer reads and writes it the same way, driven by one `EnumConventions` instance (`CSharpEssentials.Enums`). The wire name is snake_case by default (`PendingApproval` → `pending_approval`); change it per enum (`[StringEnum(Naming = ...)]`), per member (`[JsonStringEnumMemberName]`) or per project (the `CSharpEssentialsEnumNaming` MSBuild property). Enums without `[StringEnum]` keep the framework defaults.
+
+```csharp
+[StringEnum]
+public enum OrderStatus
+{
+    Pending,
+    [EnumAlias("Approval")] PendingApproval,
+    [EnumFallback] Unknown = 99, // what tolerant readers map unknown values to
+}
+```
+
+| Layer | Package | Setup | Reads | Writes |
+|---|---|---|---|---|
+| JSON (System.Text.Json) | `CSharpEssentials.Json` | `options.AddEnumConventions(conventions)` | wire name, member name in any casing, alias, defined number; undefined numbers rejected | `"pending_approval"`, or `1` with `WriteAs = Number` |
+| Route, query, header, form | `CSharpEssentials.AspNetCore` | `AddEnumConventions()` + `UseEnumBinding()` | same rules as a JSON body, trimmed; invalid → 400 problem listing the allowed values | |
+| Responses | `CSharpEssentials.AspNetCore` | `WithEnumWireFormat(...)` per group, `[EnumWireFormat]` per controller | | string by default, number per group |
+| OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` or `.Swashbuckle` (one per host) | `o.AddEnumConventions()` | | string or integer schema, value table, `x-enum-*` |
+| EF Core | `CSharpEssentials.EntityFrameworkCore` | `ConfigureEnumConventions(conventions)` | tolerant: any known spelling, unknown → fallback member | `text` column + `ck_{table}_{column}_enum`; `[Flags]` as an integer bitmask |
+| Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
+| Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
+
+`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. Any CSharpEssentials package brings the generator and analyzers to your project: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. A direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints` and `.RequestResponseLogging` do not depend on it).
+
+| Scenario | Packages |
+|---|---|
+| ASP.NET Core API | `CSharpEssentials.AspNetCore` |
+| + OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` (net10.0) or `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
+| + EF Core | `CSharpEssentials.EntityFrameworkCore` |
+| Worker or console with EF Core | `CSharpEssentials.EntityFrameworkCore` |
+| JSON only (message bus, client) | `CSharpEssentials.Json` |
+| Outgoing HTTP | `CSharpEssentials.Http` |
+| Generated helpers and `EnumMetadata` only | `CSharpEssentials.Enums` |
+
+One-time setup per host:
+
+```csharp
+// Minimal API: JSON options, binding, body errors and output in one call
+builder.Services.AddEnumConventions();
+app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization
+
+// Body errors as the same 400 problem: Minimal APIs throw a body error only with ThrowOnBadRequest,
+// and GlobalExceptionHandler maps it. Without these lines the framework writes its own 400 without a body.
+// MVC reports body errors through model state instead.
+builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+app.UseEnhancedProblemDetails();
+app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status)); // ?status=pending_approval, approval or 1
+
+// MVC: the same two calls; [FromQuery], [FromRoute], [FromHeader], [FromForm] and DTO properties bind
+builder.Services.AddControllers();
+builder.Services.AddEnumConventions();
+app.UseEnumBinding();
+
+// OpenAPI: one document per version, v1 keeps numbers for old clients
+builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());          // or AddSwaggerGen(o => o.AddEnumConventions())
+builder.Services.AddOpenApi("v2", o => o.AddEnumConventions());
+app.MapGroup("/api/v1").WithGroupName("v1").WithEnumWireFormat(EnumWireFormat.Number);
+app.MapGroup("/api/v2").WithGroupName("v2");
+
+// EF Core only (worker, console): no ASP.NET Core package needed
+protected override void ConfigureConventions(ModelConfigurationBuilder builder) =>
+    builder.ConfigureEnumConventions(EnumConventions.Default);
+```
+
+There is no message bus package. A bus that serializes with System.Text.Json takes the JSON conventions in tolerant `Data` mode, for example MassTransit: `cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumReadMode.Data, writeAs: EnumWireFormat.Number))`. Upgrade consumers first, then switch producers to strings.
+
+`[Flags]` enums are JSON arrays on the wire (`["read","write"]`), repeated or comma-separated query values, and an integer bitmask in the database. Give every member an explicit value and a `None = 0` member; the analyzers warn otherwise (CSE0005, CSE0006, and CSE0007 for a member that is neither a single bit nor a combination), and `[EnumFallback]` on flags is an error (CSE0008). Use them for a fixed, small set of independent on/off capabilities (permissions, feature toggles, days of week). Use `List<TEnum>` for a user-chosen multi-select, a set that grows often or past 64 members, or when a member needs data attached; use a single enum for one value at a time (statuses, types).
+
+The `v2` document of [the end-to-end sample](examples/Examples.Enums.EndToEnd/README.md) describes the enum like this (the `v1` document has `"type": "integer"` and `"enum": [0, 1, 2, 99]`):
+
+```json
+"OrderStatus": {
+  "enum": ["pending", "pending_approval", "shipped", "unknown"],
+  "type": "string",
+  "description": "Order lifecycle state.\n\n| value | number | description |\n|---|---|---|\n| `pending` | 0 | Created, waiting for payment. |\n| `pending_approval` | 1 | Paid, waiting for manual approval. |\n| `shipped` | 2 | Shipped to the customer. |\n| `unknown` | 99 | Response only: a value this API version does not know. |",
+  "x-enum-varnames": ["Pending", "PendingApproval", "Shipped", "Unknown"],
+  "x-enum-descriptions": ["Created, waiting for payment.", "Paid, waiting for manual approval.", "Shipped to the customer.", "Response only: a value this API version does not know."],
+  "x-enum-numeric-values": [0, 1, 2, 99]
+}
+```
+
+Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (generated API, diagnostics, renaming a member, AOT), [enum conventions design](docs/design/CSharpEssentials.Enums-DESIGN.md) (normative matrix, flags guidance, rollout) and [ADR-007](docs/adr/ADR-007-enum-conventions.md).
+
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- Coming from 4.x? Read [Migrating from 4.x to 5.0](docs/migration/v4-to-v5.md). 5.0 applies one set of enum conventions to JSON, binding, OpenAPI and EF Core, and moves the Swashbuckle support into its own package.
 - Coming from 3.x? Read [Migrating from 3.x to 4.0](docs/migration/v3-to-v4.md). 4.0 changed ProblemDetails defaults, enum naming and some package dependencies.
 
 ## AI Skills

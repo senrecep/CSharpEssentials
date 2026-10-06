@@ -1,5 +1,4 @@
 using CSharpEssentials.Enums;
-using CSharpEssentials.Json;
 
 namespace Examples.Enums;
 
@@ -52,8 +51,8 @@ public class Program
         string text = s.ToOptimizedString();
         Console.WriteLine($"Status.Active.ToOptimizedString() = {text}");
 
-        string snake = s.ToSnakeCase();
-        Console.WriteLine($"Status.Active.ToSnakeCase() = {snake}");
+        string wire = s.ToWireName();
+        Console.WriteLine($"Status.Active.ToWireName() = {wire}");
 
         string kebab = s.ToKebabCase();
         Console.WriteLine($"Status.Active.ToKebabCase() = {kebab}");
@@ -84,9 +83,9 @@ public class Program
         bool notKnown = StatusExtensions.IsDefined("Deleted");
         Console.WriteLine($"StatusExtensions.IsDefined(\"Deleted\") = {notKnown}");
 
-        if (StatusExtensions.TryParse("Inactive", out Status parsedStatus))
+        if (StatusExtensions.TryParseWire("inactive", out Status parsedStatus))
         {
-            Console.WriteLine($"StatusExtensions.TryParse(\"Inactive\") = {parsedStatus}");
+            Console.WriteLine($"StatusExtensions.TryParseWire(\"inactive\") = {parsedStatus}");
         }
 
         string[] names = StatusExtensions.GetNames();
@@ -103,23 +102,24 @@ public class Program
 
         DeliveryStatus delivery = DeliveryStatus.Shipped;
         Console.WriteLine($"ToOptimizedString() = {delivery.ToOptimizedString()}");
-        Console.WriteLine($"ToSnakeCase()       = {delivery.ToSnakeCase()}");
+        Console.WriteLine($"ToWireName()        = {delivery.ToWireName()}");
         Console.WriteLine($"ToKebabCase()       = {delivery.ToKebabCase()}");
         Console.WriteLine($"GetNames()          = [{string.Join(", ", DeliveryStatusExtensions.GetNames())}]");
         Console.WriteLine($"GetValues()         = [{string.Join(", ", DeliveryStatusExtensions.GetValues())}]");
 
-        if (DeliveryStatusExtensions.TryParse("Delivered", out DeliveryStatus delivered))
+        if (DeliveryStatusExtensions.TryParseWire("delivered", out DeliveryStatus delivered))
         {
-            Console.WriteLine($"TryParse(\"Delivered\") = {delivered}");
+            Console.WriteLine($"TryParseWire(\"delivered\") = {delivered}");
         }
 
-        Console.WriteLine($"Parse(\"Returned\")    = {DeliveryStatusExtensions.Parse("Returned")}");
+        Console.WriteLine($"ParseWire(\"returned\") = {DeliveryStatusExtensions.ParseWire("returned")}");
 
-        // StringEnumNaming (CSharpEssentials.Json) gives the wire name used by the JSON converters
-        // (snake_case by default), so APIs and generated code agree on the same spelling.
-        Console.WriteLine($"StringEnumNaming.GetName(Shipped) = {StringEnumNaming.GetName(delivery)}");
-        Console.WriteLine($"StringEnumNaming.GetNames<DeliveryStatus>() = [{string.Join(", ", StringEnumNaming.GetNames<DeliveryStatus>())}]");
-        Console.WriteLine($"StringEnumNaming.IsStringEnum(typeof(DeliveryStatus)) = {StringEnumNaming.IsStringEnum(typeof(DeliveryStatus))}");
+        // EnumMetadata (CSharpEssentials.Enums) is the one source of the wire names the JSON converters use, so APIs
+        // and generated code agree on the same spelling.
+        IEnumInfo info = EnumMetadata.Get<DeliveryStatus>();
+        Console.WriteLine($"EnumValueFormatter.Format(Shipped) = {EnumValueFormatter.Format(delivery, EnumWireFormat.String)}");
+        Console.WriteLine($"EnumMetadata.Get<DeliveryStatus>().WireNames = [{string.Join(", ", info.WireNames)}]");
+        Console.WriteLine($"EnumMetadata.IsRegistered(typeof(DeliveryStatus)) = {EnumMetadata.IsRegistered(typeof(DeliveryStatus))}");
         Console.WriteLine();
 
         Console.WriteLine("========================================");

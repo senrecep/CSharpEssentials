@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A contracts-style assembly: netstandard2.0 (no ModuleInitializerAttribute, so the generator emits its polyfill), its own
+       project-wide naming, and only enum types, so the tests reference it by type only and its module initializer has not run. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <CSharpEssentialsEnumNaming>KebabCaseLower</CSharpEssentialsEnumNaming>
+    <!-- UnreachableHolder<T>.Status has no generated metadata on purpose (fail-loud tests). -->
+    <NoWarn>$(NoWarn);CSE0015</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\CSharpEssentials.Enums\build\CSharpEssentials.Enums.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

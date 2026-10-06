@@ -1,4 +1,8 @@
+using System.Collections.Concurrent;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern;
@@ -10,8 +14,13 @@ public sealed class HttpRequestBuilder
     private HttpMethod _method = HttpMethod.Get;
     private Uri? _uri;
     private readonly List<(string Key, string Value)> _headers = [];
-    private readonly List<(string Key, string Value)> _queryParameters = [];
+    private readonly List<(string Key, object? Value)> _queryParameters = [];
+    private readonly List<(string Name, object? Value)> _routeValues = [];
+    private EnumConventions? _enumConventions;
+    private EnumWireFormat? _enumWriteAs;
     private HttpContent? _content;
+    private object? _jsonValue;
+    private JsonSerializerOptions? _jsonOptions;
     private bool _followRedirects;
     private int _maxRedirects = 5;
 
@@ -75,15 +84,37 @@ public sealed class HttpRequestBuilder
         return this;
     }
 
+    public HttpRequestBuilder WithQuery(string name, object? value)
+    {
+        _queryParameters.Add((name, value));
+        return this;
+    }
+
+    public HttpRequestBuilder WithRoute(string name, object? value)
+    {
+        _routeValues.Add((name, value));
+        return this;
+    }
+
+    public HttpRequestBuilder WithEnumConventions(EnumConventions conventions, EnumWireFormat? writeAs = null)
+    {
+        _enumConventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+        _enumWriteAs = writeAs;
+        return this;
+    }
+
     public HttpRequestBuilder WithContent(HttpContent content)
     {
         _content = content;
+        _jsonValue = null;
         return this;
     }
 
     public HttpRequestBuilder WithJsonContent(object value, JsonSerializerOptions? options = null)
     {
-        _content = JsonContent.Create(value, options: options ?? EnhancedJsonSerializerOptions.DefaultOptions);
+        _jsonValue = value;
+        _jsonOptions = options;
+        _content = null;
         return this;
     }
 
@@ -99,9 +130,24 @@ public sealed class HttpRequestBuilder
         if (_uri is null)
             return Error.Validation("HttpRequestBuilder.UriRequired", "URI must be set before building the request.");
 
-        Result<Uri> uriResult = _queryParameters.Count > 0
-            ? _uri.WithQueryString(_queryParameters.ToDictionary(p => p.Key, p => (string?)p.Value))
-            : _uri;
+        EnumConventions conventions = _enumConventions ?? EnumConventions.Default;
+        Result<Uri> uriResult;
+        try
+        {
+            uriResult = ApplyRouteValues(_uri, conventions);
+            if (uriResult.IsSuccess && _queryParameters.Count > 0)
+            {
+                List<KeyValuePair<string, string?>> pairs = [];
+                foreach ((string key, object? value) in _queryParameters)
+                    QueryStringExtensions.AddValues(pairs, key, value, conventions, _enumWriteAs);
+
+                uriResult = uriResult.Value.AppendQuery(QueryStringExtensions.BuildQuery(pairs));
+            }
+        }
+        catch (EnumValueException exception)
+        {
+            return Error.Validation("HttpRequestBuilder.InvalidEnumValue", exception.Message);
+        }
 
         if (uriResult.IsFailure)
             return uriResult.Errors;
@@ -111,10 +157,52 @@ public sealed class HttpRequestBuilder
         foreach ((string key, string value) in _headers)
             request.Headers.TryAddWithoutValidation(key, value);
 
-        if (_content is not null)
+        if (_jsonValue is not null)
+            request.Content = JsonContent.Create(_jsonValue, options: _jsonOptions ?? ResolveJsonOptions());
+        else if (_content is not null)
             request.Content = _content;
 
         return request;
+    }
+
+    private static readonly ConditionalWeakTable<EnumConventions, ConcurrentDictionary<EnumWireFormat, JsonSerializerOptions>> JsonOptionsCache = [];
+
+    private Result<Uri> ApplyRouteValues(Uri uri, EnumConventions conventions)
+    {
+        if (_routeValues.Count == 0)
+            return uri;
+
+        string template = uri.OriginalString;
+        foreach ((string name, object? value) in _routeValues)
+        {
+            string placeholder = "{" + name + "}";
+            if (!template.Contains(placeholder, StringComparison.Ordinal))
+                return Error.Validation("HttpRequestBuilder.RouteParameterNotFound", $"The URI has no '{placeholder}' placeholder.");
+            if (value is null)
+                return Error.Validation("HttpRequestBuilder.RouteValueRequired", $"The route value '{name}' cannot be null.");
+
+            string text = EnumValueFormatter.TryFormat(value, conventions, out string? formatted, _enumWriteAs)
+                ? formatted
+                : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+            template = template.Replace(placeholder, Uri.EscapeDataString(text), StringComparison.Ordinal);
+        }
+
+        return new Uri(template, UriKind.RelativeOrAbsolute);
+    }
+
+    private JsonSerializerOptions ResolveJsonOptions()
+    {
+        if (_enumConventions is null)
+            return EnhancedJsonSerializerOptions.DefaultOptions;
+
+        EnumConventions conventions = _enumConventions;
+        return JsonOptionsCache.GetOrCreateValue(conventions).GetOrAdd(_enumWriteAs ?? conventions.WriteAs, writeAs =>
+            EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters.Create(options =>
+            {
+                options.AddEnumConventions(conventions, EnumReadMode.Data, writeAs);
+                options.Converters.Add(new MultiFormatDateTimeConverterFactory());
+                options.Converters.Add(new PolymorphicJsonConverterFactory());
+            }));
     }
 
     public async Task<Result> AsResultAsync(HttpClient? client, CancellationToken cancellationToken = default)

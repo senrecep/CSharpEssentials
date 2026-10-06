@@ -23,6 +23,9 @@
     <ProjectReference Include="../../CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Core/CSharpEssentials.Core.csproj" />
     <ProjectReference Include="../../CSharpEssentials.Time/CSharpEssentials.Time.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="../../CSharpEssentials.Enums.Generators/CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

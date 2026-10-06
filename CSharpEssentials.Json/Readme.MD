@@ -4,7 +4,7 @@ Enhanced JSON serialization utilities on top of `System.Text.Json`.
 
 ## Features
 
-- **Conditional String Enums**: Enums marked with `[StringEnum]` serialize as strings; others stay as integers.
+- **Enum Conventions**: `[StringEnum]` enums read and write their wire names (`AddEnumConventions`); other enums keep the host's behavior.
 - **Multi-Format DateTime**: Deserialize from many date formats automatically.
 - **Polymorphic Serialization**: Serialize abstract types and interfaces with a `$type` discriminator.
 - **Pre-Configured Options**: CamelCase, ignore cycles, ignore nulls, relaxed escaping.
@@ -29,8 +29,11 @@ string json = JsonSerializer.Serialize(myObject, options);
 
 ### Quick Extensions
 
+`ConvertToJson`, `ConvertFromJson` and `ConvertToJsonDocument` use `EnhancedJsonSerializerOptions.DefaultOptions` (or the options you pass) through reflection-based serialization. They are annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`; in trimmed or NativeAOT apps call `JsonSerializer` with a `JsonSerializerContext` instead.
+
 ```csharp
 using System.Text.Json;
+using CSharpEssentials.Json;
 
 var user = new { Name = "Alice", Age = 30 };
 
@@ -53,7 +56,9 @@ var data = (Dictionary<string, object?>)doc.RootElement.ToClrObject()!;
 // data["id"] is int, data["price"] is decimal, data["tags"] is List<object?>
 ```
 
-### String Enum Serialization
+### Enum Conventions
+
+`AddEnumConventions` adds the enum converter for every enum with generated metadata (`[StringEnum]`, see [CSharpEssentials.Enums](../CSharpEssentials.Enums/Readme.MD)). Other enums are left to the converters already on the options, so a plain enum stays a number unless you add `JsonStringEnumConverter` yourself.
 
 ```csharp
 using System.Text.Json;
@@ -61,22 +66,36 @@ using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
 
 [StringEnum]
-public enum Status { Active, Inactive }
+public enum Status { Active, Inactive, [EnumFallback] Unknown }
 
 public enum Level { Low, High }
 
-var data = new { S = Status.Active, L = Level.High };
-string json = data.ConvertToJson(); // {"s":"active","l":1}
+public sealed record Account(Status Status, Level Level);
 
-// Reject numbers that are not a defined member ("999") when reading. Default: accepted, like JsonStringEnumConverter.
-// DefaultOptions is shared and read-only once used, so customize a copy.
-var options = new JsonSerializerOptions(EnhancedJsonSerializerOptions.DefaultOptions);
-options.Converters.Add(new ConditionalStringEnumConverter { AllowUndefinedValues = false });
+// Data mode (the default): tolerant, for values you stored or received from a trusted service
+JsonSerializerOptions data = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+    .AddEnumConventions(EnumConventions.Default);
+
+// Input mode: strict, for request bodies (AddEnumConventions() in CSharpEssentials.AspNetCore does this for you)
+JsonSerializerOptions input = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+    .AddEnumConventions(EnumConventions.Default, EnumReadMode.Input);
+
+JsonSerializer.Serialize(new Account(Status.Active, Level.High), data); // {"status":"active","level":1}
+JsonSerializer.Deserialize<Account>("""{"status":"gone","level":0}""", data);  // Status.Unknown (fallback)
+JsonSerializer.Deserialize<Account>("""{"status":"gone","level":0}""", input); // throws EnumValueJsonException
 ```
+
+- Reads accept the wire name, the member name in any casing, aliases and the number of a defined member. `Input` mode applies `EnumConventions.AcceptNumbers`, `AcceptMemberNames` and `CaseInsensitive`.
+- Undefined values (`"gone"`, `999`) are rejected with `EnumValueJsonException` (a `JsonException`). In `Data` mode only, they map to the `[EnumFallback]` member when the enum declares one (`EnumConventions.UnknownValue = UnknownEnumValueHandling.UseFallback`, the default).
+- Writes are the wire name, or the number with `writeAs: EnumWireFormat.Number`. `[Flags]` values are JSON arrays.
+- `EnhancedJsonSerializerOptions.DefaultOptions` already calls `AddEnumConventions(EnumConventions.Default)` (Data mode).
+- A `[StringEnum]` enum without generated metadata (CSE0015) throws when its converter is created instead of falling back to numbers. `AddEnumConventionsWithReflection` also converts enums without metadata through reflection; it is not trim or AOT safe.
+
+`ConditionalStringEnumConverter` (4.x) is obsolete and forwards to the same converter in `Input` mode. It no longer has `AllowUndefinedValues`: undefined numbers are always rejected. See [Migrating from 4.x to 5.0](../docs/migration/v4-to-v5.md).
 
 ### StringEnumNaming
 
-`StringEnumNaming` is the single naming source for enum strings. JSON, EF Core storage, Swagger schemas and query/route binding in the other packages all use it, so a member is spelled the same everywhere. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
+`StringEnumNaming` is obsolete in 5.0 and stays as a working facade over `EnumMetadata`. In new code use `EnumMetadata`, `EnumValueFormatter`, `EnumValueParser` or the generated `ToWireName()` and `TryParseWire` helpers: they are the naming source that JSON, EF Core storage, Swagger schemas and query/route binding all use, so a member is spelled the same everywhere. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
 
 ```csharp
 using CSharpEssentials.Json;

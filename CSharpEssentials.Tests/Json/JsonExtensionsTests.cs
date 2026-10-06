@@ -130,5 +130,42 @@ public class JsonExtensionsTests
         result.IsSuccess.Should().BeTrue();
         result.Value!.Value.GetString().Should().Be("John");
     }
-}
 
+    [Fact]
+    public void ConvertToJsonDocument_Should_ParseTheText_When_StringIsValidJson()
+    {
+        using JsonDocument? document = """{"name":"John","age":30}""".ConvertToJsonDocument();
+
+        document.Should().NotBeNull();
+        document.RootElement.GetProperty("name").GetString().Should().Be("John");
+        document.RootElement.GetProperty("age").GetInt32().Should().Be(30);
+    }
+
+    [Fact]
+    public void ConvertToJsonDocument_Should_ReturnANullRoot_When_StringIsTheJsonNullLiteral()
+    {
+        using JsonDocument? document = "null".ConvertToJsonDocument();
+
+        document.Should().NotBeNull();
+        document.RootElement.ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public void ConvertToJsonDocument_Should_WrapTheTextAsAJsonString_When_StringIsNotJson()
+    {
+        using JsonDocument? document = "not json".ConvertToJsonDocument();
+
+        document.Should().NotBeNull();
+        document.RootElement.ValueKind.Should().Be(JsonValueKind.String);
+        document.RootElement.GetString().Should().Be("not json");
+    }
+
+    [Fact]
+    public void ConvertToJsonDocument_Should_WrapTheTextAsAJsonString_When_StringIsEmpty()
+    {
+        using JsonDocument? document = string.Empty.ConvertToJsonDocument();
+
+        document.Should().NotBeNull();
+        document.RootElement.GetString().Should().BeEmpty();
+    }
+}

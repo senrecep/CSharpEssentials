@@ -12,7 +12,6 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
 {
     private static readonly Type _dateTimeType = typeof(DateTime);
     private static readonly Type _nullableDateTimeType = typeof(DateTime?);
-    private static readonly Type _convertType = typeof(MultiFormatDateTimeConverter<>);
     private readonly string[] _formats;
 
 
@@ -30,13 +29,9 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
     /// <returns></returns>
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        bool isNullable = typeToConvert == _nullableDateTimeType;
-
-        return (JsonConverter)Activator.CreateInstance(
-            _convertType.MakeGenericType(typeToConvert),
-            isNullable,
-            _formats
-        )!;
+        return typeToConvert == _nullableDateTimeType
+            ? new MultiFormatDateTimeConverter<DateTime?>(true, _formats)
+            : new MultiFormatDateTimeConverter<DateTime>(false, _formats);
     }
 
     private static readonly string[] _defaultFormats = [

@@ -1,4 +1,3 @@
-using System.Reflection;
 using CSharpEssentials.EntityFrameworkCore;
 using CSharpEssentials.EntityFrameworkCore.Converters;
 using CSharpEssentials.Enums;
@@ -8,18 +7,11 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
+/// <summary>The 4.x registration overloads, kept as obsolete forwarders to the 5.0 convention.</summary>
 public class ModelConfigurationExtensionsTests
 {
     [StringEnum]
-    private enum TestStatus
-    {
-        Active,
-        Inactive,
-        Pending
-    }
-
-    [StringEnum]
-    private enum AcronymStatus
+    internal enum AcronymStatus
     {
         HTTPStatus,
         IOError,
@@ -40,18 +32,18 @@ public class ModelConfigurationExtensionsTests
         public PlainColor Color { get; set; }
     }
 
+    private sealed class NullConventionsDbContext(DbContextOptions<NullConventionsDbContext> options) : DbContext(options)
+    {
+        public DbSet<AcronymEntity> Entities { get; set; } = null!;
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+            configurationBuilder.ConfigureEnumConventions(null);
+    }
+
     private sealed class DefaultConventionDbContext(DbContextOptions<DefaultConventionDbContext> options) : DbContext(options)
     {
         public DbSet<AcronymEntity> Entities { get; set; } = null!;
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
             configurationBuilder.ConfigureEnumConventions(typeof(DefaultConventionDbContext).Assembly);
-    }
-
-    private sealed class OptionsDefaultConventionDbContext(DbContextOptions<OptionsDefaultConventionDbContext> options) : DbContext(options)
-    {
-        public DbSet<AcronymEntity> Entities { get; set; } = null!;
-        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
-            configurationBuilder.ConfigureEnumConventions(_ => { }, typeof(OptionsDefaultConventionDbContext).Assembly);
     }
 
     private sealed class LegacyConventionDbContext(DbContextOptions<LegacyConventionDbContext> options) : DbContext(options)
@@ -65,69 +57,39 @@ public class ModelConfigurationExtensionsTests
     {
         public DbSet<AcronymEntity> Entities { get; set; } = null!;
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
-            configurationBuilder.ConfigureEnumConventions(o => o.CanConvert = type => type == typeof(PlainColor), typeof(PredicateConventionDbContext).Assembly);
+            configurationBuilder.ConfigureEnumConventions(o => o.CanConvert = type => type == typeof(PlainColor));
     }
 
-    private sealed class PartiallyLoadableAssemblyDbContext(DbContextOptions<PartiallyLoadableAssemblyDbContext> options) : DbContext(options)
+    private sealed class StatusOnlyConventionDbContext(DbContextOptions<StatusOnlyConventionDbContext> options) : DbContext(options)
     {
-        public static readonly Assembly BrokenAssembly = PartiallyLoadableAssembly.Create("EnumConventionScan.Broken");
-
         public DbSet<AcronymEntity> Entities { get; set; } = null!;
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
-            configurationBuilder.ConfigureEnumConventions(BrokenAssembly, typeof(PartiallyLoadableAssemblyDbContext).Assembly);
-    }
-
-    private sealed class EnumEntity
-    {
-        public int Id { get; set; }
-        public TestStatus Status { get; set; }
-    }
-
-    private sealed class EnumConventionDbContext : DbContext
-    {
-        public DbSet<EnumEntity> EnumEntities { get; set; } = null!;
-        public EnumConventionDbContext(DbContextOptions<EnumConventionDbContext> options) : base(options) { }
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<EnumEntity>().HasKey(x => x.Id);
-        }
-        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-        {
-            configurationBuilder.ConfigureEnumConventions(typeof(EnumConventionDbContext).Assembly);
-        }
+            configurationBuilder.ConfigureEnumConventions(o => o.CanConvert = type => type == typeof(AcronymStatus));
     }
 
     [Fact]
-    public void ConfigureEnumConventions_ShouldApplyConverterAndMaxLength()
-    {
-        DbContextOptions<EnumConventionDbContext> options = new DbContextOptionsBuilder<EnumConventionDbContext>()
-            .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .Options;
-        using var context = new EnumConventionDbContext(options);
-
-        IEntityType entityType = context.Model.FindEntityType(typeof(EnumEntity))!;
-        IProperty property = entityType.FindProperty(nameof(EnumEntity.Status))!;
-
-        property.GetMaxLength().Should().Be(8); // "inactive".Length
-        property.GetValueConverter().Should().NotBeNull();
-        property.GetValueConverter()!.ModelClrType.Should().Be<TestStatus>();
-        property.GetValueConverter()!.ProviderClrType.Should().Be<string>();
-        _ = new EnumEntity { Id = 1, Status = TestStatus.Active };
-    }
-
-    [Fact]
-    public void ConfigureEnumConventions_ShouldUseCanonicalConverterAndJsonNameMaxLength()
+    public void ConfigureEnumConventions_Should_StoreWireName_When_CalledWithAssemblies()
     {
         using DefaultConventionDbContext context = new(CreateOptions<DefaultConventionDbContext>());
 
         IProperty property = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
 
-        property.GetValueConverter().Should().BeOfType<EnumToFormattedStringConverter<AcronymStatus>>();
-        property.GetMaxLength().Should().Be("http_status".Length);
+        property.GetValueConverter().Should().BeOfType<EnumWireNameConverter<AcronymStatus>>();
+        property.GetValueConverter()!.ConvertToProvider(AcronymStatus.HTTPStatus).Should().Be("http_status");
     }
 
     [Fact]
-    public void ConfigureEnumConventions_ShouldNotConvertEnumsWithoutStringEnumAttribute()
+    public void ConfigureEnumConventions_Should_Bind_To_The_Convention_Overload_When_CalledWithNull()
+    {
+        using NullConventionsDbContext context = new(CreateOptions<NullConventionsDbContext>());
+
+        IProperty property = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
+
+        property.GetValueConverter().Should().BeOfType<EnumWireNameConverter<AcronymStatus>>();
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_LeaveEnumsWithoutStringEnumAttribute()
     {
         using DefaultConventionDbContext context = new(CreateOptions<DefaultConventionDbContext>());
 
@@ -138,44 +100,40 @@ public class ModelConfigurationExtensionsTests
     }
 
     [Fact]
-    public void ConfigureEnumConventions_WithDefaultOptions_ShouldMatchParameterlessOverload()
-    {
-        using OptionsDefaultConventionDbContext context = new(CreateOptions<OptionsDefaultConventionDbContext>());
-
-        IProperty status = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
-        IProperty color = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Color));
-
-        status.GetValueConverter().Should().BeOfType<EnumToFormattedStringConverter<AcronymStatus>>();
-        status.GetMaxLength().Should().Be(11);
-        color.GetValueConverter().Should().BeNull();
-    }
-
-    [Fact]
-    public void ConfigureEnumConventions_WithUseLegacySnakeCase_ShouldUseLegacyConverterAndLegacyMaxLength()
+    public void ConfigureEnumConventions_Should_WriteLegacySnakeCase_When_UseLegacySnakeCase()
     {
         using LegacyConventionDbContext context = new(CreateOptions<LegacyConventionDbContext>());
 
         IProperty property = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
 
-        property.GetValueConverter().Should().BeOfType<LegacySnakeCaseEnumConverter<AcronymStatus>>();
-        property.GetMaxLength().Should().Be("httpstatus".Length);
+        property.GetValueConverter()!.ConvertToProvider(AcronymStatus.HTTPStatus).Should().Be("httpstatus");
+        property.GetValueConverter()!.ConvertFromProvider("http_status").Should().Be(AcronymStatus.HTTPStatus);
     }
 
     [Fact]
-    public void ConfigureEnumConventions_WithCustomCanConvert_ShouldOnlyConvertMatchingEnums()
+    public void ConfigureEnumConventions_Should_Throw_When_CanConvertSelectsEnumWithoutMetadata()
     {
         using PredicateConventionDbContext context = new(CreateOptions<PredicateConventionDbContext>());
+
+        Action build = () => _ = context.Model;
+
+        build.Should().Throw<InvalidOperationException>().WithMessage("*PlainColor*[StringEnum]*ConfigureEnumConventionsWithReflection*");
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_StoreEnumWithMetadata_When_CanConvertSelectsOnlyIt()
+    {
+        using StatusOnlyConventionDbContext context = new(CreateOptions<StatusOnlyConventionDbContext>());
 
         IProperty color = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Color));
         IProperty status = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
 
-        color.GetValueConverter().Should().BeOfType<EnumToFormattedStringConverter<PlainColor>>();
-        color.GetMaxLength().Should().Be("green".Length);
-        status.GetValueConverter().Should().BeNull();
+        color.GetValueConverter().Should().BeNull();
+        status.GetValueConverter().Should().BeOfType<EnumWireNameConverter<AcronymStatus>>();
     }
 
     [Fact]
-    public async Task ConfigureEnumConventions_ShouldRoundTripThroughInMemoryProvider()
+    public async Task ConfigureEnumConventions_Should_RoundTripThroughInMemoryProvider()
     {
         DbContextOptions<DefaultConventionDbContext> options = CreateOptions<DefaultConventionDbContext>();
         await using (DefaultConventionDbContext writeContext = new(options))
@@ -189,17 +147,6 @@ public class ModelConfigurationExtensionsTests
 
         entity.Status.Should().Be(AcronymStatus.HTTPStatus);
         entity.Color.Should().Be(PlainColor.Green);
-    }
-
-    [Fact]
-    public void ConfigureEnumConventions_WithPartiallyLoadableAssembly_ShouldScanLoadableTypes()
-    {
-        using PartiallyLoadableAssemblyDbContext context = new(CreateOptions<PartiallyLoadableAssemblyDbContext>());
-
-        IProperty property = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
-
-        PartiallyLoadableAssemblyDbContext.BrokenAssembly.Invoking(a => a.GetTypes()).Should().Throw<ReflectionTypeLoadException>();
-        property.GetValueConverter().Should().BeOfType<EnumToFormattedStringConverter<AcronymStatus>>();
     }
 
     private static DbContextOptions<TContext> CreateOptions<TContext>() where TContext : DbContext =>
