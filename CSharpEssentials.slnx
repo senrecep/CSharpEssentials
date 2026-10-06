@@ -1,6 +1,7 @@
 <Solution>
   <Project Path="CSharpEssentials.Any/CSharpEssentials.Any.csproj" />
   <Project Path="CSharpEssentials.AspNetCore/CSharpEssentials.AspNetCore.csproj" />
+  <Project Path="CSharpEssentials.AspNetCore.Swashbuckle/CSharpEssentials.AspNetCore.Swashbuckle.csproj" />
   <Project Path="CSharpEssentials.Clone/CSharpEssentials.Clone.csproj" />
   <Project Path="CSharpEssentials.Core/CSharpEssentials.Core.csproj" />
   <Project Path="CSharpEssentials.DependencyInjection/CSharpEssentials.DependencyInjection.csproj" />

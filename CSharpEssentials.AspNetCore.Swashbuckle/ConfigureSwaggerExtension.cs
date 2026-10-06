@@ -4,8 +4,10 @@ using CSharpEssentials.AspNetCore.Swagger.Filters;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
 namespace CSharpEssentials.AspNetCore;
@@ -21,10 +23,6 @@ public static class ConfigureSwaggerExtension
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
-            assembly ??= Assembly.GetCallingAssembly();
-            string xmlFile = $"{assembly.GetName().Name}.xml";
-            string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-            options.IncludeXmlComments(xmlPath);
             options.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
             options.AddSecurityRequirement(new OpenApiSecurityRequirement
             {
@@ -39,6 +37,7 @@ public static class ConfigureSwaggerExtension
 
             options.SchemaFilter<EnumSchemaFilter>();
         });
+        services.AddSingleton<IConfigureOptions<SwaggerGenOptions>>(provider => new XmlCommentsConfigureOptions(provider, assembly));
         services.ConfigureOptions<TConfigureSwaggerOptions>();
         return services;
     }

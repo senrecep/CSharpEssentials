@@ -23,19 +23,17 @@ public abstract class ConfigureSwaggerOptions(
            IConfiguration configuration)
            : IConfigureNamedOptions<SwaggerGenOptions>
 {
-#pragma warning disable S1075
-    private const string _defaultLicenseUrl = "https://opensource.org/license/mit";
-#pragma warning restore S1075
+    private static readonly Uri _defaultLicenseUrl = new UriBuilder(Uri.UriSchemeHttps, "opensource.org") { Path = "license/mit" }.Uri;
     public virtual void Configure(SwaggerGenOptions options)
     {
         string title = configuration["Swagger:Title"] ?? "API";
         string description = configuration["Swagger:Description"] ?? "API Description";
         string license = configuration["Swagger:License"] ?? "API License";
-        string licenseUrl = configuration["Swagger:LicenseUrl"] ?? _defaultLicenseUrl;
+        string? licenseUrl = configuration["Swagger:LicenseUrl"];
         var swaggerLicense = new OpenApiLicense
         {
             Name = license,
-            Url = new Uri(licenseUrl)
+            Url = licenseUrl is null ? _defaultLicenseUrl : new Uri(licenseUrl)
         };
         options.ResolveConflictingActions(apiDescriptions => apiDescriptions.First());
         IApiVersionDescriptionProvider? provider = serviceProvider.GetService<IApiVersionDescriptionProvider>();
