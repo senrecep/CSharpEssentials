@@ -32,7 +32,7 @@ public static class EnumMigrationBuilderExtensions
     /// <param name="from">The format the column holds. <see cref="EnumStoredAs.Text"/> reads every spelling; <see cref="EnumStoredAs.FlagsText"/> reads comma separated flags.</param>
     /// <param name="to">The storage to convert to. Flags enums convert to <see cref="EnumStorage.Integer"/> only.</param>
     /// <param name="schema">The schema, or <see langword="null"/> for the default schema.</param>
-    /// <param name="type">The store type of the converted column; defaults to <c>text</c> or the integer type of the enum.</param>
+    /// <param name="type">The store type of the converted column; defaults to <c>text</c> or the integer type of the enum. A raw provider SQL type, inserted into the generated SQL verbatim (not quoted or escaped): pass a constant, never user input.</param>
     /// <remarks>
     /// Flags text becomes a bitmask through a temporary column <c>cse_tmp_{8 hex digits of a hash of the column name}</c> filled with <c>bit_or</c> (PostgreSQL rejects
     /// subqueries in <c>ALTER COLUMN ... USING</c>); the column keeps its nullability and indexes. A column default that does not
@@ -66,7 +66,7 @@ public static class EnumMigrationBuilderExtensions
     /// <param name="from">The format the column holds.</param>
     /// <param name="to">The legacy format to write. <see cref="EnumStoredAs.Text"/> is not a write format.</param>
     /// <param name="schema">The schema, or <see langword="null"/> for the default schema.</param>
-    /// <param name="type">The store type of the converted column, for example <c>character varying(32)</c>; defaults to <c>text</c> or the integer type of the enum.</param>
+    /// <param name="type">The store type of the converted column, for example <c>character varying(32)</c>; defaults to <c>text</c> or the integer type of the enum. A raw provider SQL type, inserted into the generated SQL verbatim (not quoted or escaped): pass a constant, never user input.</param>
     /// <returns>The same builder.</returns>
     public static MigrationBuilder ConvertEnumColumn<TEnum>(
         this MigrationBuilder migrationBuilder,
