@@ -22,7 +22,7 @@
     },
     {
       "name": "csharpessentials-dependencyinjection",
-      "description": "Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning — [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001–CSE2008 diagnostics.",
+      "description": "Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning — [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001–CSE2009 diagnostics.",
       "files": ["SKILL.md"]
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "name": "csharpessentials-endpoints",
-      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1007.",
+      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1009.",
       "files": ["SKILL.md"]
     },
     {

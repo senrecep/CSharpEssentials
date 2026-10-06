@@ -267,6 +267,40 @@ public partial class EndpointsGeneratorTests
     }
 
     [Fact]
+    public void Generator_Should_Skip_Referenced_Registries_When_Their_Names_Collide()
+    {
+        CSharpCompilation dotted = Compile("Foo.Api", OutputKind.DynamicallyLinkedLibrary, PingSource("FooDotted"));
+        CSharpCompilation plain = Compile("FooApi", OutputKind.DynamicallyLinkedLibrary, PingSource("FooPlain"));
+        CSharpCompilation api = Compile("Sample.Api", OutputKind.DynamicallyLinkedLibrary, LibrarySource);
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [dotted.ToMetadataReference(), plain.ToMetadataReference(), api.ToMetadataReference()],
+            HostSource));
+
+        ShouldCompile(run);
+        string aggregate = EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs");
+        aggregate.Should().Contain("SampleApiEndpointRegistry.MapEndpoints(app, options);").And.NotContain("FooApiEndpointRegistry");
+    }
+
+    [Fact]
+    public void Generator_Should_Map_Own_Registry_Once_When_Referenced_Registry_Has_Same_Name()
+    {
+        CSharpCompilation dotted = Compile("Foo.Api", OutputKind.DynamicallyLinkedLibrary, PingSource("FooDotted"));
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "FooApi",
+            OutputKind.ConsoleApplication,
+            [dotted.ToMetadataReference()],
+            HostSource));
+
+        ShouldCompile(run);
+        string aggregate = EndpointCompilations.GeneratedText(run, "FooApiEndpointAggregate.g.cs");
+        aggregate.Split("FooApiEndpointRegistry.MapEndpoints(").Should().HaveCount(2);
+    }
+
+    [Fact]
     public void Generator_Should_Cache_Steps_When_Unrelated_Source_Is_Added()
     {
         CSharpCompilation compilation = EndpointCompilations.Create("Sample.Api", OutputKind.ConsoleApplication, LibrarySource);
@@ -280,6 +314,20 @@ public partial class EndpointsGeneratorTests
         IncrementalCaching.ShouldHaveCachedSourceOutputs(second);
         IncrementalCaching.ShouldNotCaptureCompilationObjects(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "Host", "IsTestProject");
     }
+
+    private static string PingSource(string @namespace) => $$"""
+        using CSharpEssentials.Endpoints;
+        using Microsoft.AspNetCore.Builder;
+        using Microsoft.AspNetCore.Http;
+        using Microsoft.AspNetCore.Routing;
+
+        namespace {{@namespace}};
+
+        public sealed class Ping : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/ping", () => TypedResults.Ok());
+        }
+        """;
 
     private static CSharpCompilation Compile(string assemblyName, OutputKind outputKind, string source)
     {

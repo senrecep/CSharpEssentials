@@ -7,11 +7,13 @@ using Microsoft.CodeAnalysis.Operations;
 namespace CSharpEssentials.Endpoints.Generators;
 
 /// <summary>
-/// Reports endpoint and group types that the endpoints generator cannot map and duplicate routes (CSE1001–CSE1008).
+/// Reports endpoint and group types that the endpoints generator cannot map and duplicate routes (CSE1001–CSE1009).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
 {
+    private const string IsTestProjectProperty = "build_property.IsTestProject";
+
     /// <inheritdoc />
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics { get; } = ImmutableArray.Create(
         EndpointDiagnostics.InaccessibleType,
@@ -21,7 +23,8 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         EndpointDiagnostics.DuplicateRoute,
         EndpointDiagnostics.SkippedType,
         EndpointDiagnostics.InvalidGroupTarget,
-        EndpointDiagnostics.RefStructType);
+        EndpointDiagnostics.RefStructType,
+        EndpointDiagnostics.RegistryNameCollision);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -29,6 +32,7 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
         context.RegisterSymbolAction(AnalyzeType, SymbolKind.NamedType);
+        context.RegisterCompilationAction(ReportRegistryCollisions);
         context.RegisterCompilationStartAction(static start =>
         {
             ConcurrentBag<EndpointRoute> routes = [];
@@ -43,6 +47,29 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
                 OperationKind.Invocation);
             start.RegisterCompilationEndAction(end => ReportDuplicateRoutes(end, routes));
         });
+    }
+
+    private static void ReportRegistryCollisions(CompilationAnalysisContext context)
+    {
+        IAssemblySymbol assembly = context.Compilation.Assembly;
+        bool isExecutable = context.Compilation.Options.OutputKind is OutputKind.ConsoleApplication or OutputKind.WindowsApplication;
+        bool isTestProject = context.Options.AnalyzerConfigOptionsProvider.GlobalOptions.TryGetValue(IsTestProjectProperty, out string? value) &&
+            string.Equals(value?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
+        if (EndpointSymbolRules.HasAttribute(assembly, EndpointSymbolRules.DisableAggregateAttribute) ||
+            !(EndpointSymbolRules.HasAttribute(assembly, EndpointSymbolRules.GenerateAggregateAttribute) || isExecutable && !isTestProject))
+        {
+            return;
+        }
+
+        IReadOnlyList<ReferencedRegistry> registries = ReferencedRegistryReader.Read(context.Compilation, context.CancellationToken);
+        foreach (IGrouping<string, ReferencedRegistry> collision in ReferencedRegistryReader.FindCollisions(registries))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(
+                EndpointDiagnostics.RegistryNameCollision,
+                Location.None,
+                string.Join(", ", collision.Select(static registry => "'" + registry.AssemblyName + "'")),
+                collision.Key.Replace("global::", string.Empty)));
+        }
     }
 
     private static void ReportDuplicateRoutes(CompilationAnalysisContext context, ConcurrentBag<EndpointRoute> routes)

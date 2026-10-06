@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using CSharpEssentials.Tests.Generators;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 
 namespace CSharpEssentials.Tests.Endpoints;
 
@@ -515,6 +516,54 @@ public class EndpointsAnalyzerTests
         string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
         registry.Should().NotContain("Sample.Api.Case");
         registry.Should().Contain("global::Sample.Api.ListVersions").And.Contain("global::Sample.Api.Container.NestedEndpoint");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1009_When_Referenced_Registry_Names_Collide()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [RegistryReference("Foo.Api"), RegistryReference("FooApi")],
+            "namespace Sample.Host; public sealed class Marker;");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE1009").Subject;
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
+        diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Be(
+            "Assemblies 'Foo.Api', 'FooApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.FooApiEndpointRegistry', so MapAllEndpoints skips them; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE1009_When_Project_Does_Not_Generate_Aggregate()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "Sample.Library",
+            OutputKind.DynamicallyLinkedLibrary,
+            [RegistryReference("Foo.Api"), RegistryReference("FooApi")],
+            "namespace Sample.Library; public sealed class Marker;");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE1009");
+    }
+
+    private static CompilationReference RegistryReference(string assemblyName)
+    {
+        string source = $$"""
+            using CSharpEssentials.Endpoints;
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Routing;
+
+            namespace {{assemblyName.Replace(".", "_", StringComparison.Ordinal)}}Endpoints;
+
+            public sealed class Ping : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/ping", () => "pong");
+            }
+            """;
+        return EndpointCompilations.Run(EndpointCompilations.Create(assemblyName, OutputKind.DynamicallyLinkedLibrary, source)).OutputCompilation.ToMetadataReference();
     }
 
     private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source, params string[] additionalSources) =>
