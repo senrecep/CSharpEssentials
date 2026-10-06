@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-aspnetcore
-description: Use when wiring CSharpEssentials into ASP.NET Core — AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumBinding/UseEnumBinding for [StringEnum] query/route values, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.
+description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumBinding/UseEnumBinding for [StringEnum] query/route values, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.
 ---
 
 # CSharpEssentials.AspNetCore
@@ -47,7 +47,7 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler() + UseStatusCodePages()
 | `Instance` | `ProblemInstanceFormat.Path` (`"/path"`) | `MethodAndPath` |
 | `ErrorFields` | `ProblemErrorFields.Codes \| ValidationErrors` | `All` |
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Rfc7231` |
-| `ExposeExceptionDetails` | `false` | — |
+| `ExposeExceptionDetails` | `false` | N/A |
 
 `errors` holds only `ErrorType.Validation` errors as `{ code, description }` (`ValidationErrorsFormat.List`).
 
@@ -180,4 +180,4 @@ v2.MapGet("/health", () => Results.Ok());          // GET /v2/health
 - Keep `ExposeExceptionDetails` off outside development; never put raw exception messages in `ExceptionProblem.Detail`
 - `ToProblemResult` / `ToActionResult` return `EnhancedProblemHttpResult` / `EnhancedProblemObjectResult`, not `ProblemHttpResult` / `BadRequestObjectResult`
 - Apply `ResultEndpointFilter` at the group level, not per endpoint
-- `error.Description` is the field name — not `error.Message`
+- `error.Description` is the field name, not `error.Message`

@@ -19,33 +19,33 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 | Package | Description | Docs | NuGet |
 |---------|-------------|------|-------|
-| `CSharpEssentials` | Meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http, Time | [📖](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
-| `CSharpEssentials.Results` | `Result<T>` — railway-oriented error handling without exceptions | [📖](examples/Examples.Results/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
-| `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata | [📖](examples/Examples.Errors/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
-| `CSharpEssentials.Maybe` | `Maybe<T>` — explicit optionals, no null reference exceptions | [📖](examples/Examples.Maybe/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
-| `CSharpEssentials.Any` | `Any<T1,T2,...>` — type-safe discriminated unions | [📖](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
-| `CSharpEssentials.These` | `These<TError,TValue>` — 3-state union: Left, Right, Both (error + value simultaneously) | [📖](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
-| `CSharpEssentials.Core` | String/GUID/collection utilities | [📖](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
-| `CSharpEssentials.Enums` | `[StringEnum]` source generator — AOT-safe enum↔string | [📖](examples/Examples.Enums/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
-| `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [📖](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
-| `CSharpEssentials.Mediator` | CQRS pipeline behaviors: validation, logging, exception handling, caching, transactions | [📖](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
-| `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [📖](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
-| `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [📖](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
-| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, Swagger versioning | [📖](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
-| `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001–CSE1011 | [📖](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
-| `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001–CSE2009 | [📖](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
-| `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [📖](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
-| `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [📖](CSharpEssentials.Resilience/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
-| `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [📖](examples/Examples.Json/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
-| `CSharpEssentials.RequestResponseLogging` | Request/response body logging middleware | [📖](examples/Examples.RequestResponseLogging/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
-| `CSharpEssentials.GcpSecretManager` | GCP Secret Manager → `IConfiguration` provider | [📖](examples/Examples.GcpSecretManager/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
-| `CSharpEssentials.Time` | Testable `IDateTimeProvider` wrapping `TimeProvider` | [📖](examples/Examples.Time/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
-| `CSharpEssentials.Validation` | High-performance model-first validation with `Result<T>` integration | [📖](CSharpEssentials.Validation/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Validation.svg)](https://www.nuget.org/packages/CSharpEssentials.Validation) |
-| `CSharpEssentials.Clone` | `ICloneable<T>` — typed deep-copy for entity collections | [📖](examples/Examples.Clone/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
+| `CSharpEssentials` | Meta-package: Results, Errors, Maybe, Any, These, Rules, Core, Enums, Entity, Clone, Json, Http, Time | [Docs](examples/Examples.Main/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials) |
+| `CSharpEssentials.Results` | `Result<T>`: railway-oriented error handling without exceptions | [Docs](examples/Examples.Results/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Results.svg)](https://www.nuget.org/packages/CSharpEssentials.Results) |
+| `CSharpEssentials.Errors` | Structured `Error` values with type, code, description, metadata | [Docs](examples/Examples.Errors/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Errors.svg)](https://www.nuget.org/packages/CSharpEssentials.Errors) |
+| `CSharpEssentials.Maybe` | `Maybe<T>`: explicit optionals, no null reference exceptions | [Docs](examples/Examples.Maybe/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Maybe.svg)](https://www.nuget.org/packages/CSharpEssentials.Maybe) |
+| `CSharpEssentials.Any` | `Any<T1,T2,...>`: type-safe discriminated unions | [Docs](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
+| `CSharpEssentials.These` | `These<TError,TValue>`: 3-state union with Left, Right, Both (error + value simultaneously) | [Docs](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
+| `CSharpEssentials.Core` | String/GUID/collection utilities | [Docs](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
+| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](examples/Examples.Enums/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
+| `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
+| `CSharpEssentials.Mediator` | CQRS pipeline behaviors: validation, logging, exception handling, caching, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
+| `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
+| `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
+| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, Swagger versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1011 | [Docs](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
+| `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001 to CSE2009 | [Docs](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
+| `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [Docs](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
+| `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [Docs](CSharpEssentials.Resilience/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
+| `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [Docs](examples/Examples.Json/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
+| `CSharpEssentials.RequestResponseLogging` | Request/response body logging middleware | [Docs](examples/Examples.RequestResponseLogging/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
+| `CSharpEssentials.GcpSecretManager` | GCP Secret Manager → `IConfiguration` provider | [Docs](examples/Examples.GcpSecretManager/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
+| `CSharpEssentials.Time` | Testable `IDateTimeProvider` wrapping `TimeProvider` | [Docs](examples/Examples.Time/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
+| `CSharpEssentials.Validation` | High-performance model-first validation with `Result<T>` integration | [Docs](CSharpEssentials.Validation/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Validation.svg)](https://www.nuget.org/packages/CSharpEssentials.Validation) |
+| `CSharpEssentials.Clone` | `ICloneable<T>`: typed deep-copy for entity collections | [Docs](examples/Examples.Clone/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)** — Complete guide to every package, method, and pattern in the ecosystem. Covers all 23 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers all 23 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
 
 ## Installation
 
@@ -60,7 +60,7 @@ dotnet add package CSharpEssentials.Mediator
 
 ## Core Concepts
 
-### Result\<T\> — Railway-Oriented Error Handling
+### Result\<T\>: Railway-Oriented Error Handling
 
 Stop throwing exceptions for expected failures. Chain operations that short-circuit on the first error.
 
@@ -88,7 +88,7 @@ Result<UserDto> result = GetUser(id)
     .Map(user => new UserDto(user));
 ```
 
-### Maybe\<T\> — Explicit Optionals
+### Maybe\<T\>: Explicit Optionals
 
 Model the absence of a value without null references.
 
@@ -104,9 +104,9 @@ string displayName = Maybe.From(user)
     .GetValueOrDefault("ANONYMOUS");
 ```
 
-### Any\<T1,T2,...\> — Discriminated Unions
+### Any\<T1,T2,...\>: Discriminated Unions
 
-A value that is exactly one of several types — exhaustively matched at compile time.
+A value that is exactly one of several types, exhaustively matched at compile time.
 
 ```csharp
 Any<Circle, Rectangle, Triangle> shape = new Circle(radius: 5);
@@ -119,7 +119,7 @@ AnyActionResult<double> area = shape.Match(
 );
 ```
 
-### Rules — Composable Validation
+### Rules: Composable Validation
 
 Build complex validation logic from simple, reusable rules that return `Result<T>`.
 
@@ -135,7 +135,7 @@ Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And()
 Result adminOrMod = RuleEngine.Evaluate(new[] { isAdmin, isModerator }.Or(), user);
 ```
 
-### AspNetCore — Result → HTTP, Automatically
+### AspNetCore: Result → HTTP, Automatically
 
 Map `Result<T>` to correct HTTP status codes without writing any error-mapping boilerplate.
 
@@ -162,7 +162,7 @@ public Result<Order> PlaceOrder(Guid productId, int quantity)
         .Then(p => CreateOrder(p, quantity));
 ```
 
-### Endpoints — Source-Generated Minimal APIs
+### Endpoints: Source-Generated Minimal APIs
 
 Each endpoint is a type with a static `Map` method. A source generator collects them into one registry per assembly, so mapping uses no reflection and works with Native AOT.
 
@@ -186,7 +186,7 @@ public sealed class GetProduct : IEndpoint
 app.MapAllEndpoints(); // every generated registry of the app and its referenced assemblies
 ```
 
-### DependencyInjection — Attribute-Based Registration
+### DependencyInjection: Attribute-Based Registration
 
 Mark a class with its lifetime. A source generator writes the registrations, and decorators are applied in order.
 
@@ -203,8 +203,8 @@ builder.Services.AddAllServices(); // every generated registry of the app and it
 
 ## What's new in 4.1
 
-- New package `CSharpEssentials.Endpoints`: source-generated endpoint registries (`IEndpoint`, `IEndpointGroup`, `[EndpointGroup]`), a reflection fallback (`MapEndpointsFromAssemblies`), `RouteOf<TEndpoint>`, `RequireRoles`/`RequirePolicies`/`RequireAuthSchemes`, and analyzers CSE1001–CSE1011 with a code fix for CSE1004. See the [Readme](CSharpEssentials.Endpoints/Readme.MD), including a migration guide from Carter.
-- New package `CSharpEssentials.DependencyInjection`: `[RegisterScoped]`/`[RegisterSingleton]`/`[RegisterTransient]` with keys, `As` and `Strategy`, `[Decorates]`, runtime `Decorate`/`TryDecorate`, a reflection fallback (`AddServicesFromAssemblies`), and analyzers CSE2001–CSE2009 with a code fix for CSE2003. See the [Readme](CSharpEssentials.DependencyInjection/Readme.MD), including a migration guide from Scrutor.
+- New package `CSharpEssentials.Endpoints`: source-generated endpoint registries (`IEndpoint`, `IEndpointGroup`, `[EndpointGroup]`), a reflection fallback (`MapEndpointsFromAssemblies`), `RouteOf<TEndpoint>`, `RequireRoles`/`RequirePolicies`/`RequireAuthSchemes`, and analyzers CSE1001 to CSE1011 with a code fix for CSE1004. See the [Readme](CSharpEssentials.Endpoints/Readme.MD), including a migration guide from Carter.
+- New package `CSharpEssentials.DependencyInjection`: `[RegisterScoped]`/`[RegisterSingleton]`/`[RegisterTransient]` with keys, `As` and `Strategy`, `[Decorates]`, runtime `Decorate`/`TryDecorate`, a reflection fallback (`AddServicesFromAssemblies`), and analyzers CSE2001 to CSE2009 with a code fix for CSE2003. See the [Readme](CSharpEssentials.DependencyInjection/Readme.MD), including a migration guide from Scrutor.
 - `CSharpEssentials.AspNetCore`: `MapVersionedGroup(version)` and the `WithValidation<T>()` endpoint filter for `CSharpEssentials.Validation` validators.
 - `CSharpEssentials.Core`: `IsBetween` (inclusive) and `IsBetweenExclusive` for any `IComparable<T>`.
 - `CSharpEssentials.Time`: `NextDayOfWeek`/`PreviousDayOfWeek` for `DateTime` and `DateOnly`, and `GetAge(DateOnly, DateOnly)`/`GetAge(DateOnly, IDateTimeProvider)`.
@@ -279,7 +279,7 @@ Other ProblemDetails changes:
 | Changed behavior | 3.x | 4.0 default | Restore with |
 |---|---|---|---|
 | EF Core `ConfigureEnumConventions` stored value | `Core.ToSnakeCase()` (`HTTPStatus` → `httpstatus`, `Value1` → `value_1`) | JSON policy (`http_status`, `value1`) | `ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, assemblies)` |
-| Swagger enum schema names | `Core.ToSnakeCase()` | JSON policy names | — (schema follows JSON) |
+| Swagger enum schema names | `Core.ToSnakeCase()` | JSON policy names | None (schema follows JSON) |
 
 Names with a single word or plain PascalCase did not change. Enums with acronyms or digits in member names did. When reading, the new EF converter also accepts the old stored values, so existing rows still load.
 

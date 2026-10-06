@@ -12,6 +12,6 @@ description: C# coding conventions for CSharpEssentials. Use when writing, revie
 - Use `readonly` on fields that are set only in constructors.
 - Extension methods live in a static class named `<Subject>Extensions` in the appropriate package.
 - No `dynamic`. No `object` as a catch-all return type when generics work.
-- Functional types (Result, Maybe, Any) use implicit operators for ergonomic construction — maintain this pattern in new types.
+- Functional types (Result, Maybe, Any) use implicit operators for ergonomic construction; maintain this pattern in new types.
 - Record types are preferred over classes for immutable value objects.
-- `TreatWarningsAsErrors=true` is global — never suppress a warning without understanding why it fires.
+- `TreatWarningsAsErrors=true` is global; never suppress a warning without understanding why it fires.

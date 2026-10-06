@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-rules
-description: Use when composing business validation logic — define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(); branch with RuleEngine.If().
+description: Use when composing business validation logic. Define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(); branch with RuleEngine.If().
 ---
 
 # CSharpEssentials.Rules
@@ -25,7 +25,7 @@ using CSharpEssentials.Errors;       // Error
 
 ## Three Definition Styles
 
-All styles are interchangeable — mix and match freely when composing.
+All styles are interchangeable; mix and match freely when composing.
 
 ### 1. Class (injectable, unit-testable)
 
@@ -85,7 +85,7 @@ Result r4 = RuleEngine.Evaluate(
 
 Compose first using extension methods on arrays, then evaluate with `RuleEngine.Evaluate`.
 
-### And — all must pass (collects all failures)
+### And: all must pass (collects all failures)
 
 ```csharp
 // Class instances
@@ -109,7 +109,7 @@ Result andResult3 = RuleEngine.Evaluate(
     ctx);
 ```
 
-### Or — at least one must pass
+### Or: at least one must pass
 
 ```csharp
 Result orResult = RuleEngine.Evaluate(
@@ -117,7 +117,7 @@ Result orResult = RuleEngine.Evaluate(
     ctx);
 ```
 
-### Linear — stop on first failure
+### Linear: stop on first failure
 
 ```csharp
 // Class instances
@@ -133,7 +133,7 @@ Result pipeline = RuleEngine.Evaluate(
     ctx);
 ```
 
-### Conditional — if/then/else branching
+### Conditional: if/then/else branching
 
 ```csharp
 // Rule as condition
@@ -222,7 +222,7 @@ result.Switch(
 
 ## Predicate Factories
 
-Create `IRule<T>` or `IAsyncRule<T>` directly from a predicate — no class needed.
+Create `IRule<T>` or `IAsyncRule<T>` directly from a predicate; no class needed.
 
 ```csharp
 // Static error
@@ -253,6 +253,6 @@ Result composed = RuleEngine.Evaluate(
 - `array.And()` collects **all** failures; `array.Linear()` stops at the **first** failure
 - Prefer `.Next()` for readable linear pipelines over `.Linear()` with an array
 - No explicit `.ToRule()` needed when passing `Func<>` to `RuleEngine.Evaluate` or to `.And()/.Or()` on `Func[]`
-- Group domain errors in static classes — rules read like domain language
-- Test each `IRule<T>` in isolation: `Evaluate(context)` → assert Result — no mocking needed
+- Group domain errors in static classes so rules read like domain language
+- Test each `IRule<T>` in isolation: `Evaluate(context)` → assert Result. No mocking needed
 - Use class rules when the rule needs DI; use `Func` fields when it doesn't

@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-resilience
-description: Use when adding transient fault handling around Result-based operations — ResiliencePolicy/ResiliencePolicy<T> retry, timeout, circuit breaker and fallback on Polly.Core v8, RetryIfFailed with an optional shouldRetry predicate, Result-aware retry filtering and caller cancellation that throws OperationCanceledException.
+description: Use when adding transient fault handling around Result-based operations. Covers ResiliencePolicy/ResiliencePolicy<T> retry, timeout, circuit breaker and fallback on Polly.Core v8, RetryIfFailed with an optional shouldRetry predicate, Result-aware retry filtering and caller cancellation that throws OperationCanceledException.
 ---
 
 # CSharpEssentials.Resilience
@@ -27,11 +27,11 @@ using CSharpEssentials.Resilience;
 
 | Scenario | Use this package? |
 |----------|-------------------|
-| Transient fault handling (retry, timeout, circuit breaker) | ✅ Yes |
-| Composing resilience policies around `Result<T>` pipelines | ✅ Yes |
-| Fallback values after retries are exhausted | ✅ Yes |
-| HTTP-specific resilience (redirects, status code mapping) | ❌ No — use `CSharpEssentials.Http` |
-| Non-Result exception-only retry logic | ⚠️ Consider Polly directly for simpler scenarios |
+| Transient fault handling (retry, timeout, circuit breaker) | Yes |
+| Composing resilience policies around `Result<T>` pipelines | Yes |
+| Fallback values after retries are exhausted | Yes |
+| HTTP-specific resilience (redirects, status code mapping) | No. Use `CSharpEssentials.Http` |
+| Non-Result exception-only retry logic | Consider Polly directly for simpler scenarios |
 
 ---
 

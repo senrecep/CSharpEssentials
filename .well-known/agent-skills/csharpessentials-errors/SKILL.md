@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-errors
-description: Use when creating structured error values — Error factory methods (Failure/Validation/NotFound/Conflict/Unauthorized/Forbidden/Unexpected), ErrorMetadata for contextual data, HTTP status mapping, and domain-specific static error class hierarchies.
+description: Use when creating structured error values. Covers Error factory methods (Failure/Validation/NotFound/Conflict/Unauthorized/Forbidden/Unexpected), ErrorMetadata for contextual data, HTTP status mapping, and domain-specific static error class hierarchies.
 ---
 
 # CSharpEssentials.Errors
@@ -71,7 +71,7 @@ ErrorType et = 401.ToErrorType();                       // Unauthorized
 
 ## Domain-Specific Error Hierarchies
 
-`Error` is a `readonly record struct` — it cannot be subclassed. Use static classes per aggregate:
+`Error` is a `readonly record struct`, so it cannot be subclassed. Use static classes per aggregate:
 
 ```csharp
 public static class UserErrors
@@ -122,7 +122,7 @@ throw new DomainException(Error.Validation("Order.Invalid", "Total must be great
 ## Best Practices
 
 - Group errors in static classes per aggregate for IDE autocomplete + type-safe codes
-- Use `error.Description` — the field is named `Description`, not `Message`
-- `ErrorMetadata` uses `.AddMetadata()` — there is no `.WithMetadata()`
+- Use `error.Description`; the field is named `Description`, not `Message`
+- `ErrorMetadata` uses `.AddMetadata()`; there is no `.WithMetadata()`
 - Prefer factory methods (parameterized) over static readonly fields when the message includes runtime data
-- `Error` is a value type — safe to use as dictionary key, in switch expressions, etc.
+- `Error` is a value type, safe to use as dictionary key, in switch expressions, etc.

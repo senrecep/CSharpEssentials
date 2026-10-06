@@ -4,11 +4,11 @@ Structured, type-safe error handling for .NET. Errors are data, not exceptions.
 
 ## Features
 
-- **Error Struct** — Value-type error with code, description, type, and metadata.
-- **Standard Error Types** — Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected.
-- **ErrorMetadata** — Attach contextual data to errors fluently.
-- **Exception Bridge** — Convert exceptions to `Error` or throw `DomainException` / `EnhancedValidationException`.
-- **HTTP Mapping** — Built-in conversion between `ErrorType` and HTTP status codes.
+- **Error Struct**: Value-type error with code, description, type, and metadata.
+- **Standard Error Types**: Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected.
+- **ErrorMetadata**: Attach contextual data to errors fluently.
+- **Exception Bridge**: Convert exceptions to `Error` or throw `DomainException` / `EnhancedValidationException`.
+- **HTTP Mapping**: Built-in conversion between `ErrorType` and HTTP status codes.
 
 ## Installation
 
@@ -137,4 +137,4 @@ public Result PlaceOrder(Cart cart, decimal balance)
 }
 ```
 
-This pattern provides discoverability (IDE autocomplete per domain), type-safe error codes, and centralised descriptions — without inheritance.
+This pattern provides discoverability (IDE autocomplete per domain), type-safe error codes, and centralised descriptions, all without inheritance.

@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-core
-description: Use when you need low-level C# helpers — string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), Guider.NewGuid and URL-safe GUID strings, IsBetween/IsBetweenExclusive range checks, collection helpers (IfAdd, WhereIf, WithoutNulls), IfNotNull/IfTrue statements and WithCancellation for tasks.
+description: Use when you need low-level C# helpers. Covers string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), Guider.NewGuid and URL-safe GUID strings, IsBetween/IsBetweenExclusive range checks, collection helpers (IfAdd, WhereIf, WithoutNulls), IfNotNull/IfTrue statements and WithCancellation for tasks.
 ---
 
 # CSharpEssentials.Core
 
-Lightweight C# utility helpers. No functional patterns here — those live in the Results, Errors, Maybe, and Any skills.
+Lightweight C# utility helpers. No functional patterns here; those live in the Results, Errors, Maybe, and Any skills.
 
 ## Installation
 
@@ -95,7 +95,7 @@ string data = await LoadAsync().WithCancellation(ct);
 
 ## Best Practices
 
-- Use `Guider.NewGuid()` for database primary keys — on .NET 9+ it returns time-sortable version 7 GUIDs
+- Use `Guider.NewGuid()` for database primary keys. On .NET 9+ it returns time-sortable version 7 GUIDs
 - `WithoutNulls()` keeps nullable annotations correct, unlike `.Where(x => x != null)`
 - `IfNotNull()` is a statement form; for transforms use `Maybe<T>.Map()` instead
 - `WithCancellation` stops waiting; it does not cancel the underlying task

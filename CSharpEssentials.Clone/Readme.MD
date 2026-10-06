@@ -4,9 +4,9 @@ Type-safe generic cloning for .NET. Provides a strongly-typed `ICloneable<T>` al
 
 ## Features
 
-- **Generic `ICloneable<T>`** — Type-safe cloning interface.
-- **Collection Extensions** — Clone `IEnumerable<T>` and `IQueryable<T>` in one call.
-- **Deep Copy Support** — Compose clones for nested objects.
+- **Generic `ICloneable<T>`**: Type-safe cloning interface.
+- **Collection Extensions**: Clone `IEnumerable<T>` and `IQueryable<T>` in one call.
+- **Deep Copy Support**: Compose clones for nested objects.
 
 ## Installation
 

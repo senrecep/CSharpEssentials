@@ -1,6 +1,6 @@
 # CSharpEssentials.Validation
 
-High-performance, model-first validation library for C#. Zero-reflection, eager evaluation — no expression trees, no deferred builds. Returns `Result<T>` natively.
+High-performance, model-first validation library for C#. Zero-reflection, eager evaluation: no expression trees, no deferred builds. Returns `Result<T>` natively.
 
 ## Installation
 
@@ -42,7 +42,7 @@ if (result.IsFailure)
 }
 ```
 
-> **Sync call site:** `validator.ValidateAsync(command).GetAwaiter().GetResult()` — safe when the validator has no actual async operations (returns a pre-completed `ValueTask`).
+> **Sync call site:** `validator.ValidateAsync(command).GetAwaiter().GetResult()` is safe when the validator has no actual async operations (returns a pre-completed `ValueTask`).
 
 ### Inline (Static) Usage
 
@@ -66,7 +66,7 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 }, cancellationToken);
 ```
 
-`Validator.ValidateAsync` and `Validator<T>` live in the same file (`Validator.cs`) as separate types — one static utility class, one abstract base class. They are independent; the static form does not use `Validator<T>` internally.
+`Validator.ValidateAsync` and `Validator<T>` live in the same file (`Validator.cs`) as separate types: one static utility class and one abstract base class. They are independent; the static form does not use `Validator<T>` internally.
 
 ## Built-in Validators
 
@@ -110,7 +110,7 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 
 ### Nullable Structs (`int?`, `DateTime?`, …)
 
-All comparable validators are available for nullable value types — `null` is silently skipped.
+All comparable validators are available for nullable value types; `null` is skipped.
 
 ## CascadeMode
 
@@ -156,7 +156,7 @@ rules.ForEach(() => model.Tags, (tag, tagRules) =>
 
 ## Native C# Control Flow
 
-`Configure` receives the fully-resolved model instance, so **any C# control flow** works inside it — no DSL, no special API.
+`Configure` receives the fully-resolved model instance, so **any C# control flow** works inside it, with no DSL or special API.
 
 ### Conditional Rules
 
@@ -209,7 +209,7 @@ if (model.ShippingAddress is not null)
 ### Null-Tolerant Member Paths
 
 A `null` intermediate segment in a member path is tolerated: `rules.For(() => model.Address.City)`
-with a `null` `Address` does not throw — the property is treated as `null`, so guards like
+with a `null` `Address` does not throw. The property is treated as `null`, so guards like
 `NotEmpty()` fire normally and null-tolerant validators (`MaxLength`, `EmailAddress`, …) are skipped.
 The same applies to `ForEach` / `ForEachAsync`: a null collection path produces no errors.
 (Only paths whose target type can be null are tolerated; for non-nullable value types the
@@ -219,13 +219,13 @@ The same applies to `ForEach` / `ForEachAsync`: a null collection path produces 
 
 `MustAsync` also accepts `ValueTask<bool>` predicates (extension overload in
 `CSharpEssentials.Validation`), avoiding the `Task` allocation for ValueTask-based sources.
-Async lambdas keep binding to the built-in `Task<bool>` overload — no call-site changes needed.
+Async lambdas keep binding to the built-in `Task<bool>` overload, so call sites do not change.
 
 ### CSharpEssentials.Core Integration
 
 `CSharpEssentials.Core` is transitively available (via `CSharpEssentials.Errors`) and ships a rich set of conditional helpers that compose naturally with validators.
 
-**`IfNotNull` — run rules only when a property has a value:**
+**`IfNotNull`: run rules only when a property has a value.**
 
 ```csharp
 // native C#:
@@ -237,7 +237,7 @@ model.Coupon.IfNotNull(coupon =>
     rules.For(() => coupon.Code).NotEmpty());
 ```
 
-**`WhereIf` — filter a collection before iterating:**
+**`WhereIf`: filter a collection before iterating.**
 
 ```csharp
 // Only validate active items
@@ -246,7 +246,7 @@ rules.ForEach(
     (item, itemRules) => itemRules.For(() => item.Sku).NotEmpty());
 ```
 
-**`WithoutNulls` — skip null elements in a collection:**
+**`WithoutNulls`: skip null elements in a collection.**
 
 ```csharp
 rules.ForEach(
@@ -254,14 +254,14 @@ rules.ForEach(
     (tag, tagRules) => tagRules.For(() => tag).NotEmpty().MaxLength(50));
 ```
 
-**`IsEmpty` / `IsNotEmpty` — readable null/empty guards:**
+**`IsEmpty` / `IsNotEmpty`: readable null/empty guards.**
 
 ```csharp
 if (model.PromoCode.IsNotEmpty())
     rules.For(() => model.PromoCode).Matches(@"^PROMO-\d{4}$");
 ```
 
-**`IfTrue` / `IfFalse` — boolean action helpers:**
+**`IfTrue` / `IfFalse`: boolean action helpers.**
 
 ```csharp
 model.IsInternational.IfTrue(() =>
@@ -341,8 +341,8 @@ public class BusinessRulesValidator(IReadOnlySet<string> blocklist) : Validator<
 **Execution rules:**
 - Validators sharing the same `Order` run **concurrently** within their group.
 - Groups with lower `Order` run **sequentially before** groups with higher `Order`.
-- All groups execute regardless of earlier failures — errors from all groups are accumulated and deduplicated.
-- Default `Order` is `0` — all validators without an override run concurrently in one group.
+- All groups execute regardless of earlier failures. Errors from all groups are accumulated and deduplicated.
+- Default `Order` is `0`, so all validators without an override run concurrently in one group.
 
 ## DI Registration
 
@@ -376,9 +376,9 @@ services.AddMediatorValidationBehavior();
 services.AddMediatorBehaviors(); // registers all behaviors
 ```
 
-`ValidationBehavior` is registered as `Scoped`. It runs all registered `IValidator<TRequest>` implementations, groups them by `Order`, and returns `Result.Failure` if any errors are found — the handler is never invoked.
+`ValidationBehavior` is registered as `Scoped`. It runs all registered `IValidator<TRequest>` implementations, groups them by `Order`, and returns `Result.Failure` if any errors are found. The handler is never invoked.
 
-**Exception isolation:** If a validator throws a non-`OperationCanceledException` exception, `ValidationBehavior` catches it and converts it to a `Result.Failure` error (code `"Validator.Exception"`). `OperationCanceledException` always propagates — cancellation is never swallowed.
+**Exception isolation:** If a validator throws a non-`OperationCanceledException` exception, `ValidationBehavior` catches it and converts it to a `Result.Failure` error (code `"Validator.Exception"`). `OperationCanceledException` always propagates; cancellation is never swallowed.
 
 ## Railway Validation Bindings
 
@@ -439,20 +439,20 @@ Result<User> asyncResult = await GetUserCommand()
 
 > **Benchmarks:** Head-to-head numbers across 23 scenarios (construction, invalid path, valid path,
 > collections, async, nested, cascade) are documented in [BENCHMARKS.md](./BENCHMARKS.md).
-> Key findings: validator construction is **776× faster**, invalid paths are **5–8× faster** with
-> **3–5× less memory**, complex/large-collection valid paths beat FV on both time and memory,
+> Key findings: validator construction is **776× faster**, invalid paths are **5-8× faster** with
+> **3-5× less memory**, complex/large-collection valid paths beat FV on both time and memory,
 > and large collections (50 items) run **3× faster** with **27% less allocation**.
 
 | | CSharpEssentials.Validation | FluentValidation |
 |---|---|---|
-| **Rule definition** | `ValueTask Configure(model, rules, ct)` — model is the live instance; sync validators `return ValueTask.CompletedTask` | Constructor — `RuleFor(x => x.Name)` stores expressions |
-| **Conditional rules** | Native `if`/`else`/`switch` — no DSL | `.When(x => ..., () => { ... })` block or per-rule `.When()` chain |
-| **Conditional style** | Standard C# — zero extra API to learn | Dedicated `When`, `Unless`, `WhenAsync`, `UnlessAsync` methods |
+| **Rule definition** | `ValueTask Configure(model, rules, ct)`: model is the live instance; sync validators `return ValueTask.CompletedTask` | Constructor: `RuleFor(x => x.Name)` stores expressions |
+| **Conditional rules** | Native `if`/`else`/`switch`, no DSL | `.When(x => ..., () => { ... })` block or per-rule `.When()` chain |
+| **Conditional style** | Standard C#, no extra API to learn | Dedicated `When`, `Unless`, `WhenAsync`, `UnlessAsync` methods |
 | **Property name** | Extracted from `CallerArgumentExpression` at compile time | Extracted from `Expression<Func<T,TProperty>>` at compile time |
-| **Reflection** | Zero — no expression trees, no reflection at runtime | Expression trees at rule-definition time; compiled to delegates |
+| **Reflection** | None: no expression trees, no reflection at runtime | Expression trees at rule-definition time; compiled to delegates |
 | **AOT / NativeAOT** | Fully compatible | Expression tree compilation can cause issues |
 | **Async rules** | `MustAsync`, `ForEachAsync`, `SetValidatorAsync`; `ValidateAsync` returns `ValueTask<Result<T>>` | `MustAsync`, `WhenAsync`; `ValidateAsync` returns `Task<ValidationResult>` |
-| **Result type** | Returns `Result<T>` natively (railway-oriented) | Returns `ValidationResult` — separate mapping needed |
+| **Result type** | Returns `Result<T>` natively (railway-oriented) | Returns `ValidationResult`; separate mapping needed |
 | **Error type** | Structured `Error` (code, description, type, metadata) | `ValidationFailure` (PropertyName, ErrorMessage, …) |
 | **DI lifetime** | Scoped by default; `Singleton`-safe | Typically `Singleton` (stateless by design) |
 
@@ -460,9 +460,9 @@ Result<User> asyncResult = await GetUserCommand()
 
 FluentValidation's constructor-based design forces rule registration **without a model instance**. This means:
 
-- You cannot write `if (model.X) { ... }` in the constructor — the model doesn't exist yet.
+- You cannot write `if (model.X) { ... }` in the constructor, because the model doesn't exist yet.
 - The `When()` DSL exists solely to compensate for this limitation.
-- Every developer must learn an extra API layer that simply reimplements what C# `if` already provides.
+- Every developer must learn an extra API layer that reimplements what C# `if` already provides.
 
 By passing `model` directly into `Configure`, CSharpEssentials.Validation eliminates the need for `When`/`Unless` entirely. Branching logic is written in idiomatic C#, readable by anyone, debuggable with standard tooling, and refactorable without ceremony.
 
@@ -478,7 +478,7 @@ The trade-off: a new `RuleContext<T>` is created per `ValidateAsync` call. This 
 ### FluentValidation Disadvantages
 
 - Cannot use plain `if` for conditional rules without DSL
-- `ValidationResult` is not railway-oriented — requires manual `Result<T>` mapping
+- `ValidationResult` is not railway-oriented and requires manual `Result<T>` mapping
 - Expression trees limit Native AOT compatibility
 - `When()` blocks create implicit coupling between rule registration and condition evaluation
 

@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-entity
-description: Use when building DDD domain models — EntityBase<TId> for aggregate roots with audit fields and domain events (Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> for the MarkAsDeleted/Restore/MarkAsHardDeleted lifecycle, and IDomainEvent with [DomainEventTiming] for publish timing.
+description: Use when building DDD domain models. Covers EntityBase<TId> for aggregate roots with audit fields and domain events (Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> for the MarkAsDeleted/Restore/MarkAsHardDeleted lifecycle, and IDomainEvent with [DomainEventTiming] for publish timing.
 ---
 
 # CSharpEssentials.Entity
@@ -98,8 +98,8 @@ order.ClearDomainEvents();
 
 ## Best Practices
 
-- Call `Raise()` only inside entity methods — keep domain events encapsulated in the aggregate
-- `DomainEvents` is a **property** — do not call `GetDomainEvents()` (doesn't exist)
-- Audit fields are `UpdatedAt`/`UpdatedBy` — **not** `ModifiedAt`/`ModifiedBy`
+- Call `Raise()` only inside entity methods to keep domain events encapsulated in the aggregate
+- `DomainEvents` is a **property**; do not call `GetDomainEvents()` (doesn't exist)
+- Audit fields are `UpdatedAt`/`UpdatedBy`, **not** `ModifiedAt`/`ModifiedBy`
 - `MarkAsDeleted()` takes **two parameters**: `(DateTimeOffset deletedAt, string deletedBy)`
 - Use `DomainEventTiming.BeforeSave` for events that must be processed before the transaction commits

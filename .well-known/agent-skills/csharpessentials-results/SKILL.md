@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-results
-description: Use when handling operation outcomes without exceptions — Result and Result<T> for success/failure, railway-oriented chaining with Then/ThenAsync/Ensure, Match for consumption, and Result.And/Or for combining multiple results.
+description: Use when handling operation outcomes without exceptions. Covers Result and Result<T> for success/failure, railway-oriented chaining with Then/ThenAsync/Ensure, Match for consumption, and Result.And/Or for combining multiple results.
 ---
 
 # CSharpEssentials.Results
@@ -56,7 +56,7 @@ if (result.IsSuccess)
 }
 ```
 
-## Chaining — railway-oriented
+## Chaining: railway-oriented
 
 ```csharp
 // Then: transform value, short-circuits on failure
@@ -79,7 +79,7 @@ Result<User> validated = await GetUserAsync(id)
     .EnsureAsync(u => IsActiveAsync(u), Error.Validation("User.Inactive", "Account is inactive."));
 ```
 
-## Consuming — Match
+## Consuming: Match
 
 ```csharp
 string msg = result.Match(
@@ -131,7 +131,7 @@ await GetValueTaskResultAsync().TapIfAsync(true, async v => await LogAsync(v));
 ## Best Practices
 
 - Never access `.Value` without checking `.IsSuccess` first
-- `onError` in `Match` receives `Error[]` (array) — not a single `Error`
+- `onError` in `Match` receives `Error[]` (array), not a single `Error`
 - `Then()` short-circuits: once a failure occurs, subsequent `Then()` calls are skipped
 - Prefer implicit conversions (`return value;`, `return Error.NotFound(...);`); use `Result.Success(value)`/`Result.Failure<T>(error)` only where the target type cannot be inferred. Keep `Result.Success()` for non-generic success
 - Use `Ensure()` to add guard conditions without breaking the chain

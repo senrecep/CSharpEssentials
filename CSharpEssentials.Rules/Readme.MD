@@ -4,13 +4,13 @@ Composable, functional rule engine for .NET. Define business logic as small, reu
 
 ## Features
 
-- **Three definition styles** — Class, `Func` field, or inline lambda: all are first-class citizens.
-- **No boilerplate conversions** — Pass functions directly to `RuleEngine`; no explicit `.ToRule()` required at call sites.
-- **Linear Sequences** — Run rules in order, stop on first failure.
-- **Conditional Rules** — If/Then/Else branching.
-- **And / Or Logic** — All must pass, or at least one must pass.
-- **Async Support** — First-class async rules.
-- **Result Integration** — Built on `CSharpEssentials.Results`.
+- **Three definition styles**: Class, `Func` field, or inline lambda. All are first-class.
+- **No boilerplate conversions**: Pass functions directly to `RuleEngine`; no explicit `.ToRule()` required at call sites.
+- **Linear Sequences**: Run rules in order, stop on first failure.
+- **Conditional Rules**: If/Then/Else branching.
+- **And / Or Logic**: All must pass, or at least one must pass.
+- **Async Support**: First-class async rules.
+- **Result Integration**: Built on `CSharpEssentials.Results`.
 
 ## Installation
 
@@ -20,7 +20,7 @@ dotnet add package CSharpEssentials.Rules
 
 ## Rule Definition Styles
 
-There are three ways to define a rule. All styles are interchangeable — mix and match freely when composing.
+There are three ways to define a rule. All styles are interchangeable and can be mixed freely when composing.
 
 ### 1. Class (recommended for complex or injectable rules)
 
@@ -46,7 +46,7 @@ public sealed class LicenseRule : IRule<UserContext>
 
 ### 2. `Func` field (reusable, no class needed)
 
-Declare rules as `Func<TContext, Result>` fields or variables. They can be stored, passed around, and used anywhere an `IRule<TContext>` is expected — with or without an explicit `.ToRule()` call.
+Declare rules as `Func<TContext, Result>` fields or variables. They can be stored, passed around, and used anywhere an `IRule<TContext>` is expected, with or without an explicit `.ToRule()` call.
 
 ```csharp
 // Defined once, reused anywhere
@@ -60,7 +60,7 @@ static Result CheckEmail(UserContext ctx) =>
 
 ### 3. Inline lambda (best for one-off or ad-hoc composition)
 
-Write the rule directly at the call site. No variable, no class — maximum density for simple checks.
+Write the rule directly at the call site. No variable, no class: maximum density for simple checks.
 
 ```csharp
 Result result = RuleEngine.Evaluate(
@@ -98,7 +98,7 @@ Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
 
 All three styles compose freely. Mix class instances, `Func` variables, and lambdas in the same call.
 
-### And — all must pass (collects all failures)
+### And: all must pass (collects all failures)
 
 ```csharp
 // Using class instances
@@ -122,7 +122,7 @@ Result andResult3 = RuleEngine.Evaluate(
     ctx);
 ```
 
-### Or — at least one must pass
+### Or: at least one must pass
 
 ```csharp
 // Func array — direct, no conversion
@@ -131,7 +131,7 @@ Result orResult = RuleEngine.Evaluate(
     ctx);
 ```
 
-### Linear — stop on first failure
+### Linear: stop on first failure
 
 ```csharp
 // Class instances
@@ -147,7 +147,7 @@ Result pipeline = RuleEngine.Evaluate(
     ctx);
 ```
 
-### Conditional — if/then/else branching
+### Conditional: if/then/else branching
 
 ```csharp
 // Class instances
@@ -249,9 +249,9 @@ result.Switch(
 // [Validation] Registration.NoLicense: A valid driver's license is required.
 ```
 
-Rules return `Result` / `Result<T>` — the same type used throughout CSharpEssentials — so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
+Rules return `Result` / `Result<T>`, the same type used throughout CSharpEssentials, so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
 
-### FromPredicate / FromPredicateAsync — Inline Rules Without Classes
+### FromPredicate / FromPredicateAsync: Inline Rules Without Classes
 
 ```csharp
 // Static error — reuse the same error for any failing context

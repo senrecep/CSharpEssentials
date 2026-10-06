@@ -4,10 +4,10 @@ Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 
 ## Features
 
-- **Comprehensive Logging** — Request/Response bodies, headers, path, method, timing, sizes.
-- **Configurable Fields** — Choose exactly what to log via `LoggingOptions`.
-- **Path Filtering** — Ignore specific paths (e.g., health checks).
-- **Attributes** — `[SkipRequestLogging]`, `[SkipResponseLogging]`, `[SkipRequestResponseLogging]` for fine-grained control.
+- **Detailed Logging**: Request/Response bodies, headers, path, method, timing, sizes.
+- **Configurable Fields**: Choose exactly what to log via `LoggingOptions`.
+- **Path Filtering**: Ignore specific paths (e.g., health checks).
+- **Attributes**: `[SkipRequestLogging]`, `[SkipResponseLogging]`, `[SkipRequestResponseLogging]` for fine-grained control.
 
 ## Installation
 

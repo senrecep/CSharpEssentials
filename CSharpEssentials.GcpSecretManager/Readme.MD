@@ -4,11 +4,11 @@ Integrates Google Cloud Secret Manager into the .NET Configuration system. Load 
 
 ## Features
 
-- **Configuration Integration** — Secrets appear as standard config keys.
-- **Multi-Project** — Load from multiple GCP projects.
-- **AppSettings Support** — Configure via `appsettings.json` or fluent API.
-- **Batch Processing** — Efficient retrieval with configurable batch sizes.
-- **Transient Retry** — Listing and per-secret access are retried on transient gRPC failures (uses `CSharpEssentials.Resilience`).
+- **Configuration Integration**: Secrets appear as standard config keys.
+- **Multi-Project**: Load from multiple GCP projects.
+- **AppSettings Support**: Configure via `appsettings.json` or fluent API.
+- **Batch Processing**: Efficient retrieval with configurable batch sizes.
+- **Transient Retry**: Listing and per-secret access are retried on transient gRPC failures (uses `CSharpEssentials.Resilience`).
 
 ## Installation
 

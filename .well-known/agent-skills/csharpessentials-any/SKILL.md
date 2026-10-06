@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-any
-description: Use when a method can return one of several distinct types — Any<T0,T1> through Any<T0,…,T7> as a type-safe discriminated union, implicit assignment from any branch type, Match()/Switch() with one handler per branch, IsFirst/GetFirst, Is/As/TryAs, and Partition/Traverse for sequences.
+description: Use when a method can return one of several distinct types. Covers Any<T0,T1> through Any<T0,…,T7> as a type-safe discriminated union, implicit assignment from any branch type, Match()/Switch() with one handler per branch, IsFirst/GetFirst, Is/As/TryAs, and Partition/Traverse for sequences.
 ---
 
 # CSharpEssentials.Any
 
-`Any<T0,T1,...>` is a discriminated union — a value that is exactly one of several possible types at runtime. Replaces `object`-typed returns and eliminates unsafe casting.
+`Any<T0,T1,...>` is a discriminated union: a value that is exactly one of several possible types at runtime. Replaces `object`-typed returns and eliminates unsafe casting.
 
 ## Installation
 
@@ -101,4 +101,4 @@ public IResult PlaceOrderEndpoint(PlaceOrderRequest request) =>
 - Use `Any<T0,T1>` over `Result<T>` when the error branches carry distinct, typed data
 - Pass a handler for every branch to `Match()`/`Switch()`; a missing handler is not a compile error, it returns `NotExecuted`
 - `IsFirst`/`GetFirst()` or `TryAs<…>()` are the escape hatch for cases where `Match()` is too verbose
-- Avoid `object`-typed union members — defeats the purpose
+- Avoid `object`-typed union members; they defeat the purpose

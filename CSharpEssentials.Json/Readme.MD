@@ -4,10 +4,10 @@ Enhanced JSON serialization utilities on top of `System.Text.Json`.
 
 ## Features
 
-- **Conditional String Enums** — Enums marked with `[StringEnum]` serialize as strings; others stay as integers.
-- **Multi-Format DateTime** — Deserialize from many date formats automatically.
-- **Polymorphic Serialization** — Serialize abstract types and interfaces with a `$type` discriminator.
-- **Pre-Configured Options** — CamelCase, ignore cycles, ignore nulls, relaxed escaping.
+- **Conditional String Enums**: Enums marked with `[StringEnum]` serialize as strings; others stay as integers.
+- **Multi-Format DateTime**: Deserialize from many date formats automatically.
+- **Polymorphic Serialization**: Serialize abstract types and interfaces with a `$type` discriminator.
+- **Pre-Configured Options**: CamelCase, ignore cycles, ignore nulls, relaxed escaping.
 
 ## Installation
 

@@ -4,9 +4,9 @@ Testable time abstraction built on .NET `TimeProvider`. Decouple your code from 
 
 ## Features
 
-- **IDateTimeProvider** — Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, and `UtcNowTime`.
-- **TimeProvider Integration** — Works with .NET's built-in `TimeProvider` and `FakeTimeProvider` for testing.
-- **DateTime Extensions** — Convert `DateTime` to `DateOnly` and `TimeOnly`, next/previous weekday, age calculation.
+- **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, and `UtcNowTime`.
+- **TimeProvider Integration**: Works with .NET's built-in `TimeProvider` and `FakeTimeProvider` for testing.
+- **DateTime Extensions**: Convert `DateTime` to `DateOnly` and `TimeOnly`, next/previous weekday, age calculation.
 
 ## Installation
 
@@ -43,7 +43,7 @@ builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
 ### Test with FakeDateTimeProvider
 
-`CSharpEssentials.Time` ships a built-in `FakeDateTimeProvider` — no extra package needed.
+`CSharpEssentials.Time` ships a built-in `FakeDateTimeProvider`, so no extra package is needed.
 
 ```csharp
 using CSharpEssentials.Time;

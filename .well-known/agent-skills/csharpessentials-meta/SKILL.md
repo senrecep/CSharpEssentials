@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use — overview of all 23 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 23 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
 ---
 
-# CSharpEssentials — Package Index
+# CSharpEssentials: Package Index
 
-CSharpEssentials is a modular .NET NuGet ecosystem of 23 packages (22 focused packages plus the `CSharpEssentials` meta-package). Each package is independent — take only what you need.
+CSharpEssentials is a modular .NET NuGet ecosystem of 23 packages (22 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
 
 ## Meta-Package
 

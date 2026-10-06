@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-efcore
-description: Use when wiring EF Core with CSharpEssentials domain models — AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage and AddCqrsDbContexts.
+description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage and AddCqrsDbContexts.
 ---
 
 # CSharpEssentials.EntityFrameworkCore
@@ -186,6 +186,6 @@ The write context is pooled with change tracking; the read context is pooled wit
 ## Best Practices
 
 - Pick one domain event path: `DomainEventInterceptor` or `BaseDbContext.DispatchDomainEventsOnSaveChanges`
-- `SoftDeleteAsync` skips audit and domain events — use `MarkAsDeleted` + `SaveChanges` when those must run
+- `SoftDeleteAsync` skips audit and domain events; use `MarkAsDeleted` + `SaveChanges` when those must run
 - `PaginateAsync` issues a COUNT and a data query; pass `includeTotalCount: false` to skip the COUNT
 - Upgrading from 3.x: enum columns change format unless you set `UseLegacySnakeCase = true`

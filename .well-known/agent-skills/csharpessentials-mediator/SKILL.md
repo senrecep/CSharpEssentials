@@ -1,13 +1,13 @@
 ---
 name: csharpessentials-mediator
-description: Use when adding cross-cutting pipeline behaviors to CQRS handlers — ValidationBehavior (CSharpEssentials.Validation, throws EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (auto-converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).
+description: Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation, throws EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (auto-converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).
 ---
 
 # CSharpEssentials.Mediator
 
-Pipeline behaviors for the Mediator source-generator library. Register cross-cutting concerns (validation, logging, caching, transactions) once — they run automatically for every matching handler.
+Pipeline behaviors for the Mediator source-generator library. Register cross-cutting concerns (validation, logging, caching, transactions) once; they run automatically for every matching handler.
 
-> Built on the **Mediator** source-generator NuGet package — not MediatR.
+> Built on the **Mediator** source-generator NuGet package, not MediatR.
 
 ## Installation
 
@@ -37,11 +37,11 @@ builder.Services.AddMediatorCachingBehavior();
 builder.Services.AddMediatorTransactionBehavior();
 ```
 
-Register `ValidationBehavior` first — invalid requests should never reach the handler.
+Register `ValidationBehavior` first: invalid requests should never reach the handler.
 
 ---
 
-## ValidationBehavior — CSharpEssentials.Validation
+## ValidationBehavior (CSharpEssentials.Validation)
 
 Runs registered validators before the handler. On failure, the handler is never invoked. Errors are surfaced based on the handler return type:
 
@@ -49,7 +49,7 @@ Runs registered validators before the handler. On failure, the handler is never 
 |-------------|---------------|
 | `Result` | `Result.Failure(errors)` returned directly |
 | `Result<T>` | `Result<T>.Failure(errors)` returned directly |
-| Any other type | `EnhancedValidationException` thrown — caught by `GlobalExceptionHandler` (400 ProblemDetails) |
+| Any other type | `EnhancedValidationException` thrown, caught by `GlobalExceptionHandler` (400 ProblemDetails) |
 
 ```csharp
 public class CreateOrderValidator : Validator<CreateOrderCommand>
@@ -67,7 +67,7 @@ builder.Services.AddValidatorsFromAssembly(typeof(Program).Assembly);
 
 ---
 
-## LoggingBehavior — ILoggableRequest
+## LoggingBehavior (ILoggableRequest)
 
 Interface hierarchy:
 
@@ -88,11 +88,11 @@ public record SendEmailCommand(string To, string Body)
 
 ---
 
-## ExceptionHandlingBehavior — automatic for Result-returning handlers
+## ExceptionHandlingBehavior: automatic for Result-returning handlers
 
-Registered as a singleton pipeline behavior between `LoggingBehavior` and `CachingBehavior`. When a handler throws, the behavior catches the exception and converts it to `Result.Failure(Error.Exception(ex))` — keeping the caller on the Result railway instead of forcing a try/catch at every call site. `OperationCanceledException` always propagates and is never caught.
+Registered as a singleton pipeline behavior between `LoggingBehavior` and `CachingBehavior`. When a handler throws, the behavior catches the exception and converts it to `Result.Failure(Error.Exception(ex))`. This keeps the caller on the Result railway instead of forcing a try/catch at every call site. `OperationCanceledException` always propagates and is never caught.
 
-No interface needed — the behavior activates automatically for any handler whose `TResponse` is `Result` or `Result<T>`. Handlers returning other types (plain DTOs, etc.) pass through with zero overhead.
+No interface needed: the behavior activates automatically for any handler whose `TResponse` is `Result` or `Result<T>`. Handlers returning other types (plain DTOs, etc.) pass through with zero overhead.
 
 ### Pipeline execution order
 
@@ -143,7 +143,7 @@ if (result.IsFailure)
 
 ---
 
-## CachingBehavior — ICacheable
+## CachingBehavior (ICacheable)
 
 Requires `IDistributedCache` registration.
 
@@ -163,7 +163,7 @@ builder.Services.AddDistributedMemoryCache();
 
 ---
 
-## TransactionBehavior — ITransactionalRequest
+## TransactionBehavior (ITransactionalRequest)
 
 Wraps the handler in a `TransactionScope` created with `TransactionScopeAsyncFlowOption.Enabled` (default isolation level). The scope completes whenever the handler returns, including a failed `Result`; it rolls back only when the handler throws.
 
@@ -177,8 +177,8 @@ public record PlaceOrderCommand(OrderDto Order)
 
 ## Best Practices
 
-- Register `ValidationBehavior` first — invalid requests should never reach the handler
-- `ExceptionHandlingBehavior` requires no setup; it activates automatically for `Result` / `Result<T>` handlers — do not add try/catch inside handlers that already return `Result`
-- Set `CacheFailures = false` — transient failures should not be cached
+- Register `ValidationBehavior` first: invalid requests should never reach the handler
+- `ExceptionHandlingBehavior` requires no setup; it activates automatically for `Result` / `Result<T>` handlers; do not add try/catch inside handlers that already return `Result`
+- Set `CacheFailures = false`; transient failures should not be cached
 - `ITransactionalRequest` only on commands writing to multiple tables in one operation; throw (or let the exception surface) to roll back, because a returned failed `Result` still completes the scope
 - Use `IRequestLoggable` (not `IRequestResponseLoggable`) when the response contains PII

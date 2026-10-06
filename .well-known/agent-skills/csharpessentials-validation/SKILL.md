@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-validation
-description: Use when writing model validation that returns Result<T> — Validator<T> with Configure(model, rules, ct), rules.For(() => model.X).NotEmpty()/MaxLength()/GreaterThan() chains, Must/MustAsync, SetValidatorAsync for nested objects, ForEach/ForEachAsync for collections, native if/switch for conditional rules, Include and Order for composition, AddValidator/AddValidatorsFromAssembly (idempotent), ValidateWith/ValidateWithAsync railway bindings. Also use when migrating from FluentValidation.
+description: Use when writing model validation that returns Result<T>. Covers Validator<T> with Configure(model, rules, ct), rules.For(() => model.X).NotEmpty()/MaxLength()/GreaterThan() chains, Must/MustAsync, SetValidatorAsync for nested objects, ForEach/ForEachAsync for collections, native if/switch for conditional rules, Include and Order for composition, AddValidator/AddValidatorsFromAssembly (idempotent), ValidateWith/ValidateWithAsync railway bindings. Also use when migrating from FluentValidation.
 ---
 
 # CSharpEssentials.Validation

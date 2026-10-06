@@ -4,14 +4,14 @@ Foundational utilities and extensions for everyday .NET development. Zero intern
 
 ## Features
 
-- **String Conversions** — Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
-- **Collection Helpers** — Conditional add, null filtering, random selection, set comparison.
-- **Range Checks** — `IsBetween` / `IsBetweenExclusive` for any `IComparable<T>`.
-- **Functional Extensions** — Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`).
-- **Task Helpers** — `WithCancellation`, `AsTask`, `AsValueTask`.
-- **GUID Utilities** — URL-safe Base64 encoding, Version 7 GUID generation on .NET 9+.
-- **Exception Helpers** — Flatten inner exceptions and messages.
-- **HTTP Constants** — Common status codes as typed constants.
+- **String Conversions**: Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
+- **Collection Helpers**: Conditional add, null filtering, random selection, set comparison.
+- **Range Checks**: `IsBetween` / `IsBetweenExclusive` for any `IComparable<T>`.
+- **Functional Extensions**: Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`).
+- **Task Helpers**: `WithCancellation`, `AsTask`, `AsValueTask`.
+- **GUID Utilities**: URL-safe Base64 encoding, Version 7 GUID generation on .NET 9+.
+- **Exception Helpers**: Flatten inner exceptions and messages.
+- **HTTP Constants**: Common status codes as typed constants.
 
 ## Installation
 

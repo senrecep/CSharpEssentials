@@ -1,6 +1,6 @@
 # Exception Types in CSharpEssentials
 
-CSharpEssentials provides custom exception types that enhance error handling capabilities in your applications. These exceptions are designed to work seamlessly with the functional programming paradigm and the Error management system.
+CSharpEssentials provides custom exception types for error handling. They are designed to work with the functional programming paradigm and the Error management system.
 
 ## Available Exception Types
 

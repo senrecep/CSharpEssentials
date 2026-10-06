@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-maybe
-description: Use when representing optional values explicitly — Maybe<T> as a null-safe container, Maybe.From()/FromTry()/AsMaybe() for creation, HasValue/HasNoValue, Map/Bind chaining, TapNone for None-side effects, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.
+description: Use when representing optional values explicitly. Covers Maybe<T> as a null-safe container, Maybe.From()/FromTry()/AsMaybe() for creation, HasValue/HasNoValue, Map/Bind chaining, TapNone for None-side effects, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.
 ---
 
 # CSharpEssentials.Maybe
 
-`Maybe<T>` makes optionality explicit. No null reference exceptions — the absence of a value is a first-class concept.
+`Maybe<T>` makes optionality explicit. No null reference exceptions: the absence of a value is a first-class concept.
 
 ## Installation
 
@@ -97,7 +97,7 @@ Result<string> r = maybe.ToMaybeResult(
 
 ## Best Practices
 
-- Prefer implicit conversion (`Maybe<T> m = value;`, `return value;`, `Maybe.None`); use `Maybe.From()` or `.AsMaybe()` where the target type is not known — there is no `.ToMaybe()`
+- Prefer implicit conversion (`Maybe<T> m = value;`, `return value;`, `Maybe.None`); use `Maybe.From()` or `.AsMaybe()` where the target type is not known; there is no `.ToMaybe()`
 - Prefer `Match()` over `HasValue` + `GetValueOrThrow()` to avoid branches
 - Use `Bind()` when the transform itself can be absent (returns `Maybe<T>`)
 - Bridge to `Result` with `ToMaybeResult()` when the caller needs error information

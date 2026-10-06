@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-time
-description: Use when you need testable time — inject IDateTimeProvider (DateTimeProvider over TimeProvider in production, FakeDateTimeProvider with Advance/SetTime in tests), plus DateTime/DateOnly extensions ToDateOnly/ToTimeOnly, NextDayOfWeek/PreviousDayOfWeek and GetAge.
+description: Use when you need testable time. Inject IDateTimeProvider (DateTimeProvider over TimeProvider in production, FakeDateTimeProvider with Advance/SetTime in tests), plus DateTime/DateOnly extensions ToDateOnly/ToTimeOnly, NextDayOfWeek/PreviousDayOfWeek and GetAge.
 ---
 
 # CSharpEssentials.Time
@@ -69,7 +69,7 @@ public class OrderService(IDateTimeProvider time)
 
 ## Test with FakeDateTimeProvider
 
-`CSharpEssentials.Time` ships a `FakeDateTimeProvider` — no extra NuGet package needed. Its time zone is UTC.
+`CSharpEssentials.Time` ships a `FakeDateTimeProvider`, so no extra NuGet package is needed. Its time zone is UTC.
 
 ```csharp
 var start = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
@@ -113,8 +113,8 @@ int ageToday = birthDate.GetAge(timeProvider);                // "today" in the 
 
 ## Best Practices
 
-- Inject `IDateTimeProvider` — never call `DateTime.UtcNow` directly in domain/service code
+- Inject `IDateTimeProvider`; never call `DateTime.UtcNow` directly in domain/service code
 - Register `TimeProvider.System` and `DateTimeProvider` as singletons
-- `DateOnly` / `TimeOnly` members are `NET6_0_OR_GREATER` only — not available on `netstandard2.x`
+- `DateOnly` / `TimeOnly` members are `NET6_0_OR_GREATER` only, not available on `netstandard2.x`
 - `FakeDateTimeProvider.Advance()` simulates elapsed time without `Thread.Sleep` in tests
 - Use `GetAge(IDateTimeProvider)` instead of `DateTime.Today` so age checks are testable
