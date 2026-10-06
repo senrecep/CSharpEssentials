@@ -28,8 +28,8 @@ public class JsonSerializerOptionsExtensionsTests
     }
 
     [Fact]
-    [Obsolete("Creates the obsolete 4.x converter to check that it is removed.")]
-    public void AddEnumConventions_Should_Remove_Other_Enum_Converters()
+    [Obsolete("Creates the obsolete 4.x converter to check that it is replaced.")]
+    public void AddEnumConventions_Should_Remove_Earlier_Convention_Factories_And_Keep_Other_Converters()
     {
         JsonSerializerOptions options = new()
         {
@@ -44,8 +44,22 @@ public class JsonSerializerOptionsExtensionsTests
 
         options.AddEnumConventions(EnumConventions.Default);
 
-        EnumConverterFactory factory = options.Converters.Should().ContainSingle().Which.Should().BeOfType<EnumConverterFactory>().Subject;
+        options.Converters.Should().HaveCount(3);
+        EnumConverterFactory factory = options.Converters[0].Should().BeOfType<EnumConverterFactory>().Subject;
         factory.Mode.Should().Be(EnumReadMode.Data);
+        options.Converters.OfType<EnumConverterFactory>().Should().ContainSingle();
+        options.Converters.OfType<JsonStringEnumConverter>().Should().ContainSingle();
+    }
+
+    [Fact]
+    public void AddEnumConventions_Should_Keep_Plain_Enums_As_Strings_When_The_Host_Has_A_JsonStringEnumConverter()
+    {
+        JsonSerializerOptions options = new() { Converters = { new JsonStringEnumConverter() } };
+
+        options.AddEnumConventions(EnumConventions.Default);
+
+        JsonSerializer.Serialize(JsonOrderStatus.PendingApproval, options).Should().Be("\"pending_approval\"");
+        JsonSerializer.Serialize(JsonPlainKind.Second, options).Should().Be("\"Second\"");
     }
 
     [Fact]
@@ -109,3 +123,9 @@ internal sealed partial class EnumConventionsJsonContext : JsonSerializerContext
 [JsonSourceGenerationOptions(UseStringEnumConverter = true)]
 [JsonSerializable(typeof(JsonOrder))]
 internal sealed partial class EnumConventionsStringEnumJsonContext : JsonSerializerContext;
+
+internal enum JsonPlainKind
+{
+    First,
+    Second,
+}
