@@ -92,7 +92,7 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 | EF string column | `varchar(longest name)` | `text` on PostgreSQL, provider length elsewhere | next migration alters the column type |
 | EF check constraint | none | `ck_{table}_{column}_enum` | audit data first (`EnumDataAudit`), convert with the migration helpers |
 | EF flags | comma string | integer bitmask | `ConvertEnumColumn<TEnum>(from: EnumStoredAs.FlagsText)` |
-| EF options | `EnumConventionOptions`, `UseLegacySnakeCase` | `EnumConventions`, `HasLegacyEnumStorage` | legacy snake case names are read tolerantly; `HasLegacyEnumStorage(EnumStoredAs.LegacySnakeCase)` keeps writing them until the column is converted |
+| EF options | `EnumConventionOptions`, `UseLegacySnakeCase` | `EnumConventions`, `HasLegacyEnumStorage` | legacy snake case names are read tolerantly; `HasLegacyEnumStorage(EnumStoredAs.LegacySnakeCase)` keeps writing them until the column is converted; the obsolete `UseLegacySnakeCase = true` forwards to `existingStorage: EnumStoredAs.LegacySnakeCase` |
 | Binding | `AddEnumBinding` + `UseEnumBinding` | `AddEnumConventions` + `UseEnumBinding` | `AddEnumBinding` is an obsolete forwarder; `UseEnumBinding` stays |
 | Generated helpers | `ToSnakeCase()`, `TryParse(string)` | `ToWireName()`, `TryParseWire(string)` | obsolete with the new name in the message |
 | `StringEnumNaming` | public static helper with runtime policy | obsolete facade over `EnumMetadata` | use `EnumMetadata` / generated helpers |
