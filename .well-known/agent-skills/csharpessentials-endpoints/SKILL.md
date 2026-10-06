@@ -89,7 +89,7 @@ app.MapAppsEndpoints(options =>
 });
 ```
 
-Every endpoint gets `EndpointTypeMetadata` (`EndpointType` property) so middleware and tests can identify the endpoint type at runtime. An explicit `WithName(...)` always wins over `OperationNaming`.
+Every endpoint gets `EndpointTypeMetadata` (`EndpointType` property) so middleware and tests can identify the endpoint type at runtime. An explicit `WithName(...)` always wins over `OperationNaming`. `TypeName` names are unique per application: containing types are part of the name (`Orders_Endpoint`), a type with several routes gets the HTTP method as a suffix (`Items_Get`, `Items_Post`), colliding names are qualified with the namespace, and two types with the same full name throw at map time.
 
 ---
 

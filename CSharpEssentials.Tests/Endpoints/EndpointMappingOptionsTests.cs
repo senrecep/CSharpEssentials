@@ -140,7 +140,7 @@ public class EndpointMappingOptionsTests
     }
 
     [Fact]
-    public void OperationNaming_TypeName_Should_Name_Endpoint_After_Type()
+    public void OperationNaming_TypeName_Should_Name_Endpoint_After_Type_And_Containing_Types()
     {
         using WebApplication app = EndpointTestApp.Create();
         EndpointMappingOptions options = new() { OperationNaming = OperationNaming.TypeName };
@@ -148,8 +148,8 @@ public class EndpointMappingOptionsTests
         EndpointMapper.MapEndpoint<OptionsEndpoints.Ping>(app, null, options);
 
         RouteEndpoint endpoint = EndpointTestApp.Single(app);
-        endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName.Should().Be("Ping");
-        endpoint.Metadata.GetMetadata<IRouteNameMetadata>()!.RouteName.Should().Be("Ping");
+        endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!.EndpointName.Should().Be("OptionsEndpoints_Ping");
+        endpoint.Metadata.GetMetadata<IRouteNameMetadata>()!.RouteName.Should().Be("OptionsEndpoints_Ping");
     }
 
     [Fact]
