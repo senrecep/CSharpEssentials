@@ -41,7 +41,7 @@
 | Project | TFMs | New dependencies | Contents |
 |---|---|---|---|
 | `CSharpEssentials.Enums` | `net11.0;net10.0;net9.0;netstandard2.1;netstandard2.0` (unchanged) | none | attributes, `EnumInfo<TEnum>`, `EnumMetadata`, `EnumConventions`, parser, formatter, `EnumValueError` |
-| `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0013, packed into `CSharpEssentials.Enums` |
+| `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0014, packed into `CSharpEssentials.Enums` |
 | `CSharpEssentials.Enums.CodeFixes` (new, not packable) | `netstandard2.0` | Roslyn 4.8 | code fixes for CSE0005 and CSE0006 |
 | `CSharpEssentials.Json` | unchanged | none | `EnumConverterFactory`, `JsonSerializerOptions.AddEnumConventions` |
 | `CSharpEssentials.AspNetCore` | unchanged | **removes** `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
@@ -49,7 +49,6 @@
 | `CSharpEssentials.AspNetCore.Swashbuckle` (new) | `net11.0;net10.0;net9.0;net8.0` | `Swashbuckle.AspNetCore` (moved) | `AddSwagger`, filters, schema id factory, security schemes |
 | `CSharpEssentials.EntityFrameworkCore` | unchanged | none | storage conventions, check constraint convention, migration helpers, `EnumDataAudit` |
 | `CSharpEssentials.Http` | unchanged | none | query formatting, `AddEnumConventions` for typed clients |
-| `CSharpEssentials.Refit` (new) | `net11.0;net10.0;net9.0;netstandard2.1` | `Refit` (approval needed) | `EnumConventionsRefit.Settings`, `IUrlParameterFormatter` |
 | `CSharpEssentials.Validation` | unchanged | **adds** `CSharpEssentials.Enums` | `IsDefinedEnum`, `IsOneOf`, `HasOnlyDefinedFlags` |
 
 The parser and the formatter live in `CSharpEssentials.Enums` because every other package already depends on it (directly or through `CSharpEssentials.Json`), and because it has no `System.Text.Json` dependency. The generator reads `[JsonStringEnumMemberName]` and `[EnumMember]` by metadata name, so no package reference is needed for that either.
@@ -146,7 +145,7 @@ Rules for the switches:
 - `UseFallback` maps an undefined value to the `[EnumFallback]` member **only when the enum declares one**. Without a fallback member it behaves like `Reject`. `Reject` ignores fallback members everywhere.
 - `UnknownValue` applies to **data reads only**. Input is always strict: undefined values and the fallback member itself are rejected (section 5).
 - `AcceptNumbers`, `AcceptMemberNames` and `CaseInsensitive` apply to **input only**. Data reads always accept every known spelling of a defined member, because that is how legacy rows and legacy producers stay readable.
-- `WriteAs = Number` writes the underlying number. It exists for legacy consumers; it is selected per endpoint group (section 9.4), per HTTP client (section 13) or per serializer options instance (message producers).
+- `WriteAs = Number` writes the underlying number. It exists for legacy consumers; it is selected per endpoint group (section 9.4), per HTTP client (section 13), globally for ASP.NET Core output (section 9.4) or per serializer options instance (message producers).
 
 Registration:
 
@@ -167,8 +166,8 @@ JsonSerializerOptions json = new JsonSerializerOptions().AddEnumConventions(Enum
 | Wire name | `[JsonStringEnumMemberName]`, `[EnumMember]` | | `[StringEnum(Naming)]` | | `CSharpEssentialsEnumNaming` | | `SnakeCaseLower` |
 | Aliases | `[EnumAlias]` | | | | | | legacy 3.x name |
 | Fallback | `[EnumFallback]` | | | | | `UnknownValue` | `UseFallback` |
-| Output format | | | | `WithEnumWireFormat`, client options | | `WriteAs` | `String` |
-| Storage | | `.HasEnumStorage()`, `.HasLegacyEnumStorage()` | `[StringEnum(Storage)]` | | | `Storage`, `FlagsStorage` | `String`, flags `Integer` |
+| Output format | | | | action/controller `[EnumWireFormat]` > group `WithEnumWireFormat`, client options | | `WriteAs` | `String` |
+| Storage | | `.HasEnumStorage()`, `.HasLegacyEnumStorage()` | `[StringEnum(Storage)]` | | `ConfigureEnumConventions(existingStorage)` (model) | `Storage`, `FlagsStorage` | `String`, flags `Integer` |
 | Check constraint | | `.HasEnumCheckConstraint(false)` | | | | `CheckConstraints` | on |
 
 ## 5. Normative Matrix
@@ -353,6 +352,12 @@ public static class EnumValueFormatter
 {
     public static string Format<TEnum>(TEnum value, EnumWireFormat format) where TEnum : struct, Enum;
     public static void FormatFlags<TEnum>(TEnum value, IList<string> names) where TEnum : struct, Enum;
+
+    // Non-generic entry points for HTTP client adapters (section 13.1) and other code that only has object + Type.
+    // Stable public API. Flags and collections are not handled here: adapters expand them through FormatFlags/TryFormatMany.
+    public static string Format(object value, EnumConventions conventions, EnumWireFormat? format = null);
+    public static bool TryFormat(object? value, EnumConventions conventions, [NotNullWhen(true)] out string? text, EnumWireFormat? format = null);
+    public static bool TryFormatMany(object? value, EnumConventions conventions, IList<string> values, EnumWireFormat? format = null); // flags value or IEnumerable of enums
 }
 
 public sealed record EnumValueError(Type EnumType, string? Value, IReadOnlyList<string> AllowedValues, string? Path)
@@ -450,11 +455,23 @@ var v2 = app.MapGroup("/api/v2");                                        // Stri
 public sealed class LegacyOrdersController : ControllerBase { ... }
 ```
 
+Global default and overrides (both directions):
+
+```csharp
+builder.Services.AddEnumConventions(o => o with { WriteAs = EnumWireFormat.Number });   // every API answers with numbers
+var v2 = app.MapGroup("/api/v2").WithEnumWireFormat(EnumWireFormat.String);         // except v2
+
+[EnumWireFormat(EnumWireFormat.String)]                                               // MVC controller or action
+public sealed class OrdersV2Controller : ControllerBase { ... }
+```
+
+The default output format of ASP.NET Core is `EnumConventions.WriteAs`. Precedence: action attribute > controller attribute > endpoint group > `EnumConventions.WriteAs`. No model convention is needed to apply a format to every controller.
+
 Contract:
 
-- Global `JsonOptions` are never mutated. `AddEnumConventions` builds a second `JsonSerializerOptions` instance (a copy of the configured options with `writeAs: Number`) once at startup.
-- Minimal APIs: an endpoint filter replaces the returned value or `IValueHttpResult` with a JSON result that uses the numeric options instance and keeps the status code and content type. `Result`/`Result<T>` from `CSharpEssentials.Results` go through the same path after their normal mapping.
-- MVC: a result filter assigns a `SystemTextJsonOutputFormatter` built from the numeric options to `ObjectResult.Formatters`.
+- Global `JsonOptions` are never mutated. `AddEnumConventions` builds a second `JsonSerializerOptions` instance once at startup: a copy of the configured options with the format that is not the global default.
+- Minimal APIs: an endpoint filter replaces the returned value or `IValueHttpResult` with a JSON result that uses the second options instance and keeps the status code and content type. `Result`/`Result<T>` from `CSharpEssentials.Results` go through the same path after their normal mapping.
+- MVC: a result filter assigns a `SystemTextJsonOutputFormatter` built from the second options instance to `ObjectResult.Formatters`.
 - Reading is unaffected: a v1 group still accepts names, so new clients can send names to old endpoints.
 - Optional selector for apps that cannot version routes (easyapp mobile clients share routes across app versions): `group.WithEnumWireFormat(ctx => ctx.Request.Headers["X-Enum-Format"] == "string" ? EnumWireFormat.String : EnumWireFormat.Number)`. The OpenAPI document of such a group shows the default branch (the value returned for a request without the header) and a description note. A selector group adds `Vary: X-Enum-Format` (the configured header name) to every response so caches keep the two formats apart.
 - The endpoint filter unwraps `Results<T1, ...>` through `INestedHttpResult` before looking for `IValueHttpResult`.
@@ -516,6 +533,15 @@ modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumCheckConstraint(fals
 // Transition: keep writing the format the column holds today (section 12, step 1).
 modelBuilder.Entity<Order>().Property(o => o.Status).HasLegacyEnumStorage(EnumStoredAs.MemberName);
 ```
+
+Upgrading a model whose enum columns are plain integers (no `HasConversion`, EF's default):
+
+```csharp
+builder.ConfigureEnumConventions(conventions, existingStorage: EnumStoredAs.Integer);
+modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);   // opt in, one column at a time
+```
+
+`existingStorage` applies `HasLegacyEnumStorage(existingStorage)` to every enum property the convention handles that has no property-level `HasEnumStorage`/`HasLegacyEnumStorage`; it wins over `[StringEnum(Storage)]` and `EnumConventions.Storage`. Without it, a `[StringEnum]` enum stored as an integer would get `Storage = String` and EF would generate an `int → text` `AlterColumn` (PostgreSQL's implicit cast writes `'1'`). With it, the first 5.0 migration is empty (section 12.3). New projects omit the argument.
 
 `HasLegacyEnumStorage(EnumStoredAs format)` writes the old format (`Integer`, `MemberName`, `CamelCase`, `LegacySnakeCase`, `FlagsText`), reads every spelling tolerantly, adds **no** check constraint and keeps the current column type. It affects the database only; JSON, OpenAPI and binding still use the wire name. Server-side filters keep matching existing rows because writes and query parameters use the same old format.
 
@@ -596,7 +622,7 @@ When storage changes (removing `HasLegacyEnumStorage` or a manual `HasConversion
 2. `ConvertEnumColumn` (type change and data conversion in one step).
 3. `AddCheckConstraint`.
 
-The guide shows the edit: delete the generated `AlterColumn` for the column, insert the helper call, keep the constraint operations around it. `ConvertEnumColumn` never inspects the current column type, so a forgotten generated `AlterColumn` cannot make it skip silently; instead it fails on the unexpected type (integer to text with a text column raises a type error), which surfaces the mistake in the first test run.
+The guide shows the edit: delete the generated `AlterColumn` for the column, insert the helper call, keep the constraint operations around it. Forgetting to delete the generated `AlterColumn` does not corrupt data: if EF's `AlterColumn` runs first, the helper's `CASE status WHEN 0` compares text with integer, PostgreSQL raises a type error and the migration transaction rolls back; if the helper runs first, EF's `AlterColumn` is a no-op. CSE0014 (error) catches it at build time: a `Migration` whose `Up` or `Down` contains both `AlterColumn` and `ConvertEnumColumn` for the same table and column. An automatic `IMigrationsModelDiffer` replacement was rejected because it depends on EF Core `.Internal` APIs.
 
 ### 12.2 SQL
 
@@ -617,23 +643,43 @@ Every CASE has an `ELSE` that keeps the original value, so no conversion ever wr
 
 ### 12.3 Rollout order
 
-1. **Deploy 5.0 without changing storage.** Columns with a manual `HasConversion` are skipped (section 11.1). Columns managed by 4.x `ConfigureEnumConventions` already hold 4.x wire names; the first migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint, so run `EnumDataAudit` before it. JSON columns get `HasLegacyEnumStorage(EnumStoredAs.Integer)`. Reads are tolerant from now on; writes are unchanged, so queries keep matching rows and older instances can still read new rows.
+1. **Deploy 5.0 without changing storage.** Columns with a manual `HasConversion` are skipped (section 11.1); plain integer columns are covered by `existingStorage: EnumStoredAs.Integer`. Columns managed by 4.x `ConfigureEnumConventions` already hold 4.x wire names; the first migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint, so run `EnumDataAudit` before it. JSON columns get `HasLegacyEnumStorage(EnumStoredAs.Integer)`. Reads are tolerant from now on; writes are unchanged, so queries keep matching rows and older instances can still read new rows.
 2. **Audit** every column that will be converted: run `EnumDataAudit` in production, fix or map unknown values.
+   Acceptance criterion: `dotnet ef migrations add Upgrade5` right after the upgrade produces an **empty** migration (no `AlterColumn`, no `AddCheckConstraint`) for a model that only used manual conversions and plain integer columns. #64 pins it with a test; consumers use the same check.
 3. **Convert**: replace the manual conversion with nothing (or remove `HasLegacyEnumStorage`), add the migration, apply section 12.1, deploy. Pre-5.0 instances must be drained before this step, because they cannot read the new format.
 
-## 13. Outgoing HTTP and Refit (`CSharpEssentials.Http`, `CSharpEssentials.Refit`, #66)
+## 13. Outgoing HTTP Clients (`CSharpEssentials.Http`, #66)
+
+There is no Refit (or RestEase, Flurl) package and no new dependency. Bodies are library-agnostic through `JsonSerializerOptions`; only route and query formatting is library-specific, and a `DelegatingHandler` cannot do it because the enum type is gone by then. The library therefore ships the stable non-generic `EnumValueFormatter.Format/TryFormat/TryFormatMany` (section 6.4) and the guide shows a short adapter per library.
 
 - Request bodies: `AddEnumConventions(conventions, EnumReadMode.Data, writeAs)` on the client's `JsonSerializerOptions`.
 - Responses: `Data` mode. The client keeps working while the server moves from integer to string output, and maps newer server values to the fallback member.
-- Route/query: `HttpRequestBuilder` and `QueryStringExtensions` format enums with `EnumValueFormatter` (wire name or number by `writeAs`); flags and collections become repeated keys.
+- Route/query in `CSharpEssentials.Http`: `HttpRequestBuilder` and `QueryStringExtensions` format enums with `EnumValueFormatter` (wire name or number by `writeAs`); flags and collections become repeated keys.
 - `WriteAs = Number` per client for servers that accept only integers.
-- Refit:
+
+### 13.1 HTTP client recipes (guide, #68)
+
+Refit:
 
 ```csharp
-services.AddRefitClient<IOrdersApi>(EnumConventionsRefit.Settings(conventions, writeAs: EnumWireFormat.String));
+public sealed class EnumUrlParameterFormatter(EnumConventions conventions, EnumWireFormat? format = null)
+    : DefaultUrlParameterFormatter
+{
+    public override string? Format(object? value, ICustomAttributeProvider attributeProvider, Type type) =>
+        EnumValueFormatter.TryFormat(value, conventions, out string? text, format)
+            ? text
+            : base.Format(value, attributeProvider, type);
+}
+
+JsonSerializerOptions json = new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(conventions);
+services.AddRefitClient<IOrdersApi>(new RefitSettings
+{
+    ContentSerializer = new SystemTextJsonContentSerializer(json),
+    UrlParameterFormatter = new EnumUrlParameterFormatter(conventions),
+});
 ```
 
-  `Settings` returns `RefitSettings` with `SystemTextJsonContentSerializer` over the conventions options (the Refit default `JsonStringEnumConverter` is removed by `AddEnumConventions`) and an `IUrlParameterFormatter` that formats enums through `EnumValueFormatter` and delegates everything else to `DefaultUrlParameterFormatter`.
+The guide also shows RestEase (`IRequestQueryParamSerializer`/`RequestPathParamSerializer` delegating to `TryFormat`/`TryFormatMany`), Flurl (format before `SetQueryParam`, `ISerializer` over the options), and `HttpClient` with `CSharpEssentials.Http`. Generated clients (Kiota, NSwag) need nothing: they send the wire names from the OpenAPI `enum` list, and their response readers accept names.
 
 Rollout rule for HTTP, the same as for the bus: **every consumer before any producer**. A server switches its output from `Number` to `String` only after all of its clients run 5.0 (tolerant reads) or another reader that accepts names. A pre-5.0 Refit client fails on `pending_approval`, because the Refit default converter knows only its own naming. Mobile apps that cannot be updated keep the `Number` group or the header selector (section 9.4) for as long as they are supported.
 
@@ -678,6 +724,7 @@ Error: `Error.Validation(code: "enum.invalid" | "enum.not_allowed", description:
 | CSE0011 | Info | `[StringEnum]` enum in a compilation below C# 9: no metadata registration, reflection path |
 | CSE0012 | Warning | Invalid `CSharpEssentialsEnumNaming` MSBuild value |
 | CSE0013 | Warning | `[EnumAlias]`, `[EnumFallback]` or `[StringEnum(Naming)]`-dependent attributes on an enum without `[StringEnum]` (no effect) |
+| CSE0014 | Error | A migration's `Up` or `Down` contains both EF's `AlterColumn` and `ConvertEnumColumn` for the same table and column (section 12.1). Symbols are matched by metadata name, so the analyzer is inert without `CSharpEssentials.EntityFrameworkCore` |
 
 When an error diagnostic applies, the generator skips metadata for that enum (ADR-006 rule), so the only error the user sees is the analyzer's.
 
@@ -702,14 +749,14 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | Area | Tests |
 |---|---|
 | Naming | generator vs `JsonNamingPolicy` corpus test for every built-in policy |
-| Generator | snapshot per feature (aliases, fallback, flags, nested, descriptions, obsolete, every underlying type including `ulong` and negative `long`), incremental caching test, CSE0002 to CSE0013 positive and negative |
+| Generator | snapshot per feature (aliases, fallback, flags, nested, descriptions, obsolete, every underlying type including `ulong` and negative `long`), incremental caching test, CSE0002 to CSE0014 positive and negative |
 | Parser | every matrix row in `Input` and `Data` mode, each `EnumConventions` switch; registration from a separate type-only assembly |
 | JSON | every matrix row, flags, nullable, dictionary key, collection, alias, fallback, source generated context |
 | ASP.NET Core | TestServer: matrix rows for route, query, header, form, body; minimal API and MVC in one host; v1 Number + v2 String groups |
 | OpenAPI | golden files for both packages, normalized diff equality (generated client round trip deferred to 5.1) |
 | EF Core | Testcontainers PostgreSQL + SQLite: column types, constraints, invalid insert rejected, migration diff after adding a member, JSON columns, collections, skipped user converters, legacy storage; migration helper conversions with an undefined value in the data (kept, never `NULL`), `Down()`, idempotency, operation order of 12.1 |
-| HTTP/Refit | TestServer peer: String client ↔ Number server and Number client ↔ tolerant server |
-| Cross-layer | one table-driven golden test (#68) executed against JSON, binding, EF, Refit and both OpenAPI outputs |
+| HTTP | TestServer peer: String client ↔ Number server and Number client ↔ tolerant server (`CSharpEssentials.Http`); `EnumValueFormatter` non-generic overloads for every underlying type, nullable, flags, collections |
+| Cross-layer | one table-driven golden test (#68) executed against JSON, binding, EF, `CSharpEssentials.Http` and both OpenAPI outputs |
 
 ## 19. Migration Guide Outline (`docs/migration/v4-to-v5.md`, #68)
 
@@ -726,7 +773,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
    - Flags comma text → integer bitmask.
    - jsonb documents with integers: no change needed (tolerant read); optional `ConvertEnumJsonPath`.
 7. Legacy clients: `WithEnumWireFormat(EnumWireFormat.Number)` per group, or the header selector for shared routes.
-8. Outgoing clients and Refit: `EnumConventionsRefit.Settings`.
+8. Outgoing clients: `AddEnumConventions` on the client options plus the recipe of section 13.1 (Refit, RestEase, Flurl).
 9. Message bus: consumers first, producers second.
 10. `EnumData<T>`-style holders → typed parameters.
 
@@ -734,10 +781,11 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 
 | Today | Step 1 (deploy 5.0) | Target |
 |---|---|---|
-| APIs send enums as integers, mobile apps in stores | existing route groups `WithEnumWireFormat(Number)` (or the header selector); input accepts integers and names | new app versions send the header or call new groups and get names |
+| APIs send enums as integers, mobile apps in stores | global `WriteAs = Number`, new v2 groups/controllers override to `String` (or the header selector); input accepts integers and names | new app versions send the header or call new groups and get names |
+| plain integer enum columns | `existingStorage: EnumStoredAs.Integer`; first migration empty | `HasEnumStorage(String)` per column, audit, convert |
 | 10 EF columns `HasConversion<string>()` PascalCase | unchanged: the convention skips them, tolerant reads only where `HasLegacyEnumStorage(EnumStoredAs.MemberName)` replaces the manual conversion | audit, `ConvertEnumColumn(from: Text)`, constraint (section 12.3) |
 | jsonb with integers | `HasLegacyEnumStorage(EnumStoredAs.Integer)` on JSON-mapped enum properties (writes stay integers, reads accept names) | `ConvertEnumJsonPath`, then remove the legacy storage |
-| 35 Refit clients with the default converter | `EnumConventionsRefit.Settings` with `writeAs: Number` where the server reads only integers | names once every server runs 5.0 (servers accept names from step 1) |
+| 35 Refit clients with the default converter | own adapter in BuildingBlocks (section 13.1) with `writeAs: Number` where the server reads only integers | names once every server runs 5.0 (servers accept names from step 1) |
 | Newtonsoft events with integers | STJ consumers on `Data` mode read integers | MassTransit STJ producers, `Number` until every consumer runs 5.0 |
 
 Open item for easyapp: confirm whether its jsonb enums are EF `ToJson()` owned/complex types or value-converted `JsonSerializer` properties, and which naming the Refit clients actually send (the Refit default `SystemTextJsonContentSerializer` options use a camelCase `JsonStringEnumConverter`).

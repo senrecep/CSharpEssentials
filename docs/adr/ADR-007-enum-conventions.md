@@ -60,7 +60,7 @@ Reads accept the wire name, the C# name, any casing, declared aliases and the nu
 
 ### 8. OpenAPI moves to its own packages
 
-`CSharpEssentials.AspNetCore` stops depending on Swashbuckle. Two packages produce the same enum schema:
+`CSharpEssentials.AspNetCore` stops depending on Swashbuckle. Two packages produce the same enum schema (no package is added for HTTP client libraries such as Refit; see the design, section 13):
 
 - `CSharpEssentials.AspNetCore.OpenApi` for `Microsoft.AspNetCore.OpenApi` (net9.0+).
 - `CSharpEssentials.AspNetCore.Swashbuckle` for the existing `AddSwagger` code.
@@ -104,7 +104,7 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 - A runtime naming policy is no longer possible. Teams that used a custom `JsonNamingPolicy` set the MSBuild property, the enum attribute, or `[JsonStringEnumMemberName]` per member.
 - Enums that are not marked `[StringEnum]` take the reflection path, which is not AOT safe. CSE0010 (info, opt-in) points to them.
 - Check constraints must be dropped and recreated when members change. The convention does it automatically, but the migration is no longer empty for an enum change.
-- New dependencies need owner approval: `Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x, `Refit` (only in the new `CSharpEssentials.Refit` package).
+- New dependencies need owner approval: `Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x. There is no Refit package: HTTP client libraries get a ten-line adapter over the public non-generic `EnumValueFormatter` (design section 13.1).
 
 **Neutral**
 - Newtonsoft.Json is not supported. Newtonsoft producers that write integers are read correctly by STJ consumers through tolerant reads; the migration guide covers the transition.
