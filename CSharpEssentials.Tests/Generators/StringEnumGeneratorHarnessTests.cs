@@ -45,6 +45,35 @@ public class StringEnumGeneratorHarnessTests
     }
 
     [Fact]
+    public void StringEnumGenerator_Should_Generate_SameNamedEnums_In_DifferentNamespaces()
+    {
+        const string first = """
+            using CSharpEssentials.Enums;
+
+            namespace Orders;
+
+            [StringEnum]
+            public enum Status { Open, Closed }
+            """;
+        const string second = """
+            using CSharpEssentials.Enums;
+
+            namespace Users;
+
+            [StringEnum]
+            public enum Status { Active, Suspended }
+            """;
+        CSharpCompilation compilation = GeneratorHarness.CreateCompilation([first, second], [typeof(StringEnumAttribute).Assembly]);
+
+        GeneratorRun run = GeneratorHarness.Run(compilation, [.. EnumsAssembly.Value.Generators]);
+
+        run.GeneratorDiagnostics.Should().BeEmpty();
+        run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+        run.Result.GeneratedTrees.Select(static t => Path.GetFileName(t.FilePath))
+            .Should().BeEquivalentTo("Orders.StatusExtensions.g.cs", "Users.StatusExtensions.g.cs");
+    }
+
+    [Fact]
     public async Task AnalyzerHarness_Should_Report_NestedStringEnum_Diagnostic()
     {
         const string nestedSource = """
