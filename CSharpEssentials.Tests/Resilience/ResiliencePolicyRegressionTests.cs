@@ -181,7 +181,7 @@ public class ResiliencePolicyRegressionTests
         {
             attempts++;
             await cts.CancelAsync();
-            return Result<int>.Failure(Error.Unexpected());
+            return Error.Unexpected();
         };
 
         Func<Task> act = async () => await operation.RetryIfFailed(
@@ -202,7 +202,7 @@ public class ResiliencePolicyRegressionTests
         {
             attempts++;
             await cts.CancelAsync();
-            return Result.Failure(Error.Unexpected());
+            return Error.Unexpected();
         };
 
         Func<Task> act = async () => await operation.RetryIfFailed(

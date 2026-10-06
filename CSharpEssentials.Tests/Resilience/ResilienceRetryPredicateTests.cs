@@ -176,7 +176,7 @@ public sealed class ResilienceRetryPredicateTests
         {
             attempts++;
             await cts.CancelAsync();
-            return Result.Failure(Error.Failure("Transient"));
+            return Error.Failure("Transient");
         };
 
         Func<Task> act = async () => await operation.RetryIfFailed(
@@ -196,7 +196,7 @@ public sealed class ResilienceRetryPredicateTests
         Func<CancellationToken, Task<Result<int>>> operation = async _ =>
         {
             await cts.CancelAsync();
-            return Result<int>.Failure(Error.Failure("Permanent"));
+            return Error.Failure("Permanent");
         };
 
         Result<int> result = await operation.RetryIfFailed(

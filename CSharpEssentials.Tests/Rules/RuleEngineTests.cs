@@ -1476,7 +1476,7 @@ public class RuleEngineTests
     [Fact]
     public void Evaluate_FuncTResult_Success_ShouldReturnValue()
     {
-        Func<TestContext, Result<int>> rule = _ => Result.Success(42);
+        Func<TestContext, Result<int>> rule = _ => 42;
         Result<int> result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -1485,7 +1485,7 @@ public class RuleEngineTests
     [Fact]
     public void Evaluate_FuncTContextCancellationTokenResultTResult_Success_ShouldReturnValue()
     {
-        Func<TestContext, CancellationToken, Result<int>> rule = (_, _) => Result.Success(77);
+        Func<TestContext, CancellationToken, Result<int>> rule = (_, _) => 77;
         Result<int> result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(77);

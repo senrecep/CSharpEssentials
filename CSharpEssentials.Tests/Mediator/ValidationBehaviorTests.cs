@@ -105,7 +105,7 @@ public class ValidationBehaviorTests
         ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new StubValidator("NameRequired", "Name is required")]);
         TestValidationCommand command = new("");
 
-        Result<int> result = await behavior.Handle(command, (_, _) => new ValueTask<Result<int>>(Result.Success(42)), default);
+        Result<int> result = await behavior.Handle(command, (_, _) => new ValueTask<Result<int>>(42), default);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Type.Should().Be(ErrorType.Validation);

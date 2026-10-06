@@ -9,7 +9,7 @@ public class ResultTapIfTests
     public void TapIf_Should_ExecuteAction_When_Success_And_PredicateTrue()
     {
         bool called = false;
-        Result<int> result = Result<int>.Success(42);
+        Result<int> result = 42;
 
         result.TapIf(v => v > 10, v => called = true);
 
@@ -20,7 +20,7 @@ public class ResultTapIfTests
     public void TapIf_Should_NotExecuteAction_When_Success_And_PredicateFalse()
     {
         bool called = false;
-        Result<int> result = Result<int>.Success(5);
+        Result<int> result = 5;
 
         result.TapIf(v => v > 10, v => called = true);
 
@@ -31,7 +31,7 @@ public class ResultTapIfTests
     public void TapIf_Should_NotExecuteAction_When_Failure()
     {
         bool called = false;
-        Result<int> result = Result<int>.Failure(CSharpEssentials.Errors.Error.Failure("E", "fail"));
+        Result<int> result = CSharpEssentials.Errors.Error.Failure("E", "fail");
 
         result.TapIf(v => v > 0, v => called = true);
 
@@ -41,7 +41,7 @@ public class ResultTapIfTests
     [Fact]
     public void TapIf_Should_ReturnSameResult()
     {
-        Result<int> result = Result<int>.Success(42);
+        Result<int> result = 42;
         Result<int> returned = result.TapIf(v => v > 0, v => { });
 
         returned.Should().Be(result);
@@ -51,7 +51,7 @@ public class ResultTapIfTests
     public async Task TapIfAsync_Bool_Should_ExecuteAction_When_Success_And_ConditionTrue()
     {
         bool called = false;
-        Result<int> result = Result<int>.Success(42);
+        Result<int> result = 42;
 
         await result.TapIfAsync(true, async v => { await Task.Yield(); called = true; });
 
@@ -62,7 +62,7 @@ public class ResultTapIfTests
     public async Task TapIfAsync_Bool_Should_NotExecuteAction_When_Success_And_ConditionFalse()
     {
         bool called = false;
-        Result<int> result = Result<int>.Success(42);
+        Result<int> result = 42;
 
         await result.TapIfAsync(false, async v => { await Task.Yield(); called = true; });
 
@@ -73,7 +73,7 @@ public class ResultTapIfTests
     public async Task TapIfAsync_Bool_Should_NotExecuteAction_When_Failure()
     {
         bool called = false;
-        Result<int> result = Result<int>.Failure(CSharpEssentials.Errors.Error.Failure("E", "fail"));
+        Result<int> result = CSharpEssentials.Errors.Error.Failure("E", "fail");
 
         await result.TapIfAsync(true, async v => { await Task.Yield(); called = true; });
 
@@ -84,7 +84,7 @@ public class ResultTapIfTests
     public async Task TapIfAsync_Predicate_Should_ExecuteAction_When_Success_And_PredicateTrue()
     {
         bool called = false;
-        Result<int> result = Result<int>.Success(42);
+        Result<int> result = 42;
 
         await result.TapIfAsync(v => v == 42, async v => { await Task.Yield(); called = true; });
 
@@ -95,7 +95,7 @@ public class ResultTapIfTests
     public async Task TapIfAsync_Predicate_Should_NotExecuteAction_When_Success_And_PredicateFalse()
     {
         bool called = false;
-        Result<int> result = Result<int>.Success(5);
+        Result<int> result = 5;
 
         await result.TapIfAsync(v => v > 10, async v => { await Task.Yield(); called = true; });
 
@@ -106,7 +106,7 @@ public class ResultTapIfTests
     public async Task TapIfAsync_Predicate_Should_NotExecuteAction_When_Failure()
     {
         bool called = false;
-        Result<int> result = Result<int>.Failure(CSharpEssentials.Errors.Error.Failure("E", "fail"));
+        Result<int> result = CSharpEssentials.Errors.Error.Failure("E", "fail");
 
         await result.TapIfAsync(v => v > 0, async v => { await Task.Yield(); called = true; });
 

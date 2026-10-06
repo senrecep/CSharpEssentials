@@ -66,7 +66,7 @@ public class ExtensionTests
     [Fact]
     public void ToRule_FuncTContextResultTResult_ShouldCreateEvaluableRuleT()
     {
-        Func<TestContext, Result<int>> func = _ => Result.Success(42);
+        Func<TestContext, Result<int>> func = _ => 42;
         IRule<TestContext, int> rule = func.ToRule();
         Result<int> result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsSuccess.Should().BeTrue();
@@ -76,7 +76,7 @@ public class ExtensionTests
     [Fact]
     public void ToRule_FuncTContextCancellationTokenResultTResult_ShouldCreateEvaluableRuleT()
     {
-        Func<TestContext, CancellationToken, Result<int>> func = (_, _) => Result.Success(42);
+        Func<TestContext, CancellationToken, Result<int>> func = (_, _) => 42;
         IRule<TestContext, int> rule = func.ToRule();
         Result<int> result = RuleEngine.Evaluate(rule, new TestContext());
         result.IsSuccess.Should().BeTrue();
@@ -377,7 +377,7 @@ public class ExtensionTests
     [Fact]
     public void Next_FuncTResult_To_FuncTResult_ShouldChain()
     {
-        Func<TestContext, Result<int>> first = _ => Result.Success(1);
+        Func<TestContext, Result<int>> first = _ => 1;
         IRule<TestContext, int> chain = first.Next(_ => Result.Success(2));
         Result<int> result = RuleEngine.Evaluate(chain, new TestContext());
         result.IsSuccess.Should().BeTrue();
@@ -387,7 +387,7 @@ public class ExtensionTests
     [Fact]
     public void Next_FuncWithTokenTResult_To_FuncWithTokenTResult_ShouldChain()
     {
-        Func<TestContext, CancellationToken, Result<int>> first = (_, _) => Result.Success(1);
+        Func<TestContext, CancellationToken, Result<int>> first = (_, _) => 1;
         IRule<TestContext, int> chain = first.Next((_, _) => Result.Success(2));
         Result<int> result = RuleEngine.Evaluate(chain, new TestContext());
         result.IsSuccess.Should().BeTrue();
