@@ -76,7 +76,7 @@ options.Converters.Add(new ConditionalStringEnumConverter { AllowUndefinedValues
 
 ### StringEnumNaming
 
-`StringEnumNaming` is the single naming source for enum strings. JSON, EF Core storage, Swagger schemas and query/route binding in the other packages all use it, so a member is spelled the same everywhere. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
+`StringEnumNaming` is obsolete in 5.0 and stays as a working facade over `EnumMetadata`. In new code use `EnumMetadata`, `EnumValueFormatter`, `EnumValueParser` or the generated `ToWireName()` and `TryParseWire` helpers: they are the naming source that JSON, EF Core storage, Swagger schemas and query/route binding all use, so a member is spelled the same everywhere. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
 
 ```csharp
 using CSharpEssentials.Json;
