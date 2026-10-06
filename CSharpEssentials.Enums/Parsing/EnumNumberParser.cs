@@ -21,10 +21,15 @@ internal static class EnumNumberParser<TEnum> where TEnum : struct, Enum
         return first is >= '0' and <= '9' or '-' or '+' or '.';
     }
 
-    /// <summary>Parses a numeric token. Returns false for malformed or out of range numbers.</summary>
+    /// <summary>The longest numeric token: <c>-9223372036854775808</c> and <c>18446744073709551615</c>.</summary>
+    internal const int MaxLength = 20;
+
+    /// <summary>Parses a numeric token. Returns false for malformed, out of range or longer than <see cref="MaxLength"/> numbers.</summary>
     public static bool TryParse(CharText text, out ulong raw)
     {
         raw = 0;
+        if (text.Length > MaxLength)
+            return false;
         int index = 0;
         bool negative = text[0] == '-';
         if (negative)

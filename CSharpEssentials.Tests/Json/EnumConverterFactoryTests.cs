@@ -488,6 +488,33 @@ public class EnumConverterFactoryTests
         act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be("1" + new string('0', 63) + "…");
     }
 
+    [Theory]
+    [InlineData(EnumReadMode.Input)]
+    [InlineData(EnumReadMode.Data)]
+    public void Read_Should_Reject_Numeric_Text_Longer_Than_The_Limit_Like_The_Parser(EnumReadMode mode)
+    {
+        string padded = new string('0', 21) + "1";
+        EnumInfo<JsonOrderStatus> info = EnumMetadata.Get<JsonOrderStatus>();
+
+        Action act = () => Read<JsonOrderStatus>("\"" + padded + "\"", mode);
+
+        act.Should().Throw<EnumValueJsonException>().Which.Error.Value.Should().Be(padded);
+        info.TryParse(padded, mode, EnumConventions.Default, out _, out _).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(EnumReadMode.Input)]
+    [InlineData(EnumReadMode.Data)]
+    public void Read_Should_Accept_Zero_Padded_Numeric_Text_Within_The_Limit_Like_The_Parser(EnumReadMode mode)
+    {
+        string padded = new string('0', 19) + "1";
+        EnumInfo<JsonOrderStatus> info = EnumMetadata.Get<JsonOrderStatus>();
+
+        Read<JsonOrderStatus>("\"" + padded + "\"", mode).Should().Be(JsonOrderStatus.PendingApproval);
+        info.TryParse(padded, mode, EnumConventions.Default, out JsonOrderStatus value, out _).Should().BeTrue();
+        value.Should().Be(JsonOrderStatus.PendingApproval);
+    }
+
     [Fact]
     public void Errors_Should_Truncate_Long_Values()
     {
