@@ -142,3 +142,27 @@ protected override void Down(MigrationBuilder migrationBuilder)
 4. **Deploy** after every pre-5.0 instance is drained; older instances cannot read the new format.
 
 `Down()` restores the format, not the original bytes: a column that held mixed spellings comes back in the one format you name. On PostgreSQL drop a column default that cannot be cast to the new type before the conversion and recreate it after. SQL is generated for PostgreSQL and SQLite only.
+
+## OpenAPI (`CSharpEssentials.AspNetCore.Swashbuckle`, `CSharpEssentials.AspNetCore.OpenApi`)
+
+`CSharpEssentials.AspNetCore` no longer depends on Swashbuckle. Pick one OpenAPI package per host, never both (Microsoft.OpenApi 2.x would replace the 1.x that Swashbuckle 8/9 needs):
+
+- Staying on Swashbuckle: add `CSharpEssentials.AspNetCore.Swashbuckle`. `AddSwagger`, `UseVersionableSwagger`, `ConfigureSwaggerOptions`, `SecuritySchemes` and the filters keep their names and namespaces. `AddSwagger` adds the enum filters; with a plain `AddSwaggerGen` call `o.AddEnumConventions()`. `EnumSchemaFilter` has no parameterless constructor any more; a `SchemaFilter<EnumSchemaFilter>()` registration still works but misses the operation filter, so replace it with `AddEnumConventions()`.
+- Moving to `Microsoft.AspNetCore.OpenApi` (net10.0+): add `CSharpEssentials.AspNetCore.OpenApi` and call `services.AddOpenApi(o => o.AddEnumConventions())` per document.
+
+```bash
+dotnet add package CSharpEssentials.AspNetCore.Swashbuckle   # or CSharpEssentials.AspNetCore.OpenApi
+```
+
+The enum schemas change in both packages:
+
+| 4.x (Swashbuckle filter) | 5.0 |
+|---|---|
+| `description` replaced by `Possible values: a, b` | your description kept, value table appended (number, description, deprecated, `Response only:`) |
+| names from the snake_case policy | wire names from the metadata (`[JsonStringEnumMemberName]`, aliases not listed) |
+| always strings | integers in a document whose operations all write numbers; mixed documents mark the number operations (`x-enum-wire-format: number`) |
+| flags: one string schema | arrays with `uniqueItems: true` |
+| nullable: Swashbuckle default | nullable where used (`allOf` + `nullable` in 3.0, `oneOf` with `type: null` in 3.1) |
+| no extensions | `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` |
+
+Client generators that read `x-enum-varnames` (NSwag, openapi-generator, Kiota) keep the C# member names. Regenerate clients after the upgrade.
