@@ -1,6 +1,9 @@
+using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi;
@@ -20,6 +23,48 @@ public class OpenApiEnumSchemaTests
         warnings.Should().OnlyHaveUniqueItems();
         warnings.Should().ContainSingle(static message => message.StartsWith($"OpenAPI document 'mixed' writes enum {typeof(SampleStatus).FullName} ", StringComparison.Ordinal));
         warnings.Should().NotContain(static message => message.StartsWith("OpenAPI document 'v1' ", StringComparison.Ordinal) || message.StartsWith("OpenAPI document 'v2' ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Operation_Should_UseWriteAsAndWarnOnce_When_TheHeaderSelectorThrows()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        IReadOnlyDictionary<string, string> documents = await OpenApiSampleHost.GetDocumentsAsync(
+            OpenApiSpecVersion.OpenApi3_0,
+            configureServices: services => services.AddSingleton<ILoggerProvider>(logs),
+            passes: 2,
+            configureApp: static app => app.MapGet("/v1/throwing", static (SampleStatus status) => status).WithGroupName("v1")
+                .WithEnumWireFormat("X-Enum-Format", static _ => throw new InvalidOperationException("selector failed")));
+
+        // The operation falls back to WriteAs (String): the v1 document, numbers otherwise, now shows the string form.
+        JsonNode operation = JsonNode.Parse(documents["v1"])!["paths"]!["/v1/throwing"]!["get"]!;
+        operation["x-enum-wire-format"].Should().BeNull();
+        Component(documents["v1"], "SampleStatus")["type"]!.GetValue<string>().Should().Be("string");
+        operation["x-enum-wire-format-header"]!.GetValue<string>().Should().Be("X-Enum-Format");
+        logs.Messages.Where(static message => message.Contains("selector of", StringComparison.Ordinal)).Should().ContainSingle()
+            .Which.Should().Contain("/v1/throwing").And.Contain("global format String");
+    }
+
+    [Fact]
+    public async Task HeaderSelector_Should_RunInARequestScope_When_TheDocumentIsGenerated()
+    {
+        var providers = new ConcurrentBag<IServiceProvider>();
+        IServiceProvider? root = null;
+
+        await OpenApiSampleHost.GetDocumentsAsync(
+            OpenApiSpecVersion.OpenApi3_0,
+            configureApp: app =>
+            {
+                root = app.Services;
+                app.MapGet("/v1/scoped", static (SampleStatus status) => status).WithGroupName("v1").WithEnumWireFormat("X-Enum-Format", context =>
+                {
+                    providers.Add(context.RequestServices);
+                    return EnumWireFormat.Number;
+                });
+            });
+
+        providers.Should().NotBeEmpty().And.NotContain(root!);
     }
 
     [Fact]

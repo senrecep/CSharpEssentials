@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Tests.Endpoints;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
@@ -76,7 +78,51 @@ public class SwashbuckleEnumGoldenTests
         warnings.Should().NotContain(static message => message.StartsWith("OpenAPI document 'v1' ", StringComparison.Ordinal) || message.StartsWith("OpenAPI document 'v2' ", StringComparison.Ordinal));
     }
 
-    private static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(bool addEnumConventions, ILoggerProvider? logs = null, int passes = 1)
+    [Fact]
+    public async Task Operation_Should_UseWriteAsAndWarnOnce_When_TheHeaderSelectorThrows()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        IReadOnlyDictionary<string, string> documents = await GetDocumentsAsync(
+            addEnumConventions: true,
+            logs,
+            passes: 2,
+            configureApp: static app => app.MapGet("/v1/throwing", static (SampleStatus status) => status).WithGroupName("v1")
+                .WithEnumWireFormat("X-Enum-Format", static _ => throw new InvalidOperationException("selector failed")));
+
+        // The operation falls back to WriteAs (String): the v1 document, numbers otherwise, now shows the string form.
+        JsonNode document = JsonNode.Parse(documents["v1"])!;
+        JsonNode operation = document["paths"]!["/v1/throwing"]!["get"]!;
+        operation["x-enum-wire-format"].Should().BeNull();
+        operation["x-enum-wire-format-header"]!.GetValue<string>().Should().Be("X-Enum-Format");
+        document["components"]!["schemas"]!["SampleStatus"]!["type"]!.GetValue<string>().Should().Be("string");
+        logs.Entries.Where(static entry => entry.Message.Contains("selector of", StringComparison.Ordinal)).Should().ContainSingle()
+            .Which.Message.Should().Contain("/v1/throwing").And.Contain("global format String");
+    }
+
+    [Fact]
+    public async Task HeaderSelector_Should_RunInARequestScope_When_TheDocumentIsGenerated()
+    {
+        var providers = new ConcurrentBag<IServiceProvider>();
+        IServiceProvider? root = null;
+
+        await GetDocumentsAsync(
+            addEnumConventions: true,
+            configureApp: app =>
+            {
+                root = app.Services;
+                app.MapGet("/v1/scoped", static (SampleStatus status) => status).WithGroupName("v1").WithEnumWireFormat("X-Enum-Format", context =>
+                {
+                    providers.Add(context.RequestServices);
+                    return EnumWireFormat.Number;
+                });
+            });
+
+        providers.Should().NotBeEmpty().And.NotContain(root!);
+    }
+
+    private static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(
+        bool addEnumConventions, ILoggerProvider? logs = null, int passes = 1, Action<WebApplication>? configureApp = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -102,6 +148,7 @@ public class SwashbuckleEnumGoldenTests
         app.UseSwagger();
         app.MapSampleApi();
         app.MapControllers();
+        configureApp?.Invoke(app);
         await app.StartAsync();
         try
         {

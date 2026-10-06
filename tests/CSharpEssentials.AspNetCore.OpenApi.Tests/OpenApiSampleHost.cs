@@ -17,7 +17,8 @@ internal static class OpenApiSampleHost
         OpenApiSpecVersion version,
         bool addEnumConventions = true,
         Action<IServiceCollection>? configureServices = null,
-        int passes = 1)
+        int passes = 1,
+        Action<WebApplication>? configureApp = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -41,6 +42,7 @@ internal static class OpenApiSampleHost
         app.MapOpenApi();
         app.MapSampleApi();
         app.MapControllers();
+        configureApp?.Invoke(app);
         await app.StartAsync();
         try
         {
