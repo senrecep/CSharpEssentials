@@ -85,3 +85,11 @@ public sealed class StoredOrderV2
     public int Id { get; set; }
     public StoredOrderStatusV2 Status { get; set; }
 }
+
+public sealed class PlainOrder
+{
+    public int Id { get; set; }
+    public PlainColor Color { get; set; }
+    public PlainColor? PreviousColor { get; set; }
+    public List<PlainColor> Colors { get; set; } = [];
+}
