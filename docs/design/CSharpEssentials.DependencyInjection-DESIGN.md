@@ -1,4 +1,4 @@
-# CSharpEssentials.DependencyInjection — Design Document
+# CSharpEssentials.DependencyInjection: Design Document
 
 > **Date:** 2026-10-06 | **Status:** Approved design (4.1)
 > **Issues:** #48 (epic), #49 (docs), #50 (infra), #55 (attributes + runtime), #56 (generator + analyzer), #57 (docs/AOT example), #58 (P3)
@@ -35,7 +35,7 @@
 | Project | TFMs | Dependencies | Packable |
 |---|---|---|---|
 | `CSharpEssentials.DependencyInjection` | `net11.0;net10.0;net9.0;net8.0;netstandard2.1` (no `netstandard2.0`) | `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions` (duplicate debug log) | yes |
-| `CSharpEssentials.DependencyInjection.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no — packed into the runtime nupkg at `analyzers/dotnet/cs` (ADR-006) |
+| `CSharpEssentials.DependencyInjection.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no, packed into the runtime nupkg at `analyzers/dotnet/cs` (ADR-006) |
 
 - Both dependencies already exist in `Directory.Packages.props` (`[9.0.4,)`). Keyed services are available on `netstandard2.1` through `Microsoft.Extensions.DependencyInjection.Abstractions` 8+.
 - **netstandard2.1 polyfills** (`internal`, compiled only for `netstandard2.1`): `RequiresUnreferencedCodeAttribute`, `RequiresDynamicCodeAttribute`, `DynamicallyAccessedMembersAttribute`, `DynamicallyAccessedMemberTypes`. Trim annotations are meaningful only on `net8.0+`.
@@ -425,7 +425,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Incremental caching | Second run → tracked steps `Cached`/`Unchanged` |
 | Aggregate | Two fixture assemblies (`CSharpEssentials.Tests.Fixtures.DependencyInjectionA/B`); cross-assembly decorator; no duplicate registration |
 | Debug log (#56) | Duplicate (service, key) logged at `Debug`; nothing logged when the logger is null |
-| Analyzer (#56, #58) | Positive and negative per ID (CSE2001–2008) |
+| Analyzer (#56, #58) | Positive and negative per ID (CSE2001 to CSE2009) |
 | AOT (#57) | `examples/Examples.Endpoints` uses `Add{Asm}Services` and publishes with zero trim/AOT warnings |
 
 Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentials.Tests/Generators/`. xUnit + FluentAssertions, `Method_Should_Behavior`.

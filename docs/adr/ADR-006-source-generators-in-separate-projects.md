@@ -57,9 +57,9 @@ Each generator-backed package consists of two projects:
 
 | Block | Owner | Notes |
 |---|---|---|
-| `CSE0001`–`CSE0999` | Enums and future cross-cutting rules | `CSE0001` is in use (`NestedStringEnumAnalyzer`) |
-| `CSE1001`–`CSE1999` | `CSharpEssentials.Endpoints` | see [CSharpEssentials.Endpoints-DESIGN.md](../design/CSharpEssentials.Endpoints-DESIGN.md) |
-| `CSE2001`–`CSE2999` | `CSharpEssentials.DependencyInjection` | see [CSharpEssentials.DependencyInjection-DESIGN.md](../design/CSharpEssentials.DependencyInjection-DESIGN.md) |
+| `CSE0001` to `CSE0999` | Enums and future cross-cutting rules | `CSE0001` is in use (`NestedStringEnumAnalyzer`) |
+| `CSE1001` to `CSE1999` | `CSharpEssentials.Endpoints` | see [CSharpEssentials.Endpoints-DESIGN.md](../design/CSharpEssentials.Endpoints-DESIGN.md) |
+| `CSE2001` to `CSE2999` | `CSharpEssentials.DependencyInjection` | see [CSharpEssentials.DependencyInjection-DESIGN.md](../design/CSharpEssentials.DependencyInjection-DESIGN.md) |
 
 IDs are never reused or renumbered, including IDs reserved for deferred (P3) rules.
 
