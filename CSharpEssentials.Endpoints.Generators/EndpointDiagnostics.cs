@@ -48,6 +48,17 @@ internal static class EndpointDiagnostics
         description: "IEndpoint.Map is static and endpoint types are never instantiated, so instance state and constructor dependencies are dead code.",
         helpLinkUri: HelpLink);
 
+    public static readonly DiagnosticDescriptor DuplicateRoute = new(
+        "CSE1005",
+        "Duplicate HTTP method and route in the same group",
+        "Endpoint '{0}' maps {1} '{2}', which '{3}' also maps in the same group",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "Two endpoints with the same HTTP method and route pattern in one group make requests ambiguous at runtime. Only constant patterns passed directly to the Map parameter are compared.",
+        helpLinkUri: HelpLink,
+        customTags: WellKnownDiagnosticTags.CompilationEnd);
+
     public static readonly DiagnosticDescriptor SkippedType = new(
         "CSE1006",
         "Abstract or open-generic endpoint type is skipped",

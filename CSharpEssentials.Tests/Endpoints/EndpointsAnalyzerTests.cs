@@ -190,6 +190,89 @@ public class EndpointsAnalyzerTests
         }
         """;
 
+    private const string Cse1005Source = """
+        public sealed class OrdersGroup : IEndpointGroup
+        {
+            public static string Prefix => "orders";
+        }
+
+        public sealed class FirstUngrouped : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/dup", () => "first");
+        }
+
+        public sealed class SecondUngrouped : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("Dup/", () => "second");
+        }
+
+        [EndpointGroup<OrdersGroup>]
+        public sealed class CreateOrder : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapPost("/", () => "create");
+        }
+
+        [EndpointGroup<OrdersGroup>]
+        public sealed class CreateOrderAgain : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapMethods("/", new[] { "post", "put" }, () => "again");
+        }
+        """;
+
+    private const string Cse1005NegativeSource = """
+        public sealed class UsersGroup : IEndpointGroup
+        {
+            public static string Prefix => "users";
+        }
+
+        public sealed class TeamsGroup : IEndpointGroup
+        {
+            public static string Prefix => "teams";
+        }
+
+        [EndpointGroup<UsersGroup>]
+        public sealed class ListUsers : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/", () => "users");
+        }
+
+        [EndpointGroup<TeamsGroup>]
+        public sealed class ListTeams : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/", () => "teams");
+        }
+
+        [EndpointGroup<TeamsGroup>]
+        public sealed class CreateTeam : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapPost("/", () => "create");
+        }
+
+        public sealed class DynamicRoute : IEndpoint
+        {
+            private static string Pattern => "/dynamic";
+
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet(Pattern, () => "dynamic");
+        }
+
+        public sealed class DynamicRouteAgain : IEndpoint
+        {
+            private static string Pattern => "/dynamic";
+
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet(Pattern, () => "dynamic-again");
+        }
+
+        public sealed class SubGroupRoute : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGroup("/sub").MapGet("/plain", () => "sub");
+        }
+
+        public sealed class PlainRoute : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/plain", () => "plain");
+        }
+        """;
+
     [Fact]
     public async Task Analyzer_Should_Report_Nothing_When_Types_Are_Valid()
     {
@@ -306,6 +389,30 @@ public class EndpointsAnalyzerTests
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(ValidSource);
 
         diagnostics.Should().NotContain(static d => d.Id == "CSE1007");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1005_When_Method_And_Route_Repeat_In_Same_Group()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1005Source);
+
+        Diagnostic[] duplicates = [.. diagnostics.Where(static d => d.Id == "CSE1005")];
+        duplicates.Should().HaveCount(4).And.OnlyContain(static d => d.Severity == DiagnosticSeverity.Warning);
+        duplicates.Select(static d => d.Location.SourceTree!.GetText().ToString(d.Location.SourceSpan)).Should().BeEquivalentTo(
+            "\"/dup\"",
+            "\"Dup/\"",
+            "\"/\"",
+            "\"/\"");
+        duplicates.Select(static d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Should().Contain(
+            "Endpoint 'Sample.Api.CreateOrderAgain' maps POST '/', which 'Sample.Api.CreateOrder' also maps in the same group");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE1005_When_Groups_Methods_Or_Patterns_Differ()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1005NegativeSource);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE1005");
     }
 
     [Fact]

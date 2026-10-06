@@ -1,11 +1,13 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace CSharpEssentials.Endpoints.Generators;
 
 /// <summary>
-/// Reports endpoint and group types that the endpoints generator cannot map (CSE1001–CSE1004, CSE1006, CSE1007).
+/// Reports endpoint and group types that the endpoints generator cannot map and duplicate routes (CSE1001–CSE1007).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
@@ -16,6 +18,7 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         EndpointDiagnostics.GroupCycle,
         EndpointDiagnostics.MultipleGroups,
         EndpointDiagnostics.InstanceState,
+        EndpointDiagnostics.DuplicateRoute,
         EndpointDiagnostics.SkippedType,
         EndpointDiagnostics.InvalidGroupTarget);
 
@@ -25,6 +28,45 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
         context.EnableConcurrentExecution();
         context.RegisterSymbolAction(AnalyzeType, SymbolKind.NamedType);
+        context.RegisterCompilationStartAction(static start =>
+        {
+            ConcurrentBag<EndpointRoute> routes = [];
+            start.RegisterOperationAction(
+                operationContext =>
+                {
+                    foreach (EndpointRoute route in EndpointRouteReader.Read((IInvocationOperation)operationContext.Operation, operationContext.ContainingSymbol))
+                    {
+                        routes.Add(route);
+                    }
+                },
+                OperationKind.Invocation);
+            start.RegisterCompilationEndAction(end => ReportDuplicateRoutes(end, routes));
+        });
+    }
+
+    private static void ReportDuplicateRoutes(CompilationAnalysisContext context, ConcurrentBag<EndpointRoute> routes)
+    {
+        IEnumerable<IGrouping<string, EndpointRoute>> duplicates = routes
+            .GroupBy(static route => route.Key, StringComparer.Ordinal)
+            .Where(static group => group.Count() > 1);
+        foreach (IGrouping<string, EndpointRoute> duplicate in duplicates)
+        {
+            EndpointRoute[] ordered = [.. duplicate
+                .OrderBy(static route => route.Location.SourceTree?.FilePath, StringComparer.Ordinal)
+                .ThenBy(static route => route.Location.SourceSpan.Start)];
+            for (int index = 0; index < ordered.Length; index++)
+            {
+                EndpointRoute route = ordered[index];
+                EndpointRoute other = ordered[index == 0 ? 1 : 0];
+                context.ReportDiagnostic(Diagnostic.Create(
+                    EndpointDiagnostics.DuplicateRoute,
+                    route.Location,
+                    route.EndpointName,
+                    route.Method,
+                    route.Pattern,
+                    other.EndpointName));
+            }
+        }
     }
 
     private static void AnalyzeType(SymbolAnalysisContext context)

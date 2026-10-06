@@ -9,5 +9,6 @@ CSE1001 | CSharpEssentials.Endpoints | Error | EndpointsAnalyzer
 CSE1002 | CSharpEssentials.Endpoints | Error | EndpointsAnalyzer
 CSE1003 | CSharpEssentials.Endpoints | Error | EndpointsAnalyzer
 CSE1004 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
+CSE1005 | CSharpEssentials.Endpoints | Warning | EndpointsAnalyzer
 CSE1006 | CSharpEssentials.Endpoints | Info | EndpointsAnalyzer
 CSE1007 | CSharpEssentials.Endpoints | Error | EndpointsAnalyzer
