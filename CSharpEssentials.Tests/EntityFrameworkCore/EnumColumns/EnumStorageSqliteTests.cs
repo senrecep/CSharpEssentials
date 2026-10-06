@@ -18,16 +18,16 @@ public sealed class EnumStorageSqliteTests
         context.Orders.Add(SampleOrder());
         await context.SaveChangesAsync();
 
-        (await ScalarAsync(connection, "\"Status\"")).Should().Be("pending_approval");
-        (await ScalarAsync(connection, "\"PreviousStatus\"")).Should().Be("shipped");
-        (await ScalarAsync(connection, "\"Priority\"")).Should().Be(2L);
-        (await ScalarAsync(connection, "\"Permissions\"")).Should().Be(3L);
-        (await ScalarAsync(connection, "\"SharedPermissions\"")).Should().Be("[\"read\",\"delete\"]");
-        (await ScalarAsync(connection, "\"Color\"")).Should().Be(1L);
-        (await ScalarAsync(connection, "\"ManualStatus\"")).Should().Be("PendingApproval");
-        (await ScalarAsync(connection, "\"History\"")).Should().Be("[\"pending\",\"shipped\"]");
-        (await ScalarAsync(connection, "\"Priorities\"")).Should().Be("[0,2]");
-        (await ScalarAsync(connection, "\"details\"")).Should().Be("{\"Color\":1,\"Priority\":1,\"Status\":\"shipped\"}");
+        (await ScalarAsync(context, "\"Status\"")).Should().Be("pending_approval");
+        (await ScalarAsync(context, "\"PreviousStatus\"")).Should().Be("shipped");
+        (await ScalarAsync(context, "\"Priority\"")).Should().Be("2");
+        (await ScalarAsync(context, "\"Permissions\"")).Should().Be("3");
+        (await ScalarAsync(context, "\"SharedPermissions\"")).Should().Be("[\"read\",\"delete\"]");
+        (await ScalarAsync(context, "\"Color\"")).Should().Be("1");
+        (await ScalarAsync(context, "\"ManualStatus\"")).Should().Be("PendingApproval");
+        (await ScalarAsync(context, "\"History\"")).Should().Be("[\"pending\",\"shipped\"]");
+        (await ScalarAsync(context, "\"Priorities\"")).Should().Be("[0,2]");
+        (await ScalarAsync(context, "\"details\"")).Should().Be("{\"Color\":1,\"Priority\":1,\"Status\":\"shipped\"}");
     }
 
     [Fact]
@@ -75,7 +75,7 @@ public sealed class EnumStorageSqliteTests
 
         await using StoredOrderContext reader = StoredOrderContext.Sqlite(connection, model);
 
-        (await ScalarAsync(connection, "\"PreviousStatus\"")).Should().Be(DBNull.Value);
+        (await ScalarAsync(reader, "\"PreviousStatus\"")).Should().BeNull();
         (await reader.Orders.SingleAsync()).PreviousStatus.Should().BeNull();
     }
 
@@ -87,7 +87,7 @@ public sealed class EnumStorageSqliteTests
         context.Orders.Add(SampleOrder());
         await context.SaveChangesAsync();
 
-        Func<Task> update = () => ExecuteAsync(connection, "UPDATE orders SET \"Status\" = 'cancelled'");
+        Func<Task> update = () => context.Database.ExecuteSqlRawAsync("UPDATE orders SET \"Status\" = 'cancelled'");
 
         (await update.Should().ThrowAsync<SqliteException>()).Which.Message.Should().Contain("ck_orders_Status_enum");
     }
@@ -100,8 +100,8 @@ public sealed class EnumStorageSqliteTests
         context.Orders.Add(SampleOrder());
         await context.SaveChangesAsync();
 
-        Func<Task> priority = () => ExecuteAsync(connection, "UPDATE orders SET \"Priority\" = 7");
-        Func<Task> permissions = () => ExecuteAsync(connection, "UPDATE orders SET \"Permissions\" = 8");
+        Func<Task> priority = () => context.Database.ExecuteSqlRawAsync("UPDATE orders SET \"Priority\" = 7");
+        Func<Task> permissions = () => context.Database.ExecuteSqlRawAsync("UPDATE orders SET \"Permissions\" = 8");
 
         (await priority.Should().ThrowAsync<SqliteException>()).Which.Message.Should().Contain("ck_orders_Priority_enum");
         (await permissions.Should().ThrowAsync<SqliteException>()).Which.Message.Should().Contain("ck_orders_Permissions_enum");
@@ -120,8 +120,8 @@ public sealed class EnumStorageSqliteTests
             await writer.SaveChangesAsync();
         }
 
-        await ExecuteAsync(connection, "UPDATE orders SET \"Shipment\" = 'lost_at_sea'");
         await using StoredOrderContext reader = StoredOrderContext.Sqlite(connection, model);
+        await ExecuteAsync(reader, "UPDATE orders SET \"Shipment\" = 'lost_at_sea'");
 
         (await reader.Orders.SingleAsync()).Shipment.Should().Be(StoredShipment.Unknown);
     }
@@ -139,8 +139,8 @@ public sealed class EnumStorageSqliteTests
             await writer.SaveChangesAsync();
         }
 
-        await ExecuteAsync(connection, "UPDATE orders SET \"Status\" = 'SHIPPED'");
         await using StoredOrderContext reader = StoredOrderContext.Sqlite(connection, model);
+        await ExecuteAsync(reader, "UPDATE orders SET \"Status\" = 'SHIPPED'");
 
         (await reader.Orders.SingleAsync()).Status.Should().Be(StoredOrderStatus.Shipped);
     }
@@ -158,8 +158,8 @@ public sealed class EnumStorageSqliteTests
             await writer.SaveChangesAsync();
         }
 
-        await ExecuteAsync(connection, "UPDATE orders SET \"Status\" = 'cancelled'");
         await using StoredOrderContext reader = StoredOrderContext.Sqlite(connection, model);
+        await ExecuteAsync(reader, "UPDATE orders SET \"Status\" = 'cancelled'");
 
         Func<Task> read = () => reader.Orders.SingleAsync();
 
@@ -212,17 +212,11 @@ public sealed class EnumStorageSqliteTests
         return context;
     }
 
-    private static async Task<object?> ScalarAsync(SqliteConnection connection, string column)
+    private static Task<string?> ScalarAsync(DbContext context, string column)
     {
-        await using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = $"SELECT {column} FROM orders";
-        return await command.ExecuteScalarAsync();
+        string sql = "SELECT CAST(" + column + " AS TEXT) AS \"Value\" FROM orders";
+        return context.Database.SqlQueryRaw<string?>(sql).SingleAsync();
     }
 
-    private static async Task ExecuteAsync(SqliteConnection connection, string sql)
-    {
-        await using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = sql;
-        await command.ExecuteNonQueryAsync();
-    }
+    private static Task<int> ExecuteAsync(DbContext context, string sql) => context.Database.ExecuteSqlRawAsync(sql);
 }
