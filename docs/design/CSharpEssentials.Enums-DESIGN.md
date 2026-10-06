@@ -809,23 +809,23 @@ Error: `Error.Validation(code: "enum.invalid" | "enum.not_allowed", description:
 | ID | Severity | Rule |
 |---|---|---|
 | CSE0001 | | retired in 5.0 (nested enums are supported); ID stays reserved |
-| CSE0002 | Error | Two members produce the same wire name (`HTTPStatus` and `HttpStatus` → `http_status`) |
+| CSE0002 | Error | Two members produce the same wire name, compared case-insensitively like data reads (`HTTPStatus` and `HttpStatus` → `http_status`) |
 | CSE0003 | Error | An alias equals a wire name, member name or alias of another member (case-insensitive) |
 | CSE0004 | Error | More than one `[EnumFallback]` member |
-| CSE0005 | Warning | Effective storage is `Integer` and a member has no explicit value (reordering changes stored data). Code fix: add explicit values |
+| CSE0005 | Warning | Effective storage is `Integer` (`Storage = EnumStorage.Integer`, or a `[Flags]` enum with the default storage, because `EnumConventions.FlagsStorage` defaults to `Integer`) and a member has no explicit value (reordering changes stored data). Reported once per enum. Code fix: add explicit values |
 | CSE0006 | Warning | `[Flags]` enum without a zero member. Code fix: add `None = 0` |
 | CSE0007 | Warning | `[Flags]` member that is neither a power of two nor a combination of other members |
 | CSE0008 | Error | `[EnumFallback]` on a `[Flags]` enum (unknown bits are rejected, a fallback is meaningless) |
-| CSE0009 | Error | Wire name or alias is empty, contains whitespace or a comma, or is a valid number (it would collide with numeric input or with comma separated flags) |
+| CSE0009 | Error | Wire name or alias is empty, contains whitespace or a comma, or starts with a digit, `-`, `+` or `.` (the parser reads such text as a number, so it would collide with numeric input or with comma separated flags) |
 | CSE0010 | Info, disabled by default | Enum without `[StringEnum]` used as a property or parameter type of a public type (takes the reflection path); enable in `.editorconfig` |
 | CSE0011 | (not used) | Folded into CSE0015: a compilation below C# 9 gets no registration and fails loudly like any other enum without metadata |
 | CSE0012 | Warning | Invalid `CSharpEssentialsEnumNaming` MSBuild value |
-| CSE0013 | Warning | `[EnumAlias]`, `[EnumFallback]` or `[StringEnum(Naming)]`-dependent attributes on an enum without `[StringEnum]` (no effect) |
+| CSE0013 | Warning | `[EnumAlias]` or `[EnumFallback]` on a member of an enum without `[StringEnum]` (ignored; only the opt-in reflection fallback reads them). `[JsonStringEnumMemberName]` and `[EnumMember]` are not reported because System.Text.Json and other serializers read them |
 | CSE0014 | Error | A migration's `Up` or `Down` contains both EF's `AlterColumn` and `ConvertEnumColumn` for the same table and column (section 12.1). Symbols are matched by metadata name, so the analyzer is inert without `CSharpEssentials.EntityFrameworkCore` |
 | CSE0015 | Warning | `[StringEnum]` enum without generated metadata: the generator cannot reach it (private/protected nested, nested in a generic type) or the compilation is below C# 9. JSON converter creation throws instead of writing integers |
 | CSE0016 | Error | Two `[StringEnum]` enums map to the same generated extensions class name (for example nested `Order.State` and top-level `Order_State`); rename one. Hint names use the metadata name, so only the class name collides |
 
-When an error diagnostic applies, the generator skips metadata for that enum (ADR-006 rule), so the only error the user sees is the analyzer's.
+When an error diagnostic applies, the generator skips metadata for that enum (ADR-006 rule), so the only error the user sees is the analyzer's. This covers CSE0002, CSE0003, CSE0004, CSE0008 and CSE0009; CSE0016 keeps distinct hint names and still generates both enums.
 
 ## 16. Flags Guidance
 
