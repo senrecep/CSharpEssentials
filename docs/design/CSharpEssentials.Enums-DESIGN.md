@@ -12,7 +12,7 @@
 - One enum contract, configured once, applied identically to the database, JSON columns, request and response bodies, route/query/header/form values, outgoing HTTP clients, message bus payloads, validation and the OpenAPI document.
 - `snake_case` wire names by default, configurable per project, per enum and per member.
 - Undefined values never enter the system. The database enforces the value set with generated check constraints.
-- Legacy data (PascalCase, camelCase, integers, numeric text, 3.x snake case, comma separated flags) is readable in every layer, and existing rows can be converted with migration helpers.
+- Legacy data (PascalCase, camelCase, integers, numeric text, 3.x/4.x snake case, comma separated flags) is readable in every layer, and existing rows can be converted with migration helpers.
 - Legacy clients can keep receiving integers per endpoint group.
 - Flags and enum collections never hit a column length limit.
 - Everything on the generated path is decided at build time: no startup reflection, trim and AOT clean.
@@ -30,7 +30,7 @@
 | **Wire name** | The canonical string of a member. Written by every layer when the output format is `String`. |
 | **Member name** | The C# identifier (`PendingApproval`). |
 | **Alias** | A declared extra spelling (`[EnumAlias("Started")]`). Read, never written. |
-| **Legacy name** | The 3.x Core `ToSnakeCase()` spelling (`HTTPStatus` → `httpstatus`), emitted automatically when it differs from the wire name. Read, never written. |
+| **Legacy name** | The 3.x/4.x `ToSnakeCase()` spelling (`HTTPStatus` → `httpstatus`): the 3.x Core helper and EF storage, and the 4.x generated `ToSnakeCase()`. Emitted automatically as an alias when it differs from the wire name. Read, never written. |
 | **Input** | A value sent to this service by a caller: request body, route, query, header, form. The strictest read mode. |
 | **Data read** | A value this service reads from something it trusts to have been valid once: database rows, JSON columns, responses of other services, message bus payloads. Tolerant, may map to the fallback member. |
 | **Output** | Any value this service writes: response bodies, outgoing request bodies and query strings, message payloads, database writes. Always canonical. |
@@ -164,7 +164,7 @@ JsonSerializerOptions json = new JsonSerializerOptions().AddEnumConventions(Enum
 | Setting | Member | Property | Enum | Endpoint group / client | Project (MSBuild) | `EnumConventions` | Built-in default |
 |---|---|---|---|---|---|---|---|
 | Wire name | `[JsonStringEnumMemberName]`, `[EnumMember]` | | `[StringEnum(Naming)]` | | `CSharpEssentialsEnumNaming` | | `SnakeCaseLower` |
-| Aliases | `[EnumAlias]` | | | | | | legacy 3.x name |
+| Aliases | `[EnumAlias]` | | | | | | legacy 3.x/4.x name |
 | Fallback | `[EnumFallback]` | | | | | `UnknownValue` | `UseFallback` |
 | Output format | | | | action/controller `[EnumWireFormat]` > group `WithEnumWireFormat`, client options | | `WriteAs` | `String` |
 | Storage | | `.HasEnumStorage()`, `.HasLegacyEnumStorage()` | `[StringEnum(Storage)]` | | `ConfigureEnumConventions(existingStorage)` (model) | `Storage`, `FlagsStorage` | `String`, flags `Integer` |
@@ -627,7 +627,7 @@ public enum EnumStoredAs
     Integer,          // 0, 1
     MemberName,       // PendingApproval
     CamelCase,        // pendingApproval
-    LegacySnakeCase,  // 3.x Core ToSnakeCase: httpstatus
+    LegacySnakeCase,  // 3.x/4.x ToSnakeCase: httpstatus
     Text,             // any known spelling: wire name, member name, any case, alias, legacy name, numeric text
     FlagsText,        // "Read, Write", "read,write"
 }
@@ -877,7 +877,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 - `[StringEnum]` path: no reflection, no `MakeGenericType`, no `Activator`. The JSON factory, EF converters and model binders obtain typed instances through generated `IEnumInfo` factory methods.
 - Reflection fallback (`EnumMetadata.GetOrCreateWithReflection`) is annotated and off by default. It is reached only through an explicit opt-in that carries the same annotations; the default path never touches it. `CSharpEssentials.Enums` and `CSharpEssentials.Json` set `IsAotCompatible` so the trim analyzer enforces this.
 - A `[StringEnum]` enum without metadata fails loudly (CSE0015, converter creation throws); it never silently falls back to integers.
-- AOT smoke test: a `PublishAot=true` console sample in `examples/` that serializes, parses and formats every matrix row with `TrimmerSingleWarn=false` and warnings as errors.
+- Verification in 5.0: `IsAotCompatible` turns on the trim, AOT and single-file analyzers for `CSharpEssentials.Enums` and `CSharpEssentials.Json` on net8.0+, and `TreatWarningsAsErrors` makes any unannotated reflection a build error. There is no `PublishAot` sample for enums yet; a console sample that publishes with `PublishAot=true` and exercises every matrix row is a follow-up. User-facing guidance is in the [Enums Readme](../../CSharpEssentials.Enums/Readme.MD#aot-and-trimming).
 
 ## 18. Testing Strategy
 
