@@ -20,5 +20,5 @@ dotnet_diagnostic.CS0618.severity = none
 dotnet_diagnostic.CS0618.severity = none
 
 # Non-int underlying types (byte, sbyte, short, ushort, uint, long, ulong) are the subject of these tests.
-[{Enums/EnumValueFormatterTests,Enums/Runtime/RuntimeTestEnums}.cs]
+[{Enums/EnumValueFormatterTests,Enums/Runtime/RuntimeTestEnums,EntityFrameworkCore/EnumColumns/EnumStorageNumericTypes}.cs]
 dotnet_diagnostic.CA1028.severity = none
