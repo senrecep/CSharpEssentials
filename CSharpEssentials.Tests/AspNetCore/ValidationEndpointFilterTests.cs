@@ -83,7 +83,10 @@ public class ValidationEndpointFilterTests
         await using WebApplication app = await StartAsync(registerValidators: false);
         using HttpClient client = app.GetTestClient();
 
-        Func<Task> act = () => client.PostAsJsonAsync(new Uri("/items", UriKind.Relative), new CreateItem("pen", 2));
+        Func<Task> act = async () =>
+        {
+            using HttpResponseMessage response = await client.PostAsJsonAsync(new Uri("/items", UriKind.Relative), new CreateItem("pen", 2));
+        };
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("No IValidator<*CreateItem> is registered*");
     }
