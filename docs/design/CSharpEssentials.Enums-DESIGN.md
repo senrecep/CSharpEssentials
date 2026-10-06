@@ -200,7 +200,8 @@ Default conventions. "data reads" covers EF reads, JSON column reads, HTTP clien
 | `"unknown"`, `99999` (the fallback member) | 400 | 400 | ok | `Unknown` |
 | `99`, `"99"`, `"bogus"` | 400 | 400 | `Unknown` (fallback) | without a fallback member: exception, never stored |
 | `99` with `UnknownValue = Reject` | 400 | 400 | exception | |
-| `""`, `" pending"` | 400 | 400 | exception | no trimming, no empty |
+| `""` | 400 | 400 | exception | no empty |
+| `" pending"` | 400 | ok (trimmed) | exception | route, query, header and form values are trimmed; a JSON string is not |
 | JSON `null` / missing value | nullable: `null`; non-nullable: STJ rules | nullable: `null`; required: ASP.NET Core required handling | nullable: `null` | |
 | `"1.0"`, `"0x1"`, `"+1"`, `"-0"` | 400 | 400 | exception | numbers are `[-]digits` in the invariant culture only |
 
@@ -440,7 +441,7 @@ Changes in 5.0:
 - Adds header and form sources to the 4.1 query/route plan. Flags and collections accept repeated keys and comma separated values.
 - Rewrites accepted spellings to the member name before binding and short-circuits with the 400 of section 8 for rejected values, so `Enum.TryParse` never sees an undefined number.
 - `UseEnumBinding()` without `AddEnumConventions()` throws at startup with a message naming the missing call.
-- Values are not trimmed (like a JSON string). An empty value of a nullable or collection target is dropped, so the framework binds `null` or skips the item; a missing value is never touched, so a missing required parameter keeps the framework's handling.
+- Leading and trailing whitespace of a scalar value is trimmed before parsing, as the comma separated parts already are (a JSON string is not trimmed); a value that is still invalid is rejected. An empty or whitespace-only value of a nullable or collection target is dropped, so the framework binds `null` or skips the item; a missing value is never touched, so a missing required parameter keeps the framework's handling.
 - Each value is normalized by `EnumBindingNormalizer` (created once per enum type from `IEnumInfo`), which parses with `EnumInfo<TEnum>.TryParse(..., EnumReadMode.Input, conventions, ...)`: the exact accept rules of a JSON body. A comma on a scalar non-flags target is rejected; on a collection it splits items; on a flags target it combines members. A flags combination is written back as its number (`ToString("D")`) so comma-splitting binders (MVC header arrays) cannot split it again.
 - Header collections are written back as separate `StringValues`; form values replace `HttpRequest.Form` with a `FormCollection` that keeps the uploaded files.
 

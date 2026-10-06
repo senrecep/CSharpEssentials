@@ -46,7 +46,7 @@ public static class EnumBindingExtensions
     /// <summary>
     /// Normalizes the enum route, query, header and form values of the selected endpoint before model binding, for Minimal API
     /// (including <c>[AsParameters]</c>) and MVC actions, with the rules of the JSON converter: a wire name, alias, C# member
-    /// name or (with <see cref="EnumConventions.AcceptNumbers"/>) the number of a defined member, without trimming and never the
+    /// name or (with <see cref="EnumConventions.AcceptNumbers"/>) the number of a defined member, after trimming surrounding whitespace, and never the
     /// fallback member. Arrays bind repeated keys and comma separated values (<c>?s=a&amp;s=b</c>, <c>?s=a,b</c>); flags enums
     /// accept a comma separated value. A rejected value returns a 400 problem response with one error per key (see
     /// <see cref="EnumConventionsBuilder.ConfigureErrors"/>). Enums the conventions do not handle keep the framework's binding.

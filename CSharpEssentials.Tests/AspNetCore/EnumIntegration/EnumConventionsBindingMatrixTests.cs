@@ -23,7 +23,7 @@ public class EnumConventionsBindingMatrixTests
             var data = new TheoryData<string, string, string>();
             foreach (string api in new[] { "min", "mvc" })
                 foreach (string source in new[] { "route", "query", "header", "form" })
-                    foreach (string value in new[] { "pending_approval", "PENDING_APPROVAL", "PendingApproval", "pendingapproval", "1" })
+                    foreach (string value in new[] { "pending_approval", "PENDING_APPROVAL", "PendingApproval", "pendingapproval", "1", " pending_approval", "PendingApproval ", " 1 " })
                         data.Add(api, source, value);
             return data;
         }
@@ -220,6 +220,17 @@ public class EnumConventionsBindingMatrixTests
         EcResponse response = await host.GetAsync("/min/query");
 
         response.Status.Should().Be(400);
+    }
+
+    [Theory]
+    [MemberData(nameof(ScalarRows))]
+    public async Task Scalar_Should_Return400_When_ValueIsInvalidAfterTrimming(string api, string source)
+    {
+        await using EnumConventionsHost host = await EnumConventionsHost.StartMatrixAsync();
+
+        EcResponse response = await Send(host, api, source, "", " bogus ");
+
+        response.ShouldBeProblem().Should().ContainSingle().Which.Description.Should().EndWith(AllowedStatuses);
     }
 
     public static TheoryData<string> Apis => new() { "min", "mvc" };
