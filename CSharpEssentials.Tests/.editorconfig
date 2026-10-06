@@ -11,6 +11,10 @@ dotnet_diagnostic.S1133.severity = none
 [Enums/Runtime/EnumInfoParserTests.cs]
 dotnet_diagnostic.CS0618.severity = none
 
+# These tests cover the obsolete 4.x ConfigureEnumConventions forwarders on purpose.
+[EntityFrameworkCore/ModelConfigurationExtensionsTests.cs]
+dotnet_diagnostic.CS0618.severity = none
+
 # Non-int underlying types (byte, sbyte, short, ushort, uint, long, ulong) are the subject of these tests.
 [{Enums/EnumValueFormatterTests,Enums/Runtime/RuntimeTestEnums}.cs]
 dotnet_diagnostic.CA1028.severity = none
