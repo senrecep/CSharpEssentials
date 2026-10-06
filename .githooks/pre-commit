@@ -22,7 +22,7 @@ fi
 
 # ── Package count ──────────────────────────────────────────────────────────────
 ACTUAL_PACKAGES=$(find . -maxdepth 2 -name "CSharpEssentials.*.csproj" -o -name "CSharpEssentials.csproj" \
-    | grep -v -E "Tests|examples|Examples" \
+    | grep -v -E "Tests|examples|Examples|Generators" \
     | wc -l | tr -d ' ')
 BADGE_PACKAGES=$(grep -oE 'packages-[0-9]+-blue' "$README" | grep -oE '[0-9]+' || echo "")
 

@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace CSharpEssentials.Tests.Generators;
 
@@ -30,14 +31,21 @@ public static class GeneratorHarness
         compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(source, ParseOptions, path: $"Source{compilation.SyntaxTrees.Count()}.cs"));
 
     public static GeneratorDriver CreateDriver(params ISourceGenerator[] generators) =>
+        CreateDriver(null, generators);
+
+    public static GeneratorDriver CreateDriver(AnalyzerConfigOptionsProvider? optionsProvider, params ISourceGenerator[] generators) =>
         CSharpGeneratorDriver.Create(
             generators,
             parseOptions: ParseOptions,
+            optionsProvider: optionsProvider,
             driverOptions: new GeneratorDriverOptions(IncrementalGeneratorOutputKind.None, trackIncrementalGeneratorSteps: true));
 
-    public static GeneratorRun Run(Compilation compilation, params ISourceGenerator[] generators)
+    public static GeneratorRun Run(Compilation compilation, params ISourceGenerator[] generators) =>
+        Run(compilation, null, generators);
+
+    public static GeneratorRun Run(Compilation compilation, AnalyzerConfigOptionsProvider? optionsProvider, params ISourceGenerator[] generators)
     {
-        GeneratorDriver driver = CreateDriver(generators)
+        GeneratorDriver driver = CreateDriver(optionsProvider, generators)
             .RunGeneratorsAndUpdateCompilation(compilation, out Compilation outputCompilation, out ImmutableArray<Diagnostic> generatorDiagnostics);
 
         return new GeneratorRun(driver, driver.GetRunResult(), outputCompilation, generatorDiagnostics);

@@ -35,6 +35,23 @@ public sealed class CreateApp : IEndpoint
 - `[EndpointGroup(typeof(TGroup))]` or `[EndpointGroup<TGroup>]` places an endpoint or a group under a group. Groups can nest.
 - `[ExcludeFromMapping]` excludes an endpoint, a group (with everything under it) or an assembly.
 
+## Mapping
+
+The bundled source generator creates one registry per assembly in the `Microsoft.AspNetCore.Builder` namespace:
+
+```csharp
+var app = builder.Build();
+
+app.MapAppsEndpoints();   // one assembly's registry
+// or
+app.MapAllEndpoints();    // own registry + every referenced assembly's registry
+```
+
+- `Map{Asm}Endpoints` maps the endpoints of one assembly. `{Asm}` is the sanitized assembly name (`MyCompany.Apps.Api` → `MyCompanyAppsApi`) or the `[assembly: EndpointRegistryName("Apps")]` value.
+- `{Asm}EndpointRegistry.EndpointTypes` lists the endpoint types in mapping order.
+- `MapAllEndpoints` is `internal` and generated automatically in `Exe`/`WinExe` projects that are not test projects. Use `[assembly: GenerateEndpointAggregate]` to opt in from a library or test project, `[assembly: DisableEndpointAggregate]` to opt out. Each registry is mapped once, own registry first, then referenced registries by assembly name.
+- Each endpoint type is mapped inside its own `MapGroup("")`, so route patterns, OpenAPI metadata, filters and authorization are the same as direct mapping. Route calls such as `MapGet` stay in your `Map` method.
+
 ## Mapping options
 
 ```csharp

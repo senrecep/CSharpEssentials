@@ -38,6 +38,8 @@
 | `CSharpEssentials.Endpoints.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no — packed into `CSharpEssentials.Endpoints` at `analyzers/dotnet/cs` (ADR-006) |
 | `CSharpEssentials.AspNetCore` (existing) | unchanged | **no** reference to Endpoints | yes |
 
+Packing: `build/PackGenerator.targets` (imported by the runtime csproj) adds a `ReferenceOutputAssembly=false` project reference to `$(MSBuildProjectName).Generators` and packs its `netstandard2.0` dll at `analyzers/dotnet/cs`. `build/CSharpEssentials.Endpoints.props` is packed at both `build/` and `buildTransitive/`.
+
 Namespace: `CSharpEssentials.Endpoints`. Generated registries live in `Microsoft.AspNetCore.Builder`, so `app.Map{Asm}Endpoints()` is discoverable without a `using`.
 
 ## 4. Public Contracts (#51)
@@ -238,6 +240,7 @@ internal static class {Asm}EndpointAggregate
 | No duplicate mapping | Registries are deduplicated by registry type. An assembly that has both its own module and the aggregate maps its endpoints exactly once. |
 | Order | Own registry first, then referenced registries by assembly name (ordinal). |
 | Exclusions | Runtime selection uses `options.Filter` (for example, by `type.Assembly`). |
+| Empty aggregate | An eligible assembly gets `MapAllEndpoints` even when it has no own registry and no referenced module. The method is then a no-op, so `app.MapAllEndpoints()` compiles before the first endpoint exists. *(Added during #52: emitting it conditionally would break the host build whenever all endpoints are removed or excluded.)* |
 
 An assembly that sees another assembly's internals (`InternalsVisibleTo`) and also has its own aggregate gets an ambiguous `MapAllEndpoints` call. In that case, call the registries explicitly.
 
@@ -329,6 +332,8 @@ namespace Microsoft.AspNetCore.Builder
     }
 }
 ```
+
+The generated registry carries `<summary>`/`<param>` XML docs on its public members (omitted above for brevity), so consumers with `GenerateDocumentationFile` and warnings-as-errors build clean (CS1591). *(Added during #52.)* The `GeneratedCode` version is the generator assembly version.
 
 The runtime `EndpointMapper.MapEndpoint<T>` performs the §5.4 wrapping and the §5.5 ordering. Snapshot tests pin the exact text, and the listing above shows the shape.
 

@@ -38,9 +38,12 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+    <None Include="build\CSharpEssentials.Endpoints.props" Pack="true" PackagePath="build;buildTransitive" />
   </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+
+  <Import Project="..\build\PackGenerator.targets" />
 </Project>
