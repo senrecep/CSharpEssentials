@@ -28,3 +28,8 @@ dotnet_diagnostic.CSE0006.severity = none
 # The reader/writer test compiles ConstructorExpression, which EF Core marks as evaluation-only, to prove compiled models rebuild it.
 [EntityFrameworkCore/EnumColumns/EnumJsonValueReaderWriterTests.cs]
 dotnet_diagnostic.EF9100.severity = none
+
+# A flags enum whose composite member covers bits without a single flag, so formatting has to fall back to the composite.
+[Enums/Runtime/ParserCompositeAccess.cs]
+dotnet_diagnostic.CA2217.severity = none
+dotnet_diagnostic.S4070.severity = none
