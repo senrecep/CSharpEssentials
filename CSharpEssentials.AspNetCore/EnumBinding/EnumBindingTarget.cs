@@ -12,10 +12,15 @@ namespace CSharpEssentials.AspNetCore;
 /// MVC complex type fallback key: skipped when the request has a value under this model prefix, because MVC then
 /// binds the prefixed keys only.
 /// </param>
+/// <param name="FirstSourceWins">
+/// MVC parameter without an explicit source: MVC reads the first value provider that has the key (form, route, query), so
+/// only that source is validated.
+/// </param>
 internal sealed record EnumBindingTarget(
     EnumBindingSource Source,
     string Key,
     EnumBindingNormalizer Normalizer,
     bool AllowEmpty,
     bool IsCollection,
-    string? SkipWhenPrefixPresent = null);
+    string? SkipWhenPrefixPresent = null,
+    bool FirstSourceWins = false);

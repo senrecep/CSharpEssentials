@@ -148,9 +148,9 @@ internal sealed class EnumBindingPlanBuilder(Func<Type, EnumBindingNormalizer?> 
         else if (source is null || source == BindingSource.ModelBinding)
         {
             // MVC value providers read the form, the route and the query string.
-            Add(EnumBindingSource.Form, name, value);
-            Add(EnumBindingSource.Route, name, value);
-            Add(EnumBindingSource.Query, name, value);
+            Add(EnumBindingSource.Form, name, value, firstSourceWins: true);
+            Add(EnumBindingSource.Route, name, value, firstSourceWins: true);
+            Add(EnumBindingSource.Query, name, value, firstSourceWins: true);
         }
     }
 
@@ -221,16 +221,16 @@ internal sealed class EnumBindingPlanBuilder(Func<Type, EnumBindingNormalizer?> 
                 Add(explicitSource, key, value, skipWhenPrefixPresent);
                 continue;
             }
-            Add(EnumBindingSource.Form, key, value, skipWhenPrefixPresent);
-            Add(EnumBindingSource.Route, key, value, skipWhenPrefixPresent);
-            Add(EnumBindingSource.Query, key, value, skipWhenPrefixPresent);
+            Add(EnumBindingSource.Form, key, value, skipWhenPrefixPresent, firstSourceWins: true);
+            Add(EnumBindingSource.Route, key, value, skipWhenPrefixPresent, firstSourceWins: true);
+            Add(EnumBindingSource.Query, key, value, skipWhenPrefixPresent, firstSourceWins: true);
         }
     }
 
-    private void Add(EnumBindingSource source, string key, EnumBindingValue value, string? skipWhenPrefixPresent = null)
+    private void Add(EnumBindingSource source, string key, EnumBindingValue value, string? skipWhenPrefixPresent = null, bool firstSourceWins = false)
     {
         if (_keys.Add((source, key.ToUpperInvariant())))
-            _targets.Add(new EnumBindingTarget(source, key, value.Normalizer, value.AllowEmpty, value.IsCollection, skipWhenPrefixPresent));
+            _targets.Add(new EnumBindingTarget(source, key, value.Normalizer, value.AllowEmpty, value.IsCollection, skipWhenPrefixPresent, firstSourceWins));
     }
 
     private bool TryGetEnumType(Type type, out EnumBindingValue value)
