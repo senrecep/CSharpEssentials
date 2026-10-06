@@ -48,7 +48,7 @@ public class ShopDbContext : BaseDbContext<ShopDbContext>
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
         base.ConfigureConventions(configurationBuilder);
-        configurationBuilder.ConfigureEnumConventions(typeof(ShopDbContext).Assembly);
+        configurationBuilder.ConfigureEnumConventions(EnumConventions.Default);
     }
 }
 ```
@@ -114,7 +114,7 @@ var response = await _dbContext.Logs
 
 ## Enum String Conversion
 
-The `EnumToStringConverter` stores enum values as human-readable strings:
+`ConfigureEnumConventions` stores `[StringEnum]` values by their wire name through `EnumWireNameConverter<TEnum>`:
 
 | Enum Value | Stored in DB |
 |------------|--------------|
@@ -122,10 +122,14 @@ The `EnumToStringConverter` stores enum values as human-readable strings:
 | `ProductCategory.Clothing` | `"clothing"` |
 | `ProductCategory.Food` | `"food"` |
 
-This makes the database self-documenting and avoids magic numbers.
+This makes the database self-documenting and avoids magic numbers. The convention also adds a check constraint, so the database rejects unknown values:
 
-Since 4.0 the stored value is the JSON name from `StringEnumNaming` (`snake_case_lower`, `[JsonStringEnumMemberName]` respected), so it matches JSON and Swagger. This differs from 3.x only for acronyms and digits (`HTTPStatus` → `http_status`, was `httpstatus`). Reading also accepts the old values. To keep writing the 3.x format:
+```sql
+CONSTRAINT "ck_products_Category_enum" CHECK ("Category" IN ('electronics', 'clothing', 'food', 'books', 'home'))
+```
+
+The stored value is the wire name, the same spelling as JSON and query binding. For an existing database whose enum columns hold integers, keep them and opt in per column:
 
 ```csharp
-configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(ShopDbContext).Assembly);
+configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
 ```

@@ -108,22 +108,28 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IServic
 
 ---
 
-## Enum Storage (4.0 breaking change)
+## Enum Storage (5.0)
 
-`ConfigureEnumConventions` stores every `[StringEnum]` enum as a string using the same naming as JSON (`StringEnumNaming`, snake_case by default). 3.x stored names with Core `ToSnakeCase`; set `UseLegacySnakeCase` to keep reading existing data:
+`ConfigureEnumConventions` stores `[StringEnum]` enums by wire name (same spelling as JSON) and adds a check constraint `ck_{table}_{column}_enum` per column. Enums without `[StringEnum]` keep EF's integer default.
 
 ```csharp
 public class ShopDbContext(DbContextOptions<ShopDbContext> options) : DbContext(options)
 {
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-    {
-        configurationBuilder.ConfigureEnumConventions(typeof(ShopDbContext).Assembly);
-
-        // 3.x storage format for existing data:
-        // configurationBuilder.ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, typeof(ShopDbContext).Assembly);
-    }
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+        configurationBuilder.ConfigureEnumConventions(EnumConventions.Default);
+        // Existing database with integer enum columns: keep them, first migration stays empty
+        // configurationBuilder.ConfigureEnumConventions(EnumConventions.Default, existingStorage: EnumStoredAs.Integer);
 }
+
+modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);              // per property
+modelBuilder.Entity<Order>().Property(o => o.Kind).HasLegacyEnumStorage(EnumStoredAs.MemberName);     // keep old text format
+modelBuilder.Entity<Order>().Property(o => o.Note).HasEnumCheckConstraint(false);                     // no constraint
 ```
+
+- Properties with a user `HasConversion` are skipped.
+- Reads are tolerant; unknown values map to `[EnumFallback]` or throw naming the column.
+- `ToJson()` columns use `EnumJsonValueReaderWriter<TEnum>`.
+- The 4.x `params Assembly[]` overloads and `EnumConventionOptions` are obsolete forwarders.
 
 ---
 
@@ -188,4 +194,4 @@ The write context is pooled with change tracking; the read context is pooled wit
 - Pick one domain event path: `DomainEventInterceptor` or `BaseDbContext.DispatchDomainEventsOnSaveChanges`
 - `SoftDeleteAsync` skips audit and domain events; use `MarkAsDeleted` + `SaveChanges` when those must run
 - `PaginateAsync` issues a COUNT and a data query; pass `includeTotalCount: false` to skip the COUNT
-- Upgrading from 3.x: enum columns change format unless you set `UseLegacySnakeCase = true`
+- Upgrading to 5.0: pass `existingStorage: EnumStoredAs.Integer` (or the column's old format) to `ConfigureEnumConventions`, otherwise `[StringEnum]` integer columns become text in the next migration
