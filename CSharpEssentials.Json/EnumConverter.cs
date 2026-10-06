@@ -83,7 +83,7 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         if (byteLength > limit * (reader.ValueIsEscaped ? 6 : 3))
         {
             if (_acceptsAnyText)
-                return ReadText(reader.GetString().AsSpan());
+                return IsPlainUnknownText(ref reader, splitLegacyFlags) ? info.Fallback!.Value : ReadText(reader.GetString().AsSpan());
             throw new EnumValueJsonException(info.CreateError(Preview(ref reader, byteLength), mode));
         }
 
@@ -102,6 +102,36 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
                 ArrayPool<char>.Shared.Return(rented);
         }
     }
+
+    // An over-long value is the fallback member unless it looks like a number (rejected as malformed), starts or ends with
+    // whitespace (rejected) or is split into legacy flags. Only plain ASCII edges are decided from the bytes; anything else
+    // is read as a string.
+    private bool IsPlainUnknownText(ref Utf8JsonReader reader, bool splitLegacyFlags)
+    {
+        if (reader.ValueIsEscaped || splitLegacyFlags && info.IsFlags)
+            return false;
+
+        byte first;
+        byte last;
+        if (reader.HasValueSequence)
+        {
+            ReadOnlySequence<byte> sequence = reader.ValueSequence;
+            Span<byte> edge = stackalloc byte[1];
+            sequence.Slice(0, 1).CopyTo(edge);
+            first = edge[0];
+            sequence.Slice(sequence.Length - 1, 1).CopyTo(edge);
+            last = edge[0];
+        }
+        else
+        {
+            first = reader.ValueSpan[0];
+            last = reader.ValueSpan[^1];
+        }
+
+        return IsPlainEdge(first) && IsPlainEdge(last) && !(first is >= (byte)'0' and <= (byte)'9' or (byte)'-' or (byte)'+' or (byte)'.');
+    }
+
+    private static bool IsPlainEdge(byte value) => value is > 0x20 and < 0x7F;
 
     private TEnum ReadText(ReadOnlySpan<char> text) =>
         info.IsFlags && text.IndexOf(',') >= 0 ? ReadLegacyFlags(text) : ReadToken(text);

@@ -431,6 +431,38 @@ public class EnumConverterFactoryTests
     }
 
     [Theory]
+    [InlineData("x", "x", true)]
+    [InlineData("é", "é", true)]
+    [InlineData(" ", "x", false)]
+    [InlineData("x", " ", false)]
+    [InlineData("1", "x", false)]
+    [InlineData("-", "x", false)]
+    [InlineData("x", "1", true)]
+    public void Read_Should_Treat_A_Long_Value_As_The_Fallback_Member_Unless_It_Is_Malformed(string first, string last, bool fallback)
+    {
+        string json = "\"" + first + new string('x', 5_000) + last + "\"";
+
+        Action act = () => Read<JsonOrderStatus>(json, EnumReadMode.Data);
+
+        if (fallback)
+            Read<JsonOrderStatus>(json, EnumReadMode.Data).Should().Be(JsonOrderStatus.Unknown);
+        else
+            act.Should().Throw<EnumValueJsonException>();
+    }
+
+    [Fact]
+    public async Task Read_Should_Treat_A_Long_Value_Split_Across_Segments_As_The_Fallback_Member()
+    {
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes("\"" + new string('x', 5_000) + "\"");
+        JsonSerializerOptions options = Options(EnumReadMode.Data);
+
+        await using ChunkedStream stream = new(new MemoryStream(bytes));
+        JsonOrderStatus value = await JsonSerializer.DeserializeAsync<JsonOrderStatus>(stream, options);
+
+        value.Should().Be(JsonOrderStatus.Unknown);
+    }
+
+    [Theory]
     [InlineData("\"\\u0070ending_approval\"")]
     [InlineData("\"\\u0041pproval\"")]
     public void Read_Should_Unescape_A_Value_Before_The_Lookup(string json)
@@ -617,6 +649,28 @@ public class EnumConverterFactoryTests
 
         json.Should().Be("\"http-shipped\"");
     }
+}
+
+internal sealed class ChunkedStream(Stream inner) : Stream
+{
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+    public override void Flush() { }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            inner.Dispose();
+        base.Dispose(disposing);
+    }
+
+    public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, Math.Min(count, 1000));
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }
 
 [StringEnum]
