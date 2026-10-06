@@ -24,7 +24,7 @@ Current version: 4.1.0 <!-- x-release-please-version -->
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: One public type per file, filename matches type name
 - Tests live in `CSharpEssentials.Tests/`
-- Endpoints and DependencyInjection keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
+- Endpoints, DependencyInjection and Enums keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
 
 ## Releasing
 
