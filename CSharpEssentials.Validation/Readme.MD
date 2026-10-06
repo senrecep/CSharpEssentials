@@ -112,6 +112,28 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 
 All comparable validators are available for nullable value types; `null` is skipped.
 
+### Enums (`TEnum`, `TEnum?`)
+
+| Validator | Null | Error code | Description |
+|-----------|------|------------|-------------|
+| `IsDefinedEnum()` | skip | `enum.invalid` | Value is a defined member; a `[Flags]` enum also accepts any combination of defined flags |
+| `IsOneOf(params TEnum[])` | skip | `enum.not_allowed` | Value equals one of the given members (exact match, flags are not decomposed) |
+| `HasOnlyDefinedFlags()` | skip | `enum.invalid` | Every set bit belongs to a defined member; zero passes |
+
+The description is the `EnumValueError.Message` text that binding and JSON errors use:
+
+```csharp
+rules.For(() => order.Status).IsDefinedEnum();
+// enum.invalid: '42' is not a valid OrderStatus. Allowed values: pending, in_progress.
+
+rules.For(() => command.Status).IsOneOf(OrderStatus.Approved, OrderStatus.Rejected);
+// enum.not_allowed: 'pending' is not a valid OrderStatus. Allowed values: approved, rejected.
+```
+
+- `[StringEnum]` enums use their generated metadata: values are written as wire names (flags as `a,b`), and `IsDefinedEnum`/`HasOnlyDefinedFlags` list the input wire names (the `[EnumFallback]` member is defined but not listed, as in binding errors).
+- Enums without metadata never throw: `IsDefinedEnum` follows `Enum.IsDefined` (plus defined flag combinations for `[Flags]` enums), and errors list the C# member names.
+- An undefined value is written as its number. Each rule has a `message` overload (code kept) and an `Error` overload.
+
 ## CascadeMode
 
 By default (`Stop`), the first failure on a chain stops subsequent rules. Use `Continue` to accumulate all errors for a property:
@@ -514,5 +536,5 @@ Result<Order> order = await GetOrderAsync(id)
 
 ## Dependencies
 
-- `CSharpEssentials.Results`
+- `CSharpEssentials.Results` (brings `CSharpEssentials.Errors` and `CSharpEssentials.Enums`)
 - `Microsoft.Extensions.DependencyInjection.Abstractions`
