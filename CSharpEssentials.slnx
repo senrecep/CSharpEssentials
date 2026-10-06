@@ -5,6 +5,7 @@
   <Project Path="CSharpEssentials.Core/CSharpEssentials.Core.csproj" />
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
+  <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
   <Project Path="CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
   <Project Path="CSharpEssentials.GcpSecretManager/CSharpEssentials.GcpSecretManager.csproj" />
