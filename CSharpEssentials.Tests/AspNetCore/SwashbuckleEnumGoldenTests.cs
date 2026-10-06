@@ -121,8 +121,32 @@ public class SwashbuckleEnumGoldenTests
         providers.Should().NotBeEmpty().And.NotContain(root!);
     }
 
+    [Fact]
+    public async Task Operation_Should_UseWriteAs_When_DisposingTheSelectorScopeThrows()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        IReadOnlyDictionary<string, string> documents = await GetDocumentsAsync(
+            addEnumConventions: true,
+            logs,
+            configureServices: static services => services.AddScoped<AsyncOnlyDisposable>(),
+            configureApp: static app => app.MapGet("/v1/async-disposable", static (SampleStatus status) => status).WithGroupName("v1")
+                .WithEnumWireFormat("X-Enum-Format", static context => context.RequestServices.GetRequiredService<AsyncOnlyDisposable>().Format));
+
+        // The synchronous scope Dispose throws for a service that only implements IAsyncDisposable; the operation falls back to WriteAs.
+        JsonNode document = JsonNode.Parse(documents["v1"])!;
+        document["paths"]!["/v1/async-disposable"]!["get"]!["x-enum-wire-format-header"]!.GetValue<string>().Should().Be("X-Enum-Format");
+        document["components"]!["schemas"]!["SampleStatus"]!["type"]!.GetValue<string>().Should().Be("string");
+        logs.Entries.Where(static entry => entry.Message.Contains("selector of", StringComparison.Ordinal)).Should().ContainSingle()
+            .Which.Message.Should().Contain("/v1/async-disposable");
+    }
+
     internal static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(
-        bool addEnumConventions, ILoggerProvider? logs = null, int passes = 1, Action<WebApplication>? configureApp = null)
+        bool addEnumConventions,
+        ILoggerProvider? logs = null,
+        int passes = 1,
+        Action<WebApplication>? configureApp = null,
+        Action<IServiceCollection>? configureServices = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -143,6 +167,7 @@ public class SwashbuckleEnumGoldenTests
             options.UseOneOfForPolymorphism();
             options.CustomSchemaIds(static type => type == typeof(SampleGrantChange) ? nameof(SampleChange) + type.Name : type.Name);
         });
+        configureServices?.Invoke(builder.Services);
 
         await using WebApplication app = builder.Build();
         app.UseSwagger();
@@ -166,5 +191,12 @@ public class SwashbuckleEnumGoldenTests
         {
             await app.StopAsync();
         }
+    }
+
+    private sealed class AsyncOnlyDisposable : IAsyncDisposable
+    {
+        public EnumWireFormat Format => EnumWireFormat.Number;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

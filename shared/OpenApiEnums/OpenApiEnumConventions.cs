@@ -210,11 +210,13 @@ internal sealed partial class OpenApiEnumConventions
             return new OperationEnumFormat(WriteAs, null);
 
         // A header selector is described by its default branch: the format of a request without the header. It runs in its own
-        // scope, so scoped services resolve as in a request; a selector that throws is described with WriteAs.
-        using IServiceScope scope = _services.CreateScope();
+        // scope, so scoped services resolve as in a request; a selector that throws is described with WriteAs. The scope is
+        // disposed inside the try: a scoped service that is only IAsyncDisposable makes the synchronous Dispose throw.
         try
         {
-            EnumWireFormat format = metadata.SelectFormat(new DefaultHttpContext { RequestServices = scope.ServiceProvider });
+            EnumWireFormat format;
+            using (IServiceScope scope = _services.CreateScope())
+                format = metadata.SelectFormat(new DefaultHttpContext { RequestServices = scope.ServiceProvider });
             return new OperationEnumFormat(format, metadata.VaryHeader);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
