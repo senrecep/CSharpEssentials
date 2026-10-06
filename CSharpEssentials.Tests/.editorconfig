@@ -2,3 +2,15 @@
 [*.cs]
 # xunit test classes and [Theory] parameter/MemberData types must be public
 dotnet_diagnostic.CA1515.severity = none
+
+# Fixtures that deliberately carry [Obsolete] members to prove the generators and converters keep them working.
+[{Enums/StringEnumGeneratorTests,Enums/Runtime/RuntimeTestEnums,Json/JsonSerializerOptionsExtensionsTests,Json/ConditionalStringEnumConverterTests}.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# The parser test feeds the obsolete ParserStatus.Aborted alias on purpose.
+[Enums/Runtime/EnumInfoParserTests.cs]
+dotnet_diagnostic.CS0618.severity = none
+
+# Non-int underlying types (byte, sbyte, short, ushort, uint, long, ulong) are the subject of these tests.
+[{Enums/EnumValueFormatterTests,Enums/Runtime/RuntimeTestEnums}.cs]
+dotnet_diagnostic.CA1028.severity = none

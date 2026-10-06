@@ -229,13 +229,15 @@ public class EnumValueFormatterTests
         values.Should().Equal("0", "255");
     }
 
+    private static readonly int[] TwoInts = [1, 2];
+
     public static TheoryData<object?> NotHandledCollections => new()
     {
         null,
         "second_value",
         42,
         DayOfWeek.Monday,
-        new[] { 1, 2 },
+        TwoInts,
         Array.Empty<FormatterInt>(),
         new List<FormatterInt?> { null },
         new object[] { FormatterInt.MinValue, "second_value" },

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using CSharpEssentials.Enums;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
@@ -55,13 +56,13 @@ public class StringEnumAnalyzerTests
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Source, LanguageVersion.Latest);
 
         diagnostics.Should().OnlyContain(static d => d.Id == "CSE0015" && d.Severity == DiagnosticSeverity.Warning);
-        diagnostics.Select(static d => d.GetMessage().Split('\'')[1]).Should().BeEquivalentTo(
+        diagnostics.Select(static d => d.GetMessage(CultureInfo.InvariantCulture).Split('\'')[1]).Should().BeEquivalentTo(
             "Sample.Order.Hidden",
             "Sample.Order.Guarded",
             "Sample.Order.Inner.InPrivate",
             "Sample.Generic<T>.InGeneric",
             "FileLocal");
-        diagnostics.Should().OnlyContain(static d => d.GetMessage().Contains("throws instead of writing numbers"));
+        diagnostics.Should().OnlyContain(static d => d.GetMessage(CultureInfo.InvariantCulture).Contains("throws instead of writing numbers"));
     }
 
     [Theory]
@@ -85,7 +86,7 @@ public class StringEnumAnalyzerTests
 
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0015");
-        diagnostic.GetMessage().Should().Contain("Sample.OrderStatus").And.Contain("below 9");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Contain("Sample.OrderStatus").And.Contain("below 9");
     }
 
     [Fact]
@@ -137,7 +138,7 @@ public class StringEnumAnalyzerTests
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(colliding, LanguageVersion.Latest);
 
         diagnostics.Should().OnlyContain(static d => d.Id == "CSE0016" && d.Severity == DiagnosticSeverity.Error);
-        diagnostics.Select(static d => d.GetMessage()).Should().BeEquivalentTo(
+        diagnostics.Select(static d => d.GetMessage(CultureInfo.InvariantCulture)).Should().BeEquivalentTo(
             "'Sample.Order.State' generates the extensions class 'Order_StateExtensions', which 'Sample.Order_State' generates as well; rename one of the enums or its containing type",
             "'Sample.Order_State' generates the extensions class 'Order_StateExtensions', which 'Sample.Order.State' generates as well; rename one of the enums or its containing type");
     }
