@@ -110,7 +110,8 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
     }
 
     /// <summary>
-    /// The normalized values of one key, or <see langword="null"/> after adding the error of a rejected value.
+    /// The normalized values of one key, or <see langword="null"/> when the values are unchanged or after adding the error
+    /// of a rejected value, so the request collections are only copied when a value actually changes.
     /// </summary>
     private StringValues? Normalize(EnumBindingTarget target, StringValues values, ref List<Error>? errors)
     {
@@ -125,7 +126,8 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
             foreach (string? part in parts)
                 normalized.Add(part!);
         }
-        return new StringValues([.. normalized]);
+        StringValues result = new([.. normalized]);
+        return result.Equals(values) ? null : (StringValues?)result;
     }
 
     /// <summary>
