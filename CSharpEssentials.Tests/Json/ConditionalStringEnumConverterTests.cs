@@ -46,6 +46,8 @@ internal enum ConverterFlagsKind
 [Obsolete("Tests the obsolete 4.x converter.")]
 public class ConditionalStringEnumConverterTests
 {
+    private static readonly JsonSerializerOptions CustomPredicateOptions = new() { Converters = { new ConditionalStringEnumConverter(canConvert: type => type == typeof(RegularEnumType)) } };
+
     private static readonly JsonSerializerOptions StringEnumOptions = new()
     {
         Converters = { new ConditionalStringEnumConverter() }
@@ -160,9 +162,7 @@ public class ConditionalStringEnumConverterTests
     [Fact]
     public void Serialize_WithCustomPredicate_ShouldNotUseReflectionForEnumsWithoutGeneratedMetadata()
     {
-        JsonSerializerOptions options = new() { Converters = { new ConditionalStringEnumConverter(canConvert: type => type == typeof(RegularEnumType)) } };
-
-        string json = JsonSerializer.Serialize(RegularEnumType.Second, options);
+        string json = JsonSerializer.Serialize(RegularEnumType.Second, CustomPredicateOptions);
 
         new ConditionalStringEnumConverter(canConvert: _ => true).CanConvert(typeof(RegularEnumType)).Should().BeFalse();
         json.Should().Be("1");

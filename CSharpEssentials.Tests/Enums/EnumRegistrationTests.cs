@@ -55,7 +55,7 @@ public class EnumRegistrationTests
     }
 
     [Fact]
-    public void Parallel_First_Lookups_Should_All_Find_Metadata()
+    public async Task Parallel_First_Lookups_Should_All_Find_Metadata()
     {
         const int threads = 16;
         string path = typeof(ContractStatus).Assembly.Location;
@@ -81,8 +81,8 @@ public class EnumRegistrationTests
                     TaskScheduler.Default);
             }
 
-            Task.WaitAll(lookups);
-            lookups.Select(static lookup => lookup.Result).Should().AllBeEquivalentTo(true);
+            bool[] results = await Task.WhenAll(lookups);
+            results.Should().AllBeEquivalentTo(true);
         }
     }
 }

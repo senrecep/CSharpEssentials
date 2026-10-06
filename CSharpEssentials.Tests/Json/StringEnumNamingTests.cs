@@ -291,7 +291,7 @@ public class StringEnumNamingTests
     {
         Action getName = () => StringEnumNaming.GetName(PlainKind.First);
         Action getNames = () => StringEnumNaming.GetNames<PlainKind>();
-        Action tryParse = () => StringEnumNaming.TryParse("first", out PlainKind _);
+        Action tryParse = () => _ = StringEnumNaming.TryParse("first", out PlainKind _);
 
         getName.Should().Throw<InvalidOperationException>().WithMessage("*PlainKind*no generated metadata*");
         getNames.Should().Throw<InvalidOperationException>();
