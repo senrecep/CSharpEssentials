@@ -131,7 +131,7 @@ The bundled analyzer reports types the generator cannot map. Invalid types are s
 | CSE1001 | Error | Endpoint or group type is not accessible from generated code (private/protected nested, `file`-local, or nested in an inaccessible type). |
 | CSE1002 | Error | Group nesting cycle: the `[EndpointGroup]` chain returns to the same group. Reported on each group in the cycle. |
 | CSE1003 | Error | More than one group attribute on one type (`[EndpointGroup(typeof(X))]` and `[EndpointGroup<Y>]`). |
-| CSE1004 | Warning | Endpoint declares instance fields, auto-properties or a constructor with parameters. Endpoint types are never instantiated; take dependencies as handler parameters. |
+| CSE1004 | Warning | Endpoint declares instance fields, auto-properties or a constructor with parameters. Endpoint types are never instantiated; take dependencies as handler parameters. Code fix: removes the state when nothing else uses it. |
 | CSE1005 | Warning | Two endpoints in the same group map the same HTTP method and constant route (`MapGet`/`MapPost`/`MapPut`/`MapDelete`/`MapPatch`/`MapMethods` on the `Map` parameter). Ungrouped endpoints count as one group. |
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped. |
 | CSE1007 | Error | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract or open-generic. |

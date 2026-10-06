@@ -1,9 +1,12 @@
-<!-- Packs the companion source generator project ($(MSBuildProjectName).Generators) into this package under analyzers/dotnet/cs.
-     The generator is built first through a non-referencing ProjectReference and never becomes a package or runtime dependency. -->
+<!-- Packs the companion source generator project ($(MSBuildProjectName).Generators) and code fix project ($(MSBuildProjectName).CodeFixes)
+     into this package under analyzers/dotnet/cs. Both are built first through non-referencing ProjectReferences and never become
+     package or runtime dependencies. -->
 <Project>
   <PropertyGroup>
     <CseGeneratorProjectName Condition="'$(CseGeneratorProjectName)' == ''">$(MSBuildProjectName).Generators</CseGeneratorProjectName>
     <CseGeneratorProjectDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../$(CseGeneratorProjectName)'))</CseGeneratorProjectDirectory>
+    <CseCodeFixProjectName Condition="'$(CseCodeFixProjectName)' == ''">$(MSBuildProjectName).CodeFixes</CseCodeFixProjectName>
+    <CseCodeFixProjectDirectory>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../$(CseCodeFixProjectName)'))</CseCodeFixProjectDirectory>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +14,16 @@
                       ReferenceOutputAssembly="false"
                       PrivateAssets="all" />
     <None Include="$(CseGeneratorProjectDirectory)/bin/$(Configuration)/netstandard2.0/$(CseGeneratorProjectName).dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('$(CseCodeFixProjectDirectory)/$(CseCodeFixProjectName).csproj')">
+    <ProjectReference Include="$(CseCodeFixProjectDirectory)/$(CseCodeFixProjectName).csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+    <None Include="$(CseCodeFixProjectDirectory)/bin/$(Configuration)/netstandard2.0/$(CseCodeFixProjectName).dll"
           Pack="true"
           PackagePath="analyzers/dotnet/cs"
           Visible="false" />

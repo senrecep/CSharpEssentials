@@ -77,7 +77,7 @@ The analyzer reports invalid declarations at compile time:
 |---|---|---|
 | CSE2001 | Error | The class does not implement the service type. |
 | CSE2002 | Error | Two registrations of the same service type and key, one with `RegistrationStrategy.Throw`. |
-| CSE2003 | Info | The class has interfaces, but none matches `I{TypeName}`, so it is registered as itself. |
+| CSE2003 | Info | The class has interfaces, but none matches `I{TypeName}`, so it is registered as itself. Code fix: `[RegisterX(typeof(IFoo))]` per interface, or `As = ServiceAs.Self`. |
 | CSE2004 | Error | The decorator has no constructor parameter of the decorated type, or more than one. |
 | CSE2005 | Error | The decorator does not have exactly one public constructor. |
 | CSE2006 | Info | Captive dependency: a singleton takes a scoped or transient service (or a scoped one takes a transient) registered by attribute in the same project. Checked for single-constructor classes only. |
