@@ -80,7 +80,7 @@ services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // open ge
 
 ## Generated Registry
 
-Each assembly with marked classes gets `services.Add{Assembly}Services()` (dots removed: `Sample.Billing` → `AddSampleBillingServices()`), plus an overload taking an `ILogger` that logs duplicate (service, key) registrations at `Debug`. It registers the assembly's services, then applies its decorators.
+Each assembly with marked classes gets `services.Add{Assembly}Services()` (dots removed: `Sample.Billing` → `AddSampleBillingServices()`), plus an overload taking an `ILogger` that logs duplicate (service, key) registrations at `Debug`. It registers the assembly's services, then applies its decorators immediately, so a decorator of a service registered by another assembly throws `InvalidOperationException` unless that assembly's `Add{Assembly}Services()` (or a manual registration) ran first.
 
 Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`, which registers every referenced assembly's registry and the app's own before applying any decorator, so a decorator can wrap a service from another assembly. `Order` is global across assemblies; ties follow assembly order (referenced by name, the app last), then type name. `AddServicesFromAssemblies` does the same with the assemblies in the order passed. Registration is idempotent per assembly: a second `Add{Assembly}Services`, `AddAllServices` or `AddServicesFromAssemblies` call skips assemblies already registered by any of them, so services and decorators are never added twice.
 
@@ -139,6 +139,7 @@ Build after adding attributes: CSE2003 flags classes whose interfaces do not fol
 ## Best Practices
 
 - Prefer the generated `Add{Assembly}Services()` / `AddAllServices()` over `AddServicesFromAssemblies`.
+- When decorators wrap services from other assemblies, call `AddAllServices()`, or call the per-assembly methods with dependencies first.
 - Use `Strategy = RegistrationStrategy.Throw` or `TryAdd` for services that must have one registration.
 - Treat CSE2006 (captive dependency) as a bug even though it is Info.
 - Add a unit test that groups `IServiceCollection` by `(ServiceType, ServiceKey)` to catch unintended duplicates.

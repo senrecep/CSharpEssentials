@@ -211,7 +211,7 @@ Applied when neither an explicit service type nor `As` is given:
 1. Registrations in deterministic order (by implementation fully qualified name, then attribute order), each through its strategy.
 2. Decorators, **last**, sorted by `Order` then fully qualified name, each through `Decorate<TService>(factory, key)` with a generated factory.
 
-Decorators may target services registered manually or by other modules, as long as those registrations exist when the decorator is applied. Otherwise, `Decorate` throws with the decorator name. The aggregate (§6.3) applies all modules' registrations before any decorators, which covers cross-assembly decoration.
+Decorators may target services registered manually or by other modules, as long as those registrations exist when the decorator is applied. Otherwise, `Decorate` throws with the decorator name. Because `Add{Asm}Services` applies its decorators immediately, per-assembly calls are order-sensitive: `AddAuditServices()` decorating a service from `Billing` throws when it runs before `AddBillingServices()`. Callers either register dependencies first or use the aggregate (§6.3), which applies all modules' registrations before any decorators and so covers cross-assembly decoration regardless of order. The generator cannot reorder per-assembly calls written by the user, and decorators are not deferred, so a missing registration still fails fast at startup instead of silently leaving a service undecorated.
 
 ### 5.4 Coexistence with manual registrations
 
