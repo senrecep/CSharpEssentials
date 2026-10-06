@@ -23,6 +23,17 @@ public class GeneratedServiceRegistryTests
     }
 
     [Fact]
+    public void AddCSharpEssentialsTestsServices_Should_Register_Record_Services()
+    {
+        ServiceCollection services = new();
+
+        services.AddCSharpEssentialsTestsServices();
+
+        services.Should().ContainSingle(static descriptor => descriptor.ServiceType == typeof(IScanRecordService))
+            .Which.ImplementationType.Should().Be<ScanRecordService>();
+    }
+
+    [Fact]
     public void AddCSharpEssentialsTestsServices_Should_Apply_Decorators_In_Order()
     {
         ServiceCollection services = new();
