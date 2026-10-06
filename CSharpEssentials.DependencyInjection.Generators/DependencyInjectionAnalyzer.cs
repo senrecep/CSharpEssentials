@@ -136,8 +136,9 @@ public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer
             int consumerRank = LifetimeRank(consumer.Registration.Model.Lifetime);
             foreach (ServiceDependency dependency in consumer.Dependencies)
             {
-                (string TypeName, string Lifetime) provider = providers[dependency.ServiceType + "|" + dependency.Key]
-                    .Concat(dependency.OpenServiceType is { } open ? providers[open + "|" + dependency.Key] : [])
+                string? key = dependency.InheritsKey ? consumer.Registration.Model.Key : dependency.Key;
+                (string TypeName, string Lifetime) provider = providers[dependency.ServiceType + "|" + key]
+                    .Concat(dependency.OpenServiceType is { } open ? providers[open + "|" + key] : [])
                     .FirstOrDefault(candidate => LifetimeRank(candidate.Lifetime) > consumerRank);
                 if (provider.TypeName is null)
                 {
