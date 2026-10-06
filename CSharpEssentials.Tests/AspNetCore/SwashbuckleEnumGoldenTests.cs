@@ -122,6 +122,36 @@ public class SwashbuckleEnumGoldenTests
     }
 
     [Fact]
+    public async Task HeaderSelector_Should_ResolveScopedServices_When_TheRootProviderValidatesScopes()
+    {
+        using var logs = new CapturingLoggerProvider();
+        var resolved = new ConcurrentBag<ScopedFormat>();
+
+        IReadOnlyDictionary<string, string> documents = await GetDocumentsAsync(
+            addEnumConventions: true,
+            logs,
+            configureServices: static services => services.AddScoped<ScopedFormat>(),
+            configureApp: app =>
+            {
+                foreach (string path in (string[])["/v1/scoped-a", "/v1/scoped-b"])
+                {
+                    app.MapGet(path, static (SampleStatus status) => status).WithGroupName("v1").WithEnumWireFormat("X-Enum-Format", context =>
+                    {
+                        ScopedFormat format = context.RequestServices.GetRequiredService<ScopedFormat>();
+                        resolved.Add(format);
+                        return format.Format;
+                    });
+                }
+            },
+            validateScopes: true);
+
+        // ValidateScopes makes the root provider refuse scoped services; a fresh scope per selector call gives each its own instance.
+        resolved.Should().HaveCountGreaterThanOrEqualTo(2).And.OnlyHaveUniqueItems();
+        logs.Entries.Should().NotContain(static entry => entry.Message.Contains("selector of", StringComparison.Ordinal));
+        JsonNode.Parse(documents["v1"])!["components"]!["schemas"]!["SampleStatus"]!["type"]!.GetValue<string>().Should().Be("integer");
+    }
+
+    [Fact]
     public async Task Operation_Should_UseWriteAs_When_DisposingTheSelectorScopeThrows()
     {
         using var logs = new CapturingLoggerProvider();
@@ -146,10 +176,12 @@ public class SwashbuckleEnumGoldenTests
         ILoggerProvider? logs = null,
         int passes = 1,
         Action<WebApplication>? configureApp = null,
-        Action<IServiceCollection>? configureServices = null)
+        Action<IServiceCollection>? configureServices = null,
+        bool validateScopes = false)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.WebHost.UseDefaultServiceProvider(options => options.ValidateScopes = validateScopes);
         builder.Logging.ClearProviders();
         if (logs is not null)
             builder.Logging.AddProvider(logs);
@@ -191,6 +223,11 @@ public class SwashbuckleEnumGoldenTests
         {
             await app.StopAsync();
         }
+    }
+
+    private sealed class ScopedFormat
+    {
+        public EnumWireFormat Format => EnumWireFormat.Number;
     }
 
     private sealed class AsyncOnlyDisposable : IAsyncDisposable
