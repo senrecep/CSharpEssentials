@@ -19,7 +19,7 @@ The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle h
 
 ## Package references
 
-The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` never carries analyzers. The same app outside the repository references the packages:
+The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` does not carry the referenced project's own generator output, but analyzers from that project's NuGet packages do flow, so the generator project is referenced explicitly. The same app outside the repository references the packages:
 
 ```xml
 <ItemGroup>

@@ -13,7 +13,7 @@ This console application shows the helpers that the `CSharpEssentials.Enums` sou
 
 ## Package references
 
-The project references the library projects and the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` never carries analyzers. In your own project reference the package:
+The project references the library projects and the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` does not carry the referenced project's own generator output, but analyzers from that project's NuGet packages do flow, so the generator project is referenced explicitly. In your own project reference the package:
 
 ```xml
 <ItemGroup>

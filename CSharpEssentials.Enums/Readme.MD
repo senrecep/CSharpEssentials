@@ -20,7 +20,7 @@ The package contains the source generator, the analyzers and the code fixes. Any
 | Outgoing HTTP | `CSharpEssentials.Http` |
 | Enums declared in a shared domain library | `CSharpEssentials.Enums` (or one of the packages above) in the library; consumers need it only if they declare enums too |
 
-Inside this repository the samples and tests use `ProjectReference`s, which never carry analyzers: they reference `CSharpEssentials.Enums.Generators` with `OutputItemType="Analyzer"` themselves (the tests also import `build/CSharpEssentials.Enums.props` for `CSharpEssentialsEnumNaming`).
+Inside this repository the samples and tests use `ProjectReference`s; a `ProjectReference` does not carry the referenced project's own generator output, but analyzers from that project's NuGet packages do flow. The samples and tests therefore reference `CSharpEssentials.Enums.Generators` with `OutputItemType="Analyzer"` themselves (the tests also import `build/CSharpEssentials.Enums.props` for `CSharpEssentialsEnumNaming`).
 
 Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` and `netstandard2.0`. Registration needs C# 9 or later.
 
