@@ -45,8 +45,8 @@
 | `CSharpEssentials.Enums.CodeFixes` (new, not packable) | `netstandard2.0` | Roslyn 4.8 | code fixes for CSE0005 and CSE0006 |
 | `CSharpEssentials.Json` | unchanged | none | `EnumConverterFactory`, `JsonSerializerOptions.AddEnumConventions` |
 | `CSharpEssentials.AspNetCore` | unchanged | **removes** `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
-| `CSharpEssentials.AspNetCore.OpenApi` (new) | `net11.0;net10.0;net9.0` | `Microsoft.AspNetCore.OpenApi` (approval needed) | schema and operation transformers |
-| `CSharpEssentials.AspNetCore.Swashbuckle` (new) | `net11.0;net10.0;net9.0;net8.0` | `Swashbuckle.AspNetCore` (moved) | `AddSwagger`, filters, schema id factory, security schemes |
+| `CSharpEssentials.AspNetCore.OpenApi` (new) | `net11.0;net10.0` | `Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x (approved 2026-10-06, only in this package) | schema and operation transformers |
+| `CSharpEssentials.AspNetCore.Swashbuckle` (new) | `net11.0;net10.0;net9.0;net8.0` | `Swashbuckle.AspNetCore` [8.1.0,10) (moved, Microsoft.OpenApi 1.x) | `AddSwagger`, filters, schema id factory, security schemes |
 | `CSharpEssentials.EntityFrameworkCore` | unchanged | none | storage conventions, check constraint convention, migration helpers, `EnumDataAudit` |
 | `CSharpEssentials.Http` | unchanged | none | query formatting, `AddEnumConventions` for typed clients |
 | `CSharpEssentials.Validation` | unchanged | **adds** `CSharpEssentials.Enums` | `IsDefinedEnum`, `IsOneOf`, `HasOnlyDefinedFlags` |
@@ -514,9 +514,10 @@ Rules:
 
 ### 10.2 Package split
 
-- `CSharpEssentials.AspNetCore.Swashbuckle`: `AddSwagger`, `ConfigureSwaggerOptions`, `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory`, `SecuritySchemes`. Namespaces stay `CSharpEssentials.AspNetCore.Swagger*` so only a package reference changes. Swashbuckle 8.x/9.x (Microsoft.OpenApi 1.x) on net8.0/net9.0, 10.x (Microsoft.OpenApi 2.x) on net10.0+.
+- `CSharpEssentials.AspNetCore.Swashbuckle`: `AddSwagger`, `ConfigureSwaggerOptions`, `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory`, `SecuritySchemes`. Namespaces stay `CSharpEssentials.AspNetCore.Swagger*` so only a package reference changes. Swashbuckle 8.x/9.x (Microsoft.OpenApi 1.x) on every TFM, as pinned centrally today. This package carries the net8.0/net9.0 story. Swashbuckle 10 (Microsoft.OpenApi 2.x) support is a follow-up outside 5.0.
 - Fixes moved with the code: XML comments are loaded per assembly that declares the type (`type.Assembly.Location` with `File.Exists`), not `GetCallingAssembly`; descriptions are appended, not replaced; the schema follows `EnumConventions` and metadata, no hardcoded policy.
-- `CSharpEssentials.AspNetCore.OpenApi`: `services.AddOpenApi(o => o.AddEnumConventions())` registers an `IOpenApiSchemaTransformer` and an `IOpenApiOperationTransformer` (parameters, group format). net9.0 compiles against Microsoft.OpenApi 1.x, net10.0+ against 2.x, with `#if` only inside the two transformer files.
+- `CSharpEssentials.AspNetCore.OpenApi` (net10.0+ only, Microsoft.OpenApi 2.x): `services.AddOpenApi(o => o.AddEnumConventions())` registers an `IOpenApiSchemaTransformer` and an `IOpenApiOperationTransformer` (parameters, group format). There is no net9.0 target: between Microsoft.OpenApi 1.x and 2.x the schema type (`string` → `JsonSchemaType`), enum values and extensions (`IOpenApiAny` → `JsonNode`) and the schema model (`IOpenApiSchema` interface) all change, so multi-targeting would implement the package core twice, and net8.0/net9.0 reach end of support on 2026-11-10, around the 5.0 release. Adding net9.0 later is non-breaking; removing it would be breaking.
+- **One host references one of the two packages, never both.** Microsoft.OpenApi 2.x from the OpenApi package and Swashbuckle 8.x/9.x (1.x) in the same host resolve to 2.x and break Swashbuckle at runtime. The README of both packages states it. No other package (`CSharpEssentials.AspNetCore`, `.Enums`, `.Json`) depends on Microsoft.OpenApi. A test asserts that the dependency closure of each package never contains the other, and the OpenApi tests run on a net10.0 test TFM (the main test project is net9.0 only today).
 - Scalar UI: no helper in 5.0 (no new dependency). The README shows the two lines for versioned documents.
 
 ## 11. EF Core Storage (`CSharpEssentials.EntityFrameworkCore`, #64)
@@ -761,7 +762,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | Parser | every matrix row in `Input` and `Data` mode, each `EnumConventions` switch; registration from a separate type-only assembly |
 | JSON | every matrix row, flags, nullable, dictionary key, collection, alias, fallback, source generated context |
 | ASP.NET Core | TestServer: matrix rows for route, query, header, form, body; minimal API and MVC in one host; v1 Number + v2 String groups |
-| OpenAPI | golden files for both packages, normalized diff equality (generated client round trip deferred to 5.1) |
+| OpenAPI | golden files for both packages (OpenApi on net10.0, Swashbuckle on net9.0), normalized diff equality; dependency closure test (section 10.2) (generated client round trip deferred to 5.1) |
 | EF Core | Testcontainers PostgreSQL + SQLite: column types, constraints, invalid insert rejected, migration diff after adding a member, JSON columns, collections, skipped user converters, legacy storage; migration helper conversions with an undefined value in the data (kept, never `NULL`), `Down()`, idempotency, operation order of 12.1 |
 | HTTP | TestServer peer: String client ↔ Number server and Number client ↔ tolerant server (`CSharpEssentials.Http`); `EnumValueFormatter` non-generic overloads for every underlying type, nullable, flags, collections |
 | Cross-layer | one table-driven golden test (#68) executed against JSON, binding, EF, `CSharpEssentials.Http` and both OpenAPI outputs |
