@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using CSharpEssentials.Enums;
 using FluentAssertions;
 using Microsoft.CodeAnalysis;
@@ -36,7 +37,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0002");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Error);
-        diagnostic.GetMessage().Should().Be("'Running' produces the wire name 'IN_PROGRESS', which 'InProgress' produces as well");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Be("'Running' produces the wire name 'IN_PROGRESS', which 'InProgress' produces as well");
         SourceText(diagnostic).Should().Be("JsonStringEnumMemberName(\"IN_PROGRESS\")");
     }
 
@@ -70,9 +71,9 @@ public class EnumRulesAnalyzerTests
             }
             """);
 
-        Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE0003" && d.GetMessage().Contains("of 'Done' equals")).Subject;
+        Diagnostic diagnostic = diagnostics.Should().ContainSingle(static d => d.Id == "CSE0003" && d.GetMessage(CultureInfo.InvariantCulture).Contains("of 'Done' equals")).Subject;
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Error);
-        diagnostic.GetMessage().Should().Be($"The alias {alias.Replace("\"", "'", StringComparison.Ordinal)} of 'Done' equals {detail}");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Be($"The alias {alias.Replace("\"", "'", StringComparison.Ordinal)} of 'Done' equals {detail}");
         SourceText(diagnostic).Should().StartWith("EnumAlias(");
     }
 
@@ -105,7 +106,7 @@ public class EnumRulesAnalyzerTests
             """);
 
         diagnostics.Should().HaveCount(2).And.OnlyContain(static d => d.Id == "CSE0004" && d.Severity == DiagnosticSeverity.Error);
-        diagnostics.Select(static d => d.GetMessage()).Should().BeEquivalentTo(
+        diagnostics.Select(static d => d.GetMessage(CultureInfo.InvariantCulture)).Should().BeEquivalentTo(
             "'Unknown' is marked [EnumFallback] as well as 'Other'; keep one fallback member",
             "'Other' is marked [EnumFallback] as well as 'Unknown'; keep one fallback member");
     }
@@ -141,7 +142,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0005");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
-        diagnostic.GetMessage().Should().Be(
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Be(
             "'Sample.Priority' is stored as an integer and 'Low', 'High' have no explicit value; reordering or inserting members changes stored data");
         SourceText(diagnostic).Should().Be("Priority");
     }
@@ -159,7 +160,7 @@ public class EnumRulesAnalyzerTests
             }
             """);
 
-        diagnostics.Should().ContainSingle(static d => d.Id == "CSE0005").Which.GetMessage().Should().Contain("'Write' has no explicit value");
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE0005").Which.GetMessage(CultureInfo.InvariantCulture).Should().Contain("'Write' has no explicit value");
     }
 
     [Theory]
@@ -184,7 +185,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0006");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
-        diagnostic.GetMessage().Should().Be("[Flags] enum 'Sample.Access' has no member with the value 0");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Be("[Flags] enum 'Sample.Access' has no member with the value 0");
         SourceText(diagnostic).Should().Be("Access");
     }
 
@@ -213,7 +214,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0007");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
-        diagnostic.GetMessage().Should().Be("[Flags] member 'Odd' is neither a single bit nor a combination of other members");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Be("[Flags] member 'Odd' is neither a single bit nor a combination of other members");
         SourceText(diagnostic).Should().Be("Odd");
     }
 
@@ -239,7 +240,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0008");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Error);
-        diagnostic.GetMessage().Should().StartWith("'None' is marked [EnumFallback] but 'Sample.Access' is a [Flags] enum");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().StartWith("'None' is marked [EnumFallback] but 'Sample.Access' is a [Flags] enum");
         SourceText(diagnostic).Should().Be("EnumFallback");
     }
 
@@ -271,7 +272,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0009");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Error);
-        diagnostic.GetMessage().Should().Be($"The {kind} '{name}' of 'A' is invalid because {reason}");
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().Be($"The {kind} '{name}' of 'A' is invalid because {reason}");
     }
 
     [Fact]
@@ -317,7 +318,7 @@ public class EnumRulesAnalyzerTests
             new Dictionary<string, ReportDiagnostic> { ["CSE0010"] = ReportDiagnostic.Info });
 
         diagnostics.Should().OnlyContain(static d => d.Id == "CSE0010" && d.Severity == DiagnosticSeverity.Info);
-        diagnostics.Select(static d => d.GetMessage().Split('\'')[1]).Should().BeEquivalentTo(
+        diagnostics.Select(static d => d.GetMessage(CultureInfo.InvariantCulture).Split('\'')[1]).Should().BeEquivalentTo(
             "Sample.Color",
             "Sample.Size",
             "Sample.Shape");
@@ -350,7 +351,7 @@ public class EnumRulesAnalyzerTests
         Diagnostic diagnostic = diagnostics.Should().ContainSingle().Subject;
         diagnostic.Id.Should().Be("CSE0012");
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
-        diagnostic.GetMessage().Should().StartWith($"The CSharpEssentialsEnumNaming value '{value}' is not valid; use one of ")
+        diagnostic.GetMessage(CultureInfo.InvariantCulture).Should().StartWith($"The CSharpEssentialsEnumNaming value '{value}' is not valid; use one of ")
             .And.Contain("KebabCaseLower")
             .And.EndWith("SnakeCaseLower is used instead.");
     }
@@ -376,7 +377,7 @@ public class EnumRulesAnalyzerTests
             """);
 
         diagnostics.Should().HaveCount(2).And.OnlyContain(static d => d.Id == "CSE0013" && d.Severity == DiagnosticSeverity.Warning);
-        diagnostics.Select(static d => d.GetMessage()).Should().BeEquivalentTo(
+        diagnostics.Select(static d => d.GetMessage(CultureInfo.InvariantCulture)).Should().BeEquivalentTo(
             "[EnumAlias] on 'Active' is ignored because 'Sample.Status' has no [StringEnum]; only the opt-in reflection fallback reads it",
             "[EnumFallback] on 'Unknown' is ignored because 'Sample.Status' has no [StringEnum]; only the opt-in reflection fallback reads it");
     }
