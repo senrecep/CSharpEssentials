@@ -22,6 +22,20 @@ public class DependencyInjectionAnalyzerTests
 
         """;
 
+    private const string FromKeyedServicesStub = """
+        namespace Microsoft.Extensions.DependencyInjection;
+
+        [System.AttributeUsage(System.AttributeTargets.Parameter)]
+        public sealed class FromKeyedServicesAttribute : System.Attribute
+        {
+            public FromKeyedServicesAttribute() { }
+
+            public FromKeyedServicesAttribute(object? key) => Key = key;
+
+            public object? Key { get; }
+        }
+        """;
+
     public static TheoryData<string, DiagnosticSeverity, string> InvalidSources => new()
     {
         { "CSE2001", DiagnosticSeverity.Error, "[RegisterScoped(typeof(IFoo))] public sealed class Foo;" },
@@ -218,6 +232,13 @@ public class DependencyInjectionAnalyzerTests
         diagnostics.Should().NotContain(static d => d.Id == "CSE2009");
     }
 
-    private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source) =>
-        AnalyzerHarness.GetAnalyzerDiagnosticsAsync(ServiceGeneration.CreateCompilation(source), ServiceGeneration.Analyzers);
+    private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(source);
+        compilation = compilation.AddSyntaxTrees(CSharpSyntaxTree.ParseText(FromKeyedServicesStub, (CSharpParseOptions)compilation.SyntaxTrees[0].Options));
+
+        compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).Should().BeEmpty();
+
+        return AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+    }
 }
