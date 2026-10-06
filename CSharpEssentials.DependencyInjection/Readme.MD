@@ -69,6 +69,17 @@ builder.Services.AddSampleBillingServices(logger); // logs duplicate (service, k
 
 Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`. It registers the services of every referenced assembly that has a generated registry, and of the application itself, before it applies any decorator, so a decorator can wrap a service from another assembly. Decorators of all assemblies are applied together in ascending `Order`; decorators with the same `Order` follow assembly order (referenced assemblies by name, the application last), then type name. `AddServicesFromAssemblies` uses the same rule with the assemblies in the order you pass them. Registration is idempotent per assembly: calling `Add{Assembly}Services` twice, or after `AddAllServices`, does nothing, and `AddAllServices` and `AddServicesFromAssemblies` skip assemblies that are already registered. The generated and reflection paths share one marker per assembly in the collection, so mixing them does not register a service or apply a decorator twice.
 
+### Decorators across assemblies
+
+`Add{Assembly}Services` applies the assembly's decorators as soon as it has registered its services. A decorator whose service is registered by another assembly therefore needs that registration to exist first; otherwise `Decorate` throws `InvalidOperationException` naming the decorator. With per-assembly calls, register dependencies first:
+
+```csharp
+builder.Services.AddSampleBillingServices();   // registers IPaymentGateway
+builder.Services.AddSampleAuditServices();     // decorates IPaymentGateway
+```
+
+`AddAllServices()` has no such ordering requirement, because it registers every assembly's services before it applies any decorator. Prefer it in applications that decorate across assemblies.
+
 | Assembly attribute | Effect |
 |---|---|
 | `[assembly: ServiceRegistryName("Billing")]` | Renames the method to `AddBillingServices`. |
