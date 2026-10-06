@@ -1,4 +1,4 @@
-# CSharpEssentials.Endpoints — Design Document
+# CSharpEssentials.Endpoints: Design Document
 
 > **Date:** 2026-10-06 | **Status:** Approved design (4.1)
 > **Issues:** #48 (epic), #49 (docs), #50 (infra), #51 (contracts), #52 (generator), #53 (analyzer), #54 (fallback + versioned group), #57 (docs/AOT example), #58 (P3)
@@ -35,7 +35,7 @@
 | Project | TFMs | Dependencies | Packable |
 |---|---|---|---|
 | `CSharpEssentials.Endpoints` | `net11.0;net10.0;net9.0;net8.0` (same as AspNetCore) | `FrameworkReference Microsoft.AspNetCore.App` | yes |
-| `CSharpEssentials.Endpoints.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no — packed into `CSharpEssentials.Endpoints` at `analyzers/dotnet/cs` (ADR-006) |
+| `CSharpEssentials.Endpoints.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no, packed into `CSharpEssentials.Endpoints` at `analyzers/dotnet/cs` (ADR-006) |
 | `CSharpEssentials.AspNetCore` (existing) | unchanged | **no** reference to Endpoints | yes |
 
 Packing: `build/PackGenerator.targets` (imported by the runtime csproj) adds a `ReferenceOutputAssembly=false` project reference to `$(MSBuildProjectName).Generators` and packs its `netstandard2.0` dll at `analyzers/dotnet/cs`. `build/CSharpEssentials.Endpoints.props` is packed at both `build/` and `buildTransitive/`.
@@ -80,11 +80,11 @@ public interface IEndpointGroup
 |---|---|---|---|
 | `EndpointGroupAttribute` | Class, Struct | `(Type groupType)` | Places an endpoint or group under `groupType`. `typeof` form is primary. |
 | `EndpointGroupAttribute<TGroup>` | Class, Struct | `where TGroup : IEndpointGroup` | Generic form (C# 11+). It is equivalent to the `typeof` form and only one of the two may be present (CSE1003). |
-| `ExcludeFromMappingAttribute` | Class, Struct, Assembly | — | Excludes a type from discovery (generated and fallback paths). On a group, it excludes the group and everything under it. On an assembly, no registry or `EndpointModule` attribute is generated. |
+| `ExcludeFromMappingAttribute` | Class, Struct, Assembly | None | Excludes a type from discovery (generated and fallback paths). On a group, it excludes the group and everything under it. On an assembly, no registry or `EndpointModule` attribute is generated. |
 | `EndpointRegistryNameAttribute` | Assembly | `(string name)` | Overrides the registry name. `[assembly: EndpointRegistryName("Apps")]` → `AppsEndpointRegistry.MapAppsEndpoints`. The value is sanitized like an assembly name (§5.2). |
 | `EndpointModuleAttribute` | Assembly, `AllowMultiple=false` | `(Type registryType)`, `RegistryType { get; }` | Generated. It marks an assembly that contains a registry and is read by the aggregate generator in referencing assemblies. |
-| `GenerateEndpointAggregateAttribute` | Assembly | — | Opt-in: generate `MapAllEndpoints` in a library or test project (§5.6). |
-| `DisableEndpointAggregateAttribute` | Assembly | — | Opt-out: suppress the automatic `MapAllEndpoints` in an `Exe`/`WinExe` (§5.6). |
+| `GenerateEndpointAggregateAttribute` | Assembly | None | Opt-in: generate `MapAllEndpoints` in a library or test project (§5.6). |
+| `DisableEndpointAggregateAttribute` | Assembly | None | Opt-out: suppress the automatic `MapAllEndpoints` in an `Exe`/`WinExe` (§5.6). |
 
 All attributes are `sealed`, with `Inherited = false`.
 
@@ -449,7 +449,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Generator snapshots (#52) | Registry, nested groups, empty assembly (no output), `EndpointRegistryName`, sanitized names, aggregate on/off (Exe, library, test project, opt-in, opt-out), Verify.SourceGenerators |
 | Incremental caching | Second run with an unrelated edit → tracked steps `Cached`/`Unchanged` |
 | Behavior (`TestServer`) | `MapGroup("")` yields an identical `RoutePattern`, ApiExplorer group, tags and operationId vs. direct mapping; convention order (§5.5); filters and `RequireAuthorization` in `Map` still apply; nested groups; aggregate across two fixture assemblies (`CSharpEssentials.Tests.Fixtures.EndpointsA/B`); no duplicate mapping with module + aggregate; MVC controllers coexist |
-| Analyzer (#53, #58) | Positive and negative per ID (CSE1001–1011) |
+| Analyzer (#53, #58) | Positive and negative per ID (CSE1001 to CSE1011) |
 | Fallback (#54) | Parity with generated registry; `ReflectionTypeLoadException` logging; versioned group routing + ApiExplorer; AspNetCore has no Endpoints reference |
 | Pack | Generator dll is under `analyzers/dotnet/cs` in `CSharpEssentials.Endpoints.nupkg`, with no `*.Generators` package |
 | AOT (#57) | `examples/Examples.Endpoints` publishes with `PublishAot=true` and zero trim/AOT warnings (CI `aot` job) |

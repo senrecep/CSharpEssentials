@@ -1,4 +1,4 @@
-# CSharpEssentials.Validation — Performance Benchmarks
+# CSharpEssentials.Validation: Performance Benchmarks
 
 **vs. FluentValidation 11.x · BenchmarkDotNet v0.14.0 · Apple M3 Pro · .NET 9 / 10 / 11 (preview)**
 
@@ -18,7 +18,7 @@ validation requirements, exercising equivalent logic on identical input data.
 
 | Property | Value |
 |---|---|
-| Machine | Apple M3 Pro — 12 cores (arm64) |
+| Machine | Apple M3 Pro, 12 cores (arm64) |
 | OS | macOS 26.3.1 / Darwin 25.3.0 |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser] |
 | Runtimes tested | .NET 9.0.4, .NET 10.0.7, .NET 11.0.0-preview.X |
@@ -33,12 +33,12 @@ validation requirements, exercising equivalent logic on identical input data.
 
 | Finding | Details |
 |---|---|
-| **Construction is 776× faster** | CSE validators use lazy init — `new()` costs 2 ns / 24 B; FV eagerly builds the rule tree on `new()` at ~1,918 ns / 9.6 KB |
-| **Invalid-path is 5–8× faster** | CSE appends a lightweight `Error` to a plain list. FV builds a `ValidationFailure` object per failed rule with message interpolation through its expression-based rule pipeline — the per-failure allocation difference dominates on invalid input |
+| **Construction is 776× faster** | CSE validators use lazy init: `new()` costs 2 ns / 24 B; FV eagerly builds the rule tree on `new()` at ~1,918 ns / 9.6 KB |
+| **Invalid-path is 5-8× faster** | CSE appends a lightweight `Error` to a plain list. FV builds a `ValidationFailure` object per failed rule with message interpolation through its expression-based rule pipeline. The per-failure allocation difference dominates on invalid input |
 | **Valid-path wins on complex models** | CSE beats FV on both time and memory for Complex and LargeCollection valid paths; Simple-Valid gap is just 32 B |
 | **Collections: 3× faster, 27% less memory** | CSE allocates 34.1 KB vs FV's 46.6 KB on 50-item collections and processes them 3× faster on net9 |
-| **Memory advantage is consistent** | On invalid paths CSE allocates 2.5×–4.7× less; on valid paths FV is leaner only for wide models (10+ fields) |
-| **Runtime improvements** | net10/11 reduced CSE allocation in collection and nested scenarios by 15–20% |
+| **Memory advantage is consistent** | On invalid paths CSE allocates 2.5×-4.7× less; on valid paths FV is leaner only for wide models (10+ fields) |
+| **Runtime improvements** | net10/11 reduced CSE allocation in collection and nested scenarios by 15-20% |
 
 ---
 
@@ -56,7 +56,7 @@ All numbers are **net9.0** (representative). Net10/11 columns show the trend.
 | FV-Ctor | 1,918 ns | 1,644 ns | 1,640 ns | 9,624 B |
 | **CSE advantage** | **776×** | **751×** | **658×** | **401× less** |
 
-CSE uses a lazy `Configure()` pattern — the rule chain is built once on the first validation call, not in the constructor. FV builds its entire expression tree eagerly on `new()`.
+CSE uses a lazy `Configure()` pattern: the rule chain is built once on the first validation call, not in the constructor. FV builds its entire expression tree eagerly on `new()`.
 
 ---
 
@@ -69,7 +69,7 @@ CSE uses a lazy `Configure()` pattern — the rule chain is built once on the fi
 | CSE-Simple-Invalid | 292 ns | 1,608 B |
 | FV-Simple-Invalid | 2,404 ns | 7,584 B |
 
-**Valid path:** FV uses 32 B less — a negligible gap at this scale.  
+**Valid path:** FV uses 32 B less, a negligible gap at this scale.  
 **Invalid path:** CSE is **8.2× faster**, allocates **4.7× less**.
 
 ---
@@ -193,7 +193,7 @@ CSE uses a lazy `Configure()` pattern — the rule chain is built once on the fi
 
 This is the most impactful scenario for real applications. When a form has several invalid fields,
 CSE collects all errors into a plain list inside a `Result<T>`. FV allocates a `ValidationFailure`
-per failed rule — each carrying the interpolated message, severity, and metadata — inside its
+per failed rule, each carrying the interpolated message, severity, and metadata, inside its
 rule pipeline. (Neither side throws: FV's `Validate()` returns a `ValidationResult`; the gap is
 purely per-failure object allocation and pipeline overhead, not exception handling.)
 
@@ -208,7 +208,7 @@ purely per-failure object allocation and pipeline overhead, not exception handli
 | CSE-Conditional-Personal | 182 ns | 792 B |
 | FV-Conditional-Personal | 230 ns | 664 B |
 
-CSE is **~1.1–1.2×** faster on time; FV uses slightly less memory on the short/valid path.
+CSE is **~1.1-1.2×** faster on time; FV uses slightly less memory on the short/valid path.
 
 ---
 
@@ -253,7 +253,7 @@ CSE improves more than FV across newer runtime versions.
 | **CSE advantage** | **3.0×** | **1.95×** | **1.9×** | **CSE leaner** | **CSE leaner** |
 
 CSE wins on both time and memory across all tested runtimes. The net10 JIT brings additional
-improvements to CSE's collection path — widening the time gap further in newer versions.
+improvements to CSE's collection path, widening the time gap further in newer versions.
 
 ---
 
@@ -268,7 +268,7 @@ improvements to CSE's collection path — widening the time gap further in newer
 | **CSE advantage (invalid)** | **5.2×** | **2.7× less** |
 
 **Valid path:** CSE is 2.7× faster and allocates 20% less.  
-**Invalid path:** CSE is 5.2× faster and allocates 2.7× less — the gap widens with rule count.
+**Invalid path:** CSE is 5.2× faster and allocates 2.7× less, and the gap widens with rule count.
 
 ---
 
@@ -282,10 +282,10 @@ improvements to CSE's collection path — widening the time gap further in newer
 | FV-Wide-Invalid | 4,984 ns | 14,720 B |
 | **CSE advantage (invalid)** | **5.2×** | **2.6× less** |
 
-**Valid path:** CSE is 1.6× faster on time. FV allocates less memory here — with 12 fields, the
+**Valid path:** CSE is 1.6× faster on time. FV allocates less memory here: with 12 fields, the
 `Result<T>` wrapper per field adds up; FV's constructor-built rule tree pays for itself on the
 happy path for wide models.  
-**Invalid path:** FV's per-failure allocation is amplified across all 12 fields — CSE stays proportional.
+**Invalid path:** FV's per-failure allocation is amplified across all 12 fields, while CSE stays proportional.
 
 ---
 
@@ -327,7 +327,7 @@ happy path for wide models.
 
 | Scenario | .NET 9 | .NET 10 | .NET 11 | Trend |
 |---|---:|---:|---:|---|
-| CSE-Simple-Invalid | 292 ns | — | — | measured on net9 |
+| CSE-Simple-Invalid | 292 ns | - | - | measured on net9 |
 | FV-Simple-Invalid | 2,404 ns | 2,107 ns | 2,102 ns | ↓ improved in 10, flat in 11 |
 | CSE-LargeCollection | 7.1 μs | 9.28 μs | 9.04 μs | net10 JIT variation |
 | FV-LargeCollection | 21.41 μs | 18.11 μs | 17.32 μs | ↓ ~19% improvement |
@@ -336,7 +336,7 @@ happy path for wide models.
 | CSE-Ctor | 2.47 ns | 2.19 ns | 2.49 ns | flat (already ~noise floor) |
 
 Key observation: the net10 runtime update (JIT/GC improvements) benefited CSE's collection and
-nested scenarios more than FV's — widening the advantage gap from ~1.5× to ~2× for collection item iteration.
+nested scenarios more than FV's, widening the advantage gap from ~1.5× to ~2× for collection item iteration.
 
 ---
 
@@ -346,13 +346,13 @@ On **valid paths with wide models**, FV can allocate less than CSE:
 
 | Scenario | CSE alloc | FV alloc | Reason |
 |---|---:|---:|---|
-| Simple-Valid | 736 B | 704 B | `Result<T>` wrapper — 32 B overhead |
+| Simple-Valid | 736 B | 704 B | `Result<T>` wrapper, 32 B overhead |
 | Wide-Valid | 1,896 B | 984 B | 12 chained `Result<T>` allocations |
 
 This is the inherent trade-off of the monad design: CSE wraps every validation result in `Result<T>`,
 which pays off decisively on invalid paths (no exceptions, no stack traces) but adds a small per-field
-cost on valid paths. For most real-world workloads — user-facing forms, API request validation,
-write commands — invalid input is common and the trade-off clearly favours CSE. Wide models with
+cost on valid paths. For most real-world workloads (user-facing forms, API request validation,
+write commands), invalid input is common and the trade-off clearly favours CSE. Wide models with
 10+ fields on purely valid paths represent the one case where FV's eager constructor-based design
 produces a lower allocation footprint.
 
@@ -409,5 +409,5 @@ Raw JSON + HTML + GitHub Markdown reports are in `benchmarks/results/{tfm}/resul
 > **Harness note:** CSE benchmark methods previously consumed the returned `ValueTask` via
 > `.AsTask().GetAwaiter().GetResult()`, which allocates a `Task` even on the sync-completed
 > fast path. They now use a `Run()` helper (`ValueTaskRunner.cs`) that consumes completed
-> `ValueTask`s directly — matching real `await` usage. The numbers above were captured with
+> `ValueTask`s directly, matching real `await` usage. The numbers above were captured with
 > the previous harness, so re-running may show slightly better CSE figures than reported here.
