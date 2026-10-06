@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Tests.Endpoints;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -60,11 +61,28 @@ public class SwashbuckleEnumGoldenTests
         documents.Values.Should().AllSatisfy(json => json.Should().NotContain("x-enum-varnames"));
     }
 
-    private static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(bool addEnumConventions)
+    [Fact]
+    public async Task Documents_Should_WarnOncePerEnum_When_ADocumentMixesNumbersAndStrings()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        await GetDocumentsAsync(addEnumConventions: true, logs, passes: 2);
+
+        string[] warnings = [.. logs.Entries
+            .Where(static entry => entry.Level == LogLevel.Warning && entry.Message.Contains("x-enum-wire-format: number", StringComparison.Ordinal))
+            .Select(static entry => entry.Message)];
+        warnings.Should().OnlyHaveUniqueItems();
+        warnings.Should().ContainSingle(static message => message.StartsWith($"OpenAPI document 'mixed' writes enum {typeof(SampleStatus).FullName} ", StringComparison.Ordinal));
+        warnings.Should().NotContain(static message => message.StartsWith("OpenAPI document 'v1' ", StringComparison.Ordinal) || message.StartsWith("OpenAPI document 'v2' ", StringComparison.Ordinal));
+    }
+
+    private static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(bool addEnumConventions, ILoggerProvider? logs = null, int passes = 1)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Logging.ClearProviders();
+        if (logs is not null)
+            builder.Logging.AddProvider(logs);
 
         builder.Services.AddEnumConventions();
         builder.Services.AddControllers().AddSampleControllers();
@@ -87,8 +105,11 @@ public class SwashbuckleEnumGoldenTests
             string address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
             using var client = new HttpClient { BaseAddress = new Uri(address) };
             var documents = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (string document in SampleApi.Documents)
-                documents[document] = await client.GetStringAsync($"/swagger/{document}/swagger.json");
+            for (int pass = 0; pass < passes; pass++)
+            {
+                foreach (string document in SampleApi.Documents)
+                    documents[document] = await client.GetStringAsync($"/swagger/{document}/swagger.json");
+            }
             return documents;
         }
         finally

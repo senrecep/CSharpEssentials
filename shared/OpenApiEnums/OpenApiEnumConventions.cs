@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Enums;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -8,6 +10,9 @@ using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
 namespace CSharpEssentials.AspNetCore;
 
@@ -15,12 +20,15 @@ namespace CSharpEssentials.AspNetCore;
 /// The enum conventions as the OpenAPI document generators see them: which enums are handled (the same selection as the JSON
 /// converter) and the output format of every operation and document (design section 10.1).
 /// </summary>
-internal sealed class OpenApiEnumConventions
+internal sealed partial class OpenApiEnumConventions
 {
     internal const string WireFormatExtension = "x-enum-wire-format";
     internal const string WireFormatHeaderExtension = "x-enum-wire-format-header";
 
     private static readonly ConditionalWeakTable<IServiceProvider, OpenApiEnumConventions> _instances = [];
+
+    // Keyed by the host's logger factory (a root singleton): the conventions can be created per request scope.
+    private static readonly ConditionalWeakTable<ILoggerFactory, ConcurrentDictionary<(string Document, Type EnumType), bool>> _mixedWarnings = [];
 
     private readonly IServiceProvider _services;
     private readonly EnumConventionsRegistration? _registration;
@@ -66,22 +74,111 @@ internal sealed class OpenApiEnumConventions
 
         Dictionary<ActionDescriptor, Endpoint> endpoints = IndexEndpoints();
         Dictionary<ActionDescriptor, OperationEnumFormat> operations = [with(ReferenceEqualityComparer.Instance)];
+        List<ApiDescription> descriptions = [];
         foreach (ApiDescriptionGroup group in groups.Items)
         {
             foreach (ApiDescription description in group.Items)
             {
-                if (include(description))
-                    operations[description.ActionDescriptor] = GetOperationFormat(description.ActionDescriptor, endpoints);
+                if (!include(description))
+                    continue;
+                operations[description.ActionDescriptor] = GetOperationFormat(description.ActionDescriptor, endpoints);
+                descriptions.Add(description);
             }
         }
 
         EnumWireFormat format = WriteAs;
         if (operations.Count > 0)
             format = operations.Values.All(static operation => operation.Format == EnumWireFormat.Number) ? EnumWireFormat.Number : EnumWireFormat.String;
+        if (format == EnumWireFormat.String && operations.Values.Any(static operation => operation.Format == EnumWireFormat.Number))
+            WarnMixedEnums(documentName, descriptions, operations);
         var document = new DocumentEnumFormat(groups.Version, format, operations);
         _documents[documentName] = document;
         return document;
     }
+
+    /// <summary>
+    /// Logs once per document and enum when the enum is written as strings by some operations and as numbers by others: its one
+    /// component shows the string form, so clients of the number operations must read the value table (design section 10.1).
+    /// </summary>
+    private void WarnMixedEnums(string documentName, List<ApiDescription> descriptions, Dictionary<ActionDescriptor, OperationEnumFormat> operations)
+    {
+        JsonSerializerOptions jsonOptions = _services.GetService<IOptions<HttpJsonOptions>>()?.Value.SerializerOptions ?? JsonSerializerOptions.Default;
+        HashSet<Type> stringEnums = [];
+        HashSet<Type> numberEnums = [];
+        HashSet<Type> stringVisited = [];
+        HashSet<Type> numberVisited = [];
+        foreach (ApiDescription description in descriptions)
+        {
+            bool number = operations[description.ActionDescriptor].Format == EnumWireFormat.Number;
+            HashSet<Type> enums = number ? numberEnums : stringEnums;
+            HashSet<Type> visited = number ? numberVisited : stringVisited;
+            foreach (ApiParameterDescription parameter in description.ParameterDescriptions)
+            {
+                // MVC reports string as the Type of a parameter whose type converts from string (enums do); its model type is the enum.
+                CollectEnums(parameter.Type == typeof(string) ? parameter.ModelMetadata?.ModelType : parameter.Type, jsonOptions, enums, visited);
+            }
+
+            foreach (ApiResponseType response in description.SupportedResponseTypes)
+                CollectEnums(response.Type, jsonOptions, enums, visited);
+        }
+
+        stringEnums.IntersectWith(numberEnums);
+        if (stringEnums.Count == 0)
+            return;
+
+        if (_services.GetService<ILoggerFactory>() is not { } loggerFactory)
+            return;
+        ILogger logger = loggerFactory.CreateLogger<OpenApiEnumConventions>();
+        ConcurrentDictionary<(string Document, Type EnumType), bool> warned = _mixedWarnings.GetValue(loggerFactory, static _ => []);
+        foreach (Type enumType in stringEnums.OrderBy(static type => type.FullName, StringComparer.Ordinal))
+        {
+            if (warned.TryAdd((documentName, enumType), true))
+                LogMixedEnum(logger, documentName, enumType.FullName ?? enumType.Name);
+        }
+    }
+
+    private void CollectEnums(Type? type, JsonSerializerOptions jsonOptions, HashSet<Type> enums, HashSet<Type> visited)
+    {
+        if (type is null || type == typeof(void) || type.IsPointer || type.IsByRef || type.ContainsGenericParameters)
+            return;
+        type = Nullable.GetUnderlyingType(type) ?? type;
+        if (!visited.Add(type))
+            return;
+        if (type.IsEnum)
+        {
+            if (Resolve(type) is not null)
+                enums.Add(type);
+            return;
+        }
+
+        JsonTypeInfo typeInfo;
+        try
+        {
+            typeInfo = jsonOptions.GetTypeInfo(type);
+        }
+        catch (Exception exception) when (exception is NotSupportedException or InvalidOperationException or ArgumentException)
+        {
+            // Types the serializer cannot describe (Stream, delegates, ...) carry no enum values.
+            return;
+        }
+
+        if (typeInfo.Kind == JsonTypeInfoKind.Object)
+        {
+            foreach (JsonPropertyInfo property in typeInfo.Properties)
+                CollectEnums(property.PropertyType, jsonOptions, enums, visited);
+        }
+        else if (typeInfo.Kind is JsonTypeInfoKind.Enumerable or JsonTypeInfoKind.Dictionary)
+        {
+            CollectEnums(typeInfo.KeyType, jsonOptions, enums, visited);
+            CollectEnums(typeInfo.ElementType, jsonOptions, enums, visited);
+        }
+    }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "OpenAPI document '{DocumentName}' writes enum {EnumType} as strings in some operations and as numbers in others; " +
+            "its schema shows the string form and the number operations are marked with x-enum-wire-format: number.")]
+    private static partial void LogMixedEnum(ILogger logger, string documentName, string enumType);
 
     private IEnumInfo? ResolveCore(Type enumType)
     {
