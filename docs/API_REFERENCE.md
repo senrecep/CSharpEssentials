@@ -1778,7 +1778,7 @@ builder.Services.AddSampleBillingServices();
 builder.Services.TryDecorate<IOrderService, LoggingOrderService>();
 ```
 
-Decorated originals move to a hidden registration under a private key, so they never appear in `GetServices<T>()`. If decoration fails, the collection is left unchanged.
+Decorated originals move to a hidden registration under a private key, so they never appear in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. If decoration fails, the collection is left unchanged.
 
 ### Diagnostics
 
