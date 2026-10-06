@@ -73,10 +73,15 @@ public static class ModelConfigurationExtensions
         Predicate<Type> canConvert = options.CanConvert;
         AddConvention(
             configurationBuilder,
-            EnumConventions.Default with { CanHandle = type => canConvert(type) && EnumMetadata.IsRegistered(type) },
+            EnumConventions.Default with { CanHandle = type => canConvert(type) },
             options.UseLegacySnakeCase ? EnumStoredAs.LegacySnakeCase : null,
-            reflectionFallback: null);
+            reflectionFallback: ThrowWithoutMetadata);
     }
+
+    private static IEnumInfo ThrowWithoutMetadata(Type enumType) =>
+        throw new InvalidOperationException(
+            $"Enum '{enumType.FullName}' was selected by the CanConvert predicate but has no generated metadata, so it would be stored as a number instead of a string. " +
+            "Mark it [StringEnum] (and keep it public or internal) or use ConfigureEnumConventionsWithReflection.");
 
     private static ModelConfigurationBuilder AddConvention(
         ModelConfigurationBuilder configurationBuilder,

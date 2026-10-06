@@ -100,3 +100,12 @@ group.WithEnumWireFormat("X-Enum-Format",
 ```
 
 To keep numbers everywhere and opt new APIs into strings, set `AddEnumConventions(c => c with { WriteAs = EnumWireFormat.Number })` and use `WithEnumWireFormat(EnumWireFormat.String)` on the new groups. Precedence: action attribute > controller attribute > endpoint or group > `WriteAs`.
+
+## EF Core enum storage (`CSharpEssentials.EntityFrameworkCore`)
+
+The obsolete 4.x `ConfigureEnumConventions(params Assembly[])` and `ConfigureEnumConventions(Action<EnumConventionOptions>, ...)` forward to the 5.0 convention, with these changes:
+
+- They now add the check constraint like the new API, and `UseLegacySnakeCase = true` no longer applies a max length. The next migration adds the constraints; pass `existingStorage: EnumStoredAs.LegacySnakeCase` or call `HasLegacyEnumStorage` to keep the old column shape.
+- A `CanConvert` predicate that selects an enum without generated metadata now throws `InvalidOperationException` when the model is built. In 4.x such an enum was stored through reflection as a string. Silently falling back to `int` would change the column type in the next migration and lose the stored names, so add `[StringEnum]` to the enum (keep it public or internal), or call `ConfigureEnumConventionsWithReflection`.
+- The new `ConfigureEnumConventions(EnumConventions, EnumStoredAs?)` leaves enums without generated metadata to EF Core.
+- Compiled models (`dbcontext optimize`) are not supported for properties with enum conventions in 5.0.

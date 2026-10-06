@@ -53,6 +53,13 @@ public class ModelConfigurationExtensionsTests
             configurationBuilder.ConfigureEnumConventions(o => o.CanConvert = type => type == typeof(PlainColor));
     }
 
+    private sealed class StatusOnlyConventionDbContext(DbContextOptions<StatusOnlyConventionDbContext> options) : DbContext(options)
+    {
+        public DbSet<AcronymEntity> Entities { get; set; } = null!;
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+            configurationBuilder.ConfigureEnumConventions(o => o.CanConvert = type => type == typeof(AcronymStatus));
+    }
+
     [Fact]
     public void ConfigureEnumConventions_Should_StoreWireName_When_CalledWithAssemblies()
     {
@@ -87,15 +94,25 @@ public class ModelConfigurationExtensionsTests
     }
 
     [Fact]
-    public void ConfigureEnumConventions_Should_LeaveEnumWithoutMetadata_When_CanConvertAcceptsIt()
+    public void ConfigureEnumConventions_Should_Throw_When_CanConvertSelectsEnumWithoutMetadata()
     {
         using PredicateConventionDbContext context = new(CreateOptions<PredicateConventionDbContext>());
+
+        Action build = () => _ = context.Model;
+
+        build.Should().Throw<InvalidOperationException>().WithMessage("*PlainColor*[StringEnum]*ConfigureEnumConventionsWithReflection*");
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_StoreEnumWithMetadata_When_CanConvertSelectsOnlyIt()
+    {
+        using StatusOnlyConventionDbContext context = new(CreateOptions<StatusOnlyConventionDbContext>());
 
         IProperty color = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Color));
         IProperty status = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
 
         color.GetValueConverter().Should().BeNull();
-        status.GetValueConverter().Should().BeNull();
+        status.GetValueConverter().Should().BeOfType<EnumWireNameConverter<AcronymStatus>>();
     }
 
     [Fact]
