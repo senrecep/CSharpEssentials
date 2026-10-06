@@ -3,6 +3,7 @@
   <Project Path="CSharpEssentials.AspNetCore/CSharpEssentials.AspNetCore.csproj" />
   <Project Path="CSharpEssentials.Clone/CSharpEssentials.Clone.csproj" />
   <Project Path="CSharpEssentials.Core/CSharpEssentials.Core.csproj" />
+  <Project Path="CSharpEssentials.DependencyInjection/CSharpEssentials.DependencyInjection.csproj" />
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
   <Project Path="CSharpEssentials.Enums/CSharpEssentials.Enums.csproj" />

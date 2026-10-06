@@ -52,6 +52,7 @@
         <PackageVersion Include="CSharpEssentials.Any" Version="[4.0.0]" />
         <PackageVersion Include="CSharpEssentials.Clone" Version="[4.0.0]" />
         <PackageVersion Include="CSharpEssentials.Core" Version="[4.0.0]" />
+        <PackageVersion Include="CSharpEssentials.DependencyInjection" Version="[4.0.0]" />
         <PackageVersion Include="CSharpEssentials.Entity" Version="[4.0.0]" />
         <PackageVersion Include="CSharpEssentials.Enums" Version="[4.0.0]" />
         <PackageVersion Include="CSharpEssentials.Errors" Version="[4.0.0]" />
