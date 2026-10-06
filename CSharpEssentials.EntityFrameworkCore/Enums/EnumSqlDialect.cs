@@ -53,10 +53,10 @@ internal sealed class EnumSqlDialect
     public string IsIntegerText(string sql)
     {
         if (IsPostgres)
-            return $"{sql} ~ '^[[:space:]]*-?[0-9]+[[:space:]]*$'";
+            return $"{sql} ~ {Literal("^[[:space:]]*-?[0-9]+[[:space:]]*$")}";
 
-        string digits = $"(CASE WHEN trim({sql}) LIKE '-%' THEN substr(trim({sql}), 2) ELSE trim({sql}) END)";
-        return $"({digits} <> '' AND {digits} NOT GLOB '*[^0-9]*')";
+        string digits = $"(CASE WHEN trim({sql}) LIKE {Literal("-%")} THEN substr(trim({sql}), 2) ELSE trim({sql}) END)";
+        return $"({digits} <> {Literal(string.Empty)} AND {digits} NOT GLOB {Literal("*[^0-9]*")})";
     }
 
     public string CastInteger(string sql, string integerType) => $"CAST(trim({sql}) AS {integerType})";
@@ -68,5 +68,5 @@ internal sealed class EnumSqlDialect
     public string Fail(string message, string valueSql, string integerType) =>
         IsPostgres
             ? $"CAST({Literal(message)} || {valueSql} AS {integerType})"
-            : $"json_extract('{{}}', {Literal(message)} || {valueSql})";
+            : $"json_extract({Literal("{}")}, {Literal(message)} || {valueSql})";
 }

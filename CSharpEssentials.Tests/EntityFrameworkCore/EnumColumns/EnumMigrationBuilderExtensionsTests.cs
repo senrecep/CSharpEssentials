@@ -32,7 +32,8 @@ public sealed class EnumMigrationBuilderExtensionsTests
         builder.ConvertEnumColumn<StoredOrderStatus>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
 
         builder.Operations.Should().HaveCount(2);
-        builder.Operations[0].Should().BeOfType<SqlOperation>().Which.Sql.Should().StartWith("PRAGMA ignore_check_constraints = ON; UPDATE \"orders\" SET \"Status\" = ")
+        builder.Operations[0].Should().BeOfType<SqlOperation>().Which.Sql.Should().StartWith("SELECT count(CASE \"Status\" WHEN 0 THEN 'pending'")
+            .And.Contain("WHERE \"Status\" IS NOT NULL; PRAGMA ignore_check_constraints = ON; UPDATE \"orders\" SET \"Status\" = ")
             .And.EndWith("PRAGMA ignore_check_constraints = OFF;");
         builder.Operations[1].Should().BeOfType<AlterColumnOperation>().Which.ColumnType.Should().Be("TEXT");
     }
@@ -45,6 +46,55 @@ public sealed class EnumMigrationBuilderExtensionsTests
         builder.ConvertEnumColumn<StoredOrderStatus>("or\"ders", "Sta'tus", from: EnumStoredAs.Integer, to: EnumStorage.String, schema: "sales");
 
         builder.Operations.OfType<SqlOperation>().Single().Sql.Should().StartWith("ALTER TABLE \"sales\".\"or\"\"ders\" ALTER COLUMN \"Sta'tus\"");
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_EvaluateTheConversionBeforeIgnoringConstraints_When_Sqlite()
+    {
+        MigrationBuilder builder = new(Sqlite);
+
+        builder.ConvertEnumColumn<StoredOrderStatus>("orders", "Status", from: EnumStoredAs.Text, to: EnumStorage.Integer);
+
+        string sql = builder.Operations.OfType<SqlOperation>().Single().Sql;
+        int check = sql.IndexOf("SELECT count(", StringComparison.Ordinal);
+        int fail = sql.IndexOf("cannot convert orders.Status", StringComparison.Ordinal);
+        int pragma = sql.IndexOf("PRAGMA ignore_check_constraints = ON;", StringComparison.Ordinal);
+        check.Should().Be(0);
+        fail.Should().BePositive().And.BeLessThan(pragma);
+    }
+
+    [Fact]
+    public void ConvertEnumColumn_Should_QuoteEmbeddedQuotes_When_Sqlite()
+    {
+        MigrationBuilder builder = new(Sqlite);
+
+        builder.ConvertEnumColumn<QuotedOrderStatus>("or\"ders", "Sta\"tus", from: EnumStoredAs.Text, to: EnumStorage.Integer);
+
+        builder.Operations.OfType<SqlOperation>().Single().Sql.Should()
+            .Contain("UPDATE \"or\"\"ders\" SET \"Sta\"\"tus\" = ")
+            .And.Contain("WHEN 'o''pen' THEN 0")
+            .And.Contain("'CSharpEssentials: cannot convert or\"ders.Sta\"tus to QuotedOrderStatus, unknown value: '");
+    }
+
+    [Fact]
+    public void ConvertEnumJsonPath_Should_QuoteEmbeddedQuotes()
+    {
+        MigrationBuilder builder = new(Postgres);
+
+        builder.ConvertEnumJsonPath<QuotedOrderStatus>("docu\"ments", "da\"ta", ["it's", "sta\"tus"]);
+
+        builder.Operations.OfType<SqlOperation>().Single().Sql.Should()
+            .StartWith("UPDATE \"docu\"\"ments\" SET \"da\"\"ta\" = jsonb_set(\"da\"\"ta\", ARRAY['it''s', 'sta\"tus']::text[], ")
+            .And.Contain("WHEN 'o''pen' THEN 'open'");
+    }
+
+    [Fact]
+    public void Sql_Should_QuoteEmbeddedQuotes()
+    {
+        string sql = EnumDataAudit.Sql<QuotedOrderStatus>("or\"ders", "Sta\"tus", provider: Sqlite);
+
+        sql.Should().StartWith("SELECT \"Sta\"\"tus\" AS \"Value\", count(*) AS \"Count\" FROM \"or\"\"ders\" WHERE \"Sta\"\"tus\" IS NOT NULL")
+            .And.Contain("'o''pen'");
     }
 
     [Fact]

@@ -54,7 +54,7 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
 
     /// <summary>Like <see cref="TextToNumber"/> for one token of a flags list, where an empty token is zero.</summary>
     public string TokenToNumber(string sql) =>
-        $"CASE {_dialect.Lower(sql)}{NumberWhens()} WHEN '' THEN 0 ELSE {NumberOrFail(sql)} END";
+        $"CASE {_dialect.Lower(sql)}{NumberWhens()} WHEN {EnumSqlDialect.Literal(string.Empty)} THEN 0 ELSE {NumberOrFail(sql)} END";
 
     /// <summary>
     /// Maps the number <paramref name="sql"/> to the name written by <paramref name="format"/> (<see langword="null"/> for the wire
@@ -76,9 +76,9 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
         ulong mask = singles.Aggregate(0UL, (current, member) => current | member.RawValue);
         string zero = _info.TypedMembers.FirstOrDefault(member => member.RawValue == 0) is { } none ? Name(none, format) : "0";
         string parts = singles.Length == 0
-            ? "''"
+            ? EnumSqlDialect.Literal(string.Empty)
             : string.Join(" || ", singles.Select(member =>
-                $"CASE WHEN ({sql} & {member.NumericText}) <> 0 THEN {EnumSqlDialect.Literal(FlagsSeparator + Name(member, format))} ELSE '' END"));
+                $"CASE WHEN ({sql} & {member.NumericText}) <> 0 THEN {EnumSqlDialect.Literal(FlagsSeparator + Name(member, format))} ELSE {EnumSqlDialect.Literal(string.Empty)} END"));
 
         return $"CASE WHEN {sql} IS NULL THEN NULL WHEN {sql} = 0 THEN {EnumSqlDialect.Literal(zero)} " +
             $"WHEN ({sql} & ~{Number(mask)}) <> 0 THEN {_dialect.ToText(sql)} " +
@@ -91,7 +91,7 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
         if (_dialect.IsPostgres)
         {
             return $"(SELECT coalesce(bit_or({TokenToNumber("cse_token.value")}), 0) " +
-                $"FROM unnest(string_to_array({qualifiedColumn}, ',')) AS cse_token(value))";
+                $"FROM unnest(string_to_array({qualifiedColumn}, {EnumSqlDialect.Literal(",")})) AS cse_token(value))";
         }
 
         // SQLite has no bitwise aggregate: split through json_each, then fold the tokens in order with |.
@@ -105,9 +105,9 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
     /// <summary>True when a comma separated token of the text column <paramref name="qualifiedColumn"/> is no known spelling.</summary>
     public string HasUnknownToken(string qualifiedColumn)
     {
-        string known = string.Join(", ", _spellings.Select(pair => EnumSqlDialect.Literal(pair.Spelling)).Append("''"));
+        string known = string.Join(", ", _spellings.Select(pair => EnumSqlDialect.Literal(pair.Spelling)).Append(EnumSqlDialect.Literal(string.Empty)));
         return _dialect.IsPostgres
-            ? $"EXISTS (SELECT 1 FROM unnest(string_to_array({qualifiedColumn}, ',')) AS cse_token(value) WHERE {_dialect.Lower("cse_token.value")} NOT IN ({known}))"
+            ? $"EXISTS (SELECT 1 FROM unnest(string_to_array({qualifiedColumn}, {EnumSqlDialect.Literal(",")})) AS cse_token(value) WHERE {_dialect.Lower("cse_token.value")} NOT IN ({known}))"
             : $"EXISTS (SELECT 1 FROM {SqliteTokens(qualifiedColumn)} AS cse_item WHERE {_dialect.Lower("cse_item.value")} NOT IN ({known}))";
     }
 
@@ -130,8 +130,11 @@ internal sealed class EnumConversionSql<TEnum> where TEnum : struct, Enum
         return format is null ? canonical.WireName : EnumColumnCodec<TEnum>.LegacyName(canonical.MemberName, format.Value);
     }
 
-    private static string SqliteTokens(string qualifiedColumn) =>
-        $"json_each('[\"' || replace(replace(replace({qualifiedColumn}, '\\', '\\\\'), '\"', '\\\"'), ',', '\",\"') || '\"]')";
+    private static string SqliteTokens(string qualifiedColumn)
+    {
+        string escaped = $"replace(replace({qualifiedColumn}, {EnumSqlDialect.Literal("\\")}, {EnumSqlDialect.Literal("\\\\")}), {EnumSqlDialect.Literal("\"")}, {EnumSqlDialect.Literal("\\\"")})";
+        return $"json_each({EnumSqlDialect.Literal("[\"")} || replace({escaped}, {EnumSqlDialect.Literal(",")}, {EnumSqlDialect.Literal("\",\"")}) || {EnumSqlDialect.Literal("\"]")})";
+    }
 
     private string NumberWhens() =>
         string.Concat(_spellings.Select(pair => $" WHEN {EnumSqlDialect.Literal(pair.Spelling)} THEN {pair.Member.NumericText}"));

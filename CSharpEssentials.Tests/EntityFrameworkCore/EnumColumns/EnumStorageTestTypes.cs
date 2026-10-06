@@ -45,6 +45,13 @@ public enum StoredPermissions
     Delete = 4,
 }
 
+[StringEnum]
+public enum QuotedOrderStatus
+{
+    [EnumAlias("o'pen")] Open,
+    Closed,
+}
+
 public enum PlainColor
 {
     Red,
