@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Microsoft.AspNetCore.OpenApi with Microsoft.OpenApi 2.x needs net10.0; net8.0/net9.0 hosts use the Swashbuckle package. -->
-    <TargetFrameworks>net11.0;net10.0</TargetFrameworks>
+    <!-- Microsoft.AspNetCore.OpenApi with Microsoft.OpenApi 2.x needs net10.0; net8.0/net9.0 hosts use the Swashbuckle package.
+         No net11.0 yet: Microsoft.AspNetCore.OpenApi 11.x needs Microsoft.OpenApi 3.x (see Directory.Packages.props). -->
+    <TargetFrameworks>net10.0</TargetFrameworks>
     <!-- Pins Microsoft.OpenApi 2.x in Directory.Packages.props (see the OpenApi item group there). -->
     <CSharpEssentialsUsesOpenApi2>true</CSharpEssentialsUsesOpenApi2>
 

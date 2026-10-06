@@ -10,7 +10,7 @@
 dotnet add package CSharpEssentials.AspNetCore.OpenApi
 ```
 
-Targets net10.0 and net11.0 with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.OpenApi` 2.x.
+Targets net10.0 with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.OpenApi` 2.x. A net11.0 target with `Microsoft.AspNetCore.OpenApi` 11.x needs `Microsoft.OpenApi` 3.x and will come later as a non-breaking addition.
 
 ## Enum schemas
 

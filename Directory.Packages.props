@@ -16,7 +16,9 @@
 
     <!-- OpenApi: only CSharpEssentials.AspNetCore.OpenApi and its tests (approved 2026-10-06). Microsoft.OpenApi 2.x is pinned only
          where CSharpEssentialsUsesOpenApi2 is set, because transitive pinning would otherwise force 2.x on Swashbuckle (1.x).
-         2.7.5 is the first 2.x without GHSA-v5pm-xwqc-g5wc (Microsoft.AspNetCore.OpenApi 10.0.0 asks for 2.0.0). -->
+         2.7.5 is the first 2.x without GHSA-v5pm-xwqc-g5wc (Microsoft.AspNetCore.OpenApi 10.0.0 asks for 2.0.0).
+         No net11.0 target: Microsoft.AspNetCore.OpenApi 11.x (rc.1 only) needs Microsoft.OpenApi [3.10.0,4.0.0), which conflicts
+         with this 2.x pin on any net11.0 host. net11.0 with Microsoft.OpenApi 3.x comes later as a non-breaking addition. -->
     <ItemGroup Label="OpenApi">
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.0,11)" />
         <PackageVersion Include="Microsoft.OpenApi" Version="[2.7.5,3)" Condition="'$(CSharpEssentialsUsesOpenApi2)' == 'true'" />
