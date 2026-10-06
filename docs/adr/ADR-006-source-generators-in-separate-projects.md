@@ -57,7 +57,7 @@ Each generator-backed package consists of two projects:
 
 | Block | Owner | Notes |
 |---|---|---|
-| `CSE0001` to `CSE0999` | Enums and future cross-cutting rules | `CSE0001` is in use (`NestedStringEnumAnalyzer`) |
+| `CSE0001` to `CSE0999` | Enums and future cross-cutting rules | `CSE0001` retired in 5.0 and reserved, `CSE0002` to `CSE0013` used by ADR-007 |
 | `CSE1001` to `CSE1999` | `CSharpEssentials.Endpoints` | see [CSharpEssentials.Endpoints-DESIGN.md](../design/CSharpEssentials.Endpoints-DESIGN.md) |
 | `CSE2001` to `CSE2999` | `CSharpEssentials.DependencyInjection` | see [CSharpEssentials.DependencyInjection-DESIGN.md](../design/CSharpEssentials.DependencyInjection-DESIGN.md) |
 
