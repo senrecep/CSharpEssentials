@@ -9,11 +9,12 @@
     <Title>CSharpEssentials.Enums</Title>
     <Product>CSharpEssentials.Enums</Product>
     <Description>
-      Enum utilities and attributes for enhanced enum functionality in C#.
-      Provides StringEnumAttribute, compile-time enum extensions (ToOptimizedString,
-      ToSnakeCase, ToKebabCase, Parse, TryParse, IsDefined, GetNames, GetValues),
-      and a source generator for fast enum operations.
-      Essential for working with enums in modern C# applications.
+      One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and HTTP.
+      Mark enums with [StringEnum]; the bundled source generator writes AOT-safe metadata and
+      helpers (ToWireName, TryParseWire, ParseWire, IsDefined, GetNames, GetValues).
+      Includes EnumConventions, [EnumAlias], [EnumFallback], EnumValueParser, EnumValueFormatter,
+      EnumMetadata, and analyzers with code fixes (CSE0002-CSE0016).
+      Reference it directly in every project that declares [StringEnum] enums.
     </Description>
     <PackageTags>
       Enums,StringEnum,EnumAttribute,EnumUtils,Serialization,SourceGenerator,CSharpEssentials

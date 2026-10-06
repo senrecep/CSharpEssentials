@@ -1014,7 +1014,7 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `jsonElement.ToClrObject()` | Converts a `JsonElement` to plain CLR values: objects to `Dictionary<string, object?>`, arrays to `List<object?>`, numbers to `int`/`long`/`decimal`/`double`, plus `string`, `bool` and `null` |
 | `PolymorphicJsonConverterFactory` | Handles polymorphic serialization |
 | `MultiFormatDateTimeConverterFactory` / `MultiFormatDateTimeConverter<T>` | Parses multiple date/time formats |
-| `ConditionalStringEnumConverter` | Conditional enum to/from string (`AllowUndefinedValues = false` rejects undefined numbers) |
+| `ConditionalStringEnumConverter` | `[Obsolete]` since 5.0; forwards to the enum conventions converter in `Input` mode (undefined numbers are rejected). Use `options.AddEnumConventions(...)` |
 | `StringEnumNaming` | Obsolete facade over `EnumMetadata`; the naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
 | `options.AddEnumConventions(conventions, mode, writeAs)` | Adds `EnumConverterFactory` for enums with generated metadata at position 0 and removes earlier convention factories. Other converters such as `JsonStringEnumConverter` stay, so plain enums keep the host's output. A `[StringEnum]` enum without generated metadata fails with `InvalidOperationException` instead of becoming a number |
 | `EnumConverterFactory.CreateWithReflectionFallback(conventions, mode, writeAs)` | Opt-in factory that also converts enums without generated metadata that `EnumConventions.CanHandle` accepts, with metadata read by reflection. `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`: not AOT safe |
@@ -1244,38 +1244,57 @@ if (result.IsFailure)
 
 ## 14. CSharpEssentials.Enums: Source-Generated String Enums
 
-**What it is:** A Roslyn source generator that produces fast, AOT-safe enum-to-string and string-to-enum methods.
+**What it is:** A source generator, metadata and conventions that give every enum member one spelling (the wire name) across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP.
 
-**Why it exists:** `Enum.ToString()` and `Enum.Parse()` use reflection, which is slow and incompatible with NativeAOT trimming. The `[StringEnum]` attribute triggers compile-time generation of switch-based conversion methods.
+**Why it exists:** `Enum.ToString()`, `Enum.Parse()` and `JsonStringEnumConverter` use reflection, disagree about naming between layers and are not NativeAOT friendly. `[StringEnum]` makes the generator write the metadata at compile time, and one `EnumConventions` instance decides how every layer reads and writes it.
+
+Reference `CSharpEssentials.Enums` directly in every project that declares a `[StringEnum]` enum: the generator does not flow through the other packages or the meta-package.
 
 ```csharp
-[StringEnum]
+using System.Text.Json.Serialization;
+using CSharpEssentials.Enums;
+
+[StringEnum]                                     // optional: Naming = EnumNaming.KebabCaseLower, Storage = EnumStorage.Integer
 public enum OrderStatus
 {
-    Pending,
-    Processing,
-    Shipped,
-    Delivered
+    Pending,                                     // "pending"
+    [EnumAlias("Approval")] PendingApproval,     // "pending_approval", also reads "Approval"
+    [JsonStringEnumMemberName("sent")] Shipped,  // "sent"
+    [EnumFallback] Unknown = 99,                 // data reads map unknown values here
 }
 
-// Generated methods (no reflection):
-string str = OrderStatus.Pending.ToOptimizedString(); // "Pending"
-string snake = OrderStatus.Pending.ToSnakeCase();     // "pending"
-bool ok = OrderStatusExtensions.TryParse("Shipped", out var status);
-bool defined = OrderStatusExtensions.IsDefined("Processing");
-OrderStatus[] all = OrderStatusExtensions.GetValues();
+string wire = OrderStatus.PendingApproval.ToWireName();                  // "pending_approval"
+bool ok = OrderStatusExtensions.TryParseWire("Approval", out var status); // true, PendingApproval
+OrderStatus parsed = OrderStatusExtensions.ParseWire("sent");             // Shipped
 ```
 
-| Generated member | What It Does |
-|------------------|-------------|
-| `value.ToOptimizedString()` | Member name without reflection |
-| `value.ToSnakeCase()` / `ToKebabCase()` / `ToLowerCase()` / `ToUpperCase()` | Member name in the given casing |
-| `value.AsUnderlyingType()` | Underlying numeric value |
-| `{Enum}Extensions.Parse(name)` / `TryParse(name, out value)` | Name to value |
-| `{Enum}Extensions.IsDefined(name)` | `true` for a member name |
-| `{Enum}Extensions.GetNames()` / `GetValues()` | All member names / values as arrays |
+Wire name priority: `[JsonStringEnumMemberName]`, `[EnumMember(Value)]`, `[StringEnum(Naming)]`, the `CSharpEssentialsEnumNaming` MSBuild property, then `SnakeCaseLower`. `EnumNaming`: `Default`, `SnakeCaseLower`, `SnakeCaseUpper`, `KebabCaseLower`, `KebabCaseUpper`, `CamelCase`, `PascalCase`.
 
-Extensions are generated only for top-level enums. A `[StringEnum]` enum nested in a class or struct is skipped, and analyzer `CSE0001` (Info) reports it. Move the enum to namespace level to get the extensions.
+| Generated member (`{Enum}Extensions`) | What It Does |
+|------------------|-------------|
+| `value.ToWireName()` | Canonical wire name; throws `EnumValueException` for undefined values; flags are comma separated |
+| `{Enum}Extensions.TryParseWire(text, out value)` / `ParseWire(text)` | Every known spelling (wire name, member name in any casing, alias, defined number), no fallback; `ParseWire` throws `EnumValueException` |
+| `value.IsDefined()` | Defined member, or a combination of defined flags |
+| `{Member}WireName` | Wire name constant |
+| `value.ToOptimizedString()` / `ToKebabCase()` / `ToLowerCase()` / `ToUpperCase()` | Member name, 4.x kebab case, lower or upper case |
+| `value.AsUnderlyingType()` | Underlying numeric value |
+| `{Enum}Extensions.IsDefined(name)` / `GetNames()` / `GetValues()` | Member name check, member names, values |
+| `{Member}SnakeCase` / `{Member}KebabCase` | 4.x constants, unchanged |
+| `value.ToSnakeCase()`, `TryParse`, `Parse` | `[Obsolete]`: use `ToWireName()`, `TryParseWire`, `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`, wire name `http_status`) |
+
+Nested enums are supported (`Order.State` gets `Order_StateExtensions`).
+
+| Runtime type | What It Does |
+|------|-------------|
+| `EnumConventions` | Record; `Default` has `AcceptNumbers`, `AcceptMemberNames`, `CaseInsensitive` = `true`, `UnknownValue = UseFallback`, `WriteAs = String`, `Storage = String`, `FlagsStorage = Integer`, `CheckConstraints = true`, `CanHandle = EnumMetadata.IsRegistered` |
+| `EnumReadMode` | `Input` (strict, caller values, never the fallback) or `Data` (tolerant, stored or trusted values, applies `UnknownValue`) |
+| `EnumValueParser.TryParse<TEnum>(text, mode, conventions, out value, out error)` / `TryParseNumber` | Parses one token |
+| `EnumValueFormatter.Format<TEnum>(value, format)` / `FormatFlags` / `TryFormat` / `TryFormatMany` | Formats as wire name or number |
+| `EnumValueError` / `EnumValueException` | Enum type, value, allowed values and path of a rejected value |
+| `EnumMetadata.Get<TEnum>()` / `TryGet` / `IsRegistered(Type)` | Generated metadata (`EnumInfo<TEnum>`: `Members`, `WireNames`, `Fallback`, `IsFlags`, `Storage`) |
+| `EnumMetadata.GetOrCreateWithReflection(Type)` | Opt-in reflection metadata; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
+
+Analyzers CSE0002 to CSE0016 check duplicate wire names and aliases, fallback and flags rules, invalid names, migrations and enums the generator cannot reach; see the [Enums Readme](../CSharpEssentials.Enums/Readme.MD#diagnostics) for the table with fixes, and the [design document](design/CSharpEssentials.Enums-DESIGN.md) for the per-layer behavior. Upgrading: [Migrating from 4.x to 5.0](migration/v4-to-v5.md).
 
 ---
 
