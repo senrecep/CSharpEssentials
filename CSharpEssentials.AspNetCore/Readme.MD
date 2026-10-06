@@ -67,6 +67,14 @@ var usersGroup = app.CreateVersionedGroup("users", version: 1);
 usersGroup.MapGet("/{id}", (int id) => Results.Ok(new { Id = id }));
 ```
 
+`MapVersionedGroup(version)` creates a group with only the `v{version:apiVersion}` prefix and the version set, so other route groups can be composed under it:
+
+```csharp
+var v2 = app.MapVersionedGroup(2);            // /v2, ApiExplorer group "v2"
+v2.MapGet("/ping", () => "pong");             // GET /v2/ping
+v2.MapAppsEndpoints();                        // CSharpEssentials.Endpoints registry under /v2
+```
+
 ### Swagger with Versioning
 
 ```csharp

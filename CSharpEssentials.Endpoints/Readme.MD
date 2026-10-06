@@ -52,6 +52,27 @@ app.MapAllEndpoints();    // own registry + every referenced assembly's registry
 - `MapAllEndpoints` is `internal` and generated automatically in `Exe`/`WinExe` projects that are not test projects. Use `[assembly: GenerateEndpointAggregate]` to opt in from a library or test project, `[assembly: DisableEndpointAggregate]` to opt out. Each registry is mapped once, own registry first, then referenced registries by assembly name.
 - Each endpoint type is mapped inside its own `MapGroup("")`, so route patterns, OpenAPI metadata, filters and authorization are the same as direct mapping. Route calls such as `MapGet` stay in your `Map` method.
 
+## Reflection fallback
+
+When a registry cannot be generated (for example, plugin assemblies loaded at runtime), map endpoints by scanning assemblies:
+
+```csharp
+app.MapEndpointsFromAssemblies(typeof(CreateApp).Assembly);
+app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAssembly);
+```
+
+- Uses the same discovery rules, ordering, conventions and options as the generated registries.
+- Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the loadable types are mapped and each loader exception is logged at `Warning`.
+- Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Prefer the generated methods in trimmed and Native AOT apps.
+
+## API versioning
+
+`CSharpEssentials.AspNetCore` provides `MapVersionedGroup`, which composes with any registry:
+
+```csharp
+app.MapVersionedGroup(2).MapAppsEndpoints();   // routes under /v2/...
+```
+
 ## Mapping options
 
 ```csharp

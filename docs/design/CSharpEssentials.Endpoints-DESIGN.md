@@ -358,6 +358,7 @@ public static class EndpointRouteBuilderExtensions
 - Discovery uses the same rules as the generator (§5.1): it skips abstract, open-generic, inaccessible (the CSE1001 set), cyclic, conflicting and excluded types, and skips assemblies with `[ExcludeFromMapping]`. It uses the same ordering and the same `EndpointMapper`.
 - On `ReflectionTypeLoadException`, it maps the loadable types and **logs** every loader exception (with the type name when available) at `Warning`, category `CSharpEssentials.Endpoints`. Nothing is silently swallowed.
 - Invalid types that the analyzer would report as errors are skipped and logged at `Warning`, because there is no compile-time check on this path.
+- Implementation note: abstract, open-generic and `[ExcludeFromMapping]` types (and endpoints under an excluded group) are skipped without a log entry, matching the generator, where they produce no error. Each assembly is scanned once even when it is passed more than once, and gets its own group tree, like one generated registry per assembly.
 - Parity test: the fallback and the generated registry produce the same endpoint set (route patterns, metadata, order).
 
 ### 6.2 `MapVersionedGroup` (CSharpEssentials.AspNetCore)
