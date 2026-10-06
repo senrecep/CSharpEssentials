@@ -82,6 +82,7 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
             !EndpointSymbolRules.IsEndpoint(type) ||
             !EndpointSymbolRules.IsAccessible(type) ||
             EndpointSymbolRules.IsAbstractOrOpenGeneric(type) ||
+            type.IsRefLikeType ||
             EndpointSymbolRules.HasAttribute(type, EndpointSymbolRules.ExcludeAttribute))
         {
             return null;

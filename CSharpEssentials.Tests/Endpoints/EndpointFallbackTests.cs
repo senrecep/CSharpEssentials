@@ -95,6 +95,22 @@ public class EndpointFallbackTests
             public static void Map(IEndpointRouteBuilder app) => app.MapGet("/abstract", () => "abstract");
         }
 
+        public ref struct RefEndpoint : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/ref", () => "ref");
+        }
+
+        public ref struct RefGroup : IEndpointGroup
+        {
+            public static string Prefix => "ref";
+        }
+
+        [EndpointGroup(typeof(RefGroup))]
+        public sealed class InRefGroup : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/", () => "ref-group");
+        }
+
         public sealed class GenericEndpoint<T> : IEndpoint
         {
             public static void Map(IEndpointRouteBuilder app) => app.MapGet("/generic", () => typeof(T).Name);
@@ -185,12 +201,14 @@ public class EndpointFallbackTests
         string[] warnings = [.. provider.Entries
             .Where(static entry => entry.Category == LogCategory && entry.Level == LogLevel.Warning)
             .Select(static entry => entry.Message)];
-        warnings.Should().HaveCount(5);
+        warnings.Should().HaveCount(7);
         warnings.Should().ContainSingle(static message => message.Contains("PrivateEndpoint", StringComparison.Ordinal) && message.Contains("CSE1001", StringComparison.Ordinal));
         warnings.Should().ContainSingle(static message => message.Contains("FileEndpoint", StringComparison.Ordinal) && message.Contains("CSE1001", StringComparison.Ordinal));
         warnings.Should().ContainSingle(static message => message.Contains("InCycle", StringComparison.Ordinal) && message.Contains("CSE1002", StringComparison.Ordinal));
         warnings.Should().ContainSingle(static message => message.Contains("Conflicting", StringComparison.Ordinal) && message.Contains("CSE1003", StringComparison.Ordinal));
         warnings.Should().ContainSingle(static message => message.Contains("InNonGroup", StringComparison.Ordinal) && message.Contains("CSE1007", StringComparison.Ordinal));
+        warnings.Should().ContainSingle(static message => message.Contains("RefEndpoint", StringComparison.Ordinal) && message.Contains("CSE1008", StringComparison.Ordinal));
+        warnings.Should().ContainSingle(static message => message.Contains("InRefGroup", StringComparison.Ordinal) && message.Contains("CSE1007", StringComparison.Ordinal));
     }
 
     [Fact]

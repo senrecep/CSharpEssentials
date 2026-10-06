@@ -39,6 +39,7 @@ internal static class EndpointRouteReader
         groupKey = string.Empty;
         if (EndpointSymbolRules.IsExcluded(endpoint) ||
             EndpointSymbolRules.IsAbstractOrOpenGeneric(endpoint) ||
+            endpoint.IsRefLikeType ||
             !EndpointSymbolRules.IsAccessible(endpoint))
         {
             return false;

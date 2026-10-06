@@ -190,6 +190,24 @@ public class EndpointsAnalyzerTests
         }
         """;
 
+    private const string Cse1008Source = """
+        public ref struct RefEndpoint : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/ref", () => "ref");
+        }
+
+        public ref struct RefGroup : IEndpointGroup
+        {
+            public static string Prefix => "ref";
+        }
+
+        [EndpointGroup(typeof(RefGroup))]
+        public sealed class InRefGroup : IEndpoint
+        {
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/", () => "ref-group");
+        }
+        """;
+
     private const string Cse1005Source = """
         public sealed class OrdersGroup : IEndpointGroup
         {
@@ -384,6 +402,28 @@ public class EndpointsAnalyzerTests
     }
 
     [Fact]
+    public async Task Analyzer_Should_Report_CSE1008_When_Endpoint_Or_Group_Is_Ref_Struct()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(Cse1008Source);
+
+        Diagnostic[] refStructs = [.. diagnostics.Where(static d => d.Id == "CSE1008")];
+        refStructs.Should().HaveCount(2).And.OnlyContain(static d => d.Severity == DiagnosticSeverity.Error);
+        refStructs.Select(static d => d.GetMessage(System.Globalization.CultureInfo.InvariantCulture)).Should().BeEquivalentTo(
+            "Type 'Sample.Api.RefEndpoint' is a ref struct and is not mapped; declare it as a class or a non-ref struct",
+            "Type 'Sample.Api.RefGroup' is a ref struct and is not mapped; declare it as a class or a non-ref struct");
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE1007")
+            .Which.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Contain("Sample.Api.InRefGroup");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Not_Report_CSE1008_When_Endpoint_Is_Struct()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(ValidSource);
+
+        diagnostics.Should().NotContain(static d => d.Id == "CSE1008");
+    }
+
+    [Fact]
     public async Task Analyzer_Should_Not_Report_CSE1007_When_Group_Target_Is_Valid()
     {
         ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync(ValidSource);
@@ -426,7 +466,7 @@ public class EndpointsAnalyzerTests
     [Fact]
     public void Generator_Should_Skip_Invalid_Types_So_Generated_Code_Compiles()
     {
-        string[] sources = [.. new[] { Cse1001Source, Cse1002Source, Cse1003Source, Cse1006Source, Cse1007Source }
+        string[] sources = [.. new[] { Cse1001Source, Cse1002Source, Cse1003Source, Cse1006Source, Cse1007Source, Cse1008Source }
             .Select(static (source, index) => Usings.Replace("namespace Sample.Api;", $"namespace Sample.Api.Case{index};", StringComparison.Ordinal) + source)];
         GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
             "Sample.Api",

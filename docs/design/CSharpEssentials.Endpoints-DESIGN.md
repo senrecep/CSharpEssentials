@@ -160,7 +160,7 @@ This is the only place that implements wrapping, ordering, naming, tagging, filt
 
 - `context.SyntaxProvider.CreateSyntaxProvider`: the predicate keeps `TypeDeclarationSyntax` (class/record/struct) that has a base list. The transform resolves the symbol and checks `AllInterfaces` for `CSharpEssentials.Endpoints.IEndpoint` / `IEndpointGroup` by metadata name. `ForAttributeWithMetadataName` is not used because discovery is interface-based.
 - The transform outputs value-equatable models (fully qualified name, accessibility, group type name, flags), with no symbols. Partial types are deduplicated by fully qualified name.
-- Skipped (no code, analyzer reports): abstract and open-generic types (CSE1006, info), inaccessible types (CSE1001), types in group cycles (CSE1002), types with conflicting group attributes (CSE1003), types whose group target is invalid (CSE1007), `[ExcludeFromMapping]` types, and everything when the assembly has `[ExcludeFromMapping]`.
+- Skipped (no code, analyzer reports): abstract and open-generic types (CSE1006, info), inaccessible types (CSE1001), types in group cycles (CSE1002), types with conflicting group attributes (CSE1003), types whose group target is invalid (CSE1007), ref struct types (CSE1008), `[ExcludeFromMapping]` types, and everything when the assembly has `[ExcludeFromMapping]`.
 - If no endpoint survives, no registry and no `EndpointModule` attribute are emitted.
 
 ### 5.2 Names
@@ -383,7 +383,8 @@ Reported by `EndpointsAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssentials.Endp
 | CSE1004 | Endpoint declares instance state (instance fields or auto-properties) or a constructor with parameters | Warning | It is never instantiated, so the state and dependencies are dead code |
 | CSE1005 | Duplicate HTTP method + route literal in the same group (best effort, constant strings only) | Warning | Ambiguous match at runtime. Compares `MapGet/Post/Put/Delete/Patch` and `MapMethods` with a constant pattern and a constant method array, called directly on the `Map` parameter. Patterns compare case-insensitively without leading/trailing `/`. Ungrouped endpoints form one group. Reported on each pattern argument at compilation end. |
 | CSE1006 | Abstract or open-generic `IEndpoint`/`IEndpointGroup` type is skipped | Info | Deliberate skip, made visible |
-| CSE1007 | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract or open-generic | Error | Generated `MapGroup<X>` would not compile |
+| CSE1007 | `[EndpointGroup(typeof(X))]` target does not implement `IEndpointGroup`, or is abstract, open-generic or a ref struct | Error | Generated `MapGroup<X>` would not compile |
+| CSE1008 | Endpoint or group type is a `ref struct` | Error | Generated `MapEndpoint<X>`/`MapGroup<X>` would not compile (CS9244) |
 
 CSE1007 is added by this design. The `typeof` form cannot carry the `IEndpointGroup` constraint that the generic form has, so this case would otherwise surface as a compile error in generated code. It ships with #53.
 

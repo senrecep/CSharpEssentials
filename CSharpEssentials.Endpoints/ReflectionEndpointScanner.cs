@@ -67,6 +67,11 @@ internal static class ReflectionEndpointScanner
             return false;
         }
 
+        if (endpointType.IsByRefLike)
+        {
+            return Skip(logger, endpointType, "the type is a ref struct (CSE1008)");
+        }
+
         if (!IsAccessible(endpointType))
         {
             return Skip(logger, endpointType, "the type is not accessible from generated code (CSE1001)");
@@ -88,7 +93,7 @@ internal static class ReflectionEndpointScanner
             }
 
             Type group = targets[0];
-            if (!typeof(IEndpointGroup).IsAssignableFrom(group) || group.IsInterface || IsAbstractOrOpenGeneric(group))
+            if (!typeof(IEndpointGroup).IsAssignableFrom(group) || group.IsInterface || group.IsByRefLike || IsAbstractOrOpenGeneric(group))
             {
                 return Skip(logger, endpointType, $"group target '{group}' of '{current}' is not a concrete IEndpointGroup (CSE1007)");
             }

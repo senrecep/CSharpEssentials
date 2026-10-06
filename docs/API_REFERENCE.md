@@ -1726,7 +1726,8 @@ group.RequireRoles("admin", "editor");
 | CSE1004 | Warning | Endpoint declares instance state (code fix removes it) |
 | CSE1005 | Warning | Two endpoints in one group map the same HTTP method and constant route |
 | CSE1006 | Info | Abstract or open-generic endpoint or group type is skipped |
-| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target is not a concrete `IEndpointGroup` |
+| CSE1007 | Error | `[EndpointGroup(typeof(X))]` target is not a concrete, non-ref struct `IEndpointGroup` |
+| CSE1008 | Error | Endpoint or group type is a `ref struct` and is not mapped |
 
 ---
 

@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace CSharpEssentials.Endpoints.Generators;
 
 /// <summary>
-/// Reports endpoint and group types that the endpoints generator cannot map and duplicate routes (CSE1001–CSE1007).
+/// Reports endpoint and group types that the endpoints generator cannot map and duplicate routes (CSE1001–CSE1008).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
@@ -20,7 +20,8 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         EndpointDiagnostics.InstanceState,
         EndpointDiagnostics.DuplicateRoute,
         EndpointDiagnostics.SkippedType,
-        EndpointDiagnostics.InvalidGroupTarget);
+        EndpointDiagnostics.InvalidGroupTarget,
+        EndpointDiagnostics.RefStructType);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -87,6 +88,12 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         if (EndpointSymbolRules.IsAbstractOrOpenGeneric(type))
         {
             context.ReportDiagnostic(Diagnostic.Create(EndpointDiagnostics.SkippedType, location, name));
+            return;
+        }
+
+        if (type.IsRefLikeType)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(EndpointDiagnostics.RefStructType, location, name));
             return;
         }
 
