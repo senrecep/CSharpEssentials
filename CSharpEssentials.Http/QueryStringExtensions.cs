@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Globalization;
 using System.Text;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
@@ -125,9 +127,32 @@ public static class QueryStringExtensions
                     pairs.Add(new KeyValuePair<string, string?>(name, text));
                 return;
             }
+
+            if (value is IEnumerable items)
+            {
+                foreach (object? item in items)
+                    AddItem(pairs, name, item, conventions, format);
+                return;
+            }
         }
 
-        pairs.Add(new KeyValuePair<string, string?>(name, value.ToString()));
+        AddItem(pairs, name, value, conventions, format);
+    }
+
+    private static void AddItem(
+        List<KeyValuePair<string, string?>> pairs,
+        string name,
+        object? value,
+        EnumConventions conventions,
+        EnumWireFormat? format)
+    {
+        if (value is null)
+            return;
+
+        string? text = EnumValueFormatter.TryFormat(value, conventions, out string? formatted, format)
+            ? formatted
+            : Convert.ToString(value, CultureInfo.InvariantCulture);
+        pairs.Add(new KeyValuePair<string, string?>(name, text));
     }
 
     internal static Result<Uri> AppendQuery(this Uri uri, Result<string> queryResult)
