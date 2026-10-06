@@ -13,7 +13,7 @@ namespace CSharpEssentials.Tests.AspNetCore;
 public class EnumSchemaFilterTests
 {
     [StringEnum]
-    private enum TestString
+    internal enum TestString
     {
         Active,
         Inactive,
@@ -21,7 +21,7 @@ public class EnumSchemaFilterTests
     }
 
     [StringEnum]
-    private enum TestAcronym
+    internal enum TestAcronym
     {
         HTTPStatus,
         IOError,
@@ -29,7 +29,7 @@ public class EnumSchemaFilterTests
     }
 
     [StringEnum]
-    private enum TestCustomNamed
+    internal enum TestCustomNamed
     {
         [JsonStringEnumMemberName("renamed")]
         Original,

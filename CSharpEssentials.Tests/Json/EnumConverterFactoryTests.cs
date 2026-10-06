@@ -399,15 +399,66 @@ public class EnumConverterFactoryTests
     }
 
     [Fact]
-    public void Enums_Without_Generated_Metadata_Accepted_By_CanHandle_Should_Use_Reflection_Metadata()
+    public void Enums_Without_Generated_Metadata_Should_Not_Be_Handled_Without_The_Reflection_Opt_In()
     {
         EnumConventions all = EnumConventions.Default with { CanHandle = static type => type.IsEnum };
+        EnumConverterFactory factory = new(all);
 
         string json = JsonSerializer.Serialize(DayOfWeek.Monday, Options(conventions: all));
-        DayOfWeek value = Read<DayOfWeek>("\"Monday\"", EnumReadMode.Input, all);
 
+        factory.UsesReflectionFallback.Should().BeFalse();
+        factory.CanConvert(typeof(DayOfWeek)).Should().BeFalse();
+        json.Should().Be("1");
+    }
+
+    [Fact]
+    public void Enums_Without_Generated_Metadata_Accepted_By_CanHandle_Should_Use_Reflection_Metadata_When_Opted_In()
+    {
+        EnumConventions all = EnumConventions.Default with { CanHandle = static type => type.IsEnum };
+        JsonSerializerOptions options = new JsonSerializerOptions().AddEnumConventionsWithReflection(all, EnumReadMode.Input);
+
+        string json = JsonSerializer.Serialize(DayOfWeek.Monday, options);
+        DayOfWeek value = JsonSerializer.Deserialize<DayOfWeek>("\"Monday\"", options);
+
+        EnumConverterFactory.CreateWithReflectionFallback(all).UsesReflectionFallback.Should().BeTrue();
         json.Should().Be("\"monday\"");
         value.Should().Be(DayOfWeek.Monday);
+    }
+
+    [Fact]
+    public void Reflection_Opt_In_Should_Still_Respect_CanHandle()
+    {
+        EnumConverterFactory factory = EnumConverterFactory.CreateWithReflectionFallback(EnumConventions.Default);
+
+        factory.CanConvert(typeof(DayOfWeek)).Should().BeFalse();
+        factory.CanConvert(typeof(JsonOrderStatus)).Should().BeTrue();
+    }
+
+    [Fact]
+    public void StringEnum_Without_Generated_Metadata_Should_Fail_Loud_Instead_Of_Writing_A_Number()
+    {
+        EnumConverterFactory factory = new(EnumConventions.Default);
+
+        Action create = () => factory.CreateConverter(typeof(UnreachableHolder<int>.Status), new JsonSerializerOptions());
+        Action serialize = () => JsonSerializer.Serialize(UnreachableHolder<int>.Status.First, Options());
+        Action deserialize = () => JsonSerializer.Deserialize<UnreachableHolder<int>.Status>("0", Options());
+
+        EnumMetadata.TryGet(typeof(UnreachableHolder<int>.Status), out _).Should().BeFalse();
+        factory.CanConvert(typeof(UnreachableHolder<int>.Status)).Should().BeTrue();
+        create.Should().Throw<InvalidOperationException>().WithMessage("*UnreachableHolder*Status*[StringEnum]*no generated metadata*");
+        serialize.Should().Throw<InvalidOperationException>().WithMessage("*UnreachableHolder*Status*");
+        deserialize.Should().Throw<InvalidOperationException>().WithMessage("*UnreachableHolder*Status*");
+    }
+
+    [Fact]
+    public void StringEnum_Without_Generated_Metadata_Should_Use_The_Reflection_Opt_In()
+    {
+        JsonSerializerOptions options = new JsonSerializerOptions().AddEnumConventionsWithReflection(EnumConventions.Default with
+        {
+            CanHandle = static type => type == typeof(UnreachableHolder<int>.Status),
+        });
+
+        JsonSerializer.Serialize(UnreachableHolder<int>.Status.SecondValue, options).Should().Be("\"second_value\"");
     }
 
     [Fact]

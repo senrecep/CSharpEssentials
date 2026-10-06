@@ -11,7 +11,7 @@ namespace CSharpEssentials.Tests.EntityFrameworkCore;
 public class ModelConfigurationExtensionsTests
 {
     [StringEnum]
-    private enum TestStatus
+    internal enum TestStatus
     {
         Active,
         Inactive,
@@ -19,7 +19,7 @@ public class ModelConfigurationExtensionsTests
     }
 
     [StringEnum]
-    private enum AcronymStatus
+    internal enum AcronymStatus
     {
         HTTPStatus,
         IOError,
@@ -162,16 +162,13 @@ public class ModelConfigurationExtensionsTests
     }
 
     [Fact]
-    public void ConfigureEnumConventions_WithCustomCanConvert_ShouldOnlyConvertMatchingEnums()
+    public void ConfigureEnumConventions_WithCustomCanConvert_ShouldFailLoudForEnumsWithoutGeneratedMetadata()
     {
         using PredicateConventionDbContext context = new(CreateOptions<PredicateConventionDbContext>());
 
-        IProperty color = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Color));
-        IProperty status = GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Status));
+        Action build = () => GetProperty<AcronymEntity>(context, nameof(AcronymEntity.Color));
 
-        color.GetValueConverter().Should().BeOfType<EnumToFormattedStringConverter<PlainColor>>();
-        color.GetMaxLength().Should().Be("green".Length);
-        status.GetValueConverter().Should().BeNull();
+        build.Should().Throw<InvalidOperationException>().WithMessage("*PlainColor*no generated metadata*");
     }
 
     [Fact]

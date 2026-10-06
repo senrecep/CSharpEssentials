@@ -1,6 +1,7 @@
 using System.Text.Json;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
+using CSharpEssentials.Tests.Fixtures.EnumsContracts;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Json;
@@ -150,22 +151,30 @@ public class ConditionalStringEnumConverterTests
     [Fact]
     public void CanConvert_WithCustomPredicate_ShouldUsePredicate()
     {
-        ConditionalStringEnumConverter converter = new(canConvert: type => type == typeof(RegularEnumType));
+        ConditionalStringEnumConverter converter = new(canConvert: type => type == typeof(ConverterAcronymKind));
 
-        converter.CanConvert(typeof(RegularEnumType)).Should().BeTrue();
+        converter.CanConvert(typeof(ConverterAcronymKind)).Should().BeTrue();
         converter.CanConvert(typeof(TestStringEnumType)).Should().BeFalse();
     }
 
     [Fact]
-    public void Serialize_WithCustomPredicate_ShouldUseReflectionMetadataForEnumsWithoutGeneratedMetadata()
+    public void Serialize_WithCustomPredicate_ShouldNotUseReflectionForEnumsWithoutGeneratedMetadata()
     {
         JsonSerializerOptions options = new() { Converters = { new ConditionalStringEnumConverter(canConvert: type => type == typeof(RegularEnumType)) } };
 
         string json = JsonSerializer.Serialize(RegularEnumType.Second, options);
-        RegularEnumType value = JsonSerializer.Deserialize<RegularEnumType>("\"Second\"", options);
 
-        json.Should().Be("\"second\"");
-        value.Should().Be(RegularEnumType.Second);
+        new ConditionalStringEnumConverter(canConvert: _ => true).CanConvert(typeof(RegularEnumType)).Should().BeFalse();
+        json.Should().Be("1");
+    }
+
+    [Fact]
+    public void Serialize_StringEnumWithoutGeneratedMetadata_ShouldFailLoud()
+    {
+        Action serialize = () => JsonSerializer.Serialize(UnreachableHolder<int>.Status.SecondValue, StringEnumOptions);
+
+        new ConditionalStringEnumConverter().CanConvert(typeof(UnreachableHolder<int>.Status)).Should().BeTrue();
+        serialize.Should().Throw<InvalidOperationException>().WithMessage("*UnreachableHolder*Status*no generated metadata*");
     }
 
     [Fact]
