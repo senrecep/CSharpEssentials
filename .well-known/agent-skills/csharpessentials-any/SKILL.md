@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-any
-description: Use when a method can return one of several distinct types — Any<T1,T2> as a type-safe discriminated union, implicit assignment from any branch type, exhaustive Match() to handle all cases, and Is<T>/As<T> for type inspection.
+description: Use when a method can return one of several distinct types — Any<T0,T1> through Any<T0,…,T7> as a type-safe discriminated union, implicit assignment from any branch type, Match()/Switch() with one handler per branch, IsFirst/GetFirst, Is/As/TryAs, and Partition/Traverse for sequences.
 ---
 
 # CSharpEssentials.Any
 
-`Any<T1,T2,...>` is a discriminated union — a value that is exactly one of several possible types at runtime. Replaces `object`-typed returns and eliminates unsafe casting.
+`Any<T0,T1,...>` is a discriminated union — a value that is exactly one of several possible types at runtime. Replaces `object`-typed returns and eliminates unsafe casting.
 
 ## Installation
 
@@ -22,63 +22,83 @@ using CSharpEssentials.Any;
 ## Creating Any
 
 ```csharp
-// Implicit assignment — just assign the value
-Any<User, NotFoundError> result = user;
-Any<User, NotFoundError> result = new NotFoundError("User not found");
+// Implicit assignment from any branch type
+Any<User, NotFoundError> found = user;
+Any<User, NotFoundError> missing = new NotFoundError("User not found");
 
-// Up to Any<T1,T2,T3,T4> supported
-Any<Order, ValidationError, NotFoundError> outcome = order;
+// Explicit factories: First, Second, ... (unions of 2 to 8 types)
+Any<Order, ValidationFailure, NotFoundError> outcome = Any<Order, ValidationFailure, NotFoundError>.First(order);
 ```
 
-## Exhaustive Match
+## Match and Switch
 
 ```csharp
-// All branches must be handled — compile error if one is missing
-IResult response = result.Match(
-    whenT0: u   => Ok(u),
-    whenT1: err => NotFound(err.Message));
+// Match returns AnyActionResult<TResult>: Status says whether a handler ran, Result holds its value.
+// Handlers are optional parameters, so a missing handler returns Status = NotExecuted.
+AnyActionResult<IResult> response = found.Match(
+    first: u => Results.Ok(u),
+    second: err => Results.NotFound(err.Message));
+IResult http = response.Result!;
 
-// Async match
-IResult response = await result.MatchAsync(
-    whenT0: async u   => await BuildOkResponseAsync(u),
-    whenT1: async err => await BuildErrorResponseAsync(err));
+// Switch runs side effects and returns AnyActionStatus
+AnyActionStatus status = found.Switch(
+    first: u => Console.WriteLine(u.Name),
+    second: err => Console.WriteLine(err.Message));
 ```
 
 ## Type Inspection
 
 ```csharp
-if (result.Is<User>())
+if (found.IsFirst)
 {
-    User user = result.As<User>();  // safe after Is<T>() check
+    User u = found.GetFirst(); // throws InvalidOperationException for the wrong branch
 }
+
+// Generic helpers take the target type followed by the union's type arguments
+bool isUser = found.Is<User, User, NotFoundError>();
+User? asUser = found.As<User, User, NotFoundError>();
+bool ok = found.TryAs<NotFoundError, User, NotFoundError>(out NotFoundError? error);
+
+// Deconstruct / ToTuple: the inactive branches are default
+var (maybeUser, maybeError) = found;
 ```
 
-## Typical Usage — service return type
+## Collections
 
 ```csharp
-public Any<Order, ValidationErrors, NotFoundError> PlaceOrder(PlaceOrderRequest request)
-{
-    if (!_validator.IsValid(request))
-        return new ValidationErrors(request.Errors);
+// Split a sequence of unions into one typed array per branch
+(User[] users, NotFoundError[] notFound) = lookups.Partition();
 
-    var cart = _repo.FindCart(request.CartId);
+// Or project and split in one pass
+(User[] loaded, NotFoundError[] failed) = ids.Traverse(id => FindUser(id));
+```
+
+## Typical Usage: service return type
+
+```csharp
+public Any<Order, ValidationFailure, NotFoundError> PlaceOrder(PlaceOrderRequest request)
+{
+    if (request.Quantity <= 0)
+        return new ValidationFailure("Quantity must be positive");
+
+    Cart? cart = _repo.FindCart(request.UserId);
     if (cart is null)
         return new NotFoundError("Cart not found");
 
-    return _orderFactory.Create(cart);
+    return new Order { Id = Guid.NewGuid() };
 }
 
-// At API boundary
-var result = _service.PlaceOrder(request);
-return result.Match(
-    whenT0: order => Created($"/orders/{order.Id}", order),
-    whenT1: errs  => BadRequest(errs),
-    whenT2: err   => NotFound(err.Message));
+// At the API boundary
+public IResult PlaceOrderEndpoint(PlaceOrderRequest request) =>
+    PlaceOrder(request).Match(
+        first: order => Results.Created($"/orders/{order.Id}", order),
+        second: failure => Results.BadRequest(failure.Message),
+        third: err => Results.NotFound(err.Message)).Result!;
 ```
 
 ## Best Practices
 
-- Use `Any<T1,T2>` over `Result<T>` when the error branches carry distinct, typed data
-- Always use `Match()` — it enforces exhaustiveness at compile time
-- `Is<T>()` + `As<T>()` is the escape hatch for cases where `Match()` is too verbose
+- Use `Any<T0,T1>` over `Result<T>` when the error branches carry distinct, typed data
+- Pass a handler for every branch to `Match()`/`Switch()`; a missing handler is not a compile error, it returns `NotExecuted`
+- `IsFirst`/`GetFirst()` or `TryAs<…>()` are the escape hatch for cases where `Match()` is too verbose
 - Avoid `object`-typed union members — defeats the purpose

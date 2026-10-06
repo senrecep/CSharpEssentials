@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-entity
-description: Use when building DDD domain models — EntityBase<TId> for aggregate roots with audit fields and domain events, SoftDeletableEntityBase for soft deletion lifecycle, and IDomainEvent for defining and raising domain events.
+description: Use when building DDD domain models — EntityBase<TId> for aggregate roots with audit fields and domain events (Raise/DomainEvents/ClearDomainEvents), SoftDeletableEntityBase<TId> for the MarkAsDeleted/Restore/MarkAsHardDeleted lifecycle, and IDomainEvent with [DomainEventTiming] for publish timing.
 ---
 
 # CSharpEssentials.Entity
@@ -25,6 +25,8 @@ using CSharpEssentials.Entity.Interfaces; // IDomainEvent, ISoftDeletable, IEnti
 ## EntityBase\<TId\>
 
 ```csharp
+public record OrderCreatedEvent(Guid OrderId, string CustomerId) : IDomainEvent;
+
 public class Order : EntityBase<Guid>
 {
     public string CustomerId { get; private set; } = default!;
@@ -40,8 +42,8 @@ public class Order : EntityBase<Guid>
 
 // Provided members:
 // TId? Id
-// DateTimeOffset CreatedAt          — set by AuditInterceptor
-// string? CreatedBy                 — set by AuditInterceptor
+// DateTimeOffset CreatedAt          — set by AuditInterceptor (or SetCreatedInfo)
+// string? CreatedBy                 — set by AuditInterceptor (or SetCreatedInfo)
 // DateTimeOffset? UpdatedAt         — NOT ModifiedAt
 // string? UpdatedBy                 — NOT ModifiedBy
 // IReadOnlyList<IDomainEvent> DomainEvents  — property, NOT a method
@@ -59,10 +61,14 @@ public class Product : SoftDeletableEntityBase<int>
     public string Name { get; private set; } = default!;
 }
 
+var product = new Product();
+
 // Soft delete lifecycle
 product.MarkAsDeleted(DateTimeOffset.UtcNow, "admin"); // two params: (deletedAt, deletedBy)
 product.Restore();                                      // undoes soft delete
 product.MarkAsHardDeleted();                           // irreversible
+
+// Hard-delete a batch: products.HardDelete() calls MarkAsHardDeleted() on each item
 
 // Additional members:
 // DateTimeOffset? DeletedAt
@@ -76,15 +82,12 @@ product.MarkAsHardDeleted();                           // irreversible
 ## Domain Events
 
 ```csharp
-// Define — implement IDomainEvent
-public record OrderCreatedEvent(Guid OrderId, string CustomerId) : IDomainEvent;
-
-// Control publish timing
+// Default timing is AfterSave; BeforeSave runs handlers inside the save transaction
 [DomainEventTiming(DomainEventTiming.BeforeSave)]
 public record InventoryReservedEvent(Guid ProductId, int Qty) : IDomainEvent;
 
-// Raise inside the aggregate
-order.Raise(new OrderCreatedEvent(order.Id, customerId));
+// Raise inside the aggregate (see Order.Create above)
+Order order = Order.Create("customer-1", 99m);
 
 // Read and clear (after publishing)
 IReadOnlyList<IDomainEvent> events = order.DomainEvents;  // property

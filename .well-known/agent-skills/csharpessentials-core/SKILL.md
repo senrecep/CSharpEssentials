@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-core
-description: Use for low-level C# utility helpers — string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), URL-safe and v7 GUID generation, null-safe collection helpers (WhereNotNull, AddIf), and async cancellation utilities.
+description: Use when you need low-level C# helpers — string case conversions (ToPascalCase/ToSnakeCase/ToKebabCase), Guider.NewGuid and URL-safe GUID strings, IsBetween/IsBetweenExclusive range checks, collection helpers (IfAdd, WhereIf, WithoutNulls), IfNotNull/IfTrue statements and WithCancellation for tasks.
 ---
 
 # CSharpEssentials.Core
@@ -13,7 +13,7 @@ Lightweight C# utility helpers. No functional patterns here — those live in th
 dotnet add package CSharpEssentials.Core
 ```
 
-Or the meta-package (includes Core + Results + Errors + Maybe + Any):
+Or the meta-package, which includes Core:
 
 ```bash
 dotnet add package CSharpEssentials
@@ -30,46 +30,72 @@ using CSharpEssentials.Core;
 ## String Case Conversions
 
 ```csharp
-"helloWorld".ToPascalCase()     // "HelloWorld"
-"HelloWorld".ToSnakeCase()      // "hello_world"
-"HelloWorld".ToKebabCase()      // "hello-world"
-"hello-world".ToCamelCase()     // "helloWorld"
+string pascal = "helloWorld".ToPascalCase();   // "HelloWorld"
+string snake  = "HelloWorld".ToSnakeCase();    // "hello_world"
+string kebab  = "HelloWorld".ToKebabCase();    // "hello-world"
+string camel  = "hello-world".ToCamelCase();   // "helloWorld"
+string macro  = "HelloWorld".ToMacroCase();    // "HELLO_WORLD"
 ```
+
+Also available: `ToTitleCase`, `ToTrainCase`, `ToUnderscoreCamelCase`. Each takes an optional `CultureInfo`.
 
 ---
 
 ## GUID Utilities
 
 ```csharp
-// URL-safe Base64 GUID (compact, URL-safe, no padding)
-string id = Guider.NewGuid();
+// Version 7 (time-sortable) GUID on .NET 9+, Guid.NewGuid() on older targets
+Guid id = Guider.NewGuid();
 
-// Version 7 GUID — time-sortable, database index-friendly (.NET 9+)
-Guid id = Guider.NewGuidV7();
+// Compact, URL-safe 22-character string and back
+string shortId = id.ToStringFromGuid();
+Guid parsed = shortId.ToGuidFromString();
 ```
 
 ---
 
-## Null-Safe / Conditional Helpers
+## Range Checks
 
 ```csharp
-// Execute action only when value is non-null
-value.IfNotNull(v => process(v));
+bool inRange = 5.IsBetween(1, 10);            // inclusive: 1 <= 5 <= 10
+bool strict  = 10.IsBetweenExclusive(1, 10);  // exclusive: false
+```
 
-// Add to list conditionally
-list.AddIf(condition, item);
+Both work for any `IComparable<T>` (`DateTime`, `decimal`, `string`, ...).
 
-// Filter nulls from sequence
-IEnumerable<string> names = rawList.WhereNotNull();
+---
 
-// Cancellation-aware task awaiting
-await longRunningTask.WithCancellation(ct);
+## Collection Helpers
+
+```csharp
+List<string> tags = ["a"];
+tags.IfAdd(includeBeta, "beta");                 // adds only when the condition is true
+tags.IfAddRange(includeExtra, "x", "y");
+
+IEnumerable<User> active = users.WhereIf(onlyActive, u => u.IsActive);   // also on IQueryable<T>
+IEnumerable<string> names = rawNames.WithoutNulls();
+```
+
+---
+
+## Statement Helpers and Tasks
+
+```csharp
+// Run an action only when the value is not null; returns whether it ran
+user.IfNotNull(u => Console.WriteLine(u.Name));
+
+// Run an action only when the condition is true
+isAdmin.IfTrue(() => Console.WriteLine("admin"));
+
+// Stop awaiting when the token is cancelled (throws OperationCanceledException)
+string data = await LoadAsync().WithCancellation(ct);
 ```
 
 ---
 
 ## Best Practices
 
-- Use `Guider.NewGuidV7()` for database primary keys — time-sortable GUIDs reduce index fragmentation
-- `WhereNotNull()` is safer than `.Where(x => x != null).Select(x => x!)` — handles nullable annotations correctly
+- Use `Guider.NewGuid()` for database primary keys — on .NET 9+ it returns time-sortable version 7 GUIDs
+- `WithoutNulls()` keeps nullable annotations correct, unlike `.Where(x => x != null)`
 - `IfNotNull()` is a statement form; for transforms use `Maybe<T>.Map()` instead
+- `WithCancellation` stops waiting; it does not cancel the underlying task

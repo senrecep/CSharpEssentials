@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-maybe
-description: Use when representing optional values explicitly — Maybe<T> as a null-safe container, Maybe.From()/FromTry() for creation, HasValue/HasNoValue, Map/Bind chaining, TapNone for None-side effects, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.
+description: Use when representing optional values explicitly — Maybe<T> as a null-safe container, Maybe.From()/FromTry()/AsMaybe() for creation, HasValue/HasNoValue, Map/Bind chaining, TapNone for None-side effects, Match for consumption, and ToMaybeResult() to bridge into the Result pattern.
 ---
 
 # CSharpEssentials.Maybe
@@ -25,10 +25,11 @@ using CSharpEssentials.Maybe;
 Maybe<string> name    = Maybe.From(user?.Name);   // null → None, value → Some
 Maybe<string> none    = Maybe<string>.None;
 Maybe<string> some    = Maybe.From("Alice");
-Maybe<string> implicit = user.Name;               // implicit T? → Maybe<T>
+Maybe<string> fromName = user.Name;               // implicit T? → Maybe<T>
+Maybe<User>   viaExt  = user.AsMaybe();           // extension on T?
 ```
 
-`Maybe.From(null)` → `None`. `Maybe.From(value)` → `Some(value)`. Never use `.ToMaybe()` — that method does not exist.
+`Maybe.From(null)` → `None`. `Maybe.From(value)` → `Some(value)`. `.AsMaybe()` does the same on any `T?` (and on `Result<T>`); there is no `.ToMaybe()`.
 
 ## Checking Value
 
@@ -36,7 +37,7 @@ Maybe<string> implicit = user.Name;               // implicit T? → Maybe<T>
 bool has    = maybe.HasValue;
 bool empty  = maybe.HasNoValue;
 string val  = maybe.GetValueOrDefault("fallback");
-string val  = maybe.GetValueOrThrow();             // throws if None
+string val2 = maybe.GetValueOrThrow();             // throws InvalidOperationException if None
 ```
 
 ## Exception-safe Creation
@@ -44,7 +45,7 @@ string val  = maybe.GetValueOrThrow();             // throws if None
 ```csharp
 // Returns None if the factory throws — never propagates the exception
 Maybe<int>  n = Maybe<int>.FromTry(() => int.Parse(input));
-Maybe<User> u = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json));
+Maybe<User> u = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json)!);
 ```
 
 ## Pattern Match
@@ -65,7 +66,7 @@ string display = Maybe.From(user?.Email)
 
 // Bind: flatMap — when the transform itself returns Maybe<T>
 Maybe<Address> address = Maybe.From(user)
-    .Bind(u => Maybe.From(u?.Address));
+    .Bind(u => Maybe.From(u.Address));
 ```
 
 ## None-side Effects
@@ -96,7 +97,7 @@ Result<string> r = maybe.ToMaybeResult(
 
 ## Best Practices
 
-- Use `Maybe.From()` — not `.ToMaybe()` (doesn't exist)
+- Use `Maybe.From()` or `.AsMaybe()` — there is no `.ToMaybe()`
 - Prefer `Match()` over `HasValue` + `GetValueOrThrow()` to avoid branches
 - Use `Bind()` when the transform itself can be absent (returns `Maybe<T>`)
 - Bridge to `Result` with `ToMaybeResult()` when the caller needs error information
