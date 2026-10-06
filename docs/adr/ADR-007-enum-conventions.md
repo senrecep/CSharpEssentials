@@ -62,7 +62,7 @@ Reads accept the wire name, the C# name, any casing, declared aliases and the nu
 
 `CSharpEssentials.AspNetCore` stops depending on Swashbuckle. Two packages produce the same enum schema (no package is added for HTTP client libraries such as Refit; see the design, section 13):
 
-- `CSharpEssentials.AspNetCore.OpenApi` for `Microsoft.AspNetCore.OpenApi` and Microsoft.OpenApi 2.x, net10.0+ only. Microsoft.OpenApi 1.x and 2.x differ in the schema type, enum values, extensions and schema model, so a net9.0 target would duplicate the package core; net8.0/net9.0 reach end of support on 2026-11-10. Adding net9.0 later is non-breaking.
+- `CSharpEssentials.AspNetCore.OpenApi` for `Microsoft.AspNetCore.OpenApi` and Microsoft.OpenApi 2.x, net10.0+ only. Microsoft.OpenApi 1.x and 2.x differ in the schema type, enum values, extensions and schema model, so a net9.0 target would duplicate the package core; net8.0/net9.0 reach end of support on 2026-11-10. Adding net9.0 later is non-breaking. 5.0 targets net10.0 only: `Microsoft.AspNetCore.OpenApi` 11.x (rc.1 only so far) needs Microsoft.OpenApi `[3.10.0, 4.0.0)`, which conflicts with the 2.x pin on a net11.0 target. net11.0 with Microsoft.OpenApi 3.x will come later as a non-breaking addition.
 - `CSharpEssentials.AspNetCore.Swashbuckle` for the existing `AddSwagger` code (Swashbuckle 8.x/9.x, Microsoft.OpenApi 1.x, net8.0+). It carries the net9.0 story.
 
 A host references one of the two, never both: Microsoft.OpenApi 2.x would replace the 1.x that Swashbuckle 8/9 needs and break it at runtime. No other package depends on Microsoft.OpenApi, and a test pins that the two dependency closures stay apart.

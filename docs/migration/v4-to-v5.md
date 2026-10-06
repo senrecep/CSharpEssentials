@@ -148,7 +148,7 @@ protected override void Down(MigrationBuilder migrationBuilder)
 `CSharpEssentials.AspNetCore` no longer depends on Swashbuckle. Pick one OpenAPI package per host, never both (Microsoft.OpenApi 2.x would replace the 1.x that Swashbuckle 8/9 needs):
 
 - Staying on Swashbuckle: add `CSharpEssentials.AspNetCore.Swashbuckle`. `AddSwagger`, `UseVersionableSwagger`, `ConfigureSwaggerOptions`, `SecuritySchemes` and the filters keep their names and namespaces. `AddSwagger` adds the enum filters; with a plain `AddSwaggerGen` call `o.AddEnumConventions()`. `EnumSchemaFilter` has no parameterless constructor any more; a `SchemaFilter<EnumSchemaFilter>()` registration still works but misses the operation filter, so replace it with `AddEnumConventions()`.
-- Moving to `Microsoft.AspNetCore.OpenApi` (net10.0+): add `CSharpEssentials.AspNetCore.OpenApi` and call `services.AddOpenApi(o => o.AddEnumConventions())` per document.
+- Moving to `Microsoft.AspNetCore.OpenApi` (net10.0+): add `CSharpEssentials.AspNetCore.OpenApi` and call `services.AddOpenApi(o => o.AddEnumConventions())` per document. The package targets net10.0 only, with `Microsoft.AspNetCore.OpenApi` 10.x and Microsoft.OpenApi 2.x; `Microsoft.AspNetCore.OpenApi` 11.x needs Microsoft.OpenApi 3.x, so net11.0 support will come later as a non-breaking addition.
 
 ```bash
 dotnet add package CSharpEssentials.AspNetCore.Swashbuckle   # or CSharpEssentials.AspNetCore.OpenApi

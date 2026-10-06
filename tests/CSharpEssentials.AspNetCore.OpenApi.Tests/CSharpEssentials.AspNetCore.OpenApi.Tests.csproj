@@ -3,7 +3,7 @@
   <!-- Separate from CSharpEssentials.Tests (net9.0, Swashbuckle with Microsoft.OpenApi 1.x): Microsoft.AspNetCore.OpenApi needs
        net10.0 or later and Microsoft.OpenApi 2.x, which has the same assembly name as 1.x, so one test assembly cannot load both. -->
   <PropertyGroup>
-    <TargetFrameworks>net11.0;net10.0</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <CSharpEssentialsUsesOpenApi2>true</CSharpEssentialsUsesOpenApi2>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
