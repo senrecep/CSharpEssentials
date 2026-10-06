@@ -14,6 +14,13 @@
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="[8.1.0,10)" />
     </ItemGroup>
 
+    <!-- OpenApi: only CSharpEssentials.AspNetCore.OpenApi and its tests (approved 2026-10-06). Microsoft.OpenApi 2.x is pinned only
+         where CSharpEssentialsUsesOpenApi2 is set, because transitive pinning would otherwise force 2.x on Swashbuckle (1.x). -->
+    <ItemGroup Label="OpenApi">
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.0,11)" />
+        <PackageVersion Include="Microsoft.OpenApi" Version="[2.0.0,3)" Condition="'$(CSharpEssentialsUsesOpenApi2)' == 'true'" />
+    </ItemGroup>
+
     <!-- EntityFrameworkCore -->
     <ItemGroup Label="EntityFrameworkCore">
         <PackageVersion Include="EFCore.NamingConventions" Version="[9.0.0,10)" />
