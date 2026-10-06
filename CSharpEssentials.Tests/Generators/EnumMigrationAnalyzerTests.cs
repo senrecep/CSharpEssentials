@@ -62,7 +62,7 @@ public class EnumMigrationAnalyzerTests
             {
                 protected override void Up(MigrationBuilder migrationBuilder)
                 {
-                    migrationBuilder.ConvertEnumColumn<Status>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
+                    migrationBuilder.ConvertEnumColumn<Status>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String, schema: "public");
                     migrationBuilder.AlterColumn<string>(name: "Note", table: "orders");
                     migrationBuilder.AlterColumn<string>(name: "Status", table: "archive");
                     migrationBuilder.AlterColumn<string>(name: "Status", table: "orders", schema: "sales");
@@ -76,6 +76,30 @@ public class EnumMigrationAnalyzerTests
             """);
 
         diagnostics.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("", ", schema: \"sales\"")]
+    [InlineData(", schema: \"sales\"", "")]
+    [InlineData(", schema: null", ", schema: \"sales\"")]
+    public async Task CSE0014_Should_Report_When_OneSideHasNoSchema(string convertSchema, string alterSchema)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync($$"""
+            public sealed class ConvertStatus : Migration
+            {
+                protected override void Up(MigrationBuilder migrationBuilder)
+                {
+                    migrationBuilder.ConvertEnumColumn<Status>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String{{convertSchema}});
+                    migrationBuilder.AlterColumn<string>(name: "Status", table: "orders"{{alterSchema}});
+                }
+
+                protected override void Down(MigrationBuilder migrationBuilder)
+                {
+                }
+            }
+            """);
+
+        diagnostics.Should().ContainSingle().Which.Id.Should().Be("CSE0014");
     }
 
     [Fact]
