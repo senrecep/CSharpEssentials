@@ -140,7 +140,7 @@ public static class OpenApiGolden
         _ => false,
     };
 
-    private static JsonNode? Normalize(JsonNode? node) => node switch
+    internal static JsonNode? Normalize(JsonNode? node) => node switch
     {
         JsonObject obj => Sorted(obj),
         JsonArray array => new JsonArray([.. array.Select(Normalize)]),

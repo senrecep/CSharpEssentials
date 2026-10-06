@@ -121,7 +121,7 @@ public class SwashbuckleEnumGoldenTests
         providers.Should().NotBeEmpty().And.NotContain(root!);
     }
 
-    private static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(
+    internal static async Task<IReadOnlyDictionary<string, string>> GetDocumentsAsync(
         bool addEnumConventions, ILoggerProvider? logs = null, int passes = 1, Action<WebApplication>? configureApp = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
