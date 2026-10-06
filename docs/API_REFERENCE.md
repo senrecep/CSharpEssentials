@@ -1104,14 +1104,20 @@ app.UseEnhancedProblemDetails();
 
 `InvalidOperationException`, `ApplicationException` and `ValidationException` no longer return 400; register an `IExceptionProblemMapper` to restore that.
 
-### Enum Binding
+### Enum Conventions and Binding
 
 | Method | What It Does |
 |--------|-------------|
-| `AddEnumBinding(Action<EnumBindingOptions>? = null)` | Optional configuration (`CanBind`, `NamingPolicy`, `AllowIntegerValues`, `ErrorFactory`) |
-| `UseEnumBinding()` | Middleware that normalizes enum query/route values before binding (Minimal API incl. `[AsParameters]`, and MVC) |
+| `AddEnumConventions(Func<EnumConventions, EnumConventions>? = null)` | Registers `EnumConventions`, applies them to Minimal API and MVC `JsonOptions` (Input mode), maps JSON body enum errors to 400, adds the wire format filters. Returns `EnumConventionsBuilder` |
+| `AddEnumConventionsWithReflection(...)` | Same, and handles enums without generated metadata that `CanHandle` selects, by reflection (`[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`) |
+| `EnumConventionsBuilder.ConfigureErrors(Func<EnumValueError, string, Error>)` | Creates the `Error` of a rejected value (the string is the key) for binding and JSON bodies |
+| `UseEnumBinding()` | Middleware that normalizes enum route, query, header and form values before binding (Minimal API incl. `[AsParameters]`, and MVC). Throws when `AddEnumConventions` was not called |
+| `WithEnumWireFormat(EnumWireFormat)` | Output format of an endpoint or group (`IEndpointConventionBuilder`) |
+| `WithEnumWireFormat(string header, Func<HttpContext, EnumWireFormat>)` | Output format per request; adds `Vary: header` |
+| `[EnumWireFormat(EnumWireFormat)]` | Output format of an MVC controller or action |
+| `AddEnumBinding(Action<EnumBindingOptions>? = null)` | **Obsolete.** Forwards to `AddEnumConventions` (`CanBind` → `CanHandle`, `AllowIntegerValues` → `AcceptNumbers`, `ErrorFactory` → `ConfigureErrors`; a naming policy other than snake_case throws) |
 
-`[StringEnum]` enums accept the snake_case name, the C# member name (case-insensitive) or the number of a defined member (flags enums: comma-separated list). Invalid values return a 400 ProblemDetails response. Call it after routing selected the endpoint.
+`[StringEnum]` enums accept the same spellings as a JSON body (wire name, alias, C# member name, and with `AcceptNumbers` the number of a defined member; flags enums: comma-separated list; arrays: repeated keys or comma-separated values). Invalid values return a 400 ProblemDetails response listing the allowed values. Call `UseEnumBinding` after routing selected the endpoint. Output precedence: action attribute > controller attribute > endpoint/group > `EnumConventions.WriteAs`.
 
 ### API Versioning
 
