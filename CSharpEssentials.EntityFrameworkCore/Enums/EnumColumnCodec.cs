@@ -153,7 +153,7 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
     private EnumValueException Undefined(TEnum value) =>
         new(Info.CreateError(value.ToString(), EnumReadMode.Data, Column));
 
-    private static string LegacyName(string memberName, EnumStoredAs format)
+    internal static string LegacyName(string memberName, EnumStoredAs format)
     {
         if (format == EnumStoredAs.CamelCase)
             return JsonNamingPolicy.CamelCase.ConvertName(memberName);
