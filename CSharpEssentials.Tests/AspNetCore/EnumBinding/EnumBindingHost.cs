@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Enums;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -39,7 +40,8 @@ internal sealed class EnumBindingHost : IAsyncDisposable
     public static async Task<EnumBindingHost> StartAsync(
         EbHostKind kind,
         bool useEnumBinding = true,
-        Action<EnumBindingOptions>? configure = null)
+        Action<EnumConventionsBuilder>? configure = null,
+        Func<EnumConventions, EnumConventions>? conventions = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
@@ -48,7 +50,8 @@ internal sealed class EnumBindingHost : IAsyncDisposable
         if (useEnumBinding)
         {
             builder.Services.AddEnhancedProblemDetails();
-            builder.Services.AddEnumBinding(configure);
+            EnumConventionsBuilder enumConventions = builder.Services.AddEnumConventions(conventions);
+            configure?.Invoke(enumConventions);
         }
 
         if (kind != EbHostKind.MinimalApi)

@@ -418,3 +418,11 @@ trim_trailing_whitespace = false
 # The 4.x converter stays as an obsolete subclass for the 5.0 migration (design section 7).
 [CSharpEssentials.Json/ConditionalStringEnumConverter.cs]
 dotnet_diagnostic.S1133.severity = none
+
+# The 4.x enum binding registration stays as obsolete forwarders to AddEnumConventions (design section 9.2).
+[CSharpEssentials.AspNetCore/EnumBinding/{EnumBindingExtensions,EnumBindingOptions}.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# Tests of the obsolete 4.x enum binding registration.
+[CSharpEssentials.Tests/AspNetCore/EnumIntegration/EnumBindingForwarderTests.cs]
+dotnet_diagnostic.S1133.severity = none
