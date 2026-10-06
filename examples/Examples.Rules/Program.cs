@@ -11,8 +11,8 @@ Console.WriteLine("========================================\n");
 // ============================================================================
 Console.WriteLine("--- Simple Rules (Func.ToRule) ---");
 
-IRule<int> isPositive = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Result.Failure(Error.Validation("Value.Positive", "Value must be positive")))).ToRule();
-IRule<int> isLessThan100 = ((Func<int, Result>)(x => x < 100 ? Result.Success() : Result.Failure(Error.Validation("Value.Range", "Value must be less than 100")))).ToRule();
+IRule<int> isPositive = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Error.Validation("Value.Positive", "Value must be positive"))).ToRule();
+IRule<int> isLessThan100 = ((Func<int, Result>)(x => x < 100 ? Result.Success() : Error.Validation("Value.Range", "Value must be less than 100"))).ToRule();
 
 Result CheckValue(int value) => isPositive.Evaluate(value);
 
@@ -48,8 +48,8 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Or Rules ---");
 
-IRule<int> isEven = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Result.Failure(Error.Validation("Value.Even", "Value must be even")))).ToRule();
-IRule<int> isDivisibleBy5 = ((Func<int, Result>)(x => x % 5 == 0 ? Result.Success() : Result.Failure(Error.Validation("Value.Div5", "Value must be divisible by 5")))).ToRule();
+IRule<int> isEven = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Error.Validation("Value.Even", "Value must be even"))).ToRule();
+IRule<int> isDivisibleBy5 = ((Func<int, Result>)(x => x % 5 == 0 ? Result.Success() : Error.Validation("Value.Div5", "Value must be divisible by 5"))).ToRule();
 
 RuleEngine.Evaluate(new[] { isEven, isDivisibleBy5 }.Or(), 4).Switch(
     onSuccess: () => Console.WriteLine("4 passes (even)"),
@@ -72,9 +72,9 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Conditional Rules (If) ---");
 
-IRule<int> adultRule = ((Func<int, Result>)(x => x >= 18 ? Result.Success() : Result.Failure(Error.Validation("Age.Adult", "Must be adult")))).ToRule();
-IRule<int> seniorRule = ((Func<int, Result>)(x => x >= 65 ? Result.Success() : Result.Failure(Error.Validation("Age.Senior", "Must be senior")))).ToRule();
-IRule<int> minorRule = ((Func<int, Result>)(x => x < 18 ? Result.Success() : Result.Failure(Error.Validation("Age.Minor", "Must be minor")))).ToRule();
+IRule<int> adultRule = ((Func<int, Result>)(x => x >= 18 ? Result.Success() : Error.Validation("Age.Adult", "Must be adult"))).ToRule();
+IRule<int> seniorRule = ((Func<int, Result>)(x => x >= 65 ? Result.Success() : Error.Validation("Age.Senior", "Must be senior"))).ToRule();
+IRule<int> minorRule = ((Func<int, Result>)(x => x < 18 ? Result.Success() : Error.Validation("Age.Minor", "Must be minor"))).ToRule();
 
 Result conditionalResult = RuleEngine.If(adultRule, seniorRule, minorRule, 70);
 conditionalResult.Switch(
@@ -94,9 +94,9 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Linear Rules ---");
 
-IRule<int> step1 = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Result.Failure(Error.Validation("Step1", "Must be positive")))).ToRule();
-IRule<int> step2 = ((Func<int, Result>)(x => x < 1000 ? Result.Success() : Result.Failure(Error.Validation("Step2", "Must be less than 1000")))).ToRule();
-IRule<int> step3 = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Result.Failure(Error.Validation("Step3", "Must be even")))).ToRule();
+IRule<int> step1 = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Error.Validation("Step1", "Must be positive"))).ToRule();
+IRule<int> step2 = ((Func<int, Result>)(x => x < 1000 ? Result.Success() : Error.Validation("Step2", "Must be less than 1000"))).ToRule();
+IRule<int> step3 = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Error.Validation("Step3", "Must be even"))).ToRule();
 
 RuleEngine.Linear(new[] { step1, step2, step3 }, 50).Switch(
     onSuccess: () => Console.WriteLine("Linear: all steps passed"),
@@ -116,11 +116,11 @@ Console.WriteLine("--- Rules with Result Value ---");
 
 IRule<int, string> gradeRule = ((Func<int, Result<string>>)(score =>
 {
-    if (score >= 90) return Result.Success("A");
-    if (score >= 80) return Result.Success("B");
-    if (score >= 70) return Result.Success("C");
-    if (score >= 60) return Result.Success("D");
-    return Result.Failure<string>(Error.Validation("Grade", "Failed"));
+    if (score >= 90) return "A";
+    if (score >= 80) return "B";
+    if (score >= 70) return "C";
+    if (score >= 60) return "D";
+    return Error.Validation("Grade", "Failed");
 })).ToRule();
 
 gradeRule.Evaluate(85).Switch(
@@ -142,7 +142,7 @@ Console.WriteLine("--- Async Rules ---");
 IAsyncRule<string> asyncNotEmpty = ((Func<string, CancellationToken, ValueTask<Result>>)(async (s, ct) =>
 {
     await Task.Delay(10, ct);
-    return !string.IsNullOrWhiteSpace(s) ? Result.Success() : Result.Failure(Error.Validation("Name.Empty", "Name cannot be empty"));
+    return !string.IsNullOrWhiteSpace(s) ? Result.Success() : Error.Validation("Name.Empty", "Name cannot be empty");
 })).ToRule<string>();
 
 asyncNotEmpty.EvaluateAsync("Alice").Result.Switch(
@@ -156,8 +156,8 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Rules with String Validation ---");
 
-IRule<string> notEmpty = ((Func<string, Result>)(s => !string.IsNullOrWhiteSpace(s) ? Result.Success() : Result.Failure(Error.Validation("Name.Empty", "Name cannot be empty")))).ToRule();
-IRule<string> maxLength = ((Func<string, Result>)(s => s.Length <= 50 ? Result.Success() : Result.Failure(Error.Validation("Name.Length", "Name must not exceed 50 characters")))).ToRule();
+IRule<string> notEmpty = ((Func<string, Result>)(s => !string.IsNullOrWhiteSpace(s) ? Result.Success() : Error.Validation("Name.Empty", "Name cannot be empty"))).ToRule();
+IRule<string> maxLength = ((Func<string, Result>)(s => s.Length <= 50 ? Result.Success() : Error.Validation("Name.Length", "Name must not exceed 50 characters"))).ToRule();
 
 RuleEngine.Evaluate(new[] { notEmpty, maxLength }.And(), "Alice").Switch(
     onSuccess: () => Console.WriteLine("'Alice' is a valid name"),
@@ -176,13 +176,13 @@ Console.WriteLine();
 Console.WriteLine("--- Next Combinator ---");
 
 IRule<int> mustBePositive = ((Func<int, Result>)(x =>
-    x > 0 ? Result.Success() : Result.Failure(Error.Validation("Positive", "Must be positive")))).ToRule();
+    x > 0 ? Result.Success() : Error.Validation("Positive", "Must be positive"))).ToRule();
 
 IRule<int> mustBeEven = ((Func<int, Result>)(x =>
-    x % 2 == 0 ? Result.Success() : Result.Failure(Error.Validation("Even", "Must be even")))).ToRule();
+    x % 2 == 0 ? Result.Success() : Error.Validation("Even", "Must be even"))).ToRule();
 
 IRule<int> mustBeLessThan100 = ((Func<int, Result>)(x =>
-    x < 100 ? Result.Success() : Result.Failure(Error.Validation("Range", "Must be less than 100")))).ToRule();
+    x < 100 ? Result.Success() : Error.Validation("Range", "Must be less than 100"))).ToRule();
 
 IRuleBase<int> chain = mustBePositive.Next(mustBeEven).Next(mustBeLessThan100);
 

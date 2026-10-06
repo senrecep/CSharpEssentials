@@ -25,7 +25,7 @@ var validationBehavior = new ValidationBehavior<CreateProductCommand, Result<int
 
 Result<int> invalidResult = await validationBehavior.Handle(
     new CreateProductCommand("", -10),
-    static (_, _) => new ValueTask<Result<int>>(Result.Success(1)),
+    static (_, _) => new ValueTask<Result<int>>(1),
     default);
 
 Console.WriteLine($"Invalid command - IsFailure: {invalidResult.IsFailure}");
@@ -34,7 +34,7 @@ foreach (Error error in invalidResult.Errors)
 
 Result<int> validResult = await validationBehavior.Handle(
     new CreateProductCommand("Widget", 99),
-    static (_, _) => new ValueTask<Result<int>>(Result.Success(42)),
+    static (_, _) => new ValueTask<Result<int>>(42),
     default);
 
 Console.WriteLine($"Valid command - IsSuccess: {validResult.IsSuccess}, ProductId: {validResult.Value}");
@@ -55,7 +55,7 @@ var loggingBehavior = new LoggingBehavior<GetProductQuery, Result<string>>(reque
 
 await loggingBehavior.Handle(
     new GetProductQuery("123"),
-    static (q, _) => new ValueTask<Result<string>>(Result.Success<string>($"Product-{q.Id}")),
+    static (q, _) => new ValueTask<Result<string>>($"Product-{q.Id}"),
     default);
 
 Console.WriteLine();
@@ -74,14 +74,14 @@ int callCount = 0;
 
 Result<string> firstCall = await cachingBehavior.Handle(
     query,
-    (q, _) => { callCount++; return new ValueTask<Result<string>>(Result.Success<string>($"Product-{q.Id}")); },
+    (q, _) => { callCount++; return new ValueTask<Result<string>>($"Product-{q.Id}"); },
     default);
 
 Console.WriteLine($"First call (cache miss) : {firstCall.Value}, handler calls: {callCount}");
 
 Result<string> secondCall = await cachingBehavior.Handle(
     query,
-    (q, _) => { callCount++; return new ValueTask<Result<string>>(Result.Success<string>($"Product-{q.Id}")); },
+    (q, _) => { callCount++; return new ValueTask<Result<string>>($"Product-{q.Id}"); },
     default);
 
 Console.WriteLine($"Second call (cache hit) : {secondCall.Value}, handler calls: {callCount}");

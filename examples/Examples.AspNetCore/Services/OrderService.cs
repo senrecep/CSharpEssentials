@@ -43,7 +43,7 @@ public sealed class OrderService : IOrderService
             );
         }
 
-        return Result.Success(product);
+        return product;
     }
 
     private static Result<Product> ReserveStock(Product product, int quantity)
@@ -58,7 +58,7 @@ public sealed class OrderService : IOrderService
             );
         }
 
-        return Result.Success(product);
+        return product;
     }
 
     private static Result<Order> CreateOrder(Product product, int quantity)
@@ -73,6 +73,6 @@ public sealed class OrderService : IOrderService
         );
 
         _orders.Add(order);
-        return Result.Success(order);
+        return order;
     }
 }

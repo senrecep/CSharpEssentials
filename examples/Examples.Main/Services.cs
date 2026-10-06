@@ -10,7 +10,7 @@ public static class Services
     public static Maybe<User> FindUserByEmail(string email)
     {
         if (email == "alice@example.com")
-            return new User { Email = email, Name = "Alice Smith" }.AsMaybe();
+            return new User { Email = email, Name = "Alice Smith" };
         return Maybe<User>.None;
     }
 
@@ -22,6 +22,6 @@ public static class Services
             Total = total,
             CreatedAt = DateTime.UtcNow
         };
-        return Result.Success(order);
+        return order;
     }
 }

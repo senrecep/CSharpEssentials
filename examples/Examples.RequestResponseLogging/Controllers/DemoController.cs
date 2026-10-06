@@ -60,7 +60,7 @@ public class DemoController : ControllerBase
     [ProducesResponseType(typeof(object), StatusCodes.Status404NotFound)]
     public IActionResult NotFoundDemo()
     {
-        Result result = Result.Failure(ErrorType.NotFound("Demo resource was not found."));
+        Result result = ErrorType.NotFound("Demo resource was not found.");
         return result.Match(
             onSuccess: () => Ok(),
             onFailure: errors => errors.ToActionResult()
@@ -89,7 +89,8 @@ public class DemoController : ControllerBase
 
         if (errors.Count > 0)
         {
-            return Result.Failure(errors.ToArray()).Match(
+            Result failure = errors;
+            return failure.Match(
                 onSuccess: () => Ok(),
                 onFailure: e => e.ToActionResult()
             );
