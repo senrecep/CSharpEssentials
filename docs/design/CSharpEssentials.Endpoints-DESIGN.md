@@ -134,7 +134,7 @@ public sealed class EndpointTypeMetadata(Type endpointType)
 }
 ```
 
-It is added to every endpoint produced by an `IEndpoint` type. It identifies the source type at runtime (diagnostics, tests, the P3 `RouteOf<T>` helper) without reflection over handlers.
+It is added to every endpoint produced by an `IEndpoint` type. It identifies the source type at runtime (diagnostics, tests, the `RouteOf<T>` helper of §8) without reflection over handlers.
 
 ### 4.7 `EndpointMapper` (runtime helper, used by generated code and the fallback)
 
@@ -392,7 +392,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 ## 8. P3 Follow-ups (#58, optional)
 
 - Shipped: CSE1005 duplicate HTTP method + route literal (warning, §7).
-- Typed route helper `app.RouteOf<CreateApp>(new { id })`, resolved through `EndpointTypeMetadata`.
+- Shipped: typed route helper `app.RouteOf<CreateApp>(new { id })` and `app.RouteOf<CreateApp>(nameOrMethod, values)` in `EndpointRouteLookupExtensions`. It selects `RouteEndpoint`s by `EndpointTypeMetadata` (optionally by `WithName` or HTTP method), binds values with `TemplateBinderFactory` and checks route constraints. No route, an ambiguous route or a missing/invalid value throws `InvalidOperationException`. It is `[RequiresUnreferencedCode]` because `RouteValueDictionary(object)` reads properties by reflection.
 - Validation endpoint filter on `CSharpEssentials.Validation` `IValidator<T>` → `ToProblemResult`.
 - Security shortcuts (`Roles`, `Policies`, `AuthSchemes`) over `RequireAuthorization`.
 - Code fix for CSE1004 (needs `Microsoft.CodeAnalysis.CSharp.Workspaces` in a separate `*.CodeFixes` project; owner approval required).
