@@ -685,7 +685,10 @@ Result<UserDto> result = await HttpRequestBuilder
 | `HttpRequestBuilder.Get(url)` | Creates GET builder |
 | `.Post(url)` / `.Put(url)` / `.Patch(url)` / `.Delete(url)` | Other HTTP methods |
 | `.WithHeader(name, value)` / `.WithHeaders(dictionary)` | Adds request headers |
-| `.WithQuery(key, value)` / `.WithQuery(dictionary)` | Adds query parameters |
+| `.WithQuery(key, value)` / `.WithQuery(dictionary)` | Adds query parameters. A repeated key is kept. |
+| `.WithQuery(key, object? value)` | Adds a query parameter. Enums are formatted by the enum conventions; flags and enum collections become repeated keys. |
+| `.WithRoute(name, object? value)` | Replaces the `{name}` placeholder of the URI with the escaped value; enums are formatted by the enum conventions |
+| `.WithEnumConventions(conventions, writeAs?)` | Sets the conventions and the output format (`Number` for legacy servers) for this request's route, query and default JSON body |
 | `.WithJsonContent(body, options?)` | Sets JSON request body |
 | `.WithContent(httpContent)` | Sets any `HttpContent` body |
 | `.WithMethod(method)` / `.WithUri(uri)` | Changes the HTTP method or target URI |
@@ -695,6 +698,21 @@ Result<UserDto> result = await HttpRequestBuilder
 | `.AsResultAsync<T>(client, jsonOptions?, ct)` | Builds, sends, deserializes to `Result<T>` |
 
 There is no bearer-token shortcut; set the header with `.WithHeader("Authorization", $"Bearer {token}")`.
+
+### Enums in route, query and body
+
+Enums with generated metadata (`[StringEnum]`) are written as wire names, or as numbers with `EnumWireFormat.Number`. Plain enums keep the framework behavior: `ToString()` in route and query, a number in JSON bodies. An undefined enum value is never sent; `Build()` returns a validation error and a JSON body fails to serialize.
+
+```csharp
+Result<OrderDto> order = await HttpRequestBuilder
+    .Get("https://api.example.com/orders/{status}")
+    .WithEnumConventions(EnumConventions.Default, EnumWireFormat.Number)  // a legacy server that accepts only numbers
+    .WithRoute("status", OrderStatus.PendingApproval)                     // /orders/1
+    .WithQuery("permissions", Permissions.Read | Permissions.Write)       // ?permissions=3
+    .AsResultAsync<OrderDto>(httpClient, jsonOptions);
+```
+
+Pass `jsonOptions` built once with `new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(conventions, EnumReadMode.Data, writeAs)` so responses are read tolerantly (names, numbers and the fallback member). `QueryStringExtensions` has the same enum handling: `ToQueryString(source, conventions, format)` and `WithQueryString(name, value, conventions, format)`.
 
 ### HttpClient Extensions
 
