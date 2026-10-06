@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;netstandard2.1</TargetFrameworks>
+
+    <PackageId>CSharpEssentials.DependencyInjection</PackageId>
+    <Title>CSharpEssentials.DependencyInjection</Title>
+    <Product>CSharpEssentials.DependencyInjection</Product>
+    <Description>
+      Attribute-based service registration and decoration for Microsoft.Extensions.DependencyInjection.
+      Provides RegisterScoped/RegisterSingleton/RegisterTransient and Decorates attributes, key-aware
+      registration strategies, keyed decoration and a source-generated, trim and AOT friendly registry.
+    </Description>
+    <PackageTags>
+      DependencyInjection,DI,ServiceCollection,Decorator,KeyedServices,SourceGenerator,NativeAOT,CSharpEssentials
+    </PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+    <None Include="build\CSharpEssentials.DependencyInjection.props" Pack="true" PackagePath="build;buildTransitive" />
+    <None Include="..\CSharpEssentials.DependencyInjection.Generators\bin\$(Configuration)\netstandard2.0\CSharpEssentials.DependencyInjection.Generators.dll"
+          Pack="true"
+          PackagePath="analyzers/dotnet/cs"
+          Visible="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Generators\CSharpEssentials.DependencyInjection.Generators.csproj"
+                      ReferenceOutputAssembly="false"
+                      PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>
