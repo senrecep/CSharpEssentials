@@ -68,6 +68,35 @@ public class OpenApiEnumSchemaTests
     }
 
     [Fact]
+    public async Task HeaderSelector_Should_ResolveScopedServices_When_TheRootProviderValidatesScopes()
+    {
+        using var logs = new CapturingLoggerProvider();
+        var resolved = new ConcurrentBag<ScopedFormat>();
+
+        IReadOnlyDictionary<string, string> documents = await OpenApiSampleHost.GetDocumentsAsync(
+            OpenApiSpecVersion.OpenApi3_0,
+            configureServices: services => services.AddSingleton<ILoggerProvider>(logs).AddScoped<ScopedFormat>(),
+            configureApp: app =>
+            {
+                foreach (string path in (string[])["/v1/scoped-a", "/v1/scoped-b"])
+                {
+                    app.MapGet(path, static (SampleStatus status) => status).WithGroupName("v1").WithEnumWireFormat("X-Enum-Format", context =>
+                    {
+                        ScopedFormat format = context.RequestServices.GetRequiredService<ScopedFormat>();
+                        resolved.Add(format);
+                        return format.Format;
+                    });
+                }
+            },
+            validateScopes: true);
+
+        // ValidateScopes makes the root provider refuse scoped services; a fresh scope per selector call gives each its own instance.
+        resolved.Should().HaveCountGreaterThanOrEqualTo(2).And.OnlyHaveUniqueItems();
+        logs.Messages.Should().NotContain(static entry => entry.Contains("selector of", StringComparison.Ordinal));
+        Component(documents["v1"], "SampleStatus")["type"]!.GetValue<string>().Should().Be("integer");
+    }
+
+    [Fact]
     public async Task Operation_Should_UseWriteAs_When_DisposingTheSelectorScopeThrows()
     {
         using var logs = new CapturingLoggerProvider();
@@ -189,6 +218,11 @@ public class OpenApiEnumSchemaTests
 
     private static JsonNode Operation(string json, string path, string method) =>
         JsonNode.Parse(json)!["paths"]![path]![method]!;
+
+    private sealed class ScopedFormat
+    {
+        public EnumWireFormat Format => EnumWireFormat.Number;
+    }
 
     private sealed class AsyncOnlyDisposable : IAsyncDisposable
     {

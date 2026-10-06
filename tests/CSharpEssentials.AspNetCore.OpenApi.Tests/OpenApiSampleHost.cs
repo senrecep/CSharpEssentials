@@ -18,10 +18,12 @@ internal static class OpenApiSampleHost
         bool addEnumConventions = true,
         Action<IServiceCollection>? configureServices = null,
         int passes = 1,
-        Action<WebApplication>? configureApp = null)
+        Action<WebApplication>? configureApp = null,
+        bool validateScopes = false)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.WebHost.UseDefaultServiceProvider(options => options.ValidateScopes = validateScopes);
         builder.Logging.ClearProviders();
 
         builder.Services.AddEnumConventions();
