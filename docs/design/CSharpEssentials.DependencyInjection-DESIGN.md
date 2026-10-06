@@ -160,12 +160,13 @@ public static class ServiceCollectionDecorationExtensions
         where TService : class;
 
     [RequiresDynamicCode("Closes the open-generic decorator for each matching closed registration.")]
+    [RequiresUnreferencedCode("Closes the open-generic decorator for each matching closed registration; its constructors may be trimmed.")]
     public static IServiceCollection Decorate(this IServiceCollection services, Type serviceType, Type decoratorType);
 }
 ```
 
 - **Hidden inner registration:** each matched descriptor is re-registered as `ServiceType = typeof(object)` under a **private sentinel key**. The key is a fresh instance of a private sealed class per decorated descriptor, compared by reference. Implementation type, factory or instance and the lifetime are preserved. The decorator descriptor takes the original's place, with the same service type, key and lifetime.
-- **No leak:** the hidden registration's service type is not `TService`, so it never appears in `GetServices<TService>()`, `GetKeyedServices<TService>(key)` or `GetKeyedServices<TService>(KeyedService.AnyKey)`. The sentinel type is private, so no user code can construct or obtain the key.
+- **No leak:** the hidden registration's service type is not `TService`, so it never appears in `GetServices<TService>()`, `GetKeyedServices<TService>(key)` or `GetKeyedServices<TService>(KeyedService.AnyKey)`. The sentinel type is private, so no user code can construct or obtain the key. Only `GetKeyedServices<object>(KeyedService.AnyKey)`, which enumerates every keyed `object` registration, returns hidden inners; MS.DI requires the hidden service type to be assignable from the implementation, so `object` is the only type that fits every original.
 - **Multiple registrations:** every descriptor matching (service, key) is decorated, so enumeration returns decorated instances in the original order.
 - **Keyed services** are decoratable through `serviceKey`. Original implementations that inject `[ServiceKey]` cannot be decorated (they would receive the sentinel), so `Decorate` throws `InvalidOperationException`. This is detected through the trim-annotated `ImplementationType` constructors.
 - **No partial mutation:** all matches are collected and validated first, and the collection is changed only after validation succeeds. On failure, `services` is unchanged.
@@ -180,9 +181,13 @@ public static class ServiceCollectionDecorationExtensions
 [RequiresUnreferencedCode("Scans assemblies for registration attributes; use the generated Add{Asm}Services for trimmed/AOT apps.")]
 [RequiresDynamicCode("Builds decorator factories and closes generic types at runtime.")]
 public static IServiceCollection AddServicesFromAssemblies(this IServiceCollection services, params Assembly[] assemblies);
+
+[RequiresUnreferencedCode("Scans assemblies for registration attributes; use the generated Add{Asm}Services for trimmed/AOT apps.")]
+[RequiresDynamicCode("Builds decorator factories and closes generic types at runtime.")]
+public static IServiceCollection AddServicesFromAssemblies(this IServiceCollection services, ILogger? logger, params Assembly[] assemblies);
 ```
 
-It uses the same rules as the generator (§5): resolution, strategies, forwarding, decorators last ordered by `Order`. `ReflectionTypeLoadException` is handled: loadable types are processed and the failures are listed in the thrown or logged exception. Invalid types that the analyzer would report as errors throw `InvalidOperationException` (fail fast, because this path has no compile-time check).
+It uses the same rules as the generator (§5): resolution, strategies, forwarding, decorators last ordered by `Order`. Attributes are read through `CustomAttributeData`, so an explicitly set `As` is detected. All assemblies' registrations are applied before any decorator, in the order the assemblies are passed. `ReflectionTypeLoadException` is handled and never swallowed: without a logger, an `InvalidOperationException` listing the loader errors is thrown before `services` changes; with a logger, a `Warning` (event 2002) lists the loader errors and the loadable types are processed. The logger also receives the duplicate `Debug` log (§5.5). An open-generic `[Decorates]` class is applied through `Decorate(Type, Type)` restricted to the attribute's `Key`. Invalid types that the analyzer would report as errors throw `InvalidOperationException` (fail fast, because this path has no compile-time check).
 
 ## 5. Semantics
 
@@ -399,3 +404,18 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | AOT (#57) | `examples/Examples.Endpoints` uses `Add{Asm}Services` and publishes with zero trim/AOT warnings |
 
 Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentials.Tests/Generators/`. xUnit + FluentAssertions, `Method_Should_Behavior`.
+
+## 11. Implementation Deviations
+
+| Deviation | Reason |
+|---|---|
+| `Decorate(Type, Type)` also carries `[RequiresUnreferencedCode]` | Closing the decorator with `MakeGenericType` and reading its constructors cannot be statically annotated for trimming, so the trim analyzer warns unless the caller is told. |
+| `AddServicesFromAssemblies(ILogger?, params Assembly[])` overload | §4.8 asks for loader failures to be "thrown or logged". The overload makes the choice explicit: no logger throws, a logger warns and continues. It also carries the duplicate debug log of §5.5 to the fallback. |
+| `SelfWithInterfaces` with an explicit service type forwards the explicit type too | §4.2 defines the union but not whether the explicit type shares the instance. Forwarding keeps one instance per scope for every service type of the registration, which is what `SelfWithInterfaces` promises. |
+| Open-generic `Decorate(Type, Type)` decorates closed registrations of every key | The API has no key parameter. Each registration keeps its own key, and the decorator receives that key through `[ServiceKey]`. The fallback restricts it to the attribute's `Key`. |
+| CSE2007 also covers file-local types, types nested in a `private`/`protected` type, and types nested in a generic type | Generated code lives in another file and namespace and cannot name these types, so the generator would emit code that does not compile. Reporting them keeps the rule "the error comes from the analyzer, not from generated code" (§6.1). |
+| CSE2005 also reports a decorator with zero public constructors | The generated factory needs exactly one public constructor, and the runtime activator rejects zero as well. |
+| A generated decorator with nothing to decorate does not name the decorator type in its exception | Generated code uses the `Decorate<TService>(Func<TService, IServiceProvider, TService>, serviceKey)` overload so it needs no reflection; that overload has no decorator type to report. The service type and key are still named. |
+| The `[ServiceKey]` argument is emitted as `(T)(object)key`, or `default(T)!` for a non-keyed decorator | The key constant and the parameter type can differ (for example an `object` parameter or a boxed enum). The double cast compiles for every combination the runtime activator accepts. |
+| The analyzer reports nothing in an assembly marked `[ExcludeFromRegistration]` | The generator emits no registry for such an assembly, so its declarations cannot fail at registration. |
+| Fallback parity is tested on descriptor sets (service type, key, lifetime, implementation type), not on order | The fallback scans types in metadata order and the generator in ordinal name order. Registration order differs only between unrelated service types, which the container does not observe. |
