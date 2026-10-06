@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-json
-description: Use when configuring System.Text.Json for ASP.NET Core — JsonOptions.Default with camelCase/no-nulls/no-cycles, ConditionalStringEnumConverter for [StringEnum] enums, MultiFormatDateTimeConverter for flexible date parsing, and PolymorphicJsonConverterFactory for $type discriminator.
+description: Use when configuring System.Text.Json — EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, ConditionalStringEnumConverter and StringEnumNaming for [StringEnum] enums, MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().
 ---
 
 # CSharpEssentials.Json
 
-Pre-configured `System.Text.Json` options and converters for common ASP.NET Core patterns.
+Pre-configured `System.Text.Json` options, converters and serialization helpers.
 
 ## Installation
 
@@ -16,66 +16,107 @@ dotnet add package CSharpEssentials.Json
 ## Namespace
 
 ```csharp
+using System.Text.Json;
 using CSharpEssentials.Json;
 ```
 
 ---
 
-## JsonOptions.Default
+## EnhancedJsonSerializerOptions
 
-Pre-configured profile: camelCase property names, ignore null values, handle circular references.
+| Member | Contents |
+|---|---|
+| `DefaultOptionsWithoutConverters` | Web defaults, camelCase, case-insensitive reads, nulls ignored on write, `ReferenceHandler.IgnoreCycles` |
+| `DefaultOptions` | The above plus `ConditionalStringEnumConverter`, `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` |
+| `DefaultOptionsWithDateTimeConverter` | The base options plus `MultiFormatDateTimeConverterFactory` |
+| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members |
+| `CreateOptionsWithConverters(params JsonConverter[])` | Base options plus the given converters |
+| `options.Create(configure)` | Copies options and applies a configuration |
+| `source.ApplyTo(target)` / `ApplyFrom` | Copies settings and converters onto another instance |
 
 ```csharp
-// In ASP.NET Core
-builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.ApplyDefaults());
+// ASP.NET Core Minimal APIs
+builder.Services.ConfigureHttpJsonOptions(o =>
+    EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(o.SerializerOptions));
 
 // Standalone serialization
-var json = JsonSerializer.Serialize(obj, JsonOptions.Default);
-var obj  = JsonSerializer.Deserialize<MyType>(json, JsonOptions.Default);
+string json = JsonSerializer.Serialize(order, EnhancedJsonSerializerOptions.DefaultOptions);
+Order? copy = JsonSerializer.Deserialize<Order>(json, EnhancedJsonSerializerOptions.DefaultOptions);
+```
+
+---
+
+## Serialization Helpers
+
+All helpers use `DefaultOptions` when no options are passed.
+
+```csharp
+string json = order.ConvertToJson();
+Order? back = json.ConvertFromJson<Order>();
+object? untyped = json.ConvertFromJson(typeof(Order));
+using JsonDocument document = order.ConvertToJsonDocument();
+
+// 4.1: JsonElement to plain CLR values (Dictionary<string, object?>, List<object?>, int/long/decimal/double, string, bool, null)
+object? clr = document.RootElement.ToClrObject();
 ```
 
 ---
 
 ## ConditionalStringEnumConverter
 
-Serializes enums marked with `[StringEnum]` (from `CSharpEssentials.Enums`) as strings, and all other enums as integers.
+Serializes enums marked with `[StringEnum]` (from `CSharpEssentials.Enums`) as strings and all other enums as numbers. Names use `StringEnumNaming.DefaultPolicy` (`JsonNamingPolicy.SnakeCaseLower`); `[JsonStringEnumMemberName]` wins.
 
 ```csharp
-// In setup
-options.Converters.Add(new ConditionalStringEnumConverter());
+var options = new JsonSerializerOptions();
+options.Converters.Add(new ConditionalStringEnumConverter { AllowUndefinedValues = false });
 
-// [StringEnum] enum → "Shipped" in JSON
-// Regular enum     → 2 in JSON
+// [StringEnum] OrderStatus.Shipped → "shipped"
+// Plain enum value              → 2
+```
+
+`AllowUndefinedValues` (default `true`) controls whether undefined numeric values are accepted on read. The constructor also takes a naming policy, `allowIntegerValues` and a custom `canConvert` predicate.
+
+## StringEnumNaming
+
+The same names are used by JSON, EF Core storage, OpenAPI schemas and route/query binding.
+
+```csharp
+string name = StringEnumNaming.GetName(OrderStatus.Shipped);             // "shipped"
+IReadOnlyList<string> names = StringEnumNaming.GetNames<OrderStatus>();
+bool ok = StringEnumNaming.TryParse("shipped", out OrderStatus status);
 ```
 
 ---
 
-## MultiFormatDateTimeConverter
+## MultiFormatDateTimeConverterFactory
 
-Deserializes `DateTime` / `DateTimeOffset` from multiple input formats (ISO 8601, custom patterns). Useful when consuming third-party APIs with inconsistent date formats.
+Reads `DateTime` and `DateTime?` from many input formats (ISO 8601 and common patterns). Extra formats can be passed to the constructor.
 
 ```csharp
-options.Converters.Add(new MultiFormatDateTimeConverter());
+// Accepts the built-in formats plus "dd.MM.yyyy"
+var options = new JsonSerializerOptions();
+options.Converters.Add(new MultiFormatDateTimeConverterFactory("dd.MM.yyyy"));
 ```
 
 ---
 
 ## PolymorphicJsonConverterFactory
 
-Enables polymorphic deserialization using a `$type` discriminator field.
+Handles abstract classes and interfaces (collections excluded) with a `$type` discriminator that holds the concrete type's full name.
 
 ```csharp
+// Abstract and interface types round-trip through "$type"
+var options = new JsonSerializerOptions();
 options.Converters.Add(new PolymorphicJsonConverterFactory());
 
-// JSON: { "$type": "Circle", "radius": 5 }
-// Deserializes to Circle : Shape
+// { "$type": "MyApp.Shapes.Circle", "radius": 5 } → Circle : Shape
 ```
 
 ---
 
 ## Best Practices
 
-- Call `ApplyDefaults()` in one place — do not configure `JsonSerializerOptions` in multiple locations
-- `ConditionalStringEnumConverter` requires enums to be decorated with `[StringEnum]` from `CSharpEssentials.Enums`
-- `PolymorphicJsonConverterFactory` requires the discriminator field to be named `$type`
+- Configure options once and share them; prefer `DefaultOptions` over ad-hoc instances
+- `ConditionalStringEnumConverter` only converts enums marked `[StringEnum]` from `CSharpEssentials.Enums`
+- Since 4.0, string enums are written in snake_case (`"shipped"`); EF Core storage follows the same naming
+- `PolymorphicJsonConverterFactory` discovers types by reflection; it is not trim/AOT safe

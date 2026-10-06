@@ -38,18 +38,23 @@ Result<int> multi = Result.Failure<int>(
     Error.Validation("Email.Invalid", "Email is invalid."));
 
 // Implicit conversions — shorthand
-Result<User> r = user;                        // T → Result<T>
-Result<User> r = Error.NotFound("...", "..."); // Error → Result<T>
+Result<User> found   = user;                                       // T → Result<T>
+Result<User> missing = Error.NotFound("User.NotFound", "Not found."); // Error → Result<T>
 ```
 
 ## Checking the Result
 
 ```csharp
 if (result.IsFailure)
-    return result.FirstError;  // Error (first in list)
+{
+    Error first = result.FirstError; // first error in the list
+    Error[] all = result.Errors;
+}
 
 if (result.IsSuccess)
-    return result.Value;       // T — safe only after IsSuccess check
+{
+    User value = result.Value;       // safe only after the IsSuccess check
+}
 ```
 
 ## Chaining — railway-oriented
@@ -82,10 +87,10 @@ string msg = result.Match(
     onSuccess: value  => $"OK: {value}",
     onError:   errors => $"Failed: {errors[0].Description}");  // errors is Error[]
 
-// Async match
-await result.MatchAsync(
+// Async match: both handlers return Task<T>
+bool sent = await result.MatchAsync(
     onSuccess: async value  => await SendConfirmationAsync(value),
-    onError:   async errors => await LogErrorsAsync(errors));
+    onError:   async errors => { await LogErrorsAsync(errors); return false; });
 ```
 
 ## Combining Results
@@ -93,6 +98,7 @@ await result.MatchAsync(
 ```csharp
 // And — all must pass (short-circuits on first failure)
 Result combined = Result.And(r1, r2, r3);
+Result<int[]> values = Result<int>.And(v1, v2); // generic form collects the values
 
 // Or — first success wins
 Result any = Result.Or(r1, r2, r3);
@@ -114,10 +120,7 @@ Result<Data> data = await Result.TryAsync(() => _db.GetAsync(id), ex => Error.Ex
 // TapIf — predicate-gated tap, only fires when Success AND predicate is true
 result.TapIf(v => v > 0, v => Audit(v));
 
-// Bool condition shorthand
-result.TapIf(featureEnabled, v => Track(v));
-
-// Async — instance methods
+// Async — instance methods (the bool overload exists only on TapIfAsync)
 await result.TapIfAsync(v => v > 0, async v => await AuditAsync(v));
 await result.TapIfAsync(isEnabled,   async v => await TrackAsync(v));
 

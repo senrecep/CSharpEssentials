@@ -209,9 +209,9 @@ Result result = RuleEngine.Evaluate(
     }.And(),
     applicant);
 
-result.Match(
+result.Switch(
     onSuccess: () => Console.WriteLine("Approved"),
-    onError: errors =>
+    onFailure: errors =>
     {
         foreach (Error e in errors)
             Console.WriteLine($"[{e.Type}] {e.Code}: {e.Description}");
@@ -226,24 +226,24 @@ Create `IRule<T>` or `IAsyncRule<T>` directly from a predicate — no class need
 
 ```csharp
 // Static error
-IRule<int> rule = RuleEngine.FromPredicate<int>(
+IRule<int> positive = RuleEngine.FromPredicate<int>(
     x => x > 0,
     Error.Validation("Value.Negative", "Must be positive"));
 
 // Error factory — error message references the failing context
-IRule<string> rule = RuleEngine.FromPredicate<string>(
+IRule<string> minLength = RuleEngine.FromPredicate<string>(
     s => s.Length >= 3,
     s => Error.Validation("String.TooShort", $"'{s}' must be at least 3 characters"));
 
 // Async predicate (e.g., DB uniqueness check)
-IAsyncRule<string> rule = RuleEngine.FromPredicateAsync<string>(
+IAsyncRule<string> unique = RuleEngine.FromPredicateAsync<string>(
     async s => await _db.IsUniqueAsync(s),
     s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
 
 // Evaluate and compose normally
-Result r = RuleEngine.Evaluate(rule, context);
+Result r = RuleEngine.Evaluate(positive, 42);
 Result composed = RuleEngine.Evaluate(
-    new IRuleBase<int>[] { ruleA, ruleB }.And(), value);
+    new IRuleBase<string>[] { minLength, unique }.And(), "alice");
 ```
 
 ---

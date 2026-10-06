@@ -23,23 +23,23 @@ using CSharpEssentials.Errors;
 
 ```csharp
 // ErrorType: Failure | Unexpected | Validation | Conflict | NotFound | Unauthorized | Forbidden
-Error.Failure("order.failed",    "Order could not be processed.")
-Error.Validation("email.invalid","Email format is invalid.")
-Error.NotFound("user.not_found", "User not found.")
-Error.Conflict("email.taken",    "Email is already registered.")
-Error.Unauthorized("token.expired", "Token has expired.")
-Error.Forbidden("access.denied", "Insufficient permissions.")
-Error.Unexpected("sys.error",    "An unexpected error occurred.")
-Error.Exception(ex)              // wrap exception → Error
+Error failure      = Error.Failure("order.failed", "Order could not be processed.");
+Error validation   = Error.Validation("email.invalid", "Email format is invalid.");
+Error notFound     = Error.NotFound("user.not_found", "User not found.");
+Error conflict     = Error.Conflict("email.taken", "Email is already registered.");
+Error unauthorized = Error.Unauthorized("token.expired", "Token has expired.");
+Error forbidden    = Error.Forbidden("access.denied", "Insufficient permissions.");
+Error unexpected   = Error.Unexpected("sys.error", "An unexpected error occurred.");
+Error fromEx       = Error.Exception(ex); // code = exception type name, description = message, metadata = exception details
 ```
 
 ## Error Properties
 
 ```csharp
-error.Code         // "email.invalid"
-error.Description  // "Email format is invalid." — NOT .Message
-error.Type         // ErrorType.Validation
-error.Metadata     // ErrorMetadata? (nullable)
+string code          = error.Code;        // "email.invalid"
+string description   = error.Description; // "Email format is invalid." (there is no .Message)
+ErrorType type       = error.Type;        // ErrorType.Validation
+ErrorMetadata? meta  = error.Metadata;    // nullable
 ```
 
 ## ErrorMetadata
@@ -58,14 +58,14 @@ Error withMeta = Error.NotFound(
 
 ```csharp
 Error[] merged = error1 + error2;              // operator +
-Error[] many   = Error.CreateMany(e1, e2, e3);
+Error[] many   = Error.CreateMany(error1, error2, error3);
 ```
 
 ## HTTP Status Mapping
 
 ```csharp
 int status   = ErrorType.NotFound.ToHttpStatusCode();  // 404
-int status2  = ErrorType.Validation.ToHttpStatusCode(); // 400
+int status2  = ErrorType.Validation.ToHttpStatusCode(); // 400 (Failure/Unexpected map to 500)
 ErrorType et = 401.ToErrorType();                       // Unauthorized
 ```
 

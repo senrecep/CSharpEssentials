@@ -1,17 +1,19 @@
 ---
 name: csharpessentials-aspnetcore
-description: Use when wiring CSharpEssentials Result<T> into ASP.NET Core — GlobalExceptionHandler maps unhandled exceptions to ProblemDetails, ResultEndpointFilter converts Result<T> returns to HTTP responses, and ConfigureSwaggerOptions adds per-version Swagger docs.
+description: Use when wiring CSharpEssentials into ASP.NET Core — AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumBinding/UseEnumBinding for [StringEnum] query/route values, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.
 ---
 
 # CSharpEssentials.AspNetCore
 
-ASP.NET Core integration for functional patterns: error-to-ProblemDetails mapping and automatic Result<T>-to-HTTP conversion.
+ASP.NET Core integration: one ProblemDetails pipeline for `Error`/`Result` values and exceptions, automatic `Result<T>`-to-HTTP conversion, enum binding, API versioning and Swagger.
 
 ## Installation
 
 ```bash
 dotnet add package CSharpEssentials.AspNetCore
 ```
+
+Depends on `Asp.Versioning.*` 8.1+ and `Swashbuckle.AspNetCore` `[8.1.0, 10)`.
 
 ## Namespace
 
@@ -21,12 +23,11 @@ using CSharpEssentials.AspNetCore;
 
 ---
 
-## GlobalExceptionHandler + ProblemDetails
+## ProblemDetails + GlobalExceptionHandler
 
 `AddEnhancedProblemDetails` configures one ProblemDetails pipeline (RFC 9457) shared by `ToProblemResult` (Minimal API), `ToActionResult` (MVC), `GlobalExceptionHandler`, status code pages and framework 404/405 responses.
 
 ```csharp
-// Program.cs
 builder.Services.AddEnhancedProblemDetails(o =>
 {
     o.ExposeExceptionDetails = builder.Environment.IsDevelopment(); // default false
@@ -37,56 +38,91 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 app.UseEnhancedProblemDetails(); // UseExceptionHandler() + UseStatusCodePages()
 ```
 
-4.0 defaults: `traceId` is the 32-hex W3C trace id; `requestId`, `user`, `spanId`/`parentSpanId` and `errorMessages` are omitted; `instance` is `"/path"`; `type` uses RFC 9110 URIs; `errors` holds only `ErrorType.Validation` errors as `{ code, description }`. Options: `TraceId`, `IncludeRequestId`, `IncludeUser`, `IncludeSpanIds`, `Instance`, `ErrorFields` (`ProblemErrorFields` flags), `ValidationErrorsFormat`, `TypeUriResolver`, `ExposeExceptionDetails`.
+### Secure defaults (4.0)
+
+| Option | Default | 3.x (`UseLegacyDefaults()`) |
+|---|---|---|
+| `TraceId` | `TraceIdFormat.W3CTraceId` (32-hex trace id) | `TraceparentHeader` |
+| `IncludeRequestId` / `IncludeUser` / `IncludeSpanIds` | `false` | `true` |
+| `Instance` | `ProblemInstanceFormat.Path` (`"/path"`) | `MethodAndPath` |
+| `ErrorFields` | `ProblemErrorFields.Codes \| ValidationErrors` | `All` |
+| `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Rfc7231` |
+| `ExposeExceptionDetails` | `false` | — |
+
+`errors` holds only `ErrorType.Validation` errors as `{ code, description }` (`ValidationErrorsFormat.List`).
+
+### Status codes
+
+Default `IErrorStatusCodeMapper`: Validation → 400, Unauthorized → 401, Forbidden → 403, NotFound → 404, Conflict → 409, Failure / Unexpected / Unknown → 500.
+
+`DefaultExceptionProblemMapper` (always last): `OperationCanceledException` from an aborted request → 499, `BadHttpRequestException` → its status, `EnhancedValidationException` → 400, `DomainException` → status of its `ErrorType`, anything else → 500 with a generic detail (the message is logged, not returned).
+
+### Extension points
 
 ```csharp
-// ErrorType → HTTP status (default IErrorStatusCodeMapper):
-// Validation → 400, Unauthorized → 401, Forbidden → 403, NotFound → 404, Conflict → 409
-// Failure / Unexpected / Unknown → 500
+public sealed class TenantEnricher : IProblemDetailsEnricher
+{
+    public void Enrich(ProblemDetailsContext context) =>
+        context.ProblemDetails.Extensions["tenant"] = context.HttpContext.Request.Headers["X-Tenant"].ToString();
+}
+
+public sealed class AuthAwareStatusMapper : DefaultErrorStatusCodeMapper
+{
+    public override int GetStatusCode(Error error) =>
+        error.Code == "auth.expired" ? StatusCodes.Status401Unauthorized : base.GetStatusCode(error);
+}
+
+public sealed class TimeoutExceptionMapper : IExceptionProblemMapper
+{
+    public bool TryMap(HttpContext httpContext, Exception exception, [NotNullWhen(true)] out ExceptionProblem? problem)
+    {
+        problem = exception is TimeoutException
+            ? new ExceptionProblem(StatusCodes.Status504GatewayTimeout, Detail: "The upstream service timed out.")
+            : null;
+        return problem is not null;
+    }
+}
 ```
 
-Exception mapping (`DefaultExceptionProblemMapper`): `OperationCanceledException` → 499, `BadHttpRequestException` → its status, `EnhancedValidationException` → 400, `DomainException` → status of its `ErrorType`, anything else → 500 (message logged, not returned).
+```csharp
+builder.Services.AddProblemDetailsEnricher<TenantEnricher>();          // runs after the built-in enrichment
+builder.Services.AddErrorStatusCodeMapper<AuthAwareStatusMapper>();    // replaces the default mapper
+builder.Services.AddExceptionProblemMapper<TimeoutExceptionMapper>();  // tried before DefaultExceptionProblemMapper
+```
 
-Extension points:
+### Results to responses
 
 ```csharp
-builder.Services.AddProblemDetailsEnricher<TenantEnricher>();         // IProblemDetailsEnricher
-builder.Services.AddErrorStatusCodeMapper<AuthAwareStatusMapper>();   // IErrorStatusCodeMapper (replaces default)
-builder.Services.AddExceptionProblemMapper<PaymentExceptionMapper>(); // IExceptionProblemMapper (tried before default)
+Error error = Error.NotFound("user.not_found", "User not found");
+IResult minimalApi = error.ToProblemResult();   // EnhancedProblemHttpResult
+IActionResult mvc  = error.ToActionResult();    // EnhancedProblemObjectResult
 ```
 
 ---
 
 ## ResultEndpointFilter
 
-Converts `Result<T>` returns from minimal API handlers into HTTP responses automatically.
+Converts `Result` / `Result<T>` returns from Minimal API handlers: success → 200 (with the value), failure → ProblemDetails (4.0; 3.x returned 400 with raw `Error[]`).
 
 ```csharp
-// Apply to a group
-app.MapGroup("/api").AddEndpointFilter<ResultEndpointFilter>();
+RouteGroupBuilder api = app.MapGroup("/api").AddEndpointFilter<ResultEndpointFilter>();
 
-// Handler just returns Result<T>
-app.MapGet("/users/{id}", async (Guid id, UserService svc) =>
-    await svc.GetUserAsync(id));   // returns Result<User>
-
-// IsSuccess  → 200 OK with JSON body
-// IsFailure  → ProblemDetails response (4.0; 3.x returned 400 with raw Error[])
+api.MapGet("/users/{id:guid}", Result<User> (Guid id) =>
+    id == Guid.Empty ? Error.NotFound("user.not_found", "User not found") : new User());
 ```
 
-A registered `IResultErrorMapper` takes precedence over the ProblemDetails response:
+A registered `IResultErrorMapper` (resolved from the request services, so any lifetime works) replaces the ProblemDetails response:
 
 ```csharp
-public class MyErrorMapper : IResultErrorMapper
+public sealed class LegacyErrorMapper : IResultErrorMapper
 {
-    public int MapToStatusCode(ErrorType errorType) => errorType switch
-    {
-        ErrorType.NotFound   => 404,
-        ErrorType.Validation => 422,
-        _                    => 500
-    };
+    public IResult Map(Error[] errors) =>
+        errors[0].Type == ErrorType.NotFound ? Results.NotFound() : errors.ToProblemResult();
 }
+```
 
-builder.Services.AddSingleton<IResultErrorMapper, MyErrorMapper>();
+```csharp
+builder.Services.AddScoped<IResultErrorMapper, LegacyErrorMapper>();
 ```
 
 ---
@@ -94,44 +130,54 @@ builder.Services.AddSingleton<IResultErrorMapper, MyErrorMapper>();
 ## Enum Query/Route Binding
 
 ```csharp
-builder.Services.AddEnumBinding();   // optional: EnumBindingOptions (CanBind, NamingPolicy, AllowIntegerValues)
-app.UseEnumBinding();                // after routing selected the endpoint
+builder.Services.AddEnumBinding(o =>   // optional; UseEnumBinding works with the defaults
+{
+    o.AllowIntegerValues = false;
+    o.ErrorFactory = (key, enumType, names) =>
+        Error.Validation($"validation.{key}", $"Use one of: {string.Join(", ", names)}");
+});
+
+app.UseEnumBinding();                  // after routing has selected the endpoint
 ```
 
-`[StringEnum]` enums in query/route values (Minimal API incl. `[AsParameters]`, and MVC) accept the snake_case name, the C# member name (case-insensitive) or the number of a defined member. Invalid values return a 400 ProblemDetails response. Swagger enum schemas use the same JSON names.
+`[StringEnum]` enums in query/route values (Minimal API incl. `[AsParameters]`, and MVC) accept the snake_case name, the C# member name (case-insensitive) or, unless disabled, the number of a defined member. Invalid values return a 400 ProblemDetails response. `EnumBindingOptions` also has `CanBind` and `NamingPolicy`. Swagger enum schemas use the same names.
+
+## MVC Invalid Model State
+
+```csharp
+builder.Services.AddControllers();
+builder.Services.ConfigureInvalidModelStateResponse(); // [ApiController] 400s become enhanced ProblemDetails
+
+// Custom error per model state entry:
+// builder.Services.ConfigureInvalidModelStateResponse((key, modelError) =>
+//     Error.Validation($"validation.{key}", modelError.ErrorMessage));
+```
+
+Do not combine with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off.
 
 ---
 
 ## API Versioning + Swagger
 
 ```csharp
-builder.Services.AddApiVersioning(options =>
-{
-    options.DefaultApiVersion = new ApiVersion(1);
-    options.ReportApiVersions = true;
-})
-.AddApiExplorer(options =>
-{
-    options.GroupNameFormat = "'v'VVV";
-    options.SubstituteApiVersionInUrl = true;
-});
+builder.Services.AddAndConfigureApiVersioning();   // v1 default, URL segment or x-api-version header
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(SecuritySchemes.JwtBearerTokenSecurity);
 
-builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
-builder.Services.AddSwaggerGen();
+app.UseVersionableSwagger();                        // one Swagger UI endpoint per API version
 
-app.UseSwagger();
-app.UseSwaggerUI(options =>
-{
-    foreach (var desc in app.DescribeApiVersions())
-        options.SwaggerEndpoint($"/swagger/{desc.GroupName}/swagger.json", desc.GroupName);
-});
+// 4.1: "v{version:apiVersion}" route group bound to API version 2
+RouteGroupBuilder v2 = app.MapVersionedGroup(2);
+v2.MapGet("/health", () => Results.Ok());          // GET /v2/health
 ```
+
+`CreateVersionedGroup("orders", version: 1)` builds `v{version:apiVersion}/orders` in one call.
 
 ---
 
 ## Best Practices
 
 - Call `AddEnhancedProblemDetails()` (not plain `AddProblemDetails()`) and `app.UseEnhancedProblemDetails()`
+- Keep `ExposeExceptionDetails` off outside development; never put raw exception messages in `ExceptionProblem.Detail`
 - `ToProblemResult` / `ToActionResult` return `EnhancedProblemHttpResult` / `EnhancedProblemObjectResult`, not `ProblemHttpResult` / `BadRequestObjectResult`
-- Apply `ResultEndpointFilter` at the group level, not per-endpoint
+- Apply `ResultEndpointFilter` at the group level, not per endpoint
 - `error.Description` is the field name — not `error.Message`

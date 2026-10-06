@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-logging
-description: Use when adding request/response body logging middleware to ASP.NET Core — AddRequestResponseLogging() with configurable body/header capture, UseRequestResponseLogging() pipeline registration, and [SkipRequestResponseLogging] / [SkipRequestLogging] / [SkipResponseLogging] attributes for per-endpoint opt-out.
+description: Use when logging HTTP requests and responses in ASP.NET Core — app.AddRequestResponseLogging(opt => …) with UseLogger(ILoggerFactory, LoggingOptions), UseHandler, IgnorePaths, LogFields selection, and [SkipRequestLogging] / [SkipResponseLogging] / [SkipRequestResponseLogging] endpoint metadata for per-endpoint opt-out.
 ---
 
 # CSharpEssentials.RequestResponseLogging
 
-Middleware that logs HTTP request and response bodies. Configurable per-endpoint via attributes.
+Middleware that logs HTTP requests and responses (bodies, headers, path, method, timing, sizes). Configured on `IApplicationBuilder`; no service registration is needed.
 
 ## Installation
 
@@ -21,39 +21,85 @@ using CSharpEssentials.RequestResponseLogging;
 
 ---
 
-## Register and Use
+## Register
+
+`AddRequestResponseLogging` is an `IApplicationBuilder` extension that adds the middleware. Call it on the built app.
 
 ```csharp
-// Program.cs
-builder.Services.AddRequestResponseLogging(options =>
-{
-    options.Request.LogBody    = true;
-    options.Request.LogHeaders = false;
-    options.Response.LogBody   = true;
-    options.IgnorePaths        = ["/health", "/metrics", "/favicon.ico"];
-});
+var app = builder.Build();
 
-app.UseRequestResponseLogging();
+app.AddRequestResponseLogging(opt =>
+{
+    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), LoggingOptions.CreateAllFields());
+    opt.IgnorePaths("/health", "/metrics");
+});
 ```
+
+- Without `UseLogger` or `UseHandler`, the middleware runs but writes nothing.
+- `IgnorePaths` matches by prefix, case-insensitive. A later call replaces the earlier list.
+- Request bodies larger than 10 MB are not captured; a size note is logged instead.
+
+---
+
+## Choosing Fields
+
+```csharp
+app.AddRequestResponseLogging(opt =>
+    opt.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), logging =>
+    {
+        logging.LoggingFields = [LogFields.Method, LogFields.Path, LogFields.ResponseTiming];
+        logging.HeaderKeys = ["X-Correlation-Id"];
+        logging.LoggingLevel = LogLevel.Debug;
+        logging.LoggerCategoryName = "Http";
+    }));
+```
+
+`LogFields`: `Request`, `Response`, `HostName`, `Path`, `Method`, `QueryString`, `Headers`, `ResponseTiming`, `RequestLength`, `ResponseLength`. `LoggingOptions.CreateAllFields()` selects all of them.
+
+---
+
+## Custom Handler
+
+```csharp
+app.AddRequestResponseLogging(opt => opt.UseHandler(context =>
+{
+    Console.WriteLine($"{context.Url} {context.ResponseTime} {context.RequestLength} {context.ResponseLength}");
+    return Task.CompletedTask;
+}));
+```
+
+`RequestResponseContext` exposes `RequestBody`, `ResponseBody`, `ResponseCreationTime`, `ResponseTime`, `RequestLength`, `ResponseLength` and `Url`.
 
 ---
 
 ## Per-Endpoint Opt-Out
 
-```csharp
-[SkipRequestResponseLogging]   // skip both request and response
-[SkipRequestLogging]           // skip request body only
-[SkipResponseLogging]          // skip response body only
-public IActionResult MyAction() { ... }
-```
+The middleware reads the attributes from endpoint metadata:
 
-Apply to individual controller actions, Minimal API handlers, or entire controllers.
+| Attribute | Effect |
+|---|---|
+| `[SkipRequestLogging]` | Request body is not captured |
+| `[SkipResponseLogging]` | Response body is not captured |
+| `[SkipRequestResponseLogging]` | Neither body is captured |
+
+```csharp
+[ApiController]
+[Route("auth")]
+public sealed class AuthController : ControllerBase
+{
+    [HttpPost("login")]
+    [SkipRequestLogging] // passwords
+    public IActionResult Login(LoginRequest request) => Ok();
+}
+
+// Minimal APIs
+app.MapGet("/export", () => Results.Ok()).WithMetadata(new SkipResponseLoggingAttribute());
+```
 
 ---
 
 ## Best Practices
 
-- Set `LogBody = false` for endpoints handling auth, passwords, or PII
-- Always add health check and metrics paths to `IgnorePaths` — these are high-frequency and low-value
-- Apply `[SkipRequestResponseLogging]` rather than `[SkipRequestLogging]` + `[SkipResponseLogging]` when skipping both
-- Register `UseRequestResponseLogging()` early in the pipeline, before `UseRouting()`
+- Skip request bodies on endpoints that receive passwords, tokens or other PII.
+- Add health check and metrics paths to `IgnorePaths`; they are high-frequency and low-value.
+- If you call `UseRouting()` explicitly, add the middleware after it, so endpoint metadata (and the skip attributes) is available.

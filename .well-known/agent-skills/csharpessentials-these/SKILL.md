@@ -66,10 +66,10 @@ These<string, string> chained = these.FlatMap(x => These<string, string>.Right(x
 
 ```csharp
 // Tap fires on Right or Both
-these.Tap(v => logger.Log($"Got {v}"));
+these.Tap(v => logger.LogInformation("Got {Value}", v));
 
 // TapLeft fires on Left or Both
-these.TapLeft(e => logger.LogWarning(e));
+these.TapLeft(e => logger.LogWarning("Warning: {Warning}", e));
 ```
 
 ## Bridge to/from Result

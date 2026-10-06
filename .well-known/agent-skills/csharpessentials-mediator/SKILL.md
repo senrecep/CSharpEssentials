@@ -56,8 +56,8 @@ public class CreateOrderValidator : Validator<CreateOrderCommand>
 {
     protected override ValueTask Configure(CreateOrderCommand model, RuleContext<CreateOrderCommand> rules, CancellationToken ct = default)
     {
-        rules.For(() => model.CustomerId).NotEmpty();
-        rules.For(() => model.Total).GreaterThan(0);
+        rules.For(() => model.UserId).NotEqual(Guid.Empty);
+        rules.For(() => model.Amount).GreaterThan(0m);
         return ValueTask.CompletedTask;
     }
 }
@@ -118,9 +118,9 @@ public record ProcessPaymentCommand(Guid OrderId, decimal Amount)
 
 public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Result>
 {
-    private readonly IPaymentGateway _paymentGateway;
+    private readonly IPaymentClient _paymentGateway;
 
-    public ProcessPaymentHandler(IPaymentGateway paymentGateway)
+    public ProcessPaymentHandler(IPaymentClient paymentGateway)
         => _paymentGateway = paymentGateway;
 
     public async ValueTask<Result> Handle(ProcessPaymentCommand command, CancellationToken ct)
@@ -136,8 +136,8 @@ public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Resu
 Result result = await mediator.Send(new ProcessPaymentCommand(orderId, 99.99m));
 if (result.IsFailure)
 {
-    // result.Error.Code        => "HttpRequestException"
-    // result.Error.Description => "Payment gateway timed out"
+    // result.FirstError.Code        => "HttpRequestException"
+    // result.FirstError.Description => "Payment gateway timed out"
 }
 ```
 
@@ -157,9 +157,7 @@ public record GetProductQuery(int ProductId)
     public TimeSpan Expiration => TimeSpan.FromMinutes(5);
 }
 
-// Requires a cache backend
-builder.Services.AddStackExchangeRedisCache(o => o.Configuration = redisConn);
-// or:
+// Requires an IDistributedCache backend (in-memory here; Redis or SQL Server in production)
 builder.Services.AddDistributedMemoryCache();
 ```
 
@@ -167,7 +165,7 @@ builder.Services.AddDistributedMemoryCache();
 
 ## TransactionBehavior — ITransactionalRequest
 
-Wraps the handler in `TransactionScope` (ReadCommitted + AsyncFlowEnabled). Commits on success, rolls back on failure or exception.
+Wraps the handler in a `TransactionScope` created with `TransactionScopeAsyncFlowOption.Enabled` (default isolation level). The scope completes whenever the handler returns, including a failed `Result`; it rolls back only when the handler throws.
 
 ```csharp
 public record PlaceOrderCommand(OrderDto Order)
@@ -182,5 +180,5 @@ public record PlaceOrderCommand(OrderDto Order)
 - Register `ValidationBehavior` first — invalid requests should never reach the handler
 - `ExceptionHandlingBehavior` requires no setup; it activates automatically for `Result` / `Result<T>` handlers — do not add try/catch inside handlers that already return `Result`
 - Set `CacheFailures = false` — transient failures should not be cached
-- `ITransactionalRequest` only on commands writing to multiple tables in one operation
+- `ITransactionalRequest` only on commands writing to multiple tables in one operation; throw (or let the exception surface) to roll back, because a returned failed `Result` still completes the scope
 - Use `IRequestLoggable` (not `IRequestResponseLoggable`) when the response contains PII
