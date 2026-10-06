@@ -6,6 +6,8 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <CSharpEssentialsEnumNaming>KebabCaseLower</CSharpEssentialsEnumNaming>
+    <!-- UnreachableHolder<T>.Status has no generated metadata on purpose (fail-loud tests). -->
+    <NoWarn>$(NoWarn);CSE0015</NoWarn>
   </PropertyGroup>
 
   <Import Project="..\..\CSharpEssentials.Enums\build\CSharpEssentials.Enums.props" />

@@ -99,6 +99,12 @@ internal static class EnumModelReader
             isFallback);
     }
 
+    /// <summary>
+    /// Whether a namespace-level generated class can reach the enum: no private, protected or file-local type in the chain and no
+    /// generic containing type.
+    /// </summary>
+    public static bool IsReachable(INamedTypeSymbol symbol) => TryGetAccessibility(symbol, out _);
+
     private static bool TryGetAccessibility(INamedTypeSymbol symbol, out bool isPublic)
     {
         isPublic = true;
