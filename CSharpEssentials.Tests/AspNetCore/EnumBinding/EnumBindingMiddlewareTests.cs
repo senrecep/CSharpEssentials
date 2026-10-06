@@ -231,11 +231,22 @@ public class EnumBindingMiddlewareTests
 
     [Theory]
     [MemberData(nameof(AllHostKinds))]
-    public async Task Nullable_Should_Return400Problem_When_ValueIsWhitespace(EbHostKind kind)
+    public async Task Nullable_Should_BindNull_When_ValueIsWhitespace(EbHostKind kind)
     {
         await using EnumBindingHost host = await Start(kind);
 
-        var response = await host.GetAsync("/nullable?status=%20");
+        var response = await host.GetAsync("/nullable?status=%20%09");
+
+        response.Body.Should().Be("null");
+    }
+
+    [Theory]
+    [MemberData(nameof(AllHostKinds))]
+    public async Task Query_Should_Return400Problem_When_NonNullableValueIsWhitespace(EbHostKind kind)
+    {
+        await using EnumBindingHost host = await Start(kind);
+
+        var response = await host.GetAsync("/status?status=%20");
 
         response.ShouldBeEnumBindingProblem().Single().Code.Should().Be("status");
     }

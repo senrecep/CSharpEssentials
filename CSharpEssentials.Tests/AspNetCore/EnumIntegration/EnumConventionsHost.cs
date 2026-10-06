@@ -89,6 +89,7 @@ internal sealed class EnumConventionsHost : IAsyncDisposable
     {
         RouteGroupBuilder min = app.MapGroup("/min");
         min.MapGet("/route/{status}", (EcStatus status) => EcEcho.Of<EcStatus>(status));
+        min.MapGet("/route-nullable/{status?}", (EcStatus? status) => EcEcho.Of(status));
         min.MapGet("/route-flags/{perms}", (EcPermission perms) => EcEcho.Of<EcPermission>(perms));
         min.MapGet("/query", ([FromQuery] EcStatus status) => EcEcho.Of<EcStatus>(status));
         min.MapGet("/query-nullable", ([FromQuery] EcStatus? status) => EcEcho.Of(status));

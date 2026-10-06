@@ -135,13 +135,13 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
     }
 
     /// <summary>
-    /// Normalizes one value. An empty value of a nullable or collection target yields no value (the framework binds null
-    /// or skips the item).
+    /// Normalizes one value. An empty or whitespace-only value of a nullable or collection target yields no value (the
+    /// framework binds null or skips the item); for any other target it is rejected.
     /// </summary>
     private static bool TryNormalize(EnumBindingTarget target, string? value, out StringValues normalized)
     {
         normalized = StringValues.Empty;
-        if (string.IsNullOrEmpty(value))
+        if (string.IsNullOrWhiteSpace(value))
             return target.AllowEmpty;
 
         List<string> output = [];

@@ -17,6 +17,9 @@ internal static class EnumConventionsControllers
         [HttpGet("route/{status}")]
         public string Route(EcStatus status) => EcEcho.Of<EcStatus>(status);
 
+        [HttpGet("route-nullable/{status?}")]
+        public string RouteNullable(EcStatus? status) => EcEcho.Of(status);
+
         [HttpGet("route-flags/{perms}")]
         public string RouteFlags(EcPermission perms) => EcEcho.Of<EcPermission>(perms);
 

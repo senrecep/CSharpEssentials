@@ -124,7 +124,7 @@ app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status));
 - Nullable, array, `List<T>` and `[Flags]` parameters are supported. Arrays accept repeated keys and comma-separated values (`?s=a&s=b`, `?s=a,b`); flags values are a comma-separated list.
 - These values return a 400 ProblemDetails response that lists the allowed values (`'99' is not a valid OrderStatus. Allowed values: pending, pending_approval.`):
   - undefined numbers;
-  - unknown names (leading and trailing whitespace is trimmed first, so `?status=%20pending` binds, while `?status=%20bogus%20` is still a 400);
+  - unknown names (leading and trailing whitespace is trimmed first, so `?status=%20pending` binds, while `?status=%20bogus%20` is still a 400; an empty or whitespace-only value binds `null` for a nullable parameter and is a 400 for a non-nullable one);
   - commas on enums without `[Flags]`;
   - empty values for non-nullable parameters.
 - A missing required value keeps the framework's handling.
