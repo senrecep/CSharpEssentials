@@ -10,6 +10,9 @@ internal static class __CSharpEssentialsEnumRegistry
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()
     {
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.OrderStatusExtensions.__CreateEnumInfo());
+        global::CSharpEssentials.Enums.EnumMetadata.RegisterRange(new global::System.Collections.Generic.KeyValuePair<global::System.Type, global::System.Func<global::CSharpEssentials.Enums.IEnumInfo>>[]
+        {
+            new(typeof(global::Sample.OrderStatus), global::Sample.OrderStatusExtensions.__CreateEnumInfo),
+        });
     }
 }

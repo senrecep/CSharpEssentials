@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 #if NET9_0_OR_GREATER
 using System.Collections.Frozen;
@@ -21,11 +20,12 @@ public static class EnumMetadata
 #else
     private static readonly object Gate = new();
 #endif
-    private static readonly ConcurrentDictionary<Module, byte> InitializedModules = new();
     private static readonly ConcurrentDictionary<(Type Type, EnumNaming Naming), IEnumInfo> ReflectionCache = new();
-    private static Dictionary<Type, IEnumInfo> _registered = [];
+    private static readonly Dictionary<Type, Lazy<IEnumInfo>> Registered = [];
 #if NET9_0_OR_GREATER
-    private static FrozenDictionary<Type, IEnumInfo>? _snapshot;
+    private static FrozenDictionary<Type, Lazy<IEnumInfo>>? _snapshot;
+#else
+    private static Dictionary<Type, Lazy<IEnumInfo>>? _snapshot;
 #endif
 
     /// <summary>Gets the generated metadata of <typeparamref name="TEnum"/>.</summary>
@@ -49,8 +49,13 @@ public static class EnumMetadata
         if (Lookup(enumType, out info))
             return true;
 
-        // A type-only reference does not run the module initializer of the declaring assembly; run it once and retry.
-        return enumType.IsEnum && TryRunModuleInitializer(enumType.Module) && Lookup(enumType, out info);
+        if (!enumType.IsEnum)
+            return false;
+
+        // A type-only reference does not run the module initializer of the declaring assembly. The runtime runs it at most once
+        // and blocks concurrent callers until it completes, so every caller sees the registrations after this call.
+        RuntimeHelpers.RunModuleConstructor(enumType.Module.ModuleHandle);
+        return Lookup(enumType, out info);
     }
 
     /// <summary>Whether <paramref name="type"/> is an enum with generated metadata.</summary>
@@ -75,46 +80,71 @@ public static class EnumMetadata
             : ReflectionCache.GetOrAdd((enumType, naming), static key => ReflectionEnumInfoBuilder.Build(key.Type, key.Naming));
     }
 
-    /// <summary>Registers generated metadata. Called by the generated module initializer.</summary>
+    /// <summary>Registers metadata built in code.</summary>
     public static void Register<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum
     {
         _ = info ?? throw new ArgumentNullException(nameof(info));
 
         lock (Gate)
         {
-            Dictionary<Type, IEnumInfo> copy = new(_registered) { [typeof(TEnum)] = info };
-            Volatile.Write(ref _registered, copy);
-#if NET9_0_OR_GREATER
+            Registered[typeof(TEnum)] = new Lazy<IEnumInfo>(() => info);
             _snapshot = null;
-#endif
             EnumInfoCache<TEnum>.Set(info);
         }
     }
 
-    /// <summary>Runs the module initializer of <paramref name="module"/> on the first call for that module.</summary>
-    internal static bool TryRunModuleInitializer(Module module)
+    /// <summary>
+    /// Registers the metadata factories of one assembly in a single batch. Called by the generated module initializer; each factory
+    /// runs on the first lookup of its enum.
+    /// </summary>
+    /// <param name="factories">The enum types and the factories of their metadata.</param>
+    public static void RegisterRange(KeyValuePair<Type, Func<IEnumInfo>>[] factories)
     {
-        if (!InitializedModules.TryAdd(module, 0))
-            return false;
-        RuntimeHelpers.RunModuleConstructor(module.ModuleHandle);
-        return true;
+        _ = factories ?? throw new ArgumentNullException(nameof(factories));
+
+        foreach (KeyValuePair<Type, Func<IEnumInfo>> factory in factories)
+        {
+            _ = factory.Key ?? throw new ArgumentException("An enum type is null.", nameof(factories));
+            _ = factory.Value ?? throw new ArgumentException($"The factory of '{factory.Key.FullName}' is null.", nameof(factories));
+        }
+
+        lock (Gate)
+        {
+            foreach (KeyValuePair<Type, Func<IEnumInfo>> factory in factories)
+            {
+                Registered[factory.Key] = new Lazy<IEnumInfo>(factory.Value);
+            }
+
+            _snapshot = null;
+        }
     }
 
     private static bool Lookup(Type enumType, [NotNullWhen(true)] out IEnumInfo? info)
     {
 #if NET9_0_OR_GREATER
-        FrozenDictionary<Type, IEnumInfo>? snapshot = Volatile.Read(ref _snapshot);
+        FrozenDictionary<Type, Lazy<IEnumInfo>>? snapshot = Volatile.Read(ref _snapshot);
+#else
+        Dictionary<Type, Lazy<IEnumInfo>>? snapshot = Volatile.Read(ref _snapshot);
+#endif
         if (snapshot is null)
         {
             lock (Gate)
             {
-                snapshot = _snapshot ??= _registered.ToFrozenDictionary();
+#if NET9_0_OR_GREATER
+                snapshot = _snapshot ??= Registered.ToFrozenDictionary();
+#else
+                snapshot = _snapshot ??= Registered.ToDictionary(static entry => entry.Key, static entry => entry.Value);
+#endif
             }
         }
 
-        return snapshot.TryGetValue(enumType, out info);
-#else
-        return Volatile.Read(ref _registered).TryGetValue(enumType, out info);
-#endif
+        if (snapshot.TryGetValue(enumType, out Lazy<IEnumInfo>? entry))
+        {
+            info = entry.Value;
+            return true;
+        }
+
+        info = null;
+        return false;
     }
 }

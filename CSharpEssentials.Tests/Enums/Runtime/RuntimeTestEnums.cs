@@ -68,3 +68,8 @@ public enum ManuallyRegistered
     First,
     SecondValue,
 }
+
+public enum LazilyRegistered
+{
+    Only,
+}

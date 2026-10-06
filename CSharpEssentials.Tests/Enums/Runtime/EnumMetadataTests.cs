@@ -86,6 +86,40 @@ public class EnumMetadataTests
     }
 
     [Fact]
+    public void RegisterRange_Should_Build_Metadata_Once_On_First_Lookup()
+    {
+        int calls = 0;
+        EnumInfo<LazilyRegistered> info = new(
+            [new EnumMemberInfo<LazilyRegistered>(LazilyRegistered.Only, 0, "Only", "only")],
+            static v => unchecked((ulong)(long)v),
+            static r => unchecked((LazilyRegistered)(long)r),
+            isFlags: false,
+            EnumStorage.Integer);
+
+        EnumMetadata.RegisterRange([new(typeof(LazilyRegistered), () =>
+        {
+            Interlocked.Increment(ref calls);
+            return info;
+        })]);
+
+        calls.Should().Be(0);
+        EnumMetadata.TryGet(typeof(LazilyRegistered), out IEnumInfo? untyped).Should().BeTrue();
+        untyped.Should().BeSameAs(info);
+        EnumMetadata.Get<LazilyRegistered>().Should().BeSameAs(info);
+        calls.Should().Be(1);
+    }
+
+    [Fact]
+    public void RegisterRange_Should_Reject_Null_Entries()
+    {
+        Action nullArray = () => EnumMetadata.RegisterRange(null!);
+        Action nullFactory = () => EnumMetadata.RegisterRange([new(typeof(LazilyRegistered), null!)]);
+
+        nullArray.Should().Throw<ArgumentNullException>();
+        nullFactory.Should().Throw<ArgumentException>().WithMessage("*LazilyRegistered*");
+    }
+
+    [Fact]
     public void Visitor_Should_Reach_Typed_Metadata()
     {
         IEnumInfo info = EnumMetadata.GetOrCreateWithReflection(typeof(StrictStatus));

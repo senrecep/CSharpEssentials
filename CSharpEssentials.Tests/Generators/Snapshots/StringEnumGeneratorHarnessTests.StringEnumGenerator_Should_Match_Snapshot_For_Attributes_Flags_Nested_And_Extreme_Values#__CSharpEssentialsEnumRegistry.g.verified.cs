@@ -10,11 +10,14 @@ internal static class __CSharpEssentialsEnumRegistry
     [global::System.Runtime.CompilerServices.ModuleInitializer]
     internal static void Register()
     {
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.ContractExtensions.__CreateEnumInfo());
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.HugeExtensions.__CreateEnumInfo());
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.Order_Line_KindExtensions.__CreateEnumInfo());
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.Order_StateExtensions.__CreateEnumInfo());
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.PermissionsExtensions.__CreateEnumInfo());
-        global::CSharpEssentials.Enums.EnumMetadata.Register(global::Sample.SignedExtensions.__CreateEnumInfo());
+        global::CSharpEssentials.Enums.EnumMetadata.RegisterRange(new global::System.Collections.Generic.KeyValuePair<global::System.Type, global::System.Func<global::CSharpEssentials.Enums.IEnumInfo>>[]
+        {
+            new(typeof(global::Sample.Contract), global::Sample.ContractExtensions.__CreateEnumInfo),
+            new(typeof(global::Sample.Huge), global::Sample.HugeExtensions.__CreateEnumInfo),
+            new(typeof(global::Sample.Order.Line.Kind), global::Sample.Order_Line_KindExtensions.__CreateEnumInfo),
+            new(typeof(global::Sample.Order.State), global::Sample.Order_StateExtensions.__CreateEnumInfo),
+            new(typeof(global::Sample.Permissions), global::Sample.PermissionsExtensions.__CreateEnumInfo),
+            new(typeof(global::Sample.Signed), global::Sample.SignedExtensions.__CreateEnumInfo),
+        });
     }
 }
