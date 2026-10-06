@@ -32,7 +32,7 @@ Every layer formats with the same function and parses with the same function. Bo
 
 ### 2. Metadata is generated, not reflected
 
-The `[StringEnum]` source generator emits an `EnumInfo<TEnum>` per enum: values, C# names, wire names, aliases, descriptions, `[Obsolete]`, flags, the defined mask and the fallback member. A generated module initializer registers it in `EnumMetadata`. Lookups are a static generic field read (`EnumMetadata.Get<TEnum>()`) or a frozen dictionary lookup (`EnumMetadata.TryGet(Type)`). Enums without `[StringEnum]` are handled only through an explicit reflection fallback annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`.
+The `[StringEnum]` source generator emits an `EnumInfo<TEnum>` per enum: values, C# names, wire names, aliases, descriptions, `[Obsolete]`, flags, the defined mask and the fallback member. A generated module initializer registers it in `EnumMetadata`. Lookups are a static generic field read (`EnumMetadata.Get<TEnum>()`) or a frozen dictionary lookup (`EnumMetadata.TryGet(Type)`). Enums without generated metadata are handled only through an explicit, opt-in reflection fallback annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. A `[StringEnum]` enum whose metadata is missing (unreachable nested type, C# below 9, a contracts assembly built with 4.x) fails loudly instead of silently becoming an integer: CSE0015 at build time, `InvalidOperationException` when a converter is created.
 
 ### 3. Naming is a build-time decision
 
@@ -80,7 +80,9 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 | Area | 4.x | 5.0 | Migration |
 |---|---|---|---|
 | Swashbuckle | in `CSharpEssentials.AspNetCore` | `CSharpEssentials.AspNetCore.Swashbuckle` | add the package, same `AddSwagger` API |
-| JSON undefined numbers | accepted (`AllowUndefinedValues = true`) | rejected | none for valid data; `[EnumFallback]` for consumers |
+| JSON undefined numbers | accepted (`AllowUndefinedValues = true`) | rejected; `ConditionalStringEnumConverter.AllowUndefinedValues` removed (compile break) | none for valid data; `[EnumFallback]` for consumers |
+| `[StringEnum]` without metadata | snake_case string through reflection | CSE0015 warning, converter creation throws | make the enum internal/public, not nested in a generic type; rebuild contracts with 5.0 |
+| Enums without `[StringEnum]` | handled through reflection when the predicate selected them | not handled unless the reflection fallback is opted in | add `[StringEnum]`, or opt in (not AOT safe) |
 | JSON flags | `"read, write"` | `["read","write"]` (comma string still read) | clients that parse flags strings must read arrays |
 | JSON member names | case-sensitive policy name or C# name | any casing, aliases | none |
 | EF manual `HasConversion` | untouched | untouched (skipped by the convention) | remove it when ready to convert |
