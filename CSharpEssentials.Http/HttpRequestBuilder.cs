@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
@@ -164,7 +165,7 @@ public sealed class HttpRequestBuilder
         return request;
     }
 
-    private static readonly ConcurrentDictionary<(EnumConventions Conventions, EnumWireFormat? WriteAs), JsonSerializerOptions> JsonOptionsCache = new();
+    private static readonly ConditionalWeakTable<EnumConventions, ConcurrentDictionary<EnumWireFormat, JsonSerializerOptions>> JsonOptionsCache = [];
 
     private Result<Uri> ApplyRouteValues(Uri uri, EnumConventions conventions)
     {
@@ -189,16 +190,20 @@ public sealed class HttpRequestBuilder
         return new Uri(template, UriKind.RelativeOrAbsolute);
     }
 
-    private JsonSerializerOptions ResolveJsonOptions() =>
-        _enumConventions is null
-            ? EnhancedJsonSerializerOptions.DefaultOptions
-            : JsonOptionsCache.GetOrAdd((_enumConventions, _enumWriteAs), static key =>
-                EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters.Create(options =>
-                {
-                    options.AddEnumConventions(key.Conventions, EnumReadMode.Data, key.WriteAs);
-                    options.Converters.Add(new MultiFormatDateTimeConverterFactory());
-                    options.Converters.Add(new PolymorphicJsonConverterFactory());
-                }));
+    private JsonSerializerOptions ResolveJsonOptions()
+    {
+        if (_enumConventions is null)
+            return EnhancedJsonSerializerOptions.DefaultOptions;
+
+        EnumConventions conventions = _enumConventions;
+        return JsonOptionsCache.GetOrCreateValue(conventions).GetOrAdd(_enumWriteAs ?? conventions.WriteAs, writeAs =>
+            EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters.Create(options =>
+            {
+                options.AddEnumConventions(conventions, EnumReadMode.Data, writeAs);
+                options.Converters.Add(new MultiFormatDateTimeConverterFactory());
+                options.Converters.Add(new PolymorphicJsonConverterFactory());
+            }));
+    }
 
     public async Task<Result> AsResultAsync(HttpClient? client, CancellationToken cancellationToken = default)
     {
