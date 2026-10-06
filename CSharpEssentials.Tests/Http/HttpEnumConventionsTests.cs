@@ -247,6 +247,16 @@ public class HttpEnumConventionsTests
     }
 
     [Fact]
+    public void TryFormat_Should_Throw_When_Conventions_Handle_An_Enum_Without_Metadata()
+    {
+        EnumConventions handleAll = Conventions with { CanHandle = static _ => true };
+
+        Action act = () => EnumValueFormatter.TryFormat(HttpPlainStatus.Approved, handleAll, out _);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*HttpPlainStatus*no generated metadata*");
+    }
+
+    [Fact]
     public async Task Builder_Should_Write_Wire_Names_In_Json_Bodies_By_Default()
     {
         string json = await BodyAsync(HttpRequestBuilder.Post("http://localhost/orders")
