@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-gcpsecretmanager
-description: Use when loading Google Cloud Secret Manager secrets into IConfiguration at startup — builder.Configuration.AddGcpSecretManager(o => o.AddProject(new ProjectSecretConfiguration { ProjectId, SecretIds, PrefixFilters, RawSecretIds, Region })) or the "GoogleSecretManager" appsettings section, with `__` → `:` key mapping, JSON secret flattening, LoggerFactory diagnostics and transient gRPC retries.
+description: Use when loading Google Cloud Secret Manager secrets into IConfiguration at startup. Covers builder.Configuration.AddGcpSecretManager(o => o.AddProject(new ProjectSecretConfiguration { ProjectId, SecretIds, PrefixFilters, RawSecretIds, Region })) or the "GoogleSecretManager" appsettings section, with `__` → `:` key mapping, JSON secret flattening, LoggerFactory diagnostics and transient gRPC retries.
 ---
 
 # CSharpEssentials.GcpSecretManager

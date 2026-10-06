@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-logging
-description: Use when logging HTTP requests and responses in ASP.NET Core — app.AddRequestResponseLogging(opt => …) with UseLogger(ILoggerFactory, LoggingOptions), UseHandler, IgnorePaths, LogFields selection, and [SkipRequestLogging] / [SkipResponseLogging] / [SkipRequestResponseLogging] endpoint metadata for per-endpoint opt-out.
+description: Use when logging HTTP requests and responses in ASP.NET Core. Covers app.AddRequestResponseLogging(opt => …) with UseLogger(ILoggerFactory, LoggingOptions), UseHandler, IgnorePaths, LogFields selection, and [SkipRequestLogging] / [SkipResponseLogging] / [SkipRequestResponseLogging] endpoint metadata for per-endpoint opt-out.
 ---
 
 # CSharpEssentials.RequestResponseLogging

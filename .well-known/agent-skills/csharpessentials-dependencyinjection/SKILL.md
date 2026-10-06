@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-dependencyinjection
-description: Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning — [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001–CSE2009 diagnostics.
+description: Use when registering services by attribute instead of manual AddScoped calls or Scrutor scanning. Covers [RegisterScoped]/[RegisterSingleton]/[RegisterTransient] (Key, As = ServiceAs.*, Strategy = RegistrationStrategy.*), [Decorates] and services.Decorate/TryDecorate, [ExcludeFromRegistration], the source-generated services.Add{Assembly}Services()/AddAllServices() registry, the AddServicesFromAssemblies reflection fallback, and CSE2001-CSE2009 diagnostics.
 ---
 
 # CSharpEssentials.DependencyInjection

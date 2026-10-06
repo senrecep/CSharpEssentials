@@ -1,15 +1,15 @@
 # CSharpEssentials.Mediator
 
-Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator) source-generator library, with built-in support for `Result<T>`, validation, caching, logging, and transactions. Native AOT compatible — zero reflection at runtime.
+Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator) source-generator library, with built-in support for `Result<T>`, validation, caching, logging, and transactions. Native AOT compatible, with zero reflection at runtime.
 
 > **Note:** `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` are provided by the `Mediator` package itself. This package adds marker interfaces and pipeline behaviors that integrate with `Result<T>`.
 
 ## Features
 
-- **Validation Behavior** — CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type.
-- **Logging Behavior** — Opt-in request/response payload logging with elapsed-time tracking.
-- **Caching Behavior** — `IDistributedCache` integration with bypass and failure-cache control.
-- **Transaction Behavior** — Wraps handlers in `TransactionScope` with async flow enabled.
+- **Validation Behavior**: CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type.
+- **Logging Behavior**: Opt-in request/response payload logging with elapsed-time tracking.
+- **Caching Behavior**: `IDistributedCache` integration with bypass and failure-cache control.
+- **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled.
 
 ## Installation
 
@@ -49,7 +49,7 @@ services.AddMediator(options =>
 
 Pipeline order: **Validation → Logging → Caching → Transaction**
 
-> See [Mediator §4.4 — Use pipeline behaviors](https://github.com/martinothamar/Mediator#44-use-pipeline-behaviors) for the full Native AOT pipeline behavior documentation.
+> See [Mediator §4.4: Use pipeline behaviors](https://github.com/martinothamar/Mediator#44-use-pipeline-behaviors) for the full Native AOT pipeline behavior documentation.
 
 ### Commands & Queries
 
@@ -121,7 +121,7 @@ On validation failure the handler is never invoked. Errors are surfaced based on
 |-------------|---------------|
 | `Result` | `Result.Failure(errors)` returned directly |
 | `Result<T>` | `Result<T>.Failure(errors)` returned directly |
-| Any other type | `EnhancedValidationException` thrown — caught by `GlobalExceptionHandler` |
+| Any other type | `EnhancedValidationException` thrown and caught by `GlobalExceptionHandler` |
 
 Error codes use the property path (e.g. `"Email.NotEmpty"`). Multiple validators are aggregated and deduplicated.
 
@@ -179,8 +179,8 @@ All requests log basic handling/handled messages and elapsed time regardless of 
 
 | Interface | Extends | Purpose |
 |-----------|---------|---------|
-| `ICacheable` | — | Enables `CachingBehavior` |
-| `ITransactionalRequest` | — | Enables `TransactionScopeBehavior` |
+| `ICacheable` | None | Enables `CachingBehavior` |
+| `ITransactionalRequest` | None | Enables `TransactionScopeBehavior` |
 | `ILoggableRequest` | `IMessage` | Base for logging opt-in |
 | `IRequestLoggable` | `ILoggableRequest` | Log request payload |
 | `IResponseLoggable` | `ILoggableRequest` | Log response payload |

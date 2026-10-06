@@ -1,6 +1,6 @@
 # CSharpEssentials.Errors Example
 
-This console application demonstrates the comprehensive error handling system from `CSharpEssentials.Errors`.
+This console application demonstrates the error handling system from `CSharpEssentials.Errors`.
 
 ## Features Demonstrated
 

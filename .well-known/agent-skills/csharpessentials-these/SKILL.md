@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-these
-description: Use when modeling partial success — These<TError, TValue> holds Left (error only), Right (value only), or Both (error + value), enabling scenarios where a result can partially succeed while carrying warnings. Use FromResult to bridge from Result<T>, ToResult/ToResultLenient to bridge back, and Partition to split collections.
+description: Use when modeling partial success. These<TError, TValue> holds Left (error only), Right (value only), or Both (error + value), enabling scenarios where a result can partially succeed while carrying warnings. Use FromResult to bridge from Result<T>, ToResult/ToResultLenient to bridge back, and Partition to split collections.
 ---
 
 # CSharpEssentials.These
@@ -105,8 +105,8 @@ var (lefts, rights, boths) = items.Partition();
 
 ## Best Practices
 
-- Prefer `Match()` over checking `IsLeft`/`IsRight`/`IsBoth` separately — exhaustive and compiler-safe
-- `FlatMap` loses the Both state — use it only when the warning from the prior step can be discarded
+- Prefer `Match()` over checking `IsLeft`/`IsRight`/`IsBoth` separately; it is exhaustive and compiler-safe
+- `FlatMap` loses the Both state; use it only when the warning from the prior step can be discarded
 - `ToResultLenient()` is the lenient bridge: Both → success (value wins, error side discarded)
 - `ToResult()` is the strict bridge: Both → failure
-- Avoid using `These` as a general-purpose error type — use `Result<T>` for that; `These` is for partial-success semantics
+- Avoid using `These` as a general-purpose error type; use `Result<T>` for that; `These` is for partial-success semantics

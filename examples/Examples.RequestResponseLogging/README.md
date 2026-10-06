@@ -105,7 +105,7 @@ app.AddRequestResponseLogging(opt =>
 
 ## Custom Handler
 
-`ILogWriter` interface'i internal'dır — custom implementasyon için `UseHandler(Func<RequestResponseContext, Task> handler)` kullan.
+`ILogWriter` is internal. For a custom implementation, use `UseHandler(Func<RequestResponseContext, Task> handler)`.
 
 ## Security Considerations
 

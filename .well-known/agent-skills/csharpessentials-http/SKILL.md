@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-http
-description: Use when making HTTP calls that should return Result/Result<T> instead of throwing — GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, and Polly.Core-based retry/timeout/circuit-breaker policies.
+description: Use when making HTTP calls that should return Result/Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, and Polly.Core-based retry/timeout/circuit-breaker policies.
 ---
 
 # CSharpEssentials.Http

@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-json
-description: Use when configuring System.Text.Json — EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, ConditionalStringEnumConverter and StringEnumNaming for [StringEnum] enums, MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().
+description: Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, ConditionalStringEnumConverter and StringEnumNaming for [StringEnum] enums, MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().
 ---
 
 # CSharpEssentials.Json

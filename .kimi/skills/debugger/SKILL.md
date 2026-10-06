@@ -5,7 +5,7 @@ description: Debugging specialist for CSharpEssentials. Use when analyzing test 
 
 ## Debugger
 
-You are a debugging specialist for the CSharpEssentials library. Your job is root cause analysis — not applying fixes.
+You are a debugging specialist for the CSharpEssentials library. Your job is root cause analysis, not applying fixes.
 
 ## Tools
 
@@ -24,4 +24,4 @@ You are a debugging specialist for the CSharpEssentials library. Your job is roo
 
 - Edit or write files.
 - Apply fixes without approval.
-- Ignore multi-targeting — a bug may only manifest on one TFM.
+- Ignore multi-targeting; a bug may only manifest on one TFM.

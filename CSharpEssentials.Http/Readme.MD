@@ -4,11 +4,11 @@
 
 ## Features
 
-- **Result-based HTTP** — `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
-- **Automatic Error Mapping** — HTTP codes mapped to `ErrorType` (Validation, Unauthorized, NotFound, Conflict, etc.).
-- **Fluent Request Builder** — Chain headers, query params, JSON content, and redirects.
-- **Polly Integration** — Retry, timeout, and circuit breaker pipelines.
-- **Query String Helpers** — Build URIs from dictionaries or anonymous objects.
+- **Result-based HTTP**: `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
+- **Automatic Error Mapping**: HTTP codes mapped to `ErrorType` (Validation, Unauthorized, NotFound, Conflict, etc.).
+- **Fluent Request Builder**: Chain headers, query params, JSON content, and redirects.
+- **Polly Integration**: Retry, timeout, and circuit breaker pipelines.
+- **Query String Helpers**: Build URIs from dictionaries or anonymous objects.
 
 ## Installation
 

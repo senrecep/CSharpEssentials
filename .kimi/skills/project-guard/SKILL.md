@@ -9,8 +9,8 @@ Before committing, verify the following:
 
 ### Code Quality
 - No `dynamic` usage unless explicitly justified.
-- No `#pragma warning disable` — fix the root cause instead.
-- No `// TODO` comments in committed code — track as GitHub issues.
+- No `#pragma warning disable`; fix the root cause instead.
+- No `// TODO` comments in committed code; track as GitHub issues.
 - All public APIs have explicit nullable annotations (`string?` vs `string`).
 - New concrete classes are `sealed` unless designed for inheritance.
 
@@ -19,7 +19,7 @@ Before committing, verify the following:
 - Conditional compilation (`#if NET9_0_OR_GREATER`, `#if NETSTANDARD`) is used for framework-specific APIs.
 
 ### Project Files
-- No `Version=` attributes in `.csproj` files — use `Directory.Packages.props`.
+- No `Version=` attributes in `.csproj` files; use `Directory.Packages.props`.
 - No new NuGet packages added without checking existing entries in `Directory.Packages.props`.
 
 ### Tests

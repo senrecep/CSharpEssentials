@@ -1,6 +1,6 @@
 # CSharpEssentials Extension Methods
 
-This library provides a comprehensive set of extension methods to enhance C#'s functional programming capabilities and improve code readability.
+This library provides extension methods that add functional programming helpers to C# and improve code readability.
 
 ## String Extensions
 
@@ -223,11 +223,11 @@ catch (Exception ex)
 2. Null Checks:
 
    - Use extension methods instead of null checks
-   - Leverage NotNullWhen attribute for null analysis
+   - Use the NotNullWhen attribute for null analysis
 
 3. Collection Operations:
 
-   - Utilize fluent interface
+   - Use the fluent interface
    - Use WhereIf for conditional operations
 
 4. Exception Handling:

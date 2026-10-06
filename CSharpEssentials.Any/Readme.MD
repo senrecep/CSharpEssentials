@@ -4,11 +4,11 @@ Discriminated Unions (Sum Types) for .NET. A type-safe way to represent a value 
 
 ## Features
 
-- **Unions of 2–8 types** — `Any<T0, T1>` through `Any<T0, ..., T7>`.
-- **Implicit Conversions** — Assign values directly to the union type.
-- **Pattern Matching** — `Switch` and `Match` for exhaustive handling.
-- **Type Helpers** — `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
-- **JSON Support** — Built-in serialization.
+- **Unions of 2 to 8 types**: `Any<T0, T1>` through `Any<T0, ..., T7>`.
+- **Implicit Conversions**: Assign values directly to the union type.
+- **Pattern Matching**: `Switch` and `Match` for exhaustive handling.
+- **Type Helpers**: `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
+- **JSON Support**: Built-in serialization.
 
 ## Installation
 

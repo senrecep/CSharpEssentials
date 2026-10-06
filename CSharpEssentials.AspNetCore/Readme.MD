@@ -4,13 +4,13 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 
 ## Features
 
-- **Enhanced Problem Details** — One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
-- **Global Exception Handler** — Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
-- **Result Endpoint Filter** — Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
-- **Validation Endpoint Filter** — Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
-- **Enum Binding** — Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
-- **API Versioning** — Pre-configured URL segment and header-based versioning.
-- **Swagger** — Easy setup with versioning support, enum schema filters, and custom schema IDs.
+- **Enhanced Problem Details**: One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
+- **Global Exception Handler**: Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
+- **Result Endpoint Filter**: Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
+- **Validation Endpoint Filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
+- **Enum Binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
+- **API Versioning**: Pre-configured URL segment and header-based versioning.
+- **Swagger**: Setup with versioning support, enum schema filters, and custom schema IDs.
 
 ## Installation
 

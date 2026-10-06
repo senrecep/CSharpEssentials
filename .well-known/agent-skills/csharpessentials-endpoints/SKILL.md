@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-endpoints
-description: Use when organizing ASP.NET Core Minimal API endpoints into classes — IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001–CSE1011.
+description: Use when organizing ASP.NET Core Minimal API endpoints into classes. Covers IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001-CSE1011.
 ---
 
 # CSharpEssentials.Endpoints
@@ -71,7 +71,7 @@ app.MapAllEndpoints();    // own registry + every referenced assembly's registry
 IReadOnlyList<Type> mapped = AppsEndpointRegistry.EndpointTypes;   // mapping order
 ```
 
-- `Map{Asm}Endpoints(Action<EndpointMappingOptions>? configure = null)` — `{Asm}` is the sanitized assembly name (`MyCompany.Apps.Api` → `MyCompanyAppsApi`) or the value of `[assembly: EndpointRegistryName("Apps")]`.
+- `Map{Asm}Endpoints(Action<EndpointMappingOptions>? configure = null)`: `{Asm}` is the sanitized assembly name (`MyCompany.Apps.Api` → `MyCompanyAppsApi`) or the value of `[assembly: EndpointRegistryName("Apps")]`.
 - `MapAllEndpoints` is `internal`, generated automatically in `Exe`/`WinExe` projects that are not test projects. `[assembly: GenerateEndpointAggregate]` opts in from a library or test project; `[assembly: DisableEndpointAggregate]` opts out. Own registry first, then referenced registries by assembly name, each once.
 - `[assembly: EndpointModule(typeof(...))]` is emitted by the generator; do not write it yourself.
 - Each endpoint type is mapped inside its own `MapGroup("")`, so routes, OpenAPI metadata, filters and authorization match direct mapping.
@@ -121,7 +121,7 @@ app.MapEndpointsFromAssemblies(typeof(Program).Assembly);
 app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAssembly);
 ```
 
-Same discovery rules, ordering and options as the generated registries. Types the analyzer reports as errors are skipped and logged at `Warning`. Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` — not for trimmed or Native AOT apps.
+Same discovery rules, ordering and options as the generated registries. Types the analyzer reports as errors are skipped and logged at `Warning`. Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`, so not for trimmed or Native AOT apps.
 
 ---
 

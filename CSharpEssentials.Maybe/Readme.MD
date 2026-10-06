@@ -4,11 +4,11 @@ Maybe (Option) monad for null-safe, expressive code. Avoid `NullReferenceExcepti
 
 ## Features
 
-- **Maybe<T>** — Explicit presence/absence of a value with implicit conversions.
-- **Functional API** — `Map`, `Bind`, `Where`, `Match`, `Or`, `Tap`.
-- **LINQ Support** — Query syntax with `Select`, `SelectMany`, `Where`.
-- **Async Support** — `MapAsync`, `BindAsync`, and awaitable extensions.
-- **Result Bridge** — Convert `Maybe<T>` to `Result<T>` and back.
+- **Maybe<T>**: Explicit presence/absence of a value with implicit conversions.
+- **Functional API**: `Map`, `Bind`, `Where`, `Match`, `Or`, `Tap`.
+- **LINQ Support**: Query syntax with `Select`, `SelectMany`, `Where`.
+- **Async Support**: `MapAsync`, `BindAsync`, and awaitable extensions.
+- **Result Bridge**: Convert `Maybe<T>` to `Result<T>` and back.
 
 ## Installation
 
@@ -98,7 +98,7 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 |--------|---------|----------|
 | `Sequence()` | `Maybe<T[]>` | `None` if any element is `None` |
 | `Traverse(selector)` | `Maybe<TOut[]>` | Applies selector then sequences |
-| `Partition()` | `(T[] Values, int NoneCount)` | Never returns `None` — always splits |
+| `Partition()` | `(T[] Values, int NoneCount)` | Never returns `None`; always splits |
 
 ### Exception-safe Creation
 
@@ -110,7 +110,7 @@ Maybe<int> result = Maybe<int>.FromTry(() => int.Parse(userInput));
 Maybe<User> user  = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json));
 ```
 
-### TapNone — Side Effect on Absence
+### TapNone: Side Effect on Absence
 
 ```csharp
 Maybe<int> maybe = Maybe.None;
@@ -124,14 +124,14 @@ await maybe.TapNoneAsync(async () => await NotifyAsync("Missing"));
 await GetMaybeAsync().TapNoneAsync(() => logger.LogWarning("Value missing"));
 ```
 
-### GetValueOrElse — Lazy Fallback
+### GetValueOrElse: Lazy Fallback
 
 ```csharp
 // Factory only called when None (unlike GetValueOrDefault which always evaluates)
 int value = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
 ```
 
-### OrElse — Lazy Maybe Chain
+### OrElse: Lazy Maybe Chain
 
 ```csharp
 // Alias for Or(Func<Maybe<T>>) — returns self if Some, calls factory if None

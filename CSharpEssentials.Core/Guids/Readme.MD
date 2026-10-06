@@ -1,6 +1,6 @@
 # Guider - Enhanced GUID Operations for .NET
 
-The `Guider` class provides efficient and optimized methods for working with GUIDs (Globally Unique Identifiers) in .NET applications. It offers high-performance operations using modern C# features like `Span<T>` and stack allocation.
+The `Guider` class provides methods for working with GUIDs (Globally Unique Identifiers) in .NET applications. It uses modern C# features like `Span<T>` and stack allocation to reduce allocations.
 
 ## Features
 

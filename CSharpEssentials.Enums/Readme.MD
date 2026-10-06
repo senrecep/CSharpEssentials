@@ -4,8 +4,8 @@ Source generator for fast, compile-time enum operations. Mark enums with `[Strin
 
 ## Features
 
-- **StringEnumAttribute** — Marker to opt enums into source generation.
-- **Source Generator** — Compile-time optimized `ToString`, parsing, and formatting with zero reflection.
+- **StringEnumAttribute**: Marker to opt enums into source generation.
+- **Source Generator**: Compile-time optimized `ToString`, parsing, and formatting with zero reflection.
 
 ## Installation
 

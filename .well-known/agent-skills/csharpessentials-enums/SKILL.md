@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-enums
-description: Use when you need reflection-free enum string conversion — the [StringEnum] source generator emits {Enum}Extensions with ToOptimizedString/ToSnakeCase/ToKebabCase, IsDefined/TryParse/Parse, GetNames/GetValues and name constants, NativeAOT-safe; analyzer CSE0001 flags nested [StringEnum] enums.
+description: Use when you need reflection-free enum string conversion. The [StringEnum] source generator emits {Enum}Extensions with ToOptimizedString/ToSnakeCase/ToKebabCase, IsDefined/TryParse/Parse, GetNames/GetValues and name constants, NativeAOT-safe; analyzer CSE0001 flags nested [StringEnum] enums.
 ---
 
 # CSharpEssentials.Enums
@@ -66,4 +66,4 @@ options.Converters.Add(new ConditionalStringEnumConverter());
 
 - Apply `[StringEnum]` to enums that appear in API responses, logs, or database columns as text
 - Keep `[StringEnum]` enums at namespace level (CSE0001)
-- Generated methods use `switch` expressions — no reflection, NativeAOT-safe
+- Generated methods use `switch` expressions: no reflection, NativeAOT-safe

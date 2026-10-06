@@ -23,16 +23,16 @@ dotnet run
 
 The demo performs the following steps automatically:
 
-1. **Database Creation** — Creates a local SQLite database (`shop.db`).
-2. **Seeding** — Inserts 3 initial products.
-3. **Soft Delete Demo** — Deletes the "Wireless Mouse" product, then shows:
+1. **Database Creation**: Creates a local SQLite database (`shop.db`).
+2. **Seeding**: Inserts 3 initial products.
+3. **Soft Delete Demo**: Deletes the "Wireless Mouse" product, then shows:
    - Visible products (filtered): 2
    - Total products (with deleted): 3
-4. **Pagination Demo** — Adds 25 more products and demonstrates page navigation.
-5. **Enum Conversion Demo** — Shows how `ProductCategory` is stored as strings.
-6. **Audit Interceptor Demo** — Modifies a product and observes `UpdatedAt` being set automatically.
-7. **Cursor Pagination Demo** — Efficient pagination for large datasets using `CursorPaginationRequest<T>`.
-8. **Domain Event Interceptor Demo** — Dispatches events raised by entities during `SaveChanges`.
+4. **Pagination Demo**: Adds 25 more products and demonstrates page navigation.
+5. **Enum Conversion Demo**: Shows how `ProductCategory` is stored as strings.
+6. **Audit Interceptor Demo**: Modifies a product and observes `UpdatedAt` being set automatically.
+7. **Cursor Pagination Demo**: Efficient pagination for large datasets using `CursorPaginationRequest<T>`.
+8. **Domain Event Interceptor Demo**: Dispatches events raised by entities during `SaveChanges`.
 
 ## BaseDbContext
 

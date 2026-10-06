@@ -4,14 +4,14 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 
 ## Features
 
-- **Audit Interceptor** — Auto-populates `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
-- **Domain Event Interceptor** — Dispatches domain events with before/after save timing and outbox support.
-- **Slow Query Logging** — Logs queries exceeding a configurable threshold.
-- **Pagination** — Offset-based and cursor-based pagination on `IQueryable`.
-- **Batch Soft Delete** — Soft-delete many rows with a single `UPDATE` statement.
-- **BaseDbContext** — Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
-- **CQRS Support** — Register separate write and read DbContexts.
-- **SQL Connection Factories** — Abstractions for raw SQL/Dapper scenarios.
+- **Audit Interceptor**: Auto-populates `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
+- **Domain Event Interceptor**: Dispatches domain events with before/after save timing and outbox support.
+- **Slow Query Logging**: Logs queries exceeding a configurable threshold.
+- **Pagination**: Offset-based and cursor-based pagination on `IQueryable`.
+- **Batch Soft Delete**: Soft-delete many rows with a single `UPDATE` statement.
+- **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
+- **CQRS Support**: Register separate write and read DbContexts.
+- **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
 
 ## Installation
 

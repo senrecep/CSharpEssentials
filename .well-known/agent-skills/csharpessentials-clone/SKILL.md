@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-clone
-description: Use when entities need deep-copy semantics — implement ICloneable<T> on domain objects, then call .Clone() on IEnumerable<T> or IQueryable<T> collections to produce independent deep copies of every element.
+description: Use when entities need deep-copy semantics. Implement ICloneable<T> on domain objects, then call .Clone() on IEnumerable<T> or IQueryable<T> collections to produce independent deep copies of every element.
 ---
 
 # CSharpEssentials.Clone
 
-Typed deep-copy contract for domain objects. `ICloneable<T>` is covariant and type-safe — unlike `System.ICloneable` which returns `object`.
+Typed deep-copy contract for domain objects. `ICloneable<T>` is covariant and type-safe, unlike `System.ICloneable` which returns `object`.
 
 ## Installation
 
@@ -79,8 +79,8 @@ List<Product> working = snapshot.Clone().ToList();  // independent deep copies �
 
 ## Best Practices
 
-- Always deep-copy nested collections inside `Clone()` — a shallow copy defeats the purpose
-- `ICloneable<T>` is covariant (`out T`) — a `Product : ICloneable<Product>` is also an `ICloneable<object>`
+- Always deep-copy nested collections inside `Clone()`; a shallow copy defeats the purpose
+- `ICloneable<T>` is covariant (`out T`): a `Product : ICloneable<Product>` is also an `ICloneable<object>`
 - `Clone()` on a sequence is lazy; call `ToList()` to materialize the copies once
 - Consider using `record` types with `with` expressions for immutable value objects instead of `ICloneable<T>`
 - `ICloneable<T>` is most valuable for mutable domain objects that are tracked by EF Core

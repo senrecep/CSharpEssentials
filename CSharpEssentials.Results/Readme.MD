@@ -4,11 +4,11 @@ Functional Result pattern for explicit success/failure handling in .NET. No exce
 
 ## Features
 
-- **Result & Result<T>** — Value-type results with implicit conversions from values and errors.
-- **Railway Oriented Programming** — Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
-- **Error Aggregation** — Collect multiple validation errors in one result.
-- **Async Support** — Full async/await across all extension methods.
-- **Safe Execution** — `TryCatch` to wrap exceptions into results.
+- **Result & Result<T>**: Value-type results with implicit conversions from values and errors.
+- **Railway Oriented Programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
+- **Error Aggregation**: Collect multiple validation errors in one result.
+- **Async Support**: Full async/await across all extension methods.
+- **Safe Execution**: `TryCatch` to wrap exceptions into results.
 
 ## Installation
 
@@ -148,7 +148,7 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 | `Partition()` | Split | `(T[] Successes, Error[] Errors)` |
 | `FirstFailureOrSuccesses()` | Short-circuit | `Result` or `Result<T[]>` |
 
-### TapIf — Conditional Side Effects
+### TapIf: Conditional Side Effects
 
 ```csharp
 Result<int> result = 42;

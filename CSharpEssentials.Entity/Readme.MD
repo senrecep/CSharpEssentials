@@ -4,10 +4,10 @@ DDD foundation for .NET entities with auditing, soft deletion, and domain events
 
 ## Features
 
-- **EntityBase<TId>** — Typed IDs with creation and modification audit fields.
-- **SoftDeletableEntityBase** — Soft delete with `MarkAsDeleted`, `Restore`, and `MarkAsHardDeleted`.
-- **Domain Events** — Raise and clear events for outbox or dispatcher patterns.
-- **Event Timing** — Control when events publish with `[DomainEventTiming]`.
+- **EntityBase<TId>**: Typed IDs with creation and modification audit fields.
+- **SoftDeletableEntityBase**: Soft delete with `MarkAsDeleted`, `Restore`, and `MarkAsHardDeleted`.
+- **Domain Events**: Raise and clear events for outbox or dispatcher patterns.
+- **Event Timing**: Control when events publish with `[DomainEventTiming]`.
 
 ## Installation
 

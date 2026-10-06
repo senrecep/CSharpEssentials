@@ -1,14 +1,14 @@
 # CSharpEssentials.These
 
-`These<TError, TValue>` is a three-state discriminated union — `Left` (error only), `Right` (value only), or `Both` (error and value together). Unlike `Result<T>`, it does not treat the presence of an error as an automatic failure. Use it when partial success carries a meaningful value alongside a warning or non-fatal error.
+`These<TError, TValue>` is a three-state discriminated union: `Left` (error only), `Right` (value only), or `Both` (error and value together). Unlike `Result<T>`, it does not treat the presence of an error as an automatic failure. Use it when partial success carries a meaningful value alongside a warning or non-fatal error.
 
 ## Features
 
-- **Three-state union** — `Left`, `Right`, `Both` with explicit state flags.
-- **Functional API** — `Map`, `MapLeft`, `FlatMap`, `Tap`, `TapLeft`, `Match`.
-- **Maybe bridges** — `GetRight()` and `GetLeft()` return `Maybe<T>` without throwing.
-- **Result bridges** — Convert to/from `Result<T>` in strict or lenient mode.
-- **Collection extensions** — Partition a sequence into its three states.
+- **Three-state union**: `Left`, `Right`, `Both` with explicit state flags.
+- **Functional API**: `Map`, `MapLeft`, `FlatMap`, `Tap`, `TapLeft`, `Match`.
+- **Maybe bridges**: `GetRight()` and `GetLeft()` return `Maybe<T>` without throwing.
+- **Result bridges**: Convert to/from `Result<T>` in strict or lenient mode.
+- **Collection extensions**: Partition a sequence into its three states.
 
 ## Installation
 
@@ -41,7 +41,7 @@ bool isRight = these.IsRight; // true when Right only
 bool isBoth  = these.IsBoth;  // true when Both
 ```
 
-### Map — Transform the Value
+### Map: Transform the Value
 
 `Map` applies a function to the value. Left passes through unchanged; Both transforms the value while keeping the error.
 
@@ -53,14 +53,14 @@ These<string, int> both = These<string, int>.Both("warn", 10)
     .Map(n => n * 2);   // Both("warn", 20)
 ```
 
-### MapLeft — Transform the Error
+### MapLeft: Transform the Error
 
 ```csharp
 These<int, string> result = These<string, string>.Left("err")
     .MapLeft(e => e.Length);  // Left(3)
 ```
 
-### FlatMap — Chain These
+### FlatMap: Chain These
 
 `FlatMap` sequences operations that return `These`. When chaining from `Both`, the original error is discarded; the new result determines state.
 
@@ -71,7 +71,7 @@ These<string, int> result = These<string, int>.Right(5)
         : These<string, int>.Left("non-positive"));
 ```
 
-### Tap / TapLeft — Side Effects
+### Tap / TapLeft: Side Effects
 
 ```csharp
 these
@@ -79,7 +79,7 @@ these
     .TapLeft(e => logger.LogWarning("Error: {E}", e));      // fires on Left or Both
 ```
 
-### Match — Exhaustive Pattern Match
+### Match: Exhaustive Pattern Match
 
 ```csharp
 string message = these.Match(
@@ -90,7 +90,7 @@ string message = these.Match(
 
 ### GetRight / GetLeft
 
-Both return `Maybe<T>` — no exceptions on the wrong state.
+Both return `Maybe<T>` and do not throw on the wrong state.
 
 ```csharp
 Maybe<int>    value = these.GetRight();  // Some(42) or None
