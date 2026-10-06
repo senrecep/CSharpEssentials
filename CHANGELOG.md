@@ -3,6 +3,95 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0](https://github.com/senrecep/CSharpEssentials/compare/v4.1.0...v5.0.0) (2026-10-06)
+
+
+### ⚠ BREAKING CHANGES
+
+* **enums:** the CSE enum analyzers (CSE0002-CSE0016) and the generator now run in every project that references any CSharpEssentials package that depends on CSharpEssentials.Enums, including .Validation, .Mediator, .Any, .Maybe, .Entity, .Rules, .These, .Resilience and .GcpSecretManager. New CSE warnings and errors can appear; fix them or set their severity in .editorconfig.
+* **enums:** the CSE enum analyzers (CSE0002-CSE0016) and the generator now also run in every project that references CSharpEssentials.Errors, .Results, .AspNetCore.OpenApi or .AspNetCore.Swashbuckle. New CSE diagnostics can appear; fix them or set their severity in .editorconfig.
+* **enums:** the CSE enum analyzers (CSE0002-CSE0016) and the generator now run in every project that references CSharpEssentials.Json, .EntityFrameworkCore, .AspNetCore, .Http or the CSharpEssentials meta-package. New CSE warnings can appear (errors under TreatWarningsAsErrors); fix them or set their severity in .editorconfig.
+* **swashbuckle:** EnumSchemaFilter takes an IServiceProvider and no longer writes the "Possible values" description.
+* **aspnetcore:** hosts that use AddSwagger or the Swagger filters must reference CSharpEssentials.AspNetCore.Swashbuckle.
+* **json:** enums without generated metadata are no longer converted by AddEnumConventions, ConditionalStringEnumConverter or a custom CanHandle predicate; use AddEnumConventionsWithReflection. StringEnumNaming, and the EF Core and binding helpers built on it, throw InvalidOperationException for such enums.
+* **json:** ConditionalStringEnumConverter.AllowUndefinedValues is removed and undefined values are rejected on read and write. Naming policies other than SnakeCaseLower throw NotSupportedException; set the naming at build time instead.
+
+### Added
+
+* **aspnetcore:** add AddEnumConventions, enum wire format and route binding through the conventions ([331d94b](https://github.com/senrecep/CSharpEssentials/commit/331d94bca1201be90def9807bcc17d1c64da2719))
+* **aspnetcore:** move the Swagger support to CSharpEssentials.AspNetCore.Swashbuckle ([e74f257](https://github.com/senrecep/CSharpEssentials/commit/e74f25754d1647f1ddd33c343cdfc8ecc28b1a6e))
+* **efcore:** add enum column migration helpers and data audit ([ad5d7a4](https://github.com/senrecep/CSharpEssentials/commit/ad5d7a48caab62cd13c309e5703e2fbfb56e4fb3))
+* **efcore:** store enums as wire names or integers with check constraints ([59c81f9](https://github.com/senrecep/CSharpEssentials/commit/59c81f93c769524e71606071abfccf202b6a6a5d)), closes [#64](https://github.com/senrecep/CSharpEssentials/issues/64)
+* **enums:** add analyzers for wire names, aliases, fallbacks and flags ([0f1d441](https://github.com/senrecep/CSharpEssentials/commit/0f1d441593f115debd6ee9c9a8271a1ac208e192))
+* **enums:** add code fixes for explicit values and none member ([57f8a8a](https://github.com/senrecep/CSharpEssentials/commit/57f8a8a4ab9189b2ceceecaea3777ba47f0888e7))
+* **enums:** add enum metadata, conventions, parser and formatter ([c2d3d66](https://github.com/senrecep/CSharpEssentials/commit/c2d3d66a5fe161a422a0356110b47b808899f2d8)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** add non-generic EnumValueFormatter overloads ([bfb237b](https://github.com/senrecep/CSharpEssentials/commit/bfb237bb0f6d771e041c1a934558868c88d3ae32)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** generate enum metadata, registration and wire-name helpers ([80c0689](https://github.com/senrecep/CSharpEssentials/commit/80c06897b6ddbd5b5e52e0b58053659da690951d)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** report AlterColumn next to ConvertEnumColumn for the same column (CSE0014) ([0dc2562](https://github.com/senrecep/CSharpEssentials/commit/0dc256249e2004a412f8e7a82eb7135b4219b531))
+* **enums:** warn with CSE0015 when a [StringEnum] enum gets no generated metadata ([b13a2e1](https://github.com/senrecep/CSharpEssentials/commit/b13a2e169fb0c88cb2550edea273d19b410f4d44)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **http:** format enums in query and route through EnumValueFormatter ([462ef1d](https://github.com/senrecep/CSharpEssentials/commit/462ef1da70821f9b2a0e761a683a85dc18d6ea47))
+* **json:** add EnumConverterFactory and AddEnumConventions ([4b8a7f6](https://github.com/senrecep/CSharpEssentials/commit/4b8a7f66a05884a72fb978eb08f75c2f379cdd47)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **json:** make reflection enum metadata an explicit opt-in and fail loud for [StringEnum] without metadata ([a32e6f3](https://github.com/senrecep/CSharpEssentials/commit/a32e6f3bf7fc3fcdb6ecd1278303bc18f04d5c87)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **openapi:** warn once per enum when a document mixes string and number formats ([74ca8f3](https://github.com/senrecep/CSharpEssentials/commit/74ca8f3367cfa73c5668a82c483bade79dffb06e))
+* **swashbuckle:** describe enums by the enum conventions ([7e1258e](https://github.com/senrecep/CSharpEssentials/commit/7e1258e352fbadf705ab458ffe22a892f09f66c1)), closes [#63](https://github.com/senrecep/CSharpEssentials/issues/63)
+* **validation:** add enum rules that reuse the binding error text ([cb0233e](https://github.com/senrecep/CSharpEssentials/commit/cb0233e3102d1f23bae17090ba557cbf364c4a3a))
+
+
+### Fixed
+
+* **aspnetcore:** bind whitespace-only enum values to null for nullable targets ([13806b3](https://github.com/senrecep/CSharpEssentials/commit/13806b30cef79d48592a3c44ea8100dc6bc9354b))
+* **aspnetcore:** keep the host output formatters when applying an enum wire format override ([eded825](https://github.com/senrecep/CSharpEssentials/commit/eded82558f07bed26464128d04f5a7be12697b94))
+* **aspnetcore:** trim surrounding whitespace of enum binding values ([733f389](https://github.com/senrecep/CSharpEssentials/commit/733f38967d26a6f12ba12ae74fc0310439c83c53))
+* **aspnetcore:** validate only the first value source of an unannotated MVC enum parameter ([212d2ea](https://github.com/senrecep/CSharpEssentials/commit/212d2eabe4ce8cf94c7f22c85eeb5f6b099f0685))
+* **efcore:** compare text[] flags columns as enum values on PostgreSQL ([41b521b](https://github.com/senrecep/CSharpEssentials/commit/41b521bf05ae3ef84633900d65a72952436bfdcb)), closes [#64](https://github.com/senrecep/CSharpEssentials/issues/64)
+* **efcore:** keep SQLite check constraints enforced when an enum conversion fails ([b6b0d4b](https://github.com/senrecep/CSharpEssentials/commit/b6b0d4bc96ab30f8b2ab6140d9957d0616c43ded))
+* **efcore:** match a missing migration schema against any schema in CSE0014 ([53bf32a](https://github.com/senrecep/CSharpEssentials/commit/53bf32a324012c6488b7759ea010d9a40743696e))
+* **efcore:** name the PostgreSQL flags conversion column from a short hash of the column name ([cb76c18](https://github.com/senrecep/CSharpEssentials/commit/cb76c183a9e7d2476ca567e52f7c821e03038e29))
+* **efcore:** resolve ConfigureEnumConventions(null) ambiguity with OverloadResolutionPriority ([0dc031e](https://github.com/senrecep/CSharpEssentials/commit/0dc031ebaa971a37919d91deebbc95093ce1593e))
+* **efcore:** split SQLite flags text with a recursive CTE instead of json_each ([b4d9f51](https://github.com/senrecep/CSharpEssentials/commit/b4d9f510fda32d08ecbc667b65acebb7100ab827))
+* **efcore:** throw when an obsolete CanConvert predicate selects an enum without metadata ([5795fd0](https://github.com/senrecep/CSharpEssentials/commit/5795fd06b2f8053ebe7574911e35d5582ad8b8eb))
+* **efcore:** write enum wire names in JSON columns on EF Core 9 ([44ccbac](https://github.com/senrecep/CSharpEssentials/commit/44ccbac3031855d489c23773c95117df75a23cca)), closes [#64](https://github.com/senrecep/CSharpEssentials/issues/64)
+* **enums:** escape keyword member names in generated value expressions ([a468a28](https://github.com/senrecep/CSharpEssentials/commit/a468a28f252b76ff34b61c850c4800ebaa975104)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** format a flags zero without a zero member as "0" ([fac8d4a](https://github.com/senrecep/CSharpEssentials/commit/fac8d4a8eeeb335c077c34df464766d6144bd884)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** forward IsExternalInit on .NET 5+ targets ([b4591c3](https://github.com/senrecep/CSharpEssentials/commit/b4591c3898c15c2e7165095e01d4db354274d68b)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** register metadata lazily and rerun module initializers on every miss ([af0fa89](https://github.com/senrecep/CSharpEssentials/commit/af0fa896264cba285f4330886878fe002c18a9eb)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **enums:** reject numeric text longer than 20 characters in the parser as the JSON converter does ([16eefbd](https://github.com/senrecep/CSharpEssentials/commit/16eefbd78f152bf84311bc086af0f6e8210755d1))
+* **enums:** throw from EnumValueFormatter when a handled enum has no generated metadata ([68c8aa8](https://github.com/senrecep/CSharpEssentials/commit/68c8aa87107f7d78417626e86d0831fb07e6ec25))
+* **enums:** use unique hint names and report colliding extensions classes with CSE0016 ([d8a5aa4](https://github.com/senrecep/CSharpEssentials/commit/d8a5aa4748318f99dedcd3add598259c4b203473)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **examples:** read the sample database password from the environment instead of appsettings ([8d504b2](https://github.com/senrecep/CSharpEssentials/commit/8d504b2fa4eb79ccb3228db730d5c3c5d8c2cf29))
+* **http:** annotate reflection based ToQueryString(object) with trimming attributes ([e399d2e](https://github.com/senrecep/CSharpEssentials/commit/e399d2e07cd86d08f5752c18b8d4761a8cbf1c9b))
+* **http:** annotate the remaining reflection based query string overloads for trimming ([de2395c](https://github.com/senrecep/CSharpEssentials/commit/de2395cb637534e4695851636a0e5c0873d67365))
+* **http:** cache builder JSON options per EnumConventions instance with a weak table ([5a2c88b](https://github.com/senrecep/CSharpEssentials/commit/5a2c88b797cc0c947c246e483b06c592f8b3be34))
+* **http:** format non-enum collection items per item with invariant culture in query strings ([a7717bb](https://github.com/senrecep/CSharpEssentials/commit/a7717bb8fb19b27afef73f01f1a27460199a8769))
+* **http:** serialize WithJsonContent payload at Build so later WithEnumConventions applies ([e1f15d0](https://github.com/senrecep/CSharpEssentials/commit/e1f15d05d6d15300533ad0dfb35c20236db8b4b2))
+* **json:** do not claim a StringEnum enum without metadata that CanHandle excludes ([4e67b63](https://github.com/senrecep/CSharpEssentials/commit/4e67b6379ed142f11c4b35154839689a1c66b5d8))
+* **json:** keep existing JsonStringEnumConverter when adding enum conventions ([47fe470](https://github.com/senrecep/CSharpEssentials/commit/47fe4700e93169c0625c22ecc3faf0d03d240f56))
+* **json:** reject over-long enum strings before unescaping and truncate error values ([282f244](https://github.com/senrecep/CSharpEssentials/commit/282f244e1bc5e4a28edf3a0704f402bf532d6401)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **json:** reject the JSON number -0 for enums and bound number error values ([025c426](https://github.com/senrecep/CSharpEssentials/commit/025c4269317a96a6683aae7faafe74c510b02fad)), closes [#61](https://github.com/senrecep/CSharpEssentials/issues/61)
+* **json:** stop writing parse failures to the console from ConvertToJsonDocument ([4c9c9ba](https://github.com/senrecep/CSharpEssentials/commit/4c9c9ba51e885ad937868761fe611bfbc3f52f7e))
+* **openapi:** classify MVC enum parameters by their model type ([9f8c603](https://github.com/senrecep/CSharpEssentials/commit/9f8c60385d037b63f05d95b03b6322306b411c32))
+* **openapi:** describe enum properties declared on polymorphic derived types ([0b5effa](https://github.com/senrecep/CSharpEssentials/commit/0b5effab939b7ace29acdda1abdfa70480310335))
+* **openapi:** fall back to WriteAs when disposing the selector scope throws ([fdd6694](https://github.com/senrecep/CSharpEssentials/commit/fdd6694ddfcddce700d10570aeb89f5f0009c071))
+* **openapi:** run header format selectors in a scope and fall back to WriteAs when they throw ([cdad36b](https://github.com/senrecep/CSharpEssentials/commit/cdad36bdcfd80323e1897de0a058a42e870f60b7))
+* **openapi:** write ulong enum values above long.MaxValue exactly in both packages ([45267a4](https://github.com/senrecep/CSharpEssentials/commit/45267a48b84bb6af32bde447980cbb15e26a9c48))
+* **validation:** use the {Prop}.{Rule} format for enum validator error codes ([89521bf](https://github.com/senrecep/CSharpEssentials/commit/89521bf873a9c815d114f1d5602c00f3c867de09))
+
+
+### Changed
+
+* **aspnetcore:** copy request query and form only when an enum binding value changes ([611e8ae](https://github.com/senrecep/CSharpEssentials/commit/611e8ae4bd93ea5dec4a90484c5cc4fa8a1cad81))
+* **efcore:** drop the per-write closure in EnumColumnCodec ([4ff6b20](https://github.com/senrecep/CSharpEssentials/commit/4ff6b20f0fda51a671f9df59a054ada103b86de6))
+* **json:** drop the per-call delegate array in ConvertToJsonDocument ([fe2c5a6](https://github.com/senrecep/CSharpEssentials/commit/fe2c5a62e3c30c572afd7c23383aa1d8677f5760))
+* **json:** parse a number token once in the enum converter ([4823407](https://github.com/senrecep/CSharpEssentials/commit/48234078cc07f06e3db818c85e65a46724a7a541))
+* **json:** read an over-long unknown enum value as the fallback without allocating its string ([70ea029](https://github.com/senrecep/CSharpEssentials/commit/70ea02931e4948e2dbe4ea835869e39bfc404883))
+
+
+### Build
+
+* **enums:** let every csharpessentials package bring the enums generator and analyzers ([0fff7c3](https://github.com/senrecep/CSharpEssentials/commit/0fff7c305a1b94047ebf1df26374e9388f750e19))
+* **enums:** let the enums generator and analyzers flow through errors, results, openapi and swashbuckle ([0d4a4e3](https://github.com/senrecep/CSharpEssentials/commit/0d4a4e376cd4c7a428faf5df1abd957c0b3f0a46))
+* **enums:** let the enums generator and analyzers flow through json, efcore, aspnetcore, http and the meta-package ([49890fc](https://github.com/senrecep/CSharpEssentials/commit/49890fc6a098014e3409eb731e7032b1b452e78e))
+
 ## [4.1.0](https://github.com/senrecep/CSharpEssentials/compare/v4.0.0...v4.1.0) (2026-10-06)
 
 ### Added
