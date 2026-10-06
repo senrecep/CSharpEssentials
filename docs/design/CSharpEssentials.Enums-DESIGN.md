@@ -626,11 +626,15 @@ public enum EnumStoredAs
     FlagsText,        // "Read, Write", "read,write"
 }
 
-migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "status", schema: null,
-    from: EnumStoredAs.Integer, to: EnumStorage.String);
+migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "status",
+    from: EnumStoredAs.Integer, to: EnumStorage.String);                                // optional: schema, type
+migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "status",
+    from: EnumStoredAs.Text, to: EnumStoredAs.MemberName);                              // Down(): a legacy text format
 migrationBuilder.ConvertEnumJsonPath<OrderStatus>("orders", "payload", ["status"]);   // PostgreSQL jsonb, path segments
-string sql = EnumDataAudit.Sql<OrderStatus>("orders", "status");                      // read only
+string sql = EnumDataAudit.Sql<OrderStatus>("orders", "status");                      // read only; provider: optional
 ```
+
+The helpers live in `CSharpEssentials.EntityFrameworkCore` (`EnumMigrationBuilderExtensions`, `EnumDataAudit`) and generate SQL per `MigrationBuilder.ActiveProvider`: PostgreSQL and SQLite. Other providers throw `NotSupportedException` when the migration is built. The optional `type` names the target store type when it is not the default (`text` or the integer type of the underlying type), for example `varchar(32)` in a `Down()`.
 
 `from` values other than `Text` and `FlagsText` are what `HasLegacyEnumStorage` writes; for reading old data `Text` accepts all of them, so `MemberName`, `CamelCase` and `LegacySnakeCase` matter only as `to` targets of `Down()`.
 
@@ -646,20 +650,28 @@ The guide shows the edit: delete the generated `AlterColumn` for the column, ins
 
 ### 12.2 SQL
 
-Every CASE has an `ELSE` that keeps the original value, so no conversion ever writes `NULL` or loses data. Values that match no spelling stay as they are and fail the constraint added in step 3, which is intended: `EnumDataAudit` lists them before the migration runs.
+No conversion ever writes `NULL` or loses a value. Every CASE has an `ELSE`:
+
+- **Text targets** keep the original value in the `ELSE`. A value that matches no spelling stays as it is and fails the constraint added in step 3, which is intended: `EnumDataAudit` lists such values before the migration runs.
+- **Integer targets** keep integer text as that number (undefined numbers survive, as they do in integer columns) and abort the statement for any other text with an error that names the column, the enum and the value: `CSharpEssentials: cannot convert orders.status to OrderStatus, unknown value: bogus`. PostgreSQL raises it through `CAST('<message>' || value AS integer)`, SQLite through `json_extract('{}', '<message>' || value)`; both roll back the migration transaction.
+
+Spellings are matched on `lower(trim(value))` in this priority (first wins when two members share one): wire name, member name, aliases, camelCase, legacy snake case, numeric text.
 
 | Conversion | SQL shape (PostgreSQL) |
 |---|---|
-| `Integer` → `String` | `ALTER TABLE ... ALTER COLUMN status TYPE text USING CASE status WHEN 0 THEN 'pending' WHEN 1 THEN 'pending_approval' ... ELSE status::text END` |
-| `Text` → `String` | `UPDATE ... SET status = CASE lower(status) WHEN 'pendingapproval' THEN 'pending_approval' WHEN 'pending_approval' THEN 'pending_approval' WHEN 'approval' THEN 'pending_approval' WHEN '1' THEN 'pending_approval' ... ELSE status END WHERE status IS NOT NULL AND status IS DISTINCT FROM <same CASE>` |
-| `String`/`Text` → `Integer` | text values are first normalized as above, then `ALTER COLUMN ... TYPE integer USING CASE status WHEN 'pending' THEN 0 ... END` (no `ELSE`: an unmapped value must fail the type change; the audit lists it first) |
-| `FlagsText` → flags `Integer` | PostgreSQL rejects subqueries in `USING`, so: `ADD COLUMN status__cse integer`; `UPDATE ... SET status__cse = (SELECT coalesce(bit_or(CASE lower(trim(p)) WHEN 'read' THEN 1 WHEN 'readwrite' THEN 3 ... END), 0) FROM unnest(string_to_array(permissions, ',')) AS p)`; `DROP COLUMN permissions`; `RENAME COLUMN status__cse TO permissions`. `bit_or` handles composites that overlap. Indexes on the column are listed by the helper's XML doc as a manual step. |
-| jsonb path | `UPDATE ... SET payload = jsonb_set(payload, '{status}', to_jsonb(<CASE ... END>)) WHERE payload #> '{status}' IS NOT NULL AND <CASE ... END> IS NOT NULL AND payload #>> '{status}' IS DISTINCT FROM <CASE ... END>`, where the CASE has no `ELSE` and the `IS NOT NULL` guard prevents `jsonb_set` from receiving `NULL` (which would null the whole document). Integers and strings in the document are both matched through `payload #>> '{status}'`. Array paths (`items[*].status`) are not supported in 5.0. |
+| `Integer` → `String` or a text format | `ALTER TABLE ... ALTER COLUMN status TYPE text USING CASE status WHEN 0 THEN 'pending' WHEN 1 THEN 'pending_approval' ... ELSE CAST(status AS text) END` |
+| `Text` → `String` or a text format | `ALTER COLUMN status TYPE text`, then `UPDATE ... SET status = <CASE lower(trim(status)) WHEN 'pendingapproval' THEN 'pending_approval' ... ELSE status END> WHERE status IS NOT NULL AND status <> <same CASE>`, then `ALTER COLUMN ... TYPE <type>` when a `type` other than `text` is given |
+| `Text` → `Integer` | `ALTER COLUMN status TYPE integer USING CASE lower(trim(status)) WHEN 'pending' THEN 0 ... ELSE <integer text or loud failure> END` |
+| `FlagsText` → flags `Integer` | PostgreSQL rejects subqueries in `USING`, so through a temporary column: `ADD COLUMN "permissions__cse" integer`; `UPDATE ... SET "permissions__cse" = (SELECT coalesce(bit_or(<token CASE>), 0) FROM unnest(string_to_array(permissions, ',')) AS cse_token(value)) WHERE permissions IS NOT NULL`; `ALTER COLUMN permissions TYPE integer USING "permissions__cse"`; `DROP COLUMN "permissions__cse"`. The column itself is kept, so `NOT NULL`, defaults that cast, and indexes survive. `bit_or` handles repeated and overlapping tokens; an empty token is `0`; an unknown token fails loudly. |
+| flags `Integer` → `FlagsText` | `CASE WHEN p = 0 THEN 'None' WHEN (p & ~7) <> 0 THEN CAST(p AS text) ELSE substr(CASE WHEN (p & 1) <> 0 THEN ', Read' ELSE '' END \|\| ..., 3) END`: single-bit member names in declaration order; a value with undefined bits is kept as its number |
+| jsonb path | `UPDATE ... SET payload = jsonb_set(payload, ARRAY['status']::text[], <value>) WHERE payload #> '{status}' IS NOT NULL AND <value> IS NOT NULL AND payload #> '{status}' IS DISTINCT FROM <value>`, where `<value>` is `to_jsonb(<CASE payload #>> '{status}' ... END>)` without an `ELSE`. The `IS NOT NULL` guard keeps `jsonb_set` from receiving `NULL` (which would null the whole document), so unknown values stay untouched. Integers and strings in the document are both matched through `#>>`. Array paths (`items[*].status`) and flags are not supported in 5.0. |
 
 - The CASE expressions are generated from metadata when the migration is authored and written into the migration as literals, so the migration does not change when the enum changes later.
-- `Down()`: the mirrored call (`from: EnumStoredAs.Text, to: EnumStorage.Integer` or `to: EnumStoredAs.MemberName`). Text spellings cannot be restored byte for byte (PascalCase vs camelCase is lost), so `Down()` restores the format, not the original bytes; the XML doc states it.
-- Idempotent: running a conversion twice does not change data (`Text` → `String` and jsonb updates skip already canonical values; `Integer` → `String` is guarded by the migration history like any migration).
-- Other providers: `Integer` ↔ `String` and `Text` → `String` for SQL Server and SQLite through standard `CASE`; `FlagsText` and jsonb paths are PostgreSQL only in 5.0.
+- `Down()`: the mirrored call (`from: EnumStoredAs.Text, to: EnumStorage.Integer` or `to: EnumStoredAs.MemberName`; flags `from: EnumStoredAs.Integer, to: EnumStoredAs.FlagsText`). Text spellings cannot be restored byte for byte (PascalCase vs camelCase is lost), so `Down()` restores the format, not the original bytes; the XML doc states it.
+- Idempotent: running a text conversion or a jsonb update twice changes nothing, because already canonical values are skipped; type changes are guarded by the migration history like any migration.
+- **SQLite** cannot change a column type. The helper runs `UPDATE ... SET status = <same CASE>` and adds an `AlterColumnOperation` so that EF rebuilds the table with the target model's column and constraints; the rebuild's `INSERT ... SELECT` applies the new column affinity and checks every row against the new constraint. EF runs SQLite table rebuilds after the SQL operations of a migration, so the old constraint is still in place during the update; the helper wraps the update in `PRAGMA ignore_check_constraints = ON/OFF`. Flags are folded with a recursive CTE over `json_each`, since SQLite has no bitwise aggregate.
+- On PostgreSQL a column default that cannot be cast to the new type must be dropped before the conversion and recreated after it (`AlterColumn` with `oldDefaultValueSql`), as with any type change.
+- Flags `String` storage (text arrays) and wire name flags text are not converted in 5.0; ulong flags are not supported on PostgreSQL (stored as `numeric`, which has no bitwise operators).
 
 ### 12.3 Rollout order
 

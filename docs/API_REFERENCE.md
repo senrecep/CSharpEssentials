@@ -948,6 +948,23 @@ modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.
 
 Properties with your own `HasConversion` are skipped. See the EF Core package README for column types per provider.
 
+### Enum Migration Helpers
+
+| Method | What It Does |
+|--------|-------------|
+| `migrationBuilder.ConvertEnumColumn<TEnum>(table, column, EnumStoredAs from, EnumStorage to, schema?, type?)` | Replaces EF's generated `AlterColumn`: changes the column to text (wire names) or the integer type and converts the data in one step. Run between `DropCheckConstraint` and `AddCheckConstraint` |
+| `migrationBuilder.ConvertEnumColumn<TEnum>(table, column, EnumStoredAs from, EnumStoredAs to, schema?, type?)` | Same, to a legacy text format (`MemberName`, `CamelCase`, `LegacySnakeCase`, `FlagsText`) or `Integer`; used in `Down()` |
+| `migrationBuilder.ConvertEnumJsonPath<TEnum>(table, column, path, schema?, to = EnumStorage.String)` | Rewrites one path of a PostgreSQL `jsonb` column to wire names (or numbers); unknown values stay untouched |
+| `EnumDataAudit.Sql<TEnum>(table, column, schema?, storedAs = EnumStoredAs.Text, provider?)` | Read-only `SELECT value, count(*)` of the values a conversion or check constraint would reject |
+
+SQL is generated for PostgreSQL and SQLite per `MigrationBuilder.ActiveProvider`. No conversion writes `NULL`: text targets keep unknown values (the new constraint rejects them), integer targets keep integer text and abort on other text with a message that names the column, the enum and the value. Flags text is OR'ed through a temporary column on PostgreSQL. Analyzer CSE0014 (error) reports a generated `AlterColumn` left next to `ConvertEnumColumn` for the same column.
+
+```csharp
+migrationBuilder.DropCheckConstraint(name: "ck_orders_Status_enum", table: "orders");
+migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
+migrationBuilder.AddCheckConstraint(name: "ck_orders_Status_enum", table: "orders", sql: "...");
+```
+
 ### Interceptors
 
 | Method | What It Does |
