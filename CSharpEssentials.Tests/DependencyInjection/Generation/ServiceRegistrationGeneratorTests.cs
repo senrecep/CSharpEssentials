@@ -185,6 +185,55 @@ public class ServiceRegistrationGeneratorTests
     }
 
     [Fact]
+    public void Generator_Should_Register_Record_Classes_And_Decorators()
+    {
+        const string source = """
+            using CSharpEssentials.DependencyInjection;
+
+            namespace Sample;
+
+            public interface IRecordService;
+
+            [RegisterScoped]
+            public sealed record RecordService : IRecordService;
+
+            [RegisterSingleton]
+            public sealed record class ExplicitRecordService(int Value = 1) : IRecordService;
+
+            [Decorates(typeof(IRecordService))]
+            public sealed record RecordDecorator(IRecordService Inner) : IRecordService;
+            """;
+
+        GeneratorRun run = ServiceGeneration.Run(ServiceGeneration.CreateCompilation(source));
+
+        run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning);
+        string registry = ServiceGeneration.GeneratedSources(run)["GeneratorTestsServiceRegistry.g.cs"];
+        registry.Should().Contain("global::Sample.RecordService")
+            .And.Contain("global::Sample.ExplicitRecordService")
+            .And.Contain("global::Sample.RecordDecorator")
+            .And.NotContain("IEquatable");
+    }
+
+    [Fact]
+    public void Generator_Should_Ignore_Record_Structs()
+    {
+        const string source = """
+            using CSharpEssentials.DependencyInjection;
+
+            namespace Sample;
+
+            public interface IRecordService;
+
+            [RegisterScoped]
+            public readonly record struct RecordStructService : IRecordService;
+            """;
+
+        IReadOnlyDictionary<string, string> sources = ServiceGeneration.GeneratedSources(ServiceGeneration.Run(ServiceGeneration.CreateCompilation(source)));
+
+        sources.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Generator_Should_Not_Emit_Registry_When_Nothing_Is_Registered()
     {
         IReadOnlyDictionary<string, string> sources = ServiceGeneration.GeneratedSources(

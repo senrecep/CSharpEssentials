@@ -50,7 +50,7 @@ public sealed class ServiceRegistrationGenerator : IIncrementalGenerator
             IncrementalValueProvider<ImmutableArray<ServiceTypeModel>> models = context.SyntaxProvider
                 .ForAttributeWithMetadataName(
                     metadataName,
-                    static (node, _) => node is ClassDeclarationSyntax,
+                    static (node, _) => node is ClassDeclarationSyntax or RecordDeclarationSyntax,
                     static (ctx, ct) => ServiceTypeInspector.Inspect((INamedTypeSymbol)ctx.TargetSymbol, ct).ToModel())
                 .Where(static model => model is not null)
                 .Select(static (model, _) => model!)

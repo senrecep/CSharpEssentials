@@ -149,3 +149,8 @@ internal sealed class KeyedDecoratorScanGreeter(IScanGreeter inner) : IScanGreet
 {
     public string Greet() => $"keyed-decorator({inner.Greet()})";
 }
+
+internal interface IScanRecordService;
+
+[RegisterScoped]
+internal sealed record ScanRecordService : IScanRecordService;
