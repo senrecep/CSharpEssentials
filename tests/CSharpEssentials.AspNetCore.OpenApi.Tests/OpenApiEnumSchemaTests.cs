@@ -68,6 +68,24 @@ public class OpenApiEnumSchemaTests
     }
 
     [Fact]
+    public async Task Operation_Should_UseWriteAs_When_DisposingTheSelectorScopeThrows()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        IReadOnlyDictionary<string, string> documents = await OpenApiSampleHost.GetDocumentsAsync(
+            OpenApiSpecVersion.OpenApi3_0,
+            configureServices: services => services.AddSingleton<ILoggerProvider>(logs).AddScoped<AsyncOnlyDisposable>(),
+            configureApp: static app => app.MapGet("/v1/async-disposable", static (SampleStatus status) => status).WithGroupName("v1")
+                .WithEnumWireFormat("X-Enum-Format", static context => context.RequestServices.GetRequiredService<AsyncOnlyDisposable>().Format));
+
+        // The synchronous scope Dispose throws for a service that only implements IAsyncDisposable; the operation falls back to WriteAs.
+        Operation(documents["v1"], "/v1/async-disposable", "get")["x-enum-wire-format-header"]!.GetValue<string>().Should().Be("X-Enum-Format");
+        Component(documents["v1"], "SampleStatus")["type"]!.GetValue<string>().Should().Be("string");
+        logs.Messages.Where(static message => message.Contains("selector of", StringComparison.Ordinal)).Should().ContainSingle()
+            .Which.Should().Contain("/v1/async-disposable");
+    }
+
+    [Fact]
     public async Task Documents_Should_DescribeEnumsDifferently_When_GroupsWriteNumbersAndStrings()
     {
         IReadOnlyDictionary<string, string> documents = await OpenApiSampleHost.GetDocumentsAsync(OpenApiSpecVersion.OpenApi3_0);
@@ -171,4 +189,11 @@ public class OpenApiEnumSchemaTests
 
     private static JsonNode Operation(string json, string path, string method) =>
         JsonNode.Parse(json)!["paths"]![path]![method]!;
+
+    private sealed class AsyncOnlyDisposable : IAsyncDisposable
+    {
+        public EnumWireFormat Format => EnumWireFormat.Number;
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
 }
