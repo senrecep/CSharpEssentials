@@ -111,4 +111,32 @@ public class QueryStringExtensionsTests
 
         result.IsFailure.Should().BeTrue();
     }
+
+    [Fact]
+    public void ToQueryString_FromObject_Should_Repeat_Key_For_Each_Collection_Item()
+    {
+        var obj = new { Ids = new[] { 1, 2, 3 }, Tags = new List<string?> { "a", null, "b" } };
+
+        Result<string> result = obj.ToQueryString();
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be("Ids=1&Ids=2&Ids=3&Tags=a&Tags=b");
+    }
+
+    [Fact]
+    public void ToQueryString_FromObject_Should_Format_Collection_Items_With_Invariant_Culture()
+    {
+        var previous = System.Globalization.CultureInfo.CurrentCulture;
+        System.Globalization.CultureInfo.CurrentCulture = new System.Globalization.CultureInfo("tr-TR");
+        try
+        {
+            Result<string> result = new { Values = (IEnumerable<double>)[1.5, 2.25] }.ToQueryString();
+
+            result.Value.Should().Be("Values=1.5&Values=2.25");
+        }
+        finally
+        {
+            System.Globalization.CultureInfo.CurrentCulture = previous;
+        }
+    }
 }
