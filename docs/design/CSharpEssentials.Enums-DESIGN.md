@@ -41,7 +41,7 @@
 | Project | TFMs | New dependencies | Contents |
 |---|---|---|---|
 | `CSharpEssentials.Enums` | `net11.0;net10.0;net9.0;netstandard2.1;netstandard2.0` (unchanged) | none | attributes, `EnumInfo<TEnum>`, `EnumMetadata`, `EnumConventions`, parser, formatter, `EnumValueError` |
-| `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0015, packed into `CSharpEssentials.Enums` |
+| `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0016, packed into `CSharpEssentials.Enums` |
 | `CSharpEssentials.Enums.CodeFixes` (new, not packable) | `netstandard2.0` | Roslyn 4.8 | code fixes for CSE0005 and CSE0006 |
 | `CSharpEssentials.Json` | unchanged | none | `EnumConverterFactory`, `JsonSerializerOptions.AddEnumConventions` |
 | `CSharpEssentials.AspNetCore` | unchanged | **removes** `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
@@ -311,7 +311,7 @@ Generic access is a static field read (`EnumInfoCache<TEnum>.Value`). Non-generi
 
 The generator emits, per assembly, one `internal static class __CSharpEssentialsEnumRegistry` with a `[ModuleInitializer]` that calls `EnumMetadata.Register(...)` for every `[StringEnum]` enum of the assembly. On `netstandard2.0`/`netstandard2.1` consumers the generator emits an internal `ModuleInitializerAttribute` polyfill when the compilation does not have one. C# 9 is required for registration.
 
-A module initializer runs only when code of the declaring assembly runs; `typeof(OrderStatus)` alone does not trigger it. A contracts assembly that contains only types would otherwise report `IsRegistered = false` and the enum would silently fall back to default handling. Therefore `EnumMetadata.TryGet(Type)` and `EnumInfoCache<TEnum>` call `RuntimeHelpers.RunModuleConstructor(type.Module.ModuleHandle)` on the first miss for a type and retry once (the runtime runs a module constructor at most once, so the call is cheap and AOT safe). A test covers an enum in a separate type-only assembly. On older language versions the generator emits the extension methods without registration and CSE0011 (info) explains that the enum takes the reflection path.
+A module initializer runs only when code of the declaring assembly runs; `typeof(OrderStatus)` alone does not trigger it. A contracts assembly that contains only types would otherwise report `IsRegistered = false` and the enum would silently fall back to default handling. Therefore `EnumMetadata.TryGet(Type)` and `EnumInfoCache<TEnum>` call `RuntimeHelpers.RunModuleConstructor(type.Module.ModuleHandle)` on the first miss for a type and retry once (the runtime runs a module constructor at most once, so the call is cheap and AOT safe). A test covers an enum in a separate type-only assembly. On older language versions the generator emits the extension methods without registration and CSE0015 (warning) reports the enum; JSON converter creation for it throws instead of taking a reflection path.
 
 Nested enums are supported in 5.0 (the generated extension class is emitted at namespace level with the containing type names joined, `Order_StateExtensions`), so CSE0001 is retired as obsolete and kept reserved.
 
@@ -728,11 +728,12 @@ Error: `Error.Validation(code: "enum.invalid" | "enum.not_allowed", description:
 | CSE0008 | Error | `[EnumFallback]` on a `[Flags]` enum (unknown bits are rejected, a fallback is meaningless) |
 | CSE0009 | Error | Wire name or alias is empty, contains whitespace or a comma, or is a valid number (it would collide with numeric input or with comma separated flags) |
 | CSE0010 | Info, disabled by default | Enum without `[StringEnum]` used as a property or parameter type of a public type (takes the reflection path); enable in `.editorconfig` |
-| CSE0011 | Info | `[StringEnum]` enum in a compilation below C# 9: no metadata registration, reflection path |
+| CSE0011 | (not used) | Folded into CSE0015: a compilation below C# 9 gets no registration and fails loudly like any other enum without metadata |
 | CSE0012 | Warning | Invalid `CSharpEssentialsEnumNaming` MSBuild value |
 | CSE0013 | Warning | `[EnumAlias]`, `[EnumFallback]` or `[StringEnum(Naming)]`-dependent attributes on an enum without `[StringEnum]` (no effect) |
 | CSE0014 | Error | A migration's `Up` or `Down` contains both EF's `AlterColumn` and `ConvertEnumColumn` for the same table and column (section 12.1). Symbols are matched by metadata name, so the analyzer is inert without `CSharpEssentials.EntityFrameworkCore` |
-| CSE0015 | Warning | `[StringEnum]` enum the generator cannot reach (private/protected nested, nested in a generic type): no metadata; JSON converter creation throws instead of writing integers |
+| CSE0015 | Warning | `[StringEnum]` enum without generated metadata: the generator cannot reach it (private/protected nested, nested in a generic type) or the compilation is below C# 9. JSON converter creation throws instead of writing integers |
+| CSE0016 | Error | Two `[StringEnum]` enums map to the same generated extensions class name (for example nested `Order.State` and top-level `Order_State`); rename one. Hint names use the metadata name, so only the class name collides |
 
 When an error diagnostic applies, the generator skips metadata for that enum (ADR-006 rule), so the only error the user sees is the analyzer's.
 
@@ -758,7 +759,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | Area | Tests |
 |---|---|
 | Naming | generator vs `JsonNamingPolicy` corpus test for every built-in policy |
-| Generator | snapshot per feature (aliases, fallback, flags, nested, descriptions, obsolete, every underlying type including `ulong` and negative `long`), incremental caching test, CSE0002 to CSE0015 positive and negative |
+| Generator | snapshot per feature (aliases, fallback, flags, nested, descriptions, obsolete, every underlying type including `ulong` and negative `long`), incremental caching test, CSE0002 to CSE0016 positive and negative |
 | Parser | every matrix row in `Input` and `Data` mode, each `EnumConventions` switch; registration from a separate type-only assembly |
 | JSON | every matrix row, flags, nullable, dictionary key, collection, alias, fallback, source generated context |
 | ASP.NET Core | TestServer: matrix rows for route, query, header, form, body; minimal API and MVC in one host; v1 Number + v2 String groups |
