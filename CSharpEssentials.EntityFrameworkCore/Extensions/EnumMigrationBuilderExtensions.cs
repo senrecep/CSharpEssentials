@@ -34,7 +34,7 @@ public static class EnumMigrationBuilderExtensions
     /// <param name="schema">The schema, or <see langword="null"/> for the default schema.</param>
     /// <param name="type">The store type of the converted column; defaults to <c>text</c> or the integer type of the enum.</param>
     /// <remarks>
-    /// Flags text becomes a bitmask through a temporary column <c>{column}__cse</c> filled with <c>bit_or</c> (PostgreSQL rejects
+    /// Flags text becomes a bitmask through a temporary column <c>cse_tmp_{8 hex digits of a hash of the column name}</c> filled with <c>bit_or</c> (PostgreSQL rejects
     /// subqueries in <c>ALTER COLUMN ... USING</c>); the column keeps its nullability and indexes. A column default that does not
     /// cast to the new type must be dropped before the conversion. Text to wire names is idempotent; the other conversions are
     /// guarded by the migration history like any migration.
@@ -184,7 +184,7 @@ public static class EnumMigrationBuilderExtensions
 
         if (dialect.IsPostgres && info.IsFlags && integer)
         {
-            string temporary = EnumSqlDialect.Identifier(column + "__cse");
+            string temporary = EnumSqlDialect.Identifier(TemporaryColumn(column));
             migrationBuilder.Sql($"ALTER TABLE {tableSql} ADD COLUMN {temporary} {targetType};");
             migrationBuilder.Sql($"UPDATE {tableSql} SET {temporary} = {sql.FlagsTextToNumber(qualifiedColumn)} WHERE {columnSql} IS NOT NULL;");
             migrationBuilder.Sql($"{alter} {targetType} USING {temporary};");
@@ -238,6 +238,16 @@ public static class EnumMigrationBuilderExtensions
     private static string SqliteUpdate(string tableSql, string columnSql, string value, string where) =>
         $"SELECT count({value}) FROM {tableSql} WHERE {where}; " +
         $"PRAGMA ignore_check_constraints = ON; UPDATE {tableSql} SET {columnSql} = {value} WHERE {where}; PRAGMA ignore_check_constraints = OFF;";
+
+    // PostgreSQL truncates identifiers to 63 bytes, so the temporary column is named from a stable hash (FNV-1a over the UTF-16
+    // code units) of the column name instead of the name itself: 16 characters for any column.
+    private static string TemporaryColumn(string column)
+    {
+        uint hash = 2166136261;
+        foreach (char c in column)
+            hash = (hash ^ c) * 16777619;
+        return "cse_tmp_" + hash.ToString("x8", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     private static EnumSqlDialect Dialect(MigrationBuilder migrationBuilder, string table, string column)
     {
