@@ -272,10 +272,10 @@ Console.WriteLine();
 // ============================================================================
 Console.WriteLine("--- Deconstruct ---");
 
-(bool hasValue, int? val) = someInt;
+(bool hasValue, int val) = someInt;
 Console.WriteLine($"Deconstruct Some: hasValue={hasValue}, value={val}");
 
-(bool hasValueNone, int? valNone) = noneInt;
+(bool hasValueNone, int valNone) = noneInt;
 Console.WriteLine($"Deconstruct None: hasValue={hasValueNone}, value={valNone}");
 Console.WriteLine();
 
