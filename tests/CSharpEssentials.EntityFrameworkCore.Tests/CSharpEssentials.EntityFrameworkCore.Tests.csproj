@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Separate from CSharpEssentials.Tests (net9.0, EF Core 9): named query filters need EF Core 10, which needs net10.0, and one test
+       assembly cannot load two EF Core majors. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <CodeAnalysisTreatWarningsAsErrors>false</CodeAnalysisTreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="FluentAssertions" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <!-- EF Core 10 and the 10.x Microsoft.Extensions packages it needs; lift the central (transitively pinned) 9.x versions. -->
+    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[10.0.0,11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[10.0.1,11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="[10.0.1,11)" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="[10.0.1,)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
+    <!-- Dogfood: CSE3001 runs on these tests (raised to error in .editorconfig) and is copied next to them for the end-to-end test. -->
+    <ProjectReference Include="..\..\CSharpEssentials.EntityFrameworkCore.Generators\CSharpEssentials.EntityFrameworkCore.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <Target Name="CopyEntityFrameworkCoreAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.EntityFrameworkCore.Generators.dll'"
+            Link="Analyzers\CSharpEssentials.EntityFrameworkCore.Generators.dll"
+            CopyToOutputDirectory="PreserveNewest"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
