@@ -74,6 +74,38 @@ public class PaginationOverloadsTests
     }
 
     [Fact]
+    public async Task PaginateAsync_Should_ReturnEmptyPage_When_PageNumberIsIntMaxValue()
+    {
+        using ItemDbContext context = await CreateSeededContextAsync();
+
+        PaginationResponse<Item> result = await context.Items.OrderBy(i => i.Id).PaginateAsync(int.MaxValue, 100);
+
+        result.Items.Should().BeEmpty();
+        result.PageNumber.Should().Be(int.MaxValue);
+        result.TotalCount.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task CursorPaginateAsync_Should_ReturnAllItems_When_LimitIsIntMaxValue()
+    {
+        using ItemDbContext context = await CreateSeededContextAsync();
+
+        CursorPaginationResponse<Item, int> result = await context.Items.PaginateAsync(
+            new CursorPaginationRequest<int> { Limit = int.MaxValue }, i => i.Id);
+
+        result.Items.Should().HaveCount(10);
+    }
+
+    [Fact]
+    public void Paginate_Should_ReturnEmptyPage_When_PageNumberIsIntMaxValue()
+    {
+        PaginationResponse<Item> result = InMemoryItems().Paginate(int.MaxValue, 100);
+
+        result.Items.Should().BeEmpty();
+        result.TotalCount.Should().Be(10);
+    }
+
+    [Fact]
     public void Paginate_WithRequest_ShouldWorkOnNonEfQueryable()
     {
         var request = new PaginationRequest { PageNumber = 3, PageSize = 4 };
