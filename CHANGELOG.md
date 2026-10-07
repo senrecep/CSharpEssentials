@@ -3,6 +3,25 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.0](https://github.com/senrecep/CSharpEssentials/compare/v5.2.1...v6.0.0) (2026-10-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **openapi:** CSharpEssentials.AspNetCore.Swashbuckle needs Swashbuckle.AspNetCore [10.2.3,11) and Microsoft.OpenApi [2.7.5,3) on every target. AddSwagger<T>(securityScheme, assembly) is now AddSwagger<T>(securitySchemeName, securityScheme, assembly); pass SecuritySchemes.JwtBearerSchemeName ("Bearer") for the previous behavior. SecuritySchemes.JwtBearerTokenSecurity no longer sets Reference. Custom Swashbuckle filters and MapType factories must move to the Microsoft.OpenApi 2.x API (using Microsoft.OpenApi; IOpenApiSchema; JsonSchemaType; JsonNode).
+* **efcore:** offset pagination returns at most 100 rows per page unless a larger cap is given. Pass maxPageSize: 500 (or int.MaxValue for the 5.x behavior) to PaginateAsync/Paginate, or call Normalize(int.MaxValue). The sync Paginate overloads gained a parameter, so assemblies compiled against 5.x must be recompiled. Custom IPaginationRequest types that override Normalize() must also override Normalize(int). See docs/migration/v5-to-v6.md.
+* **efcore:** the single-column cursor `PaginateAsync<T, TCursor>` is `[Obsolete]`; use `KeysetPaginateAsync`, which supports composite keys, opaque cursors, backward paging and a maximum limit ([d431ad7](https://github.com/senrecep/CSharpEssentials/commit/d431ad7)).
+
+### Added
+
+* **efcore:** cap offset page size at 100 by default ([74badad](https://github.com/senrecep/CSharpEssentials/commit/74badad9db80607a798a41c282e064a2d3578985))
+* **openapi:** require Swashbuckle 10 and Microsoft.OpenApi 2 on all targets ([ca352cf](https://github.com/senrecep/CSharpEssentials/commit/ca352cf0675b2105adbbae6adb0fc4dc2fdd1d91)), closes [#69](https://github.com/senrecep/CSharpEssentials/issues/69)
+
+
+### Fixed
+
+* **openapi:** keep enum type summaries off enum properties ([efb7d53](https://github.com/senrecep/CSharpEssentials/commit/efb7d53f03e9ead45dd4b31d93be45d7d6ff3c76))
+
 ## [5.2.1](https://github.com/senrecep/CSharpEssentials/compare/v5.2.0...v5.2.1) (2026-10-07)
 
 
