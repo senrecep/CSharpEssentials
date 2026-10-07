@@ -1,6 +1,6 @@
 using Microsoft.OpenApi;
 
-namespace CSharpEssentials.AspNetCore.Swagger.Filters;
+namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
 /// Copies an operation one level deeper than the Microsoft.OpenApi copy constructors, which copy the collections but keep

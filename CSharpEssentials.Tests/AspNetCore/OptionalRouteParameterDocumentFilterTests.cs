@@ -1,10 +1,14 @@
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
 using CSharpEssentials.AspNetCore.Swagger.Filters;
+using CSharpEssentials.Tests.Endpoints;
 using FluentAssertions;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.OpenApi;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Reader;
+using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.Tests.AspNetCore;
@@ -91,6 +95,33 @@ public class OptionalRouteParameterDocumentFilterTests
 
         document.Paths.Keys.Where(static key => key.StartsWith("/api/deep", StringComparison.Ordinal)).Should().Equal("/api/deep/{a}/{b}/{c}/{d}");
         AssertRequiredPathParameters(Operation(document, "/api/deep/{a}/{b}/{c}/{d}", HttpMethod.Get), "a", "b", "c", "d");
+    }
+
+    [Fact]
+    public async Task SplitPaths_Should_Warn_Once_When_More_Than_Three_Trailing_Parameters_Are_Optional()
+    {
+        using var logs = new CapturingLoggerProvider();
+        await using WebApplication app = await OptionalRouteParameterHost.StartAsync(null, OptionalRouteParameterControllers.Compliant, logs);
+        ISwaggerProvider provider = app.Services.GetRequiredService<ISwaggerProvider>();
+
+        provider.GetSwagger("v1");
+        provider.GetSwagger("v1");
+
+        logs.Entries.Where(static entry => entry.Category.EndsWith(".OptionalRouteParameterDocumentFilter", StringComparison.Ordinal))
+            .Should().ContainSingle()
+            .Which.Should().Match<(string Category, LogLevel Level, string Message)>(static entry =>
+                entry.Level == LogLevel.Warning
+                && entry.Message.StartsWith("OpenAPI document 'v1': GET /api/deep/{a}/{b}/{c}/{d} ends with 4 optional route parameters, more than the 3 ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task RequiredOnly_Should_Not_Warn_When_More_Than_Three_Trailing_Parameters_Are_Optional()
+    {
+        using var logs = new CapturingLoggerProvider();
+
+        await OptionalRouteParameterHost.GetDocumentAsync(static options => options.AddOptionalRouteParameters(OptionalRouteParameterMode.RequiredOnly), loggerProvider: logs);
+
+        logs.Entries.Should().NotContain(static entry => entry.Category.EndsWith(".OptionalRouteParameterDocumentFilter", StringComparison.Ordinal));
     }
 
     [Fact]

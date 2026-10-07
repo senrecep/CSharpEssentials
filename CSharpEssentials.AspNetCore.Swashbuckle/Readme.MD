@@ -41,8 +41,9 @@ OpenAPI requires every path parameter to be `required: true`, so a route with an
 | `/api/archive/{year}` | `GetArchiveWithoutMonth` |
 | `/api/archive/{year}/{month}` | `GetArchive` |
 
-- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue` or a `null` default.
+- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue`, a `null` type or default, or a `{"type": "null"}` member in `oneOf` or `anyOf`.
 - Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required.
+- A route with more than three trailing optional parameters is logged as a warning (once per document, path and method) through the host's `ILoggerFactory`, so the missing shorter forms do not go unnoticed. Without an `ILoggerFactory` nothing is logged.
 - A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
 - The full form keeps the operationId; a shorter form gets `{operationId}Without{Param}` (`And` between parameters), or none when the full form has none. A generated operationId that another operation already uses throws `InvalidOperationException` when the document is generated; rename one of them or pass a selector.
 - Controller and Minimal API routes are handled the same way.

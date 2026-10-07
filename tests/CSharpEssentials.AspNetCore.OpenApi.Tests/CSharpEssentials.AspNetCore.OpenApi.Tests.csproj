@@ -33,4 +33,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- The optional route parameter controllers of the Swashbuckle tests, so both packages describe the same routes. -->
+    <Compile Include="..\..\CSharpEssentials.Tests\AspNetCore\OptionalRouteParameterControllers.cs" Link="OptionalRouteParameterControllers.cs" />
+  </ItemGroup>
+
 </Project>

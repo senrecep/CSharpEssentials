@@ -1,5 +1,5 @@
 {
-  "openapi": "3.1.1",
+  "openapi": "3.0.4",
   "info": {
     "title": "API",
     "description": "API Description",
@@ -19,14 +19,10 @@
           {
             "name": "id",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "integer"
-              ],
-              "format": "int32",
-              "default": null
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -64,27 +60,19 @@
           {
             "name": "year",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "integer"
-              ],
-              "format": "int32",
-              "default": null
+              "type": "integer",
+              "format": "int32"
             }
           },
           {
             "name": "month",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "integer"
-              ],
-              "format": "int32",
-              "default": null
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -176,11 +164,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": [
-                    "null",
-                    "integer"
-                  ],
-                  "format": "int32"
+                  "type": "integer",
+                  "format": "int32",
+                  "nullable": true
                 }
               }
             }
@@ -260,49 +246,81 @@
           {
             "name": "a",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "string"
-              ],
-              "default": null
+              "type": "string"
             }
           },
           {
             "name": "b",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "string"
-              ],
-              "default": null
+              "type": "string"
             }
           },
           {
             "name": "c",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "string"
-              ],
-              "default": null
+              "type": "string"
             }
           },
           {
             "name": "d",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "string"
-              ],
-              "default": null
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/downloads/{name}.{ext}": {
+      "get": {
+        "tags": [
+          "Downloads"
+        ],
+        "operationId": "GetDownload",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ext",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -370,6 +388,77 @@
         }
       }
     },
+    "/api/items": {
+      "post": {
+        "tags": [
+          "Items"
+        ],
+        "operationId": "CreateItem",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/items/{id}": {
+      "get": {
+        "tags": [
+          "Items"
+        ],
+        "operationId": "GetItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/keys/{key}": {
       "post": {
         "tags": [
@@ -380,13 +469,89 @@
           {
             "name": "key",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "string"
-              ],
-              "default": null
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notes/{id}": {
+      "get": {
+        "tags": [
+          "Notes"
+        ],
+        "operationId": "GetNote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Notes"
+        ],
+        "operationId": "PostNote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -424,14 +589,10 @@
           {
             "name": "id",
             "in": "path",
-            "allowEmptyValue": true,
+            "required": true,
             "schema": {
-              "type": [
-                "null",
-                "integer"
-              ],
-              "format": "int32",
-              "default": null
+              "type": "integer",
+              "format": "int32"
             }
           }
         ],
@@ -503,6 +664,46 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{slug}": {
+      "get": {
+        "tags": [
+          "Root"
+        ],
+        "operationId": "GetRoot",
+        "parameters": [
+          {
+            "name": "slug",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -650,6 +851,62 @@
           }
         }
       }
+    },
+    "/api/triple/{a}/{b}/{c}": {
+      "get": {
+        "tags": [
+          "Triple"
+        ],
+        "operationId": "GetTriple",
+        "parameters": [
+          {
+            "name": "a",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "b",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "c",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -683,16 +940,28 @@
       "name": "Deep"
     },
     {
+      "name": "Downloads"
+    },
+    {
       "name": "Files"
     },
     {
+      "name": "Items"
+    },
+    {
       "name": "Keys"
+    },
+    {
+      "name": "Notes"
     },
     {
       "name": "Orders"
     },
     {
       "name": "Pages"
+    },
+    {
+      "name": "Root"
     },
     {
       "name": "Routed"
@@ -702,6 +971,9 @@
     },
     {
       "name": "Tenants"
+    },
+    {
+      "name": "Triple"
     }
   ]
 }
