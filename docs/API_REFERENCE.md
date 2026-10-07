@@ -1289,6 +1289,7 @@ Reads: `If-None-Match` uses weak comparison and takes precedence over `If-Modifi
 | `CreateVersionedGroup(route, version = 1)` | Creates versioned route group |
 | `MapVersionedGroup(version)` | `MapGroup("v{version:apiVersion}")` with a version set for `version`; works for any endpoints, including a `CSharpEssentials.Endpoints` registry (`app.MapVersionedGroup(2).MapAppsEndpoints()`) |
 | `AddSwagger<T>(securitySchemeName, securityScheme, assembly?)` / `UseVersionableSwagger()` | Swagger with version support (5.0: in `CSharpEssentials.AspNetCore.Swashbuckle`, same namespace; 6.0: Swashbuckle 10, the scheme id is the first argument, e.g. `SecuritySchemes.JwtBearerSchemeName`) |
+| `SwaggerGenOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | How optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described. `SplitPaths` (the `AddSwagger` default from 6.1.0): one path per form (`/orders`, `/orders/{id}`), trailing optionals only, up to three; shorter forms get `{operationId}Without{Param}`, a duplicate operationId throws. `RequiredOnly`: one path, parameters required. `LegacyNonCompliant` (obsolete): the 6.0.0 output, invalid OpenAPI. See [the migration note](migration/v6-optional-route-parameters.md) |
 
 ### OpenAPI Enum Schemas (5.0)
 

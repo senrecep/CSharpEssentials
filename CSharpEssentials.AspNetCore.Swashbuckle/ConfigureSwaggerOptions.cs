@@ -1,6 +1,5 @@
 
 using Asp.Versioning.ApiExplorer;
-using CSharpEssentials.AspNetCore.Swagger.Filters;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -54,7 +53,7 @@ public abstract class ConfigureSwaggerOptions(
         }
 
 
-        options.OperationFilter<ReApplyOptionalRouteParameterOperationFilter>();
+        options.AddOptionalRouteParameters();
 
         // A new schema per call: Swashbuckle changes the mapped schema (nullable) for each usage.
         options.MapType<TimeSpan>(CreateTimeSchema);
