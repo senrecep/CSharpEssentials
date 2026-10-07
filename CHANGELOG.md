@@ -8,7 +8,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
-* **openapi:** emit spec-valid optional route parameters by splitting paths ([f5ff643](https://github.com/senrecep/CSharpEssentials/commit/f5ff643267e12e53587b9352afcc6c2140fb8c41))
 * **openapi:** emit spec-valid optional route parameters by splitting paths ([e32afea](https://github.com/senrecep/CSharpEssentials/commit/e32afea0328900e37e7355cac9a21c9cc6f09a77)), closes [#101](https://github.com/senrecep/CSharpEssentials/issues/101)
 
 ## [6.0.0](https://github.com/senrecep/CSharpEssentials/compare/v5.2.1...v6.0.0) (2026-10-07)
