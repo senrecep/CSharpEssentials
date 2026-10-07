@@ -22,7 +22,7 @@ An enum value crosses up to eight boundaries in a typical service: the database 
 
 The 4.1 audit found eight defects that all come from this split (listed in #59): an undefined number accepted by JSON and then stored in a row that can no longer be loaded, `[Flags]` values that overflow the column, case handling that differs between query and body, a generated `ToSnakeCase()` that disagrees with the wire name, a schema filter that ignores the configured policy, and Swashbuckle code bound to Microsoft.OpenApi 1.x.
 
-The first consumer (easyapp) adds hard constraints: every API sends enums as integers today, ten EF columns store PascalCase names, jsonb documents hold integers, 35 Refit clients use the Refit default serializer settings (camelCase enum strings), events go through Newtonsoft with integers, and mobile apps already in the stores cannot be forced to update. A new contract must read all of that and must be able to keep writing integers to old clients.
+A production consumer adds hard constraints: every API sends enums as integers today, ten EF columns store PascalCase names, jsonb documents hold integers, 35 Refit clients use the Refit default serializer settings (camelCase enum strings), events go through Newtonsoft with integers, and mobile apps already in the stores cannot be forced to update. A new contract must read all of that and must be able to keep writing integers to old clients.
 
 ## Decision
 
@@ -52,7 +52,7 @@ There is no runtime naming policy on `EnumConventions`. A runtime policy would m
 
 ### 6. Reads are tolerant, inputs are bounded
 
-Reads accept the wire name, the C# name, any casing, declared aliases and the number of a defined member. That covers every format easyapp has in production today (PascalCase columns, integer jsonb, integer request bodies, Refit camelCase). Tolerance stops at defined members: `99` and `"bogus"` are rejected everywhere.
+Reads accept the wire name, the C# name, any casing, declared aliases and the number of a defined member. That covers every format a typical production consumer has today (PascalCase columns, integer jsonb, integer request bodies, Refit camelCase). Tolerance stops at defined members: `99` and `"bogus"` are rejected everywhere.
 
 ### 7. Flags and collections are first class
 
@@ -131,7 +131,7 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 | Runtime `JsonNamingPolicy` in `EnumConventions` | Generated constants and helpers would disagree with the wire. Naming would also differ between hosts that load the same contracts assembly. |
 | Reflection metadata cached at startup (4.1 `StringEnumNaming`) | Not AOT safe, and the cache key includes the policy, which is how layers diverged. |
 | Per-layer options with a shared default | That is the 4.1 design. A custom value on one layer silently diverges from the others (defect 3). |
-| Reject numbers by default | Every easyapp client sends integers today and old app versions cannot be updated. Numbers of defined members stay accepted; `AcceptNumbers = false` turns it off. |
+| Reject numbers by default | Existing clients send integers today and old app versions cannot be updated. Numbers of defined members stay accepted; `AcceptNumbers = false` turns it off. |
 | Integers on the wire by default | Not self-describing, unsafe under member reordering, and unreadable in logs. Integer output stays available per endpoint group for legacy clients. |
 | `varchar(n)` with the longest name | The source of the flags overflow, and a migration for every renamed member. A check constraint is the real guard; `text` costs nothing on PostgreSQL. |
 | Database enum types (`CREATE TYPE ... AS ENUM`) | PostgreSQL only, values cannot be removed, and renames need DDL outside EF migrations. Check constraints work on every provider. |

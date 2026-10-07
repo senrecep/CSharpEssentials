@@ -483,7 +483,7 @@ Contract:
 - Minimal APIs: `WithEnumWireFormat` adds endpoint metadata and an endpoint filter. When the selected format is not the default, the filter wraps the returned value or `IValueHttpResult` in a result that executes the original result with `RequestServices` resolving `IOptions<JsonOptions>` to the second instance, so the result keeps its status code, content type and headers (`Location` of `Created`). `Result`/`Result<T>` from `CSharpEssentials.Results` go through the same path after their normal mapping. An endpoint's `WithEnumWireFormat` overrides its group's (endpoint metadata comes last). An `[EnumWireFormat]` attribute on a minimal API handler is only honored on an endpoint that also has `WithEnumWireFormat` (the filter is added there).
 - MVC: a global result filter (registered by `AddEnumConventions`) assigns a `SystemTextJsonOutputFormatter` built from the second options instance to `ObjectResult.Formatters`, and the second options to a `JsonResult` without its own settings. The attributes are read first, because endpoint conventions such as `MapControllers().WithEnumWireFormat(...)` are added to the endpoint metadata after them.
 - Reading is unaffected: a v1 group still accepts names, so new clients can send names to old endpoints.
-- Optional selector for apps that cannot version routes (easyapp mobile clients share routes across app versions): `group.WithEnumWireFormat("X-Enum-Format", ctx => ctx.Request.Headers["X-Enum-Format"] == "string" ? EnumWireFormat.String : EnumWireFormat.Number)`. The header name is a parameter so the `Vary` value is explicit. The OpenAPI document of such a group shows the default branch (the value returned for a request without the header) and a description note. A selector group adds `Vary: X-Enum-Format` (the configured header name) to every response so caches keep the two formats apart.
+- Optional selector for apps that cannot version routes (for example mobile clients that share routes across app versions): `group.WithEnumWireFormat("X-Enum-Format", ctx => ctx.Request.Headers["X-Enum-Format"] == "string" ? EnumWireFormat.String : EnumWireFormat.Number)`. The header name is a parameter so the `Vary` value is explicit. The OpenAPI document of such a group shows the default branch (the value returned for a request without the header) and a description note. A selector group adds `Vary: X-Enum-Format` (the configured header name) to every response so caches keep the two formats apart.
 - The endpoint filter unwraps `Results<T1, ...>` through `INestedHttpResult` before looking for `IValueHttpResult`.
 
 ### 9.5 Replacing `EnumData<T>`-style holders
@@ -912,7 +912,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 9. Message bus: consumers first, producers second.
 10. `EnumData<T>`-style holders → typed parameters.
 
-## 20. Easyapp Rollout (first consumer)
+## 20. Example Rollout (existing production app)
 
 | Today | Step 1 (deploy 5.0) | Target |
 |---|---|---|
@@ -920,10 +920,10 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | plain integer enum columns | `existingStorage: EnumStoredAs.Integer`; first migration empty | `HasEnumStorage(String)` per column, audit, convert |
 | 10 EF columns `HasConversion<string>()` PascalCase | unchanged: the convention skips them, tolerant reads only where `HasLegacyEnumStorage(EnumStoredAs.MemberName)` replaces the manual conversion | audit, `ConvertEnumColumn(from: Text)`, constraint (section 12.3) |
 | jsonb with integers | `HasLegacyEnumStorage(EnumStoredAs.Integer)` on JSON-mapped enum properties (writes stay integers, reads accept names) | `ConvertEnumJsonPath`, then remove the legacy storage |
-| 35 Refit clients with the default converter | own adapter in BuildingBlocks (section 13.1) with `writeAs: Number` where the server reads only integers | names once every server runs 5.0 (servers accept names from step 1) |
+| 35 Refit clients with the default converter | own adapter in the application (section 13.1) with `writeAs: Number` where the server reads only integers | names once every server runs 5.0 (servers accept names from step 1) |
 | Newtonsoft events with integers | STJ consumers on `Data` mode read integers | MassTransit STJ producers, `Number` until every consumer runs 5.0 |
 
-Open item for easyapp: confirm whether its jsonb enums are EF `ToJson()` owned/complex types or value-converted `JsonSerializer` properties, and which naming the Refit clients actually send (the Refit default `SystemTextJsonContentSerializer` options use a camelCase `JsonStringEnumConverter`).
+Open item for such an app: confirm whether its jsonb enums are EF `ToJson()` owned/complex types or value-converted `JsonSerializer` properties, and which naming the Refit clients actually send (the Refit default `SystemTextJsonContentSerializer` options use a camelCase `JsonStringEnumConverter`).
 
 ## 21. Open Points Resolved During Implementation
 
