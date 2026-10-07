@@ -3,6 +3,25 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.1.0](https://github.com/senrecep/CSharpEssentials/compare/v5.0.0...v5.1.0) (2026-10-07)
+
+
+### Added
+
+* **aspnetcore:** add conditional GET (ETag/Last-Modified, 304) and If-Match preconditions ([5f1e229](https://github.com/senrecep/CSharpEssentials/commit/5f1e22935277b00d7d53849f80738a536679fe4b)), closes [#78](https://github.com/senrecep/CSharpEssentials/issues/78)
+* **aspnetcore:** add Idempotency-Key middleware with pluggable IIdempotencyStore ([60caf33](https://github.com/senrecep/CSharpEssentials/commit/60caf33c7ee68f60e7082ffd447d85d8e3224832)), closes [#79](https://github.com/senrecep/CSharpEssentials/issues/79)
+* **efcore:** add composite keyset pagination with opaque cursors ([3835744](https://github.com/senrecep/CSharpEssentials/commit/38357441eb23b42146b9fe2a1eea46dafab38e9c)), closes [#87](https://github.com/senrecep/CSharpEssentials/issues/87)
+* **efcore:** add EF Core 10 named query filter helpers and IgnoreQueryFilters analyzer ([3e91857](https://github.com/senrecep/CSharpEssentials/commit/3e91857d981ee0be19db80b277769f263fdac6d0)), closes [#77](https://github.com/senrecep/CSharpEssentials/issues/77)
+* **efcore:** add IDbErrorTranslator with SQLSTATE default ([ad06306](https://github.com/senrecep/CSharpEssentials/commit/ad0630634c0df084668f476470b43670f21e8003)), closes [#74](https://github.com/senrecep/CSharpEssentials/issues/74)
+* **mediator:** add IResourceLock and LockBehavior ([2d08bfb](https://github.com/senrecep/CSharpEssentials/commit/2d08bfb17b00873314acc48a60a89d924c71c9f3)), closes [#76](https://github.com/senrecep/CSharpEssentials/issues/76)
+* **mediator:** add ITransactionRunner and TransactionBehavior ([105a3ac](https://github.com/senrecep/CSharpEssentials/commit/105a3ac6f74fb8c53ebdbd43d7a27d3c1f227245)), closes [#72](https://github.com/senrecep/CSharpEssentials/issues/72)
+* **mediator:** add validation modes and failure observers ([ecf9873](https://github.com/senrecep/CSharpEssentials/commit/ecf98739cfe431413a26ccaec1b22dba6fcd7eed)), closes [#73](https://github.com/senrecep/CSharpEssentials/issues/73)
+
+
+### Fixed
+
+* **mediator:** roll back TransactionScopeBehavior on failed results ([a692870](https://github.com/senrecep/CSharpEssentials/commit/a692870751d7ebb4c1418fb954bf3e32e15650fd))
+
 ## [5.0.0](https://github.com/senrecep/CSharpEssentials/compare/v4.1.0...v5.0.0) (2026-10-06)
 
 
