@@ -8,21 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
-* **aspnetcore:** add conditional GET (ETag/Last-Modified, 304) and If-Match preconditions ([f147e91](https://github.com/senrecep/CSharpEssentials/commit/f147e91316ea323aa9b76083f31be890e1f71fb0))
 * **aspnetcore:** add conditional GET (ETag/Last-Modified, 304) and If-Match preconditions ([5f1e229](https://github.com/senrecep/CSharpEssentials/commit/5f1e22935277b00d7d53849f80738a536679fe4b)), closes [#78](https://github.com/senrecep/CSharpEssentials/issues/78)
-* **aspnetcore:** add Idempotency-Key middleware with pluggable IIdempotencyStore ([508f985](https://github.com/senrecep/CSharpEssentials/commit/508f9859bceef6dfbe6f902a9d5ea1b2a071fcdf))
 * **aspnetcore:** add Idempotency-Key middleware with pluggable IIdempotencyStore ([60caf33](https://github.com/senrecep/CSharpEssentials/commit/60caf33c7ee68f60e7082ffd447d85d8e3224832)), closes [#79](https://github.com/senrecep/CSharpEssentials/issues/79)
-* **efcore:** add composite keyset pagination with opaque cursors ([a505653](https://github.com/senrecep/CSharpEssentials/commit/a50565399c15c55908d18b5372663a65591f8ff7))
 * **efcore:** add composite keyset pagination with opaque cursors ([3835744](https://github.com/senrecep/CSharpEssentials/commit/38357441eb23b42146b9fe2a1eea46dafab38e9c)), closes [#87](https://github.com/senrecep/CSharpEssentials/issues/87)
-* **efcore:** add EF Core 10 named query filter helpers and IgnoreQueryFilters analyzer ([1fb0164](https://github.com/senrecep/CSharpEssentials/commit/1fb0164dbb0a29adb2a6f7b1a6af4d5a244c6118))
 * **efcore:** add EF Core 10 named query filter helpers and IgnoreQueryFilters analyzer ([3e91857](https://github.com/senrecep/CSharpEssentials/commit/3e91857d981ee0be19db80b277769f263fdac6d0)), closes [#77](https://github.com/senrecep/CSharpEssentials/issues/77)
-* **efcore:** add IDbErrorTranslator with SQLSTATE default ([7755501](https://github.com/senrecep/CSharpEssentials/commit/77555018cf4006ce51fb1e8a65a3686ddd1b6c86))
 * **efcore:** add IDbErrorTranslator with SQLSTATE default ([ad06306](https://github.com/senrecep/CSharpEssentials/commit/ad0630634c0df084668f476470b43670f21e8003)), closes [#74](https://github.com/senrecep/CSharpEssentials/issues/74)
-* **mediator:** add IResourceLock and LockBehavior ([414888d](https://github.com/senrecep/CSharpEssentials/commit/414888d40c9d5e7ebc9abd6cf29982513e958825))
 * **mediator:** add IResourceLock and LockBehavior ([2d08bfb](https://github.com/senrecep/CSharpEssentials/commit/2d08bfb17b00873314acc48a60a89d924c71c9f3)), closes [#76](https://github.com/senrecep/CSharpEssentials/issues/76)
-* **mediator:** add ITransactionRunner and TransactionBehavior ([7335fe3](https://github.com/senrecep/CSharpEssentials/commit/7335fe35b9f7e3630da01117aa0f33a826e8725f))
 * **mediator:** add ITransactionRunner and TransactionBehavior ([105a3ac](https://github.com/senrecep/CSharpEssentials/commit/105a3ac6f74fb8c53ebdbd43d7a27d3c1f227245)), closes [#72](https://github.com/senrecep/CSharpEssentials/issues/72)
-* **mediator:** add validation modes and failure observers ([c4806e1](https://github.com/senrecep/CSharpEssentials/commit/c4806e168344e387cf890c546363c0885ff3eef3))
 * **mediator:** add validation modes and failure observers ([ecf9873](https://github.com/senrecep/CSharpEssentials/commit/ecf98739cfe431413a26ccaec1b22dba6fcd7eed)), closes [#73](https://github.com/senrecep/CSharpEssentials/issues/73)
 
 
