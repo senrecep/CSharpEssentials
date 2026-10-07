@@ -153,6 +153,103 @@
         }
       }
     },
+    "/minimal/{id}": {
+      "get": {
+        "tags": [
+          "CSharpEssentials.Tests"
+        ],
+        "operationId": "GetMinimal",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": [
+                    "null",
+                    "integer"
+                  ],
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/minimal-default/{page}": {
+      "get": {
+        "tags": [
+          "CSharpEssentials.Tests"
+        ],
+        "operationId": "GetMinimalDefault",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/minimal-all/{rest}": {
+      "get": {
+        "tags": [
+          "CSharpEssentials.Tests"
+        ],
+        "operationId": "GetMinimalRest",
+        "parameters": [
+          {
+            "name": "rest",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/deep/{a}/{b}/{c}/{d}": {
       "get": {
         "tags": [
@@ -553,103 +650,6 @@
           }
         }
       }
-    },
-    "/minimal/{id}": {
-      "get": {
-        "tags": [
-          "testhost"
-        ],
-        "operationId": "GetMinimal",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": [
-                    "null",
-                    "integer"
-                  ],
-                  "format": "int32"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/minimal-default/{page}": {
-      "get": {
-        "tags": [
-          "testhost"
-        ],
-        "operationId": "GetMinimalDefault",
-        "parameters": [
-          {
-            "name": "page",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "integer",
-                  "format": "int32"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/minimal-all/{rest}": {
-      "get": {
-        "tags": [
-          "testhost"
-        ],
-        "operationId": "GetMinimalRest",
-        "parameters": [
-          {
-            "name": "rest",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -677,6 +677,9 @@
       "name": "Constrained"
     },
     {
+      "name": "CSharpEssentials.Tests"
+    },
+    {
       "name": "Deep"
     },
     {
@@ -699,9 +702,6 @@
     },
     {
       "name": "Tenants"
-    },
-    {
-      "name": "testhost"
     }
   ]
 }

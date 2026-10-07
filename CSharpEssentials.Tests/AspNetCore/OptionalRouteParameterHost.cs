@@ -34,7 +34,11 @@ internal static class OptionalRouteParameterHost
 
     public static async Task<WebApplication> StartAsync(Action<SwaggerGenOptions>? configure, IReadOnlyList<Type> controllers, ILoggerProvider? loggerProvider = null)
     {
-        WebApplicationBuilder builder = WebApplication.CreateBuilder();
+        // The application name is the default tag of Minimal API operations; the test runner's would change with the runner.
+        WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
+        {
+            ApplicationName = typeof(OptionalRouteParameterHost).Assembly.GetName().Name,
+        });
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         if (loggerProvider is not null)
