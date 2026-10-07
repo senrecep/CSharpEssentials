@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using Swashbuckle.AspNetCore.SwaggerUI;
@@ -16,21 +16,21 @@ public static class ConfigureSwaggerExtension
 {
     public static IServiceCollection AddSwagger<TConfigureSwaggerOptions>(
      this IServiceCollection services,
+     string securitySchemeName,
      OpenApiSecurityScheme securityScheme,
      Assembly? assembly = null)
         where TConfigureSwaggerOptions : ConfigureSwaggerOptions
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(securitySchemeName);
+        ArgumentNullException.ThrowIfNull(securityScheme);
+
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen(options =>
         {
-            options.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
-            options.AddSecurityRequirement(new OpenApiSecurityRequirement
+            options.AddSecurityDefinition(securitySchemeName, securityScheme);
+            options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
             {
-#if NET8_0_OR_GREATER
-                { securityScheme, [] }
-#else
-                { securityScheme, Array.Empty<string>() }
-#endif
+                { new OpenApiSecuritySchemeReference(securitySchemeName, document), [] }
             });
             var factory = new SwashbuckleSchemaIdFactory();
             options.CustomSchemaIds(factory.GetSchemaId);

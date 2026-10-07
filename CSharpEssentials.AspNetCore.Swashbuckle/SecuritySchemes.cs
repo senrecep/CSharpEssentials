@@ -1,9 +1,12 @@
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace CSharpEssentials.AspNetCore;
 
 public static class SecuritySchemes
 {
+    /// <summary>The name <see cref="JwtBearerTokenSecurity"/> is registered under in <c>components.securitySchemes</c>.</summary>
+    public const string JwtBearerSchemeName = "Bearer";
+
     public static readonly OpenApiSecurityScheme JwtBearerTokenSecurity = new()
     {
         Scheme = "bearer",
@@ -12,11 +15,5 @@ public static class SecuritySchemes
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
         Description = "JWT Bearer Token Authorization",
-
-        Reference = new OpenApiReference
-        {
-            Id = "Bearer",
-            Type = ReferenceType.SecurityScheme
-        }
     };
 }

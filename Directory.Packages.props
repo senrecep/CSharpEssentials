@@ -11,17 +11,17 @@
         <PackageVersion Include="Asp.Versioning.Http" Version="[8.1.0,)" />
         <PackageVersion Include="Asp.Versioning.Mvc" Version="[8.1.0,)" />
         <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="[8.1.0,)" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="[8.1.0,10)" />
+        <!-- 10.2.3: the Swashbuckle 10 release chosen in #69 for the Microsoft.OpenApi 2.x move. -->
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="[10.2.3,11)" />
     </ItemGroup>
 
-    <!-- OpenApi: only CSharpEssentials.AspNetCore.OpenApi and its tests (approved 2026-10-06). Microsoft.OpenApi 2.x is pinned only
-         where CSharpEssentialsUsesOpenApi2 is set, because transitive pinning would otherwise force 2.x on Swashbuckle (1.x).
+    <!-- OpenApi: Microsoft.OpenApi 2.x for both OpenAPI packages on every target (Swashbuckle.AspNetCore 10 needs [2.7.5,)).
          2.7.5 is the first 2.x without GHSA-v5pm-xwqc-g5wc (Microsoft.AspNetCore.OpenApi 10.0.0 asks for 2.0.0).
-         No net11.0 target: Microsoft.AspNetCore.OpenApi 11.x (rc.1 only) needs Microsoft.OpenApi [3.10.0,4.0.0), which conflicts
-         with this 2.x pin on any net11.0 host. net11.0 with Microsoft.OpenApi 3.x comes later as a non-breaking addition. -->
+         No net11.0 target for CSharpEssentials.AspNetCore.OpenApi: Microsoft.AspNetCore.OpenApi 11.x needs Microsoft.OpenApi
+         [3.10.0,4.0.0), which conflicts with this 2.x pin. -->
     <ItemGroup Label="OpenApi">
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.0,11)" />
-        <PackageVersion Include="Microsoft.OpenApi" Version="[2.7.5,3)" Condition="'$(CSharpEssentialsUsesOpenApi2)' == 'true'" />
+        <PackageVersion Include="Microsoft.OpenApi" Version="[2.7.5,3)" />
     </ItemGroup>
 
     <!-- EntityFrameworkCore -->

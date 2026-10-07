@@ -2,7 +2,7 @@ using CSharpEssentials.AspNetCore.Swagger.Filters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 
@@ -17,7 +17,7 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
         var schemaGenerator = new SchemaGenerator(
             new SchemaGeneratorOptions(),
             new JsonSerializerDataContractResolver(new System.Text.Json.JsonSerializerOptions()));
-        return new OperationFilterContext(apiDescription, schemaGenerator, schemaRepository, methodInfo);
+        return new OperationFilterContext(apiDescription, schemaGenerator, schemaRepository, new OpenApiDocument(), methodInfo);
     }
 
     [HttpGet("{id?}")]
@@ -51,10 +51,10 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
 
         filter.Apply(operation, context);
 
-        OpenApiParameter param = operation.Parameters[0];
+        var param = (OpenApiParameter)operation.Parameters[0];
         param.Required.Should().BeFalse();
         param.AllowEmptyValue.Should().BeTrue();
-        param.Schema.Nullable.Should().BeTrue();
+        param.Schema!.Type.Should().HaveFlag(JsonSchemaType.Null);
     }
 
     [Fact]
@@ -126,4 +126,54 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
         act.Should().NotThrow();
         operation.Parameters.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Apply_Should_WrapTheReferenceInAllOf_When_TheOptionalParameterSchemaIsAReference()
+    {
+        var filter = new ReApplyOptionalRouteParameterOperationFilter();
+        var reference = new OpenApiSchemaReference("RouteId");
+        var operation = new OpenApiOperation
+        {
+            Parameters = [new OpenApiParameter { Name = "id", In = ParameterLocation.Path, Required = true, Schema = reference }]
+        };
+
+        filter.Apply(operation, CreateContext(GetMethod(nameof(MethodWithOptionalRoute))));
+
+        var schema = operation.Parameters[0].Schema.Should().BeOfType<OpenApiSchema>().Subject;
+        schema.AllOf.Should().ContainSingle().Which.Should().BeSameAs(reference);
+        schema.Type.Should().Be(JsonSchemaType.Null);
+        schema.Default.Should().BeSameAs(JsonNullSentinel.JsonNull);
+    }
+
+    [Fact]
+    public void Apply_Should_CreateANullableSchema_When_TheOptionalParameterHasNoSchema()
+    {
+        var filter = new ReApplyOptionalRouteParameterOperationFilter();
+        var operation = new OpenApiOperation
+        {
+            Parameters = [new OpenApiParameter { Name = "id", In = ParameterLocation.Path, Required = true, Schema = null }]
+        };
+
+        filter.Apply(operation, CreateContext(GetMethod(nameof(MethodWithOptionalRoute))));
+
+        var schema = operation.Parameters[0].Schema.Should().BeOfType<OpenApiSchema>().Subject;
+        schema.Type.Should().Be(JsonSchemaType.Null);
+        schema.AllOf.Should().BeNullOrEmpty();
+        schema.Default.Should().BeSameAs(JsonNullSentinel.JsonNull);
+    }
+
+    [Fact]
+    public void Apply_Should_DoNothing_When_TheOperationHasNoParameters()
+    {
+        var filter = new ReApplyOptionalRouteParameterOperationFilter();
+        var operation = new OpenApiOperation { Parameters = null };
+
+        Action act = () => filter.Apply(operation, CreateContext(GetMethod(nameof(MethodWithOptionalRoute))));
+
+        act.Should().NotThrow();
+        operation.Parameters.Should().BeNull();
+    }
+
+    private static MethodInfo GetMethod(string name) =>
+        typeof(ReApplyOptionalRouteParameterOperationFilterTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)!;
 }

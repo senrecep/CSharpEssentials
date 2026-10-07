@@ -13,7 +13,7 @@ ASP.NET Core integration: one ProblemDetails pipeline for `Error`/`Result` value
 dotnet add package CSharpEssentials.AspNetCore
 ```
 
-Depends on `Asp.Versioning.*` 8.1+ and `Swashbuckle.AspNetCore` `[8.1.0, 10)`.
+Depends on `Asp.Versioning.*` 8.1+. Swagger (`AddSwagger`, `UseVersionableSwagger`) lives in `CSharpEssentials.AspNetCore.Swashbuckle`, which needs `Swashbuckle.AspNetCore` `[10.2.3, 11)` and `Microsoft.OpenApi` 2.x on every target.
 
 ## Namespace
 
@@ -159,7 +159,9 @@ Do not combine with `ConfigureModelValidatorResponse()`, which turns the automat
 
 ```csharp
 builder.Services.AddAndConfigureApiVersioning();   // v1 default, URL segment or x-api-version header
-builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(SecuritySchemes.JwtBearerTokenSecurity);
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(  // CSharpEssentials.AspNetCore.Swashbuckle
+    SecuritySchemes.JwtBearerSchemeName,            // 6.0: the scheme id is an argument
+    SecuritySchemes.JwtBearerTokenSecurity);
 
 app.UseVersionableSwagger();                        // one Swagger UI endpoint per API version
 

@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace CSharpEssentials.Tests.AspNetCore;
 
@@ -157,13 +157,12 @@ public class EnumSchemaFilterParameterTests
 
         var scheme = new OpenApiSecurityScheme
         {
-            Reference = new OpenApiReference { Id = "Bearer", Type = ReferenceType.SecurityScheme },
             Scheme = "bearer",
             BearerFormat = "JWT",
             In = ParameterLocation.Header,
             Type = SecuritySchemeType.Http,
         };
-        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(scheme, typeof(EnumSchemaFilter).Assembly);
+        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(SecuritySchemes.JwtBearerSchemeName, scheme, typeof(EnumSchemaFilter).Assembly);
 
         if (kind == Kind.Mvc)
         {

@@ -6,8 +6,8 @@ namespace CSharpEssentials.AspNetCore.OpenApi.Tests;
 
 /// <summary>
 /// One host, one OpenAPI package: the restored dependency closure of CSharpEssentials.AspNetCore.OpenApi has no Swashbuckle,
-/// that of CSharpEssentials.AspNetCore.Swashbuckle has no Microsoft.AspNetCore.OpenApi, and CSharpEssentials.AspNetCore has
-/// neither. Reads the <c>project.assets.json</c> files of a restored solution.
+/// that of CSharpEssentials.AspNetCore.Swashbuckle has no Microsoft.AspNetCore.OpenApi, both use Microsoft.OpenApi 2.x, and
+/// CSharpEssentials.AspNetCore has neither. Reads the <c>project.assets.json</c> files of a restored solution.
 /// </summary>
 public class PackageClosureTests
 {
@@ -21,12 +21,12 @@ public class PackageClosureTests
     }
 
     [Fact]
-    public void SwashbucklePackage_Should_UseMicrosoftOpenApi1AndNoMicrosoftAspNetCoreOpenApi_When_Restored()
+    public void SwashbucklePackage_Should_UseMicrosoftOpenApi2AndNoMicrosoftAspNetCoreOpenApi_When_Restored()
     {
         IReadOnlyDictionary<string, string> libraries = ReadLibraries("CSharpEssentials.AspNetCore.Swashbuckle");
 
         libraries.Keys.Should().NotContain("Microsoft.AspNetCore.OpenApi");
-        libraries.Should().ContainKey("Microsoft.OpenApi").WhoseValue.Should().StartWith("1.");
+        libraries.Should().ContainKey("Microsoft.OpenApi").WhoseValue.Should().StartWith("2.");
     }
 
     [Fact]

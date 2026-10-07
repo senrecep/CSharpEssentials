@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace CSharpEssentials.Tests.Endpoints;
@@ -221,14 +221,14 @@ public class EndpointRegistryTests
         ApiDescription description = app.Services.GetRequiredService<IApiDescriptionGroupCollectionProvider>()
             .ApiDescriptionGroups.Items.SelectMany(static group => group.Items).Single();
         OpenApiOperation operation = app.Services.GetRequiredService<ISwaggerProvider>().GetSwagger("v1")
-            .Paths.Values.Single().Operations.Values.Single();
+            .Paths.Values.Single().Operations!.Values.Single();
 
         return new EndpointShape(
             endpoint.RoutePattern.RawText!,
             description.HttpMethod!,
             description.GroupName,
-            operation.OperationId,
-            [.. operation.Tags.Select(static tag => tag.Name)]);
+            operation.OperationId!,
+            [.. operation.Tags!.Select(static tag => tag.Name!)]);
     }
 
     private static int IndexOf(IReadOnlyList<object> metadata, Func<object, bool> predicate)

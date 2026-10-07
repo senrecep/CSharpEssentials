@@ -2,12 +2,12 @@ using System.Text.Json.Nodes;
 using CSharpEssentials.Enums;
 using Microsoft.OpenApi;
 
-namespace CSharpEssentials.AspNetCore.OpenApi;
+namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
-/// Writes the enum component content and the usage shapes (nullable, array, default) in the Microsoft.OpenApi 2.x model.
-/// Nullable branches on the document's OpenAPI version: <c>allOf</c> + <c>nullable: true</c> for 3.0,
-/// <c>oneOf [$ref, {type: null}]</c> for 3.1.
+/// Writes the enum component content and the usage shapes (nullable, array, default) in the Microsoft.OpenApi 2.x model, for
+/// both the Swashbuckle and the Microsoft.AspNetCore.OpenApi packages. Nullable branches on the OpenAPI version:
+/// <c>allOf</c> + <c>nullable: true</c> for 3.0, <c>oneOf [$ref, {type: null}]</c> for 3.1.
 /// </summary>
 internal static class OpenApiEnumSchemas
 {

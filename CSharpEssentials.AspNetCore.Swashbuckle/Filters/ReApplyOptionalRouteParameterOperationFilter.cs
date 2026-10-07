@@ -1,6 +1,5 @@
 using System.Text.RegularExpressions;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore.Swagger.Filters;
@@ -16,7 +15,7 @@ public sealed partial class ReApplyOptionalRouteParameterOperationFilter : IOper
             .OfType<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>();
 
         Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute? httpMethodWithOptional = httpMethodAttributes.FirstOrDefault(m => m.Template?.Contains('?') ?? false);
-        if (httpMethodWithOptional?.Template == null)
+        if (httpMethodWithOptional?.Template == null || operation.Parameters is null)
             return;
 
         MatchCollection matches = RouteRegex().Matches(httpMethodWithOptional.Template);
@@ -25,20 +24,28 @@ public sealed partial class ReApplyOptionalRouteParameterOperationFilter : IOper
         {
             string name = match.Groups[_captureName].Value;
 
-            OpenApiParameter? parameter = operation.Parameters.FirstOrDefault(p => p.In == ParameterLocation.Path && p.Name == name);
-            if (parameter == null)
+            if (operation.Parameters.OfType<OpenApiParameter>().FirstOrDefault(p => p.In == ParameterLocation.Path && p.Name == name) is not { } parameter)
                 continue;
             parameter.AllowEmptyValue = true;
             parameter.Required = false;
-            parameter.Schema.Default = new OpenApiString(null);
-            parameter.Schema.Nullable = true;
+            parameter.Schema = MakeNullable(parameter.Schema);
         }
     }
 
-#if NET7_0_OR_GREATER
+    // A $ref cannot carry siblings in OpenAPI 3.0, so a referenced schema gets an allOf wrapper.
+    private static OpenApiSchema MakeNullable(IOpenApiSchema? schema)
+    {
+        OpenApiSchema nullable = schema switch
+        {
+            OpenApiSchema inline => inline,
+            null => new OpenApiSchema(),
+            _ => new OpenApiSchema { AllOf = [schema] },
+        };
+        nullable.Type = (nullable.Type ?? JsonSchemaType.Null) | JsonSchemaType.Null;
+        nullable.Default = JsonNullSentinel.JsonNull;
+        return nullable;
+    }
+
     [GeneratedRegex(@"{(?<routeParameter>\w+)\?}")]
     private static partial Regex RouteRegex();
-#else
-    private static Regex RouteRegex() => new Regex(@"{(?<routeParameter>\w+)\?}", RegexOptions.Compiled);
-#endif
 }

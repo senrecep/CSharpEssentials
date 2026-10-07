@@ -2,7 +2,7 @@
 
 `Microsoft.AspNetCore.OpenApi` integration for the CSharpEssentials enum conventions.
 
-> One host, one OpenAPI package: reference either `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle, `Microsoft.OpenApi` 1.x), never both.
+> One host, one OpenAPI package: reference either `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle), never both. Both use `Microsoft.OpenApi` 2.x.
 
 ## Installation
 

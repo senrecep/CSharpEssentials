@@ -4,9 +4,9 @@ using System.Text.Json.Nodes;
 namespace CSharpEssentials.Tests.Fixtures.OpenApiSample;
 
 /// <summary>
-/// The enum part of an OpenAPI document, normalized so Swashbuckle (Microsoft.OpenApi 1.x) and Microsoft.AspNetCore.OpenApi
-/// (Microsoft.OpenApi 2.x) produce the same text: the enum components, the enum properties of object components, and per
-/// operation the enum parameters, bodies, responses and markers. Keys are sorted; serializer defaults (<c>style: form</c>,
+/// The enum part of an OpenAPI document, normalized so Swashbuckle and Microsoft.AspNetCore.OpenApi produce the same text:
+/// the enum components, the enum properties of object components, and per operation the enum parameters, bodies, responses
+/// and markers. Keys are sorted; serializer defaults (<c>style: form</c>,
 /// <c>explode: true</c> of a query parameter) and framework-only keys are dropped.
 /// </summary>
 public static class OpenApiGolden
@@ -145,7 +145,7 @@ public static class OpenApiGolden
         JsonObject obj => Sorted(obj),
         JsonArray array => new JsonArray([.. array.Select(Normalize)]),
         null => null,
-        _ => NormalizeValue(node),
+        _ => node.DeepClone(),
     };
 
     private static JsonObject Sorted(JsonObject obj)
@@ -155,8 +155,4 @@ public static class OpenApiGolden
             sorted[key] = Normalize(value);
         return sorted;
     }
-
-    // 1.x and 2.x write the same numbers with different CLR types (OpenApiLong, long, decimal): compare them as text.
-    private static JsonNode NormalizeValue(JsonNode value) =>
-        value.GetValueKind() == JsonValueKind.Number ? JsonValue.Create(decimal.Parse(value.ToJsonString(), System.Globalization.CultureInfo.InvariantCulture)) : value.DeepClone();
 }

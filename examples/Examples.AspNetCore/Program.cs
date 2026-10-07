@@ -3,7 +3,7 @@ using CSharpEssentials.AspNetCore;
 using CSharpEssentials.AspNetCore.Swagger.Filters;
 using Examples.AspNetCore.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);

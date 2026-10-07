@@ -5,17 +5,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using System.Text.Json.Nodes;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore;
-
-public sealed class DefaultConfigureSwaggerOptions(
-           IServiceProvider serviceProvider,
-           IHostEnvironment environment,
-           IConfiguration configuration)
-           : ConfigureSwaggerOptions(serviceProvider, environment, configuration);
 
 public abstract class ConfigureSwaggerOptions(
             IServiceProvider serviceProvider,
@@ -62,20 +56,21 @@ public abstract class ConfigureSwaggerOptions(
 
         options.OperationFilter<ReApplyOptionalRouteParameterOperationFilter>();
 
-        var timeSchema = new OpenApiSchema
-        {
-            Type = "string",
-            Example = new OpenApiString("00:00:00")
-        };
-
-        options.MapType<TimeSpan>(() => timeSchema);
-        options.MapType<TimeOnly>(() => timeSchema);
+        // A new schema per call: Swashbuckle changes the mapped schema (nullable) for each usage.
+        options.MapType<TimeSpan>(CreateTimeSchema);
+        options.MapType<TimeOnly>(CreateTimeSchema);
     }
 
     public virtual void Configure(string? name, SwaggerGenOptions options)
     {
         Configure(options);
     }
+
+    private static OpenApiSchema CreateTimeSchema() => new()
+    {
+        Type = JsonSchemaType.String,
+        Example = JsonValue.Create("00:00:00")
+    };
 
     private static string CreateDescription(string? description, ApiVersionDescription apiVersionDescription,
         IHostEnvironment environment)

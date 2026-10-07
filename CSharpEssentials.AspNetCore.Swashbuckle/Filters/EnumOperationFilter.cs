@@ -2,9 +2,10 @@ using CSharpEssentials.Enums;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore.Swagger.Filters;
@@ -31,26 +32,30 @@ internal sealed class EnumOperationFilter(IServiceProvider services) : IOperatio
 
         if (document.GetMarkers(context.ApiDescription.ActionDescriptor) is not { } markers)
             return;
+        operation.Extensions ??= new Dictionary<string, IOpenApiExtension>(StringComparer.Ordinal);
         if (markers.WireFormat is { } wireFormat)
-            operation.Extensions[OpenApiEnumConventions.WireFormatExtension] = new OpenApiString(wireFormat);
+            operation.Extensions[OpenApiEnumConventions.WireFormatExtension] = new JsonNodeExtension(JsonValue.Create(wireFormat));
         if (markers.Header is { } header)
-            operation.Extensions[OpenApiEnumConventions.WireFormatHeaderExtension] = new OpenApiString(header);
+            operation.Extensions[OpenApiEnumConventions.WireFormatHeaderExtension] = new JsonNodeExtension(JsonValue.Create(header));
         operation.Description = markers.AppendNote(operation.Description);
     }
 
     private void ApplyParameters(OpenApiOperation operation, OperationFilterContext context, EnumWireFormat format)
     {
-        foreach (OpenApiParameter parameter in operation.Parameters)
+        foreach (IOpenApiParameter openApiParameter in operation.Parameters ?? [])
         {
+            if (openApiParameter is not OpenApiParameter parameter)
+                continue;
+
             ApiParameterDescription? description = context.ApiDescription.ParameterDescriptions.FirstOrDefault(candidate =>
                 string.Equals(candidate.Name, parameter.Name, StringComparison.OrdinalIgnoreCase) && candidate.Source != BindingSource.Body);
             // MVC reports string as the Type of a parameter whose type converts from string (enums do); its model type is the enum.
             if (description is null || parameter.Schema is null || (EnumUsage.Classify(description.Type, _conventions) ?? EnumUsage.Classify(description.ModelMetadata?.ModelType, _conventions)) is not { } usage)
                 continue;
 
-            OpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
-            parameter.Schema = SwashbuckleEnumSchemas.CreateUsage(
-                usage, format, reference, usage.FormatDefault(description.DefaultValue, format), description: null);
+            IOpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
+            parameter.Schema = OpenApiEnumSchemas.CreateUsage(
+                usage, format, reference, usage.FormatDefault(description.DefaultValue, format), description: null, OpenApiSpecVersion.OpenApi3_0);
             if (parameter.In == ParameterLocation.Query && usage.IsArray(format))
             {
                 parameter.Style = ParameterStyle.Form;
@@ -62,14 +67,16 @@ internal sealed class EnumOperationFilter(IServiceProvider services) : IOperatio
     private void ApplyBodies(OpenApiOperation operation, OperationFilterContext context, EnumWireFormat format)
     {
         ApiParameterDescription? body = context.ApiDescription.ParameterDescriptions.FirstOrDefault(static candidate => candidate.Source == BindingSource.Body);
-        if (body is not null && operation.RequestBody is { } requestBody)
-            Replace(requestBody.Content, body.Type, context, format);
+        if (body is not null && operation.RequestBody?.Content is { } requestContent)
+            Replace(requestContent, body.Type, context, format);
 
+        if (operation.Responses is null)
+            return;
         foreach (ApiResponseType response in context.ApiDescription.SupportedResponseTypes)
         {
-            string statusCode = response.IsDefaultResponse ? "default" : response.StatusCode.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (operation.Responses.TryGetValue(statusCode, out OpenApiResponse? openApiResponse))
-                Replace(openApiResponse.Content, response.Type, context, format);
+            string statusCode = response.IsDefaultResponse ? "default" : response.StatusCode.ToString(CultureInfo.InvariantCulture);
+            if (operation.Responses.TryGetValue(statusCode, out IOpenApiResponse? openApiResponse) && openApiResponse.Content is { } content)
+                Replace(content, response.Type, context, format);
         }
     }
 
@@ -82,8 +89,8 @@ internal sealed class EnumOperationFilter(IServiceProvider services) : IOperatio
         {
             if (mediaType.Schema is null)
                 continue;
-            OpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
-            mediaType.Schema = SwashbuckleEnumSchemas.CreateUsage(usage, format, reference, defaults: null, description: null);
+            IOpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
+            mediaType.Schema = OpenApiEnumSchemas.CreateUsage(usage, format, reference, defaults: null, description: null, OpenApiSpecVersion.OpenApi3_0);
         }
     }
 }
