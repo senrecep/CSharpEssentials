@@ -37,6 +37,7 @@ public static class OpenApiOptionalRouteParameterExtensions
         OptionalRouteParameterDocumentTransformer transformer = _transformers.GetValue(options, static registered =>
         {
             var created = new OptionalRouteParameterDocumentTransformer();
+            registered.AddOperationTransformer(created);
             registered.AddDocumentTransformer(created);
             return created;
         });
