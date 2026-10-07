@@ -10,6 +10,8 @@
   <Project Path="CSharpEssentials.DependencyInjection.Generators/CSharpEssentials.DependencyInjection.Generators.csproj" />
   <Project Path="CSharpEssentials.Entity/CSharpEssentials.Entity.csproj" />
   <Project Path="CSharpEssentials.EntityFrameworkCore/CSharpEssentials.EntityFrameworkCore.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.CodeFixes/CSharpEssentials.EntityFrameworkCore.CodeFixes.csproj" />
+  <Project Path="CSharpEssentials.EntityFrameworkCore.Generators/CSharpEssentials.EntityFrameworkCore.Generators.csproj" />
   <Project Path="CSharpEssentials.Endpoints/CSharpEssentials.Endpoints.csproj" />
   <Project Path="CSharpEssentials.Endpoints.CodeFixes/CSharpEssentials.Endpoints.CodeFixes.csproj" />
   <Project Path="CSharpEssentials.Endpoints.Generators/CSharpEssentials.Endpoints.Generators.csproj" />
@@ -39,5 +41,6 @@
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.EnumsContracts/CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.OpenApiSample/CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
   <Project Path="tests/CSharpEssentials.AspNetCore.OpenApi.Tests/CSharpEssentials.AspNetCore.OpenApi.Tests.csproj" />
+  <Project Path="tests/CSharpEssentials.EntityFrameworkCore.Tests/CSharpEssentials.EntityFrameworkCore.Tests.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>

@@ -65,6 +65,16 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CopyEntityFrameworkCoreAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.EntityFrameworkCore.Generators.dll'"
+            Link="Analyzers\CSharpEssentials.EntityFrameworkCore.Generators.dll"
+            CopyToOutputDirectory="PreserveNewest"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\CSharpEssentials\CSharpEssentials.csproj" />
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
@@ -85,6 +95,10 @@
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.OpenApiSample\CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.EntityFrameworkCore.Generators\CSharpEssentials.EntityFrameworkCore.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.EntityFrameworkCore.CodeFixes\CSharpEssentials.EntityFrameworkCore.CodeFixes.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.GcpSecretManager\CSharpEssentials.GcpSecretManager.csproj" />
     <ProjectReference
