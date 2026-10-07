@@ -168,7 +168,7 @@ public static class HttpClientRedirectExtensions
         if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
             throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
 
-        return Error.Exception(ex, ErrorType.Unexpected);
+        return HttpExceptionErrors.ToError(ex);
     }
 
     private static Result HandleResponse(HttpResponseMessage response)

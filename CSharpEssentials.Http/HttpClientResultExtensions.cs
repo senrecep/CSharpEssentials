@@ -146,7 +146,7 @@ public static class HttpClientResultExtensions
         if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
             throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
 
-        return Error.Exception(ex, ErrorType.Unexpected);
+        return HttpExceptionErrors.ToError(ex);
     }
 
     private static Task<Result> ExecuteAsync(Func<Task<Result>> action)
@@ -158,7 +158,7 @@ public static class HttpClientResultExtensions
                 if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
                     throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
 
-                return Error.Exception(ex, ErrorType.Unexpected);
+                return HttpExceptionErrors.ToError(ex);
             });
     }
 

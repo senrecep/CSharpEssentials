@@ -26,7 +26,7 @@ public static class HttpContentExtensions
                 if (ex is JsonException)
                     return Error.Exception(ex, ErrorType.Validation);
 
-                return Error.Exception(ex, ErrorType.Unexpected);
+                return HttpExceptionErrors.ToError(ex);
             },
             cancellationToken);
     }
@@ -52,7 +52,7 @@ public static class HttpContentExtensions
                 if (ex is JsonException)
                     return Error.Exception(ex, ErrorType.Validation);
 
-                return Error.Exception(ex, ErrorType.Unexpected);
+                return HttpExceptionErrors.ToError(ex);
             },
             cancellationToken);
     }
