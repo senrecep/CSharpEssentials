@@ -11,23 +11,25 @@ public interface IPaginationRequest
     /// <see cref="int.MaxValue"/>, so a page beyond the addressable range yields an empty page instead of overflowing.
     /// </summary>
     int SkipCount() => (int)Math.Clamp(((long)PageNumber - 1) * PageSize, 0, int.MaxValue);
-    void Normalize()
-    {
-        Search = Search?.Trim();
-        PageNumber = Math.Max(PageNumber, 1);
-        PageSize = Math.Max(PageSize, 1);
-    }
 
     /// <summary>
-    /// Normalizes the request like <see cref="Normalize()"/> and also lowers <see cref="PageSize"/> to
-    /// <paramref name="maxPageSize"/>, the same way keyset pagination clamps to <c>KeysetPaginationOptions.MaxLimit</c>.
+    /// Normalizes the request like <see cref="Normalize(int)"/> with
+    /// <see cref="PaginationDefaults.MaxPageSize"/> (100) as the cap.
+    /// </summary>
+    void Normalize() => Normalize(PaginationDefaults.MaxPageSize);
+
+    /// <summary>
+    /// Trims <see cref="Search"/>, raises <see cref="PageNumber"/> and <see cref="PageSize"/> to 1 and lowers
+    /// <see cref="PageSize"/> to <paramref name="maxPageSize"/>, the same way keyset pagination clamps to
+    /// <c>KeysetPaginationOptions.MaxLimit</c>. Pass <see cref="int.MaxValue"/> to turn the cap off.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPageSize"/> is less than 1.</exception>
     void Normalize(int maxPageSize)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(maxPageSize, 1);
-        Normalize();
-        PageSize = Math.Min(PageSize, maxPageSize);
+        Search = Search?.Trim();
+        PageNumber = Math.Max(PageNumber, 1);
+        PageSize = Math.Clamp(PageSize, 1, maxPageSize);
     }
 }
 

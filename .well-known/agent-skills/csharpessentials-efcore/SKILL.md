@@ -155,7 +155,7 @@ PaginationResponse<Product> products = await db.Products
 
 The single-column cursor `PaginateAsync(cursorRequest, cursorSelector, ...)` is `[Obsolete]` since 6.0; use `KeysetPaginateAsync` below with a unique key (add the id as a tie-breaker).
 
-`Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`. `Normalize()` only enforces minimums; it does not cap `PageSize`/`Limit`. Opt in to a cap with the interface overloads `IPaginationRequest.Normalize(int maxPageSize)` / `ICursorPaginationRequest<T>.Normalize(int maxLimit)` (clamps down like `KeysetPaginationOptions.MaxLimit`; cap < 1 throws `ArgumentOutOfRangeException`).
+`Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`. Offset pagination caps `PageSize` at `PaginationDefaults.MaxPageSize` (100) by default: `IPaginationRequest.Normalize()` lowers larger values to 100, and `PaginateAsync`/`Paginate` take an optional `maxPageSize` (pass `int.MaxValue` to turn the cap off; cap < 1 throws `ArgumentOutOfRangeException`).
 
 ### Keyset (composite cursor) pagination
 
@@ -232,4 +232,5 @@ The write context is pooled with change tracking; the read context is pooled wit
 - Pick one domain event path: `DomainEventInterceptor` or `BaseDbContext.DispatchDomainEventsOnSaveChanges`
 - `SoftDeleteAsync` skips audit and domain events; use `MarkAsDeleted` + `SaveChanges` when those must run
 - `PaginateAsync` issues a COUNT and a data query; pass `includeTotalCount: false` to skip the COUNT
+- Upgrading to 6.0: offset `PageSize` is capped at 100; pass `maxPageSize:` to `PaginateAsync`/`Paginate` when an endpoint needs larger pages
 - Upgrading to 5.0: pass `existingStorage: EnumStoredAs.Integer` (or the column's old format) to `ConfigureEnumConventions`, otherwise `[StringEnum]` integer columns become text in the next migration

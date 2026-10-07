@@ -1,3 +1,4 @@
+using CSharpEssentials.EntityFrameworkCore.Pagination;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 using FluentAssertions;
 
@@ -69,11 +70,73 @@ public class PaginationRequestTests
     }
 
     [Fact]
-    public void Normalize_WithoutCap_ShouldNotLowerLargePageSize()
+    public void MaxPageSize_Should_Be100()
+    {
+        int max = PaginationDefaults.MaxPageSize;
+
+        max.Should().Be(100);
+    }
+
+    [Fact]
+    public void Normalize_Should_LowerPageSizeToDefaultMax_When_NoCapIsGiven()
     {
         var request = new PaginationRequest { PageNumber = 1, PageSize = 100_000 };
+
         ((IPaginationRequest)request).Normalize();
+
+        request.PageSize.Should().Be(PaginationDefaults.MaxPageSize);
+    }
+
+    [Theory]
+    [InlineData(99)]
+    [InlineData(100)]
+    public void Normalize_Should_KeepPageSize_When_AtOrBelowDefaultMax(int pageSize)
+    {
+        var request = new PaginationRequest { PageNumber = 1, PageSize = pageSize };
+
+        ((IPaginationRequest)request).Normalize();
+
+        request.PageSize.Should().Be(pageSize);
+    }
+
+    [Fact]
+    public void Normalize_Should_LowerPageSizeToDefaultMax_When_PageSizeIs101()
+    {
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 101 };
+
+        ((IPaginationRequest)request).Normalize();
+
+        request.PageSize.Should().Be(100);
+    }
+
+    [Fact]
+    public void Normalize_WithCapAboveDefault_Should_KeepPageSizeAboveDefault()
+    {
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 500 };
+
+        ((IPaginationRequest)request).Normalize(1_000);
+
+        request.PageSize.Should().Be(500);
+    }
+
+    [Fact]
+    public void Normalize_WithIntMaxValueCap_Should_NotLowerLargePageSize()
+    {
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 100_000 };
+
+        ((IPaginationRequest)request).Normalize(int.MaxValue);
+
         request.PageSize.Should().Be(100_000);
+    }
+
+    [Fact]
+    public void Normalize_WithCapOfOne_Should_LowerPageSizeToOne()
+    {
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 20 };
+
+        ((IPaginationRequest)request).Normalize(1);
+
+        request.PageSize.Should().Be(1);
     }
 
     [Fact]

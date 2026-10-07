@@ -77,13 +77,15 @@ Result<KeysetPaginationResponse<Log>> feed = await dbContext.Logs.KeysetPaginate
     k => k.Descending(x => x.CreatedAt).Descending(x => x.Id), ct);
 ```
 
-`IPaginationRequest.Normalize()` and `ICursorPaginationRequest<TCursor>.Normalize()` (default interface methods, so call them through the interface type) only raise values to their minimum (page 1, size/limit 1). By default they do not cap the page size or limit, so existing callers keep their results. To opt in to an upper bound, call `Normalize(int maxPageSize)` (offset) or `Normalize(int maxLimit)` (cursor) before paginating. A larger value is lowered to the cap, the same way `KeysetPaginateAsync` clamps `Limit` to `KeysetPaginationOptions.MaxLimit`; a cap below 1 throws `ArgumentOutOfRangeException`.
+Offset pagination caps the page size at `PaginationDefaults.MaxPageSize` (100) by default. `IPaginationRequest.Normalize()` (a default interface method, so call it through the interface type) raises the page number and page size to 1 and lowers a larger page size to 100. `Normalize(int maxPageSize)` uses your own cap instead; pass `int.MaxValue` to turn the cap off. A cap below 1 throws `ArgumentOutOfRangeException`. `PaginateAsync` and `Paginate` take the same cap through an optional `maxPageSize` parameter, the same way `KeysetPaginateAsync` clamps `Limit` to `KeysetPaginationOptions.MaxLimit`.
 
 ```csharp
 IPaginationRequest request = new PaginationRequest { PageNumber = 1, PageSize = 5000 };
-request.Normalize(maxPageSize: 100);   // PageSize is now 100
-await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToken: ct);
+await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToken: ct);                    // 100 rows
+await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
 ```
+
+`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own.
 
 ### Keyset Pagination
 
