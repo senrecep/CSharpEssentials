@@ -143,34 +143,24 @@ using (var scope = provider.CreateScope())
 
     Console.WriteLine("--- DEMO: Cursor Pagination ---");
 
-    // Use Name (string) as cursor — SQLite does not support DateTimeOffset
-    // or decimal in ORDER BY clauses.
-    var request = new CursorPaginationRequest<string>
-    {
-        Limit = 3,
-        Cursor = string.Empty
-    };
+    // Keyset pagination by Name, with Id as the tie-breaker so the key is unique.
+    // SQLite does not support DateTimeOffset or decimal in ORDER BY clauses.
+    var page = await db.Products.KeysetPaginateAsync(
+        new KeysetPaginationRequest { Limit = 3 },
+        keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
 
-    var response = await db.Products
-        .PaginateAsync(request, p => p.Name);
-
-    Console.WriteLine($"Cursor Page: {response.Items.Count} items, HasMore={response.HasMore}");
-    foreach (var p in response.Items)
+    Console.WriteLine($"Cursor Page: {page.Value.Items.Count} items, HasNext={page.Value.HasNext}");
+    foreach (var p in page.Value.Items)
         Console.WriteLine($"  - {p.Name} (${p.Price})");
 
-    if (response.HasMore)
+    if (page.Value.HasNext)
     {
-        var nextRequest = new CursorPaginationRequest<string>
-        {
-            Limit = 3,
-            Cursor = response.Next
-        };
+        var nextPage = await db.Products.KeysetPaginateAsync(
+            new KeysetPaginationRequest { Limit = 3, After = page.Value.NextCursor },
+            keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
 
-        var nextResponse = await db.Products
-            .PaginateAsync(nextRequest, p => p.Name);
-
-        Console.WriteLine($"\nNext Cursor Page: {nextResponse.Items.Count} items, HasMore={nextResponse.HasMore}");
-        foreach (var p in nextResponse.Items)
+        Console.WriteLine($"\nNext Cursor Page: {nextPage.Value.Items.Count} items, HasNext={nextPage.Value.HasNext}");
+        foreach (var p in nextPage.Value.Items)
             Console.WriteLine($"  - {p.Name} (${p.Price})");
     }
 

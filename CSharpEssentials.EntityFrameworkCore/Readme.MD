@@ -7,7 +7,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Audit Interceptor**: Auto-populates `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
 - **Domain Event Interceptor**: Dispatches domain events with before/after save timing and outbox support.
 - **Slow Query Logging**: Logs queries exceeding a configurable threshold.
-- **Pagination**: Offset-based and cursor-based pagination on `IQueryable`, plus composite keyset pagination with opaque, versioned cursors and `Result` errors for bad cursors.
+- **Pagination**: Offset-based pagination on `IQueryable` and composite keyset (cursor) pagination with opaque, versioned cursors and `Result` errors for bad cursors.
 - **Batch Soft Delete**: Soft-delete many rows with a single `UPDATE` statement.
 - **Named Query Filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
@@ -71,10 +71,10 @@ var page = await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(pageNumber: 2,
 // Synchronous, also works on in-memory IQueryable
 var memoryPage = users.AsQueryable().Paginate(pageNumber: 1, pageSize: 10);
 
-// Single-column cursor (the column must be unique; see Keyset Pagination for composite keys)
-var cursorResponse = await dbContext.Logs.PaginateAsync(
-    new CursorPaginationRequest<long> { Limit = 20, Cursor = lastId },
-    cursorSelector: x => x.Id);
+// Cursor-based: see Keyset Pagination below
+Result<KeysetPaginationResponse<Log>> feed = await dbContext.Logs.KeysetPaginateAsync(
+    new KeysetPaginationRequest { Limit = 20, After = nextCursor },
+    k => k.Descending(x => x.CreatedAt).Descending(x => x.Id), ct);
 ```
 
 `IPaginationRequest.Normalize()` and `ICursorPaginationRequest<TCursor>.Normalize()` (default interface methods, so call them through the interface type) only raise values to their minimum (page 1, size/limit 1). By default they do not cap the page size or limit, so existing callers keep their results. To opt in to an upper bound, call `Normalize(int maxPageSize)` (offset) or `Normalize(int maxLimit)` (cursor) before paginating. A larger value is lowered to the cap, the same way `KeysetPaginateAsync` clamps `Limit` to `KeysetPaginationOptions.MaxLimit`; a cap below 1 throws `ArgumentOutOfRangeException`.
@@ -166,7 +166,7 @@ A row-value comparison only fits orderings whose keys all share one direction. F
 - The ordering is by the key values alone. Rows that change their key values between requests can move between pages.
 - There is no total count. Run a separate `CountAsync` if you need it.
 
-**Moving from `PaginateAsync<T, TCursor>`.** The single-column cursor overload is kept and now sends the cursor as a SQL parameter instead of a constant, so EF Core reuses one query plan for all pages. It still filters by one column only, so that column must be unique: with a non-unique column such as a timestamp, a page that ends inside a group of equal values skips the rest of that group. It is not marked `[Obsolete]`, because the repository builds with warnings as errors. To migrate:
+**Moving from `PaginateAsync<T, TCursor>`.** The single-column cursor overload is `[Obsolete]` since 6.0 (warning CS0618) and will be removed in a later major version. It still works and sends the cursor as a SQL parameter, but it filters by one column only, so that column must be unique: with a non-unique column such as a timestamp, a page that ends inside a group of equal values skips the rest of that group. It also has no upper bound on `Limit`. To migrate:
 
 ```csharp
 // Before

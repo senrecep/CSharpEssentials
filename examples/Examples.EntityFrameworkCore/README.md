@@ -10,7 +10,7 @@ This console application demonstrates the complete feature set of `CSharpEssenti
 | **Soft Delete** | `Data/Entities/Product.cs` | Entities are flagged, not removed; filtered from queries |
 | **Audit Interceptor** | Built into BaseDbContext | Auto-sets `CreatedAt` and `UpdatedAt` |
 | **Domain Event Interceptor** | Built into BaseDbContext | Dispatches entity domain events BeforeSave / AfterSave |
-| **Pagination** | `Services/ProductCatalogService.cs` | Offset-based `ToPaginatedList()` and cursor-based `PaginateAsync()` |
+| **Pagination** | `Services/ProductCatalogService.cs` | Offset-based `PaginateAsync()` and keyset `KeysetPaginateAsync()` (in `Program.cs`) |
 | **Enum to String** | `Data/ShopDbContext.cs` | Stores enums as JSON-named (snake_case) strings in the database |
 | **Snake Case Naming** | `Data/ShopDbContext.cs` | Automatic `PascalCase` -> `snake_case` conversion |
 
@@ -31,7 +31,7 @@ The demo performs the following steps automatically:
 4. **Pagination Demo**: Adds 25 more products and demonstrates page navigation.
 5. **Enum Conversion Demo**: Shows how `ProductCategory` is stored as strings.
 6. **Audit Interceptor Demo**: Modifies a product and observes `UpdatedAt` being set automatically.
-7. **Cursor Pagination Demo**: Efficient pagination for large datasets using `CursorPaginationRequest<T>`.
+7. **Cursor Pagination Demo**: Efficient pagination for large datasets using `KeysetPaginateAsync` and `KeysetPaginationRequest`.
 8. **Domain Event Interceptor Demo**: Dispatches events raised by entities during `SaveChanges`.
 
 ## BaseDbContext
@@ -95,21 +95,18 @@ var page = await _dbContext.Products
 // page.HasNextPage  -> bool
 ```
 
-### Cursor-based (High Performance)
+### Keyset (cursor) pagination
 
-Ideal for infinite scroll or very large datasets.
+Ideal for infinite scroll or very large datasets. The key must be unique, so add the id as a tie-breaker.
 
 ```csharp
-var request = new CursorPaginationRequest<DateTimeOffset>
-{
-    Limit = 20,
-    Cursor = lastSeenDate
-};
+var page = await _dbContext.Products.KeysetPaginateAsync(
+    new KeysetPaginationRequest { Limit = 20, After = nextCursor },
+    keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
 
-var response = await _dbContext.Logs
-    .PaginateAsync(request, cursorSelector: x => x.CreatedAt);
-
-// response.Next -> Continue from here
+// page.Value.Items      -> rows of this page
+// page.Value.NextCursor -> pass as After to get the next page
+// page.Value.HasNext    -> bool
 ```
 
 ## Enum String Conversion

@@ -919,7 +919,7 @@ Result<User> user = await ResiliencePolicy
 | `PaginateAsync(query, request)` | Offset-based pagination → `PaginationResponse<T>` |
 | `PaginateAsync(query, pageNumber, pageSize, includeTotalCount = true)` | Same, without building a `PaginationRequest` |
 | `Paginate(query, request)` / `Paginate(query, pageNumber, pageSize)` | Synchronous offset pagination; also works on non-EF `IQueryable` (e.g. `list.AsQueryable()`) |
-| `PaginateAsync(query, cursorRequest, cursorSelector, isAscending = true, search = null, thenBy = null)` | Single-column cursor pagination → `CursorPaginationResponse<T, TCursor>`; the cursor is sent as a SQL parameter and the column must be unique |
+| `PaginateAsync(query, cursorRequest, cursorSelector, isAscending = true, search = null, thenBy = null)` | `[Obsolete]` since 6.0: use `KeysetPaginateAsync`. Single-column cursor pagination → `CursorPaginationResponse<T, TCursor>`; the cursor is sent as a SQL parameter and the column must be unique |
 | `KeysetPaginateAsync(query, request, k => k.Descending(...).Ascending(...), ct)` | Composite keyset pagination → `Result<KeysetPaginationResponse<T>>`; reads `limit + 1` rows, no `COUNT`; bad cursors return `Error.Validation` |
 | `KeysetPaginateAsync(query, request, keys, options, ct)` / `(query, request, ordering[, options], ct)` | Same, with `KeysetPaginationOptions` or a reusable `KeysetOrdering<T>` |
 

@@ -21,7 +21,7 @@ Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8). T
 using CSharpEssentials.EntityFrameworkCore;                       // BaseDbContext, DbContextInterceptors, SoftDeleteAsync, *AsResultAsync
 using CSharpEssentials.EntityFrameworkCore.Interceptors;          // interceptors, IAuditUserIdProvider, IDomainEventPublisher, ISlowQueryHandler
 using CSharpEssentials.EntityFrameworkCore.Pagination;            // PaginateAsync, Paginate, KeysetPaginateAsync
-using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;   // PaginationRequest, CursorPaginationRequest<T>, KeysetPaginationRequest
+using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;   // PaginationRequest, KeysetPaginationRequest
 using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;  // PaginationResponse<T>, KeysetPaginationResponse<T>
 using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;     // KeysetOrdering<T>, KeysetPaginationOptions, ICursorProtector, KeysetCursorErrors
 using CSharpEssentials.EntityFrameworkCore.Extensions;            // AddCqrsDbContexts, AddWriteDbContext, AddReadDbContext
@@ -151,12 +151,9 @@ bool more = page.HasNextPage;  // also PageNumber, PageSize, TotalPages, HasPrev
 var request = new PaginationRequest { PageNumber = 2, PageSize = 10, Search = "pen" };
 PaginationResponse<Product> products = await db.Products
     .PaginateAsync(request, search: term => p => p.Name.Contains(term), cancellationToken: ct);
-
-// Single-column cursor: the column must be unique (the cursor value is sent as a SQL parameter)
-CursorPaginationResponse<Order, long> feed = await db.Orders.PaginateAsync(
-    new CursorPaginationRequest<long> { Limit = 20 },
-    cursorSelector: o => o.Id);
 ```
+
+The single-column cursor `PaginateAsync(cursorRequest, cursorSelector, ...)` is `[Obsolete]` since 6.0; use `KeysetPaginateAsync` below with a unique key (add the id as a tie-breaker).
 
 `Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`. `Normalize()` only enforces minimums; it does not cap `PageSize`/`Limit`. Opt in to a cap with the interface overloads `IPaginationRequest.Normalize(int maxPageSize)` / `ICursorPaginationRequest<T>.Normalize(int maxLimit)` (clamps down like `KeysetPaginationOptions.MaxLimit`; cap < 1 throws `ArgumentOutOfRangeException`).
 

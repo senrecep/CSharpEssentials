@@ -7,6 +7,10 @@ dotnet_diagnostic.CA1515.severity = none
 [{Enums/StringEnumGeneratorTests,Enums/Runtime/RuntimeTestEnums,Json/JsonSerializerOptionsExtensionsTests,Json/ConditionalStringEnumConverterTests}.cs]
 dotnet_diagnostic.S1133.severity = none
 
+# The class is [Obsolete] so it can cover the obsolete single-column cursor PaginateAsync without CS0618.
+[EntityFrameworkCore/ObsoleteCursorPaginationTests.cs]
+dotnet_diagnostic.S1133.severity = none
+
 # The parser test feeds the obsolete ParserStatus.Aborted alias on purpose.
 [Enums/Runtime/EnumInfoParserTests.cs]
 dotnet_diagnostic.CS0618.severity = none
