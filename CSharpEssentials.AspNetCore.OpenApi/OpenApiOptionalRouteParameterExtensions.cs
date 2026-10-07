@@ -11,7 +11,8 @@ public static class OpenApiOptionalRouteParameterExtensions
 
     /// <summary>
     /// Describes optional route parameters with valid OpenAPI (see <see cref="OpenApiOptionalRouteParameterMode"/>). A later call
-    /// on the same options replaces the mode and selector of an earlier one.
+    /// on the same options replaces the mode and selector of an earlier one; the transformer keeps the position in the
+    /// transformer pipeline of the first call.
     /// </summary>
     /// <example><code>services.AddOpenApi(options => options.AddOptionalRouteParameters());</code></example>
     /// <param name="options">The options of one OpenAPI document.</param>
@@ -30,7 +31,7 @@ public static class OpenApiOptionalRouteParameterExtensions
         Func<string, IReadOnlyList<string>, string>? operationIdSelector = null)
     {
         ArgumentNullException.ThrowIfNull(options);
-        if (!Enum.IsDefined(mode))
+        if (mode is not (OpenApiOptionalRouteParameterMode.SplitPaths or OpenApiOptionalRouteParameterMode.RequiredOnly))
             throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown optional route parameter mode.");
 
         // The registered transformers of OpenApiOptions cannot be removed, so a later call updates the registered one.
