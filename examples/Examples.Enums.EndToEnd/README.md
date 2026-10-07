@@ -15,7 +15,7 @@ One `[StringEnum]` enum and one `[Flags]` enum travel through every layer with a
 | Two API versions | `Program.cs` | `v1` writes numbers (`WithEnumWireFormat(EnumWireFormat.Number)`), `v2` writes wire names |
 | OpenAPI | `Program.cs` | `AddOpenApi("v1"/"v2", o => o.AddEnumConventions())`: an integer schema in `v1`, a string schema in `v2` |
 
-The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle host references `CSharpEssentials.AspNetCore.Swashbuckle` instead and calls `o.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does it for you). Never reference both packages in one host: they need different Microsoft.OpenApi major versions.
+The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle host references `CSharpEssentials.AspNetCore.Swashbuckle` instead and calls `o.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does it for you). Reference one of the two packages per host, never both.
 
 ## Package references
 

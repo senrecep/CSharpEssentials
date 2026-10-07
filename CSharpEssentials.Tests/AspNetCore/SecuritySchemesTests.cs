@@ -1,6 +1,6 @@
 using CSharpEssentials.AspNetCore;
 using FluentAssertions;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace CSharpEssentials.Tests.AspNetCore;
 
@@ -18,8 +18,6 @@ public class SecuritySchemesTests
         scheme.In.Should().Be(ParameterLocation.Header);
         scheme.Type.Should().Be(SecuritySchemeType.Http);
         scheme.Description.Should().Be("JWT Bearer Token Authorization");
-        scheme.Reference.Should().NotBeNull();
-        scheme.Reference.Id.Should().Be("Bearer");
-        scheme.Reference.Type.Should().Be(ReferenceType.SecurityScheme);
+        SecuritySchemes.JwtBearerSchemeName.Should().Be("Bearer");
     }
 }

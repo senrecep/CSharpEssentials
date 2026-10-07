@@ -5,8 +5,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using System.Text.Json.Nodes;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore;
@@ -64,8 +64,8 @@ public abstract class ConfigureSwaggerOptions(
 
         var timeSchema = new OpenApiSchema
         {
-            Type = "string",
-            Example = new OpenApiString("00:00:00")
+            Type = JsonSchemaType.String,
+            Example = JsonValue.Create("00:00:00")
         };
 
         options.MapType<TimeSpan>(() => timeSchema);

@@ -2,7 +2,7 @@ using CSharpEssentials.AspNetCore.Swagger.Filters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Reflection;
 
@@ -17,7 +17,7 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
         var schemaGenerator = new SchemaGenerator(
             new SchemaGeneratorOptions(),
             new JsonSerializerDataContractResolver(new System.Text.Json.JsonSerializerOptions()));
-        return new OperationFilterContext(apiDescription, schemaGenerator, schemaRepository, methodInfo);
+        return new OperationFilterContext(apiDescription, schemaGenerator, schemaRepository, new OpenApiDocument(), methodInfo);
     }
 
     [HttpGet("{id?}")]
@@ -51,10 +51,10 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
 
         filter.Apply(operation, context);
 
-        OpenApiParameter param = operation.Parameters[0];
+        var param = (OpenApiParameter)operation.Parameters[0];
         param.Required.Should().BeFalse();
         param.AllowEmptyValue.Should().BeTrue();
-        param.Schema.Nullable.Should().BeTrue();
+        param.Schema!.Type.Should().HaveFlag(JsonSchemaType.Null);
     }
 
     [Fact]

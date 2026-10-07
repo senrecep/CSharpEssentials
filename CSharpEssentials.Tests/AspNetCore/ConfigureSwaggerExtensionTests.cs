@@ -2,7 +2,7 @@ using CSharpEssentials.AspNetCore;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 
 namespace CSharpEssentials.Tests.AspNetCore;
 
@@ -10,7 +10,6 @@ public class ConfigureSwaggerExtensionTests
 {
     private static OpenApiSecurityScheme CreateBearerScheme() => new()
     {
-        Reference = new OpenApiReference { Id = "Bearer", Type = ReferenceType.SecurityScheme },
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
@@ -23,7 +22,7 @@ public class ConfigureSwaggerExtensionTests
         var services = new ServiceCollection();
         OpenApiSecurityScheme scheme = CreateBearerScheme();
 
-        IServiceCollection result = services.AddSwagger<DefaultConfigureSwaggerOptions>(scheme);
+        IServiceCollection result = services.AddSwagger<DefaultConfigureSwaggerOptions>("Bearer", scheme);
 
         result.Should().BeSameAs(services);
     }
@@ -34,7 +33,7 @@ public class ConfigureSwaggerExtensionTests
         var services = new ServiceCollection();
         OpenApiSecurityScheme scheme = CreateBearerScheme();
 
-        services.AddSwagger<DefaultConfigureSwaggerOptions>(scheme);
+        services.AddSwagger<DefaultConfigureSwaggerOptions>("Bearer", scheme);
 
         services.Should().NotBeEmpty();
     }
@@ -45,7 +44,7 @@ public class ConfigureSwaggerExtensionTests
         var services = new ServiceCollection();
         OpenApiSecurityScheme scheme = CreateBearerScheme();
 
-        services.AddSwagger<DefaultConfigureSwaggerOptions>(scheme);
+        services.AddSwagger<DefaultConfigureSwaggerOptions>("Bearer", scheme);
 
         bool hasConfigureOptions = services.Any(sd =>
             sd.ServiceType == typeof(Microsoft.Extensions.Options.IConfigureOptions<Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions>));
@@ -56,7 +55,7 @@ public class ConfigureSwaggerExtensionTests
     public void UseVersionableSwagger_Should_ConfigureMiddleware_When_NoApiVersionProvider()
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(CreateBearerScheme());
+        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>("Bearer", CreateBearerScheme());
         WebApplication app = builder.Build();
 
         Action act = () => app.UseVersionableSwagger();
@@ -68,7 +67,7 @@ public class ConfigureSwaggerExtensionTests
     public void UseVersionableSwagger_Should_InvokeOptionsCallback_When_CallbackProvided()
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(CreateBearerScheme());
+        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>("Bearer", CreateBearerScheme());
         WebApplication app = builder.Build();
         bool callbackInvoked = false;
 
@@ -84,7 +83,7 @@ public class ConfigureSwaggerExtensionTests
     public void UseVersionableSwagger_Should_InvokeUiOptionsCallback_When_CallbackProvided()
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
-        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(CreateBearerScheme());
+        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>("Bearer", CreateBearerScheme());
         WebApplication app = builder.Build();
         bool uiCallbackInvoked = false;
 

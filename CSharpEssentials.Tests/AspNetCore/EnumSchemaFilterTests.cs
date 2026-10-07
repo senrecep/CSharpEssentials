@@ -1,12 +1,12 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CSharpEssentials.AspNetCore.Swagger.Filters;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.OpenApi.Any;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.Tests.AspNetCore;
@@ -54,12 +54,11 @@ public class EnumSchemaFilterTests
 
         filter.Apply(schema, context);
 
-        schema.Type.Should().Be("string");
+        schema.Type.Should().Be(JsonSchemaType.String);
         schema.Enum.Should().HaveCount(3);
         schema.Description.Should().Contain("| `active` | 0 |").And.Contain("| `pending` | 2 |");
         Strings(schema, "x-enum-varnames").Should().Equal("Active", "Inactive", "Pending");
-        schema.Extensions["x-enum-numeric-values"].Should().BeOfType<OpenApiArray>()
-            .Which.Cast<OpenApiLong>().Select(value => value.Value).Should().Equal(0L, 1L, 2L);
+        Nodes(schema, "x-enum-numeric-values").Select(value => value!.GetValue<long>()).Should().Equal(0L, 1L, 2L);
     }
 
     [Fact]
@@ -79,12 +78,12 @@ public class EnumSchemaFilterTests
     public void Apply_ForIntEnum_ShouldNotModifySchema()
     {
         var filter = new EnumSchemaFilter(_services);
-        var schema = new OpenApiSchema { Type = "integer" };
+        var schema = new OpenApiSchema { Type = JsonSchemaType.Integer };
         SchemaFilterContext context = CreateContext(typeof(TestInt));
 
         filter.Apply(schema, context);
 
-        schema.Type.Should().Be("integer");
+        schema.Type.Should().Be(JsonSchemaType.Integer);
         schema.Enum.Should().BeNullOrEmpty();
     }
 
@@ -123,17 +122,17 @@ public class EnumSchemaFilterTests
         var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema
         {
-            Type = "integer",
+            Type = JsonSchemaType.Integer,
             Format = "int32",
-            Enum = [new OpenApiInteger(0), new OpenApiInteger(1), new OpenApiInteger(2)]
+            Enum = [JsonValue.Create(0), JsonValue.Create(1), JsonValue.Create(2)]
         };
 
         filter.Apply(schema, CreateContext(typeof(TestString)));
 
-        schema.Type.Should().Be("string");
+        schema.Type.Should().Be(JsonSchemaType.String);
         schema.Format.Should().BeNull();
         EnumValues(schema).Should().Equal("active", "inactive", "pending");
-        schema.Enum.Should().AllBeOfType<OpenApiString>();
+        schema.Enum.Should().AllSatisfy(value => value.GetValueKind().Should().Be(JsonValueKind.String));
     }
 
     [Fact]
@@ -142,38 +141,41 @@ public class EnumSchemaFilterTests
         var filter = new EnumSchemaFilter(_services);
         var schema = new OpenApiSchema
         {
-            Type = "integer",
+            Type = JsonSchemaType.Integer,
             Format = "int32",
             Description = "original",
-            Enum = [new OpenApiInteger(0), new OpenApiInteger(1)]
+            Enum = [JsonValue.Create(0), JsonValue.Create(1)]
         };
 
         filter.Apply(schema, CreateContext(typeof(TestInt)));
 
-        schema.Type.Should().Be("integer");
+        schema.Type.Should().Be(JsonSchemaType.Integer);
         schema.Format.Should().Be("int32");
         schema.Description.Should().Be("original");
-        schema.Enum.Should().HaveCount(2).And.AllBeOfType<OpenApiInteger>();
+        schema.Enum.Select(value => value.GetValue<int>()).Should().Equal(0, 1);
     }
 
     [Fact]
     public void Apply_ForNonEnumType_ShouldLeaveSchemaUntouched()
     {
         var filter = new EnumSchemaFilter(_services);
-        var schema = new OpenApiSchema { Type = "string", Format = "uuid" };
+        var schema = new OpenApiSchema { Type = JsonSchemaType.String, Format = "uuid" };
 
         filter.Apply(schema, CreateContext(typeof(Guid)));
 
-        schema.Type.Should().Be("string");
+        schema.Type.Should().Be(JsonSchemaType.String);
         schema.Format.Should().Be("uuid");
         schema.Enum.Should().BeNullOrEmpty();
     }
 
+    private static JsonArray Nodes(OpenApiSchema schema, string extension) =>
+        ((JsonNodeExtension)schema.Extensions![extension]).Node.AsArray();
+
     private static IEnumerable<string> Strings(OpenApiSchema schema, string extension) =>
-        ((OpenApiArray)schema.Extensions[extension]).Cast<OpenApiString>().Select(value => value.Value);
+        Nodes(schema, extension).Select(value => value!.GetValue<string>());
 
     private static IEnumerable<string> EnumValues(OpenApiSchema schema) =>
-        schema.Enum.Cast<OpenApiString>().Select(value => value.Value);
+        schema.Enum!.Select(value => value.GetValue<string>());
 
     private static SchemaFilterContext CreateContext(Type type)
     {

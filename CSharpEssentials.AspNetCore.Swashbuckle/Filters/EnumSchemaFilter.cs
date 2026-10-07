@@ -3,7 +3,7 @@ using System.Reflection;
 using CSharpEssentials.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore.Swagger.Filters;
@@ -21,19 +21,23 @@ public class EnumSchemaFilter(IServiceProvider services) : ISchemaFilter
     private readonly OpenApiEnumConventions _conventions = OpenApiEnumConventions.For(services);
 
     /// <inheritdoc />
-    public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+    public void Apply(IOpenApiSchema schema, SchemaFilterContext context)
     {
         ArgumentNullException.ThrowIfNull(schema);
         ArgumentNullException.ThrowIfNull(context);
 
+        // A reference has nothing to change; its component gets the filter on its own.
+        if (schema is not OpenApiSchema concrete)
+            return;
+
         if (context.Type.IsEnum)
         {
-            ApplyEnum(schema, context);
+            ApplyEnum(concrete, context);
             return;
         }
 
-        if (schema.Properties is { Count: > 0 })
-            ApplyProperties(schema, context);
+        if (concrete.Properties is { Count: > 0 })
+            ApplyProperties(concrete, context);
     }
 
     private void ApplyEnum(OpenApiSchema schema, SchemaFilterContext context)
@@ -42,32 +46,47 @@ public class EnumSchemaFilter(IServiceProvider services) : ISchemaFilter
             return;
 
         EnumWireFormat format = GetFormat(services, _conventions, context.DocumentName);
-        SwashbuckleEnumSchemas.ApplyContent(schema, _conventions.GetContent(info, format));
+        OpenApiEnumSchemas.ApplyContent(schema, _conventions.GetContent(info, format));
     }
 
     private void ApplyProperties(OpenApiSchema schema, SchemaFilterContext context)
     {
         DataContract contract = services.GetRequiredService<ISerializerDataContractResolver>().GetDataContractForType(context.Type);
-        if (contract.ObjectProperties is null)
+        if (contract.ObjectProperties is null || schema.Properties is null)
             return;
 
         EnumWireFormat? format = null;
         foreach (DataProperty property in contract.ObjectProperties)
         {
-            if (!schema.Properties.TryGetValue(property.Name, out OpenApiSchema? existing)
+            if (!schema.Properties.TryGetValue(property.Name, out IOpenApiSchema? existing)
                 || EnumUsage.Classify(property.MemberType, _conventions) is not { } usage)
                 continue;
 
             format ??= GetFormat(services, _conventions, context.DocumentName);
             object? defaultValue = property.MemberInfo?.GetCustomAttribute<DefaultValueAttribute>()?.Value;
-            OpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
-            schema.Properties[property.Name] = SwashbuckleEnumSchemas.CreateUsage(
+            IOpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
+            schema.Properties[property.Name] = OpenApiEnumSchemas.CreateUsage(
                 usage,
                 format.Value,
                 reference,
                 usage.FormatDefault(defaultValue, format.Value),
-                existing.Reference is null ? existing.Description : null);
+                GetPropertyDescription(existing, context.SchemaRepository),
+                OpenApiSpecVersion.OpenApi3_0);
         }
+    }
+
+    // The description of the property itself, never the one of the enum component: Swashbuckle copies the component
+    // description onto the reference it returns when it first adds the component.
+    private static string? GetPropertyDescription(IOpenApiSchema existing, SchemaRepository repository)
+    {
+        if (existing is not OpenApiSchemaReference reference)
+            return existing.Description;
+
+        string? description = reference.Reference.Description;
+        bool copiedFromComponent = reference.Reference.Id is { } id
+            && repository.Schemas.TryGetValue(id, out IOpenApiSchema? component)
+            && string.Equals(component.Description, description, StringComparison.Ordinal);
+        return copiedFromComponent ? null : description;
     }
 
     internal static EnumWireFormat GetFormat(IServiceProvider services, OpenApiEnumConventions conventions, string? documentName)

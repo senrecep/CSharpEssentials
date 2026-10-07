@@ -12,7 +12,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Emit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace CSharpEssentials.Tests.Endpoints;
@@ -157,7 +157,7 @@ public class OperationNamingTests
             .ApiDescriptionGroups.Items.SelectMany(static group => group.Items)
             .Select(static description => description.ActionDescriptor.EndpointMetadata.OfType<IEndpointNameMetadata>().LastOrDefault()?.EndpointName)];
         string[] operationIds = [.. app.Services.GetRequiredService<ISwaggerProvider>().GetSwagger("v1")
-            .Paths.Values.SelectMany(static path => path.Operations.Values).Select(static operation => operation.OperationId)];
+            .Paths.Values.SelectMany(static path => path.Operations!.Values).Select(static operation => operation.OperationId!)];
 
         apiExplorerNames.Should().HaveCount(10).And.OnlyHaveUniqueItems().And.NotContainNulls();
         operationIds.Should().BeEquivalentTo(apiExplorerNames);
