@@ -19,9 +19,10 @@ namespace CSharpEssentials.Tests.AspNetCore;
 /// </summary>
 internal static class OptionalRouteParameterHost
 {
-    public static async Task<OpenApiDocument> GetDocumentAsync(Action<SwaggerGenOptions>? configure = null, IReadOnlyList<Type>? controllers = null)
+    public static async Task<OpenApiDocument> GetDocumentAsync(
+        Action<SwaggerGenOptions>? configure = null, IReadOnlyList<Type>? controllers = null, ILoggerProvider? loggerProvider = null)
     {
-        await using WebApplication app = await StartAsync(configure, controllers ?? OptionalRouteParameterControllers.Compliant);
+        await using WebApplication app = await StartAsync(configure, controllers ?? OptionalRouteParameterControllers.Compliant, loggerProvider);
         return app.Services.GetRequiredService<ISwaggerProvider>().GetSwagger("v1");
     }
 
@@ -31,11 +32,13 @@ internal static class OptionalRouteParameterHost
         return await document.SerializeAsJsonAsync(version);
     }
 
-    public static async Task<WebApplication> StartAsync(Action<SwaggerGenOptions>? configure, IReadOnlyList<Type> controllers)
+    public static async Task<WebApplication> StartAsync(Action<SwaggerGenOptions>? configure, IReadOnlyList<Type> controllers, ILoggerProvider? loggerProvider = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
+        if (loggerProvider is not null)
+            builder.Logging.AddProvider(loggerProvider);
         builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(
             "Bearer",
             new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" },

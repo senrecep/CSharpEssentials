@@ -1,8 +1,11 @@
+using System.Collections.Concurrent;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -14,12 +17,16 @@ namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 /// <see cref="OptionalRouteParameterMode.RequiredOnly"/>). Every path parameter of an operation with an optional or
 /// catch-all route parameter is marked required. In <see cref="OptionalRouteParameterMode.SplitPaths"/>, an operation whose
 /// route ends with one to <see cref="MaxSplitParameters"/> optional parameters is also described, as a copy, on the paths
-/// without them. A form whose path and method another operation already has is skipped.
+/// without them. A form whose path and method another operation already has is skipped. An operation with more trailing optional
+/// parameters is logged once per document as a warning.
 /// </summary>
-internal sealed class OptionalRouteParameterDocumentFilter(IServiceProvider services, OptionalRouteParameterSettings settings) : IDocumentFilter
+internal sealed partial class OptionalRouteParameterDocumentFilter(IServiceProvider services, OptionalRouteParameterSettings settings) : IDocumentFilter
 {
     internal const int MaxSplitParameters = 3;
     private const char PathSeparator = '/';
+
+    // Keyed by the host's logger factory (a root singleton): the filter can be created per document generation.
+    private static readonly ConditionalWeakTable<ILoggerFactory, ConcurrentDictionary<(string Document, string Path, HttpMethod Method), bool>> _warnings = [];
 
     public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
     {
@@ -54,9 +61,14 @@ internal sealed class OptionalRouteParameterDocumentFilter(IServiceProvider serv
                 continue;
 
             MarkPathParametersRequired(operation);
-            if (settings.Mode != OptionalRouteParameterMode.SplitPaths
-                || shape.TrailingOptional.Count is 0 or > MaxSplitParameters
-                || !EndsWithParameters(path, shape.TrailingOptional))
+            if (settings.Mode != OptionalRouteParameterMode.SplitPaths || shape.TrailingOptional.Count == 0)
+                continue;
+            if (shape.TrailingOptional.Count > MaxSplitParameters)
+            {
+                WarnNotSplit(context.DocumentName, path, method, shape.TrailingOptional.Count);
+                continue;
+            }
+            if (!EndsWithParameters(path, shape.TrailingOptional))
                 continue;
 
             string[] segments = path.Split(PathSeparator);
@@ -127,6 +139,20 @@ internal sealed class OptionalRouteParameterDocumentFilter(IServiceProvider serv
         form.OperationId = operationId;
         return form;
     }
+
+    private void WarnNotSplit(string documentName, string path, HttpMethod method, int count)
+    {
+        if (services.GetService<ILoggerFactory>() is not { } loggerFactory)
+            return;
+        if (_warnings.GetValue(loggerFactory, static _ => []).TryAdd((documentName, path, method), true))
+            LogNotSplit(loggerFactory.CreateLogger<OptionalRouteParameterDocumentFilter>(), documentName, method.Method, path, count, MaxSplitParameters);
+    }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "OpenAPI document '{DocumentName}': {Method} {Path} ends with {Count} optional route parameters, more than the {MaxSplitParameters} " +
+            "that SplitPaths describes as separate paths; it is described on one path with every parameter required.")]
+    private static partial void LogNotSplit(ILogger logger, string documentName, string method, string path, int count, int maxSplitParameters);
 
     private static void MarkPathParametersRequired(OpenApiOperation operation)
     {
