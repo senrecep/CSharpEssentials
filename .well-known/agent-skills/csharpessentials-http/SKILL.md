@@ -115,7 +115,7 @@ services.AddHttpClient("webhooks")
     });
 ```
 
-- Defaults: https only on port 443, at most 3 redirects, no proxy, no cookie container, never HTTP/3 (QUIC skips `ConnectCallback`). Private, loopback, link-local, metadata, multicast and reserved IPv4/IPv6 ranges are blocked, including Teredo, `fec0::/10`, `64:ff9b:1::/48` and IPv6 forms that embed a blocked IPv4 address.
+- Defaults: https only on port 443, at most 3 redirects, no proxy, no cookie container, never HTTP/3 (QUIC skips `ConnectCallback`). Private, loopback, link-local, metadata, multicast and reserved IPv4/IPv6 ranges are blocked, including Teredo, ORCHID (`2001:10::/28`), benchmarking (`2001:2::/48`), documentation (`2001:db8::/32`, `3fff::/20`), SRv6 SIDs (`5f00::/16`), discard-only (`100::/64`), SIIT (`::ffff:0:0:0/96`), 6to4 relay anycast (`192.88.99.0/24`), `fec0::/10`, `64:ff9b:1::/48` and IPv6 forms that embed a blocked IPv4 address.
 - Every resolved address is checked, and the socket connects to an address that was checked. A name with even one private address is rejected.
 - Every redirect hop is checked again. `Authorization`, `Proxy-Authorization` and `Cookie` are removed on cross-origin hops.
 - Exceptions: `AllowedNetworks`/`BlockedNetworks` (`IPNetwork.Parse("10.0.0.0/8")`) and `AllowedHosts`/`BlockedHosts` (`"*.example.com"` matches subdomains, not `example.com`; case, trailing dot and IDN form are normalized). Block lists win. Use host wildcards only for domains whose DNS you control.

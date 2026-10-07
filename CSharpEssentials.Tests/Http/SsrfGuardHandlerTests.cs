@@ -662,6 +662,40 @@ public sealed class SsrfGuardHandlerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SendAsync_Should_Use_Network_Snapshot_When_Options_Are_Mutated_After_Client_Creation()
+    {
+        SsrfGuardOptions? captured = null;
+        HttpClient client = CreateClient(o =>
+        {
+            o.AllowedNetworks.Add(LoopbackNetwork);
+            captured = o;
+        });
+        captured!.AllowedNetworks.Clear();
+        captured.BlockedNetworks.Add(LoopbackNetwork);
+
+        string body = await client.GetStringAsync(_server.Url("loopback.test", "/ok"));
+
+        body.Should().Be("ok");
+    }
+
+    [Fact]
+    public async Task SendAsync_Should_Keep_Blocked_Network_Snapshot_When_Options_Are_Cleared_After_Client_Creation()
+    {
+        SsrfGuardOptions? captured = null;
+        HttpClient client = CreateClient(o =>
+        {
+            o.AllowedHosts.Add("loopback.test");
+            o.BlockedNetworks.Add(LoopbackNetwork);
+            captured = o;
+        });
+        captured!.BlockedNetworks.Clear();
+
+        SsrfBlockedException ex = await AssertBlockedAsync(() => client.GetAsync(_server.Url("loopback.test", "/ok")));
+
+        ex.Reason.Should().Be(SsrfBlockReason.AddressNotAllowed);
+    }
+
+    [Fact]
     public async Task SendAsync_Should_Allow_Allowlisted_Host()
     {
         HttpClient client = CreateClient(o => o.AllowedHosts.Add("*.test"));

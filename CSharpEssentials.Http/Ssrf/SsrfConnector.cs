@@ -11,6 +11,8 @@ internal sealed class SsrfConnector(SsrfGuardOptions options, IOutboundAddressPo
 
     private readonly string[] _allowedHosts = NormalizePatterns(options.AllowedHosts);
     private readonly string[] _blockedHosts = NormalizePatterns(options.BlockedHosts);
+    private readonly IPNetwork[] _allowedNetworks = [.. options.AllowedNetworks];
+    private readonly IPNetwork[] _blockedNetworks = [.. options.BlockedNetworks];
 
     public async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, CancellationToken cancellationToken)
     {
@@ -49,10 +51,10 @@ internal sealed class SsrfConnector(SsrfGuardOptions options, IOutboundAddressPo
     {
         IPAddress normalized = DefaultOutboundAddressPolicy.Normalize(address);
 
-        if (ContainsAny(options.BlockedNetworks, address) || ContainsAny(options.BlockedNetworks, normalized))
+        if (ContainsAny(_blockedNetworks, address) || ContainsAny(_blockedNetworks, normalized))
             return false;
 
-        if (hostAllowed || ContainsAny(options.AllowedNetworks, address))
+        if (hostAllowed || ContainsAny(_allowedNetworks, address))
             return true;
 
         // Both forms must pass so a policy that inspects only one of them cannot be bypassed by the other.
@@ -87,7 +89,7 @@ internal sealed class SsrfConnector(SsrfGuardOptions options, IOutboundAddressPo
         throw lastError ?? new SocketException((int)SocketError.HostNotFound);
     }
 
-    private static bool ContainsAny(ICollection<IPNetwork> networks, IPAddress address)
+    private static bool ContainsAny(IPNetwork[] networks, IPAddress address)
     {
         foreach (IPNetwork network in networks)
         {
