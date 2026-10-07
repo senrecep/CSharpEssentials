@@ -172,7 +172,7 @@ v2.MapGet("/health", () => Results.Ok());          // GET /v2/health
 
 `CreateVersionedGroup("orders", version: 1)` builds `v{version:apiVersion}/orders` in one call.
 
-Optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described as one path per form (`/orders` + `/orders/{id}`, every path parameter required); the shorter form's operationId is `{operationId}Without{Param}` and a duplicate throws at document generation. `o.AddOptionalRouteParameters(OptionalRouteParameterMode.RequiredOnly)` (on `SwaggerGenOptions`, after `AddSwagger`) keeps one path per operation; avoid the obsolete `LegacyNonCompliant`, it emits invalid OpenAPI.
+Optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described as one path per form (`/orders` + `/orders/{id}`, every path parameter required); the shorter form's operationId is `{operationId}Without{Param}` and a duplicate throws at document generation. `o.AddOptionalRouteParameters(OptionalRouteParameterMode.RequiredOnly)` (on `SwaggerGenOptions`, after `AddSwagger`) keeps one path per operation; avoid the obsolete `LegacyNonCompliant`, it emits invalid OpenAPI. With `Microsoft.AspNetCore.OpenApi` (`CSharpEssentials.AspNetCore.OpenApi`, 6.2.0) the same behavior is opt-in: `services.AddOpenApi("v1", o => o.AddOptionalRouteParameters())` (`OpenApiOptionalRouteParameterMode.SplitPaths` or `RequiredOnly`).
 
 ---
 

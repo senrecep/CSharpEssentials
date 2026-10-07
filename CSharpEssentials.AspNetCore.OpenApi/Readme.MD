@@ -45,6 +45,44 @@ app.MapOpenApi();
 
 The Swashbuckle package produces the same enum schemas (both are compared with the same golden files).
 
+## Optional route parameters
+
+OpenAPI requires every path parameter to be `required: true`, so a route with an optional segment (`{id?}`, `{id:int?}`, `{page=1}`) cannot be described on one path. `AddOptionalRouteParameters` (from 6.2.0, opt-in) describes it on several paths, one per form:
+
+```csharp
+using CSharpEssentials.AspNetCore; // AddOptionalRouteParameters, OpenApiOptionalRouteParameterMode
+
+builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters());
+```
+
+```csharp
+[HttpGet("api/archive/{year?}/{month?}", Name = "GetArchive")]
+```
+
+| Path | operationId |
+|------|-------------|
+| `/api/archive` | `GetArchiveWithoutYearAndMonth` |
+| `/api/archive/{year}` | `GetArchiveWithoutMonth` |
+| `/api/archive/{year}/{month}` | `GetArchive` |
+
+- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue` or a `null` type or default.
+- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required.
+- A route with more than three trailing optional parameters is logged as a warning (once per document, path and method) through the host's `ILoggerFactory`. Without an `ILoggerFactory` nothing is logged.
+- A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
+- The full form keeps the operationId; a shorter form gets `{operationId}Without{Param}` (`And` between parameters), or none when the full form has none. A generated operationId that another operation already uses throws `InvalidOperationException` when the document is generated; rename one of them or pass a selector.
+- Controller and Minimal API routes are handled the same way, on the paths `Microsoft.AspNetCore.OpenApi` writes (`/minimal/{id}` for `/minimal/{id:int?}`).
+
+```csharp
+// Split paths with your own operationIds for the shorter forms
+builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(
+    operationIdSelector: (operationId, omitted) => $"{operationId}_{string.Join("_", omitted)}"));
+
+// Or keep one path per operation and only mark the parameters required
+builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(OpenApiOptionalRouteParameterMode.RequiredOnly));
+```
+
+A later call on the same options replaces the mode and selector of an earlier one. Without `AddOptionalRouteParameters`, the document keeps the framework output: one path per operation (`/api/archive/{year}/{month}`). The Swashbuckle package describes the same routes the same way.
+
 ## Scalar
 
 No helper is needed; list the documents:

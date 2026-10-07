@@ -41,3 +41,20 @@ builder.Services.Configure<SwaggerGenOptions>(o => o.AddOptionalRouteParameters(
 ```
 
 `ReApplyOptionalRouteParameterOperationFilter` stays public and unchanged; `LegacyNonCompliant` registers it. A `ConfigureSwaggerOptions` subclass that registers it itself keeps the old output for those operations, next to the `SplitPaths` document filter that `AddSwagger` adds; call `AddOptionalRouteParameters(OptionalRouteParameterMode.LegacyNonCompliant)` instead.
+
+## Warning for routes that are not split (6.2.0)
+
+From 6.2.0, a route with more than three trailing optional parameters (`api/deep/{a?}/{b?}/{c?}/{d?}`) is logged as a warning in `SplitPaths` mode, once per document, path and method, through the host's `ILoggerFactory`. The route is still described on one path with every parameter required; the warning tells you the shorter forms are missing from the document.
+
+## Microsoft.AspNetCore.OpenApi (6.2.0)
+
+`CSharpEssentials.AspNetCore.OpenApi` gets the same behavior in 6.2.0 as an opt-in document transformer; documents that do not call it keep the framework output.
+
+```csharp
+using CSharpEssentials.AspNetCore;
+
+builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters());
+builder.Services.AddOpenApi("v2", o => o.AddOptionalRouteParameters(OpenApiOptionalRouteParameterMode.RequiredOnly));
+```
+
+The forms, operationIds, collision rules, skipped forms and the warning are the same as in the Swashbuckle package, on the paths `Microsoft.AspNetCore.OpenApi` writes (`/orders/{id}` for `orders/{id:int?}`). The framework already writes path parameters as `required: true`; the transformer adds the shorter forms and removes a `null` type or default from path parameter schemas. There is no legacy mode.
