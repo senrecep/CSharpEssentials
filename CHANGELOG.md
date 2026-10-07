@@ -3,6 +3,14 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.1](https://github.com/senrecep/CSharpEssentials/compare/v5.2.0...v5.2.1) (2026-10-07)
+
+
+### Fixed
+
+* **efcore:** prevent int overflow in pagination skip and take ([07bfc4a](https://github.com/senrecep/CSharpEssentials/commit/07bfc4a879023499bfe7be343534b9c38d39ee26))
+* **http:** block more reserved IPv6 and 6to4 relay ranges in SSRF guard ([904f979](https://github.com/senrecep/CSharpEssentials/commit/904f97959ace1e37d6ecda162e163b244d27d881))
+
 ## [5.2.0](https://github.com/senrecep/CSharpEssentials/compare/v5.1.0...v5.2.0) (2026-10-07)
 
 
