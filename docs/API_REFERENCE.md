@@ -1197,6 +1197,35 @@ app.UseEnhancedProblemDetails();
 
 Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`.
 
+### Conditional requests
+
+| Member | What It Does |
+|--------|-------------|
+| `AddConditionalRequests(Action<ConditionalRequestOptions>? = null)` | Registers the options, the default `IETagGenerator` (unless one is registered) and the MVC filters. Calling it again only replaces the options |
+| `AddETagSource<T, TSource>()` | Registers `TSource : IETagSource<T>` (scoped). Used for values whose runtime type is `T` or derives from it; wins over `IVersioned` and `IETagGenerator`. Throws `ArgumentException` when `T` is an interface |
+| `WithConditionalGet()` / `[ConditionalGet]` | `ETag`/`Last-Modified` and 304 for `GET`/`HEAD` on an endpoint, group, MVC controller or action |
+| `WithIfMatch(bool required = false)` / `[IfMatch(Required = ...)]` | Parses `If-Match` on `POST`/`PUT`/`PATCH`/`DELETE` (safe methods are not evaluated; `If-Unmodified-Since` is not supported): 400 when malformed, 428 when missing and required. An endpoint overrides its group; action > controller > endpoint for MVC |
+| `WithIfMatch<TBuilder, T>(Func<HttpContext, CancellationToken, ValueTask<T?>> loadCurrent, bool required = false)` | Also loads the current resource and returns 412 before the handler when it is missing or does not match. Not atomic. `T : class`. A weak ETag (body hash) never matches, so only `*` passes |
+| `HttpContext.GetPreconditions()` | The parsed `Preconditions`; throws without `WithIfMatch`/`[IfMatch]` |
+| `IVersioned` | `string Version`: strong ETag `"{Version}"`; invalid ETag characters are hashed (base64url SHA-256); empty: no ETag |
+| `IVersioned.ToETag()` | The ETag the default generator sends for the resource (`EntityTagHeaderValue?`) |
+| `IETagSource<in T>` | `ResourceValidators? GetValidators(T value)` |
+| `IETagGenerator` | `ResourceValidators? GetValidators(object value)`: fallback for values without a source |
+| `ResourceValidators(EntityTagHeaderValue? ETag, DateTimeOffset? LastModified)` | The validators of a resource |
+| `ConditionalRequestErrors.PreconditionFailed` | Conflict `Error` with code `Http.PreconditionFailed`; `DefaultErrorStatusCodeMapper` maps it to 412 |
+
+| `Preconditions` member | Notes |
+|------------------------|-------|
+| `HasIfMatch` / `IsWildcard` / `IfMatch` | The parsed header; empty for safe methods |
+| `Matches(IVersioned?)` / `Matches(ResourceValidators?)` / `Matches(EntityTagHeaderValue?)` | `true` without `If-Match`; strong comparison, weak tags never match; `*` matches an existing resource |
+| `TryGetIfMatchVersion(out string version)` | The opaque tag of a single strong ETag; pass it as the original concurrency token for an atomic update. Equals `IVersioned.Version` only when the version is a valid entity tag (`uint xmin`, `long` revision); otherwise use `Matches(IVersioned?)` |
+
+| Option | Default | Notes |
+|--------|---------|-------|
+| `UseBodyHashFallback` | `false` | `true`: values without a source or `IVersioned` get a weak ETag from the SHA-256 of their JSON (host `JsonOptions`, also for MVC). Only buffered values: `IAsyncEnumerable<T>`, `Stream`, `PipeReader` and `IQueryable` get none; a lazy `IEnumerable<T>` is enumerated twice |
+
+Reads: `If-None-Match` uses weak comparison and takes precedence over `If-Modified-Since`; an unparsable date is ignored. `Last-Modified` has second precision and is capped at now (`TimeProvider` from DI, else the system clock). A 304 has no body and keeps the headers already on the response. A response whose handler already set `ETag` is left untouched. Strings (also `Result<string>`), `ProblemDetails`, `null`, failed `Result<T>` and non-2xx results pass through. Works with `ResultEndpointFilter` in either order. A custom `IErrorStatusCodeMapper` that does not derive from `DefaultErrorStatusCodeMapper` must map `PreconditionFailedCode` to 412 itself; a registered `IResultErrorMapper` decides the `ResultEndpointFilter` response.
+
 ### API Versioning
 
 | Method | What It Does |

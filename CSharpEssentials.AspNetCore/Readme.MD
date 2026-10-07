@@ -10,6 +10,7 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 - **Validation Endpoint Filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
 - **Idempotency**: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response instead of running the handler again. The store is pluggable (`IIdempotencyStore`); in-memory and `IDistributedCache` stores are included.
 - **Enum Binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
+- **Conditional Requests**: `ETag`/`Last-Modified` with `304 Not Modified` on reads (`WithConditionalGet()`, `[ConditionalGet]`), and `If-Match` optimistic concurrency with 412/428 on writes (`WithIfMatch()`, `[IfMatch]`).
 - **API Versioning**: Pre-configured URL segment and header-based versioning.
 - **OpenAPI**: Not part of this package. Add `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swagger), one per host.
 
@@ -200,6 +201,63 @@ public sealed class LegacyOrdersController : ControllerBase { ... }
 Precedence: action attribute > controller attribute > endpoint or group (`MapControllers().WithEnumWireFormat(...)` for MVC) > `WriteAs`. The host's `JsonOptions` are never changed; the other format is written with a copy. Status codes and headers of the result (`Created` + `Location`, `Results<Ok<T>, NotFound>`) are kept. Reading is not affected.
 
 `AddEnumBinding`/`EnumBindingOptions` are obsolete forwarders to `AddEnumConventions` (see the v4 to v5 migration guide).
+
+### Conditional requests
+
+```csharp
+using Microsoft.Net.Http.Headers; // EntityTagHeaderValue; not System.Net.Http.Headers
+
+builder.Services.AddConditionalRequests();                      // MVC filters included; call once or many times
+builder.Services.AddETagSource<Article, ArticleETagSource>();    // optional: ETag + Last-Modified for a type
+
+// public sealed class Order : IVersioned { public uint Xmin { get; set; } public string Version => Xmin.ToString(); ... }
+app.MapGet("/orders/{id}", async Task<Result<Order>> (Guid id, AppDbContext db) =>
+        await db.Orders.FindAsync(id) is { } order ? order : Error.NotFound("order.notFound", "Order not found"))
+    .AddEndpointFilter<ResultEndpointFilter>()
+    .WithConditionalGet();                                      // ETag "{Version}"; a failure is untouched
+
+app.MapPut("/orders/{id}", async Task<Result> (Guid id, UpdateOrder body, HttpContext http, AppDbContext db) =>
+{
+    Order? order = await db.Orders.FindAsync(id);
+    if (order is null)
+        return Error.NotFound("order.notFound", "Order not found");
+    Preconditions preconditions = http.GetPreconditions();
+    if (!preconditions.Matches(order))                          // same ETag as the GET, also for hashed versions
+        return ConditionalRequestErrors.PreconditionFailed;     // 412
+    if (preconditions.TryGetIfMatchVersion(out string? version))
+        db.Entry(order).Property(o => o.Xmin).OriginalValue = uint.Parse(version); // atomic check in SaveChanges
+    order.Apply(body);
+    await db.SaveChangesAsync();
+    return Result.Success();
+}).AddEndpointFilter<ResultEndpointFilter>().WithIfMatch(required: true);
+
+public sealed class ArticleETagSource : IETagSource<Article>
+{
+    public ResourceValidators? GetValidators(Article article) =>
+        new(new EntityTagHeaderValue($"\"{article.Revision}\""), article.UpdatedAt); // long Revision
+}
+```
+
+A `byte[]` row version must be encoded (`Convert.ToBase64String(rowVersion)`); interpolating it gives `"System.Byte[]"`.
+
+MVC: `[ConditionalGet]` on a `[HttpGet, HttpHead]` action or controller, `[IfMatch(Required = true)]` on a write action, or `MapControllers().WithConditionalGet()` / `.WithIfMatch()` for all actions (action > controller > endpoint).
+
+| Request | Response |
+|---------|----------|
+| `GET`/`HEAD` with a successful value (object, `Result<T>` success, `Ok<T>` or another 2xx `IValueHttpResult`) | `ETag` and `Last-Modified` (second precision, never later than now) are set |
+| `If-None-Match` matches (weak comparison, `*` matches any) | `304 Not Modified` without a body; headers already on the response (`Cache-Control`, `Vary`, `Content-Location`) are kept |
+| No `If-None-Match`, `If-Modified-Since` not older than `Last-Modified` | 304 (an unparsable date is ignored) |
+| Handler already set an `ETag` header | Untouched (not overridden, no 304) |
+| Strings, `ProblemDetails`, `null`, failed results, non-2xx results, other methods | Untouched (also a `Result<string>`) |
+| `POST`/`PUT`/`PATCH`/`DELETE` without `If-Match`, `required: true` | 428 Precondition Required |
+| Malformed `If-Match` (`v1`, `*, "v1"`) | 400 |
+| Handler returns `ConditionalRequestErrors.PreconditionFailed` | 412 Precondition Failed (`DefaultErrorStatusCodeMapper`) |
+
+`If-Match` is evaluated only for `POST`, `PUT`, `PATCH` and `DELETE`; safe methods get empty preconditions. `If-Unmodified-Since` is not supported. A header sent on several lines is combined. The 412 comes from `DefaultErrorStatusCodeMapper`: a registered `IResultErrorMapper` decides the `ResultEndpointFilter` response itself, and a custom `IErrorStatusCodeMapper` must map `ConditionalRequestErrors.PreconditionFailedCode` to 412.
+
+Validators: a registered `IETagSource<T>` (exact runtime type, then base classes; interfaces are rejected; resolved per request so scoped dependencies work), otherwise `IETagGenerator`. The default generator turns `IVersioned.Version` into a strong ETag (versions with characters not allowed in an ETag are hashed to base64url SHA-256; an empty version gives none); `versioned.ToETag()` returns the same tag. With `AddConditionalRequests(o => o.UseBodyHashFallback = true)` other values get a weak ETag from the SHA-256 of their JSON. Only buffered values are hashed: `IAsyncEnumerable<T>`, `Stream`, `PipeReader` and `IQueryable` get no ETag, so they are not enumerated or run twice. Return materialized values (a list or array): a lazy `IEnumerable<T>` (`yield`, `AsEnumerable().Select(...)`) is enumerated once for the hash and again for the response. The hash uses the host `JsonOptions` (`ConfigureHttpJsonOptions`), also for MVC actions. It is off by default because it serializes every response twice. `Last-Modified` is capped at now, read from the `TimeProvider` in DI (the system clock when none is registered).
+
+`Preconditions` (`HttpContext.GetPreconditions()`): `HasIfMatch`, `IsWildcard`, `IfMatch`, `Matches(IVersioned?)`, `Matches(ResourceValidators?)`, `Matches(EntityTagHeaderValue?)` (strong comparison, weak tags never match), and `TryGetIfMatchVersion(out string version)`, the value of a single strong tag. That value equals `IVersioned.Version` only when the version is a valid entity tag (numbers such as `uint xmin` or a `long` revision are); hashed versions must be compared with `Matches(IVersioned?)`. Pass it as the original concurrency token of the update (for example EF Core `OriginalValue`) for an atomic check. `WithIfMatch<TBuilder, T>(loadCurrent)` loads the current resource and returns 412 before the handler; that check is not atomic. A weak ETag (the body hash fallback) never matches there, so only `If-Match: *` passes. With `UseIdempotency()`, a retry with the same `Idempotency-Key` replays the stored response without evaluating `If-Match` again; the fingerprint covers method, path, query and body, not headers.
 
 ### Structured Error Response
 
