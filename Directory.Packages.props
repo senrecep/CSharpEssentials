@@ -11,6 +11,7 @@
         <PackageVersion Include="Asp.Versioning.Http" Version="[8.1.0,)" />
         <PackageVersion Include="Asp.Versioning.Mvc" Version="[8.1.0,)" />
         <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="[8.1.0,)" />
+        <!-- 10.2.3: the Swashbuckle 10 release chosen in #69 for the Microsoft.OpenApi 2.x move. -->
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="[10.2.3,11)" />
     </ItemGroup>
 
