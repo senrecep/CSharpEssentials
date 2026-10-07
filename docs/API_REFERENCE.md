@@ -984,6 +984,14 @@ Opt-in hooks; both are off by default.
 
 Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interceptor attachment. Use either `DispatchDomainEventsOnSaveChanges` or `DomainEventInterceptor`, not both; events collected by the context are cleared before the interceptor runs, so they are never dispatched twice.
 
+### Transaction Runner
+
+| Member | What It Does |
+|--------|-------------|
+| `ITransactionRunner` (`CSharpEssentials.Core`, namespace `CSharpEssentials.Transactions`) | `ExecuteAsync(work, shouldCommit, ct)`: runs work in a transaction, commits when `shouldCommit` is true, rolls back otherwise or on exception |
+| `EfCoreTransactionRunner<TDbContext>` | Outermost call: execution strategy + `BeginTransactionAsync`, retry re-runs the whole unit. Nested call on the same context: joins `CurrentTransaction` behind a savepoint |
+| `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner`, replacing an earlier one |
+
 ### CQRS Context Registration
 
 | Method | What It Does |
@@ -1182,7 +1190,8 @@ Both produce the same enum schemas (shared golden files): one component per enum
 | `LoggingBehavior` | `ILoggableRequest` | Logs request/response details |
 | `ExceptionHandlingBehavior` | None (auto for `Result` / `Result<T>`) | Catches handler exceptions; converts to `Result.Failure(Error.Exception(ex))`; `OperationCanceledException` always propagates |
 | `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `Expiration` (`BypassCache`, `CacheFailures` control the lookup) |
-| `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope` |
+| `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope`; completes only when the `Result` succeeds |
+| `TransactionBehavior` | `ITransactionalRequest` | Runs the handler through the registered `ITransactionRunner`; commits only when the `Result` succeeds. Replaces `TransactionScopeBehavior` when registered |
 
 ### ExceptionHandlingBehavior
 
@@ -1240,7 +1249,8 @@ if (result.IsFailure)
 | `AddMediatorLoggingBehavior()` | Registers logging only |
 | `AddMediatorExceptionHandlingBehavior()` | Registers exception handling only (singleton) |
 | `AddMediatorCachingBehavior()` | Registers caching only |
-| `AddMediatorTransactionBehavior()` | Registers transaction only |
+| `AddMediatorTransactionBehavior()` | Registers `TransactionScopeBehavior`, replacing `TransactionBehavior` in place |
+| `AddMediatorTransactionRunnerBehavior()` | Registers `TransactionBehavior` (scoped), replacing `TransactionScopeBehavior` in place; needs an `ITransactionRunner` |
 
 ---
 
