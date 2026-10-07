@@ -116,8 +116,8 @@ public static class Extensions
     /// <para>
     /// The cursor column must be unique. <paramref name="thenBy"/> only changes ORDER BY, not the filter, so with a
     /// non-unique column (such as a timestamp) a page that ends inside a group of equal values skips the rest of that
-    /// group. <see cref="ICursorPaginationRequest{TCursor}.Normalize"/> only raises <c>Limit</c> to 1 and does not cap it;
-    /// validate the upper bound yourself. Prefer
+    /// group. <see cref="ICursorPaginationRequest{TCursor}.Normalize()"/> only raises <c>Limit</c> to 1 and does not cap it;
+    /// call <see cref="ICursorPaginationRequest{TCursor}.Normalize(int)"/> first to cap it. Prefer
     /// <see cref="KeysetPaginationExtensions.KeysetPaginateAsync{T}(IQueryable{T}, IKeysetPaginationRequest, Func{Keyset.KeysetOrdering{T}, Keyset.KeysetOrdering{T}}, CancellationToken)"/>,
     /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
     /// </para>

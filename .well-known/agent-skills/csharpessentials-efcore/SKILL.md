@@ -158,7 +158,7 @@ CursorPaginationResponse<Order, long> feed = await db.Orders.PaginateAsync(
     cursorSelector: o => o.Id);
 ```
 
-`Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`. `Normalize()` only enforces minimums; it does not cap `PageSize`/`Limit`.
+`Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`. `Normalize()` only enforces minimums; it does not cap `PageSize`/`Limit`. Opt in to a cap with the interface overloads `IPaginationRequest.Normalize(int maxPageSize)` / `ICursorPaginationRequest<T>.Normalize(int maxLimit)` (clamps down like `KeysetPaginationOptions.MaxLimit`; cap < 1 throws `ArgumentOutOfRangeException`).
 
 ### Keyset (composite cursor) pagination
 
