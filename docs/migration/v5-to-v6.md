@@ -49,7 +49,7 @@ What the documents change:
 - An enum property with its own XML `<summary>` is written as `allOf: [$ref]` + `description` (the summary of the property). A property without one stays a plain `$ref`; the summary of the enum type stays on the component.
 - An optional route parameter (`{id?}`) whose schema is a `$ref` is written as `allOf: [$ref]` + `nullable: true` + `default: null`, because a `$ref` cannot carry siblings in OpenAPI 3.0. An inline schema gets `nullable: true` and `default: null` on itself.
 
-Keep OpenAPI 3.0, the Swashbuckle default. The enum filters always write the 3.0 shape (a filter cannot see the version `UseSwagger` serializes), and with `UseSwagger(o => o.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1)` a nullable enum usage is serialized as `{"type": "null", "allOf": [{"$ref": ...}]}`: no value matches both `type: "null"` and the enum component, so the schema is unsatisfiable and validators and client generators reject `null` and every enum value.
+Keep OpenAPI 3.0, the Swashbuckle default. The enum filters always write the 3.0 shape (a filter cannot see the version `UseSwagger` serializes), and with `UseSwagger(o => o.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1)` a nullable enum usage, and an optional route parameter whose schema is a `$ref`, is serialized as `{"type": "null", "allOf": [{"$ref": ...}]}`: no value matches both `type: "null"` and the referenced component, so the schema is unsatisfiable and validators and client generators reject `null` and every enum value.
 
 ## `CSharpEssentials.AspNetCore.OpenApi`
 
