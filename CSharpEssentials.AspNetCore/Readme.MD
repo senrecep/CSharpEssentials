@@ -8,6 +8,7 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 - **Global Exception Handler**: Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
 - **Result Endpoint Filter**: Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
 - **Validation Endpoint Filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
+- **Idempotency**: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response instead of running the handler again. The store is pluggable (`IIdempotencyStore`); in-memory and `IDistributedCache` stores are included.
 - **Enum Binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
 - **API Versioning**: Pre-configured URL segment and header-based versioning.
 - **OpenAPI**: Not part of this package. Add `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swagger), one per host.
@@ -107,6 +108,56 @@ app.MapPost("/users", (CreateUserRequest request) => CreateUser(request))
 - A `null` argument (optional body) is passed through.
 - No registered `IValidator<T>` throws `InvalidOperationException` at request time, so unvalidated input never reaches the handler. A handler without a `T` parameter throws when the endpoint is built.
 - `ValidationEndpointFilter<T>` can also be added directly with `AddEndpointFilter<ValidationEndpointFilter<T>>()`, for example on a route group.
+
+### Idempotency
+
+```csharp
+builder.Services.AddIdempotency(o =>
+{
+    o.RetentionPeriod = TimeSpan.FromHours(24);   // default
+    o.RequireKey = true;                           // default false: requests without a key pass through
+});
+
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseIdempotency();                              // after auth, so the key is scoped to the user
+
+app.MapPost("/orders", CreateOrder).WithIdempotency();
+
+[HttpPost, Idempotent]                             // MVC
+public IActionResult Create(CreateOrderRequest request) => ...;
+```
+
+How a request with an `Idempotency-Key` header is handled:
+
+| Situation | Response |
+|-----------|----------|
+| First request | The handler runs. A response that `ShouldStore` accepts (default: 2xx) is stored for `RetentionPeriod` |
+| Same key, same request, completed | The stored status, body and allowlisted headers, plus `Idempotency-Replayed: true`. The handler does not run |
+| Same key, same request, still running | 409 with `Retry-After` |
+| Same key, different method, path, query or body | 422 |
+| Missing key | Passes through (400 with `RequireKey`) |
+| Empty key, key longer than `MaxKeyLength` (255), several key headers | 400 |
+| Handler throws before the response started, or `ShouldStore` rejects the status | The key is released, so the client can retry |
+| Handler throws after the response started (for example the client went away mid-write) | The key stays in flight until `InFlightTimeout`, because the work is most likely done |
+
+- Only endpoints with `IdempotentAttribute` metadata (`WithIdempotency()`, `[Idempotent]`, or on a route group) and methods in `Methods` (default POST and PATCH) participate.
+- Keys are scoped to the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Requests without a scope pass through; set `KeyScope` (for example to a tenant id, or the issuer plus the subject when several authentication schemes can produce the same `sub`) or `AllowUnscopedKeys = true` to change that. Unscoped keys live in their own namespace and never match a scoped entry.
+- Only the headers in `ReplayedHeaders` are replayed (`Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`). `Set-Cookie` is never stored.
+- Put `UseResponseCompression()` before `UseIdempotency()`: the stored body is uncompressed and compression runs again on replay. `Content-Encoding` and `Vary` are not replayed by default; add them only when the handler encodes the body itself.
+- A response body larger than `MaxResponseBodySize` (1 MiB) is sent normally but not stored, and a warning is logged.
+- The request body is buffered (`EnableBuffering`) to compute the fingerprint; bodies over 30 KB spill to a temporary file.
+- `InFlightTimeout` (1 minute) frees the key of a request that never finished, for example after a crash. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
+- A store failure after the handler ran is logged and does not change the response; the key then stays in flight until `InFlightTimeout`.
+
+Stores:
+
+| Store | Register with | Notes |
+|-------|---------------|-------|
+| `InMemoryIdempotencyStore` | default, or `o.UseInMemoryStore()` | Single instance only. Unbounded: every stored response stays in memory for `RetentionPeriod`, so use it for development or small workloads |
+| `DistributedCacheIdempotencyStore` | `o.UseDistributedCacheStore()` plus an `IDistributedCache` | Best effort: `IDistributedCache` has no atomic add, so two simultaneous first requests on different instances can both run |
+| Your own `IIdempotencyStore` | `o.UseStore<TStore>(lifetime)` | Use an atomic insert (for example `INSERT ... ON CONFLICT DO NOTHING` or Redis `SET NX`) for a strict guarantee, and make `CompleteAsync`/`ReleaseAsync` conditional on the reservation token (`WHERE key = @key AND token = @token`) |
 
 ### Enum Conventions: JSON, Binding and Wire Format
 
