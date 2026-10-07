@@ -7,19 +7,35 @@ using CSharpEssentials.Validation;
 
 namespace CSharpEssentials.Mediator;
 
-public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators)
-    : IPipelineBehavior<TRequest, TResponse>
+public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IMessage
 {
     private readonly Type _responseType = typeof(TResponse);
 
     // Validators are grouped by Order (ascending) and materialized once at construction time.
     // Hot path never pays the GroupBy/OrderBy cost — groups are iterated directly.
-    private readonly IValidator<TRequest>[][] _orderedGroups = [..
-        validators
-            .GroupBy(v => v.Order)
-            .OrderBy(g => g.Key)
-            .Select(g => g.ToArray())];
+    private readonly IValidator<TRequest>[][] _orderedGroups;
+    private readonly IValidationFailureObserver[] _observers;
+    private readonly ValidationMode _defaultMode;
+
+    public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
+        : this(validators, [], null)
+    {
+    }
+
+    public ValidationBehavior(
+        IEnumerable<IValidator<TRequest>> validators,
+        IEnumerable<IValidationFailureObserver> observers,
+        ValidationBehaviorOptions? options = null)
+    {
+        _orderedGroups = [..
+            validators
+                .GroupBy(v => v.Order)
+                .OrderBy(g => g.Key)
+                .Select(g => g.ToArray())];
+        _observers = [.. observers];
+        _defaultMode = options?.DefaultMode ?? ValidationMode.Enforce;
+    }
 
     public async ValueTask<TResponse> Handle(
         TRequest message,
@@ -28,16 +44,36 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (_orderedGroups.Length == 0)
+        ValidationMode mode = message is IValidationModeOverride modeOverride
+            ? modeOverride.ValidationMode
+            : _defaultMode;
+
+        if (mode == ValidationMode.Off || _orderedGroups.Length == 0)
             return await next(message, cancellationToken);
 
+        Error[]? errors = await ValidateAsync(message, cancellationToken);
+        if (errors is null)
+            return await next(message, cancellationToken);
+
+        if (_observers.Length > 0)
+            await NotifyObserversAsync(message, errors, mode, cancellationToken);
+
+        if (mode == ValidationMode.LogOnly)
+            return await next(message, cancellationToken);
+
+        return BuildFailureResponse(errors);
+    }
+
+    /// <summary>
+    /// Runs the validators and returns the errors, or <see langword="null"/> when the request is valid.
+    /// </summary>
+    private async ValueTask<Error[]?> ValidateAsync(TRequest message, CancellationToken cancellationToken)
+    {
         // Single validator fast path — skips group iteration and List allocation entirely.
         if (_orderedGroups is [{ Length: 1 } onlyGroup])
         {
             Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken);
-            if (singleResult.IsFailure)
-                return BuildFailureResponse([.. singleResult.Errors]);
-            return await next(message, cancellationToken);
+            return singleResult.IsFailure ? [.. singleResult.Errors] : null;
         }
 
         // Groups are pre-sorted by Order (ascending) in the constructor.
@@ -61,14 +97,21 @@ public sealed class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidat
         }
 
         if (allErrors is null)
-            return await next(message, cancellationToken);
+            return null;
 
         Error[] errors = [.. allErrors.Distinct()];
+        return errors.Length == 0 ? null : errors;
+    }
 
-        if (errors.Length == 0)
-            return await next(message, cancellationToken);
-
-        return BuildFailureResponse(errors);
+    private async ValueTask NotifyObserversAsync(
+        TRequest message,
+        Error[] errors,
+        ValidationMode mode,
+        CancellationToken cancellationToken)
+    {
+        ValidationFailureContext failure = new(typeof(TRequest), message, Array.AsReadOnly(errors), mode);
+        foreach (IValidationFailureObserver observer in _observers)
+            await observer.OnValidationFailedAsync(failure, cancellationToken);
     }
 
     /// <summary>
