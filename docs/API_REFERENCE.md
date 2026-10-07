@@ -1178,7 +1178,7 @@ Both produce the same enum schemas (shared golden files): one component per enum
 
 | Behavior | Marker Interface | What It Does |
 |----------|-----------------|-------------|
-| `ValidationBehavior` | None (auto for all) | Runs CSharpEssentials.Validation before handler; returns `Result.Failure` with validation errors |
+| `ValidationBehavior` | None (auto for all); `IValidationModeOverride` to pick a mode per request | Runs CSharpEssentials.Validation before handler; returns `Result.Failure` with validation errors in `Enforce` mode, continues in `LogOnly`, skips in `Off`; notifies `IValidationFailureObserver`s |
 | `LoggingBehavior` | `ILoggableRequest` | Logs request/response details |
 | `ExceptionHandlingBehavior` | None (auto for `Result` / `Result<T>`) | Catches handler exceptions; converts to `Result.Failure(Error.Exception(ex))`; `OperationCanceledException` always propagates |
 | `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `Expiration` (`BypassCache`, `CacheFailures` control the lookup) |
@@ -1235,6 +1235,8 @@ if (result.IsFailure)
 |--------|-------------|
 | `AddMediatorBehaviors()` | Registers all five behaviors |
 | `AddMediatorValidationBehavior()` | Registers validation only |
+| `AddMediatorValidationBehavior(configure)` | Registers validation and sets `ValidationBehaviorOptions.DefaultMode` |
+| `AddMediatorValidationOptions(configure?)` | Registers `ValidationBehaviorOptions` and the default `LoggingValidationFailureObserver` (use with `DefaultPipelineBehaviors` under Native AOT) |
 | `AddMediatorLoggingBehavior()` | Registers logging only |
 | `AddMediatorExceptionHandlingBehavior()` | Registers exception handling only (singleton) |
 | `AddMediatorCachingBehavior()` | Registers caching only |
