@@ -3,6 +3,16 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [5.2.0](https://github.com/senrecep/CSharpEssentials/compare/v5.1.0...v5.2.0) (2026-10-07)
+
+
+### Added
+
+* **efcore:** add opt-in max limit to pagination request normalization ([68c2f18](https://github.com/senrecep/CSharpEssentials/commit/68c2f18e3adc4ec6acf01eb9f48ad4f13f647614))
+* **efcore:** add opt-in max limit to pagination request normalization ([4a77d5b](https://github.com/senrecep/CSharpEssentials/commit/4a77d5b445342039cf4711d8e923cc512cc0efcc)), closes [#92](https://github.com/senrecep/CSharpEssentials/issues/92)
+* **http:** add SSRF guard for outbound HttpClient requests ([37329b2](https://github.com/senrecep/CSharpEssentials/commit/37329b2c636cf0d5dfe93800a848e97217fce6a3))
+* **http:** add SSRF guard for outbound HttpClient requests ([c97b0cc](https://github.com/senrecep/CSharpEssentials/commit/c97b0cc1a7df6c48d43ec188053ecdf7afe8cdf6)), closes [#80](https://github.com/senrecep/CSharpEssentials/issues/80)
+
 ## [5.1.0](https://github.com/senrecep/CSharpEssentials/compare/v5.0.0...v5.1.0) (2026-10-07)
 
 
