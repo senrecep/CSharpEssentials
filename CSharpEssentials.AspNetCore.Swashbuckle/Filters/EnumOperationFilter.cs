@@ -42,9 +42,9 @@ internal sealed class EnumOperationFilter(IServiceProvider services) : IOperatio
 
     private void ApplyParameters(OpenApiOperation operation, OperationFilterContext context, EnumWireFormat format)
     {
-        foreach (IOpenApiParameter candidate in operation.Parameters ?? [])
+        foreach (IOpenApiParameter openApiParameter in operation.Parameters ?? [])
         {
-            if (candidate is not OpenApiParameter parameter)
+            if (openApiParameter is not OpenApiParameter parameter)
                 continue;
 
             ApiParameterDescription? description = context.ApiDescription.ParameterDescriptions.FirstOrDefault(candidate =>
