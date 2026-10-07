@@ -410,6 +410,10 @@ dotnet_diagnostic.CA1720.severity = none
 [CSharpEssentials.EntityFrameworkCore/Extensions/{ModelConfigurationExtensions,EnumConventionOptions}.cs]
 dotnet_diagnostic.S1133.severity = none
 
+# The single-column cursor PaginateAsync stays as an obsolete overload until KeysetPaginateAsync replaces it (issue #92).
+[CSharpEssentials.EntityFrameworkCore/Pagination/Extensions.cs]
+dotnet_diagnostic.S1133.severity = none
+
 # EnumStoredAs.Integer mirrors EnumStorage.Integer (design section 11.4).
 [CSharpEssentials.EntityFrameworkCore/Enums/EnumStoredAs.cs]
 dotnet_diagnostic.CA1720.severity = none

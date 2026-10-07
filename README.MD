@@ -6,7 +6,7 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-4518%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-4542%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
@@ -292,6 +292,7 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- Coming from 5.x? Read [Migrating from 5.x to 6.0](docs/migration/v5-to-v6.md). 6.0 makes the single-column cursor `PaginateAsync` obsolete in favor of `KeysetPaginateAsync` and caps the offset page size at 100 by default.
 - Coming from 4.x? Read [Migrating from 4.x to 5.0](docs/migration/v4-to-v5.md). 5.0 applies one set of enum conventions to JSON, binding, OpenAPI and EF Core, and moves the Swashbuckle support into its own package.
 - Coming from 3.x? Read [Migrating from 3.x to 4.0](docs/migration/v3-to-v4.md). 4.0 changed ProblemDetails defaults, enum naming and some package dependencies.
 

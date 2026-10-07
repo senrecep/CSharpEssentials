@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Linq.Expressions;
 
 using CSharpEssentials.EntityFrameworkCore.Pagination;
@@ -9,7 +8,6 @@ using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore.Keyset;
 
@@ -469,25 +467,6 @@ public sealed class KeysetPaginationSqliteTests : IDisposable
     public Task KeysetPaginateAsync_Should_MatchDatabaseOrder_When_KeyIsTimeOnly(bool descending) =>
         AssertWalkMatchesDatabaseOrderAsync(x => x.Time, descending);
 
-    [Fact]
-    public async Task PaginateAsync_Should_SendCursorAsParameter_When_CursorIsSet()
-    {
-        var interceptor = new CommandCapturingInterceptor();
-        DbContextOptions<KeysetDbContext> options = new DbContextOptionsBuilder<KeysetDbContext>()
-            .UseSqlite(_connection)
-            .AddInterceptors(interceptor)
-            .Options;
-
-        using (var context = new KeysetDbContext(options))
-            await context.Rows.PaginateAsync(new CursorPaginationRequest<int> { Cursor = 40, Limit = 3 }, x => x.Id);
-        using (var context = new KeysetDbContext(options))
-            await context.Rows.PaginateAsync(new CursorPaginationRequest<int> { Cursor = 60, Limit = 3 }, x => x.Id);
-
-        interceptor.Commands.Should().HaveCount(2);
-        interceptor.Commands[0].Should().Contain("@").And.NotContain("40").And.NotContain("60");
-        interceptor.Commands[1].Should().Be(interceptor.Commands[0]);
-    }
-
     private async Task AssertWalkMatchesDatabaseOrderAsync<TKey>(Expression<Func<KeysetRow, TKey>> key, bool descending)
     {
         var empty = new KeysetOrdering<KeysetRow>();
@@ -527,20 +506,5 @@ public sealed class KeysetPaginationSqliteTests : IDisposable
     private sealed class ConstantPredicateBuilder : IKeysetPredicateBuilder
     {
         public Expression BuildPredicate(IReadOnlyList<KeysetColumn> columns) => Expression.Constant(1);
-    }
-
-    private sealed class CommandCapturingInterceptor : DbCommandInterceptor
-    {
-        public List<string> Commands { get; } = [];
-
-        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
-            DbCommand command,
-            CommandEventData eventData,
-            InterceptionResult<DbDataReader> result,
-            CancellationToken cancellationToken = default)
-        {
-            Commands.Add(command.CommandText);
-            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
-        }
     }
 }

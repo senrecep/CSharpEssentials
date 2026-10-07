@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
@@ -11,14 +12,21 @@ namespace CSharpEssentials.EntityFrameworkCore.Pagination;
 
 public static class Extensions
 {
+    /// <summary>
+    /// Offset-paginates <paramref name="query"/>. The request is normalized with
+    /// <see cref="IPaginationRequest.Normalize(int)"/>, so <c>PageSize</c> is lowered to <paramref name="maxPageSize"/>
+    /// (default <see cref="PaginationDefaults.MaxPageSize"/>). Apply an ordering before paging for stable results.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPageSize"/> is less than 1.</exception>
     public static async Task<PaginationResponse<T>> PaginateAsync<T>(
-       this IQueryable<T> query,
-       IPaginationRequest paginationRequest,
-       Func<string, Expression<Func<T, bool>>>? search = null,
+        this IQueryable<T> query,
+        IPaginationRequest paginationRequest,
+        Func<string, Expression<Func<T, bool>>>? search = null,
         bool includeTotalCount = true,
-       CancellationToken cancellationToken = default)
+        int maxPageSize = PaginationDefaults.MaxPageSize,
+        CancellationToken cancellationToken = default)
     {
-        paginationRequest.Normalize();
+        paginationRequest.Normalize(maxPageSize);
 
         if (search.IsNotNull() && paginationRequest.Search.IsNotEmpty())
             query = query
@@ -38,33 +46,67 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Offset-paginates <paramref name="query"/> using a page number and page size.
-    /// Values below 1 are normalized to 1. Apply an ordering before paging for stable results.
+    /// Keeps the 5.x signature, so positional calls that pass a <see cref="CancellationToken"/> right after
+    /// <paramref name="includeTotalCount"/> still compile and compiled callers still bind. It caps <c>PageSize</c> at
+    /// <see cref="PaginationDefaults.MaxPageSize"/>.
     /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static Task<PaginationResponse<T>> PaginateAsync<T>(
+        this IQueryable<T> query,
+        IPaginationRequest paginationRequest,
+        Func<string, Expression<Func<T, bool>>>? search,
+        bool includeTotalCount,
+        CancellationToken cancellationToken) =>
+        query.PaginateAsync(paginationRequest, search, includeTotalCount, PaginationDefaults.MaxPageSize, cancellationToken);
+
+    /// <summary>
+    /// Offset-paginates <paramref name="query"/> using a page number and page size.
+    /// Values below 1 are normalized to 1 and <paramref name="pageSize"/> is lowered to <paramref name="maxPageSize"/>
+    /// (default <see cref="PaginationDefaults.MaxPageSize"/>). Apply an ordering before paging for stable results.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPageSize"/> is less than 1.</exception>
     public static Task<PaginationResponse<T>> PaginateAsync<T>(
         this IQueryable<T> query,
         int pageNumber,
         int pageSize,
         bool includeTotalCount = true,
+        int maxPageSize = PaginationDefaults.MaxPageSize,
         CancellationToken cancellationToken = default) =>
         query.PaginateAsync(
             new PaginationRequest { PageNumber = pageNumber, PageSize = pageSize },
             search: null,
             includeTotalCount,
+            maxPageSize,
             cancellationToken);
 
     /// <summary>
+    /// Keeps the 5.x signature, so positional calls that pass a <see cref="CancellationToken"/> right after
+    /// <paramref name="includeTotalCount"/> still compile and compiled callers still bind. It caps
+    /// <paramref name="pageSize"/> at <see cref="PaginationDefaults.MaxPageSize"/>.
+    /// </summary>
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public static Task<PaginationResponse<T>> PaginateAsync<T>(
+        this IQueryable<T> query,
+        int pageNumber,
+        int pageSize,
+        bool includeTotalCount,
+        CancellationToken cancellationToken) =>
+        query.PaginateAsync(pageNumber, pageSize, includeTotalCount, PaginationDefaults.MaxPageSize, cancellationToken);
+
+    /// <summary>
     /// Synchronous counterpart of
-    /// <see cref="PaginateAsync{T}(IQueryable{T}, IPaginationRequest, Func{string, Expression{Func{T, bool}}}?, bool, CancellationToken)"/>.
+    /// <see cref="PaginateAsync{T}(IQueryable{T}, IPaginationRequest, Func{string, Expression{Func{T, bool}}}?, bool, int, CancellationToken)"/>.
     /// Also works on non-EF queryables (e.g. <c>list.AsQueryable()</c>).
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPageSize"/> is less than 1.</exception>
     public static PaginationResponse<T> Paginate<T>(
         this IQueryable<T> query,
         IPaginationRequest paginationRequest,
         Func<string, Expression<Func<T, bool>>>? search = null,
-        bool includeTotalCount = true)
+        bool includeTotalCount = true,
+        int maxPageSize = PaginationDefaults.MaxPageSize)
     {
-        paginationRequest.Normalize();
+        paginationRequest.Normalize(maxPageSize);
 
         if (search.IsNotNull() && paginationRequest.Search.IsNotEmpty())
             query = query
@@ -80,17 +122,20 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Synchronous counterpart of <see cref="PaginateAsync{T}(IQueryable{T}, int, int, bool, CancellationToken)"/>.
+    /// Synchronous counterpart of <see cref="PaginateAsync{T}(IQueryable{T}, int, int, bool, int, CancellationToken)"/>.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPageSize"/> is less than 1.</exception>
     public static PaginationResponse<T> Paginate<T>(
         this IQueryable<T> query,
         int pageNumber,
         int pageSize,
-        bool includeTotalCount = true) =>
+        bool includeTotalCount = true,
+        int maxPageSize = PaginationDefaults.MaxPageSize) =>
         query.Paginate(
             new PaginationRequest { PageNumber = pageNumber, PageSize = pageSize },
             search: null,
-            includeTotalCount);
+            includeTotalCount,
+            maxPageSize);
 
     private static readonly ConcurrentDictionary<LambdaExpression, Delegate> _cursorSelectorCache = new(
         Environment.ProcessorCount * 2,
@@ -121,6 +166,7 @@ public static class Extensions
     /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
     /// </para>
     /// </summary>
+    [Obsolete("Single-column cursor pagination skips rows when the cursor column is not unique and does not cap the limit by default. Use KeysetPaginateAsync with a unique key (for example .Descending(x => x.CreatedAt).Ascending(x => x.Id)) instead.")]
     public static async Task<CursorPaginationResponse<T, TCursor>> PaginateAsync<T, TCursor>(
         this IQueryable<T> query,
         ICursorPaginationRequest<TCursor> request,

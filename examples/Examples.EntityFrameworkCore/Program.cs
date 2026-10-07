@@ -143,35 +143,35 @@ using (var scope = provider.CreateScope())
 
     Console.WriteLine("--- DEMO: Cursor Pagination ---");
 
-    // Use Name (string) as cursor — SQLite does not support DateTimeOffset
-    // or decimal in ORDER BY clauses.
-    var request = new CursorPaginationRequest<string>
+    // Keyset pagination by Name, with Id as the tie-breaker so the key is unique.
+    // SQLite does not support DateTimeOffset or decimal in ORDER BY clauses.
+    var page = await db.Products.KeysetPaginateAsync(
+        new KeysetPaginationRequest { Limit = 3 },
+        keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
+
+    if (page.IsFailure)
     {
-        Limit = 3,
-        Cursor = string.Empty
-    };
-
-    var response = await db.Products
-        .PaginateAsync(request, p => p.Name);
-
-    Console.WriteLine($"Cursor Page: {response.Items.Count} items, HasMore={response.HasMore}");
-    foreach (var p in response.Items)
-        Console.WriteLine($"  - {p.Name} (${p.Price})");
-
-    if (response.HasMore)
+        // A bad cursor or request returns Error.Validation instead of throwing.
+        Console.WriteLine($"Cursor Page failed: {page.FirstError.Description}");
+    }
+    else
     {
-        var nextRequest = new CursorPaginationRequest<string>
-        {
-            Limit = 3,
-            Cursor = response.Next
-        };
-
-        var nextResponse = await db.Products
-            .PaginateAsync(nextRequest, p => p.Name);
-
-        Console.WriteLine($"\nNext Cursor Page: {nextResponse.Items.Count} items, HasMore={nextResponse.HasMore}");
-        foreach (var p in nextResponse.Items)
+        KeysetPaginationResponse<Product> first = page.Value;
+        Console.WriteLine($"Cursor Page: {first.Items.Count} items, HasNext={first.HasNext}");
+        foreach (var p in first.Items)
             Console.WriteLine($"  - {p.Name} (${p.Price})");
+
+        if (first.HasNext)
+        {
+            var nextPage = await db.Products.KeysetPaginateAsync(
+                new KeysetPaginationRequest { Limit = 3, After = first.NextCursor },
+                keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
+
+            Console.WriteLine(nextPage.Match(
+                next => $"\nNext Cursor Page: {next.Items.Count} items, HasNext={next.HasNext}\n"
+                    + string.Join("\n", next.Items.Select(p => $"  - {p.Name} (${p.Price})")),
+                errors => $"\nNext Cursor Page failed: {errors[0].Description}"));
+        }
     }
 
     Console.WriteLine();
