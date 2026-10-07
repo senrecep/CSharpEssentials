@@ -1166,6 +1166,37 @@ app.UseEnhancedProblemDetails();
 
 `[StringEnum]` enums accept the same spellings as a JSON body (wire name, alias, C# member name, and with `AcceptNumbers` the number of a defined member; flags enums: comma-separated list; arrays: repeated keys or comma-separated values). Invalid values return a 400 ProblemDetails response listing the allowed values. Call `UseEnumBinding` after routing selected the endpoint. Output precedence: action attribute > controller attribute > endpoint/group > `EnumConventions.WriteAs`.
 
+### Idempotency
+
+| Member | What It Does |
+|--------|-------------|
+| `AddIdempotency(Action<IdempotencyOptions>? = null)` | Registers the options and a store (the in-memory store unless one is already registered) |
+| `UseIdempotency()` | Middleware; call after `UseRouting`, authentication and authorization |
+| `WithIdempotency()` | Adds `IdempotentAttribute` metadata to an endpoint or group (`IEndpointConventionBuilder`) |
+| `[Idempotent]` | Same for an MVC controller or action |
+| `IIdempotencyStore` | `TryReserveAsync(key, fingerprint, inFlightTimeout)`, `CompleteAsync(key, token, fingerprint, IdempotentResponse, retention)`, `ReleaseAsync(key, token)` (in-flight entries only). Complete and Release return `false` and change nothing when another reservation holds the key |
+| `IdempotencyReservation` | `Status` (`Reserved`, `InFlight`, `Completed`, `FingerprintMismatch`), the `Token` when reserved, and the stored `Response` when completed |
+| `IdempotentResponse(int StatusCode, IReadOnlyDictionary<string, string[]> Headers, ReadOnlyMemory<byte> Body)` | A stored response |
+| `InMemoryIdempotencyStore` / `DistributedCacheIdempotencyStore` | Built-in stores; the in-memory one is unbounded, the distributed one is best effort (no atomic add or compare) |
+
+| Option | Default | Notes |
+|--------|---------|-------|
+| `HeaderName` / `ReplayedHeaderName` | `Idempotency-Key` / `Idempotency-Replayed` | |
+| `Methods` | POST, PATCH | Case-insensitive set |
+| `InFlightTimeout` | 1 minute | Frees the key of a request that never finished; keep it longer than the request timeout |
+| `RetentionPeriod` | 24 hours | How long a completed response is replayed |
+| `RetryAfter` | 1 second | `Retry-After` on 409; `null` omits it |
+| `MaxKeyLength` | 255 | Longer keys return 400 |
+| `MaxResponseBodySize` | 1 MiB | Larger bodies are not stored (warning logged) |
+| `RequireKey` | `false` | `true`: a missing key returns 400 |
+| `ShouldStore` | 2xx | Other statuses release the key |
+| `KeyScope` | `DefaultKeyScope` (`NameIdentifier`, then `sub`) | `null` scope passes through unless `AllowUnscopedKeys` |
+| `AllowUnscopedKeys` | `false` | |
+| `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
+| `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered store |
+
+Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`.
+
 ### API Versioning
 
 | Method | What It Does |
