@@ -26,6 +26,15 @@
     <PackageReference Include="System.Net.Http.Json" />
   </ItemGroup>
 
+  <!-- IHttpClientBuilder for AddSsrfGuard; the SSRF guard needs SocketsHttpHandler.ConnectCallback and is absent on netstandard2.1 -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.1'">
+    <PackageReference Include="Microsoft.Extensions.Http" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
   <!-- The .NET 11 SDK adds System.Net.Http.Json to implicit usings; declare it once for every TFM -->
   <ItemGroup>
     <Using Include="System.Net.Http.Json" />

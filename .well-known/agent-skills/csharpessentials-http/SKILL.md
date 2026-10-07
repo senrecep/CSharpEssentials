@@ -102,6 +102,30 @@ Result<User> result = await policy.ExecuteAsync(token =>
 
 ---
 
+## SSRF Guard (.NET 9+, not available on netstandard2.1)
+
+Use it for any client that calls a URL a user or tenant supplied (webhooks, link previews, import-by-URL).
+
+```csharp
+services.AddHttpClient("webhooks")
+    .AddSsrfGuard(o =>
+    {
+        o.MaxResponseContentLength = 1_048_576;
+        o.Timeout = TimeSpan.FromSeconds(10);
+    });
+```
+
+- Defaults: https only on port 443, at most 3 redirects, no proxy, no cookie container, never HTTP/3 (QUIC skips `ConnectCallback`). Private, loopback, link-local, metadata, multicast and reserved IPv4/IPv6 ranges are blocked, including Teredo, `fec0::/10`, `64:ff9b:1::/48` and IPv6 forms that embed a blocked IPv4 address.
+- Every resolved address is checked, and the socket connects to an address that was checked. A name with even one private address is rejected.
+- Every redirect hop is checked again. `Authorization`, `Proxy-Authorization` and `Cookie` are removed on cross-origin hops.
+- Exceptions: `AllowedNetworks`/`BlockedNetworks` (`IPNetwork.Parse("10.0.0.0/8")`) and `AllowedHosts`/`BlockedHosts` (`"*.example.com"` matches subdomains, not `example.com`; case, trailing dot and IDN form are normalized). Block lists win. Use host wildcards only for domains whose DNS you control.
+- Custom rules: set `options.AddressPolicy`/`options.RequestPolicy` for one client, or register `IOutboundAddressPolicy`/`IOutboundRequestPolicy` in DI for every guarded client. Options win over the container.
+- A blocked request throws `SsrfBlockedException` (`Reason`, `BlockedAddress`; the message never contains the resolved address). The `*AsResultAsync` extensions return `ErrorType.Forbidden` with code `Http.SsrfBlocked` and `reason` metadata, also for `Timeout` and `ResponseTooLarge`. While buffering a body it may arrive wrapped in an `HttpRequestException`; check the `InnerException` chain.
+- Do not retry `SsrfBlockedException` in resilience handlers.
+- Do not replace the primary handler or turn on a proxy or cookies after `AddSsrfGuard`; the first request will throw.
+
+---
+
 ## Best Practices
 
 - Use `HttpRequestBuilder` when a request needs headers, query values or redirects.

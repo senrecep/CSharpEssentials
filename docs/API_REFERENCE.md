@@ -750,6 +750,25 @@ HTTP status codes are automatically mapped to `ErrorType`:
 | `CreateResiliencePipeline` | Combines all resilience policies |
 | `ExecuteAsResultAsync` | Executes through resilience pipeline, returns `Result` |
 
+### SSRF Guard (.NET 9+)
+
+Protects `IHttpClientFactory` clients that call URLs supplied by users. Not available on `netstandard2.1`.
+
+```csharp
+services.AddHttpClient("webhooks").AddSsrfGuard(o => o.Timeout = TimeSpan.FromSeconds(10));
+```
+
+| Type / Member | What It Does |
+|---------------|-------------|
+| `AddSsrfGuard(this IHttpClientBuilder, Action<SsrfGuardOptions>?)` | Installs a `SocketsHttpHandler` that resolves DNS and checks addresses in `ConnectCallback`, with no proxy, no cookie container and no automatic redirects. Adds a handler that follows redirects, checks every hop and caps the request version at HTTP/2 (QUIC skips `ConnectCallback`). The primary handler repeats the version cap and request policy on the final request, so handlers added after the guard cannot bypass them |
+| `SsrfGuardOptions` | `AllowHttp`, `AllowedPorts`, `MaxRedirects` (3), `MaxResponseContentLength`, `Timeout`, `AllowedNetworks`/`BlockedNetworks` (`IPNetwork`), `AllowedHosts`/`BlockedHosts` (exact or `*.suffix`; `*.example.com` does not match `example.com`; case/trailing-dot/IDN normalized). `AllowedNetworks` matches only the raw address; `BlockedNetworks` matches the raw or embedded IPv4 address, `AddressPolicy`, `RequestPolicy` |
+| `IOutboundAddressPolicy` | `bool IsAllowed(IPAddress address, Uri requestUri)`; receives the embedded IPv4 address for mapped/compatible/NAT64/6to4 forms, then the raw address when it differs; both must be allowed. `::` and `::1` are not reduced to IPv4. Set `SsrfGuardOptions.AddressPolicy` for one client, or register one in DI for every guarded client |
+| `IOutboundRequestPolicy` | `bool IsAllowed(Uri requestUri)`, checked on the request and every redirect. Set `SsrfGuardOptions.RequestPolicy` for one client, or register one in DI for every guarded client |
+| `DefaultOutboundAddressPolicy.Instance` | Blocks private, loopback, link-local, site-local, CGNAT, Teredo, local NAT64, documentation, benchmark, multicast and reserved ranges, plus IPv4-mapped, IPv4-compatible, NAT64 and 6to4 forms of them |
+| `DefaultOutboundRequestPolicy` | https only on port 443 by default; `AllowHttp` adds http and port 80 |
+| `SsrfBlockedException : HttpRequestException` | Thrown when a request is blocked; `Reason` (`SsrfBlockReason`), `RequestUri` and `BlockedAddress`. The message never contains the resolved address, query string or user info (`RequestUri` keeps the full URI). `*AsResultAsync` maps every reason, including `Timeout` and `ResponseTooLarge`, to `ErrorType.Forbidden`, code `Http.SsrfBlocked`, `reason` metadata. A limit or timeout hit while buffering the body can surface as an `HttpRequestException` whose `InnerException` is the `SsrfBlockedException`; check the `InnerException` chain |
+| `SsrfBlockReason` | `RequestNotAllowed`, `HostNotAllowed`, `AddressNotAllowed`, `RedirectLimitExceeded`, `ResponseTooLarge`, `Timeout` |
+
 ---
 
 ## 9. CSharpEssentials.Resilience: Transient Fault Handling
