@@ -1,3 +1,4 @@
+using CSharpEssentials.Errors;
 using Mediator;
 using System.Transactions;
 
@@ -56,5 +57,36 @@ public class TransactionScopeBehaviorTests
 
         handlerCalled.Should().BeTrue();
         result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Abort_TransactionScope_When_Result_Fails()
+    {
+        var behavior = new TransactionScopeBehavior<TestTransactionalCommand, Result>();
+        TransactionStatus? status = null;
+
+        Result result = await behavior.Handle(new TestTransactionalCommand("test"), (_, _) =>
+        {
+            Transaction.Current!.TransactionCompleted += (_, e) => status = e.Transaction!.TransactionInformation.Status;
+            return new ValueTask<Result>(Error.Conflict("Order.Conflict", "conflict"));
+        }, default);
+
+        result.IsFailure.Should().BeTrue();
+        status.Should().Be(TransactionStatus.Aborted);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Commit_TransactionScope_When_Result_Succeeds()
+    {
+        var behavior = new TransactionScopeBehavior<TestTransactionalCommand, Result>();
+        TransactionStatus? status = null;
+
+        await behavior.Handle(new TestTransactionalCommand("test"), (_, _) =>
+        {
+            Transaction.Current!.TransactionCompleted += (_, e) => status = e.Transaction!.TransactionInformation.Status;
+            return new ValueTask<Result>(Result.Success());
+        }, default);
+
+        status.Should().Be(TransactionStatus.Committed);
     }
 }

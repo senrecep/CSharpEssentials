@@ -24,7 +24,7 @@ public static class MediatorExtensions
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.LoggingBehavior<,>));
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.ExceptionHandlingBehavior<,>));
         services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.CachingBehavior<,>));
-        services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>));
+        services.AddMediatorTransactionBehavior();
         return services;
     }
 
@@ -97,9 +97,48 @@ public static class MediatorExtensions
         return services;
     }
 
-    public static IServiceCollection AddMediatorTransactionBehavior(this IServiceCollection services)
+    /// <summary>
+    /// Registers <see cref="CSharpEssentials.Mediator.TransactionScopeBehavior{TRequest, TResponse}"/>. It takes the
+    /// pipeline position of a registered <see cref="CSharpEssentials.Mediator.TransactionBehavior{TRequest, TResponse}"/>,
+    /// so only one transaction behavior ever wraps an <see cref="ITransactionalRequest"/>.
+    /// </summary>
+    public static IServiceCollection AddMediatorTransactionBehavior(this IServiceCollection services) =>
+        services.SetTransactionBehavior(
+            ServiceDescriptor.Singleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>)));
+
+    /// <summary>
+    /// Registers <see cref="CSharpEssentials.Mediator.TransactionBehavior{TRequest, TResponse}"/>, which runs
+    /// <see cref="ITransactionalRequest"/> handlers through the registered
+    /// <see cref="CSharpEssentials.Transactions.ITransactionRunner"/>. It takes the pipeline position of a registered
+    /// <see cref="CSharpEssentials.Mediator.TransactionScopeBehavior{TRequest, TResponse}"/>, so only one transaction
+    /// behavior ever wraps a request. Register an <see cref="CSharpEssentials.Transactions.ITransactionRunner"/> as well,
+    /// for example with <c>AddEfCoreTransactionRunner&lt;TDbContext&gt;()</c>.
+    /// </summary>
+    public static IServiceCollection AddMediatorTransactionRunnerBehavior(this IServiceCollection services) =>
+        services.SetTransactionBehavior(
+            ServiceDescriptor.Scoped(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.TransactionBehavior<,>)));
+
+    private static IServiceCollection SetTransactionBehavior(this IServiceCollection services, ServiceDescriptor behavior)
     {
-        services.AddSingleton(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>));
+        int position = -1;
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (!IsTransactionBehavior(services[index]))
+                continue;
+            services.RemoveAt(index);
+            position = index;
+        }
+
+        if (position < 0)
+            services.Add(behavior);
+        else
+            services.Insert(position, behavior);
         return services;
     }
+
+    private static bool IsTransactionBehavior(ServiceDescriptor descriptor) =>
+        descriptor.ServiceType == typeof(IPipelineBehavior<,>)
+        && !descriptor.IsKeyedService
+        && (descriptor.ImplementationType == typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>)
+            || descriptor.ImplementationType == typeof(CSharpEssentials.Mediator.TransactionBehavior<,>));
 }

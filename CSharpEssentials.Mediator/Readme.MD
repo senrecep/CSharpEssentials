@@ -9,7 +9,7 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 - **Validation Behavior**: CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type. `Enforce`, `LogOnly` and `Off` modes, globally or per request, with pluggable failure observers.
 - **Logging Behavior**: Opt-in request/response payload logging with elapsed-time tracking.
 - **Caching Behavior**: `IDistributedCache` integration with bypass and failure-cache control.
-- **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled.
+- **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled, or runs them through a pluggable `ITransactionRunner` (EF Core implementation in `CSharpEssentials.EntityFrameworkCore`). Commits only when the `Result` succeeds.
 
 ## Installation
 
@@ -197,7 +197,33 @@ public record TransferMoneyCommand(Guid From, Guid To, decimal Amount)
     : ICommand<Result>, ITransactionalRequest;
 ```
 
-The handler is wrapped in a `TransactionScope` with `TransactionScopeAsyncFlowOption.Enabled`.
+The handler is wrapped in a `TransactionScope` with `TransactionScopeAsyncFlowOption.Enabled`. The scope completes only when the handler returns a successful `Result` / `Result<T>` (or a non-`Result` response); a failed `Result` or an exception rolls it back.
+
+#### Transaction runner
+
+To use the database transaction of your own data access instead of an ambient `TransactionScope`, register `TransactionBehavior` and an `ITransactionRunner` (namespace `CSharpEssentials.Transactions`). The same `ITransactionalRequest` marker applies. Only one transaction behavior is active at a time: `AddMediatorTransactionRunnerBehavior()` takes the pipeline position of a registered `TransactionScopeBehavior`, and `AddMediatorTransactionBehavior()` does the reverse.
+
+```csharp
+services.AddMediatorBehaviors();
+services.AddMediatorTransactionRunnerBehavior();
+services.AddEfCoreTransactionRunner<AppDbContext>(); // CSharpEssentials.EntityFrameworkCore
+```
+
+The runner commits when the `Result` succeeds and rolls back on a failed `Result` or an exception. Any other runner (Dapper, a message broker outbox, a test fake) implements the single method:
+
+```csharp
+public interface ITransactionRunner
+{
+    ValueTask<T> ExecuteAsync<T>(
+        Func<CancellationToken, ValueTask<T>> work,
+        Func<T, bool> shouldCommit,
+        CancellationToken cancellationToken = default);
+}
+```
+
+With Native AOT, replace `TransactionScopeBehavior<,>` with `TransactionBehavior<,>` in your copy of `DefaultPipelineBehaviors` and set `options.ServiceLifetime = ServiceLifetime.Scoped` in `AddMediator`. With the generator's default singleton lifetime, the behavior would capture one runner, and with it one `DbContext`, for every request.
+
+The replacement only matches behaviors registered by type through these methods; a transaction behavior you registered with a factory is left alone.
 
 ### Logging Behavior
 
@@ -220,7 +246,7 @@ All requests log basic handling/handled messages and elapsed time regardless of 
 | Interface | Extends | Purpose |
 |-----------|---------|---------|
 | `ICacheable` | None | Enables `CachingBehavior` |
-| `ITransactionalRequest` | None | Enables `TransactionScopeBehavior` |
+| `ITransactionalRequest` | None | Enables `TransactionScopeBehavior` or `TransactionBehavior`, whichever is registered |
 | `ILoggableRequest` | `IMessage` | Base for logging opt-in |
 | `IRequestLoggable` | `ILoggableRequest` | Log request payload |
 | `IResponseLoggable` | `ILoggableRequest` | Log response payload |
@@ -234,8 +260,9 @@ All requests log basic handling/handled messages and elapsed time regardless of 
 | `LoggingBehavior<TRequest,TResponse>` | Always registered | `TRequest : ILoggableRequest, IMessage` |
 | `CachingBehavior<TRequest,TResponse>` | Always registered | `TRequest : ICacheable, IMessage` |
 | `TransactionScopeBehavior<TRequest,TResponse>` | Always registered | `TRequest : ITransactionalRequest, IMessage` |
+| `TransactionBehavior<TRequest,TResponse>` | `AddMediatorTransactionRunnerBehavior()`, replaces `TransactionScopeBehavior` | `TRequest : ITransactionalRequest, IMessage` |
 
-> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
+> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior` is scoped as well, because `ITransactionRunner` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
 
 ## Dependencies
 

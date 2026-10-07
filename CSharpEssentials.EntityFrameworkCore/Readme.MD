@@ -238,6 +238,25 @@ services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
     configureRead: (sp, options) => options.UseNpgsql(connectionString).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 ```
 
+### Transaction Runner
+
+`EfCoreTransactionRunner<TDbContext>` implements `ITransactionRunner` (from `CSharpEssentials.Core`) for the Mediator `TransactionBehavior` or any code of your own.
+
+```csharp
+services.AddEfCoreTransactionRunner<AppDbContext>();
+
+Result result = await transactionRunner.ExecuteAsync(
+    ct => orderService.PlaceAsync(command, ct),
+    outcome => outcome.IsSuccess,
+    cancellationToken);
+```
+
+- The outermost call runs inside `Database.CreateExecutionStrategy()` and opens a transaction with `BeginTransactionAsync`, so it works with retrying strategies such as `EnableRetryOnFailure`. A retry re-runs the whole unit of work, nested calls included, on a cleared change tracker. With a retrying strategy the context must have no pending changes when the call starts (the runner throws otherwise), because the clear would drop them.
+- A nested call on the same context instance (`Database.CurrentTransaction` is set) joins the outer transaction: no new strategy, begin or commit. When the provider supports savepoints, the nested work runs behind a savepoint and is rolled back to it when it fails, so its partial writes are undone and the outer call still decides the commit. Entities that nested work saved stay tracked after a rollback to the savepoint, and entities still `Added` after a failed nested `SaveChanges` are written again by the next outer `SaveChanges`; reload or detach them if the outer work carries on. Without savepoint support (for example SQL Server with MARS enabled), a failed nested call keeps its writes and the outer call decides about them.
+- Only the same `DbContext` instance is joined. Another context type or connection opens its own transaction and is not atomic with this one.
+- It needs a relational provider: the InMemory provider throws on `BeginTransactionAsync` unless `TransactionIgnoredWarning` is ignored. Retrying strategies also refuse to run inside an ambient `TransactionScope`, so don't combine it with `TransactionScopeBehavior`.
+- If the commit itself fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you use a retrying strategy.
+
 ### Slow Query Logging
 
 ```csharp
