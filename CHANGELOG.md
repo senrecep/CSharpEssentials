@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 * **openapi:** CSharpEssentials.AspNetCore.Swashbuckle needs Swashbuckle.AspNetCore [10.2.3,11) and Microsoft.OpenApi [2.7.5,3) on every target. AddSwagger<T>(securityScheme, assembly) is now AddSwagger<T>(securitySchemeName, securityScheme, assembly); pass SecuritySchemes.JwtBearerSchemeName ("Bearer") for the previous behavior. SecuritySchemes.JwtBearerTokenSecurity no longer sets Reference. Custom Swashbuckle filters and MapType factories must move to the Microsoft.OpenApi 2.x API (using Microsoft.OpenApi; IOpenApiSchema; JsonSchemaType; JsonNode).
 * **efcore:** offset pagination returns at most 100 rows per page unless a larger cap is given. Pass maxPageSize: 500 (or int.MaxValue for the 5.x behavior) to PaginateAsync/Paginate, or call Normalize(int.MaxValue). The sync Paginate overloads gained a parameter, so assemblies compiled against 5.x must be recompiled. Custom IPaginationRequest types that override Normalize() must also override Normalize(int). See docs/migration/v5-to-v6.md.
+* **efcore:** the single-column cursor `PaginateAsync<T, TCursor>` is `[Obsolete]`; use `KeysetPaginateAsync`, which supports composite keys, opaque cursors, backward paging and a maximum limit ([d431ad7](https://github.com/senrecep/CSharpEssentials/commit/d431ad7)).
 
 ### Added
 
