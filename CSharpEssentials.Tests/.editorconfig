@@ -39,3 +39,7 @@ dotnet_diagnostic.EF9100.severity = none
 [Enums/Runtime/ParserCompositeAccess.cs]
 dotnet_diagnostic.CA2217.severity = none
 dotnet_diagnostic.S4070.severity = none
+
+# The class is [Obsolete] so it can cover OptionalRouteParameterMode.LegacyNonCompliant without CS0618.
+[AspNetCore/LegacyOptionalRouteParameterTests.cs]
+dotnet_diagnostic.S1133.severity = none

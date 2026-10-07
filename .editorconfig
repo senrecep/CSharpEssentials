@@ -442,3 +442,7 @@ dotnet_diagnostic.S1133.severity = none
 # Tests of the obsolete 4.x enum binding registration.
 [CSharpEssentials.Tests/AspNetCore/EnumIntegration/EnumBindingForwarderTests.cs]
 dotnet_diagnostic.S1133.severity = none
+
+# LegacyNonCompliant keeps the earlier optional route parameter output as an opt-in (issue #101).
+[CSharpEssentials.AspNetCore.Swashbuckle/OptionalRouteParameterMode.cs]
+dotnet_diagnostic.S1133.severity = none
