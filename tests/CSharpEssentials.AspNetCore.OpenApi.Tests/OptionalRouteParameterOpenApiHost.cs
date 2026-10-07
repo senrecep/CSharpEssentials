@@ -43,14 +43,27 @@ internal static class OptionalRouteParameterOpenApiHost
     }
 
     /// <summary>The document as <c>MapOpenApi</c> serves it.</summary>
-    public static async Task<string> GetJsonAsync(OpenApiSpecVersion version, Action<OpenApiOptions>? configure = null)
+    public static async Task<string> GetJsonAsync(OpenApiSpecVersion version, Action<OpenApiOptions>? configure = null) =>
+        (await GetJsonDocumentsAsync(version, [DocumentName], configure))[DocumentName];
+
+    /// <summary>The documents named <paramref name="documentNames"/> as <c>MapOpenApi</c> serves them.</summary>
+    public static async Task<IReadOnlyDictionary<string, string>> GetJsonDocumentsAsync(
+        OpenApiSpecVersion version,
+        IReadOnlyList<string> documentNames,
+        Action<OpenApiOptions>? configure = null,
+        IReadOnlyList<Type>? controllers = null,
+        Action<IServiceCollection>? configureServices = null,
+        Action<WebApplication>? configureApp = null)
     {
-        await using WebApplication app = await StartAsync(version, configure, null, null);
+        await using WebApplication app = await StartAsync(version, configure, controllers, null, documentNames, configureServices, configureApp);
         try
         {
             string address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.First();
             using var client = new HttpClient { BaseAddress = new Uri(address) };
-            return await client.GetStringAsync($"/openapi/{DocumentName}.json");
+            var documents = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (string documentName in documentNames)
+                documents[documentName] = await client.GetStringAsync($"/openapi/{documentName}.json");
+            return documents;
         }
         finally
         {
@@ -59,7 +72,13 @@ internal static class OptionalRouteParameterOpenApiHost
     }
 
     private static async Task<WebApplication> StartAsync(
-        OpenApiSpecVersion version, Action<OpenApiOptions>? configure, IReadOnlyList<Type>? controllers, ILoggerProvider? loggerProvider)
+        OpenApiSpecVersion version,
+        Action<OpenApiOptions>? configure,
+        IReadOnlyList<Type>? controllers,
+        ILoggerProvider? loggerProvider,
+        IReadOnlyList<string>? documentNames = null,
+        Action<IServiceCollection>? configureServices = null,
+        Action<WebApplication>? configureApp = null)
     {
         // The application name is the default tag of Minimal API operations; the test runner's would change with the runner.
         WebApplicationBuilder builder = WebApplication.CreateBuilder(new WebApplicationOptions
@@ -78,11 +97,15 @@ internal static class OptionalRouteParameterOpenApiHost
                     manager.FeatureProviders.Remove(provider);
                 manager.FeatureProviders.Add(new ControllersFeatureProvider(controllers ?? OptionalRouteParameterControllers.Compliant));
             });
-        builder.Services.AddOpenApi(DocumentName, options =>
+        foreach (string documentName in documentNames ?? [DocumentName])
         {
-            options.OpenApiVersion = version;
-            (configure ?? (static o => o.AddOptionalRouteParameters())).Invoke(options);
-        });
+            builder.Services.AddOpenApi(documentName, options =>
+            {
+                options.OpenApiVersion = version;
+                (configure ?? (static o => o.AddOptionalRouteParameters())).Invoke(options);
+            });
+        }
+        configureServices?.Invoke(builder.Services);
 
         WebApplication app = builder.Build();
         app.MapOpenApi();
@@ -90,6 +113,7 @@ internal static class OptionalRouteParameterOpenApiHost
         app.MapGet("/minimal/{id:int?}", static (int? id) => id).WithName("GetMinimal");
         app.MapGet("/minimal-default/{page=1}", static (int page) => page).WithName("GetMinimalDefault");
         app.MapGet("/minimal-all/{*rest}", static (string? rest) => rest).WithName("GetMinimalRest");
+        configureApp?.Invoke(app);
         await app.StartAsync();
         return app;
     }

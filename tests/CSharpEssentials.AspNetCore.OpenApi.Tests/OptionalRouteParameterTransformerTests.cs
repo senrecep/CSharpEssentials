@@ -316,6 +316,30 @@ public class OptionalRouteParameterTransformerTests
     }
 
     [Fact]
+    public async Task SplitPaths_Should_Describe_Each_Document_With_Its_Own_Operations_When_Groups_Share_A_Route()
+    {
+        IReadOnlyDictionary<string, string> documents = await OptionalRouteParameterOpenApiHost.GetJsonDocumentsAsync(
+            OpenApiSpecVersion.OpenApi3_1,
+            ["v1", "v2"],
+            controllers:
+            [
+                typeof(OptionalRouteParameterControllers.KeysController),
+                typeof(OptionalRouteParameterGroupControllers.SharedV1Controller),
+                typeof(OptionalRouteParameterGroupControllers.SharedV2Controller),
+                typeof(OptionalRouteParameterGroupControllers.ReportsController),
+            ]);
+
+        JsonNode v1 = JsonNode.Parse(documents["v1"])!["paths"]!;
+        JsonNode v2 = JsonNode.Parse(documents["v2"])!["paths"]!;
+        OperationId(v1, "/api/shared").Should().Be("GetSharedV1WithoutId");
+        OperationId(v2, "/api/shared").Should().Be("GetSharedV2WithoutId");
+        OperationId(v1, "/api/keys", "post").Should().Be("PostKeyWithoutKey");
+        OperationId(v2, "/api/keys", "post").Should().Be("PostKeyWithoutKey");
+        OperationId(v2, "/api/reports").Should().Be("GetReportWithoutYear");
+        v1.AsObject().Select(static pair => pair.Key).Should().NotContain(static key => key.StartsWith("/api/reports", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task AddOptionalRouteParameters_Should_Replace_Earlier_Call()
     {
         OpenApiDocument document = await OptionalRouteParameterOpenApiHost.GetDocumentAsync(static options =>
@@ -350,6 +374,9 @@ public class OptionalRouteParameterTransformerTests
         document.Paths[path].Operations.Should().ContainKey(method);
         return document.Paths[path].Operations![method];
     }
+
+    private static string? OperationId(JsonNode paths, string path, string method = "get") =>
+        paths[path]?[method]?["operationId"]?.GetValue<string>();
 
     private static IEnumerable<string?> AllOperationIds(OpenApiDocument document) =>
         document.Paths.Values.SelectMany(static item => item.Operations!.Values).Select(static operation => operation.OperationId);
