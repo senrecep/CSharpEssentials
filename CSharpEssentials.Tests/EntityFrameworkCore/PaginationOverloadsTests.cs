@@ -136,6 +136,64 @@ public class PaginationOverloadsTests
     }
 
     [Fact]
+    public async Task PaginateAsync_WithRequest_Should_CapAtDefaultMax_When_LastPositionalArgumentIsDefaultLiteral()
+    {
+        using ItemDbContext context = await CreateSeededContextAsync(150);
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 500 };
+
+        PaginationResponse<Item> result = await context.Items.OrderBy(i => i.Id)
+            .PaginateAsync(request, null, true, default);
+
+        result.PageSize.Should().Be(PaginationDefaults.MaxPageSize);
+        result.Items.Should().HaveCount(PaginationDefaults.MaxPageSize);
+    }
+
+    [Fact]
+    public async Task PaginateAsync_WithRequest_Should_CapAtDefaultMax_When_AllArgumentsAreNamed()
+    {
+        using ItemDbContext context = await CreateSeededContextAsync(150);
+        var request = new PaginationRequest { PageNumber = 1, PageSize = 500 };
+
+        PaginationResponse<Item> result = await context.Items.OrderBy(i => i.Id)
+            .PaginateAsync(
+                paginationRequest: request,
+                search: null,
+                includeTotalCount: true,
+                cancellationToken: CancellationToken.None);
+
+        result.PageSize.Should().Be(PaginationDefaults.MaxPageSize);
+        result.Items.Should().HaveCount(PaginationDefaults.MaxPageSize);
+    }
+
+    [Fact]
+    public async Task PaginateAsync_WithPageNumberAndSize_Should_CapAtDefaultMax_When_LastPositionalArgumentIsDefaultLiteral()
+    {
+        using ItemDbContext context = await CreateSeededContextAsync(150);
+
+        PaginationResponse<Item> result = await context.Items.OrderBy(i => i.Id)
+            .PaginateAsync(1, 500, true, default);
+
+        result.PageSize.Should().Be(PaginationDefaults.MaxPageSize);
+        result.Items.Should().HaveCount(PaginationDefaults.MaxPageSize);
+    }
+
+    [Fact]
+    public async Task PaginateAsync_WithPageNumberAndSize_Should_CapAtDefaultMax_When_AllArgumentsAreNamed()
+    {
+        using ItemDbContext context = await CreateSeededContextAsync(150);
+
+        PaginationResponse<Item> result = await context.Items.OrderBy(i => i.Id)
+            .PaginateAsync(
+                pageNumber: 1,
+                pageSize: 500,
+                includeTotalCount: true,
+                cancellationToken: CancellationToken.None);
+
+        result.PageSize.Should().Be(PaginationDefaults.MaxPageSize);
+        result.Items.Should().HaveCount(PaginationDefaults.MaxPageSize);
+    }
+
+    [Fact]
     public async Task PaginateAsync_WithPageNumberAndSize_Should_CapPageSizeAtDefaultMax_When_MaxPageSizeIsNotGiven()
     {
         using ItemDbContext context = await CreateSeededContextAsync(150);

@@ -149,19 +149,29 @@ using (var scope = provider.CreateScope())
         new KeysetPaginationRequest { Limit = 3 },
         keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
 
-    Console.WriteLine($"Cursor Page: {page.Value.Items.Count} items, HasNext={page.Value.HasNext}");
-    foreach (var p in page.Value.Items)
-        Console.WriteLine($"  - {p.Name} (${p.Price})");
-
-    if (page.Value.HasNext)
+    if (page.IsFailure)
     {
-        var nextPage = await db.Products.KeysetPaginateAsync(
-            new KeysetPaginationRequest { Limit = 3, After = page.Value.NextCursor },
-            keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
-
-        Console.WriteLine($"\nNext Cursor Page: {nextPage.Value.Items.Count} items, HasNext={nextPage.Value.HasNext}");
-        foreach (var p in nextPage.Value.Items)
+        // A bad cursor or request returns Error.Validation instead of throwing.
+        Console.WriteLine($"Cursor Page failed: {page.FirstError.Description}");
+    }
+    else
+    {
+        KeysetPaginationResponse<Product> first = page.Value;
+        Console.WriteLine($"Cursor Page: {first.Items.Count} items, HasNext={first.HasNext}");
+        foreach (var p in first.Items)
             Console.WriteLine($"  - {p.Name} (${p.Price})");
+
+        if (first.HasNext)
+        {
+            var nextPage = await db.Products.KeysetPaginateAsync(
+                new KeysetPaginationRequest { Limit = 3, After = first.NextCursor },
+                keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
+
+            Console.WriteLine(nextPage.Match(
+                next => $"\nNext Cursor Page: {next.Items.Count} items, HasNext={next.HasNext}\n"
+                    + string.Join("\n", next.Items.Select(p => $"  - {p.Name} (${p.Price})")),
+                errors => $"\nNext Cursor Page failed: {errors[0].Description}"));
+        }
     }
 
     Console.WriteLine();

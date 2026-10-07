@@ -23,6 +23,12 @@ public interface IPaginationRequest
     /// <see cref="PageSize"/> to <paramref name="maxPageSize"/>, the same way keyset pagination clamps to
     /// <c>KeysetPaginationOptions.MaxLimit</c>. Pass <see cref="int.MaxValue"/> to turn the cap off.
     /// </summary>
+    /// <remarks>
+    /// This method does not call <see cref="Normalize()"/>, because <see cref="Normalize()"/> applies the default
+    /// cap of <see cref="PaginationDefaults.MaxPageSize"/> and would lower a larger <paramref name="maxPageSize"/>.
+    /// The pagination extensions call this overload, so an implementation that adds its own rules must override
+    /// this method, not only <see cref="Normalize()"/>.
+    /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="maxPageSize"/> is less than 1.</exception>
     void Normalize(int maxPageSize)
     {

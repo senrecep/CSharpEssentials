@@ -166,7 +166,7 @@ public static class Extensions
     /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
     /// </para>
     /// </summary>
-    [Obsolete("Single-column cursor pagination skips rows when the cursor column is not unique and does not cap the limit. Use KeysetPaginateAsync with a unique key (for example .Descending(x => x.CreatedAt).Ascending(x => x.Id)) instead.")]
+    [Obsolete("Single-column cursor pagination skips rows when the cursor column is not unique and does not cap the limit by default. Use KeysetPaginateAsync with a unique key (for example .Descending(x => x.CreatedAt).Ascending(x => x.Id)) instead.")]
     public static async Task<CursorPaginationResponse<T, TCursor>> PaginateAsync<T, TCursor>(
         this IQueryable<T> query,
         ICursorPaginationRequest<TCursor> request,
