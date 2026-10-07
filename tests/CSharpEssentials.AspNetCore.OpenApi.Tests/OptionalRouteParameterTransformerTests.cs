@@ -3,7 +3,10 @@ using System.Text.Json.Nodes;
 using CSharpEssentials.Tests.AspNetCore;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Reader;
 
@@ -337,6 +340,29 @@ public class OptionalRouteParameterTransformerTests
         OperationId(v2, "/api/keys", "post").Should().Be("PostKeyWithoutKey");
         OperationId(v2, "/api/reports").Should().Be("GetReportWithoutYear");
         v1.AsObject().Select(static pair => pair.Key).Should().NotContain(static key => key.StartsWith("/api/reports", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(OpenApiSpecVersion.OpenApi3_0)]
+    [InlineData(OpenApiSpecVersion.OpenApi3_1)]
+    public async Task SplitPaths_Should_Describe_Required_Non_Null_Enum_When_Enum_Route_Parameter_Is_Optional(OpenApiSpecVersion version)
+    {
+        IReadOnlyDictionary<string, string> documents = await OptionalRouteParameterOpenApiHost.GetJsonDocumentsAsync(
+            version,
+            [OptionalRouteParameterOpenApiHost.DocumentName],
+            static options => options.AddOptionalRouteParameters().AddEnumConventions(),
+            [typeof(OptionalRouteParameterControllers.KeysController)],
+            static services => services.AddEnumConventions(),
+            static app => app.MapGet("/statuses/{status?}", static (SampleStatus? status) => status?.ToString()).WithName("GetByStatus"));
+        string json = documents[OptionalRouteParameterOpenApiHost.DocumentName];
+
+        JsonNode paths = JsonNode.Parse(json)!["paths"]!;
+        JsonNode parameter = paths["/statuses/{status}"]!["get"]!["parameters"]![0]!;
+        OperationId(paths, "/statuses").Should().Be("GetByStatusWithoutStatus");
+        parameter["required"]!.GetValue<bool>().Should().BeTrue();
+        parameter["schema"]!.ToJsonString().Should().Contain("#/components/schemas/SampleStatus")
+            .And.NotContain("\"null\"").And.NotContain("nullable");
+        Validate(json).Should().BeEmpty();
     }
 
     [Fact]

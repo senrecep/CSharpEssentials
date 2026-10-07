@@ -171,7 +171,9 @@ internal sealed partial class OptionalRouteParameterSplitter(
 
             bool nullType = schema.Type is { } type && type.HasFlag(JsonSchemaType.Null);
             bool nullDefault = schema.Default is { } value && (JsonNullSentinel.IsJsonNullSentinel(value) || value.GetValueKind() == JsonValueKind.Null);
-            if (!nullType && !nullDefault)
+            bool nullOneOf = schema.OneOf?.Any(IsNullSchema) == true;
+            bool nullAnyOf = schema.AnyOf?.Any(IsNullSchema) == true;
+            if (!nullType && !nullDefault && !nullOneOf && !nullAnyOf)
                 continue;
 
             // A path segment is never empty, so a required path parameter cannot be null.
@@ -180,9 +182,16 @@ internal sealed partial class OptionalRouteParameterSplitter(
                 copy.Type &= ~JsonSchemaType.Null;
             if (nullDefault)
                 copy.Default = null;
+            if (nullOneOf)
+                copy.OneOf = [.. schema.OneOf!.Where(static member => !IsNullSchema(member))];
+            if (nullAnyOf)
+                copy.AnyOf = [.. schema.AnyOf!.Where(static member => !IsNullSchema(member))];
             parameter.Schema = copy;
         }
     }
+
+    // The branch a nullable value type gets in oneOf or anyOf, for example Nullable<TEnum>.
+    private static bool IsNullSchema(IOpenApiSchema schema) => schema is OpenApiSchema { Type: JsonSchemaType.Null };
 
     private static bool EndsWithParameters(string path, IReadOnlyList<string> names)
     {
