@@ -1,5 +1,9 @@
 {
   "openapi": "3.1.1",
+  "info": {
+    "title": "CSharpEssentials.AspNetCore.OpenApi.Tests | v1",
+    "version": "1.0.0"
+  },
   "paths": {
     "/minimal": {
       "get": {

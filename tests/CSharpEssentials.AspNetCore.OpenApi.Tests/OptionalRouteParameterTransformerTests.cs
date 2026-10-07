@@ -306,14 +306,13 @@ public class OptionalRouteParameterTransformerTests
     {
         string json = await OptionalRouteParameterOpenApiHost.GetJsonAsync(version, options => options.AddOptionalRouteParameters(mode));
 
-        Golden.Verify(OpenApiGolden.PathOf(fixture, suffix), WithoutHostDetails(json));
+        Golden.Verify(OpenApiGolden.PathOf(fixture, suffix), WithoutServers(json));
     }
 
-    // The server address (a random port) and the title (the test host's assembly name) depend on the run.
-    private static string WithoutHostDetails(string json)
+    // The server address has the random port of the run.
+    private static string WithoutServers(string json)
     {
         var document = (JsonObject)JsonNode.Parse(json)!;
-        document.Remove("info");
         document.Remove("servers");
         return document.ToJsonString(new JsonSerializerOptions { WriteIndented = true }).Replace("\r\n", "\n", StringComparison.Ordinal);
     }
