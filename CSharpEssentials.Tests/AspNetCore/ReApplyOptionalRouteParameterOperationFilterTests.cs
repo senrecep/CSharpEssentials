@@ -126,4 +126,54 @@ public class ReApplyOptionalRouteParameterOperationFilterTests
         act.Should().NotThrow();
         operation.Parameters.Should().BeEmpty();
     }
+
+    [Fact]
+    public void Apply_Should_WrapTheReferenceInAllOf_When_TheOptionalParameterSchemaIsAReference()
+    {
+        var filter = new ReApplyOptionalRouteParameterOperationFilter();
+        var reference = new OpenApiSchemaReference("RouteId");
+        var operation = new OpenApiOperation
+        {
+            Parameters = [new OpenApiParameter { Name = "id", In = ParameterLocation.Path, Required = true, Schema = reference }]
+        };
+
+        filter.Apply(operation, CreateContext(GetMethod(nameof(MethodWithOptionalRoute))));
+
+        var schema = operation.Parameters[0].Schema.Should().BeOfType<OpenApiSchema>().Subject;
+        schema.AllOf.Should().ContainSingle().Which.Should().BeSameAs(reference);
+        schema.Type.Should().Be(JsonSchemaType.Null);
+        schema.Default.Should().BeSameAs(JsonNullSentinel.JsonNull);
+    }
+
+    [Fact]
+    public void Apply_Should_CreateANullableSchema_When_TheOptionalParameterHasNoSchema()
+    {
+        var filter = new ReApplyOptionalRouteParameterOperationFilter();
+        var operation = new OpenApiOperation
+        {
+            Parameters = [new OpenApiParameter { Name = "id", In = ParameterLocation.Path, Required = true, Schema = null }]
+        };
+
+        filter.Apply(operation, CreateContext(GetMethod(nameof(MethodWithOptionalRoute))));
+
+        var schema = operation.Parameters[0].Schema.Should().BeOfType<OpenApiSchema>().Subject;
+        schema.Type.Should().Be(JsonSchemaType.Null);
+        schema.AllOf.Should().BeNullOrEmpty();
+        schema.Default.Should().BeSameAs(JsonNullSentinel.JsonNull);
+    }
+
+    [Fact]
+    public void Apply_Should_DoNothing_When_TheOperationHasNoParameters()
+    {
+        var filter = new ReApplyOptionalRouteParameterOperationFilter();
+        var operation = new OpenApiOperation { Parameters = null };
+
+        Action act = () => filter.Apply(operation, CreateContext(GetMethod(nameof(MethodWithOptionalRoute))));
+
+        act.Should().NotThrow();
+        operation.Parameters.Should().BeNull();
+    }
+
+    private static MethodInfo GetMethod(string name) =>
+        typeof(ReApplyOptionalRouteParameterOperationFilterTests).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static)!;
 }

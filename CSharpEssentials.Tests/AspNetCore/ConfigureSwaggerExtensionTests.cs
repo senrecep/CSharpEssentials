@@ -16,6 +16,19 @@ public class ConfigureSwaggerExtensionTests
         Type = SecuritySchemeType.Http
     };
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void AddSwagger_Should_Throw_When_TheSecuritySchemeNameIsMissing(string? name)
+    {
+        var services = new ServiceCollection();
+
+        Action act = () => services.AddSwagger<DefaultConfigureSwaggerOptions>(name!, CreateBearerScheme());
+
+        act.Should().Throw<ArgumentException>().Which.ParamName.Should().Be("securitySchemeName");
+    }
+
     [Fact]
     public void AddSwagger_Should_ReturnSameServiceCollection_When_Called()
     {
