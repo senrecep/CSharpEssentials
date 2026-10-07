@@ -12,6 +12,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
 - **CQRS Support**: Register separate write and read DbContexts.
 - **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
+- **Database Error Translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
 
 ## Installation
 
@@ -262,3 +263,61 @@ Result result = await transactionRunner.ExecuteAsync(
 ```csharp
 services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));
 ```
+
+### Database Error Translation
+
+`DbErrorTranslation` (namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`) turns persistence exceptions into `Error` values, which the AspNetCore package renders as ProblemDetails. The built-in `SqlStateErrorTranslator` reads `DbException.SqlState` from the exception or any inner exception, so it needs no provider reference:
+
+| SQLSTATE | Meaning | Error | Code |
+|----------|---------|-------|------|
+| `23505` | unique violation | `Conflict` (409) | `Database.UniqueViolation` |
+| `23503` | foreign key violation | `Conflict` (409) | `Database.ForeignKeyViolation` |
+| `23514` | check violation | `Validation` (400) | `Database.CheckViolation` |
+| `23502` | not null violation | `Validation` (400) | `Database.NotNullViolation` |
+| `40001` | serialization failure | `Conflict` (409), `retryable: true` | `Database.SerializationFailure` |
+| `40P01` | deadlock | `Conflict` (409), `retryable: true` | `Database.Deadlock` |
+
+The metadata carries `sqlState`, and `entities` (the entity type names of `DbUpdateException.Entries`) when there are any. The database message is not copied, because it can contain row values.
+
+```csharp
+services.AddDbErrorTranslation();
+
+public sealed class RegisterUserHandler(AppDbContext db, DbErrorTranslation translation)
+{
+    public async Task<Result> Handle(RegisterUser command, CancellationToken ct)
+    {
+        db.Users.Add(new User(command.Email));
+        Result<int> saved = await translation.SaveChangesAsync(db, ct); // Conflict on a duplicate email
+        return saved.IsSuccess ? Result.Success() : saved.Errors;
+    }
+}
+```
+
+`translation.SaveChangesAsync` returns the translated error and rethrows exceptions no translator recognizes, so unexpected failures still reach your exception handler. `SaveChangesAsResultAsync` is different: it turns every exception into an `Unknown` error. After a failure the change tracker keeps the unsaved changes. To translate an exception you caught yourself, call `translation.TryTranslate(exception, out Error error)`.
+
+Providers that report no SQLSTATE (SQL Server, SQLite) or extra details (the constraint name of `PostgresException`) plug in an `IDbErrorTranslator`. Custom translators run in registration order before the SQLSTATE default, and the first match wins. `DbErrorTranslation` is a singleton, so translators must be stateless:
+
+```csharp
+services.AddDbErrorTranslator<PostgresConstraintTranslator>();
+
+public sealed class PostgresConstraintTranslator : IDbErrorTranslator
+{
+    private readonly SqlStateErrorTranslator _sqlState = new();
+
+    public bool TryTranslate(Exception exception, out Error error)
+    {
+        if (!_sqlState.TryTranslate(exception, out error))
+            return false;
+
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException postgres)
+                error.Metadata!.AddMetadata("constraint", postgres.ConstraintName);
+        }
+
+        return true;
+    }
+}
+```
+
+The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
