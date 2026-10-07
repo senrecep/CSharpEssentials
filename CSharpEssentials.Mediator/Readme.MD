@@ -6,7 +6,7 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 
 ## Features
 
-- **Validation Behavior**: CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type.
+- **Validation Behavior**: CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type. `Enforce`, `LogOnly` and `Off` modes, globally or per request, with pluggable failure observers.
 - **Logging Behavior**: Opt-in request/response payload logging with elapsed-time tracking.
 - **Caching Behavior**: `IDistributedCache` integration with bypass and failure-cache control.
 - **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled.
@@ -124,6 +124,46 @@ On validation failure the handler is never invoked. Errors are surfaced based on
 | Any other type | `EnhancedValidationException` thrown and caught by `GlobalExceptionHandler` |
 
 Error codes use the property path (e.g. `"Email.NotEmpty"`). Multiple validators are aggregated and deduplicated.
+
+#### Validation modes
+
+| Mode | Validators run | Observers notified | Handler runs on failure |
+|------|---------------|-------------------|------------------------|
+| `Enforce` (default) | Yes | Yes | No, failure returned or thrown as above |
+| `LogOnly` | Yes | Yes | Yes, the request continues |
+| `Off` | No | No | Yes |
+
+`LogOnly` is for rolling out new rules: watch real traffic fail validation before you start rejecting it. Set the default mode at registration, and override it per request with `IValidationModeOverride`:
+
+```csharp
+services.AddMediatorValidationBehavior(options => options.DefaultMode = ValidationMode.LogOnly);
+
+public record ImportLegacyOrderCommand(string Payload) : ICommand<Result>, IValidationModeOverride
+{
+    public ValidationMode ValidationMode => ValidationMode.Enforce;
+}
+```
+
+With Native AOT, register the options and the default observer with `services.AddMediatorValidationOptions(options => ...)` next to `DefaultPipelineBehaviors`.
+
+#### Failure observers
+
+Every `IValidationFailureObserver` in DI is called, in registration order, when validation fails in `Enforce` or `LogOnly` mode. The built-in `LoggingValidationFailureObserver` is registered automatically. It logs a warning in `LogOnly` mode, debug in `Enforce` mode, and increments the `cse.mediator.validation.failures` counter on the `CSharpEssentials.Mediator` meter, tagged with `request` and `mode`. Add your own observer to send failures somewhere else:
+
+```csharp
+public sealed class AuditValidationObserver(IAuditLog audit) : IValidationFailureObserver
+{
+    public ValueTask OnValidationFailedAsync(ValidationFailureContext failure, CancellationToken cancellationToken) =>
+        audit.WriteAsync(failure.RequestType.Name, failure.Errors, cancellationToken);
+}
+
+// using Microsoft.Extensions.DependencyInjection.Extensions;
+services.TryAddEnumerable(ServiceDescriptor.Scoped<IValidationFailureObserver, AuditValidationObserver>());
+```
+
+Observers are resolved together with the behavior, so their lifetime must not be shorter than the behavior's. `AddMediatorValidationBehavior` registers the behavior as scoped, so scoped observers work. With Native AOT the source generator registers behaviors with its `ServiceLifetime` setting (singleton by default), so register observers as singletons there.
+
+An exception thrown by an observer fails the request, in `LogOnly` mode too, so keep observers cheap and catch your own transport errors.
 
 ### Caching Behavior
 
