@@ -91,6 +91,10 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
   <Import Project="..\build\PackGenerator.targets" />
 
 </Project>

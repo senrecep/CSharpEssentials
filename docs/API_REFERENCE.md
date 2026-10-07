@@ -900,7 +900,31 @@ Result<User> user = await ResiliencePolicy
 | `PaginateAsync(query, request)` | Offset-based pagination → `PaginationResponse<T>` |
 | `PaginateAsync(query, pageNumber, pageSize, includeTotalCount = true)` | Same, without building a `PaginationRequest` |
 | `Paginate(query, request)` / `Paginate(query, pageNumber, pageSize)` | Synchronous offset pagination; also works on non-EF `IQueryable` (e.g. `list.AsQueryable()`) |
-| `PaginateAsync(query, cursorRequest)` | Cursor-based pagination → `CursorPaginationResponse<T>` |
+| `PaginateAsync(query, cursorRequest, cursorSelector, isAscending = true, search = null, thenBy = null)` | Single-column cursor pagination → `CursorPaginationResponse<T, TCursor>`; the cursor is sent as a SQL parameter and the column must be unique |
+| `KeysetPaginateAsync(query, request, k => k.Descending(...).Ascending(...), ct)` | Composite keyset pagination → `Result<KeysetPaginationResponse<T>>`; reads `limit + 1` rows, no `COUNT`; bad cursors return `Error.Validation` |
+| `KeysetPaginateAsync(query, request, keys, options, ct)` / `(query, request, ordering[, options], ct)` | Same, with `KeysetPaginationOptions` or a reusable `KeysetOrdering<T>` |
+
+`Normalize()` on `PaginationRequest` and `CursorPaginationRequest<TCursor>` only enforces minimums; it does not cap the page size or limit.
+
+#### Keyset Pagination Types
+
+Namespaces: `CSharpEssentials.EntityFrameworkCore.Pagination` (extensions), `.Pagination.Requests`, `.Pagination.Responses`, `.Pagination.Keyset`.
+
+| Type | Members |
+|------|---------|
+| `KeysetPaginationRequest : IKeysetPaginationRequest` | `Limit` (default `10`), `After`, `Before` (both set → `KeysetPagination.AfterAndBefore` error) |
+| `KeysetPaginationResponse<T>` | `Items`, `NextCursor`, `PreviousCursor`, `HasNext`, `HasPrevious` |
+| `KeysetOrdering<T>` | Immutable; `Ascending(x => x.Key)`, `Descending(x => x.Key)`, `Count`. Keys must be non-nullable member accesses (no nullable navigation on the path) of a supported type, otherwise `ArgumentException`; enums stored as strings cannot be keys |
+| `KeysetDirection` | `Ascending`, `Descending` |
+| `KeysetPaginationOptions` (record) | `MaxLimit` (default `KeysetPaginationOptions.DefaultMaxLimit` = 100, `1..int.MaxValue - 1`), `MaxCursorLength` (default `DefaultMaxCursorLength` = 2048; longer cursors → `InvalidCode`), `Protector` (default `NoOpCursorProtector.Instance`), `PredicateBuilder` (default `KeysetPredicateBuilder.Instance`); `Default` |
+| `ICursorProtector` | `string Protect(string cursor)`, `bool TryUnprotect(string protectedCursor, out string cursor)`; wrap `IDataProtector` to sign/encrypt cursors |
+| `NoOpCursorProtector` | Default protector; returns the cursor unchanged |
+| `IKeysetPredicateBuilder` | `Expression BuildPredicate(IReadOnlyList<KeysetColumn> columns)`; returns a `bool` expression |
+| `KeysetPredicateBuilder` | Default; `a <= @a AND (a < @a OR (a = @a AND b > @b))` with a redundant leading-column condition |
+| `KeysetColumn` | `Column`, `Value` (parameter expression), `Type`, `Direction` (effective, reversed for `Before` pages) |
+| `KeysetCursorErrors` | Error codes `InvalidCode`, `UnsupportedVersionCode`, `DirectionMismatchCode`, `KeyMismatchCode`, `AfterAndBeforeCode`; metadata key `ParameterKey` (`"parameter"`, value `after`/`before`) |
+
+Cursor format: base64url (no padding) of `{"v":1,"d":"a"|"b","k":"<key fingerprint>","p":[values]}`, then `ICursorProtector.Protect`. Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime` (`Kind` preserved), `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly`, enums (not `ulong`-based). The provider must also translate ordering and comparison of the key type (SQLite does not for `decimal`, `DateTimeOffset`, `TimeSpan`).
 
 ### Batch Operations
 

@@ -7,7 +7,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Audit Interceptor**: Auto-populates `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
 - **Domain Event Interceptor**: Dispatches domain events with before/after save timing and outbox support.
 - **Slow Query Logging**: Logs queries exceeding a configurable threshold.
-- **Pagination**: Offset-based and cursor-based pagination on `IQueryable`.
+- **Pagination**: Offset-based and cursor-based pagination on `IQueryable`, plus composite keyset pagination with opaque, versioned cursors and `Result` errors for bad cursors.
 - **Batch Soft Delete**: Soft-delete many rows with a single `UPDATE` statement.
 - **Named Query Filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
@@ -71,11 +71,109 @@ var page = await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(pageNumber: 2,
 // Synchronous, also works on in-memory IQueryable
 var memoryPage = users.AsQueryable().Paginate(pageNumber: 1, pageSize: 10);
 
-// Cursor-based
+// Single-column cursor (the column must be unique; see Keyset Pagination for composite keys)
 var cursorResponse = await dbContext.Logs.PaginateAsync(
-    new CursorPaginationRequest<DateTimeOffset> { Limit = 20, Cursor = lastDate },
-    cursorSelector: x => x.CreatedAt);
+    new CursorPaginationRequest<long> { Limit = 20, Cursor = lastId },
+    cursorSelector: x => x.Id);
 ```
+
+`PaginationRequest.Normalize()` and `CursorPaginationRequest.Normalize()` only raise values to their minimum (page 1, size/limit 1). They do not cap the page size or limit, because a cap would change the results of existing callers. Validate the upper bound in your API layer, or use `KeysetPaginateAsync`, which clamps `Limit` to `KeysetPaginationOptions.MaxLimit`.
+
+### Keyset Pagination
+
+`KeysetPaginateAsync` pages through a query by a composite key, such as "newest first, then by id". It returns opaque cursors for the next and previous page, sends one query that reads `limit + 1` rows, and never runs a `COUNT`. Unlike offset paging, its cost does not grow with the page number, and rows inserted or deleted between requests do not shift the pages.
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Pagination;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
+
+// GET /orders?limit=20&after=eyJ2IjoxLCJkIjoiYSIs...
+Result<KeysetPaginationResponse<Order>> page = await db.Orders
+    .Where(o => o.CustomerId == customerId)
+    .KeysetPaginateAsync(
+        new KeysetPaginationRequest { Limit = 20, After = after, Before = before },
+        k => k.Descending(o => o.CreatedAt).Descending(o => o.Id),
+        ct);
+
+// page.Value.Items, NextCursor, PreviousCursor, HasNext, HasPrevious
+```
+
+- **Keys.** The keys replace any `OrderBy` already on the query. Together they must be unique, so end with a unique tie-breaker such as the primary key. Directions can be mixed (`Descending(x => x.CreatedAt).Ascending(x => x.Id)`). A `KeysetOrdering<T>` is immutable; build it once and reuse it with the `KeysetOrdering<T>` overloads.
+- **Request.** `After` takes `NextCursor` and returns the following page; `Before` takes `PreviousCursor` and returns the page before it. Setting both returns a `KeysetPagination.AfterAndBefore` validation error. A request with neither returns the first page.
+- **Limit.** `Limit` is clamped to `1..KeysetPaginationOptions.MaxLimit` (default `100`, at most `int.MaxValue - 1`).
+- **Cursor length.** A cursor longer than `KeysetPaginationOptions.MaxCursorLength` (default `2048` characters) is rejected with `InvalidCursor` before it is decoded. Raise it if a protector produces longer cursors.
+- **Before pages.** For a `Before` request the ordering is reversed in SQL, `limit + 1` rows are read, and the page is reversed in memory, so `Items` is always in the configured order.
+- **Has next/previous.** `HasNext` and `HasPrevious` come from the extra row, not from a count. A page reached with `After` always reports a previous page, and a page reached with `Before` always reports a next page, since the cursor came from a real neighbouring page. An empty page has no cursors.
+- **Errors.** A malformed, tampered, outdated or mismatched cursor never throws. It returns `Error.Validation` with one of the `KeysetCursorErrors` codes (`InvalidCursor`, `UnsupportedCursorVersion`, `CursorDirectionMismatch`, `CursorKeyMismatch`), and the metadata key `parameter` names the bad request field (`after` or `before`). Map it to HTTP 400.
+
+**Cursor format.** A cursor is base64url (no padding) of a small versioned JSON payload: `{"v":1,"d":"a","k":"<key fingerprint>","p":[<key values>]}`. `d` is the direction (`a` after, `b` before), `k` is a hash of the entity type and the key paths, types and directions, so a cursor issued for one ordering or entity is rejected by another, and `p` holds the typed key values. `DateTime` keeps its `Kind`, `DateTimeOffset` its offset, enums are stored as numbers, and non-finite `double`/`float` values as the strings `"NaN"`, `"Infinity"` and `"-Infinity"`. Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly` and enums (except `ulong`-based ones).
+
+**Cursor protection.** The default cursor is encoded, not encrypted or signed: a client can read the key values and craft a cursor. That is safe for the query (every value is a typed SQL parameter), but if the key values are sensitive or you want to reject client-built cursors, plug in an `ICursorProtector`. The package does not reference ASP.NET Core; a Data Protection wrapper takes a few lines:
+
+```csharp
+public sealed class DataProtectionCursorProtector(IDataProtectionProvider provider) : ICursorProtector
+{
+    private readonly IDataProtector _protector = provider.CreateProtector("KeysetCursor.v1");
+
+    public string Protect(string cursor) => _protector.Protect(cursor);
+
+    public bool TryUnprotect(string protectedCursor, out string cursor)
+    {
+        try { cursor = _protector.Unprotect(protectedCursor); return true; }
+        catch (Exception ex) when (ex is CryptographicException or FormatException) { cursor = string.Empty; return false; }
+    }
+}
+
+var options = new KeysetPaginationOptions { Protector = protector, MaxLimit = 50 };
+Result<KeysetPaginationResponse<Order>> page = await db.Orders.KeysetPaginateAsync(request, ordering, options, ct);
+```
+
+`TryUnprotect` must not throw; return `false` and the request gets an `InvalidCursor` error.
+
+**Predicate.** The default `KeysetPredicateBuilder` writes the expanded form with a redundant leading-column condition, which lets the database use an index on the first key:
+
+```sql
+-- Descending(CreatedAt).Ascending(Name).Ascending(Id), After cursor
+WHERE "CreatedAt" <= @p0 AND ("CreatedAt" < @p0 OR ("CreatedAt" = @p0 AND ("Name" > @p1 OR ("Name" = @p1 AND "Id" > @p2))))
+ORDER BY "CreatedAt" DESC, "Name", "Id"
+LIMIT @p3
+```
+
+Cursor values always become SQL parameters, so the SQL text, and the cached query plan, are the same for every page. Strings are compared with `string.Compare`, `Guid` with `CompareTo`, and enums through their numeric value, which EF Core translates to plain `<`/`>` comparisons. The comparison therefore follows the database's own ordering (collation for strings, the stored form for `Guid`), the same ordering as the generated `ORDER BY`.
+
+To emit a different predicate, implement `IKeysetPredicateBuilder` and set `KeysetPaginationOptions.PredicateBuilder`. Each `KeysetColumn` carries the column expression, the parameter expression for the cursor value, the CLR type and the effective direction (already reversed for `Before` pages).
+
+**Untested sketch: PostgreSQL row values.** This is not shipped or tested by this package; verify it against your Npgsql version before use. Npgsql translates `EF.Functions.GreaterThan`/`LessThan` over value tuples to a row-value comparison, which PostgreSQL can serve from one composite index. A custom builder would have to emit an expression equivalent to this LINQ (shown for `Descending(x => x.CreatedAt).Descending(x => x.Id)` and an `After` cursor):
+
+```csharp
+x => EF.Functions.LessThan(ValueTuple.Create(x.CreatedAt, x.Id), ValueTuple.Create(cursorCreatedAt, cursorId))
+// WHERE ("CreatedAt", "Id") < (@p0, @p1)
+```
+
+A row-value comparison only fits orderings whose keys all share one direction. For mixed directions, return `KeysetPredicateBuilder.Instance.BuildPredicate(columns)` from your builder.
+
+**Limitations.**
+
+- Nullable key columns (`int?`, `string?` with nullable annotations) are rejected with `ArgumentException` when the ordering is built, because SQL `NULL` breaks `<`/`>` comparisons. Use a non-nullable column, or a computed non-null column.
+- Keys must be property or field accesses on the entity (`x => x.CreatedAt`, `x => x.Audit.CreatedAt`), not computed expressions. Every member on the path must be non-nullable: `x => x.Audit!.CreatedAt` through a nullable `Audit?` navigation is rejected with `ArgumentException`.
+- The provider must translate ordering and comparison of each key type. SQLite, for example, cannot order or compare `decimal`, `DateTimeOffset` or `TimeSpan` columns, and EF Core throws `NotSupportedException` for them; SQL Server and PostgreSQL support them. Enum keys are compared through their numeric value, so they must be stored as numbers (the default). Enums stored as strings, through `ConfigureEnumConventions`, `[StringEnum]` or `HasConversion<string>()`, cannot be keys: the database would order and compare the names, not the numeric values the cursor holds.
+- The ordering is by the key values alone. Rows that change their key values between requests can move between pages.
+- There is no total count. Run a separate `CountAsync` if you need it.
+
+**Moving from `PaginateAsync<T, TCursor>`.** The single-column cursor overload is kept and now sends the cursor as a SQL parameter instead of a constant, so EF Core reuses one query plan for all pages. It still filters by one column only, so that column must be unique: with a non-unique column such as a timestamp, a page that ends inside a group of equal values skips the rest of that group. It is not marked `[Obsolete]`, because the repository builds with warnings as errors. To migrate:
+
+```csharp
+// Before
+var response = await db.Logs.PaginateAsync(
+    new CursorPaginationRequest<DateTime> { Limit = 20, Cursor = lastCreatedAt }, x => x.CreatedAt, isAscending: false);
+
+// After: the tie-breaker makes the key unique, and the cursor is opaque
+Result<KeysetPaginationResponse<Log>> page = await db.Logs.KeysetPaginateAsync(
+    new KeysetPaginationRequest { Limit = 20, After = nextCursor },
+    k => k.Descending(x => x.CreatedAt).Descending(x => x.Id), ct);
+```
+
+Cursors from `PaginateAsync` (raw values) are not accepted by `KeysetPaginateAsync`; clients restart from the first page once.
 
 ### Batch Soft Delete
 
