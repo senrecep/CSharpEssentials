@@ -912,6 +912,19 @@ Result<User> user = await ResiliencePolicy
 
 Batch updates bypass the change tracker and `SaveChanges` interceptors (audit, domain events), and require a relational provider.
 
+### Database Error Translation
+
+Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
+
+| Member | What It Does |
+|--------|-------------|
+| `IDbErrorTranslator.TryTranslate(exception, out error)` | Provider hook: returns `true` and an `Error` when it recognizes the exception |
+| `SqlStateErrorTranslator` | Default translator over `DbException.SqlState` (searches inner exceptions): `23505`/`23503` → `Conflict`, `23514`/`23502` → `Validation`, `40001`/`40P01` → `Conflict` with `retryable: true`. Metadata: `sqlState`, `entities` |
+| `DbErrorTranslation.TryTranslate(exception, out error)` | Tries registered translators in registration order, then `SqlStateErrorTranslator`; first match wins |
+| `DbErrorTranslation.SaveChangesAsync(context, ct)` | `SaveChangesAsync` returning `Result<int>`; recognized exceptions become the translated error, others are rethrown |
+| `AddDbErrorTranslation()` | Registers `DbErrorTranslation` as a singleton |
+| `AddDbErrorTranslator<TTranslator>()` | Adds a singleton `IDbErrorTranslator` (once per type) and `DbErrorTranslation` |
+
 ### Entity Configuration
 
 | Method | What It Does |
