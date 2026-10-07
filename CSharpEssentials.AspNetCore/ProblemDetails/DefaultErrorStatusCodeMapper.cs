@@ -1,4 +1,5 @@
 using CSharpEssentials.Errors;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace CSharpEssentials.AspNetCore;
@@ -15,7 +16,11 @@ public class DefaultErrorStatusCodeMapper : IErrorStatusCodeMapper
     public static DefaultErrorStatusCodeMapper Instance { get; } = new();
 
     /// <inheritdoc />
-    public virtual int GetStatusCode(Error error) => error.Type.ToHttpStatusCode();
+    /// <remarks><see cref="ConditionalRequestErrors.PreconditionFailed"/> maps to 412.</remarks>
+    public virtual int GetStatusCode(Error error) =>
+        ConditionalRequestErrors.IsPreconditionFailed(error)
+            ? StatusCodes.Status412PreconditionFailed
+            : error.Type.ToHttpStatusCode();
 
     /// <inheritdoc />
     public virtual Error SelectPrimaryError(IReadOnlyList<Error> errors)
