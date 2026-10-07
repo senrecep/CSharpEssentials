@@ -1205,6 +1205,7 @@ Both produce the same enum schemas (shared golden files): one component per enum
 | `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `Expiration` (`BypassCache`, `CacheFailures` control the lookup) |
 | `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope`; completes only when the `Result` succeeds |
 | `TransactionBehavior` | `ITransactionalRequest` | Runs the handler through the registered `ITransactionRunner`; commits only when the `Result` succeeds. Replaces `TransactionScopeBehavior` when registered |
+| `LockBehavior` | `ILockedRequest` | Holds the `IResourceLock` lock for `LockKey` while the handler runs; waits up to `LockTimeout` (unbounded when `null`) and throws `TimeoutException` when it cannot acquire (a failed `Result` behind `ExceptionHandlingBehavior`). Registered only by `AddMediatorLockBehavior` |
 
 ### ExceptionHandlingBehavior
 
@@ -1264,6 +1265,16 @@ if (result.IsFailure)
 | `AddMediatorCachingBehavior()` | Registers caching only |
 | `AddMediatorTransactionBehavior()` | Registers `TransactionScopeBehavior`, replacing `TransactionBehavior` in place |
 | `AddMediatorTransactionRunnerBehavior()` | Registers `TransactionBehavior` (scoped), replacing `TransactionScopeBehavior` in place; needs an `ITransactionRunner` |
+| `AddMediatorLockBehavior(placement)` | Registers `LockBehavior` (scoped) just before (`LockPlacement.OutsideTransaction`, default) or just after (`InsideTransaction`) the transaction behavior, and `InProcessResourceLock` as the singleton `IResourceLock` unless one is registered |
+
+### Resource Locks
+
+| Type | Description |
+|------|-------------|
+| `IResourceLock` (namespace `CSharpEssentials.Locking`) | `AcquireAsync(key, timeout, ct)` waits for the lock and returns a handle that releases it on dispose (throws `TimeoutException`); `TryAcquireAsync(key, ct)` returns `Maybe<IAsyncDisposable>.None` when the key is held |
+| `InProcessResourceLock` | Default: one `SemaphoreSlim` per key, removed when the last holder or waiter leaves. Serializes only within one process; register a distributed implementation for several instances |
+| `ILockedRequest` | `LockKey` and optional `LockTimeout` (default `null`) |
+| `LockPlacement` | `OutsideTransaction` (lock held until the transaction has committed) or `InsideTransaction` (lock taken inside the transaction, for transaction-scoped locks such as `pg_advisory_xact_lock`) |
 
 ---
 

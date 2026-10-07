@@ -10,6 +10,7 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 - **Logging Behavior**: Opt-in request/response payload logging with elapsed-time tracking.
 - **Caching Behavior**: `IDistributedCache` integration with bypass and failure-cache control.
 - **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled, or runs them through a pluggable `ITransactionRunner` (EF Core implementation in `CSharpEssentials.EntityFrameworkCore`). Commits only when the `Result` succeeds.
+- **Lock Behavior**: Serializes requests that share a resource key through a pluggable `IResourceLock`, placed outside or inside the transaction. Ships an in-process default.
 
 ## Installation
 
@@ -225,6 +226,60 @@ With Native AOT, replace `TransactionScopeBehavior<,>` with `TransactionBehavior
 
 The replacement only matches behaviors registered by type through these methods; a transaction behavior you registered with a factory is left alone.
 
+### Lock Behavior
+
+Implement `ILockedRequest` to run only one handler at a time per key, for example one payment capture per order:
+
+```csharp
+public record CapturePaymentCommand(Guid OrderId) : ICommand<Result>, ILockedRequest
+{
+    public string LockKey => $"order:{OrderId}";
+    public TimeSpan? LockTimeout => TimeSpan.FromSeconds(5); // optional; null (default) waits until cancelled
+}
+
+services.AddMediatorBehaviors();
+services.AddMediatorLockBehavior(); // LockPlacement.OutsideTransaction
+```
+
+The behavior acquires the lock before the handler and releases it when the handler returns or throws. When the lock cannot be acquired within `LockTimeout`, the `IResourceLock` throws `TimeoutException` and the handler does not run. With the default registration `LockBehavior` sits inside `ExceptionHandlingBehavior`, so a `Result` or `Result<T>` handler gets a failed result carrying `Error.Exception(TimeoutException)` instead; cancellation still propagates as `OperationCanceledException`.
+
+`AddMediatorLockBehavior` registers `InProcessResourceLock` as the singleton `IResourceLock` unless one is already registered. It serializes requests within one process only. With several instances, register a distributed implementation (a database advisory lock, Redis, ...) before or after the call:
+
+```csharp
+public interface IResourceLock // namespace CSharpEssentials.Locking
+{
+    ValueTask<IAsyncDisposable> AcquireAsync(string key, TimeSpan? timeout, CancellationToken cancellationToken = default);
+    ValueTask<Maybe<IAsyncDisposable>> TryAcquireAsync(string key, CancellationToken cancellationToken = default);
+}
+
+services.AddScoped<IResourceLock, PostgresAdvisoryLock>();
+```
+
+When the lock needs a numeric key, derive it with a stable hash (FNV-1a 64 over the UTF-8 bytes, or a server-side hash such as PostgreSQL `hashtextextended(key, 0)`), never `string.GetHashCode()`, which differs between processes.
+
+#### Placement
+
+The lock wraps the transaction behavior from outside by default. Pick the placement that matches the lock:
+
+| Placement | Order | Use with | Caveat |
+|-----------|-------|----------|--------|
+| `OutsideTransaction` (default) | Lock → Transaction → Handler | Locks that live until disposed: `InProcessResourceLock`, session advisory locks, Redis | A transaction-scoped lock (`pg_advisory_xact_lock`) is released as soon as its own short transaction ends, so it protects nothing |
+| `InsideTransaction` | Transaction → Lock → Handler | Transaction-scoped locks taken on the runner's connection, such as `pg_advisory_xact_lock`, whose handle disposes as a no-op and which the database releases at commit or rollback | A lock that is released on dispose (`InProcessResourceLock`) is let go before the commit, so the next request can read data from before the commit |
+
+```csharp
+services.AddMediatorBehaviors();
+services.AddMediatorTransactionRunnerBehavior();
+services.AddEfCoreTransactionRunner<AppDbContext>();
+services.AddScoped<IResourceLock, PostgresXactLock>();
+services.AddMediatorLockBehavior(LockPlacement.InsideTransaction);
+```
+
+Call `AddMediatorLockBehavior` after the other behaviors are registered. With no transaction behavior it is appended, so calling it first would put the lock outside validation, logging and exception handling. A transaction behavior you registered with a factory is not recognized either, and the lock is appended after it, which means inside.
+
+`InsideTransaction` throws `InvalidOperationException` when no transaction behavior is registered. The placement is relative to the transaction behavior, so switching between `TransactionScopeBehavior` and `TransactionBehavior` later keeps it. Calling `AddMediatorLockBehavior` again moves the behavior instead of adding a second one. Only requests that implement both `ITransactionalRequest` and `ILockedRequest` are affected by the order.
+
+With Native AOT, `DefaultPipelineBehaviors` does not include `LockBehavior<,>`. Insert it into your own array right before (outside) or right after (inside) the transaction behavior, and register the `IResourceLock` yourself.
+
 ### Logging Behavior
 
 Implement marker interfaces to opt into payload logging.
@@ -247,6 +302,7 @@ All requests log basic handling/handled messages and elapsed time regardless of 
 |-----------|---------|---------|
 | `ICacheable` | None | Enables `CachingBehavior` |
 | `ITransactionalRequest` | None | Enables `TransactionScopeBehavior` or `TransactionBehavior`, whichever is registered |
+| `ILockedRequest` | None | Enables `LockBehavior` with `LockKey` and optional `LockTimeout` |
 | `ILoggableRequest` | `IMessage` | Base for logging opt-in |
 | `IRequestLoggable` | `ILoggableRequest` | Log request payload |
 | `IResponseLoggable` | `ILoggableRequest` | Log response payload |
@@ -261,8 +317,9 @@ All requests log basic handling/handled messages and elapsed time regardless of 
 | `CachingBehavior<TRequest,TResponse>` | Always registered | `TRequest : ICacheable, IMessage` |
 | `TransactionScopeBehavior<TRequest,TResponse>` | Always registered | `TRequest : ITransactionalRequest, IMessage` |
 | `TransactionBehavior<TRequest,TResponse>` | `AddMediatorTransactionRunnerBehavior()`, replaces `TransactionScopeBehavior` | `TRequest : ITransactionalRequest, IMessage` |
+| `LockBehavior<TRequest,TResponse>` | `AddMediatorLockBehavior()` | `TRequest : ILockedRequest, IMessage` |
 
-> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior` is scoped as well, because `ITransactionRunner` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
+> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior` and `LockBehavior` are scoped as well, because `ITransactionRunner` and database-backed `IResourceLock` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
 
 ## Dependencies
 
