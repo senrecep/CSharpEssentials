@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-efcore
-description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage and AddCqrsDbContexts.
+description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage and AddCqrsDbContexts.
 ---
 
 # CSharpEssentials.EntityFrameworkCore
@@ -20,8 +20,10 @@ Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8). T
 ```csharp
 using CSharpEssentials.EntityFrameworkCore;                       // BaseDbContext, DbContextInterceptors, SoftDeleteAsync, *AsResultAsync
 using CSharpEssentials.EntityFrameworkCore.Interceptors;          // interceptors, IAuditUserIdProvider, IDomainEventPublisher, ISlowQueryHandler
-using CSharpEssentials.EntityFrameworkCore.Pagination;            // PaginateAsync, Paginate
-using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;   // PaginationRequest, CursorPaginationRequest<T>
+using CSharpEssentials.EntityFrameworkCore.Pagination;            // PaginateAsync, Paginate, KeysetPaginateAsync
+using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;   // PaginationRequest, CursorPaginationRequest<T>, KeysetPaginationRequest
+using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;  // PaginationResponse<T>, KeysetPaginationResponse<T>
+using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;     // KeysetOrdering<T>, KeysetPaginationOptions, ICursorProtector, KeysetCursorErrors
 using CSharpEssentials.EntityFrameworkCore.Extensions;            // AddCqrsDbContexts, AddWriteDbContext, AddReadDbContext
 ```
 
@@ -150,13 +152,37 @@ var request = new PaginationRequest { PageNumber = 2, PageSize = 10, Search = "p
 PaginationResponse<Product> products = await db.Products
     .PaginateAsync(request, search: term => p => p.Name.Contains(term), cancellationToken: ct);
 
-// Cursor-based
-CursorPaginationResponse<Order, DateTimeOffset> feed = await db.Orders.PaginateAsync(
-    new CursorPaginationRequest<DateTimeOffset> { Limit = 20 },
-    cursorSelector: o => o.CreatedAt);
+// Single-column cursor: the column must be unique (the cursor value is sent as a SQL parameter)
+CursorPaginationResponse<Order, long> feed = await db.Orders.PaginateAsync(
+    new CursorPaginationRequest<long> { Limit = 20 },
+    cursorSelector: o => o.Id);
 ```
 
-`Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`.
+`Paginate` is the synchronous variant and also works on in-memory `IQueryable<T>`. `Normalize()` only enforces minimums; it does not cap `PageSize`/`Limit`.
+
+### Keyset (composite cursor) pagination
+
+Prefer this for feeds and APIs. One query reads `limit + 1` rows, no COUNT, opaque cursors for both directions:
+
+```csharp
+Result<KeysetPaginationResponse<Order>> page = await db.Orders
+    .Where(o => o.CustomerId == customerId)
+    .KeysetPaginateAsync(
+        new KeysetPaginationRequest { Limit = 20, After = after, Before = before }, // never both
+        k => k.Descending(o => o.CreatedAt).Descending(o => o.Id),                // end with a unique key
+        ct);
+// page.Value.Items, NextCursor (send as After), PreviousCursor (send as Before), HasNext, HasPrevious
+
+// Options: max limit (default 100), max cursor length (default 2048), cursor protection, custom predicate
+var options = new KeysetPaginationOptions { MaxLimit = 50, Protector = myDataProtectionWrapper };
+```
+
+- Keys replace any existing `OrderBy`; directions may be mixed; build a `KeysetOrdering<T>` once and reuse it.
+- Bad cursors (garbage, too long, tampered, other ordering or entity, wrong direction, old version) and `After` + `Before` return `Error.Validation` with a `KeysetCursorErrors.*Code`; they never throw. Map to HTTP 400.
+- Nullable keys (`int?`, `string?`), keys through a nullable navigation (`x => x.Audit!.CreatedAt`), computed keys and unsupported types throw `ArgumentException` when the ordering is built.
+- Cursors are base64url JSON, readable by clients. Implement `ICursorProtector` (wrap `IDataProtector`, return `false` instead of throwing) to sign or encrypt them.
+- The provider must order and compare the key type: SQLite cannot for `decimal`, `DateTimeOffset`, `TimeSpan`. Enum keys must be stored as numbers: enums stored as strings via `ConfigureEnumConventions`/`[StringEnum]` (or `HasConversion<string>()`) cannot be keys.
+- Replace `IKeysetPredicateBuilder` (e.g. row-value comparisons on PostgreSQL) through `KeysetPaginationOptions.PredicateBuilder`.
 
 ---
 
