@@ -3,6 +3,22 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0](https://github.com/senrecep/CSharpEssentials/compare/v6.1.0...v6.2.0) (2026-10-07)
+
+
+### Added
+
+* **openapi:** describe optional route parameters in Microsoft.AspNetCore.OpenApi documents ([33855a3](https://github.com/senrecep/CSharpEssentials/commit/33855a3860a6efa0812cb3865752b04d0f2c0b24))
+* **openapi:** optional route parameters in Microsoft.AspNetCore.OpenApi, fallback warning, goldens ([dd71944](https://github.com/senrecep/CSharpEssentials/commit/dd7194497c14569ce06ce590ab291c114ec97647))
+* **openapi:** warn when SplitPaths keeps an operation on one path ([593de9b](https://github.com/senrecep/CSharpEssentials/commit/593de9b53fdefc62c337a2cad26b613d1ac07ce7))
+
+
+### Fixed
+
+* **openapi:** drop the null branch of a required path parameter's oneOf or anyOf ([cb5c1b2](https://github.com/senrecep/CSharpEssentials/commit/cb5c1b2b1e4f5d6ebf764da13b94448d4fe7ce14))
+* **openapi:** match operations to API descriptions through an operation transformer ([50f2627](https://github.com/senrecep/CSharpEssentials/commit/50f2627440f5f50448e536eb18accbdf1f6f8120))
+* **openapi:** validate the optional route parameter mode with a pattern ([9d0f855](https://github.com/senrecep/CSharpEssentials/commit/9d0f8559e95512f4e90b049b866ad354ba4f83d4))
+
 ## [6.1.0](https://github.com/senrecep/CSharpEssentials/compare/v6.0.0...v6.1.0) (2026-10-07)
 
 
