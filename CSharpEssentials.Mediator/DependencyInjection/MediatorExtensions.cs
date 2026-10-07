@@ -118,6 +118,53 @@ public static class MediatorExtensions
         services.SetTransactionBehavior(
             ServiceDescriptor.Scoped(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.TransactionBehavior<,>)));
 
+    /// <summary>
+    /// Registers <see cref="CSharpEssentials.Mediator.LockBehavior{TRequest, TResponse}"/> (scoped) for
+    /// <see cref="ILockedRequest"/> requests, and <see cref="CSharpEssentials.Locking.InProcessResourceLock"/> as the
+    /// <see cref="CSharpEssentials.Locking.IResourceLock"/> unless one is already registered.
+    /// <para>
+    /// The behavior is placed before or after the registered transaction behavior according to <paramref name="placement"/>;
+    /// with no transaction behavior it is added at the end. Calling it again moves the behavior instead of adding a second one.
+    /// </para>
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// <paramref name="placement"/> is <see cref="LockPlacement.InsideTransaction"/> and no transaction behavior is registered.
+    /// </exception>
+    public static IServiceCollection AddMediatorLockBehavior(
+        this IServiceCollection services,
+        LockPlacement placement = LockPlacement.OutsideTransaction)
+    {
+        services.TryAddSingleton<CSharpEssentials.Locking.IResourceLock, CSharpEssentials.Locking.InProcessResourceLock>();
+
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (IsBehavior(services[index], typeof(CSharpEssentials.Mediator.LockBehavior<,>)))
+                services.RemoveAt(index);
+        }
+
+        int transaction = -1;
+        for (int index = 0; index < services.Count && transaction < 0; index++)
+        {
+            if (IsTransactionBehavior(services[index]))
+                transaction = index;
+        }
+
+        var behavior = ServiceDescriptor.Scoped(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.LockBehavior<,>));
+        if (transaction < 0)
+        {
+            if (placement == LockPlacement.InsideTransaction)
+                throw new InvalidOperationException(
+                    "LockPlacement.InsideTransaction needs a registered transaction behavior. Call AddMediatorBehaviors, AddMediatorTransactionBehavior or AddMediatorTransactionRunnerBehavior first.");
+            services.Add(behavior);
+        }
+        else
+        {
+            services.Insert(placement == LockPlacement.InsideTransaction ? transaction + 1 : transaction, behavior);
+        }
+
+        return services;
+    }
+
     private static IServiceCollection SetTransactionBehavior(this IServiceCollection services, ServiceDescriptor behavior)
     {
         int position = -1;
@@ -137,8 +184,11 @@ public static class MediatorExtensions
     }
 
     private static bool IsTransactionBehavior(ServiceDescriptor descriptor) =>
+        IsBehavior(descriptor, typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>))
+        || IsBehavior(descriptor, typeof(CSharpEssentials.Mediator.TransactionBehavior<,>));
+
+    private static bool IsBehavior(ServiceDescriptor descriptor, Type implementationType) =>
         descriptor.ServiceType == typeof(IPipelineBehavior<,>)
         && !descriptor.IsKeyedService
-        && (descriptor.ImplementationType == typeof(CSharpEssentials.Mediator.TransactionScopeBehavior<,>)
-            || descriptor.ImplementationType == typeof(CSharpEssentials.Mediator.TransactionBehavior<,>));
+        && descriptor.ImplementationType == implementationType;
 }
