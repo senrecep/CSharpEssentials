@@ -6,7 +6,11 @@ public interface IPaginationRequest
     int PageNumber { get; set; }
     int PageSize { get; set; }
 
-    int SkipCount() => Math.Max((PageNumber - 1) * PageSize, 0);
+    /// <summary>
+    /// Returns the number of rows to skip. The product is computed in 64-bit arithmetic and clamped to
+    /// <see cref="int.MaxValue"/>, so a page beyond the addressable range yields an empty page instead of overflowing.
+    /// </summary>
+    int SkipCount() => (int)Math.Clamp(((long)PageNumber - 1) * PageSize, 0, int.MaxValue);
     void Normalize()
     {
         Search = Search?.Trim();

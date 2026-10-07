@@ -3,6 +3,7 @@ namespace CSharpEssentials.Http;
 
 internal sealed class SsrfGuardedStream(Stream inner, long? maxLength, Uri? requestUri, CancellationToken timeoutToken) : Stream
 {
+    // Like any Stream, this assumes a single concurrent reader; the counter and linked token source are not synchronized.
     private long _bytesRead;
     private CancellationTokenSource? _linked;
     private CancellationToken _linkedCallerToken;

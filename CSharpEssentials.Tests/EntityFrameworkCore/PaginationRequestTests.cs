@@ -12,6 +12,34 @@ public class PaginationRequestTests
         ((IPaginationRequest)request).SkipCount().Should().Be(20);
     }
 
+    [Theory]
+    [InlineData(int.MaxValue, 100)]
+    [InlineData(int.MaxValue, int.MaxValue)]
+    [InlineData(21_474_838, 100)]
+    [InlineData(2, int.MaxValue)]
+    public void SkipCount_Should_ClampToIntMaxValue_When_ProductOverflowsInt(int pageNumber, int pageSize)
+    {
+        var request = new PaginationRequest { PageNumber = pageNumber, PageSize = pageSize };
+
+        int skip = ((IPaginationRequest)request).SkipCount();
+
+        skip.Should().Be(int.MaxValue);
+    }
+
+    [Theory]
+    [InlineData(21_474_836, 100, 2_147_483_500)]
+    [InlineData(1, 100, 0)]
+    [InlineData(0, 100, 0)]
+    [InlineData(int.MinValue, int.MaxValue, 0)]
+    public void SkipCount_Should_ReturnExactProduct_When_ProductFitsInt(int pageNumber, int pageSize, int expected)
+    {
+        var request = new PaginationRequest { PageNumber = pageNumber, PageSize = pageSize };
+
+        int skip = ((IPaginationRequest)request).SkipCount();
+
+        skip.Should().Be(expected);
+    }
+
     [Fact]
     public void Normalize_ShouldClampNegativeValues()
     {

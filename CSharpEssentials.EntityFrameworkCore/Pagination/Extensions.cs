@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;
@@ -142,8 +141,7 @@ public static class Extensions
             Expression cursorParameter = Expression.Property(
                 Expression.Constant(new KeysetParameter<TCursor>(request.Cursor)),
                 nameof(KeysetParameter<>.Value));
-            MethodInfo compareMethod = typeof(TCursor).GetMethod(nameof(IComparable<>.CompareTo), [typeof(TCursor)])!;
-            Expression compareCall = Expression.Call(cursorSelector.Body, compareMethod, cursorParameter);
+            Expression compareCall = Expression.Call(cursorSelector.Body, CursorCompareMethod<TCursor>.Value, cursorParameter);
             Expression comparison = isAscending
                 ? Expression.GreaterThan(compareCall, Expression.Constant(0))
                 : Expression.LessThan(compareCall, Expression.Constant(0));
@@ -156,7 +154,8 @@ public static class Extensions
         IOrderedQueryable<T> cursorOrdered = isAscending ? q.OrderBy(cursorSelector) : q.OrderByDescending(cursorSelector);
         q = thenBy is not null ? thenBy(cursorOrdered) : cursorOrdered;
 
-        List<T> items = await q.Take(request.Limit + 1).ToListAsync(cancellationToken);
+        int take = request.Limit == int.MaxValue ? int.MaxValue : request.Limit + 1;
+        List<T> items = await q.Take(take).ToListAsync(cancellationToken);
 
         bool hasMore = items.Count > request.Limit;
         if (hasMore.IsTrue())

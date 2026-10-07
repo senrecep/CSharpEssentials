@@ -16,6 +16,7 @@ public sealed class DefaultOutboundAddressPolicy : IOutboundAddressPolicy
         IPNetwork.Parse("172.16.0.0/12"),
         IPNetwork.Parse("192.0.0.0/24"),
         IPNetwork.Parse("192.0.2.0/24"),
+        IPNetwork.Parse("192.88.99.0/24"),
         IPNetwork.Parse("192.168.0.0/16"),
         IPNetwork.Parse("198.18.0.0/15"),
         IPNetwork.Parse("198.51.100.0/24"),
@@ -28,17 +29,24 @@ public sealed class DefaultOutboundAddressPolicy : IOutboundAddressPolicy
     [
         IPNetwork.Parse("::/128"),
         IPNetwork.Parse("::1/128"),
+        IPNetwork.Parse("::ffff:0:0:0/96"),
+        IPNetwork.Parse("100::/64"),
         IPNetwork.Parse("fc00::/7"),
         IPNetwork.Parse("fe80::/10"),
         IPNetwork.Parse("fec0::/10"),
         IPNetwork.Parse("ff00::/8"),
         IPNetwork.Parse("2001::/32"),
+        IPNetwork.Parse("2001:2::/48"),
+        IPNetwork.Parse("2001:10::/28"),
         IPNetwork.Parse("2001:db8::/32"),
+        IPNetwork.Parse("3fff::/20"),
+        IPNetwork.Parse("5f00::/16"),
         IPNetwork.Parse("64:ff9b:1::/48"),
     ];
 
     private static readonly IPNetwork IPv4CompatibleNetwork = IPNetwork.Parse("::/96");
     private static readonly IPNetwork UnspecifiedAndLoopbackNetwork = IPNetwork.Parse("::/127");
+    private static readonly IPNetwork SiitNetwork = IPNetwork.Parse("::ffff:0:0:0/96");
     private static readonly IPNetwork Nat64Network = IPNetwork.Parse("64:ff9b::/96");
     private static readonly IPNetwork SixToFourNetwork = IPNetwork.Parse("2002::/16");
 
@@ -47,7 +55,10 @@ public sealed class DefaultOutboundAddressPolicy : IOutboundAddressPolicy
     public bool IsAllowed(IPAddress address, Uri requestUri)
     {
         ArgumentNullException.ThrowIfNull(address);
-        return IsPublic(Normalize(address));
+        IPAddress normalized = Normalize(address);
+
+        // The raw form is checked too so a blocked IPv6 range that embeds an IPv4 address (SIIT) stays blocked.
+        return IsPublic(normalized) && (normalized.Equals(address) || IsPublic(address));
     }
 
     internal static IPAddress Normalize(IPAddress address)
@@ -63,7 +74,7 @@ public sealed class DefaultOutboundAddressPolicy : IOutboundAddressPolicy
 
         // :: and ::1 are the IPv6 unspecified and loopback addresses, not IPv4-compatible forms of 0.0.0.0 and 0.0.0.1.
         bool ipv4Compatible = IPv4CompatibleNetwork.Contains(address) && !UnspecifiedAndLoopbackNetwork.Contains(address);
-        if (ipv4Compatible || Nat64Network.Contains(address))
+        if (ipv4Compatible || SiitNetwork.Contains(address) || Nat64Network.Contains(address))
             return new IPAddress(bytes[12..16]);
 
         if (SixToFourNetwork.Contains(address))
