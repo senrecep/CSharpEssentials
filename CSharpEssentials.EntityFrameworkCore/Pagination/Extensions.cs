@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
+using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Responses;
 using Microsoft.EntityFrameworkCore;
@@ -108,6 +109,19 @@ public static class Extensions
             )
         )(data);
     }
+
+    /// <summary>
+    /// Single-column cursor pagination: returns the rows whose <paramref name="cursorSelector"/> value is after
+    /// <see cref="ICursorPaginationRequest{TCursor}.Cursor"/>. The cursor value is sent as a SQL parameter.
+    /// <para>
+    /// The cursor column must be unique. <paramref name="thenBy"/> only changes ORDER BY, not the filter, so with a
+    /// non-unique column (such as a timestamp) a page that ends inside a group of equal values skips the rest of that
+    /// group. <see cref="ICursorPaginationRequest{TCursor}.Normalize"/> only raises <c>Limit</c> to 1 and does not cap it;
+    /// validate the upper bound yourself. Prefer
+    /// <see cref="KeysetPaginationExtensions.KeysetPaginateAsync{T}(IQueryable{T}, IKeysetPaginationRequest, Func{Keyset.KeysetOrdering{T}, Keyset.KeysetOrdering{T}}, CancellationToken)"/>,
+    /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
+    /// </para>
+    /// </summary>
     public static async Task<CursorPaginationResponse<T, TCursor>> PaginateAsync<T, TCursor>(
         this IQueryable<T> query,
         ICursorPaginationRequest<TCursor> request,
@@ -125,9 +139,11 @@ public static class Extensions
             !EqualityComparer<TCursor>.Default.Equals(request.Cursor, default))
         {
             ParameterExpression parameter = cursorSelector.Parameters[0];
-            ConstantExpression cursorConstant = Expression.Constant(request.Cursor, typeof(TCursor));
+            Expression cursorParameter = Expression.Property(
+                Expression.Constant(new KeysetParameter<TCursor>(request.Cursor)),
+                nameof(KeysetParameter<>.Value));
             MethodInfo compareMethod = typeof(TCursor).GetMethod(nameof(IComparable<>.CompareTo), [typeof(TCursor)])!;
-            Expression compareCall = Expression.Call(cursorSelector.Body, compareMethod, cursorConstant);
+            Expression compareCall = Expression.Call(cursorSelector.Body, compareMethod, cursorParameter);
             Expression comparison = isAscending
                 ? Expression.GreaterThan(compareCall, Expression.Constant(0))
                 : Expression.LessThan(compareCall, Expression.Constant(0));
