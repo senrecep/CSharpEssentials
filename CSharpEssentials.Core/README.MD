@@ -115,3 +115,14 @@ int ok = HttpCodes.Ok;
 int notFound = HttpCodes.NotFound;
 int badRequest = HttpCodes.BadRequest;
 ```
+
+### Transaction Runner Abstraction
+
+`ITransactionRunner` (namespace `CSharpEssentials.Transactions`) runs a unit of work in a transaction and commits only when `shouldCommit` returns `true`. It has no dependencies, so data-access packages implement it (`EfCoreTransactionRunner<TDbContext>` in `CSharpEssentials.EntityFrameworkCore`) and pipelines consume it (`TransactionBehavior` in `CSharpEssentials.Mediator`).
+
+```csharp
+Result result = await transactionRunner.ExecuteAsync(
+    ct => handler.Handle(command, ct),
+    outcome => outcome.IsSuccess,
+    cancellationToken);
+```
