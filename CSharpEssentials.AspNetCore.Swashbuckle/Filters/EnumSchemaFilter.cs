@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using CSharpEssentials.Enums;
@@ -16,8 +17,11 @@ namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 /// Added by <see cref="SwaggerEnumConventionsExtensions.AddEnumConventions"/>.
 /// </summary>
 /// <param name="services">The application services.</param>
-public class EnumSchemaFilter(IServiceProvider services) : ISchemaFilter
+public sealed class EnumSchemaFilter(IServiceProvider services) : ISchemaFilter
 {
+    // [DefaultValue] of each enum property, read once per member.
+    private static readonly ConcurrentDictionary<MemberInfo, object?> _defaultValues = new();
+
     private readonly OpenApiEnumConventions _conventions = OpenApiEnumConventions.For(services);
 
     /// <inheritdoc />
@@ -63,30 +67,40 @@ public class EnumSchemaFilter(IServiceProvider services) : ISchemaFilter
                 continue;
 
             format ??= GetFormat(services, _conventions, context.DocumentName);
-            object? defaultValue = property.MemberInfo?.GetCustomAttribute<DefaultValueAttribute>()?.Value;
+            object? defaultValue = property.MemberInfo is { } member
+                ? _defaultValues.GetOrAdd(member, static member => member.GetCustomAttribute<DefaultValueAttribute>()?.Value)
+                : null;
             IOpenApiSchema reference = context.SchemaGenerator.GenerateSchema(usage.EnumType, context.SchemaRepository);
             schema.Properties[property.Name] = OpenApiEnumSchemas.CreateUsage(
                 usage,
                 format.Value,
                 reference,
                 usage.FormatDefault(defaultValue, format.Value),
-                GetPropertyDescription(existing, context.SchemaRepository),
+                GetPropertyDescription(existing, context.SchemaRepository, usage.EnumType, format.Value),
                 OpenApiSpecVersion.OpenApi3_0);
         }
     }
 
-    // The description of the property itself, never the one of the enum component: Swashbuckle copies the component
-    // description onto the reference it returns when it first adds the component.
-    private static string? GetPropertyDescription(IOpenApiSchema existing, SchemaRepository repository)
+    // The description of the property itself, never one taken from the enum: Swashbuckle copies the component description
+    // onto the reference it returns when it first adds the component, and its XML comments filter copies the summary of the
+    // enum type onto every property of that type (a property summary replaces it).
+    internal string? GetPropertyDescription(IOpenApiSchema existing, SchemaRepository repository, Type enumType, EnumWireFormat format)
     {
         if (existing is not OpenApiSchemaReference reference)
             return existing.Description;
 
         string? description = reference.Reference.Description;
-        bool copiedFromComponent = reference.Reference.Id is { } id
-            && repository.Schemas.TryGetValue(id, out IOpenApiSchema? component)
-            && string.Equals(component.Description, description, StringComparison.Ordinal);
-        return copiedFromComponent ? null : description;
+        if (string.IsNullOrEmpty(description)
+            || reference.Reference.Id is not { } id
+            || !repository.Schemas.TryGetValue(id, out IOpenApiSchema? component))
+            return description;
+
+        if (string.Equals(component.Description, description, StringComparison.Ordinal))
+            return null;
+        if (_conventions.Resolve(enumType) is { } info
+            && string.Equals(component.Description, _conventions.GetContent(info, format).AppendTable(description), StringComparison.Ordinal))
+            return null;
+        return description;
     }
 
     internal static EnumWireFormat GetFormat(IServiceProvider services, OpenApiEnumConventions conventions, string? documentName)
