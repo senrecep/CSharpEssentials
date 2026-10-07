@@ -904,7 +904,7 @@ Result<User> user = await ResiliencePolicy
 | `KeysetPaginateAsync(query, request, k => k.Descending(...).Ascending(...), ct)` | Composite keyset pagination → `Result<KeysetPaginationResponse<T>>`; reads `limit + 1` rows, no `COUNT`; bad cursors return `Error.Validation` |
 | `KeysetPaginateAsync(query, request, keys, options, ct)` / `(query, request, ordering[, options], ct)` | Same, with `KeysetPaginationOptions` or a reusable `KeysetOrdering<T>` |
 
-`Normalize()` on `PaginationRequest` and `CursorPaginationRequest<TCursor>` only enforces minimums; it does not cap the page size or limit.
+`Normalize()` on `IPaginationRequest` and `ICursorPaginationRequest<TCursor>` only enforces minimums; it does not cap the page size or limit. Opt in to a cap with `Normalize(int maxPageSize)` / `Normalize(int maxLimit)` (default interface methods): a larger value is lowered to the cap, like `KeysetPaginationOptions.MaxLimit`; a cap below 1 throws `ArgumentOutOfRangeException`. These are interface members, so call them through the interface type.
 
 #### Keyset Pagination Types
 

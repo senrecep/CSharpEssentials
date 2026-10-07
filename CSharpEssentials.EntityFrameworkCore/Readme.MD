@@ -77,7 +77,13 @@ var cursorResponse = await dbContext.Logs.PaginateAsync(
     cursorSelector: x => x.Id);
 ```
 
-`PaginationRequest.Normalize()` and `CursorPaginationRequest.Normalize()` only raise values to their minimum (page 1, size/limit 1). They do not cap the page size or limit, because a cap would change the results of existing callers. Validate the upper bound in your API layer, or use `KeysetPaginateAsync`, which clamps `Limit` to `KeysetPaginationOptions.MaxLimit`.
+`IPaginationRequest.Normalize()` and `ICursorPaginationRequest<TCursor>.Normalize()` (default interface methods, so call them through the interface type) only raise values to their minimum (page 1, size/limit 1). By default they do not cap the page size or limit, so existing callers keep their results. To opt in to an upper bound, call `Normalize(int maxPageSize)` (offset) or `Normalize(int maxLimit)` (cursor) before paginating. A larger value is lowered to the cap, the same way `KeysetPaginateAsync` clamps `Limit` to `KeysetPaginationOptions.MaxLimit`; a cap below 1 throws `ArgumentOutOfRangeException`.
+
+```csharp
+IPaginationRequest request = new PaginationRequest { PageNumber = 1, PageSize = 5000 };
+request.Normalize(maxPageSize: 100);   // PageSize is now 100
+await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToken: ct);
+```
 
 ### Keyset Pagination
 
