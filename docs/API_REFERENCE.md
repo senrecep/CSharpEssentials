@@ -936,6 +936,17 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 | `MaybeConversion<T>()` | EF value conversion for `Maybe<T>` properties |
 | `HasJsonConversion<T>()` | Stores complex properties as JSON |
 
+### Named Query Filters (net10.0, EF Core 10)
+
+| Member | What It Does |
+|--------|-------------|
+| `QueryFilterNames.SoftDelete`, `QueryFilterNames.Tenant` | Filter name constants (`"SoftDelete"`, `"Tenant"`) |
+| `HasSoftDeleteQueryFilter<TEntity>()` | `EntityTypeBuilder<TEntity>` extension (`TEntity : ISoftDeletableBase`): adds the `!IsDeleted` filter named `SoftDelete` |
+| `ApplyNamedSoftDeleteQueryFilter()` | `ModelBuilder` extension: adds the named `SoftDelete` filter to every root entity type that implements `ISoftDeletableBase`; skips owned types; a soft-deletable type under a root that is not soft-deletable gets no filter |
+| `IgnoreSoftDeleteQueryFilter<TEntity>()` | `IQueryable<TEntity>` extension: `IgnoreQueryFilters` with a cached `[QueryFilterNames.SoftDelete]` array, other named filters still apply |
+
+EF Core rejects anonymous and named filters on the same entity type, so use these instead of `ApplySoftDeleteQueryFilter()`, not next to it; they throw `InvalidOperationException` when the entity type already has an anonymous filter. Named keys do not switch off the anonymous filter, so move the model to the named filter before the queries. Pass keys in a `static readonly` array or `new[] { ... }`: EF Core 10.0.x recompiles the query when they come from a collection expression or a `List`. Analyzer CSE3001 (Info; raise with `dotnet_diagnostic.CSE3001.severity = warning`) reports parameterless `IgnoreQueryFilters()` when the referenced EF Core has the named overload; its code fix passes `new[] { QueryFilterNames.SoftDelete }` for entities that implement `ISoftDeletableBase`.
+
 ### Enum Conventions
 
 | Method | What It Does |

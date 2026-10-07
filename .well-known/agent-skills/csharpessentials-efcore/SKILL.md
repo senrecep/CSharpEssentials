@@ -176,6 +176,21 @@ Result saved = await db.SaveChangesAsResultAsync(ct);
 
 Add a global filter for soft-deleted rows with `modelBuilder.ApplySoftDeleteQueryFilter()` in `OnModelCreating`.
 
+On `net10.0` (EF Core 10) use named filters instead, so a query can drop soft delete and keep the others (never mix them with the anonymous `ApplySoftDeleteQueryFilter`; EF Core rejects both on one entity):
+
+```csharp
+modelBuilder.Entity<Order>()
+    .HasSoftDeleteQueryFilter()                                            // named QueryFilterNames.SoftDelete
+    .HasQueryFilter(QueryFilterNames.Tenant, o => o.TenantId == tenantId);
+// or modelBuilder.ApplyNamedSoftDeleteQueryFilter() at the end of OnModelCreating
+
+List<Order> withDeleted = await db.Orders.IgnoreSoftDeleteQueryFilter().ToListAsync(ct); // Tenant filter still applies
+```
+
+Migrating from the anonymous `ApplySoftDeleteQueryFilter()`: named keys do not switch off an anonymous filter, so `IgnoreSoftDeleteQueryFilter()` ignores nothing until the model uses `ApplyNamedSoftDeleteQueryFilter()`/`HasSoftDeleteQueryFilter()`. Change the model first, then the queries. The helpers throw when the entity already has an anonymous filter, skip owned types, and only filter root types (a soft-deletable type under a non-soft-deletable root gets no filter). Pass filter keys in a `static readonly string[]` or `new[] { ... }`, never a collection expression or `List`: EF Core 10.0.x recompiles the query for those.
+
+Analyzer CSE3001 (Info by default; raise with `dotnet_diagnostic.CSE3001.severity = warning` in `.editorconfig`) flags parameterless `IgnoreQueryFilters()` when EF Core 10 is referenced; the code fix rewrites it to `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })` for `ISoftDeletableBase` entities and requires the named filter in the model.
+
 ---
 
 ## CQRS Registration

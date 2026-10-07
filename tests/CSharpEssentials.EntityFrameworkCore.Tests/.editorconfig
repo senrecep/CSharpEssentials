@@ -1,0 +1,3 @@
+# Dogfood CSE3001 the way the EFCore Readme recommends: raise it so every unnamed IgnoreQueryFilters() needs a reason.
+[*.cs]
+dotnet_diagnostic.CSE3001.severity = error

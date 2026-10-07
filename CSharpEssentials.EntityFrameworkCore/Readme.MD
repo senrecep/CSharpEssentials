@@ -9,6 +9,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Slow Query Logging**: Logs queries exceeding a configurable threshold.
 - **Pagination**: Offset-based and cursor-based pagination on `IQueryable`.
 - **Batch Soft Delete**: Soft-delete many rows with a single `UPDATE` statement.
+- **Named Query Filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
 - **CQRS Support**: Register separate write and read DbContexts.
 - **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
@@ -86,6 +87,49 @@ int affected = await dbContext.Orders
 ```
 
 Works for any entity implementing `ISoftDeletable` (e.g. `SoftDeletableEntityBase`). Rows already soft-deleted keep their original `DeletedAt`/`DeletedBy`. Like all `ExecuteUpdate` calls, it bypasses the change tracker and `SaveChanges` interceptors and needs a relational provider.
+
+### Named Query Filters (EF Core 10)
+
+EF Core 10 can name query filters, so a query can switch off one filter and keep the others. On `net10.0` the package registers the soft-delete filter (`!IsDeleted`) under `QueryFilterNames.SoftDelete`:
+
+```csharp
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    modelBuilder.Entity<Order>()
+        .HasSoftDeleteQueryFilter()                                                   // one entity
+        .HasQueryFilter(QueryFilterNames.Tenant, o => o.TenantId == _tenant.Id);
+
+    // or, at the end of OnModelCreating, every root entity type that implements ISoftDeletableBase:
+    // modelBuilder.ApplyNamedSoftDeleteQueryFilter();
+}
+
+// Soft-deleted orders of the current tenant: the Tenant filter still applies.
+List<Order> orders = await db.Orders.IgnoreSoftDeleteQueryFilter().ToListAsync(ct);
+// same as db.Orders.IgnoreQueryFilters(SoftDeleteOnly), with
+// private static readonly string[] SoftDeleteOnly = [QueryFilterNames.SoftDelete];
+```
+
+- `QueryFilterNames.SoftDelete` (`"SoftDelete"`) and `QueryFilterNames.Tenant` (`"Tenant"`) are plain constants; use them for your own filters so callers can ignore them by name.
+- Pass filter keys in a `static readonly` array or `new[] { ... }`. EF Core 10.0.x compiles the query again on every execution when the keys come from a collection expression (`[...]`) or a `List<string>`. `IgnoreSoftDeleteQueryFilter()` already uses a cached array.
+- EF Core does not allow an anonymous filter and named filters on the same entity type. Use these helpers instead of `ApplySoftDeleteQueryFilter`/`AddQueryFilter`, not next to them; they throw `InvalidOperationException` when the entity type already has an anonymous filter. Those anonymous helpers keep working unchanged, and on `net8.0`/`net9.0` they are the only option.
+- `ApplyNamedSoftDeleteQueryFilter` puts the filter on root entity types only; derived types inherit it. A soft-deletable type whose root is not soft-deletable gets no filter, so make the root implement `ISoftDeletableBase`. Owned types are skipped, because EF Core does not allow query filters on them.
+
+**Moving from `ApplySoftDeleteQueryFilter()`.** Named keys only switch off named filters. While the model still uses the anonymous `ApplySoftDeleteQueryFilter()`, `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })` and `IgnoreSoftDeleteQueryFilter()` ignore nothing and soft-deleted rows stay hidden. Switch the model to `ApplyNamedSoftDeleteQueryFilter()` (and register your other filters by name, for example with `HasQueryFilter(QueryFilterNames.Tenant, ...)`) before you change the queries.
+
+The package ships an analyzer for the parameterless `IgnoreQueryFilters()`, which turns off every filter, the tenant filter included. It runs only when the referenced EF Core has the named overload (EF Core 10 or later):
+
+| ID | Severity | Rule |
+|---|---|---|
+| CSE3001 | Info | `IgnoreQueryFilters()` ignores every query filter of the entity type. Pass the names of the filters to ignore. |
+
+CSE3001 is Info by default so that apps still on the anonymous filter are not broken. Once your filters are named, raise it in `.editorconfig`:
+
+```ini
+[*.cs]
+dotnet_diagnostic.CSE3001.severity = warning
+```
+
+When the entity implements `ISoftDeletableBase`, the code fix "Ignore only the named 'SoftDelete' filter (requires HasSoftDeleteQueryFilter/ApplyNamedSoftDeleteQueryFilter)" rewrites the call to `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })`, adding the `using` when needed (the `"SoftDelete"` literal when `QueryFilterNames` is not available). It uses `new[] { ... }` because collection expressions are not allowed in expression trees and make EF Core 10.0.x recompile the query; move the array to a `static readonly` field if the call is on a hot path. Apply it only after the model registers the named filter (see above). For other entities there is no fix, because only you know which filters the query should skip. If the query really must see every row, suppress the diagnostic at that call with `[SuppressMessage("CSharpEssentials.EntityFrameworkCore", "CSE3001", Justification = "...")]`, or set `dotnet_diagnostic.CSE3001.severity = none` in `.editorconfig`.
 
 ### BaseDbContext
 

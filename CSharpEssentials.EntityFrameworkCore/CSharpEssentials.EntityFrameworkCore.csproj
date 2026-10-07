@@ -91,4 +91,6 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
+  <Import Project="..\build\PackGenerator.targets" />
+
 </Project>
