@@ -65,7 +65,7 @@ builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters());
 | `/api/archive/{year}` | `GetArchiveWithoutMonth` |
 | `/api/archive/{year}/{month}` | `GetArchive` |
 
-- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue` or a `null` type or default.
+- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue`, a `null` type or default, or a `{"type": "null"}` member in `oneOf` or `anyOf` (a nullable enum such as `{status?}` in OpenAPI 3.1).
 - Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required.
 - A route with more than three trailing optional parameters is logged as a warning (once per document, path and method) through the host's `ILoggerFactory`. Without an `ILoggerFactory` nothing is logged.
 - A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
@@ -81,7 +81,7 @@ builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(
 builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(OpenApiOptionalRouteParameterMode.RequiredOnly));
 ```
 
-A later call on the same options replaces the mode and selector of an earlier one. Without `AddOptionalRouteParameters`, the document keeps the framework output: one path per operation (`/api/archive/{year}/{month}`). The Swashbuckle package describes the same routes the same way.
+A later call on the same options replaces the mode and selector of an earlier one; the transformer keeps the pipeline position of the first call. Each document is described from its own operations, so documents split by `GroupName` (`[ApiExplorerSettings(GroupName = "v2")]`) only get the forms of their own routes. Without `AddOptionalRouteParameters`, the document keeps the framework output: one path per operation (`/api/archive/{year}/{month}`). The Swashbuckle package describes the same routes the same way.
 
 ## Scalar
 
