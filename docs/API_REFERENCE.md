@@ -338,6 +338,7 @@ Result pipeline = steps.FirstFailureOrSuccesses();
 | `MapIf(cond, func)` | Conditional map | Only maps if condition holds | Optional transformation |
 | `BindIf(cond, func)` | Conditional bind | Only binds if condition holds | Optional chaining |
 | `Flatten(nested)` | Monad join | `Maybe<Maybe<T>>` to `Maybe<T>` | Removing nesting |
+| `Flatten(nullable)` | `null` to `None` | `Maybe<T>?` to `Maybe<T>` | Reading a `Maybe<T>?` property mapped to a nullable column |
 
 ```csharp
 Maybe<string> displayName = GetUser(id)
@@ -990,8 +991,12 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 | `EntityBaseGuidIdMap()` | Configures `Guid` ID mapping |
 | `SoftDeletableEntityBaseMap()` | Configures soft-delete field mappings |
 | `ApplySoftDeleteQueryFilter()` | Adds global `IsDeleted == false` filter |
-| `MaybeConversion<T>()` | EF value conversion for `Maybe<T>` properties |
+| `MaybeConversion<T>()` | EF value conversion for `Maybe<T>` properties to a `NOT NULL` column. Lossy: `None` of a value type is stored as `default(T)` and read back as `Some(default(T))`; `None` of a reference type fails on insert. Use `Maybe<T>?` with the methods below to store absence |
+| `HasNullableMaybeConversion<T>()` | `PropertyBuilder<Maybe<T>?>` extension (`T : struct` or `T : class`): stores the property in a nullable `T` column; `null` and `None` are written as `NULL` and read back as `null` (`NullableMaybeConverter<T>`, `NullableMaybeReferenceConverter<T>`) |
+| `ConfigureNullableMaybeConventions()` | `ModelConfigurationBuilder` extension: applies `HasNullableMaybeConversion` to every public read-write `Maybe<T>?` property of entity, owned, derived and complex types; skips ignored properties and user conversions. `Maybe<T?>?` is unsupported (EF fails the model build). `[RequiresDynamicCode]`: use a compiled model under NativeAOT |
 | `HasJsonConversion<T>()` | Stores complex properties as JSON |
+
+`Maybe<T>?` queries: use `== null` / `!HasValue` for absence, `!= null` for presence and `== Maybe<T>.From(value)` for a value. `== Maybe<T>.None` matches no `NULL` row. `Flatten()` (CSharpEssentials.Maybe) turns the loaded `Maybe<T>?` into `Maybe<T>`.
 
 ### Named Query Filters (net10.0, EF Core 10)
 

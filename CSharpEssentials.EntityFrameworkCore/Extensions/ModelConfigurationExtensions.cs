@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CSharpEssentials.EntityFrameworkCore;
 
 /// <summary>
-/// Registers the enum storage convention of CSharpEssentials (design section 11).
+/// Registers the enum storage convention (design section 11) and the <c>Maybe&lt;T&gt;?</c> column convention of CSharpEssentials.
 /// </summary>
 public static class ModelConfigurationExtensions
 {
@@ -78,6 +78,32 @@ public static class ModelConfigurationExtensions
             EnumConventions.Default with { CanHandle = type => canConvert(type) },
             options.UseLegacySnakeCase ? EnumStoredAs.LegacySnakeCase : null,
             reflectionFallback: ThrowWithoutMetadata);
+    }
+
+    /// <summary>
+    /// Maps every public read-write <c>Maybe&lt;T&gt;?</c> property of every entity type and complex type to a nullable
+    /// column of <c>T</c>, as <c>HasNullableMaybeConversion</c> does per property. Ignored properties and properties with
+    /// a value converter configured by the user are left alone.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>Maybe&lt;T&gt;?</c> with a nullable value type <c>T</c> (<c>Maybe&lt;int?&gt;?</c>) is not supported: the
+    /// convention skips it and EF Core fails the model build. Ignore such a property or configure your own converter.
+    /// </para>
+    /// <para>
+    /// The CLR properties are read once while the model is built, and each converter type is closed with
+    /// <see cref="Type.MakeGenericType"/> once per <c>T</c> and cached. Queries and saves do not use reflection. Under
+    /// NativeAOT use a compiled model, so the convention does not run at runtime.
+    /// </para>
+    /// </remarks>
+    /// <param name="configurationBuilder">The model configuration builder.</param>
+    /// <returns>The same builder.</returns>
+    [RequiresDynamicCode("Closes the converter type for each Maybe<T>? with MakeGenericType while the model is built. Use a compiled model under NativeAOT.")]
+    public static ModelConfigurationBuilder ConfigureNullableMaybeConventions(this ModelConfigurationBuilder configurationBuilder)
+    {
+        _ = configurationBuilder ?? throw new ArgumentNullException(nameof(configurationBuilder));
+        configurationBuilder.Conventions.Add(static _ => new NullableMaybeConvention());
+        return configurationBuilder;
     }
 
     private static IEnumInfo ThrowWithoutMetadata(Type enumType) =>

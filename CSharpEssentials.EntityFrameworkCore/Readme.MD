@@ -11,6 +11,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Batch Soft Delete**: Soft-delete many rows with a single `UPDATE` statement.
 - **Named Query Filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
+- **Maybe Columns**: Store `Maybe<T>?` properties in nullable columns, per property or by convention.
 - **CQRS Support**: Register separate write and read DbContexts.
 - **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
 - **Database Error Translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
@@ -263,6 +264,70 @@ The two domain event paths differ in when `AfterSave` events are handled:
 | Save fails | `AfterSave` events are put back on their entities, so a retry dispatches them | events are already dispatched |
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
+
+### Maybe Columns
+
+`Maybe<T>` is a struct, and EF Core cannot make a non-nullable struct property optional, so a plain `Maybe<T>` property always maps to a `NOT NULL` column. Declare the property as `Maybe<T>?` to store absence as `NULL`:
+
+```csharp
+using CSharpEssentials.Maybe;               // Maybe<T>, Flatten
+using CSharpEssentials.EntityFrameworkCore; // HasNullableMaybeConversion, ConfigureNullableMaybeConventions
+
+public sealed class Customer
+{
+    public int Id { get; set; }
+    public Maybe<int>? LoyaltyPoints { get; set; }   // INTEGER NULL
+    public Maybe<string>? Nickname { get; set; }     // TEXT NULL
+}
+
+// Every public read-write Maybe<T>? property of every entity type
+protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder) =>
+    configurationBuilder.ConfigureNullableMaybeConventions();
+
+// Or per property
+modelBuilder.Entity<Customer>().Property(c => c.LoyaltyPoints).HasNullableMaybeConversion();
+modelBuilder.Entity<Customer>().Property(c => c.Nickname).HasNullableMaybeConversion();
+
+Maybe<int> points = customer.LoyaltyPoints.Flatten(); // null becomes None
+```
+
+- `null` and `None` are both written as `NULL`; `NULL` is read back as `null`, not `None`. Call `Flatten()` to get a `Maybe<T>`.
+- The convention covers entity types, owned types, derived types (TPH) and complex types (`ComplexProperty`). It skips ignored and `[NotMapped]` properties and properties with your own `HasConversion` (yours wins). It reads the CLR properties once while the model is built; nothing runs per query.
+- `Maybe<T?>?` (for example `Maybe<int?>?`) is not supported: EF Core fails the model build. Ignore the property or configure your own converter.
+- `HasNullableMaybeConversion` needs a concrete `T`: from unconstrained generic code (or for `Maybe<int?>?`) the compiler reports CS0452 against the `class` overload. Use the convention there, or `HasConversion(new NullableMaybeConverter<T>())` / `new NullableMaybeReferenceConverter<T>()` (namespace `CSharpEssentials.EntityFrameworkCore.Converters`).
+- Mutable reference values (`Maybe<byte[]>?`): change tracking compares `Maybe<T>` values, so changing the array in place is not saved. Assign a new value instead.
+- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API.
+- Query rules:
+  - absence: `c.Nickname == null` or `!c.Nickname.HasValue` (the `Nullable<T>.HasValue`);
+  - presence: `c.Nickname != null`;
+  - a value: `c.LoyaltyPoints == Maybe<int>.From(5)` (or a `Maybe<int>` variable).
+  - Never compare with `None`: `c.LoyaltyPoints == Maybe<int>.None` is sent as a non-null parameter, so it matches no `NULL` row.
+  - Members of `Maybe<T>` itself (`.Value.HasValue`, `.Value.Value`) do not translate to SQL; the query throws `InvalidOperationException`.
+- Background: EF Core issues [#24685](https://github.com/dotnet/efcore/issues/24685), [#34943](https://github.com/dotnet/efcore/issues/34943) and [#13850](https://github.com/dotnet/efcore/issues/13850).
+- Migration: changing a `Maybe<T>` property to `Maybe<T>?` changes the column from `NOT NULL` to `NULL` (an `AlterColumn`). Existing `default(T)` values written for `None` stay as they are; update them to `NULL` in the migration if they meant absence.
+
+`MaybeConversion<T>()` (for `Maybe<T>` without `?`) is kept for compatibility but cannot store `None`: for a value type `T` it writes `default(T)` and reads back `Some(default(T))`; for a reference type `T` it writes `NULL` into a `NOT NULL` column, so the insert fails. Prefer `Maybe<T>?` with the API above.
+
+If you would rather keep the entity free of nullable `Maybe`, map a `T?` backing field and expose `Maybe<T>` from the domain side:
+
+```csharp
+public sealed class Customer
+{
+    private string? _nickname;                                   // TEXT NULL, mapped by EF
+    public Maybe<string> Nickname
+    {
+        get => Maybe<string>.From(_nickname);
+        set => _nickname = value.GetValueOrDefault();
+    }
+}
+
+modelBuilder.Entity<Customer>(b =>
+{
+    b.Ignore(c => c.Nickname);
+    b.Property<string?>("_nickname").HasColumnName("Nickname");
+});
+// Query through the field: db.Customers.Where(c => EF.Property<string?>(c, "_nickname") == null)
+```
 
 ### Enum Storage
 

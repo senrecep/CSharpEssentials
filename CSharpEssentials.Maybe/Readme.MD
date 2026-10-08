@@ -131,6 +131,15 @@ await GetMaybeAsync().TapNoneAsync(() => logger.LogWarning("Value missing"));
 int value = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
 ```
 
+### Flatten
+
+```csharp
+Maybe<int> inner = Maybe<Maybe<int>>.From(Maybe<int>.From(5)).Flatten(); // Some(5)
+
+Maybe<int>? stored = null;              // e.g. a Maybe<int>? property mapped to a nullable column
+Maybe<int> points = stored.Flatten();   // None
+```
+
 ### OrElse: Lazy Maybe Chain
 
 ```csharp

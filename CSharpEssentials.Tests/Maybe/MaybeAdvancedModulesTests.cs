@@ -351,5 +351,36 @@ public class MaybeAdvancedModulesTests
         result.HasValue.Should().BeFalse();
     }
 
+    [Fact]
+    public void Flatten_WithNullNullableMaybe_ShouldReturnNone()
+    {
+        Maybe<int>? nullable = null;
+
+        Maybe<int> result = nullable.Flatten();
+
+        result.HasNoValue.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Flatten_WithNullableMaybeHoldingValue_ShouldReturnValue()
+    {
+        Maybe<string>? nullable = Maybe<string>.From("hello");
+
+        Maybe<string> result = nullable.Flatten();
+
+        result.HasValue.Should().BeTrue();
+        result.Value.Should().Be("hello");
+    }
+
+    [Fact]
+    public void Flatten_WithNullableMaybeHoldingNone_ShouldReturnNone()
+    {
+        Maybe<int>? nullable = Maybe<int>.None;
+
+        Maybe<int> result = nullable.Flatten();
+
+        result.HasNoValue.Should().BeTrue();
+    }
+
     #endregion
 }

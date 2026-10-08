@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-efcore
-description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage and AddCqrsDbContexts.
+description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage, Maybe<T>? nullable columns (HasNullableMaybeConversion, ConfigureNullableMaybeConventions) and AddCqrsDbContexts.
 ---
 
 # CSharpEssentials.EntityFrameworkCore
@@ -132,6 +132,34 @@ modelBuilder.Entity<Order>().Property(o => o.Note).HasEnumCheckConstraint(false)
 - Reads are tolerant; unknown values map to `[EnumFallback]` or throw naming the column.
 - `ToJson()` columns use `EnumJsonValueReaderWriter<TEnum>`.
 - The 4.x `params Assembly[]` overloads and `EnumConventionOptions` are obsolete forwarders.
+
+---
+
+## Maybe Columns
+
+EF Core cannot make a non-nullable struct property optional, so `Maybe<T>` always maps to `NOT NULL`. Declare `Maybe<T>?` to store absence as `NULL`:
+
+```csharp
+public sealed class Customer
+{
+    public int Id { get; set; }
+    public Maybe<int>? LoyaltyPoints { get; set; }   // INTEGER NULL
+    public Maybe<string>? Nickname { get; set; }     // TEXT NULL
+}
+
+configurationBuilder.ConfigureNullableMaybeConventions();                                   // all Maybe<T>? properties
+modelBuilder.Entity<Customer>().Property(c => c.LoyaltyPoints).HasNullableMaybeConversion(); // or per property
+
+Maybe<int> points = customer.LoyaltyPoints.Flatten();   // null → None (CSharpEssentials.Maybe)
+```
+
+- `null` and `None` are both written as `NULL`; `NULL` reads back as `null`. Use `Flatten()` on the domain side.
+- Query absence with `== null` or `!x.HasValue`, presence with `!= null`, a value with `== Maybe<int>.From(5)`. Never `== Maybe<T>.None`: it matches no `NULL` row. Members of `Maybe<T>` (`.Value.HasValue`, `.Value.Value`) do not translate. Background: EF Core issues #24685, #34943, #13850.
+- The convention covers entity, owned, derived (TPH) and complex types; it skips ignored/`[NotMapped]` properties and user `HasConversion` (yours wins). It reads CLR properties once at model build with `MakeGenericType` (`[RequiresDynamicCode]`): use a compiled model under NativeAOT.
+- `Maybe<T?>?` (`Maybe<int?>?`) is unsupported: EF fails the model build; ignore it or give it your own converter. `HasNullableMaybeConversion` needs a concrete `T` (CS0452 from unconstrained generic code); use the convention or `HasConversion(new NullableMaybeConverter<T>())` there.
+- Mutable reference values (`Maybe<byte[]>?`): in-place changes are not detected; assign a new value.
+- `MaybeConversion<T>()` on plain `Maybe<T>` is lossy: `None` of a value type is stored as `default(T)` and read as `Some(default(T))`; `None` of a reference type fails on insert (NOT NULL). Switching to `Maybe<T>?` alters the column to `NULL` in the next migration; old `default(T)` rows are not converted.
+- Alternative: map a private `T?` field (`b.Property<string?>("_nickname")`, `b.Ignore(c => c.Nickname)`) and expose `Maybe<T>` from the domain property.
 
 ---
 
