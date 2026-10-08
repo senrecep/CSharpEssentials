@@ -112,6 +112,36 @@ Result combined = Result.And(r1, r2, r3); // Failure
 Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exception(ex));
 ```
 
+### Mapping Errors
+
+```csharp
+// Per-error mapper: runs once for every error, in order. Never called on success.
+Result<User> result = GetUser(id)
+    .MapError(e => Error.Failure($"Users.{e.Code}", e.Description));
+
+// Array mapper: replaces the whole error array.
+Result<User> single = GetUser(id)
+    .MapError(errors => [Error.Failure("Users.Failed", $"{errors.Length} error(s)")]);
+```
+
+> **Behaviour change:** `MapError(Func<Error, Error>)` used to map only `FirstError` and drop the rest. It now maps every error and keeps the order.
+
+`MapErrorAsync` takes `Task` or `ValueTask` mappers in the same two shapes. Per-error async mappers run one at a time, in order. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
+
+
+```csharp
+// Instance: async mapper on a Result / Result<T>
+Result<User> localized = await result.MapErrorAsync(e => LocalizeAsync(e, ct), ct);
+
+// Task<Result<T>> source: sync or Task mappers
+Result<User> mapped = await GetUserAsync(id)
+    .MapErrorAsync(e => Error.Failure($"Users.{e.Code}", e.Description));
+
+// ValueTask<Result<T>> source: sync or ValueTask mappers
+Result<User> fromCache = await GetCachedUserAsync(id)
+    .MapErrorAsync(errors => CollapseAsync(errors));
+```
+
 ### Async
 
 ```csharp

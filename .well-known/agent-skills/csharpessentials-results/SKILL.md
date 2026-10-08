@@ -79,6 +79,31 @@ Result<User> validated = await GetUserAsync(id)
     .EnsureAsync(u => IsActiveAsync(u), Error.Validation("User.Inactive", "Account is inactive."));
 ```
 
+## Mapping Errors
+
+```csharp
+// Per-error mapper: called once for every error, in order; never on success
+Result<User> renamed = GetUser(id)
+    .MapError(e => Error.Failure($"Users.{e.Code}", e.Description));
+
+// Array mapper: replaces the whole error array
+Result<User> collapsed = GetUser(id)
+    .MapError(errors => [Error.Failure("Users.Failed", $"{errors.Length} error(s)")]);
+```
+
+`MapError(Func<Error, Error>)` maps every error. Older versions mapped only `FirstError` and dropped the rest.
+
+```csharp
+// MapErrorAsync — instance: Task or ValueTask mappers, per error or per array
+Result<User> localized = await result.MapErrorAsync(e => LocalizeAsync(e, ct), ct);
+
+// Task<Result<T>> source: sync or Task mappers; ValueTask<Result<T>> source: sync or ValueTask mappers
+Result<User> mapped = await GetUserAsync(id)
+    .MapErrorAsync(e => Error.Failure($"Users.{e.Code}", e.Description));
+```
+
+Per-error async mappers run one at a time, in order. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
+
 ## Consuming: Match
 
 ```csharp
