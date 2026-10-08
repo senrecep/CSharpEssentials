@@ -42,75 +42,74 @@ public static class GeneralExtensions
         => ValueTask.FromResult(obj);
 #endif
 
-    public static async Task WithCancellation(this Task task, CancellationToken cancellationToken = default)
+    public static Task WithCancellation(this Task task, CancellationToken cancellationToken = default)
     {
-        var tcs = new TaskCompletionSource<bool>();
-#if NETSTANDARD2_0
-        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#else
-        await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#endif
-            if (task != await Task.WhenAny(task, tcs.Task))
+        if (task is null)
+            return Task.FromException(new ArgumentNullException(nameof(task)));
+        if (task.IsCompleted || !cancellationToken.CanBeCanceled)
+            return task;
+        return WithCancellationCore(task, cancellationToken);
+    }
+
+    public static Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken = default)
+    {
+        if (task is null)
+            return Task.FromException<T>(new ArgumentNullException(nameof(task)));
+        if (task.IsCompleted || !cancellationToken.CanBeCanceled)
+            return task;
+        return WithCancellationCore(task, cancellationToken);
+    }
+
+    public static ValueTask<T> WithCancellation<T>(this ValueTask<T> valueTask, CancellationToken cancellationToken = default)
+    {
+        if (valueTask.IsCompleted || !cancellationToken.CanBeCanceled)
+            return valueTask;
+        return new ValueTask<T>(WithCancellationCore(valueTask.AsTask(), cancellationToken));
+    }
+
+    public static ValueTask WithCancellation(this ValueTask valueTask, CancellationToken cancellationToken = default)
+    {
+        if (valueTask.IsCompleted || !cancellationToken.CanBeCanceled)
+            return valueTask;
+        return new ValueTask(WithCancellationCore(valueTask.AsTask(), cancellationToken));
+    }
+
+    private static async Task WithCancellationCore(Task task, CancellationToken cancellationToken)
+    {
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (cancellationToken.Register(static state => (state as TaskCompletionSource<bool>)?.TrySetResult(true), tcs))
+        {
+            if (task != await Task.WhenAny(task, tcs.Task).ConfigureAwait(false))
+            {
+                ObserveFault(task);
                 throw new OperationCanceledException(cancellationToken);
+            }
+        }
 
         await task.ConfigureAwait(false);
     }
 
-    public static async Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken = default)
+    private static async Task<T> WithCancellationCore<T>(Task<T> task, CancellationToken cancellationToken)
     {
-        var tcs = new TaskCompletionSource<bool>();
-#if NETSTANDARD2_0
-        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#else
-        await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#endif
-            if (task != await Task.WhenAny(task, tcs.Task))
+        var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using (cancellationToken.Register(static state => (state as TaskCompletionSource<bool>)?.TrySetResult(true), tcs))
+        {
+            if (task != await Task.WhenAny(task, tcs.Task).ConfigureAwait(false))
+            {
+                ObserveFault(task);
                 throw new OperationCanceledException(cancellationToken);
+            }
+        }
 
         return await task.ConfigureAwait(false);
     }
 
-    public static async ValueTask<T> WithCancellation<T>(this ValueTask<T> valueTask, CancellationToken cancellationToken = default)
-    {
-        var tcs = new TaskCompletionSource<bool>();
-#if NETSTANDARD2_0
-        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#else
-        await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#endif
-        {
-            Task<T> task = valueTask.AsTask();
-
-            if (task != await Task.WhenAny(task, tcs.Task))
-            {
-                throw new OperationCanceledException(cancellationToken);
-            }
-
-            return await task.ConfigureAwait(false);
-        }
-    }
-
-    public static async ValueTask WithCancellation(this ValueTask valueTask, CancellationToken cancellationToken = default)
-    {
-        var tcs = new TaskCompletionSource<bool>();
-#if NETSTANDARD2_0
-        using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#else
-        await using (cancellationToken.Register(() => tcs.TrySetResult(true), useSynchronizationContext: false))
-#endif
-        {
-            Task task = valueTask.AsTask();
-
-            if (task != await Task.WhenAny(task, tcs.Task))
-            {
-                throw new OperationCanceledException(cancellationToken);
-            }
-
-            await task.ConfigureAwait(false);
-        }
-    }
-
-
+    private static void ObserveFault(Task task) =>
+        _ = task.ContinueWith(
+            static t => _ = t.Exception,
+            CancellationToken.None,
+            TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
 
     public static bool IfTrue(this bool condition, Action action)
     {

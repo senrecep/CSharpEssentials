@@ -243,6 +243,245 @@ public class GeneralExtensionsTests
     }
 
     [Fact]
+    public void WithCancellation_WithCompletedTask_ShouldReturnSameInstance()
+    {
+        var token = new CancellationToken(canceled: true);
+        Task task = Task.CompletedTask;
+
+        Task result = task.WithCancellation(token);
+
+        Assert.Same(task, result);
+    }
+
+    [Fact]
+    public void WithCancellation_WithPendingTaskAndNoneToken_ShouldReturnSameInstance()
+    {
+        Task task = new TaskCompletionSource<bool>().Task;
+
+        Task result = task.WithCancellation(CancellationToken.None);
+
+        Assert.Same(task, result);
+    }
+
+    [Fact]
+    public void WithCancellation_WithCompletedTaskT_ShouldReturnSameInstance()
+    {
+        var token = new CancellationToken(canceled: true);
+        Task<int> task = Task.FromResult(42);
+
+        Task<int> result = task.WithCancellation(token);
+
+        Assert.Same(task, result);
+    }
+
+    [Fact]
+    public void WithCancellation_WithPendingTaskTAndNoneToken_ShouldReturnSameInstance()
+    {
+        Task<int> task = new TaskCompletionSource<int>().Task;
+
+        Task<int> result = task.WithCancellation(CancellationToken.None);
+
+        Assert.Same(task, result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithCompletedValueTaskT_ShouldReturnResult()
+    {
+        using CancellationTokenSource cts = new();
+
+        ValueTask<int> result = new ValueTask<int>(42).WithCancellation(cts.Token);
+
+        result.IsCompletedSuccessfully.Should().BeTrue();
+        (await result).Should().Be(42);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingValueTaskTAndNoneToken_ShouldReturnResult()
+    {
+        var tcs = new TaskCompletionSource<int>();
+
+        ValueTask<int> result = new ValueTask<int>(tcs.Task).WithCancellation(CancellationToken.None);
+        tcs.SetResult(7);
+
+        (await result).Should().Be(7);
+    }
+
+    [Fact]
+    public void WithCancellation_WithCompletedValueTask_ShouldBeCompleted()
+    {
+        using CancellationTokenSource cts = new();
+
+        ValueTask result = default(ValueTask).WithCancellation(cts.Token);
+
+        result.IsCompletedSuccessfully.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingTaskAndLiveToken_WhenTaskCompletes_ShouldComplete()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<bool>();
+
+        Task result = tcs.Task.WithCancellation(cts.Token);
+        tcs.SetResult(true);
+        await result;
+
+        result.IsCompletedSuccessfully.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingTaskTAndLiveToken_WhenTaskCompletes_ShouldReturnResult()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<int>();
+
+        Task<int> result = tcs.Task.WithCancellation(cts.Token);
+        tcs.SetResult(42);
+
+        (await result).Should().Be(42);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingValueTaskTAndLiveToken_WhenTaskCompletes_ShouldReturnResult()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<int>();
+
+        ValueTask<int> result = new ValueTask<int>(tcs.Task).WithCancellation(cts.Token);
+        tcs.SetResult(42);
+
+        (await result).Should().Be(42);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingValueTaskAndLiveToken_WhenTaskCompletes_ShouldComplete()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<bool>();
+
+        Task result = new ValueTask(tcs.Task).WithCancellation(cts.Token).AsTask();
+        tcs.SetResult(true);
+        await result;
+
+        result.IsCompletedSuccessfully.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingTaskAndLiveToken_WhenTaskFaults_ShouldPropagateException()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<bool>();
+
+        Task result = tcs.Task.WithCancellation(cts.Token);
+        tcs.SetException(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingTaskTAndLiveToken_WhenTaskFaults_ShouldPropagateException()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<int>();
+
+        Task<int> result = tcs.Task.WithCancellation(cts.Token);
+        tcs.SetException(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingValueTaskTAndLiveToken_WhenTaskFaults_ShouldPropagateException()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<int>();
+
+        Task<int> result = new ValueTask<int>(tcs.Task).WithCancellation(cts.Token).AsTask();
+        tcs.SetException(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingValueTaskAndLiveToken_WhenTaskFaults_ShouldPropagateException()
+    {
+        using CancellationTokenSource cts = new();
+        var tcs = new TaskCompletionSource<bool>();
+
+        Task result = new ValueTask(tcs.Task).WithCancellation(cts.Token).AsTask();
+        tcs.SetException(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithFaultedTask_ShouldPropagateException()
+    {
+        using CancellationTokenSource cts = new();
+        Task task = Task.FromException(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => task.WithCancellation(cts.Token));
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithFaultedTaskT_ShouldPropagateException()
+    {
+        using CancellationTokenSource cts = new();
+        Task<int> task = Task.FromException<int>(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => task.WithCancellation(cts.Token));
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithCompletedTaskAndCancelledToken_ShouldReturnResult()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+
+        int taskResult = await Task.FromResult(42).WithCancellation(cts.Token);
+        int valueTaskResult = await new ValueTask<int>(43).WithCancellation(cts.Token);
+
+        taskResult.Should().Be(42);
+        valueTaskResult.Should().Be(43);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithNullTask_ShouldReturnFaultedTask()
+    {
+        Task task = null!;
+
+        Task result = task.WithCancellation(CancellationToken.None);
+
+        result.IsFaulted.Should().BeTrue();
+        await Assert.ThrowsAsync<ArgumentNullException>(() => result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithNullTaskT_ShouldReturnFaultedTask()
+    {
+        Task<int> task = null!;
+
+        Task<int> result = task.WithCancellation(CancellationToken.None);
+
+        result.IsFaulted.Should().BeTrue();
+        await Assert.ThrowsAsync<ArgumentNullException>(() => result);
+    }
+
+    [Fact]
+    public async Task WithCancellation_WithPendingTaskAndCancelledToken_ShouldThrowExactlyOperationCanceledException()
+    {
+        using CancellationTokenSource cts = new();
+        await cts.CancelAsync();
+        Task pending = new TaskCompletionSource<bool>().Task;
+        Task<int> pendingT = new TaskCompletionSource<int>().Task;
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => pending.WithCancellation(cts.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => pendingT.WithCancellation(cts.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => new ValueTask(pending).WithCancellation(cts.Token).AsTask());
+        await Assert.ThrowsAsync<OperationCanceledException>(() => new ValueTask<int>(pendingT).WithCancellation(cts.Token).AsTask());
+    }
+
+    [Fact]
     public void IfTrue_WhenTrue_ShouldExecuteAction()
     {
         bool executed = false;

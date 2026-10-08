@@ -443,6 +443,10 @@ dotnet_diagnostic.S1133.severity = none
 [CSharpEssentials.Tests/AspNetCore/EnumIntegration/EnumBindingForwarderTests.cs]
 dotnet_diagnostic.S1133.severity = none
 
+# Forces GC to check that an abandoned WithCancellation task does not raise UnobservedTaskException.
+[CSharpEssentials.Tests/Core/WithCancellationUnobservedTests.cs]
+dotnet_diagnostic.S1215.severity = none
+
 # LegacyNonCompliant keeps the earlier optional route parameter output as an opt-in (issue #101).
 [CSharpEssentials.AspNetCore.Swashbuckle/OptionalRouteParameterMode.cs]
 dotnet_diagnostic.S1133.severity = none
