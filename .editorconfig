@@ -443,6 +443,14 @@ dotnet_diagnostic.S1133.severity = none
 [CSharpEssentials.Tests/AspNetCore/EnumIntegration/EnumBindingForwarderTests.cs]
 dotnet_diagnostic.S1133.severity = none
 
+# IsNone stays as an obsolete alias of HasNoValue (issue #109).
+[CSharpEssentials.Maybe/Extensions/MaybeExtensionMembers.cs]
+dotnet_diagnostic.S1133.severity = none
+
+# Tests of the obsolete IsNone alias.
+[CSharpEssentials.Tests/Maybe/MaybeExtensionMembersTests.cs]
+dotnet_diagnostic.S1133.severity = none
+
 # Forces GC to check that an abandoned WithCancellation task does not raise UnobservedTaskException.
 [CSharpEssentials.Tests/Core/WithCancellationUnobservedTests.cs]
 dotnet_diagnostic.S1215.severity = none

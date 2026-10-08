@@ -5,6 +5,7 @@ public static class MaybeExtensionMembers
 {
     extension<T>(Maybe<T> maybe)
     {
+        [Obsolete("Use HasNoValue.")]
         public bool IsNone => !maybe.HasValue;
     }
 }

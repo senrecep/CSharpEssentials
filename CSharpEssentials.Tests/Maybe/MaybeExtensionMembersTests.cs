@@ -4,6 +4,7 @@ using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Maybe;
 
+[Obsolete("Tests the obsolete IsNone extension property.")]
 public sealed class MaybeExtensionMembersTests
 {
     [Fact]
