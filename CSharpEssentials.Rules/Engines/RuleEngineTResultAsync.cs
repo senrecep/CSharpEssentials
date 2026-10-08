@@ -8,6 +8,7 @@ public static partial class RuleEngine
     /// Evaluates <paramref name="rule"/> asynchronously, awaiting every async rule in the tree with
     /// <c>ConfigureAwait(false)</c>. Sync rules complete without allocating a task.
     /// Composite children are evaluated sequentially, with the same short-circuit and error order as <c>Evaluate</c>.
+    /// Rules must observe <paramref name="cancellationToken"/>: an in-flight rule is awaited until it returns, never abandoned.
     /// </summary>
     /// <exception cref="OperationCanceledException">
     /// Thrown when <paramref name="cancellationToken"/> is cancelled; caller cancellation is not converted to an error.

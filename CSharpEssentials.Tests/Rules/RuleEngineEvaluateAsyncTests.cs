@@ -10,7 +10,7 @@ public sealed class RuleEngineEvaluateAsyncTests
 {
     public sealed class Ctx
     {
-        public List<string> Log { get; } = [];
+        public ConcurrentQueue<string> Log { get; } = new();
     }
 
     #region Rule kinds
@@ -19,7 +19,7 @@ public sealed class RuleEngineEvaluateAsyncTests
     {
         Result IRule<Ctx>.Evaluate(Ctx context, CancellationToken cancellationToken)
         {
-            context.Log.Add(name);
+            context.Log.Enqueue(name);
             if (throws)
                 throw new InvalidOperationException(name);
             return success ? Result.Success() : Error.Validation(name, name);
@@ -27,7 +27,7 @@ public sealed class RuleEngineEvaluateAsyncTests
 
         Result<int> IRule<Ctx, int>.Evaluate(Ctx context, CancellationToken cancellationToken)
         {
-            context.Log.Add(name);
+            context.Log.Enqueue(name);
             if (throws)
                 throw new InvalidOperationException(name);
             return success ? value : Error.Validation(name, name);
@@ -39,7 +39,7 @@ public sealed class RuleEngineEvaluateAsyncTests
         async ValueTask<Result> IAsyncRule<Ctx>.EvaluateAsync(Ctx context, CancellationToken cancellationToken)
         {
             await Task.Yield();
-            context.Log.Add(name);
+            context.Log.Enqueue(name);
             if (throws)
                 throw new InvalidOperationException(name);
             return success ? Result.Success() : Error.Validation(name, name);
@@ -48,7 +48,7 @@ public sealed class RuleEngineEvaluateAsyncTests
         async ValueTask<Result<int>> IAsyncRule<Ctx, int>.EvaluateAsync(Ctx context, CancellationToken cancellationToken)
         {
             await Task.Yield();
-            context.Log.Add(name);
+            context.Log.Enqueue(name);
             if (throws)
                 throw new InvalidOperationException(name);
             return success ? value : Error.Validation(name, name);
@@ -370,9 +370,9 @@ public sealed class RuleEngineEvaluateAsyncTests
         var context = new Ctx();
         IRuleBase<Ctx> rule = new And(
             Ok("h"),
-            new Func<Ctx, CancellationToken, ValueTask<Result>>((c, _) => { c.Log.Add("first"); return new ValueTask<Result>(first.Task); }).ToRule(),
+            new Func<Ctx, CancellationToken, ValueTask<Result>>((c, _) => { c.Log.Enqueue("first"); return new ValueTask<Result>(first.Task); }).ToRule(),
             Ok("middle"),
-            new Func<Ctx, CancellationToken, ValueTask<Result>>((c, _) => { c.Log.Add("second"); return new ValueTask<Result>(second.Task); }).ToRule());
+            new Func<Ctx, CancellationToken, ValueTask<Result>>((c, _) => { c.Log.Enqueue("second"); return new ValueTask<Result>(second.Task); }).ToRule());
 
         ValueTask<Result> pending = RuleEngine.EvaluateAsync(rule, context);
 
@@ -397,7 +397,7 @@ public sealed class RuleEngineEvaluateAsyncTests
         var context = new Ctx();
         IRuleBase<Ctx, int> rule = new LinearAsyncT(
             AOk("h", 1),
-            new Func<Ctx, CancellationToken, ValueTask<Result<int>>>((c, _) => { c.Log.Add("gate"); return new ValueTask<Result<int>>(gate.Task); }).ToRule());
+            new Func<Ctx, CancellationToken, ValueTask<Result<int>>>((c, _) => { c.Log.Enqueue("gate"); return new ValueTask<Result<int>>(gate.Task); }).ToRule());
 
         ValueTask<Result<int>> pending = RuleEngine.EvaluateAsync(rule, context);
         await WaitUntil(() => context.Log.Count == 2);
@@ -445,7 +445,7 @@ public sealed class RuleEngineEvaluateAsyncTests
             Ok("h"),
             new Func<Ctx, CancellationToken, ValueTask<Result>>(async (c, ct) =>
             {
-                c.Log.Add("waiting");
+                c.Log.Enqueue("waiting");
                 await Task.Delay(Timeout.Infinite, ct);
                 return Result.Success();
             }).ToRule(),
@@ -468,7 +468,7 @@ public sealed class RuleEngineEvaluateAsyncTests
         IRuleBase<Ctx, int> rule = new LinearT(
             new Func<Ctx, CancellationToken, Result<int>>((c, _) =>
             {
-                c.Log.Add("cancel");
+                c.Log.Enqueue("cancel");
                 cts.Cancel();
                 return 1;
             }).ToRule(),
@@ -494,6 +494,23 @@ public sealed class RuleEngineEvaluateAsyncTests
         Func<Task> act = async () => await RuleEngine.EvaluateAsync(rule, new Ctx(), cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public void Evaluate_Should_Return_Caller_Cancellation_As_Error()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        IRuleBase<Ctx> rule = new Func<Ctx, CancellationToken, ValueTask<Result>>(async (_, ct) =>
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return Result.Success();
+        }).ToRule();
+
+        Result result = RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Select(e => e.Code).Should().Equal("RuleEngine.Evaluate.SimpleAsyncRule");
     }
 
     [Fact]
@@ -553,23 +570,22 @@ public sealed class RuleEngineEvaluateAsyncTests
         }
     }
 
-    private static AndAsync DelayedTree() => new AndAsync(
+    private static IAsyncRule<Ctx> Delayed(Result result) =>
         new Func<Ctx, CancellationToken, ValueTask<Result>>(async (_, ct) =>
         {
             await Task.Delay(10, ct).ConfigureAwait(false);
-            return Result.Success();
-        }).ToRule(),
-        new LinearAsync(
-            new Func<Ctx, CancellationToken, ValueTask<Result>>(async (_, ct) =>
-            {
-                await Task.Delay(10, ct).ConfigureAwait(false);
-                return Result.Success();
-            }).ToRule(),
-            Ok("sync")),
+            return result;
+        }).ToRule();
+
+    private static AndAsync DelayedTree() => new AndAsync(
+        Delayed(Result.Success()),
+        new LinearAsync(Delayed(Result.Success()), Ok("sync")),
+        new ConditionalAsync(Delayed(Result.Success()), Delayed(Result.Success()), Fail("unreached")),
+        new OrAsync(Delayed(Result.Success()), Delayed(Error.Validation("or", "or")), Delayed(Result.Success())),
         new Func<Ctx, CancellationToken, ValueTask<Result>>(async (c, ct) =>
         {
             await Task.Delay(10, ct).ConfigureAwait(false);
-            c.Log.Add("last");
+            c.Log.Enqueue("last");
             return Error.Validation("done", "done");
         }).ToRule());
 

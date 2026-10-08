@@ -8,6 +8,7 @@ public static partial class RuleEngine
     /// Evaluates <paramref name="rule"/> synchronously. Async rules in the tree are blocked on until they complete,
     /// which can deadlock under a <see cref="SynchronizationContext"/> and ties up a thread-pool thread.
     /// Prefer <see cref="EvaluateAsync{TContext, TResult}"/> when the tree contains async rules.
+    /// Caller cancellation is returned as an error Result; EvaluateAsync throws OperationCanceledException instead.
     /// </summary>
     public static Result<TResult> Evaluate<TContext, TResult>(IRuleBase<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default) =>
             InternalEvaluate(rule, context, cancellationToken);

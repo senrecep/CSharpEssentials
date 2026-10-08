@@ -29,9 +29,15 @@ public static partial class RuleEngine
     public static Result<TResult> If<TContext, TResult>(Func<TContext, CancellationToken, Result<TResult>> rule, Func<TContext, CancellationToken, Result<TResult>> success, Func<TContext, CancellationToken, Result<TResult>> failure, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(ConditionalRuleAdapter<TContext, TResult>.From(rule.ToRule(), success.ToRule(), failure.ToRule()), context, cancellationToken);
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext}"/>.
+    /// </summary>
     public static Result If<TContext>(Func<TContext, CancellationToken, ValueTask<Result>> rule, Func<TContext, CancellationToken, ValueTask<Result>> success, Func<TContext, CancellationToken, ValueTask<Result>> failure, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(ConditionalRuleAdapter<TContext>.From(rule.ToRule(), success.ToRule(), failure.ToRule()), context, cancellationToken);
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext, TResult}"/>.
+    /// </summary>
     public static Result<TResult> If<TContext, TResult>(Func<TContext, CancellationToken, ValueTask<Result<TResult>>> rule, Func<TContext, CancellationToken, ValueTask<Result<TResult>>> success, Func<TContext, CancellationToken, ValueTask<Result<TResult>>> failure, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(ConditionalRuleAdapter<TContext, TResult>.From(rule.ToRule(), success.ToRule(), failure.ToRule()), context, cancellationToken);
 }

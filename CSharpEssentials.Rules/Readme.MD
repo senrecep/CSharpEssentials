@@ -98,7 +98,9 @@ Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
 
 All three styles compose freely. Mix class instances, `Func` variables, and lambdas in the same call.
 
-### And: all must pass (collects all failures)
+### And: all must pass
+
+And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
 
 ```csharp
 // Using class instances
@@ -226,7 +228,7 @@ public sealed class AgeRule : IRule<ApplicantContext>
 Func<ApplicantContext, Result> regionRule =
     ctx => ctx.IsAllowedRegion ? Result.Success() : RegistrationErrors.RegionBlocked;
 
-// Compose: Func array runs all rules and collects all failures
+// Compose with And: Result rules stop at the first failure and return its errors
 var applicant = new ApplicantContext { Age = 16, HasLicense = false, IsAllowedRegion = true };
 
 Result result = RuleEngine.Evaluate(
@@ -246,7 +248,6 @@ result.Switch(
             Console.WriteLine($"[{e.Type}] {e.Code}: {e.Description}");
     });
 // [Validation] Registration.Underage: Applicant must be at least 18.
-// [Validation] Registration.NoLicense: A valid driver's license is required.
 ```
 
 Rules return `Result` / `Result<T>`, the same type used throughout CSharpEssentials, so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
@@ -297,6 +298,7 @@ Result result = await RuleEngine.EvaluateAsync(
 - Results, short-circuiting, and error order match `Evaluate` for every rule kind (Linear, Conditional, And, Or, nested trees).
 - Children of composites run one at a time, in order.
 - A tree made only of sync rules completes synchronously, without allocating a task.
-- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`.
+- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`. `Evaluate` returns caller cancellation as an error `Result` instead.
+- Rules must observe `ct`. The token is checked before each rule runs, but a rule that is already running is awaited until it returns; `EvaluateAsync` never abandons it.
 
 `Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.
