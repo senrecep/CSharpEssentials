@@ -4,6 +4,14 @@ namespace CSharpEssentials.Rules;
 
 public static partial class RuleEngine
 {
+    /// <summary>
+    /// Evaluates <paramref name="rule"/> synchronously. Async rules in the tree are blocked on until they complete,
+    /// which can deadlock under a <see cref="SynchronizationContext"/> and ties up a thread-pool thread.
+    /// Prefer <see cref="EvaluateAsync{TContext, TResult}"/> when the tree contains async rules.
+    /// Caller cancellation from an async rule propagates as OperationCanceledException until it reaches an enclosing sync rule
+    /// (simple, And, Or, Linear, Conditional), which returns it as an error Result; with no enclosing sync rule Evaluate throws.
+    /// On cancellation Evaluate stops waiting for a pending async rule, which may keep running. EvaluateAsync always throws.
+    /// </summary>
     public static Result<TResult> Evaluate<TContext, TResult>(IRuleBase<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default) =>
             InternalEvaluate(rule, context, cancellationToken);
 
@@ -27,12 +35,10 @@ public static partial class RuleEngine
             () =>
             {
                 Result<TResult> result = rule.Evaluate(context, cancellationToken);
-                if (result.IsFailure)
+                IRuleBase<TContext, TResult>? next = LinearNext(result.IsFailure, rule.Next);
+                if (next is null)
                     return result;
-                if (rule.Next is null)
-                    return result;
-
-                return InternalEvaluate(rule.Next, context, cancellationToken);
+                return InternalEvaluate(next, context, cancellationToken);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.LinearRule, ex));
     }
@@ -42,13 +48,11 @@ public static partial class RuleEngine
         return new ValueTask<Result<TResult>>(Result.TryAsync(
             async () =>
             {
-                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken);
-                if (result.IsFailure)
+                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+                IRuleBase<TContext, TResult>? next = LinearNext(result.IsFailure, rule.Next);
+                if (next is null)
                     return result;
-                if (rule.Next is null)
-                    return result;
-
-                return InternalEvaluate(rule.Next, context, cancellationToken);
+                return InternalEvaluate(next, context, cancellationToken);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.LinearAsyncRule, ex),
             cancellationToken));
@@ -60,15 +64,10 @@ public static partial class RuleEngine
             () =>
             {
                 Result<TResult> result = rule.Evaluate(context, cancellationToken);
-                if (result.IsFailure)
-                    if (rule.Failure is null)
-                        return result;
-                    else
-                        return InternalEvaluate(rule.Failure, context, cancellationToken);
-
-                if (rule.Success is null)
+                IRuleBase<TContext, TResult>? branch = ConditionalBranch(result.IsFailure, rule.Success, rule.Failure);
+                if (branch is null)
                     return result;
-                return InternalEvaluate(rule.Success, context, cancellationToken);
+                return InternalEvaluate(branch, context, cancellationToken);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.ConditionalRule, ex));
     }
@@ -78,16 +77,11 @@ public static partial class RuleEngine
         return new ValueTask<Result<TResult>>(Result.TryAsync(
             async () =>
             {
-                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken);
-                if (result.IsFailure)
-                    if (rule.Failure is null)
-                        return result;
-                    else
-                        return InternalEvaluate(rule.Failure, context, cancellationToken);
-
-                if (rule.Success is null)
+                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
+                IRuleBase<TContext, TResult>? branch = ConditionalBranch(result.IsFailure, rule.Success, rule.Failure);
+                if (branch is null)
                     return result;
-                return InternalEvaluate(rule.Success, context, cancellationToken);
+                return InternalEvaluate(branch, context, cancellationToken);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.ConditionalAsyncRule, ex),
             cancellationToken));
@@ -103,9 +97,7 @@ public static partial class RuleEngine
                     return result;
 
                 Result<TResult[]> andResult = Result<TResult>.And(rule.Rules.Select(r => InternalEvaluate(r, context, cancellationToken)));
-                if (andResult.IsFailure)
-                    return andResult.Errors;
-                return andResult.Value[0];
+                return FirstAndValue(andResult);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.AndRule, ex));
     }
@@ -115,14 +107,12 @@ public static partial class RuleEngine
         return new ValueTask<Result<TResult>>(Result.TryAsync(
             async () =>
             {
-                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken);
+                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
                 if (result.IsFailure)
                     return result;
 
                 Result<TResult[]> andResult = Result<TResult>.And(rule.Rules.Select(r => InternalEvaluate(r, context, cancellationToken)));
-                if (andResult.IsFailure)
-                    return andResult.Errors;
-                return andResult.Value[0];
+                return FirstAndValue(andResult);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.AndAsyncRule, ex),
             cancellationToken));
@@ -147,7 +137,7 @@ public static partial class RuleEngine
         return new ValueTask<Result<TResult>>(Result.TryAsync(
             async () =>
             {
-                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken);
+                Result<TResult> result = await rule.EvaluateAsync(context, cancellationToken).ConfigureAwait(false);
                 if (result.IsFailure)
                     return result;
 
@@ -175,11 +165,11 @@ public static partial class RuleEngine
     {
         return rule switch
         {
-            IConditionalAsyncRule<TContext, TResult> asyncConditionalRule => await Evaluate(asyncConditionalRule, context, cancellationToken),
-            ILinearAsyncRule<TContext, TResult> asyncLinearRule => await Evaluate(asyncLinearRule, context, cancellationToken),
-            IAndAsyncRule<TContext, TResult> asyncAndRule => await Evaluate(asyncAndRule, context, cancellationToken),
-            IOrAsyncRule<TContext, TResult> asyncOrRule => await Evaluate(asyncOrRule, context, cancellationToken),
-            IAsyncRule<TContext, TResult> asyncRule => await Evaluate(asyncRule, context, cancellationToken),
+            IConditionalAsyncRule<TContext, TResult> asyncConditionalRule => await Evaluate(asyncConditionalRule, context, cancellationToken).ConfigureAwait(false),
+            ILinearAsyncRule<TContext, TResult> asyncLinearRule => await Evaluate(asyncLinearRule, context, cancellationToken).ConfigureAwait(false),
+            IAndAsyncRule<TContext, TResult> asyncAndRule => await Evaluate(asyncAndRule, context, cancellationToken).ConfigureAwait(false),
+            IOrAsyncRule<TContext, TResult> asyncOrRule => await Evaluate(asyncOrRule, context, cancellationToken).ConfigureAwait(false),
+            IAsyncRule<TContext, TResult> asyncRule => await Evaluate(asyncRule, context, cancellationToken).ConfigureAwait(false),
             _ => RuleErrors.RuleEngineNotFoundError(rule.GetType().Name)
         };
     }

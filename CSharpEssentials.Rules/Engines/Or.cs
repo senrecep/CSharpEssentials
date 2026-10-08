@@ -22,9 +22,15 @@ public static partial class RuleEngine
     public static Result<TResult> Or<TContext, TResult>(Func<TContext, CancellationToken, Result<TResult>>[] rules, TContext context, CancellationToken cancellationToken = default) =>
          Evaluate(rules.Or(), context, cancellationToken);
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext}"/>.
+    /// </summary>
     public static Result Or<TContext>(Func<TContext, CancellationToken, ValueTask<Result>>[] rules, TContext context, CancellationToken cancellationToken = default) =>
          Evaluate(rules.Or(), context, cancellationToken);
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext, TResult}"/>.
+    /// </summary>
     public static Result<TResult> Or<TContext, TResult>(Func<TContext, CancellationToken, ValueTask<Result<TResult>>>[] rules, TContext context, CancellationToken cancellationToken = default) =>
          Evaluate(rules.Or(), context, cancellationToken);
 }

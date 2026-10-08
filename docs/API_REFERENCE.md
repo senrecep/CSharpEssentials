@@ -588,7 +588,7 @@ All methods accept an optional `CultureInfo` parameter.
 |-----------|----------|----------|
 | `IRule<TContext>` | Single rule | Evaluates and returns `Result` |
 | `ILinearRule<TContext>` | Sequential chain | Evaluates in order; stops at first failure |
-| `IAndRule<TContext>` | All must pass | Evaluates ALL rules; collects all errors |
+| `IAndRule<TContext>` | All must pass | `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors |
 | `IOrRule<TContext>` | Any can pass | Returns first success; fails only if all fail |
 | `IConditionalRule<TContext>` | If/else | Branches based on a condition rule |
 
@@ -598,11 +598,12 @@ Each type has `IAsyncRule` variants and `TResult`-returning variants.
 
 | Method | What It Does |
 |--------|-------------|
-| `RuleEngine.Evaluate(rule, context, ct)` | Dispatches any rule type via pattern matching |
-| `RuleEngine.Linear(rules, context, ct)` | Sequential: stops at first failure |
-| `RuleEngine.And(rules, context, ct)` | All must pass: accumulates all errors |
-| `RuleEngine.Or(rules, context, ct)` | First success wins |
-| `RuleEngine.If(condition, success, failure, ctx)` | Conditional branching |
+| `RuleEngine.Evaluate(rule, context, ct)` | Dispatches any rule type via pattern matching; blocks on async rules |
+| `await RuleEngine.EvaluateAsync(rule, context, ct)` | Same dispatch, returns `ValueTask<Result>` / `ValueTask<Result<T>>`; awaits async rules, children run sequentially, cancellation throws `OperationCanceledException` (`Evaluate` throws too unless an enclosing sync rule returns it as an error `Result`, and stops waiting for a pending async rule); rules must observe the token, in-flight rules are not abandoned |
+| `RuleEngine.Linear(rules, context, ct)` | Sequential: stops at first failure. Async-rule overloads block; prefer `EvaluateAsync` |
+| `RuleEngine.And(rules, context, ct)` | And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. Blocks on async rules; prefer `EvaluateAsync` |
+| `RuleEngine.Or(rules, context, ct)` | First success wins. Async-rule overloads block; prefer `EvaluateAsync` |
+| `RuleEngine.If(condition, success, failure, ctx)` | Conditional branching. Async-rule overloads block; prefer `EvaluateAsync` |
 | `func.ToRule()` | Adapts a `Func<TContext, Result>` to `IRule` |
 
 ```csharp
@@ -621,7 +622,7 @@ public sealed class EmailVerifiedRule : IRule<UserContext>
             Error.Validation("User.EmailNotVerified", "Email must be verified"));
 }
 
-// Compose: all must pass, collect all validation errors
+// Compose with And: Result rules stop at the first failure and return its errors
 var rules = new IRule<UserContext>[] { new MinimumAgeRule(18), new EmailVerifiedRule() };
 Result result = RuleEngine.And(rules, context, ct);
 
@@ -631,7 +632,20 @@ Func<OrderContext, Result> stockCheck = ctx =>
         Error.Conflict("Product.OutOfStock", "Insufficient stock"));
 
 Result orderResult = RuleEngine.Evaluate(stockCheck.ToRule(), orderContext, ct);
+
+// Trees with async rules (DB, HTTP): await instead of blocking
+Func<OrderContext, CancellationToken, ValueTask<Result>> customerExists = async (ctx, token) =>
+    await customers.ExistsAsync(ctx.CustomerId, token)
+        ? Result.Success()
+        : Error.NotFound("Customer.NotFound", "Customer not found");
+
+Result checkout = await RuleEngine.EvaluateAsync(
+    new IRuleBase<OrderContext>[] { stockCheck.ToRule(), customerExists.ToRule() }.And(),
+    orderContext,
+    ct);
 ```
+
+`Evaluate` blocks the calling thread on async rules, which can deadlock under a `SynchronizationContext`. Prefer `EvaluateAsync` for any tree that contains an `IAsyncRule`.
 
 ---
 

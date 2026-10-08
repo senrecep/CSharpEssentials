@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-rules
-description: Use when composing business validation logic. Define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(); branch with RuleEngine.If().
+description: Use when composing business validation logic. Define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(), or await RuleEngine.EvaluateAsync() when the tree contains async rules; branch with RuleEngine.If().
 ---
 
 # CSharpEssentials.Rules
@@ -85,7 +85,9 @@ Result r4 = RuleEngine.Evaluate(
 
 Compose first using extension methods on arrays, then evaluate with `RuleEngine.Evaluate`.
 
-### And: all must pass (collects all failures)
+### And: all must pass
+
+And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
 
 ```csharp
 // Class instances
@@ -199,7 +201,7 @@ public static class RegistrationErrors
 Func<ApplicantContext, Result> regionRule =
     ctx => ctx.IsAllowedRegion ? Result.Success() : RegistrationErrors.RegionBlocked;
 
-// Compose all rules — collects all failures
+// Compose with And: Result rules stop at the first failure and return its errors
 Result result = RuleEngine.Evaluate(
     new Func<ApplicantContext, Result>[]
     {
@@ -240,19 +242,34 @@ IAsyncRule<string> unique = RuleEngine.FromPredicateAsync<string>(
     async s => await _db.IsUniqueAsync(s),
     s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
 
-// Evaluate and compose normally
+// Sync-only tree
 Result r = RuleEngine.Evaluate(positive, 42);
-Result composed = RuleEngine.Evaluate(
-    new IRuleBase<string>[] { minLength, unique }.And(), "alice");
+
+// Tree with an async rule: await EvaluateAsync
+Result composed = await RuleEngine.EvaluateAsync(
+    new IRuleBase<string>[] { minLength, unique }.And(), "alice", ct);
 ```
+
+---
+
+## Async Evaluation
+
+`RuleEngine.EvaluateAsync(rule, context, ct)` returns `ValueTask<Result>` / `ValueTask<Result<T>>` and awaits every `IAsyncRule` in the tree.
+
+- Same results, short-circuiting and error order as `Evaluate`; composite children run sequentially.
+- Sync-only trees complete synchronously, with no task allocation.
+- Cancelling `ct` throws `OperationCanceledException` instead of returning an error (`Evaluate` throws too unless an enclosing sync rule returns it as an error `Result`; it stops waiting for a pending async rule).
+- Rules must observe `ct`: the token is checked before each rule, but an in-flight rule is awaited, never abandoned.
+- `Evaluate` blocks on async rules (deadlock risk under a `SynchronizationContext`); use `EvaluateAsync` for any tree with async rules.
 
 ---
 
 ## Best Practices
 
-- `array.And()` collects **all** failures; `array.Linear()` stops at the **first** failure
+- And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. `array.Linear()` stops at the **first** failure
 - Prefer `.Next()` for readable linear pipelines over `.Linear()` with an array
 - No explicit `.ToRule()` needed when passing `Func<>` to `RuleEngine.Evaluate` or to `.And()/.Or()` on `Func[]`
 - Group domain errors in static classes so rules read like domain language
 - Test each `IRule<T>` in isolation: `Evaluate(context)` → assert Result. No mocking needed
 - Use class rules when the rule needs DI; use `Func` fields when it doesn't
+- Await `RuleEngine.EvaluateAsync` whenever the tree contains an `IAsyncRule`

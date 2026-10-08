@@ -9,7 +9,7 @@ Composable, functional rule engine for .NET. Define business logic as small, reu
 - **Linear Sequences**: Run rules in order, stop on first failure.
 - **Conditional Rules**: If/Then/Else branching.
 - **And / Or Logic**: All must pass, or at least one must pass.
-- **Async Support**: First-class async rules.
+- **Async Support**: `IAsyncRule` rules evaluated without blocking via `await RuleEngine.EvaluateAsync(...)`.
 - **Result Integration**: Built on `CSharpEssentials.Results`.
 
 ## Installation
@@ -98,7 +98,9 @@ Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
 
 All three styles compose freely. Mix class instances, `Func` variables, and lambdas in the same call.
 
-### And: all must pass (collects all failures)
+### And: all must pass
+
+And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
 
 ```csharp
 // Using class instances
@@ -226,7 +228,7 @@ public sealed class AgeRule : IRule<ApplicantContext>
 Func<ApplicantContext, Result> regionRule =
     ctx => ctx.IsAllowedRegion ? Result.Success() : RegistrationErrors.RegionBlocked;
 
-// Compose: Func array runs all rules and collects all failures
+// Compose with And: Result rules stop at the first failure and return its errors
 var applicant = new ApplicantContext { Age = 16, HasLicense = false, IsAllowedRegion = true };
 
 Result result = RuleEngine.Evaluate(
@@ -246,7 +248,6 @@ result.Switch(
             Console.WriteLine($"[{e.Type}] {e.Code}: {e.Description}");
     });
 // [Validation] Registration.Underage: Applicant must be at least 18.
-// [Validation] Registration.NoLicense: A valid driver's license is required.
 ```
 
 Rules return `Result` / `Result<T>`, the same type used throughout CSharpEssentials, so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
@@ -269,9 +270,35 @@ IAsyncRule<string> uniqueRule = RuleEngine.FromPredicateAsync<string>(
     async s => await _db.IsUniqueAsync(s),
     s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
 
-// Evaluate normally — works with all composition methods
+// Sync-only trees can use Evaluate
 Result r = RuleEngine.Evaluate(positiveRule, 42);
 Result composed = RuleEngine.Evaluate(
     new IRuleBase<int>[] { positiveRule, rangeRule }.And(),
     value);
+
+// Trees that contain async rules: await EvaluateAsync
+Result unique = await RuleEngine.EvaluateAsync(uniqueRule, name, ct);
 ```
+
+## Async Rules: `EvaluateAsync`
+
+`RuleEngine.EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` / `ValueTask<Result<T>>`. It awaits every `IAsyncRule` in the tree, so no thread is blocked on database or HTTP calls.
+
+```csharp
+Result result = await RuleEngine.EvaluateAsync(
+    new IRuleBase<string>[]
+    {
+        RuleEngine.FromPredicate<string>(s => s.Length >= 3, Error.Validation("Name.TooShort", "Use at least 3 characters")),
+        uniqueRule
+    }.And(),
+    name,
+    ct);
+```
+
+- Results, short-circuiting, and error order match `Evaluate` for every rule kind (Linear, Conditional, And, Or, nested trees).
+- Children of composites run one at a time, in order.
+- A tree made only of sync rules completes synchronously, without allocating a task.
+- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`. `Evaluate` propagates it until an enclosing sync rule (simple, And, Or, Linear, Conditional) returns it as an error `Result`, and throws when no sync rule encloses it. It also stops waiting for a pending async rule, which may keep running.
+- Rules must observe `ct`. The token is checked before each rule runs, but a rule that is already running is awaited until it returns; `EvaluateAsync` never abandons it.
+
+`Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.

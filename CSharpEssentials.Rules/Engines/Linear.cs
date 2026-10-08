@@ -7,12 +7,18 @@ public static partial class RuleEngine
     public static Result Linear<TContext>(IRule<TContext>[] rules, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(rules.Linear(), context, cancellationToken);
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext}"/>.
+    /// </summary>
     public static Result Linear<TContext>(IAsyncRule<TContext>[] rules, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(rules.Linear(), context, cancellationToken);
 
     public static Result<TResult> Linear<TContext, TResult>(IRule<TContext, TResult>[] rules, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(rules.Linear(), context, cancellationToken);
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext, TResult}"/>.
+    /// </summary>
     public static Result<TResult> Linear<TContext, TResult>(IAsyncRule<TContext, TResult>[] rules, TContext context, CancellationToken cancellationToken = default) =>
         Evaluate(rules.Linear(), context, cancellationToken);
 
@@ -29,6 +35,9 @@ public static partial class RuleEngine
     }
 
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext}"/>.
+    /// </summary>
     public static Result Linear<TContext>(Func<TContext, CancellationToken, ValueTask<Result>>[] rules, TContext context, CancellationToken cancellationToken = default)
     {
         IRuleBase<TContext> chain = rules.Select(item => item.ToRule()).ToArray().Linear();
@@ -47,6 +56,9 @@ public static partial class RuleEngine
         return Evaluate(chain, context, cancellationToken);
     }
 
+    /// <summary>
+    /// Blocks the calling thread until the async rules complete. Prefer <see cref="EvaluateAsync{TContext, TResult}"/>.
+    /// </summary>
     public static Result<TResult> Linear<TContext, TResult>(Func<TContext, CancellationToken, ValueTask<Result<TResult>>>[] rules, TContext context, CancellationToken cancellationToken = default)
     {
         IRuleBase<TContext, TResult> chain = rules.Select(item => item.ToRule()).ToArray().Linear();
