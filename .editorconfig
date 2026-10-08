@@ -460,7 +460,7 @@ dotnet_diagnostic.S1215.severity = none
 dotnet_diagnostic.S1133.severity = none
 
 # The unsuffixed Task/ValueTask names stay as obsolete forwarders to the *Async names until 7.0 (issue #108).
-[{CSharpEssentials.Results/Modules/{Result,ResultT}.Obsolete.cs,CSharpEssentials.Maybe/Modules/Where.Obsolete.cs}]
+[{CSharpEssentials.Results/Modules/{Result,ResultT}.Obsolete.cs,CSharpEssentials.Results/Interfaces/{IResult,IResultT}.cs,CSharpEssentials.Maybe/Modules/Where.Obsolete.cs}]
 dotnet_diagnostic.S1133.severity = none
 
 # Tests of the obsolete unsuffixed async names.
