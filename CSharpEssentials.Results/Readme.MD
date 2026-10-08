@@ -198,9 +198,16 @@ Recompiling against this version changes what some existing call sites bind to:
 
 - `TapAsync` on a `Task<Result>`, `Task<Result<T>>`, `ValueTask<Result>` or `ValueTask<Result<T>>` source with an `async` lambda now awaits the handler. It used to bind `Action`/`Action<T>`, which ran it as `async void`: the chain did not wait for it and its exceptions were lost. Exceptions from the handler now propagate.
 - `MapAsync` on a `ValueTask<Result<T>>` source with an `async` lambda now returns `ValueTask<Result<U>>`. It used to return `ValueTask<Result<Task<U>>>`.
+- `TapAsync` on a `Task<Result>` or `Task<Result<T>>` source with a non-`async` lambda that returns a `Task`, such as `taskResult.TapAsync(x => SaveAsync(x))`, now awaits that task. It used to bind `Action<T>` and discard it.
 - On .NET 9+, a lambda that returns `ValueTask` binds the new `ValueTask` handlers instead of a sync or `Action` overload.
+
+Unchanged:
+
 - A non-`async` lambda that returns a `Task` on a `ValueTask` source still binds `Action<T>` for `TapAsync`, so the task is not awaited. Use an `async` lambda or a `ValueTask` handler.
+- A non-`async` lambda that returns a `ValueTask` on a `Task` source, such as `taskResult.TapAsync(x => SaveValueTaskAsync(x))`, still binds `Action<T>`, so the `ValueTask` is discarded. Use an `async` lambda or a `Task` handler.
 - The conditional `TapAsync(condition, action)` overloads on `Task`/`ValueTask` sources have no awaited twin yet: an `async` lambda passed to them still runs as `async void`. On `Result<T>` sources use `TapIfAsync` with a `Task` handler; otherwise check the condition inside a `Func<Task>` handler.
+
+Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before. Use C# 13 or later, or type the handler.
 
 ### Collection Extensions
 
