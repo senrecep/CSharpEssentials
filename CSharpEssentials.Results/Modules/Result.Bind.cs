@@ -127,6 +127,20 @@ public static partial class ResultExtensions
     }
 
     /// <summary>
+    /// Awaits the Task result and binds an async function that produces a typed result. On failure the function is never called.
+    /// </summary>
+    /// <typeparam name="TOut">The value type of the produced result.</typeparam>
+    /// <param name="task">The pending result.</param>
+    /// <param name="func">Produces the next result on success.</param>
+    /// <param name="cancellationToken">Observed while awaiting the source and the function.</param>
+    /// <returns>The produced result, or a failure with the original errors.</returns>
+    public static async Task<Result<TOut>> BindAsync<TOut>(this Task<Result> task, Func<Task<Result<TOut>>> func, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.BindAsync(func).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Binds a function to the result.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
