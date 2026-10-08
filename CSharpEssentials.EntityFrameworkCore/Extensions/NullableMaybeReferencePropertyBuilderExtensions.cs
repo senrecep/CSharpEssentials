@@ -9,6 +9,11 @@ namespace CSharpEssentials.EntityFrameworkCore;
 /// own class because two methods that differ only in their <c>struct</c> / <c>class</c> constraint cannot share one;
 /// across classes the compiler drops the candidate whose constraint fails, so both are called the same way.
 /// </summary>
+/// <remarks>
+/// Neither overload applies when <c>T</c> is an unconstrained type parameter or a nullable value type
+/// (<c>Maybe&lt;int?&gt;?</c>); the compiler then reports CS0452 against this overload. In generic code use
+/// <c>ConfigureNullableMaybeConventions</c> or pass a converter to <c>HasConversion</c> directly.
+/// </remarks>
 public static class NullableMaybeReferencePropertyBuilderExtensions
 {
     /// <summary>

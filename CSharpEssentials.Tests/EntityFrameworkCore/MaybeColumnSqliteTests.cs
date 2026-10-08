@@ -233,6 +233,32 @@ public sealed class MaybeColumnSqliteTests
     [Theory]
     [InlineData(PerProperty)]
     [InlineData(Convention)]
+    public async Task Where_Should_MatchValue_When_ComparedWithInlineMaybe(string path)
+    {
+        await using SqliteConnection connection = await OpenAsync();
+        await using MaybeContext context = await SeedAsync(connection, path);
+
+        int[] count = await context.Rows.Where(row => row.Count == Maybe<int>.From(5)).Select(row => row.Id).ToArrayAsync();
+
+        count.Should().Equal(2);
+    }
+
+    [Theory]
+    [InlineData(PerProperty)]
+    [InlineData(Convention)]
+    public async Task Where_Should_NotTranslate_When_UsingMaybeMembers(string path)
+    {
+        await using SqliteConnection connection = await OpenAsync();
+        await using MaybeContext context = await SeedAsync(connection, path);
+
+        Func<Task> query = () => context.Rows.Where(row => row.Count!.Value.HasValue).ToArrayAsync();
+
+        await query.Should().ThrowAsync<InvalidOperationException>().WithMessage("*could not be translated*");
+    }
+
+    [Theory]
+    [InlineData(PerProperty)]
+    [InlineData(Convention)]
     public async Task Where_Should_NotMatchAbsentRows_When_ComparedWithNone(string path)
     {
         await using SqliteConnection connection = await OpenAsync();

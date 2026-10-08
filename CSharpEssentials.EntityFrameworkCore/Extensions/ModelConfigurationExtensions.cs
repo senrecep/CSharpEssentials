@@ -81,16 +81,24 @@ public static class ModelConfigurationExtensions
     }
 
     /// <summary>
-    /// Maps every public read-write <c>Maybe&lt;T&gt;?</c> property of every entity type to a nullable column of
-    /// <c>T</c>, as <c>HasNullableMaybeConversion</c> does per property. Ignored properties, properties with a value
-    /// converter configured by the user and <c>Maybe&lt;T&gt;?</c> with a nullable value type <c>T</c> are left alone.
+    /// Maps every public read-write <c>Maybe&lt;T&gt;?</c> property of every entity type and complex type to a nullable
+    /// column of <c>T</c>, as <c>HasNullableMaybeConversion</c> does per property. Ignored properties and properties with
+    /// a value converter configured by the user are left alone.
     /// </summary>
     /// <remarks>
-    /// The entity CLR properties are read once while the model is built, and each converter type is closed with
-    /// <see cref="Type.MakeGenericType"/> once per <c>T</c> and cached. Queries and saves do not use reflection.
+    /// <para>
+    /// <c>Maybe&lt;T&gt;?</c> with a nullable value type <c>T</c> (<c>Maybe&lt;int?&gt;?</c>) is not supported: the
+    /// convention skips it and EF Core fails the model build. Ignore such a property or configure your own converter.
+    /// </para>
+    /// <para>
+    /// The CLR properties are read once while the model is built, and each converter type is closed with
+    /// <see cref="Type.MakeGenericType"/> once per <c>T</c> and cached. Queries and saves do not use reflection. Under
+    /// NativeAOT use a compiled model, so the convention does not run at runtime.
+    /// </para>
     /// </remarks>
     /// <param name="configurationBuilder">The model configuration builder.</param>
     /// <returns>The same builder.</returns>
+    [RequiresDynamicCode("Closes the converter type for each Maybe<T>? with MakeGenericType while the model is built. Use a compiled model under NativeAOT.")]
     public static ModelConfigurationBuilder ConfigureNullableMaybeConventions(this ModelConfigurationBuilder configurationBuilder)
     {
         _ = configurationBuilder ?? throw new ArgumentNullException(nameof(configurationBuilder));

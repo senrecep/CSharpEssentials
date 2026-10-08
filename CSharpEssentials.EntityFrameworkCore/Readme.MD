@@ -292,13 +292,17 @@ Maybe<int> points = customer.LoyaltyPoints.Flatten(); // null becomes None
 ```
 
 - `null` and `None` are both written as `NULL`; `NULL` is read back as `null`, not `None`. Call `Flatten()` to get a `Maybe<T>`.
-- The convention skips ignored properties, properties with your own `HasConversion`, and `Maybe<T>?` where `T` is itself nullable (`Maybe<int?>?`). It reads the CLR properties once while the model is built; nothing runs per query.
+- The convention covers entity types, owned types, derived types (TPH) and complex types (`ComplexProperty`). It skips ignored and `[NotMapped]` properties and properties with your own `HasConversion` (yours wins). It reads the CLR properties once while the model is built; nothing runs per query.
+- `Maybe<T?>?` (for example `Maybe<int?>?`) is not supported: EF Core fails the model build. Ignore the property or configure your own converter.
+- `HasNullableMaybeConversion` needs a concrete `T`: from unconstrained generic code (or for `Maybe<int?>?`) the compiler reports CS0452 against the `class` overload. Use the convention there, or `HasConversion(new NullableMaybeConverter<T>())` / `new NullableMaybeReferenceConverter<T>()` (namespace `CSharpEssentials.EntityFrameworkCore.Converters`).
+- Mutable reference values (`Maybe<byte[]>?`): change tracking compares `Maybe<T>` values, so changing the array in place is not saved. Assign a new value instead.
+- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API.
 - Query rules:
   - absence: `c.Nickname == null` or `!c.Nickname.HasValue` (the `Nullable<T>.HasValue`);
   - presence: `c.Nickname != null`;
   - a value: `c.LoyaltyPoints == Maybe<int>.From(5)` (or a `Maybe<int>` variable).
   - Never compare with `None`: `c.LoyaltyPoints == Maybe<int>.None` is sent as a non-null parameter, so it matches no `NULL` row.
-  - Members of `Maybe<T>` itself (`.Value.HasValue`, `.Value.Value`) do not translate to SQL.
+  - Members of `Maybe<T>` itself (`.Value.HasValue`, `.Value.Value`) do not translate to SQL; the query throws `InvalidOperationException`.
 - Background: EF Core issues [#24685](https://github.com/dotnet/efcore/issues/24685), [#34943](https://github.com/dotnet/efcore/issues/34943) and [#13850](https://github.com/dotnet/efcore/issues/13850).
 - Migration: changing a `Maybe<T>` property to `Maybe<T>?` changes the column from `NOT NULL` to `NULL` (an `AlterColumn`). Existing `default(T)` values written for `None` stay as they are; update them to `NULL` in the migration if they meant absence.
 
