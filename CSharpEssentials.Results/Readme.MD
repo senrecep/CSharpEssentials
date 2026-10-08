@@ -152,6 +152,8 @@ Result<UserDto> result = await FetchUserAsync(id)
     .EnsureAsync(dto => IsValidAsync(dto), Error.Validation("Invalid", "Not valid."));
 ```
 
+Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`, `result.Bind(async v => ...)`) still compile as `[Obsolete]` forwarders and will be removed in 7.0. An async lambda passed to `BindAsync` binds to the `Task` overload, and the `CancellationToken` is optional on every `Task` source.
+
 ### Collection Extensions
 
 Batch operations on sequences of results:

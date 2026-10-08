@@ -204,7 +204,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         bool failureCalled = false;
 
-        await task.Switch(
+        await task.SwitchAsync(
             () => successCalled = true,
             errors => failureCalled = true,
             default);
@@ -222,7 +222,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         bool failureCalled = false;
 
-        await task.Switch(
+        await task.SwitchAsync(
             () => successCalled = true,
             errors => failureCalled = true,
             default);
@@ -276,7 +276,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         bool failureCalled = false;
 
-        await task.SwitchFirst(
+        await task.SwitchFirstAsync(
             () => successCalled = true,
             error => failureCalled = true,
             default);
@@ -294,7 +294,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         Error? captured = null;
 
-        await task.SwitchFirst(
+        await task.SwitchFirstAsync(
             () => successCalled = true,
             error => captured = error,
             default);
@@ -348,7 +348,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         bool failureCalled = false;
 
-        await task.SwitchLast(
+        await task.SwitchLastAsync(
             () => successCalled = true,
             error => failureCalled = true,
             default);
@@ -366,7 +366,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         Error? captured = null;
 
-        await task.SwitchLast(
+        await task.SwitchLastAsync(
             () => successCalled = true,
             error => captured = error,
             default);
@@ -621,7 +621,7 @@ public class ResultSwitchTests
         bool failureCalled = false;
         int captured = 0;
 
-        await task.Switch(
+        await task.SwitchAsync(
             v => { successCalled = true; captured = v; },
             errors => failureCalled = true);
 
@@ -639,7 +639,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         bool failureCalled = false;
 
-        await task.Switch(
+        await task.SwitchAsync(
             v => successCalled = true,
             errors => failureCalled = true);
 
@@ -693,7 +693,7 @@ public class ResultSwitchTests
         bool failureCalled = false;
         int captured = 0;
 
-        await task.SwitchFirst(
+        await task.SwitchFirstAsync(
             v => { successCalled = true; captured = v; },
             error => failureCalled = true);
 
@@ -711,7 +711,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         Error? captured = null;
 
-        await task.SwitchFirst(
+        await task.SwitchFirstAsync(
             v => successCalled = true,
             error => captured = error);
 
@@ -765,7 +765,7 @@ public class ResultSwitchTests
         bool failureCalled = false;
         int captured = 0;
 
-        await task.SwitchLast(
+        await task.SwitchLastAsync(
             v => { successCalled = true; captured = v; },
             error => failureCalled = true);
 
@@ -783,7 +783,7 @@ public class ResultSwitchTests
         bool successCalled = false;
         Error? captured = null;
 
-        await task.SwitchLast(
+        await task.SwitchLastAsync(
             v => successCalled = true,
             error => captured = error);
 

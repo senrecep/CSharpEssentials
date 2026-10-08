@@ -166,7 +166,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        string matched = await task.Match(
+        string matched = await task.MatchAsync(
             () => "success",
             errors => $"failure:{errors.Length}");
 
@@ -180,7 +180,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result.Failure(TestError));
 #pragma warning restore IDE0008
 
-        string matched = await task.Match(
+        string matched = await task.MatchAsync(
             () => "success",
             errors => $"failure:{errors.Length}");
 
@@ -222,7 +222,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        string matched = await task.MatchFirst(
+        string matched = await task.MatchFirstAsync(
             () => "success",
             error => $"failure:{error.Code}");
 
@@ -236,7 +236,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result.Failure(TestError));
 #pragma warning restore IDE0008
 
-        string matched = await task.MatchFirst(
+        string matched = await task.MatchFirstAsync(
             () => "success",
             error => $"failure:{error.Code}");
 
@@ -278,7 +278,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        string matched = await task.MatchLast(
+        string matched = await task.MatchLastAsync(
             () => "success",
             error => $"failure:{error.Code}");
 
@@ -292,7 +292,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result.Failure(TestError, AnotherError));
 #pragma warning restore IDE0008
 
-        string matched = await task.MatchLast(
+        string matched = await task.MatchLastAsync(
             () => "success",
             error => $"failure:{error.Code}");
 
@@ -488,7 +488,7 @@ public class ResultMatchTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        string matched = await task.Match(
+        string matched = await task.MatchAsync(
             (int v) => $"success:{v}",
             errors => $"failure:{errors.Length}");
 
@@ -502,7 +502,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        string matched = await task.Match(
+        string matched = await task.MatchAsync(
             (int v) => $"success:{v}",
             errors => $"failure:{errors.Length}");
 
@@ -544,7 +544,7 @@ public class ResultMatchTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        string matched = await task.MatchFirst(
+        string matched = await task.MatchFirstAsync(
             (int v) => $"success:{v}",
             error => $"failure:{error.Code}");
 
@@ -558,7 +558,7 @@ public class ResultMatchTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        string matched = await task.MatchFirst(
+        string matched = await task.MatchFirstAsync(
             (int v) => $"success:{v}",
             error => $"failure:{error.Code}");
 

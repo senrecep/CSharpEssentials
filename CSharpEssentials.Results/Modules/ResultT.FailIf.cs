@@ -73,7 +73,7 @@ public static partial class ResultExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> FailIf<TValue>(
+    public static async Task<Result<TValue>> FailIfAsync<TValue>(
         this Task<Result<TValue>> task,
         Func<TValue, bool> onSuccess,
         Error error,
@@ -92,7 +92,7 @@ public static partial class ResultExtensions
     /// <param name="func"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> FailIf<TValue>(
+    public static async Task<Result<TValue>> FailIfAsync<TValue>(
         this Task<Result<TValue>> task,
         Func<TValue, bool> onSuccess,
         Func<TValue, Error> func,
@@ -143,7 +143,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Fail if the value is true.
     /// </summary>
-    public static async ValueTask<Result<TValue>> FailIf<TValue>(
+    public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
         this ValueTask<Result<TValue>> task,
         Func<TValue, bool> onSuccess,
         Error error,
@@ -156,7 +156,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Fail if the value is true.
     /// </summary>
-    public static async ValueTask<Result<TValue>> FailIf<TValue>(
+    public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
         this ValueTask<Result<TValue>> task,
         Func<TValue, bool> onSuccess,
         Func<TValue, Error> func,

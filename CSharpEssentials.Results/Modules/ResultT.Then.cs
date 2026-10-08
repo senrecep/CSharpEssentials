@@ -98,7 +98,7 @@ public static partial class ResultExtensions
     /// <param name="onSuccess"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<T>> Then<TValue, T>(this Task<Result<TValue>> task, Func<TValue, Result<T>> onSuccess, CancellationToken cancellationToken = default)
+    public static async Task<Result<T>> ThenAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, Result<T>> onSuccess, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Then(onSuccess);
@@ -113,7 +113,7 @@ public static partial class ResultExtensions
     /// <param name="onSuccess"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<T>> Then<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, CancellationToken cancellationToken = default)
+    public static async Task<Result<T>> ThenAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Then(onSuccess);
@@ -127,7 +127,7 @@ public static partial class ResultExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> ThenDo<TValue>(this Task<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ThenDoAsync<TValue>(this Task<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.ThenDo(action);
@@ -180,7 +180,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Executes the given function if the result is successful.
     /// </summary>
-    public static async ValueTask<Result<T>> Then<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Result<T>> onSuccess, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<T>> ThenAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Result<T>> onSuccess, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Then(onSuccess);
@@ -189,7 +189,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Executes the given function if the result is successful.
     /// </summary>
-    public static async ValueTask<Result<T>> Then<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<T>> ThenAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Then(onSuccess);
@@ -198,7 +198,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Executes the given action if the result is successful.
     /// </summary>
-    public static async ValueTask<Result<TValue>> ThenDo<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<TValue>> ThenDoAsync<TValue>(this ValueTask<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.ThenDo(action);

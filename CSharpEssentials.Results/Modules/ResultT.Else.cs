@@ -146,7 +146,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<Error[], TValue> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], TValue> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -160,7 +160,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, TValue onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, TValue onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -202,7 +202,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -216,7 +216,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Func<Error[], Error[]> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Error[]> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -230,7 +230,7 @@ public static partial class ResultExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> Else<TValue>(this Task<Result<TValue>> task, Error error, CancellationToken cancellationToken = default)
+    public static async Task<Result<TValue>> ElseAsync<TValue>(this Task<Result<TValue>> task, Error error, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(error);
@@ -280,7 +280,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// If the operation failed, executes a function to generate a single error and returns a new Result with that error.
     /// </summary>
-    public static async ValueTask<Result<TValue>> Else<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], TValue> onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<TValue>> ElseAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], TValue> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -289,7 +289,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// If the operation failed, replaces the current errors with the provided value.
     /// </summary>
-    public static async ValueTask<Result<TValue>> Else<TValue>(this ValueTask<Result<TValue>> task, TValue onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<TValue>> ElseAsync<TValue>(this ValueTask<Result<TValue>> task, TValue onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -316,7 +316,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// If the operation failed, executes a function to generate a single error and returns a new Result with that error.
     /// </summary>
-    public static async ValueTask<Result<TValue>> Else<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<TValue>> ElseAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -325,7 +325,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// If the operation failed, executes a function to generate multiple errors and returns a new Result with those errors.
     /// </summary>
-    public static async ValueTask<Result<TValue>> Else<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Error[]> onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<TValue>> ElseAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Error[]> onFailure, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(onFailure);
@@ -334,7 +334,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// If the operation failed, replaces the current errors with the provided error.
     /// </summary>
-    public static async ValueTask<Result<TValue>> Else<TValue>(this ValueTask<Result<TValue>> task, Error error, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<TValue>> ElseAsync<TValue>(this ValueTask<Result<TValue>> task, Error error, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Else(error);

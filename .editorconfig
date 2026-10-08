@@ -458,3 +458,11 @@ dotnet_diagnostic.S1215.severity = none
 # LegacyNonCompliant keeps the earlier optional route parameter output as an opt-in (issue #101).
 [CSharpEssentials.AspNetCore.Swashbuckle/OptionalRouteParameterMode.cs]
 dotnet_diagnostic.S1133.severity = none
+
+# The unsuffixed Task/ValueTask names stay as obsolete forwarders to the *Async names until 7.0 (issue #108).
+[{CSharpEssentials.Results/Modules/{Result,ResultT}.Obsolete.cs,CSharpEssentials.Maybe/Modules/Where.Obsolete.cs}]
+dotnet_diagnostic.S1133.severity = none
+
+# Tests of the obsolete unsuffixed async names.
+[CSharpEssentials.Tests/Results/AsyncNamingForwarderTests.cs]
+dotnet_diagnostic.S1133.severity = none

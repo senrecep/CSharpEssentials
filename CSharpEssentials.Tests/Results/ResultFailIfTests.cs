@@ -144,7 +144,7 @@ public class ResultFailIfTests
     {
         Task<Result<int>> task = Task.FromResult(10.ToResult());
 
-        Result<int> failIfResult = await task.FailIf(
+        Result<int> failIfResult = await task.FailIfAsync(
             value => value > 5,
             TestError);
 
@@ -157,7 +157,7 @@ public class ResultFailIfTests
     {
         Task<Result<int>> task = Task.FromResult(3.ToResult());
 
-        Result<int> failIfResult = await task.FailIf(
+        Result<int> failIfResult = await task.FailIfAsync(
             value => value > 5,
             TestError);
 
@@ -170,7 +170,7 @@ public class ResultFailIfTests
     {
         Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
 
-        Result<int> failIfResult = await task.FailIf(
+        Result<int> failIfResult = await task.FailIfAsync(
             value => value > 5,
             AnotherError);
 
@@ -183,7 +183,7 @@ public class ResultFailIfTests
     {
         Task<Result<int>> task = Task.FromResult(10.ToResult());
 
-        Result<int> failIfResult = await task.FailIf(
+        Result<int> failIfResult = await task.FailIfAsync(
             value => value > 5,
             value => Error.Validation("Computed.Code", $"Value {value}"));
 

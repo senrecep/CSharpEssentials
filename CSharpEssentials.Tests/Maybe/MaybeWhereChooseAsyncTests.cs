@@ -13,7 +13,7 @@ public class MaybeWhereChooseAsyncTests
     {
         var maybe = Maybe<int>.From(10);
 
-        Maybe<int> result = await maybe.Where(v => Task.FromResult(v > 5));
+        Maybe<int> result = await maybe.WhereAsync(v => Task.FromResult(v > 5));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(10);
@@ -24,7 +24,7 @@ public class MaybeWhereChooseAsyncTests
     {
         var maybe = Maybe<int>.From(3);
 
-        Maybe<int> result = await maybe.Where(v => Task.FromResult(v > 5));
+        Maybe<int> result = await maybe.WhereAsync(v => Task.FromResult(v > 5));
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -34,7 +34,7 @@ public class MaybeWhereChooseAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Where(v => Task.FromResult(v > 5));
+        Maybe<int> result = await maybe.WhereAsync(v => Task.FromResult(v > 5));
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -48,7 +48,7 @@ public class MaybeWhereChooseAsyncTests
     {
         var maybe = Maybe<string>.From("hello");
 
-        Maybe<string> result = await maybe.Where(v => ValueTask.FromResult(v.Length > 3));
+        Maybe<string> result = await maybe.WhereAsync(v => ValueTask.FromResult(v.Length > 3));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be("hello");
@@ -59,7 +59,7 @@ public class MaybeWhereChooseAsyncTests
     {
         var maybe = Maybe<string>.From("hi");
 
-        Maybe<string> result = await maybe.Where(v => ValueTask.FromResult(v.Length > 3));
+        Maybe<string> result = await maybe.WhereAsync(v => ValueTask.FromResult(v.Length > 3));
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -69,7 +69,7 @@ public class MaybeWhereChooseAsyncTests
     {
         Maybe<string> maybe = Maybe<string>.None;
 
-        Maybe<string> result = await maybe.Where(v => ValueTask.FromResult(v.Length > 3));
+        Maybe<string> result = await maybe.WhereAsync(v => ValueTask.FromResult(v.Length > 3));
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -83,7 +83,7 @@ public class MaybeWhereChooseAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(20));
 
-        Maybe<int> result = await maybeTask.Where(v => v > 10);
+        Maybe<int> result = await maybeTask.WhereAsync(v => v > 10);
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(20);
@@ -94,7 +94,7 @@ public class MaybeWhereChooseAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(5));
 
-        Maybe<int> result = await maybeTask.Where(v => v > 10);
+        Maybe<int> result = await maybeTask.WhereAsync(v => v > 10);
 
         result.HasNoValue.Should().BeTrue();
     }
@@ -104,7 +104,7 @@ public class MaybeWhereChooseAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
 
-        Maybe<int> result = await maybeTask.Where(v => v > 10);
+        Maybe<int> result = await maybeTask.WhereAsync(v => v > 10);
 
         result.HasNoValue.Should().BeTrue();
     }

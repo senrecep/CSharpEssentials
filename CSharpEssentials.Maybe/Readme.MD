@@ -81,6 +81,8 @@ Maybe<Order> order = await user
     .MapAsync(o => EnrichAsync(o));
 ```
 
+Every member that returns `Task` or `ValueTask` ends in `Async`. The async filter is `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`); an async predicate binds to the `Task` overload. The old unsuffixed `Where` on `Task`/`ValueTask` predicates and sources still compiles as an `[Obsolete]` forwarder and will be removed in 7.0.
+
 ### Collection Extensions
 
 ```csharp
