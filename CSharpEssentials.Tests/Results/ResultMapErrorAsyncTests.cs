@@ -572,4 +572,247 @@ public class ResultMapErrorAsyncTests
     }
 
     #endregion
+
+    #region Overload resolution
+
+    [Fact]
+    public async Task Result_MapErrorAsync_AsyncLambda_PerError_ShouldResolveToTaskOverload()
+    {
+        Result mapped = await Result.Failure(ThreeErrors).MapErrorAsync(async (Error e) => { await Task.Yield(); return e; });
+
+        mapped.Errors.Should().Equal(ThreeErrors);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_AsyncLambda_Array_ShouldResolveToTaskOverload()
+    {
+        Result mapped = await Result.Failure(ThreeErrors).MapErrorAsync(async (Error[] e) => { await Task.Yield(); return e; });
+
+        mapped.Errors.Should().Equal(ThreeErrors);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_AsyncLambda_PerError_ShouldResolveToTaskOverload()
+    {
+        Result<int> mapped = await Result<int>.Failure(ThreeErrors).MapErrorAsync(async (Error e) => { await Task.Yield(); return e; });
+
+        mapped.Errors.Should().Equal(ThreeErrors);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_AsyncLambda_Array_ShouldResolveToTaskOverload()
+    {
+        Result<int> mapped = await Result<int>.Failure(ThreeErrors).MapErrorAsync(async (Error[] e) => { await Task.Yield(); return e; });
+
+        mapped.Errors.Should().Equal(ThreeErrors);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_AsyncLambda_InferredPerError_ShouldResolveToTaskOverload()
+    {
+        Task<Result> pending = Result.Failure(ThreeErrors).MapErrorAsync(async e => { await Task.Yield(); return Prefix(e); });
+
+        Result mapped = await pending;
+
+        mapped.Errors.Select(e => e.Code).Should().Equal(MappedCodes);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_AsyncLambda_InferredArray_ShouldResolveToTaskOverload()
+    {
+        Task<Result<int>> pending = Result<int>.Failure(ThreeErrors).MapErrorAsync(async errors => { await Task.Yield(); return errors.Select(Prefix).ToArray(); });
+
+        Result<int> mapped = await pending;
+
+        mapped.Errors.Select(e => e.Code).Should().Equal(MappedCodes);
+    }
+
+    #endregion
+
+    #region Success path
+
+    [Fact]
+    public void Result_MapErrorAsync_WithSuccess_ShouldReturnCompletedTasks()
+    {
+        Result result = Result.Success();
+
+        Task<Result> each = result.MapErrorAsync(MapOneTask);
+        ValueTask<Result> eachValue = result.MapErrorAsync(MapOneValueTask);
+        Task<Result> all = result.MapErrorAsync(MapAllTask);
+        ValueTask<Result> allValue = result.MapErrorAsync(MapAllValueTask);
+
+        each.IsCompletedSuccessfully.Should().BeTrue();
+        eachValue.IsCompletedSuccessfully.Should().BeTrue();
+        all.IsCompletedSuccessfully.Should().BeTrue();
+        allValue.IsCompletedSuccessfully.Should().BeTrue();
+        _calls.Should().Be(0);
+    }
+
+    [Fact]
+    public void ResultT_MapErrorAsync_WithSuccess_ShouldReturnCompletedTasks()
+    {
+        Result<int> result = 42.ToResult();
+
+        Task<Result<int>> each = result.MapErrorAsync(MapOneTask);
+        ValueTask<Result<int>> eachValue = result.MapErrorAsync(MapOneValueTask);
+        Task<Result<int>> all = result.MapErrorAsync(MapAllTask);
+        ValueTask<Result<int>> allValue = result.MapErrorAsync(MapAllValueTask);
+
+        each.IsCompletedSuccessfully.Should().BeTrue();
+        eachValue.IsCompletedSuccessfully.Should().BeTrue();
+        all.IsCompletedSuccessfully.Should().BeTrue();
+        allValue.IsCompletedSuccessfully.Should().BeTrue();
+        _calls.Should().Be(0);
+    }
+
+    #endregion
+
+    #region Cancellation and exceptions
+
+    [Fact]
+    public async Task Result_MapErrorAsync_PerErrorTask_WithCancelledToken_ShouldThrowWithoutInvokingMapper()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result.Failure(ThreeErrors).MapErrorAsync(MapOneTask, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_PerErrorValueTask_WithCancelledToken_ShouldThrowWithoutInvokingMapper()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await Result.Failure(ThreeErrors).MapErrorAsync(MapOneValueTask, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_ArrayTask_WithCancelledToken_ShouldThrowWithoutInvokingMapper()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result<int>.Failure(ThreeErrors).MapErrorAsync(MapAllTask, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_ArrayValueTask_WithCancelledToken_ShouldThrowWithoutInvokingMapper()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await Result<int>.Failure(ThreeErrors).MapErrorAsync(MapAllValueTask, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_TaskSource_WithCancelledToken_ShouldThrowWithoutInvokingMapper()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Task.FromResult(Result.Failure(ThreeErrors)).MapErrorAsync(MapOneTask, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_PerErrorTask_WhenCancelledBetweenErrors_ShouldStopMapping()
+    {
+        using var cts = new CancellationTokenSource();
+
+        Func<Task> act = () => Result.Failure(ThreeErrors).MapErrorAsync(
+            async (Error e) =>
+            {
+                Error mapped = await MapOneTask(e);
+                await cts.CancelAsync();
+                return mapped;
+            },
+            cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_PerErrorValueTask_WhenCancelledBetweenErrors_ShouldStopMapping()
+    {
+        using var cts = new CancellationTokenSource();
+
+        async ValueTask<Error> CancelAfterMap(Error e)
+        {
+            Error mapped = await MapOneValueTask(e);
+            await cts.CancelAsync();
+            return mapped;
+        }
+
+        Func<Task> act = async () => await Result<int>.Failure(ThreeErrors).MapErrorAsync(CancelAfterMap, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        _calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_PerErrorTask_WhenMapperThrows_ShouldNotInvokeRemainingMappers()
+    {
+        Func<Task> act = () => Result.Failure(ThreeErrors).MapErrorAsync(
+            async (Error e) =>
+            {
+                Error mapped = await MapOneTask(e);
+                if (_calls == 2)
+                    throw new InvalidOperationException("Mapper failed");
+                return mapped;
+            });
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_PerErrorValueTask_WhenMapperThrows_ShouldNotInvokeRemainingMappers()
+    {
+        async ValueTask<Error> ThrowOnSecond(Error e)
+        {
+            Error mapped = await MapOneValueTask(e);
+            if (_calls == 2)
+                throw new InvalidOperationException("Mapper failed");
+            return mapped;
+        }
+
+        Func<Task> act = async () => await Result<int>.Failure(ThreeErrors).MapErrorAsync(ThrowOnSecond);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        _calls.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Result_MapErrorAsync_ArrayTask_WhenMapperReturnsEmpty_ShouldThrowArgumentException()
+    {
+        Func<Task> act = () => Result.Failure(ThreeErrors).MapErrorAsync(_ => Task.FromResult(Array.Empty<Error>()));
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task ResultT_MapErrorAsync_ArrayValueTask_WhenMapperReturnsEmpty_ShouldThrowArgumentException()
+    {
+        Func<Task> act = async () => await Result<int>.Failure(ThreeErrors).MapErrorAsync(_ => new ValueTask<Error[]>(Array.Empty<Error>()));
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    #endregion
 }

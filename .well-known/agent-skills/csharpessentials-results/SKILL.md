@@ -102,7 +102,7 @@ Result<User> mapped = await GetUserAsync(id)
     .MapErrorAsync(e => Error.Failure($"Users.{e.Code}", e.Description));
 ```
 
-Per-error async mappers run one at a time, in order.
+Per-error async mappers run one at a time, in order. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
 
 ## Consuming: Match
 

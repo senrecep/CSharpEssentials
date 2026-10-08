@@ -208,7 +208,7 @@ Result result = InternalOperation()
 | `Task<Result>` / `Task<Result<T>>` | `Task<...>` | `Task<...>` | - |
 | `ValueTask<Result>` / `ValueTask<Result<T>>` | `ValueTask<...>` | - | `ValueTask<...>` |
 
-Per-error async mappers run sequentially, in order. On success no mapper is called and no async state machine is created for the instance overloads.
+Per-error async mappers run sequentially, in order. On success no mapper is called and no async state machine is created for the instance overloads. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
 
 ### Extracting Values: Leaving the Railway
 
