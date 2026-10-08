@@ -91,6 +91,48 @@ public sealed class AsyncMatrixBindingTests
     }
 
     [Fact]
+    public async Task TapAsync_Should_AwaitNonAsyncLambdaReturningTask_When_TaskSourceOfResultT()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var gate = new TaskCompletionSource();
+
+        // Func<int, Task> beats Action<int> for a lambda whose body returns a Task, so the returned task is awaited.
+        Task<Result<int>> pending = source.TapAsync(_ => gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task TapAsync_Should_BindAction_When_TaskSourceGetsNonAsyncLambdaReturningValueTask()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var gate = new TaskCompletionSource();
+
+        // No cross cells: a Task source has no Func<int, ValueTask> handler, so the Action overload wins and the
+        // returned ValueTask is discarded. Use an async lambda or return a Task to have it awaited.
+        Task<Result<int>> pending = source.TapAsync(_ => new ValueTask(gate.Task));
+        Result<int> result = await pending;
+        bool gateCompletedAfterTap = gate.Task.IsCompleted;
+        gate.SetResult();
+
+        (result.Value, gateCompletedAfterTap).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task MapAsync_Should_ReturnNestedTask_When_ValueTaskSourceGetsLambdaReturningTask()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+
+        // No cross cells: a Task-returning lambda on a ValueTask source binds the sync map, so TOut is Task<int>.
+        ValueTask<Result<Task<int>>> nested = source.MapAsync(x => Task.FromResult(x * 2));
+        Result<Task<int>> result = await nested;
+
+        (await result.Value).Should().Be(10);
+    }
+
+    [Fact]
     public async Task MapAsync_Should_ReturnValueTaskOfMappedResult_When_ValueTaskSourceGetsAsyncLambda()
     {
         ValueTask<Result<int>> source = new(Result<int>.Success(5));
