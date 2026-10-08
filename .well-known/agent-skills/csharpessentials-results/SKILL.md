@@ -79,6 +79,20 @@ Result<User> validated = await GetUserAsync(id)
     .EnsureAsync(u => IsActiveAsync(u), Error.Validation("User.Inactive", "Account is inactive."));
 ```
 
+## Mapping Errors
+
+```csharp
+// Per-error mapper: called once for every error, in order; never on success
+Result<User> renamed = GetUser(id)
+    .MapError(e => Error.Failure($"Users.{e.Code}", e.Description));
+
+// Array mapper: replaces the whole error array
+Result<User> collapsed = GetUser(id)
+    .MapError(errors => [Error.Failure("Users.Failed", $"{errors.Length} error(s)")]);
+```
+
+`MapError(Func<Error, Error>)` maps every error. Older versions mapped only `FirstError` and dropped the rest.
+
 ## Consuming: Match
 
 ```csharp

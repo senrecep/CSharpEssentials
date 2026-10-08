@@ -180,7 +180,8 @@ result
 |--------|-------------|-------------|
 | `Else(error)` | Replaces all errors with a new error | Error message normalization |
 | `Else(func)` | Transforms errors into replacement | Dynamic error replacement |
-| `MapError(func)` | Transforms each error individually | Error enrichment (add context) |
+| `MapError(Func<Error, Error>)` | Transforms every error individually, in order | Error enrichment (add context) |
+| `MapError(Func<Error[], Error[]>)` | Replaces the whole error array | Collapsing or reshaping errors |
 | `Compensate(func)` | Attempts recovery: can return Success | Retry, fallback strategies |
 | `CompensateFirst(func)` | Recovery using first error only | Single-error recovery |
 | `Recover(errorType, func)` | Recovers only from specific error types | Selective recovery (e.g., only NotFound) |
@@ -195,6 +196,8 @@ Result<Config> config = LoadConfig(key)
 Result result = InternalOperation()
     .Else(Error.Failure("Operation.Failed", "Something went wrong. Please try again."));
 ```
+
+`MapError(Func<Error, Error>)` maps every error and keeps the order; the mapper is never called on success. Earlier versions mapped only `FirstError` and dropped the remaining errors.
 
 ### Extracting Values: Leaving the Railway
 

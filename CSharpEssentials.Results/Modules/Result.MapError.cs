@@ -15,6 +15,9 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        return errorMapper(FirstError);
+        var mappedErrors = new Error[_errors.Length];
+        for (int i = 0; i < _errors.Length; i++)
+            mappedErrors[i] = errorMapper(_errors[i]);
+        return mappedErrors;
     }
 }

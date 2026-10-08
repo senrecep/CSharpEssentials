@@ -112,6 +112,20 @@ Result combined = Result.And(r1, r2, r3); // Failure
 Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exception(ex));
 ```
 
+### Mapping Errors
+
+```csharp
+// Per-error mapper: runs once for every error, in order. Never called on success.
+Result<User> result = GetUser(id)
+    .MapError(e => Error.Failure($"Users.{e.Code}", e.Description));
+
+// Array mapper: replaces the whole error array.
+Result<User> single = GetUser(id)
+    .MapError(errors => [Error.Failure("Users.Failed", $"{errors.Length} error(s)")]);
+```
+
+> **Behaviour change:** `MapError(Func<Error, Error>)` used to map only `FirstError` and drop the rest. It now maps every error and keeps the order.
+
 ### Async
 
 ```csharp
