@@ -126,6 +126,21 @@ Result<User> single = GetUser(id)
 
 > **Behaviour change:** `MapError(Func<Error, Error>)` used to map only `FirstError` and drop the rest. It now maps every error and keeps the order.
 
+`MapErrorAsync` takes `Task` or `ValueTask` mappers in the same two shapes. Per-error async mappers run one at a time, in order:
+
+```csharp
+// Instance: async mapper on a Result / Result<T>
+Result<User> localized = await result.MapErrorAsync(e => LocalizeAsync(e, ct), ct);
+
+// Task<Result<T>> source: sync or Task mappers
+Result<User> mapped = await GetUserAsync(id)
+    .MapErrorAsync(e => Error.Failure($"Users.{e.Code}", e.Description));
+
+// ValueTask<Result<T>> source: sync or ValueTask mappers
+Result<User> fromCache = await GetCachedUserAsync(id)
+    .MapErrorAsync(errors => CollapseAsync(errors));
+```
+
 ### Async
 
 ```csharp

@@ -93,6 +93,17 @@ Result<User> collapsed = GetUser(id)
 
 `MapError(Func<Error, Error>)` maps every error. Older versions mapped only `FirstError` and dropped the rest.
 
+```csharp
+// MapErrorAsync — instance: Task or ValueTask mappers, per error or per array
+Result<User> localized = await result.MapErrorAsync(e => LocalizeAsync(e, ct), ct);
+
+// Task<Result<T>> source: sync or Task mappers; ValueTask<Result<T>> source: sync or ValueTask mappers
+Result<User> mapped = await GetUserAsync(id)
+    .MapErrorAsync(e => Error.Failure($"Users.{e.Code}", e.Description));
+```
+
+Per-error async mappers run one at a time, in order.
+
 ## Consuming: Match
 
 ```csharp

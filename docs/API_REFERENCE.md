@@ -182,6 +182,7 @@ result
 | `Else(func)` | Transforms errors into replacement | Dynamic error replacement |
 | `MapError(Func<Error, Error>)` | Transforms every error individually, in order | Error enrichment (add context) |
 | `MapError(Func<Error[], Error[]>)` | Replaces the whole error array | Collapsing or reshaping errors |
+| `MapErrorAsync(...)` | Async `MapError`: `Task`/`ValueTask` mappers per error or per array | Error enrichment that needs I/O (localization, lookups) |
 | `Compensate(func)` | Attempts recovery: can return Success | Retry, fallback strategies |
 | `CompensateFirst(func)` | Recovery using first error only | Single-error recovery |
 | `Recover(errorType, func)` | Recovers only from specific error types | Selective recovery (e.g., only NotFound) |
@@ -198,6 +199,16 @@ Result result = InternalOperation()
 ```
 
 `MapError(Func<Error, Error>)` maps every error and keeps the order; the mapper is never called on success. Earlier versions mapped only `FirstError` and dropped the remaining errors.
+
+`MapErrorAsync` overloads, for both `Result` and `Result<T>` (every overload takes an optional `CancellationToken`):
+
+| Source | `Func<Error, Error>` / `Func<Error[], Error[]>` | `Func<Error, Task<Error>>` / `Func<Error[], Task<Error[]>>` | `Func<Error, ValueTask<Error>>` / `Func<Error[], ValueTask<Error[]>>` |
+|--------|:-:|:-:|:-:|
+| `Result` / `Result<T>` (instance) | `MapError` | `Task<...>` | `ValueTask<...>` |
+| `Task<Result>` / `Task<Result<T>>` | `Task<...>` | `Task<...>` | - |
+| `ValueTask<Result>` / `ValueTask<Result<T>>` | `ValueTask<...>` | - | `ValueTask<...>` |
+
+Per-error async mappers run sequentially, in order. On success no mapper is called and no async state machine is created for the instance overloads.
 
 ### Extracting Values: Leaving the Railway
 
