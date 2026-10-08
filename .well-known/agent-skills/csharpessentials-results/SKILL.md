@@ -128,6 +128,18 @@ Result<int[]> values = Result<int>.And(v1, v2); // generic form collects the val
 Result any = Result.Or(r1, r2, r3);
 ```
 
+## Async Collections
+
+```csharp
+// Sequential (one item at a time), accumulates ALL errors in input order
+Result<OrderDto[]> orders = await orderIds.TraverseAsync(async (id, ct) => await GetOrderAsync(id, ct), ct);
+
+// Already-started tasks: awaits every task, even after a failure
+Result<int[]> values = await tasks.SequenceAsync();
+```
+
+Cancellation throws `OperationCanceledException` (never an error `Result`). The `ValueTask` selector twins of `TraverseAsync` exist on .NET 9+ only.
+
 ## Safe Execution
 
 ```csharp
