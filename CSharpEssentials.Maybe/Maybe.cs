@@ -1,8 +1,8 @@
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Core;
-using CSharpEssentials.Json;
 using CSharpEssentials.Maybe.Interfaces;
 
 namespace CSharpEssentials.Maybe;
@@ -169,24 +169,25 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         {
             return From(factory());
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return None;
         }
     }
 
-    public static bool operator ==(Maybe<T> maybe, T? value)
-    {
-        if (value is Maybe<T> maybeValue)
-            return maybe.Equals(maybeValue);
+    /// <summary>
+    /// Compares a Maybe with a plain value. A null value equals <see cref="None"/>; a non-null value never equals <see cref="None"/>.
+    /// </summary>
+    public static bool operator ==(Maybe<T> maybe, T? value) =>
+        value is null
+            ? maybe.HasNoValue
+            : maybe.HasValue && EqualityComparer<T>.Default.Equals(maybe._value, value);
 
-        if (maybe.HasNoValue)
-            return Equals(value, default(T));
+    public static bool operator !=(Maybe<T> maybe, T? value) => !(maybe == value);
 
-        return maybe._value.Equals(value);
-    }
+    public static bool operator ==(T? value, Maybe<T> maybe) => maybe == value;
 
-    public static bool operator !=(Maybe<T> maybe, T value) => !(maybe == value);
+    public static bool operator !=(T? value, Maybe<T> maybe) => !(maybe == value);
 
     public static bool operator ==(Maybe<T> maybe, object other) => maybe.Equals(other);
 
@@ -205,7 +206,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
             return Equals(otherMaybe);
 
         if (obj is T otherValue)
-            return Equals(otherValue);
+            return HasValue && EqualityComparer<T>.Default.Equals(_value, otherValue);
 
         return false;
     }
@@ -226,15 +227,22 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         if (HasNoValue)
             return 0;
 
-        return _value.GetHashCode();
+        return EqualityComparer<T>.Default.GetHashCode(_value);
     }
 
+    /// <summary>
+    /// Returns <c>Some(value)</c> or <c>None</c>. Values implementing <see cref="IFormattable"/> are formatted with the invariant culture.
+    /// </summary>
     public override string ToString()
     {
         if (HasNoValue)
-            return "No value";
+            return "None";
 
-        return _value.ConvertToJson();
+        string? text = _value is IFormattable formattable
+            ? formattable.ToString(null, CultureInfo.InvariantCulture)
+            : _value.ToString();
+
+        return $"Some({text})";
     }
 }
 public readonly record struct Maybe : IMaybe
