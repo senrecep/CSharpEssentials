@@ -148,7 +148,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        Result elseResult = await task.Else(errors => AnotherError);
+        Result elseResult = await task.ElseAsync(errors => AnotherError);
 
         elseResult.IsSuccess.Should().BeTrue();
     }
@@ -160,7 +160,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result elseResult = await task.Else(errors => AnotherError);
+        Result elseResult = await task.ElseAsync(errors => AnotherError);
 
         elseResult.IsFailure.Should().BeTrue();
         elseResult.FirstError.Should().Be(AnotherError);
@@ -173,7 +173,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        Result elseResult = await task.Else(errors => new[] { AnotherError });
+        Result elseResult = await task.ElseAsync(errors => new[] { AnotherError });
 
         elseResult.IsSuccess.Should().BeTrue();
     }
@@ -185,7 +185,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result elseResult = await task.Else(errors => new[] { AnotherError });
+        Result elseResult = await task.ElseAsync(errors => new[] { AnotherError });
 
         elseResult.IsFailure.Should().BeTrue();
         elseResult.Errors.Should().ContainSingle().Which.Should().Be(AnotherError);
@@ -198,7 +198,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result.Success());
 #pragma warning restore IDE0008
 
-        Result elseResult = await task.Else(AnotherError);
+        Result elseResult = await task.ElseAsync(AnotherError);
 
         elseResult.IsSuccess.Should().BeTrue();
     }
@@ -210,7 +210,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result elseResult = await task.Else(AnotherError);
+        Result elseResult = await task.ElseAsync(AnotherError);
 
         elseResult.IsFailure.Should().BeTrue();
         elseResult.FirstError.Should().Be(AnotherError);
@@ -526,7 +526,7 @@ public class ResultElseTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(errors => 99);
+        Result<int> elseResult = await task.ElseAsync(errors => 99);
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(42);
@@ -539,7 +539,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(errors => 99);
+        Result<int> elseResult = await task.ElseAsync(errors => 99);
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(99);
@@ -552,7 +552,7 @@ public class ResultElseTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(99);
+        Result<int> elseResult = await task.ElseAsync(99);
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(42);
@@ -565,7 +565,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(99);
+        Result<int> elseResult = await task.ElseAsync(99);
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(99);
@@ -630,7 +630,7 @@ public class ResultElseTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(errors => AnotherError);
+        Result<int> elseResult = await task.ElseAsync(errors => AnotherError);
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(42);
@@ -643,7 +643,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(errors => AnotherError);
+        Result<int> elseResult = await task.ElseAsync(errors => AnotherError);
 
         elseResult.IsFailure.Should().BeTrue();
         elseResult.FirstError.Should().Be(AnotherError);
@@ -656,7 +656,7 @@ public class ResultElseTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(errors => new[] { AnotherError });
+        Result<int> elseResult = await task.ElseAsync(errors => new[] { AnotherError });
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(42);
@@ -669,7 +669,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(errors => new[] { AnotherError });
+        Result<int> elseResult = await task.ElseAsync(errors => new[] { AnotherError });
 
         elseResult.IsFailure.Should().BeTrue();
         elseResult.Errors.Should().ContainSingle().Which.Should().Be(AnotherError);
@@ -682,7 +682,7 @@ public class ResultElseTests
         var task = Task.FromResult(42.ToResult());
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(AnotherError);
+        Result<int> elseResult = await task.ElseAsync(AnotherError);
 
         elseResult.IsSuccess.Should().BeTrue();
         elseResult.Value.Should().Be(42);
@@ -695,7 +695,7 @@ public class ResultElseTests
         var task = Task.FromResult(Result<int>.Failure(TestError));
 #pragma warning restore IDE0008
 
-        Result<int> elseResult = await task.Else(AnotherError);
+        Result<int> elseResult = await task.ElseAsync(AnotherError);
 
         elseResult.IsFailure.Should().BeTrue();
         elseResult.FirstError.Should().Be(AnotherError);

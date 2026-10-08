@@ -83,7 +83,7 @@ public static partial class ResultExtensions
     /// <param name="onFailure"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<T> Match<T>(this Task<Result> task, Func<T> onSuccess, Func<Error[], T> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchAsync<T>(this Task<Result> task, Func<T> onSuccess, Func<Error[], T> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return result.Match(onSuccess, onFailure);
@@ -101,7 +101,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Awaits a Task and executes MatchFirst to handle success or failure based on the first error.
     /// </summary>
-    public static async Task<T> MatchFirst<T>(this Task<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchFirstAsync<T>(this Task<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return result.MatchFirst(onSuccess, onFailure);
@@ -119,7 +119,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Awaits a Task and executes MatchLast to handle success or failure based on the last error.
     /// </summary>
-    public static async Task<T> MatchLast<T>(this Task<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchLastAsync<T>(this Task<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return result.MatchLast(onSuccess, onFailure);
@@ -128,7 +128,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Awaits a Task and executes the asynchronous MatchLast method.
     /// </summary>
-    public static async Task<T> MatchLastAsync<T>(this Task<Result> task, Func<Task<T>> onSuccess, Func<Error, Task<T>> onFailure, CancellationToken cancellationToken)
+    public static async Task<T> MatchLastAsync<T>(this Task<Result> task, Func<Task<T>> onSuccess, Func<Error, Task<T>> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return await result.MatchLastAsync(onSuccess, onFailure, cancellationToken);
@@ -137,7 +137,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Awaits a ValueTask and executes Match to handle success or failure based on the result.
     /// </summary>
-    public static async ValueTask<T> Match<T>(this ValueTask<Result> task, Func<T> onSuccess, Func<Error[], T> onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<T> MatchAsync<T>(this ValueTask<Result> task, Func<T> onSuccess, Func<Error[], T> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return result.Match(onSuccess, onFailure);
@@ -155,7 +155,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Awaits a ValueTask and executes MatchFirst to handle success or failure based on the first error.
     /// </summary>
-    public static async ValueTask<T> MatchFirst<T>(this ValueTask<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<T> MatchFirstAsync<T>(this ValueTask<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return result.MatchFirst(onSuccess, onFailure);
@@ -173,7 +173,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Awaits a ValueTask and executes MatchLast to handle success or failure based on the last error.
     /// </summary>
-    public static async ValueTask<T> MatchLast<T>(this ValueTask<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
+    public static async ValueTask<T> MatchLastAsync<T>(this ValueTask<Result> task, Func<T> onSuccess, Func<Error, T> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         return result.MatchLast(onSuccess, onFailure);

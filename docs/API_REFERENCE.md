@@ -272,7 +272,7 @@ var result =
 
 ### Async Support
 
-Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. On a `Task<Result<T>>` the chain methods take the `Async` suffix (`BindAsync`, `MapAsync`, `TapAsync`):
+Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
 
 ```csharp
 Result<UserDto> result = await GetUserAsync(id)
@@ -372,6 +372,8 @@ Maybe<string> displayName = GetUser(id)
     .Map(p => p.DisplayName.Trim())
     .Where(name => name.Length > 0);
 ```
+
+In this release only the async filter was renamed: `Where` with a `Task`/`ValueTask` predicate or source is now `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`). The old unsuffixed `Where` overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From(Task)` keep their unsuffixed names for now; a follow-up release renames them. An untyped async predicate binds to the `Task` overload of `WhereAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<T, Task<bool>>` local.
 
 ### Extracting Values
 

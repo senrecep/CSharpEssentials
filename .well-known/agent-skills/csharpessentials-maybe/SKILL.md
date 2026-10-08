@@ -112,6 +112,10 @@ Result<string> r = maybe.ToMaybeResult(
     Error.NotFound("user.email", "No email address on file."));
 ```
 
+## Async Naming
+
+In this release only the async filter was renamed: `Where` with a `Task`/`ValueTask` predicate or source is now `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`). The old unsuffixed `Where` overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From(Task)` keep their unsuffixed names for now; a follow-up release renames them. An untyped async predicate binds to the `Task` overload of `WhereAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<T, Task<bool>>` local.
+
 ## Best Practices
 
 - Prefer implicit conversion (`Maybe<T> m = value;`, `return value;`, `Maybe.None`); use `Maybe.From()` or `.AsMaybe()` where the target type is not known; there is no `.ToMaybe()`

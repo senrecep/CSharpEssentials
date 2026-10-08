@@ -106,7 +106,7 @@ public static partial class ResultExtensions
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<T> Match<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error[], T> onError, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error[], T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Match(onSuccess, onError);
@@ -138,7 +138,7 @@ public static partial class ResultExtensions
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<T> MatchFirst<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchFirstAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.MatchFirst(onSuccess, onError);
@@ -163,7 +163,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided functions based on the last error.
     /// </summary>
-    public static async Task<T> MatchLast<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
+    public static async Task<T> MatchLastAsync<TValue, T>(this Task<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.MatchLast(onSuccess, onError);
@@ -181,7 +181,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided functions.
     /// </summary>
-    public static async ValueTask<T> Match<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error[], T> onError, CancellationToken cancellationToken = default)
+    public static async ValueTask<T> MatchAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error[], T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.Match(onSuccess, onError);
@@ -199,7 +199,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided functions based on the first error.
     /// </summary>
-    public static async ValueTask<T> MatchFirst<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
+    public static async ValueTask<T> MatchFirstAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.MatchFirst(onSuccess, onError);
@@ -217,7 +217,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided functions based on the last error.
     /// </summary>
-    public static async ValueTask<T> MatchLast<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
+    public static async ValueTask<T> MatchLastAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, T> onSuccess, Func<Error, T> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return result.MatchLast(onSuccess, onError);

@@ -301,32 +301,36 @@ public interface IResult<TValue> : IResultBase
     Result Bind(Func<TValue, Result> func);
 
     /// <summary>
-    /// Binds a function to the result.
+    /// Binds a function to the result. Obsolete: use <c>BindAsync</c> on the concrete result type; this member will be removed in 7.0.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
     /// <param name="func"></param>
     /// <returns></returns>
+    [Obsolete("Use BindAsync on Result/Result<T>. Will be removed in 7.0.")]
     Task<Result<TOut>> Bind<TOut>(Func<TValue, Task<Result<TOut>>> func);
 
     /// <summary>
-    /// Binds a function to the result.
+    /// Binds a function to the result. Obsolete: use <c>BindAsync</c> on the concrete result type; this member will be removed in 7.0.
     /// </summary>
     /// <param name="func"></param>
     /// <returns></returns>
+    [Obsolete("Use BindAsync on Result/Result<T>. Will be removed in 7.0.")]
     Task<Result> Bind(Func<TValue, Task<Result>> func);
 
     /// <summary>
-    /// Binds a function to the result.
+    /// Binds a function to the result. Obsolete: use <c>BindAsync</c> on the concrete result type; this member will be removed in 7.0.
     /// </summary>
     /// <typeparam name="TOut"></typeparam>
     /// <param name="valueTask"></param>
     /// <returns></returns>
+    [Obsolete("Use BindAsync on Result/Result<T>. Will be removed in 7.0.")]
     ValueTask<Result<TOut>> Bind<TOut>(Func<TValue, ValueTask<Result<TOut>>> valueTask);
 
     /// <summary>
-    /// Binds a function to the result.
+    /// Binds a function to the result. Obsolete: use <c>BindAsync</c> on the concrete result type; this member will be removed in 7.0.
     /// </summary>
     /// <param name="valueTask"></param>
     /// <returns></returns>
+    [Obsolete("Use BindAsync on Result/Result<T>. Will be removed in 7.0.")]
     ValueTask<Result> Bind(Func<TValue, ValueTask<Result>> valueTask);
 }

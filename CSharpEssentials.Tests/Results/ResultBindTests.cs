@@ -69,7 +69,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result<int> bound = await result.Bind(() => Task.FromResult(42.ToResult()));
+        Result<int> bound = await result.BindAsync(() => Task.FromResult(42.ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -81,7 +81,7 @@ public class ResultBindTests
         var result = Result.Failure(TestError);
         bool called = false;
 
-        Result<int> bound = await result.Bind(() =>
+        Result<int> bound = await result.BindAsync(() =>
         {
             called = true;
             return Task.FromResult(42.ToResult());
@@ -96,7 +96,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result bound = await result.Bind(() => Task.FromResult(Result.Success()));
+        Result bound = await result.BindAsync(() => Task.FromResult(Result.Success()));
 
         bound.IsSuccess.Should().BeTrue();
     }
@@ -107,7 +107,7 @@ public class ResultBindTests
         var result = Result.Failure(TestError);
         bool called = false;
 
-        Result bound = await result.Bind(() =>
+        Result bound = await result.BindAsync(() =>
         {
             called = true;
             return Task.FromResult(Result.Success());
@@ -122,7 +122,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result<int> bound = await result.Bind(() => ValueTask.FromResult(42.ToResult()));
+        Result<int> bound = await result.BindAsync(() => ValueTask.FromResult(42.ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be(42);
@@ -134,7 +134,7 @@ public class ResultBindTests
         var result = Result.Failure(TestError);
         bool called = false;
 
-        Result<int> bound = await result.Bind(() =>
+        Result<int> bound = await result.BindAsync(() =>
         {
             called = true;
             return ValueTask.FromResult(42.ToResult());
@@ -149,7 +149,7 @@ public class ResultBindTests
     {
         var result = Result.Success();
 
-        Result bound = await result.Bind(() => ValueTask.FromResult(Result.Success()));
+        Result bound = await result.BindAsync(() => ValueTask.FromResult(Result.Success()));
 
         bound.IsSuccess.Should().BeTrue();
     }
@@ -160,7 +160,7 @@ public class ResultBindTests
         var result = Result.Failure(TestError);
         bool called = false;
 
-        Result bound = await result.Bind(() =>
+        Result bound = await result.BindAsync(() =>
         {
             called = true;
             return ValueTask.FromResult(Result.Success());
@@ -418,7 +418,7 @@ public class ResultBindTests
     {
         var result = 10.ToResult();
 
-        Result<string> bound = await result.Bind(v => Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
+        Result<string> bound = await result.BindAsync(v => Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -430,7 +430,7 @@ public class ResultBindTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result<string> bound = await result.Bind(v =>
+        Result<string> bound = await result.BindAsync(v =>
         {
             called = true;
             return Task.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
@@ -445,7 +445,7 @@ public class ResultBindTests
     {
         var result = 10.ToResult();
 
-        Result bound = await result.Bind(v => Task.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
+        Result bound = await result.BindAsync(v => Task.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
         bound.IsSuccess.Should().BeTrue();
     }
@@ -456,7 +456,7 @@ public class ResultBindTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result bound = await result.Bind(v =>
+        Result bound = await result.BindAsync(v =>
         {
             called = true;
             return Task.FromResult(Result.Success());
@@ -471,7 +471,7 @@ public class ResultBindTests
     {
         var result = 10.ToResult();
 
-        Result<string> bound = await result.Bind(v => ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
+        Result<string> bound = await result.BindAsync(v => ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult()));
 
         bound.IsSuccess.Should().BeTrue();
         bound.Value.Should().Be("10");
@@ -483,7 +483,7 @@ public class ResultBindTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result<string> bound = await result.Bind(v =>
+        Result<string> bound = await result.BindAsync(v =>
         {
             called = true;
             return ValueTask.FromResult(v.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult());
@@ -498,7 +498,7 @@ public class ResultBindTests
     {
         var result = 10.ToResult();
 
-        Result bound = await result.Bind(v => ValueTask.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
+        Result bound = await result.BindAsync(v => ValueTask.FromResult(v > 5 ? Result.Success() : Result.Failure(TestError)));
 
         bound.IsSuccess.Should().BeTrue();
     }
@@ -509,7 +509,7 @@ public class ResultBindTests
         var result = Result<int>.Failure(TestError);
         bool called = false;
 
-        Result bound = await result.Bind(v =>
+        Result bound = await result.BindAsync(v =>
         {
             called = true;
             return ValueTask.FromResult(Result.Success());

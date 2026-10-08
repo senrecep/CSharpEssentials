@@ -81,6 +81,8 @@ Maybe<Order> order = await user
     .MapAsync(o => EnrichAsync(o));
 ```
 
+In this release only the async filter was renamed: `Where` with a `Task`/`ValueTask` predicate or source is now `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`). The old unsuffixed `Where` overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From(Task)` keep their unsuffixed names for now; a follow-up release renames them. An untyped async predicate binds to the `Task` overload of `WhereAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<T, Task<bool>>` local.
+
 ### Collection Extensions
 
 ```csharp

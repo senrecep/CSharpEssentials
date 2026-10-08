@@ -130,7 +130,7 @@ public class ResultThenTests
         Task<Result> task = Task.FromResult(Result.Success());
         bool called = false;
 
-        Result thenResult = await task.Then(() => { called = true; return Result.Success(); }, CancellationToken.None);
+        Result thenResult = await task.ThenAsync(() => { called = true; return Result.Success(); }, CancellationToken.None);
 
         thenResult.IsSuccess.Should().BeTrue();
         called.Should().BeTrue();
@@ -142,7 +142,7 @@ public class ResultThenTests
         Task<Result> task = Task.FromResult(Result.Failure(TestError));
         bool called = false;
 
-        Result thenResult = await task.Then(() => { called = true; return Result.Success(); }, CancellationToken.None);
+        Result thenResult = await task.ThenAsync(() => { called = true; return Result.Success(); }, CancellationToken.None);
 
         thenResult.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
@@ -154,7 +154,7 @@ public class ResultThenTests
         Task<Result> task = Task.FromResult(Result.Success());
         bool called = false;
 
-        Result thenResult = await task.ThenDo(() => called = true, CancellationToken.None);
+        Result thenResult = await task.ThenDoAsync(() => called = true, CancellationToken.None);
 
         thenResult.IsSuccess.Should().BeTrue();
         called.Should().BeTrue();
@@ -166,7 +166,7 @@ public class ResultThenTests
         Task<Result> task = Task.FromResult(Result.Failure(TestError));
         bool called = false;
 
-        Result thenResult = await task.ThenDo(() => called = true, CancellationToken.None);
+        Result thenResult = await task.ThenDoAsync(() => called = true, CancellationToken.None);
 
         thenResult.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
@@ -424,7 +424,7 @@ public class ResultThenTests
     {
         Task<Result<int>> task = Task.FromResult(10.ToResult());
 
-        Result<string> thenResult = await task.Then(
+        Result<string> thenResult = await task.ThenAsync(
             value => value.ToString(System.Globalization.CultureInfo.InvariantCulture).ToResult(),
             CancellationToken.None);
 
@@ -438,7 +438,7 @@ public class ResultThenTests
         Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
-        Result<string> thenResult = await task.Then(
+        Result<string> thenResult = await task.ThenAsync(
             value =>
             {
                 called = true;
@@ -455,7 +455,7 @@ public class ResultThenTests
     {
         Task<Result<int>> task = Task.FromResult(10.ToResult());
 
-        Result<string> thenResult = await task.Then(
+        Result<string> thenResult = await task.ThenAsync(
             value => value.ToString(System.Globalization.CultureInfo.InvariantCulture),
             CancellationToken.None);
 
@@ -469,7 +469,7 @@ public class ResultThenTests
         Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
-        Result<string> thenResult = await task.Then(
+        Result<string> thenResult = await task.ThenAsync(
             value =>
             {
                 called = true;
@@ -487,7 +487,7 @@ public class ResultThenTests
         Task<Result<int>> task = Task.FromResult(42.ToResult());
         int captured = 0;
 
-        Result<int> thenResult = await task.ThenDo(value => captured = value, CancellationToken.None);
+        Result<int> thenResult = await task.ThenDoAsync(value => captured = value, CancellationToken.None);
 
         thenResult.IsSuccess.Should().BeTrue();
         captured.Should().Be(42);
@@ -499,7 +499,7 @@ public class ResultThenTests
         Task<Result<int>> task = Task.FromResult(Result<int>.Failure(TestError));
         bool called = false;
 
-        Result<int> thenResult = await task.ThenDo(_ => called = true, CancellationToken.None);
+        Result<int> thenResult = await task.ThenDoAsync(_ => called = true, CancellationToken.None);
 
         thenResult.IsFailure.Should().BeTrue();
         called.Should().BeFalse();
