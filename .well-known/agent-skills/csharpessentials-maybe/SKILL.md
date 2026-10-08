@@ -43,10 +43,24 @@ string val2 = maybe.GetValueOrThrow();             // throws InvalidOperationExc
 ## Exception-safe Creation
 
 ```csharp
-// Returns None if the factory throws — never propagates the exception
+// Returns None if the factory throws; OperationCanceledException is rethrown, never swallowed
 Maybe<int>  n = Maybe<int>.FromTry(() => int.Parse(input));
 Maybe<User> u = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json)!);
 ```
+
+## Choosing between `T?`, `Maybe<T>` and `Result<T>`
+
+- `T?` at boundaries: DTOs, entity columns, JSON.
+- `Maybe<T>` inside the domain, when absence is an expected state composed with `Map`/`Bind`.
+- `Result<T>` when the failure carries a reason the caller acts on.
+- Exceptions only for bugs and invariant violations.
+
+```csharp
+Maybe<string> middleName = entity.MiddleName;   // boundary T? → domain Maybe<T>, implicit
+Result<User>  found      = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFound", "User does not exist"));
+```
+
+Equality: `Maybe<int>.None == 0` is `false`, `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence (`Maybe<string>.None == null` is `true`), in either operand order; prefer `HasNoValue` over `== null`/`== default`. `Maybe<int> == null` hits CS9342 and `maybe == default` means `default(T)` for value types, so use `HasNoValue`. `ToString()` returns `Some(value)` or `None` (invariant culture for `IFormattable` values). Use `HasNoValue`, not the obsolete `IsNone`.
 
 ## Pattern Match
 

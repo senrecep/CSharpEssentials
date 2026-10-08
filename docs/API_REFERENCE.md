@@ -395,6 +395,28 @@ IEnumerable<string> names = users
     .Choose();
 ```
 
+### Choosing between `T?`, `Maybe<T>` and `Result<T>`
+
+| Use | When | Example |
+|-----|------|---------|
+| `T?` | At boundaries: DTOs, entity columns, JSON | `public string? MiddleName { get; set; }` |
+| `Maybe<T>` | Inside the domain, when absence is an expected state composed with `Map`/`Bind` | `Maybe<User> user = _cache.TryFind(id);` |
+| `Result<T>` | When the failure carries a reason the caller acts on | `Result<User> user = FindUser(id);` |
+| Exceptions | Only for bugs and invariant violations | `ArgumentNullException`, broken invariants |
+
+```csharp
+// Boundary: a nullable column converts implicitly into the domain
+Maybe<string> middleName = entity.MiddleName;
+
+// Domain: absence is expected, compose it
+string display = middleName.Map(n => n.ToUpperInvariant()).GetValueOrDefault("-");
+
+// The caller needs to know why it is missing: upgrade to Result
+Result<User> found = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFound", "User does not exist"));
+```
+
+`Maybe<T>.None` never equals a non-null plain `T`: `Maybe<int>.None == 0` is `false`, while `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence: `Maybe<string>.None == null` is `true` and `Maybe<string>.From("a") == null` is `false`, in either operand order. Prefer `HasNoValue` over `== null` or `== default` for clarity. For a value type `T`, `maybe == default` means `default(T)` (so `Maybe<int>.None == default` is `false`), and `Maybe<int> == null` does not compile cleanly (CS9342, a known overload ambiguity), so use `HasNoValue`. `ToString()` returns `Some(value)` or `None`; `IFormattable` values are formatted with the invariant culture.
+
 ### Maybe-Result Bridge
 
 | Method | Direction | What It Does |
