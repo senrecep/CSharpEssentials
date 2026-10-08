@@ -67,6 +67,9 @@ string display = Maybe.From(user?.Email)
 // Bind: flatMap — when the transform itself returns Maybe<T>
 Maybe<Address> address = Maybe.From(user)
     .Bind(u => Maybe.From(u.Address));
+
+// Flatten: Maybe<Maybe<T>> → Maybe<T>, and Maybe<T>? → Maybe<T> (null becomes None)
+Maybe<int> points = customer.LoyaltyPoints.Flatten(); // Maybe<int>? from an EF nullable column
 ```
 
 ## None-side Effects
