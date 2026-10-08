@@ -6,31 +6,31 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ## [6.3.0](https://github.com/senrecep/CSharpEssentials/compare/v6.2.0...v6.3.0) (2026-10-08)
 
 
+### Behaviour changes
+
+* **results:** `MapError(Func<Error, Error>)` now maps every error of a failed result, in order. It used to map only the first error and drop the rest.
+* **results:** `TryAsync` no longer turns the caller's cancellation into an error `Result`. When the passed token is cancelled, `OperationCanceledException` propagates. Cancellation from any other token still becomes an error. This also applies to `SaveChangesAsResultAsync` and to async rules evaluated by `RuleEngine.Evaluate` unless an enclosing sync rule returns it as an error `Result`.
+
+
 ### Added
 
 * **efcore:** add nullable Maybe&lt;T&gt;? column mapping ([a42be18](https://github.com/senrecep/CSharpEssentials/commit/a42be18177869a51bdf56101fe10e5489aba427c)), closes [#106](https://github.com/senrecep/CSharpEssentials/issues/106)
-* **efcore:** map Maybe&lt;T&gt;? properties to nullable columns ([ce782e2](https://github.com/senrecep/CSharpEssentials/commit/ce782e229714c54f94e04ceb091c9dba40a9bcaf))
 * **maybe:** add Flatten for Maybe&lt;T&gt;? ([8765bc9](https://github.com/senrecep/CSharpEssentials/commit/8765bc95d035dbf122b5bbf4fd020e3111b9bbde))
 * **results:** add MapErrorAsync overloads ([e0e78e2](https://github.com/senrecep/CSharpEssentials/commit/e0e78e2982b2f2425ca30636f0053b0539e20d72))
 * **rules:** add async RuleEngine.EvaluateAsync that awaits async rules ([e66f8bc](https://github.com/senrecep/CSharpEssentials/commit/e66f8bcb9c76c594d4bca7d5c8243f00d57279e4))
-* **rules:** add RuleEngine.EvaluateAsync that awaits async rules ([d235b5d](https://github.com/senrecep/CSharpEssentials/commit/d235b5d11c33bc30c388878219efa809289d932d))
 
 
 ### Fixed
 
 * **efcore:** map Maybe&lt;T&gt;? in complex types and document convention limits ([10ca7ef](https://github.com/senrecep/CSharpEssentials/commit/10ca7efe1de4fcbbe2a7236000e430bdd1886531))
-* **results:** map every error in MapError and add MapErrorAsync ([dcd8b89](https://github.com/senrecep/CSharpEssentials/commit/dcd8b896d5b1d8bead362d72f48c3c54d6098b8e))
 * **results:** map every error in MapError(Func&lt;Error, Error&gt;) ([8778617](https://github.com/senrecep/CSharpEssentials/commit/87786173348f203d2ef1f1918dc2cd7378bd894f)), closes [#107](https://github.com/senrecep/CSharpEssentials/issues/107)
-* **results:** propagate caller cancellation from TryAsync ([687945d](https://github.com/senrecep/CSharpEssentials/commit/687945dda89aab47f72dc3a67ec8dfe1b4836839))
 * **results:** propagate caller cancellation from TryAsync instead of converting it to an Error ([a126b51](https://github.com/senrecep/CSharpEssentials/commit/a126b51d8c6ec13ba5e7f4d78d958ed06150091f))
 * **rules:** document that sync Evaluate throws caller cancellation for async root rules ([1800cce](https://github.com/senrecep/CSharpEssentials/commit/1800cce4b687048c4abf4e1b3296e40881d0a212))
 
 
 ### Changed
 
-* **core:** skip allocations in WithCancellation when task completed or token cannot cancel ([f94681c](https://github.com/senrecep/CSharpEssentials/commit/f94681c41421e98d2789aa207c0c2cd3cfe13872))
 * **core:** skip allocations in WithCancellation when task completed or token cannot cancel ([f9553f9](https://github.com/senrecep/CSharpEssentials/commit/f9553f9a299c6ed9c09b15a92da671a698aaea65))
-* **results:** check token instead of WithCancellation in MapErrorAsync mappers ([4c35599](https://github.com/senrecep/CSharpEssentials/commit/4c3559977d209b072ed655df11b75a9f97e6184d))
 
 ## [6.2.0](https://github.com/senrecep/CSharpEssentials/compare/v6.1.0...v6.2.0) (2026-10-07)
 
