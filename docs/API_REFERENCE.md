@@ -272,7 +272,8 @@ var result =
 
 ### Async Support
 
-Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. On a `Task<Result<T>>` the chain methods take the `Async` suffix (`BindAsync`, `MapAsync`, `TapAsync`):
+Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`, `result.Bind(async v => ...)`) still compile as `[Obsolete]` forwarders and will be removed in 7.0. An async lambda passed to `BindAsync` binds to the `Task` overload, and the `CancellationToken` is optional on every `Task` source.
+
 
 ```csharp
 Result<UserDto> result = await GetUserAsync(id)
@@ -372,6 +373,8 @@ Maybe<string> displayName = GetUser(id)
     .Map(p => p.DisplayName.Trim())
     .Where(name => name.Length > 0);
 ```
+
+Every member that returns `Task` or `ValueTask` ends in `Async`. The async filter is `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`); an async predicate binds to the `Task` overload. The old unsuffixed `Where` on `Task`/`ValueTask` predicates and sources still compiles as an `[Obsolete]` forwarder and will be removed in 7.0.
 
 ### Extracting Values
 

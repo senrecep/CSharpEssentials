@@ -112,6 +112,10 @@ Result<string> r = maybe.ToMaybeResult(
     Error.NotFound("user.email", "No email address on file."));
 ```
 
+## Async Naming
+
+Every member that returns `Task` or `ValueTask` ends in `Async`. The async filter is `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`); an async predicate binds to the `Task` overload. The old unsuffixed `Where` on `Task`/`ValueTask` predicates and sources still compiles as an `[Obsolete]` forwarder and will be removed in 7.0.
+
 ## Best Practices
 
 - Prefer implicit conversion (`Maybe<T> m = value;`, `return value;`, `Maybe.None`); use `Maybe.From()` or `.AsMaybe()` where the target type is not known; there is no `.ToMaybe()`
