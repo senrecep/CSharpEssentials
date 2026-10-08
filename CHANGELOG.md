@@ -3,6 +3,19 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0](https://github.com/senrecep/CSharpEssentials/compare/v6.1.0...v6.2.0) (2026-10-07)
+
+
+### Added
+
+* **openapi:** describe optional route parameters in Microsoft.AspNetCore.OpenApi documents ([33855a3](https://github.com/senrecep/CSharpEssentials/commit/33855a3860a6efa0812cb3865752b04d0f2c0b24))
+* **openapi:** warn when SplitPaths keeps an operation on one path ([593de9b](https://github.com/senrecep/CSharpEssentials/commit/593de9b53fdefc62c337a2cad26b613d1ac07ce7))
+
+
+### Fixed
+
+* **openapi:** drop the `{type: null}` branch of a required path parameter's oneOf or anyOf (nullable enum route parameters on OpenAPI 3.1), also in the Swashbuckle package ([cb5c1b2](https://github.com/senrecep/CSharpEssentials/commit/cb5c1b2b1e4f5d6ebf764da13b94448d4fe7ce14))
+
 ## [6.1.0](https://github.com/senrecep/CSharpEssentials/compare/v6.0.0...v6.1.0) (2026-10-07)
 
 
