@@ -281,6 +281,33 @@ Result<UserDto> result = await GetUserAsync(id)
     .TapAsync(_ => _logger.LogInformation("User retrieved"));
 ```
 
+#### Async overload matrix
+
+Handler flavours follow the source: `Task<Result>` sources take sync and `Task` handlers, `ValueTask<Result>` sources take sync and `ValueTask` handlers, instances take `Task` handlers and, on .NET 9+, `ValueTask` handlers. Cells marked ¹ exist only in the .NET 9+ assets; the `netstandard2.1` asset (.NET 8) does not have them. Every overload takes an optional `CancellationToken`.
+
+| Operation | Instance `Result` / `Result<T>` | `Task<Result>` / `Task<Result<T>>` | `ValueTask<Result>` / `ValueTask<Result<T>>` |
+|---|---|---|---|
+| `MapAsync(func)` | `Func<.., Task<TOut>>`, `Func<.., ValueTask<TOut>>`¹ | `Func<.., TOut>`, `Func<.., Task<TOut>>` | `Func<.., TOut>`, `Func<.., ValueTask<TOut>>` |
+| `BindAsync(func)` | `Func<.., Task<Result<TOut>>>`, `Func<.., ValueTask<Result<TOut>>>` | sync, `Task` (`Task<Result>` also takes `Func<Task<Result<TOut>>>`) | sync, `ValueTask` |
+| `TapAsync(action)` | `Func<.., Task>`, `Func<.., ValueTask>`¹ | `Action`/`Action<T>`, `Func<Task>`, `Func<T, Task>` | `Action`/`Action<T>`, `Func<ValueTask>`, `Func<T, ValueTask>` |
+| `EnsureAsync(predicate, error \| errorFactory)` (`Result<T>`) | `Func<T, Task<bool>>`, `Func<T, ValueTask<bool>>`¹ | `Func<T, bool>`, `Func<T, Task<bool>>` | `Func<T, bool>`, `Func<T, Task<bool>>`, `Func<T, ValueTask<bool>>`¹ |
+| `MapErrorAsync(mapper)` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `SwitchAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `ThenAsync`, `ThenDoAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `TapIfAsync(condition \| predicate, action)` (`Result<T>`) | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `TraverseAsync(selector)` on `IEnumerable<T>` | `Task` selector, `ValueTask` selector¹ | | |
+
+`ThenAsync` is an alias of `BindAsync`. No cross-flavour cells were added: a `Task` source has no `ValueTask` handler, and the `Task` handlers that `ValueTask` sources already had are kept for compatibility.
+
+Binding rules:
+
+- An untyped `async` lambda binds the `Task` handler; a lambda returning `ValueTask` binds the `ValueTask` handler. On .NET 9+ the `Task` handler wins through `[OverloadResolutionPriority(1)]`, which C# 12 ignores: with `LangVersion` 12 on a .NET 9+ target, untyped `async` lambdas report CS0121 on the ¹ operations, including `MatchAsync`, `EnsureAsync`, `SwitchAsync`, `TapIfAsync`, `ThenAsync` and `ThenDoAsync`, which already existed. Use C# 13+ or type the handler (`(Func<int, Task<string>>)(async v => ...)` or a local function).
+- Ambiguous on every target: `MapErrorAsync(async e => ...)` when the body fits both `Error` and `Error[]`, and `Result<T>.BindAsync(async v => ...)` returning `Result<T>` (the `Result<TOut>` and `Result` handlers both fit). Type the handler.
+- Never pass an `async` lambda where only an `Action` overload exists, such as the conditional `TapAsync(condition, action)` on `Task`/`ValueTask` sources. It compiles as `async void`; nothing awaits it and its exceptions are lost.
+
+Behaviour changes when recompiling: `TapAsync` with an `async` lambda on a `Task`/`ValueTask` source is now awaited (it used to bind `Action` and run as `async void`), and `MapAsync` with an `async` lambda on a `ValueTask<Result<T>>` source now returns `ValueTask<Result<U>>` (it used to return `ValueTask<Result<Task<U>>>`). A non-`async` lambda that returns a `Task` on a `ValueTask` source still binds `Action`. See [the async naming migration guide](migration/v6-async-naming.md).
+
 ### Collection Extensions
 
 Batch operations on sequences of results, without manually looping.
