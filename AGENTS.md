@@ -4,7 +4,7 @@
 
 CSharpEssentials is a modular .NET NuGet ecosystem (23 packages) that bridges OOP and Functional Programming in C#. Core patterns: Result/Maybe monads, Discriminated Unions (Any<T1,T2,...>), composable Rules engine, DDD base classes (EntityBase), EF Core interceptors/pagination, ASP.NET Core utilities, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection). Multi-targets: .NET 11/10/9 (some packages also net8.0), netstandard2.1 (a few also netstandard2.0). CSharpEssentials.EntityFrameworkCore targets net10.0/net9.0/net8.0 only (no net11.0), each pinned to its EF Core major.
 
-Current version: 6.2.0 <!-- x-release-please-version -->
+Current version: 6.3.0 <!-- x-release-please-version -->
 
 ## Why
 
