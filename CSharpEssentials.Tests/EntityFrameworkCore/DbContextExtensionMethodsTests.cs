@@ -360,5 +360,31 @@ public class DbContextExtensionMethodsTests
         _ = new SoftMigrateSeed { Key = 1 };
     }
 
+    [Fact]
+    public async Task SaveChangesAsResultAsync_CallerCancelled_ShouldPropagate()
+    {
+        using var context = new ChangeTrackerDbContext(CreateOptions<ChangeTrackerDbContext>());
+        context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await context.SaveChangesAsResultAsync(cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsResultAsync_WithAcceptAll_CallerCancelled_ShouldPropagate()
+    {
+        using var context = new ChangeTrackerDbContext(CreateOptions<ChangeTrackerDbContext>());
+        context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = async () => await context.SaveChangesAsResultAsync(true, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
     #endregion
 }

@@ -112,6 +112,8 @@ Result combined = Result.And(r1, r2, r3); // Failure
 Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exception(ex));
 ```
 
+`Result.TryAsync` converts exceptions to errors the same way, but when the `CancellationToken` you pass is cancelled it lets the `OperationCanceledException` propagate instead of turning it into an `Error`. An `OperationCanceledException` that did not come from your token (for example an `HttpClient` timeout) is still passed to the error handler.
+
 ### Mapping Errors
 
 ```csharp
