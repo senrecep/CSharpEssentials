@@ -128,10 +128,10 @@ Two core types: `Result` (no value, just success/failure) and `Result<T>` (carri
 | `Result.Try(func, handler)` | `Result<T>` | Wraps try/catch around `Func<T>`, returns value on success |
 | `Result.Try(func, handler)` | `Result<T>` | Wraps try/catch around `Func<Result<T>>`, propagates inner result |
 | `Result.Try(func, handler)` | `Result` | Wraps try/catch around `Func<Result>`, propagates inner result |
-| `Result.TryAsync(action, handler)` | `Task<Result>` | Async try/catch around `Func<Task>` |
-| `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<T>>` |
-| `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<Result<T>>>` |
-| `Result.TryAsync(func, handler)` | `Task<Result>` | Async try/catch around `Func<Task<Result>>` |
+| `Result.TryAsync(action, handler)` | `Task<Result>` | Async try/catch around `Func<Task>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
+| `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<T>>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
+| `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<Result<T>>>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
+| `Result.TryAsync(func, handler)` | `Task<Result>` | Async try/catch around `Func<Task<Result>>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
 | `Result.From(errors)` | `Result` | Success if errors empty, failure otherwise |
 | `Result<int> r = 42;` | `Result<int>` | Implicit operator for ergonomic creation |
 
@@ -923,7 +923,7 @@ Result<User> user = await ResiliencePolicy
 | `FirstOrDefaultAsResultAsync<T>` | Returns `Result<T>` (NotFound on null) | `FirstOrDefaultAsync` + null check |
 | `SingleOrDefaultAsResultAsync<T>` | Returns `Result<T>` (NotFound on null) | `SingleOrDefaultAsync` + null check |
 | `FindAsResultAsync<T>` | Returns `Result<T>` from `Find` | `FindAsync` + null check |
-| `SaveChangesAsResultAsync` | Returns `Result` wrapping save | try/catch around `SaveChangesAsync` |
+| `SaveChangesAsResultAsync` | Returns `Result` wrapping save; exceptions become `Unknown` errors, but an `OperationCanceledException` caused by the passed `cancellationToken` propagates | try/catch around `SaveChangesAsync` |
 | `MigrateDataAsync<TEntity, TSeedData>(data, preCondition, converter)` | Seeds data rows when a precondition holds (returns `Task`) | Hand-written seeding code |
 
 ### Pagination

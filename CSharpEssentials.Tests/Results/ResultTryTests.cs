@@ -108,6 +108,146 @@ public class ResultTryTests
         result.FirstError.Should().Be(TestError);
     }
 
+    [Fact]
+    public async Task Result_TryAsync_Action_CallerCancelled_ShouldPropagate()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result.TryAsync(
+            () => Task.FromException(new OperationCanceledException(cts.Token)),
+            ex => TestError,
+            cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Result_TryAsync_Action_OceWithUnrelatedToken_ShouldReturnFailure()
+    {
+        using var other = new CancellationTokenSource();
+        await other.CancelAsync();
+        using var caller = new CancellationTokenSource();
+
+        Result result = await Result.TryAsync(
+            () => Task.FromException(new OperationCanceledException(other.Token)),
+            ex => TestError,
+            caller.Token);
+
+        result.FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task Result_TryAsyncT_Func_CallerCancelled_ShouldPropagate()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result.TryAsync(
+            () => Task.FromException<int>(new OperationCanceledException(cts.Token)),
+            ex => TestError,
+            cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Result_TryAsyncT_Func_OceWithUnrelatedToken_ShouldReturnFailure()
+    {
+        using var other = new CancellationTokenSource();
+        await other.CancelAsync();
+        using var caller = new CancellationTokenSource();
+
+        Result<int> result = await Result.TryAsync(
+            () => Task.FromException<int>(new OperationCanceledException(other.Token)),
+            ex => TestError,
+            caller.Token);
+
+        result.FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task Result_TryAsyncT_ResultFunc_CallerCancelled_ShouldPropagate()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result.TryAsync(
+            () => Task.FromException<Result<int>>(new OperationCanceledException(cts.Token)),
+            ex => TestError,
+            cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Result_TryAsyncT_ResultFunc_OceWithUnrelatedToken_ShouldReturnFailure()
+    {
+        using var other = new CancellationTokenSource();
+        await other.CancelAsync();
+        using var caller = new CancellationTokenSource();
+
+        Result<int> result = await Result.TryAsync(
+            () => Task.FromException<Result<int>>(new OperationCanceledException(other.Token)),
+            ex => TestError,
+            caller.Token);
+
+        result.FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task Result_TryAsync_ResultFunc_CallerCancelled_ShouldPropagate()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result.TryAsync(
+            () => Task.FromException<Result>(new OperationCanceledException(cts.Token)),
+            ex => TestError,
+            cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Result_TryAsync_ResultFunc_OceWithUnrelatedToken_ShouldReturnFailure()
+    {
+        using var other = new CancellationTokenSource();
+        await other.CancelAsync();
+        using var caller = new CancellationTokenSource();
+
+        Result result = await Result.TryAsync(
+            () => Task.FromException<Result>(new OperationCanceledException(other.Token)),
+            ex => TestError,
+            caller.Token);
+
+        result.FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task Result_TryAsync_Action_OceWithoutCallerToken_ShouldReturnFailure()
+    {
+        Result result = await Result.TryAsync(
+            () => Task.FromException(new OperationCanceledException()),
+            ex => TestError);
+
+        result.FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task Result_TryAsync_Action_TaskCanceledExceptionWithCallerCancelled_ShouldPropagate()
+    {
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => Result.TryAsync(
+            () => Task.FromException(new TaskCanceledException()),
+            ex => TestError,
+            cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
     #endregion
 
     #region Result.TryAsync<TValue>

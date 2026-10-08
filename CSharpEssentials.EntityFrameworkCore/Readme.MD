@@ -443,7 +443,7 @@ public sealed class RegisterUserHandler(AppDbContext db, DbErrorTranslation tran
 }
 ```
 
-`translation.SaveChangesAsync` returns the translated error and rethrows exceptions no translator recognizes, so unexpected failures still reach your exception handler. `SaveChangesAsResultAsync` is different: it turns every exception into an `Unknown` error. After a failure the change tracker keeps the unsaved changes. To translate an exception you caught yourself, call `translation.TryTranslate(exception, out Error error)`.
+`translation.SaveChangesAsync` returns the translated error and rethrows exceptions no translator recognizes, so unexpected failures still reach your exception handler. `SaveChangesAsResultAsync` is different: it turns every exception into an `Unknown` error, except an `OperationCanceledException` caused by the `cancellationToken` you passed, which propagates. After a failure the change tracker keeps the unsaved changes. To translate an exception you caught yourself, call `translation.TryTranslate(exception, out Error error)`.
 
 Providers that report no SQLSTATE (SQL Server, SQLite) or extra details (the constraint name of `PostgresException`) plug in an `IDbErrorTranslator`. Custom translators run in registration order before the SQLSTATE default, and the first match wins. `DbErrorTranslation` is a singleton, so translators must be stateless:
 

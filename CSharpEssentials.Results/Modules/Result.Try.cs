@@ -58,10 +58,10 @@ public readonly partial record struct Result
     {
         try
         {
-            await action().WithCancellation(cancellationToken);
+            await action().WithCancellation(cancellationToken).ConfigureAwait(false);
             return Success();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return errorHandler(ex);
         }
@@ -71,9 +71,9 @@ public readonly partial record struct Result
     {
         try
         {
-            return await func().WithCancellation(cancellationToken);
+            return await func().WithCancellation(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return errorHandler(ex);
         }
@@ -83,9 +83,9 @@ public readonly partial record struct Result
     {
         try
         {
-            return await func().WithCancellation(cancellationToken);
+            return await func().WithCancellation(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return errorHandler(ex);
         }
@@ -95,9 +95,9 @@ public readonly partial record struct Result
     {
         try
         {
-            return await func().WithCancellation(cancellationToken);
+            return await func().WithCancellation(cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             return errorHandler(ex);
         }

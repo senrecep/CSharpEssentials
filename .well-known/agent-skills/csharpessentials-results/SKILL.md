@@ -135,7 +135,9 @@ Result any = Result.Or(r1, r2, r3);
 Result<int> safe = Result.Try(() => int.Parse(input), ex => Error.Exception(ex));
 
 // Async
-Result<Data> data = await Result.TryAsync(() => _db.GetAsync(id), ex => Error.Exception(ex));
+Result<Data> data = await Result.TryAsync(() => _db.GetAsync(id), ex => Error.Exception(ex), cancellationToken);
+// Caller cancellation (OperationCanceledException while cancellationToken is cancelled) propagates; it is not converted to an Error.
+// Other OperationCanceledExceptions (e.g. HttpClient timeout) still go through the handler.
 ```
 
 ## Conditional Side Effects
