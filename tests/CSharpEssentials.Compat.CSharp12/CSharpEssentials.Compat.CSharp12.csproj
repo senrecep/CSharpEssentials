@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compile-only guard: consumers on C# 12 ignore [OverloadResolutionPriority], so every async lambda shape here must
+    bind without it. net8.0 consumes the netstandard2.1 asset; net9.0 consumes the net9.0 asset with the ValueTask twins.
+  -->
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+    <LangVersion>12</LangVersion>
+    <OutputType>Library</OutputType>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+  </ItemGroup>
+
+</Project>

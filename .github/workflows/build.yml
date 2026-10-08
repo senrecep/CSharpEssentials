@@ -33,6 +33,11 @@ jobs:
       - name: Test
         run: dotnet test --no-build --configuration Release --collect:"XPlat Code Coverage" --results-directory ./coverage
 
+      # C# 12 ignores [OverloadResolutionPriority]; this compile-only project keeps the async lambda shapes that must
+      # bind without it (net8.0 on the netstandard2.1 asset, net9.0 with the ValueTask twins) from regressing.
+      - name: Build C# 12 compatibility shapes
+        run: dotnet build tests/CSharpEssentials.Compat.CSharp12/CSharpEssentials.Compat.CSharp12.csproj --no-restore --configuration Release -warnaserror
+
       # Examples stay out of CSharpEssentials.slnx; CI builds the ones that need guarding explicitly.
       - name: Build Enums end-to-end example
         run: dotnet build examples/Examples.Enums.EndToEnd/Examples.Enums.EndToEnd.csproj --configuration Release -warnaserror

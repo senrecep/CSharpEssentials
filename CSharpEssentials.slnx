@@ -42,5 +42,6 @@
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.OpenApiSample/CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
   <Project Path="tests/CSharpEssentials.AspNetCore.OpenApi.Tests/CSharpEssentials.AspNetCore.OpenApi.Tests.csproj" />
   <Project Path="tests/CSharpEssentials.EntityFrameworkCore.Tests/CSharpEssentials.EntityFrameworkCore.Tests.csproj" />
+  <Project Path="tests/CSharpEssentials.Compat.CSharp12/CSharpEssentials.Compat.CSharp12.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>
