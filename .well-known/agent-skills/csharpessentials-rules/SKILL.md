@@ -258,7 +258,7 @@ Result composed = await RuleEngine.EvaluateAsync(
 
 - Same results, short-circuiting and error order as `Evaluate`; composite children run sequentially.
 - Sync-only trees complete synchronously, with no task allocation.
-- Cancelling `ct` throws `OperationCanceledException` instead of returning an error (`Evaluate` returns it as an error `Result`).
+- Cancelling `ct` throws `OperationCanceledException` instead of returning an error (`Evaluate` throws too unless an enclosing sync rule returns it as an error `Result`; it stops waiting for a pending async rule).
 - Rules must observe `ct`: the token is checked before each rule, but an in-flight rule is awaited, never abandoned.
 - `Evaluate` blocks on async rules (deadlock risk under a `SynchronizationContext`); use `EvaluateAsync` for any tree with async rules.
 

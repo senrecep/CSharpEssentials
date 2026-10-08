@@ -599,7 +599,7 @@ Each type has `IAsyncRule` variants and `TResult`-returning variants.
 | Method | What It Does |
 |--------|-------------|
 | `RuleEngine.Evaluate(rule, context, ct)` | Dispatches any rule type via pattern matching; blocks on async rules |
-| `await RuleEngine.EvaluateAsync(rule, context, ct)` | Same dispatch, returns `ValueTask<Result>` / `ValueTask<Result<T>>`; awaits async rules, children run sequentially, cancellation throws `OperationCanceledException` (`Evaluate` returns it as an error `Result`); rules must observe the token, in-flight rules are not abandoned |
+| `await RuleEngine.EvaluateAsync(rule, context, ct)` | Same dispatch, returns `ValueTask<Result>` / `ValueTask<Result<T>>`; awaits async rules, children run sequentially, cancellation throws `OperationCanceledException` (`Evaluate` throws too unless an enclosing sync rule returns it as an error `Result`, and stops waiting for a pending async rule); rules must observe the token, in-flight rules are not abandoned |
 | `RuleEngine.Linear(rules, context, ct)` | Sequential: stops at first failure. Async-rule overloads block; prefer `EvaluateAsync` |
 | `RuleEngine.And(rules, context, ct)` | And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. Blocks on async rules; prefer `EvaluateAsync` |
 | `RuleEngine.Or(rules, context, ct)` | First success wins. Async-rule overloads block; prefer `EvaluateAsync` |

@@ -497,21 +497,92 @@ public sealed class RuleEngineEvaluateAsyncTests
     }
 
     [Fact]
-    public void Evaluate_Should_Return_Caller_Cancellation_As_Error()
+    public void Evaluate_Should_Throw_Caller_Cancellation_For_Async_Root()
     {
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        IRuleBase<Ctx> rule = new Func<Ctx, CancellationToken, ValueTask<Result>>(async (_, ct) =>
-        {
-            await Task.Delay(Timeout.Infinite, ct);
-            return Result.Success();
-        }).ToRule();
+        IRuleBase<Ctx> rule = CancellableAsyncRule();
+
+        Action act = () => RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
+
+        act.Should().Throw<OperationCanceledException>();
+    }
+
+    [Fact]
+    public void Evaluate_Should_Return_Caller_Cancellation_As_Error_Inside_Sync_Composite()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        IRuleBase<Ctx> rule = new And(Ok("h"), CancellableAsyncRule());
 
         Result result = RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
 
         result.IsFailure.Should().BeTrue();
-        result.Errors.Select(e => e.Code).Should().Equal("RuleEngine.Evaluate.SimpleAsyncRule");
+        result.Errors.Select(e => e.Code).Should().Equal("RuleEngine.Evaluate.AndRule");
     }
+
+    [Fact]
+    public void Evaluate_Should_Throw_Caller_Cancellation_For_Async_Composite_Root()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        IRuleBase<Ctx> rule = new AndAsync(AOk("h"), CancellableAsyncRule());
+
+        Action act = () => RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
+
+        act.Should().Throw<OperationCanceledException>();
+    }
+
+    [Fact]
+    public void Evaluate_Should_Return_Caller_Cancellation_As_Error_When_Sync_Composite_Encloses_Async_Composite()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        IRuleBase<Ctx> rule = new And(Ok("h"), new AndAsync(AOk("a"), CancellableAsyncRule()));
+
+        Result result = RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
+
+        result.Errors.Select(e => e.Code).Should().Equal("RuleEngine.Evaluate.AndRule");
+    }
+
+    [Fact]
+    public void EvaluateT_Should_Throw_Caller_Cancellation_For_Async_Root()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        IRuleBase<Ctx, int> rule = CancellableAsyncRuleT();
+
+        Action act = () => RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
+
+        act.Should().Throw<OperationCanceledException>();
+    }
+
+    [Fact]
+    public void EvaluateT_Should_Return_Caller_Cancellation_As_Error_Inside_Sync_Composite()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+        IRuleBase<Ctx, int> rule = new AndT(Ok("h"), CancellableAsyncRuleT());
+
+        Result<int> result = RuleEngine.Evaluate(rule, new Ctx(), cts.Token);
+
+        result.IsFailure.Should().BeTrue();
+        result.Errors.Select(e => e.Code).Should().Equal("RuleEngine.Evaluate.AndRule");
+    }
+
+    private static IRuleBase<Ctx, int> CancellableAsyncRuleT() =>
+        new Func<Ctx, CancellationToken, ValueTask<Result<int>>>(async (_, ct) =>
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return 1;
+        }).ToRule();
+
+    private static IRuleBase<Ctx> CancellableAsyncRule() =>
+        new Func<Ctx, CancellationToken, ValueTask<Result>>(async (_, ct) =>
+        {
+            await Task.Delay(Timeout.Infinite, ct);
+            return Result.Success();
+        }).ToRule();
 
     [Fact]
     public async Task EvaluateAsync_Should_Convert_Unrelated_Cancellation_To_Error()

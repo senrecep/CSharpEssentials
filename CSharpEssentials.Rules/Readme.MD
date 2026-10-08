@@ -298,7 +298,7 @@ Result result = await RuleEngine.EvaluateAsync(
 - Results, short-circuiting, and error order match `Evaluate` for every rule kind (Linear, Conditional, And, Or, nested trees).
 - Children of composites run one at a time, in order.
 - A tree made only of sync rules completes synchronously, without allocating a task.
-- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`. `Evaluate` returns caller cancellation as an error `Result` instead.
+- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`. `Evaluate` propagates it until an enclosing sync rule (simple, And, Or, Linear, Conditional) returns it as an error `Result`, and throws when no sync rule encloses it. It also stops waiting for a pending async rule, which may keep running.
 - Rules must observe `ct`. The token is checked before each rule runs, but a rule that is already running is awaited until it returns; `EvaluateAsync` never abandons it.
 
 `Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.
