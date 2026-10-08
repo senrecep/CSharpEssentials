@@ -171,6 +171,24 @@ await GetValueTaskResultAsync().TapIfAsync(true, async v => await LogAsync(v));
 
 Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
 
+## Async Rules
+
+- Always call the `*Async` name when a handler or source is async (`MapAsync`, `BindAsync`, `TapAsync`, `EnsureAsync`, `MatchAsync`, `ThenAsync`). Never write the obsolete unsuffixed names.
+- Match the handler to the source: on `Task<Result..>` pass sync or `Task` handlers; on `ValueTask<Result..>` pass sync or `ValueTask` handlers. On an instance `Result`/`Result<T>`, `Task` handlers work everywhere; `ValueTask` handlers on instances (and on `ValueTask` sources for `Match*`, `Switch`, `Ensure`, `TapIf`, `Then`, `ThenDo`) exist only on .NET 9+.
+- **Never pass an `async` lambda to an `Action` overload.** It compiles as `async void`: nothing awaits it and its exceptions are lost. `TapAsync(async v => ...)` on a `Task`/`ValueTask` source binds the awaited `Func<T, Task>`/`Func<T, ValueTask>` overload, but the conditional `TapAsync(condition, action)` overloads only take `Action`; use `TapIfAsync` with a `Task` handler instead. A non-`async` lambda whose flavour does not match the source also binds `Action` and its result is discarded: a `Task` on a `ValueTask` source (`vt.TapAsync(v => SaveAsync(v))`) or a `ValueTask` on a `Task` source (`taskResult.TapAsync(v => SaveValueTaskAsync(v))`). Write `async v => await SaveAsync(v)`. A non-`async` lambda returning a `Task` on a `Task` source is awaited.
+- `MapAsync` on a `ValueTask<Result<T>>` with an `async` lambda returns `ValueTask<Result<U>>`.
+- `TraverseAsync` is sequential and accumulates every error in input order (no short-circuit); cancellation throws. Use `SequenceAsync` for tasks that are already running.
+- If the project targets .NET 9+ with `LangVersion` 12, untyped `async` lambdas are ambiguous (CS0121) on operations with a `ValueTask` twin: `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync`, `TraverseAsync` and instance `MapAsync`/`TapAsync`. Use C# 13+ or type the first handler: `(Func<int, Task<string>>)(async v => ...)`.
+- A mismatched handler flavour gives a nested type, not an error: `vt.MapAsync(x => Task.FromResult(x))` returns `ValueTask<Result<Task<int>>>`.
+- Always type the handler for `MapErrorAsync(async e => ...)` when the body fits both `Error` and `Error[]`, and for `Result<T>.BindAsync(async v => ...)` returning `Result<T>`; both are ambiguous on every language version.
+
+```csharp
+Result<OrderDto> order = await LoadOrderAsync(id, ct)                    // Task<Result<Order>>
+    .EnsureAsync(o => o.Lines.Count > 0, Error.Validation("Order.Empty", "Order has no lines."))
+    .TapAsync(async o => await _audit.WriteAsync(o.Id, ct))             // awaited
+    .MapAsync(o => new OrderDto(o));
+```
+
 ## Best Practices
 
 - Never access `.Value` without checking `.IsSuccess` first

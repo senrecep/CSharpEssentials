@@ -1,0 +1,6 @@
+# Benchmark project overrides; root .editorconfig still applies
+[*.cs]
+
+# These rows compare the obsolete pre-6.4 names with their Async replacements on purpose.
+[RenamedMemberBenchmarks.cs]
+dotnet_diagnostic.CS0618.severity = none

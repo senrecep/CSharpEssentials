@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 
@@ -27,6 +28,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+    [OverloadResolutionPriority(1)]
     public async Task SwitchAsync(Func<TValue, Task> onSuccess, Func<Error[], Task> onError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
@@ -100,6 +102,25 @@ public readonly partial record struct Result<TValue>
         }
         await onSuccess(Value).WithCancellation(cancellationToken);
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Executes the provided <paramref name="onSuccess"/> ValueTask function if the result is a value; otherwise the <paramref name="onError"/> function is executed.
+    /// </summary>
+    /// <param name="onSuccess">An async action to execute with the success value.</param>
+    /// <param name="onError">An async action to execute with the errors.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    /// <returns>A ValueTask representing the asynchronous operation.</returns>
+    public async ValueTask SwitchAsync(Func<TValue, ValueTask> onSuccess, Func<Error[], ValueTask> onError, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+        {
+            await onError(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+        await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+#endif
 }
 
 public static partial class ResultExtensions
@@ -206,6 +227,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Executes the provided async function if the result is a value; otherwise the async error function is executed.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask SwitchAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task> onSuccess, Func<Error[], Task> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
@@ -247,4 +269,15 @@ public static partial class ResultExtensions
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         await result.SwitchLastAsync(onSuccess, onError, cancellationToken);
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Executes the provided ValueTask function if the result is a value; otherwise the ValueTask error function is executed.
+    /// </summary>
+    public static async ValueTask SwitchAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, ValueTask> onSuccess, Func<Error[], ValueTask> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchAsync(onSuccess, onError, cancellationToken).ConfigureAwait(false);
+    }
+#endif
 }

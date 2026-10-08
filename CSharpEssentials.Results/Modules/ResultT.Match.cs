@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 
@@ -27,6 +28,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+    [OverloadResolutionPriority(1)]
     public async Task<T> MatchAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error[], Task<T>> onError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
@@ -57,6 +59,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="onFirstError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+    [OverloadResolutionPriority(1)]
     public async Task<T> MatchFirstAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error, Task<T>> onFirstError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
@@ -86,12 +89,45 @@ public readonly partial record struct Result<TValue>
     /// <param name="onLastError"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+    [OverloadResolutionPriority(1)]
     public async Task<T> MatchLastAsync<T>(Func<TValue, Task<T>> onSuccess, Func<Error, Task<T>> onLastError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
             return await onLastError(LastError).WithCancellation(cancellationToken);
         return await onSuccess(Value).WithCancellation(cancellationToken);
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Match the result with the provided ValueTask functions.
+    /// </summary>
+    public async ValueTask<T> MatchAsync<T>(Func<TValue, ValueTask<T>> onSuccess, Func<Error[], ValueTask<T>> onError, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+            return await onError(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Match the result with the provided ValueTask functions based on the first error.
+    /// </summary>
+    public async ValueTask<T> MatchFirstAsync<T>(Func<TValue, ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onFirstError, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+            return await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Match the result with the provided ValueTask functions based on the last error.
+    /// </summary>
+    public async ValueTask<T> MatchLastAsync<T>(Func<TValue, ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onLastError, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+            return await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+#endif
 }
 
 public static partial class ResultExtensions
@@ -190,6 +226,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided async functions.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask<T> MatchAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Task<T>> onSuccess, Func<Error[], Task<T>> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
@@ -208,6 +245,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided async functions based on the first error.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask<T> MatchFirstAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Task<T>> onSuccess, Func<Error, Task<T>> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
@@ -226,9 +264,39 @@ public static partial class ResultExtensions
     /// <summary>
     /// Match the result with the provided async functions based on the last error.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask<T> MatchLastAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, Task<T>> onSuccess, Func<Error, Task<T>> onError, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.MatchLastAsync(onSuccess, onError, cancellationToken);
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Match the result with the provided ValueTask functions.
+    /// </summary>
+    public static async ValueTask<T> MatchAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, ValueTask<T>> onSuccess, Func<Error[], ValueTask<T>> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MatchAsync(onSuccess, onError, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Match the result with the provided ValueTask functions based on the first error.
+    /// </summary>
+    public static async ValueTask<T> MatchFirstAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MatchFirstAsync(onSuccess, onError, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Match the result with the provided ValueTask functions based on the last error.
+    /// </summary>
+    public static async ValueTask<T> MatchLastAsync<TValue, T>(this ValueTask<Result<TValue>> task, Func<TValue, ValueTask<T>> onSuccess, Func<Error, ValueTask<T>> onError, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MatchLastAsync(onSuccess, onError, cancellationToken).ConfigureAwait(false);
+    }
+#endif
 }

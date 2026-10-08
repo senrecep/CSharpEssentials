@@ -154,6 +154,61 @@ Result<UserDto> result = await FetchUserAsync(id)
 
 Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
 
+#### Async overload matrix
+
+The source decides the handler flavour. A `Task<Result>` source takes sync and `Task` handlers, a `ValueTask<Result>` source takes sync and `ValueTask` handlers, and an instance `Result`/`Result<T>` takes `Task` handlers and, on .NET 9+, `ValueTask` handlers. Handlers that already took a `Task` on a `ValueTask` source are kept.
+
+| Operation | `Result` / `Result<T>` instance | `Task<Result>` / `Task<Result<T>>` source | `ValueTask<Result>` / `ValueTask<Result<T>>` source |
+|---|---|---|---|
+| `MapAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `ValueTask` |
+| `BindAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `TapAsync` | `Task`, `ValueTask`¹ | `Action`, `Task` | `Action`, `ValueTask` |
+| `EnsureAsync` (`Result<T>`) | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `MapErrorAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
+| `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `SwitchAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `ThenAsync`, `ThenDoAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `TapIfAsync` (`Result<T>`) | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `TraverseAsync` (`IEnumerable<T>`) | `Task` selector, `ValueTask` selector¹ | | |
+
+¹ .NET 9+ assets only. The `netstandard2.1` asset (.NET 8, older hosts) does not have these overloads.
+
+`ThenAsync` stays an alias of `BindAsync`. Nothing crosses flavours: a `Task<Result>` source has no `ValueTask` handler, and the matrix adds no new `Task` handlers to `ValueTask` sources.
+
+```csharp
+// Task source: Task handlers, awaited in order
+Result<OrderDto> order = await LoadOrderAsync(id)
+    .EnsureAsync(o => o.Lines.Count > 0, Error.Validation("Order.Empty", "Order has no lines."))
+    .TapAsync(async o => await _audit.WriteAsync(o.Id, ct))
+    .MapAsync(o => new OrderDto(o));
+
+// ValueTask source: sync or ValueTask handlers
+Result<Price> price = await GetCachedProductAsync(sku)
+    .MapAsync(p => _pricing.QuoteAsync(p, ct));   // Func<Product, ValueTask<Price>>
+```
+
+On .NET 9+, a lambda that returns `ValueTask` binds the `ValueTask` handler, and an untyped `async` lambda binds the `Task` handler through `OverloadResolutionPriority`. That needs C# 13 or later. With `LangVersion` 12 on a .NET 9+ target, an untyped `async` lambda is ambiguous (CS0121) on every operation marked ¹, including existing ones such as `result.MatchAsync(async ...)` and `vt.ThenAsync(async ...)`. Move to C# 13, or type the handler: `(Func<int, Task<string>>)(async v => ...)` or a local function. Two shapes are ambiguous on every target and language version, so type the handler there too:
+
+- `result.MapErrorAsync(async e => ...)` when the body compiles for both `Error` and `Error[]`, for example `return e;`.
+- `result.BindAsync(async v => ...)` on a `Result<T>` when the lambda returns `Result<T>`: the `Result<TOut>` and `Result` handlers both fit.
+
+#### Migrating to the async matrix
+
+Recompiling against this version changes what some existing call sites bind to:
+
+- `TapAsync` on a `Task<Result>`, `Task<Result<T>>`, `ValueTask<Result>` or `ValueTask<Result<T>>` source with an `async` lambda now awaits the handler. It used to bind `Action`/`Action<T>`, which ran it as `async void`: the chain did not wait for it and its exceptions were lost. Exceptions from the handler now propagate.
+- `MapAsync` on a `ValueTask<Result<T>>` source with an `async` lambda now returns `ValueTask<Result<U>>`. It used to return `ValueTask<Result<Task<U>>>`.
+- `TapAsync` on a `Task<Result>` or `Task<Result<T>>` source with a non-`async` lambda that returns a `Task`, such as `taskResult.TapAsync(x => SaveAsync(x))`, now awaits that task. It used to bind `Action<T>` and discard it.
+- On .NET 9+, a lambda that returns `ValueTask` binds the new `ValueTask` handlers instead of a sync or `Action` overload.
+
+Unchanged:
+
+- A non-`async` lambda that returns a `Task` on a `ValueTask` source still binds `Action<T>` for `TapAsync`, so the task is not awaited. Use an `async` lambda or a `ValueTask` handler.
+- A non-`async` lambda that returns a `ValueTask` on a `Task` source, such as `taskResult.TapAsync(x => SaveValueTaskAsync(x))`, still binds `Action<T>`, so the `ValueTask` is discarded. Use an `async` lambda or a `Task` handler.
+- The conditional `TapAsync(condition, action)` overloads on `Task`/`ValueTask` sources have no awaited twin yet: an `async` lambda passed to them still runs as `async void`. On `Result<T>` sources use `TapIfAsync` with a `Task` handler; otherwise check the condition inside a `Func<Task>` handler.
+
+Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before. Use C# 13 or later, or type the handler.
+
 ### Collection Extensions
 
 Batch operations on sequences of results:
