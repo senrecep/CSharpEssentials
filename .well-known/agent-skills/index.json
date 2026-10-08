@@ -97,7 +97,7 @@
     },
     {
       "name": "csharpessentials-rules",
-      "description": "Use when composing business validation logic. Define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(); branch with RuleEngine.If().",
+      "description": "Use when composing business validation logic. Define rules as classes, Func fields, or inline lambdas; combine with .And()/.Or()/.Linear()/.Next(); evaluate with RuleEngine.Evaluate(), or await RuleEngine.EvaluateAsync() when the tree contains async rules; branch with RuleEngine.If().",
       "files": ["SKILL.md"]
     },
     {

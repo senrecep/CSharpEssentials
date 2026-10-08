@@ -9,7 +9,7 @@ Composable, functional rule engine for .NET. Define business logic as small, reu
 - **Linear Sequences**: Run rules in order, stop on first failure.
 - **Conditional Rules**: If/Then/Else branching.
 - **And / Or Logic**: All must pass, or at least one must pass.
-- **Async Support**: First-class async rules.
+- **Async Support**: `IAsyncRule` rules evaluated without blocking via `await RuleEngine.EvaluateAsync(...)`.
 - **Result Integration**: Built on `CSharpEssentials.Results`.
 
 ## Installation
@@ -269,9 +269,34 @@ IAsyncRule<string> uniqueRule = RuleEngine.FromPredicateAsync<string>(
     async s => await _db.IsUniqueAsync(s),
     s => Error.Conflict("Name.Taken", $"'{s}' is already taken"));
 
-// Evaluate normally — works with all composition methods
+// Sync-only trees can use Evaluate
 Result r = RuleEngine.Evaluate(positiveRule, 42);
 Result composed = RuleEngine.Evaluate(
     new IRuleBase<int>[] { positiveRule, rangeRule }.And(),
     value);
+
+// Trees that contain async rules: await EvaluateAsync
+Result unique = await RuleEngine.EvaluateAsync(uniqueRule, name, ct);
 ```
+
+## Async Rules: `EvaluateAsync`
+
+`RuleEngine.EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` / `ValueTask<Result<T>>`. It awaits every `IAsyncRule` in the tree, so no thread is blocked on database or HTTP calls.
+
+```csharp
+Result result = await RuleEngine.EvaluateAsync(
+    new IRuleBase<string>[]
+    {
+        RuleEngine.FromPredicate<string>(s => s.Length >= 3, Error.Validation("Name.TooShort", "Use at least 3 characters")),
+        uniqueRule
+    }.And(),
+    name,
+    ct);
+```
+
+- Results, short-circuiting, and error order match `Evaluate` for every rule kind (Linear, Conditional, And, Or, nested trees).
+- Children of composites run one at a time, in order.
+- A tree made only of sync rules completes synchronously, without allocating a task.
+- Cancelling `ct` throws `OperationCanceledException`. It is not turned into an error `Result`.
+
+`Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.
