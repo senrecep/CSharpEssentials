@@ -1,3 +1,4 @@
+using CSharpEssentials.Core;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 using CSharpEssentials.Errors;
@@ -32,6 +33,33 @@ public static partial class ResultExtensions
             list.Capacity = capacity;
 
         return list;
+    }
+
+    private static void Accumulate<TValue>(Result<TValue> result, List<TValue> successes, ref List<Error>? errors)
+    {
+        if (result.IsSuccess)
+            successes.Add(result.Value);
+        else
+            (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+    }
+
+    private static void ObserveRemaining<TItem>(IEnumerable<TItem> source, int consumed, Func<TItem, Task> toTask)
+    {
+        if (source is not ICollection<TItem> and not IReadOnlyCollection<TItem>)
+            return;
+
+        int index = 0;
+        foreach (TItem item in source)
+        {
+            if (index++ < consumed)
+                continue;
+
+            _ = toTask(item).ContinueWith(
+                static t => _ = t.Exception,
+                CancellationToken.None,
+                TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+                TaskScheduler.Default);
+        }
     }
 
     private static Result<TValue[]> ToSequenceResult<TValue>(List<TValue> successes, List<Error>? errors) =>
@@ -87,10 +115,7 @@ public static partial class ResultExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             Result<TOut> result = await selector(item).ConfigureAwait(false);
-            if (result.IsSuccess)
-                successes.Add(result.Value);
-            else
-                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+            Accumulate(result, successes, ref errors);
         }
 
         return ToSequenceResult(successes, errors);
@@ -108,10 +133,7 @@ public static partial class ResultExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             Result<TOut> result = await selector(item, cancellationToken).ConfigureAwait(false);
-            if (result.IsSuccess)
-                successes.Add(result.Value);
-            else
-                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+            Accumulate(result, successes, ref errors);
         }
 
         return ToSequenceResult(successes, errors);
@@ -130,10 +152,7 @@ public static partial class ResultExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             Result<TOut> result = await selector(item).ConfigureAwait(false);
-            if (result.IsSuccess)
-                successes.Add(result.Value);
-            else
-                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+            Accumulate(result, successes, ref errors);
         }
 
         return ToSequenceResult(successes, errors);
@@ -151,10 +170,7 @@ public static partial class ResultExtensions
         {
             cancellationToken.ThrowIfCancellationRequested();
             Result<TOut> result = await selector(item, cancellationToken).ConfigureAwait(false);
-            if (result.IsSuccess)
-                successes.Add(result.Value);
-            else
-                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+            Accumulate(result, successes, ref errors);
         }
 
         return ToSequenceResult(successes, errors);
@@ -168,26 +184,37 @@ public static partial class ResultExtensions
         List<TValue> successes = CreateList<TValue>(CountHint(source));
         List<Error>? errors = null;
         ExceptionDispatchInfo? fault = null;
+        int started = 0;
 
-        foreach (Task<Result<TValue>> task in source)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            Result<TValue> result;
-            try
+            foreach (Task<Result<TValue>> task in source)
             {
-                result = await task.ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                fault ??= ExceptionDispatchInfo.Capture(ex);
-                continue;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
+                started++;
 
-            if (result.IsSuccess)
-                successes.Add(result.Value);
-            else
-                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+                Result<TValue> result;
+                try
+                {
+                    result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    fault ??= ExceptionDispatchInfo.Capture(ex);
+                    continue;
+                }
+
+                Accumulate(result, successes, ref errors);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ObserveRemaining(source, started, static t => t);
+            throw;
         }
 
         fault?.Throw();
@@ -201,26 +228,37 @@ public static partial class ResultExtensions
         List<TValue> successes = CreateList<TValue>(CountHint(source));
         List<Error>? errors = null;
         ExceptionDispatchInfo? fault = null;
+        int started = 0;
 
-        foreach (ValueTask<Result<TValue>> task in source)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            Result<TValue> result;
-            try
+            foreach (ValueTask<Result<TValue>> task in source)
             {
-                result = await task.ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                fault ??= ExceptionDispatchInfo.Capture(ex);
-                continue;
-            }
+                cancellationToken.ThrowIfCancellationRequested();
+                started++;
 
-            if (result.IsSuccess)
-                successes.Add(result.Value);
-            else
-                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
+                Result<TValue> result;
+                try
+                {
+                    result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    fault ??= ExceptionDispatchInfo.Capture(ex);
+                    continue;
+                }
+
+                Accumulate(result, successes, ref errors);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ObserveRemaining(source, started, static t => t.AsTask());
+            throw;
         }
 
         fault?.Throw();

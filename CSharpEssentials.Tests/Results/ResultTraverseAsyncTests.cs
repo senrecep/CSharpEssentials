@@ -1,5 +1,6 @@
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
+using System.Runtime.CompilerServices;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Results;
@@ -435,4 +436,135 @@ public class ResultTraverseAsyncTests
     }
 
     #endregion
+
+    #region SequenceAsync cancellation
+
+    [Fact]
+    public async Task SequenceAsync_Task_Should_ThrowPromptly_When_PendingTaskIsCancelled()
+    {
+        TaskCompletionSource<Result<int>> never = new();
+        using CancellationTokenSource cts = new();
+        List<Task<Result<int>>> tasks = [Task.FromResult(Result<int>.Success(1)), never.Task];
+
+        Task<Result<int[]>> pending = tasks.SequenceAsync(cts.Token);
+        await cts.CancelAsync();
+
+        Func<Task> act = () => pending;
+
+        await act.Should().ThrowAsync<OperationCanceledException>().WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task SequenceAsync_ValueTask_Should_ThrowPromptly_When_PendingTaskIsCancelled()
+    {
+        TaskCompletionSource<Result<int>> never = new();
+        using CancellationTokenSource cts = new();
+        List<ValueTask<Result<int>>> tasks = [new ValueTask<Result<int>>(never.Task)];
+
+        Task<Result<int[]>> pending = RunAsync(tasks, cts.Token);
+        await cts.CancelAsync();
+
+        Func<Task> act = () => pending;
+
+        await act.Should().ThrowAsync<OperationCanceledException>().WaitAsync(TimeSpan.FromSeconds(5));
+
+        static async Task<Result<int[]>> RunAsync(List<ValueTask<Result<int>>> source, CancellationToken ct) =>
+            await source.SequenceAsync(ct);
+    }
+
+    [Fact]
+    public async Task SequenceAsync_Task_Should_NotEnumerateLazySource_Further_When_Cancelled()
+    {
+        TaskCompletionSource<Result<int>> never = new();
+        using CancellationTokenSource cts = new();
+        int produced = 0;
+
+        IEnumerable<Task<Result<int>>> Lazy()
+        {
+            produced++;
+            yield return never.Task;
+            produced++;
+            yield return Task.FromResult(Result<int>.Success(2));
+        }
+
+        Task<Result<int[]>> pending = Lazy().SequenceAsync(cts.Token);
+        await cts.CancelAsync();
+
+        Func<Task> act = () => pending;
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        produced.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SequenceAsync_Task_Should_ObserveRemainingTasks_When_CancelledAndLaterFault()
+    {
+        List<Exception> unobserved = [];
+        void Handler(object? sender, UnobservedTaskExceptionEventArgs e) => unobserved.Add(e.Exception);
+        TaskScheduler.UnobservedTaskException += Handler;
+
+        try
+        {
+            await FaultTasksAfterCancellationAsync();
+
+            await Task.Delay(50);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            unobserved.Should().BeEmpty();
+        }
+        finally
+        {
+            TaskScheduler.UnobservedTaskException -= Handler;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static async Task FaultTasksAfterCancellationAsync()
+    {
+        using CancellationTokenSource cts = new();
+        TaskCompletionSource<Result<int>> first = new();
+        TaskCompletionSource<Result<int>> second = new();
+        List<Task<Result<int>>> tasks = [first.Task, second.Task];
+
+        Task<Result<int[]>> pending = tasks.SequenceAsync(cts.Token);
+        await cts.CancelAsync();
+
+        Func<Task> act = () => pending;
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        second.SetException(new InvalidOperationException("late"));
+        first.SetException(new InvalidOperationException("abandoned"));
+    }
+
+    #endregion
+
+#if NET9_0_OR_GREATER
+    #region ValueTask binding
+
+    private static ValueTask<Result<int>> DoubleAsync(int x) => ValueTask.FromResult(Result<int>.Success(x * 2));
+
+    [Fact]
+    public async Task TraverseAsync_Should_BindMethodGroup_ToValueTaskFlavour()
+    {
+        ValueTask<Result<int[]>> pending = Items(1, 2).TraverseAsync(DoubleAsync);
+
+        Result<int[]> result = await pending;
+
+        result.Value.Should().Equal(2, 4);
+    }
+
+    [Fact]
+    public async Task TraverseAsync_Should_BindUntypedNonAsyncLambda_ToValueTaskFlavour()
+    {
+        ValueTask<Result<int[]>> pending = Items(1, 2).TraverseAsync(x => ValueTask.FromResult(Result<int>.Success(x + 1)));
+
+        Result<int[]> result = await pending;
+
+        result.Value.Should().Equal(2, 3);
+    }
+
+    #endregion
+#endif
 }

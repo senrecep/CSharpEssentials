@@ -188,16 +188,18 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 
 ```csharp
 Result<OrderDto[]> orders = await orderIds.TraverseAsync(
-    async (id, ct) => await GetOrderAsync(id, ct),
+    (id, ct) => GetOrderAsync(id, ct),
     cancellationToken);
 
-// Tasks that are already running: all of them are awaited, even after a failure
+// Tasks that are already running: every task is awaited, and all errors are collected
 Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync();
 ```
 
 - Cancellation throws `OperationCanceledException`; it is never turned into an error. The token is checked before each item, and `(item, ct)` selectors receive it.
 - Selector exceptions propagate. They are not converted to errors.
-- `SequenceAsync` awaits every task so none is left unobserved; if tasks fault, the first exception is rethrown after all of them have completed.
+- `SequenceAsync` awaits every task, even after a failed `Result` or a faulted task. Only the first exception is rethrown, after all tasks have completed (like `Task.WhenAll`).
+- On cancellation `SequenceAsync` stops waiting at once. The remaining tasks of a materialized collection (`ICollection<T>`/`IReadOnlyCollection<T>`) are observed, so a later fault does not surface as an unobserved task exception. Lazy sources are not enumerated further, because that would start new work.
+- On .NET 9+ with `LangVersion` 12, untyped `async` lambdas can be ambiguous between the `Task` and `ValueTask` overloads (CS0121), the same as `MapErrorAsync`. Use `LangVersion` 13+ or a typed delegate.
 - Overloads: `Func<T, Task<Result<U>>>` and `Func<T, CancellationToken, Task<Result<U>>>` on all targets; the `ValueTask` selector twins are available on .NET 9+. `SequenceAsync` accepts `IEnumerable<Task<Result<T>>>` and `IEnumerable<ValueTask<Result<T>>>`.
 
 ### TapIf: Conditional Side Effects
