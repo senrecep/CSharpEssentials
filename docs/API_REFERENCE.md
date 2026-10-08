@@ -294,6 +294,12 @@ Batch operations on sequences of results, without manually looping.
 | `Partition<T>(IEnumerable<Result<T>>)` | Split | Returns `(T[] Successes, Error[] Errors)`: never fails |
 | `FirstFailureOrSuccesses(IEnumerable<Result>)` | Short-circuit | Returns first failure immediately; otherwise success |
 | `FirstFailureOrSuccesses<T>(IEnumerable<Result<T>>)` | Short-circuit | Returns first failure or `Result<T[]>` of all values |
+| `TraverseAsync<TSource, TOut>(source, Func<TSource, Task<Result<TOut>>>, ct = default)` | Async map + sequence | Sequential; returns `Task<Result<TOut[]>>` |
+| `TraverseAsync<TSource, TOut>(source, Func<TSource, CancellationToken, Task<Result<TOut>>>, ct = default)` | Async map + sequence | Same, the selector also receives `ct` |
+| `TraverseAsync<TSource, TOut>(source, Func<TSource, ValueTask<Result<TOut>>>, ct = default)` | Async map + sequence | .NET 9+ only; returns `ValueTask<Result<TOut[]>>` |
+| `TraverseAsync<TSource, TOut>(source, Func<TSource, CancellationToken, ValueTask<Result<TOut>>>, ct = default)` | Async map + sequence | .NET 9+ only; returns `ValueTask<Result<TOut[]>>` |
+| `SequenceAsync<T>(IEnumerable<Task<Result<T>>>, ct = default)` | Await all, collect all | Awaits every task, even after a failure or fault; cancellable |
+| `SequenceAsync<T>(IEnumerable<ValueTask<Result<T>>>, ct = default)` | Await all, collect all | Each `ValueTask` is awaited exactly once, in order |
 
 ```csharp
 // Validate a batch — collect ALL errors
@@ -309,6 +315,26 @@ Console.WriteLine($"{succeeded.Length} succeeded, {failed.Length} errors");
 
 // Stop at first failure — useful for sequential pipeline steps
 Result pipeline = steps.FirstFailureOrSuccesses();
+```
+
+#### TraverseAsync / SequenceAsync semantics
+
+| Aspect | Behavior |
+|--------|----------|
+| Execution | `TraverseAsync` is sequential: each selector call is awaited before the next item starts |
+| Errors | All errors are accumulated in input order, identical to `Traverse`/`Sequence`; no short-circuit |
+| Cancellation | The token is checked before each item and passed to `(item, ct)` selectors. Cancellation throws `OperationCanceledException` and is never converted to an error |
+| Exceptions | Selector and task exceptions propagate. `SequenceAsync` awaits every task first, then rethrows only the first exception (like `Task.WhenAll`) |
+| Cancellation of `SequenceAsync` | Each await is cancellable. On cancellation the remaining tasks of a materialized collection are observed; lazy sources are not enumerated further |
+| C# 12 on net9+ | Untyped `async` lambdas can hit CS0121 between the `Task` and `ValueTask` overloads, same as `MapErrorAsync`. Use `LangVersion` 13+ or a typed delegate |
+| Input | `IEnumerable<T>` only; the result list is pre-sized for `ICollection<T>`/`IReadOnlyCollection<T>` |
+| Context | `ConfigureAwait(false)` on every await |
+
+```csharp
+Result<OrderDto[]> orders = await orderIds.TraverseAsync(
+    (id, ct) => GetOrderAsync(id, ct), cancellationToken);
+
+Result<int[]> values = await tasks.SequenceAsync();
 ```
 
 ---

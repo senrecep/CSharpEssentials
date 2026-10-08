@@ -179,6 +179,28 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 | `Traverse(selector)` | Map then sequence | `Result<TOut[]>` |
 | `Partition()` | Split | `(T[] Successes, Error[] Errors)` |
 | `FirstFailureOrSuccesses()` | Short-circuit | `Result` or `Result<T[]>` |
+| `TraverseAsync(selector, ct)` | Async map then sequence, one item at a time | `Task<Result<TOut[]>>` |
+| `SequenceAsync(ct)` | Await already-started tasks, collect all | `Task<Result<T[]>>` |
+
+#### TraverseAsync and SequenceAsync
+
+`TraverseAsync` runs an async selector over a sequence **sequentially**: each item is awaited before the next one starts, so side effects keep their order and a non-thread-safe resource such as a `DbContext` is safe to use. Like `Traverse`, it never short-circuits: every failure is collected and the errors come back in input order.
+
+```csharp
+Result<OrderDto[]> orders = await orderIds.TraverseAsync(
+    (id, ct) => GetOrderAsync(id, ct),
+    cancellationToken);
+
+// Tasks that are already running: every task is awaited, and all errors are collected
+Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync();
+```
+
+- Cancellation throws `OperationCanceledException`; it is never turned into an error. The token is checked before each item, and `(item, ct)` selectors receive it.
+- Selector exceptions propagate. They are not converted to errors.
+- `SequenceAsync` awaits every task, even after a failed `Result` or a faulted task. Only the first exception is rethrown, after all tasks have completed (like `Task.WhenAll`).
+- On cancellation `SequenceAsync` stops waiting at once. The remaining tasks of a materialized collection (`ICollection<T>`/`IReadOnlyCollection<T>`) are observed, so a later fault does not surface as an unobserved task exception. Lazy sources are not enumerated further, because that would start new work.
+- On .NET 9+ with `LangVersion` 12, untyped `async` lambdas can be ambiguous between the `Task` and `ValueTask` overloads (CS0121), the same as `MapErrorAsync`. Use `LangVersion` 13+ or a typed delegate.
+- Overloads: `Func<T, Task<Result<U>>>` and `Func<T, CancellationToken, Task<Result<U>>>` on all targets; the `ValueTask` selector twins are available on .NET 9+. `SequenceAsync` accepts `IEnumerable<Task<Result<T>>>` and `IEnumerable<ValueTask<Result<T>>>`.
 
 ### TapIf: Conditional Side Effects
 
