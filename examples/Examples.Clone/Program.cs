@@ -4,9 +4,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Clone Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// ICLONEABLE INTERFACE
-// ============================================================================
 Console.WriteLine("--- ICloneable<T> ---");
 
 Person original = new()
@@ -23,7 +20,6 @@ Console.WriteLine($"Clone: {clone.Name}, {clone.Age}, {clone.Address.City}");
 Console.WriteLine($"Are same reference? {ReferenceEquals(original, clone)}");
 Console.WriteLine($"Are addresses same reference? {ReferenceEquals(original.Address, clone.Address)}");
 
-// Modify clone to verify deep copy
 clone.Name = "Bob";
 clone.Address.City = "Los Angeles";
 
@@ -32,9 +28,6 @@ Console.WriteLine($"Original: {original.Name}, {original.Address.City}");
 Console.WriteLine($"Clone: {clone.Name}, {clone.Address.City}");
 Console.WriteLine();
 
-// ============================================================================
-// EXTENSION METHOD
-// ============================================================================
 Console.WriteLine("--- Clone Extension ---");
 
 Product product = new() { Id = 1, Name = "Laptop", Price = 999.99m };
@@ -48,10 +41,6 @@ Console.WriteLine();
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
-
-// ============================================================================
-// MODELS
-// ============================================================================
 
 public class Person : ICloneable<Person>
 {

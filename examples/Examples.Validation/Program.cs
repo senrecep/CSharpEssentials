@@ -6,9 +6,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Validation Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// 1. STRING VALIDATORS
-// ============================================================================
 Console.WriteLine("--- 1. String Validators ---");
 
 Result<CreateUserCommand> stringResult = await Validator.ValidateAsync(
@@ -29,9 +26,6 @@ stringResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// 2. COMPARABLE VALIDATORS (int, decimal, DateTime)
-// ============================================================================
 Console.WriteLine("--- 2. Comparable Validators ---");
 
 Result<ProductModel> comparableResult = await Validator.ValidateAsync(
@@ -52,35 +46,25 @@ comparableResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// 3. NULLABLE STRUCT VALIDATORS (int?, DateTime?)
-// ============================================================================
 Console.WriteLine("--- 3. Nullable Struct Validators ---");
 
 Result<OrderModel> nullableResult = await Validator.ValidateAsync(
     new OrderModel("CUST-1", null, null, -1),
     (m, rules) =>
     {
-        // null is silently skipped — no error for missing Priority
-        // only fires when Priority has a value AND fails the rule
         rules.For(() => m.Priority).GreaterThan(0);
     });
 
 Console.WriteLine($"Priority=-1 result: IsFailure={nullableResult.IsFailure}");
-// Priority=-1 → fails GreaterThan(0)
 
 Result<OrderModel> nullableSkipResult = await Validator.ValidateAsync(
     new OrderModel("CUST-1", null, null, null),
     (m, rules) => rules.For(() => m.Priority).GreaterThan(0));
 
 Console.WriteLine($"Priority=null result: IsFailure={nullableSkipResult.IsFailure}");
-// Priority=null → silently skipped → success
 
 Console.WriteLine();
 
-// ============================================================================
-// 4. COLLECTION VALIDATORS (List<T>?, T[]?, IEnumerable<T>?)
-// ============================================================================
 Console.WriteLine("--- 4. Collection Validators ---");
 
 Result<OrderModel> collectionResult = await Validator.ValidateAsync(
@@ -112,9 +96,6 @@ Console.WriteLine($"6 tags CountBetween(1,5): Code={countBetweenResult.FirstErro
 
 Console.WriteLine();
 
-// ============================================================================
-// 5. CASCADE MODE — collect ALL errors for a field
-// ============================================================================
 Console.WriteLine("--- 5. CascadeMode.Continue ---");
 
 Result<CreateUserCommand> cascadeResult = await Validator.ValidateAsync(
@@ -139,9 +120,6 @@ cascadeResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// 6. MUST — custom predicate
-// ============================================================================
 Console.WriteLine("--- 6. Must / MustAsync ---");
 
 Result<CreateUserCommand> mustResult = await Validator.ValidateAsync(
@@ -159,14 +137,10 @@ mustResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// 7. NESTED OBJECT VALIDATION — SetValidatorAsync (no ! required)
-// ============================================================================
 Console.WriteLine("--- 7. Nested Object Validation ---");
 
 AddressValidator addressValidator = new();
 
-// Non-null address with invalid city
 Result<OrderModel> nestedFail = await Validator.ValidateAsync(
     new OrderModel("CUST-1", null, new AddressModel("", "34000"), null),
     async (m, rules, ct) =>
@@ -174,7 +148,6 @@ Result<OrderModel> nestedFail = await Validator.ValidateAsync(
 
 Console.WriteLine($"Empty city → Code: {nestedFail.FirstError.Code}");
 
-// Null address — silently skipped, no error
 Result<OrderModel> nestedSkip = await Validator.ValidateAsync(
     new OrderModel("CUST-1", null, null, null),
     async (m, rules, ct) =>
@@ -184,9 +157,6 @@ Console.WriteLine($"Null ShippingAddress → IsSuccess: {nestedSkip.IsSuccess}")
 
 Console.WriteLine();
 
-// ============================================================================
-// 8. FOREACH — validate collection items
-// ============================================================================
 Console.WriteLine("--- 8. ForEach / ForEachAsync ---");
 
 Result<OrderModel> forEachResult = await Validator.ValidateAsync(
@@ -206,9 +176,6 @@ forEachResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// 9. NATIVE CONDITIONAL RULES — plain C# if/switch
-// ============================================================================
 Console.WriteLine("--- 9. Conditional Rules ---");
 
 OrderValidator urgentValidator = new();
@@ -225,9 +192,6 @@ Console.WriteLine($"Normal order, missing CustomerId → Code: {normalResult.Fir
 
 Console.WriteLine();
 
-// ============================================================================
-// 10. INCLUDE — validator composition
-// ============================================================================
 Console.WriteLine("--- 10. Include (Composition) ---");
 
 FullOrderValidator fullValidator = new();
@@ -245,9 +209,6 @@ composedResult.Switch(
     });
 
 Console.WriteLine();
-// ============================================================================
-// 11. ADVANCED COMPARABLE VALIDATORS
-// ============================================================================
 Console.WriteLine("--- 11. LessThan / LessThanOrEqualTo / ExclusiveBetween / InclusiveBetween / Equal / NotEqual ---");
 
 Result<ProductModel> ltResult = await Validator.ValidateAsync(
@@ -282,9 +243,6 @@ Console.WriteLine($"Sku NotEqual('RESERVED'): IsFailure={neResult.IsFailure}");
 
 Console.WriteLine();
 
-// ============================================================================
-// 12. STRING VALIDATORS (StartsWith, EndsWith, NotNull)
-// ============================================================================
 Console.WriteLine("--- 12. StartsWith / EndsWith / NotNull ---");
 
 Result<CreateUserCommand> swResult = await Validator.ValidateAsync(
@@ -304,9 +262,6 @@ Console.WriteLine($"Name=null NotNull: IsFailure={notNullResult.IsFailure}");
 
 Console.WriteLine();
 
-// ============================================================================
-// 13. VALIDATEWITH (RAILWAY BINDING)
-// ============================================================================
 Console.WriteLine("--- 13. ValidateWith / ValidateWithAsync ---");
 
 Result<CreateUserCommand> invalidPipeline = Result.Success(new CreateUserCommand("bad-email", "Alice", 30, "P@ssw0rd!"))
@@ -343,10 +298,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
 
-// ============================================================================
-// MODELS AND VALIDATOR CLASSES
-// ============================================================================
-
 record AddressModel(string? City, string? ZipCode);
 record CreateUserCommand(string? Email, string? Name, int Age, string? Password);
 record OrderModel(string? CustomerId, List<string?>? Tags, AddressModel? ShippingAddress, int? Priority);
@@ -366,10 +317,8 @@ sealed class OrderValidator : Validator<OrderModel>
 {
     protected override ValueTask Configure(OrderModel model, RuleContext<OrderModel> rules, CancellationToken ct = default)
     {
-        // Always required
         rules.For(() => model.CustomerId).NotEmpty();
 
-        // Conditional — Priority=1 means urgent, require ShippingAddress
         if (model.Priority == 1)
             rules.For(() => model.ShippingAddress).Must(a => a is not null, "ShippingAddress.Required", "Urgent orders require a shipping address.");
 

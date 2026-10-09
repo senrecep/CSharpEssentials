@@ -11,9 +11,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials (Main Package) Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// CROSS-PACKET INTEGRATION DEMO
-// ============================================================================
 Console.WriteLine("--- Cross-Package Integration ---");
 
 string input = "  Hello World  ";
@@ -33,9 +30,6 @@ result.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// DATE TIME PROVIDER INTEGRATION
-// ============================================================================
 Console.WriteLine("--- DateTimeProvider Integration ---");
 
 IDateTimeProvider time = new DateTimeProvider(TimeProvider.System);
@@ -43,9 +37,6 @@ DateTime now = time.UtcNowDateTime;
 Console.WriteLine($"Current UTC time: {now:O}");
 Console.WriteLine();
 
-// ============================================================================
-// GUID GENERATION
-// ============================================================================
 Console.WriteLine("--- Guid Generation ---");
 
 Guid id = Guider.NewGuid();
@@ -53,9 +44,6 @@ Console.WriteLine($"New Guid: {id}");
 Console.WriteLine($"URL-safe: {Guider.ToStringFromGuid(id)}");
 Console.WriteLine();
 
-// ============================================================================
-// META PACKAGE - STRING EXTENSIONS (TrimStart / TrimEnd)
-// ============================================================================
 Console.WriteLine("--- Meta String Extensions ---");
 
 string prefixText = "HelloWorld";
@@ -79,9 +67,6 @@ trimFail.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// META PACKAGE - JSON EXTENSIONS (TryGetProperty / TryGetNestedProperty)
-// ============================================================================
 Console.WriteLine("--- Meta Json Extensions ---");
 
 string jsonString = """
@@ -114,9 +99,6 @@ missingProp.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// META PACKAGE - TIME EXTENSIONS (MsToDateTime)
-// ============================================================================
 Console.WriteLine("--- Meta Time Extensions ---");
 
 long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
@@ -134,9 +116,6 @@ nullDate.Match(
 );
 Console.WriteLine();
 
-// ============================================================================
-// META PACKAGE - MAYBE TO RESULT (ToMaybeResult)
-// ============================================================================
 Console.WriteLine("--- Meta Maybe to Result ---");
 
 Maybe<User> existingUser = Services.FindUserByEmail("alice@example.com");
@@ -153,7 +132,6 @@ missingResult.Switch(
     onError: e => Console.WriteLine($"ToMaybeResult error (expected): {e[0].Description}")
 );
 
-// ToMaybeUnitResult
 Result unitResult = existingUser.ToMaybeUnitResult(Error.NotFound("User.NotFound", "User not found"));
 unitResult.Switch(
     onSuccess: () => Console.WriteLine("ToMaybeUnitResult: success (no value)"),
@@ -161,9 +139,6 @@ unitResult.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// ERROR HANDLING PIPELINE
-// ============================================================================
 Console.WriteLine("--- Error Handling Pipeline ---");
 
 Result<int> ParseAndValidate(string value)

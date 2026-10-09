@@ -4,9 +4,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Core Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// GUID GENERATION
-// ============================================================================
 Console.WriteLine("--- GUID Generation ---");
 
 Guid standardGuid = Guider.NewGuid();
@@ -18,7 +15,6 @@ Console.WriteLine($"URL-safe Guid: {urlSafe}");
 Guid backToGuid = Guider.ToGuidFromString(urlSafe);
 Console.WriteLine($"Back to Guid: {backToGuid}");
 
-// Guid extension methods
 Guid extGuid = Guid.NewGuid();
 string extUrlSafe = extGuid.ToStringFromGuid();
 Console.WriteLine($"Guid extension ToStringFromGuid: {extUrlSafe}");
@@ -26,9 +22,6 @@ Guid extBack = extUrlSafe.ToGuidFromString();
 Console.WriteLine($"String extension ToGuidFromString: {extBack}");
 Console.WriteLine();
 
-// ============================================================================
-// STRING EXTENSIONS (Case Conversions)
-// ============================================================================
 Console.WriteLine("--- String Case Extensions ---");
 
 string input = "hello world example";
@@ -42,7 +35,6 @@ Console.WriteLine($"ToMacroCase: '{input.ToMacroCase()}'");
 Console.WriteLine($"ToTrainCase: '{input.ToTrainCase()}'");
 Console.WriteLine($"ToUnderscoreCamelCase: '{input.ToUnderscoreCamelCase()}'");
 
-// Additional inputs: different separators
 string[] testInputs = { "hello-world", "hello_world", "HelloWorld", "helloWorld", "HELLO_WORLD" };
 foreach (var t in testInputs)
 {
@@ -51,7 +43,6 @@ foreach (var t in testInputs)
     Console.WriteLine($"    Title: '{t.ToTitleCase()}' | Macro: '{t.ToMacroCase()}' | Train: '{t.ToTrainCase()}' | _Camel: '{t.ToUnderscoreCamelCase()}'");
 }
 
-// Turkish characters with culture support
 Console.WriteLine("\n--- Turkish Character Tests (with tr-TR culture) ---");
 var trCulture = System.Globalization.CultureInfo.GetCultureInfo("tr-TR");
 string[] turkishInputs = { "İstanbul Ankara", "istanbul", "İSTANBUL", "çok güzel" };
@@ -66,9 +57,6 @@ Console.WriteLine($"\nIsEmpty(''): {emptyStr.IsEmpty()}");
 Console.WriteLine($"IsNotEmpty('{input}'): {input.IsNotEmpty()}");
 Console.WriteLine();
 
-// ============================================================================
-// STRING EXTENSIONS (General)
-// ============================================================================
 Console.WriteLine("--- String General Extensions ---");
 
 string? nullStr = null;
@@ -79,41 +67,32 @@ string mixed = "HelloWorld123";
 Console.WriteLine($"'{mixed}' IsEmpty: {mixed.IsEmpty()}");
 Console.WriteLine();
 
-// ============================================================================
-// COLLECTION EXTENSIONS
-// ============================================================================
 Console.WriteLine("--- Collection Extensions ---");
 
 List<int> numbers = new() { 1, 2, 3, 4, 5 };
 
-// ForEach (returns IEnumerable<T>)
 Console.Write("ForEach: ");
 numbers.AsEnumerable().ForEach(n => Console.Write($"{n} ")).ToList();
 Console.WriteLine();
 
-// WhereIf
 IEnumerable<int> filtered = numbers.WhereIf(true, n => n > 2);
 Console.WriteLine($"WhereIf(true, n > 2): [{string.Join(", ", filtered)}]");
 
 IEnumerable<int> unfiltered = numbers.WhereIf(false, n => n > 100);
 Console.WriteLine($"WhereIf(false, n > 100): [{string.Join(", ", unfiltered)}]");
 
-// WithoutNulls
 List<string?> nullableList = new() { "a", null, "b", null, "c" };
 List<string> noNulls = nullableList.WithoutNulls().ToList();
 Console.WriteLine($"WithoutNulls: [{string.Join(", ", noNulls)}]");
 
-// HasSameElements
 List<int> listA = new() { 1, 2, 3 };
 List<int> listB = new() { 3, 2, 1 };
 Console.WriteLine($"HasSameElements [1,2,3] vs [3,2,1]: {listA.HasSameElements(listB)}");
 
-// AllTrue / AllFalse
 List<bool> bools = new() { true, true, true };
 Console.WriteLine($"AllTrue [T,T,T]: {bools.AllTrue()}");
 Console.WriteLine($"AllFalse [T,T,T]: {bools.AllFalse()}");
 
-// IfAdd / IfAddRange
 List<string> items = new();
 items.IfAdd(true, "first");
 items.IfAdd(false, "skipped");
@@ -122,54 +101,40 @@ items.IfAddRange(false, new[] { "skipped1", "skipped2" });
 Console.WriteLine($"IfAdd/IfAddRange: [{string.Join(", ", items)}]");
 Console.WriteLine();
 
-// ============================================================================
-// GENERAL EXTENSIONS
-// ============================================================================
 Console.WriteLine("--- General Extensions ---");
 
-// IsTrue / IsFalse
 bool flag = true;
 Console.WriteLine($"true.IsTrue(): {flag.IsTrue()}");
 Console.WriteLine($"true.IsFalse(): {flag.IsFalse()}");
 
-// IfTrue / IfFalse
 flag.IfTrue(() => Console.WriteLine("  IfTrue action executed"));
 flag.IfFalse(() => Console.WriteLine("  IfFalse action skipped"));
 
-// IfNotNull
 string? maybeValue = "hello";
 maybeValue.IfNotNull(v => Console.WriteLine($"  IfNotNull value: {v}"));
 string? nullValue = null;
 nullValue.IfNotNull(v => Console.WriteLine($"  This won't print"), () => Console.WriteLine("  IfNotNull elseAction executed for null"));
 
-// IfNull
 nullValue.IfNull(() => Console.WriteLine("  IfNull action executed"));
 
-// ExplicitCast
 object numberObj = 42;
 int casted = numberObj.ExplicitCast<int>();
 Console.WriteLine($"ExplicitCast<int>(42): {casted}");
 
-// MsToDateTime
 long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 DateTime fromMs = timestamp.MsToDateTime();
 Console.WriteLine($"MsToDateTime: {fromMs:O}");
 
-// AsTask / AsValueTask
 string taskResult = "hello".AsTask().Result;
 string vtResult = "world".AsValueTask().Result;
 Console.WriteLine($"AsTask: {taskResult}, AsValueTask: {vtResult}");
 
-// WithCancellation
 CancellationTokenSource cts = new();
 Task<string> taskWithCancellation = "cancellable".AsTask().WithCancellation(cts.Token);
 Console.WriteLine($"WithCancellation: {taskWithCancellation.Result}");
 cts.Dispose();
 Console.WriteLine();
 
-// ============================================================================
-// RANDOM ITEMS
-// ============================================================================
 Console.WriteLine("--- Random Items ---");
 
 List<string> fruits = new() { "Apple", "Banana", "Cherry", "Date", "Elderberry" };
@@ -180,9 +145,6 @@ List<string> randomFruits = fruits.GetRandomItems(3).ToList();
 Console.WriteLine($"3 random fruits: [{string.Join(", ", randomFruits)}]");
 Console.WriteLine();
 
-// ============================================================================
-// TYPE GROUP
-// ============================================================================
 Console.WriteLine("--- Type Group ---");
 
 HttpStatus statusCode = HttpStatus.BadRequest;
@@ -190,9 +152,6 @@ HttpStatusGroup group = statusCode.GetTypeGroup<HttpStatusGroup, HttpStatus>(100
 Console.WriteLine($"HttpStatus.BadRequest ({(int)statusCode}) group: {group}");
 Console.WriteLine();
 
-// ============================================================================
-// EXCEPTION EXTENSIONS
-// ============================================================================
 Console.WriteLine("--- Exception Extensions ---");
 
 try
@@ -213,9 +172,6 @@ catch (Exception ex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// HTTP CODES
-// ============================================================================
 Console.WriteLine("--- HttpCodes ---");
 
 Console.WriteLine($"HttpCodes.Ok: {HttpCodes.Ok}");

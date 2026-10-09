@@ -10,9 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 Console.WriteLine("=== CSharpEssentials.Http Examples ===");
 Console.WriteLine();
 
-// ============================================================================
-// STATUS CODE MAPPING
-// ============================================================================
 Console.WriteLine("--- Status Code Mapping ---");
 
 ErrorType badRequestType = HttpStatusCodeMapper.ToErrorType(HttpStatusCode.BadRequest);
@@ -31,9 +28,6 @@ Error error = HttpStatusCodeMapper.ToError(HttpStatusCode.Forbidden);
 Console.WriteLine($"403 Error: {error.Code} - {error.Description}");
 Console.WriteLine();
 
-// ============================================================================
-// MOCK HTTP CLIENT WITH RESULT
-// ============================================================================
 Console.WriteLine("--- HttpClient Result Extensions ---");
 
 var mockHandler = new MockHttpHandler();
@@ -69,9 +63,6 @@ deleteResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// QUERY STRING BUILDER
-// ============================================================================
 Console.WriteLine("--- Query String Builder ---");
 
 Uri baseUri = new("https://api.example.com/search");
@@ -90,9 +81,6 @@ dictUriResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// HTTP REQUEST BUILDER
-// ============================================================================
 Console.WriteLine("--- HttpRequestBuilder ---");
 
 Result<User> builderResult = await HttpRequestBuilder
@@ -107,9 +95,6 @@ builderResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// RESILIENCE PIPELINE
-// ============================================================================
 Console.WriteLine("--- Resilience Pipeline ---");
 
 var pipeline = HttpClientResilienceExtensions.CreateResiliencePipeline(
@@ -127,9 +112,6 @@ resilientResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// REDIRECT FOLLOWING
-// ============================================================================
 Console.WriteLine("--- Redirect Following ---");
 
 var redirectHandler = new RedirectMockHandler();
@@ -156,16 +138,8 @@ builderRedirectResult.Switch(
 
 Console.WriteLine();
 
-// ============================================================================
-// CUSTOM IResultErrorMapper
-// ============================================================================
 Console.WriteLine("--- Custom IResultErrorMapper ---");
 
-// In a minimal API app you register the mapper once; ResultEndpointFilter resolves it
-// per request from HttpContext.RequestServices:
-//   builder.Services.AddSingleton<IResultErrorMapper, ApiErrorMapper>();
-//   app.MapGet("/users/{id}", GetUser).AddEndpointFilter<ResultEndpointFilter>();
-// Without a registered mapper the filter falls back to a ProblemDetails response.
 ServiceProvider services = new ServiceCollection()
     .AddLogging()
     .AddSingleton<IResultErrorMapper, ApiErrorMapper>()
@@ -240,10 +214,6 @@ public sealed class RedirectMockHandler : HttpMessageHandler
     }
 }
 
-/// <summary>
-/// Maps a failed Result's errors to an HTTP response. The first error decides the status code;
-/// all errors are returned in a compact { errors: [...] } envelope.
-/// </summary>
 public sealed class ApiErrorMapper : IResultErrorMapper
 {
     public IResult Map(Error[] errors)

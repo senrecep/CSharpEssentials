@@ -5,15 +5,11 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Results Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// BASIC RESULT CREATION
-// ============================================================================
 Console.WriteLine("--- Basic Result Creation ---");
 
 Result success = Result.Success();
 Console.WriteLine($"Success: IsSuccess={success.IsSuccess}, IsFailure={success.IsFailure}");
 
-// Explicit factories are available too; implicit conversions (below) are preferred.
 Result failure = Result.Failure(Error.Validation("Code", "Something went wrong"));
 Console.WriteLine($"Failure: IsSuccess={failure.IsSuccess}, Errors={failure.Errors.Length}");
 
@@ -24,9 +20,6 @@ Result<int> intFailure = Error.NotFound("Item not found");
 Console.WriteLine($"Int Failure: IsFailure={intFailure.IsFailure}");
 Console.WriteLine();
 
-// ============================================================================
-// ENSURE / ENSURE NOT NULL
-// ============================================================================
 Console.WriteLine("--- Ensure / EnsureNotNull ---");
 
 Result<int> ensured = Result.Success(50)
@@ -43,9 +36,6 @@ Result<string> ensureNotNull = Result.Success("hello")
 Console.WriteLine($"EnsureNotNull: {ensureNotNull.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// MAP ERROR
-// ============================================================================
 Console.WriteLine("--- MapError ---");
 
 Result<int> originalError = Error.Validation("Old", "Original error");
@@ -57,9 +47,6 @@ Result unitMapError = Result.Failure(Error.Validation("X", "Bad input"))
 Console.WriteLine($"MapError array: {unitMapError.FirstError.Code}");
 Console.WriteLine();
 
-// ============================================================================
-// TRY / TRY ASYNC
-// ============================================================================
 Console.WriteLine("--- Try / TryAsync ---");
 
 Result<int> trySuccess = Result.Try(() => 10 * 5, ex => Error.Exception(ex));
@@ -76,9 +63,6 @@ Result<int> tryAsyncSuccess = Result.TryAsync(async () =>
 Console.WriteLine($"TryAsync success: {tryAsyncSuccess.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// ELSE DO
-// ============================================================================
 Console.WriteLine("--- ElseDo ---");
 
 Result.Failure(Error.NotFound("User", "User not found"))
@@ -91,9 +75,6 @@ Result.Success()
     .ElseDo((Error[] _) => Console.WriteLine("  This won't print"));
 Console.WriteLine();
 
-// ============================================================================
-// TAP ERROR / TAP ERROR IF
-// ============================================================================
 Console.WriteLine("--- TapError / TapErrorIf ---");
 
 Result<int> tapErr = Result.Failure<int>(Error.NotFound("X", "Missing"))
@@ -106,9 +87,6 @@ Result.Success(42)
     .TapErrorFirst(_ => Console.WriteLine("  This won't print"));
 Console.WriteLine();
 
-// ============================================================================
-// DECONSTRUCT
-// ============================================================================
 Console.WriteLine("--- Deconstruct ---");
 
 Result<int> deconstructSuccess = 123;
@@ -120,9 +98,6 @@ Result<int> deconstructFail = Error.NotFound("X", "Missing");
 Console.WriteLine($"Deconstruct failure: isSuccess={isFail}, value={failValue}, errors={failErrors.Length}");
 Console.WriteLine();
 
-// ============================================================================
-// SUCCESS IF / FAILURE IF
-// ============================================================================
 Console.WriteLine("--- SuccessIf / FailureIf ---");
 
 Result successIf = Result.SuccessIf(true, Error.Validation("X", "Should not happen"));
@@ -138,9 +113,6 @@ Result failureIfOk = Result.FailureIf(false, Error.Validation("X", "Should not h
 Console.WriteLine($"FailureIf(false): {failureIfOk.IsSuccess}");
 Console.WriteLine();
 
-// ============================================================================
-// COMPENSATE
-// ============================================================================
 Console.WriteLine("--- Compensate ---");
 
 Result<int> compensated = Result.Failure<int>(Error.NotFound("X", "Not found"))
@@ -156,9 +128,6 @@ Result<int> noCompensate = Result.Success(10)
 Console.WriteLine($"No compensate (was success): {noCompensate.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// THEN ENSURE
-// ============================================================================
 Console.WriteLine("--- ThenEnsure ---");
 
 Result<int> thenEnsureOk = Result.Success(5)
@@ -174,9 +143,6 @@ Result<int> thenEnsureUnit = Result.Success(8)
 Console.WriteLine($"ThenEnsure unit: {thenEnsureUnit.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// RESULT CHAINING WITH THEN
-// ============================================================================
 Console.WriteLine("--- Result Chaining (Then) ---");
 
 Result<int> ParseNumber(string input)
@@ -200,9 +166,6 @@ string chainedOutput = chained.Match(
 Console.WriteLine(chainedOutput);
 Console.WriteLine();
 
-// ============================================================================
-// MATCH AND SWITCH
-// ============================================================================
 Console.WriteLine("--- Match and Switch ---");
 
 Result<string> GetUserName(int id)
@@ -219,9 +182,6 @@ string result = GetUserName(10).Match(
 Console.WriteLine(result);
 Console.WriteLine();
 
-// ============================================================================
-// MAP (TRANSFORM VALUE)
-// ============================================================================
 Console.WriteLine("--- Map ---");
 
 Result<int> doubled = Result.Success(21).Map(v => v * 2);
@@ -234,9 +194,6 @@ Result<string> mapFailed = Result.Failure<int>(Error.Validation("X", "Bad")).Map
 Console.WriteLine($"Map on failure propagates: {mapFailed.FirstError.Code}");
 Console.WriteLine();
 
-// ============================================================================
-// BIND (CHAIN WITH DIFFERENT RETURN TYPE)
-// ============================================================================
 Console.WriteLine("--- Bind ---");
 
 Result<int> parsed = Result.Success("123")
@@ -248,9 +205,6 @@ Result bindUnit = Result.Success("alice")
 Console.WriteLine($"Bind to unit: {bindUnit.IsSuccess}");
 Console.WriteLine();
 
-// ============================================================================
-// TAP (SIDE EFFECT ON SUCCESS)
-// ============================================================================
 Console.WriteLine("--- Tap ---");
 
 Result.Success(10)
@@ -264,9 +218,6 @@ Result.Failure<int>(Error.NotFound("X", "Missing"))
     .Tap(v => Console.WriteLine("  This won't print (failure)"));
 Console.WriteLine();
 
-// ============================================================================
-// ELSE (FALLBACK ON FAILURE)
-// ============================================================================
 Console.WriteLine("--- Else ---");
 
 Result<int> elseValue = Result.Failure<int>(Error.NotFound("X", "Missing")).Else(42);
@@ -283,9 +234,6 @@ Result<int> elseNoChange = Result.Success(99).Else(0);
 Console.WriteLine($"Else on success (no change): {elseNoChange.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// FINALLY (ALWAYS EXECUTES)
-// ============================================================================
 Console.WriteLine("--- Finally ---");
 
 string finallySuccess = Result.Success(7).Finally(r => r.IsSuccess ? $"Ok: {r.Value}" : "Fail");
@@ -296,9 +244,6 @@ string finallyFail = Result.Failure<int>(Error.NotFound("X", "Missing"))
 Console.WriteLine($"Finally failure: {finallyFail}");
 Console.WriteLine();
 
-// ============================================================================
-// GET VALUE OR DEFAULT / GET VALUE OR THROW
-// ============================================================================
 Console.WriteLine("--- GetValueOrDefault / GetValueOrThrow ---");
 
 int defaulted = Result.Failure<int>(Error.NotFound("X", "Missing")).GetValueOrDefault(-1);
@@ -320,9 +265,6 @@ catch (InvalidOperationException ex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// UNWRAP / UNWRAP OR DEFAULT
-// ============================================================================
 Console.WriteLine("--- Unwrap / UnwrapOrDefault ---");
 
 int unwrapped = Result.Success(55).Unwrap();
@@ -341,9 +283,6 @@ catch (ResultUnwrapException ex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// RECOVER / RECOVER FIRST
-// ============================================================================
 Console.WriteLine("--- Recover / RecoverFirst ---");
 
 Result<int> recovered = Result.Failure<int>(Error.NotFound("Cache.Miss", "Not in cache"))
@@ -359,9 +298,6 @@ Result<int> recoveredFirst = Result.Failure<int>(Error.Unauthorized("Auth", "No 
 Console.WriteLine($"RecoverFirst Unauthorized: {recoveredFirst.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// BINDIF (CONDITIONAL BIND)
-// ============================================================================
 Console.WriteLine("--- BindIf ---");
 
 bool isAdmin = true;
@@ -375,9 +311,6 @@ Result<int> bindIfPredicate = Result.Success(10)
 Console.WriteLine($"BindIf predicate: {bindIfPredicate.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// FAILIF (FAIL WHEN CONDITION IS MET)
-// ============================================================================
 Console.WriteLine("--- FailIf ---");
 
 Result<int> failIfNeg = Result.Success(-5)
@@ -389,9 +322,6 @@ Result<int> failIfOk = Result.Success(5)
 Console.WriteLine($"FailIf (not met): {failIfOk.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// TRYCATCH (EXCEPTION-SAFE BIND)
-// ============================================================================
 Console.WriteLine("--- TryCatch ---");
 
 Result<int> tryCatchOk = Result.Success("42")
@@ -403,9 +333,6 @@ Result<int> tryCatchFail = Result.Success("not-a-number")
 Console.WriteLine($"TryCatch caught exception: IsFailure={tryCatchFail.IsFailure}");
 Console.WriteLine();
 
-// ============================================================================
-// COLLECTION: SEQUENCE / TRAVERSE / PARTITION / FIRSTFAILUREORSUCCESSES
-// ============================================================================
 Console.WriteLine("--- Collection Extensions ---");
 
 List<Result<int>> allOkResults = new()

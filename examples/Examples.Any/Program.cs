@@ -4,9 +4,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Any Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// ANY TYPE - CREATION
-// ============================================================================
 Console.WriteLine("--- Any Type ---");
 
 Any<string, int> anyString = Any.Create<string, int>("hello");
@@ -16,9 +13,6 @@ Console.WriteLine($"Any from string: {anyString.Value} (Type: {anyString.Value?.
 Console.WriteLine($"Any from int: {anyInt.Value} (Type: {anyInt.Value?.GetType().Name})");
 Console.WriteLine();
 
-// ============================================================================
-// DECONSTRUCT (TUPLE SYNTAX)
-// ============================================================================
 Console.WriteLine("--- Deconstruct ---");
 
 (string? sVal, int iVal) = anyString;
@@ -28,9 +22,6 @@ Console.WriteLine($"Deconstruct string: first={sVal}, second={iVal}");
 Console.WriteLine($"Deconstruct int: first={sVal2}, second={iVal2}");
 Console.WriteLine();
 
-// ============================================================================
-// TO TUPLE
-// ============================================================================
 Console.WriteLine("--- ToTuple ---");
 
 (string? t1, int? t2) = anyString.ToTuple();
@@ -40,9 +31,6 @@ Console.WriteLine($"ToTuple string: First={t1}, Second={t2}");
 Console.WriteLine($"ToTuple int: First={t3}, Second={t4}");
 Console.WriteLine();
 
-// ============================================================================
-// IS<T> / AS<T> / TRYAS<T>
-// ============================================================================
 Console.WriteLine("--- Is<T> / As<T> / TryAs<T> ---");
 
 Console.WriteLine($"anyString.Is<string>(): {anyString.Is<string, string, int>()}");
@@ -62,9 +50,6 @@ bool tryFail = anyString.TryAs<int, string, int>(out int tryInt);
 Console.WriteLine($"anyString.TryAs<int>(): success={tryFail}, value={tryInt}");
 Console.WriteLine();
 
-// ============================================================================
-// TYPE CHECKING
-// ============================================================================
 Console.WriteLine("--- Type Checking ---");
 
 Console.WriteLine($"anyString.IsFirst: {anyString.IsFirst}");
@@ -73,9 +58,6 @@ Console.WriteLine($"anyInt.IsFirst: {anyInt.IsFirst}");
 Console.WriteLine($"anyInt.IsSecond: {anyInt.IsSecond}");
 Console.WriteLine();
 
-// ============================================================================
-// GET VALUES
-// ============================================================================
 Console.WriteLine("--- Get Values ---");
 
 string stringValue = anyString.GetFirst();
@@ -85,9 +67,6 @@ int intValue = anyInt.GetSecond();
 Console.WriteLine($"GetSecond: {intValue}");
 Console.WriteLine();
 
-// ============================================================================
-// FIRST / SECOND FACTORY METHODS
-// ============================================================================
 Console.WriteLine("--- Factory Methods ---");
 
 Any<string, int> first = Any<string, int>.First("factory-first");
@@ -96,9 +75,6 @@ Console.WriteLine($"First factory: IsFirst={first.IsFirst}, Value={first.GetFirs
 Console.WriteLine($"Second factory: IsSecond={second.IsSecond}, Value={second.GetSecond()}");
 Console.WriteLine();
 
-// ============================================================================
-// SWITCH
-// ============================================================================
 Console.WriteLine("--- Switch ---");
 
 anyString.Switch(
@@ -112,9 +88,6 @@ anyInt.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// MATCH
-// ============================================================================
 Console.WriteLine("--- Match ---");
 
 AnyActionResult<string> matched = anyString.Match(
@@ -130,9 +103,6 @@ AnyActionResult<string> matchedInt = anyInt.Match(
 Console.WriteLine($"Match result: Status={matchedInt.Status}, Result={matchedInt.Result}");
 Console.WriteLine();
 
-// ============================================================================
-// MULTIPLE TYPES (AnyT3)
-// ============================================================================
 Console.WriteLine("--- Multiple Typed Values (AnyT3) ---");
 
 Any<string, int, bool> triple = "Age";
@@ -150,9 +120,6 @@ bool t3Try = tripleThird.TryAs<bool, string, int, bool>(out bool t3Bool);
 Console.WriteLine($"tripleThird.TryAs<bool>(): success={t3Try}, value={t3Bool}");
 Console.WriteLine();
 
-// ============================================================================
-// INDEX PROPERTY
-// ============================================================================
 Console.WriteLine("--- Index Property ---");
 
 Any<string, int> anyStringIdx = "hello";
@@ -161,9 +128,6 @@ Console.WriteLine($"anyString.Index: {anyStringIdx.Index}");
 Console.WriteLine($"anyInt.Index: {anyIntIdx.Index}");
 Console.WriteLine();
 
-// ============================================================================
-// ANYACTIONSTATUS (FROM SWITCH RETURN VALUE)
-// ============================================================================
 Console.WriteLine("--- AnyActionStatus ---");
 
 Any<string, int> switchTarget = "world";
@@ -181,9 +145,6 @@ AnyActionStatus emptyStatus = emptyAny.Switch(
 Console.WriteLine($"AnyActionStatus.NotExecuted: {emptyStatus == AnyActionStatus.NotExecuted}");
 Console.WriteLine();
 
-// ============================================================================
-// ANY<T0,T1,T2,T3> — FOUR-TYPE VARIANT (AnyT4)
-// ============================================================================
 Console.WriteLine("--- Any<T0,T1,T2,T3> (AnyT4) ---");
 
 Any<string, int, bool, Guid> quadThird = true;

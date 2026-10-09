@@ -5,9 +5,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Errors Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// ERROR CREATION
-// ============================================================================
 Console.WriteLine("--- Error Creation ---");
 
 Error notFound = Error.NotFound("User.NotFound", "User with id 123 was not found");
@@ -20,9 +17,6 @@ Error conflict = Error.Conflict("User.Duplicate", "A user with this email alread
 Console.WriteLine($"Conflict: Code={conflict.Code}, Type={conflict.Type}");
 Console.WriteLine();
 
-// ============================================================================
-// ERROR[] IMPLICIT CONVERSION
-// ============================================================================
 Console.WriteLine("--- Error[] Implicit Conversion ---");
 
 Error single = Error.Validation("Single", "One error");
@@ -30,9 +24,6 @@ Error[] array = single;
 Console.WriteLine($"Implicit to array: Length={array.Length}, Code={array[0].Code}");
 Console.WriteLine();
 
-// ============================================================================
-// + OPERATOR FOR COMBINING ERRORS
-// ============================================================================
 Console.WriteLine("--- + Operator (Combining Errors) ---");
 
 Error errorA = Error.Validation("A", "First error");
@@ -45,9 +36,6 @@ foreach (Error err in combined)
 }
 Console.WriteLine();
 
-// ============================================================================
-// ERROR TYPE CONVERSION
-// ============================================================================
 Console.WriteLine("--- Error Type to HTTP Status ---");
 
 Error[] errors = { notFound, validation, conflict };
@@ -57,9 +45,6 @@ foreach (Error error in errors)
 }
 Console.WriteLine();
 
-// ============================================================================
-// ERROR METADATA
-// ============================================================================
 Console.WriteLine("--- Error Metadata ---");
 
 ErrorMetadata metadata = new ErrorMetadata()
@@ -78,9 +63,6 @@ if (withMetadata.Metadata is not null)
 }
 Console.WriteLine();
 
-// ============================================================================
-// MULTIPLE ERRORS
-// ============================================================================
 Console.WriteLine("--- Multiple Errors ---");
 
 Error[] multipleErrors =
@@ -97,9 +79,6 @@ foreach (Error err in multipleErrors)
 }
 Console.WriteLine();
 
-// ============================================================================
-// DOMAIN EXCEPTION
-// ============================================================================
 Console.WriteLine("--- DomainException ---");
 
 try
@@ -115,9 +94,6 @@ catch (DomainException dex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// ENHANCED VALIDATION EXCEPTION
-// ============================================================================
 Console.WriteLine("--- EnhancedValidationException ---");
 
 try
@@ -140,9 +116,6 @@ catch (EnhancedValidationException vex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// FAILURE / UNEXPECTED / UNAUTHORIZED / FORBIDDEN / EXCEPTION
-// ============================================================================
 Console.WriteLine("--- Failure / Unexpected / Unauthorized / Forbidden / Exception ---");
 
 Error failure = Error.Failure("Op.Failed", "The operation failed.");
@@ -168,9 +141,6 @@ catch (Exception ex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// CREATE MANY
-// ============================================================================
 Console.WriteLine("--- CreateMany ---");
 
 Error[] many = Error.CreateMany(
@@ -183,9 +153,6 @@ foreach (Error e in many)
     Console.WriteLine($"  {e.Code}");
 Console.WriteLine();
 
-// ============================================================================
-// SENTINEL VALUES: NOFIRSTERROR / NOERRORS / FALSE
-// ============================================================================
 Console.WriteLine("--- Sentinel Values ---");
 
 Console.WriteLine($"NoFirstError: Code={Error.NoFirstError.Code}, Type={Error.NoFirstError.Type}");
@@ -193,9 +160,6 @@ Console.WriteLine($"NoErrors: Code={Error.NoErrors.Code}");
 Console.WriteLine($"False: Code={Error.False.Code}, Type={Error.False.Type}");
 Console.WriteLine();
 
-// ============================================================================
-// ERRORTYPE ENUM / TOINTTYPE / TOERRORTYPE / TOHTTPSTATUSCODE
-// ============================================================================
 Console.WriteLine("--- ErrorType Enum / ToIntType / ToErrorType ---");
 
 ErrorType[] types =
@@ -218,9 +182,6 @@ ErrorType fromHttp400 = 400.ToErrorType();
 Console.WriteLine($"400.ToErrorType(): {fromHttp400}");
 Console.WriteLine();
 
-// ============================================================================
-// IERROR INTERFACE
-// ============================================================================
 Console.WriteLine("--- IError Interface ---");
 
 Error sample = Error.NotFound("Sample.Missing", "Sample not found");

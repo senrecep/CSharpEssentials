@@ -8,9 +8,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Json - Advanced Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// 1. DEFAULT JSON OPTIONS & EXTENSION METHODS
-// ============================================================================
 Console.WriteLine("--- 1. Default Json Options & Extensions ---");
 
 JsonSerializerOptions defaultOpts = EnhancedJsonSerializerOptions.DefaultOptions;
@@ -27,9 +24,6 @@ using JsonDocument personDoc = person.ConvertToJsonDocument();
 Console.WriteLine($"ConvertToJsonDocument: name={personDoc.RootElement.GetProperty("name").GetString()}");
 Console.WriteLine();
 
-// ============================================================================
-// 2. JSON OPTIONS CHAINING (Create / ApplyTo / ApplyFrom)
-// ============================================================================
 Console.WriteLine("--- 2. Json Options Chaining ---");
 
 JsonSerializerOptions customOpts = EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters.Create(opts =>
@@ -50,9 +44,6 @@ sourceOpts.ApplyFrom(customOpts);
 Console.WriteLine($"ApplyFrom: WriteIndented={sourceOpts.WriteIndented}");
 Console.WriteLine();
 
-// ============================================================================
-// 3. SIMPLE POLYMORPHIC SERIALIZATION
-// ============================================================================
 Console.WriteLine("--- 3. Simple Polymorphic Serialization ---");
 
 JsonSerializerOptions polyOptions = EnhancedJsonSerializerOptions.DefaultOptions;
@@ -71,9 +62,6 @@ Console.WriteLine($"Cat: {deserializedCat.GetType().Name}, Name={deserializedCat
 Console.WriteLine($"Dog: {deserializedDog.GetType().Name}, Name={deserializedDog.Name}");
 Console.WriteLine();
 
-// ============================================================================
-// 4. DEEP INHERITANCE HIERARCHY
-// ============================================================================
 Console.WriteLine("--- 4. Deep Inheritance Hierarchy ---");
 
 Animal mammal = new Mammal { Name = "Generic Mammal", HasFur = true };
@@ -90,9 +78,6 @@ Console.WriteLine($"Mammal: {deserializedMammal.GetType().Name}, HasFur={((Mamma
 Console.WriteLine($"HouseCat: {deserializedHouseCat.GetType().Name}, Indoor={((HouseCat)deserializedHouseCat).Indoor}");
 Console.WriteLine();
 
-// ============================================================================
-// 5. POLYMORPHIC COLLECTIONS
-// ============================================================================
 Console.WriteLine("--- 5. Polymorphic Collections ---");
 
 List<Animal> zoo = new()
@@ -113,9 +98,6 @@ foreach (Animal animal in deserializedZoo!)
 }
 Console.WriteLine();
 
-// ============================================================================
-// 6. NESTED POLYMORPHIC OBJECTS
-// ============================================================================
 Console.WriteLine("--- 6. Nested Polymorphic Objects ---");
 
 PetOwner owner = new()
@@ -131,12 +113,8 @@ PetOwner? deserializedOwner = JsonSerializer.Deserialize<PetOwner>(ownerJson, po
 Console.WriteLine($"Owner: {deserializedOwner?.OwnerName}, Pet: {deserializedOwner?.FavoritePet?.GetType().Name} ({deserializedOwner?.FavoritePet?.Name})");
 Console.WriteLine();
 
-// ============================================================================
-// 7. POLYMORPHIC ERROR HANDLING
-// ============================================================================
 Console.WriteLine("--- 7. Polymorphic Error Handling ---");
 
-// Missing $type
 string missingTypeJson = "{\"name\":\"Ghost\"}";
 try
 {
@@ -147,7 +125,6 @@ catch (JsonException ex)
     Console.WriteLine($"Missing $type error (expected): {ex.Message}");
 }
 
-// Unknown $type
 string unknownTypeJson = "{\"$type\":\"UnknownType\",\"name\":\"Ghost\"}";
 try
 {
@@ -158,52 +135,36 @@ catch (JsonException ex)
     Console.WriteLine($"Unknown $type error (expected): {ex.Message}");
 }
 
-// Null value
 string nullJson = "null";
 Animal? nullAnimal = JsonSerializer.Deserialize<Animal>(nullJson, polyOptions);
 Console.WriteLine($"Null deserialized: {nullAnimal == null}");
 Console.WriteLine();
 
-// ============================================================================
-// 8. MULTI-FORMAT DATE TIME CONVERTER - EXHAUSTIVE
-// ============================================================================
 Console.WriteLine("--- 8. MultiFormatDateTimeConverter Exhaustive ---");
 
 JsonSerializerOptions dateOpts = EnhancedJsonSerializerOptions.DefaultOptionsWithDateTimeConverter;
 
-// ISO 8601
 TestDateFormat("{\"date\":\"2025-01-15T10:00:00\"}", "ISO 8601");
 
-// US format
 TestDateFormat("{\"date\":\"01/15/2025 10:00:00\"}", "US format");
 
-// European format
 TestDateFormat("{\"date\":\"15/03/2025 14:30:00\"}", "European format");
 
-// Unix timestamp
 TestDateFormat("{\"date\":\"1705312800\"}", "Unix timestamp");
 
-// Compact
 TestDateFormat("{\"date\":\"20250115\"}", "Compact yyyyMMdd");
 
-// Human readable
 TestDateFormat("{\"date\":\"15 March 2025\"}", "Human readable");
 
-// With timezone offset
 TestDateFormat("{\"date\":\"2025-01-15T10:00:00+03:00\"}", "With timezone offset");
 
-// Null DateTime (nullable)
 string nullDateJson = "{\"optionalDate\":null}";
 NullableDateDto? nullDateDto = nullDateJson.ConvertFromJson<NullableDateDto>(dateOpts);
 Console.WriteLine($"Null nullable DateTime: {nullDateDto?.OptionalDate.HasValue == false}");
 Console.WriteLine();
 
-// ============================================================================
-// 9. ENUM CONVENTIONS - COMPLEX SCENARIOS
-// ============================================================================
 Console.WriteLine("--- 9. Enum Conventions Complex ---");
 
-// Mixed enums in same object
 MixedEnumDto mixed = new()
 {
     UserStatus = UserStatus.Suspended,
@@ -213,11 +174,9 @@ MixedEnumDto mixed = new()
 string mixedJson = mixed.ConvertToJson();
 Console.WriteLine($"Mixed enums: {mixedJson}");
 
-// Enum array
 string enumArrayJson = JsonSerializer.Serialize(new[] { UserStatus.Active, UserStatus.Inactive }, defaultOpts);
 Console.WriteLine($"Enum array: {enumArrayJson}");
 
-// Enum with duplicate value behavior
 string priorityJson = JsonSerializer.Serialize(OrderPriority.High, defaultOpts);
 Console.WriteLine($"Priority as int (no [StringEnum]): {priorityJson}");
 
@@ -225,9 +184,6 @@ string statusJson = JsonSerializer.Serialize(UserStatus.Active, defaultOpts);
 Console.WriteLine($"Status as string ([StringEnum]): {statusJson}");
 Console.WriteLine();
 
-// ============================================================================
-// 10. JSON DOCUMENT NAVIGATION - COMPLEX
-// ============================================================================
 Console.WriteLine("--- 10. Json Document Navigation Complex ---");
 
 string complexJson = """
@@ -253,28 +209,24 @@ string complexJson = """
 
 using JsonDocument complexDoc = JsonDocument.Parse(complexJson);
 
-// TryGetNestedProperty deep object path
 var companyResult = complexDoc.TryGetNestedProperty("company", "metadata", "founded");
 companyResult.Switch(
     onSuccess: v => Console.WriteLine($"Deep nested founded year: {v!.Value.GetInt32()}"),
     onError: e => Console.WriteLine($"Error: {e[0].Description}")
 );
 
-// TryGetNestedProperty on JsonElement via JsonDocument
 var metaResult = complexDoc.TryGetNestedProperty("company", "metadata", "founded");
 metaResult.Switch(
     onSuccess: v => Console.WriteLine($"Metadata founded: {v!.Value.GetInt32()}"),
     onError: e => Console.WriteLine($"Error: {e[0].Description}")
 );
 
-// Missing nested path
 var missingDeep = complexDoc.TryGetNestedProperty("company", "metadata", "missing_property");
 missingDeep.Switch(
     onSuccess: v => Console.WriteLine($"Found: {v}"),
     onError: e => Console.WriteLine($"Missing deep path (expected): {e[0].Description}")
 );
 
-// Null document
 JsonDocument? nullDoc = null;
 var nullDocResult = nullDoc!.TryGetNestedProperty("test");
 nullDocResult.Switch(
@@ -282,7 +234,6 @@ nullDocResult.Switch(
     onError: e => Console.WriteLine($"Null document error (expected): {e[0].Description}")
 );
 
-// Empty property names
 var emptyProps = complexDoc.TryGetNestedProperty(Array.Empty<string>());
 emptyProps.Switch(
     onSuccess: v => Console.WriteLine($"Found: {v}"),
@@ -290,9 +241,6 @@ emptyProps.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// 11. MALFORMED JSON HANDLING
-// ============================================================================
 Console.WriteLine("--- 11. Malformed JSON Handling ---");
 
 string malformed = "{\"name\":\"Alice\",\"age\":}";
@@ -316,9 +264,6 @@ catch (JsonException ex)
 }
 Console.WriteLine();
 
-// ============================================================================
-// 12. LARGE PAYLOAD PERFORMANCE
-// ============================================================================
 Console.WriteLine("--- 12. Large Payload ---");
 
 List<Person> people = new();
@@ -334,9 +279,6 @@ List<Person>? bigBack = bigJson.ConvertFromJson<List<Person>>();
 Console.WriteLine($"Deserialized back: {bigBack?.Count} people");
 Console.WriteLine();
 
-// ============================================================================
-// 13. JSON ELEMENT EXTRACTION
-// ============================================================================
 Console.WriteLine("--- 13. JsonElement Extraction ---");
 
 string dataJson = """{"id":42,"active":true,"score":98.6,"tags":["a","b","c"]}""";
@@ -359,10 +301,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("All advanced scenarios completed.");
 Console.WriteLine("========================================");
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 static void TestDateFormat(string json, string description)
 {
     try
@@ -375,10 +313,6 @@ static void TestDateFormat(string json, string description)
         Console.WriteLine($"  {description}: FAILED - {ex.Message[..60]}...");
     }
 }
-
-// ============================================================================
-// MODELS
-// ============================================================================
 
 public class Person
 {

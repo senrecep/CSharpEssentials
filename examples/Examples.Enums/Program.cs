@@ -10,13 +10,8 @@ public class Program
         Console.WriteLine("CSharpEssentials.Enums Example");
         Console.WriteLine("========================================\n");
 
-        // ============================================================================
-        // STRING ENUM ATTRIBUTE
-        // ============================================================================
         Console.WriteLine("--- StringEnumAttribute ---");
 
-        // The [StringEnum] attribute marks enums that should be serialized
-        // as strings (instead of integers) in JSON or other contexts.
         Status status = Status.Active;
         Console.WriteLine($"Status.Active value: {(int)status}");
         Console.WriteLine($"Status.Active name: {status}");
@@ -25,13 +20,9 @@ public class Program
         Console.WriteLine($"Priority.High value: {(int)priority}");
         Console.WriteLine($"Priority.High name: {priority}");
 
-        // The library's own ErrorType enum is also marked with [StringEnum]
         Console.WriteLine("ErrorType in library is also [StringEnum]");
         Console.WriteLine();
 
-        // ============================================================================
-        // ENUM PARSING WITH STANDARD C#
-        // ============================================================================
         Console.WriteLine("--- Enum Parsing ---");
 
         bool parsed = Enum.TryParse("Active", out Status activeValue);
@@ -41,9 +32,6 @@ public class Program
         Console.WriteLine($"Parse 'Unknown': {unknown}");
         Console.WriteLine();
 
-        // ============================================================================
-        // SOURCE GENERATED FAST ToString & FORMATTING
-        // ============================================================================
         Console.WriteLine("--- Source Generated String Formatting ---");
 
         Status s = Status.Active;
@@ -64,17 +52,11 @@ public class Program
         Console.WriteLine($"Status.Active.ToUpperCase() = {upper}");
         Console.WriteLine();
 
-        // ============================================================================
-        // SOURCE GENERATED CONSTANTS
-        // ============================================================================
         Console.WriteLine("--- Source Generated Constants ---");
         Console.WriteLine($"StatusExtensions.ActiveSnakeCase = {StatusExtensions.ActiveSnakeCase}");
         Console.WriteLine($"StatusExtensions.PendingKebabCase = {StatusExtensions.PendingKebabCase}");
         Console.WriteLine();
 
-        // ============================================================================
-        // SOURCE GENERATED LOOKUP & PARSE
-        // ============================================================================
         Console.WriteLine("--- Source Generated Lookup & Parse ---");
 
         bool known = StatusExtensions.IsDefined("Pending");
@@ -95,9 +77,6 @@ public class Program
         Console.WriteLine($"StatusExtensions.GetValues() = [{string.Join(", ", values)}]");
         Console.WriteLine();
 
-        // ============================================================================
-        // DELIVERY STATUS: GENERATOR API + JSON NAMING
-        // ============================================================================
         Console.WriteLine("--- DeliveryStatus ---");
 
         DeliveryStatus delivery = DeliveryStatus.Shipped;
@@ -114,8 +93,6 @@ public class Program
 
         Console.WriteLine($"ParseWire(\"returned\") = {DeliveryStatusExtensions.ParseWire("returned")}");
 
-        // EnumMetadata (CSharpEssentials.Enums) is the one source of the wire names the JSON converters use, so APIs
-        // and generated code agree on the same spelling.
         IEnumInfo info = EnumMetadata.Get<DeliveryStatus>();
         Console.WriteLine($"EnumValueFormatter.Format(Shipped) = {EnumValueFormatter.Format(delivery, EnumWireFormat.String)}");
         Console.WriteLine($"EnumMetadata.Get<DeliveryStatus>().WireNames = [{string.Join(", ", info.WireNames)}]");
@@ -132,10 +109,6 @@ public class Program
         Console.WriteLine("========================================");
     }
 }
-
-// ============================================================================
-// ENUMS
-// ============================================================================
 
 [StringEnum]
 public enum Status
