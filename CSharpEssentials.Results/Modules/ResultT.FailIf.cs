@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 
 
 using CSharpEssentials.Core;
@@ -40,6 +41,7 @@ public readonly partial record struct Result<TValue>
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+    [OverloadResolutionPriority(1)]
     public async Task<Result<TValue>> FailIfAsync(Func<TValue, Task<bool>> onSuccess, Error error, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
@@ -54,12 +56,45 @@ public readonly partial record struct Result<TValue>
     /// <param name="func"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+    [OverloadResolutionPriority(1)]
     public async Task<Result<TValue>> FailIfAsync(Func<TValue, Task<bool>> onSuccess, Func<TValue, Task<Error>> func, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
             return this;
         return await onSuccess(Value).WithCancellation(cancellationToken) ? (await func(Value).WithCancellation(cancellationToken)) : this;
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Fail if the ValueTask predicate returns true.
+    /// </summary>
+    /// <param name="onSuccess"></param>
+    /// <param name="error"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async ValueTask<Result<TValue>> FailIfAsync(Func<TValue, ValueTask<bool>> onSuccess, Error error, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+            return this;
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false) ? error : this;
+    }
+
+    /// <summary>
+    /// Fail if the ValueTask predicate returns true.
+    /// </summary>
+    /// <param name="onSuccess"></param>
+    /// <param name="func"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async ValueTask<Result<TValue>> FailIfAsync(Func<TValue, ValueTask<bool>> onSuccess, Func<TValue, ValueTask<Error>> func, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+            return this;
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false)
+            ? (await func(Value).WithCancellation(cancellationToken).ConfigureAwait(false))
+            : this;
+    }
+#endif
 }
 
 public static partial class ResultExtensions
@@ -169,6 +204,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Fail if the value is true.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
         this ValueTask<Result<TValue>> task,
         Func<TValue, Task<bool>> onSuccess,
@@ -182,6 +218,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Fail if the value is true.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
         this ValueTask<Result<TValue>> task,
         Func<TValue, Task<bool>> onSuccess,
@@ -191,4 +228,32 @@ public static partial class ResultExtensions
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         return await result.FailIfAsync(onSuccess, func, cancellationToken);
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Fail if the ValueTask predicate returns true.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
+        this ValueTask<Result<TValue>> task,
+        Func<TValue, ValueTask<bool>> onSuccess,
+        Error error,
+        CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.FailIfAsync(onSuccess, error, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Fail if the ValueTask predicate returns true.
+    /// </summary>
+    public static async ValueTask<Result<TValue>> FailIfAsync<TValue>(
+        this ValueTask<Result<TValue>> task,
+        Func<TValue, ValueTask<bool>> onSuccess,
+        Func<TValue, ValueTask<Error>> func,
+        CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.FailIfAsync(onSuccess, func, cancellationToken).ConfigureAwait(false);
+    }
+#endif
 }

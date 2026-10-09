@@ -1,3 +1,6 @@
+#if NET9_0_OR_GREATER
+using System.Runtime.CompilerServices;
+#endif
 using CSharpEssentials.Core;
 namespace CSharpEssentials.ResultPattern;
 
@@ -122,10 +125,45 @@ public static partial class ResultExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+#if NET9_0_OR_GREATER
+    [OverloadResolutionPriority(1)]
+#endif
     public static async ValueTask<Result<TValue>> FinallyAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Result<TValue>, Task> action, CancellationToken cancellationToken = default)
     {
         Result<TValue> result = await task.WithCancellation(cancellationToken);
         await action(result).WithCancellation(cancellationToken);
         return result;
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Executes a ValueTask function regardless of the result state.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <typeparam name="TOut"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="func"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<TOut> FinallyAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<Result<TValue>, ValueTask<TOut>> func, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await func(result).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Executes a ValueTask action regardless of the result state.
+    /// </summary>
+    /// <typeparam name="TValue"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result<TValue>> FinallyAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Result<TValue>, ValueTask> action, CancellationToken cancellationToken = default)
+    {
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await action(result).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+#endif
 }

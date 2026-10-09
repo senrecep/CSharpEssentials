@@ -1,3 +1,6 @@
+#if NET9_0_OR_GREATER
+using System.Runtime.CompilerServices;
+#endif
 using CSharpEssentials.Core;
 namespace CSharpEssentials.ResultPattern;
 
@@ -115,10 +118,43 @@ public static partial class ResultExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
+#if NET9_0_OR_GREATER
+    [OverloadResolutionPriority(1)]
+#endif
     public static async ValueTask<Result> FinallyAsync(this ValueTask<Result> task, Func<Result, Task> action, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
         await action(result).WithCancellation(cancellationToken);
         return result;
     }
+
+#if NET9_0_OR_GREATER
+    /// <summary>
+    /// Executes a ValueTask function regardless of the result state.
+    /// </summary>
+    /// <typeparam name="TOut"></typeparam>
+    /// <param name="task"></param>
+    /// <param name="func"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<TOut> FinallyAsync<TOut>(this ValueTask<Result> task, Func<Result, ValueTask<TOut>> func, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await func(result).WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Executes a ValueTask action regardless of the result state.
+    /// </summary>
+    /// <param name="task"></param>
+    /// <param name="action"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public static async ValueTask<Result> FinallyAsync(this ValueTask<Result> task, Func<Result, ValueTask> action, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await action(result).WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+#endif
 }
