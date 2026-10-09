@@ -4,7 +4,7 @@
 
 ## Renamed members
 
-The old names still compile as `[Obsolete]`, `[EditorBrowsable(Never)]` forwarders and will be removed in 7.0.
+The old names still compile as `[Obsolete]` forwarders and will be removed in 7.0. The `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From` rows below ship in 6.5.0; the other rows shipped in 6.4.0. The async members of `IMaybe<T>` are obsolete too: call the `*Async` members on `Maybe<T>`.
 
 | Old name | New name | Receiver |
 |---|---|---|
@@ -58,7 +58,9 @@ Unchanged:
 
 ## Source compatibility
 
-A project that targets .NET 9 or later and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`. These calls compiled before; they are now ambiguous because each operation gained a `ValueTask` twin and C# 12 ignores the `OverloadResolutionPriority` that picks the `Task` handler. The new instance `MapAsync` and `TapAsync` pairs behave the same way, and so do the `Maybe` instance and key/value members with a `Task` and a `ValueTask` twin (`ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`), on every target including .NET 8. Projects on C# 13 or later, the default for .NET 9+, are not affected. Projects on .NET 8 (the `netstandard2.1` asset) are not affected by the `Result` twins, but are affected by the `Maybe` ones.
+A project that targets .NET 9 or later and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`. These calls compiled before; they are now ambiguous because each operation gained a `ValueTask` twin and C# 12 ignores the `OverloadResolutionPriority` that picks the `Task` handler. The new instance `MapAsync` and `TapAsync` pairs behave the same way, Projects on .NET 8 (the `netstandard2.1` asset) and projects on C# 13 or later, the default for .NET 9+, are not affected.
+
+`Maybe` is different. Its instance and key/value `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` and `MatchAsync` have a `Task` and a `ValueTask` twin on every target, and an untyped `async` lambda was already ambiguous there before 6.5.0 (CS0121 on every language version). `OverloadResolutionPriority` now fixes it on C# 13 or later; on C# 12 the handler still needs a type, on .NET 8 as well.
 
 Fix it with C# 13 or later, or type the handler:
 

@@ -20,10 +20,14 @@ public interface IMaybe<T> : IMaybe
         TContext context
     );
 
+    [Obsolete("Use ExecuteAsync on Maybe<T>. Will be removed in 7.0.")]
     Task Execute(Func<T, Task> action, CancellationToken cancellationToken = default);
+    [Obsolete("Use ExecuteAsync on Maybe<T>. Will be removed in 7.0.")]
     Task Execute(Func<T, ValueTask> valueTask, CancellationToken cancellationToken = default);
     void Execute(Action<T> action);
+    [Obsolete("Use ExecuteNoValueAsync on Maybe<T>. Will be removed in 7.0.")]
     Task ExecuteNoValue(Func<Task> action, CancellationToken cancellationToken = default);
+    [Obsolete("Use ExecuteNoValueAsync on Maybe<T>. Will be removed in 7.0.")]
     Task ExecuteNoValue(Func<ValueTask> valueTask, CancellationToken cancellationToken = default);
     void ExecuteNoValue(Action action);
 
@@ -49,12 +53,14 @@ public interface IMaybe<T> : IMaybe
         Action<TContext> none,
         TContext context
     );
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     Task<TE> Match<TE>(
            Func<T, CancellationToken, Task<TE>> some,
            Func<CancellationToken, Task<TE>> none,
            CancellationToken cancellationToken = default
        );
 
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     Task<TE> Match<TE, TContext>(
         Func<T, TContext, CancellationToken, Task<TE>> some,
         Func<TContext, CancellationToken, Task<TE>> none,
@@ -62,33 +68,39 @@ public interface IMaybe<T> : IMaybe
         CancellationToken cancellationToken = default
     );
 
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     Task Match(
         Func<T, CancellationToken, Task> some,
         Func<CancellationToken, Task> none,
         CancellationToken cancellationToken = default
     );
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     Task Match<TContext>(
         Func<T, TContext, CancellationToken, Task> some,
         Func<TContext, CancellationToken, Task> none,
         TContext context,
         CancellationToken cancellationToken = default
     );
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask<TE> Match<TE>(
           Func<T, CancellationToken, ValueTask<TE>> some,
           Func<CancellationToken, ValueTask<TE>> none,
           CancellationToken cancellationToken = default
       );
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask<TE> Match<TE, TContext>(
       Func<T, TContext, CancellationToken, ValueTask<TE>> some,
       Func<TContext, CancellationToken, ValueTask<TE>> none,
       TContext context,
       CancellationToken cancellationToken = default
   );
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask Match(
          Func<T, CancellationToken, ValueTask> some,
          Func<CancellationToken, ValueTask> none,
          CancellationToken cancellationToken = default
      );
+    [Obsolete("Use MatchAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask Match<TContext>(
        Func<T, TContext, CancellationToken, ValueTask> some,
        Func<TContext, CancellationToken, ValueTask> none,
@@ -99,11 +111,17 @@ public interface IMaybe<T> : IMaybe
     Maybe<T> Or(Func<T> fallbackOperation);
     Maybe<T> Or(Maybe<T> fallback);
     Maybe<T> Or(Func<Maybe<T>> fallbackOperation);
+    [Obsolete("Use OrAsync on Maybe<T>. Will be removed in 7.0.")]
     Task<Maybe<T>> Or(Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default);
+    [Obsolete("Use OrAsync on Maybe<T>. Will be removed in 7.0.")]
     Task<Maybe<T>> Or(Task<Maybe<T>> fallback, CancellationToken cancellationToken = default);
+    [Obsolete("Use OrAsync on Maybe<T>. Will be removed in 7.0.")]
     Task<Maybe<T>> Or(Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default);
+    [Obsolete("Use OrAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask<Maybe<T>> Or(Func<ValueTask<T>> valueTaskFallbackOperation, CancellationToken cancellationToken = default);
+    [Obsolete("Use OrAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask<Maybe<T>> Or(ValueTask<Maybe<T>> valueTaskFallback, CancellationToken cancellationToken = default);
+    [Obsolete("Use OrAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask<Maybe<T>> Or(Func<ValueTask<Maybe<T>>> valueTaskFallbackOperation, CancellationToken cancellationToken = default);
 
     Maybe<TOut> Select<TOut>(Func<T, TOut> selector);
@@ -115,6 +133,8 @@ public interface IMaybe<T> : IMaybe
     List<T> ToList();
 
     Maybe<T> Where(Func<T, bool> predicate);
+    [Obsolete("Use WhereAsync on Maybe<T>. Will be removed in 7.0.")]
     Task<Maybe<T>> Where(Func<T, Task<bool>> predicate, CancellationToken cancellationToken = default);
+    [Obsolete("Use WhereAsync on Maybe<T>. Will be removed in 7.0.")]
     ValueTask<Maybe<T>> Where(Func<T, ValueTask<bool>> predicate, CancellationToken cancellationToken = default);
 }
