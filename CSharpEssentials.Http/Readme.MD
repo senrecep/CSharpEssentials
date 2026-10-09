@@ -41,7 +41,8 @@ Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Re
 The `HttpClient` extensions above, `PostAsResultAsync`, `PutAsResultAsync`, `SendAsResultAsync`, `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and the `HttpContent` readers (`ReadAsStringAsResultAsync`, `ReadFromJsonAsResultAsync<T>`) follow the `Result.TryAsync` rule: only your own token propagates.
 
 - Cancelling the `cancellationToken` you pass throws `OperationCanceledException`.
-- An `HttpClient.Timeout` returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`.
+- An HTTP timeout, that is a `TaskCanceledException` whose `InnerException` is a `TimeoutException` (what `HttpClient.Timeout` throws), returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`.
+- A Polly attempt or total timeout from `Microsoft.Extensions.Http.Resilience` or another Polly handler surfaces as `TimeoutRejectedException`, so it keeps `ErrorType.Unexpected` with code `TimeoutRejectedException`, not `Http.Timeout`.
 - Any other cancellation, for example a token a handler links or owns, returns a failed `Result` with `ErrorType.Unexpected` and the exception type name as code.
 - Other transport exceptions return `ErrorType.Unexpected` with the exception type name as code; an SSRF guard block returns `Http.SsrfBlocked` (see below).
 
