@@ -84,6 +84,28 @@ public class ResultTests
         combined.IsFailure.Should().BeTrue();
     }
 
+    [Fact]
+    public void And_WithSeveralFailures_ShouldReturnOnlyTheFirstFailureErrors()
+    {
+        Error first = Error.Failure("FIRST", "First error");
+        Error second = Error.Failure("SECOND", "Second error");
+
+        Result combined = Result.And(Result.Failure(first), Result.Failure(second));
+
+        combined.Errors.Should().Equal(first);
+    }
+
+    [Fact]
+    public void CombineAll_WithSeveralFailures_ShouldCollectEveryError()
+    {
+        Error first = Error.Failure("FIRST", "First error");
+        Error second = Error.Failure("SECOND", "Second error");
+
+        Result combined = new[] { Result.Failure(first), Result.Failure(second) }.CombineAll();
+
+        combined.Errors.Should().Equal(first, second);
+    }
+
     #endregion
 
     #region Or

@@ -238,18 +238,27 @@ result.Finally(r => _metrics.Record(r.IsSuccess ? "success" : "failure"));
 
 | Method | Strategy | What It Does |
 |--------|----------|-------------|
-| `Result.And(results)` | All must succeed | Collects ALL errors if any fail |
+| `Result.And(results)` | All must succeed | Short-circuits: returns the errors of the first failing result. Use `CombineAll()` to collect every error |
+| `Result<T>.And(results)` | All must succeed | Accumulates the errors of every failing result, or returns the values as `T[]` |
 | `Result.Or(results)` / `Result<T>.Or(results)` | Any can succeed | Returns first success; errors only if all fail |
 | `Result<T1>.Combine(r1, r2, ..., r8)` | Applicative product | Combines up to 8 results into a tuple `Result<(T1, ..., T8)>` |
 
 ```csharp
-// Validate multiple fields independently, collect all errors
-Result validation = Result.And(new[]
+// Stop at the first failing field (short-circuits)
+Result firstFailure = Result.And(new[]
 {
     ValidateName(input.Name),
     ValidateEmail(input.Email),
     ValidateAge(input.Age)
 });
+
+// Validate multiple fields independently, collect all errors
+Result validation = new[]
+{
+    ValidateName(input.Name),
+    ValidateEmail(input.Email),
+    ValidateAge(input.Age)
+}.CombineAll();
 
 // Try multiple providers, use first that works
 Result<Config> config = Result<Config>.Or(
@@ -2199,7 +2208,7 @@ EF Core null ───── AsResultAsync ──────────► Res
 |---------|-----------|---------|
 | **Monadic bind** | `Result.Bind`, `Maybe.Bind` | Chain dependent operations; short-circuit on failure/absence |
 | **Functor map** | `Result.Map`, `Maybe.Map` | Transform inner value without changing container |
-| **Applicative** | `Result.And`, `Result.Combine` | Combine independent results; collect all errors |
+| **Applicative** | `Result.Combine`, `CombineAll`, `Result<T>.And` | Combine independent results; collect all errors (`Result.And` stops at the first failure) |
 | **Alternative** | `Result.Or`, `Maybe.Or` | First success wins; fallback chains |
 | **Catamorphism** | `Result.Match`, `Maybe.Match`, `Any.Match` | Exhaustive decomposition |
 | **Side-effect isolation** | `Tap`, `TapError`, `Execute` | Observe without altering the flow |
@@ -2218,6 +2227,6 @@ EF Core null ───── AsResultAsync ──────────► Res
 | Operation can succeed or fail with a reason | `Result<T>` |
 | Value may or may not exist (no reason needed) | `Maybe<T>` |
 | Value is one of several known types | `Any<T0, T1, ...>` |
-| Multiple validations, collect all errors | `Result.And(...)` or Rules engine |
+| Multiple validations, collect all errors | `CombineAll()` or Rules engine (`Result.And(...)` stops at the first failure) |
 | Complex business rules with branching | Rules engine |
 | Need the absence reason from a Maybe | Bridge: `maybe.ToMaybeResult(error)` |

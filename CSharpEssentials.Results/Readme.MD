@@ -103,7 +103,8 @@ var r1 = Result.Success();
 var r2 = Result.Success();
 Result r3 = Error.NotFound();
 
-Result combined = Result.And(r1, r2, r3); // Failure
+Result combined = Result.And(r1, r2, r3); // Failure: returns r3's errors; Result.And stops at the first failure
+Result all = new[] { r1, r2, r3 }.CombineAll(); // Failure: collects the errors of every failing result
 ```
 
 ### Safe Execution
