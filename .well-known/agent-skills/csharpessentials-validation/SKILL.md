@@ -217,7 +217,7 @@ public class OrderValidator : Validator<Order>
 }
 ```
 
-`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), …)`, `rules.ForEach(() => model.Tags.WithoutNulls(), …)`. The property name in the error code comes from the lambda text: `Code.NotEmpty` for the first, and the whole collection expression (`Tags.WithoutNulls()[1].NotEmpty`) for the others.
+`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), …)`, `rules.ForEach(() => model.Tags.WithoutNulls(), …)`. The property name in the error code comes from the lambda text. Method calls, `!` and `?` are dropped, so the filtered collections give `Tags[1].NotEmpty` and `Items[0].Sku.NotEmpty`. For the `IfNotNull` form the lambda only sees `c`, so the code is `Code.NotEmpty`; use `rules.For(model.Coupon.Code, "Coupon.Code")` to name the full path.
 
 ---
 

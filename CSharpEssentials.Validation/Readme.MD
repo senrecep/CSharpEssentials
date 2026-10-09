@@ -301,7 +301,7 @@ rules.ForEach(
     (item, itemRules) => itemRules.For(() => item.Sku).NotEmpty());
 ```
 
-The collection expression becomes part of the error code, for example `Items.WhereIf(model.ValidateActiveOnly, i => i.IsActive)[0].Sku.NotEmpty`. The index counts the filtered sequence.
+The error code uses the collection name only, for example `Items[0].Sku.NotEmpty`; the filter call is not part of the path. The index counts the filtered sequence.
 
 **`WithoutNulls`: skip null elements in a collection.**
 
@@ -309,7 +309,7 @@ The collection expression becomes part of the error code, for example `Items.Whe
 rules.ForEach(
     () => model.Tags.WithoutNulls(),
     (tag, tagRules) => tagRules.For(() => tag).NotEmpty().MaxLength(50));
-// Error codes look like "Tags.WithoutNulls()[1].NotEmpty": the index counts the filtered sequence
+// Error codes look like "Tags[1].NotEmpty": the index counts the filtered sequence
 ```
 
 **`IsEmpty` / `IsNotEmpty`: readable null/empty guards.**

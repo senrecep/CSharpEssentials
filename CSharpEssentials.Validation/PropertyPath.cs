@@ -47,8 +47,55 @@ internal static class PropertyPath
             return (afterArrow.TrimEnd('!').ToString(), true);
         }
 
-        // Slice after the dot, strip any trailing null-forgiving operator.
-        return (afterArrow[(dotIdx + 1)..].TrimEnd('!').ToString(), false);
+        return (Normalize(afterArrow[(dotIdx + 1)..]), false);
+    }
+
+    private static string Normalize(ReadOnlySpan<char> path)
+    {
+        if (path.IndexOfAny('(', '!', '?') < 0)
+            return path.ToString();
+
+        System.Text.StringBuilder builder = new(path.Length);
+        int segmentStart = 0;
+        int depth = 0;
+        for (int i = 0; i <= path.Length; i++)
+        {
+            bool atEnd = i == path.Length;
+            char c = atEnd ? '.' : path[i];
+            if (!atEnd)
+            {
+                if (c == '(' && depth == 0 && IsCall(path, segmentStart, i))
+                    break;
+                if (c is '(' or '[')
+                    depth++;
+                else if (c is ')' or ']')
+                    depth--;
+            }
+
+            if (c == '.' && depth == 0)
+            {
+                AppendSegment(builder, path[segmentStart..i]);
+                segmentStart = i + 1;
+            }
+        }
+
+        if (builder.Length == 0)
+            return path.TrimEnd('!').ToString();
+
+        return builder.ToString();
+    }
+
+    private static bool IsCall(ReadOnlySpan<char> path, int segmentStart, int parenIndex) =>
+        parenIndex > segmentStart && (char.IsLetterOrDigit(path[parenIndex - 1]) || path[parenIndex - 1] is '_' or '>');
+
+    private static void AppendSegment(System.Text.StringBuilder builder, ReadOnlySpan<char> segment)
+    {
+        segment = segment.Trim().TrimEnd('!').TrimEnd('?');
+        if (segment.IsEmpty)
+            return;
+        if (builder.Length > 0)
+            builder.Append('.');
+        builder.Append(segment);
     }
 
     /// <summary>
