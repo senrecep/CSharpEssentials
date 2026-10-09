@@ -40,15 +40,50 @@ public sealed class SynchronizationContextCaptureTests
         ["Maybe.BindAsync"] = () => Maybe<int>.From(1).BindAsync(v => MaybeSource(v + 1)),
         ["Maybe.WhereAsync"] = () => MaybeSource(1).WhereAsync(v => DelayedValue(v > 0)),
         ["Maybe.ToMaybeResultAsync"] = () => MaybeSource(1).ToMaybeResultAsync(),
+        ["Maybe.ChooseAsync"] = () => Drain(new[] { MaybeSource(1), MaybeSource(null), MaybeSource(3) }.ChooseAsync()),
+        ["Maybe.ChooseAsync(selector)"] = () => Drain(new[] { MaybeSource(1), MaybeSource(null), MaybeSource(3) }.ChooseAsync(v => v + 1)),
+        ["Result.MapAsync(completed source, Task handler)"] = () => CompletedResult(1).MapAsync(v => DelayedValue(v + 1)),
+        ["Result.BindAsync(completed source)"] = () => CompletedResult(1).BindAsync(v => ResultSource(v + 1)),
+        ["Result.TapAsync(completed source)"] = () => CompletedResult(1).TapAsync(_ => Task.Delay(5)),
+        ["Result.ThenAsync(completed source)"] = () => CompletedResult(1).ThenAsync(v => ResultSource(v + 1)),
+        ["Result.MatchAsync(completed source)"] = () => CompletedResult(1).MatchAsync(v => DelayedValue(v), _ => DelayedValue(0)),
+        ["Result.SwitchAsync(completed source)"] = () => CompletedResult(1).SwitchAsync(_ => Task.Delay(5), _ => Task.Delay(5)),
+        ["Result.FinallyAsync(completed source)"] = () => CompletedResult(1).FinallyAsync(r => DelayedValue(r.IsSuccess)),
+        ["Result.FailIfAsync(completed source)"] = () => CompletedResult(1).FailIfAsync(v => DelayedValue(v > 5), TestError),
+        ["Result.ElseAsync(completed source)"] = () => CompletedFailure().ElseAsync(_ => DelayedValue(7)),
+        ["Result.TapErrorAsync(completed source)"] = () => CompletedFailure().TapErrorAsync(_ => Task.Delay(5)),
+        ["Result.CompensateAsync(completed source)"] = () => CompletedFailure().CompensateAsync(_ => ResultSource(3)),
+        ["Maybe.MapAsync(completed source)"] = () => Task.FromResult(Maybe<int>.From(1)).MapAsync(v => DelayedValue(v + 1)),
+        ["Maybe.WhereAsync(completed source)"] = () => Task.FromResult(Maybe<int>.From(1)).WhereAsync(v => DelayedValue(v > 0)),
+        ["Maybe.ExecuteAsync(completed source)"] = () => Task.FromResult(Maybe<int>.From(1)).ExecuteAsync(_ => Task.Delay(5)),
+        ["Maybe.OrAsync(completed source)"] = () => Task.FromResult(Maybe<int>.None).OrAsync(() => DelayedValue(3)),
     };
 
     [Theory]
     [MemberData(nameof(ChainNames))]
     public void Chain_Should_NotPostToSynchronizationContext_When_AwaitedByLibraryCode(string chainName)
     {
-        var context = new CountingSynchronizationContext();
-        Func<Task> chain = Chains[chainName];
+        (Exception? failure, int posts) = RunOnCountingContext(Chains[chainName]);
 
+        (failure, posts).Should().Be(((Exception?)null, 0));
+    }
+
+    [Fact]
+    public void CountingContext_Should_CountAPost_When_AwaitCapturesTheContext()
+    {
+        (Exception? failure, int posts) = RunOnCountingContext(CapturingAwait);
+
+        (failure, posts).Should().Be(((Exception?)null, 1));
+    }
+
+    private static async Task CapturingAwait()
+    {
+        await Task.Delay(20);
+    }
+
+    private static (Exception? Failure, int Posts) RunOnCountingContext(Func<Task> chain)
+    {
+        var context = new CountingSynchronizationContext();
         Exception? failure = null;
         var thread = new Thread(() =>
         {
@@ -65,7 +100,19 @@ public sealed class SynchronizationContextCaptureTests
         thread.Start();
         thread.Join();
 
-        (failure, context.PostCount).Should().Be(((Exception?)null, 0));
+        return (failure, context.PostCount);
+    }
+
+    private static Task<Result<int>> CompletedResult(int value) => Task.FromResult<Result<int>>(value);
+
+    private static Task<Result<int>> CompletedFailure() => Task.FromResult<Result<int>>(TestError);
+
+    private static async Task<int> Drain<T>(IAsyncEnumerable<T> source)
+    {
+        int count = 0;
+        await foreach (T _ in source.ConfigureAwait(false))
+            count++;
+        return count;
     }
 
     private static async Task<Result<int>> ResultSource(int value)
