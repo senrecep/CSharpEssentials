@@ -3,6 +3,33 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0](https://github.com/senrecep/CSharpEssentials/compare/v6.4.0...v6.5.0) (2026-10-09)
+
+
+### Added
+
+* **maybe:** add Async-suffixed names for Execute, ExecuteNoValue, Or, Match, ToMaybeResult, From ([2ec0851](https://github.com/senrecep/CSharpEssentials/commit/2ec0851325a24f46694a6dc56440c9e406997a0b)), closes [#121](https://github.com/senrecep/CSharpEssentials/issues/121)
+* **maybe:** Async-suffixed names for Execute, ExecuteNoValue, Or, Match, ToMaybeResult, From ([49b9a0b](https://github.com/senrecep/CSharpEssentials/commit/49b9a0b4a57ef6270b48215eebaa6fb83e842da1))
+* **results:** add ValueTask twins for remaining async operations ([5f1a0db](https://github.com/senrecep/CSharpEssentials/commit/5f1a0dbcfaec2a2ab17a34b5e3c94688df9ea6cb)), closes [#122](https://github.com/senrecep/CSharpEssentials/issues/122)
+* **results:** ValueTask twins for remaining async operations (6.5) ([ddee9fd](https://github.com/senrecep/CSharpEssentials/commit/ddee9fdedf9df3d395d9c8fad75a3e7b93da87c8))
+
+
+### Fixed
+
+* add ConfigureAwait(false) across library code and enforce CA2007 ([903e267](https://github.com/senrecep/CSharpEssentials/commit/903e2670e6f35a386d873a232b211c932e24ffa7))
+* add ConfigureAwait(false) across library code and enforce CA2007 ([c54f124](https://github.com/senrecep/CSharpEssentials/commit/c54f1240c0a1bcb653f2ff23f17e3c0240126c7a)), closes [#123](https://github.com/senrecep/CSharpEssentials/issues/123)
+* **http:** remove pre-6.3.0 cancellation workaround and align timeout semantics ([6e92383](https://github.com/senrecep/CSharpEssentials/commit/6e92383bc9b1e56b96b6ccf1a210b27dd1c2e97b))
+* **http:** remove pre-6.3.0 cancellation workaround and align timeout semantics ([6e212c7](https://github.com/senrecep/CSharpEssentials/commit/6e212c73feba3e23e9cb75b6f4e8ac145725e033)), closes [#127](https://github.com/senrecep/CSharpEssentials/issues/127)
+* **maybe:** configure the await foreach in ChooseAsync and widen the context smoke test ([8e4c149](https://github.com/senrecep/CSharpEssentials/commit/8e4c149273e24b9a8795adcb08218308f3aeaaf4))
+* **maybe:** mark IMaybe async members obsolete and add overload contract tests ([fc28a61](https://github.com/senrecep/CSharpEssentials/commit/fc28a6182d5dbf01a59a7afece1468531506e813))
+* **results:** await async handlers in conditional TapAsync on Task and ValueTask sources ([df94a7e](https://github.com/senrecep/CSharpEssentials/commit/df94a7e253e22638a46d28959822ec227e001873))
+* **results:** await async handlers in conditional TapAsync on Task and ValueTask sources ([4724c1f](https://github.com/senrecep/CSharpEssentials/commit/4724c1f918ace9256ff9dc8f9d4a3946407927d0))
+
+
+### Changed
+
+* **results:** add Else and TapError async matrix benchmarks ([ba2d839](https://github.com/senrecep/CSharpEssentials/commit/ba2d8394857f87b1cc907f38d51e03ba3e34e693))
+
 ## [6.4.0](https://github.com/senrecep/CSharpEssentials/compare/v6.3.0...v6.4.0) (2026-10-08)
 
 
