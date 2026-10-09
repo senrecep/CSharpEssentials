@@ -46,7 +46,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsFailure)
             return this;
-        return await onSuccess(Value).WithCancellation(cancellationToken) ? error : this;
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false) ? error : this;
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsFailure)
             return this;
-        return await onSuccess(Value).WithCancellation(cancellationToken) ? (await func(Value).WithCancellation(cancellationToken)) : this;
+        return await onSuccess(Value).WithCancellation(cancellationToken).ConfigureAwait(false) ? (await func(Value).WithCancellation(cancellationToken).ConfigureAwait(false)) : this;
     }
 
 #if NET9_0_OR_GREATER
@@ -114,7 +114,7 @@ public static partial class ResultExtensions
         Error error,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.FailIf(onSuccess, error);
     }
 
@@ -133,7 +133,7 @@ public static partial class ResultExtensions
         Func<TValue, Error> func,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.FailIf(onSuccess, func);
     }
 
@@ -152,8 +152,8 @@ public static partial class ResultExtensions
         Error error,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.FailIfAsync(onSuccess, error, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.FailIfAsync(onSuccess, error, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -171,8 +171,8 @@ public static partial class ResultExtensions
         Func<TValue, Task<Error>> func,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.FailIfAsync(onSuccess, func, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.FailIfAsync(onSuccess, func, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -184,7 +184,7 @@ public static partial class ResultExtensions
         Error error,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.FailIf(onSuccess, error);
     }
 
@@ -197,7 +197,7 @@ public static partial class ResultExtensions
         Func<TValue, Error> func,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.FailIf(onSuccess, func);
     }
 
@@ -211,8 +211,8 @@ public static partial class ResultExtensions
         Error error,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.FailIfAsync(onSuccess, error, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.FailIfAsync(onSuccess, error, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -225,8 +225,8 @@ public static partial class ResultExtensions
         Func<TValue, Task<Error>> func,
         CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.FailIfAsync(onSuccess, func, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.FailIfAsync(onSuccess, func, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

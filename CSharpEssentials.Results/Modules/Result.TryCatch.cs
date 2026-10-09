@@ -55,7 +55,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> TryCatchAsync(this Task<Result> task, Func<Result> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 
@@ -70,7 +70,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> TryCatchAsync<TOut>(this Task<Result> task, Func<Result<TOut>> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 
@@ -84,7 +84,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> TryCatchAsync(this ValueTask<Result> task, Func<Result> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 
@@ -99,7 +99,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TOut>> TryCatchAsync<TOut>(this ValueTask<Result> task, Func<Result<TOut>> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 }

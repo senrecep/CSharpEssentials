@@ -113,7 +113,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
         if (!DispatchDomainEventsOnSaveChanges)
-            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken).ConfigureAwait(false);
 
         List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected = DomainEventCollector.CollectByEntity(this);
         (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) =
@@ -123,9 +123,9 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         try
         {
             if (beforeSave.Length > 0)
-                await DispatchDomainEventsAsync(beforeSave, DomainEventTiming.BeforeSave, cancellationToken);
+                await DispatchDomainEventsAsync(beforeSave, DomainEventTiming.BeforeSave, cancellationToken).ConfigureAwait(false);
 
-            result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            result = await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
@@ -134,7 +134,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         }
 
         if (afterSave.Length > 0)
-            await DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, cancellationToken);
+            await DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, cancellationToken).ConfigureAwait(false);
 
         return result;
     }
@@ -159,14 +159,14 @@ public abstract partial class BaseDbContext<TContext> : DbContext
             IDomainEventOutbox? outbox = ServiceProvider.GetService<IDomainEventOutbox>();
             if (outbox is not null)
             {
-                await outbox.StoreAsync(domainEvents, cancellationToken);
+                await outbox.StoreAsync(domainEvents, cancellationToken).ConfigureAwait(false);
                 return;
             }
         }
 
         IDomainEventPublisher publisher = ServiceProvider.GetRequiredService<IDomainEventPublisher>();
         foreach (IDomainEvent domainEvent in domainEvents)
-            await publisher.PublishAsync(domainEvent, cancellationToken);
+            await publisher.PublishAsync(domainEvent, cancellationToken).ConfigureAwait(false);
     }
 
     ~BaseDbContext()
@@ -184,9 +184,9 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     public override async ValueTask DisposeAsync()
     {
         LogContextDisposed(_instanceId);
-        await base.DisposeAsync();
+        await base.DisposeAsync().ConfigureAwait(false);
         if (_serviceScope is IAsyncDisposable asyncScope)
-            await asyncScope.DisposeAsync();
+            await asyncScope.DisposeAsync().ConfigureAwait(false);
         else
             _serviceScope.Dispose();
     }

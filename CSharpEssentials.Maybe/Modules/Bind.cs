@@ -56,7 +56,7 @@ public static partial class MaybeExtensions
             Func<T, Maybe<TOut>> selector,
             CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.Bind(selector);
     }
     /// <summary>
@@ -73,8 +73,8 @@ public static partial class MaybeExtensions
             Func<T, ValueTask<Maybe<TOut>>> selector,
             CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         ValueTask<Maybe<TOut>> result = maybe.HasNoValue ? Maybe<TOut>.None.AsValueTask() : selector(maybe.Value).WithCancellation(cancellationToken);
-        return await result;
+        return await result.ConfigureAwait(false);
     }
 }

@@ -25,7 +25,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this;
-        return await onFailure(Errors).WithCancellation(cancellationToken);
+        return await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
@@ -33,7 +33,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsSuccess)
             return this;
-        return await onFirstFailure(FirstError).WithCancellation(cancellationToken);
+        return await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER
@@ -57,28 +57,28 @@ public static partial class ResultExtensions
 {
     public static async Task<Result<TValue>> CompensateAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Task<Result<TValue>>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.CompensateAsync(onFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.CompensateAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<TValue>> CompensateFirstAsync<TValue>(this Task<Result<TValue>> task, Func<Error, Task<Result<TValue>>> onFirstFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.CompensateFirstAsync(onFirstFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.CompensateFirstAsync(onFirstFailure, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> CompensateAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Task<Result<TValue>>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.CompensateAsync(onFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.CompensateAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> CompensateFirstAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error, Task<Result<TValue>>> onFirstFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.CompensateFirstAsync(onFirstFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.CompensateFirstAsync(onFirstFailure, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

@@ -27,7 +27,7 @@ public sealed partial class LoggingBehavior<TRequest, TResponse>(
 #endif
 
         LogRequest(requestName, message);
-        TResponse response = await next(message, cancellationToken);
+        TResponse response = await next(message, cancellationToken).ConfigureAwait(false);
         LogResponse(responseName, message, response);
 
 #if NET7_0_OR_GREATER

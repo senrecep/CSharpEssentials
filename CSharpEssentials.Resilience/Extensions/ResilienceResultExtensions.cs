@@ -37,8 +37,8 @@ public static class ResilienceResultExtensions
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token => await operation(token),
-                cancellationToken);
+                async token => await operation(token).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -63,8 +63,8 @@ public static class ResilienceResultExtensions
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token => await operation(token),
-                cancellationToken);
+                async token => await operation(token).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -116,8 +116,8 @@ public static class ResilienceResultExtensions
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token => await operation(token),
-                cancellationToken);
+                async token => await operation(token).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -149,8 +149,8 @@ public static class ResilienceResultExtensions
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token => await operation(token),
-                cancellationToken);
+                async token => await operation(token).ConfigureAwait(false),
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

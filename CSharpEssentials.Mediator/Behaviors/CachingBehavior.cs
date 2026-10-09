@@ -20,9 +20,9 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         CancellationToken cancellationToken)
     {
         if (message.BypassCache)
-            return await next(message, cancellationToken);
+            return await next(message, cancellationToken).ConfigureAwait(false);
 
-        byte[]? cachedBytes = await cache.GetAsync(message.CacheKey, cancellationToken);
+        byte[]? cachedBytes = await cache.GetAsync(message.CacheKey, cancellationToken).ConfigureAwait(false);
         if (cachedBytes is not null && cachedBytes.Length > 0)
         {
             LogCacheHit(logger, message.CacheKey);
@@ -32,7 +32,7 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
 
         LogCacheMiss(logger, message.CacheKey);
 
-        TResponse result = await next(message, cancellationToken);
+        TResponse result = await next(message, cancellationToken).ConfigureAwait(false);
 
         if (!message.CacheFailures && result is IResultBase r && r.IsFailure)
             return result;
@@ -42,7 +42,7 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         if (message.Expiration > TimeSpan.Zero)
             options.AbsoluteExpirationRelativeToNow = message.Expiration;
 
-        await cache.SetAsync(message.CacheKey, serialized, options, cancellationToken);
+        await cache.SetAsync(message.CacheKey, serialized, options, cancellationToken).ConfigureAwait(false);
         LogCacheSet(logger, message.CacheKey);
 
         return result;

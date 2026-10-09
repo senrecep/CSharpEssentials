@@ -42,7 +42,7 @@ public sealed class DbErrorTranslation(IEnumerable<IDbErrorTranslator> translato
 
         try
         {
-            return await context.SaveChangesAsync(cancellationToken);
+            return await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception)
         {

@@ -31,7 +31,7 @@ public static class HttpClientRedirectExtensions
                     HttpResponseMessage response = await client.SendAsync(
                         currentRequest,
                         HttpCompletionOption.ResponseHeadersRead,
-                        cancellationToken);
+                        cancellationToken).ConfigureAwait(false);
 
                     if (!IsRedirectStatusCode(response.StatusCode))
                         return HandleResponse(response);
@@ -55,7 +55,7 @@ public static class HttpClientRedirectExtensions
 
                     response.Dispose();
 
-                    HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest);
+                    HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest).ConfigureAwait(false);
 
                     if (currentRequest != request)
                         currentRequest.Dispose();
@@ -69,7 +69,7 @@ public static class HttpClientRedirectExtensions
                 }
             },
             HandleException,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> SendWithRedirectsAsResultAsync<T>(
@@ -96,10 +96,10 @@ public static class HttpClientRedirectExtensions
                     HttpResponseMessage response = await client.SendAsync(
                         currentRequest,
                         HttpCompletionOption.ResponseHeadersRead,
-                        cancellationToken);
+                        cancellationToken).ConfigureAwait(false);
 
                     if (!IsRedirectStatusCode(response.StatusCode))
-                        return await HandleResponseAsync<T>(response, options, cancellationToken);
+                        return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
 
                     if (redirects >= maxRedirects)
                     {
@@ -120,7 +120,7 @@ public static class HttpClientRedirectExtensions
 
                     response.Dispose();
 
-                    HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest);
+                    HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest).ConfigureAwait(false);
 
                     if (currentRequest != request)
                         currentRequest.Dispose();
@@ -134,7 +134,7 @@ public static class HttpClientRedirectExtensions
                 }
             },
             HandleException,
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static bool IsRedirectStatusCode(HttpStatusCode statusCode)
@@ -189,7 +189,7 @@ public static class HttpClientRedirectExtensions
         {
             T? value = await response.Content.ReadFromJsonAsync<T>(
                 options ?? EnhancedJsonSerializerOptions.DefaultOptions,
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
 
             if (value is null)
                 return Error.NotFound(description: "Response body was empty or could not be deserialized.");

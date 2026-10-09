@@ -39,7 +39,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsFailure)
             return this;
-        return await predicate(Value).WithCancellation(cancellationToken) ? this : error;
+        return await predicate(Value).WithCancellation(cancellationToken).ConfigureAwait(false) ? this : error;
     }
 
     [OverloadResolutionPriority(1)]
@@ -47,7 +47,7 @@ public readonly partial record struct Result<TValue>
     {
         if (IsFailure)
             return this;
-        return await predicate(Value).WithCancellation(cancellationToken) ? this : errorFactory(Value);
+        return await predicate(Value).WithCancellation(cancellationToken).ConfigureAwait(false) ? this : errorFactory(Value);
     }
 
 #if NET9_0_OR_GREATER
@@ -85,28 +85,28 @@ public static partial class ResultExtensions
 {
     public static async Task<Result<TValue>> EnsureAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task<bool>> predicate, Error error, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.EnsureAsync(predicate, error, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<TValue>> EnsureAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task<bool>> predicate, Func<TValue, Error> errorFactory, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.EnsureAsync(predicate, errorFactory, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.EnsureAsync(predicate, errorFactory, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> EnsureAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task<bool>> predicate, Error error, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.EnsureAsync(predicate, error, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.EnsureAsync(predicate, error, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> EnsureAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task<bool>> predicate, Func<TValue, Error> errorFactory, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.EnsureAsync(predicate, errorFactory, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.EnsureAsync(predicate, errorFactory, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

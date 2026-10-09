@@ -46,10 +46,10 @@ public readonly partial struct ResiliencePolicy<T>
             result = await pipeline.ExecuteAsync(
                 async token =>
                 {
-                    T value = await action(token);
+                    T value = await action(token).ConfigureAwait(false);
                     return Result<T>.Success(value);
                 },
-                cancellationToken);
+                cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -67,7 +67,7 @@ public readonly partial struct ResiliencePolicy<T>
         Result<T> result;
         try
         {
-            result = await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            result = await pipeline.ExecuteAsync(async token => await action(token).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

@@ -21,13 +21,13 @@ internal static class IfMatchEndpointFilter
         if (endpoint is null
             || endpoint.Metadata.GetMetadata<ActionDescriptor>() is not null
             || endpoint.Metadata.GetMetadata<IfMatchMetadata>() is not { } settings)
-            return await next(invocation);
+            return await next(invocation).ConfigureAwait(false);
 
         ProblemDetails? problem = await IfMatchEvaluator.EvaluateAsync(
             httpContext,
             settings,
-            nameof(ConditionalRequestExtensions.WithIfMatch));
-        return problem is null ? await next(invocation) : new ProblemResult(problem);
+            nameof(ConditionalRequestExtensions.WithIfMatch)).ConfigureAwait(false);
+        return problem is null ? await next(invocation).ConfigureAwait(false) : new ProblemResult(problem);
     }
 
     private sealed class ProblemResult(ProblemDetails problem) : IResult

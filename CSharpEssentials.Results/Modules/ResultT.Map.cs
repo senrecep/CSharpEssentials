@@ -87,7 +87,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> MapAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, TOut> map, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Map(map);
     }
 
@@ -102,10 +102,10 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> MapAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Task<TOut>> map, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
             return result.ErrorsOrEmptyArray;
-        return await map(result.Value).WithCancellation(cancellationToken);
+        return await map(result.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TOut>> MapAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<TValue, TOut> map, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Map(map);
     }
 

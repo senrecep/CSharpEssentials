@@ -40,7 +40,7 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
         Dictionary<string, StringValues>? form = null;
         HashSet<string>? claimed = null;
         IFormCollection? originalForm = request.HasFormContentType && Array.Exists(targets, static t => t.Source == EnumBindingSource.Form)
-            ? await request.ReadFormAsync(context.RequestAborted)
+            ? await request.ReadFormAsync(context.RequestAborted).ConfigureAwait(false)
             : null;
 
         foreach (EnumBindingTarget target in targets)
@@ -101,7 +101,7 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
 
         if (errors is not null)
         {
-            await errors.ToArray().ToProblemResult(statusCode: StatusCodes.Status400BadRequest).ExecuteAsync(context);
+            await errors.ToArray().ToProblemResult(statusCode: StatusCodes.Status400BadRequest).ExecuteAsync(context).ConfigureAwait(false);
             return;
         }
 
@@ -110,7 +110,7 @@ internal sealed class EnumBindingMiddleware(RequestDelegate next, EnumConvention
         if (form is not null)
             request.Form = new FormCollection(form, originalForm!.Files);
 
-        await next(context);
+        await next(context).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -15,7 +15,7 @@ public sealed class ResultEndpointFilter : IEndpointFilter
 {
     public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
-        object? result = await next(context);
+        object? result = await next(context).ConfigureAwait(false);
         if (result is null)
             return result;
 

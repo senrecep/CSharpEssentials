@@ -27,7 +27,7 @@ public sealed class DistributedCacheIdempotencyStore(IDistributedCache cache) : 
         ArgumentException.ThrowIfNullOrEmpty(fingerprint);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(inFlightTimeout, TimeSpan.Zero);
 
-        byte[]? data = await cache.GetAsync(KeyPrefix + key, cancellationToken);
+        byte[]? data = await cache.GetAsync(KeyPrefix + key, cancellationToken).ConfigureAwait(false);
         if (data is not null && IdempotencyEntrySerializer.TryRead(data, out _, out string storedFingerprint, out IdempotentResponse? response))
         {
             if (!string.Equals(storedFingerprint, fingerprint, StringComparison.Ordinal))
@@ -40,7 +40,7 @@ public sealed class DistributedCacheIdempotencyStore(IDistributedCache cache) : 
             KeyPrefix + key,
             IdempotencyEntrySerializer.Write(token, fingerprint, null),
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = inFlightTimeout },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         return IdempotencyReservation.Reserved(token);
     }
 
@@ -59,7 +59,7 @@ public sealed class DistributedCacheIdempotencyStore(IDistributedCache cache) : 
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retention, TimeSpan.Zero);
 
         // An expired or unreadable entry may be overwritten: nobody else holds the key.
-        byte[]? data = await cache.GetAsync(KeyPrefix + key, cancellationToken);
+        byte[]? data = await cache.GetAsync(KeyPrefix + key, cancellationToken).ConfigureAwait(false);
         if (data is not null
             && IdempotencyEntrySerializer.TryRead(data, out string storedToken, out _, out IdempotentResponse? stored)
             && (stored is not null || !string.Equals(storedToken, token, StringComparison.Ordinal)))
@@ -69,7 +69,7 @@ public sealed class DistributedCacheIdempotencyStore(IDistributedCache cache) : 
             KeyPrefix + key,
             IdempotencyEntrySerializer.Write(token, fingerprint, response),
             new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = retention },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
         return true;
     }
 
@@ -78,14 +78,14 @@ public sealed class DistributedCacheIdempotencyStore(IDistributedCache cache) : 
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentException.ThrowIfNullOrEmpty(token);
 
-        byte[]? data = await cache.GetAsync(KeyPrefix + key, cancellationToken);
+        byte[]? data = await cache.GetAsync(KeyPrefix + key, cancellationToken).ConfigureAwait(false);
         if (data is null
             || !IdempotencyEntrySerializer.TryRead(data, out string storedToken, out _, out IdempotentResponse? stored)
             || stored is not null
             || !string.Equals(storedToken, token, StringComparison.Ordinal))
             return false;
 
-        await cache.RemoveAsync(KeyPrefix + key, cancellationToken);
+        await cache.RemoveAsync(KeyPrefix + key, cancellationToken).ConfigureAwait(false);
         return true;
     }
 }

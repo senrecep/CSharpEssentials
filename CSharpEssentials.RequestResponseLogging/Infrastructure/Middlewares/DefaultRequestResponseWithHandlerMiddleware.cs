@@ -18,12 +18,12 @@ internal sealed class DefaultRequestResponseWithHandlerMiddleware : BaseMiddlewa
     {
         if (IsIgnoredPath(httpContext))
         {
-            await _next(httpContext);
+            await _next(httpContext).ConfigureAwait(false);
             return;
         }
 
-        RequestResponseContext reqResContext = await InvokeMiddleware(_next, httpContext);
+        RequestResponseContext reqResContext = await InvokeMiddleware(_next, httpContext).ConfigureAwait(false);
 
-        await _reqResHandler.Invoke(reqResContext);
+        await _reqResHandler.Invoke(reqResContext).ConfigureAwait(false);
     }
 }

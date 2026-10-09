@@ -36,7 +36,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Result<T>> ToResultAsync<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.ToResult(error);
     }
 
@@ -50,7 +50,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Result<T>> ToResultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.ToResult(error);
     }
 
@@ -64,7 +64,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Result> ToUnitResultAsync<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.ToUnitResult(error);
     }
 
@@ -78,7 +78,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Result> ToUnitResultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.ToUnitResult(error);
     }
 }

@@ -216,9 +216,9 @@ public sealed class HttpRequestBuilder
 
         using HttpRequestMessage request = buildResult.Value;
         if (_followRedirects)
-            return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken);
+            return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken).ConfigureAwait(false);
 
-        return await client.SendAsResultAsync(request, cancellationToken);
+        return await client.SendAsResultAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default)
@@ -232,8 +232,8 @@ public sealed class HttpRequestBuilder
 
         using HttpRequestMessage request = buildResult.Value;
         if (_followRedirects)
-            return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken);
+            return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken).ConfigureAwait(false);
 
-        return await client.SendAsResultAsync<T>(request, options, cancellationToken);
+        return await client.SendAsResultAsync<T>(request, options, cancellationToken).ConfigureAwait(false);
     }
 }

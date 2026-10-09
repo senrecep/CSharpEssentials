@@ -24,7 +24,7 @@ internal sealed partial class IdempotencyMiddleware(
         if (context.GetEndpoint()?.Metadata.GetMetadata<IdempotentAttribute>() is null
             || !options.Methods.Contains(context.Request.Method))
         {
-            await next(context);
+            await next(context).ConfigureAwait(false);
             return;
         }
 
@@ -33,7 +33,7 @@ internal sealed partial class IdempotencyMiddleware(
         if (header.Count > 1 || key is not null && (key.Length == 0 || key.Length > options.MaxKeyLength))
         {
             await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Invalid idempotency key",
-                $"Send exactly one '{options.HeaderName}' header of 1 to {options.MaxKeyLength} characters.");
+                $"Send exactly one '{options.HeaderName}' header of 1 to {options.MaxKeyLength} characters.").ConfigureAwait(false);
             return;
         }
 
@@ -41,9 +41,9 @@ internal sealed partial class IdempotencyMiddleware(
         {
             if (options.RequireKey)
                 await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Missing idempotency key",
-                    $"This endpoint requires the '{options.HeaderName}' header.");
+                    $"This endpoint requires the '{options.HeaderName}' header.").ConfigureAwait(false);
             else
-                await next(context);
+                await next(context).ConfigureAwait(false);
             return;
         }
 
@@ -51,34 +51,34 @@ internal sealed partial class IdempotencyMiddleware(
         if (scope is null && !options.AllowUnscopedKeys)
         {
             LogUnscoped(logger, context.Request.Path);
-            await next(context);
+            await next(context).ConfigureAwait(false);
             return;
         }
 
         // Scoped keys start with the scope length and unscoped keys with '-', so neither can be forged from the other.
         string storeKey = scope is null ? $"-:{key}" : $"{scope.Length.ToString(CultureInfo.InvariantCulture)}:{scope}:{key}";
-        string fingerprint = await ComputeFingerprintAsync(context.Request, context.RequestAborted);
+        string fingerprint = await ComputeFingerprintAsync(context.Request, context.RequestAborted).ConfigureAwait(false);
         IdempotencyReservation reservation =
-            await store.TryReserveAsync(storeKey, fingerprint, options.InFlightTimeout, context.RequestAborted);
+            await store.TryReserveAsync(storeKey, fingerprint, options.InFlightTimeout, context.RequestAborted).ConfigureAwait(false);
 
         switch (reservation.Status)
         {
             case IdempotencyReservationStatus.Reserved:
-                await ExecuteAsync(context, store, storeKey, reservation.Token!, fingerprint);
+                await ExecuteAsync(context, store, storeKey, reservation.Token!, fingerprint).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.Completed:
-                await ReplayAsync(context, reservation.Response!);
+                await ReplayAsync(context, reservation.Response!).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.InFlight:
                 if (options.RetryAfter is { } retryAfter)
                     context.Response.Headers.RetryAfter =
                         Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
                 await WriteProblemAsync(context, StatusCodes.Status409Conflict, "Request in progress",
-                    "A request with this idempotency key is still being processed. Retry later.");
+                    "A request with this idempotency key is still being processed. Retry later.").ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.FingerprintMismatch:
                 await WriteProblemAsync(context, StatusCodes.Status422UnprocessableEntity, "Idempotency key reused",
-                    "This idempotency key was already used for a different request.");
+                    "This idempotency key was already used for a different request.").ConfigureAwait(false);
                 break;
             default:
                 throw new InvalidOperationException($"{store.GetType().Name} returned an unknown reservation status {reservation.Status}.");
@@ -93,8 +93,8 @@ internal sealed partial class IdempotencyMiddleware(
         response.Body = capture;
         try
         {
-            await next(context);
-            await response.BodyWriter.FlushAsync(CancellationToken.None);
+            await next(context).ConfigureAwait(false);
+            await response.BodyWriter.FlushAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception)
         {
@@ -105,14 +105,14 @@ internal sealed partial class IdempotencyMiddleware(
             if (response.HasStarted)
                 LogKeptInFlight(logger, context.Request.Path);
             else
-                await TryReleaseAsync(store, storeKey, token, context.Request.Path);
+                await TryReleaseAsync(store, storeKey, token, context.Request.Path).ConfigureAwait(false);
             throw;
         }
 
         response.Body = original;
         try
         {
-            if (!await StoreOutcomeAsync(context, store, storeKey, token, fingerprint, capture))
+            if (!await StoreOutcomeAsync(context, store, storeKey, token, fingerprint, capture).ConfigureAwait(false))
                 LogStaleReservation(logger, context.Request.Path);
         }
         catch (Exception exception)
@@ -136,12 +136,12 @@ internal sealed partial class IdempotencyMiddleware(
 
         // The work is done: store the outcome even when the client has gone away, so the key does not stay in flight.
         if (!options.ShouldStore(response.StatusCode))
-            return await store.ReleaseAsync(storeKey, token, CancellationToken.None);
+            return await store.ReleaseAsync(storeKey, token, CancellationToken.None).ConfigureAwait(false);
 
         if (capture.Overflowed)
         {
             LogTooLarge(logger, context.Request.Path, options.MaxResponseBodySize);
-            return await store.ReleaseAsync(storeKey, token, CancellationToken.None);
+            return await store.ReleaseAsync(storeKey, token, CancellationToken.None).ConfigureAwait(false);
         }
 
         // Names come from ReplayedHeaders, which is already case-insensitive.
@@ -160,7 +160,7 @@ internal sealed partial class IdempotencyMiddleware(
             fingerprint,
             new IdempotentResponse(response.StatusCode, headers, capture.ToArray()),
             options.RetentionPeriod,
-            CancellationToken.None);
+            CancellationToken.None).ConfigureAwait(false);
     }
 
     private async Task ReplayAsync(HttpContext context, IdempotentResponse stored)
@@ -173,7 +173,7 @@ internal sealed partial class IdempotencyMiddleware(
         if (stored.Body.Length > 0)
         {
             response.ContentLength = stored.Body.Length;
-            await response.Body.WriteAsync(stored.Body, context.RequestAborted);
+            await response.Body.WriteAsync(stored.Body, context.RequestAborted).ConfigureAwait(false);
         }
     }
 
@@ -181,7 +181,7 @@ internal sealed partial class IdempotencyMiddleware(
     {
         try
         {
-            await store.ReleaseAsync(storeKey, token, CancellationToken.None);
+            await store.ReleaseAsync(storeKey, token, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -202,7 +202,7 @@ internal sealed partial class IdempotencyMiddleware(
         try
         {
             int read;
-            while ((read = await request.Body.ReadAsync(buffer.AsMemory(), cancellationToken)) > 0)
+            while ((read = await request.Body.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false)) > 0)
                 hash.AppendData(buffer, 0, read);
         }
         finally

@@ -38,7 +38,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<TOut> FinallyAsync<TOut>(this Task<Result> task, Func<Result, TOut> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Finally(func);
     }
 
@@ -52,8 +52,8 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<TOut> FinallyAsync<TOut>(this Task<Result> task, Func<Result, Task<TOut>> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await func(result).WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await func(result).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> FinallyAsync(this Task<Result> task, Action<Result> action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Finally(action);
     }
 
@@ -78,8 +78,8 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> FinallyAsync(this Task<Result> task, Func<Result, Task> action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await action(result).WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await action(result).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -93,7 +93,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<TOut> FinallyAsync<TOut>(this ValueTask<Result> task, Func<Result, TOut> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Finally(func);
     }
 
@@ -107,7 +107,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> FinallyAsync(this ValueTask<Result> task, Action<Result> action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Finally(action);
     }
 
@@ -123,8 +123,8 @@ public static partial class ResultExtensions
 #endif
     public static async ValueTask<Result> FinallyAsync(this ValueTask<Result> task, Func<Result, Task> action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await action(result).WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await action(result).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 

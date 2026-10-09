@@ -98,7 +98,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> BindAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Result<TOut>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Bind(func);
     }
 
@@ -112,7 +112,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> BindAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Result> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Bind(func);
     }
 
@@ -127,8 +127,8 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> BindAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Task<Result<TOut>>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.BindAsync(func).WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.BindAsync(func).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -141,8 +141,8 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> BindAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task<Result>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.BindAsync(func).WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.BindAsync(func).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -156,7 +156,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TOut>> BindAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<TValue, Result<TOut>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Bind(func);
     }
 
@@ -170,7 +170,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> BindAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Result> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Bind(func);
     }
 
@@ -185,8 +185,8 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TOut>> BindAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<TValue, ValueTask<Result<TOut>>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.BindAsync(func).WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.BindAsync(func).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> BindAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, ValueTask<Result>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.BindAsync(func).WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.BindAsync(func).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 }

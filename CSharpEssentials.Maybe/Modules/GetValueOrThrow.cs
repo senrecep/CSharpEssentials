@@ -13,7 +13,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<T> GetValueOrThrowAsync<T>(this Task<Maybe<T>> maybeTask, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrThrow();
     }
 
@@ -27,7 +27,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<T> GetValueOrThrowAsync<T>(this Task<Maybe<T>> maybeTask, string errorMessage, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrThrow(errorMessage);
     }
 
@@ -40,7 +40,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<T> GetValueOrThrowAsync<T>(this ValueTask<Maybe<T>> maybeTask, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrThrow();
     }
 
@@ -54,7 +54,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<T> GetValueOrThrowAsync<T>(this ValueTask<Maybe<T>> maybeTask, string errorMessage, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrThrow(errorMessage);
     }
 }

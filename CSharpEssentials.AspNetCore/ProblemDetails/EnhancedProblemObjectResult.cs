@@ -42,8 +42,8 @@ public sealed class EnhancedProblemObjectResult : ObjectResult
         httpContext.Response.StatusCode = problemDetails.Status ?? StatusCodes.Status500InternalServerError;
 
         var problemContext = new ProblemDetailsContext { HttpContext = httpContext, ProblemDetails = problemDetails };
-        if (await EnhancedProblemDetailsWriter.TryWriteWithServiceAsync(problemContext))
+        if (await EnhancedProblemDetailsWriter.TryWriteWithServiceAsync(problemContext).ConfigureAwait(false))
             return;
-        await base.ExecuteResultAsync(context);
+        await base.ExecuteResultAsync(context).ConfigureAwait(false);
     }
 }

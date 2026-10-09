@@ -43,7 +43,7 @@ public static partial class MaybeExtensions
 #if NET9_0_OR_GREATER
         await foreach (Task<Maybe<T>> task in Task.WhenEach(source).WithCancellation(cancellationToken))
         {
-            Maybe<T> result = await task;
+            Maybe<T> result = await task.ConfigureAwait(false);
             if (result.HasValue)
                 yield return result.Value;
         }
@@ -72,7 +72,7 @@ public static partial class MaybeExtensions
 #if NET9_0_OR_GREATER
         await foreach (Task<Maybe<T>> task in Task.WhenEach(source).WithCancellation(cancellationToken))
         {
-            Maybe<T> result = await task;
+            Maybe<T> result = await task.ConfigureAwait(false);
             if (result.HasValue)
                 yield return selector(result.Value);
         }

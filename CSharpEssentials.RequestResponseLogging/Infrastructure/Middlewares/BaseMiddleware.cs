@@ -1,4 +1,5 @@
 ﻿using System.Buffers;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
@@ -154,7 +155,8 @@ internal abstract class BaseMiddleware
 
         try
         {
-            await using RecyclableMemoryStream requestStream = _recyclableMemoryStreamManager.GetStream();
+            RecyclableMemoryStream requestStream = _recyclableMemoryStreamManager.GetStream();
+            await using ConfiguredAsyncDisposable requestStreamScope = requestStream.ConfigureAwait(false);
             buffer = _arrayPool.Rent(_bufferSize);
 
             int bytesRead;
@@ -199,7 +201,8 @@ internal abstract class BaseMiddleware
             return (await ExecuteWithTiming(next, httpContext).ConfigureAwait(false), DefaultResponseText);
         }
 
-        await using RecyclableMemoryStream responseBody = _recyclableMemoryStreamManager.GetStream();
+        RecyclableMemoryStream responseBody = _recyclableMemoryStreamManager.GetStream();
+        await using ConfiguredAsyncDisposable responseBodyScope = responseBody.ConfigureAwait(false);
         httpContext.Response.Body = responseBody;
 
         TimeSpan elapsedTime = await ExecuteWithTiming(next, httpContext).ConfigureAwait(false);

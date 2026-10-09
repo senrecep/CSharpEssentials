@@ -75,8 +75,8 @@ public readonly partial struct Maybe<T>
            Func<CancellationToken, Task<TE>> none,
            CancellationToken cancellationToken = default
        ) => HasValue
-            ? await some(Value, cancellationToken)
-            : await none(cancellationToken);
+            ? await some(Value, cancellationToken).ConfigureAwait(false)
+            : await none(cancellationToken).ConfigureAwait(false);
 
     /// <summary>
     /// Matches the value of the Maybe to a new value.
@@ -97,8 +97,8 @@ public readonly partial struct Maybe<T>
     )
     {
         return HasValue
-            ? await some(Value, context, cancellationToken)
-            : await none(context, cancellationToken);
+            ? await some(Value, context, cancellationToken).ConfigureAwait(false)
+            : await none(context, cancellationToken).ConfigureAwait(false);
     }
 
 
@@ -117,9 +117,9 @@ public readonly partial struct Maybe<T>
     )
     {
         if (HasValue)
-            await some(Value, cancellationToken);
+            await some(Value, cancellationToken).ConfigureAwait(false);
         else
-            await none(cancellationToken);
+            await none(cancellationToken).ConfigureAwait(false);
     }
 
 
@@ -141,9 +141,9 @@ public readonly partial struct Maybe<T>
     )
     {
         if (HasValue)
-            await some(Value, context, cancellationToken);
+            await some(Value, context, cancellationToken).ConfigureAwait(false);
         else
-            await none(context, cancellationToken);
+            await none(context, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -161,8 +161,8 @@ public readonly partial struct Maybe<T>
       )
     {
         return HasValue
-            ? await some(Value, cancellationToken)
-            : await none(cancellationToken);
+            ? await some(Value, cancellationToken).ConfigureAwait(false)
+            : await none(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -183,8 +183,8 @@ public readonly partial struct Maybe<T>
     )
     {
         return HasValue
-            ? await some(Value, context, cancellationToken)
-            : await none(context, cancellationToken);
+            ? await some(Value, context, cancellationToken).ConfigureAwait(false)
+            : await none(context, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -201,9 +201,9 @@ public readonly partial struct Maybe<T>
     )
     {
         if (HasValue)
-            await some(Value, cancellationToken);
+            await some(Value, cancellationToken).ConfigureAwait(false);
         else
-            await none(cancellationToken);
+            await none(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -223,9 +223,9 @@ public readonly partial struct Maybe<T>
     )
     {
         if (HasValue)
-            await some(Value, context, cancellationToken);
+            await some(Value, context, cancellationToken).ConfigureAwait(false);
         else
-            await none(context, cancellationToken);
+            await none(context, cancellationToken).ConfigureAwait(false);
     }
 
 }
@@ -343,8 +343,8 @@ public static partial class MaybeExtensions
                 maybe.Value.Key,
                 maybe.Value.Value,
                 cancellationToken
-            )
-            : await none.Invoke(cancellationToken);
+            ).ConfigureAwait(false)
+            : await none.Invoke(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -374,8 +374,8 @@ public static partial class MaybeExtensions
                 maybe.Value.Value,
                 context,
                 cancellationToken
-            )
-            : await none.Invoke(context, cancellationToken);
+            ).ConfigureAwait(false)
+            : await none.Invoke(context, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -397,14 +397,14 @@ public static partial class MaybeExtensions
     {
         if (maybe.HasNoValue)
         {
-            await none.Invoke(cancellationToken);
+            await none.Invoke(cancellationToken).ConfigureAwait(false);
             return;
         }
         await some.Invoke(
                 maybe.Value.Key,
                 maybe.Value.Value,
                 cancellationToken
-            );
+            ).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -429,7 +429,7 @@ public static partial class MaybeExtensions
     {
         if (maybe.HasNoValue)
         {
-            await none.Invoke(context, cancellationToken);
+            await none.Invoke(context, cancellationToken).ConfigureAwait(false);
             return;
         }
 
@@ -438,7 +438,7 @@ public static partial class MaybeExtensions
             maybe.Value.Value,
             context,
             cancellationToken
-        );
+        ).ConfigureAwait(false);
     }
 
 
@@ -466,8 +466,8 @@ public static partial class MaybeExtensions
                 maybe.Value.Key,
                 maybe.Value.Value,
                 cancellationToken
-            )
-            : await none.Invoke(cancellationToken);
+            ).ConfigureAwait(false)
+            : await none.Invoke(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -498,8 +498,8 @@ public static partial class MaybeExtensions
                 maybe.Value.Value,
                 context,
                 cancellationToken
-            )
-            : await none.Invoke(context, cancellationToken);
+            ).ConfigureAwait(false)
+            : await none.Invoke(context, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -522,14 +522,14 @@ public static partial class MaybeExtensions
     {
         if (maybe.HasNoValue)
         {
-            await none.Invoke(cancellationToken);
+            await none.Invoke(cancellationToken).ConfigureAwait(false);
             return;
         }
         await some.Invoke(
             maybe.Value.Key,
             maybe.Value.Value,
             cancellationToken
-        );
+        ).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -555,7 +555,7 @@ public static partial class MaybeExtensions
     {
         if (maybe.HasNoValue)
         {
-            await none.Invoke(context, cancellationToken);
+            await none.Invoke(context, cancellationToken).ConfigureAwait(false);
             return;
         }
         await some.Invoke(
@@ -563,6 +563,6 @@ public static partial class MaybeExtensions
             maybe.Value.Value,
             context,
             cancellationToken
-        );
+        ).ConfigureAwait(false);
     }
 }

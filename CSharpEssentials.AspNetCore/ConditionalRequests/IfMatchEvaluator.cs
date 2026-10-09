@@ -50,7 +50,7 @@ internal static class IfMatchEvaluator
         if (settings.LoadCurrent is null)
             return null;
 
-        object? current = await settings.LoadCurrent(httpContext, httpContext.RequestAborted);
+        object? current = await settings.LoadCurrent(httpContext, httpContext.RequestAborted).ConfigureAwait(false);
         IServiceProvider services = httpContext.RequestServices;
         ResourceValidators? validators = current is null
             ? null

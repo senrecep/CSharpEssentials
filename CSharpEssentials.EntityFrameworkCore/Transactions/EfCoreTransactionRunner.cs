@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Transactions;
 
 using Microsoft.EntityFrameworkCore;
@@ -32,7 +33,7 @@ public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : 
 
         IDbContextTransaction? current = dbContext.Database.CurrentTransaction;
         if (current is not null)
-            return await ExecuteJoinedAsync(current, work, shouldCommit, cancellationToken);
+            return await ExecuteJoinedAsync(current, work, shouldCommit, cancellationToken).ConfigureAwait(false);
 
         IExecutionStrategy strategy = dbContext.Database.CreateExecutionStrategy();
         if (strategy.RetriesOnFailure && dbContext.ChangeTracker.HasChanges())
@@ -47,13 +48,14 @@ public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : 
                     dbContext.ChangeTracker.Clear();
                 firstAttempt = false;
 
-                await using IDbContextTransaction transaction = await dbContext.Database.BeginTransactionAsync(token);
-                T result = await work(token);
+                IDbContextTransaction transaction = await dbContext.Database.BeginTransactionAsync(token).ConfigureAwait(false);
+                await using ConfiguredAsyncDisposable transactionScope = transaction.ConfigureAwait(false);
+                T result = await work(token).ConfigureAwait(false);
                 if (shouldCommit(result))
-                    await transaction.CommitAsync(token);
+                    await transaction.CommitAsync(token).ConfigureAwait(false);
                 return result;
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
     }
 
     private static async ValueTask<T> ExecuteJoinedAsync<T>(
@@ -63,25 +65,25 @@ public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : 
         CancellationToken cancellationToken)
     {
         if (!current.SupportsSavepoints)
-            return await work(cancellationToken);
+            return await work(cancellationToken).ConfigureAwait(false);
 
         string savepoint = "cse_" + Guid.NewGuid().ToString("N");
-        await current.CreateSavepointAsync(savepoint, cancellationToken);
+        await current.CreateSavepointAsync(savepoint, cancellationToken).ConfigureAwait(false);
         T result;
         try
         {
-            result = await work(cancellationToken);
+            result = await work(cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            await TryRollbackToSavepointAsync(current, savepoint);
+            await TryRollbackToSavepointAsync(current, savepoint).ConfigureAwait(false);
             throw;
         }
 
         if (shouldCommit(result))
-            await current.ReleaseSavepointAsync(savepoint, CancellationToken.None);
+            await current.ReleaseSavepointAsync(savepoint, CancellationToken.None).ConfigureAwait(false);
         else
-            await current.RollbackToSavepointAsync(savepoint, CancellationToken.None);
+            await current.RollbackToSavepointAsync(savepoint, CancellationToken.None).ConfigureAwait(false);
         return result;
     }
 
@@ -89,7 +91,7 @@ public sealed class EfCoreTransactionRunner<TDbContext>(TDbContext dbContext) : 
     {
         try
         {
-            await transaction.RollbackToSavepointAsync(savepoint, CancellationToken.None);
+            await transaction.RollbackToSavepointAsync(savepoint, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception)
         {

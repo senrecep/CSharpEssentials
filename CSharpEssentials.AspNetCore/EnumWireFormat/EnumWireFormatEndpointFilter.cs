@@ -21,7 +21,7 @@ internal static class EnumWireFormatEndpointFilter
 
     private static async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext invocation, EndpointFilterDelegate next)
     {
-        object? result = await next(invocation);
+        object? result = await next(invocation).ConfigureAwait(false);
         HttpContext httpContext = invocation.HttpContext;
         Endpoint? endpoint = httpContext.GetEndpoint();
         if (endpoint is null || endpoint.Metadata.GetMetadata<ActionDescriptor>() is not null)
@@ -65,7 +65,7 @@ internal static class EnumWireFormatEndpointFilter
             httpContext.RequestServices = new JsonOptionsServiceProvider(services, options);
             try
             {
-                await inner.ExecuteAsync(httpContext);
+                await inner.ExecuteAsync(httpContext).ConfigureAwait(false);
             }
             finally
             {

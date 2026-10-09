@@ -17,7 +17,7 @@ public sealed class TransactionScopeBehavior<TRequest, TResponse>
         CancellationToken cancellationToken)
     {
         using TransactionScope transactionScope = new(TransactionScopeAsyncFlowOption.Enabled);
-        TResponse response = await next(message, cancellationToken);
+        TResponse response = await next(message, cancellationToken).ConfigureAwait(false);
         if (TransactionOutcome.ShouldCommit(response))
             transactionScope.Complete();
         return response;

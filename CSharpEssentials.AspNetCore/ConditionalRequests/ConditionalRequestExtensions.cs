@@ -134,7 +134,7 @@ public static class ConditionalRequestExtensions
         ArgumentNullException.ThrowIfNull(loadCurrent);
         return builder.WithIfMatch(new IfMatchMetadata(
             required,
-            async (httpContext, cancellationToken) => await loadCurrent(httpContext, cancellationToken)));
+            async (httpContext, cancellationToken) => await loadCurrent(httpContext, cancellationToken).ConfigureAwait(false)));
     }
 
     /// <summary>

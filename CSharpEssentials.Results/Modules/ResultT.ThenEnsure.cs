@@ -24,7 +24,7 @@ public readonly partial record struct Result<TValue>
         if (IsFailure)
             return this;
         cancellationToken.ThrowIfCancellationRequested();
-        return await validator(Value);
+        return await validator(Value).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
@@ -33,7 +33,7 @@ public readonly partial record struct Result<TValue>
         if (IsFailure)
             return this;
         cancellationToken.ThrowIfCancellationRequested();
-        Result result = await validator(Value);
+        Result result = await validator(Value).ConfigureAwait(false);
         return result.IsSuccess ? this : result.ErrorsOrEmptyArray;
     }
 
@@ -61,28 +61,28 @@ public static partial class ResultExtensions
 {
     public static async Task<Result<TValue>> ThenEnsureAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task<Result<TValue>>> validator, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task;
-        return await result.ThenEnsureAsync(validator, cancellationToken);
+        Result<TValue> result = await task.ConfigureAwait(false);
+        return await result.ThenEnsureAsync(validator, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<TValue>> ThenEnsureAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Task<Result>> validator, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task;
-        return await result.ThenEnsureAsync(validator, cancellationToken);
+        Result<TValue> result = await task.ConfigureAwait(false);
+        return await result.ThenEnsureAsync(validator, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> ThenEnsureAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task<Result<TValue>>> validator, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task;
-        return await result.ThenEnsureAsync(validator, cancellationToken);
+        Result<TValue> result = await task.ConfigureAwait(false);
+        return await result.ThenEnsureAsync(validator, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> ThenEnsureAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Task<Result>> validator, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task;
-        return await result.ThenEnsureAsync(validator, cancellationToken);
+        Result<TValue> result = await task.ConfigureAwait(false);
+        return await result.ThenEnsureAsync(validator, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

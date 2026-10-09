@@ -83,7 +83,7 @@ public readonly partial record struct Result<TValue>
         for (int i = 0; i < errors.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            mappedErrors[i] = await errorMapper(errors[i]);
+            mappedErrors[i] = await errorMapper(errors[i]).ConfigureAwait(false);
         }
         return mappedErrors;
     }
@@ -94,7 +94,7 @@ public readonly partial record struct Result<TValue>
         for (int i = 0; i < errors.Length; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            mappedErrors[i] = await errorMapper(errors[i]);
+            mappedErrors[i] = await errorMapper(errors[i]).ConfigureAwait(false);
         }
         return mappedErrors;
     }
@@ -102,13 +102,13 @@ public readonly partial record struct Result<TValue>
     private static async Task<Result<TValue>> MapErrorsAsync(Error[] errors, Func<Error[], Task<Error[]>> errorMapper, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return await errorMapper(errors);
+        return await errorMapper(errors).ConfigureAwait(false);
     }
 
     private static async ValueTask<Result<TValue>> MapErrorsAsync(Error[] errors, Func<Error[], ValueTask<Error[]>> errorMapper, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return await errorMapper(errors);
+        return await errorMapper(errors).ConfigureAwait(false);
     }
 }
 
@@ -123,7 +123,7 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async Task<Result<TValue>> MapErrorAsync<TValue>(this Task<Result<TValue>> task, Func<Error, Error> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.MapError(errorMapper);
     }
 
@@ -136,7 +136,7 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async Task<Result<TValue>> MapErrorAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Error[]> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.MapError(errorMapper);
     }
 
@@ -149,8 +149,8 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async Task<Result<TValue>> MapErrorAsync<TValue>(this Task<Result<TValue>> task, Func<Error, Task<Error>> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.MapErrorAsync(errorMapper, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MapErrorAsync(errorMapper, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -162,8 +162,8 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async Task<Result<TValue>> MapErrorAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Task<Error[]>> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.MapErrorAsync(errorMapper, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MapErrorAsync(errorMapper, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async ValueTask<Result<TValue>> MapErrorAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error, Error> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.MapError(errorMapper);
     }
 
@@ -188,7 +188,7 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async ValueTask<Result<TValue>> MapErrorAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Error[]> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.MapError(errorMapper);
     }
 
@@ -201,8 +201,8 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async ValueTask<Result<TValue>> MapErrorAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error, ValueTask<Error>> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.MapErrorAsync(errorMapper, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MapErrorAsync(errorMapper, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -214,7 +214,7 @@ public static partial class ResultExtensions
     /// <returns>The original success, or a failure with the mapped errors.</returns>
     public static async ValueTask<Result<TValue>> MapErrorAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], ValueTask<Error[]>> errorMapper, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.MapErrorAsync(errorMapper, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.MapErrorAsync(errorMapper, cancellationToken).ConfigureAwait(false);
     }
 }
