@@ -733,7 +733,7 @@ All methods accept an optional `CultureInfo` parameter.
 | Method | What It Does |
 |--------|-------------|
 | `guid.ToStringFromGuid()` | URL-safe Base64-encoded short GUID string |
-| `str.ToGuidFromString()` | Reverse: decodes back to `Guid` |
+| `str.ToGuidFromString()` | Reverse: decodes back to `Guid`; throws `FormatException` unless the input is exactly 22 URL-safe characters |
 | `Guider.NewGuid()` | `Guid.CreateVersion7()` on .NET 9+, `Guid.NewGuid()` on older targets |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
 

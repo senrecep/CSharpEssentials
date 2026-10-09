@@ -704,10 +704,10 @@ public class GeneralExtensionsTests
     }
 
     [Fact]
-    public void ToGuidFromString_WithInvalidString_ShouldThrowIndexOutOfRangeException()
+    public void ToGuidFromString_WithInvalidString_ShouldThrowFormatException()
     {
         Action act = () => "invalid-guid".ToGuidFromString();
-        act.Should().Throw<IndexOutOfRangeException>();
+        act.Should().Throw<FormatException>();
     }
 
     [Fact]

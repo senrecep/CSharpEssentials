@@ -119,5 +119,5 @@ int status = HttpCodes.NotFound;                 // 404; HTTP status code consta
 - `WithoutNulls()` keeps nullable annotations correct, unlike `.Where(x => x != null)`
 - `IfNotNull()` is a statement form; for transforms use `Maybe<T>.Map()` instead
 - `WithCancellation` stops waiting; it does not cancel the underlying task
-- Case conversions use a `stackalloc` buffer sized from the input; keep them for identifiers and short text
-- `Guider.ToGuidFromString` does not validate its input; only pass strings produced by `ToStringFromGuid`
+- Case conversions use a `stackalloc` buffer for short inputs and `ArrayPool<char>` for long ones
+- `Guider.ToGuidFromString` requires exactly 22 URL-safe characters and throws `FormatException` otherwise

@@ -113,5 +113,27 @@ public class RandomItemsExtensionsTests
         // RandomNumberGenerator.GetInt32 throws when given invalid range
         Assert.ThrowsAny<ArgumentException>(() => list.GetRandomItem());
     }
+
+    [Fact]
+    public void GetRandomItems_Should_Not_Overflow_The_Stack_When_Source_Is_Very_Large()
+    {
+        int[] source = new int[6_000_000];
+        for (int i = 0; i < source.Length; i++)
+            source[i] = i;
+        int[]? result = null;
+        Exception? failure = null;
+        var thread = new Thread(() =>
+        {
+            try { result = source.GetRandomItems(3); }
+            catch (Exception ex) { failure = ex; }
+        }, 1024 * 1024);
+
+        thread.Start();
+        thread.Join();
+
+        failure.Should().BeNull();
+        result.Should().NotBeNull();
+        result!.Distinct().Should().HaveCount(3);
+    }
 }
 

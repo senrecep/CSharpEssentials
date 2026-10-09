@@ -37,7 +37,7 @@ Every conversion takes an optional `CultureInfo` (invariant culture when omitted
 // CamelCase with leading underscore
 ```
 
-The conversions build the result in a `stackalloc` buffer sized from the input, so use them on identifiers and short text, not on megabyte-sized strings.
+The conversions work in a `stackalloc` buffer for short inputs and rent from `ArrayPool<char>` for longer ones, so they are safe on large strings.
 
 ## Random Item Extensions
 
@@ -236,7 +236,7 @@ catch (Exception ex)
 
 ## Notes
 
-1. String case conversions allocate one result string and use a `stackalloc` buffer for the work, so they are cheap on identifiers and unsafe on very large inputs.
+1. String case conversions allocate one result string and use a `stackalloc` buffer for short inputs (a pooled array for longer ones), so they stay safe on very large inputs.
 2. Random selection uses `RandomNumberGenerator`, not `System.Random`.
 3. `ForEach`, `WithoutNulls`, `GetInnerExceptions` and `GetInnerExceptionsMessages` are lazy; enumerate them to run them.
 4. `WithCancellation` stops the wait only; the wrapped task keeps running.
