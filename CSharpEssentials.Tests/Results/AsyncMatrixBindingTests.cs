@@ -353,5 +353,243 @@ public sealed class AsyncMatrixBindingTests
 
         ((await pending).Value, seen).Should().Be((5, 5));
     }
+
+    [Fact]
+    public async Task ElseAsync_Should_BindTaskOverload_When_ResultTGetsUntypedAsyncLambda()
+    {
+        Result<int> source = TestError;
+
+        Task<Result<int>> pending = source.ElseAsync(async _ =>
+        {
+            await Task.Yield();
+            return 42;
+        });
+
+        (await pending).Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task ElseAsync_Should_BindValueTaskOverload_When_ResultGetsLambdaReturningValueTask()
+    {
+        Result source = TestError;
+
+        ValueTask<Result> pending = source.ElseAsync(_ => ValueTask.FromResult(Error.Conflict("C", "c")));
+
+        (await pending).FirstError.Code.Should().Be("C");
+    }
+
+    [Fact]
+    public async Task FailIfAsync_Should_BindTaskOverload_When_ResultTGetsUntypedAsyncPredicate()
+    {
+        Result<int> source = 5;
+
+        Task<Result<int>> pending = source.FailIfAsync(async v =>
+        {
+            await Task.Yield();
+            return v > 0;
+        }, TestError);
+
+        (await pending).FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task SwitchFirstAsync_Should_BindTaskOverload_When_ResultGetsUntypedAsyncLambdas()
+    {
+        Result source = TestError;
+        string outcome = string.Empty;
+
+        Task pending = source.SwitchFirstAsync(
+            async () => { await Task.Yield(); outcome = "success"; },
+            async e => { await Task.Yield(); outcome = e.Code; });
+        await pending;
+
+        outcome.Should().Be("TEST");
+    }
+
+    [Fact]
+    public async Task TapErrorAsync_Should_BindTaskOverload_When_ResultGetsUntypedAsyncLambda()
+    {
+        Result source = TestError;
+        int calls = 0;
+
+        Task<Result> pending = source.TapErrorAsync(async _ =>
+        {
+            await Task.Yield();
+            calls++;
+        });
+
+        ((await pending).IsFailure, calls).Should().Be((true, 1));
+    }
+
+    [Fact]
+    public async Task TapErrorAsync_Should_BindValueTaskOverload_When_ResultTGetsLambdaReturningValueTask()
+    {
+        Result<int> source = TestError;
+        int calls = 0;
+
+        ValueTask<Result<int>> pending = source.TapErrorAsync(_ => { calls++; return ValueTask.CompletedTask; });
+
+        ((await pending).IsFailure, calls).Should().Be((true, 1));
+    }
+
+    [Fact]
+    public async Task ElseDoFirstAsync_Should_BindTaskOverload_When_ResultTGetsUntypedAsyncLambda()
+    {
+        Result<int> source = TestError;
+        string seen = string.Empty;
+
+        Task<Result<int>> pending = source.ElseDoFirstAsync(async e =>
+        {
+            await Task.Yield();
+            seen = e.Code;
+        });
+
+        ((await pending).IsFailure, seen).Should().Be((true, "TEST"));
+    }
+
+    [Fact]
+    public async Task CompensateAsync_Should_BindTaskOverload_When_ResultTGetsUntypedAsyncLambda()
+    {
+        Result<int> source = TestError;
+
+        Task<Result<int>> pending = source.CompensateAsync(async _ =>
+        {
+            await Task.Yield();
+            return Result<int>.Success(42);
+        });
+
+        (await pending).Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task ThenEnsureAsync_Should_BindTaskOverload_When_ResultTGetsUntypedAsyncLambda()
+    {
+        Result<int> source = 5;
+
+        Task<Result<int>> pending = source.ThenEnsureAsync(async _ =>
+        {
+            await Task.Yield();
+            return Result.Failure(TestError);
+        });
+
+        (await pending).FirstError.Should().Be(TestError);
+    }
+
+    [Fact]
+    public async Task TryAsync_Should_BindTaskOverload_When_GivenUntypedAsyncLambda()
+    {
+        Task<Result<int>> pending = Result.TryAsync(async () =>
+        {
+            await Task.Yield();
+            return 7;
+        }, _ => TestError);
+
+        (await pending).Value.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task TryAsync_Should_BindValueTaskOverload_When_GivenLambdaReturningValueTask()
+    {
+        ValueTask<Result<int>> pending = Result.TryAsync(() => ValueTask.FromResult(7), _ => TestError);
+
+        (await pending).Value.Should().Be(7);
+    }
+
+    [Fact]
+    public async Task FinallyAsync_Should_BindTaskHandler_When_ValueTaskSourceGetsUntypedAsyncBlockLambda()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        ValueTask<Result> pending = source.FinallyAsync(async _ => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task SwitchFirstAsync_Should_AwaitLambdasReturningValueTask_When_ValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        // 6.5.0: the ValueTask twin beats the Action pair, so the returned ValueTask is awaited instead of discarded.
+        ValueTask pending = source.SwitchFirstAsync(() => new ValueTask(gate.Task), _ => ValueTask.CompletedTask);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+        await pending;
+
+        completedBeforeGate.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SwitchLastAsync_Should_AwaitLambdasReturningValueTask_When_ValueTaskSourceOfResultT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Failure(TestError));
+        var gate = new TaskCompletionSource();
+
+        ValueTask pending = source.SwitchLastAsync(_ => ValueTask.CompletedTask, _ => new ValueTask(gate.Task));
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+        await pending;
+
+        completedBeforeGate.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task FinallyAsync_Should_AwaitLambdaReturningValueTask_When_ValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        // 6.5.0: Func<Result, ValueTask> beats Func<Result, TOut>, so the result is ValueTask<Result>, not ValueTask<ValueTask>.
+        ValueTask<Result> pending = source.FinallyAsync(_ => new ValueTask(gate.Task));
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task FinallyAsync_Should_ReturnValueTaskOfTOut_When_ValueTaskSourceOfResultTGetsLambdaReturningValueTaskOfT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+
+        // 6.5.0: Func<Result<T>, ValueTask<TOut>> beats Func<Result<T>, TOut>, which used to give ValueTask<ValueTask<int>>.
+        ValueTask<int> pending = source.FinallyAsync(r => ValueTask.FromResult(r.Value * 2));
+
+        (await pending).Should().Be(10);
+    }
+
+    [Fact]
+    public async Task FinallyAsync_Should_ReturnValueTaskOfTOut_When_ValueTaskSourceGetsAsyncLambdaReturningValue()
+    {
+        ValueTask<Result> source = new(Result.Success());
+
+        // 6.5.0: the async lambda binds Func<Result, ValueTask<TOut>>; it used to bind Func<Result, TOut> and give ValueTask<Task<int>>.
+        ValueTask<int> pending = source.FinallyAsync(async r =>
+        {
+            await Task.Yield();
+            return r.IsSuccess ? 1 : 0;
+        });
+
+        (await pending).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task FinallyAsync_Should_AwaitTaskOfT_When_ValueTaskSourceGetsNonAsyncLambdaReturningTaskOfT()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource<int>();
+
+        // 6.5.0 on .NET 9+: the prioritised Func<Result, Task> handler wins over Func<Result, TOut>, so the task is awaited
+        // and the result is ValueTask<Result>. It used to bind Func<Result, TOut> and give ValueTask<Task<int>>.
+        ValueTask<Result> pending = source.FinallyAsync(_ => gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult(1);
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
 #endif
 }
