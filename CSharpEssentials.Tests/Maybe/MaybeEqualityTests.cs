@@ -57,6 +57,16 @@ public sealed class MaybeEqualityTests
     }
 
     [Fact]
+    public void ReferenceType_None_Should_NotEqualObjectNull_When_ComparedThroughObject()
+    {
+        Maybe<string> none = Maybe<string>.None;
+
+        // A typed null means absence (operator ==(Maybe<T>, T?)), but Equals(object?) and operator ==(Maybe<T>, object)
+        // follow the BCL contract that x.Equals(null) is false. The static type of the operand picks the rule.
+        ((none == (string?)null), (none == (object)null!), none.Equals((object?)null)).Should().Be((true, false, false));
+    }
+
+    [Fact]
     public void ReferenceType_Some_Should_Compare_By_Value()
     {
         Maybe<string> some = Maybe<string>.From("abc");
