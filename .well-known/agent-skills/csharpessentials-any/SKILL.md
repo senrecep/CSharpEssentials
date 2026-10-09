@@ -28,7 +28,12 @@ Any<User, NotFoundError> missing = new NotFoundError("User not found");
 
 // Explicit factories: First, Second, ... (unions of 2 to 8 types)
 Any<Order, ValidationFailure, NotFoundError> outcome = Any<Order, ValidationFailure, NotFoundError>.First(order);
+
+// Or spell the type arguments on Any.Create
+Any<User, NotFoundError> viaCreate = Any.Create<User, NotFoundError>(user);
 ```
+
+Two type arguments of the same type (`Any<int, int>`) make the implicit conversion ambiguous (CS0457). `Index` is the active branch (0 for the first type) and `Value` its `object?` value.
 
 ## Match and Switch
 
@@ -39,6 +44,7 @@ AnyActionResult<IResult> response = found.Match(
     first: u => Results.Ok(u),
     second: err => Results.NotFound(err.Message));
 IResult http = response.Result!;
+// Match and Switch throw InvalidOperationException on default(Any<...>) or a union holding null
 
 // Switch runs side effects and returns AnyActionStatus
 AnyActionStatus status = found.Switch(
@@ -54,7 +60,8 @@ if (found.IsFirst)
     User u = found.GetFirst(); // throws InvalidOperationException for the wrong branch
 }
 
-// Generic helpers take the target type followed by the union's type arguments
+// Generic helpers take the target type followed by the union's type arguments.
+// They test the runtime type of the value; for a value-type target As returns default (0 for int), not null, on a mismatch
 bool isUser = found.Is<User, User, NotFoundError>();
 User? asUser = found.As<User, User, NotFoundError>();
 bool ok = found.TryAs<NotFoundError, User, NotFoundError>(out NotFoundError? error);
@@ -102,3 +109,4 @@ public IResult PlaceOrderEndpoint(PlaceOrderRequest request) =>
 - Pass a handler for every branch to `Match()`/`Switch()`; a missing handler is not a compile error, it returns `NotExecuted`
 - `IsFirst`/`GetFirst()` or `TryAs<…>()` are the escape hatch for cases where `Match()` is too verbose
 - Avoid `object`-typed union members; they defeat the purpose
+- A union serializes to JSON as `{"Index":n,"Value":...}` and deserializes back to the same branch

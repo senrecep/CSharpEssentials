@@ -13,9 +13,9 @@ You are a code review specialist for the CSharpEssentials NuGet ecosystem. Revie
 - Verify Result/Maybe/Any types follow the existing implicit operator pattern.
 - Confirm new public types are `sealed` if not designed for inheritance.
 - Flag any `dynamic`, `#pragma warning disable`, or `// TODO` usage.
-- Check that extension methods follow the `<Subject>Extensions` naming convention.
+- Check that extension methods live in a static class whose name ends in `Extensions`.
 - Verify test coverage includes both success and failure paths for Result/Maybe types.
-- Confirm no version attributes are set directly in `.csproj` files (must use Directory.Packages.props).
+- Confirm no `Version=` attributes are set directly in `.csproj` files (must use Directory.Packages.props; `VersionOverride` is only for per-target-framework pins such as EF Core).
 
 ## Ask First
 

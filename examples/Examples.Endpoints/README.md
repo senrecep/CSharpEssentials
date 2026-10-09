@@ -11,7 +11,7 @@ A minimal Native AOT web app that uses the source-generated registries of `CShar
 | Grouped endpoints | `Todos/*.cs` | `[EndpointGroup<TodosGroup>]` on list, get and create endpoints |
 | Attribute registration | `Services/TodoStore.cs` | `[RegisterSingleton]`, registered as `ITodoStore` by the `I{TypeName}` rule |
 | Decorator | `Services/LoggingTodoStore.cs` | `[Decorates(typeof(ITodoStore))]`, built by a generated factory |
-| Generated aggregates | `Program.cs` | `AddAllServices()` and `MapAllEndpoints()`, both reflection-free |
+| Generated aggregates | `Program.cs` | `AddAllServices()` and `MapAllEndpoints()`, both reflection-free; `MapAllEndpoints` sets `OperationNaming.TypeName` so every endpoint gets a unique name such as `ListTodos` |
 
 ## Running
 

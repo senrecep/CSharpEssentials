@@ -19,6 +19,8 @@ Depends on `Polly.Core` `[8,9)` (the v8 `ResiliencePipeline` API), not the full 
 
 ```csharp
 using CSharpEssentials.Resilience;
+using CSharpEssentials.ResultPattern;  // Result, Result<T>
+using CSharpEssentials.Errors;         // Error, ErrorType
 ```
 
 ---
@@ -74,6 +76,8 @@ ResiliencePolicy fromOptions = ResiliencePolicy.Create(new ResiliencePolicyOptio
 ```
 
 `maxAttempts` is the number of retries after the first attempt, so the operation runs at most `maxAttempts + 1` times.
+
+Strategies nest in the order you add them, the first being the outermost: `WithRetry(3).WithTimeout(t)` times out each attempt, `WithTimeout(t).WithRetry(3)` limits all attempts together. `WithFallback` always wraps the strategies of the policy it is called on. `WithTimeout` accepts 1 second to 1 day (Polly throws `ValidationException` otherwise). `WithCircuitBreaker` takes `minimumThroughput` (10), `samplingDuration` (1 min), `breakDuration` (30 s), `failureRatio` (0.5); `WithRetry` takes `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`).
 
 ---
 

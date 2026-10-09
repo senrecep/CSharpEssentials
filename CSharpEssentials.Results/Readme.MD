@@ -8,7 +8,10 @@ Functional Result pattern for explicit success/failure handling in .NET. No exce
 - **Railway Oriented Programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
 - **Error Aggregation**: Collect multiple validation errors in one result.
 - **Async Support**: Full async/await across all extension methods.
-- **Safe Execution**: `TryCatch` to wrap exceptions into results.
+- **Safe Execution**: `Result.Try`, `Result.TryAsync` and `TryCatch` wrap exceptions into results.
+- **Recovery and Inspection**: `Else`, `Compensate`, `Recover`, `TapError`, `Match`, `Switch`, `Unwrap`.
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
 
 ## Installation
 
@@ -58,12 +61,35 @@ Result<int> multiError = new[]
 };
 ```
 
+`Result<T>` does not accept `null`: `Result<string> r = (string?)null;` throws `ArgumentNullException`. A `bool` converts to `Result` too: `true` is a success and `false` is the `Error.False` failure. `default(Result)` and `default(Result<T>)` are successes. A failure must hold at least one error: `Result.From` and `Result.Failure` throw `ArgumentException` for an empty collection. Results serialize with `System.Text.Json` (an `errors` array and, for `Result<T>`, a `Value`) and deserialize back to the same state.
+
 Implicit conversion is the idiomatic style. Use the explicit factories when the compiler cannot infer the target type, for example with `var`, in a lambda whose return type is inferred, or as a generic argument:
 
 ```csharp
 var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "User already exists."));
 Task<Result<int>> pending = Task.FromResult(Result.Success(42));
 ```
+
+### Inspecting a Result
+
+```csharp
+Result<int> result = GetUser(10);
+
+if (result.IsSuccess)
+{
+    int value = result.Value;
+}
+else
+{
+    Error first = result.FirstError;
+    Error last = result.LastError;
+    Error[] all = result.Errors;
+}
+
+var (isSuccess, value2, errors) = result;   // Result<T>; Result deconstructs to (isSuccess, errors)
+```
+
+`Value` is `default` on a failure. `Errors`, `FirstError` and `LastError` on a success return the sentinel errors `Error.NoErrors`, `Error.NoFirstError` and `Error.NoLastError`; `ErrorsOrEmptyArray` returns an empty array instead. `TryGet(out value, out errors)` returns `true` for a success. `Result<T>.ToResult()` drops the value, and `Result<T>` values support `==`, `Equals`, LINQ query syntax (`from a in r1 from b in r2 select a + b`) and `r1 + r2` (a `Result<T[]>` that collects every value or every error).
 
 ### Chaining
 
@@ -80,6 +106,8 @@ Result<int> result = Parse("5")
     .Then(n => n + 10);
 ```
 
+`Then` takes either a plain function (`Func<T, U>`) or a function that returns a `Result<U>`. `Bind` takes a `Result`-returning function and `Map` a plain one (a `Result`-returning `Map` overload exists too). `ThenDo` and `Tap` run a side effect on success and return the same result. These success-side operations skip their handler when the result already failed and pass the errors through.
+
 ### Ensuring
 
 ```csharp
@@ -94,7 +122,13 @@ Result<int> ensured = Result.Success(50)
 string message = GetUser(10).Match(
     onSuccess: user => $"User: {user}",
     onError: errors => $"Failed: {errors[0].Description}");
+
+GetUser(10).Switch(
+    onSuccess: user => Console.WriteLine($"User: {user}"),
+    onError: errors => Console.WriteLine($"Failed: {errors.Length} error(s)"));
 ```
+
+`MatchFirst` and `MatchLast` (and `SwitchFirst`, `SwitchLast`) hand the handler a single `Error` instead of the array. On a non-generic `Result` the handlers take no value and the failure handler parameter is named `onFailure`.
 
 ### Combining Results
 
@@ -145,6 +179,41 @@ Result<User> fromCache = await GetCachedUserAsync(id)
     .MapErrorAsync(errors => CollapseAsync(errors));
 ```
 
+### Operations Reference
+
+Every operation returns a new `Result`; handlers run only on the side named in the table. The `Async` counterparts are listed under [Async](#async).
+
+| Operation | Runs on | Behaviour |
+|---|---|---|
+| `Then`, `Bind`, `Map` | success | Transform or chain the value; on a non-generic `Result` the handlers take no argument. `Select` and `SelectMany` exist on `Result<T>` only. |
+| `BindIf(condition, func)` | success | Bind only when the `bool`, `Func<bool>` or `Func<T, bool>` condition holds. |
+| `ThenDo`, `Tap`, `TapIf` | success | Side effect; `Tap(condition, action)` takes a `bool` or `Func<bool>`, `TapIf` (`Result<T>` only) a `Func<T, bool>` predicate. The result is returned unchanged. |
+| `Ensure(predicate, error)` | success | `Result<T>` only. Fail with the error, or with `errorFactory(value)`, when the predicate is `false`. `EnsureNotNull` fails on a `null` value. |
+| `FailIf(predicate, error)` | success | `Result<T>` only. The opposite of `Ensure`: fail when the predicate is `true`. |
+| `ThenEnsure(validator)` | success | `Result<T>` only. Run a validator that returns a `Result` or a `Result<T>`; its failure becomes the result. |
+| `MapError` | failure | Rewrite the errors; see [Mapping Errors](#mapping-errors). |
+| `Else(...)` | failure | Replace the failure with an `Error`, or with what a function of the `Error[]` returns: an `Error`, an `Error[]` (`IEnumerable<Error>` on `Result`) or, on `Result<T>`, a `TValue`. `Result<T>` also takes a fallback `TValue` directly. |
+| `ElseDo`, `ElseDoFirst`, `TapError`, `TapErrorFirst`, `TapErrorIf` | failure | Side effect with the `Error[]` or the first `Error`; the failure is returned unchanged. |
+| `Compensate`, `CompensateFirst` | failure | Replace the failure with the result of a function of the errors or the first error. |
+| `Recover(errorType, recovery)`, `Recover(predicate, recovery)`, `RecoverFirst` | failure | `Result<T>` only. Replace the failure with a value or `Result<T>` when an error has the given `ErrorType` or matches the predicate. |
+| `Match`, `MatchFirst`, `MatchLast`, `Switch`, `SwitchFirst`, `SwitchLast` | both | Consume the result. |
+| `Finally(func)` | both | Receive the whole result and return a value (or run an action and return the result). |
+| `GetValueOrDefault()`, `GetValueOrDefault(value)`, `GetValueOrDefault(factory)`, `UnwrapOrDefault(value)` | both | `Result<T>` only. The value, or a fallback on failure. |
+| `GetValueOrThrow(message)`, `GetValueOrThrow(exception)`, `Unwrap()` | both | `Result<T>` only. The value, or throw: `InvalidOperationException`, your exception, or `ResultUnwrapException` with the `Errors`. |
+| `TryCatch(func, error)` | success | Run `func`; an exception becomes `error`, or `Error.Exception(ex)` when none is given. |
+
+Static helpers on `Result`:
+
+```csharp
+Result a = Result.SuccessIf(age >= 18, Error.Validation("Age.Minor", "Must be 18 or older."));
+Result b = Result.FailureIf(() => items.Count == 0, Error.Validation("Items.Empty", "No items."));
+Result<int> c = Result.SuccessIf(age >= 18, age, Error.Validation("Age.Minor", "Must be 18 or older."));
+Result<(int, string)> pair = Result<int>.Combine(Result.Success(1), Result.Success("a"));   // up to 8 results, collects every error
+Result either = Result.Or(r1, r2);   // success as soon as one succeeds, otherwise every error
+```
+
+`Result.From` and `Result.Failure` build failures from one or more errors; an empty error list throws. `ToResult()` extension methods turn an `Error`, an `Error[]`, an `IEnumerable<Error>` or a plain value into a `Result` or `Result<T>`. On .NET 10 and later `result.ValueOrDefault` and `left | right` (the left result when it succeeded, otherwise the right) are available as extension members. `ResultComparer`, `ResultComparer<T>` and `ResultBaseComparer` in `CSharpEssentials.ResultPattern.Comparers` are `IEqualityComparer` implementations, and `TrimStart`/`TrimEnd` on `string` return a `Result<string>` that fails on empty input.
+
 ### Async
 
 ```csharp
@@ -184,6 +253,8 @@ The source decides the handler flavour. A `Task<Result>` source takes sync and `
 
 `ThenAsync` stays an alias of `BindAsync`. Nothing crosses flavours: a `Task<Result>` source has no `ValueTask` handler, and the matrix adds no new `Task` handlers to `ValueTask` sources.
 
+`Task` and `ValueTask` sources also have `BindIfAsync`, `SelectAsync`, `TryCatchAsync` and `GetValueOrDefaultAsync`, which are not part of the matrix.
+
 ```csharp
 // Task source: Task handlers, awaited in order
 Result<OrderDto> order = await LoadOrderAsync(id)
@@ -196,10 +267,12 @@ Result<Price> price = await GetCachedProductAsync(sku)
     .MapAsync(p => _pricing.QuoteAsync(p, ct));   // Func<Product, ValueTask<Price>>
 ```
 
-On .NET 9+, a lambda that returns `ValueTask` binds the `ValueTask` handler, and an untyped `async` lambda binds the `Task` handler through `OverloadResolutionPriority`. That needs C# 13 or later. With `LangVersion` 12 on a .NET 9+ target, an untyped `async` lambda is ambiguous (CS0121) on every operation marked ¹, including existing ones such as `result.MatchAsync(async ...)` and `vt.ThenAsync(async ...)`. Move to C# 13, or type the handler: `(Func<int, Task<string>>)(async v => ...)` or a local function. Two shapes are ambiguous on every target and language version, so type the handler there too:
+On .NET 9+, a lambda that returns `ValueTask` binds the `ValueTask` handler, and an untyped `async` lambda binds the `Task` handler through `OverloadResolutionPriority`. That needs C# 13 or later. With `LangVersion` 12 on a .NET 9+ target, an untyped `async` lambda is ambiguous (CS0121) on every operation marked ¹, including existing ones such as `result.MatchAsync(async ...)` and `vt.ThenAsync(async ...)`. Move to C# 13, or type the handler: `(Func<int, Task<string>>)(async v => ...)` or a local function. Two more shapes need a typed handler on C# 12, on every target including `netstandard2.1`:
 
-- `result.MapErrorAsync(async e => ...)` when the body compiles for both `Error` and `Error[]`, for example `return e;`.
-- `result.BindAsync(async v => ...)` on a `Result<T>` when the lambda returns `Result<T>`: the `Result<TOut>` and `Result` handlers both fit.
+- `result.MapErrorAsync(async e => ...)`: the per-error `Func<Error, Task<Error>>` and the array `Func<Error[], Task<Error[]>>` mappers both fit.
+- `result.BindAsync(async v => ...)` on a `Result<T>`.
+
+On C# 13 or later both compile. On a `Result<T>`, `MapErrorAsync` matches an untyped `async` lambda on what its body returns: a body that returns an `Error`, including `return e;`, binds the per-error mapper, so `async errors => errors` receives a single `Error`, and a body that returns a new `Error[]` binds the array mapper. Cast to `Func<Error[], Task<Error[]>>` when the array mapper must be explicit.
 
 #### Migrating to the async matrix
 

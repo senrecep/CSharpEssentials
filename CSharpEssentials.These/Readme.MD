@@ -9,6 +9,9 @@
 - **Maybe bridges**: `GetRight()` and `GetLeft()` return `Maybe<T>` without throwing.
 - **Result bridges**: Convert to/from `Result<T>` in strict or lenient mode.
 - **Collection extensions**: Partition a sequence into its three states.
+- **JSON round trip**: Serializes as `{"isLeft":true,"isRight":true,"left":...,"right":...}`.
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results`, `CSharpEssentials.Maybe` and `CSharpEssentials.Errors`. `These<TError, TValue>` is a `readonly record struct` in the `CSharpEssentials.These` namespace.
 
 ## Installation
 
@@ -40,6 +43,8 @@ bool isLeft  = these.IsLeft;  // true when Left only
 bool isRight = these.IsRight; // true when Right only
 bool isBoth  = these.IsBoth;  // true when Both
 ```
+
+`HasLeft` is `true` for `Left` and `Both`, `HasRight` is `true` for `Right` and `Both`, and `LeftOrDefault` and `RightOrDefault` give the raw payloads (`default` when that side is absent). `default(These<TError, TValue>)` is none of the three states, and `Match` routes it to `onBoth` with default values, so create instances through `Left`, `Right` or `Both`.
 
 ### Map: Transform the Value
 
@@ -93,16 +98,22 @@ string message = these.Match(
 Both return `Maybe<T>` and do not throw on the wrong state.
 
 ```csharp
+using CSharpEssentials.Maybe;
+
 Maybe<int>    value = these.GetRight();  // Some(42) or None
 Maybe<string> error = these.GetLeft();   // Some("msg") or None
 ```
 
+`GetRight()` is `Some` for `Right` and `Both`, `GetLeft()` is `Some` for `Left` and `Both`. A `null` payload gives `None`.
+
 ## Result Bridge
 
 ```csharp
+using CSharpEssentials.Errors;
+using CSharpEssentials.ResultPattern;
 using CSharpEssentials.These;
 
-// From Result<T>
+// From Result<T>: a success becomes Right, a failure becomes Left with its first error only
 Result<int> result = GetSomeResult();
 These<Error, int> these = TheseExtensions.FromResult(result);
 
@@ -117,6 +128,8 @@ Result<int> lenient = these.ToResultLenient();
 |------------|------|-------|------|
 | `ToResult()` | Failure | Success | Failure |
 | `ToResultLenient()` | Failure | Success | Success |
+
+`FromResult` never produces `Both`, and it keeps only the first error of a failed result. Both `ToResult` methods are defined only for `These<Error, TValue>`.
 
 ## Collection Extensions
 

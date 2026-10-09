@@ -16,7 +16,7 @@ if [ -z "$BADGE_TESTS" ]; then
     MISMATCH=1
 elif [ "$ACTUAL_TESTS" != "$BADGE_TESTS" ]; then
     echo "🔧 Auto-fixing tests badge: $BADGE_TESTS → $ACTUAL_TESTS"
-    sed -i '' "s/tests-[0-9]*%20passing/tests-${ACTUAL_TESTS}%20passing/" "$README"
+    sed -i.bak "s/tests-[0-9]*%20passing/tests-${ACTUAL_TESTS}%20passing/" "$README" && rm -f "$README.bak"
     git add "$README"
 fi
 
@@ -31,7 +31,7 @@ if [ -z "$BADGE_PACKAGES" ]; then
     MISMATCH=1
 elif [ "$ACTUAL_PACKAGES" != "$BADGE_PACKAGES" ]; then
     echo "🔧 Auto-fixing packages badge: $BADGE_PACKAGES → $ACTUAL_PACKAGES"
-    sed -i '' "s/packages-[0-9]*-blue/packages-${ACTUAL_PACKAGES}-blue/" "$README"
+    sed -i.bak "s/packages-[0-9]*-blue/packages-${ACTUAL_PACKAGES}-blue/" "$README" && rm -f "$README.bak"
     git add "$README"
 fi
 

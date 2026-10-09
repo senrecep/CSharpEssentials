@@ -96,7 +96,14 @@ builder.Services.AddExceptionProblemMapper<TimeoutExceptionMapper>();  // tried 
 Error error = Error.NotFound("user.not_found", "User not found");
 IResult minimalApi = error.ToProblemResult();   // EnhancedProblemHttpResult
 IActionResult mvc  = error.ToActionResult();    // EnhancedProblemObjectResult
+
+error.ToProblemResult(statusCode: 422);         // override the mapped status; also an optional ErrorMetadata for extra fields
+// inside a controller: this.Problem(error)    // ControllerBase extension; also on Error[] and on a failed Result
+EnhancedProblemDetails details = error.ToProblemDetails();   // the object, without writing it
+app.MapGet("/users/{id}", GetUser).ProducesProblem(404);    // OpenAPI: application/problem+json
 ```
+
+`[ValidateModel]` (an MVC filter attribute) and `ConfigureModelValidatorResponse()` return the invalid model state through `ToActionResult` with the code `validation.{key}`. `services.ConfigureSystemTextJson()` applies the `CSharpEssentials.Json` options to the MVC and Minimal API JSON options and calls `AddControllers()`.
 
 ---
 
@@ -124,6 +131,57 @@ public sealed class LegacyErrorMapper : IResultErrorMapper
 ```csharp
 builder.Services.AddScoped<IResultErrorMapper, LegacyErrorMapper>();
 ```
+
+---
+
+## Validation Endpoint Filter
+
+```csharp
+using CSharpEssentials.Validation.Extensions; // AddValidator
+
+builder.Services.AddValidator<CreateUserRequest, CreateUserRequestValidator>();   // IValidator<T> from CSharpEssentials.Validation
+
+app.MapPost("/users", (CreateUserRequest request) => CreateUser(request)).WithValidation<CreateUserRequest>();
+```
+
+Every registered `IValidator<T>` runs in ascending `Order` on each non-null `T` argument; failures return a 400 ProblemDetails response and the handler does not run. A `null` argument passes through. With no registered validator the request throws `InvalidOperationException`; a handler without a `T` parameter throws when the endpoint is built. `ValidationEndpointFilter<T>` can be added directly with `AddEndpointFilter<ValidationEndpointFilter<T>>()` (for a group).
+
+---
+
+## Idempotency
+
+```csharp
+builder.Services.AddIdempotency(o => { o.RetentionPeriod = TimeSpan.FromHours(24); o.RequireKey = true; });
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseIdempotency();                      // after auth: keys are scoped to the user
+
+app.MapPost("/orders", CreateOrder).WithIdempotency();   // or [Idempotent] on an MVC action, or on a group
+```
+
+Applies to endpoints marked with `IdempotentAttribute` metadata and to POST and PATCH by default (`Methods`). A repeat with the same `Idempotency-Key`, method, path, query and body replays the stored response (`Idempotency-Replayed: true`); the same key with a different request returns 422; a request still running returns 409 with `Retry-After`; a missing key passes through (400 with `RequireKey`). Keys are scoped to the authenticated user (`NameIdentifier`, then `sub`); requests without a scope pass through unless you set `KeyScope` or `AllowUnscopedKeys = true`. Stores: in-memory (default, single instance), `o.UseDistributedCacheStore()` (best effort, needs `IDistributedCache`), or your own `IIdempotencyStore` with `o.UseStore<TStore>(lifetime)`.
+
+---
+
+## Conditional Requests
+
+```csharp
+using Microsoft.Net.Http.Headers;   // EntityTagHeaderValue
+
+builder.Services.AddConditionalRequests();
+builder.Services.AddETagSource<Article, ArticleETagSource>();   // optional IETagSource<T>
+
+app.MapGet("/orders/{id}", GetOrder).AddEndpointFilter<ResultEndpointFilter>().WithConditionalGet();   // ETag/Last-Modified, 304
+app.MapPut("/orders/{id}", UpdateOrder).AddEndpointFilter<ResultEndpointFilter>().WithIfMatch(required: true); // 428 without If-Match
+
+// in the handler
+Preconditions preconditions = http.GetPreconditions();
+if (!preconditions.Matches(order))
+    return ConditionalRequestErrors.PreconditionFailed;   // 412
+```
+
+Entities that implement `IVersioned` (`string Version`) get a strong ETag `"{Version}"` (versions with characters not allowed in an ETag are hashed); `IETagSource<T>` overrides that per type and `AddConditionalRequests(o => o.UseBodyHashFallback = true)` adds a weak ETag from the JSON body for other values. `If-Match` is evaluated only for POST, PUT, PATCH and DELETE; a malformed header returns 400. MVC uses `[ConditionalGet]` and `[IfMatch(Required = true)]`, or `MapControllers().WithConditionalGet()` / `.WithIfMatch()`. A registered `IResultErrorMapper` decides the `ResultEndpointFilter` response itself, so it must return 412 for `ConditionalRequestErrors.PreconditionFailed`; a custom `IErrorStatusCodeMapper` must map `ConditionalRequestErrors.PreconditionFailedCode` to 412.
 
 ---
 
@@ -182,4 +240,4 @@ Optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described as on
 - Keep `ExposeExceptionDetails` off outside development; never put raw exception messages in `ExceptionProblem.Detail`
 - `ToProblemResult` / `ToActionResult` return `EnhancedProblemHttpResult` / `EnhancedProblemObjectResult`, not `ProblemHttpResult` / `BadRequestObjectResult`
 - Apply `ResultEndpointFilter` at the group level, not per endpoint
-- `error.Description` is the field name, not `error.Message`
+- `Error` has `Code` and `Description` (there is no `Error.Message`); binding errors use the model key as the code

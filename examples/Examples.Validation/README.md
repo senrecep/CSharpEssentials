@@ -7,7 +7,7 @@ This console application demonstrates model validation with `CSharpEssentials.Va
 | Feature | Description |
 |---------|-------------|
 | **String validators** | `NotEmpty`, length, `EmailAddress`, `Matches`, `StartsWith`, `EndsWith`, `NotNull` |
-| **Comparable validators** | `GreaterThan`, `LessThan`, `InclusiveBetween` and related checks for `int`, `decimal`, `DateTime` |
+| **Comparable validators** | `GreaterThan`, `LessThan`, `LessThanOrEqualTo`, `InclusiveBetween`, `ExclusiveBetween`, `Equal`, `NotEqual` for `int`, `decimal`, `DateTime`, string `Equal`/`NotEqual` |
 | **Nullable structs** | Rules on `int?` and `DateTime?` are skipped when the value is `null` |
 | **Collections** | Rules on `List<T>?`, `T[]?` and `IEnumerable<T>?` |
 | **CascadeMode** | `CascadeMode.Continue` collects every error of a field |

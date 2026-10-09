@@ -8,15 +8,15 @@ description: CSharpEssentials project guardrails. Use before committing or when 
 Before committing, verify the following:
 
 ### Code Quality
-- No `dynamic` usage unless explicitly justified.
+- No `dynamic` usage.
 - No `#pragma warning disable`; fix the root cause instead.
 - No `// TODO` comments in committed code; track as GitHub issues.
 - All public APIs have explicit nullable annotations (`string?` vs `string`).
 - New concrete classes are `sealed` unless designed for inheritance.
 
 ### Multi-Targeting
-- Code compiles under all declared target frameworks (`net9.0`, `netstandard2.1`, `netstandard2.0` where applicable).
-- Conditional compilation (`#if NET9_0_OR_GREATER`, `#if NETSTANDARD`) is used for framework-specific APIs.
+- Code compiles under all declared target frameworks of its project (`net11.0`, `net10.0`, `net9.0`, `net8.0`, `netstandard2.1`, `netstandard2.0`, depending on the package).
+- Conditional compilation (`#if NET9_0_OR_GREATER`, `#if NETSTANDARD2_0`) is used for framework-specific APIs.
 
 ### Project Files
 - No `Version=` attributes in `.csproj` files; use `Directory.Packages.props`.

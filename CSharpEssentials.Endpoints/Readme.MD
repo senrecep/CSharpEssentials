@@ -48,7 +48,7 @@ app.MapAllEndpoints();    // own registry + every referenced assembly's registry
 ```
 
 - `Map{Asm}Endpoints` maps the endpoints of one assembly. `{Asm}` is the sanitized assembly name (`MyCompany.Apps.Api` → `MyCompanyAppsApi`) or the `[assembly: EndpointRegistryName("Apps")]` value.
-- `{Asm}EndpointRegistry.EndpointTypes` lists the endpoint types in mapping order.
+- `{Asm}EndpointRegistry.EndpointTypes` lists the endpoint types in mapping order. `[assembly: EndpointModule(typeof(...))]` is emitted by the generator to mark an assembly that has a registry; do not write it yourself.
 - `MapAllEndpoints` is `internal` and generated automatically in `Exe`/`WinExe` projects that are not test projects. Use `[assembly: GenerateEndpointAggregate]` to opt in from a library or test project, `[assembly: DisableEndpointAggregate]` to opt out. Each registry is mapped once, own registry first, then referenced registries by assembly name.
 - Mapping is not idempotent: calling `Map{Asm}Endpoints` or `MapAllEndpoints` twice on the same route builder maps every route twice, and ASP.NET Core reports an ambiguous match at request time. Mapping the same registry onto different route builders (for example two version groups) is legitimate, so call each method once per builder.
 - Each endpoint type is mapped inside its own `MapGroup("")`, so route patterns, OpenAPI metadata, filters and authorization are the same as direct mapping. Route calls such as `MapGet` stay in your `Map` method.
@@ -163,7 +163,7 @@ The bundled analyzer reports types the generator cannot map and explicit endpoin
 | CSE1010 | Warning | The same constant endpoint name is set at two call sites with `WithName(...)` or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` in `WithMetadata(...)`. Duplicate names produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately, so `WithMetadata(new EndpointNameMetadata("X"))` and `WithMetadata(new RouteNameMetadata("X"))` on one endpoint are not reported. Reported on each call site. |
 | CSE1011 | Info | An explicit endpoint name outside an `IEndpoint` or `IEndpointGroup` type is not a compile-time constant, so the generated registry cannot reserve it and `OperationNaming.TypeName` can generate the same name. Use a constant. Names set inside endpoint and group types are seen at runtime and are not reported. |
 
-The bundled code fix for CSE1004 ("Remove instance state") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
+The bundled code fix for CSE1004 ("Remove instance state from '{Type}'") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
 
 ## Migrating from Carter
 

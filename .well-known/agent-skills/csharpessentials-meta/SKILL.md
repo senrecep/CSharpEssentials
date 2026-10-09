@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 23 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 25 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
 ---
 
 # CSharpEssentials: Package Index
 
-CSharpEssentials is a modular .NET NuGet ecosystem of 23 packages (22 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
+CSharpEssentials is a modular .NET NuGet ecosystem of 25 packages (24 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
 
 ## Meta-Package
 
@@ -13,6 +13,8 @@ CSharpEssentials is a modular .NET NuGet ecosystem of 23 packages (22 focused pa
 dotnet add package CSharpEssentials
 # Includes: Any, Clone, Core, Entity, Enums, Errors, Http, Json, Maybe, Results, Rules, These, Time
 ```
+
+Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, EntityFrameworkCore, AspNetCore (and its OpenApi and Swashbuckle packages), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
 
 ## All Packages
 
@@ -53,6 +55,8 @@ dotnet add package CSharpEssentials
 | Package | Install | Skill |
 |---------|---------|-------|
 | `CSharpEssentials.AspNetCore` | `dotnet add package CSharpEssentials.AspNetCore` | `csharpessentials-aspnetcore` |
+| `CSharpEssentials.AspNetCore.Swashbuckle` | `dotnet add package CSharpEssentials.AspNetCore.Swashbuckle` | `csharpessentials-aspnetcore` |
+| `CSharpEssentials.AspNetCore.OpenApi` | `dotnet add package CSharpEssentials.AspNetCore.OpenApi` | `csharpessentials-aspnetcore` |
 | `CSharpEssentials.Endpoints` | `dotnet add package CSharpEssentials.Endpoints` | `csharpessentials-endpoints` |
 | `CSharpEssentials.DependencyInjection` | `dotnet add package CSharpEssentials.DependencyInjection` | `csharpessentials-dependencyinjection` |
 | `CSharpEssentials.Http` | `dotnet add package CSharpEssentials.Http` | `csharpessentials-http` |
@@ -92,8 +96,10 @@ dotnet add package CSharpEssentials
 | Organize Minimal API endpoints in classes (source-generated, AOT-safe) | `CSharpEssentials.Endpoints` |
 | Register and decorate services with attributes (source-generated) | `CSharpEssentials.DependencyInjection` |
 | HttpClient that returns Result<T> | `CSharpEssentials.Http` |
-| JSON serialization with string enums + polymorphism (`StringEnumNaming` is the shared enum naming for JSON, EF Core, Swagger and binding) | `CSharpEssentials.Json` |
+| JSON serialization with string enums + polymorphism (wire names come from `[StringEnum]` metadata, shared by JSON, EF Core, OpenAPI and binding; `StringEnumNaming` is obsolete) | `CSharpEssentials.Json` |
 | Log request/response bodies | `CSharpEssentials.RequestResponseLogging` |
+| OpenAPI documents with enum schemas and optional route parameters (one per host) | `CSharpEssentials.AspNetCore.Swashbuckle` (net8-net11) or `CSharpEssentials.AspNetCore.OpenApi` (net10, `Microsoft.AspNetCore.OpenApi`) |
+| Idempotency-Key, ETag/304 and If-Match for HTTP endpoints | `CSharpEssentials.AspNetCore` |
 | Load secrets from GCP Secret Manager | `CSharpEssentials.GcpSecretManager` |
 | Transient fault handling (retry, timeout, circuit breaker, fallback) | `CSharpEssentials.Resilience` |
 | Testable time / freeze clock in tests | `CSharpEssentials.Time` |
@@ -118,15 +124,18 @@ using CSharpEssentials.Validation;         // Validator<T>, RuleContext<T>, IVal
 using CSharpEssentials.Mediator;           // ICacheable, ILoggableRequest, ITransactionalRequest
 using CSharpEssentials.Entity;             // EntityBase, SoftDeletableEntityBase
 using CSharpEssentials.Entity.Interfaces;  // IDomainEvent
-using CSharpEssentials.EntityFrameworkCore; // interceptors, pagination
-using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter, AddEnhancedProblemDetails
+using CSharpEssentials.EntityFrameworkCore; // BaseDbContext, DbContextInterceptors, SoftDeleteAsync, *AsResultAsync
+using CSharpEssentials.EntityFrameworkCore.Interceptors; // AuditInterceptor, DomainEventInterceptor, SlowQueryInterceptor
+using CSharpEssentials.EntityFrameworkCore.Pagination;   // PaginateAsync, KeysetPaginateAsync
+using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter, AddEnhancedProblemDetails, AddSwagger / AddEnumConventions (Swashbuckle and OpenApi packages)
 using CSharpEssentials.Endpoints;          // IEndpoint, IEndpointGroup, [EndpointGroup<T>]
 using CSharpEssentials.DependencyInjection; // [RegisterScoped], [Decorates], RegistrationStrategy
 using CSharpEssentials.Http;               // HttpClientResultExtensions, HttpRequestBuilder
 using CSharpEssentials.Resilience;          // ResiliencePolicy, ResiliencePolicy<T>
 using CSharpEssentials.Json;               // EnhancedJsonSerializerOptions, converters
 using CSharpEssentials.RequestResponseLogging; // LoggingOptions, [SkipRequestLogging], [SkipResponseLogging]
-using CSharpEssentials.GcpSecretManager;   // AddGcpSecretManager()
+using CSharpEssentials.GcpSecretManager;   // ProjectSecretConfiguration
+using CSharpEssentials.GcpSecretManager.Extensions; // AddGcpSecretManager()
 using CSharpEssentials.Time;               // IDateTimeProvider, DateTimeProvider
 using CSharpEssentials.Clone;              // ICloneable<T>
 ```

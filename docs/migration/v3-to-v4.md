@@ -3,6 +3,8 @@
 4.0 changes default behavior in `CSharpEssentials.AspNetCore` and `CSharpEssentials.EntityFrameworkCore`.
 The new defaults expose less request data and name enums the same way everywhere. Each old behavior can be turned back on with a setting.
 
+This guide describes 4.0. Where a later release changed an item, the item says so; going past 4.x, also read [4.x to 5.0](v4-to-v5.md) and [5.x to 6.0](v5-to-v6.md).
+
 ## ProblemDetails (`CSharpEssentials.AspNetCore`)
 
 Configure the output with `AddEnhancedProblemDetails(o => ...)`. Minimal API (`ToProblemResult`), MVC (`ToActionResult`), `GlobalExceptionHandler`, status code pages and framework 404/405 responses all go through `IProblemDetailsService` and produce the same JSON.
@@ -56,17 +58,17 @@ Other ProblemDetails changes:
 
 ## JSON (`CSharpEssentials.Json`)
 
-- New: `new ConditionalStringEnumConverter { AllowUndefinedValues = false }` rejects numbers that are not a defined member (for example `999`) when reading. The default still accepts them, like `JsonStringEnumConverter`.
+- New: `new ConditionalStringEnumConverter { AllowUndefinedValues = false }` rejects numbers that are not a defined member (for example `999`) when reading. The default still accepts them, like `JsonStringEnumConverter`. 5.0 removes `AllowUndefinedValues` and always rejects undefined numbers ([4.x to 5.0](v4-to-v5.md#json-csharpessentialsjson)).
 - `PolymorphicJsonConverterFactory` no longer handles collection or dictionary interfaces (`IEnumerable<T>`, `IDictionary<,>`, `IReadOnlyList<T>`, …). In 3.x it wrapped them in a `$type` envelope, which also broke `ProblemDetails.Extensions`.
 - `JsonOptions.ApplyTo` (used by `ConfigureSystemTextJson()`) keeps the target's `TypeInfoResolver` when the source has none. In 3.x the resolver was set to `null`, and Minimal API failed at startup.
 
 ## Enum names (`CSharpEssentials.Json`, `.EntityFrameworkCore`, `.AspNetCore`)
 
-`StringEnumNaming` is now the single naming source. JSON, EF Core storage, Swagger schemas and query/route binding all use the JSON naming policy (`snake_case_lower`, with `[JsonStringEnumMemberName]` respected).
+`StringEnumNaming` is now the single naming source (5.0 replaces it with generated enum metadata and makes it obsolete: [4.x to 5.0](v4-to-v5.md#naming-and-generated-helpers-csharpessentialsenums)). JSON, EF Core storage, Swagger schemas and query/route binding all use the JSON naming policy (`snake_case_lower`, with `[JsonStringEnumMemberName]` respected).
 
 | Changed behavior | 3.x | 4.0 default | Restore with |
 |---|---|---|---|
-| EF Core `ConfigureEnumConventions` stored value | `Core.ToSnakeCase()` (`HTTPStatus` → `httpstatus`, `Value1` → `value_1`) | JSON policy (`http_status`, `value1`) | `ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, assemblies)` |
+| EF Core `ConfigureEnumConventions` stored value | `Core.ToSnakeCase()` (`HTTPStatus` → `httpstatus`, `Value1` → `value_1`) | JSON policy (`http_status`, `value1`) | `ConfigureEnumConventions(o => o.UseLegacySnakeCase = true, assemblies)` (obsolete since 5.0; use `existingStorage: EnumStoredAs.LegacySnakeCase`, see [4.x to 5.0](v4-to-v5.md#ef-core-enum-storage-csharpessentialsentityframeworkcore)) |
 | Swagger enum schema names | `Core.ToSnakeCase()` | JSON policy names | None (schema follows JSON) |
 
 Names with a single word or plain PascalCase did not change. Enums with acronyms or digits in member names did. When reading, the new EF converter also accepts the old stored values, so existing rows still load.
@@ -75,7 +77,7 @@ Names with a single word or plain PascalCase did not change. Enums with acronyms
 
 ## New in 4.0: enum query/route binding
 
-`services.AddEnumBinding()` (optional) and `app.UseEnumBinding()` make Minimal API (including `[AsParameters]`) and MVC accept the same spellings as JSON for `[StringEnum]` enums in query and route values:
+`services.AddEnumBinding()` (optional; an obsolete forwarder to `AddEnumConventions()` since 5.0) and `app.UseEnumBinding()` make Minimal API (including `[AsParameters]`) and MVC accept the same spellings as JSON for `[StringEnum]` enums in query and route values:
 
 - the snake_case name;
 - the C# member name, case-insensitive;
@@ -89,7 +91,7 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 
 ## Package dependencies
 
-- `Swashbuckle.AspNetCore` is now `[8.1.0, 10)` (3.x: `[8.1.0, )`, unbounded). Apps on Swashbuckle 7.x must upgrade to 8.x.
+- `Swashbuckle.AspNetCore` is now `[8.1.0, 10)` (3.x: `[8.1.0, )`, unbounded). Apps on Swashbuckle 7.x must upgrade to 8.x. 6.0 moves the Swagger support to `CSharpEssentials.AspNetCore.Swashbuckle` and requires Swashbuckle 10 (`[10.2.3, 11)`); see [5.x to 6.0](v5-to-v6.md).
 - `CSharpEssentials.EntityFrameworkCore` now pins each target framework to its own EF Core major: `net8.0` → EF `[8, 9)`, `net9.0` → EF `[9.0.4, 10)`, `net10.0` → EF `[10.0.1, 11)` (3.x: open-ended). EF APIs such as `ExecuteUpdate` are not binary compatible across majors, so an app must use the EF major that matches its target framework (e.g. a `net8.0` app on EF 9 should target `net9.0`).
 - `CSharpEssentials.Resilience` now depends on `Polly.Core` `[8.0.0, 9.0.0)` instead of the full `Polly` package (3.x: `Polly` `[8.0.0, )`). `CSharpEssentials.Resilience` and `CSharpEssentials.Http` no longer bring `Polly` transitively, so code that uses the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …) must reference `Polly` itself. The v8 `ResiliencePipeline` API is in `Polly.Core` and still works. `CSharpEssentials.GcpSecretManager` no longer depends on `Polly`; it depends on `CSharpEssentials.Resilience`, which brings `CSharpEssentials.Results`, `CSharpEssentials.Errors`, `CSharpEssentials.Json`, `CSharpEssentials.Enums` and `Polly.Core` transitively.
 - Building the library from source (or referencing it with `ProjectReference`) needs the .NET 11 SDK (`global.json` pins 11.0 RC1). The NuGet packages work with the SDKs of their target frameworks.
@@ -118,6 +120,6 @@ Register `UseEnumBinding()` after `UseAuthentication()`/`UseAuthorization()`; ot
 
 ## Enums (`CSharpEssentials.Enums`)
 
-- New analyzer CSE0001 (Info): a `[StringEnum]` enum nested in a class or struct gets no generated extension methods, and the analyzer now reports it instead of skipping it silently.
+- New analyzer CSE0001 (Info): a `[StringEnum]` enum nested in a class or struct gets no generated extension methods, and the analyzer now reports it instead of skipping it silently. 5.0 retires CSE0001 because nested enums are supported (the ID stays reserved).
 
 See [CHANGELOG.md](../../CHANGELOG.md) for the full list of changes in each release.

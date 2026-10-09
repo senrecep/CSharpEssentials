@@ -91,7 +91,7 @@ OrderStatusExtensions.GetValues();                  // all members
 ```
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are formatted as comma separated wire names of single flags.
-- `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member) and never return the fallback member.
+- `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member). They never map an unknown value to the fallback member: `ParseWire("gone")` throws, while `ParseWire("unknown")` returns `Unknown` because that is the member's own wire name.
 - `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values.
 - `ToSnakeCase()`, `TryParse` and `Parse` are obsolete; use `ToWireName()`, `TryParseWire` and `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`), while `ToWireName()` returns `http_status`. That old spelling is read as an extra alias, so stored values still load.
 
@@ -109,7 +109,7 @@ One `EnumConventions` instance drives every layer. `EnumConventions.Default` is:
 | `Storage` | `String` | EF Core column shape (`EnumStorage.String` or `Integer`) |
 | `FlagsStorage` | `Integer` | EF Core column shape of `[Flags]` enums |
 | `CheckConstraints` | `true` | EF Core adds `ck_{table}_{column}_enum` |
-| `CanHandle` | `EnumMetadata.IsRegistered` | Which enums the conventions apply to |
+| `CanHandle` | enums with generated metadata, and `[StringEnum]` enums without it | Which enums the conventions apply to. A `[StringEnum]` enum without metadata is selected on purpose, so it fails loudly (CSE0015) instead of silently writing numbers |
 
 It is a record, so derive variants with `with`: `EnumConventions.Default with { AcceptNumbers = false }`.
 
@@ -205,7 +205,7 @@ Other services that read your output and do not know `dispatched` yet reject it,
 | CSE0007 | Warning | `[Flags]` member that is neither a single bit nor a combination of other members | Use a power of two or a combination |
 | CSE0008 | Error | `[EnumFallback]` on a `[Flags]` enum | Remove it; unknown bits are always rejected |
 | CSE0009 | Error | Wire name or alias is empty, contains whitespace or a comma, or starts with a digit, `-`, `+` or `.` | Choose another name |
-| CSE0010 | Info, off by default | Enum without `[StringEnum]` used by a public type (takes the framework or reflection path) | Add `[StringEnum]`; enable the rule in `.editorconfig` |
+| CSE0010 | Info, off by default | Enum without `[StringEnum]` used as the type of a public property or of a parameter of a public member (takes the framework or reflection path) | Add `[StringEnum]`; enable the rule in `.editorconfig` |
 | CSE0012 | Warning | Invalid `CSharpEssentialsEnumNaming` value; `SnakeCaseLower` is used | Use an `EnumNaming` member name |
 | CSE0013 | Warning | `[EnumAlias]` or `[EnumFallback]` on an enum without `[StringEnum]` (ignored) | Add `[StringEnum]` or remove the attribute |
 | CSE0014 | Error | A migration has both `AlterColumn` and `ConvertEnumColumn` for the same column | Delete the generated `AlterColumn` |

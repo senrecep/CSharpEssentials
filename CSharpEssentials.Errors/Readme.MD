@@ -5,10 +5,12 @@ Structured, type-safe error handling for .NET. Errors are data, not exceptions.
 ## Features
 
 - **Error Struct**: Value-type error with code, description, type, and metadata.
-- **Standard Error Types**: Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected.
+- **Standard Error Types**: Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected. `ErrorType` also has an `Unknown` member, which has no factory method.
 - **ErrorMetadata**: Attach contextual data to errors fluently.
 - **Exception Bridge**: Convert exceptions to `Error` or throw `DomainException` / `EnhancedValidationException`.
 - **HTTP Mapping**: Built-in conversion between `ErrorType` and HTTP status codes.
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Core` and `CSharpEssentials.Enums`.
 
 ## Installation
 
@@ -27,7 +29,12 @@ Error notFound = Error.NotFound("User.NotFound", "User was not found.");
 Error validation = Error.Validation("Email.Invalid", "Email format is invalid.");
 Error conflict = Error.Conflict("User.Duplicate", "User already exists.");
 Error failure = Error.Failure("Payment.Failed", "Payment was rejected.");
+Error forbidden = Error.Forbidden("Order.Forbidden", "You cannot cancel this order.");
+Error unauthorized = Error.Unauthorized("Token.Expired", "The token has expired.");
+Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 ```
+
+Every factory takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal.
 
 ### Error Metadata
 
@@ -40,6 +47,8 @@ Error withMeta = Error.NotFound(
         .AddMetadata("RequestPath", "/api/users/123"));
 ```
 
+`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts.
+
 ### Combining Errors
 
 ```csharp
@@ -47,6 +56,9 @@ Error a = Error.Validation("Name.Empty", "Name is required.");
 Error b = Error.Validation("Email.Invalid", "Email is invalid.");
 
 Error[] combined = a + b;
+
+Error[] many = Error.CreateMany(a, b);                          // params of Error or of Error collections
+Error[] single = a;                                             // implicit Error -> Error[]
 ```
 
 ### Converting from Exceptions
@@ -59,14 +71,23 @@ catch (Exception ex)
 }
 ```
 
+`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
+
+```csharp
+Error custom = Error.Exception("Orders.SaveFailed", "The order could not be saved.", ex, ErrorType.Unexpected);
+```
+
 ### Domain Exceptions
 
 ```csharp
+using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
 
 Error error = Error.Validation("Order.Invalid", "Total must be greater than zero.");
 throw new DomainException(error);
 ```
+
+`DomainException` and `EnhancedValidationException` live in the `CSharpEssentials.Exceptions` namespace of this package; see the [exception types](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Errors/Exceptions/Readme.MD).
 
 ### HTTP Status Mapping
 
@@ -74,6 +95,17 @@ throw new DomainException(error);
 int status = ErrorType.NotFound.ToHttpStatusCode();     // 404
 ErrorType type = 401.ToErrorType();                      // Unauthorized
 ```
+
+| `ErrorType` | HTTP status |
+|---|---|
+| `Validation` | 400 |
+| `Unauthorized` | 401 |
+| `Forbidden` | 403 |
+| `NotFound` | 404 |
+| `Conflict` | 409 |
+| `Failure`, `Unexpected`, `Unknown` | 500 |
+
+`ToErrorType` is the reverse for 400, 401, 403, 404, 409 and 500 (`Failure`); every other status code gives `Unexpected`.
 
 ### Domain-Specific Error Hierarchies
 
@@ -114,7 +146,7 @@ public static class OrderErrors
 Usage with `Result`:
 
 ```csharp
-using CSharpEssentials.ResultPattern;
+using CSharpEssentials.ResultPattern; // CSharpEssentials.Results package
 
 public Result<User> FindUser(Guid id)
 {

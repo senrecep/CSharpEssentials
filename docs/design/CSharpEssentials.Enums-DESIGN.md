@@ -1,6 +1,6 @@
 # CSharpEssentials Enum Conventions: Design Document
 
-> **Date:** 2026-10-06 | **Status:** Proposed design (5.0)
+> **Date:** 2026-10-06 | **Status:** Implemented in 5.0, kept current through 6.5
 > **Issues:** #59 (epic), #60 (this document), #61 (metadata, conventions, JSON), #62 (ASP.NET Core), #63 (OpenAPI), #64 (EF Core storage), #65 (EF Core migrations), #66 (HTTP clients), #67 (validation, analyzers), #68 (docs, examples, golden tests)
 > **Related:** [ADR-007](../adr/ADR-007-enum-conventions.md), [ADR-006](../adr/ADR-006-source-generators-in-separate-projects.md)
 
@@ -46,10 +46,10 @@
 | `CSharpEssentials.Json` | unchanged | none | `EnumConverterFactory`, `JsonSerializerOptions.AddEnumConventions` |
 | `CSharpEssentials.AspNetCore` | unchanged | **removes** `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
 | `CSharpEssentials.AspNetCore.OpenApi` (new) | `net10.0` | `Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x (approved 2026-10-06, only in this package) | schema and operation transformers |
-| `CSharpEssentials.AspNetCore.Swashbuckle` (new) | `net11.0;net10.0;net9.0;net8.0` | `Swashbuckle.AspNetCore` [8.1.0,10) (moved, Microsoft.OpenApi 1.x) | `AddSwagger`, filters, schema id factory, security schemes |
+| `CSharpEssentials.AspNetCore.Swashbuckle` (new) | `net11.0;net10.0;net9.0;net8.0` | `Swashbuckle.AspNetCore` [8.1.0,10) with Microsoft.OpenApi 1.x in 5.0 (moved); `[10.2.3,11)` with Microsoft.OpenApi `[2.7.5,3)` since 6.0 | `AddSwagger`, filters, schema id factory, security schemes |
 | `CSharpEssentials.EntityFrameworkCore` | unchanged | none | storage conventions, check constraint convention, migration helpers, `EnumDataAudit` |
 | `CSharpEssentials.Http` | unchanged | none | query formatting, `AddEnumConventions` for typed clients |
-| `CSharpEssentials.Validation` | unchanged | **adds** `CSharpEssentials.Enums` | `IsDefinedEnum`, `IsOneOf`, `HasOnlyDefinedFlags` |
+| `CSharpEssentials.Validation` | unchanged | none (reaches `CSharpEssentials.Enums` through `CSharpEssentials.Results`) | `IsDefinedEnum`, `IsOneOf`, `HasOnlyDefinedFlags` |
 
 The parser and the formatter live in `CSharpEssentials.Enums` because every other package already depends on it (directly or through `CSharpEssentials.Json`), and because it has no `System.Text.Json` dependency. The generator reads `[JsonStringEnumMemberName]` and `[EnumMember]` by metadata name, so no package reference is needed for that either.
 
@@ -131,8 +131,10 @@ public sealed record EnumConventions
     public EnumStorage FlagsStorage { get; init; } = EnumStorage.Integer;
     public bool CheckConstraints { get; init; } = true;
 
-    // Which enums the conventions apply to. Default: [StringEnum] enums with generated metadata.
-    public Func<Type, bool> CanHandle { get; init; } = EnumMetadata.IsRegistered;
+    // Which enums the conventions apply to. Default: enums with generated metadata, and [StringEnum] enums without it,
+    // so a missing generator fails loudly (CSE0015) instead of silently writing numbers.
+    public Func<Type, bool> CanHandle { get; init; } = type =>
+        EnumMetadata.IsRegistered(type) || type is not null && type.IsEnum && type.IsDefined(typeof(StringEnumAttribute), inherit: false);
 }
 
 public enum UnknownEnumValueHandling { Reject, UseFallback }
@@ -430,7 +432,7 @@ app.UseEnumBinding();                     // route/query/header/form normalizati
 
 `AddEnumConventions` configures `Microsoft.AspNetCore.Http.Json.JsonOptions` and `Microsoft.AspNetCore.Mvc.JsonOptions` with `AddEnumConventions(conventions, EnumReadMode.Input)` (post-configure, so it runs after the app's own configuration) and registers the error mapping and the output filters of section 9.4. It returns an `EnumConventionsBuilder` (`ConfigureErrors`). Calling it again replaces the conventions.
 
-`AddEnumConventionsWithReflection(...)` (`[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`) is the explicit opt-in for enums without generated metadata: enums that `CanHandle` selects get metadata from `EnumMetadata.GetOrCreateWithReflection`, in binding and JSON alike. Without it an enum without metadata is left to the framework (`CanHandle` defaults to `EnumMetadata.IsRegistered`), and nothing throws.
+`AddEnumConventionsWithReflection(...)` (`[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`) is the explicit opt-in for enums without generated metadata: enums that `CanHandle` selects get metadata from `EnumMetadata.GetOrCreateWithReflection`, in binding and JSON alike. Without it an enum without metadata and without `[StringEnum]` is left to the framework, and nothing throws; a `[StringEnum]` enum without metadata is selected by the default `CanHandle` and fails loudly (CSE0015).
 
 ### 9.2 Binding
 
@@ -524,7 +526,7 @@ Rules:
 - Query arrays get `style: form`, `explode: true`; Microsoft.OpenApi 2.x omits both from the output because they are the defaults for query parameters, so the golden extract ignores them.
 - Parameters are classified by `ApiParameterDescription.Type`, then by `ModelMetadata.ModelType`: MVC reports `string` as the type of a parameter whose type converts from string.
 - Parity: Microsoft.OpenApi 1.x and 2.x share an assembly name, so the two packages are tested in two test projects (net9.0 Swashbuckle in `CSharpEssentials.Tests`, net10.0 in `CSharpEssentials.AspNetCore.OpenApi.Tests`) against the same OpenAPI 3.0 golden files (`tests/golden/openapi/*.json`, enum components, enum properties and enum operation parts); the 3.1 files are Microsoft.AspNetCore.OpenApi only.
-- Deferred to 5.1: `EnumSchemaStyle.StringOrNumber` (a `oneOf` string/integer request schema).
+- Not implemented (deferred past 5.0): `EnumSchemaStyle.StringOrNumber` (a `oneOf` string/integer request schema).
 
 ### 10.2 Package split
 
@@ -888,7 +890,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | Parser | every matrix row in `Input` and `Data` mode, each `EnumConventions` switch; registration from a separate type-only assembly |
 | JSON | every matrix row, flags, nullable, dictionary key, collection, alias, fallback, source generated context |
 | ASP.NET Core | TestServer: matrix rows for route, query, header, form, body; minimal API and MVC in one host; v1 Number + v2 String groups |
-| OpenAPI | golden files for both packages (OpenApi on net10.0, Swashbuckle on net9.0), normalized diff equality; dependency closure test (section 10.2) (generated client round trip deferred to 5.1) |
+| OpenAPI | golden files for both packages (OpenApi on net10.0, Swashbuckle on net9.0), normalized diff equality; dependency closure test (section 10.2) (generated client round trip deferred) |
 | EF Core | Testcontainers PostgreSQL + SQLite: column types, constraints, invalid insert rejected, migration diff after adding a member, JSON columns, collections, skipped user converters, legacy storage; migration helper conversions with an undefined value in the data (kept, never `NULL`), `Down()`, idempotency, operation order of 12.1 |
 | HTTP | TestServer peer: String client ↔ Number server and Number client ↔ tolerant server (`CSharpEssentials.Http`); `EnumValueFormatter` non-generic overloads for every underlying type, nullable, flags, collections |
 | Cross-layer | one table-driven golden test (#68) executed against JSON, binding, EF, `CSharpEssentials.Http` and both OpenAPI outputs |
@@ -932,7 +934,7 @@ Open item for such an app: confirm whether its jsonb enums are EF `ToJson()` own
 | Converter precedence over `JsonSerializerContext` metadata (including `UseStringEnumConverter`) on net9.0 to net11.0 | #61 | pinned by a test; if a TFM differs, `AddEnumConventions` also sets the context's `TypeInfoResolver` modifier |
 | EF Core `JsonValueReaderWriter` on enum properties of `ToJson()` owned (EF 8+) and complex (EF 10+) types | #64 | covered by SQLite and PostgreSQL tests on EF 9 (owned types); EF 9's convention-level `JsonWarningEnumReaderWriter` is cleared (section 11.3) |
 
-Deferred to 5.1: `EnumSchemaStyle.StringOrNumber`, a Scalar helper, a migration checklist test helper, a generated-client round trip test, JSON array paths in `ConvertEnumJsonPath`, `FlagsText` conversion for non-PostgreSQL providers.
+Deferred past 5.0 and not implemented as of 6.5: `EnumSchemaStyle.StringOrNumber`, a Scalar helper, a migration checklist test helper, a generated-client round trip test, JSON array paths in `ConvertEnumJsonPath`, `FlagsText` conversion for non-PostgreSQL providers.
 
 ## 22. Issue Map
 

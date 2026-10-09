@@ -18,6 +18,16 @@ Composable, functional rule engine for .NET. Define business logic as small, reu
 dotnet add package CSharpEssentials.Rules
 ```
 
+## Namespaces
+
+```csharp
+using CSharpEssentials.Rules;         // IRule<T>, IAsyncRule<T>, RuleEngine, .And() / .Or() / .Linear() / .Next() / .ToRule()
+using CSharpEssentials.ResultPattern; // Result, Result<T>
+using CSharpEssentials.Errors;        // Error
+```
+
+The samples below assume these usings.
+
 ## Rule Definition Styles
 
 There are three ways to define a rule. All styles are interchangeable and can be mixed freely when composing.
@@ -133,6 +143,8 @@ Result orResult = RuleEngine.Evaluate(
     ctx);
 ```
 
+`Or` succeeds as soon as one rule passes. When every rule fails, the result carries the errors of all of them.
+
 ### Linear: stop on first failure
 
 ```csharp
@@ -141,13 +153,30 @@ Result linear = RuleEngine.Evaluate(
     new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }.Linear(),
     ctx);
 
-// Func chaining with .Next() — reads like a pipeline
+// .Next() runs the second rule only when the first one passes
 Result pipeline = RuleEngine.Evaluate(
-    ((Func<UserContext, Result>)CheckEmail)
-        .Next(regionRule)
-        .Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18.")),
+    ((Func<UserContext, Result>)CheckEmail).Next(regionRule),
+    ctx);
+
+// Longer sequences: nest the rest inside Next, or use Linear()
+Result longer = RuleEngine.Evaluate(
+    ((Func<UserContext, Result>)CheckEmail).Next(regionRule.Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18."))),
     ctx);
 ```
+
+`Next` links one rule to the rule after it. Do not write `a.Next(b).Next(c)`: the second `Next` links `c` to the already linked pair, and `b` is skipped, so a failing `b` goes unnoticed. Write `a.Next(b.Next(c))`, or put the rules in an array and call `.Linear()`.
+
+### Static shortcuts
+
+`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly, so no `.And()` / `.Or()` / `.Linear()` call is needed:
+
+```csharp
+Result all = RuleEngine.And(new Func<UserContext, Result>[] { regionRule, CheckEmail }, ctx);
+Result any = RuleEngine.Or(new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }, ctx);
+Result seq = RuleEngine.Linear(new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }, ctx);
+```
+
+Every combinator also exists for rules with values (`IRule<TContext, TResult>`, `Func<TContext, Result<TResult>>`) and for async rules.
 
 ### Conditional: if/then/else branching
 
@@ -281,6 +310,22 @@ Result unique = await RuleEngine.EvaluateAsync(uniqueRule, name, ct);
 ```
 
 ## Async Rules: `EvaluateAsync`
+
+An async rule implements `IAsyncRule<TContext>` (or `IAsyncRule<TContext, TResult>`), or comes from `FromPredicateAsync` above, or from a `Func<TContext, CancellationToken, ValueTask<Result>>` converted with `.ToRule()`:
+
+```csharp
+public sealed class UniqueNameRule(INameStore store) : IAsyncRule<string>
+{
+    public async ValueTask<Result> EvaluateAsync(string name, CancellationToken ct = default) =>
+        await store.IsUniqueAsync(name, ct) ? Result.Success() : Error.Conflict("Name.Taken", $"{name} is already taken");
+}
+
+IAsyncRule<string> notReserved = ((Func<string, CancellationToken, ValueTask<Result>>)(async (name, ct) =>
+{
+    await Task.Yield();
+    return name != "admin" ? Result.Success() : Error.Validation("Name.Reserved", "This name is reserved.");
+})).ToRule();
+```
 
 `RuleEngine.EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` / `ValueTask<Result<T>>`. It awaits every `IAsyncRule` in the tree, so no thread is blocked on database or HTTP calls.
 

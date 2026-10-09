@@ -1,26 +1,28 @@
 # CSharpEssentials.AspNetCore Example
 
-This project demonstrates the complete feature set of `CSharpEssentials.AspNetCore` integrated with `CSharpEssentials.Results` and `CSharpEssentials.Errors`.
+This project demonstrates `CSharpEssentials.AspNetCore` with MVC controllers, integrated with `CSharpEssentials.Results` and `CSharpEssentials.Errors`, and uses `CSharpEssentials.AspNetCore.Swashbuckle` for the Swagger document.
 
 ## Features Demonstrated
 
 | Feature | File | Description |
 |---------|------|-------------|
 | **Result Pattern** | `Services/*.cs` | Business logic returns `Result<T>` instead of throwing exceptions |
-| **ProblemDetails** | `Program.cs` | Automatic RFC 7807 error responses for all failures |
-| **Swagger Enum Filter** | `Program.cs` | Enum values display as readable strings in Swagger UI |
-| **API Versioning** | `Program.cs`, `Controllers/*.cs` | URL-segment versioning (`/api/v1/products`) |
-| **Global Exception Handling** | `Program.cs` | Unhandled exceptions become ProblemDetails automatically |
-| **Result Chaining** | `OrderService.cs` | `Then()` composes multiple validation steps |
+| **ProblemDetails** | `Program.cs`, `Controllers/*.cs` | `AddEnhancedProblemDetails()` and `errors.ToActionResult()` turn failures into RFC 9457 problem responses; `ToProblemDetails()` and `this.Problem(result)` are shown in `ProductsController.GetProblemDetails` |
+| **Global Exception Handling** | `Program.cs` | `AddExceptionHandler<GlobalExceptionHandler>()` + `UseExceptionHandler()`: unhandled exceptions become ProblemDetails |
+| **Model Validation Response** | `Program.cs` | `ConfigureModelValidatorResponse()` returns invalid model state as an enhanced problem |
+| **JSON Configuration** | `Program.cs` | `ConfigureSystemTextJson(configureOptions: ...)` applies the `CSharpEssentials.Json` options with `WriteIndented` |
+| **API Versioning** | `Program.cs`, `Controllers/*.cs` | `AddAndConfigureApiVersioning(...)`; URL-segment versioning (`/api/v1/products`) |
+| **Swagger** | `Program.cs` | `AddSwaggerGen` with `EnumSchemaFilter` and `SwashbuckleSchemaIdFactory` (see Swagger Enum Display) |
+| **Result Chaining** | `Services/OrderService.cs` | `Then()` composes multiple validation steps |
 
 ## Running the Project
 
 ```bash
 cd examples/Examples.AspNetCore
-dotnet run
+ASPNETCORE_ENVIRONMENT=Development dotnet run
 ```
 
-Open `https://localhost:5001/swagger` to explore the API.
+The project has no launch profile, so Kestrel listens on `http://localhost:5000` and the environment is `Production` unless you set it. Swagger is only enabled in `Development`: open `http://localhost:5000/swagger` to explore the API. (`UseHttpsRedirection()` logs `Failed to determine the https port for redirect` without an HTTPS endpoint; it does not break the requests.)
 
 ## API Endpoints
 
@@ -34,11 +36,14 @@ Open `https://localhost:5001/swagger` to explore the API.
 | PUT | `/api/v1/products/{id}` | Update a product |
 | DELETE | `/api/v1/products/{id}` | Delete a product |
 
+| GET | `/api/v1/products/problem/{id}` | Same lookup as `GET /{id}`, written with `ToProblemDetails()` and `this.Problem(result)` |
+
 ### Orders
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/orders` | Place an order |
+| POST | `/api/v1/orders` | Place an order (chained business rules) |
+| GET | `/api/v1/orders/{id}` | Always returns a 404 problem: the lookup is simulated |
 
 ## Result Pattern in Action
 
@@ -111,16 +116,10 @@ If any step fails, the chain short-circuits and returns the first error set.
 
 ## Swagger Enum Display
 
-The `EnumSchemaFilter` from `CSharpEssentials.AspNetCore` transforms this:
+`Program.cs` adds `options.SchemaFilter<EnumSchemaFilter>()`. `EnumSchemaFilter` (package `CSharpEssentials.AspNetCore.Swashbuckle`, namespace `CSharpEssentials.AspNetCore`) describes the enums that the enum conventions handle: `[StringEnum]` enums, whose metadata the `CSharpEssentials.Enums` generator creates. `ProductCategory` and `OrderStatus` in this project are plain enums, and the project does not reference the generator, so the filter leaves them alone and Swagger shows the framework schema:
 
 ```json
-"category": { "type": "integer", "enum": [0, 1, 2, 3, 4] }
+"ProductCategory": { "type": "integer", "format": "int32", "enum": [0, 1, 2, 3, 4] }
 ```
 
-Into this:
-
-```json
-"category": { "type": "string", "enum": ["Electronics", "Clothing", "Food", "Books", "Home"] }
-```
-
-Making the API self-documenting.
+To get the wire names in the document and in the JSON, mark the enum with `[StringEnum]`, reference `CSharpEssentials.Enums.Generators` as an analyzer (a package reference to `CSharpEssentials.AspNetCore` already brings it), call `builder.Services.AddEnumConventions()` and use `options.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does that for you). See the [Swashbuckle package README](../../CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD).

@@ -69,6 +69,7 @@ product.Restore();                                      // undoes soft delete
 product.MarkAsHardDeleted();                           // irreversible
 
 // Hard-delete a batch: products.HardDelete() calls MarkAsHardDeleted() on each item
+// IsHardDeleted makes the EF Core AuditInterceptor keep a delete instead of turning it into a soft delete
 
 // Additional members:
 // DateTimeOffset? DeletedAt
@@ -82,7 +83,7 @@ product.MarkAsHardDeleted();                           // irreversible
 ## Domain Events
 
 ```csharp
-// Default timing is AfterSave; BeforeSave runs handlers inside the save transaction
+// Default timing is AfterSave; a BeforeSave event is published before the save and a throwing handler aborts it
 [DomainEventTiming(DomainEventTiming.BeforeSave)]
 public record InventoryReservedEvent(Guid ProductId, int Qty) : IDomainEvent;
 
@@ -102,4 +103,4 @@ order.ClearDomainEvents();
 - `DomainEvents` is a **property**; do not call `GetDomainEvents()` (doesn't exist)
 - Audit fields are `UpdatedAt`/`UpdatedBy`, **not** `ModifiedAt`/`ModifiedBy`
 - `MarkAsDeleted()` takes **two parameters**: `(DateTimeOffset deletedAt, string deletedBy)`
-- Use `DomainEventTiming.BeforeSave` for events that must be processed before the transaction commits
+- Use `DomainEventTiming.BeforeSave` for events that must be processed before the save; the attribute only labels the event, `CSharpEssentials.EntityFrameworkCore` publishes it (`BaseDbContext` dispatches `AfterSave` events after the save, `DomainEventInterceptor` inside `SavingChanges`, before the write)

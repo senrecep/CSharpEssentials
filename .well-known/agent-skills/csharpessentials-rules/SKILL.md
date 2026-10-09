@@ -119,6 +119,8 @@ Result orResult = RuleEngine.Evaluate(
     ctx);
 ```
 
+`Or` succeeds as soon as one rule passes. When every rule fails, the result carries the errors of all of them.
+
 ### Linear: stop on first failure
 
 ```csharp
@@ -127,13 +129,29 @@ Result linear = RuleEngine.Evaluate(
     new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }.Linear(),
     ctx);
 
-// Func chaining with .Next() — reads like a pipeline
+// .Next() runs the second rule only when the first one passes
 Result pipeline = RuleEngine.Evaluate(
-    ((Func<UserContext, Result>)CheckEmail)
-        .Next(regionRule)
-        .Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be 18+")),
+    ((Func<UserContext, Result>)CheckEmail).Next(regionRule),
+    ctx);
+
+// Longer sequences: nest the rest inside Next, or use Linear()
+Result longer = RuleEngine.Evaluate(
+    ((Func<UserContext, Result>)CheckEmail).Next(regionRule.Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be 18+"))),
     ctx);
 ```
+
+`Next` links one rule to the rule after it. Do not write `a.Next(b).Next(c)`: the second `Next` links `c` to the already linked pair and `b` is skipped. Write `a.Next(b.Next(c))`, or use an array with `.Linear()`.
+
+### Static shortcuts
+
+`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly:
+
+```csharp
+Result all = RuleEngine.And(new Func<UserContext, Result>[] { regionRule, CheckEmail }, ctx);
+Result seq = RuleEngine.Linear(new IRule<UserContext>[] { new AgeRule(), new LicenseRule(repo) }, ctx);
+```
+
+Every combinator also exists for rules with values (`IRule<TContext, TResult>`) and for async rules.
 
 ### Conditional: if/then/else branching
 
@@ -254,6 +272,8 @@ Result composed = await RuleEngine.EvaluateAsync(
 
 ## Async Evaluation
 
+Async rules implement `IAsyncRule<TContext>` (`ValueTask<Result> EvaluateAsync(context, ct)`), come from `FromPredicateAsync`, or are a `Func<TContext, CancellationToken, ValueTask<Result>>` converted with `.ToRule()`.
+
 `RuleEngine.EvaluateAsync(rule, context, ct)` returns `ValueTask<Result>` / `ValueTask<Result<T>>` and awaits every `IAsyncRule` in the tree.
 
 - Same results, short-circuiting and error order as `Evaluate`; composite children run sequentially.
@@ -267,7 +287,7 @@ Result composed = await RuleEngine.EvaluateAsync(
 ## Best Practices
 
 - And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. `array.Linear()` stops at the **first** failure
-- Prefer `.Next()` for readable linear pipelines over `.Linear()` with an array
+- Use `.Linear()` on an array for sequences of three or more rules; `.Next()` links one rule to the next and must not be chained as `a.Next(b).Next(c)`
 - No explicit `.ToRule()` needed when passing `Func<>` to `RuleEngine.Evaluate` or to `.And()/.Or()` on `Func[]`
 - Group domain errors in static classes so rules read like domain language
 - Test each `IRule<T>` in isolation: `Evaluate(context)` → assert Result. No mocking needed

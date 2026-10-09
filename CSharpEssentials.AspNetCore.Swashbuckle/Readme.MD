@@ -25,7 +25,20 @@ var app = builder.Build();
 app.UseVersionableSwagger();
 ```
 
-The first argument is the id of the security scheme in `components.securitySchemes`; every operation requires it. `AddSwagger` includes the XML documentation file of every assembly that declares an endpoint (controllers and Minimal API handlers), plus the optional `assembly` argument. Missing files are skipped.
+The first argument is the id of the security scheme in `components.securitySchemes`; the document requires it for every operation. `AddSwagger` includes the XML documentation file of every assembly that declares an endpoint (controllers and Minimal API handlers), plus the optional `assembly` argument. Missing files are skipped.
+
+`UseVersionableSwagger(options, uiOptions)` serves the documents at `/swagger/{documentName}/swagger.json` and the Swagger UI with one entry per API version (`v1` only when `Asp.Versioning` is not registered), titled `{Swagger:Title} {GROUP}`. The optional callbacks configure `SwaggerOptions` and `SwaggerUIOptions` further.
+
+`DefaultConfigureSwaggerOptions` creates one `SwaggerDoc` per API version (or `v1` without versioning) from configuration:
+
+| Key | Default |
+|---|---|
+| `Swagger:Title` | `API` |
+| `Swagger:Description` | `API Description` (with versioning it becomes `[{environment}] {version} {description}`, plus a note for a deprecated version) |
+| `Swagger:License` | `API License` |
+| `Swagger:LicenseUrl` | `https://opensource.org/license/mit` |
+
+It also keeps the first action when several actions conflict (`ResolveConflictingActions`), calls `AddOptionalRouteParameters()`, maps `TimeSpan` and `TimeOnly` to `type: string` with the example `00:00:00`, and builds schema ids from the type name, with the generic arguments in front (`Box<Dto>` becomes `DtoBox`) and a numeric suffix when two types share a name. To change the documents, derive from the abstract `ConfigureSwaggerOptions` (constructor arguments `IServiceProvider`, `IHostEnvironment`, `IConfiguration`), override `Configure(SwaggerGenOptions)` and pass your class as the type argument of `AddSwagger<T>`.
 
 ## Optional route parameters
 

@@ -12,7 +12,10 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Named Query Filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
 - **Maybe Columns**: Store `Maybe<T>?` properties in nullable columns, per property or by convention.
-- **CQRS Support**: Register separate write and read DbContexts.
+- **CQRS Support**: Register separate write and read DbContexts, plus pooled and factory registrations with shared options.
+- **Entity Mapping**: `EntityBaseMap`, `SoftDeletableEntityBaseMap`, `OptimisticConcurrencyVersionMap` and a JSON column conversion.
+- **Result Helpers**: `FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync` and `SaveChangesAsResultAsync` return `Result<T>` instead of `null` or an exception.
+- **Hard Delete and Data Seeding**: `HardDelete` on a context or set, and `MigrateDataAsync` to sync seed data.
 - **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
 - **Database Error Translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
 
@@ -29,6 +32,8 @@ Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); t
 ### Audit Interceptor
 
 ```csharp
+using CSharpEssentials.EntityFrameworkCore.Interceptors;
+
 services.AddAuditInterceptor(() => "system-user");
 
 services.AddDbContext<MyDbContext>((sp, options) =>
@@ -36,11 +41,26 @@ services.AddDbContext<MyDbContext>((sp, options) =>
            .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
 ```
 
+On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons.
+
+`AddAuditInterceptor` takes a `Func<string>`, a `Func<IServiceProvider, string>`, or the typed `Func<TUserId>` / `Func<IServiceProvider, TUserId>` forms (the user id is stored with `ToString()`). To resolve the user from the request, use the `IServiceProvider` form:
+
+```csharp
+services.AddAuditInterceptor(sp =>
+    sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst("sub")?.Value ?? "anonymous");
+```
+
+`AddAuditUserIdProvider` (same overloads) registers only the scoped `IAuditUserIdProvider`, not the interceptor. Use it, or your own `IAuditUserIdProvider` / `IAuditUserIdProvider<TUserId>` class, when you register the interceptor yourself: `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();` (`AddAuditInterceptor` registers `TimeProvider.System` unconditionally, so it replaces a `TimeProvider` registered before it; register yours after it).
+
 ### Domain Event Interceptor
 
 ```csharp
 services.AddSingleton<IDomainEventPublisher, MyPublisher>();
 services.AddSingleton<DomainEventInterceptor>();
+
+services.AddDbContext<MyDbContext>((sp, options) =>
+    options.UseNpgsql(connectionString)
+           .AddInterceptors(sp.GetRequiredService<DomainEventInterceptor>()));
 
 // In your entity
 public sealed record PriceChangedEvent(Guid ProductId, decimal NewPrice) : IDomainEvent;
@@ -55,7 +75,15 @@ public class Product : EntityBase<Guid>
         Raise(new PriceChangedEvent(Id, newPrice));
     }
 }
+
+public sealed class MyPublisher : IDomainEventPublisher
+{
+    public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
+        Task.CompletedTask; // hand the event to your bus or handlers
+}
 ```
+
+`DomainEventInterceptor` takes the events of every tracked `IDomainEventHolder` in `SavingChanges`, clears them from the entities, publishes the `BeforeSave` events through `IDomainEventPublisher` and then handles the `AfterSave` events (see the comparison table under BaseDbContext). `IDomainEventOutbox.StoreAsync` receives the `AfterSave` events instead of the publisher when an outbox is registered.
 
 ### Pagination
 
@@ -86,7 +114,9 @@ await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToke
 await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
 ```
 
-`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own.
+`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own.
+
+`PaginationRequest.Search` is trimmed by `Normalize` and, when it is not empty and you pass a `search` delegate (`Func<string, Expression<Func<T, bool>>>`), `PaginateAsync` and `Paginate` apply that filter before counting. `PaginationResponse<T>` carries `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`; with `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
 
 ### Keyset Pagination
 
@@ -345,7 +375,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Order>().Property(o => o.Priority).HasEnumStorage(EnumStorage.Integer);
-        modelBuilder.Entity<Order>().Property(o => o.Note).HasEnumCheckConstraint(false);
+        modelBuilder.Entity<Order>().Property(o => o.Kind).HasEnumCheckConstraint(false);
     }
 }
 ```
@@ -449,10 +479,90 @@ An empty result means every row converts and passes the new constraint. Pass `sc
 ### CQRS Write/Read
 
 ```csharp
+using CSharpEssentials.EntityFrameworkCore.Extensions;
+
 services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
     configureWrite: (sp, options) => options.UseNpgsql(connectionString),
     configureRead: (sp, options) => options.UseNpgsql(connectionString).UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking));
 ```
+
+`AddCqrsDbContexts` registers both contexts as pooled contexts (`AddDbContextPool`): the write context with `UseAsWriteContext()` (`QueryTrackingBehavior.TrackAll`) and the read context with `UseAsReadContext()` (`NoTracking`). Without `configureRead` the read context reuses `configureWrite`. The same pieces are available on their own: `AddWriteDbContext<T>`, `AddReadDbContext<T>`, `AddPooledDbContext<T>` and `RegisterDbContextFactory<T>` (an `IDbContextFactory<T>`), and `UseAsWriteContext`, `UseAsReadContext` and `UseAsReadContextWithIdentityResolution` on `DbContextOptionsBuilder`. Each registration method also has an overload that takes `Action<DbContextRegistrationOptions>` before the provider callback:
+
+```csharp
+services.AddWriteDbContext<WriteDbContext>(
+    options =>
+    {
+        options.EnableAuditInterceptor = true;
+        options.EnableSlowQueryInterceptor = true;
+        options.EnableDetailedErrors = true;
+    },
+    (sp, builder) => builder.UseNpgsql(connectionString));
+```
+
+`DbContextRegistrationOptions` applies `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, and `EnableAuditInterceptor`, `EnableDomainEventInterceptor` and `EnableSlowQueryInterceptor`, which add the interceptor only when it is registered in DI. The properties `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` exist on the class but are not applied by this version; set them in the provider callback instead (`UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("MyApp.Migrations").EnableRetryOnFailure().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))`).
+
+### Entity Mapping
+
+`EntityBaseExtensions` configures the audit columns of the `CSharpEssentials.Entity` base classes in `IEntityTypeConfiguration<T>` or `OnModelCreating`:
+
+```csharp
+public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>   // Order : SoftDeletableEntityBase<Guid>
+{
+    public void Configure(EntityTypeBuilder<Order> builder)
+    {
+        builder.SoftDeletableEntityBaseGuidIdMap();   // key Id, audit columns, IsDeleted/DeletedAt/DeletedBy; IsHardDeleted is ignored
+        builder.OptimisticConcurrencyVersionMap();    // shadow byte[] "RowVersion" marked as a row version
+    }
+}
+
+public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>   // Invoice : EntityBase<long>
+{
+    public void Configure(EntityTypeBuilder<Invoice> builder) =>
+        builder.EntityBaseMap<Invoice, long>(userIdMaxLength: 64);   // any key type
+}
+```
+
+`EntityBaseGuidIdMap()` does the same for an `EntityBase<Guid>` entity without the soft delete columns. The audit columns are `CreatedAt`/`CreatedBy` (required) and `UpdatedAt`/`UpdatedBy` (optional), with the user columns limited to 40 characters unless you pass `userIdMaxLength`. `EntityBaseMap<TEntity>()` and `SoftDeletableEntityBaseMap<TEntity>()` map the audit columns without a key. `ApplySoftDeleteQueryFilter()` adds `!IsDeleted` as an anonymous filter to every root entity type that implements `ISoftDeletableBase`, and `AddQueryFilter<T>(expression)` combines your filter with the existing anonymous one with `AND` (on net10.0 use the named helpers below when you need to ignore filters by name). `HasJsonConversion(columnType: "jsonb")` stores a property as JSON with the CSharpEssentials JSON options.
+
+### Result Helpers, Hard Delete and Seeding
+
+```csharp
+Result<Order> order = await db.Orders.Where(o => o.Id == id).FirstOrDefaultAsResultAsync(Error.NotFound("Order.NotFound", "Order not found"), ct);
+Result<Order> single = await db.Orders.SingleOrDefaultAsResultAsync(cancellationToken: ct);   // Error.NotFound() when no row
+Result<Order> found = await db.Orders.FindAsResultAsync([id], cancellationToken: ct);
+Result saved = await db.SaveChangesAsResultAsync(ct);                                        // every exception becomes an Unknown error
+
+db.HardDelete(order.Value);                       // MarkAsHardDeleted + Remove: the audit interceptor keeps the delete
+db.HardDelete(await db.Orders.Where(o => o.IsDeleted).ToListAsync(ct));
+await db.SaveChangesAsync(ct);
+```
+
+`DbSet<T>.Delete(entities)` is a hard delete as well, despite its name: it calls `MarkAsHardDeleted()` on every item and removes them. A `null` row gives the `notFoundError` you pass, or `Error.NotFound()`. `SaveChangesAsResultAsync` lets an `OperationCanceledException` from your token propagate; use `DbErrorTranslation` (below) when you want database errors translated into specific `Error` values. `AsNoTracking(bool isDisabled)` on `IQueryable<T>` applies `AsNoTracking()` unless `isDisabled` is `true`.
+
+`MigrateDataAsync` adds seed rows when a precondition says they are missing, or syncs a table with a key-based diff (add, update, and remove rows that are not in the seed data):
+
+```csharp
+await db.MigrateDataAsync<Country, CountrySeed>(
+    seed,
+    (set, data) => set.Any(),                   // true: the table is already seeded, do nothing
+    s => new Country { Code = s.Code },
+    ct);
+
+await db.MigrateDataAsync(seed, new MigrateDataOptions<Country, CountrySeed, string>
+{
+    Query = set => set,
+    EntityKeyProperty = c => c.Code,
+    DataKeyProperty = s => s.Code,
+    IsUpdatedFunc = (c, s) => c.Name != s.Name,
+    UpdateFunc = (c, s) => { c.Name = s.Name; return c; },
+    Converter = s => new Country { Code = s.Code, Name = s.Name },
+    HardDeleteMode = false,                      // false: a soft-deletable row missing from the seed goes through the normal delete (soft delete with the audit interceptor); true: it is hard deleted
+}, ct);
+```
+
+### SQL Connection Factories
+
+`ISqlConnectionFactory` (`IDbConnection Create()`) and `ISqlReadOnlyConnectionFactory` are interfaces only. Implement and register them yourself for Dapper or raw ADO.NET code that should not go through the `DbContext`.
 
 ### Transaction Runner
 
@@ -461,11 +571,15 @@ services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
 ```csharp
 services.AddEfCoreTransactionRunner<AppDbContext>();
 
+// namespaces: CSharpEssentials.Transactions (ITransactionRunner), CSharpEssentials.EntityFrameworkCore.Transactions (AddEfCoreTransactionRunner)
+// orderService.PlaceAsync returns ValueTask<Result>
 Result result = await transactionRunner.ExecuteAsync(
     ct => orderService.PlaceAsync(command, ct),
     outcome => outcome.IsSuccess,
     cancellationToken);
 ```
+
+The work delegate returns a `ValueTask<T>` and `shouldCommit` decides whether the transaction commits; a work that throws rolls back.
 
 - The outermost call runs inside `Database.CreateExecutionStrategy()` and opens a transaction with `BeginTransactionAsync`, so it works with retrying strategies such as `EnableRetryOnFailure`. A retry re-runs the whole unit of work, nested calls included, on a cleared change tracker. With a retrying strategy the context must have no pending changes when the call starts (the runner throws otherwise), because the clear would drop them.
 - A nested call on the same context instance (`Database.CurrentTransaction` is set) joins the outer transaction: no new strategy, begin or commit. When the provider supports savepoints, the nested work runs behind a savepoint and is rolled back to it when it fails, so its partial writes are undone and the outer call still decides the commit. Entities that nested work saved stay tracked after a rollback to the savepoint, and entities still `Added` after a failed nested `SaveChanges` are written again by the next outer `SaveChanges`; reload or detach them if the outer work carries on. Without savepoint support (for example SQL Server with MARS enabled), a failed nested call keeps its writes and the outer call decides about them.
@@ -476,8 +590,21 @@ Result result = await transactionRunner.ExecuteAsync(
 ### Slow Query Logging
 
 ```csharp
-services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));
+services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));            // or: options => options.Threshold = ...; the default is 1 second
+services.AddSingleton<ISlowQueryHandler, MetricsSlowQueryHandler>();        // optional
+
+services.AddDbContext<MyDbContext>((sp, options) =>
+    options.UseNpgsql(connectionString)
+           .AddInterceptors(sp.GetRequiredService<SlowQueryInterceptor>()));
+
+public sealed class MetricsSlowQueryHandler : ISlowQueryHandler
+{
+    public void OnSlowQuery(SlowQueryContext context) =>
+        Console.WriteLine($"{context.ElapsedTime}: {context.CommandText}"); // also Parameters, Database, HasTransaction, MethodName
+}
 ```
+
+Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameter values, and passed to the `ISlowQueryHandler` when one is registered. Parameter values can be sensitive; keep that in mind before shipping the logs.
 
 ### Database Error Translation
 
@@ -513,6 +640,8 @@ public sealed class RegisterUserHandler(AppDbContext db, DbErrorTranslation tran
 Providers that report no SQLSTATE (SQL Server, SQLite) or extra details (the constraint name of `PostgresException`) plug in an `IDbErrorTranslator`. Custom translators run in registration order before the SQLSTATE default, and the first match wins. `DbErrorTranslation` is a singleton, so translators must be stateless:
 
 ```csharp
+using Npgsql; // PostgresException
+
 services.AddDbErrorTranslator<PostgresConstraintTranslator>();
 
 public sealed class PostgresConstraintTranslator : IDbErrorTranslator

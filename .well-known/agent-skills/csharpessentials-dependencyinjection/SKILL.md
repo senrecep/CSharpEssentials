@@ -69,9 +69,10 @@ services.Decorate<IOrderService, LoggingOrderService>();             // throws I
 services.Decorate<IPaymentGateway, RetryingGateway>(serviceKey: "stripe");
 services.Decorate<IClock>((inner, sp) => new CachedClock(inner));
 services.TryDecorate<IOrderService, AuditingOrderService>();         // returns false when nothing matches
-services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // open generic: decorates closed registrations
+services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // decorates closed registrations such as IRepository<Order>
 ```
 
+- `Decorate(Type, Type)` throws `InvalidOperationException` when a registration of the open generic type itself exists or no closed registration matches; it is `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`.
 - Attribute decorators apply in ascending `Order`. Every matching registration is decorated; lifetime and key are kept.
 - The original moves to a hidden private key under a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The container disposes both.
 - A decorator needs exactly one public constructor with exactly one parameter of the decorated type.
@@ -114,7 +115,7 @@ Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. An overload tak
 | CSE2005 | Error | Decorator does not have exactly one public constructor |
 | CSE2006 | Info | Captive dependency: a singleton takes a scoped/transient service (or scoped takes transient) registered by attribute in the same project |
 | CSE2007 | Error | Class cannot be constructed by generated code (abstract, static, file-local, inaccessible, nested in a generic type) |
-| CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` |
+| CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` at runtime (closed registrations only) |
 | CSE2009 | Warning | Two referenced assemblies produce the same registry name (`Foo.Api` and `FooApi` → `FooApiServiceRegistry`); `AddAllServices` skips both until one sets `[assembly: ServiceRegistryName("...")]`. Also reported when the project's own registry has the same name as a referenced one; only the own registry is called |
 
 ---

@@ -17,7 +17,9 @@ dotnet add package CSharpEssentials.These
 
 ```csharp
 using CSharpEssentials.These;
-using CSharpEssentials.Errors; // for Error type in bridge methods
+using CSharpEssentials.Maybe;         // for GetRight()/GetLeft()
+using CSharpEssentials.Errors;        // for Error type in bridge methods
+using CSharpEssentials.ResultPattern; // for Result<T> in bridge methods
 ```
 
 ## Creating These
@@ -75,7 +77,7 @@ these.TapLeft(e => logger.LogWarning("Warning: {Warning}", e));
 ## Bridge to/from Result
 
 ```csharp
-// Result<T> → These<Error, T>
+// Result<T> → These<Error, T>: success is Right, failure is Left with the first error only (never Both)
 These<Error, int> these = TheseExtensions.FromResult(result);
 
 // These<Error, T> → Result<T> (Both = failure)
@@ -109,4 +111,6 @@ var (lefts, rights, boths) = items.Partition();
 - `FlatMap` loses the Both state; use it only when the warning from the prior step can be discarded
 - `ToResultLenient()` is the lenient bridge: Both → success (value wins, error side discarded)
 - `ToResult()` is the strict bridge: Both → failure
+- `default(These<TError, TValue>)` is none of Left, Right or Both; `ToResult()` on it throws `InvalidOperationException`
+- A `These` serializes as `{"isLeft":...,"isRight":...,"left":...,"right":...}` (both flags are `true` for Both)
 - Avoid using `These` as a general-purpose error type; use `Result<T>` for that; `These` is for partial-success semantics
