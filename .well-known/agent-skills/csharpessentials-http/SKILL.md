@@ -71,7 +71,7 @@ Result<User> redirected = await HttpRequestBuilder
 
 Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name/value, dictionary or object value), `WithRoute` (fills `{name}` placeholders), `WithEnumConventions`, `WithContent`, `WithJsonContent`, `FollowRedirects`. `Build()` returns `Result<HttpRequestMessage>`.
 
-`WithQuery` and `Uri.WithQueryString` need an absolute URI; with a relative one (`.Get("/users/1")`) they throw `InvalidOperationException` instead of returning a failed `Result`. Without query values a relative URI works with `BaseAddress`.
+`WithQuery` and `Uri.WithQueryString` work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs resolve against `BaseAddress`.
 
 ---
 
