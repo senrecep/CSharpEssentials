@@ -135,14 +135,14 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
 
         foreach (string format in _formats)
         {
-            if (DateTime.TryParseExact(dateString, format, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out DateTime dateTime))
+            if (DateTime.TryParseExact(dateString, format, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out DateTime dateTime))
                 return (T)(object)dateTime;
         }
 
         // Try Unix timestamp as fallback (pure numeric string)
         if (long.TryParse(dateString, out long unixSeconds))
         {
-            DateTime unixDate = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).DateTime;
+            DateTime unixDate = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
             return (T)(object)unixDate;
         }
 
