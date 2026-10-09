@@ -8,27 +8,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Added
 
-* **maybe:** add Async-suffixed names for Execute, ExecuteNoValue, Or, Match, ToMaybeResult, From ([2ec0851](https://github.com/senrecep/CSharpEssentials/commit/2ec0851325a24f46694a6dc56440c9e406997a0b)), closes [#121](https://github.com/senrecep/CSharpEssentials/issues/121)
-* **maybe:** Async-suffixed names for Execute, ExecuteNoValue, Or, Match, ToMaybeResult, From ([49b9a0b](https://github.com/senrecep/CSharpEssentials/commit/49b9a0b4a57ef6270b48215eebaa6fb83e842da1))
-* **results:** add ValueTask twins for remaining async operations ([5f1a0db](https://github.com/senrecep/CSharpEssentials/commit/5f1a0dbcfaec2a2ab17a34b5e3c94688df9ea6cb)), closes [#122](https://github.com/senrecep/CSharpEssentials/issues/122)
-* **results:** ValueTask twins for remaining async operations (6.5) ([ddee9fd](https://github.com/senrecep/CSharpEssentials/commit/ddee9fdedf9df3d395d9c8fad75a3e7b93da87c8))
+* **maybe:** `Async`-suffixed names for the task-returning members left from 6.4.0: `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` ([2ec0851](https://github.com/senrecep/CSharpEssentials/commit/2ec0851325a24f46694a6dc56440c9e406997a0b)), closes [#121](https://github.com/senrecep/CSharpEssentials/issues/121)
+* **results:** `ValueTask` twins on .NET 9+ for `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` (on `ValueTask` sources) and `Result.TryAsync` ([5f1a0db](https://github.com/senrecep/CSharpEssentials/commit/5f1a0dbcfaec2a2ab17a34b5e3c94688df9ea6cb)), closes [#122](https://github.com/senrecep/CSharpEssentials/issues/122)
 
 
 ### Fixed
 
-* add ConfigureAwait(false) across library code and enforce CA2007 ([903e267](https://github.com/senrecep/CSharpEssentials/commit/903e2670e6f35a386d873a232b211c932e24ffa7))
-* add ConfigureAwait(false) across library code and enforce CA2007 ([c54f124](https://github.com/senrecep/CSharpEssentials/commit/c54f1240c0a1bcb653f2ff23f17e3c0240126c7a)), closes [#123](https://github.com/senrecep/CSharpEssentials/issues/123)
-* **http:** remove pre-6.3.0 cancellation workaround and align timeout semantics ([6e92383](https://github.com/senrecep/CSharpEssentials/commit/6e92383bc9b1e56b96b6ccf1a210b27dd1c2e97b))
-* **http:** remove pre-6.3.0 cancellation workaround and align timeout semantics ([6e212c7](https://github.com/senrecep/CSharpEssentials/commit/6e212c73feba3e23e9cb75b6f4e8ac145725e033)), closes [#127](https://github.com/senrecep/CSharpEssentials/issues/127)
-* **maybe:** configure the await foreach in ChooseAsync and widen the context smoke test ([8e4c149](https://github.com/senrecep/CSharpEssentials/commit/8e4c149273e24b9a8795adcb08218308f3aeaaf4))
-* **maybe:** mark IMaybe async members obsolete and add overload contract tests ([fc28a61](https://github.com/senrecep/CSharpEssentials/commit/fc28a6182d5dbf01a59a7afece1468531506e813))
-* **results:** await async handlers in conditional TapAsync on Task and ValueTask sources ([df94a7e](https://github.com/senrecep/CSharpEssentials/commit/df94a7e253e22638a46d28959822ec227e001873))
-* **results:** await async handlers in conditional TapAsync on Task and ValueTask sources ([4724c1f](https://github.com/senrecep/CSharpEssentials/commit/4724c1f918ace9256ff9dc8f9d4a3946407927d0))
+* **results:** the conditional `TapAsync(bool | Func<bool>, …)` on `Task` and `ValueTask` sources has awaited `Func<Task>`/`Func<ValueTask>` handlers, so an `async` lambda no longer runs as `async void` ([4724c1f](https://github.com/senrecep/CSharpEssentials/commit/4724c1f918ace9256ff9dc8f9d4a3946407927d0)), closes [#124](https://github.com/senrecep/CSharpEssentials/issues/124)
+* **http:** remove the pre-6.3.0 cancellation workaround; only the caller's cancellation throws, an `HttpClient.Timeout` or any other cancellation becomes a failed `Result` ([6e212c7](https://github.com/senrecep/CSharpEssentials/commit/6e212c73feba3e23e9cb75b6f4e8ac145725e033)), closes [#127](https://github.com/senrecep/CSharpEssentials/issues/127)
+* add `ConfigureAwait(false)` to about 800 awaits across the library packages and enforce CA2007 for them ([c54f124](https://github.com/senrecep/CSharpEssentials/commit/c54f1240c0a1bcb653f2ff23f17e3c0240126c7a), [8e4c149](https://github.com/senrecep/CSharpEssentials/commit/8e4c149273e24b9a8795adcb08218308f3aeaaf4)), closes [#123](https://github.com/senrecep/CSharpEssentials/issues/123)
 
 
 ### Changed
 
 * **results:** add Else and TapError async matrix benchmarks ([ba2d839](https://github.com/senrecep/CSharpEssentials/commit/ba2d8394857f87b1cc907f38d51e03ba3e34e693))
+* **maybe:** document the null equality rule: a typed `null` means absence, `Equals(object?)` follows the BCL contract ([8a387ef](https://github.com/senrecep/CSharpEssentials/commit/8a387ef)), closes [#125](https://github.com/senrecep/CSharpEssentials/issues/125)
+* **results:** document that `Result.And` short-circuits on the first failure and that `CombineAll` collects every error ([beca7d4](https://github.com/senrecep/CSharpEssentials/commit/beca7d4)), closes [#126](https://github.com/senrecep/CSharpEssentials/issues/126)
+
+
+### Behaviour changes
+
+* **http:** `HttpClient.Timeout` and any cancellation that is not the caller's token now return a failed `Result` instead of throwing `OperationCanceledException`. A timeout gives `Http.Timeout` (`ErrorType.Unexpected`), any other cancellation uses the exception type name as the code. Cancelling the caller's own token still throws. Code that wraps these calls in `catch (OperationCanceledException)` to handle timeouts must check the `Result` instead. Timeouts raised by Polly resilience handlers keep `TimeoutRejectedException` as the code.
+* **results:** an `async` lambda passed to the conditional `TapAsync` on a `Task` or `ValueTask` source is now awaited and its exception reaches the caller; it used to run as `async void`. A non-`async` lambda that returns the source's own flavour (`Task` on a `Task` source, `ValueTask` on a `ValueTask` source) is awaited too.
+* **results:** on .NET 9+, `SwitchFirstAsync` and `SwitchLastAsync` on `ValueTask` sources await lambdas that return a `ValueTask`; they used to bind the `Action` pair and discard them. `FinallyAsync` on `ValueTask` sources now awaits a lambda that returns `ValueTask`, `ValueTask<T>` or `Task<T>` and returns `ValueTask<Result…>` or `ValueTask<T>`, where it used to return a nested task.
+* the library no longer resumes continuations on the caller's `SynchronizationContext`, so sync-over-async callers on a single-threaded context no longer deadlock inside library code.
+
+
+### Deprecations
+
+* **maybe:** the unsuffixed task-returning `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From(Task…)` overloads, and the matching async members of `IMaybe<T>`, are `[Obsolete]` forwarders to the `*Async` names and are removed in 7.0. Projects with `TreatWarningsAsErrors` will see CS0618 — see `docs/migration/v6-async-naming.md`.
+
+
+### Source compatibility
+
+* .NET 9+ consumers that pin `LangVersion` 12 get CS0121 for untyped async lambdas on the new `ValueTask` twins. The `Maybe` instance and key/value `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` and `MatchAsync` were already ambiguous on every language version; they now bind the `Task` overload on C# 13+ and still need a typed handler on C# 12, on .NET 8 as well. No binary breaks.
 
 ## [6.4.0](https://github.com/senrecep/CSharpEssentials/compare/v6.3.0...v6.4.0) (2026-10-08)
 
