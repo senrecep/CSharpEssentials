@@ -851,7 +851,7 @@ Pass `jsonOptions` built once with `new JsonSerializerOptions(JsonSerializerDefa
 | `DeleteAsResultAsync` | DELETE to `Result` |
 | `SendAsResultAsync` | Send any request to `Result` |
 
-Cancellation follows the `Result.TryAsync` rule: only the caller's `cancellationToken` throws `OperationCanceledException`. An `HttpClient.Timeout` returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`; any other cancellation and any other transport exception returns `ErrorType.Unexpected` with the exception type name as code. The same applies to `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>`. **Behaviour change in 6.5.0:** a timeout or a non-caller cancellation used to throw `OperationCanceledException`.
+Cancellation follows the `Result.TryAsync` rule: only the caller's `cancellationToken` throws `OperationCanceledException`. An `HttpClient.Timeout` returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`; any other cancellation and any other transport exception returns `ErrorType.Unexpected` with the exception type name as code, except an SSRF guard block, which returns `ErrorType.Forbidden` with code `Http.SsrfBlocked` (see below). The same applies to `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>`. **Behaviour change in 6.5.0:** a timeout or a non-caller cancellation used to throw `OperationCanceledException`.
 
 ### Status Code Mapping
 

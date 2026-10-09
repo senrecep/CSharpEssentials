@@ -38,7 +38,7 @@ Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Re
 
 ### Errors, timeouts and cancellation
 
-Every `*AsResultAsync` member, including the `HttpContent` readers and `HttpRequestBuilder.AsResultAsync`, follows the `Result.TryAsync` rule: only your own token propagates.
+The `HttpClient` extensions above, `PostAsResultAsync`, `PutAsResultAsync`, `SendAsResultAsync`, `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and the `HttpContent` readers (`ReadAsStringAsResultAsync`, `ReadFromJsonAsResultAsync<T>`) follow the `Result.TryAsync` rule: only your own token propagates.
 
 - Cancelling the `cancellationToken` you pass throws `OperationCanceledException`.
 - An `HttpClient.Timeout` returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`.
