@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Maybe;
@@ -35,7 +36,8 @@ public readonly partial struct Maybe<T>
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<Maybe<T>> Or(Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default)
+    [OverloadResolutionPriority(1)]
+    public async Task<Maybe<T>> OrAsync(Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return await fallbackOperation().WithCancellation(cancellationToken);
@@ -49,7 +51,8 @@ public readonly partial struct Maybe<T>
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<Maybe<T>> Or(Task<Maybe<T>> fallback, CancellationToken cancellationToken = default)
+    [OverloadResolutionPriority(1)]
+    public async Task<Maybe<T>> OrAsync(Task<Maybe<T>> fallback, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return await fallback.WithCancellation(cancellationToken);
@@ -63,7 +66,8 @@ public readonly partial struct Maybe<T>
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<Maybe<T>> Or(Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
+    [OverloadResolutionPriority(1)]
+    public async Task<Maybe<T>> OrAsync(Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return await fallbackOperation().WithCancellation(cancellationToken);
@@ -77,7 +81,7 @@ public readonly partial struct Maybe<T>
     /// <param name="valueTaskFallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask<Maybe<T>> Or(Func<ValueTask<T>> valueTaskFallbackOperation, CancellationToken cancellationToken = default)
+    public async ValueTask<Maybe<T>> OrAsync(Func<ValueTask<T>> valueTaskFallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return await valueTaskFallbackOperation().WithCancellation(cancellationToken);
@@ -91,7 +95,7 @@ public readonly partial struct Maybe<T>
     /// <param name="valueTaskFallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask<Maybe<T>> Or(ValueTask<Maybe<T>> valueTaskFallback, CancellationToken cancellationToken = default)
+    public async ValueTask<Maybe<T>> OrAsync(ValueTask<Maybe<T>> valueTaskFallback, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return await valueTaskFallback.WithCancellation(cancellationToken);
@@ -105,7 +109,7 @@ public readonly partial struct Maybe<T>
     /// <param name="valueTaskFallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask<Maybe<T>> Or(Func<ValueTask<Maybe<T>>> valueTaskFallbackOperation, CancellationToken cancellationToken = default)
+    public async ValueTask<Maybe<T>> OrAsync(Func<ValueTask<Maybe<T>>> valueTaskFallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return await valueTaskFallbackOperation().WithCancellation(cancellationToken);
@@ -128,7 +132,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> OrElseAsync(Func<Task<Maybe<T>>> factory, CancellationToken cancellationToken = default)
-        => await Or(factory, cancellationToken);
+        => await OrAsync(factory, cancellationToken);
 
 }
 
@@ -143,7 +147,7 @@ public static partial class MaybeExtensions
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, T fallback, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, T fallback, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -161,7 +165,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, Func<T> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<T> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -179,7 +183,7 @@ public static partial class MaybeExtensions
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, Maybe<T> fallback, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Maybe<T> fallback, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -198,7 +202,7 @@ public static partial class MaybeExtensions
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, Task<T> fallback, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Task<T> fallback, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -219,7 +223,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -241,7 +245,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -259,7 +263,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Maybe<T>> Or<T>(this Task<Maybe<T>> maybeTask, Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -277,7 +281,7 @@ public static partial class MaybeExtensions
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, T fallback, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, T fallback, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -295,7 +299,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Func<T> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -313,7 +317,7 @@ public static partial class MaybeExtensions
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Maybe<T> fallback, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Maybe<T> fallback, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -331,7 +335,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -349,7 +353,7 @@ public static partial class MaybeExtensions
     /// <param name="fallback"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, ValueTask<T> fallback, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, ValueTask<T> fallback, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -370,7 +374,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<T>> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -392,7 +396,7 @@ public static partial class MaybeExtensions
     /// <param name="fallbackOperation"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Maybe<T>> Or<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
+    public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 
 namespace CSharpEssentials.Maybe;
@@ -10,7 +11,8 @@ public readonly partial struct Maybe<T>
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task Execute(Func<T, Task> action, CancellationToken cancellationToken = default)
+    [OverloadResolutionPriority(1)]
+    public async Task ExecuteAsync(Func<T, Task> action, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return;
@@ -24,7 +26,7 @@ public readonly partial struct Maybe<T>
     /// <param name="valueTask"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task Execute(Func<T, ValueTask> valueTask, CancellationToken cancellationToken = default)
+    public async Task ExecuteAsync(Func<T, ValueTask> valueTask, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
             return;
@@ -51,7 +53,8 @@ public readonly partial struct Maybe<T>
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task ExecuteNoValue(Func<Task> action, CancellationToken cancellationToken = default)
+    [OverloadResolutionPriority(1)]
+    public async Task ExecuteNoValueAsync(Func<Task> action, CancellationToken cancellationToken = default)
     {
         if (HasValue)
             return;
@@ -66,7 +69,7 @@ public readonly partial struct Maybe<T>
     /// <param name="valueTask"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task ExecuteNoValue(Func<ValueTask> valueTask, CancellationToken cancellationToken = default)
+    public async Task ExecuteNoValueAsync(Func<ValueTask> valueTask, CancellationToken cancellationToken = default)
     {
         if (HasValue)
             return;
@@ -99,7 +102,7 @@ public static partial class MaybeExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Execute<T>(this Task<Maybe<T>> maybeTask, Action<T> action, CancellationToken cancellationToken = default)
+    public static async Task ExecuteAsync<T>(this Task<Maybe<T>> maybeTask, Action<T> action, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -118,7 +121,7 @@ public static partial class MaybeExtensions
     /// <param name="asyncAction"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Execute<T>(this Task<Maybe<T>> maybeTask, Func<T, Task> asyncAction, CancellationToken cancellationToken = default)
+    public static async Task ExecuteAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, Task> asyncAction, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -136,7 +139,7 @@ public static partial class MaybeExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Execute<T>(this ValueTask<Maybe<T>> maybeTask, Action<T> action, CancellationToken cancellationToken = default)
+    public static async Task ExecuteAsync<T>(this ValueTask<Maybe<T>> maybeTask, Action<T> action, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -156,7 +159,7 @@ public static partial class MaybeExtensions
     /// <param name="valueTask"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Execute<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask> valueTask, CancellationToken cancellationToken = default)
+    public static async Task ExecuteAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask> valueTask, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -175,7 +178,7 @@ public static partial class MaybeExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task ExecuteNoValue<T>(this Task<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
+    public static async Task ExecuteNoValueAsync<T>(this Task<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -193,7 +196,7 @@ public static partial class MaybeExtensions
     /// <param name="asyncAction"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task ExecuteNoValue<T>(this Task<Maybe<T>> maybeTask, Func<Task> asyncAction, CancellationToken cancellationToken = default)
+    public static async Task ExecuteNoValueAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task> asyncAction, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -211,7 +214,7 @@ public static partial class MaybeExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task ExecuteNoValue<T>(this ValueTask<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
+    public static async Task ExecuteNoValueAsync<T>(this ValueTask<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 
@@ -230,7 +233,7 @@ public static partial class MaybeExtensions
     /// <param name="valueTask"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task ExecuteNoValue<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask> valueTask, CancellationToken cancellationToken = default)
+    public static async Task ExecuteNoValueAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask> valueTask, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
 

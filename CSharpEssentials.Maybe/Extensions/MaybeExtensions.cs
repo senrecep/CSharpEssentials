@@ -43,7 +43,7 @@ public static partial class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<T>> ToMaybeResult<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
+    public static async Task<Result<T>> ToMaybeResultAsync<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
         return maybe.ToMaybeResult(error);
@@ -57,7 +57,7 @@ public static partial class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Result<T>> ToMaybeResult<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result<T>> ToMaybeResultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
         return maybe.ToMaybeResult(error);
@@ -71,7 +71,7 @@ public static partial class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result> ToMaybeUnitResult<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
+    public static async Task<Result> ToMaybeUnitResultAsync<T>(this Task<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
         return maybe.ToMaybeUnitResult(error);
@@ -85,7 +85,7 @@ public static partial class MaybeExtensions
     /// <param name="error"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<Result> ToMaybeUnitResult<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
+    public static async ValueTask<Result> ToMaybeUnitResultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Error? error = null, CancellationToken cancellationToken = default)
     {
         Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
         return maybe.ToMaybeUnitResult(error);

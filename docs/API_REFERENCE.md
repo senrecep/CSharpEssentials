@@ -400,7 +400,7 @@ Maybe<string> displayName = GetUser(id)
     .Where(name => name.Length > 0);
 ```
 
-In this release only the async filter was renamed: `Where` with a `Task`/`ValueTask` predicate or source is now `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`). The old unsuffixed `Where` overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From(Task)` keep their unsuffixed names for now; a follow-up release renames them. An untyped async predicate binds to the `Task` overload of `WhereAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<T, Task<bool>>` local.
+Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`.
 
 ### Extracting Values
 
@@ -424,8 +424,8 @@ string name = GetUser(id)
 
 | Method | Runs On | What It Does |
 |--------|---------|-------------|
-| `Execute(action)` | Has value | Runs action with value (`void`, or `Task` for async actions) |
-| `ExecuteNoValue(action)` | No value | Runs action when empty (`void`, or `Task` for async actions) |
+| `Execute(action)` / `ExecuteAsync(asyncAction)` | Has value | Runs action with value (`void`, or `Task` for async actions) |
+| `ExecuteNoValue(action)` / `ExecuteNoValueAsync(asyncAction)` | No value | Runs action when empty (`void`, or `Task` for async actions) |
 | `Tap(action)` | Has value | Side effect with value, returns self |
 | `TapIf(cond, action)` | Has value + condition | Conditional side effect, returns self |
 
@@ -478,6 +478,7 @@ Result<User> found = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFo
 |--------|-----------|-------------|
 | `maybe.ToMaybeResult(error?)` | Maybe to Result | None becomes Failure, Some becomes Success |
 | `maybe.ToMaybeUnitResult(error?)` | Maybe to Result (unit) | None becomes Failure (no value) |
+| `maybeTask.ToMaybeResultAsync(error?)` / `maybeTask.ToMaybeUnitResultAsync(error?)` | `Task`/`ValueTask` Maybe to Result | Same mapping on a `Task<Maybe<T>>` or `ValueTask<Maybe<T>>` source |
 | `result.AsMaybe()` | Result to Maybe | Failure becomes None, Success becomes Some |
 
 ```csharp

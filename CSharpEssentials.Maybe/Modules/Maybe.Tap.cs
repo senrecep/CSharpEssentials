@@ -73,7 +73,7 @@ public readonly partial struct Maybe<T>
     /// <returns></returns>
     public async Task<Maybe<T>> TapAsync(Func<T, Task> action, CancellationToken cancellationToken = default)
     {
-        await Execute(action, cancellationToken);
+        await ExecuteAsync(action, cancellationToken);
         return this;
     }
 

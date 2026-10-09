@@ -47,3 +47,7 @@ dotnet_diagnostic.S1133.severity = none
 # The unobserved-exception test forces a GC to prove abandoned tasks were observed.
 [Results/ResultTraverseAsyncTests.cs]
 dotnet_diagnostic.S1215.severity = none
+
+# The test discards the ValueTask on purpose to pin that a Task source binds the Action overload and does not await it.
+[Results/AsyncMatrixBindingTests.cs]
+dotnet_diagnostic.CA1806.severity = none

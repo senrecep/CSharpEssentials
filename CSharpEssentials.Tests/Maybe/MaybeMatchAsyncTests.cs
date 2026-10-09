@@ -13,7 +13,7 @@ public class MaybeMatchAsyncTests
     {
         var maybe = Maybe<int>.From(5);
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, ct) => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => Task.FromResult("none"));
 
@@ -25,7 +25,7 @@ public class MaybeMatchAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, ct) => Task.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => Task.FromResult("none"));
 
@@ -38,7 +38,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(10);
         string context = "ctx";
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, c, ct) => Task.FromResult(v + c),
             (c, ct) => Task.FromResult("no-" + c),
             context);
@@ -52,7 +52,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         string context = "ctx";
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, c, ct) => Task.FromResult(v + c),
             (c, ct) => Task.FromResult("no-" + c),
             context);
@@ -70,7 +70,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(7);
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, ct) => { captured = v; return Task.CompletedTask; },
             ct => { captured = -1; return Task.CompletedTask; });
 
@@ -83,7 +83,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, ct) => { captured = v; return Task.CompletedTask; },
             ct => { captured = -1; return Task.CompletedTask; });
 
@@ -96,7 +96,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(3);
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, c, ct) => { captured = v + c; return Task.CompletedTask; },
             (c, ct) => { captured = c; return Task.CompletedTask; },
             10);
@@ -110,7 +110,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, c, ct) => { captured = v + c; return Task.CompletedTask; },
             (c, ct) => { captured = c; return Task.CompletedTask; },
             10);
@@ -127,7 +127,7 @@ public class MaybeMatchAsyncTests
     {
         var maybe = Maybe<int>.From(42);
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, ct) => ValueTask.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => ValueTask.FromResult("none"));
 
@@ -139,7 +139,7 @@ public class MaybeMatchAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, ct) => ValueTask.FromResult(v.ToString(CultureInfo.InvariantCulture)),
             ct => ValueTask.FromResult("none"));
 
@@ -151,7 +151,7 @@ public class MaybeMatchAsyncTests
     {
         var maybe = Maybe<int>.From(5);
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, c, ct) => ValueTask.FromResult(v + c),
             (c, ct) => ValueTask.FromResult("no-" + c),
             "_ctx");
@@ -164,7 +164,7 @@ public class MaybeMatchAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (v, c, ct) => ValueTask.FromResult(v + c),
             (c, ct) => ValueTask.FromResult("no-" + c),
             "_ctx");
@@ -182,7 +182,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(9);
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, ct) => { captured = v; return ValueTask.CompletedTask; },
             ct => { captured = -1; return ValueTask.CompletedTask; });
 
@@ -195,7 +195,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, ct) => { captured = v; return ValueTask.CompletedTask; },
             ct => { captured = -1; return ValueTask.CompletedTask; });
 
@@ -208,7 +208,7 @@ public class MaybeMatchAsyncTests
         var maybe = Maybe<int>.From(4);
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, c, ct) => { captured = v * c; return ValueTask.CompletedTask; },
             (c, ct) => { captured = c; return ValueTask.CompletedTask; },
             3);
@@ -222,7 +222,7 @@ public class MaybeMatchAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         int captured = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (v, c, ct) => { captured = v * c; return ValueTask.CompletedTask; },
             (c, ct) => { captured = c; return ValueTask.CompletedTask; },
             3);
@@ -242,7 +242,7 @@ public class MaybeMatchAsyncTests
         string? capturedKey = null;
         int capturedValue = 0;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (k, v, ct) => { capturedKey = k; capturedValue = v; return ValueTask.CompletedTask; },
             ct => ValueTask.CompletedTask);
 
@@ -256,7 +256,7 @@ public class MaybeMatchAsyncTests
         Maybe<KeyValuePair<string, int>> maybe = Maybe<KeyValuePair<string, int>>.None;
         bool noneCalled = false;
 
-        await maybe.Match(
+        await maybe.MatchAsync(
             (k, v, ct) => ValueTask.CompletedTask,
             ct => { noneCalled = true; return ValueTask.CompletedTask; });
 
@@ -269,7 +269,7 @@ public class MaybeMatchAsyncTests
         var kvp = new KeyValuePair<string, int>("x", 10);
         var maybe = Maybe<KeyValuePair<string, int>>.From(kvp);
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (k, v, ct) => ValueTask.FromResult($"{k}={v}"),
             ct => ValueTask.FromResult("none"));
 
@@ -281,7 +281,7 @@ public class MaybeMatchAsyncTests
     {
         Maybe<KeyValuePair<string, int>> maybe = Maybe<KeyValuePair<string, int>>.None;
 
-        string result = await maybe.Match(
+        string result = await maybe.MatchAsync(
             (k, v, ct) => ValueTask.FromResult($"{k}={v}"),
             ct => ValueTask.FromResult("none"));
 

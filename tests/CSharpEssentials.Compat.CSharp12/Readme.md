@@ -40,3 +40,9 @@ These are in `TypedDelegateShapes`. In each case the lambda parameter or return 
 
 - `Result<T>.MapErrorAsync(async e => ...)` when the body compiles for both `Error` and `Error[]`, for example `return e;`.
 - `Result<T>.BindAsync(async v => ...)` returning `Result<T>`: the `Result<TOut>` handler and the `Result` handler both fit, because `Result<T>` converts to `Result`.
+
+## Maybe shapes
+
+`MaybeSourceShapes` holds the untyped async lambda shapes that bind under C# 12 on every target: `ExecuteAsync`, `ExecuteNoValueAsync` and `OrAsync` on `Task<Maybe<T>>` and `ValueTask<Maybe<T>>` sources.
+
+`MaybeTypedTwinShapes` holds the typed form for `Maybe<T>` and `Maybe<KeyValuePair<TKey, TValue>>` instances. `Maybe` has `ValueTask` twins on every target, so an untyped async lambda on `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` or `MatchAsync` reports CS0121 on net8.0 as well. Type the handler or move to C# 13.

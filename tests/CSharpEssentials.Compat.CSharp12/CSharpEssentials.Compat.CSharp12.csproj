@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" />
   </ItemGroup>
 
 </Project>

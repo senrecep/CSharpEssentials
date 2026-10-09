@@ -245,7 +245,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
         return $"Some({text})";
     }
 }
-public readonly record struct Maybe : IMaybe
+public readonly partial record struct Maybe : IMaybe
 {
     /// <summary>
     /// Represents a Maybe with no value.
@@ -275,7 +275,7 @@ public readonly record struct Maybe : IMaybe
     /// <param name="valueTask"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static Task<Maybe<T>> From<T>(Task<T?> valueTask, CancellationToken cancellationToken = default) => Maybe<T>.FromAsync(valueTask, cancellationToken);
+    public static Task<Maybe<T>> FromAsync<T>(Task<T?> valueTask, CancellationToken cancellationToken = default) => Maybe<T>.FromAsync(valueTask, cancellationToken);
 
     /// <summary>
     /// Creates a Maybe from the specified task function.
@@ -284,7 +284,7 @@ public readonly record struct Maybe : IMaybe
     /// <param name="valueTaskFunc"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static Task<Maybe<T>> From<T>(Func<Task<T?>> valueTaskFunc, CancellationToken cancellationToken = default) => Maybe<T>.FromAsync(valueTaskFunc, cancellationToken);
+    public static Task<Maybe<T>> FromAsync<T>(Func<Task<T?>> valueTaskFunc, CancellationToken cancellationToken = default) => Maybe<T>.FromAsync(valueTaskFunc, cancellationToken);
 
     /// <summary>
     /// Creates a Maybe from the specified factory function, catching any exceptions.

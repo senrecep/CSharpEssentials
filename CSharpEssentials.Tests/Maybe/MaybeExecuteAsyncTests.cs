@@ -13,7 +13,7 @@ public class MaybeExecuteAsyncTests
         var maybe = Maybe<int>.From(5);
         int captured = 0;
 
-        await maybe.Execute(v => { captured = v; return Task.CompletedTask; });
+        await maybe.ExecuteAsync(v => { captured = v; return Task.CompletedTask; });
 
         captured.Should().Be(5);
     }
@@ -24,7 +24,7 @@ public class MaybeExecuteAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         int captured = 0;
 
-        await maybe.Execute(v => { captured = v; return Task.CompletedTask; });
+        await maybe.ExecuteAsync(v => { captured = v; return Task.CompletedTask; });
 
         captured.Should().Be(0);
     }
@@ -39,7 +39,7 @@ public class MaybeExecuteAsyncTests
         var maybe = Maybe<int>.From(10);
         int captured = 0;
 
-        await maybe.Execute(v => { captured = v; return ValueTask.CompletedTask; });
+        await maybe.ExecuteAsync(v => { captured = v; return ValueTask.CompletedTask; });
 
         captured.Should().Be(10);
     }
@@ -50,7 +50,7 @@ public class MaybeExecuteAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         int captured = 0;
 
-        await maybe.Execute(v => { captured = v; return ValueTask.CompletedTask; });
+        await maybe.ExecuteAsync(v => { captured = v; return ValueTask.CompletedTask; });
 
         captured.Should().Be(0);
     }
@@ -65,7 +65,7 @@ public class MaybeExecuteAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         bool invoked = false;
 
-        await maybe.ExecuteNoValue(() => { invoked = true; return Task.CompletedTask; });
+        await maybe.ExecuteNoValueAsync(() => { invoked = true; return Task.CompletedTask; });
 
         invoked.Should().BeTrue();
     }
@@ -76,7 +76,7 @@ public class MaybeExecuteAsyncTests
         var maybe = Maybe<int>.From(3);
         bool invoked = false;
 
-        await maybe.ExecuteNoValue(() => { invoked = true; return Task.CompletedTask; });
+        await maybe.ExecuteNoValueAsync(() => { invoked = true; return Task.CompletedTask; });
 
         invoked.Should().BeFalse();
     }
@@ -91,7 +91,7 @@ public class MaybeExecuteAsyncTests
         Maybe<int> maybe = Maybe<int>.None;
         bool invoked = false;
 
-        await maybe.ExecuteNoValue(() => { invoked = true; return ValueTask.CompletedTask; });
+        await maybe.ExecuteNoValueAsync(() => { invoked = true; return ValueTask.CompletedTask; });
 
         invoked.Should().BeTrue();
     }
@@ -102,7 +102,7 @@ public class MaybeExecuteAsyncTests
         var maybe = Maybe<int>.From(7);
         bool invoked = false;
 
-        await maybe.ExecuteNoValue(() => { invoked = true; return ValueTask.CompletedTask; });
+        await maybe.ExecuteNoValueAsync(() => { invoked = true; return ValueTask.CompletedTask; });
 
         invoked.Should().BeFalse();
     }
@@ -117,7 +117,7 @@ public class MaybeExecuteAsyncTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(20));
         int captured = 0;
 
-        await maybeTask.Execute(v => { captured = v; });
+        await maybeTask.ExecuteAsync(v => { captured = v; });
 
         captured.Should().Be(20);
     }
@@ -128,7 +128,7 @@ public class MaybeExecuteAsyncTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
         int captured = 0;
 
-        await maybeTask.Execute(v => { captured = v; });
+        await maybeTask.ExecuteAsync(v => { captured = v; });
 
         captured.Should().Be(0);
     }
@@ -143,7 +143,7 @@ public class MaybeExecuteAsyncTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(15));
         int captured = 0;
 
-        await maybeTask.Execute(v => { captured = v; return Task.CompletedTask; });
+        await maybeTask.ExecuteAsync(v => { captured = v; return Task.CompletedTask; });
 
         captured.Should().Be(15);
     }
@@ -154,7 +154,7 @@ public class MaybeExecuteAsyncTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
         int captured = 0;
 
-        await maybeTask.Execute(v => { captured = v; return Task.CompletedTask; });
+        await maybeTask.ExecuteAsync(v => { captured = v; return Task.CompletedTask; });
 
         captured.Should().Be(0);
     }
@@ -169,7 +169,7 @@ public class MaybeExecuteAsyncTests
         ValueTask<Maybe<int>> maybeTask = ValueTask.FromResult(Maybe<int>.From(8));
         int captured = 0;
 
-        await maybeTask.Execute(v => { captured = v; return ValueTask.CompletedTask; });
+        await maybeTask.ExecuteAsync(v => { captured = v; return ValueTask.CompletedTask; });
 
         captured.Should().Be(8);
     }
@@ -180,7 +180,7 @@ public class MaybeExecuteAsyncTests
         ValueTask<Maybe<int>> maybeTask = ValueTask.FromResult(Maybe<int>.None);
         int captured = 0;
 
-        await maybeTask.Execute(v => { captured = v; return ValueTask.CompletedTask; });
+        await maybeTask.ExecuteAsync(v => { captured = v; return ValueTask.CompletedTask; });
 
         captured.Should().Be(0);
     }
@@ -195,7 +195,7 @@ public class MaybeExecuteAsyncTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
         bool invoked = false;
 
-        await maybeTask.ExecuteNoValue(() => { invoked = true; });
+        await maybeTask.ExecuteNoValueAsync(() => { invoked = true; });
 
         invoked.Should().BeTrue();
     }
@@ -206,7 +206,7 @@ public class MaybeExecuteAsyncTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(1));
         bool invoked = false;
 
-        await maybeTask.ExecuteNoValue(() => { invoked = true; });
+        await maybeTask.ExecuteNoValueAsync(() => { invoked = true; });
 
         invoked.Should().BeFalse();
     }

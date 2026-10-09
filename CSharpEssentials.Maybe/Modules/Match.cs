@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 
 namespace CSharpEssentials.Maybe;
 
@@ -68,7 +69,8 @@ public readonly partial struct Maybe<T>
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<TE> Match<TE>(
+    [OverloadResolutionPriority(1)]
+    public async Task<TE> MatchAsync<TE>(
            Func<T, CancellationToken, Task<TE>> some,
            Func<CancellationToken, Task<TE>> none,
            CancellationToken cancellationToken = default
@@ -86,7 +88,8 @@ public readonly partial struct Maybe<T>
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task<TE> Match<TE, TContext>(
+    [OverloadResolutionPriority(1)]
+    public async Task<TE> MatchAsync<TE, TContext>(
         Func<T, TContext, CancellationToken, Task<TE>> some,
         Func<TContext, CancellationToken, Task<TE>> none,
         TContext context,
@@ -106,7 +109,8 @@ public readonly partial struct Maybe<T>
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task Match(
+    [OverloadResolutionPriority(1)]
+    public async Task MatchAsync(
         Func<T, CancellationToken, Task> some,
         Func<CancellationToken, Task> none,
         CancellationToken cancellationToken = default
@@ -128,7 +132,8 @@ public readonly partial struct Maybe<T>
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task Match<TContext>(
+    [OverloadResolutionPriority(1)]
+    public async Task MatchAsync<TContext>(
         Func<T, TContext, CancellationToken, Task> some,
         Func<TContext, CancellationToken, Task> none,
         TContext context,
@@ -149,7 +154,7 @@ public readonly partial struct Maybe<T>
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask<TE> Match<TE>(
+    public async ValueTask<TE> MatchAsync<TE>(
           Func<T, CancellationToken, ValueTask<TE>> some,
           Func<CancellationToken, ValueTask<TE>> none,
           CancellationToken cancellationToken = default
@@ -170,7 +175,7 @@ public readonly partial struct Maybe<T>
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask<TE> Match<TE, TContext>(
+    public async ValueTask<TE> MatchAsync<TE, TContext>(
         Func<T, TContext, CancellationToken, ValueTask<TE>> some,
         Func<TContext, CancellationToken, ValueTask<TE>> none,
         TContext context,
@@ -189,7 +194,7 @@ public readonly partial struct Maybe<T>
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask Match(
+    public async ValueTask MatchAsync(
         Func<T, CancellationToken, ValueTask> some,
         Func<CancellationToken, ValueTask> none,
         CancellationToken cancellationToken = default
@@ -210,7 +215,7 @@ public readonly partial struct Maybe<T>
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async ValueTask Match<TContext>(
+    public async ValueTask MatchAsync<TContext>(
         Func<T, TContext, CancellationToken, ValueTask> some,
         Func<TContext, CancellationToken, ValueTask> none,
         TContext context,
@@ -326,7 +331,7 @@ public static partial class MaybeExtensions
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<TE> Match<TE, TKey, TValue>(
+    public static async ValueTask<TE> MatchAsync<TE, TKey, TValue>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, CancellationToken, ValueTask<TE>> some,
         Func<CancellationToken, ValueTask<TE>> none,
@@ -355,7 +360,7 @@ public static partial class MaybeExtensions
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask<TE> Match<TE, TKey, TValue, TContext>(
+    public static async ValueTask<TE> MatchAsync<TE, TKey, TValue, TContext>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, TContext, CancellationToken, ValueTask<TE>> some,
         Func<TContext, CancellationToken, ValueTask<TE>> none,
@@ -383,7 +388,7 @@ public static partial class MaybeExtensions
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask Match<TKey, TValue>(
+    public static async ValueTask MatchAsync<TKey, TValue>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, CancellationToken, ValueTask> some,
         Func<CancellationToken, ValueTask> none,
@@ -414,7 +419,7 @@ public static partial class MaybeExtensions
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async ValueTask Match<TKey, TValue, TContext>(
+    public static async ValueTask MatchAsync<TKey, TValue, TContext>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, TContext, CancellationToken, ValueTask> some,
         Func<TContext, CancellationToken, ValueTask> none,
@@ -448,7 +453,8 @@ public static partial class MaybeExtensions
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<TE> Match<TE, TKey, TValue>(
+    [OverloadResolutionPriority(1)]
+    public static async Task<TE> MatchAsync<TE, TKey, TValue>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, CancellationToken, Task<TE>> some,
         Func<CancellationToken, Task<TE>> none,
@@ -477,7 +483,8 @@ public static partial class MaybeExtensions
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<TE> Match<TE, TKey, TValue, TContext>(
+    [OverloadResolutionPriority(1)]
+    public static async Task<TE> MatchAsync<TE, TKey, TValue, TContext>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, TContext, CancellationToken, Task<TE>> some,
         Func<TContext, CancellationToken, Task<TE>> none,
@@ -505,7 +512,8 @@ public static partial class MaybeExtensions
     /// <param name="none"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Match<TKey, TValue>(
+    [OverloadResolutionPriority(1)]
+    public static async Task MatchAsync<TKey, TValue>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, CancellationToken, Task> some,
         Func<CancellationToken, Task> none,
@@ -536,7 +544,8 @@ public static partial class MaybeExtensions
     /// <param name="context"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task Match<TKey, TValue, TContext>(
+    [OverloadResolutionPriority(1)]
+    public static async Task MatchAsync<TKey, TValue, TContext>(
         this Maybe<KeyValuePair<TKey, TValue>> maybe,
         Func<TKey, TValue, TContext, CancellationToken, Task> some,
         Func<TContext, CancellationToken, Task> none,
