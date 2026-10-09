@@ -65,8 +65,15 @@ public readonly record struct These<TError, TValue>
 
     public These<TError, TResult> FlatMap<TResult>(Func<TValue, These<TError, TResult>> mapper)
     {
-        if (IsRight || IsBoth)
+        if (IsRight)
             return mapper(RightOrDefault!);
+        if (IsBoth)
+        {
+            These<TError, TResult> next = mapper(RightOrDefault!);
+            return next.HasRight
+                ? These<TError, TResult>.Both(LeftOrDefault!, next.RightOrDefault!)
+                : next;
+        }
         return These<TError, TResult>.Left(LeftOrDefault!);
     }
 

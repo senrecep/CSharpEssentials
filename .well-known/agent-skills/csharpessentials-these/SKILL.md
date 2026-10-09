@@ -60,7 +60,7 @@ These<string, int> doubled = these.Map(x => x * 2);
 // MapLeft transforms the error; Right passes through unchanged
 These<string, int> upper = these.MapLeft(e => e.ToUpper());
 
-// FlatMap chains — Both state is unwrapped (loses the error side)
+// FlatMap chains — Both keeps its original error when the mapper returns Right or Both
 These<string, string> chained = these.FlatMap(x => These<string, string>.Right(x.ToString()));
 ```
 
@@ -108,7 +108,7 @@ var (lefts, rights, boths) = items.Partition();
 ## Best Practices
 
 - Prefer `Match()` over checking `IsLeft`/`IsRight`/`IsBoth` separately; it is exhaustive and compiler-safe
-- `FlatMap` loses the Both state; use it only when the warning from the prior step can be discarded
+- `FlatMap` from Both keeps the original error: mapper `Right`/`Both` gives `Both(originalError, newValue)`, mapper `Left` gives that `Left`
 - `ToResultLenient()` is the lenient bridge: Both → success (value wins, error side discarded)
 - `ToResult()` is the strict bridge: Both → failure
 - `default(These<TError, TValue>)` is none of Left, Right or Both; `ToResult()` on it throws `InvalidOperationException`

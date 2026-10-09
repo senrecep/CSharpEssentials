@@ -98,12 +98,45 @@ public class TheseTests
     }
 
     [Fact]
-    public void FlatMap_Should_Chain_When_IsBoth()
+    public void FlatMap_Should_KeepError_When_IsBoth_And_MapperReturnsRight()
     {
         var these = These<string, int>.Both("w", 5)
             .FlatMap(x => These<string, string>.Right(x.ToString(CultureInfo.InvariantCulture)));
 
-        these.IsRight.Should().BeTrue();
+        these.IsBoth.Should().BeTrue();
+        these.GetLeft().Value.Should().Be("w");
+        these.GetRight().Value.Should().Be("5");
+    }
+
+    [Fact]
+    public void FlatMap_Should_ReturnMapperLeft_When_IsBoth_And_MapperReturnsLeft()
+    {
+        var these = These<string, int>.Both("w", 5)
+            .FlatMap(_ => These<string, string>.Left("e2"));
+
+        these.IsLeft.Should().BeTrue();
+        these.GetLeft().Value.Should().Be("e2");
+    }
+
+    [Fact]
+    public void FlatMap_Should_KeepOriginalError_When_IsBoth_And_MapperReturnsBoth()
+    {
+        var these = These<string, int>.Both("w", 5)
+            .FlatMap(x => These<string, string>.Both("e2", x.ToString(CultureInfo.InvariantCulture)));
+
+        these.IsBoth.Should().BeTrue();
+        these.GetLeft().Value.Should().Be("w");
+        these.GetRight().Value.Should().Be("5");
+    }
+
+    [Fact]
+    public void FlatMap_Should_ReturnMapperResult_When_IsRight_And_MapperReturnsBoth()
+    {
+        var these = These<string, int>.Right(5)
+            .FlatMap(x => These<string, string>.Both("e2", x.ToString(CultureInfo.InvariantCulture)));
+
+        these.IsBoth.Should().BeTrue();
+        these.GetLeft().Value.Should().Be("e2");
         these.GetRight().Value.Should().Be("5");
     }
 
