@@ -12,7 +12,7 @@ public class MaybeOrAsyncTests
     {
         var maybe = Maybe<int>.From(5);
 
-        Maybe<int> result = await maybe.Or(() => Task.FromResult(99));
+        Maybe<int> result = await maybe.OrAsync(() => Task.FromResult(99));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(5);
@@ -23,7 +23,7 @@ public class MaybeOrAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Or(() => Task.FromResult(99));
+        Maybe<int> result = await maybe.OrAsync(() => Task.FromResult(99));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);
@@ -38,7 +38,7 @@ public class MaybeOrAsyncTests
     {
         var maybe = Maybe<int>.From(1);
 
-        Maybe<int> result = await maybe.Or(Task.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(Task.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(1);
@@ -49,7 +49,7 @@ public class MaybeOrAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Or(Task.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(Task.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);
@@ -64,7 +64,7 @@ public class MaybeOrAsyncTests
     {
         var maybe = Maybe<int>.From(2);
 
-        Maybe<int> result = await maybe.Or(() => Task.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(() => Task.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(2);
@@ -75,7 +75,7 @@ public class MaybeOrAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Or(() => Task.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(() => Task.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);
@@ -90,7 +90,7 @@ public class MaybeOrAsyncTests
     {
         var maybe = Maybe<int>.From(3);
 
-        Maybe<int> result = await maybe.Or(() => ValueTask.FromResult(99));
+        Maybe<int> result = await maybe.OrAsync(() => ValueTask.FromResult(99));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(3);
@@ -101,7 +101,7 @@ public class MaybeOrAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Or(() => ValueTask.FromResult(99));
+        Maybe<int> result = await maybe.OrAsync(() => ValueTask.FromResult(99));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);
@@ -116,7 +116,7 @@ public class MaybeOrAsyncTests
     {
         var maybe = Maybe<int>.From(4);
 
-        Maybe<int> result = await maybe.Or(ValueTask.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(ValueTask.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(4);
@@ -127,7 +127,7 @@ public class MaybeOrAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Or(ValueTask.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(ValueTask.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);
@@ -142,7 +142,7 @@ public class MaybeOrAsyncTests
     {
         var maybe = Maybe<int>.From(6);
 
-        Maybe<int> result = await maybe.Or(() => ValueTask.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(() => ValueTask.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(6);
@@ -153,7 +153,7 @@ public class MaybeOrAsyncTests
     {
         Maybe<int> maybe = Maybe<int>.None;
 
-        Maybe<int> result = await maybe.Or(() => ValueTask.FromResult(Maybe<int>.From(99)));
+        Maybe<int> result = await maybe.OrAsync(() => ValueTask.FromResult(Maybe<int>.From(99)));
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);
@@ -168,7 +168,7 @@ public class MaybeOrAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(7));
 
-        Maybe<int> result = await maybeTask.Or(99);
+        Maybe<int> result = await maybeTask.OrAsync(99);
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(7);
@@ -179,7 +179,7 @@ public class MaybeOrAsyncTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
 
-        Maybe<int> result = await maybeTask.Or(99);
+        Maybe<int> result = await maybeTask.OrAsync(99);
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be(99);

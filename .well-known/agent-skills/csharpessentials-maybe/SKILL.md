@@ -114,7 +114,7 @@ Result<string> r = maybe.ToMaybeResult(
 
 ## Async Naming
 
-In this release only the async filter was renamed: `Where` with a `Task`/`ValueTask` predicate or source is now `WhereAsync` (`maybe.WhereAsync(async v => ...)`, `task.WhereAsync(v => ...)`). The old unsuffixed `Where` overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `Execute`, `ExecuteNoValue`, `Or`, `Match`, `ToMaybeResult`, `ToMaybeUnitResult` and `Maybe.From(Task)` keep their unsuffixed names for now; a follow-up release renames them. An untyped async predicate binds to the `Task` overload of `WhereAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<T, Task<bool>>` local.
+Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance or key/value `Match` member binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`.
 
 ## Best Practices
 

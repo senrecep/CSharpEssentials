@@ -67,7 +67,7 @@ public class MaybeExtensionsTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.From(42));
 
-        Result<int> result = await maybeTask.ToMaybeResult();
+        Result<int> result = await maybeTask.ToMaybeResultAsync();
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -78,7 +78,7 @@ public class MaybeExtensionsTests
     {
         var maybeTask = new ValueTask<Maybe<int>>(42);
 
-        Result<int> result = await maybeTask.ToMaybeResult();
+        Result<int> result = await maybeTask.ToMaybeResultAsync();
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(42);
@@ -89,7 +89,7 @@ public class MaybeExtensionsTests
     {
         Task<Maybe<int>> maybeTask = Task.FromResult<Maybe<int>>(42);
 
-        Result result = await maybeTask.ToMaybeUnitResult();
+        Result result = await maybeTask.ToMaybeUnitResultAsync();
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -99,7 +99,7 @@ public class MaybeExtensionsTests
     {
         var maybeTask = new ValueTask<Maybe<int>>(42);
 
-        Result result = await maybeTask.ToMaybeUnitResult();
+        Result result = await maybeTask.ToMaybeUnitResultAsync();
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -110,7 +110,7 @@ public class MaybeExtensionsTests
         Task<Maybe<int>> maybeTask = Task.FromResult(Maybe<int>.None);
         Error customError = TestData.Errors.NotFound;
 
-        Result<int> result = await maybeTask.ToMaybeResult(customError);
+        Result<int> result = await maybeTask.ToMaybeResultAsync(customError);
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Should().Be(customError);

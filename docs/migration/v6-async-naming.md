@@ -1,6 +1,6 @@
 # Async naming and the async overload matrix (6.4.0)
 
-`CSharpEssentials.Results` and `CSharpEssentials.Maybe` give every member that returns `Task` or `ValueTask` an `Async` name, and fill the missing `Task`/`ValueTask` handler overloads (issue #108). Existing code keeps compiling; a few call sites bind to a different overload when recompiled, listed under [Behaviour changes](#behaviour-changes).
+`CSharpEssentials.Results` and `CSharpEssentials.Maybe` give every member that returns `Task` or `ValueTask` an `Async` name, and fill the missing `Task`/`ValueTask` handler overloads (issues #108 and #121). Existing code keeps compiling; a few call sites bind to a different overload when recompiled, listed under [Behaviour changes](#behaviour-changes).
 
 ## Renamed members
 
@@ -16,6 +16,11 @@ The old names still compile as `[Obsolete]`, `[EditorBrowsable(Never)]` forwarde
 | `Then` | `ThenAsync` | `Task<Result..>`, `ValueTask<Result..>` |
 | `ThenDo` | `ThenDoAsync` | `Task<Result..>`, `ValueTask<Result..>` |
 | `Where` with a `Task`/`ValueTask` predicate or source | `WhereAsync` | `Maybe<T>`, `Task<Maybe<T>>`, `ValueTask<Maybe<T>>` |
+| `Execute`, `ExecuteNoValue` with a `Task`/`ValueTask` handler or source | `ExecuteAsync`, `ExecuteNoValueAsync` | `Maybe<T>`, `Task<Maybe<T>>`, `ValueTask<Maybe<T>>` |
+| `Or` with a `Task`/`ValueTask` fallback or source | `OrAsync` | `Maybe<T>`, `Task<Maybe<T>>`, `ValueTask<Maybe<T>>` |
+| `Match` with a `Task`/`ValueTask` handler | `MatchAsync` | `Maybe<T>`, `Maybe<KeyValuePair<TKey, TValue>>` |
+| `ToMaybeResult`, `ToMaybeUnitResult` on a `Task`/`ValueTask` source | `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` | `Task<Maybe<T>>`, `ValueTask<Maybe<T>>` |
+| `Maybe.From(Task<T?>)`, `Maybe.From(Func<Task<T?>>)` | `Maybe.FromAsync` | static `Maybe` |
 
 ```csharp
 // Before
@@ -53,7 +58,7 @@ Unchanged:
 
 ## Source compatibility
 
-A project that targets .NET 9 or later and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`. These calls compiled before; they are now ambiguous because each operation gained a `ValueTask` twin and C# 12 ignores the `OverloadResolutionPriority` that picks the `Task` handler. The new instance `MapAsync` and `TapAsync` pairs behave the same way. Projects on .NET 8 (the `netstandard2.1` asset) and projects on C# 13 or later, the default for .NET 9+, are not affected.
+A project that targets .NET 9 or later and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`. These calls compiled before; they are now ambiguous because each operation gained a `ValueTask` twin and C# 12 ignores the `OverloadResolutionPriority` that picks the `Task` handler. The new instance `MapAsync` and `TapAsync` pairs behave the same way, and so do the `Maybe` instance and key/value members with a `Task` and a `ValueTask` twin (`ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`), on every target including .NET 8. Projects on C# 13 or later, the default for .NET 9+, are not affected. Projects on .NET 8 (the `netstandard2.1` asset) are not affected by the `Result` twins, but are affected by the `Maybe` ones.
 
 Fix it with C# 13 or later, or type the handler:
 

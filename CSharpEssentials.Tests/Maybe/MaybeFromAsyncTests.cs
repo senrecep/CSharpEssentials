@@ -62,7 +62,7 @@ public class MaybeFromAsyncTests
     {
         Task<string?> task = Task.FromResult<string?>("world");
 
-        Maybe<string> result = await CSharpEssentials.Maybe.Maybe.From<string>(task);
+        Maybe<string> result = await CSharpEssentials.Maybe.Maybe.FromAsync<string>(task);
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().Be("world");
@@ -73,7 +73,7 @@ public class MaybeFromAsyncTests
     {
         Task<string?> task = Task.FromResult<string?>(null);
 
-        Maybe<string> result = await CSharpEssentials.Maybe.Maybe.From<string>(task);
+        Maybe<string> result = await CSharpEssentials.Maybe.Maybe.FromAsync<string>(task);
 
         result.HasNoValue.Should().BeTrue();
     }
