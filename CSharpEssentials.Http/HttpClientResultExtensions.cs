@@ -50,7 +50,7 @@ public static class HttpClientResultExtensions
         {
             HttpResponseMessage response = await client.PostAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public static Task<Result<T>> PutAsJsonAsResultAsync<T>(
@@ -80,7 +80,7 @@ public static class HttpClientResultExtensions
         {
             HttpResponseMessage response = await client.PutAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public static Task<Result<T>> PatchAsJsonAsResultAsync<T>(
@@ -110,7 +110,7 @@ public static class HttpClientResultExtensions
         {
             HttpResponseMessage response = await client.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result> SendAsResultAsync(
@@ -122,7 +122,7 @@ public static class HttpClientResultExtensions
         {
             HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
-        }).ConfigureAwait(false);
+        }, cancellationToken).ConfigureAwait(false);
     }
 
     public static Task<Result<T>> SendAsResultAsync<T>(
@@ -141,25 +141,11 @@ public static class HttpClientResultExtensions
             cancellationToken);
     }
 
-    private static Error HandleException(Exception ex)
+    private static Error HandleException(Exception ex) => HttpExceptionErrors.ToError(ex);
+
+    private static Task<Result> ExecuteAsync(Func<Task<Result>> action, CancellationToken cancellationToken)
     {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
-        return HttpExceptionErrors.ToError(ex);
-    }
-
-    private static Task<Result> ExecuteAsync(Func<Task<Result>> action)
-    {
-        return Result.TryAsync(
-            action,
-            ex =>
-            {
-                if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-                    throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
-                return HttpExceptionErrors.ToError(ex);
-            });
+        return Result.TryAsync(action, HandleException, cancellationToken);
     }
 
     private static async Task<Result<T>> HandleResponseAsync<T>(HttpResponseMessage response, JsonSerializerOptions? options, CancellationToken cancellationToken)

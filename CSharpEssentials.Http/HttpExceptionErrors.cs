@@ -7,6 +7,7 @@ internal static class HttpExceptionErrors
     internal const string SsrfBlockedCode = "Http.SsrfBlocked";
     internal const string SsrfBlockedDescription = "The outbound request was blocked by the SSRF guard.";
     internal const string ReasonMetadataKey = "reason";
+    internal const string TimeoutCode = "Http.Timeout";
 
     internal static Error ToError(Exception exception)
     {
@@ -17,6 +18,9 @@ internal static class HttpExceptionErrors
                 return Error.Forbidden(SsrfBlockedCode, SsrfBlockedDescription, new ErrorMetadata(ReasonMetadataKey, blocked.Reason));
         }
 #endif
+        if (exception is TaskCanceledException { InnerException: TimeoutException })
+            return Error.Exception(TimeoutCode, exception, ErrorType.Unexpected);
+
         return Error.Exception(exception, ErrorType.Unexpected);
     }
 }
