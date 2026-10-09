@@ -67,7 +67,7 @@ These<int, string> result = These<string, string>.Left("err")
 
 ### FlatMap: Chain These
 
-`FlatMap` sequences operations that return `These`. When chaining from `Both`, the original error is discarded; the new result determines state.
+`FlatMap` sequences operations that return `These`. When chaining from `Both`, the original error is kept: a mapper result of `Right` or `Both` yields `Both(originalError, newValue)` (the mapper's own error in a `Both` is dropped because `TError` has no combine operator), and a mapper result of `Left` yields that `Left`.
 
 ```csharp
 These<string, int> result = These<string, int>.Right(5)

@@ -2112,7 +2112,7 @@ Short-circuits immediately: if `result.IsFailure` before validation runs, the ex
 |--------|-------------|
 | `Map(mapper)` | Transforms the value; passes Left through unchanged |
 | `MapLeft(mapper)` | Transforms the error; passes Right through unchanged |
-| `FlatMap(mapper)` | Chains into a new `These`: only if Right or Both. The mapper's result is returned as is, so the error of a Both is dropped; Left passes through |
+| `FlatMap(mapper)` | Chains into a new `These`: only if Right or Both. From Right the mapper's result is returned as is. From Both a mapper result of Right or Both gives `Both(originalError, newValue)` (the original error is kept, the mapper's own error is dropped), and a mapper result of Left is returned as is; Left passes through |
 | `Tap(action)` | Side-effect on value when Right or Both |
 | `TapLeft(action)` | Side-effect on error when Left or Both |
 | `Match(onLeft, onRight, onBoth)` | Exhaustive pattern match: all three branches required |
