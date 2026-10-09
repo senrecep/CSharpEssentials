@@ -67,7 +67,6 @@ public static class Guider
             };
         }
         span[_encodedLength] = span[_encodedLength + 1] = _equal;
-        Span<byte> bytes = stackalloc byte[_byteCount];
 #if NETSTANDARD2_0
         byte[] decoded;
         try
@@ -80,6 +79,7 @@ public static class Guider
         }
         return new Guid(decoded);
 #else
+        Span<byte> bytes = stackalloc byte[_byteCount];
         if (!Convert.TryFromBase64Chars(span, bytes, out int written) || written != _byteCount)
             throw new FormatException("The value is not a valid URL-safe encoded GUID.");
         return new Guid(bytes);

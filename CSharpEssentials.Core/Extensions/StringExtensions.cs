@@ -49,10 +49,8 @@ public static class StringExtensions
             : CalculateSpanSizeForKebabOrSnakeCase(value);
 
         int bufferLength = value.Length + spanSize;
-        char[]? rented = null;
-        Span<char> newString = bufferLength <= StackAllocThreshold
-            ? stackalloc char[StackAllocThreshold]
-            : (rented = ArrayPool<char>.Shared.Rent(bufferLength));
+        char[]? rented = bufferLength <= StackAllocThreshold ? null : ArrayPool<char>.Shared.Rent(bufferLength);
+        Span<char> newString = rented is null ? stackalloc char[StackAllocThreshold] : rented;
         try
         {
             int newIndex = caseType == CaseType.UnderscoreCamel ? One : Zero;

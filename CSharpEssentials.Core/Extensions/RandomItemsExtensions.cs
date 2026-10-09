@@ -26,12 +26,9 @@ public static class RandomItemsExtensions
             return result;
         }
 
-        bool[]? rented = null;
-        Span<bool> selectedIndices = sourceLength <= StackAllocThreshold
-            ? stackalloc bool[StackAllocThreshold]
-            : (rented = ArrayPool<bool>.Shared.Rent(sourceLength)).AsSpan(0, sourceLength);
-        if (rented is not null)
-            selectedIndices.Clear();
+        bool[]? rented = sourceLength <= StackAllocThreshold ? null : ArrayPool<bool>.Shared.Rent(sourceLength);
+        Span<bool> selectedIndices = rented is null ? stackalloc bool[StackAllocThreshold] : rented.AsSpan(0, sourceLength);
+        selectedIndices.Clear();
 
         try
         {
