@@ -3,6 +3,48 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.4.0](https://github.com/senrecep/CSharpEssentials/compare/v6.3.0...v6.4.0) (2026-10-08)
+
+
+### Added
+
+* **results:** add Async-suffixed names for task-returning members ([18e8b75](https://github.com/senrecep/CSharpEssentials/commit/18e8b75fda126cf3b8cc88b8b93fa26ff352abf0)), closes [#108](https://github.com/senrecep/CSharpEssentials/issues/108)
+* **results:** add sequential TraverseAsync and SequenceAsync ([dc9fbcc](https://github.com/senrecep/CSharpEssentials/commit/dc9fbcc22666e08354927ae857fc556c95685bd2)), closes [#108](https://github.com/senrecep/CSharpEssentials/issues/108)
+* **results:** fill flavour-matched async matrix ([e8f4f49](https://github.com/senrecep/CSharpEssentials/commit/e8f4f49ab413ba9cdf6a5f06e5fe455b6a6d29a3)), closes [#108](https://github.com/senrecep/CSharpEssentials/issues/108)
+
+
+### Fixed
+
+* **maybe:** strict equality with T, cancellation-safe FromTry, reflection-free ToString ([244d7fd](https://github.com/senrecep/CSharpEssentials/commit/244d7fd594fa2f3e3fead8e35ab4a906d3503180)), closes [#109](https://github.com/senrecep/CSharpEssentials/issues/109)
+* **results:** cancel and observe pending tasks in SequenceAsync ([cf5b8da](https://github.com/senrecep/CSharpEssentials/commit/cf5b8da55cb20c74c5b9c0b23770731158ecc7ff)), closes [#108](https://github.com/senrecep/CSharpEssentials/issues/108)
+* **results:** clarify async naming docs and deprecate interface Bind overloads ([ffbcae4](https://github.com/senrecep/CSharpEssentials/commit/ffbcae4c65a457b5ac8917aef862ff9c87e1eacd)), closes [#108](https://github.com/senrecep/CSharpEssentials/issues/108)
+
+
+### Changed
+
+* **results:** add async matrix benchmarks ([7a7a44b](https://github.com/senrecep/CSharpEssentials/commit/7a7a44b3d1c9e95a959c1904e5fafbf6f1c3a840))
+
+
+### Behaviour changes
+
+* **maybe:** equality with a raw value is strict — a non-null value never equals `None` (`Maybe<int>.None == 0` is now `false`); `None == null` is `true` in either operand order, `Some(x) == null` is `false`.
+* **maybe:** `FromTry` no longer swallows `OperationCanceledException`; cancellation propagates to the caller.
+* **maybe:** `ToString()` returns `Some(value)` / `None` (invariant culture, no reflection/JSON).
+* **results:** `TapAsync` with an async lambda on a `Task`/`ValueTask` source result is now awaited (previously ran as `async void`, losing exceptions); a non-async Task-returning lambda on a `Task` source is now awaited too.
+* **results:** `ValueTask<Result<T>>.MapAsync(async …)` now returns `ValueTask<Result<U>>` instead of `ValueTask<Result<Task<U>>>`.
+* **results:** on .NET 9+, a `ValueTask`-returning lambda binds to the new `ValueTask` handler instead of the sync/`Action` overload.
+
+
+### Deprecations
+
+* **results:** unsuffixed task-returning members (`Bind`, `Else`, `FailIf`, `Match*`, `Switch*`, `Then`, `ThenDo`, Maybe `Where`) are `[Obsolete]` forwarders to their `*Async` names, and the Task/ValueTask `Bind` members of `IResult`/`IResult<T>` are obsolete; all are removed in 7.0. Projects with `TreatWarningsAsErrors` will see CS0618 — see `docs/migration/v6-async-naming.md`.
+* **maybe:** `IsNone` is obsolete; use `HasNoValue`.
+
+
+### Source compatibility
+
+* .NET 9+ consumers that pin `LangVersion` 12 get CS0121 for untyped async lambdas on `Match*`, `Switch`, `Ensure`, `TapIf`, `Then`, `ThenDo` and `TraverseAsync` (C# 12 ignores `OverloadResolutionPriority`). Use C# 13+ (the .NET 9 default) or a typed handler. No binary breaks.
+
 ## [6.3.0](https://github.com/senrecep/CSharpEssentials/compare/v6.2.0...v6.3.0) (2026-10-08)
 
 
