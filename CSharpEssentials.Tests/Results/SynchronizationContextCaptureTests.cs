@@ -49,6 +49,10 @@ public sealed class SynchronizationContextCaptureTests
         ["Result.TapAsync(condition, ValueTask handler)"] = () => new ValueTask<Result<int>>(ResultSource(1)).TapAsync(() => true, _ => new ValueTask(Task.Delay(5))).AsTask(),
         ["Result.TapAsync(completed source, condition, Task handler)"] = () => CompletedResult(1).TapAsync(() => true, _ => Task.Delay(5)),
         ["Result.TapAsync(completed source, condition, ValueTask handler)"] = () => new ValueTask<Result<int>>(Result<int>.Success(1)).TapAsync(true, _ => new ValueTask(Task.Delay(5))).AsTask(),
+        ["Result(plain).TapAsync(condition, Task handler)"] = () => PlainSource().TapAsync(true, () => Task.Delay(5)),
+        ["Result(plain).TapAsync(condition, ValueTask handler)"] = () => new ValueTask<Result>(PlainSource()).TapAsync(() => true, () => new ValueTask(Task.Delay(5))).AsTask(),
+        ["Result(plain).TapAsync(completed source, condition, Task handler)"] = () => Task.FromResult(Result.Success()).TapAsync(() => true, () => Task.Delay(5)),
+        ["Result(plain).TapAsync(completed source, condition, ValueTask handler)"] = () => new ValueTask<Result>(Result.Success()).TapAsync(true, () => new ValueTask(Task.Delay(5))).AsTask(),
         ["Result.ThenAsync(completed source)"] = () => CompletedResult(1).ThenAsync(v => ResultSource(v + 1)),
         ["Result.MatchAsync(completed source)"] = () => CompletedResult(1).MatchAsync(v => DelayedValue(v), _ => DelayedValue(0)),
         ["Result.SwitchAsync(completed source)"] = () => CompletedResult(1).SwitchAsync(_ => Task.Delay(5), _ => Task.Delay(5)),
@@ -123,6 +127,12 @@ public sealed class SynchronizationContextCaptureTests
     {
         await Task.Delay(5).ConfigureAwait(false);
         return value;
+    }
+
+    private static async Task<Result> PlainSource()
+    {
+        await Task.Delay(5).ConfigureAwait(false);
+        return Result.Success();
     }
 
     private static async Task<Result<int>> FailureSource()

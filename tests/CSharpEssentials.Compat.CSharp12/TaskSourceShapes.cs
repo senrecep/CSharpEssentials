@@ -47,6 +47,9 @@ public static class TaskSourceShapes
     public static Task<Result<int>> TapSyncWhen(Task<Result<int>> source, bool condition, ICollection<int> seen) =>
         source.TapAsync(condition, seen.Add);
 
+    public static Task<Result<int>> TapTaskWhen(Task<Result<int>> source, bool condition) =>
+        source.TapAsync(condition, _ => Task.CompletedTask);
+
     public static Task<Result> TapResultWhen(Task<Result> source, bool condition) =>
         source.TapAsync(condition, async () => await Task.Delay(1).ConfigureAwait(false));
 

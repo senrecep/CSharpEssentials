@@ -421,7 +421,7 @@ public sealed class AsyncMatrixTests
     {
         Task<Result<int>> source = Task.FromResult<Result<int>>(5);
 
-        Func<Task> act = () => source.TapAsync(_ => Task.FromException(new InvalidOperationException("boom")));
+        Func<Task> act = async () => await source.TapAsync(_ => Task.FromException(new InvalidOperationException("boom")));
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
     }
@@ -431,7 +431,7 @@ public sealed class AsyncMatrixTests
     {
         Task<Result> source = Task.FromResult(Result.Success());
 
-        Func<Task> act = () => source.TapAsync(true, async () =>
+        Func<Task> act = async () => await source.TapAsync(true, async () =>
         {
             await Task.Yield();
             throw new InvalidOperationException("boom");
@@ -445,7 +445,7 @@ public sealed class AsyncMatrixTests
     {
         ValueTask<Result> source = new(Result.Success());
 
-        Func<Task> act = () => source.TapAsync(() => true, async () =>
+        Func<Task> act = async () => await source.TapAsync(() => true, async () =>
         {
             await Task.Yield();
             throw new InvalidOperationException("boom");
@@ -459,7 +459,7 @@ public sealed class AsyncMatrixTests
     {
         Task<Result<int>> source = Task.FromResult<Result<int>>(5);
 
-        Func<Task> act = () => source.TapAsync(() => true, async _ =>
+        Func<Task> act = async () => await source.TapAsync(() => true, async _ =>
         {
             await Task.Yield();
             throw new InvalidOperationException("boom");
@@ -473,7 +473,7 @@ public sealed class AsyncMatrixTests
     {
         ValueTask<Result<int>> source = new(Result<int>.Success(5));
 
-        Func<Task> act = () => source.TapAsync(true, async _ =>
+        Func<Task> act = async () => await source.TapAsync(true, async _ =>
         {
             await Task.Yield();
             throw new InvalidOperationException("boom");
@@ -516,6 +516,54 @@ public sealed class AsyncMatrixTests
             _ => { handlerCalls++; return Task.CompletedTask; });
 
         (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnTaskSourceOfResult()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(true, () => handler.Task, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(() => true, () => new ValueTask(handler.Task), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnTaskSourceOfResultT()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(() => true, _ => handler.Task, cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnValueTaskSourceOfResultT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(true, _ => new ValueTask(handler.Task), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 
 #if NET9_0_OR_GREATER
