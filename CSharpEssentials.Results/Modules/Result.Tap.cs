@@ -199,4 +199,72 @@ public static partial class ResultExtensions
         await action().WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
+
+    /// <summary>
+    /// Awaits the Task result, then runs and awaits an async side effect if it is a success and the condition is true.
+    /// </summary>
+    /// <param name="task">The pending result.</param>
+    /// <param name="condition">Gates the side effect.</param>
+    /// <param name="action">The side effect to run.</param>
+    /// <param name="cancellationToken">Observed while awaiting the source, checked before the function call and observed while awaiting it.</param>
+    /// <returns>The original result.</returns>
+    public static async Task<Result> TapAsync(this Task<Result> task, bool condition, Func<Task> action, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        if (!condition)
+            return result;
+        return await result.TapAsync(action, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Awaits the Task result, then runs and awaits an async side effect if it is a success and the condition returns true.
+    /// </summary>
+    /// <param name="task">The pending result.</param>
+    /// <param name="condition">Gates the side effect. Called only on success.</param>
+    /// <param name="action">The side effect to run.</param>
+    /// <param name="cancellationToken">Observed while awaiting the source, checked before the function call and observed while awaiting it.</param>
+    /// <returns>The original result.</returns>
+    public static async Task<Result> TapAsync(this Task<Result> task, Func<bool> condition, Func<Task> action, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        if (result.IsFailure || !condition())
+            return result;
+        return await result.TapAsync(action, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Awaits the ValueTask result, then runs and awaits an async side effect if it is a success and the condition is true.
+    /// </summary>
+    /// <param name="task">The pending result.</param>
+    /// <param name="condition">Gates the side effect.</param>
+    /// <param name="action">The side effect to run.</param>
+    /// <param name="cancellationToken">Observed while awaiting the source, checked before the function call and observed while awaiting it.</param>
+    /// <returns>The original result.</returns>
+    public static async ValueTask<Result> TapAsync(this ValueTask<Result> task, bool condition, Func<ValueTask> action, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        if (result.IsFailure || !condition)
+            return result;
+        cancellationToken.ThrowIfCancellationRequested();
+        await action().WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    /// <summary>
+    /// Awaits the ValueTask result, then runs and awaits an async side effect if it is a success and the condition returns true.
+    /// </summary>
+    /// <param name="task">The pending result.</param>
+    /// <param name="condition">Gates the side effect. Called only on success.</param>
+    /// <param name="action">The side effect to run.</param>
+    /// <param name="cancellationToken">Observed while awaiting the source, checked before the function call and observed while awaiting it.</param>
+    /// <returns>The original result.</returns>
+    public static async ValueTask<Result> TapAsync(this ValueTask<Result> task, Func<bool> condition, Func<ValueTask> action, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        if (result.IsFailure || !condition())
+            return result;
+        cancellationToken.ThrowIfCancellationRequested();
+        await action().WithCancellation(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
 }

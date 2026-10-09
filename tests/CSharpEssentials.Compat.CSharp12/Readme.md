@@ -12,10 +12,12 @@ It builds for two targets:
 
 These are in `TaskSourceShapes` and `ValueTaskSourceShapes`. On `Task<Result>` and `Task<Result<T>>` sources the untyped async lambda shapes are:
 
-- `MapAsync`, `BindAsync`, `TapAsync`, `EnsureAsync`, `MatchAsync`, `ThenAsync`.
+- `MapAsync`, `BindAsync`, `TapAsync` (also the conditional `TapAsync(condition, action)` since 6.5.0), `EnsureAsync`, `MatchAsync`, `ThenAsync`.
 - `MapErrorAsync`, when the lambda body only compiles for `Error`, for example because it reads `error.Description`.
 
-On `ValueTask<Result>` and `ValueTask<Result<T>>` sources they are `MapAsync`, `BindAsync` and `TapAsync`. Sync lambdas bind on both kinds of source.
+On `ValueTask<Result>` and `ValueTask<Result<T>>` sources they are `MapAsync`, `BindAsync` and `TapAsync`, including the conditional `TapAsync`. Sync lambdas bind on both kinds of source.
+
+An `async` lambda also compiles against the conditional `TapAsync` `Action` overloads, so those shapes alone do not prove the awaited overloads exist. The `TapAsync(condition, ...)` shapes whose handler returns `Task.CompletedTask` or `ValueTask.CompletedTask` cannot bind `Action`. There is one for each source and condition kind (`bool`, `Func<bool>`), so the net8.0 build proves that all eight conditional handlers added in 6.5.0 exist in the `netstandard2.1` asset.
 
 ## Shapes that need C# 13, or a typed handler on net9.0+
 

@@ -137,6 +137,24 @@ public sealed class AsyncMatrixTests
             ["ValueTask<Result<T>>.TapAsync(Func<ValueTask>)"] = new(
                 async p => Describe(await p.VtOfValue().TapAsync(() => p.WorkVt(), p.Token)), "S:5", Both, true),
 
+            // Conditional Tap
+            ["Task<Result>.TapAsync(bool, Func<Task>)"] = new(
+                async p => Describe(await p.TaskOfPlain().TapAsync(true, () => p.Work(), p.Token)), "S", Both, true),
+            ["Task<Result>.TapAsync(Func<bool>, Func<Task>)"] = new(
+                async p => Describe(await p.TaskOfPlain().TapAsync(() => true, () => p.Work(), p.Token)), "S", Both, true),
+            ["ValueTask<Result>.TapAsync(bool, Func<ValueTask>)"] = new(
+                async p => Describe(await p.VtOfPlain().TapAsync(true, () => p.WorkVt(), p.Token)), "S", Both, true),
+            ["ValueTask<Result>.TapAsync(Func<bool>, Func<ValueTask>)"] = new(
+                async p => Describe(await p.VtOfPlain().TapAsync(() => true, () => p.WorkVt(), p.Token)), "S", Both, true),
+            ["Task<Result<T>>.TapAsync(bool, Func<T, Task>)"] = new(
+                async p => Describe(await p.TaskOfValue().TapAsync(true, _ => p.Work(), p.Token)), "S:5", Both, true),
+            ["Task<Result<T>>.TapAsync(Func<bool>, Func<T, Task>)"] = new(
+                async p => Describe(await p.TaskOfValue().TapAsync(() => true, _ => p.Work(), p.Token)), "S:5", Both, true),
+            ["ValueTask<Result<T>>.TapAsync(bool, Func<T, ValueTask>)"] = new(
+                async p => Describe(await p.VtOfValue().TapAsync(true, _ => p.WorkVt(), p.Token)), "S:5", Both, true),
+            ["ValueTask<Result<T>>.TapAsync(Func<bool>, Func<T, ValueTask>)"] = new(
+                async p => Describe(await p.VtOfValue().TapAsync(() => true, _ => p.WorkVt(), p.Token)), "S:5", Both, true),
+
             // Ensure with a sync predicate
             ["Task<Result<T>>.EnsureAsync(Func<T, bool>, Error)"] = new(
                 async p => Describe(await p.TaskOfValue().EnsureAsync(v => p.Check(v), Rejected, p.Token)), "S:5", Both, false),
@@ -304,7 +322,7 @@ public sealed class AsyncMatrixTests
     [Fact]
     public void Cells_Should_CoverEveryNewOverload_When_MatrixIsBuilt()
     {
-        int expected = 17;
+        int expected = 25;
 #if NET9_0_OR_GREATER
         expected += 38;
 #endif
@@ -403,9 +421,191 @@ public sealed class AsyncMatrixTests
     {
         Task<Result<int>> source = Task.FromResult<Result<int>>(5);
 
-        Func<Task> act = () => source.TapAsync(_ => Task.FromException(new InvalidOperationException("boom")));
+        Func<Task> act = async () => await source.TapAsync(_ => Task.FromException(new InvalidOperationException("boom")));
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_PropagateAsyncHandlerException_When_TaskSourceOfResult()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+
+        Func<Task> act = async () => await source.TapAsync(true, async () =>
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("boom");
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_PropagateAsyncHandlerException_When_ValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+
+        Func<Task> act = async () => await source.TapAsync(() => true, async () =>
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("boom");
+        }).AsTask();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_PropagateAsyncHandlerException_When_TaskSourceOfResultT()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+
+        Func<Task> act = async () => await source.TapAsync(() => true, async _ =>
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("boom");
+        });
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_PropagateAsyncHandlerException_When_ValueTaskSourceOfResultT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+
+        Func<Task> act = async () => await source.TapAsync(true, async _ =>
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("boom");
+        }).AsTask();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_SkipHandler_When_TaskSourceConditionIsFalse()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        int calls = 0;
+
+        Result result = await source.TapAsync(false, () => { calls++; return Task.CompletedTask; });
+
+        (result.IsSuccess, calls).Should().Be((true, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_SkipHandler_When_ValueTaskSourceFuncConditionIsFalse()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+        int calls = 0;
+
+        Result<int> result = await source.TapAsync(() => false, _ => { calls++; return default(ValueTask); });
+
+        (result.Value, calls).Should().Be((5, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_TaskSourceOfResultTFails()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(First);
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result<int> result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            _ => { handlerCalls++; return Task.CompletedTask; });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_TaskSourceOfResultFails()
+    {
+        Task<Result> source = Task.FromResult(Result.Failure(First));
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            () => { handlerCalls++; return Task.CompletedTask; });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_ValueTaskSourceOfResultFails()
+    {
+        ValueTask<Result> source = new(Result.Failure(First));
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            () => { handlerCalls++; return default(ValueTask); });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_ValueTaskSourceOfResultTFails()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Failure(First));
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result<int> result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            _ => { handlerCalls++; return default(ValueTask); });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnTaskSourceOfResult()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(true, () => handler.Task, cts.Token);
+
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(() => true, () => new ValueTask(handler.Task), cts.Token);
+
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnTaskSourceOfResultT()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(() => true, _ => handler.Task, cts.Token);
+
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnValueTaskSourceOfResultT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+        var handler = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(50));
+
+        Func<Task> act = async () => await source.TapAsync(true, _ => new ValueTask(handler.Task), cts.Token);
+
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
     }
 
 #if NET9_0_OR_GREATER
