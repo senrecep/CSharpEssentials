@@ -20,9 +20,6 @@ public static class HttpContentExtensions
             },
             ex =>
             {
-                if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-                    throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
                 if (ex is JsonException)
                     return Error.Exception(ex, ErrorType.Validation);
 
@@ -46,9 +43,6 @@ public static class HttpContentExtensions
             },
             ex =>
             {
-                if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-                    throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
                 if (ex is JsonException)
                     return Error.Exception(ex, ErrorType.Validation);
 

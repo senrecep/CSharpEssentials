@@ -163,13 +163,7 @@ public static class HttpClientRedirectExtensions
         return clone;
     }
 
-    private static Error HandleException(Exception ex)
-    {
-        if (ex is OperationCanceledException oce && oce.CancellationToken.IsCancellationRequested)
-            throw new OperationCanceledException(oce.Message, oce, oce.CancellationToken);
-
-        return HttpExceptionErrors.ToError(ex);
-    }
+    private static Error HandleException(Exception ex) => HttpExceptionErrors.ToError(ex);
 
     private static Result HandleResponse(HttpResponseMessage response)
     {
