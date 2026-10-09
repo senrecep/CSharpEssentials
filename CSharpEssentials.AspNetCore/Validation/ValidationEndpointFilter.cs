@@ -28,7 +28,7 @@ public sealed class ValidationEndpointFilter<T> : IEndpointFilter
 
         T[] arguments = [.. context.Arguments.OfType<T>()];
         if (arguments.Length == 0)
-            return await next(context);
+            return await next(context).ConfigureAwait(false);
 
         IValidator<T>[] validators = [.. context.HttpContext.RequestServices
             .GetServices<IValidator<T>>()
@@ -42,14 +42,14 @@ public sealed class ValidationEndpointFilter<T> : IEndpointFilter
         {
             foreach (IValidator<T> validator in validators)
             {
-                Result<T> result = await validator.ValidateAsync(argument, context.HttpContext.RequestAborted);
+                Result<T> result = await validator.ValidateAsync(argument, context.HttpContext.RequestAborted).ConfigureAwait(false);
                 if (result.IsFailure)
                     (errors ??= []).AddRange(result.Errors);
             }
         }
 
         return errors is null
-            ? await next(context)
+            ? await next(context).ConfigureAwait(false)
             : errors.Distinct().ToArray().ToProblemResult();
     }
 }

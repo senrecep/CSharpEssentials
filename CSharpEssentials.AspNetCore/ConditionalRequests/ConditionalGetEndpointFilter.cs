@@ -17,7 +17,7 @@ internal static class ConditionalGetEndpointFilter
 
     private static async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext invocation, EndpointFilterDelegate next)
     {
-        object? result = await next(invocation);
+        object? result = await next(invocation).ConfigureAwait(false);
         HttpContext httpContext = invocation.HttpContext;
         if (!ConditionalGet.IsGetOrHead(httpContext.Request.Method))
             return result;

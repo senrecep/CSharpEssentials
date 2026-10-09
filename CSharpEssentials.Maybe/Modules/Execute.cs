@@ -17,7 +17,7 @@ public readonly partial struct Maybe<T>
         if (HasNoValue)
             return;
 
-        await action(Value).WithCancellation(cancellationToken);
+        await action(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -31,7 +31,7 @@ public readonly partial struct Maybe<T>
         if (HasNoValue)
             return;
 
-        await valueTask(Value).WithCancellation(cancellationToken);
+        await valueTask(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public readonly partial struct Maybe<T>
         if (HasValue)
             return;
 
-        await action().WithCancellation(cancellationToken);
+        await action().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
 
@@ -74,7 +74,7 @@ public readonly partial struct Maybe<T>
         if (HasValue)
             return;
 
-        await valueTask().WithCancellation(cancellationToken);
+        await valueTask().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteAsync<T>(this Task<Maybe<T>> maybeTask, Action<T> action, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return;
@@ -123,12 +123,12 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, Task> asyncAction, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return;
 
-        await asyncAction(maybe.Value).WithCancellation(cancellationToken);
+        await asyncAction(maybe.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -141,7 +141,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteAsync<T>(this ValueTask<Maybe<T>> maybeTask, Action<T> action, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return;
@@ -161,12 +161,12 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask> valueTask, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return;
 
-        await valueTask(maybe.Value);
+        await valueTask(maybe.Value).ConfigureAwait(false);
     }
 
 
@@ -180,7 +180,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteNoValueAsync<T>(this Task<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasValue)
             return;
@@ -198,12 +198,12 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteNoValueAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task> asyncAction, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasValue)
             return;
 
-        await asyncAction().WithCancellation(cancellationToken);
+        await asyncAction().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -216,7 +216,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteNoValueAsync<T>(this ValueTask<Maybe<T>> maybeTask, Action action, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasValue)
             return;
@@ -235,12 +235,12 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task ExecuteNoValueAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask> valueTask, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasValue)
             return;
 
-        await valueTask().WithCancellation(cancellationToken);
+        await valueTask().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
 }

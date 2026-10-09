@@ -33,10 +33,10 @@ public readonly partial record struct Result
     {
         if (IsFailure)
         {
-            await onFailure(Errors).WithCancellation(cancellationToken);
+            await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
             return;
         }
-        await onSuccess().WithCancellation(cancellationToken);
+        await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -67,11 +67,11 @@ public readonly partial record struct Result
     {
         if (IsFailure)
         {
-            await onFirstError(FirstError).WithCancellation(cancellationToken);
+            await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        await onSuccess().WithCancellation(cancellationToken);
+        await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -102,11 +102,11 @@ public readonly partial record struct Result
     {
         if (IsFailure)
         {
-            await onLastError(LastError).WithCancellation(cancellationToken);
+            await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false);
             return;
         }
 
-        await onSuccess().WithCancellation(cancellationToken);
+        await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER
@@ -170,7 +170,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async Task SwitchAsync(this Task<Result> task, Action onSuccess, Action<Error[]> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         result.Switch(onSuccess, onFailure);
     }
 
@@ -179,8 +179,8 @@ public static partial class ResultExtensions
     /// </summary>
     public static async Task SwitchAsync(this Task<Result> task, Func<Task> onSuccess, Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await result.SwitchAsync(onSuccess, onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async Task SwitchFirstAsync(this Task<Result> task, Action onSuccess, Action<Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         result.SwitchFirst(onSuccess, onFailure);
     }
 
@@ -197,8 +197,8 @@ public static partial class ResultExtensions
     /// </summary>
     public static async Task SwitchFirstAsync(this Task<Result> task, Func<Task> onSuccess, Func<Error, Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await result.SwitchFirstAsync(onSuccess, onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchFirstAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -206,7 +206,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async Task SwitchLastAsync(this Task<Result> task, Action onSuccess, Action<Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         result.SwitchLast(onSuccess, onFailure);
     }
 
@@ -215,8 +215,8 @@ public static partial class ResultExtensions
     /// </summary>
     public static async Task SwitchLastAsync(this Task<Result> task, Func<Task> onSuccess, Func<Error, Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await result.SwitchLastAsync(onSuccess, onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchLastAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -224,7 +224,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask SwitchAsync(this ValueTask<Result> task, Action onSuccess, Action<Error[]> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         result.Switch(onSuccess, onFailure);
     }
 
@@ -234,8 +234,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask SwitchAsync(this ValueTask<Result> task, Func<Task> onSuccess, Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await result.SwitchAsync(onSuccess, onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -243,7 +243,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask SwitchFirstAsync(this ValueTask<Result> task, Action onSuccess, Action<Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         result.SwitchFirst(onSuccess, onFailure);
     }
 
@@ -253,8 +253,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask SwitchFirstAsync(this ValueTask<Result> task, Func<Task> onSuccess, Func<Error, Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await result.SwitchFirstAsync(onSuccess, onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchFirstAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -262,7 +262,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask SwitchLastAsync(this ValueTask<Result> task, Action onSuccess, Action<Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         result.SwitchLast(onSuccess, onFailure);
     }
 
@@ -272,8 +272,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask SwitchLastAsync(this ValueTask<Result> task, Func<Task> onSuccess, Func<Error, Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        await result.SwitchLastAsync(onSuccess, onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchLastAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

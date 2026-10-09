@@ -45,7 +45,7 @@ public readonly partial record struct Result
         if (IsFailure)
             return this;
 
-        return await onSuccess().WithCancellation(cancellationToken);
+        return await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ public readonly partial record struct Result
         if (IsFailure)
             return this;
 
-        await action().WithCancellation(cancellationToken);
+        await action().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -107,7 +107,7 @@ public static partial class ResultExtensions
     /// <returns>A new <see cref="Result"/> based on the provided function or the current failure result.</returns>
     public static async Task<Result> ThenAsync(this Task<Result> task, Func<Result> onSuccess, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Then(onSuccess);
     }
 
@@ -121,7 +121,7 @@ public static partial class ResultExtensions
     /// <returns>The current <see cref="Result"/>.</returns>
     public static async Task<Result> ThenDoAsync(this Task<Result> task, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.ThenDo(action);
     }
 
@@ -135,9 +135,9 @@ public static partial class ResultExtensions
     /// <returns>A new <see cref="Result"/> based on the provided function or the current failure result.</returns>
     public static async Task<Result> ThenAsync(this Task<Result> task, Func<Task<Result>> onSuccess, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
 
-        return await result.ThenAsync(onSuccess, cancellationToken);
+        return await result.ThenAsync(onSuccess, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -150,9 +150,9 @@ public static partial class ResultExtensions
     /// <returns>The current <see cref="Result"/>.</returns>
     public static async Task<Result> ThenDoAsync(this Task<Result> task, Func<Task> action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
 
-        return await result.ThenDoAsync(action, cancellationToken);
+        return await result.ThenDoAsync(action, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -160,7 +160,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask<Result> ThenAsync(this ValueTask<Result> task, Func<Result> onSuccess, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Then(onSuccess);
     }
 
@@ -169,7 +169,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask<Result> ThenDoAsync(this ValueTask<Result> task, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.ThenDo(action);
     }
 
@@ -179,8 +179,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ThenAsync(this ValueTask<Result> task, Func<Task<Result>> onSuccess, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ThenAsync(onSuccess, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ThenAsync(onSuccess, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -189,8 +189,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ThenDoAsync(this ValueTask<Result> task, Func<Task> action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ThenDoAsync(action, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ThenDoAsync(action, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

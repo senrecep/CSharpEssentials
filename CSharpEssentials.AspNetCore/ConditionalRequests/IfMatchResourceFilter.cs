@@ -23,18 +23,18 @@ internal sealed class IfMatchResourceFilter : IAsyncResourceFilter
         HttpContext httpContext = context.HttpContext;
         if (Select(context.ActionDescriptor, httpContext) is not { } settings)
         {
-            await next();
+            await next().ConfigureAwait(false);
             return;
         }
 
         ProblemDetails? problem = await IfMatchEvaluator.EvaluateAsync(
             httpContext,
             settings,
-            nameof(IfMatchAttribute));
+            nameof(IfMatchAttribute)).ConfigureAwait(false);
         if (problem is null)
-            await next();
+            await next().ConfigureAwait(false);
         else
-            await IfMatchEvaluator.WriteAsync(httpContext, problem);
+            await IfMatchEvaluator.WriteAsync(httpContext, problem).ConfigureAwait(false);
     }
 
     private IfMatchMetadata? Select(ActionDescriptor action, HttpContext httpContext)

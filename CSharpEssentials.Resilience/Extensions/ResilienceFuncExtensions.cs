@@ -9,7 +9,7 @@ public static class ResilienceFuncExtensions
         CancellationToken cancellationToken = default)
     {
         return await ResiliencePolicy.Create()
-            .ExecuteAsync(async _ => await func(), cancellationToken);
+            .ExecuteAsync(async _ => await func().ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> ExecuteAsync<T>(
@@ -17,7 +17,7 @@ public static class ResilienceFuncExtensions
         CancellationToken cancellationToken = default)
     {
         return await ResiliencePolicy<T>.Create()
-            .ExecuteAsync(async _ => await func(), cancellationToken);
+            .ExecuteAsync(async _ => await func().ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> ExecuteAsync<T>(
@@ -25,7 +25,7 @@ public static class ResilienceFuncExtensions
         CancellationToken cancellationToken = default)
     {
         return await ResiliencePolicy<T>.Create()
-            .ExecuteAsync(async _ => await func(), cancellationToken);
+            .ExecuteAsync(async _ => await func().ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result> ExecuteAsync(
@@ -33,7 +33,7 @@ public static class ResilienceFuncExtensions
         CancellationToken cancellationToken = default)
     {
         return await ResiliencePolicy.Create()
-            .ExecuteAsync(func, cancellationToken);
+            .ExecuteAsync(func, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> ExecuteAsync<T>(
@@ -41,7 +41,7 @@ public static class ResilienceFuncExtensions
         CancellationToken cancellationToken = default)
     {
         return await ResiliencePolicy<T>.Create()
-            .ExecuteAsync(func, cancellationToken);
+            .ExecuteAsync(func, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> ExecuteAsync<T>(
@@ -49,6 +49,6 @@ public static class ResilienceFuncExtensions
         CancellationToken cancellationToken = default)
     {
         return await ResiliencePolicy<T>.Create()
-            .ExecuteAsync(func, cancellationToken);
+            .ExecuteAsync(func, cancellationToken).ConfigureAwait(false);
     }
 }

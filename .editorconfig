@@ -466,3 +466,7 @@ dotnet_diagnostic.S1133.severity = none
 # Tests of the obsolete unsuffixed async names.
 [CSharpEssentials.Tests/{Results,Maybe}/{AsyncNamingForwarderTests,MaybeAsyncNamingForwarderTests}.cs]
 dotnet_diagnostic.S1133.severity = none
+
+# Library code must not capture the caller's SynchronizationContext (issue #123). Tests, examples and benchmarks stay exempt.
+[CSharpEssentials.{Any,AspNetCore,AspNetCore.OpenApi,AspNetCore.Swashbuckle,Clone,Core,DependencyInjection,Endpoints,Entity,EntityFrameworkCore,Enums,Errors,GcpSecretManager,Http,Json,Maybe,Mediator,RequestResponseLogging,Resilience,Results,Rules,These,Time,Validation}/**.cs]
+dotnet_diagnostic.CA2007.severity = error

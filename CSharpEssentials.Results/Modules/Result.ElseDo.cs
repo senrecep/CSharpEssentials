@@ -24,7 +24,7 @@ public readonly partial record struct Result
     public async Task<Result> ElseDoAsync(Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFailure(Errors).WithCancellation(cancellationToken);
+            await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
@@ -32,7 +32,7 @@ public readonly partial record struct Result
     public async Task<Result> ElseDoFirstAsync(Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFirstFailure(FirstError).WithCancellation(cancellationToken);
+            await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
@@ -57,28 +57,28 @@ public static partial class ResultExtensions
 {
     public static async Task<Result> ElseDoAsync(this Task<Result> task, Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseDoAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseDoAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result> ElseDoFirstAsync(this Task<Result> task, Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseDoFirstAsync(onFirstFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseDoFirstAsync(onFirstFailure, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ElseDoAsync(this ValueTask<Result> task, Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseDoAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseDoAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ElseDoFirstAsync(this ValueTask<Result> task, Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseDoFirstAsync(onFirstFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseDoFirstAsync(onFirstFailure, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

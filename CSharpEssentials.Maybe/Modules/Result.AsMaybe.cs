@@ -14,13 +14,13 @@ public static partial class MaybeExtensions
 
     public static async Task<Maybe<TValue>> AsMaybeAsync<TValue>(this Task<Result<TValue>> task, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.AsMaybe();
     }
 
     public static async ValueTask<Maybe<TValue>> AsMaybeAsync<TValue>(this ValueTask<Result<TValue>> task, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.AsMaybe();
     }
 }

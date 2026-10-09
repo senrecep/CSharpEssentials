@@ -68,7 +68,7 @@ public readonly partial struct ResiliencePolicy
         ResiliencePipeline pipeline = GetPipeline();
         try
         {
-            await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            await pipeline.ExecuteAsync(async token => await action(token).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
             return Result.Success();
         }
         catch (Exception ex)
@@ -84,7 +84,7 @@ public readonly partial struct ResiliencePolicy
         ResiliencePipeline pipeline = GetPipeline();
         try
         {
-            return await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            return await pipeline.ExecuteAsync(async token => await action(token).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -100,7 +100,7 @@ public readonly partial struct ResiliencePolicy
         Result<T> result;
         try
         {
-            result = await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            result = await pipeline.ExecuteAsync(async token => await action(token).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -118,7 +118,7 @@ public readonly partial struct ResiliencePolicy
         Result result;
         try
         {
-            result = await pipeline.ExecuteAsync(async token => await action(token), cancellationToken);
+            result = await pipeline.ExecuteAsync(async token => await action(token).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {

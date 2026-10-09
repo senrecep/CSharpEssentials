@@ -13,9 +13,9 @@ public static class HttpContentExtensions
             async () =>
             {
 #if NETSTANDARD2_1
-                return await content.ReadAsStringAsync();
+                return await content.ReadAsStringAsync().ConfigureAwait(false);
 #else
-                return await content.ReadAsStringAsync(cancellationToken);
+                return await content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 #endif
             },
             ex =>
@@ -39,7 +39,7 @@ public static class HttpContentExtensions
         return Result.TryAsync<T>(
             async () =>
             {
-                T? value = await content.ReadFromJsonAsync<T>(options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken);
+                T? value = await content.ReadFromJsonAsync<T>(options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
                 if (value is null)
                     return Error.NotFound(description: "Response body was empty or could not be deserialized.");
                 return value;

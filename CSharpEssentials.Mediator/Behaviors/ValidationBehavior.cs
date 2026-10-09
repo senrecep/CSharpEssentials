@@ -49,17 +49,17 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
             : _defaultMode;
 
         if (mode == ValidationMode.Off || _orderedGroups.Length == 0)
-            return await next(message, cancellationToken);
+            return await next(message, cancellationToken).ConfigureAwait(false);
 
-        Error[]? errors = await ValidateAsync(message, cancellationToken);
+        Error[]? errors = await ValidateAsync(message, cancellationToken).ConfigureAwait(false);
         if (errors is null)
-            return await next(message, cancellationToken);
+            return await next(message, cancellationToken).ConfigureAwait(false);
 
         if (_observers.Length > 0)
-            await NotifyObserversAsync(message, errors, mode, cancellationToken);
+            await NotifyObserversAsync(message, errors, mode, cancellationToken).ConfigureAwait(false);
 
         if (mode == ValidationMode.LogOnly)
-            return await next(message, cancellationToken);
+            return await next(message, cancellationToken).ConfigureAwait(false);
 
         return BuildFailureResponse(errors);
     }
@@ -72,7 +72,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         // Single validator fast path — skips group iteration and List allocation entirely.
         if (_orderedGroups is [{ Length: 1 } onlyGroup])
         {
-            Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken);
+            Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken).ConfigureAwait(false);
             return singleResult.IsFailure ? [.. singleResult.Errors] : null;
         }
 
@@ -84,7 +84,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
 
         foreach (IValidator<TRequest>[] group in _orderedGroups)
         {
-            Result<TRequest>[] groupResults = await RunGroupAsync(group, message, cancellationToken);
+            Result<TRequest>[] groupResults = await RunGroupAsync(group, message, cancellationToken).ConfigureAwait(false);
 
             foreach (Result<TRequest> r in groupResults)
             {
@@ -111,7 +111,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     {
         ValidationFailureContext failure = new(typeof(TRequest), message, Array.AsReadOnly(errors), mode);
         foreach (IValidationFailureObserver observer in _observers)
-            await observer.OnValidationFailedAsync(failure, cancellationToken);
+            await observer.OnValidationFailedAsync(failure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

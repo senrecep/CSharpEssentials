@@ -46,7 +46,7 @@ public sealed partial class GlobalExceptionHandler(
                 Exception = exception,
                 ProblemDetails = problemDetails,
             },
-            problemDetailsService);
+            problemDetailsService).ConfigureAwait(false);
         return true;
     }
 

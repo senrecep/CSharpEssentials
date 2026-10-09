@@ -38,7 +38,7 @@ internal sealed class ResponseCaptureStream(Stream inner, long limit) : Stream
 
     public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
-        await inner.WriteAsync(buffer, cancellationToken);
+        await inner.WriteAsync(buffer, cancellationToken).ConfigureAwait(false);
         Capture(buffer.Span);
     }
 

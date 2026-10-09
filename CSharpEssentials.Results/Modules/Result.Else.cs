@@ -61,7 +61,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        Error result = await onFailure(Errors).WithCancellation(cancellationToken);
+        Error result = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
     /// <summary>
@@ -76,7 +76,7 @@ public readonly partial record struct Result
         if (IsSuccess)
             return this;
 
-        IEnumerable<Error> errors = await onFailure(Errors).WithCancellation(cancellationToken);
+        IEnumerable<Error> errors = await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return errors.ToResult();
     }
 
@@ -91,7 +91,7 @@ public readonly partial record struct Result
     {
         if (IsSuccess)
             return this;
-        Error result = await error.WithCancellation(cancellationToken);
+        Error result = await error.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result;
     }
 
@@ -154,7 +154,7 @@ public static partial class ResultExtensions
     /// </returns>
     public static async Task<Result> ElseAsync(this Task<Result> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Else(onFailure);
     }
 
@@ -169,7 +169,7 @@ public static partial class ResultExtensions
     /// </returns>
     public static async Task<Result> ElseAsync(this Task<Result> task, Func<Error[], IEnumerable<Error>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Else(onFailure);
     }
 
@@ -184,7 +184,7 @@ public static partial class ResultExtensions
     /// </returns>
     public static async Task<Result> ElseAsync(this Task<Result> task, Error error, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Else(error);
     }
 
@@ -199,8 +199,8 @@ public static partial class ResultExtensions
     /// </returns>
     public static async Task<Result> ElseAsync(this Task<Result> task, Func<Error[], Task<Error>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -214,8 +214,8 @@ public static partial class ResultExtensions
     /// </returns>
     public static async Task<Result> ElseAsync(this Task<Result> task, Func<Error[], Task<IEnumerable<Error>>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -229,8 +229,8 @@ public static partial class ResultExtensions
     /// </returns>
     public static async Task<Result> ElseAsync(this Task<Result> task, Task<Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -238,7 +238,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Func<Error[], Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Else(onFailure);
     }
 
@@ -247,7 +247,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Func<Error[], IEnumerable<Error>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Else(onFailure);
     }
 
@@ -256,7 +256,7 @@ public static partial class ResultExtensions
     /// </summary>
     public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Error error, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Else(error);
     }
 
@@ -266,8 +266,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Func<Error[], Task<Error>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -276,8 +276,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Func<Error[], Task<IEnumerable<Error>>> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -286,8 +286,8 @@ public static partial class ResultExtensions
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result> ElseAsync(this ValueTask<Result> task, Task<Error> onFailure, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
-        return await result.ElseAsync(onFailure, cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.ElseAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

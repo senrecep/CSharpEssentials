@@ -65,7 +65,7 @@ public static class KeysetPaginationExtensions
         bool hasBefore = !string.IsNullOrEmpty(request.Before);
         int limit = Limit(request, options);
 
-        List<T> items = await page.Value.ToListAsync(cancellationToken);
+        List<T> items = await page.Value.ToListAsync(cancellationToken).ConfigureAwait(false);
         bool hasMore = items.Count > limit;
         if (hasMore)
             items.RemoveAt(limit);

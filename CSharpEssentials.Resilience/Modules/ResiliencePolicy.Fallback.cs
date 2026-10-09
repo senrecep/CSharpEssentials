@@ -27,7 +27,7 @@ public readonly partial struct ResiliencePolicy<T>
                     args.Context.CancellationToken.ThrowIfCancellationRequested();
                     try
                     {
-                        T fallbackValue = await fallbackAsync(args.Context.CancellationToken);
+                        T fallbackValue = await fallbackAsync(args.Context.CancellationToken).ConfigureAwait(false);
                         return Outcome.FromResult(Result<T>.Success(fallbackValue));
                     }
                     catch (Exception ex) when (!ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken))
@@ -66,7 +66,7 @@ public readonly partial struct ResiliencePolicy<T>
                     args.Context.CancellationToken.ThrowIfCancellationRequested();
                     try
                     {
-                        Result<T> fallbackResult = await fallbackAsync(args.Context.CancellationToken);
+                        Result<T> fallbackResult = await fallbackAsync(args.Context.CancellationToken).ConfigureAwait(false);
                         return Outcome.FromResult(fallbackResult);
                     }
                     catch (Exception ex) when (!ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken))

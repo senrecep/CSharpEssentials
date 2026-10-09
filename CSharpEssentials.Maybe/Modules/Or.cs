@@ -40,7 +40,7 @@ public readonly partial struct Maybe<T>
     public async Task<Maybe<T>> OrAsync(Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await fallbackOperation().WithCancellation(cancellationToken);
+            return await fallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -55,7 +55,7 @@ public readonly partial struct Maybe<T>
     public async Task<Maybe<T>> OrAsync(Task<Maybe<T>> fallback, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await fallback.WithCancellation(cancellationToken);
+            return await fallback.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -70,7 +70,7 @@ public readonly partial struct Maybe<T>
     public async Task<Maybe<T>> OrAsync(Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await fallbackOperation().WithCancellation(cancellationToken);
+            return await fallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -84,7 +84,7 @@ public readonly partial struct Maybe<T>
     public async ValueTask<Maybe<T>> OrAsync(Func<ValueTask<T>> valueTaskFallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await valueTaskFallbackOperation().WithCancellation(cancellationToken);
+            return await valueTaskFallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -98,7 +98,7 @@ public readonly partial struct Maybe<T>
     public async ValueTask<Maybe<T>> OrAsync(ValueTask<Maybe<T>> valueTaskFallback, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await valueTaskFallback.WithCancellation(cancellationToken);
+            return await valueTaskFallback.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -112,7 +112,7 @@ public readonly partial struct Maybe<T>
     public async ValueTask<Maybe<T>> OrAsync(Func<ValueTask<Maybe<T>>> valueTaskFallbackOperation, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await valueTaskFallbackOperation().WithCancellation(cancellationToken);
+            return await valueTaskFallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return this;
     }
@@ -132,7 +132,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> OrElseAsync(Func<Task<Maybe<T>>> factory, CancellationToken cancellationToken = default)
-        => await OrAsync(factory, cancellationToken);
+        => await OrAsync(factory, cancellationToken).ConfigureAwait(false);
 
 }
 
@@ -149,7 +149,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, T fallback, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallback;
@@ -167,7 +167,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<T> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallbackOperation();
@@ -185,7 +185,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Maybe<T> fallback, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallback;
@@ -204,11 +204,11 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Task<T> fallback, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
         {
-            T? value = await fallback.WithCancellation(cancellationToken);
+            T? value = await fallback.WithCancellation(cancellationToken).ConfigureAwait(false);
             return value;
         }
 
@@ -225,11 +225,11 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
         {
-            T? value = await fallbackOperation().WithCancellation(cancellationToken);
+            T? value = await fallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
             return value;
         }
@@ -247,7 +247,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallbackOperation();
@@ -265,10 +265,10 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> OrAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
-            return await fallbackOperation().WithCancellation(cancellationToken);
+            return await fallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return maybe;
     }
@@ -283,7 +283,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, T fallback, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallback;
@@ -301,7 +301,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallbackOperation();
@@ -319,7 +319,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Maybe<T> fallback, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallback;
@@ -337,7 +337,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<Maybe<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
             return fallbackOperation();
@@ -355,11 +355,11 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, ValueTask<T> fallback, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
         {
-            T? value = await fallback.WithCancellation(cancellationToken);
+            T? value = await fallback.WithCancellation(cancellationToken).ConfigureAwait(false);
             return value;
         }
 
@@ -376,11 +376,11 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<T>> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
         {
-            T? value = await fallbackOperation().WithCancellation(cancellationToken);
+            T? value = await fallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
             return value;
         }
@@ -398,10 +398,10 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> OrAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<Maybe<T>>> fallbackOperation, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
 
         if (maybe.HasNoValue)
-            return await fallbackOperation().WithCancellation(cancellationToken);
+            return await fallbackOperation().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return maybe;
     }

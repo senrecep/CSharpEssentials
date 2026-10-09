@@ -21,7 +21,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> AsMaybeAsync<T>(this ValueTask<T?> task, CancellationToken cancellationToken = default)
     {
-        T? nullable = await task.WithCancellation(cancellationToken);
+        T? nullable = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return nullable.AsMaybe();
     }
 
@@ -35,7 +35,7 @@ public static partial class MaybeExtensions
     public static async Task<Maybe<T>> AsMaybeAsync<T>(this Task<T?> task, CancellationToken cancellationToken = default)
         where T : class
     {
-        T? nullable = await task.WithCancellation(cancellationToken);
+        T? nullable = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return nullable.AsMaybe();
     }
 }

@@ -141,7 +141,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     /// <returns></returns>
     public static async Task<Maybe<T>> FromAsync(Task<T?> task, CancellationToken cancellationToken = default)
     {
-        T? value = await task.WithCancellation(cancellationToken);
+        T? value = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return new(value, value is not null);
     }
 
@@ -153,7 +153,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     /// <returns></returns>
     public static async Task<Maybe<T>> FromAsync(Func<Task<T?>> taskFunc, CancellationToken cancellationToken = default)
     {
-        T? value = await taskFunc().WithCancellation(cancellationToken);
+        T? value = await taskFunc().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return new(value, value is not null);
     }

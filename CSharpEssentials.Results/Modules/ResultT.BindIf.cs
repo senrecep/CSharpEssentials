@@ -44,7 +44,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TValue>> BindIfAsync<TValue>(this Task<Result<TValue>> task, bool condition, Func<TValue, Result<TValue>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(condition, func);
     }
 
@@ -59,7 +59,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TValue>> BindIfAsync<TValue>(this Task<Result<TValue>> task, Func<bool> predicate, Func<TValue, Result<TValue>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(predicate, func);
     }
 
@@ -74,7 +74,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TValue>> BindIfAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, bool> predicate, Func<TValue, Result<TValue>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(predicate, func);
     }
 
@@ -89,7 +89,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TValue>> BindIfAsync<TValue>(this ValueTask<Result<TValue>> task, bool condition, Func<TValue, Result<TValue>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(condition, func);
     }
 
@@ -104,7 +104,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TValue>> BindIfAsync<TValue>(this ValueTask<Result<TValue>> task, Func<bool> predicate, Func<TValue, Result<TValue>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(predicate, func);
     }
 
@@ -119,7 +119,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TValue>> BindIfAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, bool> predicate, Func<TValue, Result<TValue>> func, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(predicate, func);
     }
 }

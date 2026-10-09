@@ -22,7 +22,7 @@ public readonly partial struct Maybe<T>
         if (HasNoValue)
             return None;
 
-        if (await predicate(Value).WithCancellation(cancellationToken))
+        if (await predicate(Value).WithCancellation(cancellationToken).ConfigureAwait(false))
             return this;
 
         return None;
@@ -33,7 +33,7 @@ public readonly partial struct Maybe<T>
         if (HasNoValue)
             return None;
 
-        if (await predicate(Value).WithCancellation(cancellationToken))
+        if (await predicate(Value).WithCancellation(cancellationToken).ConfigureAwait(false))
             return this;
 
         return None;
@@ -52,7 +52,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> WhereAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, bool> predicate, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.Where(predicate);
     }
 
@@ -66,8 +66,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> WhereAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, Task<bool>> predicate, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.WhereAsync(predicate, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.WhereAsync(predicate, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> WhereAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, bool> predicate, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.Where(predicate);
     }
 
@@ -94,7 +94,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> WhereAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask<bool>> predicate, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.WhereAsync(predicate, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.WhereAsync(predicate, cancellationToken).ConfigureAwait(false);
     }
 }

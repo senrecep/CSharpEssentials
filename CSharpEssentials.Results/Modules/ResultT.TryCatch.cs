@@ -56,7 +56,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> TryCatchAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, Result> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 
@@ -72,7 +72,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> TryCatchAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Result<TOut>> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 
@@ -87,7 +87,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> TryCatchAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue, Result> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 
@@ -103,7 +103,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TOut>> TryCatchAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<TValue, Result<TOut>> func, Error? error = null, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.TryCatch(func, error);
     }
 }

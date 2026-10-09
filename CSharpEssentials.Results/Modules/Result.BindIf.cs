@@ -34,7 +34,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> BindIfAsync(this Task<Result> task, bool condition, Func<Result> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(condition, func);
     }
 
@@ -48,7 +48,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> BindIfAsync(this Task<Result> task, Func<bool> predicate, Func<Result> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(predicate, func);
     }
 
@@ -62,7 +62,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> BindIfAsync(this ValueTask<Result> task, bool condition, Func<Result> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(condition, func);
     }
 
@@ -76,7 +76,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> BindIfAsync(this ValueTask<Result> task, Func<bool> predicate, Func<Result> func, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.BindIf(predicate, func);
     }
 }

@@ -56,21 +56,21 @@ public sealed partial class DomainEventInterceptor(
         CancellationToken cancellationToken = default)
     {
         if (eventData.Context is null)
-            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+            return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
         IDomainEvent[] allEvents = DomainEventCollector.Collect(eventData.Context);
         if (allEvents.Length == 0)
-            return await base.SavingChangesAsync(eventData, result, cancellationToken);
+            return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
         (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming(allEvents);
 
         if (beforeSave.Length > 0)
-            await PublishEventsAsync(beforeSave, cancellationToken);
+            await PublishEventsAsync(beforeSave, cancellationToken).ConfigureAwait(false);
 
-        InterceptionResult<int> returnValue = await base.SavingChangesAsync(eventData, result, cancellationToken);
+        InterceptionResult<int> returnValue = await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
         if (afterSave.Length > 0)
-            await DispatchAfterSaveEventsAsync(afterSave, cancellationToken);
+            await DispatchAfterSaveEventsAsync(afterSave, cancellationToken).ConfigureAwait(false);
 
         return returnValue;
     }
@@ -83,18 +83,18 @@ public sealed partial class DomainEventInterceptor(
         if (outbox is not null)
         {
             LogStoringDomainEvents(events.Length);
-            await outbox.StoreAsync(events, cancellationToken);
+            await outbox.StoreAsync(events, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            await PublishEventsDirectAsync(scope.ServiceProvider, events, cancellationToken);
+            await PublishEventsDirectAsync(scope.ServiceProvider, events, cancellationToken).ConfigureAwait(false);
         }
     }
 
     private async Task PublishEventsAsync(IDomainEvent[] events, CancellationToken cancellationToken)
     {
         using IServiceScope scope = serviceScopeFactory.CreateScope();
-        await PublishEventsDirectAsync(scope.ServiceProvider, events, cancellationToken);
+        await PublishEventsDirectAsync(scope.ServiceProvider, events, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task PublishEventsDirectAsync(IServiceProvider provider, IDomainEvent[] events, CancellationToken cancellationToken)
@@ -104,7 +104,7 @@ public sealed partial class DomainEventInterceptor(
         LogPublishingDomainEvents(events.Length);
 
         foreach (IDomainEvent domainEvent in events)
-            await publisher.PublishAsync(domainEvent, cancellationToken);
+            await publisher.PublishAsync(domainEvent, cancellationToken).ConfigureAwait(false);
     }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Storing {Count} domain events in outbox")]

@@ -79,7 +79,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> SelectAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, TOut> selector, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Select(selector);
     }
 
@@ -94,10 +94,10 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result<TOut>> SelectAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Task<TOut>> selector, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         if (result.IsFailure)
             return result.ErrorsOrEmptyArray;
-        return await selector(result.Value).WithCancellation(cancellationToken);
+        return await selector(result.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -111,7 +111,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result<TOut>> SelectAsync<TValue, TOut>(this ValueTask<Result<TValue>> task, Func<TValue, TOut> selector, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Select(selector);
     }
 

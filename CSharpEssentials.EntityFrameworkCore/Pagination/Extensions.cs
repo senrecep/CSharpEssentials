@@ -33,13 +33,13 @@ public static class Extensions
                 .Where(search(paginationRequest.Search));
 
         int count = includeTotalCount ? await query
-            .CountAsync(cancellationToken)
+            .CountAsync(cancellationToken).ConfigureAwait(false)
             : -1;
 
         IReadOnlyList<T> data = await query
             .Skip(paginationRequest.SkipCount())
             .Take(paginationRequest.PageSize)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
 
         return new PaginationResponse<T>(data, paginationRequest.PageNumber, paginationRequest.PageSize, count);
@@ -201,7 +201,7 @@ public static class Extensions
         q = thenBy is not null ? thenBy(cursorOrdered) : cursorOrdered;
 
         int take = request.Limit == int.MaxValue ? int.MaxValue : request.Limit + 1;
-        List<T> items = await q.Take(take).ToListAsync(cancellationToken);
+        List<T> items = await q.Take(take).ToListAsync(cancellationToken).ConfigureAwait(false);
 
         bool hasMore = items.Count > request.Limit;
         if (hasMore.IsTrue())

@@ -41,9 +41,9 @@ public static partial class MaybeExtensions
     public static async IAsyncEnumerable<T> ChooseAsync<T>(this IEnumerable<Task<Maybe<T>>> source, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
 #if NET9_0_OR_GREATER
-        await foreach (Task<Maybe<T>> task in Task.WhenEach(source).WithCancellation(cancellationToken))
+        await foreach (Task<Maybe<T>> task in Task.WhenEach(source).WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            Maybe<T> result = await task;
+            Maybe<T> result = await task.ConfigureAwait(false);
             if (result.HasValue)
                 yield return result.Value;
         }
@@ -70,9 +70,9 @@ public static partial class MaybeExtensions
     public static async IAsyncEnumerable<TOut> ChooseAsync<T, TOut>(this IEnumerable<Task<Maybe<T>>> source, Func<T, TOut> selector, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
 #if NET9_0_OR_GREATER
-        await foreach (Task<Maybe<T>> task in Task.WhenEach(source).WithCancellation(cancellationToken))
+        await foreach (Task<Maybe<T>> task in Task.WhenEach(source).WithCancellation(cancellationToken).ConfigureAwait(false))
         {
-            Maybe<T> result = await task;
+            Maybe<T> result = await task.ConfigureAwait(false);
             if (result.HasValue)
                 yield return selector(result.Value);
         }

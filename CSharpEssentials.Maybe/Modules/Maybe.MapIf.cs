@@ -38,7 +38,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> MapIfAsync(bool condition, Func<T, Task<T>> map, CancellationToken cancellationToken = default) =>
-        condition ? await MapAsync(map, cancellationToken) : this;
+        condition ? await MapAsync(map, cancellationToken).ConfigureAwait(false) : this;
 
     /// <summary>
     /// Asynchronously maps the value if the predicate returns true.
@@ -48,7 +48,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> MapIfAsync(Func<bool> predicate, Func<T, Task<T>> map, CancellationToken cancellationToken = default) =>
-        predicate() ? await MapAsync(map, cancellationToken) : this;
+        predicate() ? await MapAsync(map, cancellationToken).ConfigureAwait(false) : this;
 
     /// <summary>
     /// Asynchronously maps the value if the predicate returns true.
@@ -58,7 +58,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> MapIfAsync(Func<T, bool> predicate, Func<T, Task<T>> map, CancellationToken cancellationToken = default) =>
-        HasValue && predicate(Value) ? await MapAsync(map, cancellationToken) : this;
+        HasValue && predicate(Value) ? await MapAsync(map, cancellationToken).ConfigureAwait(false) : this;
 }
 
 public static partial class MaybeExtensions
@@ -74,7 +74,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> MapIfAsync<T>(this Task<Maybe<T>> maybeTask, bool condition, Func<T, T> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.MapIf(condition, map);
     }
 
@@ -89,7 +89,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> MapIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, T> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.MapIf(predicate, map);
     }
 
@@ -104,7 +104,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> MapIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, T> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.MapIf(predicate, map);
     }
 
@@ -119,8 +119,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> MapIfAsync<T>(this Task<Maybe<T>> maybeTask, bool condition, Func<T, Task<T>> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.MapIfAsync(condition, map, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.MapIfAsync(condition, map, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -134,8 +134,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> MapIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, Task<T>> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.MapIfAsync(predicate, map, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.MapIfAsync(predicate, map, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -149,8 +149,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> MapIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, Task<T>> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.MapIfAsync(predicate, map, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.MapIfAsync(predicate, map, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> MapIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, bool condition, Func<T, T> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.MapIf(condition, map);
     }
 
@@ -179,7 +179,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> MapIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, T> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.MapIf(predicate, map);
     }
 
@@ -194,7 +194,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> MapIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, T> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.MapIf(predicate, map);
     }
 
@@ -209,8 +209,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> MapIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, bool condition, Func<T, Task<T>> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.MapIfAsync(condition, map, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.MapIfAsync(condition, map, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -224,8 +224,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> MapIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, Task<T>> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.MapIfAsync(predicate, map, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.MapIfAsync(predicate, map, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> MapIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, Task<T>> map, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.MapIfAsync(predicate, map, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.MapIfAsync(predicate, map, cancellationToken).ConfigureAwait(false);
     }
 }

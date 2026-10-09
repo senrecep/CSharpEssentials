@@ -126,8 +126,8 @@ public static class DbContextExtensionMethods
         if (preConditionFunc(dbSet, dataList))
             return;
 
-        await dbSet.AddRangeAsync(dataList.Select(converter), cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbSet.AddRangeAsync(dataList.Select(converter), cancellationToken).ConfigureAwait(false);
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task MigrateDataAsync<TEntity, TSeedData, TKey>(
@@ -148,7 +148,7 @@ public static class DbContextExtensionMethods
         Func<TSeedData, TKey> dataKeySelector = options.DataKeyProperty.Compile();
         List<TEntity> entities = await
             options.Query(dbSet)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         TEntity[] theyWillBeDeleted = [.. entities
             .Where(entity => dataList
@@ -176,7 +176,7 @@ public static class DbContextExtensionMethods
         if (theyWillBeAdded.Length != 0)
             dbSet.AddRange(theyWillBeAdded);
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<T>> FirstOrDefaultAsResultAsync<T>(
@@ -185,7 +185,7 @@ public static class DbContextExtensionMethods
         CancellationToken cancellationToken = default)
         where T : class
     {
-        T? entity = await source.FirstOrDefaultAsync(cancellationToken);
+        T? entity = await source.FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (entity is null)
             return notFoundError ?? Error.NotFound();
         return entity;
@@ -197,7 +197,7 @@ public static class DbContextExtensionMethods
         CancellationToken cancellationToken = default)
         where T : class
     {
-        T? entity = await source.SingleOrDefaultAsync(cancellationToken);
+        T? entity = await source.SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         if (entity is null)
             return notFoundError ?? Error.NotFound();
         return entity;
@@ -210,7 +210,7 @@ public static class DbContextExtensionMethods
         CancellationToken cancellationToken = default)
         where T : class
     {
-        T? entity = await source.FindAsync(keyValues, cancellationToken);
+        T? entity = await source.FindAsync(keyValues, cancellationToken).ConfigureAwait(false);
         if (entity is null)
             return notFoundError ?? Error.NotFound();
         return entity;
@@ -221,7 +221,7 @@ public static class DbContextExtensionMethods
         CancellationToken cancellationToken = default)
     {
         return Result.TryAsync(
-            async () => { await context.SaveChangesAsync(cancellationToken); },
+            async () => { await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false); },
             ex => Error.Exception(ex, ErrorType.Unknown),
             cancellationToken);
     }

@@ -38,7 +38,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<TValue>> TapErrorAsync(Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFailure(Errors).WithCancellation(cancellationToken);
+            await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
@@ -46,7 +46,7 @@ public readonly partial record struct Result<TValue>
     public async Task<Result<TValue>> TapErrorFirstAsync(Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
-            await onFirstFailure(FirstError).WithCancellation(cancellationToken);
+            await onFirstFailure(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
         return this;
     }
 
@@ -71,28 +71,28 @@ public static partial class ResultExtensions
 {
     public static async Task<Result<TValue>> TapErrorAsync<TValue>(this Task<Result<TValue>> task, Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.TapErrorAsync(onFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.TapErrorAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<Result<TValue>> TapErrorFirstAsync<TValue>(this Task<Result<TValue>> task, Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.TapErrorFirstAsync(onFirstFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.TapErrorFirstAsync(onFirstFailure, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> TapErrorAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error[], Task> onFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.TapErrorAsync(onFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.TapErrorAsync(onFailure, cancellationToken).ConfigureAwait(false);
     }
 
     [OverloadResolutionPriority(1)]
     public static async ValueTask<Result<TValue>> TapErrorFirstAsync<TValue>(this ValueTask<Result<TValue>> task, Func<Error, Task> onFirstFailure, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
-        return await result.TapErrorFirstAsync(onFirstFailure, cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await result.TapErrorFirstAsync(onFirstFailure, cancellationToken).ConfigureAwait(false);
     }
 
 #if NET9_0_OR_GREATER

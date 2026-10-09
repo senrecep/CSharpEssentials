@@ -50,7 +50,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<TValue> GetValueOrDefaultAsync<TValue>(this Task<Result<TValue>> task, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.GetValueOrDefault();
     }
 
@@ -64,7 +64,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<TValue> GetValueOrDefaultAsync<TValue>(this Task<Result<TValue>> task, TValue defaultValue, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.GetValueOrDefault(defaultValue);
     }
 
@@ -78,7 +78,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<TValue> GetValueOrDefaultAsync<TValue>(this Task<Result<TValue>> task, Func<TValue> defaultValueFactory, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.GetValueOrDefault(defaultValueFactory);
     }
 
@@ -91,7 +91,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<TValue> GetValueOrDefaultAsync<TValue>(this ValueTask<Result<TValue>> task, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.GetValueOrDefault();
     }
 
@@ -105,7 +105,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<TValue> GetValueOrDefaultAsync<TValue>(this ValueTask<Result<TValue>> task, TValue defaultValue, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.GetValueOrDefault(defaultValue);
     }
 
@@ -119,7 +119,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<TValue> GetValueOrDefaultAsync<TValue>(this ValueTask<Result<TValue>> task, Func<TValue> defaultValueFactory, CancellationToken cancellationToken = default)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken);
+        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.GetValueOrDefault(defaultValueFactory);
     }
 }

@@ -97,7 +97,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> TapAsync(this Task<Result> task, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Tap(action);
     }
 
@@ -111,7 +111,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> TapAsync(this Task<Result> task, bool condition, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Tap(condition, action);
     }
 
@@ -125,7 +125,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async Task<Result> TapAsync(this Task<Result> task, Func<bool> condition, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Tap(condition, action);
     }
 
@@ -138,7 +138,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> TapAsync(this ValueTask<Result> task, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Tap(action);
     }
 
@@ -152,7 +152,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> TapAsync(this ValueTask<Result> task, bool condition, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Tap(condition, action);
     }
 
@@ -166,7 +166,7 @@ public static partial class ResultExtensions
     /// <returns></returns>
     public static async ValueTask<Result> TapAsync(this ValueTask<Result> task, Func<bool> condition, Action action, CancellationToken cancellationToken = default)
     {
-        Result result = await task.WithCancellation(cancellationToken);
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         return result.Tap(condition, action);
     }
 

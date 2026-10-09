@@ -28,7 +28,7 @@ internal static class EnhancedProblemDetailsWriter
         if (services?.GetService<EnhancedProblemDetailsMarker>() is not null)
         {
             service ??= services.GetService<IProblemDetailsService>();
-            if (service is not null && !IsSilentlySkippedByMvc(context) && await service.TryWriteAsync(context))
+            if (service is not null && !IsSilentlySkippedByMvc(context) && await service.TryWriteAsync(context).ConfigureAwait(false))
                 return true;
         }
 
@@ -58,7 +58,7 @@ internal static class EnhancedProblemDetailsWriter
     {
         HttpContext httpContext = context.HttpContext;
         httpContext.Response.StatusCode = context.ProblemDetails.Status ?? StatusCodes.Status500InternalServerError;
-        if (await TryWriteWithServiceAsync(context, service))
+        if (await TryWriteWithServiceAsync(context, service).ConfigureAwait(false))
             return;
 
         JsonSerializerOptions jsonOptions =
@@ -68,6 +68,6 @@ internal static class EnhancedProblemDetailsWriter
             context.ProblemDetails.GetType(),
             jsonOptions,
             ContentType,
-            httpContext.RequestAborted);
+            httpContext.RequestAborted).ConfigureAwait(false);
     }
 }

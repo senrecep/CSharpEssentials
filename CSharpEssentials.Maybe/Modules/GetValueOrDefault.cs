@@ -13,7 +13,7 @@ public readonly partial struct Maybe<T>
     public async Task<T> GetValueOrDefaultAsync(Func<Task<T>> defaultValue, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await defaultValue().WithCancellation(cancellationToken);
+            return await defaultValue().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return Value;
     }
@@ -30,7 +30,7 @@ public readonly partial struct Maybe<T>
         Func<Task<TOut>> defaultValue, CancellationToken cancellationToken = default)
     {
         if (HasNoValue)
-            return await defaultValue().WithCancellation(cancellationToken);
+            return await defaultValue().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return selector(Value);
     }
@@ -49,7 +49,7 @@ public readonly partial struct Maybe<T>
         if (HasNoValue)
             return defaultValue;
 
-        return await selector(Value).WithCancellation(cancellationToken);
+        return await selector(Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -73,7 +73,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<T> GetValueOrDefaultAsync<T>(this Task<Maybe<T>> maybeTask, Func<T> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrDefault(defaultValue);
     }
     /// <summary>
@@ -88,7 +88,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<TOut> GetValueOrDefaultAsync<T, TOut>(this Task<Maybe<T>> maybeTask, Func<T, TOut> selector, TOut defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrDefault(selector, defaultValue);
     }
     /// <summary>
@@ -103,7 +103,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<TOut> GetValueOrDefaultAsync<T, TOut>(this Task<Maybe<T>> maybeTask, Func<T, TOut> selector, Func<TOut> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrDefault(selector, defaultValue);
     }
 
@@ -122,55 +122,55 @@ public static partial class MaybeExtensions
         Func<Task<TOut>> defaultValue, CancellationToken cancellationToken = default)
     {
         if (maybe.HasNoValue)
-            return await defaultValue().WithCancellation(cancellationToken);
+            return await defaultValue().WithCancellation(cancellationToken).ConfigureAwait(false);
 
-        return await selector(maybe.Value).WithCancellation(cancellationToken);
+        return await selector(maybe.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<T> GetValueOrDefaultAsync<T>(this Task<Maybe<T>> maybeTask, Func<Task<T>> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.GetValueOrDefaultAsync(defaultValue, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.GetValueOrDefaultAsync(defaultValue, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<TOut> GetValueOrDefaultAsync<T, TOut>(this Task<Maybe<T>> maybeTask, Func<T, Task<TOut>> selector,
         TOut defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken).ConfigureAwait(false);
     }
 
     public static async Task<TOut> GetValueOrDefaultAsync<T, TOut>(this Task<Maybe<T>> maybeTask, Func<T, Task<TOut>> selector,
         Func<Task<TOut>> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken).ConfigureAwait(false);
     }
 
     public static async ValueTask<T> GetValueOrDefaultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrDefault(defaultValue);
     }
 
     public static async ValueTask<TOut> GetValueOrDefaultAsync<T, TOut>(this ValueTask<Maybe<T>> maybeTask, Func<T, TOut> selector,
         TOut defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrDefault(selector, defaultValue);
     }
 
     public static async ValueTask<TOut> GetValueOrDefaultAsync<T, TOut>(this ValueTask<Maybe<T>> maybeTask, Func<T, TOut> selector,
         Func<TOut> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.GetValueOrDefault(selector, defaultValue);
     }
 
     public static async ValueTask<T> GetValueOrDefaultAsync<T>(this Maybe<T> maybe, Func<ValueTask<T>> valueTask, CancellationToken cancellationToken = default)
     {
         if (maybe.HasNoValue)
-            return await valueTask().WithCancellation(cancellationToken);
+            return await valueTask().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return maybe.Value;
     }
@@ -179,7 +179,7 @@ public static partial class MaybeExtensions
         Func<ValueTask<TOut>> valueTask, CancellationToken cancellationToken = default)
     {
         if (maybe.HasNoValue)
-            return await valueTask().WithCancellation(cancellationToken);
+            return await valueTask().WithCancellation(cancellationToken).ConfigureAwait(false);
 
         return selector(maybe.Value);
     }
@@ -190,36 +190,36 @@ public static partial class MaybeExtensions
         if (maybe.HasNoValue)
             return defaultValue;
 
-        return await valueTask(maybe.Value).WithCancellation(cancellationToken);
+        return await valueTask(maybe.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     public static async ValueTask<TOut> GetValueOrDefaultAsync<T, TOut>(this Maybe<T> maybe, Func<T, ValueTask<TOut>> valueTask,
         Func<ValueTask<TOut>> defaultValue, CancellationToken cancellationToken = default)
     {
         if (maybe.HasNoValue)
-            return await defaultValue().WithCancellation(cancellationToken);
+            return await defaultValue().WithCancellation(cancellationToken).ConfigureAwait(false);
 
-        return await valueTask(maybe.Value).WithCancellation(cancellationToken);
+        return await valueTask(maybe.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     public static async ValueTask<T> GetValueOrDefaultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<T>> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask;
-        return await maybe.GetValueOrDefaultAsync(defaultValue, cancellationToken);
+        Maybe<T> maybe = await maybeTask.ConfigureAwait(false);
+        return await maybe.GetValueOrDefaultAsync(defaultValue, cancellationToken).ConfigureAwait(false);
     }
 
     public static async ValueTask<TOut> GetValueOrDefaultAsync<T, TOut>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask<TOut>> selector,
         TOut defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken).ConfigureAwait(false);
     }
 
     public static async ValueTask<TOut> GetValueOrDefaultAsync<T, TOut>(this ValueTask<Maybe<T>> maybeTask, Func<T, ValueTask<TOut>> selector,
         Func<ValueTask<TOut>> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.GetValueOrDefaultAsync(selector, defaultValue, cancellationToken).ConfigureAwait(false);
     }
 
     public static T GetValueOrDefault<T>(in this Maybe<T> maybe, Func<T> defaultValue)

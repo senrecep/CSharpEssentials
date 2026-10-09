@@ -38,7 +38,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> BindIfAsync(bool condition, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default) =>
-        condition ? await BindAsync(func, cancellationToken) : this;
+        condition ? await BindAsync(func, cancellationToken).ConfigureAwait(false) : this;
 
     /// <summary>
     /// Asynchronously binds the specified function if the predicate returns true.
@@ -48,7 +48,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> BindIfAsync(Func<bool> predicate, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default) =>
-        predicate() ? await BindAsync(func, cancellationToken) : this;
+        predicate() ? await BindAsync(func, cancellationToken).ConfigureAwait(false) : this;
 
     /// <summary>
     /// Asynchronously binds the specified function if the predicate returns true.
@@ -58,7 +58,7 @@ public readonly partial struct Maybe<T>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     public async Task<Maybe<T>> BindIfAsync(Func<T, bool> predicate, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default) =>
-        HasValue && predicate(Value) ? await BindAsync(func, cancellationToken) : this;
+        HasValue && predicate(Value) ? await BindAsync(func, cancellationToken).ConfigureAwait(false) : this;
 }
 
 public static partial class MaybeExtensions
@@ -74,7 +74,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> BindIfAsync<T>(this Task<Maybe<T>> maybeTask, bool condition, Func<T, Maybe<T>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.BindIf(condition, func);
     }
 
@@ -89,7 +89,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> BindIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, Maybe<T>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.BindIf(predicate, func);
     }
 
@@ -104,7 +104,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> BindIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, Maybe<T>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.BindIf(predicate, func);
     }
 
@@ -119,8 +119,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> BindIfAsync<T>(this Task<Maybe<T>> maybeTask, bool condition, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.BindIfAsync(condition, func, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.BindIfAsync(condition, func, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -134,8 +134,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> BindIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.BindIfAsync(predicate, func, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.BindIfAsync(predicate, func, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -149,8 +149,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async Task<Maybe<T>> BindIfAsync<T>(this Task<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.BindIfAsync(predicate, func, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.BindIfAsync(predicate, func, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -164,7 +164,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> BindIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, bool condition, Func<T, Maybe<T>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.BindIf(condition, func);
     }
 
@@ -179,7 +179,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> BindIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, Maybe<T>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.BindIf(predicate, func);
     }
 
@@ -194,7 +194,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> BindIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, Maybe<T>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return maybe.BindIf(predicate, func);
     }
 
@@ -209,8 +209,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> BindIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, bool condition, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.BindIfAsync(condition, func, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.BindIfAsync(condition, func, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -224,8 +224,8 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> BindIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<bool> predicate, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.BindIfAsync(predicate, func, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.BindIfAsync(predicate, func, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static async ValueTask<Maybe<T>> BindIfAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<T, bool> predicate, Func<T, Task<Maybe<T>>> func, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken);
-        return await maybe.BindIfAsync(predicate, func, cancellationToken);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
+        return await maybe.BindIfAsync(predicate, func, cancellationToken).ConfigureAwait(false);
     }
 }
