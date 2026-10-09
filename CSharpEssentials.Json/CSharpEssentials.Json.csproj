@@ -10,8 +10,8 @@
     <Product>CSharpEssentials.Json</Product>
     <Description>
       JSON utilities and custom converters for System.Text.Json in C#.
-      Includes MultiFormatDateTimeConverter, ConditionalStringEnumConverter,
-      PolymorphicJsonConverterFactory, and JsonOptions.
+      Includes MultiFormatDateTimeConverter, PolymorphicJsonConverterFactory,
+      and JsonOptions.
       Essential for advanced JSON serialization scenarios.
     </Description>
     <PackageTags>

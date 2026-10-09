@@ -7,8 +7,8 @@
     <Product>CSharp Essentials Mediator</Product>
     <Description>High-performance CQRS and pipeline behaviors built on the Mediator source-generator library.
       Provides Result-integrated commands, queries, validation, logging, caching, and transaction behaviors
-      with full Native AOT support.</Description>
-    <PackageTags>Mediator,CQRS,Pipeline,Behavior,Validation,Logging,Caching,Transaction,SourceGenerator,NativeAOT,FunctionalProgramming,CSharpEssentials</PackageTags>
+      with a Result-first pipeline.</Description>
+    <PackageTags>Mediator,CQRS,Pipeline,Behavior,Validation,Logging,Caching,Transaction,SourceGenerator,FunctionalProgramming,CSharpEssentials</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>Readme.MD</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
