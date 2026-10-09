@@ -3,10 +3,6 @@ using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Compat.CSharp12;
 
-/// <summary>
-/// Shapes that are ambiguous (CS0121) for an untyped async lambda on every target and every language version, because the
-/// lambda parameter type cannot pick between the overloads. A typed handler (local function or cast) resolves them.
-/// </summary>
 public static class TypedDelegateShapes
 {
     public static Task<Result<int>> MapError(Result<int> source)

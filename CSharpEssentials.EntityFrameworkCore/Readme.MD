@@ -326,7 +326,7 @@ Maybe<int> points = customer.LoyaltyPoints.Flatten(); // null becomes None
 - `Maybe<T?>?` (for example `Maybe<int?>?`) is not supported: EF Core fails the model build. Ignore the property or configure your own converter.
 - `HasNullableMaybeConversion` needs a concrete `T`: from unconstrained generic code (or for `Maybe<int?>?`) the compiler reports CS0452 against the `class` overload. Use the convention there, or `HasConversion(new NullableMaybeConverter<T>())` / `new NullableMaybeReferenceConverter<T>()` (namespace `CSharpEssentials.EntityFrameworkCore.Converters`).
 - Mutable reference values (`Maybe<byte[]>?`): change tracking compares `Maybe<T>` values, so changing the array in place is not saved. Assign a new value instead.
-- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API.
+- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API. This applies to `Maybe<T>?` columns only: properties configured by `ConfigureEnumConventions` cannot be compiled (see Enum Storage).
 - Query rules:
   - absence: `c.Nickname == null` or `!c.Nickname.HasValue` (the `Nullable<T>.HasValue`);
   - presence: `c.Nickname != null`;
@@ -393,6 +393,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 - Reads are tolerant (wire name, member name, aliases, any case); writes are canonical. An unknown stored value maps to the `[EnumFallback]` member, otherwise the query throws and the message names the column.
 - Enums without generated metadata (no `[StringEnum]`) keep EF's default integer column. `ConfigureEnumConventionsWithReflection` opts them in through reflection (not trim or AOT safe).
 - Properties with your own `HasConversion` are skipped.
+- Compiled models (`dotnet ef dbcontext optimize`) are not supported for properties configured by these conventions: the converters capture the model's `EnumConventions` and metadata as instances, and `dbcontext optimize` fails for them.
 - Adding a member changes only the constraint, so the migration is `DropCheckConstraint` + `AddCheckConstraint`.
 - Opt out of constraints per property with `HasEnumCheckConstraint(false)`, or globally with `EnumConventions.CheckConstraints = false`.
 - Renaming a member also changes the constraint; see [Renaming a member safely](../CSharpEssentials.Enums/Readme.MD#renaming-a-member-safely).

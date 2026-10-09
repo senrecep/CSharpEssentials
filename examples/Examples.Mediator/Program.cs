@@ -15,9 +15,6 @@ Console.WriteLine("========================================\n");
 using var loggerFactory = LoggerFactory.Create(builder =>
     builder.AddConsole().SetMinimumLevel(LogLevel.Information));
 
-// ============================================================================
-// 1. VALIDATION BEHAVIOR
-// ============================================================================
 Console.WriteLine("--- ValidationBehavior ---");
 
 var validationBehavior = new ValidationBehavior<CreateProductCommand, Result<int>>(
@@ -41,14 +38,7 @@ Console.WriteLine($"Valid command - IsSuccess: {validResult.IsSuccess}, ProductI
 
 Console.WriteLine();
 
-// ============================================================================
-// 2. LOGGING BEHAVIOR
-// ============================================================================
 Console.WriteLine("--- LoggingBehavior ---");
-
-// IRequestLoggable  → only request payload is logged
-// IResponseLoggable → only response payload is logged
-// IRequestResponseLoggable → both are logged
 
 var requestLogger = loggerFactory.CreateLogger<LoggingBehavior<GetProductQuery, Result<string>>>();
 var loggingBehavior = new LoggingBehavior<GetProductQuery, Result<string>>(requestLogger);
@@ -60,9 +50,6 @@ await loggingBehavior.Handle(
 
 Console.WriteLine();
 
-// ============================================================================
-// 3. CACHING BEHAVIOR
-// ============================================================================
 Console.WriteLine("--- CachingBehavior ---");
 
 var cacheLogger = loggerFactory.CreateLogger<CachingBehavior<GetProductQuery, Result<string>>>();
@@ -88,9 +75,6 @@ Console.WriteLine($"Second call (cache hit) : {secondCall.Value}, handler calls:
 
 Console.WriteLine();
 
-// ============================================================================
-// 4. TRANSACTION SCOPE BEHAVIOR
-// ============================================================================
 Console.WriteLine("--- TransactionScopeBehavior ---");
 
 var transactionBehavior = new TransactionScopeBehavior<PlaceOrderCommand, Result>();
@@ -108,26 +92,11 @@ Console.WriteLine($"Transaction result: IsSuccess={transactionResult.IsSuccess}"
 
 Console.WriteLine();
 
-// ============================================================================
-// 5. DI REGISTRATION
-// ============================================================================
 Console.WriteLine("--- DI Registration ---");
 
 var services = new ServiceCollection();
 
-// Register all behaviors in the default pipeline order:
-// ValidationBehavior → LoggingBehavior → CachingBehavior → TransactionScopeBehavior
 services.AddMediatorBehaviors();
-
-// Or register them individually for custom ordering:
-// services.AddMediatorValidationBehavior();
-// services.AddMediatorLoggingBehavior();
-// services.AddMediatorCachingBehavior();
-// services.AddMediatorTransactionBehavior();
-
-// For NativeAOT support, use MediatorOptions instead of open-generic DI registration:
-// services.AddMediator(options =>
-//     options.PipelineBehaviors = MediatorExtensions.DefaultPipelineBehaviors);
 
 Console.WriteLine($"Registered behaviors: {services.Count}");
 
@@ -136,11 +105,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
 
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-// IRequestLoggable  → request payload is logged by LoggingBehavior
 public sealed record CreateProductCommand(string? Name, decimal Price)
     : ICommand<Result<int>>, IRequestLoggable;
 
@@ -154,8 +118,6 @@ public sealed class CreateProductCommandValidator : Validator<CreateProductComma
     }
 }
 
-// IResponseLoggable → response payload is logged by LoggingBehavior
-// ICacheable        → result is cached by CachingBehavior
 public sealed record GetProductQuery(string Id)
     : IQuery<Result<string>>, IResponseLoggable, ICacheable
 {
@@ -165,11 +127,9 @@ public sealed record GetProductQuery(string Id)
     public bool CacheFailures => false;
 }
 
-// ITransactionalRequest → handler runs inside a TransactionScope
 public sealed record PlaceOrderCommand(Guid OrderId, decimal Amount)
     : ICommand<Result>, ITransactionalRequest;
 
-// Minimal IDistributedCache backed by a dictionary — for demo purposes only
 public sealed class DictionaryDistributedCache : IDistributedCache
 {
     private readonly Dictionary<string, byte[]> _store = [];

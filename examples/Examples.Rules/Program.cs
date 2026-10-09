@@ -6,9 +6,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Rules Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// SIMPLE RULES (using .ToRule() extension)
-// ============================================================================
 Console.WriteLine("--- Simple Rules (Func.ToRule) ---");
 
 IRule<int> isPositive = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Error.Validation("Value.Positive", "Value must be positive"))).ToRule();
@@ -27,9 +24,6 @@ CheckValue(-5).Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// RULE ENGINE (ALL RULES MUST PASS)
-// ============================================================================
 Console.WriteLine("--- Rule Engine (And / All) ---");
 
 RuleEngine.Evaluate(new[] { isPositive, isLessThan100 }.And(), 50).Switch(
@@ -43,9 +37,6 @@ RuleEngine.Evaluate(new[] { isPositive, isLessThan100 }.And(), 150).Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// OR RULES (AT LEAST ONE MUST PASS)
-// ============================================================================
 Console.WriteLine("--- Or Rules ---");
 
 IRule<int> isEven = ((Func<int, Result>)(x => x % 2 == 0 ? Result.Success() : Error.Validation("Value.Even", "Value must be even"))).ToRule();
@@ -67,9 +58,6 @@ RuleEngine.Evaluate(new[] { isEven, isDivisibleBy5 }.Or(), 7).Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// CONDITIONAL RULES (If)
-// ============================================================================
 Console.WriteLine("--- Conditional Rules (If) ---");
 
 IRule<int> adultRule = ((Func<int, Result>)(x => x >= 18 ? Result.Success() : Error.Validation("Age.Adult", "Must be adult"))).ToRule();
@@ -89,9 +77,6 @@ conditionalFail.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// LINEAR RULES (SEQUENCE)
-// ============================================================================
 Console.WriteLine("--- Linear Rules ---");
 
 IRule<int> step1 = ((Func<int, Result>)(x => x > 0 ? Result.Success() : Error.Validation("Step1", "Must be positive"))).ToRule();
@@ -109,9 +94,6 @@ RuleEngine.Linear(new[] { step1, step2, step3 }, 1500).Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// RULES WITH RESULT VALUE (IRule<TContext, TResult>)
-// ============================================================================
 Console.WriteLine("--- Rules with Result Value ---");
 
 IRule<int, string> gradeRule = ((Func<int, Result<string>>)(score =>
@@ -134,9 +116,6 @@ gradeRule.Evaluate(45).Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// ASYNC RULES
-// ============================================================================
 Console.WriteLine("--- Async Rules ---");
 
 IAsyncRule<string> asyncNotEmpty = ((Func<string, CancellationToken, ValueTask<Result>>)(async (s, ct) =>
@@ -151,9 +130,6 @@ asyncNotEmpty.EvaluateAsync("Alice").Result.Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// RULES WITH STRING VALIDATION
-// ============================================================================
 Console.WriteLine("--- Rules with String Validation ---");
 
 IRule<string> notEmpty = ((Func<string, Result>)(s => !string.IsNullOrWhiteSpace(s) ? Result.Success() : Error.Validation("Name.Empty", "Name cannot be empty"))).ToRule();
@@ -170,9 +146,6 @@ RuleEngine.Evaluate(new[] { notEmpty, maxLength }.And(), "").Switch(
 );
 Console.WriteLine();
 
-// ============================================================================
-// NEXT COMBINATOR (PIPELINE CHAIN)
-// ============================================================================
 Console.WriteLine("--- Next Combinator ---");
 
 IRule<int> mustBePositive = ((Func<int, Result>)(x =>

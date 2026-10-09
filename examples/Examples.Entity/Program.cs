@@ -5,9 +5,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Entity Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// ENTITY BASE
-// ============================================================================
 Console.WriteLine("--- EntityBase ---");
 
 User user = new()
@@ -28,9 +25,6 @@ Console.WriteLine($"UpdatedBy: {user.UpdatedBy}");
 Console.WriteLine($"DomainEvents: {user.DomainEvents.Count}");
 Console.WriteLine();
 
-// ============================================================================
-// SOFT DELETABLE ENTITY
-// ============================================================================
 Console.WriteLine("--- SoftDeletableEntityBase ---");
 
 Product product = new()
@@ -49,9 +43,6 @@ product.Restore();
 Console.WriteLine($"After restore: IsDeleted={product.IsDeleted}");
 Console.WriteLine();
 
-// ============================================================================
-// HARD DELETE
-// ============================================================================
 Console.WriteLine("--- Hard Delete ---");
 
 Product hardDeleteProduct = new()
@@ -67,9 +58,6 @@ hardDeleteProduct.MarkAsHardDeleted();
 Console.WriteLine($"After mark as hard deleted: IsHardDeleted={hardDeleteProduct.IsHardDeleted}");
 Console.WriteLine();
 
-// ============================================================================
-// ENTITY WITH TYPED ID (Guid)
-// ============================================================================
 Console.WriteLine("--- EntityBase<Guid> ---");
 
 Guid categoryId = Guid.NewGuid();
@@ -82,9 +70,6 @@ Console.WriteLine($"Category Id: {category.Id}");
 Console.WriteLine($"Category Name: {category.Name}");
 Console.WriteLine();
 
-// ============================================================================
-// DOMAIN EVENTS
-// ============================================================================
 Console.WriteLine("--- Domain Events ---");
 
 Order order = new() { OrderNumber = "ORD-001", Total = 250.00m };
@@ -102,9 +87,6 @@ order.ClearDomainEvents();
 Console.WriteLine($"After clear: {order.DomainEvents.Count}");
 Console.WriteLine();
 
-// ============================================================================
-// INTERFACES
-// ============================================================================
 Console.WriteLine("--- Interfaces ---");
 
 static void PrintAuditInfo(ICreationAudit entity)
@@ -146,10 +128,6 @@ Console.WriteLine();
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
-
-// ============================================================================
-// MODELS
-// ============================================================================
 
 public class User : EntityBase
 {

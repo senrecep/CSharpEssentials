@@ -13,28 +13,19 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.EntityFrameworkCore Demo");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// SERVICE CONFIGURATION
-// ============================================================================
-
 var services = new ServiceCollection();
 
-// Add logging so we can see SQL queries and interceptor output
 services.AddLogging(builder => builder
     .AddConsole()
     .SetMinimumLevel(LogLevel.Information));
 
-// Register audit interceptor with a simple user ID factory
 services.AddAuditInterceptor(() => "demo-user");
 
-// Register slow query interceptor with 500ms threshold
 services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));
 
-// Register domain event publisher for console output
 services.AddSingleton<IDomainEventPublisher, ConsoleDomainEventPublisher>();
 services.AddSingleton<DomainEventInterceptor>();
 
-// Add SQLite with CSharpEssentials BaseDbContext + Interceptors
 services.AddDbContext<ShopDbContext>((sp, options) =>
     options.UseSqlite("Data Source=shop.db")
            .EnableSensitiveDataLogging()
@@ -43,14 +34,9 @@ services.AddDbContext<ShopDbContext>((sp, options) =>
                sp.GetRequiredService<DomainEventInterceptor>(),
                sp.GetRequiredService<SlowQueryInterceptor>()));
 
-// Application services
 services.AddScoped<IProductCatalogService, ProductCatalogService>();
 
 var provider = services.BuildServiceProvider();
-
-// ============================================================================
-// DATABASE INITIALIZATION
-// ============================================================================
 
 using (var scope = provider.CreateScope())
 {
@@ -74,10 +60,6 @@ using (var scope = provider.CreateScope())
     }
 }
 
-// ============================================================================
-// DEMO: SOFT DELETE
-// ============================================================================
-
 using (var scope = provider.CreateScope())
 {
     var service = scope.ServiceProvider.GetRequiredService<IProductCatalogService>();
@@ -97,10 +79,6 @@ using (var scope = provider.CreateScope())
     Console.WriteLine($"Deleted product IsDeleted: {allProducts.First(p => p.Name == "Wireless Mouse").IsDeleted}");
     Console.WriteLine();
 }
-
-// ============================================================================
-// DEMO: PAGINATION (OFFSET)
-// ============================================================================
 
 using (var scope = provider.CreateScope())
 {
@@ -133,25 +111,18 @@ using (var scope = provider.CreateScope())
     Console.WriteLine();
 }
 
-// ============================================================================
-// DEMO: CURSOR PAGINATION
-// ============================================================================
-
 using (var scope = provider.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
 
     Console.WriteLine("--- DEMO: Cursor Pagination ---");
 
-    // Keyset pagination by Name, with Id as the tie-breaker so the key is unique.
-    // SQLite does not support DateTimeOffset or decimal in ORDER BY clauses.
     var page = await db.Products.KeysetPaginateAsync(
         new KeysetPaginationRequest { Limit = 3 },
         keys => keys.Ascending(p => p.Name).Ascending(p => p.Id));
 
     if (page.IsFailure)
     {
-        // A bad cursor or request returns Error.Validation instead of throwing.
         Console.WriteLine($"Cursor Page failed: {page.FirstError.Description}");
     }
     else
@@ -177,10 +148,6 @@ using (var scope = provider.CreateScope())
     Console.WriteLine();
 }
 
-// ============================================================================
-// DEMO: AUDIT INTERCEPTOR
-// ============================================================================
-
 using (var scope = provider.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
@@ -201,17 +168,12 @@ using (var scope = provider.CreateScope())
     Console.WriteLine();
 }
 
-// ============================================================================
-// DEMO: DOMAIN EVENTS
-// ============================================================================
-
 using (var scope = provider.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ShopDbContext>();
 
     Console.WriteLine("--- DEMO: Domain Events ---");
 
-    // Create a product and raise a BeforeSave event
     var newProduct = new Product
     {
         Name = "Bluetooth Speaker",
@@ -224,7 +186,6 @@ using (var scope = provider.CreateScope())
     Console.WriteLine("Saving new product (triggers BeforeSave event)...");
     db.SaveChanges();
 
-    // Update price and raise an AfterSave event
     decimal oldPrice = newProduct.Price;
     newProduct.Price = 39.99m;
     newProduct.Raise(new ProductPriceChangedEvent(newProduct.Id, oldPrice, newProduct.Price));
@@ -232,7 +193,6 @@ using (var scope = provider.CreateScope())
     Console.WriteLine("Updating price (triggers AfterSave event)...");
     db.SaveChanges();
 
-    // Multiple events on multiple entities
     var speaker = db.Products.First(p => p.Name == "Bluetooth Speaker");
     var shoes = db.Products.First(p => p.Name == "Running Shoes");
 
@@ -247,10 +207,6 @@ using (var scope = provider.CreateScope())
 
     Console.WriteLine();
 }
-
-// ============================================================================
-// DEMO: ENUM TO STRING CONVERTER
-// ============================================================================
 
 using (var scope = provider.CreateScope())
 {
@@ -268,4 +224,3 @@ using (var scope = provider.CreateScope())
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
-

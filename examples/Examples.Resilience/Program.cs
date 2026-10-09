@@ -6,9 +6,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Resilience Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// 1. BASIC POLICY — EMPTY PIPELINE
-// ============================================================================
 Console.WriteLine("--- 1. Basic Policy (Empty Pipeline) ---");
 
 ResiliencePolicy policy = ResiliencePolicy.Create();
@@ -20,9 +17,6 @@ Result<int> valueResult = await policy.ExecuteAsync(_ => Task.FromResult(Result.
 Console.WriteLine($"Empty pipeline (generic): Value={valueResult.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// 2. RETRY POLICY
-// ============================================================================
 Console.WriteLine("--- 2. Retry Policy ---");
 
 int retryAttempts = 0;
@@ -40,9 +34,6 @@ Result retryResult = await retryPolicy.ExecuteAsync(_ =>
 Console.WriteLine($"Retry result: IsSuccess={retryResult.IsSuccess}, Total attempts={retryAttempts}");
 Console.WriteLine();
 
-// ============================================================================
-// 3. RETRY WITH EXPONENTIAL BACKOFF
-// ============================================================================
 Console.WriteLine("--- 3. Retry with Exponential Backoff ---");
 
 ResiliencePolicy exponentialPolicy = ResiliencePolicy.Create()
@@ -55,9 +46,6 @@ Console.WriteLine("Exponential backoff: delays grow exponentially (50ms, 100ms, 
 Console.WriteLine("Constant backoff: delays stay constant (50ms, 50ms, 50ms)");
 Console.WriteLine();
 
-// ============================================================================
-// 4. TIMEOUT POLICY
-// ============================================================================
 Console.WriteLine("--- 4. Timeout Policy ---");
 
 ResiliencePolicy timeoutPolicy = ResiliencePolicy.Create()
@@ -72,9 +60,6 @@ Result timeoutResult = await timeoutPolicy.ExecuteAsync(async ct =>
 Console.WriteLine($"Timeout result: IsSuccess={timeoutResult.IsSuccess}, Error={timeoutResult.FirstError.Code}");
 Console.WriteLine();
 
-// ============================================================================
-// 5. CIRCUIT BREAKER POLICY
-// ============================================================================
 Console.WriteLine("--- 5. Circuit Breaker Policy ---");
 
 ResiliencePolicy cbPolicy = ResiliencePolicy.Create()
@@ -98,9 +83,6 @@ for (int i = 0; i < 5; i++)
 Console.WriteLine($"Circuit opened after threshold failures");
 Console.WriteLine();
 
-// ============================================================================
-// 6. COMBINED POLICIES (RETRY + TIMEOUT + CIRCUIT BREAKER)
-// ============================================================================
 Console.WriteLine("--- 6. Combined Policies ---");
 
 ResiliencePolicy combinedPolicy = ResiliencePolicy.Create()
@@ -112,9 +94,6 @@ Result combinedResult = await combinedPolicy.ExecuteAsync(_ => Task.FromResult(R
 Console.WriteLine($"Combined pipeline: IsSuccess={combinedResult.IsSuccess}");
 Console.WriteLine();
 
-// ============================================================================
-// 7. GENERIC RESILIENCE POLICY<T>
-// ============================================================================
 Console.WriteLine("--- 7. Generic ResiliencePolicy<T> ---");
 
 int genAttempts = 0;
@@ -132,9 +111,6 @@ Result<int> genResult = await genericPolicy.ExecuteAsync(_ =>
 Console.WriteLine($"Generic result: Value={genResult.Value}, Attempts={genAttempts}");
 Console.WriteLine();
 
-// ============================================================================
-// 8. FALLBACK POLICY
-// ============================================================================
 Console.WriteLine("--- 8. Fallback Policy ---");
 
 ResiliencePolicy<string> fallbackPolicy = ResiliencePolicy<string>.Create()
@@ -146,9 +122,6 @@ Result<string> fallbackResult = await fallbackPolicy.ExecuteAsync(_ =>
 Console.WriteLine($"Fallback result: Value={fallbackResult.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// 9. CREATE FROM OPTIONS RECORD
-// ============================================================================
 Console.WriteLine("--- 9. Create from ResiliencePolicyOptions ---");
 
 ResiliencePolicyOptions options = new()
@@ -169,9 +142,6 @@ Result optionsResult = await optionsPolicy.ExecuteAsync(_ => Task.FromResult(Res
 Console.WriteLine($"Options-based pipeline: IsSuccess={optionsResult.IsSuccess}");
 Console.WriteLine();
 
-// ============================================================================
-// 10. FUNC EXTENSIONS — INLINE EXECUTION
-// ============================================================================
 Console.WriteLine("--- 10. Func Extensions (Inline Execution) ---");
 
 Func<Task<int>> computeValue = () => Task.FromResult(42);
@@ -183,9 +153,6 @@ Result<string> funcResult2 = await fetchString.ExecuteAsync();
 Console.WriteLine($"Func<CT, Task<Result<string>>>: Value={funcResult2.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// 11. RETRY IF FAILED — EXTENSION ON RESULT-RETURNING FUNCTIONS
-// ============================================================================
 Console.WriteLine("--- 11. RetryIfFailed Extension ---");
 
 int rifAttempts = 0;
@@ -204,9 +171,6 @@ Result<int> rifResult = await unreliableOperation.RetryIfFailed(
 Console.WriteLine($"RetryIfFailed: Value={rifResult.Value}, Attempts={rifAttempts}");
 Console.WriteLine();
 
-// ============================================================================
-// 12. HANDLE DIFFERENT ERROR TYPES
-// ============================================================================
 Console.WriteLine("--- 12. Error Type Handling ---");
 
 ResiliencePolicy errorPolicy = ResiliencePolicy.Create()

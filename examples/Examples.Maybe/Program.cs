@@ -6,9 +6,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Maybe Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// MAYBE CREATION
-// ============================================================================
 Console.WriteLine("--- Maybe Creation ---");
 
 Maybe<string> some = "hello";
@@ -18,9 +15,6 @@ Console.WriteLine($"Some: HasValue={some.HasValue}, Value={some.Value}");
 Console.WriteLine($"None: HasValue={none.HasValue}, HasNoValue={none.HasNoValue}");
 Console.WriteLine();
 
-// ============================================================================
-// TAP / TAP IF
-// ============================================================================
 Console.WriteLine("--- Tap / TapIf ---");
 
 Maybe<int> number = 10;
@@ -35,9 +29,6 @@ number.TapIf(false, v => Console.WriteLine($"  This won't print"));
 number.TapIf(v => v > 5, v => Console.WriteLine($"  TapIf (predicate): {v}"));
 Console.WriteLine();
 
-// ============================================================================
-// BIND IF
-// ============================================================================
 Console.WriteLine("--- BindIf ---");
 
 Maybe<int> boundIf = number.BindIf(true, v => Maybe<int>.From(v * 2));
@@ -53,9 +44,6 @@ Maybe<int> boundIfPredFail = number.BindIf(v => v > 20, v => Maybe<int>.From(v *
 Console.WriteLine($"BindIf (predicate false): HasValue={boundIfPredFail.HasValue}");
 Console.WriteLine();
 
-// ============================================================================
-// MAP IF
-// ============================================================================
 Console.WriteLine("--- MapIf ---");
 
 Maybe<int> mappedIf = number.MapIf(true, v => v + 100);
@@ -71,9 +59,6 @@ Maybe<int> mappedIfPredFail = number.MapIf(v => v > 20, v => v + 1000);
 Console.WriteLine($"MapIf (predicate false): {mappedIfPredFail.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// TO RESULT / TO UNIT RESULT
-// ============================================================================
 Console.WriteLine("--- ToResult / ToUnitResult ---");
 
 Result<int> toResult = number.ToMaybeResult();
@@ -89,9 +74,6 @@ Result toUnitResultNone = empty.ToUnitResult(Error.NotFound("Maybe", "Value miss
 Console.WriteLine($"ToUnitResult (None): IsFailure={toUnitResultNone.IsFailure}");
 Console.WriteLine();
 
-// ============================================================================
-// SELECT / SELECTMANY (LINQ)
-// ============================================================================
 Console.WriteLine("--- Select / SelectMany (LINQ) ---");
 
 Maybe<int> linqNumber = 5;
@@ -110,9 +92,6 @@ Maybe<int> linqMulti = from a in 2.AsMaybe()
 Console.WriteLine($"SelectMany multiply: {linqMulti.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// MAP (TRANSFORM VALUE)
-// ============================================================================
 Console.WriteLine("--- Map ---");
 
 Maybe<int> doubled = number.Map(x => x * 2);
@@ -122,9 +101,6 @@ Maybe<int> emptyDoubled = empty.Map(x => x * 2);
 Console.WriteLine($"None * 2 = HasValue={emptyDoubled.HasValue}");
 Console.WriteLine();
 
-// ============================================================================
-// MATCH (SIDE EFFECTS)
-// ============================================================================
 Console.WriteLine("--- Match ---");
 
 Maybe<int> score = 95;
@@ -140,9 +116,6 @@ noScore.Match(
 );
 Console.WriteLine();
 
-// ============================================================================
-// OR (FALLBACK)
-// ============================================================================
 Console.WriteLine("--- Or (Fallback) ---");
 
 Maybe<string> emptyName = Maybe<string>.None;
@@ -154,9 +127,6 @@ Maybe<string> keptName = existingName.Or(() => "Default Name");
 Console.WriteLine($"Kept name: {keptName.Value}");
 Console.WriteLine();
 
-// ============================================================================
-// CHOOSE
-// ============================================================================
 Console.WriteLine("--- Choose ---");
 
 List<Maybe<int>> maybes = new() { 1, Maybe<int>.None, 3, Maybe<int>.None, 5 };
@@ -164,9 +134,6 @@ List<int> chosen = maybes.Choose().ToList();
 Console.WriteLine($"Choose: [{string.Join(", ", chosen)}]");
 Console.WriteLine();
 
-// ============================================================================
-// BIND
-// ============================================================================
 Console.WriteLine("--- Bind ---");
 
 Maybe<string> bindName = "alice";
@@ -177,9 +144,6 @@ Maybe<int> emptyBound = Maybe<string>.None.Bind(n => Maybe<int>.From(n.Length));
 Console.WriteLine($"Bind None: HasValue={emptyBound.HasValue}");
 Console.WriteLine();
 
-// ============================================================================
-// GET VALUE OR DEFAULT / GET VALUE OR THROW
-// ============================================================================
 Console.WriteLine("--- GetValueOrDefault / GetValueOrThrow ---");
 
 Maybe<int> someInt = 42;
@@ -201,9 +165,6 @@ try { noneInt.GetValueOrThrow("No value!"); }
 catch (InvalidOperationException ex) { Console.WriteLine($"GetValueOrThrow (None) threw: {ex.Message}"); }
 Console.WriteLine();
 
-// ============================================================================
-// TRY FIRST / TRY LAST / TRY FIND
-// ============================================================================
 Console.WriteLine("--- TryFirst / TryLast / TryFind ---");
 
 int[] nums = { 3, 7, 2, 9, 1 };
@@ -229,9 +190,6 @@ Maybe<int> notFoundVal = dict.TryFind("z");
 Console.WriteLine($"TryFind not found: HasValue={notFoundVal.HasValue}");
 Console.WriteLine();
 
-// ============================================================================
-// AS NULLABLE
-// ============================================================================
 Console.WriteLine("--- AsNullable ---");
 
 int? nullable = someInt.AsNullable();
@@ -241,9 +199,6 @@ int? nullableNone = noneInt.AsNullable();
 Console.WriteLine($"AsNullable (None): {nullableNone.HasValue}");
 Console.WriteLine();
 
-// ============================================================================
-// EXECUTE / EXECUTE NO VALUE
-// ============================================================================
 Console.WriteLine("--- Execute / ExecuteNoValue ---");
 
 someInt.Execute(v => Console.WriteLine($"  Execute (Some): {v}"));
@@ -253,9 +208,6 @@ noneInt.ExecuteNoValue(() => Console.WriteLine("  ExecuteNoValue (None) fired"))
 someInt.ExecuteNoValue(() => Console.WriteLine("  This won't print"));
 Console.WriteLine();
 
-// ============================================================================
-// FLATTEN
-// ============================================================================
 Console.WriteLine("--- Flatten ---");
 
 Maybe<Maybe<int>> nested = Maybe<Maybe<int>>.From(42.AsMaybe());
@@ -267,9 +219,6 @@ Maybe<int> flatNone = nestedNone.Flatten();
 Console.WriteLine($"Flatten None: HasValue={flatNone.HasValue}");
 Console.WriteLine();
 
-// ============================================================================
-// DECONSTRUCT
-// ============================================================================
 Console.WriteLine("--- Deconstruct ---");
 
 (bool hasValue, int val) = someInt;
@@ -279,9 +228,6 @@ Console.WriteLine($"Deconstruct Some: hasValue={hasValue}, value={val}");
 Console.WriteLine($"Deconstruct None: hasValue={hasValueNone}, value={valNone}");
 Console.WriteLine();
 
-// ============================================================================
-// TO MAYBE UNIT RESULT
-// ============================================================================
 Console.WriteLine("--- ToMaybeUnitResult ---");
 
 Result unitOk = someInt.ToMaybeUnitResult();
@@ -291,9 +237,6 @@ Result unitNone = noneInt.ToMaybeUnitResult(Error.NotFound("Val", "No value"));
 Console.WriteLine($"ToMaybeUnitResult (None): IsFailure={unitNone.IsFailure}, Code={unitNone.FirstError.Code}");
 Console.WriteLine();
 
-// ============================================================================
-// COLLECTION: SEQUENCE / TRAVERSE / PARTITION
-// ============================================================================
 Console.WriteLine("--- Collection: Sequence / Traverse / Partition ---");
 
 List<Maybe<int>> allSome = new() { 1, 2, 3 };

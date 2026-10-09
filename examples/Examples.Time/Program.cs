@@ -4,9 +4,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.Time Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// DATE TIME PROVIDER
-// ============================================================================
 Console.WriteLine("--- DateTimeProvider ---");
 
 IDateTimeProvider provider = new DateTimeProvider(TimeProvider.System);
@@ -20,9 +17,6 @@ Console.WriteLine($"UtcNowTime: {provider.UtcNowTime}");
 #endif
 Console.WriteLine();
 
-// ============================================================================
-// DATE TIME EXTENSIONS
-// ============================================================================
 Console.WriteLine("--- DateTime Extensions ---");
 
 DateTime now = DateTime.Now;
@@ -34,9 +28,6 @@ Console.WriteLine($"ToTimeOnly: {now.ToTimeOnly()}");
 #endif
 Console.WriteLine();
 
-// ============================================================================
-// TIMEZONE CONVERSIONS
-// ============================================================================
 Console.WriteLine("--- TimeZone Conversions ---");
 
 DateTime utcTime = new DateTime(2025, 6, 15, 12, 0, 0, DateTimeKind.Utc);
@@ -45,9 +36,6 @@ Console.WriteLine($"UTC: {utcTime:O}");
 Console.WriteLine($"Local: {local:O}");
 Console.WriteLine();
 
-// ============================================================================
-// CUSTOM PROVIDER (TESTING)
-// ============================================================================
 Console.WriteLine("--- Custom Provider (for testing) ---");
 
 DateTime fixedTime = new DateTime(2025, 1, 1, 10, 30, 0, DateTimeKind.Utc);
@@ -63,10 +51,6 @@ Console.WriteLine();
 Console.WriteLine("========================================");
 Console.WriteLine("Demo complete.");
 Console.WriteLine("========================================");
-
-// ============================================================================
-// FIXED PROVIDER FOR TESTING
-// ============================================================================
 
 public class FixedDateTimeProvider : IDateTimeProvider
 {

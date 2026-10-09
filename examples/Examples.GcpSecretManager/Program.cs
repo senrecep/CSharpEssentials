@@ -6,9 +6,6 @@ Console.WriteLine("========================================");
 Console.WriteLine("CSharpEssentials.GcpSecretManager Example");
 Console.WriteLine("========================================\n");
 
-// ============================================================================
-// SECRET MANAGER CONFIGURATION OPTIONS
-// ============================================================================
 Console.WriteLine("--- SecretManagerConfigurationOptions ---");
 
 SecretManagerConfigurationOptions options = new();
@@ -24,32 +21,14 @@ Console.WriteLine($"First ProjectId: {options.Projects[0].ProjectId}");
 Console.WriteLine($"First SecretIds: [{string.Join(", ", options.Projects[0].SecretIds)}]");
 Console.WriteLine();
 
-// ============================================================================
-// CONFIGURATION BUILDER SETUP (DEMONSTRATION)
-// ============================================================================
 Console.WriteLine("--- Configuration Builder Integration ---");
 
 IConfigurationBuilder builder = new ConfigurationBuilder();
-
-// In a real application, you would call:
-// builder.AddGcpSecretManager(gcpOptions =>
-// {
-//     gcpOptions.CredentialsPath = "/path/to/service-account.json";
-//     gcpOptions.LoggerFactory = loggerFactory; // optional; nothing is logged by default
-//     gcpOptions.AddProject(new ProjectSecretConfiguration
-//     {
-//         ProjectId = "my-gcp-project",
-//         SecretIds = new[] { "app-secrets" }
-//     });
-// });
 
 Console.WriteLine("Configuration builder prepared for GCP Secret Manager integration.");
 Console.WriteLine("In production, secrets would be loaded from Google Cloud Secret Manager.");
 Console.WriteLine();
 
-// ============================================================================
-// PROJECT SECRET CONFIGURATION
-// ============================================================================
 Console.WriteLine("--- ProjectSecretConfiguration ---");
 
 ProjectSecretConfiguration project = new()
@@ -65,9 +44,6 @@ Console.WriteLine($"IsRawSecret('RAW_KEY'): {project.IsRawSecret("RAW_KEY")}");
 Console.WriteLine($"IsRawSecret('PROD_KEY'): {project.IsRawSecret("PROD_KEY")}");
 Console.WriteLine();
 
-// ============================================================================
-// MULTIPLE PROJECTS
-// ============================================================================
 Console.WriteLine("--- Multiple Projects ---");
 
 SecretManagerConfigurationOptions multiOptions = new();
