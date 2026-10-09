@@ -505,7 +505,7 @@ public sealed class AsyncMatrixTests
     }
 
     [Fact]
-    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_SourceFails()
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_TaskSourceOfResultTFails()
     {
         Task<Result<int>> source = Task.FromResult<Result<int>>(First);
         int conditionCalls = 0;
@@ -519,6 +519,48 @@ public sealed class AsyncMatrixTests
     }
 
     [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_TaskSourceOfResultFails()
+    {
+        Task<Result> source = Task.FromResult(Result.Failure(First));
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            () => { handlerCalls++; return Task.CompletedTask; });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_ValueTaskSourceOfResultFails()
+    {
+        ValueTask<Result> source = new(Result.Failure(First));
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            () => { handlerCalls++; return default(ValueTask); });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_NotEvaluateCondition_When_ValueTaskSourceOfResultTFails()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Failure(First));
+        int conditionCalls = 0;
+        int handlerCalls = 0;
+
+        Result<int> result = await source.TapAsync(
+            () => { conditionCalls++; return true; },
+            _ => { handlerCalls++; return default(ValueTask); });
+
+        (result.IsFailure, conditionCalls, handlerCalls).Should().Be((true, 0, 0));
+    }
+
+    [Fact]
     public async Task ConditionalTapAsync_Should_ThrowOperationCanceled_When_TokenIsCancelledWhileAwaitingHandlerOnTaskSourceOfResult()
     {
         Task<Result> source = Task.FromResult(Result.Success());
@@ -527,7 +569,7 @@ public sealed class AsyncMatrixTests
 
         Func<Task> act = async () => await source.TapAsync(true, () => handler.Task, cts.Token);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -539,7 +581,7 @@ public sealed class AsyncMatrixTests
 
         Func<Task> act = async () => await source.TapAsync(() => true, () => new ValueTask(handler.Task), cts.Token);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -551,7 +593,7 @@ public sealed class AsyncMatrixTests
 
         Func<Task> act = async () => await source.TapAsync(() => true, _ => handler.Task, cts.Token);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
@@ -563,7 +605,7 @@ public sealed class AsyncMatrixTests
 
         Func<Task> act = async () => await source.TapAsync(true, _ => new ValueTask(handler.Task), cts.Token);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        await act.Should().ThrowWithinAsync<OperationCanceledException>(TimeSpan.FromSeconds(5));
     }
 
 #if NET9_0_OR_GREATER

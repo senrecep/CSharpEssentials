@@ -50,6 +50,15 @@ public static class TaskSourceShapes
     public static Task<Result<int>> TapTaskWhen(Task<Result<int>> source, bool condition) =>
         source.TapAsync(condition, _ => Task.CompletedTask);
 
+    public static Task<Result<int>> TapTaskWhenFunc(Task<Result<int>> source, Func<bool> condition) =>
+        source.TapAsync(condition, _ => Task.CompletedTask);
+
+    public static Task<Result> TapResultTaskWhen(Task<Result> source, bool condition) =>
+        source.TapAsync(condition, () => Task.CompletedTask);
+
+    public static Task<Result> TapResultTaskWhenFunc(Task<Result> source, Func<bool> condition) =>
+        source.TapAsync(condition, () => Task.CompletedTask);
+
     public static Task<Result> TapResultWhen(Task<Result> source, bool condition) =>
         source.TapAsync(condition, async () => await Task.Delay(1).ConfigureAwait(false));
 
