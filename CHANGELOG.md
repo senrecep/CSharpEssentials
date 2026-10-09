@@ -3,6 +3,18 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.1](https://github.com/senrecep/CSharpEssentials/compare/v6.5.0...v6.5.1) (2026-10-09)
+
+
+### Fixed
+
+* **core:** bound stackalloc and validate guider input ([#142](https://github.com/senrecep/CSharpEssentials/issues/142)) ([2eddfba](https://github.com/senrecep/CSharpEssentials/commit/2eddfba5a4220efc54aa46d8b734517bfe686cc8)), closes [#136](https://github.com/senrecep/CSharpEssentials/issues/136)
+* **http:** append query to relative uris without throwing ([#140](https://github.com/senrecep/CSharpEssentials/issues/140)) ([04106ee](https://github.com/senrecep/CSharpEssentials/commit/04106ee6514579a1a97047847d78d0eac52df523)), closes [#136](https://github.com/senrecep/CSharpEssentials/issues/136)
+* **json:** return utc from multiformatdatetimeconverter ([#141](https://github.com/senrecep/CSharpEssentials/issues/141)) ([f754e54](https://github.com/senrecep/CSharpEssentials/commit/f754e54163bd2e531a256a80993070c3cbd9beb9)), closes [#136](https://github.com/senrecep/CSharpEssentials/issues/136)
+* **rules:** keep every rule when chaining next calls ([#138](https://github.com/senrecep/CSharpEssentials/issues/138)) ([7399565](https://github.com/senrecep/CSharpEssentials/commit/7399565e76f53ed52f740a2fe9f9b0569b23be15)), closes [#136](https://github.com/senrecep/CSharpEssentials/issues/136)
+* **these:** keep the error of both in flatmap ([#143](https://github.com/senrecep/CSharpEssentials/issues/143)) ([79f2aac](https://github.com/senrecep/CSharpEssentials/commit/79f2aac6fd8eb2a5bfdb09ba955ca44a48723088)), closes [#136](https://github.com/senrecep/CSharpEssentials/issues/136)
+* **validation:** normalise property paths for filtered collections and null operators ([#144](https://github.com/senrecep/CSharpEssentials/issues/144)) ([e2760e0](https://github.com/senrecep/CSharpEssentials/commit/e2760e090921e43dbc798d4246c0f048a4ee645b)), closes [#136](https://github.com/senrecep/CSharpEssentials/issues/136)
+
 ## [6.5.0](https://github.com/senrecep/CSharpEssentials/compare/v6.4.0...v6.5.0) (2026-10-09)
 
 
