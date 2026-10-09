@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-aspnetcore
-description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.
+description: Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, MapVersionedGroup, versioned Swagger (CSharpEssentials.AspNetCore.Swashbuckle) and enum schemas for Microsoft.AspNetCore.OpenApi (CSharpEssentials.AspNetCore.OpenApi).
 ---
 
 # CSharpEssentials.AspNetCore
@@ -231,6 +231,20 @@ v2.MapGet("/health", () => Results.Ok());          // GET /v2/health
 `CreateVersionedGroup("orders", version: 1)` builds `v{version:apiVersion}/orders` in one call.
 
 Optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described as one path per form (`/orders` + `/orders/{id}`, every path parameter required); the shorter form's operationId is `{operationId}Without{Param}` and a duplicate throws at document generation. `o.AddOptionalRouteParameters(OptionalRouteParameterMode.RequiredOnly)` (on `SwaggerGenOptions`, after `AddSwagger`) keeps one path per operation; avoid the obsolete `LegacyNonCompliant`, it emits invalid OpenAPI. With `Microsoft.AspNetCore.OpenApi` (`CSharpEssentials.AspNetCore.OpenApi`, 6.2.0) the same behavior is opt-in: `services.AddOpenApi("v1", o => o.AddOptionalRouteParameters())` (`OpenApiOptionalRouteParameterMode.SplitPaths` or `RequiredOnly`).
+
+---
+
+## OpenAPI Enum Schemas
+
+A host references one OpenAPI package, never both: `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle) or `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`, net10.0 only). Both describe `[StringEnum]` enums the way they are written (wire names, `x-enum-varnames`).
+
+```csharp
+builder.Services.AddEnumConventions();                              // CSharpEssentials.AspNetCore
+builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());     // CSharpEssentials.AspNetCore.OpenApi, once per document
+app.MapOpenApi();
+
+builder.Services.AddSwaggerGen(o => o.AddEnumConventions());        // CSharpEssentials.AspNetCore.Swashbuckle; AddSwagger already calls it
+```
 
 ---
 
