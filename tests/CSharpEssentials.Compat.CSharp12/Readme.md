@@ -12,10 +12,10 @@ It builds for two targets:
 
 These are in `TaskSourceShapes` and `ValueTaskSourceShapes`. On `Task<Result>` and `Task<Result<T>>` sources the untyped async lambda shapes are:
 
-- `MapAsync`, `BindAsync`, `TapAsync`, `EnsureAsync`, `MatchAsync`, `ThenAsync`.
+- `MapAsync`, `BindAsync`, `TapAsync` (also the conditional `TapAsync(condition, action)` since 6.5.0), `EnsureAsync`, `MatchAsync`, `ThenAsync`.
 - `MapErrorAsync`, when the lambda body only compiles for `Error`, for example because it reads `error.Description`.
 
-On `ValueTask<Result>` and `ValueTask<Result<T>>` sources they are `MapAsync`, `BindAsync` and `TapAsync`. Sync lambdas bind on both kinds of source.
+On `ValueTask<Result>` and `ValueTask<Result<T>>` sources they are `MapAsync`, `BindAsync` and `TapAsync`, including the conditional `TapAsync`. Sync lambdas bind on both kinds of source.
 
 ## Shapes that need C# 13, or a typed handler on net9.0+
 
