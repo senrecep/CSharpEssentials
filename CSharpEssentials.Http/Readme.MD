@@ -36,6 +36,17 @@ Result<User> created = await client.PostAsJsonAsResultAsync<User>(
 Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Relative));
 ```
 
+### Errors, timeouts and cancellation
+
+Every `*AsResultAsync` member, including the `HttpContent` readers and `HttpRequestBuilder.AsResultAsync`, follows the `Result.TryAsync` rule: only your own token propagates.
+
+- Cancelling the `cancellationToken` you pass throws `OperationCanceledException`.
+- An `HttpClient.Timeout` returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`.
+- Any other cancellation, for example a token a handler links or owns, returns a failed `Result` with `ErrorType.Unexpected` and the exception type name as code.
+- Other transport exceptions return `ErrorType.Unexpected` with the exception type name as code; an SSRF guard block returns `Http.SsrfBlocked` (see below).
+
+**Behaviour change in 6.5.0:** before, an `HttpClient.Timeout` or any other cancelled token threw `OperationCanceledException`. Handle the failed `Result` instead; check for the `Http.Timeout` code to tell a timeout apart.
+
 ### HttpRequestBuilder
 
 ```csharp

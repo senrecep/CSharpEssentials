@@ -41,7 +41,7 @@ Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Re
 
 - 2xx → success. A 2xx with an empty or undeserializable body → `NotFound` error.
 - Non-2xx → `HttpStatusCodeMapper.ToError(statusCode)`: code `Http.<status>`, type from `ToErrorType` (400/422 → `Validation`, 401 → `Unauthorized`, 403 → `Forbidden`, 404 → `NotFound`, 409/429 → `Conflict`, 5xx → `Unexpected`).
-- Transport exceptions → `Unexpected` error. Cancelling your own token throws `OperationCanceledException`.
+- Transport exceptions → `Unexpected` error. Cancelling your own token throws `OperationCanceledException`; an `HttpClient.Timeout` → `Unexpected` error with code `Http.Timeout`, and any other cancellation → `Unexpected` error (both threw before 6.5.0).
 - JSON uses `EnhancedJsonSerializerOptions.DefaultOptions` unless you pass `options`.
 - Also available: `PostAsResultAsync` / `PutAsResultAsync` (raw `HttpContent`), `SendAsResultAsync` / `SendAsResultAsync<T>` (`HttpRequestMessage`), `SendWithRedirectsAsResultAsync`, and `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>`.
 
