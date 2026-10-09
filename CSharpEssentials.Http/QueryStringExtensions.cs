@@ -187,11 +187,34 @@ public static class QueryStringExtensions
         if (string.IsNullOrEmpty(query))
             return uri;
 
+        if (!uri.IsAbsoluteUri)
+            return AppendQueryToRelative(uri.OriginalString, query);
+
         var builder = new UriBuilder(uri);
         builder.Query = string.IsNullOrEmpty(builder.Query)
             ? query
             : builder.Query.TrimStart('?') + "&" + query;
 
         return builder.Uri;
+    }
+
+    private static Uri AppendQueryToRelative(string original, string query)
+    {
+        string fragment = string.Empty;
+        int fragmentIndex = original.IndexOf('#');
+        if (fragmentIndex >= 0)
+        {
+            fragment = original.Substring(fragmentIndex);
+            original = original.Substring(0, fragmentIndex);
+        }
+
+        string separator = "?";
+        if (original.Contains('?'))
+        {
+            char last = original[original.Length - 1];
+            separator = last is '?' or '&' ? string.Empty : "&";
+        }
+
+        return new Uri(original + separator + query + fragment, UriKind.Relative);
     }
 }

@@ -81,7 +81,7 @@ Result created = await HttpRequestBuilder
     .AsResultAsync(client);
 ```
 
-Query values (`WithQuery`, `Uri.WithQueryString`) need an absolute URI: with a relative URI such as `.Get("/users/1")` they throw `InvalidOperationException` instead of returning a failed `Result`. Without query values a relative URI works with an `HttpClient.BaseAddress`.
+Query values (`WithQuery`, `Uri.WithQueryString`) work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs are resolved against `HttpClient.BaseAddress`.
 
 Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`.
 
