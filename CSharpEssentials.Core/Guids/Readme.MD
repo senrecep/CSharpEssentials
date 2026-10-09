@@ -43,11 +43,11 @@ Guid id = Guider.ToGuidFromString(urlSafeString);
 Guid sameId = urlSafeString.ToGuidFromString();
 ```
 
-It reads the first 22 characters and does not validate them: input shorter than 22 characters throws `IndexOutOfRangeException`, extra characters are ignored, and characters that are not valid Base64 produce `Guid.Empty` instead of an error. Only pass strings made by `ToStringFromGuid`.
+The input must be exactly 22 characters from `A-Z`, `a-z`, `0-9`, `-` and `_`. Any other length or character throws `FormatException`; there is no `TryParse` form, so catch `FormatException` when the input is untrusted.
 
 ## Performance Considerations
 
-- Uses `stackalloc` for efficient memory usage
+- Uses small fixed-size `stackalloc` buffers for efficient memory usage
 - Avoids heap allocations where possible
 - Utilizes `Span<T>` for high-performance memory operations
 

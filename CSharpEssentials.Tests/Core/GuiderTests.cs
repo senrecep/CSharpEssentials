@@ -91,5 +91,41 @@ public class GuiderTests
 
         elapsed.Should().BeLessThan(TimeSpan.FromSeconds(1));
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("short")]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8pQ")]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8pQwA")]
+    public void ToGuidFromString_Should_Throw_FormatException_When_Length_Is_Not_22(string input)
+    {
+        Action act = () => Guider.ToGuidFromString(input);
+
+        act.Should().Throw<FormatException>();
+    }
+
+    [Theory]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8p!w")]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8p w")]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8p=w")]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8p+w")]
+    [InlineData("Yx7A9bx0T0y2zKl3mN8p/w")]
+    public void ToGuidFromString_Should_Throw_FormatException_When_Input_Has_Invalid_Characters(string input)
+    {
+        Action act = () => Guider.ToGuidFromString(input);
+
+        act.Should().Throw<FormatException>();
+    }
+
+    [Fact]
+    public void ToGuidFromString_Should_Round_Trip_Guid_With_Url_Safe_Characters()
+    {
+        var guid = new Guid("fbffbeef-ffff-ffff-ffff-ffffffffffff");
+        string encoded = Guider.ToStringFromGuid(guid);
+
+        Guid result = Guider.ToGuidFromString(encoded);
+
+        result.Should().Be(guid);
+    }
 }
 

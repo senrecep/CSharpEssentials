@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 
 namespace CSharpEssentials.Core;
@@ -10,6 +11,7 @@ public static class StringExtensions
     private const char Space = ' ';
     private const int One = 1;
     private const int Zero = 0;
+    private const int StackAllocThreshold = 256;
 
     private enum CaseType
     {
@@ -46,41 +48,53 @@ public static class StringExtensions
             ? CalculateSpanSizeForPascalOrCamelCase(value) + extraSize
             : CalculateSpanSizeForKebabOrSnakeCase(value);
 
-        Span<char> newString = stackalloc char[value.Length + spanSize];
-        int newIndex = caseType == CaseType.UnderscoreCamel ? One : Zero;
-
-        if (caseType == CaseType.UnderscoreCamel)
+        int bufferLength = value.Length + spanSize;
+        char[]? rented = null;
+        Span<char> newString = bufferLength <= StackAllocThreshold
+            ? stackalloc char[StackAllocThreshold]
+            : (rented = ArrayPool<char>.Shared.Rent(bufferLength));
+        try
         {
-            newString[Zero] = Underscore;
-        }
+            int newIndex = caseType == CaseType.UnderscoreCamel ? One : Zero;
 
-        UnicodeCategory current = UnicodeCategory.OtherSymbol;
-
-        for (int i = Zero; i < value.Length; i++)
-        {
-            UnicodeCategory previous = current;
-            current = char.GetUnicodeCategory(value[i]);
-            insertSeparator = insertSeparator.InsertSeparator(previous, current);
-
-            if (!IsSpecialCharacter(current))
+            if (caseType == CaseType.UnderscoreCamel)
             {
-                if (insertSeparator && !isFirstCharacter && NeedsSeparator(caseType))
-                    newString[newIndex++] = GetSeparator(caseType);
-
-                newString[newIndex] = GetCharacterCase(value[i], caseType, insertSeparator, isFirstCharacter, culture);
-                isFirstCharacter = false;
-                insertSeparator = false;
-                newIndex++;
+                newString[Zero] = Underscore;
             }
-        }
+
+            UnicodeCategory current = UnicodeCategory.OtherSymbol;
+
+            for (int i = Zero; i < value.Length; i++)
+            {
+                UnicodeCategory previous = current;
+                current = char.GetUnicodeCategory(value[i]);
+                insertSeparator = insertSeparator.InsertSeparator(previous, current);
+
+                if (!IsSpecialCharacter(current))
+                {
+                    if (insertSeparator && !isFirstCharacter && NeedsSeparator(caseType))
+                        newString[newIndex++] = GetSeparator(caseType);
+
+                    newString[newIndex] = GetCharacterCase(value[i], caseType, insertSeparator, isFirstCharacter, culture);
+                    isFirstCharacter = false;
+                    insertSeparator = false;
+                    newIndex++;
+                }
+            }
 
 #if NET8_0_OR_GREATER
-        return new string(newString[..newIndex]);
+            return new string(newString[..newIndex]);
 #elif NETSTANDARD2_1
-        return new string(newString.Slice(0, newIndex));
+            return new string(newString.Slice(0, newIndex));
 #else
-        return new string(newString.Slice(0, newIndex).ToArray());
+            return new string(newString.Slice(0, newIndex).ToArray());
 #endif
+        }
+        finally
+        {
+            if (rented is not null)
+                ArrayPool<char>.Shared.Return(rented);
+        }
     }
 
     private static char GetCharacterCase(char c, CaseType caseType, bool insertSeparator, bool isFirstCharacter, CultureInfo? culture)
