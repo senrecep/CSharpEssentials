@@ -17,7 +17,7 @@ The project references the library projects and the generator project with `Outp
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="CSharpEssentials.Json" Version="5.0.0" />
+  <PackageReference Include="CSharpEssentials.Json" Version="6.5.0" />
 </ItemGroup>
 ```
 

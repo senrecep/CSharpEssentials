@@ -104,7 +104,7 @@ DateOnly lastFriday = date.PreviousDayOfWeek(DayOfWeek.Friday, includeCurrent: t
 // Age in whole years (DateOnly, NET6+)
 var birthDate = new DateOnly(1990, 5, 20);
 int age      = birthDate.GetAge(new DateOnly(2025, 5, 19));   // 34
-int ageToday = birthDate.GetAge(timeProvider);                // "today" in the provider's time zone
+int ageToday = birthDate.GetAge(dateTimeProvider);            // "today" in the IDateTimeProvider's time zone
 ```
 
 `GetAge` throws `ArgumentOutOfRangeException` when the birth date is after the reference date.
@@ -115,6 +115,6 @@ int ageToday = birthDate.GetAge(timeProvider);                // "today" in the 
 
 - Inject `IDateTimeProvider`; never call `DateTime.UtcNow` directly in domain/service code
 - Register `TimeProvider.System` and `DateTimeProvider` as singletons
-- `DateOnly` / `TimeOnly` members are `NET6_0_OR_GREATER` only, not available on `netstandard2.x`
+- `DateOnly` / `TimeOnly` members are `NET6_0_OR_GREATER` only, not available on `netstandard2.1`
 - `FakeDateTimeProvider.Advance()` simulates elapsed time without `Thread.Sleep` in tests
 - Use `GetAge(IDateTimeProvider)` instead of `DateTime.Today` so age checks are testable

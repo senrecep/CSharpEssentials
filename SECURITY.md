@@ -4,8 +4,8 @@
 
 | Version | Supported |
 | ------- | --------- |
-| 3.x     | Yes       |
-| < 3.0   | No        |
+| 6.x     | Yes       |
+| < 6.0   | No        |
 
 ## Reporting a Vulnerability
 
@@ -28,7 +28,7 @@ This policy covers all packages published under the `CSharpEssentials` NuGet nam
 - `CSharpEssentials`
 - `CSharpEssentials.Core`
 - `CSharpEssentials.Maybe`
-- `CSharpEssentials.Result`
+- `CSharpEssentials.Results`
 - `CSharpEssentials.Rules`
 - `CSharpEssentials.Entity`
 - `CSharpEssentials.EntityFrameworkCore`
@@ -38,4 +38,4 @@ This policy covers all packages published under the `CSharpEssentials` NuGet nam
 ## Out of Scope
 
 - Vulnerabilities in third-party dependencies (report to the respective maintainer)
-- Issues in unsupported versions (< 3.0)
+- Issues in unsupported versions (< 6.0)

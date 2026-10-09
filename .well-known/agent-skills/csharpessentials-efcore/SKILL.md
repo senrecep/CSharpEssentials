@@ -125,7 +125,7 @@ public class ShopDbContext(DbContextOptions<ShopDbContext> options) : DbContext(
 
 modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.String);              // per property
 modelBuilder.Entity<Order>().Property(o => o.Kind).HasLegacyEnumStorage(EnumStoredAs.MemberName);     // keep old text format
-modelBuilder.Entity<Order>().Property(o => o.Note).HasEnumCheckConstraint(false);                     // no constraint
+modelBuilder.Entity<Order>().Property(o => o.Priority).HasEnumCheckConstraint(false);                 // no constraint
 ```
 
 - Properties with a user `HasConversion` are skipped.
@@ -244,6 +244,86 @@ Analyzer CSE3001 (Info by default; raise with `dotnet_diagnostic.CSE3001.severit
 
 ---
 
+## Entity Mapping and Result Helpers
+
+```csharp
+public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>   // Order : SoftDeletableEntityBase<Guid>
+{
+    public void Configure(EntityTypeBuilder<Order> builder)
+    {
+        builder.SoftDeletableEntityBaseGuidIdMap();   // key, audit columns (user columns max 40), IsDeleted/DeletedAt/DeletedBy; IsHardDeleted is ignored
+        builder.OptimisticConcurrencyVersionMap();    // shadow byte[] "RowVersion" row version
+        builder.Property(o => o.Metadata).HasJsonConversion(columnType: "jsonb");
+    }
+}
+// EntityBaseGuidIdMap() for an EntityBase<Guid>; EntityBaseMap<TEntity, TId>(userIdMaxLength: 64) for any key type
+
+Result<Order> one = await db.Orders.SingleOrDefaultAsResultAsync(cancellationToken: ct);   // Error.NotFound() when no row
+db.HardDelete(entity);                        // MarkAsHardDeleted + Remove (the AuditInterceptor keeps the delete)
+await db.MigrateDataAsync<Country, CountrySeed>(seed, (set, data) => set.Any(), s => new Country { Code = s.Code }, ct);
+```
+
+`ApplySoftDeleteQueryFilter()` adds an anonymous `!IsDeleted` filter to every root `ISoftDeletableBase` type; `AddQueryFilter<T>(expression)` ANDs your filter with the existing anonymous one. `MigrateDataAsync` also has an overload with `MigrateDataOptions<TEntity, TSeed, TKey>` for a key-based add/update/remove diff. `ISqlConnectionFactory` and `ISqlReadOnlyConnectionFactory` are interfaces for Dapper-style code; you implement and register them.
+
+---
+
+## Database Error Translation
+
+`DbErrorTranslation` turns persistence exceptions into `Error` values (the AspNetCore package renders them as ProblemDetails). The built-in `SqlStateErrorTranslator` reads `DbException.SqlState`:
+
+| SQLSTATE | Error | Code |
+|---|---|---|
+| `23505` | `Conflict` | `Database.UniqueViolation` |
+| `23503` | `Conflict` | `Database.ForeignKeyViolation` |
+| `23514` | `Validation` | `Database.CheckViolation` |
+| `23502` | `Validation` | `Database.NotNullViolation` |
+| `40001` | `Conflict`, `retryable: true` | `Database.SerializationFailure` |
+| `40P01` | `Conflict`, `retryable: true` | `Database.Deadlock` |
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.DbErrors;
+
+builder.Services.AddDbErrorTranslation();
+builder.Services.AddDbErrorTranslator<MyProviderTranslator>();   // optional IDbErrorTranslator, runs before the SQLSTATE default
+
+Result<int> saved = await translation.SaveChangesAsync(db, ct);   // translated error, or rethrows an unrecognized exception
+bool known = translation.TryTranslate(exception, out Error error);
+```
+
+The metadata carries `sqlState` and, when there are entries, `entities`; the database message is not copied. Translators must be stateless (`DbErrorTranslation` is a singleton). `SaveChangesAsResultAsync` is different: it turns every exception into an `Unknown` error, except cancellation of your token.
+
+---
+
+## Transaction Runner
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Transactions;   // AddEfCoreTransactionRunner
+using CSharpEssentials.Transactions;                       // ITransactionRunner (CSharpEssentials.Core)
+
+builder.Services.AddEfCoreTransactionRunner<AppDbContext>();   // scoped ITransactionRunner
+
+Result result = await runner.ExecuteAsync(
+    ct => orders.PlaceAsync(command, ct),     // returns ValueTask<Result>
+    outcome => outcome.IsSuccess,             // commit or roll back
+    cancellationToken);
+```
+
+The outermost call runs inside `CreateExecutionStrategy()` with a transaction, so retrying strategies work (a retry re-runs the whole unit on a cleared change tracker; the context must have no pending changes at the start). A nested call on the same context instance joins the transaction, behind a savepoint when the provider supports them. It needs a relational provider (the InMemory provider throws on `BeginTransactionAsync`) and does not combine with an ambient `TransactionScope`.
+
+---
+
+## Enum Column Migrations
+
+```csharp
+migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
+migrationBuilder.ConvertEnumJsonPath<OrderStatus>("orders", "payload", ["status"]);   // PostgreSQL jsonb
+string sql = EnumDataAudit.Sql<OrderStatus>("orders", "Status", storedAs: EnumStoredAs.Integer, provider: db.Database.ProviderName);
+```
+
+When you drop `HasLegacyEnumStorage`/`existingStorage` for a column, replace the generated `AlterColumn` with `ConvertEnumColumn` (analyzer CSE0014 reports a forgotten one) and keep the check-constraint operations around it. `EnumDataAudit.Sql` returns a read-only query that lists the stored values the conversion or constraint would reject, with their counts; run it before deploying. SQL is generated for PostgreSQL and SQLite only.
+
+---
+
 ## CQRS Registration
 
 ```csharp
@@ -251,12 +331,13 @@ builder.Services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
     configureWrite: (sp, options) => options.UseSqlite("Data Source=app.db"));
 ```
 
-The write context is pooled with change tracking; the read context is pooled with `NoTracking`. `AddWriteDbContext<T>` and `AddReadDbContext<T>` register them one at a time.
+The write context is pooled with change tracking; the read context is pooled with `NoTracking`. `AddWriteDbContext<T>` and `AddReadDbContext<T>` register them one at a time.  `AddPooledDbContext<T>` and `RegisterDbContextFactory<T>` register a pooled context and an `IDbContextFactory<T>`. Every registration method has an overload that takes `Action<DbContextRegistrationOptions>` first (`EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, and `EnableAuditInterceptor`/`EnableDomainEventInterceptor`/`EnableSlowQueryInterceptor`, which attach the interceptor only when it is registered in DI). `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` on that class are not applied by this version; set them in the provider callback. `UseAsWriteContext()`, `UseAsReadContext()` and `UseAsReadContextWithIdentityResolution()` are available on `DbContextOptionsBuilder`.
 
 ---
 
 ## Best Practices
 
+- Build the unit of work around `ITransactionRunner` rather than your own `BeginTransaction` when retries are enabled
 - Pick one domain event path: `DomainEventInterceptor` or `BaseDbContext.DispatchDomainEventsOnSaveChanges`
 - `SoftDeleteAsync` skips audit and domain events; use `MarkAsDeleted` + `SaveChanges` when those must run
 - `PaginateAsync` issues a COUNT and a data query; pass `includeTotalCount: false` to skip the COUNT

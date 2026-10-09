@@ -32,6 +32,8 @@ A guide to every package, method, and pattern in the CSharpEssentials ecosystem.
 - [Endpoints: Source-Generated Endpoint Mapping](#21-csharpessentialsendpoints-source-generated-endpoint-mapping)
 - [DependencyInjection: Attribute-Based Registration](#22-csharpessentialsdependencyinjection-attribute-based-registration)
 - [CSharpEssentials: Meta Package](#23-csharpessentials-meta-package)
+- [AspNetCore.OpenApi: OpenAPI Documents](#24-csharpessentialsaspnetcoreopenapi-openapi-documents)
+- [AspNetCore.Swashbuckle: Swagger Documents](#25-csharpessentialsaspnetcoreswashbuckle-swagger-documents)
 - [Ecosystem Design Patterns](#ecosystem-design-patterns)
 
 ---
@@ -57,7 +59,9 @@ Every other package in the ecosystem builds on this type.
 | `Error.Unexpected(code, desc)` | System error | 500 | Unexpected/infrastructure failures |
 | `Error.Exception(ex)` | From exception | 500 | Bridging exception-based code into the error world |
 
-All factory methods accept an optional `ErrorMetadata? metadata` parameter for attaching arbitrary key-value data.
+All factory methods accept an optional `ErrorMetadata? metadata` parameter for attaching arbitrary key-value data. `code` and `description` have defaults (the factory name and a generic message), so `Error.NotFound()` is valid. `Error.Exception` has three overloads, `(exception, type = Failure, metadata)`, `(code, exception, type, metadata)` and `(code, description, exception, type, metadata)`. Without a `code` it is the exception type name; the metadata gets `exceptionType`, `exceptionMessage`, `exceptionStackTrace` and, when present, `innerException`.
+
+`ErrorType` has eight members: `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden` and `Unknown`. `Unknown` has no factory; the EF Core `SaveChangesAsResultAsync` uses it.
 
 ### Error Composition
 
@@ -71,18 +75,31 @@ All factory methods accept an optional `ErrorMetadata? metadata` parameter for a
 
 | Method | What It Does |
 |--------|-------------|
-| `errorType.ToHttpStatusCode()` | Maps `ErrorType` to HTTP status code |
-| `intValue.ToErrorType()` | Maps integer back to `ErrorType` |
-| `error.ToResult()` | Converts an `Error` to a failed `Result` |
-| `error.ToResult<T>()` | Converts an `Error` to a failed `Result<T>` |
+| `errorType.ToHttpStatusCode()` | Maps `ErrorType` to HTTP status code: `Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409, every other type 500 |
+| `statusCode.ToErrorType()` | Maps an `int` back to `ErrorType`: 400 `Validation`, 401 `Unauthorized`, 403 `Forbidden`, 404 `NotFound`, 409 `Conflict`, 500 `Failure`, any other code `Unexpected` |
+| `errorType.ToIntType()` | The numeric value of the `ErrorType` (`Error.NumericType`) |
+| `error.ToResult()` | Converts an `Error` to a failed `Result` (Results package, namespace `CSharpEssentials.ResultPattern`) |
+| `error.ToResult<T>()` | Converts an `Error` to a failed `Result<T>` (same package and namespace) |
+
+`ToHttpStatusCode`, `ToErrorType` and `ToIntType` are in namespace `CSharpEssentials.Errors`.
 
 ### Special Values
 
 | Value | Purpose |
 |-------|---------|
-| `Error.NoFirstError` | Sentinel for when no first error exists |
-| `Error.NoErrors` | Sentinel for empty error state |
+| `Error.NoFirstError` | `Result.FirstError` of a successful result |
+| `Error.NoLastError` | `Result.LastError` of a successful result |
+| `Error.NoErrors` | The single element of `Result.Errors` of a successful result (`ErrorsOrEmptyArray` is empty) |
 | `Error.False` | Sentinel used by `bool` → `Result` implicit conversion |
+
+### Exceptions
+
+Namespace `CSharpEssentials.Exceptions`.
+
+| Type | What It Does |
+|------|-------------|
+| `DomainException(Error error)` | Exception whose `Message` is the error description; the `Error` property keeps the error |
+| `EnhancedValidationException(Error[] errors)` | Exception whose `Errors` property holds the validation errors |
 
 ```csharp
 // Creating errors with metadata
@@ -114,7 +131,7 @@ Two core types: `Result` (no value, just success/failure) and `Result<T>` (carri
 
 | Method | Returns | When to Use |
 |--------|---------|-------------|
-| `return value;` / `return error;` | `Result<T>` / `Result` | Recommended: implicit conversion from `T`, `Error`, `Error[]`, `List<Error>`, `HashSet<Error>` |
+| `return value;` / `return error;` | `Result<T>` / `Result` | Recommended: implicit conversion from `T`, `Error`, `Error[]`, `List<Error>`, `HashSet<Error>`; `Result` also converts from `bool` (`false` becomes `Error.False`) |
 | `Result.Success()` | `Result` | Void operations that succeeded |
 | `Result.Success(value)` | `Result<T>` | Where the target type cannot be inferred (`var`, inferred lambdas, generic arguments) |
 | `Result.Failure(error)` | `Result` | Single error failure |
@@ -132,7 +149,8 @@ Two core types: `Result` (no value, just success/failure) and `Result<T>` (carri
 | `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<T>>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
 | `Result.TryAsync(func, handler)` | `Task<Result<T>>` | Async try/catch around `Func<Task<Result<T>>>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
 | `Result.TryAsync(func, handler)` | `Task<Result>` | Async try/catch around `Func<Task<Result>>`; caller cancellation (`OperationCanceledException` while the passed token is cancelled) propagates instead of becoming an Error |
-| `Result.From(errors)` | `Result` | Success if errors empty, failure otherwise |
+| `Result.From(errors)` / `Result.From<T>(error \| errors)` | `Result` / `Result<T>` | Failure built from the errors; an empty collection throws `ArgumentException` |
+| `Result.Failure<T>(error \| errors)` | `Result<T>` | Typed failure without naming the struct |
 | `Result<int> r = 42;` | `Result<int>` | Implicit operator for ergonomic creation |
 
 ### Chaining: The Success Railway
@@ -143,9 +161,10 @@ These methods execute only when the result is successful. On failure, they pass 
 |--------|-----------|-------------|-------------|
 | `Bind(func)` | Monadic bind | Chains a `Result`-returning operation | Dependent operations (DB lookup, then validate) |
 | `Map(func)` | Functor map | Transforms the success value | Value transformation (entity to DTO) |
-| `Then(func)` | Bind alias | Same as Bind, more readable in chains | Fluent pipeline style |
+| `Then(func)` | Bind alias | Same as Bind, more readable in chains; a `Func<T, TOut>` that returns a plain value works like `Map` | Fluent pipeline style |
 | `Ensure(pred, error)` | Guard | Validates the value; fails if predicate is false | Post-condition checks |
 | `EnsureNotNull(error)` | Null guard | Fails if value is null | Null safety at boundaries |
+| `ThenEnsure(validator)` | Validation | Runs a validator that returns `Result<T>` or `Result`; its errors replace the success | Validation that can fail with its own errors |
 | `BindIf(cond, func)` | Conditional bind | Only executes bind if condition is true | Optional pipeline steps |
 | `TryCatch(func, err)` | Exception-safe bind | Bind with automatic exception catching | Calling unsafe external code |
 
@@ -162,11 +181,14 @@ Result<OrderDto> result = GetUser(userId)
 | Method | Runs On | What It Does |
 |--------|---------|-------------|
 | `Tap(action)` | Success | Executes side effect, returns self unchanged |
-| `Tap(condition, action)` | Success + condition | Conditional side effect |
+| `Tap(condition, action)` | Success + condition | Conditional side effect (`bool` or `Func<bool>` condition) |
+| `TapIf(predicate, action)` | Success + predicate | `Result<T>` only: runs when `predicate(value)` is true |
 | `TapError(action)` | Failure | Side effect with all errors |
 | `TapErrorFirst(action)` | Failure | Side effect with first error only |
+| `TapErrorIf(condition, action)` | Failure + condition | Runs the error action when the `bool` or `Func<bool>` condition is true |
 | `ThenDo(action)` | Success | Executes action, returns self |
 | `ElseDo(action)` | Failure | Executes action on errors, returns self |
+| `ElseDoFirst(action)` | Failure | Executes action with the first error, returns self |
 
 ```csharp
 result
@@ -180,12 +202,15 @@ result
 |--------|-------------|-------------|
 | `Else(error)` | Replaces all errors with a new error | Error message normalization |
 | `Else(func)` | Transforms errors into replacement | Dynamic error replacement |
+| `Else(value)` / `Else(Func<Error[], T>)` | `Result<T>` only: turns a failure into a success with the fallback value | Default values |
 | `MapError(Func<Error, Error>)` | Transforms every error individually, in order | Error enrichment (add context) |
 | `MapError(Func<Error[], Error[]>)` | Replaces the whole error array | Collapsing or reshaping errors |
 | `MapErrorAsync(...)` | Async `MapError`: `Task`/`ValueTask` mappers per error or per array | Error enrichment that needs I/O (localization, lookups) |
 | `Compensate(func)` | Attempts recovery: can return Success | Retry, fallback strategies |
 | `CompensateFirst(func)` | Recovery using first error only | Single-error recovery |
-| `Recover(errorType, func)` | Recovers only from specific error types | Selective recovery (e.g., only NotFound) |
+| `Recover(errorType, func)` | `Result<T>` only: recovers when any error has that `ErrorType`; `func` returns `T` or `Result<T>` | Selective recovery (e.g., only NotFound) |
+| `RecoverFirst(errorType, func)` | Same, but only when the first error has that type | Selective recovery on the first error |
+| `Recover(predicate, func)` | Same, matching errors with a `Func<Error, bool>` | Recovery by error code |
 | `FailIf(pred, error)` | Converts success to failure if predicate matches | Post-validation |
 
 ```csharp
@@ -215,13 +240,16 @@ Per-error async mappers run sequentially, in order. On success no mapper is call
 | Method | Safety | What It Does |
 |--------|--------|-------------|
 | `Match(onSuccess, onFailure)` / `Result<T>.Match(onSuccess, onError)` | Safe | Exhaustive fold: handles both cases, returns a value |
-| `MatchFirst(onSuccess, onFirstError)` | Safe | Match using only the first error |
-| `Switch(onSuccess, onFailure)` | Safe | Imperative branching (void) |
-| `Unwrap()` | Unsafe | Returns value or throws `ResultUnwrapException` |
+| `MatchFirst(onSuccess, onFirstError)` / `MatchLast(onSuccess, onLastError)` | Safe | Match using only the first or the last error |
+| `Switch(onSuccess, onFailure)` | Safe | Imperative branching (void); `SwitchFirst` and `SwitchLast` take a single error |
+| `Unwrap()` | Unsafe | Returns value or throws `ResultUnwrapException` (its `Errors` property keeps the errors) |
 | `UnwrapOrDefault(fallback)` | Safe | Returns value or specified default |
-| `GetValueOrDefault()` | Safe | Returns value or `default(T)` |
-| `GetValueOrThrow(message)` | Unsafe | Returns value or throws with message |
+| `GetValueOrDefault()` / `GetValueOrDefault(value \| factory)` | Safe | Returns value, `default(T)`, the given default or the factory result |
+| `GetValueOrThrow(message)` / `GetValueOrThrow(exception)` | Unsafe | Returns value or throws `InvalidOperationException` with the message (default `"Result has no value."`), or the given exception |
+| `TryGet(out value, out errors)` | Safe | Try pattern; `Result.TryGet(out errors)` for the non-generic `Result` |
 | `Finally(func)` | Always | Executes regardless of success/failure |
+
+`Result<T>` and `Result` also deconstruct: `var (isSuccess, value, errors) = result;` and `var (isSuccess, errors) = result;`. The members `IsSuccess`, `IsFailure`, `Errors`, `ErrorsOrEmptyArray`, `FirstError`, `LastError` and, on `Result<T>`, `Value` are available on both. On a success `FirstError`, `LastError` and `Errors` return the sentinels `Error.NoFirstError`, `Error.NoLastError` and `Error.NoErrors` (see section 1), while `ErrorsOrEmptyArray` is empty.
 
 ```csharp
 // Exhaustive matching — compiler ensures both paths are handled
@@ -242,6 +270,8 @@ result.Finally(r => _metrics.Record(r.IsSuccess ? "success" : "failure"));
 | `Result<T>.And(results)` | All must succeed | Accumulates the errors of every failing result, or returns the values as `T[]` |
 | `Result.Or(results)` / `Result<T>.Or(results)` | Any can succeed | Returns first success; errors only if all fail |
 | `Result<T1>.Combine(r1, r2, ..., r8)` | Applicative product | Combines up to 8 results into a tuple `Result<(T1, ..., T8)>` |
+| `left + right` (`Result<T>`) | All must succeed | Same as `Result<T>.And(left, right)`: `Result<T[]>` |
+| `left \| right` (`Result<T>`, .NET 10+) | Any can succeed | `left` when it succeeded, otherwise `right`. Declared as an extension operator in `ResultExtensionMembers` |
 
 ```csharp
 // Stop at the first failing field (short-circuits)
@@ -281,7 +311,7 @@ var result =
 
 ### Async Support
 
-Every method has `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support. Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
+Most chaining, side-effect, recovery and extraction members have `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support (see the matrix below; `Recover`, `RecoverFirst`, `EnsureNotNull`, `Unwrap` and `TryGet` have none). Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
 
 ```csharp
 Result<UserDto> result = await GetUserAsync(id)
@@ -292,7 +322,7 @@ Result<UserDto> result = await GetUserAsync(id)
 
 #### Async overload matrix
 
-Handler flavours follow the source: `Task<Result>` sources take sync and `Task` handlers, `ValueTask<Result>` sources take sync and `ValueTask` handlers, instances take `Task` handlers and, on .NET 9+, `ValueTask` handlers. Cells marked ¹ exist only in the .NET 9+ assets; the `netstandard2.1` asset (.NET 8) does not have them. Every overload takes an optional `CancellationToken`, but they do not all check it the same way. The new `MapAsync` and `TapAsync` cells (instance `Task` handlers, `Task` handlers on `Task` sources, `ValueTask` handlers on `ValueTask` sources, and since 6.5.0 the conditional `TapAsync` handlers on both sources) throw `OperationCanceledException` for an already-cancelled token before they invoke the handler. Each `ValueTask` twin¹ checks the token exactly where its `Task` sibling does, so for `MatchAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync` and `ThenDoAsync` the token is only observed while awaiting. The new `BindAsync(Func<Task<Result<TOut>>>)` on `Task<Result>` and the sync-predicate `EnsureAsync` on `Task`/`ValueTask` sources also only observe it while awaiting. The 6.5.0 twins follow the same rule: `ThenEnsureAsync` checks the token once before it invokes the validator, `TryAsync` rethrows the `OperationCanceledException` of a cancelled token instead of passing it to the error handler, and the other operations observe the token while awaiting.
+Handler flavours follow the source: `Task<Result>` sources take sync and `Task` handlers, `ValueTask<Result>` sources take sync and `ValueTask` handlers, instances take `Task` handlers and, on .NET 9+, `ValueTask` handlers. Cells marked ¹ exist only in the .NET 9+ assets; the `netstandard2.1` asset (.NET 8) does not have them. Every overload takes an optional `CancellationToken`, except the instance `BindAsync` overloads, which take none; they do not all check it the same way. The new `MapAsync` and `TapAsync` cells (instance `Task` handlers, `Task` handlers on `Task` sources, `ValueTask` handlers on `ValueTask` sources, and since 6.5.0 the conditional `TapAsync` handlers on both sources) throw `OperationCanceledException` for an already-cancelled token before they invoke the handler. Each `ValueTask` twin¹ checks the token exactly where its `Task` sibling does, so for `MatchAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync` and `ThenDoAsync` the token is only observed while awaiting. The new `BindAsync(Func<Task<Result<TOut>>>)` on `Task<Result>` and the sync-predicate `EnsureAsync` on `Task`/`ValueTask` sources also only observe it while awaiting. The 6.5.0 twins follow the same rule: `ThenEnsureAsync` checks the token once before it invokes the validator, `TryAsync` rethrows the `OperationCanceledException` of a cancelled token instead of passing it to the error handler, and the other operations observe the token while awaiting.
 
 | Operation | Instance `Result` / `Result<T>` | `Task<Result>` / `Task<Result<T>>` | `ValueTask<Result>` / `ValueTask<Result<T>>` |
 |---|---|---|---|
@@ -316,7 +346,7 @@ Handler flavours follow the source: `Task<Result>` sources take sync and `Task` 
 | `TapIfAsync(condition \| predicate, action)` (`Result<T>`) | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
 | `TraverseAsync(selector)` on `IEnumerable<T>` | `Task` selector, `ValueTask` selector¹ | | |
 
-`ThenAsync` is an alias of `BindAsync`. No cross-flavour cells were added: a `Task` source has no `ValueTask` handler, and the `Task` handlers that `ValueTask` sources already had are kept for compatibility.
+`ThenAsync` is an alias of `BindAsync`. Four more families exist only on `Task`/`ValueTask` sources and take sync handlers: `BindIfAsync(condition \| predicate, func)`, `TryCatchAsync(func, error?)`, `SelectAsync(selector)` (the `Task` source also takes a `Task` selector) and `GetValueOrDefaultAsync([defaultValue \| factory])`. No cross-flavour cells were added: a `Task` source has no `ValueTask` handler, and the `Task` handlers that `ValueTask` sources already had are kept for compatibility.
 
 Binding rules:
 
@@ -383,6 +413,15 @@ Result<OrderDto[]> orders = await orderIds.TraverseAsync(
 Result<int[]> values = await tasks.SequenceAsync();
 ```
 
+#### More helpers
+
+| Member | What It Does |
+|--------|-------------|
+| `result.ValueOrDefault` (.NET 10+) | Property on `Result<T>`: the value, or `default` on failure. C# extension member in `ResultExtensionMembers` |
+| `value.ToResult()` / `error.ToResult<T>()` / `errors.ToResult()` | Wraps a value (`Result<T>`), an `Error` or an `Error[]`/`IEnumerable<Error>` into a result |
+| `str.TrimStart(prefix, comparison)` / `str.TrimEnd(suffix, comparison)` | `StringResultExtensions`: `Result<string>`; a null or empty input or affix gives `Error.Validation` (`InputIsEmpty`, `PrefixIsEmpty`, `SuffixIsEmpty`), a missing prefix or suffix leaves the string unchanged |
+| `ResultComparer`, `ResultComparer<T>`, `IResult.Comparer` | `IEqualityComparer` implementations in namespace `CSharpEssentials.ResultPattern.Comparers`. `ResultComparer` compares the success state and the errors; `ResultComparer<T>` also compares the value (optionally with your own `EqualityComparer<T>`) |
+
 ---
 
 ## 3. CSharpEssentials.Maybe: Explicit Optionals
@@ -395,10 +434,14 @@ Result<int[]> values = await tasks.SequenceAsync();
 
 | Method | Creates | When to Use |
 |--------|---------|-------------|
-| `Maybe<int> m = 42;` | Some(42) via implicit operator | Recommended; `T?` converts the same way (null → None) |
+| `Maybe<int> m = 42;` | Some(42) via implicit operator | Recommended; a nullable reference (`string?`) converts the same way (null → None). An `int?` converts to `Maybe<int?>`, not to `Maybe<int>` |
 | `Maybe.None` / `Maybe<T>.None` | Absence | Explicit "no value"; `Maybe.None` converts implicitly to any `Maybe<T>` |
 | `Maybe.From(value)` | Some if non-null, None if null | Where the target type is not known (`var`, start of a chain) |
+| `Maybe.From(Func<T>)` | `From` of the factory result | Deferred creation |
+| `Maybe.FromTry(factory)` | Some of the result, None if the factory throws | Exception-prone lookups; an `OperationCanceledException` still propagates |
 | `value.AsMaybe()` | Extension on nullable | Converting any nullable |
+
+Namespace `CSharpEssentials.Maybe`. `Maybe` implements `Select` and `SelectMany`, so LINQ query syntax works on it.
 
 ### Transformations
 
@@ -428,9 +471,13 @@ Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereA
 | `Match(some, none)` | Safe | Exhaustive fold over both cases |
 | `Or(() => fallback)` | Safe | Returns self, or a `Maybe` of the fallback when empty |
 | `Or(Maybe<T> fallback)` | Safe | Returns self or fallback Maybe |
+| `OrElse(() => maybe)` | Safe | Same as `Or(Func<Maybe<T>>)`; the async form `OrElseAsync` keeps its name |
 | `GetValueOrDefault(value)` | Safe | Returns value or default |
 | `GetValueOrDefault()` | Safe | Returns `default(T)` |
+| `GetValueOrElse(() => value)` | Safe | Returns the value, or the factory result when empty |
+| `GetValueOrThrow(message?)` / `GetValueOrThrow(exception)` | Unsafe | Returns the value or throws `InvalidOperationException` (default message `"Maybe has no value."`) or the given exception |
 | `TryGetValue(out value)` | Safe | Try pattern for extraction |
+| `var (hasValue, value) = maybe` | Safe | Deconstruction |
 | `AsNullable()` | Safe | Converts back to nullable `T?` |
 
 ```csharp
@@ -447,6 +494,7 @@ string name = GetUser(id)
 | `ExecuteNoValue(action)` / `ExecuteNoValueAsync(asyncAction)` | No value | Runs action when empty (`void`, or `Task` for async actions) |
 | `Tap(action)` | Has value | Side effect with value, returns self |
 | `TapIf(cond, action)` | Has value + condition | Conditional side effect, returns self |
+| `TapNone(action)` / `TapNoneAsync(asyncAction)` | No value | Side effect when empty, returns self |
 
 ### Collection Helpers
 
@@ -455,8 +503,8 @@ string name = GetUser(id)
 | `TryFirst()` | First element or None | `FirstOrDefault` (no null) |
 | `TryFirst(predicate)` | First matching or None | `FirstOrDefault(pred)` |
 | `TryLast()` | Last element or None | `LastOrDefault` |
-| `TryFind(key)` | Dictionary lookup or None | `TryGetValue` boilerplate |
-| `Choose(maybes)` | Extracts all Some values, drops None | Manual null filtering |
+| `TryFind(key)` | Lookup on an `IReadOnlyDictionary<TKey, TValue>` (`Dictionary` qualifies) or None | `TryGetValue` boilerplate |
+| `Choose(maybes)` / `Choose(maybes, selector)` | Extracts all Some values (optionally projected), drops None | Manual null filtering |
 | `ToList()` | Single-element or empty list | Manual conditional list |
 
 ```csharp
@@ -495,8 +543,9 @@ Result<User> found = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFo
 
 | Method | Direction | What It Does |
 |--------|-----------|-------------|
-| `maybe.ToMaybeResult(error?)` | Maybe to Result | None becomes Failure, Some becomes Success |
+| `maybe.ToMaybeResult(error?)` | Maybe to Result | None becomes Failure, Some becomes Success. Without `error` the failure is `Error.NotFound("Maybe.Result", "The 'Maybe' has no value.")` |
 | `maybe.ToMaybeUnitResult(error?)` | Maybe to Result (unit) | None becomes Failure (no value) |
+| `maybe.ToResult(error?)` / `maybe.ToUnitResult(error?)` / `maybeTask.ToResultAsync(...)` / `maybeTask.ToUnitResultAsync(...)` | Maybe to Result | Aliases of the `ToMaybe*` members |
 | `maybeTask.ToMaybeResultAsync(error?)` / `maybeTask.ToMaybeUnitResultAsync(error?)` | `Task`/`ValueTask` Maybe to Result | Same mapping on a `Task<Maybe<T>>` or `ValueTask<Maybe<T>>` source |
 | `result.AsMaybe()` | Result to Maybe | Failure becomes None, Success becomes Some |
 
@@ -538,25 +587,30 @@ var (values, missingCount) = maybes.Partition();
 | `Any<int, string>.First(42)` | Explicit construction (index 0) |
 | `Any<int, string>.Second("hello")` | Explicit construction (index 1) |
 | `Any<int, string> a = 42;` | Implicit operator from any variant type |
+| `Any.Create<int, string>(42)` | Static factory; `Any.Create<T0, ..., T7>(value)` exists for every arity |
+
+`Any<T0, ..., T7>` is a `readonly struct` in namespace `CSharpEssentials.Any`. The variants are named `First`, `Second`, `Third`, `Fourth`, `Fifth`, `Sixth`, `Seventh` and `Eighth`.
 
 ### Inspecting
 
 | Property/Method | What It Does |
 |----------------|-------------|
 | `Index` | Which variant is active (0-based) |
-| `Value` | The held value as `object` |
+| `Value` | The held value as `object?` |
 | `IsFirst` / `IsSecond` / ... | Boolean check for active variant |
-| `GetFirst()` / `GetSecond()` / ... | Typed extraction (throws if wrong variant) |
-| `Is<T>()` | Checks if held value is of type T |
-| `TryAs<T>(out value)` | Safe typed extraction via try pattern |
+| `GetFirst()` / `GetSecond()` / ... | Typed extraction (throws `InvalidOperationException` if wrong variant) |
+| `ToString()` | The held value serialized as JSON |
+
+The struct is JSON serializable through `[JsonConstructor]` on `Any(int index, object? value)`.
 
 ### Pattern Matching
 
 | Method | Returns | What It Does |
 |--------|---------|-------------|
-| `Match(first:, second:, ...)` | `AnyActionResult<T>` | Transforms the active variant: partial (delegates are optional) |
+| `Match(first:, second:, ...)` | `AnyActionResult<T>` | Transforms the active variant: partial (delegates are optional). `AnyActionResult<T>` is a record struct with `Status` and `Result`, so it deconstructs: `var (status, result) = ...` |
 | `Switch(first:, second:, ...)` | `AnyActionStatus` | Executes action for active variant: partial (delegates are optional) |
-| `Deconstruct(out first, out second, ...)` | void | C# deconstruction; the inactive slots are `default` |
+
+`AnyActionStatus` is `Executed` when a delegate for the active variant ran and `NotExecuted` when none was supplied for it (`Result` is then `default`). Both methods throw `InvalidOperationException` ("Value cannot be null") on `default(Any<...>)`, which has no value.
 
 ```csharp
 // API that returns either data or a structured error
@@ -603,6 +657,8 @@ Console.WriteLine($"{users.Length} succeeded, {errors.Length} failed");
 
 **Why it exists:** Every C# project reinvents `IsNullOrEmpty`, `string.ToPascalCase()`, `list.WhereIf(condition, ...)`. This package provides well-tested, consistent implementations.
 
+Namespaces: the extension methods and `Guider` and `HttpCodes` are in `CSharpEssentials.Core`; the .NET 10+ extension members (`IsEmpty`, `IsPalindrome`) are in `CSharpEssentials`; `ITransactionRunner` is in `CSharpEssentials.Transactions`.
+
 ### Null and Boolean Guards
 
 | Method | What It Does | Returns |
@@ -613,6 +669,12 @@ Console.WriteLine($"{users.Length} succeeded, {errors.Length} failed");
 | `str.IsNotEmpty()` | Negation of IsEmpty | `bool` |
 | `bool.IsTrue()` | Identity (fluent readability) | `bool` |
 | `bool.IsFalse()` | Negation (fluent readability) | `bool` |
+| `source.IsEmpty` (.NET 10+) | Property on `IEnumerable<T>`: `true` when the sequence has no element | `bool` |
+| `str.IsPalindrome` (.NET 10+) | Property on `string`: `true` when it reads the same backwards (null or empty is `true`; case-sensitive) | `bool` |
+| `obj.ExplicitCast<T>()` | `(T)obj` as a fluent call | `T` |
+| `ms.MsToDateTime()` | Unix milliseconds (`long`) to a `DateTime` | `DateTime` |
+| `type.GetTypeGroup<TGroup, TType>(group = 100)` | Rounds an enum's numeric value down to a multiple of `group` and returns it as `TGroup` | `TGroup` |
+| `ex.GetInnerExceptions()` / `ex.GetInnerExceptionsMessages()` | The exception and its inner exceptions, outermost first; or their messages | `IEnumerable<...>` |
 
 ### Conditional Execution
 
@@ -644,8 +706,10 @@ All methods accept an optional `CultureInfo` parameter.
 |--------|-------------|
 | `WhereIf(condition, predicate)` | Applies filter only if condition is true; otherwise returns unfiltered |
 | `WithoutNulls()` | Removes null entries from a collection |
-| `HasSameElements(other)` | Order-independent element equality |
-| `IfAdd(condition, item)` | Conditionally adds item to collection |
+| `WithoutNulls(propertySelector)` | Also drops items whose selected property is null |
+| `HasSameElements(other)` | Order-independent set equality: duplicates are ignored (`[1, 1, 2]` and `[1, 2]` are equal) |
+| `IfAdd(condition, item)` / `IfAddRange(condition, items)` | Conditionally adds an item or a range to an `ICollection<T>`; returns the collection |
+| `GetRandomItem()` / `GetRandomItems(count)` | On `T[]`, `List<T>` and `Span<T>`: one random item, or `count` items at distinct positions (a shuffled copy when `count` is not below the length) |
 | `ForEach(action)` | Lazy: yields each item and runs the action while the sequence is enumerated |
 | `AllTrue()` / `AllFalse()` | Checks bool collections |
 
@@ -662,7 +726,7 @@ All methods accept an optional `CultureInfo` parameter.
 |--------|-------------|
 | `value.AsTask()` | Wraps value in `Task.FromResult` |
 | `value.AsValueTask()` | Wraps value in completed `ValueTask` |
-| `task.WithCancellation(ct)` | Adds `CancellationToken` support to any Task/ValueTask |
+| `task.WithCancellation(ct)` | Adds `CancellationToken` support to any `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`: stops waiting and throws `OperationCanceledException` when the token is cancelled; the underlying operation is not cancelled |
 
 ### Guid Utilities
 
@@ -670,6 +734,15 @@ All methods accept an optional `CultureInfo` parameter.
 |--------|-------------|
 | `guid.ToStringFromGuid()` | URL-safe Base64-encoded short GUID string |
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid` |
+| `Guider.NewGuid()` | `Guid.CreateVersion7()` on .NET 9+, `Guid.NewGuid()` on older targets |
+| `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
+
+### Other Types
+
+| Type | What It Does |
+|------|-------------|
+| `HttpCodes` | Integer constants for common HTTP status codes (`HttpCodes.NotFound`, ...) |
+| `ITransactionRunner` | `ValueTask<T> ExecuteAsync<T>(Func<CancellationToken, ValueTask<T>> work, Func<T, bool> shouldCommit, CancellationToken ct = default)`; implemented by `EfCoreTransactionRunner<TDbContext>` (section 10) and used by the Mediator `TransactionBehavior` |
 
 ---
 
@@ -701,7 +774,12 @@ Each type has `IAsyncRule` variants and `TResult`-returning variants.
 | `RuleEngine.And(rules, context, ct)` | And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. Blocks on async rules; prefer `EvaluateAsync` |
 | `RuleEngine.Or(rules, context, ct)` | First success wins. Async-rule overloads block; prefer `EvaluateAsync` |
 | `RuleEngine.If(condition, success, failure, ctx)` | Conditional branching. Async-rule overloads block; prefer `EvaluateAsync` |
-| `func.ToRule()` | Adapts a `Func<TContext, Result>` to `IRule` |
+| `func.ToRule()` | Adapts a `Func<TContext, Result>`, `Func<TContext, CancellationToken, Result>` or `Func<TContext, CancellationToken, ValueTask<Result>>` (and the `Result<TResult>` forms) to an `IRule` / `IAsyncRule` |
+| `RuleEngine.FromPredicate(predicate, error \| errorFactory)` / `FromPredicateAsync(predicate, error \| errorFactory)` | Builds an `IRule<TContext>` / `IAsyncRule<TContext>` from a `Func<TContext, bool>` / `Func<TContext, Task<bool>>`; a false predicate returns the error |
+| `rule.Next(next)` | Chains two rules (rule, `IRuleBase` or delegate on either side): `next` runs only when the first succeeded |
+| `rules.And()` / `rules.Or()` / `rules.Linear()` | Builders that turn an array or sequence of rules (or delegates) into one composite `IRuleBase<TContext>` to pass to `Evaluate` / `EvaluateAsync` |
+
+The interfaces are `IRuleBase<TContext>` (every rule), `IRule<TContext>` (`Result Evaluate(context, ct)`) and `IAsyncRule<TContext>` (`ValueTask<Result> EvaluateAsync(context, ct)`), each also with a `<TContext, TResult>` form that returns `Result<TResult>`. The composite interfaces expose their children: `Rules` on `IAndRule`, `IOrRule` and their `Async` variants (`IAndAsyncRule`, `IOrAsyncRule`), `Next` on `ILinearRule` / `ILinearAsyncRule`, `Success` and `Failure` on `IConditionalRule` / `IConditionalAsyncRule`.
 
 ```csharp
 // Define rules as simple classes
@@ -757,14 +835,16 @@ Result checkout = await RuleEngine.EvaluateAsync(
 | Member | Type | What It Does |
 |--------|------|-------------|
 | `CreatedAt` | `DateTimeOffset` | When the entity was created |
-| `CreatedBy` | `string` | Who created it |
+| `CreatedBy` | `string?` | Who created it |
 | `UpdatedAt` | `DateTimeOffset?` | When last updated |
 | `UpdatedBy` | `string?` | Who last updated it |
-| `DomainEvents` | `IReadOnlyList<IDomainEvent>` | Pending domain events |
+| `DomainEvents` | `IReadOnlyList<IDomainEvent>` | Pending domain events (a snapshot, safe to iterate while raising or clearing) |
 | `Raise(event)` | method | Queues a domain event for later dispatch |
 | `ClearDomainEvents()` | method | Clears the event queue (call after publishing) |
-| `SetCreatedInfo(at, by)` | method | Sets creation audit fields |
+| `SetCreatedInfo(at, by)` | method | Sets creation audit fields; throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue` |
 | `SetUpdatedInfo(at, by)` | method | Sets update audit fields |
+
+The audit properties have private setters; use the two `Set*Info` methods (the EF Core `AuditInterceptor` calls them). Namespace `CSharpEssentials.Entity`; the interfaces (`IEntityBase`, `IEntityBase<TId>`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder`, `IDomainEvent`, `ISoftDeletable`, `ISoftDeletableBase`, `ISoftDeletableEntityBase`, `IDeletableEntityBase`) are in `CSharpEssentials.Entity.Interfaces`.
 
 ### EntityBase\<TId\>
 
@@ -772,19 +852,27 @@ Extends `EntityBase` with a strongly-typed `Id` property where `TId : IEquatable
 
 ### SoftDeletableEntityBase
 
-Extends `EntityBase` with:
+Extends `EntityBase` with (`SoftDeletableEntityBase<TId>` adds the typed `Id`):
 
 | Member | Type | What It Does |
 |--------|------|-------------|
 | `IsDeleted` | `bool` | Soft-delete flag |
 | `DeletedAt` | `DateTimeOffset?` | When deleted |
 | `DeletedBy` | `string?` | Who deleted it |
+| `IsHardDeleted` | `bool` | Set by `MarkAsHardDeleted()`; tells the EF Core `AuditInterceptor` to remove the row instead of turning the delete into a soft delete |
+| `MarkAsDeleted(at, by)` | method | Sets `IsDeleted`, `DeletedAt` and `DeletedBy` |
+| `Restore()` | method | Clears `IsDeleted`, `DeletedAt`, `DeletedBy` and `IsHardDeleted` |
+| `MarkAsHardDeleted()` | method | Sets `IsHardDeleted` |
+
+### Domain event timing
+
+`[DomainEventTiming(DomainEventTiming.BeforeSave)]` on an event class chooses when the EF Core package dispatches it; the default is `AfterSave`. The attribute only labels the event (see `BaseDbContext` in section 10).
 
 ### Extensions
 
 | Method | What It Does |
 |--------|-------------|
-| `entities.HardDelete()` | Physically removes soft-deleted entities from a collection |
+| `entities.HardDelete()` | Calls `MarkAsHardDeleted()` on every item of an `IEnumerable<T>` where `T : ISoftDeletable`; it neither removes the items from the collection nor deletes anything by itself. The EF Core `Remove`/`SaveChanges` then deletes them physically |
 
 ---
 
@@ -848,35 +936,43 @@ Pass `jsonOptions` built once with `new JsonSerializerOptions(JsonSerializerDefa
 | `PostAsJsonAsResultAsync<T>` | POST JSON + deserialize response |
 | `PutAsJsonAsResultAsync<T>` | PUT JSON + deserialize response |
 | `PatchAsJsonAsResultAsync<T>` | PATCH JSON + deserialize response |
+| `PostAsResultAsync` / `PutAsResultAsync` | POST or PUT an `HttpContent` and return `Result` |
 | `DeleteAsResultAsync` | DELETE to `Result` |
-| `SendAsResultAsync` | Send any request to `Result` |
+| `SendAsResultAsync` / `SendAsResultAsync<T>` | Send any request to `Result` / `Result<T>` |
+| `SendWithRedirectsAsResultAsync` / `SendWithRedirectsAsResultAsync<T>` | Same, following up to `maxRedirects` (default 5) redirects |
+| `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>` | Read a response body into a `Result` |
+
+The extensions take a `Uri`, not a `string`: `client.GetFromJsonAsResultAsync<UserDto>(new Uri("https://api.example.com/users/1"))`. All members of this section are in namespace `CSharpEssentials.Http`.
 
 Cancellation follows the `Result.TryAsync` rule: only the caller's `cancellationToken` throws `OperationCanceledException`. An HTTP timeout (a `TaskCanceledException` wrapping a `TimeoutException`, as `HttpClient.Timeout` throws) returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`; a Polly attempt or total timeout (for example from `Microsoft.Extensions.Http.Resilience`) surfaces as `TimeoutRejectedException` and keeps that type name as code; any other cancellation and any other transport exception returns `ErrorType.Unexpected` with the exception type name as code, except an SSRF guard block, which returns `ErrorType.Forbidden` with code `Http.SsrfBlocked` (see below). The same applies to `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>`. **Behaviour change in 6.5.0:** a timeout or a non-caller cancellation used to throw `OperationCanceledException`.
 
 ### Status Code Mapping
 
-HTTP status codes are automatically mapped to `ErrorType`:
+HTTP status codes are automatically mapped to `ErrorType` by `HttpStatusCodeMapper.ToErrorType(HttpStatusCode)`; `HttpStatusCodeMapper.ToError(statusCode, description?)` builds the `Error` with code `Http.{status}` (for example `Http.404`):
 
 | HTTP Status | ErrorType |
 |------------|-----------|
-| 400 | `Validation` |
-| 401 | `Unauthorized` |
+| 400, 411, 413, 414, 415, 416, 417, 422 | `Validation` |
+| 401, 407 | `Unauthorized` |
 | 403 | `Forbidden` |
-| 404 | `NotFound` |
-| 409 | `Conflict` |
+| 404, 410 | `NotFound` |
+| 409, 412, 429 | `Conflict` |
+| 408 | `Unexpected` |
+| 402, 405, 406 and every other 4xx | `Failure` |
 | 5xx | `Unexpected` |
 
 ### Resilience (Polly Integration)
 
-> **Moved:** These methods have been replaced by the dedicated `CSharpEssentials.Resilience` package (Section 9). Prefer `ResiliencePolicy` / `ResiliencePolicy<T>` for new code.
+> **Legacy:** These static helpers on `HttpClientResilienceExtensions` are kept for compatibility; the `CSharpEssentials.Resilience` package (Section 9) is the supported API. Prefer `ResiliencePolicy` / `ResiliencePolicy<T>` for new code.
 
 | Method | What It Does |
 |--------|-------------|
-| `CreateRetryPipeline` | Polly retry policy |
-| `CreateCircuitBreakerPipeline` | Circuit breaker policy |
-| `CreateTimeoutPipeline` | Timeout policy |
-| `CreateResiliencePipeline` | Combines all resilience policies |
-| `ExecuteAsResultAsync` | Executes through resilience pipeline, returns `Result` |
+| `CreateRetryPipeline` / `CreateRetryPipeline<T>` | Polly retry pipeline (`ResiliencePipeline` / `ResiliencePipeline<Result<T>>`) |
+| `CreateCircuitBreakerPipeline` / `CreateCircuitBreakerPipeline<T>` | Circuit breaker pipeline |
+| `CreateTimeoutPipeline` | Timeout pipeline |
+| `CreateResiliencePipeline` / `CreateResiliencePipeline<T>` | Retry plus timeout (30 seconds unless `timeout` is passed) |
+| `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy`, `CreateResiliencePolicy` (and `<T>` forms) | The same as `ResiliencePolicy` / `ResiliencePolicy<T>` values |
+| `pipeline.ExecuteAsResultAsync(callback, ct)` | Executes a `Func<CancellationToken, Task<Result>>` or `Task<Result<T>>` through the pipeline, returns `Result` |
 
 ### SSRF Guard (.NET 9+)
 
@@ -939,9 +1035,9 @@ Result<Product> product = await ResiliencePolicy<Product>
 | `ResiliencePolicy.Create(options)` | Builds from `ResiliencePolicyOptions` |
 | `ResiliencePolicy.Create(Action<ResiliencePipelineBuilder>)` | Configures the Polly builder directly |
 | `ResiliencePolicy.FromPipeline(pipeline)` / `.ToPipeline()` | Wraps or exposes a Polly `ResiliencePipeline` |
-| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true)` / `.WithRetry(RetryOptions)` | Adds retry strategy |
-| `.WithTimeout(timeout)` / `.WithTimeout(TimeoutOptions)` | Adds timeout strategy |
-| `.WithCircuitBreaker(minThroughput, samplingDuration, breakDuration, failureRatio)` / `.WithCircuitBreaker(CircuitBreakerOptions)` | Adds circuit breaker |
+| `.WithRetry(maxAttempts = 3, delay, exponentialBackoff = true)` / `.WithRetry(RetryOptions)` | Adds retry strategy. `maxAttempts` counts retries after the first call, so `3` allows up to 4 executions; `delay` defaults to 1 second |
+| `.WithTimeout(timeout)` / `.WithTimeout(TimeoutOptions)` | Adds timeout strategy; Polly accepts a timeout from 1 second to 1 day and throws `ValidationException` otherwise |
+| `.WithCircuitBreaker(minimumThroughput = 10, samplingDuration, breakDuration, failureRatio = 0.5)` / `.WithCircuitBreaker(CircuitBreakerOptions)` | Adds circuit breaker; `samplingDuration` defaults to 1 minute and `breakDuration` to 30 seconds |
 | `.ExecuteAsync(ct => Task)` / `.ExecuteAsync(ct => Task<Result>)` | Executes through the pipeline, returns `Result` |
 | `.ExecuteAsync<T>(ct => Task<T>)` / `.ExecuteAsync<T>(ct => Task<Result<T>>)` | Executes typed action, returns `Result<T>` |
 
@@ -987,7 +1083,7 @@ Result<User> retried = await getUser.RetryIfFailed(
 
 | Method | What It Does |
 |--------|-------------|
-| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
+| `func.RetryIfFailed(maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Retries a `Func<CancellationToken, Task<Result<T>>>` or `Task<Result>` while the result is a retryable failure, at most `maxAttempts` times after the first call; returns `ValueTask<Result<T>>` / `ValueTask<Result>` |
 | `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
 | `func.ExecuteAsync(ct)` | Runs a `Func<Task>`, `Func<Task<T>>`, `Func<Task<Result<T>>>` (or their `CancellationToken` forms) and returns `Result` / `Result<T>` |
 
@@ -1037,8 +1133,9 @@ Result<User> user = await ResiliencePolicy
 | `FirstOrDefaultAsResultAsync<T>` | Returns `Result<T>` (NotFound on null) | `FirstOrDefaultAsync` + null check |
 | `SingleOrDefaultAsResultAsync<T>` | Returns `Result<T>` (NotFound on null) | `SingleOrDefaultAsync` + null check |
 | `FindAsResultAsync<T>` | Returns `Result<T>` from `Find` | `FindAsync` + null check |
-| `SaveChangesAsResultAsync` | Returns `Result` wrapping save; exceptions become `Unknown` errors, but an `OperationCanceledException` caused by the passed `cancellationToken` propagates | try/catch around `SaveChangesAsync` |
-| `MigrateDataAsync<TEntity, TSeedData>(data, preCondition, converter)` | Seeds data rows when a precondition holds (returns `Task`) | Hand-written seeding code |
+| `SaveChangesAsResultAsync(ct)` / `SaveChangesAsResultAsync(acceptAllChangesOnSuccess, ct)` | Returns `Result` (or `Result<int>` with the affected row count) wrapping save; exceptions become `Unknown` errors, but an `OperationCanceledException` caused by the passed `cancellationToken` propagates | try/catch around `SaveChangesAsync` |
+| `MigrateDataAsync<TEntity, TSeedData>(data, preCondition, converter)` | Seeds `data` through `converter` and saves, unless `preCondition(set, data)` returns `true` (for example "already seeded"); returns `Task` | Hand-written seeding code |
+| `MigrateDataAsync<TEntity, TSeedData, TKey>(data, MigrateDataOptions<...>)` | Synchronizes a table with `data` by key: adds missing rows (`Converter`), updates changed ones (`IsUpdatedFunc`/`UpdateFunc`), removes rows absent from `data` (hard delete for soft-deletable entities when `HardDeleteMode`); an optional `PreConditionFunc` that returns `true` skips everything | Hand-written upsert code |
 
 ### Pagination
 
@@ -1079,7 +1176,7 @@ Cursor format: base64url (no padding) of `{"v":1,"d":"a"|"b","k":"<key fingerpri
 |--------|-------------|
 | `SoftDeleteAsync(query, deletedAt, deletedBy)` | Soft-deletes all matching `ISoftDeletable` rows in one `UPDATE` (`ExecuteUpdate`); skips rows already deleted; returns the affected row count |
 | `SoftDeleteAsync(query, deletedBy, timeProvider = null)` | Same, taking the time from `TimeProvider` (default `TimeProvider.System`) |
-| `HardDelete(entities)` | Marks tracked soft-deletable entities as hard-deleted and removes them on the next `SaveChanges` |
+| `HardDelete(entity)` / `HardDelete(entities)` | On `DbContext` (and `DbSet` for one entity): marks soft-deletable (`ISoftDeletableEntityBase`) entities as hard-deleted and removes them on the next `SaveChanges` |
 
 Batch updates bypass the change tracker and `SaveChanges` interceptors (audit, domain events), and require a relational provider.
 
@@ -1100,10 +1197,12 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 
 | Method | What It Does |
 |--------|-------------|
-| `EntityBaseMap()` | Configures audit field mappings for `EntityBase` |
-| `EntityBaseGuidIdMap()` | Configures `Guid` ID mapping |
-| `SoftDeletableEntityBaseMap()` | Configures soft-delete field mappings |
-| `ApplySoftDeleteQueryFilter()` | Adds global `IsDeleted == false` filter |
+| `EntityBaseMap<TEntity>(userIdMaxLength = 40)` | `EntityTypeBuilder` extension for `IEntityBase`: `CreatedAt` and `CreatedBy` required, `UpdatedAt` and `UpdatedBy` optional, the user columns limited to `userIdMaxLength` |
+| `EntityBaseMap<TEntity, TId>()` / `EntityBaseGuidIdMap()` | Same, and `Id` is a required key (`EntityBaseGuidIdMap` for `Guid` ids) |
+| `SoftDeletableEntityBaseMap<TEntity>()` / `SoftDeletableEntityBaseMap<TEntity, TId>()` / `SoftDeletableEntityBaseGuidIdMap()` | Adds `DeletedAt`, `DeletedBy`, `IsDeleted` to the above and ignores `IsHardDeleted` |
+| `OptimisticConcurrencyVersionMap(propertyName = "RowVersion")` | Adds a `byte[]` row-version concurrency token property |
+| `AddQueryFilter<T>(expression)` | Adds a query filter to the entity type, combined with `AND` when one exists already |
+| `ApplySoftDeleteQueryFilter()` | `ModelBuilder` extension: adds the global `!IsDeleted` filter to every root entity type that implements `ISoftDeletableBase` |
 | `MaybeConversion<T>()` | EF value conversion for `Maybe<T>` properties to a `NOT NULL` column. Lossy: `None` of a value type is stored as `default(T)` and read back as `Some(default(T))`; `None` of a reference type fails on insert. Use `Maybe<T>?` with the methods below to store absence |
 | `HasNullableMaybeConversion<T>()` | `PropertyBuilder<Maybe<T>?>` extension (`T : struct` or `T : class`): stores the property in a nullable `T` column; `null` and `None` are written as `NULL` and read back as `null` (`NullableMaybeConverter<T>`, `NullableMaybeReferenceConverter<T>`) |
 | `ConfigureNullableMaybeConventions()` | `ModelConfigurationBuilder` extension: applies `HasNullableMaybeConversion` to every public read-write `Maybe<T>?` property of entity, owned, derived and complex types; skips ignored properties and user conversions. `Maybe<T?>?` is unsupported (EF fails the model build). `[RequiresDynamicCode]`: use a compiled model under NativeAOT |
@@ -1168,8 +1267,11 @@ migrationBuilder.AddCheckConstraint(name: "ck_orders_Status_enum", table: "order
 
 | Method | What It Does |
 |--------|-------------|
-| `AddAuditInterceptor` | Auto-fills `CreatedAt/By`, `UpdatedAt/By` on SaveChanges |
-| `AddSlowQueryInterceptor` | Logs queries exceeding a threshold |
+| `AddAuditInterceptor(userIdFactory)` | `Func<string>`, `Func<IServiceProvider, string>` or the `<TUserId>` forms. Registers the user id provider (`IAuditUserIdProvider`) and `AuditInterceptor`, which fills the creation and modification audit fields on `SaveChanges` and turns the delete of a soft-deletable entity into a soft delete (skipped for entities marked hard-deleted) |
+| `AddAuditUserIdProvider(userIdFactory)` | Same factories; registers only the `IAuditUserIdProvider` |
+| `AddSlowQueryInterceptor(Action<SlowQueryOptions>? = null)` / `AddSlowQueryInterceptor(TimeSpan threshold)` | `SlowQueryInterceptor` logs a warning for commands slower than `SlowQueryOptions.Threshold` (default 1 second) and calls a registered `ISlowQueryHandler.OnSlowQuery(SlowQueryContext)` |
+
+The interceptors are attached to a `DbContext` with `AddInterceptors(...)` or, for `BaseDbContext<TContext>`, through `InterceptorsFromServices` (below).
 
 ### BaseDbContext\<TContext\>
 
@@ -1195,11 +1297,13 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 
 | Method | What It Does |
 |--------|-------------|
-| `AddWriteDbContext` | Registers write-optimized context (tracking enabled) |
-| `AddReadDbContext` | Registers read-optimized context (no tracking) |
-| `AddCqrsDbContexts` | Registers both read and write contexts |
+| `AddWriteDbContext<TContext>(configure)` / `(Action<DbContextRegistrationOptions>, configure?)` | Registers a pooled write context (tracking enabled) |
+| `AddReadDbContext<TContext>(...)` | Registers a pooled read context (no tracking), same overloads |
+| `AddCqrsDbContexts<TWriteContext, TReadContext>(...)` | Registers both read and write contexts |
+| `DbContextRegistrationOptions` | `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, `EnableAuditInterceptor` / `EnableDomainEventInterceptor` / `EnableSlowQueryInterceptor` (attached when registered in DI), `MigrationsAssembly`, `RetryOptions` (`DbContextRetryOptions`: `MaxRetryCount` 3, `MaxRetryDelay` 5 s, `AdditionalErrorCodes`), `QuerySplittingBehavior` |
 | `UseAsWriteContext()` | Configures context for write operations |
 | `UseAsReadContext()` | Configures context for read operations (no tracking) |
+| `UseAsReadContextWithIdentityResolution()` | Same, but resolves each row to one instance per query (`NoTrackingWithIdentityResolution`) |
 
 ---
 
@@ -1211,15 +1315,18 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 
 | Member | What It Does |
 |--------|-------------|
-| `EnhancedJsonSerializerOptions.DefaultOptions` | Pre-configured (camelCase, lenient) |
-| `EnhancedJsonSerializerOptions.StrictOptions` | Strict mode options |
+| `EnhancedJsonSerializerOptions.DefaultOptions` | Web defaults with camelCase, case-insensitive reads, `null` properties omitted on write, cycles ignored, relaxed escaping, plus the enum conventions (`EnumConventions.Default`), `MultiFormatDateTimeConverterFactory` and `PolymorphicJsonConverterFactory` |
+| `EnhancedJsonSerializerOptions.DefaultOptionsWithoutConverters` | The same settings without any converter |
+| `EnhancedJsonSerializerOptions.StrictOptions` | Strict mode options: case-sensitive property names, no trailing commas or comments, unmapped members rejected; no custom converters |
 | `.DefaultOptionsWithDateTimeConverter` | Options with multi-format date parsing |
+| `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies the serializer settings and any converter type the target lacks from one `JsonSerializerOptions` to another |
 | `options.Create(configure)` | Copies options and applies a configuration delegate |
 | `CreateOptionsWithConverters(params JsonConverter[])` | Default options plus the given converters |
-| `ConvertToJson<T>()` | Extension: serialize to JSON string |
-| `ConvertFromJson<T>()` | Extension: deserialize from JSON string |
+| `ConvertToJson<T>(options?)` | Extension: serialize to JSON string |
+| `ConvertFromJson<T>(options?)` / `ConvertFromJson(returnType, options?)` | Extension on `string`: deserialize from JSON string |
+| `ConvertToJsonDocument(options?)` / `json.ConvertToJsonDocument()` | Serializes a value to a `JsonDocument` / parses a string into one |
 | `jsonElement.ToClrObject()` | Converts a `JsonElement` to plain CLR values: objects to `Dictionary<string, object?>`, arrays to `List<object?>`, numbers to `int`/`long`/`decimal`/`double`, plus `string`, `bool` and `null` |
-| `PolymorphicJsonConverterFactory` | Handles polymorphic serialization |
+| `PolymorphicJsonConverterFactory` | Handles abstract and interface types (not collections) by scanning the loaded assemblies for derived types. `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]`: not AOT safe, so `EnhancedJsonSerializerOptions` is annotated too; use `[JsonPolymorphic]` with source generation instead for trimmed or AOT apps |
 | `MultiFormatDateTimeConverterFactory` / `MultiFormatDateTimeConverter<T>` | Parses multiple date/time formats |
 | `ConditionalStringEnumConverter` | `[Obsolete]` since 5.0; forwards to the enum conventions converter in `Input` mode (undefined numbers are rejected). Use `options.AddEnumConventions(...)` |
 | `StringEnumNaming` | Obsolete facade over `EnumMetadata`; the naming source for enum strings, shared by JSON, EF Core, Swagger and query/route binding |
@@ -1263,6 +1370,10 @@ StringEnumNaming.TryParse<HttpKind>("HTTPStatus", out var kind);      // true
 | `errors.ToActionResult()` | Converts errors to MVC `IActionResult` |
 | `errors.ToProblemDetails()` | Converts errors to `ProblemDetails` |
 | `ResultEndpointFilter` | Minimal API filter that maps Result to HTTP automatically |
+| `routeHandlerBuilder.ProducesProblem(statusCode = 400)` / `ProducesProblem<TProblemDetails>(statusCode)` | OpenAPI metadata: `application/problem+json` with `EnhancedProblemDetails` (or your type) |
+| `controller.Problem(result \| error \| errors, extensions?, statusCode?)` | `ControllerBase` extension returning the `IActionResult` of the errors |
+| `[ValidateModel]` | MVC action filter (class or method): invalid `ModelState` becomes a validation problem with codes `validation.{key}`; `ConfigureModelValidatorResponse()` adds it globally |
+| `routeHandlerBuilder.WithValidation<T>()` | Endpoint filter that runs every registered `IValidator<T>` (see `AddValidator`) on the handler argument of that type and returns the merged errors as a problem; throws `InvalidOperationException` when the handler has no such parameter or no validator is registered |
 | `GlobalExceptionHandler` | Catches unhandled exceptions, returns ProblemDetails |
 
 `ResultEndpointFilter` returns `200 OK` on success. On failure it returns a ProblemDetails response (3.x: `400` with the raw `Error[]`); a registered `IResultErrorMapper` takes precedence. `ToProblemResult` returns `EnhancedProblemHttpResult` and `ToActionResult` returns `EnhancedProblemObjectResult` (derives from `ObjectResult`); both read the registered options when they execute. `ToProblemDetails` uses default options because it has no request context.
@@ -1282,7 +1393,7 @@ StringEnumNaming.TryParse<HttpKind>("HTTPStatus", out var kind);      // true
 | `AddExceptionProblemMapper<T>(lifetime = Singleton)` | Adds an `IExceptionProblemMapper` (tried before the default mapper) |
 | `ConfigureModelValidatorResponse()` | Model validation errors as ProblemDetails |
 | `ConfigureInvalidModelStateResponse(Func<string, ModelError, Error>? = null)` | `[ApiController]` automatic 400 as an enhanced problem (code = model state key) |
-| `ConfigureSystemTextJson()` | Configures JSON serialization |
+| `ConfigureSystemTextJson(jsonSerializerOptions? = null, configureOptions? = null)` | Applies `EnhancedJsonSerializerOptions.DefaultOptions` (or the options you pass) to MVC and Minimal API JSON, then your delegate |
 
 ### EnhancedProblemDetailsOptions
 
@@ -1299,7 +1410,7 @@ All problem responses (Minimal API, MVC, `GlobalExceptionHandler`, status code p
 | `ValidationErrorsFormat` | `List` | `Dictionary` groups descriptions by code |
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `Func<int, string?>`; `ProblemTypeUris.Rfc7231` restores 3.x |
 | `ExposeExceptionDetails` | `false` | Writes an `exception` extension; enable only in Development |
-| `UseLegacyDefaults()` | | Restores the 3.x output (everything above except `ExposeExceptionDetails`) |
+| `UseLegacyDefaults()` | | Restores the 3.x output: `TraceparentHeader`, request id, user and span ids on, `MethodAndPath`, `ProblemErrorFields.All`, `Rfc7231` type URIs (`ValidationErrorsFormat` and `ExposeExceptionDetails` are untouched) |
 
 ```csharp
 builder.Services.AddEnhancedProblemDetails(o =>
@@ -1318,7 +1429,8 @@ app.UseEnhancedProblemDetails();
 | Interface | Purpose | Register with |
 |-----------|---------|---------------|
 | `IProblemDetailsEnricher` | `void Enrich(ProblemDetailsContext)`: add or change fields on every problem response | `AddProblemDetailsEnricher<T>()` |
-| `IErrorStatusCodeMapper` | `GetStatusCode(Error)`, `SelectPrimaryError(IReadOnlyList<Error>)`, `GetTitle(Error, int)`: status/title for error-based problems (derive from `DefaultErrorStatusCodeMapper` to override part) | `AddErrorStatusCodeMapper<T>()` |
+| `IErrorStatusCodeMapper` | `GetStatusCode(Error)`, `SelectPrimaryError(IReadOnlyList<Error>)`, `GetTitle(Error, int)`: status/title for error-based problems (derive from `DefaultErrorStatusCodeMapper` to override part; its primary error is the one with the highest status code) | `AddErrorStatusCodeMapper<T>()` |
+| `IResultErrorMapper` | `IResult Map(Error[] errors)`: replaces the failure response of `ResultEndpointFilter` | Register it yourself, for example `services.AddSingleton<IResultErrorMapper, MyMapper>()` |
 | `IExceptionProblemMapper` | `bool TryMap(HttpContext, Exception, out ExceptionProblem?)`: first mapper returning `true` wins | `AddExceptionProblemMapper<T>()` |
 
 `ExceptionProblem(int? StatusCode, string? Title, string? Detail, IReadOnlyList<Error>? Errors)` is the result of a mapper.
@@ -1329,7 +1441,7 @@ app.UseEnhancedProblemDetails();
 
 | Exception | Response |
 |-----------|----------|
-| `OperationCanceledException` | 499 |
+| `OperationCanceledException` while `RequestAborted` is cancelled | 499 (any other one is a 500) |
 | `BadHttpRequestException` | its own status code |
 | `EnhancedValidationException` | status from its errors (validation: 400) |
 | `DomainException` | status of its `ErrorType` (3.x: always 400) |
@@ -1416,11 +1528,11 @@ Reads: `If-None-Match` uses weak comparison and takes precedence over `If-Modifi
 
 | Method | What It Does |
 |--------|-------------|
-| `AddAndConfigureApiVersioning()` | Registers API versioning services |
+| `AddAndConfigureApiVersioning(configureOptions?, configureExplorer?)` | Registers API versioning with default version 1.0 (assumed when unspecified), reported versions, a URL segment or `x-api-version` header reader, and API explorer group names like `v1` with the version substituted in URLs; the delegates adjust `ApiVersioningOptions` / `ApiExplorerOptions` |
 | `CreateVersionSet(version = 1)` | Creates version set for Minimal APIs |
-| `CreateVersionedGroup(route, version = 1)` | Creates versioned route group |
+| `CreateVersionedGroup(route, version = 1)` | Creates the group `MapGroup("v{version:apiVersion}/{route}")` with that version set |
 | `MapVersionedGroup(version)` | `MapGroup("v{version:apiVersion}")` with a version set for `version`; works for any endpoints, including a `CSharpEssentials.Endpoints` registry (`app.MapVersionedGroup(2).MapAppsEndpoints()`) |
-| `AddSwagger<T>(securitySchemeName, securityScheme, assembly?)` / `UseVersionableSwagger()` | Swagger with version support (5.0: in `CSharpEssentials.AspNetCore.Swashbuckle`, same namespace; 6.0: Swashbuckle 10, the scheme id is the first argument, e.g. `SecuritySchemes.JwtBearerSchemeName`) |
+| `AddSwagger<T>(securitySchemeName, securityScheme, assembly?)` (`T : ConfigureSwaggerOptions`, for example `DefaultConfigureSwaggerOptions`) / `UseVersionableSwagger(options?, uiOptions?)` | Swagger with version support (5.0: in `CSharpEssentials.AspNetCore.Swashbuckle`, same namespace; 6.0: Swashbuckle 10, the scheme id is the first argument, e.g. `SecuritySchemes.JwtBearerSchemeName`) |
 | `SwaggerGenOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | How optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described. `SplitPaths` (the `AddSwagger` default from 6.1.0): one path per form (`/orders`, `/orders/{id}`), trailing optionals only, up to three; shorter forms get `{operationId}Without{Param}`, a duplicate operationId throws. `RequiredOnly`: one path, parameters required. `LegacyNonCompliant` (obsolete): the 6.0.0 output, invalid OpenAPI. A route with more than three trailing optionals is logged as a warning (6.2.0). See [the migration note](migration/v6-optional-route-parameters.md) |
 | `OpenApiOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | `CSharpEssentials.AspNetCore.OpenApi` (6.2.0, opt-in): the same forms, operationIds, rules and warning for `Microsoft.AspNetCore.OpenApi` documents, as a document transformer. `OpenApiOptionalRouteParameterMode.SplitPaths` or `RequiredOnly`; a later call on the same options replaces the earlier one and keeps the pipeline position of the first call |
 
@@ -1448,12 +1560,14 @@ Both produce the same enum schemas (shared golden files): one component per enum
 | Behavior | Marker Interface | What It Does |
 |----------|-----------------|-------------|
 | `ValidationBehavior` | None (auto for all); `IValidationModeOverride` to pick a mode per request | Runs CSharpEssentials.Validation before handler; returns `Result.Failure` with validation errors in `Enforce` mode, continues in `LogOnly`, skips in `Off`; notifies `IValidationFailureObserver`s |
-| `LoggingBehavior` | `ILoggableRequest` | Logs request/response details |
+| `LoggingBehavior` | `ILoggableRequest` | Logs `Handling {Request} request`, `Handled {Response} response` and the elapsed time at `Information`; the JSON payload is added only for `IRequestLoggable` (request), `IResponseLoggable` (response) or `IRequestResponseLoggable` (both), which derive from `ILoggableRequest` |
 | `ExceptionHandlingBehavior` | None (auto for `Result` / `Result<T>`) | Catches handler exceptions; converts to `Result.Failure(Error.Exception(ex))`; `OperationCanceledException` always propagates |
-| `CachingBehavior` | `ICacheable` | Caches handler responses using `CacheKey` and `Expiration` (`BypassCache`, `CacheFailures` control the lookup) |
+| `CachingBehavior` | `ICacheable` | Caches handler responses as JSON in the registered `IDistributedCache` under `CacheKey`, absolute `Expiration` (zero or less: no expiry). `BypassCache` skips the cache entirely; `CacheFailures = false` does not store a failed `Result` |
 | `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope`; completes only when the `Result` succeeds |
 | `TransactionBehavior` | `ITransactionalRequest` | Runs the handler through the registered `ITransactionRunner`; commits only when the `Result` succeeds. Replaces `TransactionScopeBehavior` when registered |
 | `LockBehavior` | `ILockedRequest` | Holds the `IResourceLock` lock for `LockKey` while the handler runs; waits up to `LockTimeout` (unbounded when `null`) and throws `TimeoutException` when it cannot acquire (a failed `Result` behind `ExceptionHandlingBehavior`). Registered only by `AddMediatorLockBehavior` |
+
+Validation modes (`ValidationMode`): `Enforce` (default, failures stop the request), `LogOnly` (validators run, failures go to the observers, the request continues) and `Off`. `ValidationBehaviorOptions.DefaultMode` sets the default; a request implementing `IValidationModeOverride` returns its own `ValidationMode`. Every `IValidationFailureObserver` in DI receives a `ValidationFailureContext(RequestType, Request, Errors, Mode)` in `Enforce` and `LogOnly` mode; the built-in `LoggingValidationFailureObserver` logs (Warning in `LogOnly`, Debug in `Enforce`) and counts `cse.mediator.validation.failures` on the `CSharpEssentials.Mediator` meter.
 
 ### ExceptionHandlingBehavior
 
@@ -1495,8 +1609,8 @@ public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Resu
 Result result = await mediator.Send(new ProcessPaymentCommand(orderId, 99.99m));
 if (result.IsFailure)
 {
-    // result.Error.Code        => "HttpRequestException"
-    // result.Error.Description => "Payment gateway timed out"
+    // result.FirstError.Code        => "HttpRequestException"
+    // result.FirstError.Description => "Payment gateway timed out"
 }
 ```
 
@@ -1513,7 +1627,8 @@ if (result.IsFailure)
 | `AddMediatorCachingBehavior()` | Registers caching only |
 | `AddMediatorTransactionBehavior()` | Registers `TransactionScopeBehavior`, replacing `TransactionBehavior` in place |
 | `AddMediatorTransactionRunnerBehavior()` | Registers `TransactionBehavior` (scoped), replacing `TransactionScopeBehavior` in place; needs an `ITransactionRunner` |
-| `AddMediatorLockBehavior(placement)` | Registers `LockBehavior` (scoped) just before (`LockPlacement.OutsideTransaction`, default) or just after (`InsideTransaction`) the transaction behavior, and `InProcessResourceLock` as the singleton `IResourceLock` unless one is registered |
+| `AddMediatorLockBehavior(placement)` | Registers `LockBehavior` (scoped) just before (`LockPlacement.OutsideTransaction`, default) or just after (`InsideTransaction`) the transaction behavior (at the end when there is none; `InsideTransaction` without one throws `InvalidOperationException`), and `InProcessResourceLock` as the singleton `IResourceLock` unless one is registered. Calling it again moves the behavior |
+| `MediatorExtensions.DefaultPipelineBehaviors` | Pre-ordered array of the five default behavior types (`TransactionScopeBehavior<,>`, no `LockBehavior<,>`); under Native AOT pass it as `options.PipelineBehaviors` of `AddMediator` (namespace `Microsoft.Extensions.DependencyInjection`) |
 
 ### Resource Locks
 
@@ -1570,7 +1685,7 @@ Nested enums are supported (`Order.State` gets `Order_StateExtensions`).
 
 | Runtime type | What It Does |
 |------|-------------|
-| `EnumConventions` | Record; `Default` has `AcceptNumbers`, `AcceptMemberNames`, `CaseInsensitive` = `true`, `UnknownValue = UseFallback`, `WriteAs = String`, `Storage = String`, `FlagsStorage = Integer`, `CheckConstraints = true`, `CanHandle = EnumMetadata.IsRegistered` |
+| `EnumConventions` | Record; `Default` has `AcceptNumbers`, `AcceptMemberNames`, `CaseInsensitive` = `true`, `UnknownValue = UseFallback`, `WriteAs = String`, `Storage = String`, `FlagsStorage = Integer`, `CheckConstraints = true`, `CanHandle` = enums with generated metadata (`EnumMetadata.IsRegistered`) or marked `[StringEnum]` |
 | `EnumReadMode` | `Input` (strict, caller values, never the fallback) or `Data` (tolerant, stored or trusted values, applies `UnknownValue`) |
 | `EnumValueParser.TryParse<TEnum>(text, mode, conventions, out value, out error)` / `TryParseNumber` | Parses one token |
 | `EnumValueFormatter.Format<TEnum>(value, format)` / `FormatFlags` / `TryFormat` / `TryFormatMany` | Formats as wire name or number |
@@ -1578,7 +1693,7 @@ Nested enums are supported (`Order.State` gets `Order_StateExtensions`).
 | `EnumMetadata.Get<TEnum>()` / `TryGet` / `IsRegistered(Type)` | Generated metadata (`EnumInfo<TEnum>`: `Members`, `WireNames`, `Fallback`, `IsFlags`, `Storage`) |
 | `EnumMetadata.GetOrCreateWithReflection(Type)` | Opt-in reflection metadata; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
 
-Analyzers CSE0002 to CSE0016 check duplicate wire names and aliases, fallback and flags rules, invalid names, migrations and enums the generator cannot reach; see the [Enums Readme](../CSharpEssentials.Enums/Readme.MD#diagnostics) for the table with fixes, and the [design document](design/CSharpEssentials.Enums-DESIGN.md) for the per-layer behavior. Upgrading: [Migrating from 4.x to 5.0](migration/v4-to-v5.md).
+Analyzers CSE0002 to CSE0016 (CSE0011 is not used) check duplicate wire names and aliases, fallback and flags rules, invalid names, migrations and enums the generator cannot reach; see the [Enums Readme](../CSharpEssentials.Enums/Readme.MD#diagnostics) for the table with fixes, and the [design document](design/CSharpEssentials.Enums-DESIGN.md) for the per-layer behavior. Upgrading: [Migrating from 4.x to 5.0](migration/v4-to-v5.md).
 
 ---
 
@@ -1591,13 +1706,15 @@ Analyzers CSE0002 to CSE0016 check duplicate wire names and aliases, fallback an
 | Type/Method | What It Does |
 |-------------|-------------|
 | `IDateTimeProvider` | Interface: `UtcNow` (`DateTimeOffset`), `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
-| `DateTimeProvider` | Default implementation using system clock |
-| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)` |
+| `DateTimeProvider(TimeProvider)` | Production implementation: reads the clock of the `TimeProvider` you pass (for example `TimeProvider.System`); `TimeZone` is `TimeZoneInfo.Local` |
+| `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`; `TimeZone` is UTC |
 | `ToTimeOnly()` | Extension: `DateTime` to `TimeOnly` |
 | `ToDateOnly()` | Extension: `DateTime` to `DateOnly` |
 | `NextDayOfWeek(dayOfWeek, includeCurrent = false)` | Next given weekday for a `DateTime` or `DateOnly`; `includeCurrent` returns the date itself when it already matches |
 | `PreviousDayOfWeek(dayOfWeek, includeCurrent = false)` | Previous given weekday, same rules |
 | `birthDate.GetAge(today)` / `birthDate.GetAge(dateTimeProvider)` | Age in whole years for a `DateOnly` birth date; the provider form uses its `TimeZone`. Throws `ArgumentOutOfRangeException` when the birth date is after the reference date |
+
+On `netstandard2.1` the `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToTimeOnly`, `ToDateOnly`, the `DateOnly` overloads, `GetAge`) are not available. Register the provider yourself, for example `services.AddSingleton<IDateTimeProvider>(new DateTimeProvider(TimeProvider.System))`; the package has no registration helper.
 
 ```csharp
 var clock = new FakeDateTimeProvider(new DateTimeOffset(2026, 10, 6, 0, 0, 0, TimeSpan.Zero));
@@ -1609,13 +1726,13 @@ int age = new DateOnly(1990, 5, 1).GetAge(clock);                          // 36
 
 ## 16. CSharpEssentials.Clone: Deep Copy
 
-**What it is:** Deep cloning via JSON serialization.
+**What it is:** A type-safe `ICloneable<T>` and collection helpers. You write the copy logic in `Clone()` (compose nested clones for a deep copy); the package does no reflection or serialization.
 
 | Type/Method | What It Does |
 |-------------|-------------|
-| `ICloneable<T>` | Interface with `T Clone()` method |
-| `collection.Clone<T>()` | Deep-clones `IEnumerable<T>` via JSON round-trip |
-| `queryable.Clone<T>()` | Deep-clones `IQueryable<T>` results |
+| `ICloneable<out T>` | Interface with `T Clone()` method |
+| `collection.Clone()` | `IEnumerable<T>` where `T : ICloneable<T>`: lazily calls `Clone()` on every element |
+| `queryable.Clone()` | `IQueryable<T>` where `T : ICloneable<T>`: `Select(Clone)` re-wrapped with `AsQueryable()`; meant for in-memory sources (a database provider cannot translate `Clone()`) |
 
 ---
 
@@ -1625,10 +1742,25 @@ int age = new DateOnly(1990, 5, 1).GetAge(clock);                          // 36
 
 | Member | What It Does |
 |--------|-------------|
-| `app.AddRequestResponseLogging(options => ...)` | Adds the middleware to the pipeline (`IApplicationBuilder`); options: `LoggingLevel`, `HeaderKeys`, `LoggingFields`, `UseSeparateContext`, `LoggerCategoryName` |
-| `[SkipRequestLogging]` | Attribute to opt out of request body logging |
+| `app.AddRequestResponseLogging(options => ...)` | Adds the middleware to the pipeline (`IApplicationBuilder`); `options` is a `RequestResponseOptions`. Without `UseLogger` or `UseHandler` it writes nothing |
+| `options.UseLogger(ILoggerFactory, Action<LoggingOptions>)` / `UseLogger(ILoggerFactory, LoggingOptions)` | Writes one log entry per request through the factory |
+| `options.UseHandler(Func<RequestResponseContext, Task>)` | Calls your handler with the captured context after each request |
+| `options.IgnorePaths(params string[])` | Skips requests whose path starts with one of the prefixes (case-insensitive, trailing `/` trimmed) |
+| `LoggingOptions` | `LoggingLevel` (default `Information`), `LoggingFields` (list of `LogFields`: `Request`, `Response`, `HostName`, `Path`, `Method`, `QueryString`, `Headers`, `ResponseTiming`, `RequestLength`, `ResponseLength`), `HeaderKeys` (the request headers to write when `Headers` is selected; none by default), `UseSeparateContext` (default `true`), `LoggerCategoryName` (default `"RequestResponseLogger"`); `LoggingOptions.CreateAllFields()` selects every field |
+| `RequestResponseContext` | `RequestBody`, `ResponseBody`, `ResponseTime` (`mm:ss.fff`), `ResponseCreationTime`, `RequestLength`, `ResponseLength`, `Url` |
+| `[SkipRequestLogging]` | Attribute (class or method, read from endpoint metadata) to opt out of request body logging |
 | `[SkipResponseLogging]` | Attribute to opt out of response body logging |
 | `[SkipRequestResponseLogging]` | Attribute to opt out of both |
+
+```csharp
+app.AddRequestResponseLogging(options =>
+{
+    options.UseLogger(app.Services.GetRequiredService<ILoggerFactory>(), LoggingOptions.CreateAllFields());
+    options.IgnorePaths("/health", "/metrics");
+});
+```
+
+A skipped body is logged as `Skipped logging request body` / `Skipped logging response body`; request bodies over 10 MB are logged as `Request body too large`. For Minimal APIs add the attribute with `.WithMetadata(new SkipRequestLoggingAttribute())`.
 
 ---
 
@@ -1638,6 +1770,30 @@ int age = new DateOnly(1990, 5, 1).GetAge(clock);                          // 36
 
 | Type | What It Does |
 |------|-------------|
+| `configuration.AddGcpSecretManager(options => ...)` | Extension on `IConfigurationManager` (for example `builder.Configuration`), namespace `CSharpEssentials.GcpSecretManager.Extensions`. Without the delegate the projects are read from the `GoogleSecretManager:Projects` section of the configuration; throws `ArgumentException` when no project is configured |
+| `SecretManagerConfigurationOptions` | `sealed record` (namespace `CSharpEssentials.GcpSecretManager.Configuration`): `Projects` / `AddProject(...)` (fluent), `CredentialsPath`, `Loader`, `LoggerFactory` (optional `ILoggerFactory`; no console output), `LoadFromAppSettings`, `ConfigurationSectionName` (default `"GoogleSecretManager"`), `BatchSize` (default 10), `PageSize` (default 300) |
+| `ProjectSecretConfiguration` | `sealed record` per project: `ProjectId`, `Region` (null = global endpoint), `PrefixFilters`, `SecretIds`, `RawSecretIds`, `RawSecretPrefixes` (raw secrets are not parsed as JSON) |
+| `ISecretManagerConfigurationLoader` | `GetKey(Secret)`, `GetKey(string)` and `ShouldLoadSecret(Secret, ProjectSecretConfiguration)`; set `options.Loader` to replace the default, which maps `__` to `:` and loads a secret when no `PrefixFilters`/`SecretIds` are set or the id matches one |
+
+The configuration source and provider are internal. A secret that is valid JSON is also flattened into `key:child` entries (arrays as `key:0`); the secret's own key keeps the raw text.
+
+```csharp
+using CSharpEssentials.GcpSecretManager;
+using CSharpEssentials.GcpSecretManager.Extensions;
+
+builder.Configuration.AddGcpSecretManager(options =>
+{
+    options.AddProject(new ProjectSecretConfiguration
+    {
+        ProjectId = "my-gcp-project",
+        PrefixFilters = ["MyApp__"]
+    });
+});
+```
+
+`AddProject(null)` and `Projects = null` throw `ArgumentNullException`. `Projects` is copy-on-write, so copies made with `with` never share changes. Listing and reading secrets retry through `CSharpEssentials.Resilience` (`RetryIfFailed` with a `shouldRetry` predicate): only `ResourceExhausted` and `Unavailable` are retried, 3 times with exponential backoff; any other status fails at once. A failed listing skips that project, a failed read skips that secret, and loading continues.
+
+------|-------------|
 | `SecretManagerConfigurationSource` | `IConfigurationSource` for Secret Manager |
 | `SecretManagerConfigurationProvider` | Loads secrets as configuration values |
 | `SecretManagerConfigurationOptions` | `sealed record` options: `Projects` / `AddProject(...)` (fluent), `CredentialsPath`, `Loader`, `LoggerFactory` (optional `ILoggerFactory`; no console output), `LoadFromAppSettings`, `ConfigurationSectionName`, `BatchSize` (default 10), `PageSize` (default 300) |
@@ -1663,11 +1819,13 @@ builder.Configuration.AddGcpSecretManager(options =>
 
 **What it is:** A high-performance, model-first validation library that returns `Result<T>` natively.
 
-**Why it exists:** FluentValidation uses expression trees and reflection at runtime. `CSharpEssentials.Validation` is zero-reflection: no expression tree evaluation, no deferred rule builds. Validators receive the model directly; property names are inferred at startup via `nameof`-equivalent extraction. Errors flow as `Result<T>` without exceptions or secondary return channels.
+**Why it exists:** FluentValidation uses expression trees and reflection at runtime. `CSharpEssentials.Validation` is zero-reflection: no expression tree evaluation, no deferred rule builds. Validators receive the model directly; `rules.For(() => model.Email)` takes a `Func<T>` and reads the property name from the lambda text captured by `[CallerArgumentExpression]` at compile time (`rules.For(value, "Email")` names it yourself). Errors flow as `Result<T>` without exceptions or secondary return channels.
 
 ```bash
 dotnet add package CSharpEssentials.Validation
 ```
+
+Namespaces: `CSharpEssentials.Validation` (`Validator<T>`, `Validator`, `IValidator<T>`, `RuleContext<T>`, `CascadeMode`, `ValidateWith`/`ValidateWithAsync`), `CSharpEssentials.Validation.Validators` (the rule methods below) and `CSharpEssentials.Validation.Extensions` (DI registration). The samples assume all three are imported.
 
 ### Defining a Validator
 
@@ -1690,7 +1848,7 @@ Result<CreateUserCommand> result = await new CreateUserCommandValidator().Valida
 **Inline (static) usage**, for one-off validations without a dedicated class:
 
 ```csharp
-// Sync delegate — zero heap allocation
+// Sync delegate: the returned ValueTask is already completed (no async state machine)
 Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, rules) =>
 {
     rules.For(() => m.Email).NotEmpty().EmailAddress();
@@ -1954,7 +2112,7 @@ Short-circuits immediately: if `result.IsFailure` before validation runs, the ex
 |--------|-------------|
 | `Map(mapper)` | Transforms the value; passes Left through unchanged |
 | `MapLeft(mapper)` | Transforms the error; passes Right through unchanged |
-| `FlatMap(mapper)` | Chains into a new `These`: only if Right or Both |
+| `FlatMap(mapper)` | Chains into a new `These`: only if Right or Both. The mapper's result is returned as is, so the error of a Both is dropped; Left passes through |
 | `Tap(action)` | Side-effect on value when Right or Both |
 | `TapLeft(action)` | Side-effect on error when Left or Both |
 | `Match(onLeft, onRight, onBoth)` | Exhaustive pattern match: all three branches required |
@@ -1972,7 +2130,7 @@ Both are extensions on `These<Error, TValue>`.
 
 | Method | What It Does |
 |--------|-------------|
-| `Partition(IEnumerable<These<TError,TValue>>)` | Returns `(Lefts, Rights, Boths)` as read-only lists |
+| `items.Partition()` | Extension on `IEnumerable<These<TError,TValue>>` (`TheseCollectionExtensions`): returns `(Lefts, Rights, Boths)` as read-only lists; `Boths` holds `(TError, TValue)` tuples |
 | `TheseExtensions.FromResult(Result<TValue>)` | Wraps a `Result` into `These<Error, TValue>` |
 
 ```csharp
@@ -2000,8 +2158,8 @@ var (lefts, rights, boths) = items.Partition();
 |----------|---------|-----------|
 | `isLeft` | `HasLeft` | Always |
 | `isRight` | `HasRight` | Always |
-| `left` | `LeftOrDefault` | When non-null |
-| `right` | `RightOrDefault` | When non-null |
+| `left` | `LeftOrDefault` | Always (`null` or `default` when absent) |
+| `right` | `RightOrDefault` | Always (`null` or `default` when absent) |
 | `isBoth` | *(not present)* | `[JsonIgnore]`: derived from `isLeft && isRight` |
 
 ```csharp
@@ -2042,7 +2200,7 @@ public sealed class CreateApp : IEndpoint
 | Type/Attribute | What It Does |
 |----------------|-------------|
 | `IEndpoint` | `static void Map(IEndpointRouteBuilder app)`. Endpoint types are never instantiated; dependencies come from handler parameters |
-| `IEndpointGroup` | `static string Prefix` (passed to `MapGroup`) and `static void Configure(RouteGroupBuilder group)` for group-wide conventions |
+| `IEndpointGroup` | `static string Prefix` (passed to `MapGroup`) and an optional `static void Configure(RouteGroupBuilder group)` for group-wide conventions |
 | `[EndpointGroup(typeof(TGroup))]` / `[EndpointGroup<TGroup>]` | Places an endpoint or a group under a group. Groups can nest |
 | `[ExcludeFromMapping]` | Excludes an endpoint, a group (with everything under it) or an assembly |
 
@@ -2054,6 +2212,7 @@ public sealed class CreateApp : IEndpoint
 | `app.MapAllEndpoints(options?)` | `internal`; maps the own registry, then every referenced registry once. Generated in `Exe`/`WinExe` projects that are not test projects |
 | `[assembly: GenerateEndpointAggregate]` / `[assembly: DisableEndpointAggregate]` | Opt in to `MapAllEndpoints` from a library or test project / opt out in an application |
 | `{Asm}EndpointRegistry.EndpointTypes` | Endpoint types in mapping order |
+| `[assembly: EndpointModule(typeof(...))]` | Written by the generator next to each registry; `MapAllEndpoints` reads it to find the registries of referenced assemblies |
 | `app.MapEndpointsFromAssemblies(assemblies)` / `(configure, assemblies)` | Reflection fallback for assemblies without a registry (plugins). Same rules and options; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
 | `app.MapVersionedGroup(version).Map{Asm}Endpoints()` | Versioned routes (`/v2/...`) via `CSharpEssentials.AspNetCore` |
 
@@ -2084,7 +2243,7 @@ app.MapAppsEndpoints(options =>
 | Member | What It Does |
 |--------|-------------|
 | `EndpointTypeMetadata` | Added to every endpoint; identifies the endpoint type at runtime |
-| `app.RouteOf<TEndpoint>(values?)` / `RouteOf<TEndpoint>(nameOrMethod, values?)` | Builds a request path from the endpoint type (group prefixes included). Extra values become query string entries. Throws `InvalidOperationException` when no single route matches or a route value is missing |
+| `app.RouteOf<TEndpoint>(values?)` / `RouteOf<TEndpoint>(nameOrMethod, values?)` | Builds a request path from the endpoint type (group prefixes included). Extra values become query string entries. Throws `InvalidOperationException` when no single route matches or a route value is missing. `[RequiresUnreferencedCode]` (reads the public properties of `values`) |
 | `RequireRoles(...)` | Any listed role |
 | `RequirePolicies(...)` | Every listed policy |
 | `RequireAuthSchemes(...)` | Any listed scheme |
@@ -2138,7 +2297,7 @@ public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
 | `Key` | Registers a keyed service (`null` = non-keyed) |
 | `As` | `ServiceAs.Self`, `ServiceAs.SelfWithInterfaces` (one shared instance), `ServiceAs.ImplementedInterfaces` |
 | `Strategy` | `RegistrationStrategy.Add` (default), `TryAdd`, `TryAddEnumerable`, `Replace`, `Throw` |
-| `[Decorates(typeof(TService), Order = n)]` / `[Decorates<TService>]` | Decorates every matching registration in ascending `Order`, keeping lifetime and key |
+| `[Decorates(typeof(TService), Order = n)]` / `[Decorates<TService>]` | Decorates every matching registration in ascending `Order`, keeping lifetime and key; `Key` selects a keyed registration |
 | `[ExcludeFromRegistration]` | Opts a class or an assembly out |
 
 ### Registration and Decoration
@@ -2148,15 +2307,16 @@ public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
 | `services.Add{Asm}Services(logger?)` | Generated per assembly: registers services, then applies decorators; a repeated call does nothing. The logger reports duplicate (service, key) registrations at `Debug` |
 | `services.AddAllServices()` | `internal`; registers every referenced registry and the application's own, then applies all decorators in ascending `Order` across assemblies (ties: assembly order, then type name). Skips assemblies already registered, like a repeated `Add{Assembly}Services`. Generated in applications |
 | `[assembly: ServiceRegistryName("...")]` / `GenerateServiceAggregate` / `DisableServiceAggregate` | Rename the method / opt in to `AddAllServices` in a library or test project / opt out |
+| `[assembly: ServiceModule(typeof(...))]` | Written by the generator next to each registry; `AddAllServices` reads it to find the registries of referenced assemblies |
 | `services.AddServicesFromAssemblies(assemblies)` / `(logger, assemblies)` | Reflection fallback; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
 | `services.Decorate<TService, TDecorator>(serviceKey?)` | Runtime decoration; throws `InvalidOperationException` when nothing matches |
-| `services.Decorate<TService>((inner, sp) => ...)` | Factory decoration |
-| `services.TryDecorate<TService, TDecorator>()` | Returns `false` when nothing matches |
-| `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` | Decorates the closed registrations of an open generic |
+| `services.Decorate<TService>((inner, sp) => ..., serviceKey?)` | Factory decoration |
+| `services.TryDecorate<TService, TDecorator>(serviceKey?)` | Returns `false` when nothing matches |
+| `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` | Decorates the closed registrations of an open generic; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
 
 ```csharp
 builder.Services.AddSampleBillingServices();
-builder.Services.TryDecorate<IOrderService, LoggingOrderService>();
+builder.Services.TryDecorate<IOrderService, AuditedOrderService>();
 ```
 
 Decorated originals move to a hidden registration under a private key, so they never appear in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. If decoration fails, the collection is left unchanged.
@@ -2189,6 +2349,78 @@ It references `CSharpEssentials.Any`, `Clone`, `Core`, `Entity`, `Enums`, `Error
 
 ---
 
+## 24. CSharpEssentials.AspNetCore.OpenApi: OpenAPI Documents
+
+**What it is:** The `Microsoft.AspNetCore.OpenApi` integration of the enum conventions and of optional route parameters.
+
+**Why it exists:** `Microsoft.AspNetCore.OpenApi` describes enums with the framework rules, not with the wire names the enum conventions write, and it writes an optional route segment (`{id?}`) as an invalid path parameter. This package fixes both.
+
+> One host, one OpenAPI package: reference this package or `CSharpEssentials.AspNetCore.Swashbuckle` (section 25), never both. Both use `Microsoft.OpenApi` 2.x.
+
+```bash
+dotnet add package CSharpEssentials.AspNetCore.OpenApi
+```
+
+Targets `net10.0` only, with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.OpenApi` 2.x; it depends on `CSharpEssentials.AspNetCore`. Hosts on net8.0 or net9.0 use the Swashbuckle package. Everything is in namespace `CSharpEssentials.AspNetCore`.
+
+| Member | What It Does |
+|--------|-------------|
+| `OpenApiOptions.AddEnumConventions()` | Adds a schema, an operation and a document transformer. Enums handled by the enum conventions (`[StringEnum]` or generated metadata) get one component each with the wire names in `enum`, `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` and a value table appended to the description. Call `services.AddEnumConventions()` (section 12) as well |
+| `OpenApiOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | Opt-in document transformer: describes `{id?}`, `{id:int?}` and `{page=1}` with valid OpenAPI. A later call on the same options replaces the earlier one |
+| `OpenApiOptionalRouteParameterMode.SplitPaths` | One path per form of a route that ends with one to three optional parameters (`/api/archive`, `/api/archive/{year}`, `/api/archive/{year}/{month}`); a shorter form gets the operationId `{operationId}Without{Param}` (`And` between parameters) |
+| `OpenApiOptionalRouteParameterMode.RequiredOnly` | One path per operation, the path parameters marked required |
+
+```csharp
+using CSharpEssentials.AspNetCore;
+
+builder.Services.AddEnumConventions();
+builder.Services.AddOpenApi("v1", o => o.AddEnumConventions().AddOptionalRouteParameters());
+
+app.MapOpenApi();
+```
+
+A host that does not reference `Microsoft.AspNetCore.OpenApi` itself fails with `CS9137` until it enables the interceptor namespace: `<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>`. The enum schema rules (flags, nullable per OpenAPI version, numeric wire format, fallback members) are listed under "OpenAPI Enum Schemas" in section 12, and the package README has the optional route parameter rules.
+
+---
+
+## 25. CSharpEssentials.AspNetCore.Swashbuckle: Swagger Documents
+
+**What it is:** The Swashbuckle integration of `CSharpEssentials.AspNetCore`: versioned Swagger setup, schema ids, a JWT security scheme, the enum conventions and optional route parameters.
+
+> One host, one OpenAPI package: reference this package or `CSharpEssentials.AspNetCore.OpenApi` (section 24), never both.
+
+```bash
+dotnet add package CSharpEssentials.AspNetCore.Swashbuckle
+```
+
+Targets `net8.0`, `net9.0`, `net10.0` and `net11.0` with `Swashbuckle.AspNetCore` `[10.2.3, 11)` and `Microsoft.OpenApi` `[2.7.5, 3)` on every target; it depends on `CSharpEssentials.AspNetCore` and `Asp.Versioning.Mvc.ApiExplorer`. Namespace `CSharpEssentials.AspNetCore` unless noted.
+
+| Member | What It Does |
+|--------|-------------|
+| `AddSwagger<T>(securitySchemeName, securityScheme, assembly?)` | `T : ConfigureSwaggerOptions`. Registers the security scheme and a requirement for it, schema ids from `SwashbuckleSchemaIdFactory`, the XML documentation files of the assemblies that declare endpoints (plus `assembly`), `T`, and the enum conventions |
+| `UseVersionableSwagger(options?, uiOptions?)` | Serves `/swagger/{documentName}/swagger.json` and the Swagger UI with one entry per API version (`v1` without `Asp.Versioning`); the callbacks adjust `SwaggerOptions` and `SwaggerUIOptions` |
+| `ConfigureSwaggerOptions` | Abstract `IConfigureNamedOptions<SwaggerGenOptions>`; the constructor takes `IServiceProvider`, `IHostEnvironment` and `IConfiguration`; override `Configure(SwaggerGenOptions)` to change the documents |
+| `DefaultConfigureSwaggerOptions` | One `SwaggerDoc` per API version from `Swagger:Title` (`API`), `Swagger:Description` (`API Description`), `Swagger:License` (`API License`) and `Swagger:LicenseUrl` (`https://opensource.org/license/mit`); keeps the first of conflicting actions, calls `AddOptionalRouteParameters()`, maps `TimeSpan` and `TimeOnly` to a string with the example `00:00:00` |
+| `SecuritySchemes.JwtBearerSchemeName` / `SecuritySchemes.JwtBearerTokenSecurity` | `"Bearer"` and an HTTP bearer `OpenApiSecurityScheme` (`JWT`) |
+| `SwaggerGenOptions.AddEnumConventions()` | `EnumSchemaFilter` and an operation filter; `AddSwagger` already calls it. Writes the OpenAPI 3.0 shape |
+| `SwaggerGenOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | Replaces the earlier setting, so call it after `AddSwagger`. `OptionalRouteParameterMode` has `SplitPaths`, `RequiredOnly` and the obsolete `LegacyNonCompliant` (the 6.0.0 output, invalid OpenAPI) |
+| `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory` | Public types in `CSharpEssentials.AspNetCore.Swagger.Filters`; `GetSchemaId(Type)` builds the schema id from the type name with the generic arguments in front (`Box<Dto>` becomes `DtoBox`) |
+
+```csharp
+using CSharpEssentials.AspNetCore;
+
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(
+    SecuritySchemes.JwtBearerSchemeName,
+    SecuritySchemes.JwtBearerTokenSecurity);
+
+var app = builder.Build();
+app.UseVersionableSwagger();
+```
+
+See the migration notes for [5.x to 6.0](migration/v5-to-v6.md) (Swashbuckle 10 and `Microsoft.OpenApi` 2.x) and [optional route parameters](migration/v6-optional-route-parameters.md).
+
+---
+
 ## Ecosystem Design Patterns
 
 ### The Type Bridge System
@@ -2200,8 +2432,8 @@ Exception world ──── Try / TryCatch ─────► Result world
 Null world ──────── AsMaybe ──────────────► Maybe world
 Maybe ◄──────── AsMaybe / ToMaybeResult ──► Result
 Error ──────────── ToResult ───────────────► Result
-HTTP response ──── StatusCodeMapper ───────► Error → Result
-EF Core null ───── AsResultAsync ──────────► Result
+HTTP response ──── HttpStatusCodeMapper ───► Error → Result
+EF Core null ───── *AsResultAsync ─────────► Result
 ```
 
 ### Pattern Summary
@@ -2210,7 +2442,7 @@ EF Core null ───── AsResultAsync ──────────► Res
 |---------|-----------|---------|
 | **Monadic bind** | `Result.Bind`, `Maybe.Bind` | Chain dependent operations; short-circuit on failure/absence |
 | **Functor map** | `Result.Map`, `Maybe.Map` | Transform inner value without changing container |
-| **Applicative** | `Result.Combine`, `CombineAll`, `Result<T>.And` | Combine independent results; collect all errors (`Result.And` stops at the first failure) |
+| **Applicative** | `Result<T>.Combine`, `CombineAll`, `Result<T>.And` | Combine independent results; collect all errors (`Result.And` stops at the first failure) |
 | **Alternative** | `Result.Or`, `Maybe.Or` | First success wins; fallback chains |
 | **Catamorphism** | `Result.Match`, `Maybe.Match`, `Any.Match` | Exhaustive decomposition |
 | **Side-effect isolation** | `Tap`, `TapError`, `Execute` | Observe without altering the flow |

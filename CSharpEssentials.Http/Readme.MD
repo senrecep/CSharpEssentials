@@ -36,6 +36,24 @@ Result<User> created = await client.PostAsJsonAsResultAsync<User>(
 Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Relative));
 ```
 
+`PutAsJsonAsResultAsync<T>` and `PatchAsJsonAsResultAsync<T>` follow the same shape. `PostAsResultAsync` and `PutAsResultAsync` send a ready-made `HttpContent` and return a plain `Result`, and `SendAsResultAsync` / `SendAsResultAsync<T>` send an `HttpRequestMessage`. JSON uses `EnhancedJsonSerializerOptions.DefaultOptions` unless you pass `options`.
+
+A 2xx response whose body is empty or cannot be deserialized to `T` returns a `NotFound` error. A response read from an `HttpContent` you already hold goes through `ReadAsStringAsResultAsync` and `ReadFromJsonAsResultAsync<T>`; a `JsonException` there becomes an `ErrorType.Validation` error.
+
+### Status code mapping
+
+A non-success status becomes an `Error` with code `Http.<status>` (for example `Http.404`) and the description `HTTP request failed with status code 404 (NotFound).`. `HttpStatusCodeMapper.ToErrorType(statusCode)` and `HttpStatusCodeMapper.ToError(statusCode, description)` are public.
+
+| Status | `ErrorType` |
+|--------|-------------|
+| 400, 411, 413, 414, 415, 416, 417, 422 | `Validation` |
+| 401, 407 | `Unauthorized` |
+| 403 | `Forbidden` |
+| 404, 410 | `NotFound` |
+| 409, 412, 429 | `Conflict` |
+| 408 and every 5xx | `Unexpected` |
+| 402, 405, 406 and every other status | `Failure` |
+
 ### Errors, timeouts and cancellation
 
 The `HttpClient` extensions above, `PostAsResultAsync`, `PutAsResultAsync`, `SendAsResultAsync`, `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and the `HttpContent` readers (`ReadAsStringAsResultAsync`, `ReadFromJsonAsResultAsync<T>`) follow the `Result.TryAsync` rule: only your own token propagates.
@@ -52,7 +70,7 @@ The `HttpClient` extensions above, `PostAsResultAsync`, `PutAsResultAsync`, `Sen
 
 ```csharp
 Result<User> result = await HttpRequestBuilder
-    .Get("/users/1")
+    .Get("https://api.example.com/users/1")
     .WithHeader("Accept", "application/json")
     .WithQuery("include", "profile")
     .AsResultAsync<User>(client);
@@ -63,11 +81,18 @@ Result created = await HttpRequestBuilder
     .AsResultAsync(client);
 ```
 
+Query values (`WithQuery`, `Uri.WithQueryString`) need an absolute URI: with a relative URI such as `.Get("/users/1")` they throw `InvalidOperationException` instead of returning a failed `Result`. Without query values a relative URI works with an `HttpClient.BaseAddress`.
+
+Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`.
+
 ### Enums in route, query and body
 
 Enums with `[StringEnum]` are written as wire names; `WithEnumConventions(conventions, EnumWireFormat.Number)` writes numbers for servers that accept only integers. Flags and enum collections become repeated query keys, and an undefined value is never sent.
 
 ```csharp
+using CSharpEssentials.Enums;
+using CSharpEssentials.Json;
+
 Result<Order> result = await HttpRequestBuilder
     .Get("https://api.example.com/orders/{status}")
     .WithEnumConventions(EnumConventions.Default)
@@ -86,9 +111,15 @@ Roll out consumers before producers: a server moves its output from `Number` to 
 Uri uri = new Uri("https://api.example.com/search");
 Uri withQuery = uri.WithQueryString("q", "csharp").Value;
 Uri withDict = uri.WithQueryString(new Dictionary<string, string?> { { "page", "1" } }).Value;
+Uri withObject = uri.WithQueryString(new { Q = "csharp", Page = 2 }).Value;      // property names become the keys
+Result<string> query = new { Q = "csharp", Page = 2 }.ToQueryString();            // "Q=csharp&Page=2"
 ```
 
+`WithQueryString` returns a `Result<Uri>`. Null values are skipped, values are escaped, and enums follow the enum conventions like in the builder. The object overloads read public properties by reflection.
+
 ### Polly Resilience
+
+`HttpClientResilienceExtensions` builds Polly v8 pipelines on top of [`CSharpEssentials.Resilience`](../CSharpEssentials.Resilience/Readme.MD):
 
 ```csharp
 var pipeline = HttpClientResilienceExtensions.CreateResiliencePipeline(
@@ -98,6 +129,17 @@ var pipeline = HttpClientResilienceExtensions.CreateResiliencePipeline(
 Result<User> result = await pipeline.ExecuteAsResultAsync(async token =>
     await client.GetFromJsonAsResultAsync<User>(new Uri("/users/1", UriKind.Relative), cancellationToken: token));
 ```
+
+`CreateRetryPipeline`, `CreateTimeoutPipeline`, `CreateCircuitBreakerPipeline` and `CreateResiliencePipeline` (retry plus timeout) return a `ResiliencePipeline`; the generic forms return a `ResiliencePipeline<Result<T>>`. `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy` and `CreateResiliencePolicy` return a `ResiliencePolicy` instead, whose `ExecuteAsync` takes the same callback:
+
+```csharp
+ResiliencePolicy policy = HttpClientResilienceExtensions.CreateResiliencePolicy(maxRetryAttempts: 3, timeout: TimeSpan.FromSeconds(30));
+
+Result<User> viaPolicy = await policy.ExecuteAsync(token =>
+    client.GetFromJsonAsResultAsync<User>(new Uri("/users/1", UriKind.Relative), cancellationToken: token));
+```
+
+`maxRetryAttempts` counts retries after the first attempt. The timeout defaults to 30 seconds. Failed `Result` values are retried like exceptions, except `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors.
 
 ### Redirect Following
 

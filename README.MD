@@ -6,7 +6,7 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-4904%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-4949%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
@@ -28,9 +28,9 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Core` | String/GUID/collection utilities | [Docs](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
 | `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
-| `CSharpEssentials.Mediator` | CQRS pipeline behaviors: validation, logging, exception handling, caching, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
+| `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
-| `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries) + pagination | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
+| `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries), offset and keyset pagination, enum storage | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
 | `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
 | `CSharpEssentials.AspNetCore.OpenApi` | Enum convention schemas for `Microsoft.AspNetCore.OpenApi` (net10.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.OpenApi/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.OpenApi.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.OpenApi) |
 | `CSharpEssentials.AspNetCore.Swashbuckle` | Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle 10 (net8.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.Swashbuckle.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.Swashbuckle) |
@@ -47,7 +47,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers all 25 packages with method tables, philosophy, code examples, and cross-cutting FP patterns.
+**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers 23 of the 25 packages with method tables, philosophy, code examples, and cross-cutting FP patterns; `CSharpEssentials.AspNetCore.OpenApi` and `CSharpEssentials.AspNetCore.Swashbuckle` are documented in their own Readme files.
 
 ## Installation
 
@@ -123,14 +123,14 @@ AnyActionResult<double> area = shape.Match(
 
 ### Rules: Composable Validation
 
-Build complex validation logic from simple, reusable rules that return `Result<T>`.
+Build complex validation logic from simple, reusable rules that return `Result`.
 
 ```csharp
 Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() : Error.Validation("Age.MinAge", "Must be 18+");
 Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email");
 Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Error.Validation("Account.NotVerified", "Account not verified");
 
-// AND — all rules must pass, collects every failure
+// AND — all rules must pass; stops at the first failure and returns its errors
 Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And(), user);
 
 // OR — at least one rule must pass
@@ -250,6 +250,7 @@ app.UseEnumBinding(); // after routing, UseAuthentication and UseAuthorization
 // and GlobalExceptionHandler maps it. Without these lines the framework writes its own 400 without a body.
 // MVC reports body errors through model state instead.
 builder.Services.Configure<RouteHandlerOptions>(o => o.ThrowOnBadRequest = true);
+builder.Services.AddEnhancedProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 app.UseEnhancedProblemDetails();
 app.MapGet("/orders", (OrderStatus? status) => Results.Ok(status)); // ?status=pending_approval, approval or 1
@@ -292,6 +293,7 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- From 6.4.0, the task-returning members of `Result` and `Maybe` have `Async` names, and the unsuffixed names are obsolete. Read [Async naming and the async overload matrix](docs/migration/v6-async-naming.md).
 - Coming from 5.x? Read [Migrating from 5.x to 6.0](docs/migration/v5-to-v6.md). 6.0 moves the Swashbuckle support to Swashbuckle 10 and Microsoft.OpenApi 2.x on every target, makes the single-column cursor `PaginateAsync` obsolete in favor of `KeysetPaginateAsync` and caps the offset page size at 100 by default.
 - From 6.1.0, Swashbuckle documents describe optional route parameters (`{id?}`) as one path per form with required parameters. Read [Optional route parameters](docs/migration/v6-optional-route-parameters.md) for the new output and how to opt back. From 6.2.0, `CSharpEssentials.AspNetCore.OpenApi` offers the same output as an opt-in (`o.AddOptionalRouteParameters()`).
 - Coming from 4.x? Read [Migrating from 4.x to 5.0](docs/migration/v4-to-v5.md). 5.0 applies one set of enum conventions to JSON, binding, OpenAPI and EF Core, and moves the Swashbuckle support into its own package.

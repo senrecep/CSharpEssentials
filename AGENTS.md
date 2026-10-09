@@ -2,7 +2,7 @@
 
 ## What
 
-CSharpEssentials is a modular .NET NuGet ecosystem (23 packages) that bridges OOP and Functional Programming in C#. Core patterns: Result/Maybe monads, Discriminated Unions (Any<T1,T2,...>), composable Rules engine, DDD base classes (EntityBase), EF Core interceptors/pagination, ASP.NET Core utilities, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection). Multi-targets: .NET 11/10/9 (some packages also net8.0), netstandard2.1 (a few also netstandard2.0). CSharpEssentials.EntityFrameworkCore targets net10.0/net9.0/net8.0 only (no net11.0), each pinned to its EF Core major.
+CSharpEssentials is a modular .NET NuGet ecosystem (25 packages) that bridges OOP and Functional Programming in C#. Core patterns: Result/Maybe monads, Discriminated Unions (Any<T1,T2,...>), composable Rules engine, DDD base classes (EntityBase), EF Core interceptors/pagination, ASP.NET Core utilities, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection). Multi-targets: .NET 11/10/9 (some packages also net8.0), netstandard2.1 (a few also netstandard2.0). CSharpEssentials.EntityFrameworkCore targets net10.0/net9.0/net8.0 only (no net11.0), each pinned to its EF Core major. CSharpEssentials.AspNetCore.OpenApi targets net10.0 only.
 
 Current version: 6.5.0 <!-- x-release-please-version -->
 
@@ -23,8 +23,8 @@ Current version: 6.5.0 <!-- x-release-please-version -->
 - First-time setup: `git config core.hooksPath .githooks` (activates pre-commit badge validation)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: One public type per file, filename matches type name
-- Tests live in `CSharpEssentials.Tests/`
-- Endpoints, DependencyInjection and Enums keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
+- Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`
+- Endpoints, DependencyInjection, EntityFrameworkCore and Enums keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
 
 ## Releasing
 

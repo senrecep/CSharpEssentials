@@ -4,9 +4,11 @@ This library provides extension methods that add functional programming helpers 
 
 ## String Extensions
 
-High-performance extension methods for string manipulation:
+Extension methods for string manipulation (namespace `CSharpEssentials.Core`):
 
 ### Case Conversion Methods
+
+Every conversion takes an optional `CultureInfo` (invariant culture when omitted), for example `"istanbul".ToPascalCase(CultureInfo.GetCultureInfo("tr-TR"))`.
 
 ```csharp
 // Case Conversion Examples and Explanations
@@ -35,9 +37,11 @@ High-performance extension methods for string manipulation:
 // CamelCase with leading underscore
 ```
 
+The conversions build the result in a `stackalloc` buffer sized from the input, so use them on identifiers and short text, not on megabyte-sized strings.
+
 ## Random Item Extensions
 
-Extension methods for cryptographically secure random item selection:
+Extension methods for random item selection with `RandomNumberGenerator` (cryptographically secure). They exist for `T[]`, `List<T>` and `Span<T>`:
 
 ```csharp
 // Single random item selection
@@ -47,9 +51,9 @@ int randomNumber = numbers.GetRandomItem();
 
 // Multiple random item selection
 int[] threeRandomNumbers = numbers.GetRandomItems(3);
-// Selects 3 unique random numbers from the list
+// Selects 3 items at distinct positions; a count >= the list length returns all items shuffled
 
-// Works with arrays and spans
+// Works with arrays and spans (an empty source throws ArgumentException)
 Span<string> words = ["apple", "banana", "cherry"];
 string randomWord = words.GetRandomItem();
 // Selects a random word from the span
@@ -63,12 +67,11 @@ string randomWord = words.GetRandomItem();
 string? text = null;
 bool isEmpty = text.IsEmpty();      // true if null, empty, or whitespace
 bool isNotEmpty = text.IsNotEmpty(); // true if not null, empty, or whitespace
-bool isNull = text.IsNull();        // true if null
-bool isNotNull = text.IsNotNull();  // true if not null
-
-// Null analysis support with NotNullWhen attribute
-public static bool IsNotEmpty([NotNullWhen(true)] this string? str)
+bool isNull = text.IsNull();        // true if null (works for any T)
+bool isNotNull = text.IsNotNull();  // true if not null (works for any T)
 ```
+
+`IsEmpty` and `IsNotEmpty` are for `string?` only. All four carry `[NotNullWhen]` annotations, so the compiler treats the value as non-null after a successful `IsNotEmpty()` or `IsNotNull()` check.
 
 ### Boolean Extensions and Functional Programming
 
@@ -100,26 +103,31 @@ text.IfNotNull(
     () => Console.WriteLine("Is null")   // Executes if text is null
 );
 
-// Generic and non-generic versions
-text.IfNotNull<string>(action);  // Generic version
-text.IfNotNull(action);          // Non-generic version
+text.IfNull(
+    () => Console.WriteLine("Is null"),  // Executes if text is null
+    t => Console.WriteLine(t)            // Executes if text is not null
+);
+
+// The action may also ignore the value
+text.IfNotNull(() => Console.WriteLine("Has a value"));
 ```
+
+Every `IfNotNull` / `IfNull` overload returns a `bool`: `true` when the value was not null for `IfNotNull`, `true` when it was null for `IfNull`.
 
 ### Task Extensions and Asynchronous Programming
 
 ```csharp
 // Converting synchronous values to Tasks
-object obj = "test";
-Task<string> task = obj.AsTask();         // Converts to Task<T>
-ValueTask<string> valueTask = obj.AsValueTask(); // Converts to ValueTask<T>
+string value = "test";
+Task<string> task = value.AsTask();         // Task.FromResult(value)
+ValueTask<string> valueTask = value.AsValueTask(); // ValueTask.FromResult(value)
 
-// Asynchronous operations with cancellation support
+// Stop waiting when the token is cancelled
 await task.WithCancellation(cancellationToken);
-// Makes Task cancellable with CancellationToken
-
 await valueTask.WithCancellation(cancellationToken);
-// Makes ValueTask cancellable with CancellationToken
 ```
+
+`WithCancellation` exists for `Task`, `Task<T>`, `ValueTask` and `ValueTask<T>`. It throws `OperationCanceledException` as soon as the token is cancelled, but it does not cancel the underlying operation. A completed task, or a token that cannot be cancelled, returns the original task unchanged.
 
 ## Collection Extensions
 
@@ -148,11 +156,11 @@ var withoutNulls = items.WithoutNulls();
 // Returns non-null elements from collection
 
 var withoutNullProperties = items.WithoutNulls(x => x.Property);
-// Returns elements where specified property is not null
+// Returns non-null elements whose specified property is not null
 
 // Collection comparison
 bool areEqual = list1.HasSameElements(list2);
-// Checks if two collections contain the same elements
+// Compares as sets: order and duplicates are ignored
 
 // Boolean collection operations
 bool allTrue = boolList.AllTrue();   // True if all elements are true
@@ -163,10 +171,43 @@ bool allFalse = boolList.AllFalse(); // True if all elements are false
 
 ```csharp
 // Fluent interface usage with ForEach
-items.ForEach(item => Console.WriteLine(item))  // Executes action for each item
+items.ForEach(item => Console.WriteLine(item))  // Runs the action for each item as it is enumerated
      .Where(x => x.IsValid)                     // Applies filter
-     .ToList();                                 // Converts to list
+     .ToList();                                 // Enumerates, so the actions run here
 ```
+
+`ForEach` is lazy and returns each item after running the action. Nothing runs until the sequence is enumerated. When `items` is a `List<T>`, the instance method `List<T>.ForEach` (returns `void`) is chosen instead; call `items.AsEnumerable().ForEach(...)` to use this one.
+
+### Range Checks
+
+```csharp
+5.IsBetween(1, 10);            // true  (inclusive)
+10.IsBetweenExclusive(1, 10);  // false (exclusive)
+```
+
+Both work for any `IComparable<T>`.
+
+### Other General Extensions
+
+```csharp
+object boxed = 42;
+int number = boxed.ExplicitCast<int>();   // (int)boxed
+
+DateTime when = 1700000000000L.MsToDateTime();   // from Unix milliseconds
+
+Guid id = Guider.NewGuid();
+string shortId = id.ToStringFromGuid();          // see ../Guids/Readme.MD
+Guid parsed = shortId.ToGuidFromString();
+
+HttpGroup group = HttpStatus.BadRequest.GetTypeGroup<HttpGroup, HttpStatus>();   // HttpGroup.ClientError
+
+public enum HttpStatus { Ok = 200, BadRequest = 400 }
+public enum HttpGroup { Success = 200, ClientError = 400 }
+```
+
+`GetTypeGroup` rounds the enum value down to a multiple of `group` (default 100) and converts it to the target enum.
+
+On .NET 10 and later, `using CSharpEssentials;` also brings the C# 14 extension members `IEnumerable<T>.IsEmpty` (a property equal to `!source.Any()`) and `string.IsPalindrome` (a property).
 
 ## Exception Extensions
 
@@ -181,60 +222,21 @@ catch (Exception ex)
 {
     // Get all inner exceptions
     var allExceptions = ex.GetInnerExceptions();
-    // Returns exception and all inner exceptions using yield return
+    // Lazily returns ex itself, then each inner exception in turn
 
     // Get all exception messages
     var allMessages = ex.GetInnerExceptionsMessages();
-    // Returns messages from all exceptions as an array
+    // Lazily returns the Message of each of those exceptions (IEnumerable<string?>)
 }
 ```
 
-## Performance Optimizations
+## HTTP Status Codes
 
-1. String Case Conversions:
+`HttpCodes` holds `int` constants for common status codes (`HttpCodes.Ok`, `HttpCodes.NotFound`, `HttpCodes.UnprocessableEntity`, `HttpCodes.TooManyRequests`, ...).
 
-   - Minimizes heap allocations using `Span<T>`
-   - Optimizes performance with stack allocation
-   - Prevents unnecessary string creation
+## Notes
 
-2. Random Selection Operations:
-
-   - Uses cryptographically secure `RandomNumberGenerator`
-   - Implements optimal algorithm for unique element selection
-
-3. Collection Operations:
-
-   - Avoids unnecessary enumeration
-   - Implements LINQ optimizations for performance
-   - Provides efficiency in chain operations with fluent interface
-
-4. Task and Asynchronous Operations:
-   - Prevents memory leaks with proper resource disposal
-   - Implements efficient cancellation handling
-   - Optimizes performance with ValueTask support
-
-## Best Practices and Usage Guidelines
-
-1. String Operations:
-
-   - Choose appropriate case conversion method
-   - Use `Span<T>` for large strings
-
-2. Null Checks:
-
-   - Use extension methods instead of null checks
-   - Use the NotNullWhen attribute for null analysis
-
-3. Collection Operations:
-
-   - Use the fluent interface
-   - Use WhereIf for conditional operations
-
-4. Exception Handling:
-
-   - Properly handle inner exceptions
-   - Collect exception messages appropriately
-
-5. Asynchronous Programming:
-   - Use proper cancellation token handling
-   - Implement using pattern for resource cleanup
+1. String case conversions allocate one result string and use a `stackalloc` buffer for the work, so they are cheap on identifiers and unsafe on very large inputs.
+2. Random selection uses `RandomNumberGenerator`, not `System.Random`.
+3. `ForEach`, `WithoutNulls`, `GetInnerExceptions` and `GetInnerExceptionsMessages` are lazy; enumerate them to run them.
+4. `WithCancellation` stops the wait only; the wrapped task keeps running.

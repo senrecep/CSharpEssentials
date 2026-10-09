@@ -23,9 +23,9 @@ The project uses `ProjectReference`s, including the generator project with `Outp
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="CSharpEssentials.AspNetCore" Version="5.0.0" />
-  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="5.0.0" />
-  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="5.0.0" />
+  <PackageReference Include="CSharpEssentials.AspNetCore" Version="6.5.0" />
+  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="6.5.0" />
+  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="6.5.0" />
 </ItemGroup>
 ```
 

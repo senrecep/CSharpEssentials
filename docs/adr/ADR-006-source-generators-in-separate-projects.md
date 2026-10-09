@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-10-06
 - **Issues:** #48 (epic), #49 (this ADR), #50 (implementation)
-- **Supersedes:** nothing. ADR-004 (Enums generator merged into `CSharpEssentials.Enums`, recorded in the maintainers' roadmap) stays in force for `CSharpEssentials.Enums`.
+- **Supersedes:** nothing. ADR-004 (Enums generator merged into `CSharpEssentials.Enums`, recorded in the maintainers' roadmap) was in force for `CSharpEssentials.Enums` when this ADR was written. [ADR-007](ADR-007-enum-conventions.md) moved the Enums generator to this layout in 5.0 (`CSharpEssentials.Enums.Generators`).
 
 ---
 
@@ -11,7 +11,7 @@
 
 Version 4.1 adds two generator-backed packages: `CSharpEssentials.Endpoints` and `CSharpEssentials.DependencyInjection`. Both need a Roslyn source generator and a diagnostic analyzer delivered through the same NuGet package as their runtime API.
 
-The only existing mechanism is ADR-004 (`CSharpEssentials.Enums`): one project multi-targets `net11.0;net10.0;net9.0;netstandard2.1;netstandard2.0`. The generator sources compile only in the `netstandard2.0` TFM, and that TFM's output dll is packed a second time under `analyzers/dotnet/cs`. The same dll is therefore both the `lib/netstandard2.0` runtime asset and the analyzer.
+The only existing mechanism at the time was ADR-004 (`CSharpEssentials.Enums`): one project multi-targets `net11.0;net10.0;net9.0;netstandard2.1;netstandard2.0`. The generator sources compile only in the `netstandard2.0` TFM, and that TFM's output dll is packed a second time under `analyzers/dotnet/cs`. The same dll is therefore both the `lib/netstandard2.0` runtime asset and the analyzer.
 
 That mechanism does not fit the new packages:
 
@@ -57,7 +57,7 @@ Each generator-backed package consists of two projects:
 
 | Block | Owner | Notes |
 |---|---|---|
-| `CSE0001` to `CSE0999` | Enums and future cross-cutting rules | `CSE0001` retired in 5.0 and reserved, `CSE0002` to `CSE0013` used by ADR-007 |
+| `CSE0001` to `CSE0999` | Enums and future cross-cutting rules | `CSE0001` retired in 5.0 and reserved, `CSE0002` to `CSE0016` used by ADR-007 (`CSE0011` is unused) |
 | `CSE1001` to `CSE1999` | `CSharpEssentials.Endpoints` | see [CSharpEssentials.Endpoints-DESIGN.md](../design/CSharpEssentials.Endpoints-DESIGN.md) |
 | `CSE2001` to `CSE2999` | `CSharpEssentials.DependencyInjection` | see [CSharpEssentials.DependencyInjection-DESIGN.md](../design/CSharpEssentials.DependencyInjection-DESIGN.md) |
 | `CSE3001` to `CSE3999` | `CSharpEssentials.EntityFrameworkCore` | `CSE3001` reports parameterless `IgnoreQueryFilters()` when EF Core 10 named filters are available; see the package README |
@@ -81,7 +81,7 @@ Users may change severities through `.editorconfig`. The defaults follow this po
 ## Consequences
 
 **Positive**
-- Runtime TFMs and generator TFMs are independent. Endpoints stays `net8.0+` with `FrameworkReference`, and DI stays `netstandard2.1` + `net9.0+`.
+- Runtime TFMs and generator TFMs are independent. Endpoints stays `net8.0+` with `FrameworkReference`, and DI stays `netstandard2.1` + `net8.0+`.
 - The compiler loads only the generator dll, which has no runtime dependencies.
 - Consumers still add one `PackageReference` and get both the runtime API and the generator.
 - Consumers on SDK 8.0.1xx can load the generator (no `CS9057`).
@@ -94,7 +94,7 @@ Users may change severities through `.editorconfig`. The defaults follow this po
 - The generator matches runtime types by metadata-name strings. Renaming a runtime attribute or interface requires updating the generator. Snapshot tests catch the mismatch.
 
 **Neutral**
-- `CSharpEssentials.Enums` keeps the ADR-004 mechanism. Moving it to this layout is possible later, but is out of scope for 4.1.
+- `CSharpEssentials.Enums` kept the ADR-004 mechanism in 4.1. Moving it to this layout was out of scope for 4.1; ADR-007 did it in 5.0.
 - The publish script packs only packable projects, so `*.Generators` projects (`IsPackable=false`) are skipped automatically.
 
 ### Implementation
@@ -110,7 +110,7 @@ Users may change severities through `.editorconfig`. The defaults follow this po
   `build/Generators.props` sets `netstandard2.0`, `IsPackable=false`, `IncludeSymbols=false`, `IsRoslynComponent=true`, `EnforceExtendedAnalyzerRules=true` and `DebugType=embedded` (the pdb travels inside the analyzer dll, so no separate symbol file is needed in `analyzers/dotnet/cs`). It references `Microsoft.CodeAnalysis.CSharp` with `VersionOverride="4.8.0"` and `Microsoft.CodeAnalysis.Analyzers`, both `PrivateAssets="all"`, and adds `AnalyzerReleases.Shipped.md`/`AnalyzerReleases.Unshipped.md` as `AdditionalFiles`. SourceLink and SonarAnalyzer still come from `Directory.Build.props`; generator code satisfies Sonar instead of suppressing it.
 - Roslyn 4.8 brings `System.Collections.Immutable` 7.0, which has no collection builder for `ImmutableArray<T>`. Generator code uses `ImmutableArray.Create(...)` instead of collection expressions for immutable arrays (`CS9210` otherwise).
 - `build-and-publish-nugets.sh` skips directories named `*.Generators`, because it detects non-packable projects by text and the `IsPackable=false` setting lives in the imported props file.
-- Pack wiring (`build/PackGenerator.targets`) lands with the first runtime package that owns a generator (Endpoints, #52), where the nupkg layout is verified by a test.
+- Pack wiring (`build/PackGenerator.targets`) landed with the first runtime package that owns a generator (Endpoints, #52), where the nupkg layout is verified by a test. Enums, Endpoints and DependencyInjection use it; each runtime project also packs its `.CodeFixes` project the same way.
 - In-repo consumers reference the generator project directly:
 
   ```xml

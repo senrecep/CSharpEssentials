@@ -1,6 +1,6 @@
 # ADR-007: One Enum Contract for Every Layer, Built at Compile Time
 
-- **Status:** Proposed
+- **Status:** Accepted (implemented in 5.0.0)
 - **Date:** 2026-10-06
 - **Issues:** #59 (epic), #60 (this ADR and the design document), #61 to #68 (implementation)
 - **Design:** [CSharpEssentials.Enums-DESIGN.md](../design/CSharpEssentials.Enums-DESIGN.md)

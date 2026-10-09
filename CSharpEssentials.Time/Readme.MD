@@ -4,8 +4,9 @@ Testable time abstraction built on .NET `TimeProvider`. Decouple your code from 
 
 ## Features
 
-- **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, and `UtcNowTime`.
-- **TimeProvider Integration**: Works with .NET's built-in `TimeProvider` and `FakeTimeProvider` for testing.
+- **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`, `TimeZone` and `TimeZoneUtc`.
+- **TimeProvider Integration**: `DateTimeProvider` wraps .NET's `TimeProvider`, so `TimeProvider.System` or a test `TimeProvider` such as `FakeTimeProvider` both work.
+- **FakeDateTimeProvider**: Built-in controllable clock with `Advance` and `SetTime` for tests.
 - **DateTime Extensions**: Convert `DateTime` to `DateOnly` and `TimeOnly`, next/previous weekday, age calculation.
 
 ## Installation
@@ -13,6 +14,8 @@ Testable time abstraction built on .NET `TimeProvider`. Decouple your code from 
 ```bash
 dotnet add package CSharpEssentials.Time
 ```
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1` (which adds `Microsoft.Bcl.TimeProvider`).
 
 ## Usage
 
@@ -34,6 +37,8 @@ public class OrderService(IDateTimeProvider time)
 }
 ```
 
+`DateTimeProvider.UtcNow` reads `TimeProvider.GetUtcNow()`. `UtcNowDate` and `UtcNowTime` are the UTC date and time of day. `TimeZone` is `TimeZoneInfo.Local` and `TimeZoneUtc` is `TimeZoneInfo.Utc`.
+
 ### Dependency Injection
 
 ```csharp
@@ -43,7 +48,7 @@ builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
 ### Test with FakeDateTimeProvider
 
-`CSharpEssentials.Time` ships a built-in `FakeDateTimeProvider`, so no extra package is needed.
+`CSharpEssentials.Time` ships a built-in `FakeDateTimeProvider`, so no extra package is needed. Its `TimeZone` is UTC. The sample below asserts with FluentAssertions, which is not a dependency of this package.
 
 ```csharp
 using CSharpEssentials.Time;
@@ -63,7 +68,7 @@ fake.UtcNow.Should().Be(fixedTime.AddHours(2));
 // Set to a specific time
 fake.SetTime(new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero));
 
-// NET6+ only
+// .NET 6+ targets only (not netstandard2.1)
 fake.UtcNowDate.Should().Be(new DateOnly(2026, 1, 1));
 fake.UtcNowTime.Should().Be(new TimeOnly(0, 0, 0));
 ```
@@ -85,4 +90,4 @@ new DateOnly(2000, 6, 16).GetAge(today);               // 23
 birthDate.GetAge(dateTimeProvider);                    // uses the provider's time zone
 ```
 
-`DateOnly` overloads and `GetAge` require .NET 6+; on netstandard2.1 only the `DateTime` weekday overloads are available.
+`NextDayOfWeek` and `PreviousDayOfWeek` skip the current day unless `includeCurrent: true`. `GetAge` counts whole years and throws `ArgumentOutOfRangeException` when the birth date is after the reference date. `DateOnly` and `TimeOnly` members and `GetAge` require .NET 6+; on netstandard2.1 only the `DateTime` weekday overloads are available.

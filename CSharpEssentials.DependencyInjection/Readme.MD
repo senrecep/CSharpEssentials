@@ -54,7 +54,10 @@ services.Decorate<IOrderService, LoggingOrderService>();             // throws I
 services.Decorate<IPaymentGateway, RetryingGateway>(serviceKey: "stripe");
 services.Decorate<IClock>((inner, sp) => new CachedClock(inner));
 services.TryDecorate<IOrderService, AuditingOrderService>();         // returns false when nothing matches
+services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // decorates closed registrations such as IRepository<Order>
 ```
+
+`Decorate(Type, Type)` decorates every registration of a closed type constructed from the open generic service type, closing the decorator over the same type arguments. It throws `InvalidOperationException` when a registration of the open generic type itself exists (for example `[RegisterTransient(typeof(IRepository<>))]`) or when there is no closed registration to decorate. It uses reflection and is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`.
 
 Attribute decorators are applied in ascending `Order`. Every matching registration is decorated, and its lifetime and key are kept. The original is moved to a hidden registration under a private key and a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The container disposes both the decorator and the original. If decoration fails, the collection is left unchanged.
 
@@ -87,6 +90,7 @@ builder.Services.AddSampleAuditServices();     // decorates IPaymentGateway
 | `[assembly: ServiceRegistryName("Billing")]` | Renames the method to `AddBillingServices`. |
 | `[assembly: GenerateServiceAggregate]` | Generates `AddAllServices()` in a library or test project. |
 | `[assembly: DisableServiceAggregate]` | Turns off `AddAllServices()` in an application. |
+| `[assembly: ServiceModule(typeof(...))]` | Emitted by the generator to mark an assembly that has a registry; do not write it yourself. |
 
 The analyzer reports invalid declarations at compile time:
 
@@ -99,7 +103,7 @@ The analyzer reports invalid declarations at compile time:
 | CSE2005 | Error | The decorator does not have exactly one public constructor. |
 | CSE2006 | Info | Captive dependency: a singleton takes a scoped or transient service (or a scoped one takes a transient) registered by attribute in the same project. Checked for single-constructor classes only. |
 | CSE2007 | Error | The class cannot be constructed by generated code (abstract, static, file-local, inaccessible, or nested in a generic type). |
-| CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))`, which decorates the closed registrations. |
+| CSE2008 | Warning | Open-generic decorators are not generated; call `services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>))` at runtime, which decorates closed registrations such as `IRepository<Order>`. |
 | CSE2009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiServiceRegistry`. `AddAllServices` skips both registries so the project still compiles. The project's own registry counts too: when it has the same name as a referenced one, only the own registry is called. Give one of them a distinct name with `[assembly: ServiceRegistryName("...")]`. Reported only in projects that generate the aggregate. |
 
 The bundled code fix for CSE2003 offers one action per implemented interface, which adds `typeof(IFoo)` (`typeof(IFoo<>)` for a generic class) to the attribute, and one action that adds `As = ServiceAs.Self` to keep the registration as is and silence the diagnostic.
@@ -173,4 +177,4 @@ Steps:
 3. Move `Decorate` calls to `[Decorates]` attributes or keep them as runtime calls.
 4. Remove the Scrutor package. Both libraries define `Decorate` and `TryDecorate` in the `Microsoft.Extensions.DependencyInjection` namespace, so the calls are ambiguous while both are referenced.
 
-Not supported: convention-based "register every class", custom interface-matching predicates, and decorating open-generic registrations (closed registrations can be decorated with `Decorate(Type, Type)`).
+Not supported: convention-based "register every class", custom interface-matching predicates, and decorating open-generic registrations (registrations of closed types can be decorated with `Decorate(Type, Type)`).

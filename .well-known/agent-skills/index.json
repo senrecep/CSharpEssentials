@@ -7,7 +7,7 @@
     },
     {
       "name": "csharpessentials-aspnetcore",
-      "description": "Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumBinding/UseEnumBinding for [StringEnum] query/route values, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.",
+      "description": "Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, MapVersionedGroup and versioned Swagger.",
       "files": ["SKILL.md"]
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "name": "csharpessentials-enums",
-      "description": "Use when you need reflection-free enum string conversion. The [StringEnum] source generator emits {Enum}Extensions with ToOptimizedString/ToSnakeCase/ToKebabCase, IsDefined/TryParse/Parse, GetNames/GetValues and name constants, NativeAOT-safe; analyzer CSE0001 flags nested [StringEnum] enums.",
+      "description": "Use when an enum must have one string spelling across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP, or when you need reflection-free enum helpers. Covers [StringEnum], [EnumAlias], [EnumFallback], wire-name naming, the generated ToWireName/TryParseWire/ParseWire/IsDefined/GetNames/GetValues helpers, EnumConventions, EnumValueParser/EnumValueFormatter/EnumMetadata, flags, renaming members safely, AOT/trimming and the CSE0002-CSE0016 analyzers.",
       "files": ["SKILL.md"]
     },
     {
@@ -62,7 +62,7 @@
     },
     {
       "name": "csharpessentials-json",
-      "description": "Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, ConditionalStringEnumConverter and StringEnumNaming for [StringEnum] enums, MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().",
+      "description": "Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().",
       "files": ["SKILL.md"]
     },
     {
@@ -77,12 +77,12 @@
     },
     {
       "name": "csharpessentials-mediator",
-      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation, throws EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (auto-converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), and TransactionScopeBehavior (ITransactionalRequest).",
+      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) and LockBehavior (ILockedRequest).",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-meta",
-      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 23 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
+      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 25 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
       "files": ["SKILL.md"]
     },
     {

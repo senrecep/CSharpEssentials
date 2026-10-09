@@ -10,6 +10,8 @@ Discriminated Unions (Sum Types) for .NET. A type-safe way to represent a value 
 - **Type Helpers**: `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
 - **JSON Support**: Built-in serialization.
 
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Json` and `CSharpEssentials.Core`. The types live in the `CSharpEssentials.Any` namespace.
+
 ## Installation
 
 ```bash
@@ -29,7 +31,12 @@ Any<string, int> ParseInput(string input)
         return n; // implicit to Any<string, int>
     return input;
 }
+
+Any<string, int> first = Any<string, int>.First("text");   // explicit factories: First, Second, Third ... Eighth
+Any<string, int> second = Any.Create<string, int>(5);      // or Any.Create with the type arguments spelled out
 ```
+
+The union holds its active branch in `Index` (0 for the first type) and its value in `Value` (`object?`). Implicit conversion is ambiguous when two type arguments are the same type, for example `Any<int, int>`, and `default(Any<...>)` has `Index` 0 but a `null` `Value`, so `IsFirst` is `true` while `GetFirst()` returns `null` or `default`.
 
 ### Pattern Matching
 
@@ -42,24 +49,34 @@ AnyActionResult<string> output = result.Match(
     second: num => $"Number: {num}");
 Console.WriteLine(output.Result);
 
-result.Switch(
+AnyActionStatus status = result.Switch(
     first: str => Console.WriteLine("It's a string"),
     second: num => Console.WriteLine("It's a number"));
 ```
+
+Every handler is optional. When the active branch has no handler, `Switch` returns `AnyActionStatus.NotExecuted` and `Match` returns an `AnyActionResult` whose `Status` is `NotExecuted` and whose `Result` is `default`; otherwise the status is `Executed`. Calling `Match` or `Switch` on `default(Any<...>)`, or on a union that holds `null`, throws `InvalidOperationException`.
 
 ### Type Checking
 
 ```csharp
 if (result.IsSecond)
 {
-    int val = result.GetSecond();
+    int val = result.GetSecond();   // throws InvalidOperationException when another branch is active
 }
 
-// Generic helpers
+// Generic helpers: the target type first, then the union's type arguments
 bool isInt = result.Is<int, string, int>();
 int? asInt = result.As<int, string, int>();
 bool found = result.TryAs<int, string, int>(out int value);
+
+// Deconstruct and ToTuple: the inactive branches are default
+var (text, number) = result;
+(string? First, int Second) tuple = result.ToTuple();
 ```
+
+`IsFirst`, `IsSecond`, `IsThird` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. `Is`, `As` and `TryAs` test the runtime type of the value, not the branch. For a value-type target, `As` returns `default` (so `0` for `int`) when the value is of another type, not `null`; use `Is` or `TryAs` to tell the cases apart.
+
+A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. `ToString()` returns the JSON of the value.
 
 ### Multiple Types
 

@@ -37,7 +37,10 @@ app.AddRequestResponseLogging(opt =>
 
 - Without `UseLogger` or `UseHandler`, the middleware runs but writes nothing.
 - `IgnorePaths` matches by prefix, case-insensitive. A later call replaces the earlier list.
-- Request bodies larger than 10 MB are not captured; a size note is logged instead.
+- A request with a `Content-Length` over 10 MB is not read; `Request body too large: {n} bytes` is logged instead. An empty body is logged as `Empty request body`.
+- The response body is buffered in memory until the request completes, so use `[SkipResponseLogging]` on streaming or very large responses.
+- If the pipeline throws, the middleware logs `Error occurred during request processing` with the exception type and message, then rethrows.
+- `UseHandler` runs in addition to `UseLogger` when both are set.
 
 ---
 
@@ -54,7 +57,12 @@ app.AddRequestResponseLogging(opt =>
     }));
 ```
 
-`LogFields`: `Request`, `Response`, `HostName`, `Path`, `Method`, `QueryString`, `Headers`, `ResponseTiming`, `RequestLength`, `ResponseLength`. `LoggingOptions.CreateAllFields()` selects all of them.
+`LogFields`: `Request`, `Response`, `HostName`, `Path`, `Method`, `QueryString`, `Headers`, `ResponseTiming`, `RequestLength`, `ResponseLength`. `LoggingOptions.CreateAllFields()` selects all of them; the default list is empty.
+
+- The `Headers` field writes only the request headers in `HeaderKeys` (`[{"X-Correlation-Id":"..."}]`, `[]` when none is present); with no keys it is empty, so credentials are not logged by default. Names are compared case-sensitively with the spelling received: standard names are normalized by Kestrel, a custom header must match as sent (HTTP/2 sends lower-case). Use `logging.HeaderKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "X-Correlation-Id" }` to ignore the case.
+- `UseSeparateContext` (default `true`) writes one named placeholder per field (`{Path}`, `{Method}`) for structured logging providers; `false` writes one formatted text.
+- `LoggingLevel` defaults to `Information` and `LoggerCategoryName` to `RequestResponseLogger`.
+- `RequestLength` and `ResponseLength` count characters of the logged text, not bytes; a request without a body reports the 18 characters of `Empty request body`.
 
 ---
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="CSharpEssentials is a modular .NET NuGet ecosystem bridging OOP and Functional Programming in C#. 23 packages: Result, Maybe, Any, Rules, Mediator, Validation, Entity, EF Core, Endpoints, Dependency Injection, Resilience, and more.">
+<meta name="description" content="CSharpEssentials is a modular .NET NuGet ecosystem bridging OOP and Functional Programming in C#. 25 packages: Result, Maybe, Any, Rules, Mediator, Validation, Entity, EF Core, Endpoints, Dependency Injection, Resilience, and more.">
 <meta name="keywords" content=".NET, NuGet, C#, functional programming, Result, Maybe, discriminated unions, railway-oriented programming">
 <meta property="og:title" content="CSharpEssentials">
 <meta property="og:description" content="Modular .NET library ecosystem bridging OOP and Functional Programming">
@@ -762,7 +762,7 @@
   <div class="container">
     <div class="hero-badge" aria-hidden="true">
       <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-      23 packages &middot; .NET 11/10/9/8 &middot; NuGet
+      25 packages &middot; .NET 11/10/9/8 &middot; NuGet
     </div>
     <h1>CSharp<span>Essentials</span></h1>
     <p class="hero-subtitle">Modular .NET library ecosystem bridging OOP and Functional Programming: Result monads, discriminated unions, a rules engine, and more.</p>
@@ -805,7 +805,7 @@
 <div class="container">
   <div class="stats-bar reveal" role="list" aria-label="Key metrics">
     <div class="stat-item" role="listitem">
-      <span class="stat-value">23</span>
+      <span class="stat-value">25</span>
       <span class="stat-label">Packages</span>
     </div>
     <div class="stat-item" role="listitem">
@@ -814,7 +814,7 @@
     </div>
     <div class="stat-item" role="listitem">
       <span class="stat-value">50+</span>
-      <span class="stat-label">AI Agent Skills</span>
+      <span class="stat-label">Compatible AI Agents</span>
     </div>
     <div class="stat-item" role="listitem">
       <span class="stat-value">AOT</span>
@@ -874,7 +874,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
         </div>
         <h3>Modular by Default</h3>
-        <p>Take only what you need. Each package is independently versioned and published. Or grab the meta-package for everything.</p>
+        <p>Take only what you need. Each package is published on its own and all of them share one version number. Or grab the meta-package for the core functional modules.</p>
       </div>
     </div>
   </div>
@@ -885,7 +885,7 @@
   <div class="container">
     <div class="section-heading reveal">
       <span class="section-label">Ecosystem</span>
-      <h2 id="packages-heading">23 focused packages</h2>
+      <h2 id="packages-heading">25 focused packages</h2>
       <p>Targeting .NET 11, .NET 10, .NET 9, .NET 8, netstandard2.1, and netstandard2.0. Central package management keeps versions consistent.</p>
     </div>
     <div class="packages-grid">
@@ -905,7 +905,7 @@
           <span class="pkg-tag tag-core">Core</span>
         </div>
         <p class="pkg-desc">Structured <code>Error</code> values with codes and metadata, instead of exceptions as control flow.</p>
-        <span class="pkg-type">Error &middot; ErrorCode</span>
+        <span class="pkg-type">Error &middot; ErrorType</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -940,7 +940,7 @@
           <span class="pkg-name">Enums</span>
           <span class="pkg-tag tag-core">Core</span>
         </div>
-        <p class="pkg-desc"><code>[StringEnum]</code> source generator for AOT-safe, allocation-free enum-to-string conversion.</p>
+        <p class="pkg-desc"><code>[StringEnum]</code> source generator for AOT-safe wire names and metadata that JSON, binding, OpenAPI and EF Core share.</p>
         <span class="pkg-type">[StringEnum] &middot; AOT-safe</span>
       </div>
 
@@ -950,7 +950,7 @@
           <span class="pkg-tag tag-core">Core</span>
         </div>
         <p class="pkg-desc">Composable rule engine with <code>.And() .Or() .Next()</code> for readable, testable validation trees.</p>
-        <span class="pkg-type">IRule&lt;T&gt; &middot; RuleSet</span>
+        <span class="pkg-type">IRule&lt;T&gt; &middot; RuleEngine</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -958,8 +958,8 @@
           <span class="pkg-name">Mediator</span>
           <span class="pkg-tag tag-core">Core</span>
         </div>
-        <p class="pkg-desc">Lightweight CQRS mediator with pipeline behaviors, logging via <code>ILoggableRequest</code>.</p>
-        <span class="pkg-type">IMessage &middot; IMediator</span>
+        <p class="pkg-desc">CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking and transactions.</p>
+        <span class="pkg-type">ValidationBehavior &middot; LoggingBehavior</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -976,8 +976,8 @@
           <span class="pkg-name">EntityFrameworkCore</span>
           <span class="pkg-tag tag-data">Data</span>
         </div>
-        <p class="pkg-desc">EF Core interceptors for domain events, soft delete, auditing, and cursor/offset pagination.</p>
-        <span class="pkg-type">Interceptors &middot; Pagination</span>
+        <p class="pkg-desc">EF Core interceptors for domain events, soft delete, auditing and slow queries, plus keyset and offset pagination.</p>
+        <span class="pkg-type">Interceptors &middot; KeysetPaginateAsync</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -985,8 +985,26 @@
           <span class="pkg-name">AspNetCore</span>
           <span class="pkg-tag tag-infra">Web</span>
         </div>
-        <p class="pkg-desc"><code>GlobalExceptionHandler</code>, Result-aware action filters, and problem details mapping.</p>
-        <span class="pkg-type">GlobalExceptionHandler &middot; Filters</span>
+        <p class="pkg-desc"><code>GlobalExceptionHandler</code>, <code>ResultEndpointFilter</code>, problem details mapping, enum binding and API versioning.</p>
+        <span class="pkg-type">GlobalExceptionHandler &middot; ResultEndpointFilter</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">AspNetCore.OpenApi</span>
+          <span class="pkg-tag tag-infra">Web</span>
+        </div>
+        <p class="pkg-desc">Enum convention schemas for <code>Microsoft.AspNetCore.OpenApi</code> on .NET 10. Use it or the Swashbuckle package, never both.</p>
+        <span class="pkg-type">AddEnumConventions &middot; net10.0</span>
+      </div>
+
+      <div class="pkg-card reveal">
+        <div class="pkg-header">
+          <span class="pkg-name">AspNetCore.Swashbuckle</span>
+          <span class="pkg-tag tag-infra">Web</span>
+        </div>
+        <p class="pkg-desc">Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle 10.</p>
+        <span class="pkg-type">AddSwagger &middot; UseVersionableSwagger</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -995,7 +1013,7 @@
           <span class="pkg-tag tag-infra">Web</span>
         </div>
         <p class="pkg-desc"><code>HttpClient</code> extensions that return <code>Result&lt;T&gt;</code> instead of throwing on non-2xx responses.</p>
-        <span class="pkg-type">HttpResult &middot; TypedClient</span>
+        <span class="pkg-type">HttpRequestBuilder &middot; HttpStatusCodeMapper</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -1003,7 +1021,7 @@
           <span class="pkg-name">Json</span>
           <span class="pkg-tag tag-infra">Infra</span>
         </div>
-        <p class="pkg-desc">Pre-configured <code>System.Text.Json</code> options with Result/Maybe converters included.</p>
+        <p class="pkg-desc">Pre-configured <code>System.Text.Json</code> options with enum conventions, polymorphic and multi-format date converters.</p>
         <span class="pkg-type">JsonOptions &middot; Converters</span>
       </div>
 
@@ -1031,7 +1049,7 @@
           <span class="pkg-tag tag-infra">Infra</span>
         </div>
         <p class="pkg-desc">Testable <code>IDateTimeProvider</code>. Swap real time for fixed time in unit tests without static hacks.</p>
-        <span class="pkg-type">IDateTimeProvider &middot; SystemClock</span>
+        <span class="pkg-type">IDateTimeProvider &middot; FakeDateTimeProvider</span>
       </div>
 
       <div class="pkg-card reveal">
@@ -1154,7 +1172,7 @@
       <ul class="footer-links">
         <li><a href="https://github.com/senrecep/CSharpEssentials" target="_blank" rel="noopener">GitHub</a></li>
         <li><a href="https://www.nuget.org/packages/CSharpEssentials" target="_blank" rel="noopener">NuGet</a></li>
-        <li><a href="https://github.com/senrecep/CSharpEssentials/blob/main/LICENSE" target="_blank" rel="noopener">License</a></li>
+        <li><a href="https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE" target="_blank" rel="noopener">License</a></li>
       </ul>
       <span class="footer-copy">MIT License &middot; Built by Recep Sen</span>
     </div>
@@ -1260,6 +1278,8 @@
     'Entity':                { nuget: 'CSharpEssentials.Entity',                 docs: 'examples/Examples.Entity' },
     'EntityFrameworkCore':   { nuget: 'CSharpEssentials.EntityFrameworkCore',    docs: 'examples/Examples.EntityFrameworkCore' },
     'AspNetCore':            { nuget: 'CSharpEssentials.AspNetCore',             docs: 'examples/Examples.AspNetCore' },
+    'AspNetCore.OpenApi':    { nuget: 'CSharpEssentials.AspNetCore.OpenApi',    docs: 'CSharpEssentials.AspNetCore.OpenApi/Readme.MD' },
+    'AspNetCore.Swashbuckle':{ nuget: 'CSharpEssentials.AspNetCore.Swashbuckle', docs: 'CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD' },
     'Http':                  { nuget: 'CSharpEssentials.Http',                   docs: 'CSharpEssentials.Http/Readme.MD' },
     'Json':                  { nuget: 'CSharpEssentials.Json',                   docs: 'examples/Examples.Json' },
     'RequestResponseLogging':{ nuget: 'CSharpEssentials.RequestResponseLogging', docs: 'examples/Examples.RequestResponseLogging' },

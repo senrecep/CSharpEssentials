@@ -1,18 +1,20 @@
 # CSharpEssentials.EntityFrameworkCore Example
 
-This console application demonstrates the complete feature set of `CSharpEssentials.EntityFrameworkCore` including soft delete, audit interceptors, pagination, enum conversion, and naming conventions.
+This console application demonstrates `CSharpEssentials.EntityFrameworkCore` on SQLite: soft delete, the audit, domain event and slow query interceptors, offset and keyset pagination, and enum storage.
 
 ## Features Demonstrated
 
 | Feature | File | Description |
 |---------|------|-------------|
-| **BaseDbContext** | `Data/ShopDbContext.cs` | Automatic configuration discovery, soft-delete filters |
-| **Soft Delete** | `Data/Entities/Product.cs` | Entities are flagged, not removed; filtered from queries |
-| **Audit Interceptor** | Built into BaseDbContext | Auto-sets `CreatedAt` and `UpdatedAt` |
-| **Domain Event Interceptor** | Built into BaseDbContext | Dispatches entity domain events BeforeSave / AfterSave |
-| **Pagination** | `Services/ProductCatalogService.cs` | Offset-based `PaginateAsync()` and keyset `KeysetPaginateAsync()` (in `Program.cs`) |
-| **Enum to String** | `Data/ShopDbContext.cs` | Stores enums as JSON-named (snake_case) strings in the database |
-| **Snake Case Naming** | `Data/ShopDbContext.cs` | Automatic `PascalCase` -> `snake_case` conversion |
+| **BaseDbContext** | `Data/ShopDbContext.cs` | `ShopDbContext : BaseDbContext<ShopDbContext>` logs the context lifecycle and keeps a service scope; it also applies the enum conventions and the soft-delete filter |
+| **Soft Delete** | `Data/Entities/Product.cs`, `Services/ProductCatalogService.cs` | `Product : SoftDeletableEntityBase<Guid>`; `MarkAsDeleted` hides the row through a query filter (`HasQueryFilter(e => !e.IsDeleted)`, added by reflection in `ShopDbContext`) |
+| **Audit Interceptor** | `Program.cs` | `AddAuditInterceptor(() => "demo-user")`, attached with `AddInterceptors`; sets `CreatedAt`/`CreatedBy` and `UpdatedAt`/`UpdatedBy` on `SaveChanges` |
+| **Domain Event Interceptor** | `Program.cs`, `Services/ConsoleDomainEventPublisher.cs`, `Data/Events/` | `DomainEventInterceptor` publishes entity events through `IDomainEventPublisher`; `ProductCreatedEvent` has `[DomainEventTiming(BeforeSave)]`, `ProductPriceChangedEvent` uses the `AfterSave` default |
+| **Slow Query Interceptor** | `Program.cs` | `AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500))` |
+| **Pagination** | `Services/ProductCatalogService.cs`, `Program.cs` | Offset-based `PaginateAsync()` and keyset `KeysetPaginateAsync()` |
+| **Enum Storage** | `Data/ShopDbContext.cs`, `Data/Entities/Product.cs` | `ConfigureEnumConventions(EnumConventions.Default)` stores the `[StringEnum]` enum `ProductCategory` by its wire name and adds a check constraint |
+
+The interceptors are registered in DI and attached to the context in `Program.cs`. `ShopDbContext` does not override `InterceptorsFromServices` or `DispatchDomainEventsOnSaveChanges`, so `BaseDbContext` does not attach them itself. The example does not use a naming convention: the `Product` table is named `products` explicitly and the columns keep their property names.
 
 ## Running the Project
 
@@ -23,16 +25,16 @@ dotnet run
 
 The demo performs the following steps automatically:
 
-1. **Database Creation**: Creates a local SQLite database (`shop.db`).
+1. **Database Creation**: Deletes and creates a local SQLite database (`shop.db`).
 2. **Seeding**: Inserts 3 initial products.
-3. **Soft Delete Demo**: Deletes the "Wireless Mouse" product, then shows:
+3. **Soft Delete Demo**: Soft-deletes the "Wireless Mouse" product, then shows:
    - Visible products (filtered): 2
    - Total products (with deleted): 3
-4. **Pagination Demo**: Adds 25 more products and demonstrates page navigation.
-5. **Enum Conversion Demo**: Shows how `ProductCategory` is stored as strings.
-6. **Audit Interceptor Demo**: Modifies a product and observes `UpdatedAt` being set automatically.
-7. **Cursor Pagination Demo**: Efficient pagination for large datasets using `KeysetPaginateAsync` and `KeysetPaginationRequest`.
-8. **Domain Event Interceptor Demo**: Dispatches events raised by entities during `SaveChanges`.
+4. **Offset Pagination Demo**: Adds 25 more products and prints pages 1 and 2 of 5 items.
+5. **Cursor Pagination Demo**: Reads two pages of 3 products with `KeysetPaginateAsync` and `KeysetPaginationRequest`.
+6. **Audit Interceptor Demo**: Modifies a product and shows `UpdatedAt` and `UpdatedBy` being set automatically.
+7. **Domain Event Interceptor Demo**: Saves products that raise events; the console publisher prints `[BeforeSave]` and `[AfterSave]` lines. The `AfterSave` events are handled inside `SavingChanges`, before the database write.
+8. **Enum Demo**: Reads a product by its `ProductCategory`; the column holds the wire name (see below).
 
 ## BaseDbContext
 
@@ -56,7 +58,7 @@ public class ShopDbContext : BaseDbContext<ShopDbContext>
 ## Soft Delete Entity
 
 ```csharp
-public class Product : SoftDeletableEntityBase
+public class Product : SoftDeletableEntityBase<Guid>
 {
     public string Name { get; set; } = string.Empty;
     public decimal Price { get; set; }
@@ -64,13 +66,15 @@ public class Product : SoftDeletableEntityBase
 }
 ```
 
-Deleting a product:
+Deleting a product (`ProductCatalogService.DeleteProduct`):
 
 ```csharp
-_dbContext.Products.Remove(product);
+product.MarkAsDeleted(DateTimeOffset.UtcNow, "system");
 _dbContext.SaveChanges();
 // Product.IsDeleted = true, row remains in database
 ```
+
+`Products.Remove(product)` has the same effect when the `AuditInterceptor` is attached: it turns a delete of an `ISoftDeletable` entity into a soft delete. The package also ships `modelBuilder.ApplySoftDeleteQueryFilter()`, which this example replaces with its own reflection loop.
 
 Querying without soft-delete filter:
 

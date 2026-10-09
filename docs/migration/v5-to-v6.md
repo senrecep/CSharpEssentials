@@ -6,7 +6,7 @@
 - `AddSwagger<T>(securityScheme, assembly)` is now `AddSwagger<T>(securitySchemeName, securityScheme, assembly)`; `SecuritySchemes.JwtBearerTokenSecurity` no longer sets `Reference`.
 - `EnumSchemaFilter` is `sealed`, and `EnumSchemaFilter.Apply` takes `IOpenApiSchema` instead of `OpenApiSchema`.
 - `OpenApiInfo`, `OpenApiLicense` and the other model types used by `ConfigureSwaggerOptions` subclasses moved from `Microsoft.OpenApi.Models` to `Microsoft.OpenApi`.
-- `ReApplyOptionalRouteParameterOperationFilter` wraps an optional route parameter whose schema is a `$ref` in `allOf`.
+- `ReApplyOptionalRouteParameterOperationFilter` wraps an optional route parameter whose schema is a `$ref` in `allOf`. From 6.1.0 `AddSwagger` no longer registers it ([Optional route parameters](v6-optional-route-parameters.md)); only `OptionalRouteParameterMode.LegacyNonCompliant` does.
 - An enum property with its own XML `<summary>` is written as `allOf` + `description`.
 - The single-column cursor `PaginateAsync<T, TCursor>` is `[Obsolete]` (CS0618); move to `KeysetPaginateAsync`.
 - `IPaginationRequest.Normalize()` and the offset `PaginateAsync`/`Paginate` overloads cap `PageSize` at `PaginationDefaults.MaxPageSize` (100); the synchronous `Paginate` overloads gained a `maxPageSize` parameter, so assemblies compiled against 5.x must be recompiled.
@@ -47,9 +47,9 @@ What the documents change:
 
 - The enum components and the shared golden files (OpenAPI 3.0) are unchanged.
 - An enum property with its own XML `<summary>` is written as `allOf: [$ref]` + `description` (the summary of the property). A property without one stays a plain `$ref`; the summary of the enum type stays on the component.
-- An optional route parameter (`{id?}`) whose schema is a `$ref` is written as `allOf: [$ref]` + `nullable: true` + `default: null`, because a `$ref` cannot carry siblings in OpenAPI 3.0. An inline schema gets `nullable: true` and `default: null` on itself.
+- An optional route parameter (`{id?}`) whose schema is a `$ref` is written as `allOf: [$ref]` + `nullable: true` + `default: null`, because a `$ref` cannot carry siblings in OpenAPI 3.0. An inline schema gets `nullable: true` and `default: null` on itself. This is the 6.0.0 output. From 6.1.0 `AddSwagger` splits the route into one path per form with required parameters instead, and only `OptionalRouteParameterMode.LegacyNonCompliant` keeps this shape ([Optional route parameters](v6-optional-route-parameters.md)).
 
-Keep OpenAPI 3.0, the Swashbuckle default. The enum filters always write the 3.0 shape (a filter cannot see the version `UseSwagger` serializes), and with `UseSwagger(o => o.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1)` a nullable enum usage, and an optional route parameter whose schema is a `$ref`, is serialized as `{"type": "null", "allOf": [{"$ref": ...}]}`: no value matches both `type: "null"` and the referenced component, so the schema is unsatisfiable and validators and client generators reject `null` and every enum value.
+Keep OpenAPI 3.0, the Swashbuckle default. The enum filters always write the 3.0 shape (a filter cannot see the version `UseSwagger` serializes), and with `UseSwagger(o => o.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1)` a nullable enum usage, and (with `OptionalRouteParameterMode.LegacyNonCompliant`) an optional route parameter whose schema is a `$ref`, is serialized as `{"type": "null", "allOf": [{"$ref": ...}]}`: no value matches both `type: "null"` and the referenced component, so the schema is unsatisfiable and validators and client generators reject `null` and every enum value.
 
 ## `CSharpEssentials.AspNetCore.OpenApi`
 

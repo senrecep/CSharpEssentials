@@ -1,6 +1,6 @@
 # CSharpEssentials.DependencyInjection: Design Document
 
-> **Date:** 2026-10-06 | **Status:** Approved design (4.1)
+> **Date:** 2026-10-06 | **Status:** Implemented in 4.1, kept current through 6.5
 > **Issues:** #48 (epic), #49 (docs), #50 (infra), #55 (attributes + runtime), #56 (generator + analyzer), #57 (docs/AOT example), #58 (P3)
 > **Related:** [ADR-006](../adr/ADR-006-source-generators-in-separate-projects.md), [Endpoints design](CSharpEssentials.Endpoints-DESIGN.md)
 

@@ -4,15 +4,17 @@ Type-safe generic cloning for .NET. Provides a strongly-typed `ICloneable<T>` al
 
 ## Features
 
-- **Generic `ICloneable<T>`**: Type-safe cloning interface.
+- **Generic `ICloneable<out T>`**: Type-safe, covariant cloning interface with a single `T Clone()` method.
 - **Collection Extensions**: Clone `IEnumerable<T>` and `IQueryable<T>` in one call.
-- **Deep Copy Support**: Compose clones for nested objects.
+- **Deep Copy Support**: The library only calls `Clone()`; you decide how deep it copies by composing clones of nested objects in your implementation.
 
 ## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Clone
 ```
+
+Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` and `netstandard2.0`.
 
 ## Usage
 
@@ -53,6 +55,8 @@ clone.Address.City = "LA";
 // original is unaffected
 ```
 
+A single object has no extension method: `Clone()` is the instance method you implement.
+
 ### Cloning Collections
 
 ```csharp
@@ -69,3 +73,5 @@ var cloned = users.Clone().ToList();
 IQueryable<User> query = users.AsQueryable();
 var clonedQuery = query.Clone();
 ```
+
+Both extensions require `T : ICloneable<T>` and are lazy: `Clone()` runs for each element as the result is enumerated, so call `ToList()` to materialize the copies once. The `IQueryable<T>` overload returns an in-memory query (`EnumerableQuery<T>`); it does not translate the cloning into the provider's query, so a provider-backed query is read as usual and then cloned in memory.

@@ -16,14 +16,16 @@ By participating in this project, you are expected to uphold our [Code of Conduc
 
 ### Prerequisites
 
-- **.NET SDK**: .NET 9 SDK (or .NET 8 SDK for netstandard targets)
+- **.NET SDK**: the SDK pinned in `global.json` (currently 11.0 RC1, `rollForward` is `latestFeature` with prereleases allowed). The libraries target .NET 11/10/9/8 and netstandard2.0/2.1, so a build needs only that SDK; the NuGet packages themselves work with the SDKs of their target frameworks.
+- **.NET 9 and .NET 10 runtimes**: the test projects run on net9.0 and net10.0.
+- **Docker**: the PostgreSQL tests of `CSharpEssentials.Tests` start a container through Testcontainers.
 - **Git**: For version control
 
 ### First-Time Setup
 
 ```bash
 # Clone your fork
-git clone https://github.com/senrecep/CSharpEssentials.git
+git clone https://github.com/<your-username>/CSharpEssentials.git
 cd CSharpEssentials
 
 # Configure git hooks (enables pre-commit badge validation)
@@ -44,7 +46,7 @@ Here's how you can contribute to the project using Git:
 
    ```bash
    # Clone your fork
-   git clone https://github.com/senrecep/CSharpEssentials.git
+   git clone https://github.com/<your-username>/CSharpEssentials.git
 
    # Navigate to the newly cloned directory
    cd CSharpEssentials
@@ -70,9 +72,11 @@ Here's how you can contribute to the project using Git:
    # Add your changes
    git add .
 
-   # Commit with a descriptive message
-   git commit -m "Description of your changes"
+   # Commit with a Conventional Commits message
+   git commit -m "feat(results): add MapError overload for async chains"
    ```
+
+   Releases are generated from commit messages by release-please: `feat` gives a minor bump, `fix` and `perf` a patch, and `feat!` or a `BREAKING CHANGE:` footer a major. See `.claude/rules/git.md` for the allowed types and scopes.
 
 5. Keep your branch updated:
 
@@ -165,7 +169,9 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 
 - Update relevant documentation
 - Include XML comments for public APIs
-- Update README.md if needed
+- Update README.MD if needed (package table, badges)
+- Update the package `Readme.MD` and the matching `.well-known/agent-skills/<package>/SKILL.md` when a public API changes
+- Do not bump the version or edit `CHANGELOG.md` in a feature pull request; release-please generates both
 - Add examples for new features
 
 ## License

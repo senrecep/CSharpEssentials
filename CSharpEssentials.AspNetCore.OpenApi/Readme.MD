@@ -15,6 +15,8 @@ Targets net10.0 with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.OpenApi`
 ## Enum schemas
 
 ```csharp
+using CSharpEssentials.AspNetCore; // AddEnumConventions for IServiceCollection and OpenApiOptions
+
 builder.Services.AddEnumConventions();
 builder.Services.AddOpenApi("v1", o => o.AddEnumConventions());
 builder.Services.AddOpenApi("v2", o => o.AddEnumConventions());
@@ -92,9 +94,9 @@ app.MapOpenApi();
 app.MapScalarApiReference(o => o.AddDocument("v1").AddDocument("v2"));
 ```
 
-## Hosts without the Web SDK
+## Interceptors namespace
 
-`Microsoft.AspNetCore.OpenApi` intercepts `AddOpenApi` with generated code. A project on `Microsoft.NET.Sdk` (instead of `Microsoft.NET.Sdk.Web`) enables it:
+`Microsoft.AspNetCore.OpenApi` intercepts `AddOpenApi` and reads XML doc comments through generated code. Its build file enables that only for a project that references `Microsoft.AspNetCore.OpenApi` itself, and this package brings it in as a transitive dependency. A host that does not reference `Microsoft.AspNetCore.OpenApi` directly fails with `CS9137` (the `interceptors` feature is not enabled in this namespace), on `Microsoft.NET.Sdk.Web` and on `Microsoft.NET.Sdk` alike. Enable the namespace in the host project (or add a direct `PackageReference` to `Microsoft.AspNetCore.OpenApi`):
 
 ```xml
 <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>

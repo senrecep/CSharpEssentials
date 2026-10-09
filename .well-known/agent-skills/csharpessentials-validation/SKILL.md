@@ -18,9 +18,12 @@ dotnet add package CSharpEssentials.Validation
 ## Namespace
 
 ```csharp
-using CSharpEssentials.Validation;
-using CSharpEssentials.Validation.Validators;
+using CSharpEssentials.Validation;             // Validator<T>, RuleContext<T>, ValidateWith...
+using CSharpEssentials.Validation.Validators;  // NotEmpty, MaxLength, GreaterThan, SetValidatorAsync, ...
+using CSharpEssentials.Validation.Extensions;  // AddValidator, AddValidatorsFromAssembly(ies)
 ```
+
+Without the `Validators` using, `rules.For(...).NotEmpty()` does not compile. `Result<T>` is in `CSharpEssentials.ResultPattern`, `Error` in `CSharpEssentials.Errors`.
 
 ---
 
@@ -110,8 +113,11 @@ rules.For(() => model.Tags)
     .MaxCount(10)
     .CountBetween(1, 10);
 
-// Nullable structs: null is skipped
+// Nullable structs: null is skipped (Equal/NotEqual are not available; use NotNull()/Null())
 rules.For(() => model.ExpiresAt).GreaterThan(DateTime.UtcNow);
+
+// Strings also have Equal/NotEqual (ordinal, or pass a StringComparison) and Matches(Regex)
+// Enums: IsDefinedEnum(), IsOneOf(...), HasOnlyDefinedFlags()
 ```
 
 Every validator takes an optional `message`, and most have an overload that takes a full `Error` for a custom code: `.NotEmpty(Error.Validation("User.NameRequired", "Name is required."))`.
@@ -211,7 +217,26 @@ public class OrderValidator : Validator<Order>
 }
 ```
 
-`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), …)`, `rules.ForEach(() => model.Tags.WithoutNulls(), …)`.
+`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), …)`, `rules.ForEach(() => model.Tags.WithoutNulls(), …)`. The property name in the error code comes from the lambda text: `Code.NotEmpty` for the first, and the whole collection expression (`Tags.WithoutNulls()[1].NotEmpty`) for the others.
+
+---
+
+## Custom Rules and Manual Failures
+
+```csharp
+public static class EvenValidators
+{
+    public static RuleChain<T, int> Even<T>(this RuleChain<T, int> chain, string? message = null)
+    {
+        if (!chain.HasFailed && chain.Value % 2 != 0)
+            chain.AddError(Error.Validation($"{chain.PropertyName}.Even", message ?? $"'{chain.PropertyName}' must be even."));
+        return chain;
+    }
+}
+
+rules.AddFailure("Order.Total", "The total does not match the line items."); // model-level failure
+rules.For(model.Name, nameof(model.Name)).NotEmpty();                         // pre-evaluated value, no lambda
+```
 
 ---
 

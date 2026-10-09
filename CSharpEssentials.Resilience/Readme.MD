@@ -8,6 +8,16 @@ HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) wi
 dotnet add package CSharpEssentials.Resilience
 ```
 
+## Namespaces
+
+```csharp
+using CSharpEssentials.Resilience;    // ResiliencePolicy, ResiliencePolicy<T>, options records, Func and Result extensions
+using CSharpEssentials.ResultPattern; // Result, Result<T>
+using CSharpEssentials.Errors;        // Error, ErrorType
+```
+
+The samples below assume these usings.
+
 ## Quick Start
 
 ```csharp
@@ -33,6 +43,21 @@ Result<Product> product = await ResiliencePolicy<Product>
     .WithFallback(ct => _cache.GetAsync<Product>(id, ct))
     .ExecuteAsync(_ => _productService.GetProduct(id));
 ```
+
+## Policy Builder
+
+Both `ResiliencePolicy` and `ResiliencePolicy<T>` are immutable structs: every `With...` call returns a new policy.
+
+| Method | Parameters (defaults) | Notes |
+|--------|-----------------------|-------|
+| `WithRetry` | `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`) | `maxAttempts` is the number of retries after the first attempt, so the operation runs at most `maxAttempts + 1` times. With `exponentialBackoff` the delay doubles after each retry |
+| `WithTimeout` | `timeout` | Polly accepts 1 second to 1 day; any other value throws `ValidationException` when the policy is built |
+| `WithCircuitBreaker` | `minimumThroughput` (10), `samplingDuration` (1 min), `breakDuration` (30 s), `failureRatio` (0.5) | Counts the same failures as the retry strategy |
+| `WithFallback` | `Func<CancellationToken, Task<T>>` or `Func<CancellationToken, Task<Result<T>>>` | `ResiliencePolicy<T>` only; runs after the other strategies are exhausted |
+| `Create(ResiliencePolicyOptions)` | `Retry`, `Timeout`, `CircuitBreaker` records | `ResiliencePolicy` only. `WithRetry(RetryOptions)`, `WithTimeout(TimeoutOptions)` and `WithCircuitBreaker(CircuitBreakerOptions)` take the records on both policies |
+| `Create(Action<ResiliencePipelineBuilder>)`, `FromPipeline(pipeline)`, `ToPipeline()` | | Interoperate with raw Polly pipelines (`ResiliencePipelineBuilder<Result<T>>` for `ResiliencePolicy<T>`) |
+
+Strategies nest in the order you add them: the first one is the outermost. `WithRetry(3).WithTimeout(TimeSpan.FromSeconds(1))` applies the timeout to each attempt, while `WithTimeout(TimeSpan.FromSeconds(1)).WithRetry(3)` limits all attempts together. `WithFallback` always wraps the strategies of the policy it is called on.
 
 ## Retrying Failed Results
 
@@ -111,7 +136,7 @@ Resilience-specific errors are returned as `Error` values:
 - `Error.Failure("Resilience.Timeout", "Operation timed out.")`
 - `Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.")`
 
-When retries exhaust, the last exception is returned as `ErrorType.Unexpected`.
+When retries exhaust, the last exception is returned as `Error.Exception(ex, ErrorType.Unexpected)`, with the exception type name as code.
 
 Cancellation of the caller's token is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback. If the caller cancels after an attempt returned a retryable failed `Result`, `ExecuteAsync`, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException` instead of returning that result. This is the same whether the cancel lands during an attempt or during the backoff delay, and it also applies right after the final attempt: cancellation wins over returning the last failed result. It also applies to policies without a retry strategy, such as a circuit-breaker-only or timeout-only policy. This rule covers returned failures only: if the operation throws an exception other than `OperationCanceledException` while the caller's token is cancelled, the exception is returned as an `Unexpected` error. An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is treated as a normal failure: it is retried and it triggers the fallback.
 

@@ -22,7 +22,7 @@ using CSharpEssentials.Errors;
 ## Creating Errors
 
 ```csharp
-// ErrorType: Failure | Unexpected | Validation | Conflict | NotFound | Unauthorized | Forbidden
+// ErrorType: Failure | Unexpected | Validation | Conflict | NotFound | Unauthorized | Forbidden | Unknown (no factory)
 Error failure      = Error.Failure("order.failed", "Order could not be processed.");
 Error validation   = Error.Validation("email.invalid", "Email format is invalid.");
 Error notFound     = Error.NotFound("user.not_found", "User not found.");
@@ -39,8 +39,11 @@ Error fromEx       = Error.Exception(ex); // code = exception type name, descrip
 string code          = error.Code;        // "email.invalid"
 string description   = error.Description; // "Email format is invalid." (there is no .Message)
 ErrorType type       = error.Type;        // ErrorType.Validation
+int numeric          = error.NumericType; // int value of Type
 ErrorMetadata? meta  = error.Metadata;    // nullable
 ```
+
+Every factory has defaults for `code` and `description` (`Error.NotFound()` has the code `NotFound`). Two errors are equal when type, code, description and metadata entries are equal.
 
 ## ErrorMetadata
 
@@ -51,7 +54,7 @@ Error withMeta = Error.NotFound(
     new ErrorMetadata()
         .AddMetadata("TraceId", traceId)
         .AddMetadata("RequestPath", "/api/users/1"));
-// .AddMetadata() — NOT .WithMetadata()
+// .AddMetadata() — NOT .WithMetadata(); an existing key is kept, not overwritten
 ```
 
 ## Combining Errors
@@ -65,9 +68,11 @@ Error[] many   = Error.CreateMany(error1, error2, error3);
 
 ```csharp
 int status   = ErrorType.NotFound.ToHttpStatusCode();  // 404
-int status2  = ErrorType.Validation.ToHttpStatusCode(); // 400 (Failure/Unexpected map to 500)
+int status2  = ErrorType.Validation.ToHttpStatusCode(); // 400 (Failure/Unexpected/Unknown map to 500)
 ErrorType et = 401.ToErrorType();                       // Unauthorized
 ```
+
+`Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409. `ToErrorType` reverses 400, 401, 403, 404, 409 and 500 (`Failure`); any other status gives `Unexpected`.
 
 ## Domain-Specific Error Hierarchies
 
@@ -116,7 +121,9 @@ public Result<User> FindUser(Guid id)
 ```csharp
 using CSharpEssentials.Exceptions;
 
-throw new DomainException(Error.Validation("Order.Invalid", "Total must be greater than zero."));
+throw new DomainException(Error.Validation("Order.Invalid", "Total must be greater than zero."));  // .Error holds the Error
+
+throw new EnhancedValidationException(new[] { emailError, passwordError });                         // .Errors holds the Error[]
 ```
 
 ## Best Practices

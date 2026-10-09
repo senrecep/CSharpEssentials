@@ -5,7 +5,7 @@ Results package uses to prefer the `Task` handler over its `ValueTask` twin when
 
 It builds for two targets:
 
-- **net8.0** consumes the `netstandard2.1` asset. That asset has no `ValueTask` handler twins, so untyped async lambdas bind on their own.
+- **net8.0** consumes the `netstandard2.1` asset. That asset has no `ValueTask` handler twins except for the members named under "Shapes that are ambiguous on every target under C# 12" and "Maybe shapes", so other untyped async lambdas bind on their own.
 - **net9.0** consumes the `net9.0` asset. That asset has the `ValueTask` twins, so some shapes need a typed handler under C# 12.
 
 ## Shapes that bind under C# 12 on every target
@@ -28,7 +28,7 @@ On net9.0+ under C# 12, an untyped async lambda reports CS0121 for the following
 | Receiver | Methods |
 |---|---|
 | `Result<T>` / `Result` instance | `MapAsync`, `TapAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync`; since 6.5.0 also `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync` |
-| `ValueTask<Result<T>>` / `ValueTask<Result>` source | `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync`; since 6.5.0 also `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` |
+| `ValueTask<Result<T>>` / `ValueTask<Result>` source | `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync`; since 6.5.0 also `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` (only a lambda that returns no value; one that returns a value binds) |
 | static `Result` | `TryAsync` (since 6.5.0) |
 | `IEnumerable<T>` | `TraverseAsync` |
 
@@ -37,11 +37,11 @@ Fix it in either of these ways:
 - Move to C# 13 or later.
 - Type the first handler, for example `(Func<int, Task<string>>)(async v => ...)` or a local function. A handler that returns `ValueTask` binds the `ValueTask` twin.
 
-## Shapes that are ambiguous on every target and language version
+## Shapes that are ambiguous on every target under C# 12
 
-These are in `TypedDelegateShapes`. In each case the lambda parameter or return type cannot choose between overloads, so the handler must be typed:
+These are in `TypedDelegateShapes`. In each case the lambda parameter or return type cannot choose between overloads and C# 12 ignores `[OverloadResolutionPriority]`, so the handler must be typed. C# 13 and later pick the `Task` overload on their own:
 
-- `Result<T>.MapErrorAsync(async e => ...)` when the body compiles for both `Error` and `Error[]`, for example `return e;`.
+- `Result<T>.MapErrorAsync(async e => ...)` on a `Result<T>` or `Result` instance, because the lambda fits both the `Task` and the `ValueTask` handler, and also `Error` and `Error[]` when the body compiles for both, for example `return e;`.
 - `Result<T>.BindAsync(async v => ...)` returning `Result<T>`: the `Result<TOut>` handler and the `Result` handler both fit, because `Result<T>` converts to `Result`.
 
 ## Maybe shapes

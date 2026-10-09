@@ -62,15 +62,46 @@ With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpConte
 
 `errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 
+#### Returning problems from your own code
+
+```csharp
+// Minimal API
+app.MapGet("/users/{id}", (int id) =>
+    Error.NotFound("User.NotFound", "No such user").ToProblemResult())      // IResult; also on Error[] and on a failed Result
+    .ProducesProblem(404);                                                  // OpenAPI metadata: application/problem+json (EnhancedProblemDetails)
+
+IResult conflict = Error.Conflict("Order.Duplicate", "Already placed").ToProblemResult(statusCode: 422); // override the mapped status
+EnhancedProblemDetails details = Error.NotFound("User.NotFound", "No such user").ToProblemDetails();     // the object, without writing it
+```
+
+```csharp
+// MVC
+public sealed class UsersController : ControllerBase
+{
+    [HttpGet("{id}")]
+    public IActionResult Get(int id)
+    {
+        Error error = Error.NotFound("User.NotFound", "No such user");
+        return error.ToActionResult(HttpContext);   // or: this.Problem(error), this.Problem(errors), this.Problem(result)
+    }
+}
+```
+
+All of them take an optional `ErrorMetadata extensions` (extra fields on the problem) and `statusCode`. The status comes from the `ErrorType` of the error (`Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409, and so on) unless you pass one or register an `IErrorStatusCodeMapper`; with several errors the highest status wins. `[ValidateModel]` (attribute) and `ConfigureModelValidatorResponse()` return the invalid model state of MVC actions through `ToActionResult`, with the code `validation.{model state key}`.
+
+`services.ConfigureSystemTextJson()` applies the `CSharpEssentials.Json` serializer options (or the `JsonSerializerOptions` you pass, then an optional `configureOptions` callback) to both the MVC and the Minimal API JSON options; it also calls `AddControllers()`.
+
 ### API Versioning
 
 ```csharp
-builder.Services.AddAndConfigureApiVersioning();
+builder.Services.AddAndConfigureApiVersioning(); // optional: configureOptions (ApiVersioningOptions), configureExplorer (ApiExplorerOptions)
 
 var app = builder.Build();
 var usersGroup = app.CreateVersionedGroup("users", version: 1);
 usersGroup.MapGet("/{id}", (int id) => Results.Ok(new { Id = id }));
 ```
+
+`AddAndConfigureApiVersioning` sets version 1.0 as the default, assumes it when the request names no version, reports `api-supported-versions`, reads the version from the `v{version}` URL segment or the `x-api-version` header, and registers the API Explorer with the group format `'v'VVV` and the version substituted in URLs. `CreateVersionedGroup("users", version: 1)` maps `v{version:apiVersion}/users`; `CreateVersionSet(version)` builds just the `ApiVersionSet`.
 
 `MapVersionedGroup(version)` creates a group with only the `v{version:apiVersion}` prefix and the version set, so other route groups can be composed under it:
 
@@ -99,6 +130,8 @@ app.MapGet("/users/{id}", (int id) => GetUser(id))
 ### Validation Endpoint Filter
 
 ```csharp
+using CSharpEssentials.Validation.Extensions; // AddValidator
+
 builder.Services.AddValidator<CreateUserRequest, CreateUserRequestValidator>();
 
 app.MapPost("/users", (CreateUserRequest request) => CreateUser(request))
@@ -264,14 +297,14 @@ Validators: a registered `IETagSource<T>` (exact runtime type, then base classes
 ```json
 {
   "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-  "title": "Bad Request",
+  "title": "Validation Error",
   "status": 400,
   "detail": "Email format is incorrect.",
   "instance": "/users",
-  "traceId": "0af7651916cd43dd8448eb211c80319c",
   "errorCodes": ["User.InvalidEmail"],
   "errors": [
     { "code": "User.InvalidEmail", "description": "Email format is incorrect." }
-  ]
+  ],
+  "traceId": "0af7651916cd43dd8448eb211c80319c"
 }
 ```

@@ -1,80 +1,82 @@
 # Exception Types in CSharpEssentials
 
-CSharpEssentials provides custom exception types for error handling. They are designed to work with the functional programming paradigm and the Error management system.
+CSharpEssentials provides custom exception types for error handling. They are designed to work with the functional programming paradigm and the Error management system. Both live in the `CSharpEssentials.Exceptions` namespace of the `CSharpEssentials.Errors` package.
+
+```csharp
+using CSharpEssentials.Errors;
+using CSharpEssentials.Exceptions;
+```
 
 ## Available Exception Types
 
 ### 1. DomainException
 
-`DomainException` is designed for domain-specific business rule violations. It takes an `Error` object as a parameter and exposes it through the `Error` property.
+`DomainException` is designed for domain-specific business rule violations. It takes an `Error` object as a parameter and exposes it through the `Error` property. The exception `Message` is the `Description` of the error.
 
 ```csharp
 public class DomainException : Exception
 {
-    public DomainException(Error error) : base(error.Description)
-    {
-        Error = error;
-    }
+    public DomainException(Error error)
+        : base(error.Description) => Error = error;
 
     public Error Error { get; }
+}
+```
 
-    // Usage example:
-    try
-    {
-        var error = Error.Validation(
-            code: "INVALID_AGE",
-            description: "User must be at least 18 years old"
-        );
-        throw new DomainException(error);
-    }
-    catch (DomainException ex)
-    {
-        // Access the original error
-        var originalError = ex.Error;
-    }
+```csharp
+try
+{
+    var error = Error.Validation(
+        code: "INVALID_AGE",
+        description: "User must be at least 18 years old"
+    );
+    throw new DomainException(error);
+}
+catch (DomainException ex)
+{
+    // ex.Message is "User must be at least 18 years old"
+    var originalError = ex.Error;
 }
 ```
 
 ### 2. EnhancedValidationException
 
-`EnhancedValidationException` is designed for handling multiple validation errors. It takes an array of `Error` objects and provides access to them through the `Errors` property.
+`EnhancedValidationException` is designed for handling multiple validation errors. It takes an array of `Error` objects and provides access to them through the `Errors` property. The exception `Message` is `Validation failed with {n} errors`.
 
 ```csharp
 public class EnhancedValidationException : Exception
 {
     public EnhancedValidationException(Error[] errors)
-        : base($"Validation failed with {errors.Length} errors")
-    {
-        Errors = errors;
-    }
+        : base($"Validation failed with {errors.Length} errors") => Errors = errors ?? throw new ArgumentNullException(nameof(errors));
 
     public Error[] Errors { get; }
+}
+```
 
-    // Usage example:
-    try
+```csharp
+try
+{
+    var errors = new[]
     {
-        var errors = new[]
-        {
-            Error.Validation("EMAIL_INVALID", "Invalid email format"),
-            Error.Validation("PASSWORD_TOO_SHORT", "Password must be at least 8 characters")
-        };
+        Error.Validation("EMAIL_INVALID", "Invalid email format"),
+        Error.Validation("PASSWORD_TOO_SHORT", "Password must be at least 8 characters")
+    };
 
-        throw new EnhancedValidationException(errors);
-    }
-    catch (EnhancedValidationException ex)
+    throw new EnhancedValidationException(errors);
+}
+catch (EnhancedValidationException ex)
+{
+    // Access all validation errors
+    foreach (var error in ex.Errors)
     {
-        // Access all validation errors
-        foreach (var error in ex.Errors)
-        {
-            Console.WriteLine($"Code: {error.Code}, Description: {error.Description}");
-        }
+        Console.WriteLine($"Code: {error.Code}, Description: {error.Description}");
     }
 }
 ```
 
 ## Integration with Error System
 
-These exceptions are designed to work directly with the Error system:
+These exceptions are designed to work directly with the Error system. The `Result` types come from the `CSharpEssentials.Results` package (`using CSharpEssentials.ResultPattern;`), and an `Error` or an `Error[]` converts implicitly to `Result<T>`:
 
 ```csharp
 public Result<User> CreateUser(UserDto dto)
@@ -112,6 +114,10 @@ public Result<User> CreateUser(UserDto dto)
     }
 }
 ```
+
+## ASP.NET Core
+
+With `CSharpEssentials.AspNetCore`, its global exception handler turns a `DomainException` into a ProblemDetails response for its `Error`, using the HTTP status of the error's `ErrorType`, and an `EnhancedValidationException` into a 400 response that carries its errors.
 
 ## Best Practices
 

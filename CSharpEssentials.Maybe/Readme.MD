@@ -9,6 +9,9 @@ Maybe (Option) monad for null-safe, expressive code. Avoid `NullReferenceExcepti
 - **LINQ Support**: Query syntax with `Select`, `SelectMany`, `Where`.
 - **Async Support**: `MapAsync`, `BindAsync`, and awaitable extensions.
 - **Result Bridge**: Convert `Maybe<T>` to `Result<T>` and back.
+- **Sequence Helpers**: `TryFirst`, `TryLast`, `TryFind`, `Choose`, `Sequence`, `Traverse`, `Partition`.
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Errors`. `Maybe<T>` and the non-generic `Maybe` (for `Maybe.None`, `Maybe.From`, `Maybe.FromAsync` and `Maybe.FromTry`) live in the `CSharpEssentials.Maybe` namespace.
 
 ## Installation
 
@@ -31,7 +34,14 @@ public Maybe<User> FindUser(int id)
 
 Maybe<string> none = Maybe.None;
 Maybe<int> value = 42;
+
+Maybe<string> name = Maybe.From("Ann");                       // the non-generic Maybe infers T
+Maybe<int> five = 5.AsMaybe();
+Maybe<int> parsed = Maybe.FromTry(() => int.Parse("42"));
+Maybe<string> lazy = Maybe.From(() => Environment.GetEnvironmentVariable("HOME"));
 ```
+
+`From` gives `None` for `null`. `Maybe<T>` serializes with `System.Text.Json` as `{"HasValue":true,"value":5}` and deserializes back from that shape.
 
 ### Functional Chaining
 
@@ -59,7 +69,48 @@ Maybe<string> tracking =
 FindUser(1).Match(
     some: user => Console.WriteLine($"Found: {user.Name}"),
     none: () => Console.WriteLine("Not found"));
+
+string label = FindUser(1).Match(some: u => u.Name, none: () => "stranger");
+
+string loaded = await FindUser(1).MatchAsync(
+    some: async (u, ct) => await LoadProfileAsync(u, ct),   // async handlers receive a CancellationToken
+    none: async ct => await LoadAnonymousAsync(ct),
+    cancellationToken: token);
 ```
+
+### Reading the Value
+
+```csharp
+Maybe<int> maybe = 5;
+
+if (maybe.HasValue) { int v = maybe.Value; }          // Value throws InvalidOperationException on None
+bool found = maybe.TryGetValue(out int value);
+var (hasValue, inner) = maybe;                          // Deconstruct
+
+int a = maybe.GetValueOrDefault(0);                    // fallback value
+int b = maybe.GetValueOrDefault(() => 0);              // lazy fallback
+int c = maybe.GetValueOrDefault(v => v * 2, -1);       // map when Some, else the fallback
+int d = maybe.GetValueOrThrow("missing");              // or GetValueOrThrow(new MyException())
+int? e = maybe.AsNullable();                           // T? for reference types; default(T) for value types
+List<int> list = maybe.ToList();                       // one element, or empty
+```
+
+### Filtering, Fallbacks and Side Effects
+
+```csharp
+Maybe<int> big = maybe.Where(v => v > 3);               // None when the predicate fails
+Maybe<int> alt = Maybe<int>.None.Or(7);                 // Or(Maybe<T>) (a plain T converts), Or(Func<T>), Or(Func<Maybe<T>>)
+
+maybe.Tap(v => Console.WriteLine(v));                   // only when Some; returns the same Maybe
+maybe.TapIf(v => v > 3, v => Console.WriteLine(v));     // predicate-gated tap
+maybe.Execute(v => Console.WriteLine(v));               // Action<T> on Some
+maybe.ExecuteNoValue(() => Console.WriteLine("none"));  // Action on None
+
+Maybe<int> doubled = maybe.MapIf(v => v > 3, v => v * 2);
+Maybe<int> kept = maybe.BindIf(v => v > 3, v => Maybe<int>.From(v + 1));
+```
+
+`MapIf`, `BindIf` and `TapIf` also take a `bool` or a `Func<bool>` condition. `MapIfAsync` and `BindIfAsync` exist on `Maybe<T>`, `Task<Maybe<T>>` and `ValueTask<Maybe<T>>`; `TapIfAsync` exists on the `Task` and `ValueTask` sources.
 
 ### Converting to Result
 
@@ -72,6 +123,8 @@ Result<Order> result2 = new Order();
 Maybe<Order> maybe = result2.AsMaybe();
 ```
 
+`ToResult` and `ToUnitResult` are aliases of `ToMaybeResult` and `ToMaybeUnitResult`. Without an error argument a `None` becomes the `Maybe.Result` `NotFound` error. Always pass the error to `ToResult(error)`, or call `ToMaybeResult()`: `maybe.ToResult()` with no argument binds the generic `ToResult<TValue>(this TValue value)` of `CSharpEssentials.Results` and returns a successful `Result<Maybe<T>>`. `AsMaybe` on a failed `Result<T>` gives `None` and drops the errors. The async forms are `ToResultAsync`, `ToUnitResultAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `AsMaybeAsync`.
+
 ### Async
 
 ```csharp
@@ -81,7 +134,7 @@ Maybe<Order> order = await user
     .MapAsync(o => EnrichAsync(o));
 ```
 
-Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`.
+Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `WhereAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`. The instance `MapAsync` has a `Task` and a `ValueTask` twin without that priority, so `maybe.MapAsync(async v => ...)` is ambiguous (CS0121) on every language version; pass a lambda that returns a `Task` instead (`maybe.MapAsync(v => LoadAsync(v))`) or type the delegate.
 
 ### Collection Extensions
 
@@ -101,6 +154,11 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 | `Sequence()` | `Maybe<T[]>` | `None` if any element is `None` |
 | `Traverse(selector)` | `Maybe<TOut[]>` | Applies selector then sequences |
 | `Partition()` | `(T[] Values, int NoneCount)` | Never returns `None`; always splits |
+| `Choose()` | `IEnumerable<T>` | Keeps the present values; `Choose(selector)` maps them too, `ChooseAsync` streams a sequence of `Task<Maybe<T>>` |
+| `TryFirst()`, `TryFirst(predicate)`, `TryLast()`, `TryLast(predicate)` | `Maybe<T>` | First or last element, `None` when there is none |
+| `dictionary.TryFind(key)` | `Maybe<TValue>` | Lookup on an `IReadOnlyDictionary` |
+
+`TryFirst` is built on `FirstOrDefault`: for a sequence of value types such as `int[]`, an empty sequence or a predicate without a match gives `Some(default)` instead of `None`. `TryLast` and the other helpers do not have this limitation.
 
 ### Choosing between `T?`, `Maybe<T>` and `Result<T>`
 

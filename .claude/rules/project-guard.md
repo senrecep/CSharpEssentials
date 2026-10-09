@@ -5,14 +5,14 @@ paths: ["**/*.cs", "**/*.csproj", "Directory.*.props"]
 ## Project Guardrails
 
 ### Code Quality
-- No `dynamic` usage unless explicitly justified with `// claude-ok`.
+- No `dynamic` usage.
 - No `#pragma warning disable` — fix the root cause instead.
 - No `// TODO` comments in committed code — track as GitHub issues.
 - All public APIs have explicit nullable annotations (`string?` vs `string`).
 - New concrete classes are `sealed` unless designed for inheritance.
 
 ### Multi-Targeting
-- Code must compile under all declared target frameworks (`net9.0`, `netstandard2.1`, `netstandard2.0` where applicable).
+- Code must compile under all declared target frameworks of its project (`net11.0`, `net10.0`, `net9.0`, `net8.0`, `netstandard2.1`, `netstandard2.0`, depending on the package).
 - Use conditional compilation for framework-specific APIs:
   ```csharp
   #if NET9_0_OR_GREATER
