@@ -24,6 +24,8 @@ public class HttpCancellationTests
         "SendT",
         "SendWithRedirects",
         "SendWithRedirectsT",
+        "Builder",
+        "BuilderT",
     ];
 
     public static TheoryData<string> ContentMethods =>
@@ -154,6 +156,8 @@ public class HttpCancellationTests
             "SendT" => await client.SendAsResultAsync<TestDto>(request, cancellationToken: cancellationToken),
             "SendWithRedirects" => await client.SendWithRedirectsAsResultAsync(request, cancellationToken: cancellationToken),
             "SendWithRedirectsT" => await client.SendWithRedirectsAsResultAsync<TestDto>(request, cancellationToken: cancellationToken),
+            "Builder" => await HttpRequestBuilder.Get(RequestUri).AsResultAsync(client, cancellationToken),
+            "BuilderT" => await HttpRequestBuilder.Get(RequestUri).AsResultAsync<TestDto>(client, cancellationToken: cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(method), method, null),
         };
     }

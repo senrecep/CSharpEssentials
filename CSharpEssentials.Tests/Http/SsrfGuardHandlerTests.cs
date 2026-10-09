@@ -943,6 +943,22 @@ public sealed class SsrfGuardHandlerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetFromJsonAsResultAsync_Should_Return_SsrfBlocked_Not_Http_Timeout_When_Guard_Times_Out()
+    {
+        HttpClient client = CreateClient(o =>
+        {
+            o.Timeout = TimeSpan.FromMilliseconds(300);
+            o.AllowedNetworks.Add(LoopbackNetwork);
+        });
+
+        Result<string> result = await client.GetFromJsonAsResultAsync<string>(_server.Url("loopback.test", "/slow"));
+
+        result.FirstError.Type.Should().Be(ErrorType.Forbidden);
+        result.FirstError.Code.Should().Be("Http.SsrfBlocked");
+        result.FirstError.Metadata.Should().ContainKey("reason").WhoseValue.Should().Be(SsrfBlockReason.Timeout);
+    }
+
+    [Fact]
     public async Task ReadAsStringAsResultAsync_Should_Return_Forbidden_When_Body_Exceeds_Limit()
     {
         HttpClient client = CreateClient(o =>
