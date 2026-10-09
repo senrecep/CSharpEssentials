@@ -14,7 +14,9 @@ internal readonly record struct LinearRuleAdapter<TContext>(
     internal static LinearRuleAdapter<TContext> From(
         IRule<TContext> rule,
         IRuleBase<TContext> next
-    ) => new(rule, next);
+    ) => rule is ILinearRule<TContext> { Next: { } rest } linear
+        ? new(linear, LinearChain.Append(rest, next))
+        : new(rule, next);
 }
 
 internal readonly record struct LinearRuleAdapter<TContext, TResult>(
@@ -28,5 +30,7 @@ internal readonly record struct LinearRuleAdapter<TContext, TResult>(
     internal static LinearRuleAdapter<TContext, TResult> From(
         IRule<TContext, TResult> rule,
         IRuleBase<TContext, TResult> next
-    ) => new(rule, next);
+    ) => rule is ILinearRule<TContext, TResult> { Next: { } rest } linear
+        ? new(linear, LinearChain.Append(rest, next))
+        : new(rule, next);
 }
