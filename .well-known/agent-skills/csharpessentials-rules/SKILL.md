@@ -134,13 +134,13 @@ Result pipeline = RuleEngine.Evaluate(
     ((Func<UserContext, Result>)CheckEmail).Next(regionRule),
     ctx);
 
-// Longer sequences: nest the rest inside Next, or use Linear()
+// Longer sequences: keep chaining Next, or use Linear()
 Result longer = RuleEngine.Evaluate(
-    ((Func<UserContext, Result>)CheckEmail).Next(regionRule.Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be 18+"))),
+    ((Func<UserContext, Result>)CheckEmail).Next(regionRule).Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be 18+")),
     ctx);
 ```
 
-`Next` links one rule to the rule after it. Do not write `a.Next(b).Next(c)`: the second `Next` links `c` to the already linked pair and `b` is skipped. Write `a.Next(b.Next(c))`, or use an array with `.Linear()`.
+`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, same as `a.Next(b.Next(c))` or an array with `.Linear()`: a failing `b` stops the chain.
 
 ### Static shortcuts
 
@@ -287,7 +287,7 @@ Async rules implement `IAsyncRule<TContext>` (`ValueTask<Result> EvaluateAsync(c
 ## Best Practices
 
 - And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. `array.Linear()` stops at the **first** failure
-- Use `.Linear()` on an array for sequences of three or more rules; `.Next()` links one rule to the next and must not be chained as `a.Next(b).Next(c)`
+- Use `.Linear()` on an array for sequences of three or more rules; `.Next()` links one rule to the next and can be chained as `a.Next(b).Next(c)`
 - No explicit `.ToRule()` needed when passing `Func<>` to `RuleEngine.Evaluate` or to `.And()/.Or()` on `Func[]`
 - Group domain errors in static classes so rules read like domain language
 - Test each `IRule<T>` in isolation: `Evaluate(context)` → assert Result. No mocking needed

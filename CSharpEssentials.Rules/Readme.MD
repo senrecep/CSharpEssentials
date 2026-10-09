@@ -158,13 +158,13 @@ Result pipeline = RuleEngine.Evaluate(
     ((Func<UserContext, Result>)CheckEmail).Next(regionRule),
     ctx);
 
-// Longer sequences: nest the rest inside Next, or use Linear()
+// Longer sequences: keep chaining Next, or use Linear()
 Result longer = RuleEngine.Evaluate(
-    ((Func<UserContext, Result>)CheckEmail).Next(regionRule.Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18."))),
+    ((Func<UserContext, Result>)CheckEmail).Next(regionRule).Next(c => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18.")),
     ctx);
 ```
 
-`Next` links one rule to the rule after it. Do not write `a.Next(b).Next(c)`: the second `Next` links `c` to the already linked pair, and `b` is skipped, so a failing `b` goes unnoticed. Write `a.Next(b.Next(c))`, or put the rules in an array and call `.Linear()`.
+`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, so it behaves the same as `a.Next(b.Next(c))` and `new[] { a, b, c }.Linear()`: a failing `b` stops the chain and `c` is not evaluated.
 
 ### Static shortcuts
 
