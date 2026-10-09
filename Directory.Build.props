@@ -44,7 +44,7 @@
 		<RepositoryBranch>main</RepositoryBranch>
 
 		<!-- Version management -->
-		<Version>6.4.0</Version> <!-- x-release-please-version -->
+		<Version>6.5.0</Version> <!-- x-release-please-version -->
 
 		<!-- Documentation -->
 		<IncludeSymbols>true</IncludeSymbols>
