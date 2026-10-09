@@ -172,4 +172,4 @@ options.Converters.Add(new MultiFormatDateTimeConverterFactory("dd.MM.yyyy HH-mm
 DateTime custom = JsonSerializer.Deserialize<DateTime>("\"14.03.2024 10-20\"", options);
 ```
 
-Constructor arguments add formats to the built-in list. Input without an offset is read as UTC and the result is converted to the host's local time (`DateTime.Kind` is `Local`), so a date-only value such as `"14.03.2024"` is midnight UTC shown in local time, which in a time zone behind UTC is the previous evening. Slash dates are tried as `dd/MM/yyyy` before `MM/dd/yyyy`, so `"03/04/2024"` reads as 3 April. A Unix-seconds string becomes an `Unspecified` `DateTime` holding the UTC clock reading.
+Constructor arguments add formats to the built-in list. Every value is returned as UTC (`DateTime.Kind` is `Utc`) regardless of the host time zone: input without an offset is read as UTC, input with an offset or `Z` is converted to UTC, and a Unix-seconds string becomes the matching UTC instant. A date-only value such as `"14.03.2024"` is midnight UTC on that date. Slash dates are tried as `dd/MM/yyyy` before `MM/dd/yyyy`, so `"03/04/2024"` reads as 3 April.
