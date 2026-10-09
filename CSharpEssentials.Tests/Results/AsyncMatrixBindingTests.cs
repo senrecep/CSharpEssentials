@@ -515,7 +515,7 @@ public sealed class AsyncMatrixBindingTests
         var gate = new TaskCompletionSource();
 
         // 6.5.0: the ValueTask twin beats the Action pair, so the returned ValueTask is awaited instead of discarded.
-        ValueTask pending = source.SwitchFirstAsync(() => new ValueTask(gate.Task), _ => ValueTask.CompletedTask);
+        ValueTask pending = source.SwitchFirstAsync(() => new ValueTask(gate.Task), _ => new ValueTask());
         bool completedBeforeGate = pending.IsCompleted;
         gate.SetResult();
         await pending;
@@ -529,7 +529,7 @@ public sealed class AsyncMatrixBindingTests
         ValueTask<Result<int>> source = new(Result<int>.Failure(TestError));
         var gate = new TaskCompletionSource();
 
-        ValueTask pending = source.SwitchLastAsync(_ => ValueTask.CompletedTask, _ => new ValueTask(gate.Task));
+        ValueTask pending = source.SwitchLastAsync(_ => new ValueTask(), _ => new ValueTask(gate.Task));
         bool completedBeforeGate = pending.IsCompleted;
         gate.SetResult();
         await pending;
