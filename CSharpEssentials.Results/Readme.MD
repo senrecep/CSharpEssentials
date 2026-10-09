@@ -167,6 +167,14 @@ The source decides the handler flavour. A `Task<Result>` source takes sync and `
 | `MapErrorAsync` | `Task`, `ValueTask` | sync, `Task` | sync, `ValueTask` |
 | `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
 | `SwitchAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `SwitchFirstAsync`, `SwitchLastAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `ElseAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `FailIfAsync` (`Result<T>`) | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync` | `Task`, `ValueTask`¹ | `Task` | `Task`, `ValueTask`¹ |
+| `CompensateAsync`, `CompensateFirstAsync` | `Task`, `ValueTask`¹ | `Task` | `Task`, `ValueTask`¹ |
+| `ThenEnsureAsync` (`Result<T>`) | `Task`, `ValueTask`¹ | `Task` | `Task`, `ValueTask`¹ |
+| `FinallyAsync` | | sync, `Task` | sync, `Task`, `ValueTask`¹ |
+| `Result.TryAsync` (static) | `Task`, `ValueTask`¹ | | |
 | `ThenAsync`, `ThenDoAsync` | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
 | `TapIfAsync` (`Result<T>`) | `Task`, `ValueTask`¹ | sync, `Task` | sync, `Task`, `ValueTask`¹ |
 | `TraverseAsync` (`IEnumerable<T>`) | `Task` selector, `ValueTask` selector¹ | | |
@@ -200,6 +208,8 @@ Recompiling against this version changes what some existing call sites bind to:
 - `MapAsync` on a `ValueTask<Result<T>>` source with an `async` lambda now returns `ValueTask<Result<U>>`. It used to return `ValueTask<Result<Task<U>>>`.
 - `TapAsync` on a `Task<Result>` or `Task<Result<T>>` source with a non-`async` lambda that returns a `Task`, such as `taskResult.TapAsync(x => SaveAsync(x))`, now awaits that task. It used to bind `Action<T>` and discard it.
 - On .NET 9+, a lambda that returns `ValueTask` binds the new `ValueTask` handlers instead of a sync or `Action` overload.
+- 6.5.0, on .NET 9+: `SwitchFirstAsync`/`SwitchLastAsync` on a `ValueTask` source with two non-`async` lambdas that return a `ValueTask` now await them. They used to bind the `Action` pair and discard them.
+- 6.5.0, on .NET 9+: `FinallyAsync` on a `ValueTask` source with a lambda that returns `ValueTask`, `ValueTask<T>` or `Task<T>`, or an `async` lambda that returns a value, now awaits the handler. The result is `ValueTask<Result..>` for `ValueTask` and `Task<T>` handlers and `ValueTask<T>` otherwise; it used to be the nested `ValueTask<ValueTask..>` or `ValueTask<Task<T>>` from the `Func<.., TOut>` overload.
 
 Unchanged:
 
@@ -207,7 +217,7 @@ Unchanged:
 - A non-`async` lambda that returns a `ValueTask` on a `Task` source, such as `taskResult.TapAsync(x => SaveValueTaskAsync(x))`, still binds `Action<T>`, so the `ValueTask` is discarded. Use an `async` lambda or a `Task` handler.
 - The conditional `TapAsync(condition, action)` overloads on `Task`/`ValueTask` sources have no awaited twin yet: an `async` lambda passed to them still runs as `async void`. On `Result<T>` sources use `TapIfAsync` with a `Task` handler; otherwise check the condition inside a `Func<Task>` handler.
 
-Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before. Use C# 13 or later, or type the handler.
+Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before, and since 6.5.0 on `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` (`ValueTask` sources) and `Result.TryAsync`. Use C# 13 or later, or type the handler.
 
 ### Collection Extensions
 

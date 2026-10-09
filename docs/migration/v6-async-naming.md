@@ -1,6 +1,6 @@
-# Async naming and the async overload matrix (6.4.0)
+# Async naming and the async overload matrix (6.4.0, 6.5.0)
 
-`CSharpEssentials.Results` and `CSharpEssentials.Maybe` give every member that returns `Task` or `ValueTask` an `Async` name, and fill the missing `Task`/`ValueTask` handler overloads (issues #108 and #121). Existing code keeps compiling; a few call sites bind to a different overload when recompiled, listed under [Behaviour changes](#behaviour-changes).
+`CSharpEssentials.Results` and `CSharpEssentials.Maybe` give every member that returns `Task` or `ValueTask` an `Async` name, and fill the missing `Task`/`ValueTask` handler overloads (issues #108, #121 and #122). Existing code keeps compiling; a few call sites bind to a different overload when recompiled, listed under [Behaviour changes](#behaviour-changes).
 
 ## Renamed members
 
@@ -36,6 +36,7 @@ Handler flavours follow the source: a `Task<Result>` source takes sync and `Task
 
 - Available on every target: instance `MapAsync` and `TapAsync` with `Task` handlers; `MapAsync` and `TapAsync` with `ValueTask` handlers on `ValueTask` sources; `TapAsync` with `Task` handlers on `Task` sources; `BindAsync(Func<Task<Result<TOut>>>)` on `Task<Result>`; `EnsureAsync` with a sync predicate on `Task<Result<T>>` and `ValueTask<Result<T>>`.
 - .NET 9+ assets only: `ValueTask` twins of the instance `MapAsync`, `TapAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync` and `ThenDoAsync`, and the same `ValueTask` handlers on `ValueTask` sources.
+- 6.5.0, .NET 9+ assets only (issue #122): `ValueTask` twins of the instance `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync` and of the static `Result.TryAsync`, and the same `ValueTask` handlers on `ValueTask` sources. `ValueTask` sources also get `FinallyAsync(Func<Result.., ValueTask<TOut>>)` and `FinallyAsync(Func<Result.., ValueTask>)`. Each twin mirrors its `Task` sibling, including where it checks the `CancellationToken`. `TapErrorAsync`, `ElseDoAsync`, `CompensateAsync` and `ThenEnsureAsync` had no sync or `Action` overload under that name, so a lambda that returns `ValueTask` did not compile before; it now binds the twin.
 
 The full table is in the [API reference](../API_REFERENCE.md#async-overload-matrix).
 
@@ -47,6 +48,9 @@ The full table is in the [API reference](../API_REFERENCE.md#async-overload-matr
 4. On .NET 9+, a lambda that returns `ValueTask` binds the new `ValueTask` handler instead of a sync or `Action` overload.
 5. `ValueTask` handler twins exist only in the .NET 9+ assets. A library that targets `netstandard2.1` and calls them does not compile.
 6. Projects that target .NET 9+ but set `LangVersion` 12 get CS0121 for untyped `async` lambdas on every operation that now has a `ValueTask` twin. See [Source compatibility](#source-compatibility).
+7. 6.5.0, .NET 9+: `SwitchFirstAsync` and `SwitchLastAsync` on `ValueTask<Result>` and `ValueTask<Result<T>>` with two non-`async` lambdas that return a `ValueTask`, such as `vt.SwitchFirstAsync(() => SaveAsync(), e => LogAsync(e))`, now await them. They used to bind the `Action` pair, which discarded both `ValueTask`s.
+8. 6.5.0, .NET 9+: `FinallyAsync` on a `ValueTask` source with a lambda that returns `ValueTask`, such as `vt.FinallyAsync(r => LogAsync(r))`, now awaits it and returns `ValueTask<Result>`. It used to bind `Func<Result, TOut>` and return `ValueTask<ValueTask>` without awaiting the handler. A lambda that returns `ValueTask<T>`, or an `async` lambda that returns a value, now returns `ValueTask<T>`; it used to return `ValueTask<ValueTask<T>>` or `ValueTask<Task<T>>`.
+9. 6.5.0, .NET 9+: `FinallyAsync` on a `ValueTask` source with a non-`async` lambda that returns `Task<T>`, such as `vt.FinallyAsync(r => CountAsync(r))`, now binds `Func<Result, Task>`, awaits the task and returns `ValueTask<Result>`. It used to return `ValueTask<Task<T>>`. The `OverloadResolutionPriority` that causes this is applied only in the .NET 9+ assets, so the `netstandard2.1` asset keeps the old binding.
 
 Unchanged:
 
@@ -58,7 +62,7 @@ Unchanged:
 
 ## Source compatibility
 
-A project that targets .NET 9 or later and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`. These calls compiled before; they are now ambiguous because each operation gained a `ValueTask` twin and C# 12 ignores the `OverloadResolutionPriority` that picks the `Task` handler. The new instance `MapAsync` and `TapAsync` pairs behave the same way, Projects on .NET 8 (the `netstandard2.1` asset) and projects on C# 13 or later, the default for .NET 9+, are not affected.
+A project that targets .NET 9 or later and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`. 6.5.0 adds `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` on `ValueTask` sources and the static `Result.TryAsync` to that list. These calls compiled before; they are now ambiguous because each operation gained a `ValueTask` twin and C# 12 ignores the `OverloadResolutionPriority` that picks the `Task` handler. The new instance `MapAsync` and `TapAsync` pairs behave the same way. Projects on .NET 8 (the `netstandard2.1` asset) and projects on C# 13 or later, the default for .NET 9+, are not affected.
 
 `Maybe` is different. Its instance and key/value `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` and `MatchAsync` have a `Task` and a `ValueTask` twin on every target, and an untyped `async` lambda was already ambiguous there before 6.5.0 (CS0121 on every language version). `OverloadResolutionPriority` now fixes it on C# 13 or later; on C# 12 the handler still needs a type, on .NET 8 as well.
 
