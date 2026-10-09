@@ -121,6 +121,236 @@ public sealed class AsyncMatrixBindingTests
     }
 
     [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_TaskSourceOfResult()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        Task<Result> pending = source.TapAsync(true, async () => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_TaskSourceOfResultGetsFuncCondition()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        Task<Result> pending = source.TapAsync(() => true, async () => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitNonAsyncLambdaReturningTask_When_TaskSourceOfResult()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        // Func<Task> beats Action for a lambda whose body returns a Task, so the returned task is awaited.
+        Task<Result> pending = source.TapAsync(true, () => gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_BindAction_When_TaskSourceOfResultGetsNonAsyncLambdaReturningValueTask()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        // No cross cells: a Task source has no Func<ValueTask> handler, so the Action overload wins and the ValueTask is discarded.
+        Result result = await source.TapAsync(true, () => new ValueTask(gate.Task));
+        bool gateCompletedAfterTap = gate.Task.IsCompleted;
+        gate.SetResult();
+
+        (result.IsSuccess, gateCompletedAfterTap).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_BindAction_When_TaskSourceOfResultGetsStatementLambda()
+    {
+        Task<Result> source = Task.FromResult(Result.Success());
+        int counter = 0;
+
+        Result result = await source.TapAsync(() => true, () => counter++);
+
+        (result.IsSuccess, counter).Should().Be((true, 1));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_ValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        ValueTask<Result> pending = source.TapAsync(true, async () => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_ValueTaskSourceOfResultGetsFuncCondition()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        ValueTask<Result> pending = source.TapAsync(() => true, async () => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitNonAsyncLambdaReturningValueTask_When_ValueTaskSourceOfResult()
+    {
+        ValueTask<Result> source = new(Result.Success());
+        var gate = new TaskCompletionSource();
+
+        // Func<ValueTask> beats Action for a lambda whose body returns a ValueTask, so the returned ValueTask is awaited.
+        ValueTask<Result> pending = source.TapAsync(true, () => new ValueTask(gate.Task));
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).IsSuccess, completedBeforeGate).Should().Be((true, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_BindAction_When_ValueTaskSourceOfResultGetsNonAsyncLambdaReturningTask()
+    {
+        ValueTask<Result> source = new(Result.Success());
+
+        // No cross cells: a Task-returning call is not convertible to Func<ValueTask>, so the Action overload wins and the task is discarded.
+        ValueTask<Result> pending = source.TapAsync(true, () => Task.Delay(TimeSpan.FromSeconds(30)));
+        bool completedImmediately = pending.IsCompleted;
+
+        ((await pending).IsSuccess, completedImmediately).Should().Be((true, true));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_TaskSourceOfResultT()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var gate = new TaskCompletionSource();
+
+        Task<Result<int>> pending = source.TapAsync(true, async _ => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_TaskSourceOfResultTGetsFuncCondition()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var gate = new TaskCompletionSource();
+
+        Task<Result<int>> pending = source.TapAsync(() => true, async _ => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitNonAsyncLambdaReturningTask_When_TaskSourceOfResultT()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var gate = new TaskCompletionSource();
+
+        Task<Result<int>> pending = source.TapAsync(true, _ => gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_BindAction_When_TaskSourceOfResultTGetsNonAsyncLambdaReturningValueTask()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var gate = new TaskCompletionSource();
+
+        Result<int> result = await source.TapAsync(true, _ => new ValueTask(gate.Task));
+        bool gateCompletedAfterTap = gate.Task.IsCompleted;
+        gate.SetResult();
+
+        (result.Value, gateCompletedAfterTap).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_BindAction_When_TaskSourceOfResultTGetsStatementLambda()
+    {
+        Task<Result<int>> source = Task.FromResult<Result<int>>(5);
+        var seen = new List<int>();
+
+        Result<int> result = await source.TapAsync(true, _ => seen.Add(1));
+
+        (result.Value, seen.Count).Should().Be((5, 1));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_ValueTaskSourceOfResultT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+        var gate = new TaskCompletionSource();
+
+        ValueTask<Result<int>> pending = source.TapAsync(true, async _ => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitAsyncLambda_When_ValueTaskSourceOfResultTGetsFuncCondition()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+        var gate = new TaskCompletionSource();
+
+        ValueTask<Result<int>> pending = source.TapAsync(() => true, async _ => await gate.Task);
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_AwaitNonAsyncLambdaReturningValueTask_When_ValueTaskSourceOfResultT()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+        var gate = new TaskCompletionSource();
+
+        ValueTask<Result<int>> pending = source.TapAsync(true, _ => new ValueTask(gate.Task));
+        bool completedBeforeGate = pending.IsCompleted;
+        gate.SetResult();
+
+        ((await pending).Value, completedBeforeGate).Should().Be((5, false));
+    }
+
+    [Fact]
+    public async Task ConditionalTapAsync_Should_BindAction_When_ValueTaskSourceOfResultTGetsNonAsyncLambdaReturningTask()
+    {
+        ValueTask<Result<int>> source = new(Result<int>.Success(5));
+
+        ValueTask<Result<int>> pending = source.TapAsync(true, _ => Task.Delay(TimeSpan.FromSeconds(30)));
+        bool completedImmediately = pending.IsCompleted;
+
+        ((await pending).Value, completedImmediately).Should().Be((5, true));
+    }
+
+    [Fact]
     public async Task MapAsync_Should_ReturnNestedTask_When_ValueTaskSourceGetsLambdaReturningTask()
     {
         ValueTask<Result<int>> source = new(Result<int>.Success(5));
