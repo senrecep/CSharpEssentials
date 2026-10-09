@@ -25,8 +25,9 @@ On net9.0+ under C# 12, an untyped async lambda reports CS0121 for the following
 
 | Receiver | Methods |
 |---|---|
-| `Result<T>` / `Result` instance | `MapAsync`, `TapAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` |
-| `ValueTask<Result<T>>` / `ValueTask<Result>` source | `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` |
+| `Result<T>` / `Result` instance | `MapAsync`, `TapAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync`; since 6.5.0 also `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync` |
+| `ValueTask<Result<T>>` / `ValueTask<Result>` source | `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync`; since 6.5.0 also `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` |
+| static `Result` | `TryAsync` (since 6.5.0) |
 | `IEnumerable<T>` | `TraverseAsync` |
 
 Fix it in either of these ways:

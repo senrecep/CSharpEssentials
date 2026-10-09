@@ -62,6 +62,7 @@ public readonly partial record struct Result
     /// <param name="onFirstError">An async action to execute on the first error encountered.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [OverloadResolutionPriority(1)]
     public async Task SwitchFirstAsync(Func<Task> onSuccess, Func<Error, Task> onFirstError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
@@ -96,6 +97,7 @@ public readonly partial record struct Result
     /// <param name="onLastError">An async action to execute on the last error encountered.</param>
     /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    [OverloadResolutionPriority(1)]
     public async Task SwitchLastAsync(Func<Task> onSuccess, Func<Error, Task> onLastError, CancellationToken cancellationToken = default)
     {
         if (IsFailure)
@@ -120,6 +122,40 @@ public readonly partial record struct Result
         if (IsFailure)
         {
             await onFailure(Errors).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+        await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+    /// <summary>
+    /// Asynchronously switches on the result, executing a corresponding ValueTask action for success or the first encountered error.
+    /// </summary>
+    /// <param name="onSuccess">An async action to execute on success.</param>
+    /// <param name="onFirstError">An async action to execute on the first error encountered.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    /// <returns>A ValueTask representing the asynchronous operation.</returns>
+    public async ValueTask SwitchFirstAsync(Func<ValueTask> onSuccess, Func<Error, ValueTask> onFirstError, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+        {
+            await onFirstError(FirstError).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+        await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
+    }
+
+
+    /// <summary>
+    /// Asynchronously switches on the result, executing a corresponding ValueTask action for success or the last encountered error.
+    /// </summary>
+    /// <param name="onSuccess">An async action to execute on success.</param>
+    /// <param name="onLastError">An async action to execute on the last error encountered.</param>
+    /// <param name="cancellationToken">A token to observe for cancellation requests.</param>
+    /// <returns>A ValueTask representing the asynchronous operation.</returns>
+    public async ValueTask SwitchLastAsync(Func<ValueTask> onSuccess, Func<Error, ValueTask> onLastError, CancellationToken cancellationToken = default)
+    {
+        if (IsFailure)
+        {
+            await onLastError(LastError).WithCancellation(cancellationToken).ConfigureAwait(false);
             return;
         }
         await onSuccess().WithCancellation(cancellationToken).ConfigureAwait(false);
@@ -214,6 +250,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Asynchronously executes the appropriate action based on whether the ValueTask's result is successful or contains the first error.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask SwitchFirstAsync(this ValueTask<Result> task, Func<Task> onSuccess, Func<Error, Task> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
@@ -232,6 +269,7 @@ public static partial class ResultExtensions
     /// <summary>
     /// Asynchronously executes the appropriate action based on whether the ValueTask's result is successful or contains the last error.
     /// </summary>
+    [OverloadResolutionPriority(1)]
     public static async ValueTask SwitchLastAsync(this ValueTask<Result> task, Func<Task> onSuccess, Func<Error, Task> onFailure, CancellationToken cancellationToken = default)
     {
         Result result = await task.WithCancellation(cancellationToken);
@@ -246,6 +284,24 @@ public static partial class ResultExtensions
     {
         Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
         await result.SwitchAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
+    }
+    /// <summary>
+    /// Awaits the ValueTask result and executes the matching ValueTask action for success or the first error.
+    /// </summary>
+    public static async ValueTask SwitchFirstAsync(this ValueTask<Result> task, Func<ValueTask> onSuccess, Func<Error, ValueTask> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchFirstAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
+    }
+
+
+    /// <summary>
+    /// Awaits the ValueTask result and executes the matching ValueTask action for success or the last error.
+    /// </summary>
+    public static async ValueTask SwitchLastAsync(this ValueTask<Result> task, Func<ValueTask> onSuccess, Func<Error, ValueTask> onFailure, CancellationToken cancellationToken = default)
+    {
+        Result result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        await result.SwitchLastAsync(onSuccess, onFailure, cancellationToken).ConfigureAwait(false);
     }
 #endif
 }

@@ -64,5 +64,69 @@ public static class UntypedTaskOnlyShapes
             await Task.Delay(1).ConfigureAwait(false);
             return Result.Success();
         });
+
+    public static Task<Result<int>> Else(Result<int> source) =>
+        source.ElseAsync(async _ =>
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            return 0;
+        });
+
+    public static ValueTask<Result> ElseFromValueTask(ValueTask<Result> source, Error error) =>
+        source.ElseAsync(async _ =>
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            return error;
+        });
+
+    public static Task<Result<int>> FailIf(Result<int> source, Error error) =>
+        source.FailIfAsync(async v =>
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            return v < 0;
+        }, error);
+
+    public static Task SwitchFirst(Result source) =>
+        source.SwitchFirstAsync(
+            async () => await Task.Delay(1).ConfigureAwait(false),
+            async _ => await Task.Delay(1).ConfigureAwait(false));
+
+    public static ValueTask SwitchLastFromValueTask(ValueTask<Result<int>> source) =>
+        source.SwitchLastAsync(
+            async _ => await Task.Delay(1).ConfigureAwait(false),
+            async _ => await Task.Delay(1).ConfigureAwait(false));
+
+    public static Task<Result<int>> TapError(Result<int> source) =>
+        source.TapErrorAsync(async _ => await Task.Delay(1).ConfigureAwait(false));
+
+    public static ValueTask<Result> TapErrorFirstFromValueTask(ValueTask<Result> source) =>
+        source.TapErrorFirstAsync(async _ => await Task.Delay(1).ConfigureAwait(false));
+
+    public static Task<Result> ElseDo(Result source) =>
+        source.ElseDoAsync(async _ => await Task.Delay(1).ConfigureAwait(false));
+
+    public static Task<Result<int>> Compensate(Result<int> source) =>
+        source.CompensateAsync(async _ =>
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            return Result<int>.Success(0);
+        });
+
+    public static Task<Result<int>> ThenEnsure(Result<int> source) =>
+        source.ThenEnsureAsync(async _ =>
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            return Result.Success();
+        });
+
+    public static ValueTask<Result> FinallyFromValueTask(ValueTask<Result> source) =>
+        source.FinallyAsync(async _ => await Task.Delay(1).ConfigureAwait(false));
+
+    public static Task<Result<int>> Try(Error error) =>
+        Result.TryAsync(async () =>
+        {
+            await Task.Delay(1).ConfigureAwait(false);
+            return 1;
+        }, _ => error);
 }
 #endif
