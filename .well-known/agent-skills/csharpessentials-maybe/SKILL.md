@@ -60,7 +60,7 @@ Maybe<string> middleName = entity.MiddleName;   // boundary T? → domain Maybe<
 Result<User>  found      = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFound", "User does not exist"));
 ```
 
-Equality: `Maybe<int>.None == 0` is `false`, `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence (`Maybe<string>.None == null` is `true`), in either operand order; prefer `HasNoValue` over `== null`/`== default`. `Maybe<int> == null` hits CS9342 and `maybe == default` means `default(T)` for value types, so use `HasNoValue`. `ToString()` returns `Some(value)` or `None` (invariant culture for `IFormattable` values). Use `HasNoValue`, not the obsolete `IsNone`.
+Equality: `Maybe<int>.None == 0` is `false`, `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence (`Maybe<string>.None == null` is `true`), in either operand order, but `Equals(object?)` and `maybe == (object?)null` follow the BCL rule and return `false` for `null` (the static type of the operand picks the rule); prefer `HasNoValue` over `== null`/`== default`. `Maybe<int> == null` hits CS9342 and `maybe == default` means `default(T)` for value types, so use `HasNoValue`. `ToString()` returns `Some(value)` or `None` (invariant culture for `IFormattable` values). Use `HasNoValue`, not the obsolete `IsNone`.
 
 ## Pattern Match
 
