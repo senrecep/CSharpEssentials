@@ -1,4 +1,4 @@
-using CSharpEssentials.RequestResponseLogging;
+﻿using CSharpEssentials.RequestResponseLogging;
 using CSharpEssentials.RequestResponseLogging.LogWriters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
@@ -190,5 +190,46 @@ public sealed class LoggerFactoryLogWriterTests
         Func<Task> act = () => writer.Write(context);
 
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Write_Should_KeepBracesInBodyVerbatim_When_UseSeparateContextIsFalse()
+    {
+        var logger = new CapturingLogger();
+        var mockLoggerFactory = new Mock<ILoggerFactory>();
+        mockLoggerFactory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(logger);
+        var options = new LoggingOptions
+        {
+            UseSeparateContext = false,
+            LoggingFields = [LogFields.Request]
+        };
+        var writer = new LoggerFactoryLogWriter(mockLoggerFactory.Object, options);
+        const string body = "{0} {evil} {{x}}";
+
+        await writer.Write(CreateContext(requestBody: body));
+
+        logger.Messages.Should().ContainSingle().Which.Should().Contain($"Request: {body}");
+        logger.Templates.Should().ContainSingle().Which.Should().Be("{LogMessage}");
+    }
+
+    private sealed class CapturingLogger : ILogger
+    {
+        public List<string> Messages { get; } = [];
+
+        public List<string?> Templates { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Capture(state, formatter(state, exception), exception, formatter);
+
+        private void Capture<TState>(TState state, string message, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            Messages.Add(message);
+            Templates.Add((state as IEnumerable<KeyValuePair<string, object?>>)?
+                .FirstOrDefault(kv => kv.Key == "{OriginalFormat}").Value as string);
+        }
     }
 }
