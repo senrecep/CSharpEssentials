@@ -4,7 +4,7 @@ Testable time abstraction built on .NET `TimeProvider`. Decouple your code from 
 
 ## Features
 
-- **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`, `TimeZone` and `TimeZoneUtc`.
+- **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime` (always `DateTimeKind.Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone` and `TimeZoneUtc`.
 - **TimeProvider Integration**: `DateTimeProvider` wraps .NET's `TimeProvider`, so `TimeProvider.System` or a test `TimeProvider` such as `FakeTimeProvider` both work.
 - **FakeDateTimeProvider**: Built-in controllable clock with `Advance` and `SetTime` for tests.
 - **DateTime Extensions**: Convert `DateTime` to `DateOnly` and `TimeOnly`, next/previous weekday, age calculation.

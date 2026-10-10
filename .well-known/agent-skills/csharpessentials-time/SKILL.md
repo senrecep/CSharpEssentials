@@ -29,7 +29,7 @@ public interface IDateTimeProvider
     TimeZoneInfo TimeZone    { get; }   // DateTimeProvider: TimeZoneInfo.Local
     TimeZoneInfo TimeZoneUtc { get; }   // TimeZoneInfo.Utc
 
-    DateTime       UtcNowDateTime { get; }
+    DateTime       UtcNowDateTime { get; }   // Kind == Utc
     DateTimeOffset UtcNow         { get; }
 
     // NET6+ only:
