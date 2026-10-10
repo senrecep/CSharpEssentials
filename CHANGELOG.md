@@ -3,6 +3,13 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.2](https://github.com/senrecep/CSharpEssentials/compare/v6.5.1...v6.5.2) (2026-10-10)
+
+
+### Fixed
+
+* **time:** return utc kind from datetimeprovider.utcnowdatetime ([#147](https://github.com/senrecep/CSharpEssentials/issues/147)) ([83f7ff3](https://github.com/senrecep/CSharpEssentials/commit/83f7ff393c71390543636d70ff22a20abbc5f36e)), closes [#146](https://github.com/senrecep/CSharpEssentials/issues/146)
+
 ## [6.5.1](https://github.com/senrecep/CSharpEssentials/compare/v6.5.0...v6.5.1) (2026-10-09)
 
 
