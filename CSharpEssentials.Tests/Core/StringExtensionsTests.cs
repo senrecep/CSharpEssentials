@@ -205,22 +205,6 @@ public class StringExtensionsTests
     [Fact]
     public void ToSnakeCase_Should_Not_Overflow_The_Stack_When_Input_Is_Very_Large()
     {
-        const int pairs = 3_000_000;
-        string input = string.Concat(Enumerable.Repeat("aB", pairs));
-        string? result = null;
-        Exception? failure = null;
-        var thread = new Thread(() =>
-        {
-            try { result = input.ToSnakeCase(); }
-            catch (Exception ex) { failure = ex; }
-        }, 1024 * 1024);
-
-        thread.Start();
-        thread.Join();
-
-        failure.Should().BeNull();
-        result.Should().NotBeNull();
-        result!.Length.Should().Be(pairs * 3);
-        result.AsSpan(0, 7).ToString().Should().Be("a_ba_ba");
+        ChildProcessScenario.Run(OversizedInputScenarios.ToSnakeCase);
     }
 }
