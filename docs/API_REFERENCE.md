@@ -1705,7 +1705,7 @@ Analyzers CSE0002 to CSE0016 (CSE0011 is not used) check duplicate wire names an
 
 | Type/Method | What It Does |
 |-------------|-------------|
-| `IDateTimeProvider` | Interface: `UtcNow` (`DateTimeOffset`), `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
+| `IDateTimeProvider` | Interface: `UtcNow` (`DateTimeOffset`), `UtcNowDateTime` (`Kind` is `Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone`, `TimeZoneUtc` |
 | `DateTimeProvider(TimeProvider)` | Production implementation: reads the clock of the `TimeProvider` you pass (for example `TimeProvider.System`); `TimeZone` is `TimeZoneInfo.Local` |
 | `FakeDateTimeProvider(DateTimeOffset)` | Test clock with `Advance(TimeSpan)` and `SetTime(DateTimeOffset)`; `TimeZone` is UTC |
 | `ToTimeOnly()` | Extension: `DateTime` to `TimeOnly` |

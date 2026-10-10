@@ -31,6 +31,29 @@ public class DateTimeProviderTests
     }
 
     [Fact]
+    public void UtcNowDateTime_ShouldHaveUtcKind()
+    {
+        FakeTimeProvider fakeTimeProvider = new();
+        fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 6, 15, 12, 30, 45, TimeSpan.Zero));
+
+        DateTimeProvider provider = new(fakeTimeProvider);
+
+        provider.UtcNowDateTime.Kind.Should().Be(DateTimeKind.Utc);
+    }
+
+    [Fact]
+    public void UtcNowDate_AndTime_ShouldMatchUtcComponents()
+    {
+        FakeTimeProvider fakeTimeProvider = new();
+        fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 6, 15, 23, 30, 45, TimeSpan.Zero));
+
+        DateTimeProvider provider = new(fakeTimeProvider);
+
+        provider.UtcNowDate.Should().Be(new DateOnly(2024, 6, 15));
+        provider.UtcNowTime.Should().Be(new TimeOnly(23, 30, 45));
+    }
+
+    [Fact]
     public void TimeZone_ShouldReturnLocalTimeZone()
     {
         FakeTimeProvider fakeTimeProvider = new();
