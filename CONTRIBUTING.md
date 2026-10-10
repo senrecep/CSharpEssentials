@@ -154,7 +154,7 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 
 - Use 4 spaces for indentation
 - Follow C# coding conventions
-- Write XML documentation for public APIs
+- Write XML documentation for public APIs; do not add inline code comments that explain code
 - Keep methods small and focused
 - Use meaningful names for variables and methods
 
@@ -168,7 +168,7 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 ## Documentation
 
 - Update relevant documentation
-- Include XML comments for public APIs
+- Include XML documentation comments (`///`) for public APIs
 - Update README.MD if needed (package table, badges)
 - Update the package `Readme.MD` and the matching `.well-known/agent-skills/<package>/SKILL.md` when a public API changes
 - Do not bump the version or edit `CHANGELOG.md` in a feature pull request; release-please generates both
