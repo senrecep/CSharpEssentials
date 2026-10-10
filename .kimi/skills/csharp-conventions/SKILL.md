@@ -15,3 +15,4 @@ description: C# coding conventions for CSharpEssentials. Use when writing, revie
 - Functional types (Result, Maybe, Any) use implicit operators for ergonomic construction; maintain this pattern in new types.
 - Record types are preferred over classes for immutable value objects.
 - `TreatWarningsAsErrors=true` is global; never suppress a warning without understanding why it fires.
+- XML documentation comments (`///`) on public APIs are expected. No inline code comments (`//`, `/* */`) that explain code.

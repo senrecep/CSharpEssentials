@@ -45,7 +45,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 - Don't add `// TODO` to committed code — either implement it or track it as an issue.
 - Don't add new packages to `Directory.Packages.props` without checking existing entries.
 - Don't break multi-targeting — test against all declared target frameworks.
-- Don't add docstrings or comments unless explicitly asked.
+- Don't add inline code comments (`//`, `/* */`) that explain code unless explicitly asked. XML documentation comments (`///`) on public APIs are expected.
 - Don't create placeholder/stub implementations.
 
 ## Boundaries
