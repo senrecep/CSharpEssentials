@@ -5,7 +5,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeOrAsyncTests
 {
-    #region Or async — Task<T> fallback operation
+    #region Or async: Task<T> fallback operation
 
     [Fact]
     public async Task Or_TaskT_WithValue_ShouldReturnOriginal()
@@ -31,7 +31,7 @@ public class MaybeOrAsyncTests
 
     #endregion
 
-    #region Or async — Task<Maybe<T>> fallback
+    #region Or async: Task<Maybe<T>> fallback
 
     [Fact]
     public async Task Or_TaskMaybe_WithValue_ShouldReturnOriginal()
@@ -57,7 +57,7 @@ public class MaybeOrAsyncTests
 
     #endregion
 
-    #region Or async — Func<Task<Maybe<T>>> fallback operation
+    #region Or async: Func<Task<Maybe<T>>> fallback operation
 
     [Fact]
     public async Task Or_FuncTaskMaybe_WithValue_ShouldReturnOriginal()
@@ -83,7 +83,7 @@ public class MaybeOrAsyncTests
 
     #endregion
 
-    #region Or async — ValueTask<T> fallback operation
+    #region Or async: ValueTask<T> fallback operation
 
     [Fact]
     public async Task Or_ValueTaskT_WithValue_ShouldReturnOriginal()
@@ -109,7 +109,7 @@ public class MaybeOrAsyncTests
 
     #endregion
 
-    #region Or async — ValueTask<Maybe<T>> fallback
+    #region Or async: ValueTask<Maybe<T>> fallback
 
     [Fact]
     public async Task Or_ValueTaskMaybe_WithValue_ShouldReturnOriginal()
@@ -135,7 +135,7 @@ public class MaybeOrAsyncTests
 
     #endregion
 
-    #region Or async — Func<ValueTask<Maybe<T>>> fallback operation
+    #region Or async: Func<ValueTask<Maybe<T>>> fallback operation
 
     [Fact]
     public async Task Or_FuncValueTaskMaybe_WithValue_ShouldReturnOriginal()

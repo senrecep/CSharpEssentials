@@ -146,7 +146,7 @@ public class NullableAndCollectionValidatorsTests
     }
 
     // =========================================================================
-    // Collection validators — IEnumerable<T>? (interface declared property)
+    // Collection validators: IEnumerable<T>? (interface declared property)
     // =========================================================================
 
     private sealed record CollectionModel(IEnumerable<string>? Items);
@@ -276,7 +276,7 @@ public class NullableAndCollectionValidatorsTests
     }
 
     // =========================================================================
-    // Collection validators — List<T>? (concrete collection type)
+    // Collection validators: List<T>? (concrete collection type)
     // =========================================================================
 
     private sealed record ListModel(List<string>? Tags);

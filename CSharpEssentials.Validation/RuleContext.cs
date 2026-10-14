@@ -6,7 +6,7 @@ namespace CSharpEssentials.Validation;
 
 /// <summary>
 /// Collects validation errors and acts as the factory for <see cref="RuleChain{T,TProp}"/> instances.
-/// An instance is created per <see cref="Validator{T}.ValidateAsync"/> call — it is not thread-safe
+/// An instance is created per <see cref="Validator{T}.ValidateAsync"/> call, it is not thread-safe
 /// and should never be stored beyond the validation lifecycle.
 /// </summary>
 /// <typeparam name="T">The model type being validated.</typeparam>
@@ -27,7 +27,7 @@ public sealed class RuleContext<T>
     internal bool HasErrors => _errors is not null && _errors.Count > 0;
     internal IReadOnlyList<Error> Errors => (IReadOnlyList<Error>?)_errors ?? [];
 
-    /// <summary>Called by <see cref="RuleChain{T,TProp}.AddError"/> — not intended for direct use.</summary>
+    /// <summary>Called by <see cref="RuleChain{T,TProp}.AddError"/>: not intended for direct use.</summary>
     internal void Append(Error error) => (_errors ??= []).Add(error);
 
     /// <summary>Appends all errors from a child context (used by ForEach and SetValidator).</summary>
@@ -177,7 +177,7 @@ public sealed class RuleContext<T>
     /// </summary>
     /// <remarks>
     /// Cancellation is checked between iterations via <see cref="CancellationToken.ThrowIfCancellationRequested"/>.
-    /// Errors from iterations completed before cancellation are preserved — callers should treat a cancelled
+    /// Errors from iterations completed before cancellation are preserved, callers should treat a cancelled
     /// <see cref="ForEachAsync{TElement}"/> as producing partial results.
     /// </remarks>
     public async ValueTask ForEachAsync<TElement>(

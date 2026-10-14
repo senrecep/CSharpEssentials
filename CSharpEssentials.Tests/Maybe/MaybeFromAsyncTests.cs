@@ -5,7 +5,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeFromAsyncTests
 {
-    #region Maybe<T>.FromAsync — Task<T?>
+    #region Maybe<T>.FromAsync: Task<T?>
 
     [Fact]
     public async Task FromAsync_Task_WithNonNullValue_ShouldHaveValue()
@@ -30,7 +30,7 @@ public class MaybeFromAsyncTests
 
     #endregion
 
-    #region Maybe<T>.FromAsync — Func<Task<T?>>
+    #region Maybe<T>.FromAsync: Func<Task<T?>>
 
     [Fact]
     public async Task FromAsync_FuncTask_WithNonNullValue_ShouldHaveValue()
@@ -55,7 +55,7 @@ public class MaybeFromAsyncTests
 
     #endregion
 
-    #region Maybe.From static — Task<T?> via extension
+    #region Maybe.From static: Task<T?> via extension
 
     [Fact]
     public async Task From_TaskExtension_WithNonNullValue_ShouldHaveValue()

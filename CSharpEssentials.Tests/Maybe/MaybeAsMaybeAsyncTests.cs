@@ -5,7 +5,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeAsMaybeAsyncTests
 {
-    #region AsMaybeAsync — ValueTask<T?>
+    #region AsMaybeAsync: ValueTask<T?>
 
     [Fact]
     public async Task AsMaybeAsync_ValueTask_WithNonNullValue_ShouldHaveValue()
@@ -30,7 +30,7 @@ public class MaybeAsMaybeAsyncTests
 
     #endregion
 
-    #region AsMaybeAsync — Task<T?> where T : class
+    #region AsMaybeAsync: Task<T?> where T : class
 
     [Fact]
     public async Task AsMaybeAsync_Task_WithNonNullValue_ShouldHaveValue()

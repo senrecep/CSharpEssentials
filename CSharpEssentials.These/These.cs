@@ -16,7 +16,7 @@ public readonly record struct These<TError, TValue>
         RightOrDefault = rightOrDefault;
     }
 
-    // Raw backing state — serialized for JSON round-trip support
+    // Raw backing state: serialized for JSON round-trip support
     // HasLeft is true for both Left and Both states
     [JsonPropertyName("isLeft")]
     public bool HasLeft { get; }
@@ -31,7 +31,7 @@ public readonly record struct These<TError, TValue>
     [JsonPropertyName("right")]
     public TValue? RightOrDefault { get; }
 
-    // Computed discriminators — excluded from JSON, derived from HasLeft/HasRight
+    // Computed discriminators: excluded from JSON, derived from HasLeft/HasRight
     [JsonIgnore]
     public bool IsLeft => HasLeft && !HasRight;
 

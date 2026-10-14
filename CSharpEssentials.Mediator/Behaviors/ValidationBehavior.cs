@@ -13,7 +13,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     private readonly Type _responseType = typeof(TResponse);
 
     // Validators are grouped by Order (ascending) and materialized once at construction time.
-    // Hot path never pays the GroupBy/OrderBy cost — groups are iterated directly.
+    // Hot path never pays the GroupBy/OrderBy cost, groups are iterated directly.
     private readonly IValidator<TRequest>[][] _orderedGroups;
     private readonly IValidationFailureObserver[] _observers;
     private readonly ValidationMode _defaultMode;
@@ -69,7 +69,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// </summary>
     private async ValueTask<Error[]?> ValidateAsync(TRequest message, CancellationToken cancellationToken)
     {
-        // Single validator fast path — skips group iteration and List allocation entirely.
+        // Single validator fast path: skips group iteration and List allocation entirely.
         if (_orderedGroups is [{ Length: 1 } onlyGroup])
         {
             Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken).ConfigureAwait(false);
@@ -79,7 +79,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         // Groups are pre-sorted by Order (ascending) in the constructor.
         // Within each group validators run concurrently; groups run sequentially.
         // Errors accumulate in group order so lower-Order errors appear first.
-        // allErrors is null-initialized — no heap allocation on the happy path.
+        // allErrors is null-initialized, no heap allocation on the happy path.
         List<Error>? allErrors = null;
 
         foreach (IValidator<TRequest>[] group in _orderedGroups)
@@ -198,9 +198,9 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// <summary>
     /// Maps validation errors to <typeparamref name="TResponse"/>:
     /// <list type="bullet">
-    ///   <item><see cref="Result"/> — <c>Result.Failure(errors)</c> returned directly.</item>
-    ///   <item><see cref="Result{T}"/> — <c>Result&lt;T&gt;.Failure(errors)</c> via compiled factory.</item>
-    ///   <item>Any other type — <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
+    ///   <item><see cref="Result"/>: <c>Result.Failure(errors)</c> returned directly.</item>
+    ///   <item><see cref="Result{T}"/>: <c>Result&lt;T&gt;.Failure(errors)</c> via compiled factory.</item>
+    ///   <item>Any other type: <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
     /// </list>
     /// </summary>
     private TResponse BuildFailureResponse(Error[] errors)
@@ -212,7 +212,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
             && _responseType.GetGenericTypeDefinition() == BehaviorCache.GenericResultType)
             return CreateGenericResultResponse(errors);
 
-        // TResponse cannot carry error information — delegate to GlobalExceptionHandler.
+        // TResponse cannot carry error information: delegate to GlobalExceptionHandler.
         throw new EnhancedValidationException(errors);
     }
 

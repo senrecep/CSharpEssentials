@@ -11,8 +11,8 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 /// <para>
 /// <b>Timing:</b> Events are split by <see cref="DomainEventTimingAttribute"/>:
 /// <list type="bullet">
-///   <item><see cref="DomainEventTiming.BeforeSave"/> — published first (a failure aborts the save).</item>
-///   <item><see cref="DomainEventTiming.AfterSave"/> — dispatched next, still inside <c>SavingChanges</c>, i.e. before
+///   <item><see cref="DomainEventTiming.BeforeSave"/>: published first (a failure aborts the save).</item>
+///   <item><see cref="DomainEventTiming.AfterSave"/>: dispatched next, still inside <c>SavingChanges</c>, i.e. before
 ///   the changes are written. With an <see cref="IDomainEventOutbox"/> that adds rows to the same context, the outbox
 ///   entries are saved atomically with the entities. For dispatch after a successful save use
 ///   <c>BaseDbContext.DispatchDomainEventsOnSaveChanges</c>.</item>

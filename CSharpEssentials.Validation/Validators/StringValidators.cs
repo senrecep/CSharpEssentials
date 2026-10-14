@@ -164,7 +164,7 @@ public static class StringValidators
         RegexOptions.Compiled | RegexOptions.IgnoreCase,
         TimeSpan.FromMilliseconds(100));
 
-    // Cache is unbounded — only pass known, finite sets of patterns. See Matches(string, ...) remarks.
+    // Cache is unbounded: only pass known, finite sets of patterns. See Matches(string, ...) remarks.
     private static readonly ConcurrentDictionary<string, Regex> _regexCache = new();
 
     private static Regex GetOrCreateRegex(string pattern) =>
@@ -221,7 +221,7 @@ public static class StringValidators
     /// <summary>Fails if the value does not match <paramref name="pattern"/>.</summary>
     /// <remarks>
     /// The compiled <see cref="Regex"/> for <paramref name="pattern"/> is cached statically and never evicted.
-    /// Do not pass user-supplied or dynamically generated patterns — use the <see cref="Regex"/> overload with
+    /// Do not pass user-supplied or dynamically generated patterns, use the <see cref="Regex"/> overload with
     /// a pre-compiled instance instead.
     /// </remarks>
     /// <exception cref="ArgumentException">Thrown if <paramref name="pattern"/> is not a valid regular expression.</exception>
@@ -252,7 +252,7 @@ public static class StringValidators
     /// <summary>Fails if the value does not match <paramref name="pattern"/>. Uses <paramref name="error"/> directly.</summary>
     /// <remarks>
     /// The compiled <see cref="Regex"/> for <paramref name="pattern"/> is cached statically and never evicted.
-    /// Do not pass user-supplied or dynamically generated patterns — use the <see cref="Regex"/> overload with
+    /// Do not pass user-supplied or dynamically generated patterns, use the <see cref="Regex"/> overload with
     /// a pre-compiled instance instead.
     /// </remarks>
     /// <exception cref="ArgumentException">Thrown if <paramref name="pattern"/> is not a valid regular expression.</exception>

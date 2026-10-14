@@ -6,7 +6,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeBindAsyncTests
 {
-    #region BindAsync on Maybe<T> — Task<Maybe<TOut>>
+    #region BindAsync on Maybe<T>: Task<Maybe<TOut>>
 
     [Fact]
     public async Task BindAsync_Task_WithValue_ShouldChainOperations()
@@ -41,7 +41,7 @@ public class MaybeBindAsyncTests
 
     #endregion
 
-    #region BindAsync extension on Task<Maybe<T>> — sync selector
+    #region BindAsync extension on Task<Maybe<T>>, sync selector
 
     [Fact]
     public async Task BindAsync_TaskMaybe_SyncSelector_WithValue_ShouldChain()
@@ -76,7 +76,7 @@ public class MaybeBindAsyncTests
 
     #endregion
 
-    #region BindAsync extension on ValueTask<Maybe<T>> — ValueTask selector
+    #region BindAsync extension on ValueTask<Maybe<T>>, ValueTask selector
 
     [Fact]
     public async Task BindAsync_ValueTaskMaybe_WithValue_ShouldChain()

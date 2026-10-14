@@ -6,7 +6,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeMapAsyncTests
 {
-    #region MapAsync on Maybe<T> — Task<TOut>
+    #region MapAsync on Maybe<T>: Task<TOut>
 
     [Fact]
     public async Task MapAsync_Task_WithValue_ShouldTransformValue()
@@ -31,7 +31,7 @@ public class MaybeMapAsyncTests
 
     #endregion
 
-    #region MapAsync on Maybe<T> — ValueTask<TOut>
+    #region MapAsync on Maybe<T>: ValueTask<TOut>
 
     [Fact]
     public async Task MapAsync_ValueTask_WithValue_ShouldTransformValue()
@@ -56,7 +56,7 @@ public class MaybeMapAsyncTests
 
     #endregion
 
-    #region MapAsync extension on Task<Maybe<T>> — sync selector
+    #region MapAsync extension on Task<Maybe<T>>, sync selector
 
     [Fact]
     public async Task MapAsync_TaskMaybe_SyncSelector_WithValue_ShouldTransformValue()
@@ -81,7 +81,7 @@ public class MaybeMapAsyncTests
 
     #endregion
 
-    #region MapAsync extension on Task<Maybe<T>> — async selector
+    #region MapAsync extension on Task<Maybe<T>>, async selector
 
     [Fact]
     public async Task MapAsync_TaskMaybe_AsyncSelector_WithValue_ShouldTransformValue()

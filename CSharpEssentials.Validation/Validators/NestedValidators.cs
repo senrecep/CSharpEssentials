@@ -4,7 +4,7 @@ using CSharpEssentials.ResultPattern;
 namespace CSharpEssentials.Validation.Validators;
 
 /// <summary>
-/// Provides <c>SetValidatorAsync</c> — delegates validation of a nested property to a dedicated
+/// Provides <c>SetValidatorAsync</c>: delegates validation of a nested property to a dedicated
 /// <see cref="IValidator{TProp}"/> and propagates all resulting errors to the parent context.
 /// </summary>
 public static class NestedValidators
@@ -22,7 +22,7 @@ public static class NestedValidators
     /// // Non-nullable nested property
     /// await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
     ///
-    /// // Nullable reference type — no ! operator needed
+    /// // Nullable reference type: no ! operator needed
     /// await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct);
     /// </code>
     /// </example>
@@ -45,7 +45,7 @@ public static class NestedValidators
     /// appends any validation errors to the parent <see cref="RuleContext{T}"/>.
     /// <para>
     /// Use this overload when the property is declared as a nullable reference type (<c>Address?</c>).
-    /// The validator is typed against the non-null form — no null-forgiving operator is required.
+    /// The validator is typed against the non-null form, no null-forgiving operator is required.
     /// </para>
     /// <para>
     /// If the chain has already failed, or the value is <see langword="null"/>, the validator
@@ -54,7 +54,7 @@ public static class NestedValidators
     /// </summary>
     /// <example>
     /// <code>
-    /// // model.BillingAddress is Address? — works directly, no ! required
+    /// // model.BillingAddress is Address?, works directly, no ! required
     /// await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct);
     /// </code>
     /// </example>
@@ -91,7 +91,7 @@ public static class NestedValidators
         chain.MarkFailed();
     }
 
-    // A nested error code looks like "City.NotEmpty" — the part before the rule suffix is the
+    // A nested error code looks like "City.NotEmpty", the part before the rule suffix is the
     // property name the nested validator quoted in its description ("'City' must not be empty.").
     // Prefix exactly that quoted occurrence so the message matches the new fully-qualified code.
     // Messages that do not quote the property name (custom messages) are left untouched.

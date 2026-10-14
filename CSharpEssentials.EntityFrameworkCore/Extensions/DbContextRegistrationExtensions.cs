@@ -8,7 +8,7 @@ namespace CSharpEssentials.EntityFrameworkCore.Extensions;
 /// </summary>
 public static class DbContextRegistrationExtensions
 {
-    #region — Pooled DbContext —
+    #region Pooled DbContext
 
     /// <summary>
     /// Registers a pooled <see cref="DbContext"/>.
@@ -52,7 +52,7 @@ public static class DbContextRegistrationExtensions
 
     #endregion
 
-    #region — DbContext Factory —
+    #region DbContext Factory
 
     /// <summary>
     /// Registers a <see cref="DbContext"/> factory.
@@ -96,7 +96,7 @@ public static class DbContextRegistrationExtensions
 
     #endregion
 
-    #region — Write DbContext —
+    #region Write DbContext
 
     /// <summary>
     /// Registers a pooled write <see cref="DbContext"/> with change tracking enabled.
@@ -146,7 +146,7 @@ public static class DbContextRegistrationExtensions
 
     #endregion
 
-    #region — Read DbContext —
+    #region Read DbContext
 
     /// <summary>
     /// Registers a pooled read-only <see cref="DbContext"/> with no change tracking.
@@ -196,7 +196,7 @@ public static class DbContextRegistrationExtensions
 
     #endregion
 
-    #region — CQRS (Write + Read) —
+    #region CQRS (Write + Read)
 
     /// <summary>
     /// Registers both a write <see cref="DbContext"/> and a read-only <see cref="DbContext"/> for CQRS scenarios.

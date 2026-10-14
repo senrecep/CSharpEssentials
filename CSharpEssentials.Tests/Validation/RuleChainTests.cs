@@ -12,7 +12,7 @@ public class RuleChainTests
     private sealed record OuterModel(Model? Inner);
 
     // -------------------------------------------------------------------------
-    // Must — sync predicate
+    // Must: sync predicate
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -69,7 +69,7 @@ public class RuleChainTests
     }
 
     // -------------------------------------------------------------------------
-    // MustAsync — async predicate
+    // MustAsync: async predicate
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -172,7 +172,7 @@ public class RuleChainTests
     }
 
     // -------------------------------------------------------------------------
-    // AddError — cascade & manual
+    // AddError: cascade & manual
     // -------------------------------------------------------------------------
 
     [Fact]

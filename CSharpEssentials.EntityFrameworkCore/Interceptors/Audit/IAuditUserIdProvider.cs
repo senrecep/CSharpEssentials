@@ -13,7 +13,7 @@ public interface IAuditUserIdProvider
 /// Generic variant for type-safe user ID resolution.
 /// <para>
 /// The <see cref="IAuditUserIdProvider.GetCurrentUserId"/> is auto-implemented
-/// via <c>ToString()</c> — implementors only need the typed overload.
+/// via <c>ToString()</c>: implementors only need the typed overload.
 /// </para>
 /// </summary>
 /// <example>

@@ -6,7 +6,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeGetValueAsyncTests
 {
-    #region GetValueOrDefaultAsync — Func<Task<T>>
+    #region GetValueOrDefaultAsync: Func<Task<T>>
 
     [Fact]
     public async Task GetValueOrDefaultAsync_FuncTaskT_WithValue_ShouldReturnValue()
@@ -30,7 +30,7 @@ public class MaybeGetValueAsyncTests
 
     #endregion
 
-    #region GetValueOrDefaultAsync<TOut> — sync selector + Func<Task<TOut>>
+    #region GetValueOrDefaultAsync<TOut>: sync selector + Func<Task<TOut>>
 
     [Fact]
     public async Task GetValueOrDefaultAsync_SyncSelectorFuncTask_WithValue_ShouldApplySelector()
@@ -58,7 +58,7 @@ public class MaybeGetValueAsyncTests
 
     #endregion
 
-    #region GetValueOrDefaultAsync<TOut> — async selector + sync default
+    #region GetValueOrDefaultAsync<TOut>: async selector + sync default
 
     [Fact]
     public async Task GetValueOrDefaultAsync_AsyncSelectorSyncDefault_WithValue_ShouldApplySelector()
@@ -86,7 +86,7 @@ public class MaybeGetValueAsyncTests
 
     #endregion
 
-    #region GetValueOrDefaultAsync extension on Task<Maybe<T>> — sync default
+    #region GetValueOrDefaultAsync extension on Task<Maybe<T>>, sync default
 
     [Fact]
     public async Task GetValueOrDefaultAsync_TaskMaybe_SyncDefault_WithValue_ShouldReturnValue()
@@ -110,7 +110,7 @@ public class MaybeGetValueAsyncTests
 
     #endregion
 
-    #region GetValueOrDefaultAsync extension on Task<Maybe<T>> — selector + sync default value
+    #region GetValueOrDefaultAsync extension on Task<Maybe<T>>, selector + sync default value
 
     [Fact]
     public async Task GetValueOrDefaultAsync_TaskMaybe_SelectorSyncDefault_WithValue_ShouldApplySelector()
@@ -134,7 +134,7 @@ public class MaybeGetValueAsyncTests
 
     #endregion
 
-    #region GetValueOrDefaultAsync extension on Task<Maybe<T>> — selector + Func default
+    #region GetValueOrDefaultAsync extension on Task<Maybe<T>>, selector + Func default
 
     [Fact]
     public async Task GetValueOrDefaultAsync_TaskMaybe_SelectorFuncDefault_WithValue_ShouldApplySelector()

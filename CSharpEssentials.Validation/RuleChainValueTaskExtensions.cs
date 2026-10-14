@@ -12,7 +12,7 @@ public static class RuleChainValueTaskExtensions
 {
     /// <summary>
     /// Validates the property using a custom asynchronous predicate returning <see cref="ValueTask{T}"/>.
-    /// Prefer this overload when the predicate source is <see cref="ValueTask{T}"/>-based — it avoids
+    /// Prefer this overload when the predicate source is <see cref="ValueTask{T}"/>-based, it avoids
     /// the <see cref="Task{T}"/> allocation of the instance overload.
     /// Returns the awaited chain so further calls can be chained after awaiting.
     /// </summary>

@@ -62,7 +62,7 @@ public sealed class RuleChain<T, TProp>
     ///     .EmailAddress();
     /// </code>
     /// <para>
-    /// If the chain has already failed (guard fired), this call is a no-op — the chain stays
+    /// If the chain has already failed (guard fired), this call is a no-op, the chain stays
     /// stopped and the null/empty guard error is the only one reported.
     /// </para>
     /// </summary>

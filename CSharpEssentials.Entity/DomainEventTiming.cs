@@ -7,7 +7,7 @@ public enum DomainEventTiming
 {
     /// <summary>
     /// Event is published after the database transaction commits successfully.
-    /// This is the default and safest option — guarantees data is persisted before
+    /// This is the default and safest option: guarantees data is persisted before
     /// handlers run. Use for notifications, projections, and integrations.
     /// </summary>
     AfterSave = 0,

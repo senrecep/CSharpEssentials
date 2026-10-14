@@ -9,9 +9,9 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 /// <summary>
 /// Intercepts SaveChanges to automatically populate audit fields and handle soft deletes.
 /// <list type="bullet">
-///   <item><see cref="EntityState.Added"/> — sets <see cref="ICreationAudit.SetCreatedInfo"/>.</item>
-///   <item><see cref="EntityState.Modified"/> — sets <see cref="IModificationAudit.SetUpdatedInfo"/>.</item>
-///   <item><see cref="EntityState.Deleted"/> on <see cref="ISoftDeletable"/> (non-hard) — converts to soft delete.</item>
+///   <item><see cref="EntityState.Added"/>: sets <see cref="ICreationAudit.SetCreatedInfo"/>.</item>
+///   <item><see cref="EntityState.Modified"/>: sets <see cref="IModificationAudit.SetUpdatedInfo"/>.</item>
+///   <item><see cref="EntityState.Deleted"/> on <see cref="ISoftDeletable"/> (non-hard), converts to soft delete.</item>
 /// </list>
 /// </summary>
 public sealed class AuditInterceptor(

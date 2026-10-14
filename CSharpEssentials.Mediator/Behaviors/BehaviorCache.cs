@@ -13,7 +13,7 @@ namespace CSharpEssentials.Mediator;
 /// <para>
 /// <see cref="FailureFactories"/> is keyed by closed generic <see cref="Result{T}"/> types.
 /// Growth is bounded by the number of distinct <c>Result&lt;T&gt;</c> response types
-/// declared across all handlers in the consuming assembly — typically 5–50 entries.
+/// declared across all handlers in the consuming assembly, typically 5–50 entries.
 /// Entries are never stale, so eviction is intentionally absent.
 /// </para>
 /// </summary>

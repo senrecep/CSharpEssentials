@@ -166,7 +166,7 @@ public class ValidationBehaviorTests
     [Fact]
     public async Task Handle_Should_Return_ExceptionError_When_Validator_Throws()
     {
-        // Non-OCE exceptions are converted to Error.Failure — never rethrown.
+        // Non-OCE exceptions are converted to Error.Failure, never rethrown.
         ValidationBehavior<TestValidationCommand, Result> behavior = new([new ThrowingValidator()]);
         TestValidationCommand command = new("test");
 
@@ -180,7 +180,7 @@ public class ValidationBehaviorTests
     [Fact]
     public async Task Handle_Should_Propagate_OperationCanceledException_From_Validator()
     {
-        // OCE from a validator must still propagate — it is not converted to an Error.
+        // OCE from a validator must still propagate, it is not converted to an Error.
         ValidationBehavior<TestValidationCommand, Result> behavior = new([new OceCancellingValidator()]);
         TestValidationCommand command = new("test");
 

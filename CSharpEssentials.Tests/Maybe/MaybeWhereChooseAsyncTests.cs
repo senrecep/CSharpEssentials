@@ -6,7 +6,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeWhereChooseAsyncTests
 {
-    #region Where — Func<T, Task<bool>>
+    #region Where: Func<T, Task<bool>>
 
     [Fact]
     public async Task Where_TaskPredicate_WithValue_PredicateTrue_ShouldReturnValue()
@@ -41,7 +41,7 @@ public class MaybeWhereChooseAsyncTests
 
     #endregion
 
-    #region Where — Func<T, ValueTask<bool>>
+    #region Where: Func<T, ValueTask<bool>>
 
     [Fact]
     public async Task Where_ValueTaskPredicate_WithValue_PredicateTrue_ShouldReturnValue()
@@ -111,7 +111,7 @@ public class MaybeWhereChooseAsyncTests
 
     #endregion
 
-    #region ChooseAsync — IEnumerable<Task<Maybe<T>>>
+    #region ChooseAsync: IEnumerable<Task<Maybe<T>>>
 
     [Fact]
     public async Task ChooseAsync_WithMixedTasks_ShouldReturnOnlyValues()

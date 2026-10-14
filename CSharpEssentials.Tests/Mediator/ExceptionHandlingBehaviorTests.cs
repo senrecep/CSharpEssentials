@@ -16,7 +16,7 @@ public class ExceptionHandlingBehaviorTests
         (message, ct) => new ValueTask<Result>(Result.Success());
 
     // -------------------------------------------------------------------------
-    // Happy path — Result
+    // Happy path: Result
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -31,7 +31,7 @@ public class ExceptionHandlingBehaviorTests
     }
 
     // -------------------------------------------------------------------------
-    // Happy path — Result<T>
+    // Happy path: Result<T>
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -161,7 +161,7 @@ public class ExceptionHandlingBehaviorTests
     }
 
     // -------------------------------------------------------------------------
-    // Non-Result TResponse — exception propagates unchanged
+    // Non-Result TResponse, exception propagates unchanged
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -179,7 +179,7 @@ public class ExceptionHandlingBehaviorTests
     }
 
     // -------------------------------------------------------------------------
-    // Truly async handler — exception caught after await
+    // Truly async handler: exception caught after await
     // -------------------------------------------------------------------------
 
     [Fact]

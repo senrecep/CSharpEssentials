@@ -101,7 +101,7 @@ public class CascadeModeTests
     [Fact]
     public async Task Continue_ShouldReportOnlyMaxLengthError_WhenOnlyMaxLengthFails()
     {
-        // Long but valid-format email — only MaxLength fails
+        // Long but valid-format email, only MaxLength fails
         string longEmail = new string('a', 50) + "@example.com";
 
         Result<M> result = await Validator.ValidateAsync(new M(longEmail, 0), (m, rules) =>
@@ -165,7 +165,7 @@ public class CascadeModeTests
     [Fact]
     public async Task Continue_MultipleChains_AreIndependent()
     {
-        // Two independent For() chains — each has its own cascade mode
+        // Two independent For() chains: each has its own cascade mode
         Result<M> result = await Validator.ValidateAsync(new M(null, -5), (m, rules) =>
         {
             rules.For(() => m.Email)

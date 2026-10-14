@@ -5,7 +5,7 @@ namespace CSharpEssentials.Tests.Maybe;
 
 public class MaybeExecuteAsyncTests
 {
-    #region Execute async — Func<T, Task>
+    #region Execute async: Func<T, Task>
 
     [Fact]
     public async Task Execute_FuncTask_WithValue_ShouldInvokeAction()
@@ -31,7 +31,7 @@ public class MaybeExecuteAsyncTests
 
     #endregion
 
-    #region Execute async — Func<T, ValueTask>
+    #region Execute async: Func<T, ValueTask>
 
     [Fact]
     public async Task Execute_FuncValueTask_WithValue_ShouldInvokeAction()
@@ -57,7 +57,7 @@ public class MaybeExecuteAsyncTests
 
     #endregion
 
-    #region ExecuteNoValue async — Func<Task>
+    #region ExecuteNoValue async: Func<Task>
 
     [Fact]
     public async Task ExecuteNoValue_FuncTask_WithNoValue_ShouldInvokeAction()
@@ -83,7 +83,7 @@ public class MaybeExecuteAsyncTests
 
     #endregion
 
-    #region ExecuteNoValue async — Func<ValueTask>
+    #region ExecuteNoValue async: Func<ValueTask>
 
     [Fact]
     public async Task ExecuteNoValue_FuncValueTask_WithNoValue_ShouldInvokeAction()
@@ -109,7 +109,7 @@ public class MaybeExecuteAsyncTests
 
     #endregion
 
-    #region Execute extension on Task<Maybe<T>> — Action<T>
+    #region Execute extension on Task<Maybe<T>>, Action<T>
 
     [Fact]
     public async Task Execute_TaskMaybe_Action_WithValue_ShouldInvokeAction()
@@ -135,7 +135,7 @@ public class MaybeExecuteAsyncTests
 
     #endregion
 
-    #region Execute extension on Task<Maybe<T>> — Func<T, Task>
+    #region Execute extension on Task<Maybe<T>>, Func<T, Task>
 
     [Fact]
     public async Task Execute_TaskMaybe_FuncTask_WithValue_ShouldInvokeAction()
@@ -161,7 +161,7 @@ public class MaybeExecuteAsyncTests
 
     #endregion
 
-    #region Execute extension on ValueTask<Maybe<T>> — Func<T, ValueTask>
+    #region Execute extension on ValueTask<Maybe<T>>, Func<T, ValueTask>
 
     [Fact]
     public async Task Execute_ValueTaskMaybe_FuncValueTask_WithValue_ShouldInvokeAction()

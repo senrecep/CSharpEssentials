@@ -144,7 +144,7 @@ public class ForEachAndNestedValidatorsTests
     [Fact]
     public async Task ForEach_Nested_ShouldProduceFullyQualifiedPaths()
     {
-        // Lines[0].Tags[1] is empty — expected error code: "Lines[0].Tags[1].NotEmpty"
+        // Lines[0].Tags[1] is empty: expected error code: "Lines[0].Tags[1].NotEmpty"
         InvoiceModel model = new([
             new LineModel("SKU-1", ["valid", ""]),
             new LineModel("SKU-2", ["ok"])

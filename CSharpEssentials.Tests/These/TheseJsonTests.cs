@@ -95,7 +95,7 @@ public class TheseJsonTests
 
         string json = JsonSerializer.Serialize(these, Options);
 
-        // IsBoth is [JsonIgnore] — not serialized
+        // IsBoth is [JsonIgnore]: not serialized
         json.Should().NotContain("\"isBoth\"");
         // Raw backing booleans (HasLeft/HasRight) ARE in JSON as isLeft/isRight
         json.Should().Contain("\"isLeft\":true");

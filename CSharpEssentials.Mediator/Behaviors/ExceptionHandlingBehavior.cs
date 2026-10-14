@@ -10,7 +10,7 @@ namespace CSharpEssentials.Mediator;
 /// to <see cref="Result"/> / <see cref="Result{T}"/> failures.
 /// <para>
 /// When <typeparamref name="TResponse"/> cannot carry error information (e.g. a plain DTO),
-/// the exception propagates unchanged — this behavior adds zero overhead in that case.
+/// the exception propagates unchanged: this behavior adds zero overhead in that case.
 /// <see cref="OperationCanceledException"/> always propagates regardless of
 /// <typeparamref name="TResponse"/>.
 /// </para>
@@ -21,7 +21,7 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
 {
     private readonly Type _responseType = typeof(TResponse);
 
-    // Computed once at construction time — never pays the IsGenericType check on every request.
+    // Computed once at construction time: never pays the IsGenericType check on every request.
     private readonly bool _canHandleResponse;
 
     public ExceptionHandlingBehavior()
@@ -36,14 +36,14 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        // When TResponse cannot carry error info, skip exception wrapping entirely — zero overhead.
+        // When TResponse cannot carry error info, skip exception wrapping entirely, zero overhead.
         if (!_canHandleResponse)
             return next(message, cancellationToken);
 
         try
         {
             ValueTask<TResponse> vt = next(message, cancellationToken);
-            // Sync-complete fast path — no state-machine allocation on the happy path.
+            // Sync-complete fast path, no state-machine allocation on the happy path.
             if (vt.IsCompletedSuccessfully)
                 return vt;
             return WrapAsync(vt, _responseType);
@@ -77,8 +77,8 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
     /// <summary>
     /// Maps a single <paramref name="error"/> to <typeparamref name="TResponse"/>:
     /// <list type="bullet">
-    ///   <item><see cref="Result"/> — <c>Result.Failure(error)</c> returned directly.</item>
-    ///   <item><see cref="Result{T}"/> — <c>Result&lt;T&gt;.Failure(error)</c> via compiled factory.</item>
+    ///   <item><see cref="Result"/>: <c>Result.Failure(error)</c> returned directly.</item>
+    ///   <item><see cref="Result{T}"/>: <c>Result&lt;T&gt;.Failure(error)</c> via compiled factory.</item>
     /// </list>
     /// </summary>
     private static TResponse BuildFailureResponse(Error error, Type responseType)

@@ -7,7 +7,7 @@ namespace CSharpEssentials.Http;
 public static class HttpClientResilienceExtensions
 {
     // ──────────────────────────────────────────────────────
-    //  Legacy API — returns Polly ResiliencePipeline (preserved for backward compatibility)
+    //  Legacy API: returns Polly ResiliencePipeline (preserved for backward compatibility)
     // ──────────────────────────────────────────────────────
 
     public static ResiliencePipeline CreateRetryPipeline(int maxRetryAttempts = 3, TimeSpan? delay = null)
@@ -70,7 +70,7 @@ public static class HttpClientResilienceExtensions
     }
 
     // ──────────────────────────────────────────────────────
-    //  New API — returns ResiliencePolicy / ResiliencePolicy<T>
+    //  New API: returns ResiliencePolicy / ResiliencePolicy<T>
     // ──────────────────────────────────────────────────────
 
     public static ResiliencePolicy CreateRetryPolicy(int maxRetryAttempts = 3, TimeSpan? delay = null)
