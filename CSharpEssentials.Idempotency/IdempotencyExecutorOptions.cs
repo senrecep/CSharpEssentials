@@ -4,7 +4,7 @@ namespace CSharpEssentials.Idempotency;
 public sealed class IdempotencyExecutorOptions
 {
     /// <summary>
-    /// Name of the built-in profile for message consumers: a retention of 7 days, so a message
+    /// Name of the built-in profile that <see cref="IdempotencyInbox"/> uses: a retention of 7 days, so a message
     /// redelivered by the broker or resent from a dead-letter queue days later is still recognized. Registering a
     /// profile with this name replaces it.
     /// </summary>

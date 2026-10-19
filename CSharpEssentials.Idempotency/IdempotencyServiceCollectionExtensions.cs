@@ -3,12 +3,12 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
-/// <summary>Registers <see cref="IIdempotencyExecutor"/>.</summary>
+/// <summary>Registers <see cref="IIdempotencyExecutor"/> and <see cref="IdempotencyInbox"/>.</summary>
 public static class IdempotencyServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers <see cref="IdempotencyExecutorOptions"/>, a scoped <see cref="IIdempotencyExecutor"/> and, unless a store
-    /// is already registered, <see cref="InMemoryIdempotencyRecordStore"/>.
+    /// Registers <see cref="IdempotencyExecutorOptions"/>, a scoped <see cref="IIdempotencyExecutor"/>, a scoped
+    /// <see cref="IdempotencyInbox"/> and, unless a store is already registered, <see cref="InMemoryIdempotencyRecordStore"/>.
     /// With <paramref name="configure"/> the options replace any registered before; without it, registered options are
     /// kept. Invalid options throw here, not on the first operation.
     /// </summary>
@@ -27,6 +27,7 @@ public static class IdempotencyServiceCollectionExtensions
 
         services.TryAddSingleton<IIdempotencyRecordStore, InMemoryIdempotencyRecordStore>();
         services.TryAddScoped<IIdempotencyExecutor, IdempotencyExecutor>();
+        services.TryAddScoped<IdempotencyInbox>();
         return services;
     }
 }
