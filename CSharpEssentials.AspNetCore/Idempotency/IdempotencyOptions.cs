@@ -10,7 +10,11 @@ namespace CSharpEssentials.AspNetCore;
 /// </summary>
 public sealed class IdempotencyOptions
 {
-    /// <summary>Request header that carries the key. Default: <c>Idempotency-Key</c>.</summary>
+    /// <summary>
+    /// Request header that carries the key, either bare (<c>abc</c>) or as a structured-field string (<c>"abc"</c>);
+    /// both name the same record. A key must be 1 to <see cref="MaxKeyLength"/> printable ASCII characters other than
+    /// space, <c>"</c> and <c>\</c> (<see cref="IdempotencyKeys.IsValid"/>). Default: <c>Idempotency-Key</c>.
+    /// </summary>
     public string HeaderName { get; set; } = "Idempotency-Key";
 
     /// <summary>Response header added to replayed responses, with the value <c>true</c>. Default: <c>Idempotency-Replayed</c>.</summary>
@@ -29,12 +33,15 @@ public sealed class IdempotencyOptions
     public TimeSpan RetentionPeriod { get; set; } = TimeSpan.FromHours(24);
 
     /// <summary>
-    /// <c>Retry-After</c> sent with the <c>409</c> for a key that is in flight, rounded up to whole seconds.
-    /// <see langword="null"/> omits the header. Default: 1 second.
+    /// <c>Retry-After</c> sent with every <c>409</c> <c>Idempotency.InFlight</c>, rounded up to whole seconds (at least
+    /// 1). Must be positive. Default: 1 second.
     /// </summary>
-    public TimeSpan? RetryAfter { get; set; } = TimeSpan.FromSeconds(1);
+    public TimeSpan RetryAfter { get; set; } = TimeSpan.FromSeconds(1);
 
-    /// <summary>Longest accepted key; a longer one gets <c>400</c>. Default: 255.</summary>
+    /// <summary>
+    /// Longest accepted key, counted after an <c>sf-string</c> value (<c>"abc"</c>) is unquoted; a longer one gets
+    /// <c>400</c> <c>Idempotency.KeyInvalid</c>. Default: 255.
+    /// </summary>
     public int MaxKeyLength { get; set; } = 255;
 
     /// <summary>
@@ -44,8 +51,8 @@ public sealed class IdempotencyOptions
     public long MaxResponseBodySize { get; set; } = 1024 * 1024;
 
     /// <summary>
-    /// Rejects requests to idempotent endpoints that carry no key with <c>400</c>. Default: <see langword="false"/>,
-    /// such requests run without idempotency.
+    /// Rejects requests to idempotent endpoints that carry no key with <c>400</c> <c>Idempotency.KeyMissing</c>.
+    /// Default: <see langword="false"/>, such requests run without idempotency.
     /// </summary>
     public bool RequireKey { get; set; }
 
@@ -97,7 +104,7 @@ public sealed class IdempotencyOptions
         ArgumentException.ThrowIfNullOrWhiteSpace(ReplayedHeaderName);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(InFlightTimeout, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(RetentionPeriod, TimeSpan.Zero);
-        ArgumentOutOfRangeException.ThrowIfLessThan(RetryAfter ?? TimeSpan.Zero, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(RetryAfter, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(MaxKeyLength, 0);
         ArgumentOutOfRangeException.ThrowIfNegative(MaxResponseBodySize);
         // The response is buffered in one array.

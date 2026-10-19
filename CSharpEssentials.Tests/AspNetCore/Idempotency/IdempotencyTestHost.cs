@@ -149,6 +149,11 @@ internal sealed class IdempotencyTestHost : IAsyncDisposable
             probe.Execute();
             return HttpResults.NoContent();
         }).WithIdempotency();
+        app.MapPost("/conflict", (IdempotencyProbe probe) =>
+        {
+            probe.Execute();
+            return HttpResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Order already shipped");
+        }).WithIdempotency();
         app.MapPost("/plain", (IdempotencyProbe probe) => HttpResults.Ok(new { execution = probe.Execute() }));
         RouteGroupBuilder group = app.MapGroup("/group").WithIdempotency();
         group.MapPost("/items", (IdempotencyProbe probe) => HttpResults.Ok(new { execution = probe.Execute() }));

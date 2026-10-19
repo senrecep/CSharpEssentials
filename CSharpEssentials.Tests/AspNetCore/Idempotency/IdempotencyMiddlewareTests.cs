@@ -111,9 +111,9 @@ public sealed class IdempotencyMiddlewareTests
     }
 
     [Fact]
-    public async Task Concurrent_Request_Without_RetryAfter_Should_Omit_The_Header()
+    public async Task Concurrent_Request_Should_Send_Retry_After_Of_One_Second_By_Default()
     {
-        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options => options.RetryAfter = null);
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync();
 
         Task<IdempotencyResponse> first = host.PostAsync("/slow");
         await host.Probe.Started.Task.WaitAsync(TimeSpan.FromSeconds(10));
@@ -122,7 +122,7 @@ public sealed class IdempotencyMiddlewareTests
         await first;
 
         second.StatusCode.Should().Be(StatusCodes.Status409Conflict);
-        second.Header("Retry-After").Should().BeNull();
+        second.Header("Retry-After").Should().Be("1");
     }
 
     [Theory]

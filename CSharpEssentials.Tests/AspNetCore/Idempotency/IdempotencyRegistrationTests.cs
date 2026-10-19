@@ -104,6 +104,7 @@ public sealed class IdempotencyRegistrationTests
             () => new ServiceCollection().AddIdempotency(o => o.InFlightTimeout = TimeSpan.Zero),
             () => new ServiceCollection().AddIdempotency(o => o.RetentionPeriod = TimeSpan.FromSeconds(-1)),
             () => new ServiceCollection().AddIdempotency(o => o.RetryAfter = TimeSpan.FromSeconds(-1)),
+            () => new ServiceCollection().AddIdempotency(o => o.RetryAfter = TimeSpan.Zero),
             () => new ServiceCollection().AddIdempotency(o => o.MaxKeyLength = 0),
             () => new ServiceCollection().AddIdempotency(o => o.MaxResponseBodySize = -1),
             () => new ServiceCollection().AddIdempotency(o => o.MaxResponseBodySize = (long)int.MaxValue + 1),

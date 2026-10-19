@@ -1,8 +1,10 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using CSharpEssentials.Errors;
 using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +22,8 @@ internal sealed partial class IdempotencyMiddleware(
     IdempotencyOptions options,
     ILogger<IdempotencyMiddleware> logger)
 {
+    internal const string CodeKey = "code";
+
     public async Task InvokeAsync(HttpContext context, IIdempotencyRecordStore store)
     {
         if (context.GetEndpoint()?.Metadata.GetMetadata<IdempotentAttribute>() is null
@@ -30,21 +34,22 @@ internal sealed partial class IdempotencyMiddleware(
         }
 
         StringValues header = context.Request.Headers[options.HeaderName];
-        string? key = header.Count == 1 ? header[0] : null;
-        if (header.Count > 1 || key is not null && (key.Length == 0 || key.Length > options.MaxKeyLength))
+        if (header.Count == 0)
         {
-            await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Invalid idempotency key",
-                $"Send exactly one '{options.HeaderName}' header of 1 to {options.MaxKeyLength} characters.").ConfigureAwait(false);
+            if (options.RequireKey)
+                await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Missing idempotency key", Error.Validation(
+                    IdempotencyErrorCodes.KeyMissing,
+                    $"This endpoint requires the '{options.HeaderName}' header.")).ConfigureAwait(false);
+            else
+                await next(context).ConfigureAwait(false);
             return;
         }
 
-        if (string.IsNullOrEmpty(key))
+        if (header.Count > 1 || !TryNormalizeKey(header[0], options.MaxKeyLength, out string? key))
         {
-            if (options.RequireKey)
-                await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Missing idempotency key",
-                    $"This endpoint requires the '{options.HeaderName}' header.").ConfigureAwait(false);
-            else
-                await next(context).ConfigureAwait(false);
+            await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Invalid idempotency key", Error.Validation(
+                IdempotencyErrorCodes.KeyInvalid,
+                $"Send exactly one '{options.HeaderName}' header of 1 to {options.MaxKeyLength} printable ASCII characters other than space, '\"' and '\\', optionally as a quoted string.")).ConfigureAwait(false);
             return;
         }
 
@@ -74,19 +79,28 @@ internal sealed partial class IdempotencyMiddleware(
                 }
 
                 LogUnreadable(logger, context.Request.Path);
-                await WriteProblemAsync(context, StatusCodes.Status500InternalServerError, "Stored response unreadable",
-                    "The response stored for this idempotency key cannot be read, so it is neither replayed nor run again.").ConfigureAwait(false);
+                await EnhancedProblemDetailsWriter.WriteAsync(new ProblemDetailsContext
+                {
+                    HttpContext = context,
+                    ProblemDetails = new ProblemDetails
+                    {
+                        Status = StatusCodes.Status500InternalServerError,
+                        Title = "Stored response unreadable",
+                        Detail = "The response stored for this idempotency key cannot be read, so it is neither replayed nor run again.",
+                    },
+                }).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.InFlight:
-                if (options.RetryAfter is { } retryAfter)
-                    context.Response.Headers.RetryAfter =
-                        Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
-                await WriteProblemAsync(context, StatusCodes.Status409Conflict, "Request in progress",
-                    "A request with this idempotency key is still being processed. Retry later.").ConfigureAwait(false);
+                context.Response.Headers.RetryAfter =
+                    Math.Max(1, (long)Math.Ceiling(options.RetryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+                await WriteProblemAsync(context, StatusCodes.Status409Conflict, "Request in progress", Error.Conflict(
+                    IdempotencyErrorCodes.InFlight,
+                    "A request with this idempotency key is still being processed. Retry later.")).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.FingerprintMismatch:
-                await WriteProblemAsync(context, StatusCodes.Status422UnprocessableEntity, "Idempotency key reused",
-                    "This idempotency key was already used for a different request.").ConfigureAwait(false);
+                await WriteProblemAsync(context, StatusCodes.Status422UnprocessableEntity, "Idempotency key reused", Error.Validation(
+                    IdempotencyErrorCodes.KeyReused,
+                    "This idempotency key was already used for a different request.")).ConfigureAwait(false);
                 break;
             default:
                 throw new InvalidOperationException($"{store.GetType().Name} returned an unknown reservation status {reservation.Status}.");
@@ -232,12 +246,28 @@ internal sealed partial class IdempotencyMiddleware(
         hash.AppendData(bytes);
     }
 
-    private static Task WriteProblemAsync(HttpContext context, int statusCode, string title, string detail) =>
-        EnhancedProblemDetailsWriter.WriteAsync(new ProblemDetailsContext
-        {
-            HttpContext = context,
-            ProblemDetails = new ProblemDetails { Status = statusCode, Title = title, Detail = detail },
-        });
+    /// <summary>
+    /// Unquotes a structured-field string (<c>"abc"</c>) and validates the key. An escape sequence can only produce
+    /// <c>"</c> or <c>\</c>, which keys may not contain, so a value with a backslash or an inner quote is rejected
+    /// whether or not its quoting is well formed.
+    /// </summary>
+    internal static bool TryNormalizeKey(string? value, int maxKeyLength, [NotNullWhen(true)] out string? key)
+    {
+        key = value is { Length: >= 2 } && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
+        return IdempotencyKeys.IsValid(key, maxKeyLength);
+    }
+
+    /// <summary>
+    /// Writes an idempotency problem: <c>application/problem+json</c> built like any other <see cref="Error"/> problem,
+    /// plus the top-level <c>code</c> member that clients rely on to tell it apart from the endpoint's own responses.
+    /// </summary>
+    private static Task WriteProblemAsync(HttpContext context, int statusCode, string title, Error error)
+    {
+        EnhancedProblemDetails problem = EnhancedProblemDetailsFactory.Create([error], null, statusCode, context.RequestServices);
+        problem.Title = title;
+        problem.Extensions[CodeKey] = error.Code;
+        return EnhancedProblemDetailsWriter.WriteAsync(new ProblemDetailsContext { HttpContext = context, ProblemDetails = problem });
+    }
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Idempotency key ignored for {Path}: the request has no key scope.")]
     private static partial void LogUnscoped(ILogger logger, PathString path);
