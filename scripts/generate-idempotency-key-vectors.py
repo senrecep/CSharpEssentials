@@ -108,7 +108,7 @@ def main() -> None:
             "key": "If every character of the canonical string is allowed and its length is 1..255, the key is the canonical string. Otherwise it is 'h:' + base64url(SHA-256(UTF-8(canonical))) without padding. The character check comes first, so the length is always counted over ASCII characters.",
             "fromMessage": "FromMessage(messageId, consumer) = For('message', consumer, messageId).",
             "uuidV5": "ToUuidV5(operation, ...ids) = RFC 9562 UUIDv5 of UTF-8(canonical) in namespaceUuid, lowercase with hyphens. The canonical string is hashed whether or not the key falls back to 'h:'.",
-            "invalidInput": "operation null or empty, any id null, or any part that is not well-formed UTF-16 (lone surrogate) throws (C# ArgumentException, TS TypeError). Lone surrogates cannot round-trip through every JSON parser, so each language tests them natively; the 'invalid' list holds the portable cases.",
+            "invalidInput": "operation null or empty, any id null, or any part that is not well-formed UTF-16 (lone surrogate) throws an argument error in each language. Lone surrogates cannot round-trip through every JSON parser, so each language tests them natively; the 'invalid' list holds the portable cases.",
             "validation": "Servers accept an Idempotency-Key header with the same allowed characters and length 1..MaxKeyLength (default 255).",
         },
         "namespaceUuid": str(NAMESPACE),
