@@ -10,9 +10,9 @@ namespace CSharpEssentials.Idempotency;
 /// <see cref="ToStorageKey"/> turns the triple into one string for stores that need a flat key:
 /// <c>{prefix}{n}:{namespace}|{scope part}|{n}:{key}</c>, where every <c>{n}</c> is the UTF-8 byte length of the value
 /// after it. A global key writes <c>global</c> as its scope. The lengths make every part end where it should: two
-/// different triples never give the same storage key, whatever characters they contain. The scopes of
-/// <see cref="IdempotencyScopes"/> start with their kind (<c>user:</c>, <c>tenant:</c>, <c>client:</c>), so none of them
-/// is the scope of a global key.
+/// different triples never give the same storage key, whatever characters they contain. The scope <c>global</c> is
+/// reserved for global keys and rejected as an owner, and the scopes of <see cref="IdempotencyScopes"/> start with
+/// their kind (<c>user:</c>, <c>tenant:</c>, <c>client:</c>).
 /// </para>
 /// </summary>
 public sealed record IdempotencyRecordKey
@@ -27,7 +27,10 @@ public sealed record IdempotencyRecordKey
     internal const string GlobalScope = "global";
 
     /// <param name="namespace">The caller that owns the key space, for example <c>http</c>. Must not be empty.</param>
-    /// <param name="scope">The owner of the key, or <see langword="null"/> for a global key. Must not be empty.</param>
+    /// <param name="scope">
+    /// The owner of the key, or <see langword="null"/> for a global key. Must not be empty or <c>global</c>, which is
+    /// the scope part of a global key.
+    /// </param>
     /// <param name="key">The client's idempotency key. Must not be empty.</param>
     public IdempotencyRecordKey(string @namespace, string? scope, string key)
     {
@@ -35,6 +38,8 @@ public sealed record IdempotencyRecordKey
         Guard.NotNullOrEmpty(key);
         if (scope is { Length: 0 })
             throw new ArgumentException("A scope cannot be empty; use null for a global key.", nameof(scope));
+        if (scope == GlobalScope)
+            throw new ArgumentException("The scope 'global' is reserved for global keys; use null.", nameof(scope));
 
         Namespace = @namespace;
         Scope = scope;

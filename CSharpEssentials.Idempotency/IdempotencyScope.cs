@@ -19,11 +19,19 @@ public readonly record struct IdempotencyScope
     /// <summary><see langword="true"/> for <see cref="Global"/>.</summary>
     public bool IsGlobal => Value is null;
 
-    /// <summary>A scope owned by <paramref name="value"/>, for example a user id.</summary>
-    /// <exception cref="ArgumentException"><paramref name="value"/> is <see langword="null"/> or empty.</exception>
+    /// <summary>
+    /// A scope owned by <paramref name="value"/>, for example <c>user:42</c>. Prefix owner ids with their kind as
+    /// <see cref="IdempotencyScopes"/> does; use <see cref="Global"/> for a key every caller shares.
+    /// </summary>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="value"/> is <see langword="null"/>, empty or <c>global</c>, which is reserved for <see cref="Global"/>.
+    /// </exception>
     public static IdempotencyScope Of(string value)
     {
         Guard.NotNullOrEmpty(value);
+        if (value == IdempotencyRecordKey.GlobalScope)
+            throw new ArgumentException("The scope 'global' is reserved for IdempotencyScope.Global.", nameof(value));
+
         return new(value);
     }
 

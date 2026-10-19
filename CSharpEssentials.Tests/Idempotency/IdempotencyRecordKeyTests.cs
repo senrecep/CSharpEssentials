@@ -51,6 +51,22 @@ public sealed class IdempotencyRecordKeyTests
     }
 
     [Fact]
+    public void Constructor_Should_Reject_The_Reserved_Global_Scope()
+    {
+        Action act = () => _ = new IdempotencyRecordKey("http", "global", "k");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("scope");
+    }
+
+    [Fact]
+    public void Scope_Of_Should_Reject_The_Reserved_Global_Scope()
+    {
+        Action act = () => IdempotencyScope.Of("global");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("value");
+    }
+
+    [Fact]
     public void Distinct_Keys_Should_Never_Share_A_Storage_Key()
     {
         IdempotencyRecordKey[] keys =
