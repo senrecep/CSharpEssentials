@@ -163,6 +163,26 @@ app.MapPost("/orders", CreateOrder).WithIdempotency();
 public IActionResult Create(CreateOrderRequest request) => ...;
 ```
 
+Per-endpoint settings and named profiles override the global options. Each setting comes from the endpoint, else from its profile, else from `AddIdempotency`; an endpoint inside a group (or an MVC action on a controller) overrides the group's value:
+
+```csharp
+builder.Services.AddIdempotency(o => o
+    .AddProfile("payments", p =>
+    {
+        p.ServerErrorRetention = TimeSpan.FromHours(24);
+        p.StoreKey = "payments";                   // services.AddKeyedScoped<IIdempotencyRecordStore, PaymentsStore>("payments")
+    }));
+
+app.MapPost("/payments", Pay).WithIdempotency("payments");
+app.MapPost("/imports", Import).WithIdempotency(o => { o.InFlightTimeout = TimeSpan.FromMinutes(10); o.RequireKey = true; });
+
+[HttpPost, Idempotent(Profile = "payments", LeaseSeconds = 300)]   // MVC
+public IActionResult Charge(ChargeRequest request) => ...;
+```
+
+- `IdempotencyEndpointOptions` overrides `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore`, `UnscopedKeyBehavior` and `StoreKey` (the service key of a keyed `IIdempotencyRecordStore` used instead of the default store). `[Idempotent]` takes the same settings as `RetentionSeconds`, `LeaseSeconds`, `ServerErrorRetentionSeconds`, `RequireKey`, `UnscopedKeyBehavior`, `StoreKey` and `Profile`; `ShouldStore` is reached through a profile.
+- The merged settings follow the same rules as the global options. `AddIdempotency` throws when a profile is invalid, has an empty or duplicate name (names are case-insensitive) or selects another profile. An endpoint with invalid settings or an unregistered profile throws `InvalidOperationException` on each of its requests, naming the endpoint and the registered profiles.
+
 `.WithIdempotency()` (Minimal API endpoints and groups) and `[Idempotent]` (MVC) also install a filter that marks the handler as started right before it runs. The middleware uses that mark to tell a failure of the handler from a response produced before it, such as a rate limiter rejection, a binding failure or MVC model validation.
 
 How a request with an `Idempotency-Key` header is handled:
@@ -206,7 +226,7 @@ o.ServerErrorRetention = o.RetentionPeriod;          // strictest: a stored 5xx 
 - Put `UseResponseCompression()` before `UseIdempotency()`: the stored body is uncompressed and compression runs again on replay. `Content-Encoding` and `Vary` are not replayed by default; add them only when the handler encodes the body itself.
 - A response body larger than `MaxResponseBodySize` (1 MiB) is sent normally but not stored; unless the status is 4xx, the key stays in flight and a warning is logged.
 - The request body is buffered (`EnableBuffering`) to compute the fingerprint; bodies over 30 KB spill to a temporary file.
-- `InFlightTimeout` (1 minute) frees the key of a request that never finished, for example after a crash or a 503/504. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. An endpoint whose request timeout (`RequestTimeout` metadata or the default policy of `RequestTimeoutOptions`) is longer logs `Idempotency.RequestTimeoutExceedsLease` once, on its first request. Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
+- `InFlightTimeout` (1 minute, or the endpoint's own value) frees the key of a request that never finished, for example after a crash or a 503/504. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. An endpoint whose request timeout (`RequestTimeout` metadata or the default policy of `RequestTimeoutOptions`) is longer logs `Idempotency.RequestTimeoutExceedsLease` once, on its first request. Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
 - A store failure after the handler ran is logged and does not change the response; the key then stays in flight until `InFlightTimeout`.
 - `AddIdempotency` throws when `InFlightTimeout` exceeds `RetentionPeriod` or `MaxInFlightTimeout` (15 minutes), when `ServerErrorRetention` is not in (0, `RetentionPeriod`], or when `NeverStoreStatusCodes` is empty or has a code outside 100-599.
 

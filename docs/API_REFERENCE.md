@@ -1472,7 +1472,10 @@ app.UseEnhancedProblemDetails();
 | `AddIdempotency(Action<IdempotencyOptions>? = null)` | Registers the options and a store (the in-memory store unless one is already registered) |
 | `UseIdempotency()` | Middleware; call after `UseRouting`, authentication and authorization |
 | `WithIdempotency()` | Adds `IdempotentAttribute` metadata and the execution filter to an endpoint or group (`IEndpointConventionBuilder`); MVC actions get only the metadata |
-| `[Idempotent]` | Same for an MVC controller or action; it is also the action filter that marks the action as started (after model validation) |
+| `WithIdempotency(Action<IdempotencyEndpointOptions>)` / `WithIdempotency(string profile)` | Same, with settings of the endpoint or group, or a named profile. An endpoint overrides its group |
+| `[Idempotent]` | Same for an MVC controller or action; it is also the action filter that marks the action as started (after model validation). Named arguments `Profile`, `RetentionSeconds`, `LeaseSeconds`, `ServerErrorRetentionSeconds`, `RequireKey`, `UnscopedKeyBehavior`, `StoreKey`; an action overrides its controller |
+| `IdempotencyEndpointOptions` | Nullable overrides: `Profile`, `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore`, `UnscopedKeyBehavior`, `StoreKey` (service key of a keyed `IIdempotencyRecordStore`). Each unset value falls back to the profile, then to `IdempotencyOptions` |
+| `IdempotencyOptions.AddProfile(string name, Action<IdempotencyEndpointOptions>)` | Registers a named profile (case-insensitive). Throws `ArgumentException` for an empty or duplicate name or a profile that sets `Profile`; an invalid merged profile makes `AddIdempotency` throw `InvalidOperationException` |
 | `IIdempotencyExecutionFeature` | `bool HandlerStarted { get; set; }`, set by the filter right before the handler runs |
 | `IdempotencyFilterInstalledMetadata` | Endpoint metadata that marks an endpoint as having the execution filter (`Instance`) |
 | `IdempotencyOutcome(int StatusCode, bool HandlerStarted)` | What `ShouldStore` decides on |
@@ -1501,6 +1504,8 @@ The store, scope resolvers and keys come from `CSharpEssentials.Idempotency` (se
 | `UnscopedKeyBehavior` | `Skip` | `Skip`: run without idempotency and log `Idempotency.UnscopedKeySkipped`; `Reject`: 400 `Idempotency.ScopeRequired`; `Global`: use a global key |
 | `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`, `Retry-After` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
 | `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered `IIdempotencyRecordStore` |
+
+Precedence for `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore` and `UnscopedKeyBehavior`, plus the endpoint-only `StoreKey`: endpoint (action > controller, endpoint > group) > profile > global options. The other options are global only. Endpoint settings are resolved and validated on the endpoint's first request; invalid settings or an unregistered profile throw `InvalidOperationException` on every request of that endpoint.
 
 Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`.
 
