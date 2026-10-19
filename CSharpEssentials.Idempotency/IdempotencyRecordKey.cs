@@ -9,9 +9,10 @@ namespace CSharpEssentials.Idempotency;
 /// <para>
 /// <see cref="ToStorageKey"/> turns the triple into one string for stores that need a flat key:
 /// <c>{prefix}{n}:{namespace}|{scope part}|{n}:{key}</c>, where every <c>{n}</c> is the UTF-8 byte length of the value
-/// after it. The scope part is <c>{n}:{scope}</c> for a scoped key and <c>-</c> for a global key. A length prefix always
-/// starts with a digit, so the <c>-</c> marker can never be produced by a scope, and the lengths make every part end
-/// where it should: two different triples never give the same storage key, whatever characters they contain.
+/// after it. A global key writes <c>global</c> as its scope. The lengths make every part end where it should: two
+/// different triples never give the same storage key, whatever characters they contain. The scopes of
+/// <see cref="IdempotencyScopes"/> start with their kind (<c>user:</c>, <c>tenant:</c>, <c>client:</c>), so none of them
+/// is the scope of a global key.
 /// </para>
 /// </summary>
 public sealed record IdempotencyRecordKey
@@ -22,8 +23,8 @@ public sealed record IdempotencyRecordKey
     /// </summary>
     public const string DefaultPrefix = "idem:v3:";
 
-    /// <summary>Scope part of the storage key for a global key. No length prefix can start with it.</summary>
-    internal const char GlobalScopeMarker = '-';
+    /// <summary>Scope written in the storage key of a global key.</summary>
+    internal const string GlobalScope = "global";
 
     /// <param name="namespace">The caller that owns the key space, for example <c>http</c>. Must not be empty.</param>
     /// <param name="scope">The owner of the key, or <see langword="null"/> for a global key. Must not be empty.</param>
@@ -61,8 +62,8 @@ public sealed record IdempotencyRecordKey
     public bool IsGlobal => Scope is null;
 
     /// <summary>
-    /// The flat storage key <c>{prefix}{n}:{namespace}|{n}:{scope}|{n}:{key}</c>, with <c>-</c> in place of the scope
-    /// part for a global key. See the type remarks for why distinct keys never collide.
+    /// The flat storage key <c>{prefix}{n}:{namespace}|{n}:{scope}|{n}:{key}</c>, with <c>global</c> as the scope
+    /// of a global key. See the type remarks for why distinct keys never collide.
     /// </summary>
     /// <param name="prefix">Prepended as is; defaults to <see cref="DefaultPrefix"/>.</param>
     /// <exception cref="ArgumentException">A part is not well-formed UTF-16 (it contains a lone surrogate).</exception>
@@ -73,11 +74,7 @@ public sealed record IdempotencyRecordKey
         StringBuilder builder = new(prefix.Length + Namespace.Length + (Scope?.Length ?? 0) + Key.Length + 16);
         builder.Append(prefix);
         LengthPrefixed.Append(builder, Namespace).Append('|');
-        if (Scope is null)
-            builder.Append(GlobalScopeMarker);
-        else
-            LengthPrefixed.Append(builder, Scope);
-        builder.Append('|');
+        LengthPrefixed.Append(builder, Scope ?? GlobalScope).Append('|');
         return LengthPrefixed.Append(builder, Key).ToString();
     }
 }

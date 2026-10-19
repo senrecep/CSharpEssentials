@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using CSharpEssentials.Idempotency;
 using FluentAssertions;
@@ -5,7 +6,7 @@ using FluentAssertions;
 namespace CSharpEssentials.Tests.Idempotency;
 
 /// <summary>
-/// Runs <c>tests/vectors/idempotency-key-vectors.json</c>, the deterministic key vectors, plus the
+/// Runs <c>tests/vectors/idempotency-key-vectors.json</c>, the deterministic key, scope and storage key vectors, plus the
 /// cases JSON cannot carry (lone surrogates).
 /// </summary>
 public sealed class IdempotencyKeysTests
@@ -68,6 +69,44 @@ public sealed class IdempotencyKeysTests
             else
                 key.Should().StartWith("h:", name).And.HaveLength(45, name);
             IdempotencyKeys.IsValid(key).Should().BeTrue(name);
+        }
+    }
+
+    [Fact]
+    public void Scopes_Should_Match_Every_Vector()
+    {
+        JsonElement.ArrayEnumerator vectors = Root.GetProperty("scopes").EnumerateArray();
+        vectors.Should().NotBeEmpty();
+
+        foreach (JsonElement vector in vectors)
+        {
+            string name = vector.GetProperty("name").GetString()!;
+
+            ResolveScope(vector).Should().Be(ExpectedScope(vector), name);
+        }
+    }
+
+    [Fact]
+    public void StorageKeys_Should_Match_Every_Vector()
+    {
+        JsonElement.ArrayEnumerator vectors = Root.GetProperty("storageKeys").EnumerateArray();
+        vectors.Should().NotBeEmpty();
+        string defaultPrefix = Root.GetProperty("storagePrefix").GetString()!;
+        IdempotencyRecordKey.DefaultPrefix.Should().Be(defaultPrefix);
+
+        foreach (JsonElement vector in vectors)
+        {
+            string name = vector.GetProperty("name").GetString()!;
+            string scope = vector.GetProperty("scope").GetString()!;
+            string prefix = vector.GetProperty("prefix").GetString()!;
+            string expected = vector.GetProperty("storageKey").GetString()!;
+            IdempotencyRecordKey key = scope == "global"
+                ? new(vector.GetProperty("namespace").GetString()!, IdempotencyScope.Global, vector.GetProperty("key").GetString()!)
+                : new(vector.GetProperty("namespace").GetString()!, scope, vector.GetProperty("key").GetString()!);
+
+            key.ToStorageKey(prefix).Should().Be(expected, name);
+            if (prefix == defaultPrefix)
+                key.ToStorageKey().Should().Be(expected, name);
         }
     }
 
@@ -192,4 +231,40 @@ public sealed class IdempotencyKeysTests
 
     private static string[] Ids(JsonElement vector) =>
         [.. vector.GetProperty("ids").EnumerateArray().Select(id => id.GetString()!)];
+
+    private static IdempotencyScope? ExpectedScope(JsonElement vector)
+    {
+        string? scope = vector.GetProperty("scope").GetString();
+        if (scope is null)
+            return null;
+        return scope == "global" ? IdempotencyScope.Global : IdempotencyScope.Of(scope);
+    }
+
+    private static IdempotencyScope? ResolveScope(JsonElement vector)
+    {
+        const string tenantClaim = "tenant_id";
+        string kind = vector.GetProperty("kind").GetString()!;
+
+        return kind switch
+        {
+            "user" => IdempotencyScopes.User.Resolve(Principal((ClaimTypes.NameIdentifier, Optional(vector, "id")))),
+            "tenant" => IdempotencyScopes.Tenant(tenantClaim).Resolve(Principal((tenantClaim, Optional(vector, "id")))),
+            "client" => IdempotencyScopes.Client.Resolve(Principal((IdempotencyScopes.ClientIdClaimType, Optional(vector, "id")))),
+            "custom" => IdempotencyScopes
+                .Custom(vector.GetProperty("customKind").GetString()!, _ => Optional(vector, "value"))
+                .Resolve(Principal()),
+            "global" => IdempotencyScopes.Global.Resolve(Principal()),
+            "userAndTenant" => IdempotencyScopes.UserAndTenant(tenantClaim).Resolve(Principal(
+                (ClaimTypes.NameIdentifier, Optional(vector, "userId")),
+                (tenantClaim, Optional(vector, "tenantId")))),
+            _ => throw new InvalidOperationException($"Unknown scope kind '{kind}'."),
+        };
+    }
+
+    private static string? Optional(JsonElement vector, string property) => vector.GetProperty(property).GetString();
+
+    private static ClaimsPrincipal Principal(params (string Type, string? Value)[] claims) =>
+        new(new ClaimsIdentity(
+            claims.Where(claim => claim.Value is not null).Select(claim => new Claim(claim.Type, claim.Value!)),
+            "Test"));
 }

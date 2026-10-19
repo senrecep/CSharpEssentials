@@ -29,7 +29,7 @@ Old types are in namespace `CSharpEssentials.AspNetCore`, new types in `CSharpEs
 | `DistributedCacheIdempotencyStore` (`KeyPrefix = "idempotency:"`) | `DistributedCacheIdempotencyRecordStore` (prefix `idem:v3:`, configurable through the constructor) |
 | The string key built by the middleware, `"{scope.Length}:{scope}:{key}"` or `"-:{key}"` | `IdempotencyRecordKey` (`Namespace`, `Scope`, `Key`); `ToStorageKey(prefix)` gives the length-prefixed storage key |
 | `KeyScope = DefaultKeyScope` | `ScopeResolver = IdempotencyScopes.User` (the default) |
-| `KeyScope = context => ...` | `ScopeResolver = IdempotencyScopes.Custom(user => ...)`, or a ready resolver: `Tenant(claimType)`, `UserAndTenant(claimType)`, `Client`, `Global` |
+| `KeyScope = context => ...` | `ScopeResolver = IdempotencyScopes.Custom("kind", user => ...)`, or a ready resolver: `Tenant(claimType)`, `UserAndTenant(claimType)`, `Client`, `Global` |
 | `ShouldStore: Func<int, bool>` (namespace `CSharpEssentials.AspNetCore`) | `ShouldStore: Func<IdempotencyOutcome, bool>` (`StatusCode`, `HandlerStarted`), same namespace. The 6.x behavior is `IdempotencyStorePolicies.SuccessOnly` |
 | `AllowUnscopedKeys = true` | `UnscopedKeyBehavior = UnscopedKeyBehavior.Global` |
 | `AllowUnscopedKeys = false` (the default) | `UnscopedKeyBehavior = UnscopedKeyBehavior.Skip` (the default), which now logs a warning |
@@ -38,7 +38,7 @@ Old types are in namespace `CSharpEssentials.AspNetCore`, new types in `CSharpEs
 
 ## Scopes
 
-`ScopeResolver` receives `HttpContext.User`, not the whole `HttpContext`. A 6.x `KeyScope` that read a claim becomes `IdempotencyScopes.Custom(user => user?.FindFirst("org_id")?.Value)`. A scope that came from a header or a route value has to become a claim first, for example in an `IClaimsTransformation`.
+`ScopeResolver` receives `HttpContext.User`, not the whole `HttpContext`. A 6.x `KeyScope` that read a claim becomes `IdempotencyScopes.Custom("org", user => user?.FindFirst("org_id")?.Value)`. A scope that came from a header or a route value has to become a claim first, for example in an `IClaimsTransformation`.
 
 A resolver returns `null` when it cannot resolve a scope. What happens then is set by `UnscopedKeyBehavior`: `Skip` (the default) runs the request without idempotency, as in 6.x, and logs a warning; `Reject` returns 400 with code `Idempotency.ScopeRequired`; `Global` uses a global key, like 6.x `AllowUnscopedKeys = true`. Machine callers that authenticate with client credentials have no user claim; use `IdempotencyScopes.Client` for them. `IdempotencyScopes.Global` is a different answer: it shares the key between all callers on purpose. A global key never matches a scoped one.
 
@@ -111,5 +111,8 @@ Set `UseRealClock => true` for a store whose expiry runs on its own clock (Redis
 ## Stored records
 
 - Storage keys start with `idem:v3:` (`IdempotencyRecordKey.DefaultPrefix`) and contain the namespace, so 7.0 does not see the records 6.x wrote under `idempotency:`. Those expire with their 6.x retention.
+- Scope strings carry their kind: `user:{id}`, `tenant:{id}`, `client:{id}` and, for `IdempotencyScopes.Custom(kind, resolve)`, `{kind}:{value}`. `UserAndTenant` gives `{n}:tenant:{tenantId}/user:{userId}`, where `{n}` is the UTF-8 byte length of the `tenant:{tenantId}` part. `Custom` throws `ArgumentException` for a null or empty `kind`.
+- Every part of the storage key is written as `{utf8ByteLength}:{value}` and the parts are joined with `|`. A global key writes its scope part as `6:global`, not `-`, for example `idem:v3:4:http|6:global|3:abc`. A scoped key looks like `idem:v3:7:capture|9:tenant:t1|3:abc`.
+- 7.0 has not been released, so records written by a 7.0 pre-release under the earlier scope strings or the `-` global marker do not need a migration.
 - The middleware writes its responses as payload version 3 and does not read version 2. If a custom store keeps its old keys and returns a 6.x record as a completed payload, the middleware answers that key with `500` and logs an error, without running the handler, until the record expires. Use a new key prefix, or clear the table, when you upgrade a custom store.
 - During a rolling deploy, 6.x and 7.0 instances run side by side without seeing each other's records. A retry that reaches a 7.0 instance after the first attempt ran on a 6.x instance runs again. For operations that must not run twice, such as payments, drain traffic before switching or deploy outside the retry window of your clients.

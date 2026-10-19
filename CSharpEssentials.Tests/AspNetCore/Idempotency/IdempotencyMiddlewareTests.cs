@@ -321,7 +321,7 @@ public sealed class IdempotencyMiddlewareTests
     public async Task Custom_ScopeResolver_Should_Be_Used()
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
-            options.ScopeResolver = IdempotencyScopes.Custom(principal =>
+            options.ScopeResolver = IdempotencyScopes.Custom("team", principal =>
                 principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value is { Length: > 0 } user ? "team-" + user[0] : null));
 
         await host.PostAsync("/orders", user: "alice");
@@ -351,7 +351,7 @@ public sealed class IdempotencyMiddlewareTests
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
         {
-            options.ScopeResolver = IdempotencyScopes.Custom(principal =>
+            options.ScopeResolver = IdempotencyScopes.Custom("user", principal =>
                 principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             options.UnscopedKeyBehavior = UnscopedKeyBehavior.Global;
         });
@@ -382,7 +382,7 @@ public sealed class IdempotencyMiddlewareTests
 
         cache.Should().NotBeNull();
         cache.Keys.Should().ContainSingle()
-            .Which.Should().Be(new IdempotencyRecordKey("orders-api", "alice", "key-1").ToStorageKey());
+            .Which.Should().Be(new IdempotencyRecordKey("orders-api", "user:alice", "key-1").ToStorageKey());
     }
 
     [Fact]

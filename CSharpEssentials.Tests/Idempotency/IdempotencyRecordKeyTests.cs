@@ -14,13 +14,13 @@ public sealed class IdempotencyRecordKeyTests
     }
 
     [Fact]
-    public void ToStorageKey_Should_Mark_A_Global_Key()
+    public void ToStorageKey_Should_Write_Global_As_The_Scope_Of_A_Global_Key()
     {
         IdempotencyRecordKey key = new("http", IdempotencyScope.Global, "order-42");
 
         key.IsGlobal.Should().BeTrue();
         key.Scope.Should().BeNull();
-        key.ToStorageKey().Should().Be("idem:v3:4:http|-|8:order-42");
+        key.ToStorageKey().Should().Be("idem:v3:4:http|6:global|8:order-42");
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public sealed class IdempotencyRecordKeyTests
     public void Global_Key_Should_Never_Collide_With_A_Scoped_Key()
     {
         string global = new IdempotencyRecordKey("http", (string?)null, "k").ToStorageKey();
-        string[] scopes = ["-", "--", " ", "|", "0:", "1:-", "-|1:k", "global", "(global)", "null"];
+        string[] scopes = ["-", "--", " ", "|", "0:", "1:-", "-|1:k", "global:", "(global)", "null"];
 
         foreach (string scope in scopes)
             new IdempotencyRecordKey("http", scope, "k").ToStorageKey().Should().NotBe(global, $"scope '{scope}' is not global");
