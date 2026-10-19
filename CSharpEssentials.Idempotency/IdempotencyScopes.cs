@@ -67,7 +67,11 @@ public static class IdempotencyScopes
     /// empty value means unresolved; implement <see cref="IIdempotencyScopeResolver"/> to return
     /// <see cref="IdempotencyScope.Global"/> as well.
     /// </summary>
-    /// <param name="kind">Names the scope, for example <c>account</c>. Must not be empty, contain <c>:</c> or consist only of digits.</param>
+    /// <param name="kind">
+    /// Names the scope, for example <c>account</c>. The same rules as <see cref="IdempotencyScope.Custom"/>: not empty,
+    /// no <c>:</c> or <c>/</c>, not only digits, no unpaired surrogate, and not a reserved built-in kind (<c>user</c>,
+    /// <c>tenant</c>, <c>client</c>, <c>global</c>, in any casing).
+    /// </param>
     /// <param name="resolve">Returns the value for the caller.</param>
     /// <exception cref="ArgumentException"><paramref name="kind"/> is not valid.</exception>
     public static IIdempotencyScopeResolver Custom(string kind, Func<ClaimsPrincipal?, string?> resolve)

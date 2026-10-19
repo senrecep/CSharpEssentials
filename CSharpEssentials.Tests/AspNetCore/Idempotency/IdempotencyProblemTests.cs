@@ -68,6 +68,26 @@ public sealed class IdempotencyProblemTests
     }
 
     [Fact]
+    public async Task Key_With_A_Lone_Surrogate_Should_Return_400_KeyInvalid()
+    {
+        string[] keys = ["k\uD800", "\"k\uD800\"", "\uDC00k", "\"\uDC00k\""];
+
+        foreach (string key in keys)
+        {
+            await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(configurePipeline: app => app.Use((context, next) =>
+            {
+                context.Request.Headers["Idempotency-Key"] = key;
+                return next(context);
+            }));
+
+            IdempotencyResponse response = await host.PostAsync("/orders", key: null);
+
+            AssertProblem(response, StatusCodes.Status400BadRequest, IdempotencyErrorCodes.KeyInvalid, "Invalid idempotency key");
+            host.Probe.Executions.Should().Be(0);
+        }
+    }
+
+    [Fact]
     public async Task MaxKeyLength_Should_Apply_To_The_Unquoted_Key()
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options => options.MaxKeyLength = 5);

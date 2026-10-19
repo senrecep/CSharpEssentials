@@ -29,15 +29,15 @@ public readonly record struct IdempotencyScope
     public bool IsGlobal => Value is null;
 
     /// <summary>The user <paramref name="id"/>: <c>user:{id}</c>.</summary>
-    /// <exception cref="ArgumentException"><paramref name="id"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentException"><paramref name="id"/> is <see langword="null"/> or empty, or not well-formed UTF-16.</exception>
     public static IdempotencyScope User(string id) => Kind("user", id);
 
     /// <summary>The tenant <paramref name="id"/>: <c>tenant:{id}</c>.</summary>
-    /// <exception cref="ArgumentException"><paramref name="id"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentException"><paramref name="id"/> is <see langword="null"/> or empty, or not well-formed UTF-16.</exception>
     public static IdempotencyScope Tenant(string id) => Kind("tenant", id);
 
     /// <summary>The calling client <paramref name="id"/>, for example an OAuth client id: <c>client:{id}</c>.</summary>
-    /// <exception cref="ArgumentException"><paramref name="id"/> is <see langword="null"/> or empty.</exception>
+    /// <exception cref="ArgumentException"><paramref name="id"/> is <see langword="null"/> or empty, or not well-formed UTF-16.</exception>
     public static IdempotencyScope Client(string id) => Kind("client", id);
 
     /// <summary>
@@ -50,6 +50,8 @@ public readonly record struct IdempotencyScope
     {
         Guard.NotNullOrEmpty(userId);
         Guard.NotNullOrEmpty(tenantId);
+        Guard.WellFormedUtf16(userId);
+        Guard.WellFormedUtf16(tenantId);
 
         string tenantPart = "tenant:" + tenantId;
         return new(LengthPrefixed.Append(new StringBuilder(tenantPart.Length + userId.Length + 16), tenantPart)
@@ -59,8 +61,12 @@ public readonly record struct IdempotencyScope
     }
 
     /// <summary>An owner of your own kind: <c>{kind}:{value}</c>, for example <c>Custom("account", "acc-9")</c>.</summary>
-    /// <param name="kind">Names the kind of owner. Must not be empty, contain <c>:</c> or consist only of digits.</param>
-    /// <param name="value">The owner id. Must not be empty.</param>
+    /// <param name="kind">
+    /// Names the kind of owner. Must not be empty, contain <c>:</c> or <c>/</c>, consist only of digits or contain an
+    /// unpaired surrogate. The built-in kinds <c>user</c>, <c>tenant</c>, <c>client</c> and <c>global</c> are reserved
+    /// in any casing; use their factories.
+    /// </param>
+    /// <param name="value">The owner id. Must not be empty or contain an unpaired surrogate.</param>
     /// <exception cref="ArgumentException"><paramref name="kind"/> or <paramref name="value"/> is not valid.</exception>
     public static IdempotencyScope Custom(string kind, string value)
     {
@@ -82,19 +88,34 @@ public readonly record struct IdempotencyScope
         return new(value);
     }
 
-    /// <exception cref="ArgumentException"><paramref name="kind"/> is empty, contains <c>:</c> or is all digits.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="kind"/> is empty, contains <c>:</c> or <c>/</c>, is all digits, is a reserved built-in kind
+    /// (<c>user</c>, <c>tenant</c>, <c>client</c> or <c>global</c>, in any casing), or is not well-formed UTF-16.
+    /// </exception>
     internal static void ValidateKind(string kind)
     {
         Guard.NotNullOrEmpty(kind);
+        Guard.WellFormedUtf16(kind);
         if (kind.Contains(':'))
             throw new ArgumentException("A scope kind cannot contain ':'.", nameof(kind));
+        if (kind.Contains('/'))
+            throw new ArgumentException("A scope kind cannot contain '/'; it separates the parts of a user and tenant scope.", nameof(kind));
+        if (IsReservedKind(kind))
+            throw new ArgumentException($"The scope kind '{kind}' is reserved; use the built-in factory instead of Custom.", nameof(kind));
         if (kind.All(static c => c is >= '0' and <= '9'))
             throw new ArgumentException("A scope kind cannot consist only of digits; it would look like the length prefix of a user and tenant scope.", nameof(kind));
     }
 
+    private static bool IsReservedKind(string kind) =>
+        StringComparer.OrdinalIgnoreCase.Equals(kind, "user")
+        || StringComparer.OrdinalIgnoreCase.Equals(kind, "tenant")
+        || StringComparer.OrdinalIgnoreCase.Equals(kind, "client")
+        || StringComparer.OrdinalIgnoreCase.Equals(kind, IdempotencyRecordKey.GlobalScope);
+
     private static IdempotencyScope Kind(string kind, string id, [CallerArgumentExpression(nameof(id))] string? parameterName = null)
     {
         Guard.NotNullOrEmpty(id, parameterName);
+        Guard.WellFormedUtf16(id, parameterName);
         return new(kind + ":" + id);
     }
 

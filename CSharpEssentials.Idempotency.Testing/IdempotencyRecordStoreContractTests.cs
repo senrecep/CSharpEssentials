@@ -246,6 +246,18 @@ public abstract class IdempotencyRecordStoreContractTests
     }
 
     [Fact]
+    public async Task Keys_And_Scopes_Should_Compare_Case_Sensitively()
+    {
+        await ReserveAsync(Key("key-a", IdempotencyScope.Tenant("abc")));
+
+        IdempotencyRecordReservation otherKey = await Store.TryReserveAsync(Key("KEY-A", IdempotencyScope.Tenant("abc")), "other", Lease);
+        IdempotencyRecordReservation otherScope = await Store.TryReserveAsync(Key("key-a", IdempotencyScope.Tenant("ABC")), "other", Lease);
+
+        Assert.Equal(IdempotencyReservationStatus.Reserved, otherKey.Status);
+        Assert.Equal(IdempotencyReservationStatus.Reserved, otherScope.Status);
+    }
+
+    [Fact]
     public async Task Global_Key_Should_Not_Collide_With_Scoped_Keys()
     {
         string token = await ReserveAsync(Key("k1", scope: null));

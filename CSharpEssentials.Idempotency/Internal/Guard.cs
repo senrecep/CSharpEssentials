@@ -37,4 +37,27 @@ internal static class Guard
             throw new ArgumentOutOfRangeException(parameterName, value, "The value must be positive.");
 #endif
     }
+
+    /// <summary>Throws when <paramref name="value"/> contains an unpaired surrogate, which has no UTF-8 encoding.</summary>
+    public static void WellFormedUtf16(string value, [CallerArgumentExpression(nameof(value))] string? parameterName = null)
+    {
+        int index = 0;
+        while (index < value.Length)
+        {
+            char character = value[index];
+            if (!char.IsSurrogate(character))
+            {
+                index++;
+                continue;
+            }
+
+            if (char.IsHighSurrogate(character) && index + 1 < value.Length && char.IsLowSurrogate(value[index + 1]))
+            {
+                index += 2;
+                continue;
+            }
+
+            throw new ArgumentException("The value contains an unpaired surrogate; it must be well-formed UTF-16.", parameterName);
+        }
+    }
 }

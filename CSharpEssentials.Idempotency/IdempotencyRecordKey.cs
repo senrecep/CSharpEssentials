@@ -32,6 +32,10 @@ public sealed record IdempotencyRecordKey
     /// <see cref="IdempotencyScope.Global"/> gives a global key.
     /// </param>
     /// <param name="key">The client's idempotency key. Must not be empty.</param>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="namespace"/> or <paramref name="key"/> is <see langword="null"/> or empty, or a part contains an
+    /// unpaired surrogate, which has no UTF-8 encoding.
+    /// </exception>
     public IdempotencyRecordKey(string @namespace, IdempotencyScope? scope, string key)
         : this(@namespace, scope?.Value, key)
     {
@@ -41,10 +45,14 @@ public sealed record IdempotencyRecordKey
     {
         Guard.NotNullOrEmpty(@namespace);
         Guard.NotNullOrEmpty(key);
+        Guard.WellFormedUtf16(@namespace);
+        Guard.WellFormedUtf16(key);
         if (scope is { Length: 0 })
             throw new ArgumentException("A scope cannot be empty; use null for a global key.", nameof(scope));
         if (scope == GlobalScope)
             throw new ArgumentException("The scope 'global' is reserved for global keys; use null.", nameof(scope));
+        if (scope is not null)
+            Guard.WellFormedUtf16(scope);
 
         Namespace = @namespace;
         Scope = scope;
@@ -55,7 +63,9 @@ public sealed record IdempotencyRecordKey
     /// A key from the storage form of its scope (<see cref="IdempotencyScope.Value"/>), for code that reads keys back and
     /// for tests of the storage key encoding. Public code passes an <see cref="IdempotencyScope"/>.
     /// </summary>
-    /// <exception cref="ArgumentException">A part is empty, or <paramref name="scope"/> is <c>global</c>.</exception>
+    /// <exception cref="ArgumentException">
+    /// A part is empty or contains an unpaired surrogate, or <paramref name="scope"/> is <c>global</c>.
+    /// </exception>
     internal static IdempotencyRecordKey FromStorageScope(string @namespace, string? scope, string key) => new(@namespace, scope, key);
 
     /// <summary>The caller that owns the key space, for example <c>http</c>.</summary>
@@ -78,7 +88,6 @@ public sealed record IdempotencyRecordKey
     /// of a global key. See the type remarks for why distinct keys never collide.
     /// </summary>
     /// <param name="prefix">Prepended as is; defaults to <see cref="DefaultPrefix"/>.</param>
-    /// <exception cref="ArgumentException">A part is not well-formed UTF-16 (it contains a lone surrogate).</exception>
     public string ToStorageKey(string prefix = DefaultPrefix)
     {
         Guard.NotNull(prefix);

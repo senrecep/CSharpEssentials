@@ -351,7 +351,7 @@ public sealed class IdempotencyMiddlewareTests
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
         {
-            options.ScopeResolver = IdempotencyScopes.Custom("user", principal =>
+            options.ScopeResolver = IdempotencyScopes.Custom("member", principal =>
                 principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             options.UnscopedKeyBehavior = UnscopedKeyBehavior.Global;
         });

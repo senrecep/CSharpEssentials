@@ -10,7 +10,7 @@ consumers and background jobs can use them directly.
 - **Stores**: `InMemoryIdempotencyRecordStore` (atomic within one process) and `DistributedCacheIdempotencyRecordStore` (any `IDistributedCache`; best-effort, not atomic).
 - **`IdempotencyRecordKey`**: namespace, scope and key. `ToStorageKey()` gives `idem:v3:{n}:{namespace}|{n}:{scope}|{n}:{key}` with UTF-8 byte lengths, and `global` as the scope of a global key, so two different keys never share a storage key. The constructor takes an `IdempotencyScope?`; `null` or `IdempotencyScope.Global` gives a global key.
 - **Scopes**: `IdempotencyScopes.User`, `Tenant(claim)`, `UserAndTenant(claim)`, `Client`, `Custom(kind, resolve)` and `Global`. The scopes are `user:{id}`, `tenant:{id}`, `client:{id}`, `{kind}:{value}`, `{n}:tenant:{tenantId}/user:{userId}` (`{n}` is the UTF-8 byte length of the tenant part) and `global`. A resolver returns `null` when it cannot tell who the caller is; `IdempotencyScope.Global` is a separate, explicit answer.
-- **`IdempotencyScope`**: built only by its factories, `User(id)`, `Tenant(id)`, `Client(id)`, `UserAndTenant(userId, tenantId)`, `Custom(kind, value)` and `Global`. Every owner scope starts with its kind, so `Tenant("user:42")` (`tenant:user:42`) never matches `User("42")` (`user:42`) and no owner scope can be the `global` part of a global key. `Custom` rejects a `kind` that is empty, contains `:` or is all digits.
+- **`IdempotencyScope`**: built only by its factories, `User(id)`, `Tenant(id)`, `Client(id)`, `UserAndTenant(userId, tenantId)`, `Custom(kind, value)` and `Global`. Every owner scope starts with its kind, so `Tenant("user:42")` (`tenant:user:42`) never matches `User("42")` (`user:42`) and no owner scope can be the `global` part of a global key. `Custom` rejects a `kind` that is empty, contains `:` or `/`, is all digits or has an unpaired surrogate; the built-in kinds `user`, `tenant`, `client` and `global` are reserved in any casing.
 - **`IdempotencyKeys`**: `For(operation, ids)`, `FromMessage(messageId, consumer)`, `ToUuidV5(operation, ids)` (RFC 9562, namespace `9c8fbd17-da5f-4f32-a4bf-651721368d5e`) and `IsValid(key)`.
 - **`IdempotencyErrorCodes`**: stable codes such as `Idempotency.KeyReused` and `Idempotency.InFlight`.
 - Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. No reflection.
@@ -92,6 +92,10 @@ IdempotencyRecordKey recordKey = new("http", scope.Value, key);
 `User` reads `ClaimTypes.NameIdentifier`, then `sub`. `Client` reads `client_id`, then `azp`. The claim-based resolvers
 return `null` for an anonymous principal or a missing claim, and the caller decides what to do with it.
 
+The scope factories and the `IdempotencyRecordKey` constructor throw `ArgumentException` for a value with an unpaired
+surrogate, which has no UTF-8 encoding. A `Custom` kind cannot contain `:` or `/`, and `user`, `tenant`, `client` and
+`global` are reserved for the built-in factories in any casing: `Custom("user", id)` throws, use `User(id)`.
+
 ## Stores
 
 | Store | Guarantee |
@@ -102,3 +106,7 @@ return `null` for an anonymous principal or a missing claim, and the caller deci
 For strict guarantees across instances, implement `IIdempotencyRecordStore` with one atomic operation for
 `TryReserveAsync` (Redis `SET NX`, a unique index) and token-checked `CompleteAsync` and `ReleaseAsync`, then run the
 `CSharpEssentials.Idempotency.Testing` contract tests against it.
+
+**Store requirement:** a store must compare `Namespace`, `Scope` and `Key` ordinally and case-sensitively. For a SQL
+store that means a binary or case-sensitive collation on those columns; with a case-insensitive one,
+`Tenant("ABC")` and `Tenant("abc")` share a record. The contract tests check this.

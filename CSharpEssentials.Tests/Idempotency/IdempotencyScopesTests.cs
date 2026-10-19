@@ -234,6 +234,8 @@ public sealed class IdempotencyScopesTests
     [InlineData("a:b")]
     [InlineData(":")]
     [InlineData("123")]
+    [InlineData("a/b")]
+    [InlineData("/")]
     public void Custom_Should_Reject_An_Invalid_Kind(string kind)
     {
         Action scope = () => IdempotencyScope.Custom(kind, "v");
@@ -260,6 +262,103 @@ public sealed class IdempotencyScopesTests
 
         foreach (Action factory in factories)
             factory.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void Custom_Should_Reject_The_Reserved_User_Kind() => AssertReservedKind("user");
+
+    [Fact]
+    public void Custom_Should_Reject_The_Reserved_Tenant_Kind() => AssertReservedKind("tenant");
+
+    [Fact]
+    public void Custom_Should_Reject_The_Reserved_Client_Kind() => AssertReservedKind("client");
+
+    [Fact]
+    public void Custom_Should_Reject_The_Reserved_Global_Kind() => AssertReservedKind("global");
+
+    [Fact]
+    public void Custom_Should_Reject_Reserved_Kinds_In_Any_Casing()
+    {
+        string[] kinds = ["User", "USER", "Tenant", "cLiEnT", "GLOBAL", "Global"];
+
+        foreach (string kind in kinds)
+            AssertReservedKind(kind);
+    }
+
+    [Fact]
+    public void Custom_Should_Accept_A_Kind_That_Only_Contains_A_Reserved_Kind()
+    {
+        IdempotencyScope.Custom("users", "1").Value.Should().Be("users:1");
+        IdempotencyScope.Custom("global-org", "1").Value.Should().Be("global-org:1");
+    }
+
+    [Fact]
+    public void User_Should_Reject_A_Lone_Surrogate()
+    {
+        Action act = () => IdempotencyScope.User("u\uD800");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("id");
+    }
+
+    [Fact]
+    public void Tenant_Should_Reject_A_Lone_Surrogate()
+    {
+        Action act = () => IdempotencyScope.Tenant("\uDC00t");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("id");
+    }
+
+    [Fact]
+    public void Client_Should_Reject_A_Lone_Surrogate()
+    {
+        Action act = () => IdempotencyScope.Client("c\uD800c");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("id");
+    }
+
+    [Fact]
+    public void UserAndTenant_Should_Reject_A_Lone_Surrogate_In_Either_Id()
+    {
+        Action user = () => IdempotencyScope.UserAndTenant("u\uD800", "t1");
+        Action tenant = () => IdempotencyScope.UserAndTenant("u1", "t\uDC00");
+
+        user.Should().Throw<ArgumentException>().WithParameterName("userId");
+        tenant.Should().Throw<ArgumentException>().WithParameterName("tenantId");
+    }
+
+    [Fact]
+    public void Custom_Should_Reject_A_Lone_Surrogate_In_The_Kind()
+    {
+        Action scope = () => IdempotencyScope.Custom("org\uD800", "v");
+        Action resolver = () => IdempotencyScopes.Custom("org\uD800", _ => "v");
+
+        scope.Should().Throw<ArgumentException>().WithParameterName("kind");
+        resolver.Should().Throw<ArgumentException>().WithParameterName("kind");
+    }
+
+    [Fact]
+    public void Custom_Should_Reject_A_Lone_Surrogate_In_The_Value()
+    {
+        Action act = () => IdempotencyScope.Custom("org", "v\uDC00");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("value");
+    }
+
+    [Fact]
+    public void Scope_Factories_Should_Accept_A_Surrogate_Pair()
+    {
+        IdempotencyScope.User("\uD83D\uDE00").Value.Should().Be("user:\uD83D\uDE00");
+        IdempotencyScope.UserAndTenant("\uD83D\uDE00", "\uD83D\uDE00").Value.Should().Be("11:tenant:\uD83D\uDE00/user:\uD83D\uDE00");
+        IdempotencyScope.Custom("\uD83D\uDE00", "v").Value.Should().Be("\uD83D\uDE00:v");
+    }
+
+    private static void AssertReservedKind(string kind)
+    {
+        Action scope = () => IdempotencyScope.Custom(kind, "v");
+        Action resolver = () => IdempotencyScopes.Custom(kind, _ => "v");
+
+        scope.Should().Throw<ArgumentException>().WithParameterName(nameof(kind)).WithMessage("*reserved*");
+        resolver.Should().Throw<ArgumentException>().WithParameterName(nameof(kind)).WithMessage("*reserved*");
     }
 
     private static ClaimsPrincipal Authenticated(params Claim[] claims) => new(new ClaimsIdentity(claims, "Test"));

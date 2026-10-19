@@ -75,7 +75,7 @@ public sealed class IdempotencyRecordKeyTests
             IdempotencyScope.Tenant("global"),
             IdempotencyScope.Client("global"),
             IdempotencyScope.UserAndTenant("global", "global"),
-            IdempotencyScope.Custom("global", "global"),
+            IdempotencyScope.Custom("org", "global"),
         ];
         string global = new IdempotencyRecordKey("http", IdempotencyScope.Global, "k").ToStorageKey();
 
@@ -146,13 +146,40 @@ public sealed class IdempotencyRecordKeyTests
     }
 
     [Fact]
-    public void ToStorageKey_Should_Reject_A_Lone_Surrogate()
+    public void Constructor_Should_Reject_A_Lone_Surrogate_In_The_Key()
     {
-        IdempotencyRecordKey key = Raw("http", "alice", "k\uD800");
+        string[] keys = ["k\uD800", "k\uDC00", "\uDC00\uD800", "k\uD800x"];
 
-        Action act = () => key.ToStorageKey();
+        foreach (string key in keys)
+        {
+            Action act = () => new IdempotencyRecordKey("http", IdempotencyScope.User("alice"), key);
 
-        act.Should().Throw<ArgumentException>();
+            act.Should().Throw<ArgumentException>().WithParameterName(nameof(key));
+        }
+    }
+
+    [Fact]
+    public void Constructor_Should_Reject_A_Lone_Surrogate_In_The_Namespace()
+    {
+        Action act = () => new IdempotencyRecordKey("http\uD800", IdempotencyScope.User("alice"), "k");
+
+        act.Should().Throw<ArgumentException>().WithMessage("*unpaired surrogate*");
+    }
+
+    [Fact]
+    public void Constructor_Should_Reject_A_Lone_Surrogate_In_A_Storage_Scope()
+    {
+        Action act = () => Raw("http", "user:\uD800", "k");
+
+        act.Should().Throw<ArgumentException>().WithParameterName("scope");
+    }
+
+    [Fact]
+    public void Constructor_Should_Accept_A_Surrogate_Pair()
+    {
+        IdempotencyRecordKey key = new("http\uD83D\uDE00", IdempotencyScope.User("\uD83D\uDE00"), "k\uD83D\uDE00");
+
+        key.ToStorageKey().Should().Be("idem:v3:8:http\uD83D\uDE00|9:user:\uD83D\uDE00|5:k\uD83D\uDE00");
     }
 
     [Fact]
