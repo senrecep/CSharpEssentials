@@ -36,7 +36,7 @@ public sealed class IdempotencyOverridesTests
             foreach (string level in new[] { Global, Profile, Endpoint })
             {
                 data.Add("minimal", setting, level);
-                if (setting != ShouldStore)
+                if (setting != ShouldStore || level != Endpoint)
                     data.Add("mvc", setting, level);
             }
         }
