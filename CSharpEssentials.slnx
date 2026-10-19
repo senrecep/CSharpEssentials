@@ -21,6 +21,8 @@
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
   <Project Path="CSharpEssentials.GcpSecretManager/CSharpEssentials.GcpSecretManager.csproj" />
   <Project Path="CSharpEssentials.Http/CSharpEssentials.Http.csproj" />
+  <Project Path="CSharpEssentials.Idempotency/CSharpEssentials.Idempotency.csproj" />
+  <Project Path="CSharpEssentials.Idempotency.Testing/CSharpEssentials.Idempotency.Testing.csproj" />
   <Project Path="CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
 
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />

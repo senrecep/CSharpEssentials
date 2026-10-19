@@ -6,12 +6,12 @@
 
 [![Build](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml/badge.svg)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 
-[![Tests](https://img.shields.io/badge/tests-5012%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
+[![Tests](https://img.shields.io/badge/tests-5046%20passing-brightgreen)](https://github.com/senrecep/CSharpEssentials/actions/workflows/build.yml)
 [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
-[![Packages](https://img.shields.io/badge/packages-25-blue)](https://www.nuget.org/profiles/senrecep)
+[![Packages](https://img.shields.io/badge/packages-27-blue)](https://www.nuget.org/profiles/senrecep)
 
 Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
@@ -37,6 +37,8 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 | `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1011 | [Docs](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
 | `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001 to CSE2009 | [Docs](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
 | `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [Docs](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
+| `CSharpEssentials.Idempotency` | Transport-independent idempotency: record store with reservation tokens, scoped record keys, scope resolvers, deterministic keys (UUIDv5) | [Docs](CSharpEssentials.Idempotency/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Idempotency.svg)](https://www.nuget.org/packages/CSharpEssentials.Idempotency) |
+| `CSharpEssentials.Idempotency.Testing` | xUnit contract tests for custom `IIdempotencyRecordStore` implementations | [Docs](CSharpEssentials.Idempotency.Testing/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Idempotency.Testing.svg)](https://www.nuget.org/packages/CSharpEssentials.Idempotency.Testing) |
 | `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [Docs](CSharpEssentials.Resilience/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
 | `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [Docs](examples/Examples.Json/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
 | `CSharpEssentials.RequestResponseLogging` | Request/response body logging middleware | [Docs](examples/Examples.RequestResponseLogging/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
@@ -47,7 +49,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers 23 of the 25 packages with method tables, philosophy, code examples, and cross-cutting FP patterns; `CSharpEssentials.AspNetCore.OpenApi` and `CSharpEssentials.AspNetCore.Swashbuckle` are documented in their own Readme files.
+**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers 24 of the 27 packages with method tables, philosophy, code examples, and cross-cutting FP patterns; `CSharpEssentials.AspNetCore.OpenApi`, `CSharpEssentials.AspNetCore.Swashbuckle` and `CSharpEssentials.Idempotency.Testing` are documented in their own Readme files.
 
 ## Installation
 

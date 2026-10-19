@@ -34,6 +34,7 @@ A guide to every package, method, and pattern in the CSharpEssentials ecosystem.
 - [CSharpEssentials: Meta Package](#23-csharpessentials-meta-package)
 - [AspNetCore.OpenApi: OpenAPI Documents](#24-csharpessentialsaspnetcoreopenapi-openapi-documents)
 - [AspNetCore.Swashbuckle: Swagger Documents](#25-csharpessentialsaspnetcoreswashbuckle-swagger-documents)
+- [Idempotency: Transport-Independent Core](#26-csharpessentialsidempotency-transport-independent-core)
 - [Ecosystem Design Patterns](#ecosystem-design-patterns)
 
 ---
@@ -2418,6 +2419,40 @@ app.UseVersionableSwagger();
 ```
 
 See the migration notes for [5.x to 6.0](migration/v5-to-v6.md) (Swashbuckle 10 and `Microsoft.OpenApi` 2.x) and [optional route parameters](migration/v6-optional-route-parameters.md).
+
+---
+
+## 26. CSharpEssentials.Idempotency: Transport-Independent Core
+
+**What it is:** The record store, scopes and deterministic keys behind the `Idempotency-Key` middleware, without any HTTP or infrastructure dependency, so message consumers and jobs can use the same store.
+
+```bash
+dotnet add package CSharpEssentials.Idempotency
+dotnet add package CSharpEssentials.Idempotency.Testing   # xUnit contract tests for your own store
+```
+
+Targets `netstandard2.1`, `net9.0`, `net10.0` and `net11.0`; depends only on `Microsoft.Extensions.Caching.Abstractions` (and `Microsoft.Bcl.TimeProvider` on `netstandard2.1`). Namespace `CSharpEssentials.Idempotency`.
+
+| Member | What It Does |
+|--------|-------------|
+| `IIdempotencyRecordStore` | `TryReserveAsync(key, fingerprint, lease)`, `CompleteAsync(key, token, fingerprint, payload, retention)`, `ReleaseAsync(key, token)`. Reserve is atomic; the fingerprint is compared before the in-flight state; Complete and Release only change an entry that still carries the token; an expired reservation nobody took over can still complete; Release never removes a completed entry |
+| `IdempotencyRecordReservation` | `Status` (`Reserved`, `InFlight`, `Completed`, `FingerprintMismatch`), `Token` when reserved, `Payload` (`ReadOnlyMemory<byte>?`) when completed |
+| `IdempotencyRecordKey(namespace, scope, key)` | `Namespace`, `Scope` (`null` = global), `Key`, `IsGlobal`. `ToStorageKey(prefix = "idem:v3:")` gives `{prefix}{n}:{namespace}\|{n}:{scope}\|{n}:{key}` with UTF-8 byte lengths and `-` in place of the scope part for a global key, so no two keys collide and a global key never matches a scoped one |
+| `InMemoryIdempotencyRecordStore()` / `(TimeProvider)` | Atomic within one process; unbounded, expired entries are swept |
+| `DistributedCacheIdempotencyRecordStore(IDistributedCache, keyPrefix?)` | Single instance or development: best effort, `IDistributedCache` has no atomic add or compare. Entries are versioned; an unreadable entry counts as absent |
+| `IIdempotencyScopeResolver.Resolve(ClaimsPrincipal?)` | Returns `IdempotencyScope?`: `null` means unresolved, `IdempotencyScope.Global` means a deliberate global key |
+| `IdempotencyScopes` | `User` (`NameIdentifier`, then `sub`), `Tenant(claimType)`, `UserAndTenant(claimType)` (length-prefixed composite), `Client` (`client_id`, then `azp`), `Custom(Func<ClaimsPrincipal?, string?>)`, `Global`. Claim resolvers need an authenticated principal |
+| `IdempotencyKeys` | `For(operation, params ids)`, `FromMessage(messageId, consumer)` (= `For("message", consumer, messageId)`), `ToUuidV5(operation, params ids)` (RFC 9562, namespace `UuidNamespace` = `9c8fbd17-da5f-4f32-a4bf-651721368d5e`), `IsValid(key, maxLength = 255)`. Keys that are not printable ASCII or exceed 255 characters become `h:` + base64url SHA-256; a lone surrogate throws `ArgumentException`. The format is pinned by `shared/idempotency-key-vectors.json` |
+| `IdempotencyErrorCodes` | `KeyMissing`, `KeyInvalid`, `InFlight`, `KeyReused`, `ScopeRequired`, `UnscopedKeySkipped` |
+| `IdempotencyRecordStoreContractTests` (Testing package) | Abstract xUnit class; implement `CreateStore(TimeProvider)` to run every store scenario. `UseRealClock` switches to real waits for stores with their own clock; `IsReservationAtomic = false` relaxes the concurrency checks for best-effort stores |
+
+```csharp
+using CSharpEssentials.Idempotency;
+
+string key = IdempotencyKeys.FromMessage(message.Id, "billing.invoice-created");
+IdempotencyRecordKey recordKey = new("messages", IdempotencyScope.Global, key);
+IdempotencyRecordReservation reservation = await store.TryReserveAsync(recordKey, fingerprint, TimeSpan.FromMinutes(5));
+```
 
 ---
 

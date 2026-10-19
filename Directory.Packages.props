@@ -70,6 +70,8 @@
         <PackageVersion Include="CSharpEssentials.Enums" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Errors" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Http" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Idempotency" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Idempotency.Testing" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Json" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Maybe" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Mediator" Version="[$(Version)]" />
