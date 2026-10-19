@@ -1,10 +1,12 @@
 using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CSharpEssentials.AspNetCore;
 
+/// <summary>Registration, middleware and endpoint extensions for <c>Idempotency-Key</c> handling.</summary>
 public static class IdempotencyExtensions
 {
     /// <summary>
@@ -37,11 +39,26 @@ public static class IdempotencyExtensions
         return app.UseMiddleware<IdempotencyMiddleware>();
     }
 
-    /// <summary>Opts an endpoint or a route group into <c>Idempotency-Key</c> handling.</summary>
+    /// <summary>
+    /// Opts an endpoint or a route group into <c>Idempotency-Key</c> handling. On Minimal API endpoints it also adds
+    /// the endpoint filter that sets <see cref="IIdempotencyExecutionFeature.HandlerStarted"/>; endpoint filters added
+    /// after this call run inside it. MVC actions ignore endpoint filters: mark them with
+    /// <see cref="IdempotentAttribute"/>, otherwise their handler is never seen as started.
+    /// </summary>
     public static TBuilder WithIdempotency<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder
     {
         ArgumentNullException.ThrowIfNull(builder);
-        return builder.WithMetadata(new IdempotentAttribute());
+        builder.WithMetadata(new IdempotentAttribute());
+        builder.Add(static endpoint =>
+        {
+            if (endpoint.Metadata.Any(static metadata => metadata is ActionDescriptor))
+                return;
+            if (!endpoint.FilterFactories.Contains(IdempotencyEndpointFilter.Factory))
+                endpoint.FilterFactories.Add(IdempotencyEndpointFilter.Factory);
+            if (!endpoint.Metadata.Contains(IdempotencyFilterInstalledMetadata.Instance))
+                endpoint.Metadata.Add(IdempotencyFilterInstalledMetadata.Instance);
+        });
+        return builder;
     }
 }

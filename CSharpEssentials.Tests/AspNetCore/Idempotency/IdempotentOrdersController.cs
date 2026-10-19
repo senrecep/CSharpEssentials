@@ -10,4 +10,12 @@ internal sealed class IdempotentOrdersController(IdempotencyProbe probe) : Contr
     [HttpPost]
     [Idempotent]
     public IActionResult Create() => Created("/mvc/orders/1", new { execution = probe.Execute() });
+
+    [HttpPost("matrix")]
+    [Idempotent]
+    public async Task Matrix(string outcome)
+    {
+        probe.Execute();
+        await IdempotencyOutcomes.RunAsync(HttpContext, outcome);
+    }
 }

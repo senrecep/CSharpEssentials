@@ -2,14 +2,19 @@ using System.Buffers;
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Timeouts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
+using Microsoft.Net.Http.Headers;
 
 namespace CSharpEssentials.AspNetCore;
 
@@ -24,14 +29,20 @@ internal sealed partial class IdempotencyMiddleware(
 {
     internal const string CodeKey = "code";
 
+    private static readonly object Checked = new();
+
+    private readonly ConditionalWeakTable<Endpoint, object> _checkedEndpoints = [];
+
     public async Task InvokeAsync(HttpContext context, IIdempotencyRecordStore store)
     {
-        if (context.GetEndpoint()?.Metadata.GetMetadata<IdempotentAttribute>() is null
-            || !options.Methods.Contains(context.Request.Method))
+        Endpoint? endpoint = context.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IdempotentAttribute>() is null || !options.Methods.Contains(context.Request.Method))
         {
             await next(context).ConfigureAwait(false);
             return;
         }
+
+        CheckEndpoint(context, endpoint);
 
         StringValues header = context.Request.Headers[options.HeaderName];
         if (header.Count == 0)
@@ -54,14 +65,23 @@ internal sealed partial class IdempotencyMiddleware(
         }
 
         IdempotencyScope? scope = options.ScopeResolver.Resolve(context.User);
-        if (scope is null && !options.AllowUnscopedKeys)
+        if (scope is null && options.UnscopedKeyBehavior == UnscopedKeyBehavior.Global)
+            scope = IdempotencyScope.Global;
+        else if (scope is null && options.UnscopedKeyBehavior == UnscopedKeyBehavior.Reject)
         {
-            LogUnscoped(logger, context.Request.Path);
+            await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Idempotency scope required", Error.Validation(
+                IdempotencyErrorCodes.ScopeRequired,
+                "An idempotency key needs a caller whose scope can be resolved, such as an authenticated user or client.")).ConfigureAwait(false);
+            return;
+        }
+        else if (scope is null)
+        {
+            LogUnscopedKeySkipped(logger, context.Request.Path);
             await next(context).ConfigureAwait(false);
             return;
         }
 
-        IdempotencyRecordKey recordKey = new(options.Namespace, scope ?? IdempotencyScope.Global, key);
+        IdempotencyRecordKey recordKey = new(options.Namespace, scope.Value, key);
         string fingerprint = await ComputeFingerprintAsync(context.Request, context.RequestAborted).ConfigureAwait(false);
         IdempotencyRecordReservation reservation =
             await store.TryReserveAsync(recordKey, fingerprint, options.InFlightTimeout, context.RequestAborted).ConfigureAwait(false);
@@ -107,11 +127,18 @@ internal sealed partial class IdempotencyMiddleware(
         }
     }
 
+    /// <summary>
+    /// Runs the request on a held reservation and settles it. An exception after the handler or the response started
+    /// keeps the key in flight until the lease expires, because the side effect may already have happened; an
+    /// exception before that releases it.
+    /// </summary>
     private async Task ExecuteAsync(HttpContext context, IIdempotencyRecordStore store, IdempotencyRecordKey recordKey, string token, string fingerprint)
     {
+        IdempotencyExecutionFeature execution = new();
+        context.Features.Set<IIdempotencyExecutionFeature>(execution);
         HttpResponse response = context.Response;
         Stream original = response.Body;
-        using ResponseCaptureStream capture = new(original, options.MaxResponseBodySize);
+        using ResponseCaptureStream capture = new(original, options.MaxResponseBodySize, response.Headers);
         response.Body = capture;
         try
         {
@@ -121,11 +148,8 @@ internal sealed partial class IdempotencyMiddleware(
         catch (Exception)
         {
             response.Body = original;
-            // Once the response has started the handler's work is most likely done (for example the client went away
-            // while the body was written). Releasing would let a retry run it again, so the key stays in flight until
-            // InFlightTimeout instead.
-            if (response.HasStarted)
-                LogKeptInFlight(logger, context.Request.Path);
+            if (execution.HandlerStarted || response.HasStarted)
+                LogKeptInFlight(logger, context.Request.Path, response.StatusCode, "the request failed after its handler started");
             else
                 await TryReleaseAsync(store, recordKey, token, context.Request.Path).ConfigureAwait(false);
             throw;
@@ -134,39 +158,56 @@ internal sealed partial class IdempotencyMiddleware(
         response.Body = original;
         try
         {
-            if (!await StoreOutcomeAsync(context, store, recordKey, token, fingerprint, capture).ConfigureAwait(false))
+            if (!await SettleAsync(context, store, recordKey, token, fingerprint, capture, execution.HandlerStarted).ConfigureAwait(false))
                 LogStaleReservation(logger, context.Request.Path);
         }
         catch (Exception exception)
         {
-            // The response is already sent; a store failure must not turn it into an error. A reservation that could
-            // not be completed or released expires after InFlightTimeout.
             LogStoreFailed(logger, exception, context.Request.Path);
         }
     }
 
+    /// <summary>
+    /// Stores, releases or keeps the reservation for a request that completed. The work is done, so the store calls
+    /// ignore <see cref="HttpContext.RequestAborted"/>: a client that went away still gets its outcome on retry.
+    /// </summary>
     /// <returns><see langword="false"/> when the reservation was taken over after <c>InFlightTimeout</c>.</returns>
-    private async Task<bool> StoreOutcomeAsync(
+    private async ValueTask<bool> SettleAsync(
         HttpContext context,
         IIdempotencyRecordStore store,
         IdempotencyRecordKey recordKey,
         string token,
         string fingerprint,
-        ResponseCaptureStream capture)
+        ResponseCaptureStream capture,
+        bool handlerStarted)
     {
         HttpResponse response = context.Response;
-
-        // The work is done: store the outcome even when the client has gone away, so the key does not stay in flight.
-        if (!options.ShouldStore(response.StatusCode))
+        int statusCode = response.StatusCode;
+        if (!handlerStarted)
             return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
 
-        if (capture.Overflowed)
+        if (options.NeverStoreStatusCodes.Contains(statusCode))
         {
-            LogTooLarge(logger, context.Request.Path, options.MaxResponseBodySize);
-            return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
+            LogKeptInFlight(logger, context.Request.Path, statusCode, "its status is in NeverStoreStatusCodes");
+            return true;
         }
 
-        // Names come from ReplayedHeaders, which is already case-insensitive.
+        if (!options.ShouldStore(new IdempotencyOutcome { StatusCode = statusCode, HandlerStarted = true }))
+            return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
+
+        string? notStorable = NotStorableReason(response, capture);
+        if (notStorable is not null)
+        {
+            if (statusCode is >= 400 and < 500)
+            {
+                LogNotStorableReleased(logger, context.Request.Path, statusCode, notStorable);
+                return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
+            }
+
+            LogKeptInFlight(logger, context.Request.Path, statusCode, notStorable);
+            return true;
+        }
+
         Dictionary<string, string[]> headers = [];
         foreach (string name in options.ReplayedHeaders)
         {
@@ -180,9 +221,64 @@ internal sealed partial class IdempotencyMiddleware(
             recordKey,
             token,
             fingerprint,
-            IdempotencyEntrySerializer.Write(new IdempotentResponse(response.StatusCode, headers, capture.ToArray())),
-            options.RetentionPeriod,
+            IdempotencyEntrySerializer.Write(new IdempotentResponse(statusCode, headers, capture.ToArray())),
+            statusCode >= StatusCodes.Status500InternalServerError ? options.ServerErrorRetention : options.RetentionPeriod,
             CancellationToken.None).ConfigureAwait(false);
+    }
+
+    private string? NotStorableReason(HttpResponse response, ResponseCaptureStream capture)
+    {
+        if (capture.Overflowed)
+            return string.Create(CultureInfo.InvariantCulture, $"its body exceeds MaxResponseBodySize ({options.MaxResponseBodySize} bytes)");
+        if (capture.EncodedByHandler)
+            return "the handler set a Content-Encoding";
+        if (MediaTypeHeaderValue.TryParse(response.ContentType, out MediaTypeHeaderValue? mediaType)
+            && mediaType.MediaType.Equals("text/event-stream", StringComparison.OrdinalIgnoreCase))
+            return "it is an event stream";
+        return null;
+    }
+
+    /// <summary>
+    /// Validates the endpoint's setup: without <see cref="IdempotencyFilterInstalledMetadata"/> its handler is never
+    /// seen as started, which throws under <see cref="IdempotencyOptions.RequireExecutionFilter"/>. Warnings about the
+    /// filter and about a request timeout longer than the lease are logged on the endpoint's first request only.
+    /// </summary>
+    private void CheckEndpoint(HttpContext context, Endpoint endpoint)
+    {
+        bool filterInstalled = endpoint.Metadata.GetMetadata<IdempotencyFilterInstalledMetadata>() is not null;
+        if (!filterInstalled && options.RequireExecutionFilter)
+            throw new InvalidOperationException(
+                $"The idempotent endpoint '{endpoint.DisplayName}' has no filter that marks its handler as started. Use .WithIdempotency() on Minimal API endpoints and [Idempotent] on MVC actions.");
+
+        if (_checkedEndpoints.TryGetValue(endpoint, out _) || !_checkedEndpoints.TryAdd(endpoint, Checked))
+            return;
+
+        string name = endpoint.DisplayName ?? context.Request.Path.ToString();
+        if (!filterInstalled)
+            LogExecutionFilterMissing(logger, name);
+        if (ResolveRequestTimeout(endpoint, context.RequestServices) is { } timeout && timeout > options.InFlightTimeout)
+            LogRequestTimeoutExceedsLease(logger, name, timeout, options.InFlightTimeout);
+    }
+
+    /// <summary>The timeout <c>UseRequestTimeouts()</c> applies to the endpoint, resolved like that middleware does.</summary>
+    private static TimeSpan? ResolveRequestTimeout(Endpoint endpoint, IServiceProvider services)
+    {
+        if (endpoint.Metadata.GetMetadata<DisableRequestTimeoutAttribute>() is not null)
+            return null;
+
+        RequestTimeoutOptions? timeouts = services.GetService<IOptions<RequestTimeoutOptions>>()?.Value;
+        if (endpoint.Metadata.GetMetadata<RequestTimeoutPolicy>() is { } policy)
+            return policy.Timeout;
+        if (endpoint.Metadata.GetMetadata<RequestTimeoutAttribute>() is { } attribute)
+        {
+            if (attribute.Timeout is { } timeout)
+                return timeout;
+            return attribute.PolicyName is { } policyName && timeouts?.Policies.TryGetValue(policyName, out RequestTimeoutPolicy? named) == true
+                ? named.Timeout
+                : null;
+        }
+
+        return timeouts?.DefaultPolicy?.Timeout;
     }
 
     private async Task ReplayAsync(HttpContext context, IdempotentResponse stored)
@@ -199,6 +295,7 @@ internal sealed partial class IdempotencyMiddleware(
         }
     }
 
+    /// <summary>Releases after a failure; a store error is logged so the request's own exception is the one surfaced.</summary>
     private async Task TryReleaseAsync(IIdempotencyRecordStore store, IdempotencyRecordKey recordKey, string token, PathString path)
     {
         try
@@ -207,7 +304,6 @@ internal sealed partial class IdempotencyMiddleware(
         }
         catch (Exception exception)
         {
-            // The request's own exception is the one to surface; the reservation expires after InFlightTimeout.
             LogReleaseFailed(logger, exception, path);
         }
     }
@@ -269,24 +365,39 @@ internal sealed partial class IdempotencyMiddleware(
         return EnhancedProblemDetailsWriter.WriteAsync(new ProblemDetailsContext { HttpContext = context, ProblemDetails = problem });
     }
 
-    [LoggerMessage(Level = LogLevel.Debug, Message = "Idempotency key ignored for {Path}: the request has no key scope.")]
-    private static partial void LogUnscoped(ILogger logger, PathString path);
+    [LoggerMessage(EventId = 7001, EventName = IdempotencyErrorCodes.UnscopedKeySkipped, Level = LogLevel.Warning,
+        Message = "The idempotency key for {Path} was ignored and the request ran without idempotency: the caller's scope could not be resolved.")]
+    private static partial void LogUnscopedKeySkipped(ILogger logger, PathString path);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "The idempotent response stored for {Path} cannot be read; the request was answered with 500 and not run again.")]
+    [LoggerMessage(EventId = 7002, EventName = "Idempotency.StoredResponseUnreadable", Level = LogLevel.Error,
+        Message = "The idempotent response stored for {Path} cannot be read; the request was answered with 500 and not run again.")]
     private static partial void LogUnreadable(ILogger logger, PathString path);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Idempotent response for {Path} was not stored: the body exceeded {MaxResponseBodySize} bytes.")]
-    private static partial void LogTooLarge(ILogger logger, PathString path, long maxResponseBodySize);
+    [LoggerMessage(EventId = 7003, EventName = "Idempotency.KeptInFlight", Level = LogLevel.Warning,
+        Message = "The outcome of {Path} ({StatusCode}) was not stored because {Reason}; the idempotency key stays in flight until its lease expires.")]
+    private static partial void LogKeptInFlight(ILogger logger, PathString path, int statusCode, string reason);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "The request for {Path} failed after its response started; the idempotency key stays in flight until it expires.")]
-    private static partial void LogKeptInFlight(ILogger logger, PathString path);
+    [LoggerMessage(EventId = 7004, EventName = "Idempotency.ResponseNotStorable", Level = LogLevel.Debug,
+        Message = "The {StatusCode} response of {Path} was not stored because {Reason}; the idempotency key was released.")]
+    private static partial void LogNotStorableReleased(ILogger logger, PathString path, int statusCode, string reason);
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Storing the idempotent outcome for {Path} failed; the key stays in flight until it expires.")]
+    [LoggerMessage(EventId = 7005, EventName = "Idempotency.StoreFailed", Level = LogLevel.Error,
+        Message = "Storing the idempotent outcome for {Path} failed; the key stays in flight until it expires.")]
     private static partial void LogStoreFailed(ILogger logger, Exception exception, PathString path);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "The request for {Path} outlived its idempotency reservation, which expired or was taken over by another request; its outcome was not stored. Make InFlightTimeout longer than the request timeout.")]
+    [LoggerMessage(EventId = 7006, EventName = "Idempotency.StaleReservation", Level = LogLevel.Warning,
+        Message = "The request for {Path} outlived its idempotency reservation, which expired or was taken over by another request; its outcome was not stored. Make InFlightTimeout longer than the request timeout.")]
     private static partial void LogStaleReservation(ILogger logger, PathString path);
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Releasing the idempotency key for {Path} failed; it stays in flight until it expires.")]
+    [LoggerMessage(EventId = 7007, EventName = "Idempotency.ReleaseFailed", Level = LogLevel.Warning,
+        Message = "Releasing the idempotency key for {Path} failed; it stays in flight until it expires.")]
     private static partial void LogReleaseFailed(ILogger logger, Exception exception, PathString path);
+
+    [LoggerMessage(EventId = 7008, EventName = "Idempotency.ExecutionFilterMissing", Level = LogLevel.Warning,
+        Message = "The idempotent endpoint {Endpoint} has no filter that marks its handler as started, so every outcome releases its key and failures can run again. Use .WithIdempotency() on Minimal API endpoints and [Idempotent] on MVC actions.")]
+    private static partial void LogExecutionFilterMissing(ILogger logger, string endpoint);
+
+    [LoggerMessage(EventId = 7009, EventName = "Idempotency.RequestTimeoutExceedsLease", Level = LogLevel.Warning,
+        Message = "The request timeout of the idempotent endpoint {Endpoint} ({RequestTimeout}) is longer than InFlightTimeout ({InFlightTimeout}); a retry can run the handler again while the first request is still running.")]
+    private static partial void LogRequestTimeoutExceedsLease(ILogger logger, string endpoint, TimeSpan requestTimeout, TimeSpan inFlightTimeout);
 }

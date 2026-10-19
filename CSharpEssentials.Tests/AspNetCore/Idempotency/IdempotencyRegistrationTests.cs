@@ -91,7 +91,13 @@ public sealed class IdempotencyRegistrationTests
         IdempotencyOptions options = provider.GetRequiredService<IdempotencyOptions>();
         options.Namespace.Should().Be("http");
         options.ScopeResolver.Should().BeSameAs(IdempotencyScopes.User);
-        options.AllowUnscopedKeys.Should().BeFalse();
+        options.UnscopedKeyBehavior.Should().Be(UnscopedKeyBehavior.Skip);
+        options.ShouldStore.Should().BeSameAs(IdempotencyStorePolicies.Default);
+        options.NeverStoreStatusCodes.Should().BeEquivalentTo([503, 504]);
+        options.ServerErrorRetention.Should().Be(TimeSpan.FromMinutes(10));
+        options.MaxInFlightTimeout.Should().Be(TimeSpan.FromMinutes(15));
+        options.RequireExecutionFilter.Should().BeFalse();
+        options.ReplayedHeaders.Should().Contain("Retry-After");
     }
 
     [Fact]
@@ -112,10 +118,40 @@ public sealed class IdempotencyRegistrationTests
             () => new ServiceCollection().AddIdempotency(o => o.ScopeResolver = null!),
             () => new ServiceCollection().AddIdempotency(o => o.Namespace = ""),
             () => new ServiceCollection().AddIdempotency(o => o.Namespace = null!),
+            () => new ServiceCollection().AddIdempotency(o => o.InFlightTimeout = TimeSpan.FromMinutes(16)),
+            () => new ServiceCollection().AddIdempotency(o =>
+            {
+                o.InFlightTimeout = TimeSpan.FromMinutes(10);
+                o.RetentionPeriod = TimeSpan.FromMinutes(5);
+                o.ServerErrorRetention = TimeSpan.FromMinutes(5);
+            }),
+            () => new ServiceCollection().AddIdempotency(o => o.MaxInFlightTimeout = TimeSpan.Zero),
+            () => new ServiceCollection().AddIdempotency(o => o.ServerErrorRetention = TimeSpan.Zero),
+            () => new ServiceCollection().AddIdempotency(o => o.ServerErrorRetention = TimeSpan.FromHours(25)),
+            () => new ServiceCollection().AddIdempotency(o => o.NeverStoreStatusCodes.Clear()),
+            () => new ServiceCollection().AddIdempotency(o => o.NeverStoreStatusCodes.Add(99)),
+            () => new ServiceCollection().AddIdempotency(o => o.NeverStoreStatusCodes.Add(600)),
+            () => new ServiceCollection().AddIdempotency(o => o.UnscopedKeyBehavior = (UnscopedKeyBehavior)3),
         ];
 
         foreach (Action act in invalid)
             act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void AddIdempotency_Should_Accept_The_Boundaries_Of_The_Timing_Rules()
+    {
+        Action act = () => new ServiceCollection().AddIdempotency(o =>
+        {
+            o.MaxInFlightTimeout = TimeSpan.FromMinutes(30);
+            o.InFlightTimeout = TimeSpan.FromMinutes(30);
+            o.RetentionPeriod = TimeSpan.FromMinutes(30);
+            o.ServerErrorRetention = TimeSpan.FromMinutes(30);
+            o.NeverStoreStatusCodes.Add(100);
+            o.NeverStoreStatusCodes.Add(599);
+        });
+
+        act.Should().NotThrow();
     }
 
     private sealed class CustomStore : IIdempotencyRecordStore

@@ -24,13 +24,30 @@ public sealed class IdempotencyOptions
     public ISet<string> Methods { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { HttpMethods.Post, HttpMethods.Patch };
 
     /// <summary>
-    /// How long a reservation blocks the key while its request runs. A request still running after this time no
-    /// longer blocks a retry. Default: 1 minute.
+    /// The lease: how long a reservation blocks the key while its request runs. A request still running after this
+    /// time no longer blocks a retry. It is also how long the key stays in flight after an outcome that is neither
+    /// stored nor released (an exception or abort after the handler started, a status in
+    /// <see cref="NeverStoreStatusCodes"/>, a response that cannot be stored). Keep it longer than the request timeout
+    /// and the client's total retry budget. Must be positive and at most <see cref="RetentionPeriod"/> and
+    /// <see cref="MaxInFlightTimeout"/>. Default: 1 minute.
     /// </summary>
     public TimeSpan InFlightTimeout { get; set; } = TimeSpan.FromMinutes(1);
 
-    /// <summary>How long a completed response is replayed. Default: 24 hours.</summary>
+    /// <summary>
+    /// Upper bound for <see cref="InFlightTimeout"/>, so a key held after a failure cannot lock its client out for
+    /// long. Default: 15 minutes.
+    /// </summary>
+    public TimeSpan MaxInFlightTimeout { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>How long a stored response other than 5xx is replayed. Default: 24 hours.</summary>
     public TimeSpan RetentionPeriod { get; set; } = TimeSpan.FromHours(24);
+
+    /// <summary>
+    /// How long a stored 5xx response is replayed. After it expires a retry with the same key runs the handler again,
+    /// which repeats any side effect the failed run already caused; set it to <see cref="RetentionPeriod"/> for the
+    /// strictest behaviour. Must be positive and at most <see cref="RetentionPeriod"/>. Default: 10 minutes.
+    /// </summary>
+    public TimeSpan ServerErrorRetention { get; set; } = TimeSpan.FromMinutes(10);
 
     /// <summary>
     /// <c>Retry-After</c> sent with every <c>409</c> <c>Idempotency.InFlight</c>, rounded up to whole seconds (at least
@@ -45,8 +62,9 @@ public sealed class IdempotencyOptions
     public int MaxKeyLength { get; set; } = 255;
 
     /// <summary>
-    /// Largest response body that is stored, in bytes. A larger response is sent unchanged, not stored, and its
-    /// reservation is released. Default: 1 MiB.
+    /// Largest response body that is stored, in bytes. A larger response is sent unchanged and not stored: a 4xx
+    /// releases the key, any other status keeps it in flight until <see cref="InFlightTimeout"/>, because the handler
+    /// ran and a retry must not run it again at once. Default: 1 MiB.
     /// </summary>
     public long MaxResponseBodySize { get; set; } = 1024 * 1024;
 
@@ -57,10 +75,34 @@ public sealed class IdempotencyOptions
     public bool RequireKey { get; set; }
 
     /// <summary>
-    /// Decides from the status code whether a response is stored and replayed. Responses that are not stored release
-    /// the key, so the client can retry with it. Default: 2xx only.
+    /// Decides whether a response is stored and replayed; when it returns <see langword="false"/> the key is released,
+    /// so the client can retry with it. It is asked only after the handler started and only for statuses outside
+    /// <see cref="NeverStoreStatusCodes"/>: a request whose handler did not start is always released, and a status in
+    /// <see cref="NeverStoreStatusCodes"/> keeps the key in flight. A stored response that cannot be captured (encoded
+    /// by the handler, <c>text/event-stream</c>, larger than <see cref="MaxResponseBodySize"/>) is not stored either;
+    /// it keeps the key in flight unless its status is 4xx. Default: <see cref="IdempotencyStorePolicies.Default"/>.
     /// </summary>
-    public Func<int, bool> ShouldStore { get; set; } = static statusCode => statusCode is >= 200 and < 300;
+    public Func<IdempotencyOutcome, bool> ShouldStore { get; set; } = IdempotencyStorePolicies.Default;
+
+    /// <summary>
+    /// Statuses that are never stored because they mean "retry later". Returned after the handler started (for
+    /// example a request timeout that hit the handler), they keep the key in flight until
+    /// <see cref="InFlightTimeout"/>; returned before it, they release the key. Must not be empty; every entry must be
+    /// 100 to 599. Default: 503 and 504.
+    /// </summary>
+    public ISet<int> NeverStoreStatusCodes { get; } = new HashSet<int>
+    {
+        StatusCodes.Status503ServiceUnavailable,
+        StatusCodes.Status504GatewayTimeout,
+    };
+
+    /// <summary>
+    /// Throws <see cref="InvalidOperationException"/> on requests to an idempotent endpoint that lacks the filter
+    /// which sets <see cref="IIdempotencyExecutionFeature.HandlerStarted"/> (<see cref="IdempotencyFilterInstalledMetadata"/>),
+    /// instead of logging a warning once per endpoint. Without the filter every outcome of that endpoint releases its
+    /// key. Default: <see langword="false"/>.
+    /// </summary>
+    public bool RequireExecutionFilter { get; set; }
 
     /// <summary>
     /// Namespace of the idempotency records written by this middleware, so HTTP keys never meet the keys of message
@@ -71,23 +113,27 @@ public sealed class IdempotencyOptions
     /// <summary>
     /// Resolves the scope that owns the key from <see cref="HttpContext.User"/>, usually the user (and tenant), so
     /// clients cannot replay each other's responses. <see cref="IdempotencyScope.Global"/> shares the key between all
-    /// callers. When it returns <see langword="null"/> (unresolved, for example an anonymous request), the request runs
-    /// without idempotency unless <see cref="AllowUnscopedKeys"/> is set. Default: <see cref="IdempotencyScopes.User"/>.
+    /// callers. When it returns <see langword="null"/> (unresolved, for example an anonymous request),
+    /// <see cref="UnscopedKeyBehavior"/> applies. Machine principals (client credentials) need
+    /// <see cref="IdempotencyScopes.Client"/>. Default: <see cref="IdempotencyScopes.User"/>.
     /// </summary>
     public IIdempotencyScopeResolver ScopeResolver { get; set; } = IdempotencyScopes.User;
 
     /// <summary>
-    /// Uses a global key when <see cref="ScopeResolver"/> cannot resolve a scope. Any client that sends the same key
-    /// then gets the same response. Default: <see langword="false"/>.
+    /// What happens when a request carries a key but <see cref="ScopeResolver"/> cannot resolve its scope:
+    /// <see cref="UnscopedKeyBehavior.Skip"/> runs it without idempotency and logs a warning
+    /// (<c>Idempotency.UnscopedKeySkipped</c>), <see cref="UnscopedKeyBehavior.Reject"/> answers <c>400</c>
+    /// <c>Idempotency.ScopeRequired</c>, <see cref="UnscopedKeyBehavior.Global"/> uses a key shared by every caller.
+    /// Default: <see cref="UnscopedKeyBehavior.Skip"/>.
     /// </summary>
-    public bool AllowUnscopedKeys { get; set; }
+    public UnscopedKeyBehavior UnscopedKeyBehavior { get; set; } = UnscopedKeyBehavior.Skip;
 
     /// <summary>
     /// Response headers stored and replayed. <c>Set-Cookie</c> is never stored.
-    /// Default: <c>Content-Type</c>, <c>Content-Language</c>, <c>Location</c>, <c>ETag</c>, <c>Cache-Control</c>.
-    /// <c>Content-Encoding</c> and <c>Vary</c> are left out because response compression running outside this
-    /// middleware sets them on the compressed stream while the stored body is uncompressed; add them only when the
-    /// handler encodes the body itself.
+    /// Default: <c>Content-Type</c>, <c>Content-Language</c>, <c>Location</c>, <c>ETag</c>, <c>Cache-Control</c>,
+    /// <c>Retry-After</c>. <c>Content-Encoding</c> and <c>Vary</c> are left out because response compression running
+    /// outside this middleware sets them on the compressed stream while the stored body is uncompressed. A response
+    /// whose body the handler encodes itself is not stored at all.
     /// </summary>
     public ISet<string> ReplayedHeaders { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
@@ -96,6 +142,7 @@ public sealed class IdempotencyOptions
         "Location",
         "ETag",
         "Cache-Control",
+        "Retry-After",
     };
 
     internal void Validate()
@@ -104,12 +151,25 @@ public sealed class IdempotencyOptions
         ArgumentException.ThrowIfNullOrWhiteSpace(ReplayedHeaderName);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(InFlightTimeout, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(RetentionPeriod, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(MaxInFlightTimeout, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(InFlightTimeout, RetentionPeriod);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(InFlightTimeout, MaxInFlightTimeout);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(ServerErrorRetention, TimeSpan.Zero);
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(ServerErrorRetention, RetentionPeriod);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(RetryAfter, TimeSpan.Zero);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(MaxKeyLength, 0);
         ArgumentOutOfRangeException.ThrowIfNegative(MaxResponseBodySize);
-        // The response is buffered in one array.
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxResponseBodySize, Array.MaxLength);
         ArgumentNullException.ThrowIfNull(ShouldStore);
+        ArgumentOutOfRangeException.ThrowIfZero(NeverStoreStatusCodes.Count);
+        foreach (int neverStoreStatusCode in NeverStoreStatusCodes)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(neverStoreStatusCode, 100);
+            ArgumentOutOfRangeException.ThrowIfGreaterThan(neverStoreStatusCode, 599);
+        }
+
+        uint unscopedKeyBehavior = (uint)UnscopedKeyBehavior;
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(unscopedKeyBehavior, (uint)UnscopedKeyBehavior.Global);
         ArgumentException.ThrowIfNullOrEmpty(Namespace);
         ArgumentNullException.ThrowIfNull(ScopeResolver);
     }
