@@ -295,6 +295,7 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- Coming from 6.x with the `Idempotency-Key` middleware or a custom idempotency store? Read [Migrating idempotency from 6.x to 7.0](docs/migration/v6-to-v7-idempotency.md). 7.0 moves the store into `CSharpEssentials.Idempotency` and replaces `KeyScope` with `ScopeResolver`.
 - From 6.4.0, the task-returning members of `Result` and `Maybe` have `Async` names, and the unsuffixed names are obsolete. Read [Async naming and the async overload matrix](docs/migration/v6-async-naming.md).
 - Coming from 5.x? Read [Migrating from 5.x to 6.0](docs/migration/v5-to-v6.md). 6.0 moves the Swashbuckle support to Swashbuckle 10 and Microsoft.OpenApi 2.x on every target, makes the single-column cursor `PaginateAsync` obsolete in favor of `KeysetPaginateAsync` and caps the offset page size at 100 by default.
 - From 6.1.0, Swashbuckle documents describe optional route parameters (`{id?}`) as one path per form with required parameters. Read [Optional route parameters](docs/migration/v6-optional-route-parameters.md) for the new output and how to opt back. From 6.2.0, `CSharpEssentials.AspNetCore.OpenApi` offers the same output as an opt-in (`o.AddOptionalRouteParameters()`).
