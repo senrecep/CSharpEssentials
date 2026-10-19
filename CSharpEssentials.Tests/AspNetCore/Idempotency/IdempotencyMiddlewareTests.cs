@@ -1,8 +1,11 @@
+using System.Security.Claims;
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Idempotency;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.Tests.AspNetCore.Idempotency;
@@ -315,20 +318,84 @@ public sealed class IdempotencyMiddlewareTests
     }
 
     [Fact]
-    public async Task Custom_KeyScope_Should_Be_Used()
+    public async Task Custom_ScopeResolver_Should_Be_Used()
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
-            options.KeyScope = context => context.Request.Headers["X-Tenant"].ToString() is { Length: > 0 } tenant ? tenant : null);
-        using HttpRequestMessage first = IdempotencyTestHost.CreateRequest("/orders", user: null);
-        first.Headers.TryAddWithoutValidation("X-Tenant", "t1");
-        using HttpRequestMessage second = IdempotencyTestHost.CreateRequest("/orders", user: null);
-        second.Headers.TryAddWithoutValidation("X-Tenant", "t1");
+            options.ScopeResolver = IdempotencyScopes.Custom(principal =>
+                principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value is { Length: > 0 } user ? "team-" + user[0] : null));
 
-        (await host.Client.SendAsync(first)).Dispose();
-        using HttpResponseMessage replay = await host.Client.SendAsync(second);
+        await host.PostAsync("/orders", user: "alice");
+        IdempotencyResponse sameTeam = await host.PostAsync("/orders", user: "anna");
+        IdempotencyResponse otherTeam = await host.PostAsync("/orders", user: "bob");
 
-        replay.Headers.Contains("Idempotency-Replayed").Should().BeTrue();
+        sameTeam.Replayed.Should().BeTrue();
+        otherTeam.Replayed.Should().BeFalse();
+        host.Probe.Executions.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Global_ScopeResolver_Should_Share_The_Key_Between_All_Callers()
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
+            options.ScopeResolver = IdempotencyScopes.Global);
+
+        await host.PostAsync("/orders", user: "alice");
+        IdempotencyResponse anonymous = await host.PostAsync("/orders", user: null);
+
+        anonymous.Replayed.Should().BeTrue();
         host.Probe.Executions.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Unscoped_Key_Should_Share_The_Entry_Of_An_Explicit_Global_Scope()
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
+        {
+            options.ScopeResolver = IdempotencyScopes.Custom(principal =>
+                principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            options.AllowUnscopedKeys = true;
+        });
+
+        await host.PostAsync("/orders", user: null);
+        IdempotencyResponse second = await host.PostAsync("/orders", user: null);
+        IdempotencyResponse scoped = await host.PostAsync("/orders", user: "alice");
+
+        second.Replayed.Should().BeTrue();
+        scoped.Replayed.Should().BeFalse();
+        host.Probe.Executions.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Namespace_Should_Prefix_The_Stored_Key()
+    {
+        FakeDistributedCache? cache = null;
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(
+            options =>
+            {
+                options.Namespace = "orders-api";
+                options.UseDistributedCacheStore();
+            },
+            services => services.AddSingleton<IDistributedCache>(provider =>
+                cache = new FakeDistributedCache(provider.GetRequiredService<TimeProvider>())));
+
+        await host.PostAsync("/orders", key: "key-1", user: "alice");
+
+        cache.Should().NotBeNull();
+        cache.Keys.Should().ContainSingle()
+            .Which.Should().Be(new IdempotencyRecordKey("orders-api", "alice", "key-1").ToStorageKey());
+    }
+
+    [Fact]
+    public async Task Version_2_Stored_Response_Should_Not_Be_Replayed()
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(
+            options => options.UseStore<UnreadablePayloadStore>(ServiceLifetime.Singleton));
+
+        IdempotencyResponse response = await host.PostAsync("/orders", key: "key-1", user: "alice");
+
+        response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        response.Replayed.Should().BeFalse();
+        host.Probe.Executions.Should().Be(0);
     }
 
     [Fact]
@@ -544,5 +611,20 @@ public sealed class IdempotencyMiddlewareTests
         await using var gzip = new System.IO.Compression.GZipStream(compressed, System.IO.Compression.CompressionMode.Decompress);
         using var reader = new StreamReader(gzip);
         return (string.Join(",", response.Content.Headers.ContentEncoding), await reader.ReadToEndAsync());
+    }
+
+    /// <summary>Reports every key as completed with a version 2 response (status 201, no headers, body <c>{}</c>).</summary>
+    private sealed class UnreadablePayloadStore : IIdempotencyRecordStore
+    {
+        private static readonly byte[] Version2Response = [2, 201, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, (byte)'{', (byte)'}'];
+
+        public ValueTask<IdempotencyRecordReservation> TryReserveAsync(IdempotencyRecordKey key, string fingerprint, TimeSpan lease, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(IdempotencyRecordReservation.Completed(Version2Response));
+
+        public ValueTask<bool> CompleteAsync(IdempotencyRecordKey key, string token, string fingerprint, ReadOnlyMemory<byte> payload, TimeSpan retention, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(false);
+
+        public ValueTask<bool> ReleaseAsync(IdempotencyRecordKey key, string token, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(false);
     }
 }

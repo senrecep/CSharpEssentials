@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -56,15 +56,22 @@ public sealed class IdempotencyOptions
     public Func<int, bool> ShouldStore { get; set; } = static statusCode => statusCode is >= 200 and < 300;
 
     /// <summary>
-    /// Returns the scope that prefixes the key in the store, usually the user (and tenant) id, so clients cannot
-    /// replay each other's responses. When it returns <see langword="null"/>, the request runs without idempotency
-    /// unless <see cref="AllowUnscopedKeys"/> is set. Default: <see cref="DefaultKeyScope"/>.
+    /// Namespace of the idempotency records written by this middleware, so HTTP keys never meet the keys of message
+    /// consumers or jobs that share the store. Default: <c>http</c>.
     /// </summary>
-    public Func<HttpContext, string?> KeyScope { get; set; } = DefaultKeyScope;
+    public string Namespace { get; set; } = "http";
 
     /// <summary>
-    /// Uses the bare key when <see cref="KeyScope"/> returns <see langword="null"/>. Any client that sends the same
-    /// key then gets the same response. Default: <see langword="false"/>.
+    /// Resolves the scope that owns the key from <see cref="HttpContext.User"/>, usually the user (and tenant), so
+    /// clients cannot replay each other's responses. <see cref="IdempotencyScope.Global"/> shares the key between all
+    /// callers. When it returns <see langword="null"/> (unresolved, for example an anonymous request), the request runs
+    /// without idempotency unless <see cref="AllowUnscopedKeys"/> is set. Default: <see cref="IdempotencyScopes.User"/>.
+    /// </summary>
+    public IIdempotencyScopeResolver ScopeResolver { get; set; } = IdempotencyScopes.User;
+
+    /// <summary>
+    /// Uses a global key when <see cref="ScopeResolver"/> cannot resolve a scope. Any client that sends the same key
+    /// then gets the same response. Default: <see langword="false"/>.
     /// </summary>
     public bool AllowUnscopedKeys { get; set; }
 
@@ -96,50 +103,41 @@ public sealed class IdempotencyOptions
         // The response is buffered in one array.
         ArgumentOutOfRangeException.ThrowIfGreaterThan(MaxResponseBodySize, Array.MaxLength);
         ArgumentNullException.ThrowIfNull(ShouldStore);
-        ArgumentNullException.ThrowIfNull(KeyScope);
+        ArgumentException.ThrowIfNullOrEmpty(Namespace);
+        ArgumentNullException.ThrowIfNull(ScopeResolver);
     }
 
     internal Action<IServiceCollection> StoreRegistration { get; private set; } =
-        static services => services.TryAddSingleton<IIdempotencyStore, InMemoryIdempotencyStore>();
+        static services => services.TryAddSingleton<IIdempotencyRecordStore, InMemoryIdempotencyRecordStore>();
 
     /// <summary>
-    /// The authenticated user's <see cref="ClaimTypes.NameIdentifier"/> or <c>sub</c> claim; <see langword="null"/>
-    /// for anonymous requests.
+    /// Uses <see cref="InMemoryIdempotencyRecordStore"/> (singleton). Correct for a single instance. This is the default.
     /// </summary>
-    public static string? DefaultKeyScope(HttpContext context)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        ClaimsPrincipal user = context.User;
-        if (user.Identity?.IsAuthenticated != true)
-            return null;
-        return user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user.FindFirst("sub")?.Value;
-    }
-
-    /// <summary>Uses <see cref="InMemoryIdempotencyStore"/> (singleton). Correct for a single instance. This is the default.</summary>
     public IdempotencyOptions UseInMemoryStore()
     {
         StoreRegistration = static services =>
-            services.Replace(ServiceDescriptor.Singleton<IIdempotencyStore, InMemoryIdempotencyStore>());
+            services.Replace(ServiceDescriptor.Singleton<IIdempotencyRecordStore, InMemoryIdempotencyRecordStore>());
         return this;
     }
 
     /// <summary>
-    /// Uses <see cref="DistributedCacheIdempotencyStore"/> (singleton) on the registered <c>IDistributedCache</c>.
-    /// Concurrent requests with the same key are detected on a best-effort basis only.
+    /// Uses <see cref="DistributedCacheIdempotencyRecordStore"/> (singleton) on the registered <c>IDistributedCache</c>.
+    /// Meant for a single instance or development: concurrent requests with the same key are detected on a best-effort
+    /// basis only.
     /// </summary>
     public IdempotencyOptions UseDistributedCacheStore()
     {
         StoreRegistration = static services =>
-            services.Replace(ServiceDescriptor.Singleton<IIdempotencyStore, DistributedCacheIdempotencyStore>());
+            services.Replace(ServiceDescriptor.Singleton<IIdempotencyRecordStore, DistributedCacheIdempotencyRecordStore>());
         return this;
     }
 
     /// <summary>Uses <typeparamref name="TStore"/> with the given lifetime. Default: scoped.</summary>
     public IdempotencyOptions UseStore<TStore>(ServiceLifetime lifetime = ServiceLifetime.Scoped)
-        where TStore : class, IIdempotencyStore
+        where TStore : class, IIdempotencyRecordStore
     {
         StoreRegistration = services =>
-            services.Replace(ServiceDescriptor.Describe(typeof(IIdempotencyStore), typeof(TStore), lifetime));
+            services.Replace(ServiceDescriptor.Describe(typeof(IIdempotencyRecordStore), typeof(TStore), lifetime));
         return this;
     }
 }

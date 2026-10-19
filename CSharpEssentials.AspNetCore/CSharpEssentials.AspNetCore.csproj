@@ -62,9 +62,11 @@
     <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
   </ItemGroup>
 
-  <!-- Dependencies: AspNetCore depends on Errors, Json, and Results -->
+  <!-- Dependencies: AspNetCore depends on Errors, Idempotency, Json, Results and Validation -->
   <ItemGroup>
     <PackageReference Include="CSharpEssentials.Errors"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Idempotency"
       Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Json"
       Condition="'$(UseProjectReferences)' != 'true'" />
@@ -74,6 +76,8 @@
       Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Idempotency\CSharpEssentials.Idempotency.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />

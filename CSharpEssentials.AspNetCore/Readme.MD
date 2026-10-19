@@ -8,7 +8,7 @@ Production-ready ASP.NET Core utilities: global exception handling, structured P
 - **Global Exception Handler**: Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
 - **Result Endpoint Filter**: Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
 - **Validation Endpoint Filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
-- **Idempotency**: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response instead of running the handler again. The store is pluggable (`IIdempotencyStore`); in-memory and `IDistributedCache` stores are included.
+- **Idempotency**: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response instead of running the handler again. Records live in an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`; in-memory and `IDistributedCache` stores are included.
 - **Enum Binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
 - **Conditional Requests**: `ETag`/`Last-Modified` with `304 Not Modified` on reads (`WithConditionalGet()`, `[ConditionalGet]`), and `If-Match` optimistic concurrency with 412/428 on writes (`WithIfMatch()`, `[IfMatch]`).
 - **API Versioning**: Pre-configured URL segment and header-based versioning.
@@ -177,7 +177,8 @@ How a request with an `Idempotency-Key` header is handled:
 | Handler throws after the response started (for example the client went away mid-write) | The key stays in flight until `InFlightTimeout`, because the work is most likely done |
 
 - Only endpoints with `IdempotentAttribute` metadata (`WithIdempotency()`, `[Idempotent]`, or on a route group) and methods in `Methods` (default POST and PATCH) participate.
-- Keys are scoped to the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Requests without a scope pass through; set `KeyScope` (for example to a tenant id, or the issuer plus the subject when several authentication schemes can produce the same `sub`) or `AllowUnscopedKeys = true` to change that. Unscoped keys live in their own namespace and never match a scoped entry.
+- Keys are scoped by `ScopeResolver`, which reads `HttpContext.User`. The default `IdempotencyScopes.User` uses the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Other resolvers: `IdempotencyScopes.Tenant(claimType)`, `UserAndTenant(claimType)`, `Client` (`client_id`, then `azp`), `Custom(principal => ...)` and `Global`. Requests whose scope cannot be resolved (for example anonymous ones) pass through; `AllowUnscopedKeys = true` stores them under a global key instead. Global keys never match a scoped entry.
+- Records are written in the `Namespace` (default `http`), so HTTP keys never meet the keys of message consumers or jobs that share the store.
 - Only the headers in `ReplayedHeaders` are replayed (`Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`). `Set-Cookie` is never stored.
 - Put `UseResponseCompression()` before `UseIdempotency()`: the stored body is uncompressed and compression runs again on replay. `Content-Encoding` and `Vary` are not replayed by default; add them only when the handler encodes the body itself.
 - A response body larger than `MaxResponseBodySize` (1 MiB) is sent normally but not stored, and a warning is logged.
@@ -189,9 +190,11 @@ Stores:
 
 | Store | Register with | Notes |
 |-------|---------------|-------|
-| `InMemoryIdempotencyStore` | default, or `o.UseInMemoryStore()` | Single instance only. Unbounded: every stored response stays in memory for `RetentionPeriod`, so use it for development or small workloads |
-| `DistributedCacheIdempotencyStore` | `o.UseDistributedCacheStore()` plus an `IDistributedCache` | Best effort: `IDistributedCache` has no atomic add, so two simultaneous first requests on different instances can both run |
-| Your own `IIdempotencyStore` | `o.UseStore<TStore>(lifetime)` | Use an atomic insert (for example `INSERT ... ON CONFLICT DO NOTHING` or Redis `SET NX`) for a strict guarantee, and make `CompleteAsync`/`ReleaseAsync` conditional on the reservation token (`WHERE key = @key AND token = @token`) |
+| `InMemoryIdempotencyRecordStore` | default, or `o.UseInMemoryStore()` | Single instance only. Unbounded: every stored response stays in memory for `RetentionPeriod`, so use it for development or small workloads |
+| `DistributedCacheIdempotencyRecordStore` | `o.UseDistributedCacheStore()` plus an `IDistributedCache` | Single instance or development. Best effort: `IDistributedCache` has no atomic add, so two simultaneous first requests can both run |
+| Your own `IIdempotencyRecordStore` | `o.UseStore<TStore>(lifetime)` | Use an atomic insert (for example `INSERT ... ON CONFLICT DO NOTHING` or Redis `SET NX`) for a strict guarantee, and make `CompleteAsync`/`ReleaseAsync` conditional on the reservation token (`WHERE key = @key AND token = @token`). Verify it with `CSharpEssentials.Idempotency.Testing` |
+
+The response is stored as an opaque, versioned payload. A stored payload that cannot be read is answered with 500 and an error log; the handler does not run again.
 
 ### Enum Conventions: JSON, Binding and Wire Format
 

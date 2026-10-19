@@ -1,3 +1,4 @@
+using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -7,8 +8,8 @@ namespace CSharpEssentials.AspNetCore;
 public static class IdempotencyExtensions
 {
     /// <summary>
-    /// Registers <see cref="IdempotencyOptions"/> and the <see cref="IIdempotencyStore"/> chosen in
-    /// <paramref name="configure"/>. Without a <c>Use…Store()</c> call, <see cref="InMemoryIdempotencyStore"/> is
+    /// Registers <see cref="IdempotencyOptions"/> and the <see cref="IIdempotencyRecordStore"/> chosen in
+    /// <paramref name="configure"/>. Without a <c>Use…Store()</c> call, <see cref="InMemoryIdempotencyRecordStore"/> is
     /// registered unless a store is already registered. Calling it again replaces the options.
     /// Invalid options throw here, not on the first request.
     /// </summary>

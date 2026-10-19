@@ -1473,10 +1473,9 @@ app.UseEnhancedProblemDetails();
 | `UseIdempotency()` | Middleware; call after `UseRouting`, authentication and authorization |
 | `WithIdempotency()` | Adds `IdempotentAttribute` metadata to an endpoint or group (`IEndpointConventionBuilder`) |
 | `[Idempotent]` | Same for an MVC controller or action |
-| `IIdempotencyStore` | `TryReserveAsync(key, fingerprint, inFlightTimeout)`, `CompleteAsync(key, token, fingerprint, IdempotentResponse, retention)`, `ReleaseAsync(key, token)` (in-flight entries only). Complete and Release return `false` and change nothing when another reservation holds the key |
-| `IdempotencyReservation` | `Status` (`Reserved`, `InFlight`, `Completed`, `FingerprintMismatch`), the `Token` when reserved, and the stored `Response` when completed |
-| `IdempotentResponse(int StatusCode, IReadOnlyDictionary<string, string[]> Headers, ReadOnlyMemory<byte> Body)` | A stored response |
-| `InMemoryIdempotencyStore` / `DistributedCacheIdempotencyStore` | Built-in stores; the in-memory one is unbounded, the distributed one is best effort (no atomic add or compare) |
+| `IdempotentResponse(int StatusCode, IReadOnlyDictionary<string, string[]> Headers, ReadOnlyMemory<byte> Body)` | A stored response, serialized into the record payload |
+
+The store, scope resolvers and keys come from `CSharpEssentials.Idempotency` (section 26).
 
 | Option | Default | Notes |
 |--------|---------|-------|
@@ -1489,10 +1488,11 @@ app.UseEnhancedProblemDetails();
 | `MaxResponseBodySize` | 1 MiB | Larger bodies are not stored (warning logged) |
 | `RequireKey` | `false` | `true`: a missing key returns 400 |
 | `ShouldStore` | 2xx | Other statuses release the key |
-| `KeyScope` | `DefaultKeyScope` (`NameIdentifier`, then `sub`) | `null` scope passes through unless `AllowUnscopedKeys` |
-| `AllowUnscopedKeys` | `false` | |
+| `Namespace` | `http` | Namespace of the records written by the middleware |
+| `ScopeResolver` | `IdempotencyScopes.User` (`NameIdentifier`, then `sub`) | Resolved against `HttpContext.User`; an unresolved (`null`) scope passes through unless `AllowUnscopedKeys` |
+| `AllowUnscopedKeys` | `false` | `true`: an unresolved scope uses a global key |
 | `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
-| `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered store |
+| `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered `IIdempotencyRecordStore` |
 
 Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`.
 

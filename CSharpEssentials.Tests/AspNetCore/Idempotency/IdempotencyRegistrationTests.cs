@@ -1,4 +1,5 @@
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Idempotency;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,8 +15,8 @@ public sealed class IdempotencyRegistrationTests
         services.AddIdempotency();
 
         using ServiceProvider provider = services.BuildServiceProvider();
-        provider.GetRequiredService<IIdempotencyStore>().Should().BeOfType<InMemoryIdempotencyStore>();
-        provider.GetRequiredService<IIdempotencyStore>().Should().BeSameAs(provider.GetRequiredService<IIdempotencyStore>());
+        provider.GetRequiredService<IIdempotencyRecordStore>().Should().BeOfType<InMemoryIdempotencyRecordStore>();
+        provider.GetRequiredService<IIdempotencyRecordStore>().Should().BeSameAs(provider.GetRequiredService<IIdempotencyRecordStore>());
         provider.GetRequiredService<IdempotencyOptions>().HeaderName.Should().Be("Idempotency-Key");
     }
 
@@ -23,24 +24,24 @@ public sealed class IdempotencyRegistrationTests
     public void AddIdempotency_Should_Keep_An_Existing_Store()
     {
         ServiceCollection services = new();
-        services.AddSingleton<IIdempotencyStore, CustomStore>();
+        services.AddSingleton<IIdempotencyRecordStore, CustomStore>();
 
         services.AddIdempotency();
 
         using ServiceProvider provider = services.BuildServiceProvider();
-        provider.GetRequiredService<IIdempotencyStore>().Should().BeOfType<CustomStore>();
+        provider.GetRequiredService<IIdempotencyRecordStore>().Should().BeOfType<CustomStore>();
     }
 
     [Fact]
     public void UseInMemoryStore_Should_Replace_An_Existing_Store()
     {
         ServiceCollection services = new();
-        services.AddSingleton<IIdempotencyStore, CustomStore>();
+        services.AddSingleton<IIdempotencyRecordStore, CustomStore>();
 
         services.AddIdempotency(options => options.UseInMemoryStore());
 
         using ServiceProvider provider = services.BuildServiceProvider();
-        provider.GetRequiredService<IIdempotencyStore>().Should().BeOfType<InMemoryIdempotencyStore>();
+        provider.GetRequiredService<IIdempotencyRecordStore>().Should().BeOfType<InMemoryIdempotencyRecordStore>();
     }
 
     [Fact]
@@ -52,7 +53,7 @@ public sealed class IdempotencyRegistrationTests
         services.AddIdempotency(options => options.UseDistributedCacheStore());
 
         using ServiceProvider provider = services.BuildServiceProvider();
-        provider.GetRequiredService<IIdempotencyStore>().Should().BeOfType<DistributedCacheIdempotencyStore>();
+        provider.GetRequiredService<IIdempotencyRecordStore>().Should().BeOfType<DistributedCacheIdempotencyRecordStore>();
     }
 
     [Fact]
@@ -62,7 +63,7 @@ public sealed class IdempotencyRegistrationTests
 
         services.AddIdempotency(options => options.UseStore<CustomStore>());
 
-        services.Where(d => d.ServiceType == typeof(IIdempotencyStore)).Should().ContainSingle()
+        services.Where(d => d.ServiceType == typeof(IIdempotencyRecordStore)).Should().ContainSingle()
             .Which.Should().Match<ServiceDescriptor>(d => d.Lifetime == ServiceLifetime.Scoped && d.ImplementationType == typeof(CustomStore));
     }
 
@@ -76,31 +77,21 @@ public sealed class IdempotencyRegistrationTests
 
         using ServiceProvider provider = services.BuildServiceProvider();
         provider.GetRequiredService<IdempotencyOptions>().HeaderName.Should().Be("B");
-        services.Count(d => d.ServiceType == typeof(IIdempotencyStore)).Should().Be(1);
+        services.Count(d => d.ServiceType == typeof(IIdempotencyRecordStore)).Should().Be(1);
     }
 
     [Fact]
-    public void DefaultKeyScope_Should_Use_NameIdentifier_Then_Sub()
+    public void AddIdempotency_Should_Default_To_The_Http_Namespace_And_User_Scope()
     {
-        var nameIdentifier = new Microsoft.AspNetCore.Http.DefaultHttpContext
-        {
-            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
-                [new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, "u1")], "Test")),
-        };
-        var sub = new Microsoft.AspNetCore.Http.DefaultHttpContext
-        {
-            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
-                [new System.Security.Claims.Claim("sub", "u2")], "Test")),
-        };
-        var unauthenticated = new Microsoft.AspNetCore.Http.DefaultHttpContext
-        {
-            User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(
-                [new System.Security.Claims.Claim("sub", "u3")])),
-        };
+        ServiceCollection services = new();
 
-        IdempotencyOptions.DefaultKeyScope(nameIdentifier).Should().Be("u1");
-        IdempotencyOptions.DefaultKeyScope(sub).Should().Be("u2");
-        IdempotencyOptions.DefaultKeyScope(unauthenticated).Should().BeNull();
+        services.AddIdempotency();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IdempotencyOptions options = provider.GetRequiredService<IdempotencyOptions>();
+        options.Namespace.Should().Be("http");
+        options.ScopeResolver.Should().BeSameAs(IdempotencyScopes.User);
+        options.AllowUnscopedKeys.Should().BeFalse();
     }
 
     [Fact]
@@ -117,21 +108,23 @@ public sealed class IdempotencyRegistrationTests
             () => new ServiceCollection().AddIdempotency(o => o.MaxResponseBodySize = -1),
             () => new ServiceCollection().AddIdempotency(o => o.MaxResponseBodySize = (long)int.MaxValue + 1),
             () => new ServiceCollection().AddIdempotency(o => o.ShouldStore = null!),
-            () => new ServiceCollection().AddIdempotency(o => o.KeyScope = null!),
+            () => new ServiceCollection().AddIdempotency(o => o.ScopeResolver = null!),
+            () => new ServiceCollection().AddIdempotency(o => o.Namespace = ""),
+            () => new ServiceCollection().AddIdempotency(o => o.Namespace = null!),
         ];
 
         foreach (Action act in invalid)
             act.Should().Throw<ArgumentException>();
     }
 
-    private sealed class CustomStore : IIdempotencyStore
+    private sealed class CustomStore : IIdempotencyRecordStore
     {
-        public ValueTask<IdempotencyReservation> TryReserveAsync(string key, string fingerprint, TimeSpan inFlightTimeout, CancellationToken cancellationToken = default) =>
-            ValueTask.FromResult(IdempotencyReservation.Reserved("token"));
+        public ValueTask<IdempotencyRecordReservation> TryReserveAsync(IdempotencyRecordKey key, string fingerprint, TimeSpan lease, CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(IdempotencyRecordReservation.Reserved("token"));
 
-        public ValueTask<bool> CompleteAsync(string key, string token, string fingerprint, IdempotentResponse response, TimeSpan retention, CancellationToken cancellationToken = default) =>
+        public ValueTask<bool> CompleteAsync(IdempotencyRecordKey key, string token, string fingerprint, ReadOnlyMemory<byte> payload, TimeSpan retention, CancellationToken cancellationToken = default) =>
             ValueTask.FromResult(true);
 
-        public ValueTask<bool> ReleaseAsync(string key, string token, CancellationToken cancellationToken = default) => ValueTask.FromResult(true);
+        public ValueTask<bool> ReleaseAsync(IdempotencyRecordKey key, string token, CancellationToken cancellationToken = default) => ValueTask.FromResult(true);
     }
 }

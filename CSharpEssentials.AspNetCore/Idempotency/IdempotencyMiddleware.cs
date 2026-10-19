@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -19,7 +20,7 @@ internal sealed partial class IdempotencyMiddleware(
     IdempotencyOptions options,
     ILogger<IdempotencyMiddleware> logger)
 {
-    public async Task InvokeAsync(HttpContext context, IIdempotencyStore store)
+    public async Task InvokeAsync(HttpContext context, IIdempotencyRecordStore store)
     {
         if (context.GetEndpoint()?.Metadata.GetMetadata<IdempotentAttribute>() is null
             || !options.Methods.Contains(context.Request.Method))
@@ -47,7 +48,7 @@ internal sealed partial class IdempotencyMiddleware(
             return;
         }
 
-        string? scope = options.KeyScope(context);
+        IdempotencyScope? scope = options.ScopeResolver.Resolve(context.User);
         if (scope is null && !options.AllowUnscopedKeys)
         {
             LogUnscoped(logger, context.Request.Path);
@@ -55,19 +56,26 @@ internal sealed partial class IdempotencyMiddleware(
             return;
         }
 
-        // Scoped keys start with the scope length and unscoped keys with '-', so neither can be forged from the other.
-        string storeKey = scope is null ? $"-:{key}" : $"{scope.Length.ToString(CultureInfo.InvariantCulture)}:{scope}:{key}";
+        IdempotencyRecordKey recordKey = new(options.Namespace, scope ?? IdempotencyScope.Global, key);
         string fingerprint = await ComputeFingerprintAsync(context.Request, context.RequestAborted).ConfigureAwait(false);
-        IdempotencyReservation reservation =
-            await store.TryReserveAsync(storeKey, fingerprint, options.InFlightTimeout, context.RequestAborted).ConfigureAwait(false);
+        IdempotencyRecordReservation reservation =
+            await store.TryReserveAsync(recordKey, fingerprint, options.InFlightTimeout, context.RequestAborted).ConfigureAwait(false);
 
         switch (reservation.Status)
         {
             case IdempotencyReservationStatus.Reserved:
-                await ExecuteAsync(context, store, storeKey, reservation.Token!, fingerprint).ConfigureAwait(false);
+                await ExecuteAsync(context, store, recordKey, reservation.Token!, fingerprint).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.Completed:
-                await ReplayAsync(context, reservation.Response!).ConfigureAwait(false);
+                if (IdempotencyEntrySerializer.TryRead(reservation.Payload.GetValueOrDefault(), out IdempotentResponse? stored))
+                {
+                    await ReplayAsync(context, stored).ConfigureAwait(false);
+                    break;
+                }
+
+                LogUnreadable(logger, context.Request.Path);
+                await WriteProblemAsync(context, StatusCodes.Status500InternalServerError, "Stored response unreadable",
+                    "The response stored for this idempotency key cannot be read, so it is neither replayed nor run again.").ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.InFlight:
                 if (options.RetryAfter is { } retryAfter)
@@ -85,7 +93,7 @@ internal sealed partial class IdempotencyMiddleware(
         }
     }
 
-    private async Task ExecuteAsync(HttpContext context, IIdempotencyStore store, string storeKey, string token, string fingerprint)
+    private async Task ExecuteAsync(HttpContext context, IIdempotencyRecordStore store, IdempotencyRecordKey recordKey, string token, string fingerprint)
     {
         HttpResponse response = context.Response;
         Stream original = response.Body;
@@ -105,14 +113,14 @@ internal sealed partial class IdempotencyMiddleware(
             if (response.HasStarted)
                 LogKeptInFlight(logger, context.Request.Path);
             else
-                await TryReleaseAsync(store, storeKey, token, context.Request.Path).ConfigureAwait(false);
+                await TryReleaseAsync(store, recordKey, token, context.Request.Path).ConfigureAwait(false);
             throw;
         }
 
         response.Body = original;
         try
         {
-            if (!await StoreOutcomeAsync(context, store, storeKey, token, fingerprint, capture).ConfigureAwait(false))
+            if (!await StoreOutcomeAsync(context, store, recordKey, token, fingerprint, capture).ConfigureAwait(false))
                 LogStaleReservation(logger, context.Request.Path);
         }
         catch (Exception exception)
@@ -126,8 +134,8 @@ internal sealed partial class IdempotencyMiddleware(
     /// <returns><see langword="false"/> when the reservation was taken over after <c>InFlightTimeout</c>.</returns>
     private async Task<bool> StoreOutcomeAsync(
         HttpContext context,
-        IIdempotencyStore store,
-        string storeKey,
+        IIdempotencyRecordStore store,
+        IdempotencyRecordKey recordKey,
         string token,
         string fingerprint,
         ResponseCaptureStream capture)
@@ -136,12 +144,12 @@ internal sealed partial class IdempotencyMiddleware(
 
         // The work is done: store the outcome even when the client has gone away, so the key does not stay in flight.
         if (!options.ShouldStore(response.StatusCode))
-            return await store.ReleaseAsync(storeKey, token, CancellationToken.None).ConfigureAwait(false);
+            return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
 
         if (capture.Overflowed)
         {
             LogTooLarge(logger, context.Request.Path, options.MaxResponseBodySize);
-            return await store.ReleaseAsync(storeKey, token, CancellationToken.None).ConfigureAwait(false);
+            return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
         }
 
         // Names come from ReplayedHeaders, which is already case-insensitive.
@@ -155,10 +163,10 @@ internal sealed partial class IdempotencyMiddleware(
         }
 
         return await store.CompleteAsync(
-            storeKey,
+            recordKey,
             token,
             fingerprint,
-            new IdempotentResponse(response.StatusCode, headers, capture.ToArray()),
+            IdempotencyEntrySerializer.Write(new IdempotentResponse(response.StatusCode, headers, capture.ToArray())),
             options.RetentionPeriod,
             CancellationToken.None).ConfigureAwait(false);
     }
@@ -177,11 +185,11 @@ internal sealed partial class IdempotencyMiddleware(
         }
     }
 
-    private async Task TryReleaseAsync(IIdempotencyStore store, string storeKey, string token, PathString path)
+    private async Task TryReleaseAsync(IIdempotencyRecordStore store, IdempotencyRecordKey recordKey, string token, PathString path)
     {
         try
         {
-            await store.ReleaseAsync(storeKey, token, CancellationToken.None).ConfigureAwait(false);
+            await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception exception)
         {
@@ -233,6 +241,9 @@ internal sealed partial class IdempotencyMiddleware(
 
     [LoggerMessage(Level = LogLevel.Debug, Message = "Idempotency key ignored for {Path}: the request has no key scope.")]
     private static partial void LogUnscoped(ILogger logger, PathString path);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "The idempotent response stored for {Path} cannot be read; the request was answered with 500 and not run again.")]
+    private static partial void LogUnreadable(ILogger logger, PathString path);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Idempotent response for {Path} was not stored: the body exceeded {MaxResponseBodySize} bytes.")]
     private static partial void LogTooLarge(ILogger logger, PathString path, long maxResponseBodySize);
