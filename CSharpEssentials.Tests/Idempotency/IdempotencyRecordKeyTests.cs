@@ -152,7 +152,7 @@ public sealed class IdempotencyRecordKeyTests
 
         foreach (string key in keys)
         {
-            Action act = () => new IdempotencyRecordKey("http", IdempotencyScope.User("alice"), key);
+            Action act = () => _ = new IdempotencyRecordKey("http", IdempotencyScope.User("alice"), key);
 
             act.Should().Throw<ArgumentException>().WithParameterName(nameof(key));
         }
@@ -161,7 +161,7 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void Constructor_Should_Reject_A_Lone_Surrogate_In_The_Namespace()
     {
-        Action act = () => new IdempotencyRecordKey("http\uD800", IdempotencyScope.User("alice"), "k");
+        Action act = () => _ = new IdempotencyRecordKey("http\uD800", IdempotencyScope.User("alice"), "k");
 
         act.Should().Throw<ArgumentException>().WithMessage("*unpaired surrogate*");
     }

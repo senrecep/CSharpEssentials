@@ -53,19 +53,7 @@ public sealed class IdempotencyProblemTests
     [InlineData("anahtar-ğ")]
     [InlineData("a\\b")]
     [InlineData("\"key 1\"")]
-    public async Task Key_With_Invalid_Characters_Should_Return_400_KeyInvalid(string key)
-    {
-        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(configurePipeline: app => app.Use((context, next) =>
-        {
-            context.Request.Headers["Idempotency-Key"] = key;
-            return next(context);
-        }));
-
-        IdempotencyResponse response = await host.PostAsync("/orders", key: null);
-
-        AssertProblem(response, StatusCodes.Status400BadRequest, IdempotencyErrorCodes.KeyInvalid, "Invalid idempotency key");
-        host.Probe.Executions.Should().Be(0);
-    }
+    public Task Key_With_Invalid_Characters_Should_Return_400_KeyInvalid(string key) => AssertKeyInvalidAsync(key);
 
     [Fact]
     public async Task Key_With_A_Lone_Surrogate_Should_Return_400_KeyInvalid()
@@ -73,18 +61,7 @@ public sealed class IdempotencyProblemTests
         string[] keys = ["k\uD800", "\"k\uD800\"", "\uDC00k", "\"\uDC00k\""];
 
         foreach (string key in keys)
-        {
-            await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(configurePipeline: app => app.Use((context, next) =>
-            {
-                context.Request.Headers["Idempotency-Key"] = key;
-                return next(context);
-            }));
-
-            IdempotencyResponse response = await host.PostAsync("/orders", key: null);
-
-            AssertProblem(response, StatusCodes.Status400BadRequest, IdempotencyErrorCodes.KeyInvalid, "Invalid idempotency key");
-            host.Probe.Executions.Should().Be(0);
-        }
+            await AssertKeyInvalidAsync(key);
     }
 
     [Fact]
@@ -199,5 +176,19 @@ public sealed class IdempotencyProblemTests
         body["errorCodes"]!.AsArray().Select(node => node!.GetValue<string>()).Should().Equal(code);
         string? type = body["type"]?.GetValue<string>();
         (type is null || !type.Contains("idempotency", StringComparison.OrdinalIgnoreCase)).Should().BeTrue();
+    }
+
+    private static async Task AssertKeyInvalidAsync(string key)
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(configurePipeline: app => app.Use((context, next) =>
+        {
+            context.Request.Headers["Idempotency-Key"] = key;
+            return next(context);
+        }));
+
+        IdempotencyResponse response = await host.PostAsync("/orders", key: null);
+
+        AssertProblem(response, StatusCodes.Status400BadRequest, IdempotencyErrorCodes.KeyInvalid, "Invalid idempotency key");
+        host.Probe.Executions.Should().Be(0);
     }
 }
