@@ -12,8 +12,8 @@ namespace CSharpEssentials.Idempotency;
 /// joined with <c>|</c>, which is the canonical string; <c>("a", "bc")</c> and <c>("ab", "c")</c> stay different. When
 /// every character of the canonical string is allowed (see <see cref="IsValid"/>) and it is at most
 /// <see cref="MaxKeyLength"/> characters long, it is the key. Otherwise the key is <c>h:</c> followed by the unpadded
-/// base64url SHA-256 of its UTF-8 bytes. The format is shared with the other CSharpEssentials ports through
-/// <c>shared/idempotency-key-vectors.json</c>.
+/// base64url SHA-256 of its UTF-8 bytes. The vectors in <c>tests/vectors/idempotency-key-vectors.json</c> pin this
+/// format.
 /// </para>
 /// </summary>
 public static class IdempotencyKeys

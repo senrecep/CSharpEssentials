@@ -125,7 +125,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\shared\idempotency-key-vectors.json" Link="Idempotency\idempotency-key-vectors.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\tests\vectors\idempotency-key-vectors.json" Link="Idempotency\idempotency-key-vectors.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Generates shared/idempotency-key-vectors.json, the deterministic key vectors shared by the C# and TypeScript
-idempotency implementations. Standard library only, so the expected values come from an implementation independent
-of both libraries.
+"""Generates tests/vectors/idempotency-key-vectors.json, this repo's deterministic key, scope and storage key vectors.
+Standard library only, so the expected values come from an implementation independent of the library under test.
 
 Usage: python3 scripts/generate-idempotency-key-vectors.py
 """
@@ -218,7 +217,7 @@ def main() -> None:
     assert vectors_scope[5]["scope"] == "9:tenant:t1/user:u1"
     assert vectors_storage[0]["storageKey"] == "idem:v3:7:capture|9:tenant:t1|3:abc"
 
-    path = pathlib.Path(__file__).resolve().parent.parent / "shared" / "idempotency-key-vectors.json"
+    path = pathlib.Path(__file__).resolve().parent.parent / "tests" / "vectors" / "idempotency-key-vectors.json"
     path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(path)
 

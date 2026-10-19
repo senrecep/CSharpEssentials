@@ -5,7 +5,7 @@ using FluentAssertions;
 namespace CSharpEssentials.Tests.Idempotency;
 
 /// <summary>
-/// Runs <c>shared/idempotency-key-vectors.json</c>, the format shared with the other CSharpEssentials ports, plus the
+/// Runs <c>tests/vectors/idempotency-key-vectors.json</c>, the deterministic key vectors, plus the
 /// cases JSON cannot carry (lone surrogates).
 /// </summary>
 public sealed class IdempotencyKeysTests
