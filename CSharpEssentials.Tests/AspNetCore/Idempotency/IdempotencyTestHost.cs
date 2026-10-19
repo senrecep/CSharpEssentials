@@ -45,6 +45,8 @@ internal sealed class IdempotencyTestHost : IAsyncDisposable
 
     public CapturingLoggerProvider Logs => _app.Services.GetRequiredService<CapturingLoggerProvider>();
 
+    public IServiceProvider Services => _app.Services;
+
     /// <param name="configure">Configures <see cref="IdempotencyOptions"/>.</param>
     /// <param name="configureServices">Adds services.</param>
     /// <param name="configurePipeline">Adds middleware after routing and before <c>UseIdempotency</c>.</param>
@@ -76,7 +78,9 @@ internal sealed class IdempotencyTestHost : IAsyncDisposable
             foreach (IApplicationFeatureProvider<ControllerFeature> provider in
                      manager.FeatureProviders.OfType<IApplicationFeatureProvider<ControllerFeature>>().ToList())
                 manager.FeatureProviders.Remove(provider);
-            manager.FeatureProviders.Add(new OnlyControllersFeatureProvider(typeof(IdempotentOrdersController), typeof(PlainOrdersController)));
+            manager.FeatureProviders.Add(new OnlyControllersFeatureProvider(
+                typeof(IdempotentOrdersController), typeof(PlainOrdersController), typeof(IdempotencyOverridesController),
+                typeof(IdempotencyProfileController)));
         });
         builder.Services.AddIdempotency(configure);
         configureServices?.Invoke(builder.Services);

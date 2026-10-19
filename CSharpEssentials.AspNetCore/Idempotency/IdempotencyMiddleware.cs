@@ -29,11 +29,9 @@ internal sealed partial class IdempotencyMiddleware(
 {
     internal const string CodeKey = "code";
 
-    private static readonly object Checked = new();
+    private readonly ConditionalWeakTable<Endpoint, IdempotencyEndpointSettings> _endpointSettings = [];
 
-    private readonly ConditionalWeakTable<Endpoint, object> _checkedEndpoints = [];
-
-    public async Task InvokeAsync(HttpContext context, IIdempotencyRecordStore store)
+    public async Task InvokeAsync(HttpContext context, IIdempotencyRecordStore defaultStore)
     {
         Endpoint? endpoint = context.GetEndpoint();
         if (endpoint?.Metadata.GetMetadata<IdempotentAttribute>() is null || !options.Methods.Contains(context.Request.Method))
@@ -42,12 +40,12 @@ internal sealed partial class IdempotencyMiddleware(
             return;
         }
 
-        CheckEndpoint(context, endpoint);
+        IdempotencyEndpointSettings settings = GetSettings(context, endpoint);
 
         StringValues header = context.Request.Headers[options.HeaderName];
         if (header.Count == 0)
         {
-            if (options.RequireKey)
+            if (settings.RequireKey)
                 await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Missing idempotency key", Error.Validation(
                     IdempotencyErrorCodes.KeyMissing,
                     $"This endpoint requires the '{options.HeaderName}' header.")).ConfigureAwait(false);
@@ -65,9 +63,9 @@ internal sealed partial class IdempotencyMiddleware(
         }
 
         IdempotencyScope? scope = options.ScopeResolver.Resolve(context.User);
-        if (scope is null && options.UnscopedKeyBehavior == UnscopedKeyBehavior.Global)
+        if (scope is null && settings.UnscopedKeyBehavior == UnscopedKeyBehavior.Global)
             scope = IdempotencyScope.Global;
-        else if (scope is null && options.UnscopedKeyBehavior == UnscopedKeyBehavior.Reject)
+        else if (scope is null && settings.UnscopedKeyBehavior == UnscopedKeyBehavior.Reject)
         {
             await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Idempotency scope required", Error.Validation(
                 IdempotencyErrorCodes.ScopeRequired,
@@ -81,15 +79,18 @@ internal sealed partial class IdempotencyMiddleware(
             return;
         }
 
+        IIdempotencyRecordStore store = settings.StoreKey is { } storeKey
+            ? context.RequestServices.GetRequiredKeyedService<IIdempotencyRecordStore>(storeKey)
+            : defaultStore;
         IdempotencyRecordKey recordKey = new(options.Namespace, scope.Value, key);
         string fingerprint = await ComputeFingerprintAsync(context.Request, context.RequestAborted).ConfigureAwait(false);
         IdempotencyRecordReservation reservation =
-            await store.TryReserveAsync(recordKey, fingerprint, options.InFlightTimeout, context.RequestAborted).ConfigureAwait(false);
+            await store.TryReserveAsync(recordKey, fingerprint, settings.InFlightTimeout, context.RequestAborted).ConfigureAwait(false);
 
         switch (reservation.Status)
         {
             case IdempotencyReservationStatus.Reserved:
-                await ExecuteAsync(context, store, recordKey, reservation.Token!, fingerprint).ConfigureAwait(false);
+                await ExecuteAsync(context, settings, store, recordKey, reservation.Token!, fingerprint).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.Completed:
                 if (IdempotencyEntrySerializer.TryRead(reservation.Payload.GetValueOrDefault(), out IdempotentResponse? stored))
@@ -132,7 +133,7 @@ internal sealed partial class IdempotencyMiddleware(
     /// keeps the key in flight until the lease expires, because the side effect may already have happened; an
     /// exception before that releases it.
     /// </summary>
-    private async Task ExecuteAsync(HttpContext context, IIdempotencyRecordStore store, IdempotencyRecordKey recordKey, string token, string fingerprint)
+    private async Task ExecuteAsync(HttpContext context, IdempotencyEndpointSettings settings, IIdempotencyRecordStore store, IdempotencyRecordKey recordKey, string token, string fingerprint)
     {
         IdempotencyExecutionFeature execution = new();
         context.Features.Set<IIdempotencyExecutionFeature>(execution);
@@ -159,7 +160,7 @@ internal sealed partial class IdempotencyMiddleware(
         try
         {
             bool filterInstalled = context.GetEndpoint()?.Metadata.GetMetadata<IdempotencyFilterInstalledMetadata>() is not null;
-            if (!await SettleAsync(context, store, recordKey, token, fingerprint, capture, execution.HandlerStarted, filterInstalled).ConfigureAwait(false))
+            if (!await SettleAsync(context, settings, store, recordKey, token, fingerprint, capture, execution.HandlerStarted, filterInstalled).ConfigureAwait(false))
                 LogStaleReservation(logger, context.Request.Path);
         }
         catch (Exception exception)
@@ -177,6 +178,7 @@ internal sealed partial class IdempotencyMiddleware(
     /// <returns><see langword="false"/> when the reservation was taken over after <c>InFlightTimeout</c>.</returns>
     private async ValueTask<bool> SettleAsync(
         HttpContext context,
+        IdempotencyEndpointSettings settings,
         IIdempotencyRecordStore store,
         IdempotencyRecordKey recordKey,
         string token,
@@ -196,7 +198,7 @@ internal sealed partial class IdempotencyMiddleware(
             return true;
         }
 
-        if (!options.ShouldStore(new IdempotencyOutcome { StatusCode = statusCode, HandlerStarted = handlerStarted }))
+        if (!settings.ShouldStore(new IdempotencyOutcome { StatusCode = statusCode, HandlerStarted = handlerStarted }))
             return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
 
         string? notStorable = NotStorableReason(response, capture);
@@ -226,7 +228,7 @@ internal sealed partial class IdempotencyMiddleware(
             token,
             fingerprint,
             IdempotencyEntrySerializer.Write(new IdempotentResponse(statusCode, headers, capture.ToArray())),
-            statusCode >= StatusCodes.Status500InternalServerError ? options.ServerErrorRetention : options.RetentionPeriod,
+            statusCode >= StatusCodes.Status500InternalServerError ? settings.ServerErrorRetention : settings.RetentionPeriod,
             CancellationToken.None).ConfigureAwait(false);
     }
 
@@ -243,25 +245,36 @@ internal sealed partial class IdempotencyMiddleware(
     }
 
     /// <summary>
-    /// Validates the endpoint's setup: without <see cref="IdempotencyFilterInstalledMetadata"/> only its 2xx responses
-    /// can be stored, which throws under <see cref="IdempotencyOptions.RequireExecutionFilter"/>. Warnings about the
-    /// filter and about a request timeout longer than the lease are logged on the endpoint's first request only.
+    /// Validates the endpoint's setup and returns its effective settings, merged from its
+    /// <see cref="IdempotentAttribute"/> metadata (the most specific value wins), its profile and the options.
+    /// Without <see cref="IdempotencyFilterInstalledMetadata"/> only its 2xx responses can be stored, which throws
+    /// under <see cref="IdempotencyOptions.RequireExecutionFilter"/>. The settings are cached per endpoint; warnings
+    /// about the filter and about a request timeout longer than the lease are logged when they are first resolved.
+    /// An unknown profile or invalid settings throw on every request to the endpoint.
     /// </summary>
-    private void CheckEndpoint(HttpContext context, Endpoint endpoint)
+    private IdempotencyEndpointSettings GetSettings(HttpContext context, Endpoint endpoint)
     {
         bool filterInstalled = endpoint.Metadata.GetMetadata<IdempotencyFilterInstalledMetadata>() is not null;
         if (!filterInstalled && options.RequireExecutionFilter)
             throw new InvalidOperationException(
                 $"The idempotent endpoint '{endpoint.DisplayName}' has no filter that marks its handler as started. Use .WithIdempotency() on Minimal API endpoints and [Idempotent] on MVC actions.");
 
-        if (_checkedEndpoints.TryGetValue(endpoint, out _) || !_checkedEndpoints.TryAdd(endpoint, Checked))
-            return;
+        if (_endpointSettings.TryGetValue(endpoint, out IdempotencyEndpointSettings? cached))
+            return cached;
 
         string name = endpoint.DisplayName ?? context.Request.Path.ToString();
+        IdempotencyEndpointOptions merged = new();
+        foreach (IdempotentAttribute attribute in endpoint.Metadata.GetOrderedMetadata<IdempotentAttribute>())
+            merged.MergeFrom(attribute.Overrides);
+        var settings = IdempotencyEndpointSettings.Resolve(options, merged, $"the endpoint '{name}'");
+        if (!_endpointSettings.TryAdd(endpoint, settings))
+            return _endpointSettings.TryGetValue(endpoint, out cached) ? cached : settings;
+
         if (!filterInstalled)
             LogExecutionFilterMissing(logger, name);
-        if (ResolveRequestTimeout(endpoint, context.RequestServices) is { } timeout && timeout > options.InFlightTimeout)
-            LogRequestTimeoutExceedsLease(logger, name, timeout, options.InFlightTimeout);
+        if (ResolveRequestTimeout(endpoint, context.RequestServices) is { } timeout && timeout > settings.InFlightTimeout)
+            LogRequestTimeoutExceedsLease(logger, name, timeout, settings.InFlightTimeout);
+        return settings;
     }
 
     /// <summary>The timeout <c>UseRequestTimeouts()</c> applies to the endpoint, resolved like that middleware does.</summary>

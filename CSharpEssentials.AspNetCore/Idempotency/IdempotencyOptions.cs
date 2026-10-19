@@ -174,6 +174,35 @@ public sealed class IdempotencyOptions
         ArgumentOutOfRangeException.ThrowIfGreaterThan(unscopedKeyBehavior, (uint)UnscopedKeyBehavior.Global);
         ArgumentException.ThrowIfNullOrEmpty(Namespace);
         ArgumentNullException.ThrowIfNull(ScopeResolver);
+        foreach (KeyValuePair<string, IdempotencyEndpointOptions> profile in Profiles)
+            IdempotencyEndpointSettings.Resolve(this, profile.Value, $"the idempotency profile '{profile.Key}'");
+    }
+
+    internal Dictionary<string, IdempotencyEndpointOptions> Profiles { get; } = [with(StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>
+    /// Registers a named set of settings that endpoints select with <c>.WithIdempotency("name")</c>,
+    /// <c>[Idempotent(Profile = "name")]</c> or <see cref="IdempotencyEndpointOptions.Profile"/>. A setting the
+    /// profile leaves <see langword="null"/> comes from these options; a setting the endpoint gives wins over the
+    /// profile. Names are compared case-insensitively. The profile merged with these options is validated in
+    /// <c>AddIdempotency</c> and throws <see cref="InvalidOperationException"/> when invalid, for example when its
+    /// <see cref="IdempotencyEndpointOptions.ServerErrorRetention"/> exceeds its retention.
+    /// </summary>
+    /// <exception cref="ArgumentException">The name is empty, already registered, or the profile names another profile.</exception>
+    public IdempotencyOptions AddProfile(string name, Action<IdempotencyEndpointOptions> configure)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        ArgumentNullException.ThrowIfNull(configure);
+        if (Profiles.ContainsKey(name))
+            throw new ArgumentException($"The idempotency profile '{name}' is already registered.", nameof(name));
+
+        IdempotencyEndpointOptions profile = new();
+        configure(profile);
+        if (profile.Profile is not null)
+            throw new ArgumentException($"The idempotency profile '{name}' cannot select another profile ('{profile.Profile}').", nameof(configure));
+
+        Profiles.Add(name, profile);
+        return this;
     }
 
     internal Action<IServiceCollection> StoreRegistration { get; private set; } =

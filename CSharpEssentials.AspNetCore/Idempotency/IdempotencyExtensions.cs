@@ -46,10 +46,39 @@ public static class IdempotencyExtensions
     /// <see cref="IdempotentAttribute"/>, otherwise only their 2xx responses are stored.
     /// </summary>
     public static TBuilder WithIdempotency<TBuilder>(this TBuilder builder)
+        where TBuilder : IEndpointConventionBuilder =>
+        builder.WithIdempotency(new IdempotentAttribute());
+
+    /// <summary>
+    /// Same as <see cref="WithIdempotency{TBuilder}(TBuilder)"/>, with settings that override the profile and
+    /// <see cref="IdempotencyOptions"/> for this endpoint or group (<see cref="IdempotencyEndpointOptions"/>). An
+    /// endpoint's own settings win over its group's.
+    /// </summary>
+    public static TBuilder WithIdempotency<TBuilder>(this TBuilder builder, Action<IdempotencyEndpointOptions> configure)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentNullException.ThrowIfNull(configure);
+        IdempotentAttribute attribute = new();
+        configure(attribute.Overrides);
+        return builder.WithIdempotency(attribute);
+    }
+
+    /// <summary>
+    /// Same as <see cref="WithIdempotency{TBuilder}(TBuilder)"/>, with the settings of the profile registered under
+    /// <paramref name="profile"/> by <see cref="IdempotencyOptions.AddProfile"/>.
+    /// </summary>
+    public static TBuilder WithIdempotency<TBuilder>(this TBuilder builder, string profile)
+        where TBuilder : IEndpointConventionBuilder
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(profile);
+        return builder.WithIdempotency(new IdempotentAttribute { Profile = profile });
+    }
+
+    private static TBuilder WithIdempotency<TBuilder>(this TBuilder builder, IdempotentAttribute attribute)
         where TBuilder : IEndpointConventionBuilder
     {
         ArgumentNullException.ThrowIfNull(builder);
-        builder.WithMetadata(new IdempotentAttribute());
+        builder.WithMetadata(attribute);
         builder.Add(static endpoint =>
         {
             if (endpoint.Metadata.Any(static metadata => metadata is ActionDescriptor))
