@@ -58,7 +58,7 @@ The middleware now knows whether the endpoint's handler started. `.WithIdempoten
 | Any status before the handler started (429 from a rate limiter, 503 from load shedding) | Released (unless 2xx) | Released |
 | Exception or abort after the handler started | Released, unless the response had started | Stays in flight until `InFlightTimeout` |
 | Exception before the handler started | Released | Same |
-| Handler ignores the abort and returns | Stored | Same |
+| Handler ignores the abort and returns | Stored | Stored; if writing the response fails after the abort, the key stays in flight until `InFlightTimeout` |
 | Response that cannot be stored (`Content-Encoding` set by the handler, `text/event-stream`, body larger than `MaxResponseBodySize`) | Released | Released on 4xx only; any other status stays in flight until `InFlightTimeout` |
 | Request with a key but no scope | Ran without idempotency | Same, and a warning `Idempotency.UnscopedKeySkipped` is logged (the key itself is never logged) |
 

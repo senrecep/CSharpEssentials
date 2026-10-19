@@ -184,7 +184,7 @@ What happens to the key after the first request:
 | Anything before the handler started (429 from a rate limiter, 503 from load shedding, a binding or model validation failure, an exception) | Released, so the client can retry |
 | Status in `NeverStoreStatusCodes` (503, 504) from a started handler | Stays in flight until `InFlightTimeout`: a retry gets 409, then runs the handler once more |
 | Exception or client abort after the handler started | Stays in flight until `InFlightTimeout`, because the work may be done |
-| Handler that ignores the abort and returns | Its response is stored as usual |
+| Handler that ignores the abort and returns | Its response is stored as usual. If writing the response fails after the abort, that is an exception after the handler started, so the key stays in flight |
 | Response that cannot be stored (`Content-Encoding` set by the handler, `text/event-stream`, body larger than `MaxResponseBodySize`) | 4xx releases; any other status stays in flight until `InFlightTimeout` |
 | Otherwise | `ShouldStore` decides. The default, `IdempotencyStorePolicies.Default`, stores 2xx and 3xx for `RetentionPeriod` and 5xx for `ServerErrorRetention` (10 minutes), and releases 4xx |
 
