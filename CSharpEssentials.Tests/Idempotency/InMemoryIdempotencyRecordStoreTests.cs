@@ -64,7 +64,7 @@ public sealed class InMemoryIdempotencyRecordStoreTests : IdempotencyRecordStore
     public async Task Parameterless_Constructor_Should_Use_The_System_Clock()
     {
         InMemoryIdempotencyRecordStore store = new();
-        IdempotencyRecordKey key = new("ns", "user-1", "k1");
+        IdempotencyRecordKey key = new("ns", IdempotencyScope.User("1"), "k1");
 
         IdempotencyRecordReservation first = await store.TryReserveAsync(key, "fp", TimeSpan.FromMinutes(1));
         IdempotencyRecordReservation second = await store.TryReserveAsync(key, "fp", TimeSpan.FromMinutes(1));

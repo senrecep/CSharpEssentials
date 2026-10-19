@@ -102,7 +102,7 @@ public sealed class IdempotencyKeysTests
             string expected = vector.GetProperty("storageKey").GetString()!;
             IdempotencyRecordKey key = scope == "global"
                 ? new(vector.GetProperty("namespace").GetString()!, IdempotencyScope.Global, vector.GetProperty("key").GetString()!)
-                : new(vector.GetProperty("namespace").GetString()!, scope, vector.GetProperty("key").GetString()!);
+                : IdempotencyRecordKey.FromStorageScope(vector.GetProperty("namespace").GetString()!, scope, vector.GetProperty("key").GetString()!);
 
             key.ToStorageKey(prefix).Should().Be(expected, name);
             if (prefix == defaultPrefix)

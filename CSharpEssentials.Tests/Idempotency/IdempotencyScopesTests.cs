@@ -13,7 +13,7 @@ public sealed class IdempotencyScopesTests
     {
         ClaimsPrincipal principal = Authenticated(new Claim(ClaimTypes.NameIdentifier, "u1"), new Claim("sub", "u2"));
 
-        IdempotencyScopes.User.Resolve(principal).Should().Be(IdempotencyScope.Of("user:u1"));
+        IdempotencyScopes.User.Resolve(principal).Should().Be(IdempotencyScope.User("u1"));
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public sealed class IdempotencyScopesTests
     {
         ClaimsPrincipal principal = Authenticated(new Claim("sub", "u2"));
 
-        IdempotencyScopes.User.Resolve(principal).Should().Be(IdempotencyScope.Of("user:u2"));
+        IdempotencyScopes.User.Resolve(principal).Should().Be(IdempotencyScope.User("u2"));
     }
 
     [Fact]
@@ -61,7 +61,7 @@ public sealed class IdempotencyScopesTests
     {
         IIdempotencyScopeResolver resolver = IdempotencyScopes.Tenant(TenantClaim);
 
-        resolver.Resolve(Authenticated(new Claim(TenantClaim, "t1"))).Should().Be(IdempotencyScope.Of("tenant:t1"));
+        resolver.Resolve(Authenticated(new Claim(TenantClaim, "t1"))).Should().Be(IdempotencyScope.Tenant("t1"));
         resolver.Resolve(Authenticated(new Claim(ClaimTypes.NameIdentifier, "u1"))).Should().BeNull();
     }
 
@@ -72,7 +72,8 @@ public sealed class IdempotencyScopesTests
 
         IdempotencyScope? scope = resolver.Resolve(Authenticated(new Claim("sub", "u1"), new Claim(TenantClaim, "t1")));
 
-        scope.Should().Be(IdempotencyScope.Of("9:tenant:t1/user:u1"));
+        scope.Should().Be(IdempotencyScope.UserAndTenant("u1", "t1"));
+        scope.Value.Value.Should().Be("9:tenant:t1/user:u1");
     }
 
     [Fact]
@@ -102,7 +103,7 @@ public sealed class IdempotencyScopesTests
             new Claim(IdempotencyScopes.ClientIdClaimType, "c1"),
             new Claim(IdempotencyScopes.AuthorizedPartyClaimType, "c2"));
 
-        IdempotencyScopes.Client.Resolve(principal).Should().Be(IdempotencyScope.Of("client:c1"));
+        IdempotencyScopes.Client.Resolve(principal).Should().Be(IdempotencyScope.Client("c1"));
     }
 
     [Fact]
@@ -110,7 +111,7 @@ public sealed class IdempotencyScopesTests
     {
         ClaimsPrincipal principal = Authenticated(new Claim(IdempotencyScopes.AuthorizedPartyClaimType, "c2"));
 
-        IdempotencyScopes.Client.Resolve(principal).Should().Be(IdempotencyScope.Of("client:c2"));
+        IdempotencyScopes.Client.Resolve(principal).Should().Be(IdempotencyScope.Client("c2"));
     }
 
     [Fact]
@@ -126,7 +127,7 @@ public sealed class IdempotencyScopesTests
     {
         IIdempotencyScopeResolver resolver = IdempotencyScopes.Custom("org", principal => principal?.FindFirst("org")?.Value);
 
-        resolver.Resolve(new ClaimsPrincipal(new ClaimsIdentity([new Claim("org", "o1")]))).Should().Be(IdempotencyScope.Of("org:o1"));
+        resolver.Resolve(new ClaimsPrincipal(new ClaimsIdentity([new Claim("org", "o1")]))).Should().Be(IdempotencyScope.Custom("org", "o1"));
         resolver.Resolve(Authenticated()).Should().BeNull();
         resolver.Resolve(null).Should().BeNull();
     }
@@ -166,14 +167,13 @@ public sealed class IdempotencyScopesTests
 
         scope.Should().Be(IdempotencyScope.Global);
         scope.IsGlobal.Should().BeTrue();
-        IdempotencyScope.Of("u1").IsGlobal.Should().BeFalse();
-        IdempotencyScope.Of("u1").Value.Should().Be("u1");
+        IdempotencyScope.User("u1").IsGlobal.Should().BeFalse();
     }
 
     [Fact]
     public void Scope_ToString_Should_Show_The_Value_Or_Global()
     {
-        IdempotencyScope.Of("u1").ToString().Should().Be("u1");
+        IdempotencyScope.User("u1").ToString().Should().Be("user:u1");
         IdempotencyScope.Global.ToString().Should().Be("(global)");
     }
 
@@ -195,6 +195,71 @@ public sealed class IdempotencyScopesTests
         emptyCustomKind.Should().Throw<ArgumentException>();
         nullCustomKind.Should().Throw<ArgumentException>();
         nullCustom.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Scope_Factories_Should_Prefix_The_Kind()
+    {
+        IdempotencyScope.User("42").Value.Should().Be("user:42");
+        IdempotencyScope.Tenant("42").Value.Should().Be("tenant:42");
+        IdempotencyScope.Client("42").Value.Should().Be("client:42");
+        IdempotencyScope.UserAndTenant("u1", "t1").Value.Should().Be("9:tenant:t1/user:u1");
+        IdempotencyScope.Custom("org", "42").Value.Should().Be("org:42");
+    }
+
+    [Fact]
+    public void Tenant_With_A_User_Like_Id_Should_Not_Collide_With_User()
+    {
+        IdempotencyScope tenant = IdempotencyScope.Tenant("user:42");
+        IdempotencyScope user = IdempotencyScope.User("42");
+
+        tenant.Value.Should().Be("tenant:user:42");
+        tenant.Should().NotBe(user);
+        new IdempotencyRecordKey("http", tenant, "k").ToStorageKey()
+            .Should().NotBe(new IdempotencyRecordKey("http", user, "k").ToStorageKey());
+    }
+
+    [Fact]
+    public void Custom_Should_Not_Mimic_A_Built_In_Length_Prefix()
+    {
+        Action allDigitKind = () => IdempotencyScope.Custom("9", "tenant:t1/user:u1");
+        Action allDigitResolverKind = () => IdempotencyScopes.Custom("9", _ => "tenant:t1/user:u1");
+
+        allDigitKind.Should().Throw<ArgumentException>().WithParameterName("kind");
+        allDigitResolverKind.Should().Throw<ArgumentException>().WithParameterName("kind");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("a:b")]
+    [InlineData(":")]
+    [InlineData("123")]
+    public void Custom_Should_Reject_An_Invalid_Kind(string kind)
+    {
+        Action scope = () => IdempotencyScope.Custom(kind, "v");
+        Action resolver = () => IdempotencyScopes.Custom(kind, _ => "v");
+
+        scope.Should().Throw<ArgumentException>().WithParameterName(nameof(kind));
+        resolver.Should().Throw<ArgumentException>().WithParameterName(nameof(kind));
+    }
+
+    [Fact]
+    public void Scope_Factories_Should_Reject_Empty_Ids()
+    {
+        Action[] factories =
+        [
+            () => IdempotencyScope.User(""),
+            () => IdempotencyScope.User(null!),
+            () => IdempotencyScope.Tenant(""),
+            () => IdempotencyScope.Client(""),
+            () => IdempotencyScope.UserAndTenant("", "t1"),
+            () => IdempotencyScope.UserAndTenant("u1", ""),
+            () => IdempotencyScope.Custom("org", ""),
+            () => IdempotencyScope.Custom(null!, "v"),
+        ];
+
+        foreach (Action factory in factories)
+            factory.Should().Throw<ArgumentException>();
     }
 
     private static ClaimsPrincipal Authenticated(params Claim[] claims) => new(new ClaimsIdentity(claims, "Test"));

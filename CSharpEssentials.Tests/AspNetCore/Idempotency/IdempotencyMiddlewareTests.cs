@@ -382,7 +382,7 @@ public sealed class IdempotencyMiddlewareTests
 
         cache.Should().NotBeNull();
         cache.Keys.Should().ContainSingle()
-            .Which.Should().Be(new IdempotencyRecordKey("orders-api", "user:alice", "key-1").ToStorageKey());
+            .Which.Should().Be(new IdempotencyRecordKey("orders-api", IdempotencyScope.User("alice"), "key-1").ToStorageKey());
     }
 
     [Fact]

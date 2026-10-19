@@ -8,7 +8,7 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void ToStorageKey_Should_Length_Prefix_Every_Part()
     {
-        IdempotencyRecordKey key = new("http", "alice", "order-42");
+        IdempotencyRecordKey key = Raw("http", "alice", "order-42");
 
         key.ToStorageKey().Should().Be("idem:v3:4:http|5:alice|8:order-42");
     }
@@ -26,7 +26,7 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void ToStorageKey_Should_Count_Utf8_Bytes()
     {
-        IdempotencyRecordKey key = new("http", "é", "ключ");
+        IdempotencyRecordKey key = Raw("http", "é", "ключ");
 
         key.ToStorageKey().Should().Be("idem:v3:4:http|2:é|8:ключ");
     }
@@ -34,7 +34,7 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void ToStorageKey_Should_Use_The_Given_Prefix()
     {
-        IdempotencyRecordKey key = new("http", "alice", "k");
+        IdempotencyRecordKey key = Raw("http", "alice", "k");
 
         key.ToStorageKey("app:").Should().Be("app:4:http|5:alice|1:k");
         key.ToStorageKey("").Should().Be("4:http|5:alice|1:k");
@@ -43,17 +43,17 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void Global_Key_Should_Never_Collide_With_A_Scoped_Key()
     {
-        string global = new IdempotencyRecordKey("http", (string?)null, "k").ToStorageKey();
+        string global = new IdempotencyRecordKey("http", null, "k").ToStorageKey();
         string[] scopes = ["-", "--", " ", "|", "0:", "1:-", "-|1:k", "global:", "(global)", "null"];
 
         foreach (string scope in scopes)
-            new IdempotencyRecordKey("http", scope, "k").ToStorageKey().Should().NotBe(global, $"scope '{scope}' is not global");
+            Raw("http", scope, "k").ToStorageKey().Should().NotBe(global, $"scope '{scope}' is not global");
     }
 
     [Fact]
     public void Constructor_Should_Reject_The_Reserved_Global_Scope()
     {
-        Action act = () => _ = new IdempotencyRecordKey("http", "global", "k");
+        Action act = () => Raw("http", "global", "k");
 
         act.Should().Throw<ArgumentException>().WithParameterName("scope");
     }
@@ -67,22 +67,52 @@ public sealed class IdempotencyRecordKeyTests
     }
 
     [Fact]
+    public void Scope_Factories_Should_Never_Produce_The_Global_Scope_Part()
+    {
+        IdempotencyScope[] scopes =
+        [
+            IdempotencyScope.User("global"),
+            IdempotencyScope.Tenant("global"),
+            IdempotencyScope.Client("global"),
+            IdempotencyScope.UserAndTenant("global", "global"),
+            IdempotencyScope.Custom("global", "global"),
+        ];
+        string global = new IdempotencyRecordKey("http", IdempotencyScope.Global, "k").ToStorageKey();
+
+        foreach (IdempotencyScope scope in scopes)
+        {
+            scope.Value.Should().Contain(":").And.NotBe("global");
+            new IdempotencyRecordKey("http", scope, "k").ToStorageKey().Should().NotBe(global);
+        }
+    }
+
+    [Fact]
+    public void Constructor_Should_Treat_Null_And_Global_Scope_Alike()
+    {
+        IdempotencyRecordKey fromNull = new("http", null, "k");
+        IdempotencyRecordKey fromGlobal = new("http", IdempotencyScope.Global, "k");
+
+        fromNull.Should().Be(fromGlobal);
+        fromNull.IsGlobal.Should().BeTrue();
+    }
+
+    [Fact]
     public void Distinct_Keys_Should_Never_Share_A_Storage_Key()
     {
         IdempotencyRecordKey[] keys =
         [
-            new("a|1:b", "c", "d"),
-            new("a", "b|1:c", "d"),
-            new("a", "b", "c|1:d"),
-            new("a", "b", "c"),
-            new("a", "-", "b"),
-            new("a", (string?)null, "b"),
-            new("a", (string?)null, "-|1:b"),
-            new("a|-", (string?)null, "b"),
-            new("1:a", "b", "c"),
-            new("a", "1:b", "c"),
-            new("ab", "c", "d"),
-            new("a", "bc", "d"),
+            Raw("a|1:b", "c", "d"),
+            Raw("a", "b|1:c", "d"),
+            Raw("a", "b", "c|1:d"),
+            Raw("a", "b", "c"),
+            Raw("a", "-", "b"),
+            Raw("a", null, "b"),
+            Raw("a", null, "-|1:b"),
+            Raw("a|-", null, "b"),
+            Raw("1:a", "b", "c"),
+            Raw("a", "1:b", "c"),
+            Raw("ab", "c", "d"),
+            Raw("a", "bc", "d"),
         ];
 
         keys.Select(key => key.ToStorageKey()).Should().OnlyHaveUniqueItems();
@@ -91,22 +121,22 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void Keys_With_The_Same_Parts_Should_Be_Equal()
     {
-        IdempotencyRecordKey fromString = new("http", "alice", "k");
-        IdempotencyRecordKey fromScope = new("http", IdempotencyScope.Of("alice"), "k");
+        IdempotencyRecordKey fromString = Raw("http", "user:alice", "k");
+        IdempotencyRecordKey fromScope = new("http", IdempotencyScope.User("alice"), "k");
 
         fromString.Should().Be(fromScope);
         fromString.GetHashCode().Should().Be(fromScope.GetHashCode());
-        new IdempotencyRecordKey("http", (string?)null, "k").Should().NotBe(new IdempotencyRecordKey("http", "-", "k"));
+        new IdempotencyRecordKey("http", null, "k").Should().NotBe(Raw("http", "-", "k"));
     }
 
     [Fact]
     public void Constructor_Should_Reject_Empty_Parts()
     {
-        Action emptyNamespace = () => _ = new IdempotencyRecordKey("", "s", "k");
-        Action nullNamespace = () => _ = new IdempotencyRecordKey(null!, "s", "k");
-        Action emptyScope = () => _ = new IdempotencyRecordKey("ns", "", "k");
-        Action emptyKey = () => _ = new IdempotencyRecordKey("ns", "s", "");
-        Action nullKey = () => _ = new IdempotencyRecordKey("ns", "s", null!);
+        Action emptyNamespace = () => Raw("", "s", "k");
+        Action nullNamespace = () => Raw(null!, "s", "k");
+        Action emptyScope = () => Raw("ns", "", "k");
+        Action emptyKey = () => Raw("ns", "s", "");
+        Action nullKey = () => Raw("ns", "s", null!);
 
         emptyNamespace.Should().Throw<ArgumentException>();
         nullNamespace.Should().Throw<ArgumentException>();
@@ -118,7 +148,7 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void ToStorageKey_Should_Reject_A_Lone_Surrogate()
     {
-        IdempotencyRecordKey key = new("http", "alice", "k\uD800");
+        IdempotencyRecordKey key = Raw("http", "alice", "k\uD800");
 
         Action act = () => key.ToStorageKey();
 
@@ -128,8 +158,11 @@ public sealed class IdempotencyRecordKeyTests
     [Fact]
     public void ToStorageKey_Should_Reject_A_Null_Prefix()
     {
-        Action act = () => new IdempotencyRecordKey("http", "alice", "k").ToStorageKey(null!);
+        Action act = () => Raw("http", "alice", "k").ToStorageKey(null!);
 
         act.Should().Throw<ArgumentNullException>();
     }
+
+    private static IdempotencyRecordKey Raw(string @namespace, string? scope, string key) =>
+        IdempotencyRecordKey.FromStorageScope(@namespace, scope, key);
 }

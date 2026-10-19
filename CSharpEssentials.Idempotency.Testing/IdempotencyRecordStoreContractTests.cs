@@ -19,7 +19,7 @@ public abstract class IdempotencyRecordStoreContractTests
 {
     private const int ParallelReservations = 32;
 
-    /// <summary>Namespace of every key created by <see cref="Key"/>; unique per test instance.</summary>
+    /// <summary>Namespace of every key created by <see cref="Key(string, IdempotencyScope?)"/>; unique per test instance.</summary>
     protected string Namespace { get; } = "contract-" + Guid.NewGuid().ToString("N");
 
     /// <summary>
@@ -56,8 +56,11 @@ public abstract class IdempotencyRecordStoreContractTests
     /// <summary>Creates the store under test. Its leases and retention must follow <paramref name="timeProvider"/>.</summary>
     protected abstract IIdempotencyRecordStore CreateStore(TimeProvider timeProvider);
 
+    /// <summary>A key in <see cref="Namespace"/> owned by the user <c>user-1</c>.</summary>
+    protected IdempotencyRecordKey Key(string key) => Key(key, IdempotencyScope.User("user-1"));
+
     /// <summary>A key in <see cref="Namespace"/>; <paramref name="scope"/> <see langword="null"/> gives a global key.</summary>
-    protected IdempotencyRecordKey Key(string key, string? scope = "user-1") => new(Namespace, scope, key);
+    protected IdempotencyRecordKey Key(string key, IdempotencyScope? scope) => new(Namespace, scope, key);
 
     /// <summary>Moves the fake clock forward, or waits with <see cref="UseRealClock"/>.</summary>
     protected Task AdvanceAsync(TimeSpan duration)
@@ -227,7 +230,7 @@ public abstract class IdempotencyRecordStoreContractTests
         await ReserveAsync(Key("k1"));
 
         IdempotencyRecordReservation other =
-            await Store.TryReserveAsync(new IdempotencyRecordKey(Namespace + "-other", "user-1", "k1"), "other", Lease);
+            await Store.TryReserveAsync(new IdempotencyRecordKey(Namespace + "-other", IdempotencyScope.User("user-1"), "k1"), "other", Lease);
 
         Assert.Equal(IdempotencyReservationStatus.Reserved, other.Status);
     }
@@ -235,9 +238,9 @@ public abstract class IdempotencyRecordStoreContractTests
     [Fact]
     public async Task Scopes_Should_Be_Independent()
     {
-        await ReserveAsync(Key("k1", "user-1"));
+        await ReserveAsync(Key("k1", IdempotencyScope.User("user-1")));
 
-        IdempotencyRecordReservation other = await Store.TryReserveAsync(Key("k1", "user-2"), "other", Lease);
+        IdempotencyRecordReservation other = await Store.TryReserveAsync(Key("k1", IdempotencyScope.User("user-2")), "other", Lease);
 
         Assert.Equal(IdempotencyReservationStatus.Reserved, other.Status);
     }
@@ -248,8 +251,8 @@ public abstract class IdempotencyRecordStoreContractTests
         string token = await ReserveAsync(Key("k1", scope: null));
         Assert.True(await Store.CompleteAsync(Key("k1", scope: null), token, "fp", Payload("global"), Retention));
 
-        IdempotencyRecordReservation marker = await Store.TryReserveAsync(Key("k1", "-"), "other", Lease);
-        IdempotencyRecordReservation blank = await Store.TryReserveAsync(Key("k1", " "), "other", Lease);
+        IdempotencyRecordReservation marker = await Store.TryReserveAsync(Key("k1", IdempotencyScope.User("-")), "other", Lease);
+        IdempotencyRecordReservation blank = await Store.TryReserveAsync(Key("k1", IdempotencyScope.User(" ")), "other", Lease);
         IdempotencyRecordReservation global = await Store.TryReserveAsync(Key("k1", scope: null), "fp", Lease);
 
         Assert.Equal(IdempotencyReservationStatus.Reserved, marker.Status);
@@ -260,10 +263,10 @@ public abstract class IdempotencyRecordStoreContractTests
     [Fact]
     public async Task Parts_Containing_Separators_Should_Not_Collide()
     {
-        await ReserveAsync(new IdempotencyRecordKey(Namespace, "a|1:b", "c"));
+        await ReserveAsync(new IdempotencyRecordKey(Namespace, IdempotencyScope.User("a|1:b"), "c"));
 
         IdempotencyRecordReservation shifted =
-            await Store.TryReserveAsync(new IdempotencyRecordKey(Namespace, "a", "b|1:c"), "other", Lease);
+            await Store.TryReserveAsync(new IdempotencyRecordKey(Namespace, IdempotencyScope.User("a"), "b|1:c"), "other", Lease);
 
         Assert.Equal(IdempotencyReservationStatus.Reserved, shifted.Status);
     }

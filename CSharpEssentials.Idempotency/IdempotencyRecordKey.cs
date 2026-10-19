@@ -11,8 +11,8 @@ namespace CSharpEssentials.Idempotency;
 /// <c>{prefix}{n}:{namespace}|{scope part}|{n}:{key}</c>, where every <c>{n}</c> is the UTF-8 byte length of the value
 /// after it. A global key writes <c>global</c> as its scope. The lengths make every part end where it should: two
 /// different triples never give the same storage key, whatever characters they contain. The scope <c>global</c> is
-/// reserved for global keys and rejected as an owner, and the scopes of <see cref="IdempotencyScopes"/> start with
-/// their kind (<c>user:</c>, <c>tenant:</c>, <c>client:</c>).
+/// reserved for global keys: every scope built by the <see cref="IdempotencyScope"/> factories starts with its kind
+/// (<c>user:</c>, <c>tenant:</c>, <c>client:</c>, <c>{kind}:</c>) or a length prefix, so none of them is <c>global</c>.
 /// </para>
 /// </summary>
 public sealed record IdempotencyRecordKey
@@ -28,11 +28,16 @@ public sealed record IdempotencyRecordKey
 
     /// <param name="namespace">The caller that owns the key space, for example <c>http</c>. Must not be empty.</param>
     /// <param name="scope">
-    /// The owner of the key, or <see langword="null"/> for a global key. Must not be empty or <c>global</c>, which is
-    /// the scope part of a global key.
+    /// The owner of the key, built by the <see cref="IdempotencyScope"/> factories; <see langword="null"/> or
+    /// <see cref="IdempotencyScope.Global"/> gives a global key.
     /// </param>
     /// <param name="key">The client's idempotency key. Must not be empty.</param>
-    public IdempotencyRecordKey(string @namespace, string? scope, string key)
+    public IdempotencyRecordKey(string @namespace, IdempotencyScope? scope, string key)
+        : this(@namespace, scope?.Value, key)
+    {
+    }
+
+    private IdempotencyRecordKey(string @namespace, string? scope, string key)
     {
         Guard.NotNullOrEmpty(@namespace);
         Guard.NotNullOrEmpty(key);
@@ -46,18 +51,20 @@ public sealed record IdempotencyRecordKey
         Key = key;
     }
 
-    /// <param name="namespace">The caller that owns the key space, for example <c>http</c>. Must not be empty.</param>
-    /// <param name="scope">The resolved scope; <see cref="IdempotencyScope.Global"/> gives a global key.</param>
-    /// <param name="key">The client's idempotency key. Must not be empty.</param>
-    public IdempotencyRecordKey(string @namespace, IdempotencyScope scope, string key)
-        : this(@namespace, scope.Value, key)
-    {
-    }
+    /// <summary>
+    /// A key from the storage form of its scope (<see cref="IdempotencyScope.Value"/>), for code that reads keys back and
+    /// for tests of the storage key encoding. Public code passes an <see cref="IdempotencyScope"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">A part is empty, or <paramref name="scope"/> is <c>global</c>.</exception>
+    internal static IdempotencyRecordKey FromStorageScope(string @namespace, string? scope, string key) => new(@namespace, scope, key);
 
     /// <summary>The caller that owns the key space, for example <c>http</c>.</summary>
     public string Namespace { get; }
 
-    /// <summary>The owner of the key; <see langword="null"/> for a global key shared by every caller.</summary>
+    /// <summary>
+    /// The owner of the key in its storage form (<see cref="IdempotencyScope.Value"/>); <see langword="null"/> for a
+    /// global key shared by every caller.
+    /// </summary>
     public string? Scope { get; }
 
     /// <summary>The client's idempotency key.</summary>
