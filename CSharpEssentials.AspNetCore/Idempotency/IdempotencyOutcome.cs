@@ -11,8 +11,9 @@ public readonly record struct IdempotencyOutcome
 
     /// <summary>
     /// Whether the endpoint's handler started (<see cref="IIdempotencyExecutionFeature.HandlerStarted"/>).
-    /// <c>UseIdempotency()</c> releases a request whose handler did not start before it asks the policy, so the
-    /// middleware always passes <see langword="true"/>; the value is there for policies shared with other hosts.
+    /// <c>UseIdempotency()</c> releases a request whose handler did not start before it asks the policy, so it passes
+    /// <see langword="true"/>, except for a 2xx from an endpoint without the execution filter
+    /// (<see cref="IdempotencyFilterInstalledMetadata"/>), where it is unknown and <see langword="false"/>.
     /// </summary>
     public bool HandlerStarted { get; init; }
 }

@@ -43,7 +43,7 @@ public static class IdempotencyExtensions
     /// Opts an endpoint or a route group into <c>Idempotency-Key</c> handling. On Minimal API endpoints it also adds
     /// the endpoint filter that sets <see cref="IIdempotencyExecutionFeature.HandlerStarted"/>; endpoint filters added
     /// after this call run inside it. MVC actions ignore endpoint filters: mark them with
-    /// <see cref="IdempotentAttribute"/>, otherwise their handler is never seen as started.
+    /// <see cref="IdempotentAttribute"/>, otherwise only their 2xx responses are stored.
     /// </summary>
     public static TBuilder WithIdempotency<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder

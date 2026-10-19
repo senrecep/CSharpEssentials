@@ -158,7 +158,8 @@ internal sealed partial class IdempotencyMiddleware(
         response.Body = original;
         try
         {
-            if (!await SettleAsync(context, store, recordKey, token, fingerprint, capture, execution.HandlerStarted).ConfigureAwait(false))
+            bool filterInstalled = context.GetEndpoint()?.Metadata.GetMetadata<IdempotencyFilterInstalledMetadata>() is not null;
+            if (!await SettleAsync(context, store, recordKey, token, fingerprint, capture, execution.HandlerStarted, filterInstalled).ConfigureAwait(false))
                 LogStaleReservation(logger, context.Request.Path);
         }
         catch (Exception exception)
@@ -170,6 +171,8 @@ internal sealed partial class IdempotencyMiddleware(
     /// <summary>
     /// Stores, releases or keeps the reservation for a request that completed. The work is done, so the store calls
     /// ignore <see cref="HttpContext.RequestAborted"/>: a client that went away still gets its outcome on retry.
+    /// An endpoint without the execution filter cannot report whether its handler started, so a 2xx from it is
+    /// settled as a started handler's response and every other status releases the key.
     /// </summary>
     /// <returns><see langword="false"/> when the reservation was taken over after <c>InFlightTimeout</c>.</returns>
     private async ValueTask<bool> SettleAsync(
@@ -179,11 +182,12 @@ internal sealed partial class IdempotencyMiddleware(
         string token,
         string fingerprint,
         ResponseCaptureStream capture,
-        bool handlerStarted)
+        bool handlerStarted,
+        bool filterInstalled)
     {
         HttpResponse response = context.Response;
         int statusCode = response.StatusCode;
-        if (!handlerStarted)
+        if (!handlerStarted && (filterInstalled || statusCode is < 200 or >= 300))
             return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
 
         if (options.NeverStoreStatusCodes.Contains(statusCode))
@@ -192,7 +196,7 @@ internal sealed partial class IdempotencyMiddleware(
             return true;
         }
 
-        if (!options.ShouldStore(new IdempotencyOutcome { StatusCode = statusCode, HandlerStarted = true }))
+        if (!options.ShouldStore(new IdempotencyOutcome { StatusCode = statusCode, HandlerStarted = handlerStarted }))
             return await store.ReleaseAsync(recordKey, token, CancellationToken.None).ConfigureAwait(false);
 
         string? notStorable = NotStorableReason(response, capture);
@@ -239,8 +243,8 @@ internal sealed partial class IdempotencyMiddleware(
     }
 
     /// <summary>
-    /// Validates the endpoint's setup: without <see cref="IdempotencyFilterInstalledMetadata"/> its handler is never
-    /// seen as started, which throws under <see cref="IdempotencyOptions.RequireExecutionFilter"/>. Warnings about the
+    /// Validates the endpoint's setup: without <see cref="IdempotencyFilterInstalledMetadata"/> only its 2xx responses
+    /// can be stored, which throws under <see cref="IdempotencyOptions.RequireExecutionFilter"/>. Warnings about the
     /// filter and about a request timeout longer than the lease are logged on the endpoint's first request only.
     /// </summary>
     private void CheckEndpoint(HttpContext context, Endpoint endpoint)
@@ -394,7 +398,7 @@ internal sealed partial class IdempotencyMiddleware(
     private static partial void LogReleaseFailed(ILogger logger, Exception exception, PathString path);
 
     [LoggerMessage(EventId = 7008, EventName = "Idempotency.ExecutionFilterMissing", Level = LogLevel.Warning,
-        Message = "The idempotent endpoint {Endpoint} has no filter that marks its handler as started, so every outcome releases its key and failures can run again. Use .WithIdempotency() on Minimal API endpoints and [Idempotent] on MVC actions.")]
+        Message = "The idempotent endpoint {Endpoint} has no filter that marks its handler as started, so only its 2xx responses are stored and every other outcome releases its key, which lets a failure after a side effect run again. Use .WithIdempotency() on Minimal API endpoints and [Idempotent] on MVC actions.")]
     private static partial void LogExecutionFilterMissing(ILogger logger, string endpoint);
 
     [LoggerMessage(EventId = 7009, EventName = "Idempotency.RequestTimeoutExceedsLease", Level = LogLevel.Warning,

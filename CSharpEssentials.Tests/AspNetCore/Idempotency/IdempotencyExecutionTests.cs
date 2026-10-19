@@ -56,6 +56,44 @@ public sealed class IdempotencyExecutionTests
         string path = api == "mvc" ? $"/mvc/orders/matrix?outcome={outcome}" : $"/matrix?outcome={outcome}";
         string? stageHeader = stage == "middleware" ? stage : null;
 
+        await AssertSettledAsync(host, path, stageHeader, outcome, expected);
+    }
+
+    public static TheoryData<string, string, string> MatrixWithoutFilter()
+    {
+        TheoryData<string, string, string> data = [];
+        foreach (string api in new[] { "minimal", "mvc" })
+        {
+            foreach (string outcome in new[] { "201", "303", "400", "500", "503", "504", IdempotencyOutcomes.Throw, IdempotencyOutcomes.Abort })
+                data.Add(api, outcome, outcome == "201" ? Stored : Released);
+        }
+
+        return data;
+    }
+
+    [Theory]
+    [MemberData(nameof(MatrixWithoutFilter))]
+    public async Task Outcome_Of_An_Endpoint_Without_The_Filter_Should_Store_Only_2xx(string api, string outcome, string expected)
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(
+            configureEndpoints: app => app.MapControllers().WithIdempotency());
+        string path = api == "mvc" ? $"/mvc/plain/matrix?outcome={outcome}" : $"/no-filter?outcome={outcome}";
+
+        await AssertSettledAsync(host, path, null, outcome, expected);
+    }
+
+    [Theory]
+    [InlineData("201", InFlight)]
+    [InlineData("500", Released)]
+    public async Task Response_That_Cannot_Be_Stored_From_An_Endpoint_Without_The_Filter_Should_Stay_In_Flight_Only_On_2xx(string outcome, string expected)
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options => options.MaxResponseBodySize = 8);
+
+        await AssertSettledAsync(host, $"/no-filter?outcome={outcome}", null, outcome, expected);
+    }
+
+    private static async Task AssertSettledAsync(IdempotencyTestHost host, string path, string? stageHeader, string outcome, string expected)
+    {
         IdempotencyResponse? first = await SendAsync(host, path, stageHeader);
         IdempotencyResponse? retry = await SendAsync(host, path, stageHeader);
 
@@ -443,15 +481,14 @@ public sealed class IdempotencyExecutionTests
     }
 
     [Fact]
-    public async Task Endpoint_Without_The_Filter_Should_Release_Every_Outcome_And_Warn_Once()
+    public async Task Endpoint_Without_The_Filter_Should_Warn_Once()
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync();
 
-        await host.PostAsync("/no-filter?status=201");
-        IdempotencyResponse retry = await host.PostAsync("/no-filter?status=201");
+        await host.PostAsync("/no-filter?outcome=500");
+        await host.PostAsync("/no-filter?outcome=500");
+        await host.PostAsync("/no-filter?outcome=201", key: "key-2");
 
-        retry.Replayed.Should().BeFalse();
-        host.Probe.Executions.Should().Be(2);
         host.Logs.Named("Idempotency.ExecutionFilterMissing").Should().ContainSingle()
             .Which.Message.Should().Contain("/no-filter");
     }
@@ -475,7 +512,7 @@ public sealed class IdempotencyExecutionTests
                 }
             }));
 
-        IdempotencyResponse response = await host.PostAsync("/no-filter?status=201");
+        IdempotencyResponse response = await host.PostAsync("/no-filter?outcome=201");
         IdempotencyResponse filtered = await host.PostAsync("/orders", key: "key-2");
 
         response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
@@ -486,7 +523,7 @@ public sealed class IdempotencyExecutionTests
     }
 
     [Fact]
-    public async Task Mvc_Action_Opted_In_By_WithIdempotency_Without_The_Attribute_Should_Warn()
+    public async Task Mvc_Action_Opted_In_By_WithIdempotency_Without_The_Attribute_Should_Warn_And_Store_2xx()
     {
         await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(
             configureEndpoints: app => app.MapControllers().WithIdempotency());
@@ -496,9 +533,9 @@ public sealed class IdempotencyExecutionTests
         await host.PostAsync("/mvc/orders", key: "key-2");
         IdempotencyResponse attributed = await host.PostAsync("/mvc/orders", key: "key-2");
 
-        retry.Replayed.Should().BeFalse();
+        retry.Replayed.Should().BeTrue();
         attributed.Replayed.Should().BeTrue();
-        host.Probe.Executions.Should().Be(3);
+        host.Probe.Executions.Should().Be(2);
         host.Logs.Named("Idempotency.ExecutionFilterMissing").Should().ContainSingle()
             .Which.Message.Should().Contain(nameof(PlainOrdersController));
     }

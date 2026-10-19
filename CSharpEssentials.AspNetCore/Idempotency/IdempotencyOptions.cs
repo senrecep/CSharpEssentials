@@ -78,7 +78,9 @@ public sealed class IdempotencyOptions
     /// Decides whether a response is stored and replayed; when it returns <see langword="false"/> the key is released,
     /// so the client can retry with it. It is asked only after the handler started and only for statuses outside
     /// <see cref="NeverStoreStatusCodes"/>: a request whose handler did not start is always released, and a status in
-    /// <see cref="NeverStoreStatusCodes"/> keeps the key in flight. A stored response that cannot be captured (encoded
+    /// <see cref="NeverStoreStatusCodes"/> keeps the key in flight. On an endpoint without the execution filter
+    /// (<see cref="IdempotencyFilterInstalledMetadata"/>) it is asked for 2xx only, with
+    /// <see cref="IdempotencyOutcome.HandlerStarted"/> <see langword="false"/>; other statuses release the key. A stored response that cannot be captured (encoded
     /// by the handler, <c>text/event-stream</c>, larger than <see cref="MaxResponseBodySize"/>) is not stored either;
     /// it keeps the key in flight unless its status is 4xx. Default: <see cref="IdempotencyStorePolicies.Default"/>.
     /// </summary>
@@ -99,8 +101,8 @@ public sealed class IdempotencyOptions
     /// <summary>
     /// Throws <see cref="InvalidOperationException"/> on requests to an idempotent endpoint that lacks the filter
     /// which sets <see cref="IIdempotencyExecutionFeature.HandlerStarted"/> (<see cref="IdempotencyFilterInstalledMetadata"/>),
-    /// instead of logging a warning once per endpoint. Without the filter every outcome of that endpoint releases its
-    /// key. Default: <see langword="false"/>.
+    /// instead of logging a warning once per endpoint. Without the filter only 2xx responses of that endpoint are
+    /// stored; every other outcome releases its key. Default: <see langword="false"/>.
     /// </summary>
     public bool RequireExecutionFilter { get; set; }
 

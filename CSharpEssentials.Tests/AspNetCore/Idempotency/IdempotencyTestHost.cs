@@ -218,10 +218,10 @@ internal sealed class IdempotencyTestHost : IAsyncDisposable
                 context.HttpContext.RequestServices.GetRequiredService<IdempotencyProbe>().Execute();
                 return ValueTask.FromResult<object?>(HttpResults.StatusCode(StatusCodes.Status500InternalServerError));
             });
-        app.MapPost("/no-filter", (int status, IdempotencyProbe probe) =>
+        app.MapPost("/no-filter", async (HttpContext context, string outcome, IdempotencyProbe probe) =>
         {
             probe.Execute();
-            return HttpResults.StatusCode(status);
+            await IdempotencyOutcomes.RunAsync(context, outcome);
         }).WithMetadata(new IdempotentAttribute());
         app.MapPost("/raw", (RequestDelegate)(context =>
         {

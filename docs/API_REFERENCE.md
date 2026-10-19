@@ -1495,7 +1495,7 @@ The store, scope resolvers and keys come from `CSharpEssentials.Idempotency` (se
 | `RequireKey` | `false` | `true`: a missing key returns 400 |
 | `ShouldStore` | `IdempotencyStorePolicies.Default` | `Func<IdempotencyOutcome, bool>`, asked only after the handler started and for statuses outside `NeverStoreStatusCodes`; `false` releases the key |
 | `NeverStoreStatusCodes` | 503, 504 | From a started handler: not stored, not released; the key stays in flight until `InFlightTimeout`. Not empty, codes in 100-599 |
-| `RequireExecutionFilter` | `false` | `true`: an idempotent endpoint without the execution filter throws instead of logging a warning once |
+| `RequireExecutionFilter` | `false` | `true`: an idempotent endpoint without the execution filter throws instead of logging a warning once. Without the filter only 2xx is stored; every other outcome releases the key |
 | `Namespace` | `http` | Namespace of the records written by the middleware |
 | `ScopeResolver` | `IdempotencyScopes.User` (`NameIdentifier`, then `sub`) | Resolved against `HttpContext.User`; an unresolved (`null`) scope follows `UnscopedKeyBehavior` |
 | `UnscopedKeyBehavior` | `Skip` | `Skip`: run without idempotency and log `Idempotency.UnscopedKeySkipped`; `Reject`: 400 `Idempotency.ScopeRequired`; `Global`: use a global key |
