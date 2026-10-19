@@ -6,8 +6,8 @@
     <Title>CSharp Essentials Idempotency</Title>
     <Product>CSharp Essentials Idempotency</Product>
     <Description>Transport-independent idempotency core: a record store contract with token-fenced reservations and
-      opaque byte payloads, in-memory and IDistributedCache stores, claim-based scope resolvers and deterministic
-      idempotency keys (canonical, hashed and UUIDv5).</Description>
+      opaque byte payloads, in-memory and IDistributedCache stores, claim-based scope resolvers, deterministic
+      idempotency keys (canonical, hashed and UUIDv5), and an executor that runs an operation at most once.</Description>
     <PackageTags>Idempotency,IdempotencyKey,Deduplication,UUIDv5,DistributedCache,CSharpEssentials</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>Readme.MD</PackageReadmeFile>
@@ -28,6 +28,8 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
