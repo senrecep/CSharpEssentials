@@ -71,6 +71,21 @@ public sealed class IdempotencyExecutorOptions
         return this;
     }
 
+    /// <summary>
+    /// The mode <paramref name="operation"/> runs in: its own <see cref="IdempotencyExecutionOptions.Mode"/>, else the
+    /// mode of its profile, else <see cref="Mode"/>. A caller that prepares an operation before
+    /// <see cref="IIdempotencyExecutor.ExecuteAsync{TResult}"/>, for example by computing its fingerprint, uses it to skip
+    /// that work in <see cref="IdempotencyMode.Off"/> and to decide whether a problem found while preparing blocks the
+    /// operation (<see cref="IdempotencyMode.Enforce"/>) or is only logged (<see cref="IdempotencyMode.Observe"/>).
+    /// </summary>
+    /// <param name="operation">The settings of the operation, or <see langword="null"/> for these defaults.</param>
+    /// <exception cref="InvalidOperationException">The operation names a profile that is not registered.</exception>
+    public IdempotencyMode ResolveMode(IdempotencyExecutionOptions? operation)
+    {
+        IdempotencyExecutionOptions? profile = IdempotencyExecutionSettings.FindProfile(this, operation, "the idempotent operation");
+        return operation?.Mode ?? profile?.Mode ?? Mode;
+    }
+
     /// <summary>Validates these options and every profile merged with them.</summary>
     /// <exception cref="InvalidOperationException">The options or a profile are invalid.</exception>
     internal void Validate()

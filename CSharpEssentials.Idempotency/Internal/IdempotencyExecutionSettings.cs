@@ -25,14 +25,7 @@ internal readonly struct IdempotencyExecutionSettings
     /// <exception cref="InvalidOperationException">The profile is unknown or the merged settings are invalid.</exception>
     internal static IdempotencyExecutionSettings Resolve(IdempotencyExecutorOptions options, IdempotencyExecutionOptions? operation, string owner)
     {
-        IdempotencyExecutionOptions? profile = null;
-        if (operation?.Profile is { } profileName && !options.Profiles.TryGetValue(profileName, out profile))
-        {
-            string known = string.Join(", ", options.Profiles.Keys.Select(static name => $"'{name}'"));
-            throw new InvalidOperationException(
-                $"{owner} uses the idempotency profile '{profileName}', which is not registered. Register it with AddIdempotencyExecutor(o => o.AddProfile(\"{profileName}\", ...)). Registered profiles: {known}.");
-        }
-
+        IdempotencyExecutionOptions? profile = FindProfile(options, operation, owner);
         var settings = new IdempotencyExecutionSettings(
             operation?.Mode ?? profile?.Mode ?? options.Mode,
             operation?.Retention ?? profile?.Retention ?? options.Retention,
@@ -41,6 +34,20 @@ internal readonly struct IdempotencyExecutionSettings
             operation?.StoreKey ?? profile?.StoreKey);
         settings.Validate(options.MaxLease, owner);
         return settings;
+    }
+
+    /// <exception cref="InvalidOperationException">The operation names a profile that is not registered.</exception>
+    internal static IdempotencyExecutionOptions? FindProfile(IdempotencyExecutorOptions options, IdempotencyExecutionOptions? operation, string owner)
+    {
+        IdempotencyExecutionOptions? profile = null;
+        if (operation?.Profile is { } profileName && !options.Profiles.TryGetValue(profileName, out profile))
+        {
+            string known = string.Join(", ", options.Profiles.Keys.Select(static name => $"'{name}'"));
+            throw new InvalidOperationException(
+                $"{owner} uses the idempotency profile '{profileName}', which is not registered. Register it with AddIdempotencyExecutor(o => o.AddProfile(\"{profileName}\", ...)). Registered profiles: {known}.");
+        }
+
+        return profile;
     }
 
     private void Validate(TimeSpan maxLease, string owner)

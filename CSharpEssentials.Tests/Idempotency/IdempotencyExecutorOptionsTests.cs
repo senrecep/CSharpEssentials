@@ -64,6 +64,31 @@ public sealed class IdempotencyExecutorOptionsTests
     }
 
     [Fact]
+    public void ResolveMode_Should_Prefer_The_Operation_Then_The_Profile_Then_The_Default()
+    {
+        IdempotencyExecutorOptions options = new() { Mode = IdempotencyMode.Enforce };
+        options.AddProfile("quiet", profile => profile.Mode = IdempotencyMode.Off);
+
+        IdempotencyMode fromDefault = options.ResolveMode(null);
+        IdempotencyMode fromProfile = options.ResolveMode(new IdempotencyExecutionOptions { Profile = "quiet" });
+        IdempotencyMode fromOperation = options.ResolveMode(new IdempotencyExecutionOptions { Profile = "quiet", Mode = IdempotencyMode.Observe });
+
+        fromDefault.Should().Be(IdempotencyMode.Enforce);
+        fromProfile.Should().Be(IdempotencyMode.Off);
+        fromOperation.Should().Be(IdempotencyMode.Observe);
+    }
+
+    [Fact]
+    public void ResolveMode_Should_Throw_For_An_Unknown_Profile()
+    {
+        IdempotencyExecutorOptions options = new();
+
+        Action act = () => options.ResolveMode(new IdempotencyExecutionOptions { Profile = "missing", Mode = IdempotencyMode.Off });
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*profile 'missing'*not registered*");
+    }
+
+    [Fact]
     public void AddIdempotencyExecutor_Should_Register_The_Executor_And_A_Default_Store()
     {
         ServiceCollection services = new();
