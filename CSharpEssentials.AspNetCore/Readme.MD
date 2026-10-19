@@ -163,28 +163,52 @@ app.MapPost("/orders", CreateOrder).WithIdempotency();
 public IActionResult Create(CreateOrderRequest request) => ...;
 ```
 
+`.WithIdempotency()` (Minimal API endpoints and groups) and `[Idempotent]` (MVC) also install a filter that marks the handler as started right before it runs. The middleware uses that mark to tell a failure of the handler from a response produced before it, such as a rate limiter rejection, a binding failure or MVC model validation.
+
 How a request with an `Idempotency-Key` header is handled:
 
 | Situation | Response |
 |-----------|----------|
-| First request | The handler runs. A response that `ShouldStore` accepts (default: 2xx) is stored for `RetentionPeriod` |
+| First request | The handler runs, and the key is settled as in the next table |
 | Same key, same request, completed | The stored status, body and allowlisted headers, plus `Idempotency-Replayed: true`. The handler does not run |
 | Same key, same request, still running | 409 with `Retry-After` |
 | Same key, different method, path, query or body | 422 |
 | Missing key | Passes through (400 with `RequireKey`) |
 | Empty key, key longer than `MaxKeyLength` (255), several key headers | 400 |
-| Handler throws before the response started, or `ShouldStore` rejects the status | The key is released, so the client can retry |
-| Handler throws after the response started (for example the client went away mid-write) | The key stays in flight until `InFlightTimeout`, because the work is most likely done |
+| Key present but no scope resolved | `UnscopedKeyBehavior`: `Skip` (default) runs without idempotency and logs `Idempotency.UnscopedKeySkipped`; `Reject` returns 400 `Idempotency.ScopeRequired`; `Global` uses a global key |
+
+What happens to the key after the first request:
+
+| Outcome | Key |
+|---------|-----|
+| Anything before the handler started (429 from a rate limiter, 503 from load shedding, a binding or model validation failure, an exception) | Released, so the client can retry |
+| Status in `NeverStoreStatusCodes` (503, 504) from a started handler | Stays in flight until `InFlightTimeout`: a retry gets 409, then runs the handler once more |
+| Exception or client abort after the handler started | Stays in flight until `InFlightTimeout`, because the work may be done |
+| Handler that ignores the abort and returns | Its response is stored as usual |
+| Response that cannot be stored (`Content-Encoding` set by the handler, `text/event-stream`, body larger than `MaxResponseBodySize`) | 4xx releases; any other status stays in flight until `InFlightTimeout` |
+| Otherwise | `ShouldStore` decides. The default, `IdempotencyStorePolicies.Default`, stores 2xx and 3xx for `RetentionPeriod` and 5xx for `ServerErrorRetention` (10 minutes), and releases 4xx |
+
+- `IdempotencyStorePolicies.SuccessOnly` stores 2xx only. It releases 3xx and 5xx on purpose, so a handler that failed after its side effect can run again on retry. Use it only when that is safe.
+- Storing 5xx protects against running a handler twice when it fails after its side effect. The cost: an application that maps business errors to 500 replays that error for `ServerErrorRetention`. Two common settings:
+
+```csharp
+o.ServerErrorRetention = TimeSpan.FromMinutes(10);   // default: clients are not locked out of a key for long
+o.ServerErrorRetention = o.RetentionPeriod;          // strictest: a stored 5xx is replayed as long as a success would be
+```
+
+- `ShouldStore` receives an `IdempotencyOutcome` (`StatusCode`, `HandlerStarted`). It is asked only after the handler started and only for statuses outside `NeverStoreStatusCodes`.
+- An idempotent endpoint without the filter (a `RequestDelegate` endpoint given `IdempotentAttribute` metadata by hand, or an MVC action opted in with `MapControllers().WithIdempotency()` but without `[Idempotent]`) releases the key for every outcome and logs `Idempotency.ExecutionFilterMissing` once. `RequireExecutionFilter = true` throws instead.
 
 - Only endpoints with `IdempotentAttribute` metadata (`WithIdempotency()`, `[Idempotent]`, or on a route group) and methods in `Methods` (default POST and PATCH) participate.
-- Keys are scoped by `ScopeResolver`, which reads `HttpContext.User`. The default `IdempotencyScopes.User` uses the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Other resolvers: `IdempotencyScopes.Tenant(claimType)`, `UserAndTenant(claimType)`, `Client` (`client_id`, then `azp`), `Custom(principal => ...)` and `Global`. Requests whose scope cannot be resolved (for example anonymous ones) pass through; `AllowUnscopedKeys = true` stores them under a global key instead. Global keys never match a scoped entry.
+- Keys are scoped by `ScopeResolver`, which reads `HttpContext.User`. The default `IdempotencyScopes.User` uses the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Other resolvers: `IdempotencyScopes.Tenant(claimType)`, `UserAndTenant(claimType)`, `Client` (`client_id`, then `azp`), `Custom(principal => ...)` and `Global`. Requests whose scope cannot be resolved (for example anonymous ones) follow `UnscopedKeyBehavior` (see above); the raw key is never logged. Use `Client` for callers that authenticate with client credentials. Global keys never match a scoped entry.
 - Records are written in the `Namespace` (default `http`), so HTTP keys never meet the keys of message consumers or jobs that share the store.
-- Only the headers in `ReplayedHeaders` are replayed (`Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`). `Set-Cookie` is never stored.
+- Only the headers in `ReplayedHeaders` are replayed (`Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`, `Retry-After`). `Set-Cookie` is never stored.
 - Put `UseResponseCompression()` before `UseIdempotency()`: the stored body is uncompressed and compression runs again on replay. `Content-Encoding` and `Vary` are not replayed by default; add them only when the handler encodes the body itself.
-- A response body larger than `MaxResponseBodySize` (1 MiB) is sent normally but not stored, and a warning is logged.
+- A response body larger than `MaxResponseBodySize` (1 MiB) is sent normally but not stored; unless the status is 4xx, the key stays in flight and a warning is logged.
 - The request body is buffered (`EnableBuffering`) to compute the fingerprint; bodies over 30 KB spill to a temporary file.
-- `InFlightTimeout` (1 minute) frees the key of a request that never finished, for example after a crash. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
+- `InFlightTimeout` (1 minute) frees the key of a request that never finished, for example after a crash or a 503/504. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. An endpoint whose request timeout (`RequestTimeout` metadata or the default policy of `RequestTimeoutOptions`) is longer logs `Idempotency.RequestTimeoutExceedsLease` once, on its first request. Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
 - A store failure after the handler ran is logged and does not change the response; the key then stays in flight until `InFlightTimeout`.
+- `AddIdempotency` throws when `InFlightTimeout` exceeds `RetentionPeriod` or `MaxInFlightTimeout` (15 minutes), when `ServerErrorRetention` is not in (0, `RetentionPeriod`], or when `NeverStoreStatusCodes` is empty or has a code outside 100-599.
 
 Stores:
 

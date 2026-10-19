@@ -1471,8 +1471,12 @@ app.UseEnhancedProblemDetails();
 |--------|-------------|
 | `AddIdempotency(Action<IdempotencyOptions>? = null)` | Registers the options and a store (the in-memory store unless one is already registered) |
 | `UseIdempotency()` | Middleware; call after `UseRouting`, authentication and authorization |
-| `WithIdempotency()` | Adds `IdempotentAttribute` metadata to an endpoint or group (`IEndpointConventionBuilder`) |
-| `[Idempotent]` | Same for an MVC controller or action |
+| `WithIdempotency()` | Adds `IdempotentAttribute` metadata and the execution filter to an endpoint or group (`IEndpointConventionBuilder`); MVC actions get only the metadata |
+| `[Idempotent]` | Same for an MVC controller or action; it is also the action filter that marks the action as started (after model validation) |
+| `IIdempotencyExecutionFeature` | `bool HandlerStarted { get; set; }`, set by the filter right before the handler runs |
+| `IdempotencyFilterInstalledMetadata` | Endpoint metadata that marks an endpoint as having the execution filter (`Instance`) |
+| `IdempotencyOutcome(int StatusCode, bool HandlerStarted)` | What `ShouldStore` decides on |
+| `IdempotencyStorePolicies.Default` / `.SuccessOnly` | Default: 2xx, plus 3xx and 5xx from a started handler. SuccessOnly: 2xx only; it releases 3xx and 5xx |
 | `IdempotentResponse(int StatusCode, IReadOnlyDictionary<string, string[]> Headers, ReadOnlyMemory<byte> Body)` | A stored response, serialized into the record payload |
 
 The store, scope resolvers and keys come from `CSharpEssentials.Idempotency` (section 26).
@@ -1481,20 +1485,26 @@ The store, scope resolvers and keys come from `CSharpEssentials.Idempotency` (se
 |--------|---------|-------|
 | `HeaderName` / `ReplayedHeaderName` | `Idempotency-Key` / `Idempotency-Replayed` | |
 | `Methods` | POST, PATCH | Case-insensitive set |
-| `InFlightTimeout` | 1 minute | Frees the key of a request that never finished; keep it longer than the request timeout |
+| `InFlightTimeout` | 1 minute | Frees the key of a request that never finished; keep it longer than the request timeout. Must not exceed `RetentionPeriod` or `MaxInFlightTimeout` |
+| `MaxInFlightTimeout` | 15 minutes | Upper bound for `InFlightTimeout` |
 | `RetentionPeriod` | 24 hours | How long a completed response is replayed |
+| `ServerErrorRetention` | 10 minutes | How long a stored 5xx is replayed; in (0, `RetentionPeriod`] |
 | `RetryAfter` | 1 second | `Retry-After` on 409; `null` omits it |
 | `MaxKeyLength` | 255 | Longer keys return 400 |
-| `MaxResponseBodySize` | 1 MiB | Larger bodies are not stored (warning logged) |
+| `MaxResponseBodySize` | 1 MiB | Larger bodies are not stored (warning logged); the key is released on 4xx and stays in flight otherwise |
 | `RequireKey` | `false` | `true`: a missing key returns 400 |
-| `ShouldStore` | 2xx | Other statuses release the key |
+| `ShouldStore` | `IdempotencyStorePolicies.Default` | `Func<IdempotencyOutcome, bool>`, asked only after the handler started and for statuses outside `NeverStoreStatusCodes`; `false` releases the key |
+| `NeverStoreStatusCodes` | 503, 504 | From a started handler: not stored, not released; the key stays in flight until `InFlightTimeout`. Not empty, codes in 100-599 |
+| `RequireExecutionFilter` | `false` | `true`: an idempotent endpoint without the execution filter throws instead of logging a warning once |
 | `Namespace` | `http` | Namespace of the records written by the middleware |
-| `ScopeResolver` | `IdempotencyScopes.User` (`NameIdentifier`, then `sub`) | Resolved against `HttpContext.User`; an unresolved (`null`) scope passes through unless `AllowUnscopedKeys` |
-| `AllowUnscopedKeys` | `false` | `true`: an unresolved scope uses a global key |
-| `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
+| `ScopeResolver` | `IdempotencyScopes.User` (`NameIdentifier`, then `sub`) | Resolved against `HttpContext.User`; an unresolved (`null`) scope follows `UnscopedKeyBehavior` |
+| `UnscopedKeyBehavior` | `Skip` | `Skip`: run without idempotency and log `Idempotency.UnscopedKeySkipped`; `Reject`: 400 `Idempotency.ScopeRequired`; `Global`: use a global key |
+| `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`, `Retry-After` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
 | `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered `IIdempotencyRecordStore` |
 
 Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`.
+
+Settling the key: a response produced before the handler started (rate limiter, load shedding, binding or model validation failure) or an exception there releases it. A `NeverStoreStatusCodes` status, an exception or an abort after the handler started, and a non-4xx response that cannot be stored (handler-set `Content-Encoding`, `text/event-stream`, oversize) keep it in flight until `InFlightTimeout`. Everything else goes to `ShouldStore`. Log events: `Idempotency.UnscopedKeySkipped`, `Idempotency.KeptInFlight`, `Idempotency.ResponseNotStorable`, `Idempotency.StoreFailed`, `Idempotency.ReleaseFailed`, `Idempotency.StaleReservation`, `Idempotency.StoredResponseUnreadable`, `Idempotency.ExecutionFilterMissing`, `Idempotency.RequestTimeoutExceedsLease` (once per endpoint, when its request timeout is longer than `InFlightTimeout`).
 
 ### Conditional requests
 
