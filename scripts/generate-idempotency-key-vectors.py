@@ -15,6 +15,8 @@ import uuid
 NAMESPACE = uuid.UUID("9c8fbd17-da5f-4f32-a4bf-651721368d5e")
 MAX_KEY_LENGTH = 255
 MESSAGE_OPERATION = "message"
+STORAGE_PREFIX = "idem:v3:"
+GLOBAL_SCOPE = "global"
 
 
 def is_allowed_char(ch: str) -> bool:
@@ -41,6 +43,52 @@ def key_for(operation: str, ids: list[str]) -> str:
 
 def uuid_v5(operation: str, ids: list[str]) -> str:
     return str(uuid.uuid5(NAMESPACE, canonical(operation, ids)))
+
+
+def length_prefixed(part: str) -> str:
+    return f"{len(part.encode('utf-8'))}:{part}"
+
+
+def present(value):
+    return value is not None and value != ""
+
+
+def scope_of(kind: str, value):
+    return f"{kind}:{value}" if present(value) else None
+
+
+def scope_user_and_tenant(tenant_id, user_id):
+    if not present(tenant_id) or not present(user_id):
+        return None
+    tenant = f"tenant:{tenant_id}"
+    return f"{length_prefixed(tenant)}/user:{user_id}"
+
+
+def scope_vector(name: str, kind: str, **inputs) -> dict:
+    if kind == "global":
+        scope = GLOBAL_SCOPE
+    elif kind == "userAndTenant":
+        scope = scope_user_and_tenant(inputs["tenantId"], inputs["userId"])
+    elif kind == "custom":
+        scope = scope_of(inputs["customKind"], inputs["value"])
+    else:
+        scope = scope_of(kind, inputs["id"])
+    return {"name": name, "kind": kind, **inputs, "scope": scope}
+
+
+def storage_key(prefix: str, namespace: str, scope: str, key: str) -> str:
+    return prefix + "|".join(length_prefixed(part) for part in (namespace, scope, key))
+
+
+def storage_vector(name: str, namespace: str, scope: str, key: str) -> dict:
+    return {
+        "name": name,
+        "prefix": STORAGE_PREFIX,
+        "namespace": namespace,
+        "scope": scope,
+        "key": key,
+        "storageKey": storage_key(STORAGE_PREFIX, namespace, scope, key),
+    }
 
 
 def for_vector(name: str, operation: str, ids: list[str]) -> dict:
@@ -99,8 +147,39 @@ def main() -> None:
         message_vector("message guid id", "0192f3b4-7c1e-7a00-8000-000000000001", "OrderPlacedConsumer"),
     ]
 
+    vectors_scope = [
+        scope_vector("user", "user", id="u1"),
+        scope_vector("tenant", "tenant", id="t1"),
+        scope_vector("client", "client", id="billing-service"),
+        scope_vector("custom", "custom", customKind="account", value="acc-9"),
+        scope_vector("global", "global"),
+        scope_vector("user and tenant", "userAndTenant", tenantId="t1", userId="u1"),
+        scope_vector("user and tenant with separators", "userAndTenant", tenantId="a/b:c", userId="d|e"),
+        scope_vector("user and tenant unicode", "userAndTenant", tenantId="şirket", userId="kullanıcı-ğ"),
+        scope_vector("user unicode", "user", id="müşteri-ı"),
+        scope_vector("user emoji", "user", id="🎉"),
+        scope_vector("user missing", "user", id=None),
+        scope_vector("user empty", "user", id=""),
+        scope_vector("tenant missing", "tenant", id=None),
+        scope_vector("client empty", "client", id=""),
+        scope_vector("custom value missing", "custom", customKind="account", value=None),
+        scope_vector("user and tenant without tenant", "userAndTenant", tenantId=None, userId="u1"),
+        scope_vector("user and tenant without user", "userAndTenant", tenantId="t1", userId=None),
+        scope_vector("user and tenant with empty tenant", "userAndTenant", tenantId="", userId="u1"),
+    ]
+
+    vectors_storage = [
+        storage_vector("tenant scope", "capture", "tenant:t1", "abc"),
+        storage_vector("http user scope", "http", "user:u1", "order-42"),
+        storage_vector("global scope", "http", GLOBAL_SCOPE, "abc"),
+        storage_vector("user and tenant scope", "http", "9:tenant:t1/user:u1", "abc"),
+        storage_vector("unicode namespace and scope", "SiparişOluştur", "user:müşteri", "abc"),
+        storage_vector("separators inside parts", "a|b", "user:1:2", "x|y"),
+        storage_vector("hashed deterministic key", "message", "client:billing", key_for("capture", ["x" * 300])),
+    ]
+
     document = {
-        "version": 1,
+        "version": 2,
         "spec": {
             "parts": "For(operation, ...ids): parts are [operation, ...ids] in order.",
             "canonical": "Each part is written as '{utf8ByteLength}:{value}' (decimal length, no padding) and the parts are joined with '|'.",
@@ -109,6 +188,8 @@ def main() -> None:
             "fromMessage": "FromMessage(messageId, consumer) = For('message', consumer, messageId).",
             "uuidV5": "ToUuidV5(operation, ...ids) = RFC 9562 UUIDv5 of UTF-8(canonical) in namespaceUuid, lowercase with hyphens. The canonical string is hashed whether or not the key falls back to 'h:'.",
             "invalidInput": "operation null or empty, any id null, or any part that is not well-formed UTF-16 (lone surrogate) throws an argument error in each language. Lone surrogates cannot round-trip through every JSON parser, so each language tests them natively; the 'invalid' list holds the portable cases.",
+            "scopes": "user, tenant and client scopes are '{kind}:{id}'; custom is '{customKind}:{value}'; global is the literal 'global'. userAndTenant builds tenant = 'tenant:' + tenantId and user = 'user:' + userId, then the scope is '{utf8ByteLength(tenant)}:{tenant}/{user}' (only the tenant part is length-prefixed). A null or empty id, value, tenantId or userId means no scope (null in the vectors).",
+            "storageKeys": "storageKey = prefix + [namespace, scope, key] each written as '{utf8ByteLength}:{value}' and joined with '|'. The default prefix is 'idem:v3:'. A global key uses the scope 'global'.",
             "validation": "Servers accept an Idempotency-Key header with the same allowed characters and length 1..MaxKeyLength (default 255).",
         },
         "namespaceUuid": str(NAMESPACE),
@@ -119,8 +200,11 @@ def main() -> None:
             "name": "www.example.com",
             "uuidV5": str(uuid.uuid5(uuid.NAMESPACE_DNS, "www.example.com")),
         },
+        "storagePrefix": STORAGE_PREFIX,
         "for": vectors_for,
         "fromMessage": vectors_message,
+        "scopes": vectors_scope,
+        "storageKeys": vectors_storage,
         "invalid": [
             {"name": "empty operation", "operation": "", "ids": ["a"]},
             {"name": "null operation", "operation": None, "ids": ["a"]},
@@ -131,6 +215,8 @@ def main() -> None:
     assert document["rfc9562"]["uuidV5"] == "2ed6657d-e927-568b-95e1-2665a8aea6a2"
     assert vectors_for[2]["key"] != vectors_for[3]["key"]
     assert vectors_message[0]["key"] != vectors_message[1]["key"]
+    assert vectors_scope[5]["scope"] == "9:tenant:t1/user:u1"
+    assert vectors_storage[0]["storageKey"] == "idem:v3:7:capture|9:tenant:t1|3:abc"
 
     path = pathlib.Path(__file__).resolve().parent.parent / "shared" / "idempotency-key-vectors.json"
     path.write_text(json.dumps(document, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
