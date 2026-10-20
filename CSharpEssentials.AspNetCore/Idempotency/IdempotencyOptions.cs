@@ -20,7 +20,9 @@ public sealed class IdempotencyOptions
     /// answers differently from <see cref="IdempotencyMode.Off"/>: no replay, no <c>Idempotency-Replayed</c>, no
     /// <c>400</c>/<c>409</c>/<c>422</c>; it logs and counts what <see cref="IdempotencyMode.Enforce"/> would have done.
     /// Observe measures duplicates, it does not prevent them; keep it short for operations that move money. A record
-    /// stored in Observe is replayed once the mode becomes Enforce. This switch is separate from
+    /// stored in Observe is replayed once the mode becomes Enforce; an <see cref="ITransactionalIdempotencyRecordStore"/>
+    /// stores it in the transaction open around <c>UseIdempotency</c>, so a response whose transaction rolled back is
+    /// never replayed. This switch is separate from
     /// <c>IdempotencyExecutorOptions.Mode</c>, which Mediator and message consumers read. Default:
     /// <see cref="IdempotencyMode.Enforce"/>.
     /// </summary>

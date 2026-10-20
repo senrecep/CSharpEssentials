@@ -36,9 +36,21 @@ namespace CSharpEssentials.EntityFrameworkCore.Idempotency;
 /// <see cref="EfCoreIdempotencyStoreServiceCollectionExtensions.AddEfCoreIdempotencyRecordStore{TContext}"/>.
 /// </para>
 /// <para>
-/// In <see cref="IdempotencyMode.Observe"/> the executor and the HTTP middleware use <see cref="Detached"/>, which writes
-/// from a new <typeparamref name="TContext"/> of its own scope, outside the business and ambient transactions, so
-/// observing neither waits for a concurrent request nor can fail the business transaction.
+/// In <see cref="IdempotencyMode.Observe"/> the executor and the HTTP middleware reserve and release through
+/// <see cref="Detached"/>, which writes from a new <typeparamref name="TContext"/> of its own scope, outside the business
+/// and ambient transactions, so a reservation neither waits for a concurrent request nor can fail the business
+/// transaction. A result to store releases that reservation and is written through this store, in the business
+/// transaction, so it commits and rolls back with the business data as in <see cref="IdempotencyMode.Enforce"/>.
+/// A result for a token this instance did not reserve, as in Observe, is written behind a savepoint of the context's
+/// current transaction (on PostgreSQL also of an ambient <c>System.Transactions</c> transaction the connection is
+/// enlisted in; when the connection is not enlisted, the result is written without a savepoint): a database error rolls
+/// back to the savepoint and is rethrown, so the transaction stays usable and the business data commits without the
+/// record. Two limits remain. On PostgreSQL, Observe stores results only under <c>READ COMMITTED</c>: under a stricter
+/// level the write fails with a serialization error, because the release changed the row after the transaction's
+/// snapshot was taken; other providers may succeed. On SQL Server a savepoint cannot save a transaction that the server
+/// has doomed, which happens when the connection has <c>XACT_ABORT ON</c> or under <c>SNAPSHOT</c> isolation after an
+/// update conflict (error 3960): the rollback to the savepoint fails, the transaction is lost with the business data,
+/// and the original error is thrown.
 /// </para>
 /// </summary>
 /// <typeparam name="TContext">The context that maps <see cref="IdempotencyRecord"/>.</typeparam>
@@ -47,11 +59,13 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
 {
     private const int MaxReserveAttempts = 8;
     private const string SavepointName = "cse_idempotency";
+    private const string ResultSavepointName = "cse_idempotency_result";
 
     private readonly TContext _context;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
     private readonly bool _plainInsert;
+    private readonly HashSet<string> _reservedTokens = [];
     private DetachedEfCoreIdempotencyRecordStore<TContext>? _detached;
 
     /// <summary>Creates a store on <paramref name="context"/>.</summary>
@@ -110,7 +124,10 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
             string token = Guid.NewGuid().ToString("N");
 
             if (await TryInsertAsync(key, hash, token, fingerprint, payload: null, expiresAt, cancellationToken).ConfigureAwait(false))
+            {
+                _reservedTokens.Add(token);
                 return IdempotencyRecordReservation.Reserved(token);
+            }
 
             int takenOver = await Records(key, hash)
                 .Where(record => record.ExpiresAt <= now)
@@ -123,7 +140,10 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
                     cancellationToken)
                 .ConfigureAwait(false);
             if (takenOver == 1)
+            {
+                _reservedTokens.Add(token);
                 return IdempotencyRecordReservation.Reserved(token);
+            }
 
             var existing = await Records(hash)
                 .Select(record => new { record.Namespace, record.Scope, record.Key, record.Fingerprint, record.Payload, record.ExpiresAt })
@@ -166,6 +186,91 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         ArgumentException.ThrowIfNullOrEmpty(fingerprint);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retention, TimeSpan.Zero);
 
+        if (_reservedTokens.Remove(token))
+            return await CompleteCoreAsync(key, token, fingerprint, payload, retention, cancellationToken).ConfigureAwait(false);
+
+        IDbContextTransaction? transaction = _context.Database.CurrentTransaction;
+        bool savepoint = transaction is null
+            ? System.Transactions.Transaction.Current is not null && IdempotencyRecordSql.For(_context).AmbientSavepoints
+            : transaction.SupportsSavepoints;
+        if (!savepoint)
+            return await CompleteCoreAsync(key, token, fingerprint, payload, retention, cancellationToken).ConfigureAwait(false);
+
+        try
+        {
+            await CreateResultSavepointAsync(transaction, cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbException) when (transaction is null)
+        {
+            return await CompleteCoreAsync(key, token, fingerprint, payload, retention, cancellationToken).ConfigureAwait(false);
+        }
+
+        bool completed;
+        try
+        {
+            completed = await CompleteCoreAsync(key, token, fingerprint, payload, retention, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is DbException || exception.InnerException is DbException)
+        {
+            _ = await TryRollbackToResultSavepointAsync(transaction).ConfigureAwait(false);
+            throw;
+        }
+
+        await ReleaseResultSavepointAsync(transaction, cancellationToken).ConfigureAwait(false);
+        return completed;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> ReleaseAsync(IdempotencyRecordKey key, string token, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentException.ThrowIfNullOrEmpty(token);
+
+        _reservedTokens.Remove(token);
+        int released = await Records(key, IdempotencyRecord.HashKey(key))
+            .Where(record => record.Token == token && record.Payload == null)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return released == 1;
+    }
+
+    private Task CreateResultSavepointAsync(IDbContextTransaction? transaction, CancellationToken cancellationToken) =>
+        transaction is null
+            ? _context.Database.ExecuteSqlRawAsync("SAVEPOINT " + ResultSavepointName, cancellationToken)
+            : transaction.CreateSavepointAsync(ResultSavepointName, cancellationToken);
+
+    /// <summary>
+    /// Rolls back to the result savepoint; <see langword="false"/> when the rollback itself failed. The failure is not
+    /// thrown, so that the caller rethrows the database error that made the write fail instead of the rollback's.
+    /// </summary>
+    private async Task<bool> TryRollbackToResultSavepointAsync(IDbContextTransaction? transaction)
+    {
+        try
+        {
+            await (transaction is null
+                ? _context.Database.ExecuteSqlRawAsync("ROLLBACK TO SAVEPOINT " + ResultSavepointName, CancellationToken.None)
+                : transaction.RollbackToSavepointAsync(ResultSavepointName, CancellationToken.None)).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception rollbackFailure) when (rollbackFailure is DbException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
+
+    private Task ReleaseResultSavepointAsync(IDbContextTransaction? transaction, CancellationToken cancellationToken) =>
+        transaction is null
+            ? _context.Database.ExecuteSqlRawAsync("RELEASE SAVEPOINT " + ResultSavepointName, cancellationToken)
+            : transaction.ReleaseSavepointAsync(ResultSavepointName, cancellationToken);
+
+    private async ValueTask<bool> CompleteCoreAsync(
+        IdempotencyRecordKey key,
+        string token,
+        string fingerprint,
+        ReadOnlyMemory<byte> payload,
+        TimeSpan retention,
+        CancellationToken cancellationToken)
+    {
         byte[] hash = IdempotencyRecord.HashKey(key);
         byte[] stored = payload.ToArray();
         DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -197,19 +302,6 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
             return true;
 
         return await TryInsertAsync(key, hash, token, fingerprint, stored, expiresAt, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <inheritdoc />
-    public async ValueTask<bool> ReleaseAsync(IdempotencyRecordKey key, string token, CancellationToken cancellationToken = default)
-    {
-        ArgumentNullException.ThrowIfNull(key);
-        ArgumentException.ThrowIfNullOrEmpty(token);
-
-        int released = await Records(key, IdempotencyRecord.HashKey(key))
-            .Where(record => record.Token == token && record.Payload == null)
-            .ExecuteDeleteAsync(cancellationToken)
-            .ConfigureAwait(false);
-        return released == 1;
     }
 
     /// <summary>

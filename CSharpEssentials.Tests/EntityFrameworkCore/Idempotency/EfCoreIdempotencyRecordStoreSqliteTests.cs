@@ -119,6 +119,59 @@ public sealed class EfCoreIdempotencyRecordStoreSqliteTests : IDisposable
     }
 
     [Fact]
+    public async Task CompleteAsync_Should_Write_A_Result_Of_Another_Token_Without_A_Transaction()
+    {
+        await using IdempotencyTestDbContext context = new(_options);
+        EfCoreIdempotencyRecordStore<IdempotencyTestDbContext> store = new(context, ScopeFactory);
+
+        bool completed = await store.CompleteAsync(Key, "detached-token", "fp", "done"u8.ToArray(), Retention);
+
+        completed.Should().BeTrue();
+        (await CountAsync(records => records.IdempotencyRecords)).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_Should_Leave_No_Record_When_The_Commit_After_A_Savepoint_Write_Fails()
+    {
+        DbContextOptions<IdempotencyTestDbContext> options = new DbContextOptionsBuilder<IdempotencyTestDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(new FailingCommitInterceptor())
+            .Options;
+        await using IdempotencyTestDbContext context = new(options);
+        await using IDbContextTransaction transaction = await context.Database.BeginTransactionAsync();
+        EfCoreIdempotencyRecordStore<IdempotencyTestDbContext> store = new(context, ScopeFactory);
+
+        bool completed = await store.CompleteAsync(Key, "detached-token", "fp", "done"u8.ToArray(), Retention);
+        Func<Task> commit = () => transaction.CommitAsync();
+        await commit.Should().ThrowAsync<InvalidOperationException>().WithMessage("The commit failed.");
+        await transaction.RollbackAsync();
+
+        completed.Should().BeTrue();
+        (await CountAsync(records => records.IdempotencyRecords)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_Should_Roll_Back_To_The_Savepoint_And_Keep_The_Business_Data_When_The_Write_Fails()
+    {
+        DbContextOptions<IdempotencyTestDbContext> options = new DbContextOptionsBuilder<IdempotencyTestDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(new FailingRecordWriteInterceptor())
+            .Options;
+        await using IdempotencyTestDbContext context = new(options);
+        await using IDbContextTransaction transaction = await context.Database.BeginTransactionAsync();
+        EfCoreIdempotencyRecordStore<IdempotencyTestDbContext> store = new(context, ScopeFactory);
+        context.Payments.Add(new IdempotencyPayment { EventId = "evt-1", Amount = 10 });
+        await context.SaveChangesAsync();
+
+        Func<Task> complete = () => store.CompleteAsync(Key, "detached-token", "fp", "done"u8.ToArray(), Retention).AsTask();
+        await complete.Should().ThrowAsync<Exception>();
+        await transaction.CommitAsync();
+
+        (await CountAsync(records => records.Payments)).Should().Be(1);
+        (await CountAsync(records => records.IdempotencyRecords)).Should().Be(0);
+    }
+
+    [Fact]
     public async Task PurgeExpiredAsync_Should_Delete_Only_The_Expired_Records()
     {
         FakeTimeProvider clock = new();

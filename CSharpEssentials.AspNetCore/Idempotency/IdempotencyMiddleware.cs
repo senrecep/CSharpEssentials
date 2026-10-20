@@ -24,8 +24,11 @@ namespace CSharpEssentials.AspNetCore;
 /// The options are read once per request from <see cref="IOptionsMonitor{TOptions}"/>, so a reload applies to the next
 /// request; the endpoint's mode (<see cref="IdempotencyEndpointOptions.Mode"/>, its profile's, else
 /// <see cref="IdempotencyOptions.Mode"/>) decides whether the key is ignored, observed or enforced. In Observe an
-/// <see cref="ITransactionalIdempotencyRecordStore"/> is used through its
-/// <see cref="ITransactionalIdempotencyRecordStore.Detached"/> view, so observing never joins the request's transaction.
+/// <see cref="ITransactionalIdempotencyRecordStore"/> reserves and releases through its
+/// <see cref="ITransactionalIdempotencyRecordStore.Detached"/> view, so the reservation never joins the request's
+/// transaction. A response to store releases that reservation and is then written through the store itself, in the
+/// transaction open around <c>UseIdempotency</c> if there is one: the record exists only when that transaction
+/// commits, so a retry after the switch to Enforce never replays a response whose work rolled back.
 /// </summary>
 internal sealed partial class IdempotencyMiddleware(
     RequestDelegate next,
@@ -126,10 +129,11 @@ internal sealed partial class IdempotencyMiddleware(
 
         IdempotencyRecordKey recordKey = new(options.Namespace, scope.Value, key);
         IIdempotencyRecordStore store;
+        IIdempotencyRecordStore results;
         string? fingerprint;
         try
         {
-            store = settings.StoreKey is { } storeKey
+            store = results = settings.StoreKey is { } storeKey
                 ? context.RequestServices.GetRequiredKeyedService<IIdempotencyRecordStore>(storeKey)
                 : defaultStore;
             if (observe && store is ITransactionalIdempotencyRecordStore transactional)
@@ -141,7 +145,7 @@ internal sealed partial class IdempotencyMiddleware(
             LogObserveResolutionFailed(logger, exception, context.Request.Path);
             if (context.Request.Body.CanSeek)
                 context.Request.Body.Position = 0;
-            store = defaultStore;
+            store = results = defaultStore;
             fingerprint = null;
         }
 
@@ -172,7 +176,7 @@ internal sealed partial class IdempotencyMiddleware(
         switch (reservation.Status)
         {
             case IdempotencyReservationStatus.Reserved:
-                await ExecuteAsync(context, options, settings, store, recordKey, reservation.Token!, fingerprint, target).ConfigureAwait(false);
+                await ExecuteAsync(context, options, settings, store, results, recordKey, reservation.Token!, fingerprint, target).ConfigureAwait(false);
                 break;
             case IdempotencyReservationStatus.Completed when observe:
                 LogObserveWouldReplay(logger, context.Request.Path, new IdempotencyKeyHash(recordKey));
@@ -274,6 +278,7 @@ internal sealed partial class IdempotencyMiddleware(
         IdempotencyOptions options,
         IdempotencyEndpointSettings settings,
         IIdempotencyRecordStore store,
+        IIdempotencyRecordStore results,
         IdempotencyRecordKey recordKey,
         string token,
         string fingerprint,
@@ -304,7 +309,7 @@ internal sealed partial class IdempotencyMiddleware(
         try
         {
             bool filterInstalled = context.GetEndpoint()?.Metadata.GetMetadata<IdempotencyFilterInstalledMetadata>() is not null;
-            if (!await SettleAsync(context, options, settings, store, recordKey, token, fingerprint, capture, execution.HandlerStarted, filterInstalled, target).ConfigureAwait(false))
+            if (!await SettleAsync(context, options, settings, store, results, recordKey, token, fingerprint, capture, execution.HandlerStarted, filterInstalled, target).ConfigureAwait(false))
                 LogStaleReservation(logger, context.Request.Path, new IdempotencyKeyHash(recordKey));
         }
         catch (Exception exception)
@@ -318,7 +323,9 @@ internal sealed partial class IdempotencyMiddleware(
     /// ignore <see cref="HttpContext.RequestAborted"/>: a client that went away still gets its outcome on retry.
     /// An endpoint without the execution filter cannot report whether its handler started, so a 2xx from it is
     /// settled as a started handler's response and every other status releases the key. A release or a stored response
-    /// is counted in <see cref="IdempotencyTelemetry.DecisionsInstrumentName"/>.
+    /// is counted in <see cref="IdempotencyTelemetry.DecisionsInstrumentName"/>. A response is written to
+    /// <paramref name="results"/>; when that is not the <paramref name="store"/> that holds the reservation, the
+    /// reservation is released first, so the response is written as the record of a key that is gone.
     /// </summary>
     /// <returns><see langword="false"/> when the reservation was taken over after <c>InFlightTimeout</c>.</returns>
     private async ValueTask<bool> SettleAsync(
@@ -326,6 +333,7 @@ internal sealed partial class IdempotencyMiddleware(
         IdempotencyOptions options,
         IdempotencyEndpointSettings settings,
         IIdempotencyRecordStore store,
+        IIdempotencyRecordStore results,
         IdempotencyRecordKey recordKey,
         string token,
         string fingerprint,
@@ -370,7 +378,9 @@ internal sealed partial class IdempotencyMiddleware(
                 headers[name] = [.. values.OfType<string>()];
         }
 
-        bool stored = await store.CompleteAsync(
+        if (!ReferenceEquals(store, results))
+            await TryReleaseAsync(store, recordKey, token, context.Request.Path).ConfigureAwait(false);
+        bool stored = await results.CompleteAsync(
             recordKey,
             token,
             fingerprint,

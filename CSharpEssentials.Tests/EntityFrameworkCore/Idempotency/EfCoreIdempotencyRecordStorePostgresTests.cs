@@ -216,7 +216,7 @@ public sealed class EfCoreIdempotencyRecordStorePostgresTests(IdempotencyPostgre
     }
 
     [Fact]
-    public async Task Observe_Should_Keep_Its_Record_Out_Of_An_Ambient_Transaction()
+    public async Task Observe_Should_Leave_No_Record_When_The_Ambient_Transaction_Rolls_Back()
     {
         IdempotencyRecordKey key = Key("order-1");
 
@@ -230,6 +230,22 @@ public sealed class EfCoreIdempotencyRecordStorePostgresTests(IdempotencyPostgre
         }
 
         (await CountPaymentsAsync(EventId("evt-1"))).Should().Be(0);
+        (await CountRecordsAsync(key)).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_Should_Write_Without_A_Savepoint_When_The_Connection_Is_Not_Enlisted_In_The_Ambient_Transaction()
+    {
+        IdempotencyRecordKey key = Key("order-1");
+        string connectionString = new NpgsqlConnectionStringBuilder(postgres.ConnectionString) { Enlist = false }.ConnectionString;
+
+        using (TransactionScope ambient = new(TransactionScopeAsyncFlowOption.Enabled))
+        {
+            await using IdempotencyTestDbContext context = new(new DbContextOptionsBuilder<IdempotencyTestDbContext>().UseNpgsql(connectionString).Options);
+            bool completed = await Store(context).CompleteAsync(key, "detached-token", "fp", "done"u8.ToArray(), TimeSpan.FromHours(1));
+            completed.Should().BeTrue();
+        }
+
         (await CountRecordsAsync(key)).Should().Be(1);
     }
 

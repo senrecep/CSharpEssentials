@@ -20,8 +20,9 @@ internal sealed class IdempotencyRecordSql
 
     private static readonly ConditionalWeakTable<IModel, IdempotencyRecordSql> Cache = [];
 
-    private IdempotencyRecordSql(string insertInFlight, string insertCompleted, string? onConflictDoNothing)
+    private IdempotencyRecordSql(string insertInFlight, string insertCompleted, string? onConflictDoNothing, bool ambientSavepoints)
     {
+        AmbientSavepoints = ambientSavepoints;
         InsertInFlight = insertInFlight;
         InsertCompleted = insertCompleted;
         if (onConflictDoNothing is not null)
@@ -45,6 +46,12 @@ internal sealed class IdempotencyRecordSql
 
     /// <summary><see cref="InsertCompleted"/> with <c>ON CONFLICT (…) DO NOTHING</c>; see <see cref="InsertInFlightOrNothing"/>.</summary>
     public string? InsertCompletedOrNothing { get; }
+
+    /// <summary>
+    /// Whether the store takes a <c>SAVEPOINT</c> with plain SQL inside an ambient <c>System.Transactions</c>
+    /// transaction: only on PostgreSQL, whose failed statement aborts the whole transaction.
+    /// </summary>
+    public bool AmbientSavepoints { get; }
 
     public static IdempotencyRecordSql For(DbContext context)
     {
@@ -79,7 +86,8 @@ internal sealed class IdempotencyRecordSql
             ? $" ON CONFLICT ({keyColumns}) DO NOTHING"
             : null;
 
-        return new IdempotencyRecordSql(insert + "NULL, {6})", insert + "{6}, {7})", onConflictDoNothing);
+        return new IdempotencyRecordSql(
+            insert + "NULL, {6})", insert + "{6}, {7})", onConflictDoNothing, context.Database.ProviderName is PostgreSqlProvider);
     }
 
     /// <summary>Doubles the braces of an identifier so <c>ExecuteSqlRaw</c> does not read them as placeholders.</summary>
