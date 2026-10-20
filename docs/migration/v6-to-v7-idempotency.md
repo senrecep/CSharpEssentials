@@ -9,6 +9,7 @@
 - Stored records use a new key format (`idem:v3:` prefix) and a new payload format (version 3). Records written by 6.x are not read. See [Stored records](#stored-records).
 - `IdempotencyOptions.ShouldStore` is a `Func<IdempotencyOutcome, bool>` instead of a `Func<int, bool>`. `IdempotencyOutcome` carries `StatusCode` and `HandlerStarted`.
 - `IdempotencyOptions.AllowUnscopedKeys` is removed. Use `UnscopedKeyBehavior`.
+- `IdempotencyOptions` resolved from DI is transient and reflects the current options, instead of a singleton instance. See [Options at runtime](#options-at-runtime).
 - What happens to a key after the request depends on whether the handler started, and the default policy stores more statuses. See [Behavior changes](#behavior-changes).
 
 `UseInMemoryStore()`, `UseDistributedCacheStore()`, `UseStore<TStore>(lifetime)` and the other options keep their names and behavior.
@@ -77,6 +78,14 @@ New startup validation in `AddIdempotency`:
 - `InFlightTimeout` must not exceed `RetentionPeriod` or `MaxInFlightTimeout` (15 minutes).
 - `ServerErrorRetention` must be greater than zero and not exceed `RetentionPeriod`.
 - `NeverStoreStatusCodes` must not be empty, and every code must be between 100 and 599.
+
+## Options at runtime
+
+- `IdempotencyOptions` are read through `IOptionsMonitor<IdempotencyOptions>` once per request. `AddIdempotency(configure)` registers `configure` as an `IConfigureOptions<IdempotencyOptions>`, so `Configure<IdempotencyOptions>` and `Bind` calls apply after it, and a reload of a bound configuration section reaches the next request. Calling `AddIdempotency` again still replaces the delegate of the earlier call.
+- `IdempotencyOptions` resolved from DI is now transient: each resolution returns the monitor's current value instead of one singleton instance. Changes made to a resolved instance are lost on the next reload and may not reach endpoints whose settings were already resolved; configure the options through `AddIdempotency` or `Configure<IdempotencyOptions>` instead.
+- A reload that makes the options invalid throws `OptionsValidationException` on every request to an idempotent endpoint until it is fixed. The store is chosen in `AddIdempotency`; a reload does not change it.
+- New `IdempotencyOptions.Mode` (`Enforce` by default, so nothing changes without it): `Observe` stores as `Enforce` does but never answers differently from `Off`, and `Off` ignores the header. Endpoints and profiles override it with `IdempotencyEndpointOptions.Mode` or `[Idempotent(Mode = ...)]`. It does not prevent duplicates in `Observe`; keep that phase short for payments.
+- Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`), and the middleware's log messages that name a record now include a key hash, never the key or the scope. See the [Idempotency Readme](../../CSharpEssentials.Idempotency/Readme.MD#telemetry).
 
 ## Custom stores
 

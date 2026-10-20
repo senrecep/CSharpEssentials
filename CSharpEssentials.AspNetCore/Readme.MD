@@ -180,7 +180,7 @@ app.MapPost("/imports", Import).WithIdempotency(o => { o.InFlightTimeout = TimeS
 public IActionResult Charge(ChargeRequest request) => ...;
 ```
 
-- `IdempotencyEndpointOptions` overrides `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore`, `UnscopedKeyBehavior` and `StoreKey` (the service key of a keyed `IIdempotencyRecordStore` used instead of the default store). `[Idempotent]` takes the same settings as `RetentionSeconds`, `LeaseSeconds`, `ServerErrorRetentionSeconds`, `RequireKey`, `UnscopedKeyBehavior`, `StoreKey` and `Profile`; `ShouldStore` is reached through a profile.
+- `IdempotencyEndpointOptions` overrides `Mode`, `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore`, `UnscopedKeyBehavior` and `StoreKey` (the service key of a keyed `IIdempotencyRecordStore` used instead of the default store). `[Idempotent]` takes the same settings as `Mode`, `RetentionSeconds`, `LeaseSeconds`, `ServerErrorRetentionSeconds`, `RequireKey`, `UnscopedKeyBehavior`, `StoreKey` and `Profile`; `ShouldStore` is reached through a profile.
 - The merged settings follow the same rules as the global options. `AddIdempotency` throws when a profile is invalid, has an empty or duplicate name (names are case-insensitive) or selects another profile. An endpoint with invalid settings or an unregistered profile throws `InvalidOperationException` on each of its requests, naming the endpoint and the registered profiles.
 
 `.WithIdempotency()` (Minimal API endpoints and groups) and `[Idempotent]` (MVC) also install a filter that marks the handler as started right before it runs. The middleware uses that mark to tell a failure of the handler from a response produced before it, such as a rate limiter rejection, a binding failure or MVC model validation.
@@ -227,9 +227,31 @@ o.ServerErrorRetention = o.RetentionPeriod;          // strictest: a stored 5xx 
 - Put `UseResponseCompression()` before `UseIdempotency()`: the stored body is uncompressed and compression runs again on replay. `Content-Encoding` and `Vary` are not replayed by default; add them only when the handler encodes the body itself.
 - A response body larger than `MaxResponseBodySize` (1 MiB) is sent normally but not stored; unless the status is 4xx, the key stays in flight and a warning is logged.
 - The request body is buffered (`EnableBuffering`) to compute the fingerprint; bodies over 30 KB spill to a temporary file.
-- `InFlightTimeout` (1 minute, or the endpoint's own value) frees the key of a request that never finished, for example after a crash or a 503/504. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. An endpoint whose request timeout (`RequestTimeout` metadata or the default policy of `RequestTimeoutOptions`) is longer logs `Idempotency.RequestTimeoutExceedsLease` once, on its first request. Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
+- `InFlightTimeout` (1 minute, or the endpoint's own value) frees the key of a request that never finished, for example after a crash or a 503/504. Keep it longer than your request timeout: a retry after it expires runs the handler again even if the first request is still running. An endpoint whose request timeout (`RequestTimeout` metadata or the default policy of `RequestTimeoutOptions`) is longer logs `Idempotency.RequestTimeoutExceedsLease` once, on its first request (and again after the options reload). Each reservation has a token, so the late request can no longer overwrite or release the retry's entry (a warning is logged), but its side effects have already happened.
 - A store failure after the handler ran is logged and does not change the response; the key then stays in flight until `InFlightTimeout`.
 - `AddIdempotency` throws when `InFlightTimeout` exceeds `RetentionPeriod` or `MaxInFlightTimeout` (15 minutes), when `ServerErrorRetention` is not in (0, `RetentionPeriod`], or when `NeverStoreStatusCodes` is empty or has a code outside 100-599.
+
+Rollout modes:
+
+| Mode | Behavior |
+|------|----------|
+| `Enforce` (default) | The tables above |
+| `Observe` | The client gets what `Off` would give: no replay, no `Idempotency-Replayed`, no 400, 409 or 422, no `Retry-After`. A new key is reserved and its response stored as in `Enforce`; a completed, in-flight or reused key is left as it is. What `Enforce` would have done is logged and counted |
+| `Off` | The header is ignored: no key parsing, no scope resolver, no store call |
+
+```csharp
+builder.Services.AddIdempotency(o => o.Mode = IdempotencyMode.Observe);
+builder.Services.Configure<IdempotencyOptions>(builder.Configuration.GetSection("Idempotency:Http")); // "Mode": "Enforce"
+
+app.MapPost("/payments", Pay).WithIdempotency(o => o.Mode = IdempotencyMode.Enforce);
+```
+
+- The options are read through `IOptionsMonitor<IdempotencyOptions>` once per request, so a reload of a bound configuration section changes `Mode`, or any other option, for the next request without a restart. Endpoint settings are resolved again after a reload. The store is chosen in `AddIdempotency`; a reload does not change it. A reload that makes the options invalid throws `OptionsValidationException` on every request to an idempotent endpoint until it is fixed. `IdempotencyOptions` resolved from DI is the current value.
+- The mode comes from the endpoint, else its profile, else `IdempotencyOptions.Mode`. It is separate from `IdempotencyExecutorOptions.Mode`, which the Mediator behavior and message consumers read.
+- After a switch from `Observe` to `Enforce`, the responses stored in `Observe` are replayed and a key still in flight gets 409.
+- `Observe` measures duplicates; it does not prevent them. Keep it short for endpoints that move money.
+- In `Observe`, a scope resolver, keyed store or fingerprint that throws is logged as `Idempotency.Observe.ResolutionFailed`, and a store that throws while reserving as `Idempotency.Observe.ReserveFailed`; the request then runs once without idempotency. In `Enforce`, or when the client aborted, the exception propagates and the handler does not run.
+- Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`) with `source` `http` and the route template as `target`. Logs carry a key hash, never the key or the scope. See the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#telemetry) for the tags and the log events.
 
 Stores:
 

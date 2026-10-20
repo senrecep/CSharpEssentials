@@ -373,7 +373,9 @@ Call `AddMediatorIdempotencyBehavior` after `AddMediatorBehaviors`, so validatio
 
 #### Modes
 
-`IdempotencyExecutorOptions.Mode`, a profile or `ForRequest<T>(p => p.Mode = ...)` sets the mode. In `Off` the behavior only calls the handler. In `Observe` it never blocks: a request it would reject (invalid key, unresolved scope, a scope or fingerprint that throws) and a replay, in-flight or reused key are logged, and the request runs.
+`IdempotencyExecutorOptions.Mode`, a profile or `ForRequest<T>(p => p.Mode = ...)` sets the mode. In `Off` the behavior only calls the handler. In `Observe` it never blocks: a request it would reject (missing or invalid key, unresolved scope) and a replay, in-flight or reused key are logged, and the request runs. A scope resolver or fingerprint that throws is logged as `Idempotency.Observe.ResolutionFailed` and the request runs once without idempotency; in `Enforce`, or when the request was cancelled, the exception propagates.
+
+The mode is read per request from `IOptionsMonitor<IdempotencyExecutorOptions>`, so binding the options to a reloadable configuration section switches it without a restart. It is separate from the `Idempotency-Key` middleware's `IdempotencyOptions.Mode`. `Observe` measures duplicates; it does not prevent them, so keep it short for commands that move money. Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`) with `source` `mediator` and the request type as `target`; see the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#telemetry).
 
 ### Logging Behavior
 

@@ -91,7 +91,56 @@ services.AddIdempotencyExecutor(o =>
     o.Mode = IdempotencyMode.Observe;
     o.AddProfile("payments", p => p.Mode = IdempotencyMode.Enforce);
 });
+services.Configure<IdempotencyExecutorOptions>(configuration.GetSection("Idempotency:Executor")); // "Mode": "Enforce"
 ```
+
+- The executor reads `IOptionsMonitor<IdempotencyExecutorOptions>` on every call, so a reload of a bound configuration section changes the mode, globally or per profile, without a restart. A reload that makes the options invalid throws `OptionsValidationException` from every call until it is fixed. The store is the one registered at startup.
+- The mode comes from the operation (`IdempotencyExecutionOptions.Mode`), else its profile, else `IdempotencyExecutorOptions.Mode`.
+- After a switch from `Observe` to `Enforce`, a result stored in `Observe` is replayed and a key still in flight is answered `InFlight`.
+- `Observe` measures duplicates; it does not prevent them. Keep it short for operations that move money.
+- In `Observe` a store that throws while reserving is logged (`Idempotency.Observe.ReserveFailed`) and the operation runs once without idempotency, unless the caller cancelled. In `Enforce` the exception propagates.
+- The `Idempotency-Key` middleware of `CSharpEssentials.AspNetCore` has its own switch, `IdempotencyOptions.Mode`. The Mediator behavior and `IdempotencyInbox` use this one.
+
+### Telemetry
+
+Every entry point counts its decisions on one counter, so an `Observe` rollout can be measured before it is enforced:
+
+```csharp
+builder.Services.AddOpenTelemetry().WithMetrics(m => m.AddMeter(IdempotencyTelemetry.MeterName));
+```
+
+| | |
+|---|---|
+| Meter | `CSharpEssentials.Idempotency` (`IdempotencyTelemetry.MeterName`) |
+| Counter | `idempotency.decisions` (`IdempotencyTelemetry.DecisionsInstrumentName`) |
+| `decision` | `reserved`, `replay`, `key_reused`, `in_flight`, `unscoped`, `released`, `stored` |
+| `mode` | `observe` or `enforce`. Nothing is recorded in `Off` |
+| `source` | `http` (middleware), `mediator` (behavior), `messaging` (`IdempotencyInbox`), `executor` (direct calls) |
+| `target` | The route template, the request type, `messaging:{consumer}`, or the record namespace |
+
+`replay`, `key_reused` and `in_flight` are counted in `Observe` too, as what `Enforce` would have done. Keys and scopes are never tags, and logs never contain them: a log that names a record carries a key hash, the first 16 hex characters of the SHA-256 of its namespace, scope and key, so the log lines of one key can be correlated.
+
+Log events:
+
+| EventId | Name | Level | Logged by |
+|---|---|---|---|
+| 7001 | `Idempotency.UnscopedKeySkipped` | Warning | HTTP, Mediator |
+| 7002 | `Idempotency.StoredResponseUnreadable` | Error | HTTP |
+| 7003 | `Idempotency.KeptInFlight` | Warning | HTTP, executor |
+| 7004 | `Idempotency.ResponseNotStorable` | Warning | HTTP |
+| 7005 | `Idempotency.StoreFailed` | Error | HTTP, executor |
+| 7006 | `Idempotency.StaleReservation` | Warning | HTTP, executor |
+| 7007 | `Idempotency.ReleaseFailed` | Warning | HTTP, executor |
+| 7008 | `Idempotency.ExecutionFilterMissing` | Warning | HTTP |
+| 7009 | `Idempotency.RequestTimeoutExceedsLease` | Warning | HTTP |
+| 7010 | `Idempotency.Observe.WouldReplay` | Information | HTTP, executor |
+| 7011 | `Idempotency.Observe.WouldRejectInFlight` | Information | HTTP, executor |
+| 7012 | `Idempotency.Observe.WouldRejectKeyReused` | Information | HTTP, executor |
+| 7013 | `Idempotency.Observe.WouldRejectScopeRequired` | Information | HTTP, Mediator |
+| 7014 | `Idempotency.Observe.ResolutionFailed` | Warning | HTTP, Mediator |
+| 7015 | `Idempotency.Observe.ReserveFailed` | Warning | HTTP, executor |
+| 7016 | `Idempotency.Observe.WouldRejectKeyMissing` | Information | HTTP, Mediator |
+| 7017 | `Idempotency.Observe.WouldRejectKeyInvalid` | Information | HTTP, Mediator |
 
 ### Use the store directly
 
