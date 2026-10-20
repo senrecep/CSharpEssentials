@@ -10,8 +10,8 @@ namespace CSharpEssentials.AspNetCore;
 /// Swashbuckle and the Microsoft.AspNetCore.OpenApi packages: the header parameter, the <c>Idempotency-Replayed</c> header
 /// of the 2xx responses, and the <c>400</c>, <c>409</c> (<see cref="IdempotencyErrorCodes.InFlight"/>, with <c>Retry-After</c>)
 /// and <c>422</c> problem responses with their <c>code</c> values. An endpoint that does not enforce its key (no
-/// <see cref="IdempotentAttribute"/>, <see cref="IdempotencyMode.Off"/> or <see cref="IdempotencyMode.Observe"/>) and a method
-/// outside <see cref="IdempotencyOptions.Methods"/> stay unchanged.
+/// <see cref="IdempotentAttribute"/> or <see cref="IdempotencyMode.Off"/>) and a method outside
+/// <see cref="IdempotencyOptions.Methods"/> stay unchanged. An endpoint in <see cref="IdempotencyMode.Observe"/> gets only the optional key header.
 /// </summary>
 internal static class OpenApiIdempotency
 {
@@ -34,21 +34,27 @@ internal static class OpenApiIdempotency
             return;
 
         var settings = IdempotencyEndpointSettings.Resolve(options, merged, owner);
-        if (settings.Mode != IdempotencyMode.Enforce)
+        if (settings.Mode == IdempotencyMode.Off)
             return;
 
-        AddKeyParameter(operation, options, settings.RequireKey);
+        if (settings.Mode == IdempotencyMode.Observe)
+        {
+            AddKeyParameter(operation, options, false, true);
+            return;
+        }
+
+        AddKeyParameter(operation, options, settings.RequireKey, false);
         AddReplayedHeader(operation, options);
         AddBadRequest(operation, options, settings);
         AddInFlight(operation);
         AddKeyReused(operation);
     }
 
-    private static void AddKeyParameter(OpenApiOperation operation, IdempotencyOptions options, bool required)
+    private static void AddKeyParameter(OpenApiOperation operation, IdempotencyOptions options, bool required, bool observe)
     {
-        string description =
-            $"Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the {options.ReplayedHeaderName} header, "
-            + $"and the same key with a different request is rejected. 1 to {options.MaxKeyLength.ToString(CultureInfo.InvariantCulture)} printable ASCII characters other than space, '\"' and '\\', optionally quoted.";
+        string description = observe
+            ? $"Optional while the endpoint observes idempotency: the key is accepted and recorded but requests are not replayed or rejected yet, so clients can start sending it. 1 to {options.MaxKeyLength.ToString(CultureInfo.InvariantCulture)} printable ASCII characters other than space, '\"' and '\\', optionally quoted."
+            : BuildEnforceDescription(options);
 
         operation.Parameters ??= [];
         OpenApiParameter? existing = operation.Parameters
@@ -76,6 +82,10 @@ internal static class OpenApiIdempotency
             },
         });
     }
+
+    private static string BuildEnforceDescription(IdempotencyOptions options) =>
+            $"Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the {options.ReplayedHeaderName} header, "
+            + $"and the same key with a different request is rejected. 1 to {options.MaxKeyLength.ToString(CultureInfo.InvariantCulture)} printable ASCII characters other than space, '\"' and '\\', optionally quoted.";
 
     private static void AddReplayedHeader(OpenApiOperation operation, IdempotencyOptions options)
     {

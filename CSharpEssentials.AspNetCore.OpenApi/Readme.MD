@@ -87,7 +87,7 @@ A later call on the same options replaces the mode and selector of an earlier on
 
 ## Idempotency
 
-`options.AddIdempotencyConventions()` describes the contract of idempotent endpoints (`.WithIdempotency()`, `[Idempotent]`) whose method is in `IdempotencyOptions.Methods` and whose resolved mode is `Enforce`. `Off` and `Observe` endpoints, other methods and non-idempotent endpoints are left unchanged.
+`options.AddIdempotencyConventions()` describes the contract of idempotent endpoints (`.WithIdempotency()`, `[Idempotent]`) whose method is in `IdempotencyOptions.Methods`. An `Observe` endpoint gets only the `Idempotency-Key` header, always `required: false`, so clients can start sending keys before `Enforce` is switched on: no `Idempotency-Replayed` header and no 400, 409 or 422 responses. `Off` endpoints, other methods and non-idempotent endpoints are left unchanged. The rest of this section describes `Enforce`.
 
 ```csharp
 builder.Services.AddIdempotency();

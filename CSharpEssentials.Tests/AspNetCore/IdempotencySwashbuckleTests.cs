@@ -35,12 +35,24 @@ public class IdempotencySwashbuckleTests
     {
         JsonNode paths = JsonNode.Parse(await IdempotencySwashbuckleHost.GetJsonAsync(OpenApiSpecVersion.OpenApi3_0))!["paths"]!;
 
-        foreach (string path in (string[])["/idempotency/plain", "/idempotency/mvc/plain", "/idempotency/off", "/idempotency/observe", "/idempotency/get"])
+        foreach (string path in (string[])["/idempotency/plain", "/idempotency/mvc/plain", "/idempotency/off", "/idempotency/get"])
         {
             JsonNode operation = paths[path]!.AsObject().Single().Value!;
             operation["parameters"]?.AsArray().Select(static parameter => (string?)parameter!["in"]).Should().NotContain("header", path);
             operation["responses"]!.AsObject().Select(static pair => pair.Key).Should().BeEquivalentTo(["200"], path);
         }
+    }
+
+    [Fact]
+    public async Task Document_Should_DescribeOnlyAnOptionalKeyHeader_When_TheEndpointObserves()
+    {
+        JsonNode operation = JsonNode.Parse(await IdempotencySwashbuckleHost.GetJsonAsync(OpenApiSpecVersion.OpenApi3_0))!["paths"]!["/idempotency/observe"]!["post"]!;
+
+        JsonNode header = operation["parameters"]!.AsArray().Single(static parameter => (string?)parameter!["in"] == "header")!;
+        ((string?)header["name"]).Should().Be("Idempotency-Key");
+        ((bool?)header["required"] ?? false).Should().BeFalse();
+        operation["responses"]!.AsObject().Select(static pair => pair.Key).Should().BeEquivalentTo("200");
+        operation["responses"]!["200"]!["headers"].Should().BeNull();
     }
 
     [Fact]

@@ -272,6 +272,20 @@
       }
     }
   },
+  "POST /idempotency/observe": {
+    "parameters": [
+      {
+        "description": "Optional while the endpoint observes idempotency: the key is accepted and recorded but requests are not replayed or rejected yet, so clients can start sending it. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ]
+  },
   "POST /idempotency/optional": {
     "parameters": [
       {
