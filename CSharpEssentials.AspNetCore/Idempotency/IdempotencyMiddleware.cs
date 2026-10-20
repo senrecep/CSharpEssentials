@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -79,7 +78,7 @@ internal sealed partial class IdempotencyMiddleware(
             return;
         }
 
-        if (header.Count > 1 || !TryNormalizeKey(header[0], options.MaxKeyLength, out string? key))
+        if (header.Count > 1 || !IdempotencyKeyHeader.TryParse(header[0], options.MaxKeyLength, out string? key))
         {
             if (observe)
             {
@@ -508,17 +507,6 @@ internal sealed partial class IdempotencyMiddleware(
         BinaryPrimitives.WriteInt32LittleEndian(length, bytes.Length);
         hash.AppendData(length);
         hash.AppendData(bytes);
-    }
-
-    /// <summary>
-    /// Unquotes a structured-field string (<c>"abc"</c>) and validates the key. An escape sequence can only produce
-    /// <c>"</c> or <c>\</c>, which keys may not contain, so a value with a backslash or an inner quote is rejected
-    /// whether or not its quoting is well formed.
-    /// </summary>
-    internal static bool TryNormalizeKey(string? value, int maxKeyLength, [NotNullWhen(true)] out string? key)
-    {
-        key = value is { Length: >= 2 } && value[0] == '"' && value[^1] == '"' ? value[1..^1] : value;
-        return IdempotencyKeys.IsValid(key, maxKeyLength);
     }
 
     /// <summary>
