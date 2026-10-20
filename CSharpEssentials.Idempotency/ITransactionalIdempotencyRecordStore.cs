@@ -11,7 +11,13 @@ namespace CSharpEssentials.Idempotency;
 /// detached reservation and is written through this store, in the caller's transaction, so Observe records only work
 /// that committed, as Enforce does: a retry after the switch to <see cref="IdempotencyMode.Enforce"/> never replays a
 /// result whose transaction rolled back. Between that write and the commit, a reservation of the same key waits for
-/// the caller's transaction, as in Enforce.
+/// the caller's transaction; in Observe that wait can be a cycle across the caller's two connections that the database
+/// cannot detect and only a command timeout ends.
+/// </para>
+/// <para>
+/// In Observe, <see cref="IIdempotencyRecordStore.CompleteAsync"/> of this store is therefore called with a token whose
+/// reservation <see cref="Detached"/> has already released. An implementation must write the result anyway and succeed
+/// when the entry is gone, as <see cref="IIdempotencyRecordStore"/> requires.
 /// </para>
 /// </summary>
 public interface ITransactionalIdempotencyRecordStore : IIdempotencyRecordStore

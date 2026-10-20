@@ -138,16 +138,27 @@ with the business data, as in `Enforce`: when the commit fails, nothing is recor
 - Between the release of the detached reservation and the write in the business transaction the key is absent for one
   round trip. A concurrent duplicate that arrives then is reserved: in `Observe` it is counted `reserved` instead of
   `in_flight`, and on an instance that already runs `Enforce` (a rolling switch) it runs.
-- From that write until the commit, a reservation of the same key waits for the business transaction, as in `Enforce`.
-  An operation that reuses the key of an operation it already completed in the same transaction waits until its command
-  times out, then runs without idempotency (`Idempotency.Observe.ReserveFailed`).
+- From that write until the commit, a reservation of the same key waits for the business transaction. In `Enforce` that
+  wait is a plain lock wait the database can see; in `Observe` it can be a cycle the database cannot detect: request B
+  holds its business transaction while its detached reservation, on a second connection, waits for the uncommitted
+  result row of request A, and one edge of the cycle lives in the application across B's two connections. Only the
+  command timeout ends it, and B then runs without idempotency (`Idempotency.Observe.ReserveFailed`). An operation that
+  reuses the key of an operation it already completed in the same transaction waits the same way.
 - A database error on that write (a lock or statement timeout, for example) is rolled back to a savepoint, so the
   business data still commits, without the record, and a retry after the switch to `Enforce` runs again. The EF Core
-  store takes the savepoint in the context's transaction, and on PostgreSQL also in an ambient `TransactionScope`; on
-  other providers an error that aborts an ambient transaction takes the business data with it. Under an isolation level
-  stricter than `READ COMMITTED` (`TransactionScope` defaults to `Serializable`) the write always fails this way,
-  because the release changed the row after the transaction's snapshot, so `Observe` records nothing: run the business
-  transaction at `READ COMMITTED`, which the store needs anyway.
+  store takes the savepoint in the context's transaction, and on PostgreSQL also in an ambient `TransactionScope` whose
+  transaction the connection is enlisted in; on other providers an error that aborts an ambient transaction takes the
+  business data with it. On PostgreSQL, under an isolation level stricter than `READ COMMITTED` (`TransactionScope`
+  defaults to `Serializable`) the write always fails this way, because the release changed the row after the
+  transaction's snapshot, so `Observe` records nothing: run the business transaction at `READ COMMITTED`, which the
+  store needs anyway. Other providers may succeed under a stricter level; that is not verified.
+- On SQL Server a savepoint cannot save a transaction the server has doomed: with `XACT_ABORT ON` on the connection, or
+  under `SNAPSHOT` isolation after an update conflict (error 3960), the failed write dooms the whole transaction, the
+  rollback to the savepoint fails, and the business data is lost with it. The original error is thrown. Keep
+  `XACT_ABORT` off and avoid `SNAPSHOT` for transactions that run `Observe`, or use `Enforce`.
+- If the detached release fails, the write in the business transaction turns the committed in-flight row to `Completed`
+  inside that transaction. When that commit then fails, the row stays in flight, and after the switch to `Enforce` a
+  retry is answered `InFlight` (409) until the lease ends; it is not replayed.
 
 Keep `Observe` short for operations that move money.
 
