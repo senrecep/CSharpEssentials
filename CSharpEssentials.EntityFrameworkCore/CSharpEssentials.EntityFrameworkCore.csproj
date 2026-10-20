@@ -52,6 +52,7 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" VersionOverride="[10.0.1,)" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" VersionOverride="[10.0.1,)" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="[10.0.1,)" />
+    <PackageReference Include="Microsoft.Extensions.Options" VersionOverride="[10.0.1,)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="EFCore.NamingConventions" />
