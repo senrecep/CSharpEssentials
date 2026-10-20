@@ -1,7 +1,9 @@
 using CSharpEssentials.AspNetCore;
 using CSharpEssentials.Idempotency;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.Tests.AspNetCore.Idempotency;
 
@@ -89,6 +91,7 @@ public sealed class IdempotencyRegistrationTests
 
         using ServiceProvider provider = services.BuildServiceProvider();
         IdempotencyOptions options = provider.GetRequiredService<IdempotencyOptions>();
+        options.Mode.Should().Be(IdempotencyMode.Enforce);
         options.Namespace.Should().Be("http");
         options.ScopeResolver.Should().BeSameAs(IdempotencyScopes.User);
         options.UnscopedKeyBehavior.Should().Be(UnscopedKeyBehavior.Skip);
@@ -132,6 +135,7 @@ public sealed class IdempotencyRegistrationTests
             () => new ServiceCollection().AddIdempotency(o => o.NeverStoreStatusCodes.Add(99)),
             () => new ServiceCollection().AddIdempotency(o => o.NeverStoreStatusCodes.Add(600)),
             () => new ServiceCollection().AddIdempotency(o => o.UnscopedKeyBehavior = (UnscopedKeyBehavior)3),
+            () => new ServiceCollection().AddIdempotency(o => o.Mode = (IdempotencyMode)3),
         ];
 
         foreach (Action act in invalid)
@@ -152,6 +156,60 @@ public sealed class IdempotencyRegistrationTests
         });
 
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AddIdempotency_Should_Expose_The_Options_Through_The_Monitor_With_Later_Configuration()
+    {
+        ServiceCollection services = new();
+
+        services.AddIdempotency(options => options.HeaderName = "A");
+        services.Configure<IdempotencyOptions>(options => options.Mode = IdempotencyMode.Observe);
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IdempotencyOptions current = provider.GetRequiredService<IOptionsMonitor<IdempotencyOptions>>().CurrentValue;
+        current.HeaderName.Should().Be("A");
+        current.Mode.Should().Be(IdempotencyMode.Observe);
+        provider.GetRequiredService<IdempotencyOptions>().Should().BeSameAs(current);
+    }
+
+    [Fact]
+    public void AddIdempotency_Twice_Should_Drop_The_First_Configure()
+    {
+        ServiceCollection services = new();
+
+        services.AddIdempotency(options => options.AddProfile("payments", profile => profile.Mode = IdempotencyMode.Observe));
+        services.AddIdempotency(options => options.AddProfile("payments", profile => profile.Mode = IdempotencyMode.Off));
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        Action act = () => _ = provider.GetRequiredService<IOptionsMonitor<IdempotencyOptions>>().CurrentValue;
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void A_Reload_Should_Change_The_Mode_And_An_Invalid_Reload_Should_Throw()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Mode"] = "Observe", ["RetryAfter"] = "00:00:02" })
+            .Build();
+        ServiceCollection services = new();
+        services.AddIdempotency();
+        services.Configure<IdempotencyOptions>(configuration);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        IOptionsMonitor<IdempotencyOptions> monitor = provider.GetRequiredService<IOptionsMonitor<IdempotencyOptions>>();
+        IdempotencyMode before = monitor.CurrentValue.Mode;
+
+        configuration["Mode"] = "Enforce";
+        configuration.Reload();
+        IdempotencyMode after = monitor.CurrentValue.Mode;
+        configuration["RetryAfter"] = "00:00:00";
+        Action invalidReload = configuration.Reload;
+
+        before.Should().Be(IdempotencyMode.Observe);
+        after.Should().Be(IdempotencyMode.Enforce);
+        invalidReload.Should().Throw<AggregateException>().WithInnerException<OptionsValidationException>();
+        Action read = () => _ = monitor.CurrentValue;
+        read.Should().Throw<OptionsValidationException>().WithMessage("*RetryAfter*");
     }
 
     private sealed class CustomStore : IIdempotencyRecordStore

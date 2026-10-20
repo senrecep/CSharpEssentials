@@ -6,10 +6,26 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
-/// Settings for <c>UseIdempotency()</c>, configured through <c>AddIdempotency</c>.
+/// Settings for <c>UseIdempotency()</c>, configured through <c>AddIdempotency</c> and read through
+/// <c>IOptionsMonitor&lt;IdempotencyOptions&gt;</c>, so a configuration reload (for example of <see cref="Mode"/>)
+/// applies to the next request without a restart. The store chosen with a <c>Use…Store()</c> call is fixed when
+/// <c>AddIdempotency</c> runs.
 /// </summary>
 public sealed class IdempotencyOptions
 {
+    /// <summary>
+    /// How idempotent endpoints that set no mode of their own (<see cref="IdempotencyEndpointOptions.Mode"/>, or that of
+    /// their profile) use their keys. <see cref="IdempotencyMode.Off"/> ignores the header and never touches the store.
+    /// <see cref="IdempotencyMode.Observe"/> reserves and stores like <see cref="IdempotencyMode.Enforce"/> but never
+    /// answers differently from <see cref="IdempotencyMode.Off"/>: no replay, no <c>Idempotency-Replayed</c>, no
+    /// <c>400</c>/<c>409</c>/<c>422</c>; it logs and counts what <see cref="IdempotencyMode.Enforce"/> would have done.
+    /// Observe measures duplicates, it does not prevent them; keep it short for operations that move money. A record
+    /// stored in Observe is replayed once the mode becomes Enforce. This switch is separate from
+    /// <c>IdempotencyExecutorOptions.Mode</c>, which Mediator and message consumers read. Default:
+    /// <see cref="IdempotencyMode.Enforce"/>.
+    /// </summary>
+    public IdempotencyMode Mode { get; set; } = IdempotencyMode.Enforce;
+
     /// <summary>
     /// Request header that carries the key, either bare (<c>abc</c>) or as a structured-field string (<c>"abc"</c>);
     /// both name the same record. A key must be 1 to <see cref="MaxKeyLength"/> printable ASCII characters other than
@@ -170,6 +186,8 @@ public sealed class IdempotencyOptions
             ArgumentOutOfRangeException.ThrowIfGreaterThan(neverStoreStatusCode, 599);
         }
 
+        uint mode = (uint)Mode;
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(mode, (uint)IdempotencyMode.Enforce);
         uint unscopedKeyBehavior = (uint)UnscopedKeyBehavior;
         ArgumentOutOfRangeException.ThrowIfGreaterThan(unscopedKeyBehavior, (uint)UnscopedKeyBehavior.Global);
         ArgumentException.ThrowIfNullOrEmpty(Namespace);

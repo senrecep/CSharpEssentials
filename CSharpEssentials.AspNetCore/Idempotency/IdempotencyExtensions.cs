@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.AspNetCore;
 
@@ -12,8 +13,17 @@ public static class IdempotencyExtensions
     /// <summary>
     /// Registers <see cref="IdempotencyOptions"/> and the <see cref="IIdempotencyRecordStore"/> chosen in
     /// <paramref name="configure"/>. Without a <c>Use…Store()</c> call, <see cref="InMemoryIdempotencyRecordStore"/> is
-    /// registered unless a store is already registered. Calling it again replaces the options.
+    /// registered unless a store is already registered. Calling it again replaces the options it configured.
     /// Invalid options throw here, not on the first request.
+    /// <para>
+    /// The options are read through <c>IOptionsMonitor&lt;IdempotencyOptions&gt;</c>: <paramref name="configure"/> runs
+    /// every time they are built, and other <c>Configure</c> or <c>Bind</c> calls on <see cref="IdempotencyOptions"/>
+    /// apply after it, so options bound to a reloadable configuration section (for example
+    /// <see cref="IdempotencyOptions.Mode"/>) change at runtime. A reload that makes them invalid throws
+    /// <c>OptionsValidationException</c> when they are rebuilt and on every request to an idempotent endpoint until it
+    /// is fixed. <see cref="IdempotencyOptions"/> itself resolves to the current value. The store is the one chosen
+    /// here; a reload does not change it.
+    /// </para>
     /// <para>
     /// It also registers an <see cref="IIdempotencyScopeAccessor"/> that reads the user of the current request (unless
     /// one is already registered), so the Mediator idempotency behavior resolves scopes from the same caller as the
@@ -28,7 +38,18 @@ public static class IdempotencyExtensions
         IdempotencyOptions options = new();
         configure?.Invoke(options);
         options.Validate();
-        services.Replace(ServiceDescriptor.Singleton(options));
+
+        services.AddOptions();
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (services[index] is { IsKeyedService: false, ImplementationInstance: IdempotencyOptionsSetup })
+                services.RemoveAt(index);
+        }
+
+        if (configure is not null)
+            services.AddSingleton<IConfigureOptions<IdempotencyOptions>>(new IdempotencyOptionsSetup(configure));
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<IdempotencyOptions>, IdempotencyOptionsValidator>());
+        services.Replace(ServiceDescriptor.Transient(static provider => provider.GetRequiredService<IOptionsMonitor<IdempotencyOptions>>().CurrentValue));
         services.TryAddSingleton(TimeProvider.System);
         services.AddHttpContextAccessor();
         services.TryAddSingleton<IIdempotencyScopeAccessor, HttpContextIdempotencyScopeAccessor>();

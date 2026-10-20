@@ -29,6 +29,13 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter, IOrdere
         set => Overrides.Profile = value;
     }
 
+    /// <summary>Overrides <see cref="IdempotencyOptions.Mode"/>.</summary>
+    public IdempotencyMode Mode
+    {
+        get => Overrides.Mode.GetValueOrDefault();
+        set => Overrides.Mode = value;
+    }
+
     /// <summary>Overrides <see cref="IdempotencyOptions.RetentionPeriod"/>, in seconds.</summary>
     public int RetentionSeconds
     {

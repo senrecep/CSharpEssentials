@@ -7,6 +7,7 @@ namespace CSharpEssentials.AspNetCore;
 /// <see cref="IdempotencyOptions"/>.
 /// </summary>
 internal sealed record IdempotencyEndpointSettings(
+    IdempotencyMode Mode,
     TimeSpan RetentionPeriod,
     TimeSpan InFlightTimeout,
     TimeSpan ServerErrorRetention,
@@ -33,6 +34,7 @@ internal sealed record IdempotencyEndpointSettings(
         }
 
         IdempotencyEndpointSettings settings = new(
+            endpoint.Mode ?? profile?.Mode ?? options.Mode,
             endpoint.RetentionPeriod ?? profile?.RetentionPeriod ?? options.RetentionPeriod,
             endpoint.InFlightTimeout ?? profile?.InFlightTimeout ?? options.InFlightTimeout,
             endpoint.ServerErrorRetention ?? profile?.ServerErrorRetention ?? options.ServerErrorRetention,
@@ -46,6 +48,8 @@ internal sealed record IdempotencyEndpointSettings(
 
     private void Validate(TimeSpan maxInFlightTimeout, string owner)
     {
+        if ((uint)Mode > (uint)IdempotencyMode.Enforce)
+            throw Invalid(owner, $"Mode ({Mode}) is not a defined value.");
         if (RetentionPeriod <= TimeSpan.Zero)
             throw Invalid(owner, $"RetentionPeriod ({RetentionPeriod}) must be positive.");
         if (InFlightTimeout <= TimeSpan.Zero || InFlightTimeout > RetentionPeriod || InFlightTimeout > maxInFlightTimeout)
