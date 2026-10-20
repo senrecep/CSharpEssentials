@@ -211,8 +211,220 @@ surrogate, which has no UTF-8 encoding. A `Custom` kind cannot contain `:` or `/
 
 For strict guarantees across instances, implement `IIdempotencyRecordStore` with one atomic operation for
 `TryReserveAsync` (Redis `SET NX`, a unique index) and token-checked `CompleteAsync` and `ReleaseAsync`, then run the
-`CSharpEssentials.Idempotency.Testing` contract tests against it.
+`CSharpEssentials.Idempotency.Testing` contract tests against it. See [External stores](#external-stores).
 
 **Store requirement:** a store must compare `Namespace`, `Scope` and `Key` ordinally and case-sensitively. For a SQL
 store that means a binary or case-sensitive collation on those columns; with a case-insensitive one,
 `Tenant("ABC")` and `Tenant("abc")` share a record. The contract tests check this.
+
+## External stores
+
+There is no Redis or DynamoDB package. The library gives the `IIdempotencyRecordStore` contract, the requirements
+below and the contract tests in `CSharpEssentials.Idempotency.Testing`; the store itself lives in your application.
+
+**Atomicity requirements**
+
+- `TryReserveAsync` is one atomic operation: of concurrent calls for a free or expired key, exactly one returns
+  `Reserved`. A live entry with another fingerprint returns `FingerprintMismatch`, whether it is in flight or completed.
+- `CompleteAsync` and `ReleaseAsync` are compare-and-set on the reservation token. They change the entry only while it
+  carries the caller's token and is not completed. `CompleteAsync` also succeeds when the entry is gone (its lease
+  expired and nobody took the key over); `ReleaseAsync` never removes a completed entry.
+- The lease applies to the in-flight reservation, the retention to the completed entry. The store applies the duration
+  it is given; the caller picks it (`Retention`, `FailureRetention`, `ServerErrorRetention`).
+- Build the storage key with `key.ToStorageKey(prefix)` and compare it ordinally and case-sensitively (see the store
+  requirement above).
+- The payload is opaque bytes and may be empty, so a store marks completion separately from the payload content.
+
+### Redis
+
+A reference implementation on `StackExchange.Redis`. Each operation is one Lua script on one key, so it is atomic and
+works on Redis Cluster. An entry is a hash with `t` (token), `f` (fingerprint) and, once completed, `p` (payload);
+leases and retention are `PEXPIRE` TTLs, so an expired entry is absent.
+
+- Reserve: when the key is absent, write `t` and `f` and set `PEXPIRE lease`; otherwise return `FingerprintMismatch`
+  for another `f`, `Completed` with `p` when `p` exists, else `InFlight`.
+- Complete: when the key is absent, or `t` matches and `p` does not exist, write `t`, `f` and `p` and set
+  `PEXPIRE retention`.
+- Release: when `t` matches and `p` does not exist, `DEL`.
+
+```csharp
+using CSharpEssentials.Idempotency;
+using StackExchange.Redis;
+
+namespace Examples.Idempotency.Redis;
+
+/// <summary>
+/// <see cref="IIdempotencyRecordStore"/> on Redis. Every operation is one Lua script on one key, so it is atomic and
+/// works on Redis Cluster. An entry is a hash: <c>t</c> (token), <c>f</c> (fingerprint) and, once completed,
+/// <c>p</c> (payload). Leases and retention are Redis TTLs (<c>PEXPIRE</c>), so an expired entry is simply absent.
+/// </summary>
+public sealed class RedisIdempotencyRecordStore : IIdempotencyRecordStore
+{
+    private const string ReserveScript = """
+        local entry = redis.call('HMGET', KEYS[1], 't', 'f', 'p')
+        if not entry[1] then
+          redis.call('HSET', KEYS[1], 't', ARGV[1], 'f', ARGV[2])
+          redis.call('PEXPIRE', KEYS[1], ARGV[3])
+          return { 0 }
+        end
+        if entry[2] ~= ARGV[2] then
+          return { 3 }
+        end
+        if not entry[3] then
+          return { 1 }
+        end
+        return { 2, entry[3] }
+        """;
+
+    private const string CompleteScript = """
+        local entry = redis.call('HMGET', KEYS[1], 't', 'p')
+        if entry[1] and (entry[2] or entry[1] ~= ARGV[1]) then
+          return 0
+        end
+        redis.call('HSET', KEYS[1], 't', ARGV[1], 'f', ARGV[2], 'p', ARGV[3])
+        redis.call('PEXPIRE', KEYS[1], ARGV[4])
+        return 1
+        """;
+
+    private const string ReleaseScript = """
+        local entry = redis.call('HMGET', KEYS[1], 't', 'p')
+        if entry[1] == ARGV[1] and not entry[2] then
+          redis.call('DEL', KEYS[1])
+          return 1
+        end
+        return 0
+        """;
+
+    private readonly IConnectionMultiplexer _connection;
+
+    /// <summary>Uses <see cref="IdempotencyRecordKey.DefaultPrefix"/>.</summary>
+    public RedisIdempotencyRecordStore(IConnectionMultiplexer connection)
+        : this(connection, IdempotencyRecordKey.DefaultPrefix)
+    {
+    }
+
+    /// <param name="connection">The application's Redis connection.</param>
+    /// <param name="keyPrefix">Prefix of the Redis keys, passed to <see cref="IdempotencyRecordKey.ToStorageKey"/>.</param>
+    public RedisIdempotencyRecordStore(IConnectionMultiplexer connection, string keyPrefix)
+    {
+        ArgumentNullException.ThrowIfNull(connection);
+        ArgumentNullException.ThrowIfNull(keyPrefix);
+        _connection = connection;
+        KeyPrefix = keyPrefix;
+    }
+
+    /// <summary>Prefix of the Redis keys written by this store.</summary>
+    public string KeyPrefix { get; }
+
+    /// <inheritdoc />
+    public async ValueTask<IdempotencyRecordReservation> TryReserveAsync(
+        IdempotencyRecordKey key,
+        string fingerprint,
+        TimeSpan lease,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentException.ThrowIfNullOrEmpty(fingerprint);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lease, TimeSpan.Zero);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        string token = Guid.NewGuid().ToString("N");
+        RedisResult result = await _connection.GetDatabase().ScriptEvaluateAsync(
+            ReserveScript,
+            [key.ToStorageKey(KeyPrefix)],
+            [token, fingerprint, Milliseconds(lease)]).ConfigureAwait(false);
+
+        return (int)result[0] switch
+        {
+            0 => IdempotencyRecordReservation.Reserved(token),
+            1 => IdempotencyRecordReservation.InFlight,
+            2 => IdempotencyRecordReservation.Completed((byte[]?)result[1] ?? []),
+            _ => IdempotencyRecordReservation.FingerprintMismatch,
+        };
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> CompleteAsync(
+        IdempotencyRecordKey key,
+        string token,
+        string fingerprint,
+        ReadOnlyMemory<byte> payload,
+        TimeSpan retention,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentException.ThrowIfNullOrEmpty(token);
+        ArgumentException.ThrowIfNullOrEmpty(fingerprint);
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retention, TimeSpan.Zero);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        RedisResult result = await _connection.GetDatabase().ScriptEvaluateAsync(
+            CompleteScript,
+            [key.ToStorageKey(KeyPrefix)],
+            [token, fingerprint, payload.ToArray(), Milliseconds(retention)]).ConfigureAwait(false);
+        return (int)result == 1;
+    }
+
+    /// <inheritdoc />
+    public async ValueTask<bool> ReleaseAsync(IdempotencyRecordKey key, string token, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+        ArgumentException.ThrowIfNullOrEmpty(token);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        RedisResult result = await _connection.GetDatabase().ScriptEvaluateAsync(
+            ReleaseScript,
+            [key.ToStorageKey(KeyPrefix)],
+            [token]).ConfigureAwait(false);
+        return (int)result == 1;
+    }
+
+    /// <summary>Whole milliseconds for <c>PEXPIRE</c>, rounded up so a positive span never becomes 0.</summary>
+    private static long Milliseconds(TimeSpan duration) => Math.Max(1L, (long)Math.Ceiling(duration.TotalMilliseconds));
+}
+```
+
+Register your `IConnectionMultiplexer` and select the store. For HTTP endpoints:
+
+```csharp
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+builder.Services.AddIdempotency(o => o.UseStore<RedisIdempotencyRecordStore>(ServiceLifetime.Singleton));
+```
+
+For the executor, `IdempotencyInbox` or the Mediator behavior, register it before `AddIdempotencyExecutor`, which keeps
+an existing store:
+
+```csharp
+builder.Services.AddSingleton<IIdempotencyRecordStore, RedisIdempotencyRecordStore>();
+builder.Services.AddIdempotencyExecutor();
+```
+
+For one profile only, register it as a keyed `IIdempotencyRecordStore` and name the key in the profile's `StoreKey`.
+`StackExchange.Redis` commands take no `CancellationToken`, so the store checks it before the call only. Multi-field
+`HSET` needs Redis 4.0 or later.
+
+This code is kept in [`examples/Examples.Idempotency.Redis`](https://github.com/senrecep/CSharpEssentials/tree/main/examples/Examples.Idempotency.Redis),
+where CI runs every contract scenario against a Redis container:
+
+```csharp
+public sealed class RedisIdempotencyRecordStoreTests(RedisFixture redis)
+    : IdempotencyRecordStoreContractTests, IClassFixture<RedisFixture>
+{
+    protected override bool UseRealClock => true;
+
+    protected override IIdempotencyRecordStore CreateStore(TimeProvider timeProvider) =>
+        new RedisIdempotencyRecordStore(redis.Connection);
+}
+```
+
+### DynamoDB
+
+Use one item per `ToStorageKey()` partition key with `token`, `fingerprint`, `payload` and `expiresAt`, and conditional
+writes. DynamoDB TTL deletes expired items late, so expiry is part of every condition and TTL only cleans up.
+
+- Reserve: `PutItem` with `attribute_not_exists(pk) OR expiresAt <= :now`. On `ConditionalCheckFailedException`, read
+  the existing item (`ReturnValuesOnConditionCheckFailure = ALL_OLD`) and return `FingerprintMismatch`, `Completed` or
+  `InFlight`.
+- Complete: `PutItem` with `attribute_not_exists(pk) OR (#token = :token AND attribute_not_exists(payload))`, with
+  `expiresAt` set to now plus the retention.
+- Release: `DeleteItem` with `#token = :token AND attribute_not_exists(payload)`.
