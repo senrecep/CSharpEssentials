@@ -112,7 +112,7 @@ services.Configure<IdempotencyExecutorOptions>(configuration.GetSection("Idempot
 
 - The executor reads `IOptionsMonitor<IdempotencyExecutorOptions>` on every call, so a reload of a bound configuration section changes the mode, globally or per profile, without a restart. A reload that makes the options invalid throws `OptionsValidationException` from every call until it is fixed. The store is the one registered at startup.
 - The mode comes from the operation (`IdempotencyExecutionOptions.Mode`), else its profile, else `IdempotencyExecutorOptions.Mode`.
-- After a switch from `Observe` to `Enforce`, a result stored in `Observe` is replayed and a key still in flight is answered `InFlight`.
+- After a switch from `Observe` to `Enforce`, a result stored in `Observe` is replayed and a key still in flight is answered `InFlight`. With a store that writes in the business transaction (`ITransactionalIdempotencyRecordStore`, such as the EF Core store) only results whose transaction committed are stored, so a retry of work that rolled back runs again.
 - `Observe` measures duplicates; it does not prevent them. Keep it short for operations that move money.
 - In `Observe` a store that throws while reserving is logged (`Idempotency.Observe.ReserveFailed`) and the operation runs once without idempotency, unless the caller cancelled. In `Enforce` the exception propagates.
 - The `Idempotency-Key` middleware of `CSharpEssentials.AspNetCore` has its own switch, `IdempotencyOptions.Mode`. The Mediator behavior and `IdempotencyInbox` use this one.
@@ -123,10 +123,32 @@ To add idempotency to an operation that already has callers:
 2. Read the [telemetry](#telemetry). `key_reused` shows callers that reuse a key for different content, `in_flight` shows concurrent duplicates, `replay` shows how often a retry would have been answered from the store, and `unscoped` shows callers that send a key without a resolvable scope (the log events name the endpoint or request type, never the key).
 3. Fix what the numbers show (a client that reuses keys, a machine caller that needs `IdempotencyScopes.Client`), then switch to `Enforce` through configuration.
 
-**Residual risk.** `Observe` records are real records. When the business transaction fails after the operation completed
-and its record was written, for example because the commit failed, the record stays, and after the switch to `Enforce` a
-retry with that key replays a result for work that never committed. With the EF Core store this is the one case where the
-record and the data are not atomic: in `Observe` it writes through the `Detached` view (see [EF Core store](#ef-core-store)).
+**Transactions in `Observe`.** `Observe` records are real records. With an `ITransactionalIdempotencyRecordStore` (the
+EF Core store) the executor and the HTTP middleware reserve the key through the `Detached` view, so the reservation never
+waits for or fails the business transaction. When the operation returns a result to store, they release that reservation
+and write the result through the store itself, in the business transaction (the Mediator transaction with
+`IdempotencyPlacement.InsideTransaction`, or the one open around `UseIdempotency`). The record then commits and rolls back
+with the business data, as in `Enforce`: when the commit fails, nothing is recorded and a retry after the switch to
+`Enforce` runs the operation again. What remains:
+
+- A store that cannot join the business transaction (in-memory, distributed cache, Redis) stores the result before the
+  commit when the transaction wraps the idempotency layer, in `Observe` and `Enforce` alike. A commit that then fails
+  leaves a record, and a retry replays a result for work that never committed. Use the EF Core store, or put the
+  idempotency layer outside the transaction, for work whose commit can fail after the operation returned.
+- Between the release of the detached reservation and the write in the business transaction the key is absent for one
+  round trip. A concurrent duplicate that arrives then is reserved: in `Observe` it is counted `reserved` instead of
+  `in_flight`, and on an instance that already runs `Enforce` (a rolling switch) it runs.
+- From that write until the commit, a reservation of the same key waits for the business transaction, as in `Enforce`.
+  An operation that reuses the key of an operation it already completed in the same transaction waits until its command
+  times out, then runs without idempotency (`Idempotency.Observe.ReserveFailed`).
+- A database error on that write (a lock or statement timeout, for example) is rolled back to a savepoint, so the
+  business data still commits, without the record, and a retry after the switch to `Enforce` runs again. The EF Core
+  store takes the savepoint in the context's transaction, and on PostgreSQL also in an ambient `TransactionScope`; on
+  other providers an error that aborts an ambient transaction takes the business data with it. Under an isolation level
+  stricter than `READ COMMITTED` (`TransactionScope` defaults to `Serializable`) the write always fails this way,
+  because the release changed the row after the transaction's snapshot, so `Observe` records nothing: run the business
+  transaction at `READ COMMITTED`, which the store needs anyway.
+
 Keep `Observe` short for operations that move money.
 
 ### Lease and retry budget
@@ -405,9 +427,10 @@ services.AddEfCoreIdempotencyRecordStore<AppDbContext>();
   them, for example from a hosted service.
 - `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` registers it as a keyed store, so only the profiles with
   `StoreKey = "payments"` use the database and the others keep the default store.
-- In `Observe` the executor and the HTTP middleware write through its `Detached` view, in a context and transaction of
-  their own, so observing does not wait for or fail the business transaction. Those records are not atomic with the
-  business data.
+- In `Observe` the executor and the HTTP middleware reserve and release through its `Detached` view, in a context and
+  transaction of their own, so a reservation does not wait for or fail the business transaction. A result to store is
+  written in the business transaction, so it commits and rolls back with the business data as in `Enforce` (see
+  [Transactions in `Observe`](#rollout-observe--enforce)).
 
 The [EF Core Readme](../CSharpEssentials.EntityFrameworkCore/Readme.MD#idempotency-records) has the details and a purge
 service.
