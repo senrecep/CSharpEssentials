@@ -63,7 +63,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.0,9)" />
   </ItemGroup>
 
-  <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, and Json -->
+  <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, Json, Maybe, Results and Idempotency -->
   <ItemGroup>
     <PackageReference Include="CSharpEssentials.Core"
       Condition="'$(UseProjectReferences)' != 'true'" />
@@ -89,6 +89,10 @@
     <PackageReference Include="CSharpEssentials.Results"
       Condition="'$(UseProjectReferences)' != 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+    <PackageReference Include="CSharpEssentials.Idempotency"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Idempotency\CSharpEssentials.Idempotency.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
