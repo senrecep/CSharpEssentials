@@ -14,6 +14,12 @@ public static class IdempotencyExtensions
     /// <paramref name="configure"/>. Without a <c>Use…Store()</c> call, <see cref="InMemoryIdempotencyRecordStore"/> is
     /// registered unless a store is already registered. Calling it again replaces the options.
     /// Invalid options throw here, not on the first request.
+    /// <para>
+    /// It also registers an <see cref="IIdempotencyScopeAccessor"/> that reads the user of the current request (unless
+    /// one is already registered), so the Mediator idempotency behavior resolves scopes from the same caller as the
+    /// middleware, and its <see cref="IdempotencyOptions.RetryAfter"/> is sent with every problem response carrying
+    /// <see cref="IdempotencyErrorCodes.InFlight"/>.
+    /// </para>
     /// </summary>
     public static IServiceCollection AddIdempotency(this IServiceCollection services, Action<IdempotencyOptions>? configure = null)
     {
@@ -24,6 +30,8 @@ public static class IdempotencyExtensions
         options.Validate();
         services.Replace(ServiceDescriptor.Singleton(options));
         services.TryAddSingleton(TimeProvider.System);
+        services.AddHttpContextAccessor();
+        services.TryAddSingleton<IIdempotencyScopeAccessor, HttpContextIdempotencyScopeAccessor>();
         options.StoreRegistration(services);
         return services;
     }

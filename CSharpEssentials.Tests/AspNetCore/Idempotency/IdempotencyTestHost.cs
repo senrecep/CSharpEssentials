@@ -80,7 +80,7 @@ internal sealed class IdempotencyTestHost : IAsyncDisposable
                 manager.FeatureProviders.Remove(provider);
             manager.FeatureProviders.Add(new OnlyControllersFeatureProvider(
                 typeof(IdempotentOrdersController), typeof(PlainOrdersController), typeof(IdempotencyOverridesController),
-                typeof(IdempotencyProfileController)));
+                typeof(IdempotencyProfileController), typeof(IdempotencyResultController)));
         });
         builder.Services.AddIdempotency(configure);
         configureServices?.Invoke(builder.Services);

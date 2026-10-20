@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
+using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
@@ -31,6 +33,7 @@ internal static class ProblemDetailsEnrichment
             return;
         IServiceProvider? services = context.HttpContext.RequestServices;
         Apply(context, GetOptions(services));
+        ApplyIdempotencyInFlight(context, services);
         if (services is null)
             return;
         foreach (IProblemDetailsEnricher enricher in services.GetServices<IProblemDetailsEnricher>())
@@ -88,6 +91,26 @@ internal static class ProblemDetailsEnrichment
                 ["stackTrace"] = exception.StackTrace,
                 ["innerException"] = exception.InnerException?.Message,
             };
+    }
+
+    /// <summary>
+    /// Gives a problem that carries <see cref="IdempotencyErrorCodes.InFlight"/>, such as a failed <c>Result</c> of an
+    /// idempotent Mediator request, the same shape as the <c>409</c> of the idempotency middleware: the top-level
+    /// <c>code</c> member and <c>Retry-After</c> from <see cref="IdempotencyOptions.RetryAfter"/> (1 second when
+    /// <c>AddIdempotency</c> was not called). A business conflict gets neither, so clients retry only a key in flight.
+    /// </summary>
+    private static void ApplyIdempotencyInFlight(ProblemDetailsContext context, IServiceProvider? services)
+    {
+        if (context.ProblemDetails is not EnhancedProblemDetails problem
+            || !Array.Exists(problem.Errors, static error => error.Code == IdempotencyErrorCodes.InFlight))
+            return;
+
+        problem.Extensions[IdempotencyMiddleware.CodeKey] = IdempotencyErrorCodes.InFlight;
+        HttpResponse response = context.HttpContext.Response;
+        if (response.HasStarted)
+            return;
+        TimeSpan retryAfter = services?.GetService<IdempotencyOptions>()?.RetryAfter ?? TimeSpan.FromSeconds(1);
+        response.Headers.RetryAfter = Math.Max(1, (long)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
     }
 
     private static void ApplyTraceId(IDictionary<string, object?> extensions, TraceIdFormat format, Activity? activity, HttpContext httpContext)
