@@ -100,6 +100,7 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 | Log request/response bodies | `CSharpEssentials.RequestResponseLogging` |
 | OpenAPI documents with enum schemas and optional route parameters (one per host) | `CSharpEssentials.AspNetCore.Swashbuckle` (net8-net11) or `CSharpEssentials.AspNetCore.OpenApi` (net10, `Microsoft.AspNetCore.OpenApi`) |
 | Idempotency-Key, ETag/304 and If-Match for HTTP endpoints | `CSharpEssentials.AspNetCore` |
+| Run an operation or a message once (`IIdempotencyExecutor`, `IdempotencyInbox`), or a Mediator request (`IdempotencyBehavior`) | `CSharpEssentials.Idempotency`, `CSharpEssentials.Mediator` |
 | Load secrets from GCP Secret Manager | `CSharpEssentials.GcpSecretManager` |
 | Transient fault handling (retry, timeout, circuit breaker, fallback) | `CSharpEssentials.Resilience` |
 | Testable time / freeze clock in tests | `CSharpEssentials.Time` |
