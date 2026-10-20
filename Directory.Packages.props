@@ -109,6 +109,7 @@
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
         <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
+        <PackageVersion Include="StackExchange.Redis" Version="2.8.31" />
     </ItemGroup>
 
     <!-- Build -->
