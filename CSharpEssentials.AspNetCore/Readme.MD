@@ -293,16 +293,19 @@ The response is stored as an opaque, versioned payload. A stored payload that ca
 
 #### Transactional store for money movement
 
-Pass the header key to a command and run the command inside the transaction; the middleware can stay in front for the `Idempotency-Key` contract. The two layers use different namespaces (`http` and the request type), so their records never collide. The command's record commits with the data; see the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#transactional-store-for-money-movement) for the setup and `CapturePaymentCommand`.
+Pass the header key to a command and run the command inside the transaction. Parse it with `IdempotencyKeyHeader.TryParse` first: the middleware accepts a key sent as a structured-field string (`"abc"`) and dedupes it as `abc`, and the command must see the same key; the middleware can stay in front for the `Idempotency-Key` contract. The two layers use different namespaces (`http` and the request type), so their records never collide. The command's record commits with the data; see the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#transactional-store-for-money-movement) for the setup and `CapturePaymentCommand`.
 
 ```csharp
 app.MapPost("/payments/{orderId:guid}/capture", async (
     Guid orderId,
     CaptureRequest body,
-    [FromHeader(Name = "Idempotency-Key")] string key,
+    [FromHeader(Name = "Idempotency-Key")] string? header,
     ISender sender,
     CancellationToken cancellationToken) =>
 {
+    if (!IdempotencyKeyHeader.TryParse(header, out string? key))
+        return Error.Validation(IdempotencyErrorCodes.KeyInvalid, "Send a valid Idempotency-Key header.").ToProblemResult();
+
     Result<Receipt> result = await sender.Send(new CapturePaymentCommand(orderId, key, body.Amount), cancellationToken);
     return result.IsSuccess ? Results.Ok(result.Value) : result.ToProblemResult();
 }).WithIdempotency("payments");
