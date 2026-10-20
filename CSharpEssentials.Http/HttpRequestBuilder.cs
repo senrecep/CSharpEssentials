@@ -23,6 +23,7 @@ public sealed class HttpRequestBuilder
     private JsonSerializerOptions? _jsonOptions;
     private bool _followRedirects;
     private int _maxRedirects = 5;
+    private string? _idempotencyKey;
 
     private HttpRequestBuilder() { }
 
@@ -118,6 +119,24 @@ public sealed class HttpRequestBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sends an <c>Idempotency-Key</c> header. The key is fixed now, not when the request is built: every
+    /// <see cref="Build"/> of this builder, and so every retry that builds the request again, sends the same key.
+    /// When <paramref name="key"/> is <see langword="null"/> a new key is generated (a UUIDv7 on .NET 9 and later, a
+    /// random UUID on netstandard2.1); pass a deterministic key, for example from <c>IdempotencyKeys.For(...)</c>, when
+    /// the operation can be started again from scratch. A new logical operation needs a new builder or a new key.
+    /// </summary>
+    /// <param name="key">The key to send, or <see langword="null"/> to generate one.</param>
+    /// <returns>This builder.</returns>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="key"/> is empty or contains a character other than visible ASCII, or contains <c>"</c> or <c>\</c>.
+    /// </exception>
+    public HttpRequestBuilder WithIdempotencyKey(string? key = null)
+    {
+        _idempotencyKey = key is null ? IdempotencyHttpProtocol.NewKey() : IdempotencyHttpProtocol.Validate(key, nameof(key));
+        return this;
+    }
+
     public HttpRequestBuilder FollowRedirects(int maxRedirects = 5)
     {
         _followRedirects = true;
@@ -156,6 +175,9 @@ public sealed class HttpRequestBuilder
 
         foreach ((string key, string value) in _headers)
             request.Headers.TryAddWithoutValidation(key, value);
+
+        if (_idempotencyKey is not null)
+            request.SetIdempotencyKey(_idempotencyKey);
 
         if (_jsonValue is not null)
             request.Content = JsonContent.Create(_jsonValue, options: _jsonOptions ?? ResolveJsonOptions());
