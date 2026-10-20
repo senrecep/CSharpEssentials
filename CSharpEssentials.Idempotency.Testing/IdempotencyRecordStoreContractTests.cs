@@ -258,6 +258,21 @@ public abstract class IdempotencyRecordStoreContractTests
     }
 
     [Fact]
+    public async Task Keys_Scopes_And_Namespaces_Should_Not_Ignore_Trailing_Spaces()
+    {
+        await ReserveAsync(Key("key-a", IdempotencyScope.Tenant("abc")));
+
+        IdempotencyRecordReservation otherKey = await Store.TryReserveAsync(Key("key-a ", IdempotencyScope.Tenant("abc")), "other", Lease);
+        IdempotencyRecordReservation otherScope = await Store.TryReserveAsync(Key("key-a", IdempotencyScope.Tenant("abc ")), "other", Lease);
+        IdempotencyRecordReservation otherNamespace = await Store.TryReserveAsync(
+            new IdempotencyRecordKey(Namespace + " ", IdempotencyScope.Tenant("abc"), "key-a"), "other", Lease);
+
+        Assert.Equal(IdempotencyReservationStatus.Reserved, otherKey.Status);
+        Assert.Equal(IdempotencyReservationStatus.Reserved, otherScope.Status);
+        Assert.Equal(IdempotencyReservationStatus.Reserved, otherNamespace.Status);
+    }
+
+    [Fact]
     public async Task Global_Key_Should_Not_Collide_With_Scoped_Keys()
     {
         string token = await ReserveAsync(Key("k1", scope: null));
