@@ -21,7 +21,7 @@ dotnet add package CSharpEssentials.Idempotency
 | Duplicates | A run that outlives its lease, or a crash before `CompleteAsync`, can repeat the operation after the lease | None for writes in that database |
 | Use it for | Most operations | Money and credit movement |
 
-The HTTP middleware is always lease mode. For a transactional guarantee over HTTP, pass the header key to a Mediator command that is `ITransactionalRequest` and `IIdempotentRequest`. A call to an external system is outside your transaction: send it the same deterministic key.
+The HTTP middleware is always lease mode. For a transactional guarantee over HTTP, parse the header with `IdempotencyKeyHeader.TryParse` (`CSharpEssentials.AspNetCore`; the middleware's normalization, so a quoted `"abc"` is `abc` in both layers) and pass that key to a Mediator command that is `ITransactionalRequest` and `IIdempotentRequest`. A call to an external system is outside your transaction: send it the same deterministic key.
 
 ## Run an operation once
 

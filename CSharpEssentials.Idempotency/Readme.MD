@@ -39,9 +39,10 @@ dotnet add package CSharpEssentials.Idempotency
 
 The `Idempotency-Key` middleware of `CSharpEssentials.AspNetCore` is always lease mode: it reserves before and completes
 after the endpoint, outside your handler's transaction, whatever store it uses. For a transactional guarantee over HTTP,
-pass the header key to a Mediator command and run that command `InsideTransaction`; see
+parse the header with `IdempotencyKeyHeader.TryParse` (the middleware's own normalization, so a quoted `"abc"` is
+`abc` in both layers), pass that key to a Mediator command and run the command `InsideTransaction`; see
 [Transactional store for money movement](#transactional-store-for-money-movement). The middleware (namespace `http`)
-and the behavior (the request type's name) never share a record, so you can keep both.
+and the behavior (namespace: the request type's full name, `Type.FullName`) never share a record, so you can keep both.
 
 ### Run an operation once
 
@@ -139,7 +140,8 @@ A lease shorter than the server's request timeout lets a retry start a second ru
 lease shorter than the client's total retry budget (for `AddStandardResilienceHandler`, `TotalRequestTimeout`) lets the
 client's last attempt run a second time. The defaults are 1 minute (`IdempotencyExecutorOptions.Lease`,
 `IdempotencyOptions.InFlightTimeout`) and at most 15 minutes (`MaxLease`, `MaxInFlightTimeout`); a lease must not exceed
-its retention either, and all of it is validated at startup. The client retries an `InFlight` answer after its
+its retention either. The options and profiles are validated at startup, and the values of an operation
+(`IdempotencyExecutionOptions`) on each call. The client retries an `InFlight` answer after its
 `Retry-After` (at most `IdempotentRetryOptions.MaxRetryAfter`, 30 seconds by default), so a long operation needs a
 client that keeps retrying for as long as the lease, or one that polls the result.
 
@@ -303,7 +305,7 @@ public sealed record CapturePaymentCommand(Guid OrderId, string IdempotencyKey, 
 ### Webhook dedupe
 
 Providers deliver at least once and send no `Idempotency-Key`; their event id is the identity. Dedupe it with the Mediator
-behavior and the EF Core store: verify the signature, claim the event, do the work, commit.
+behavior and the EF Core store: verify the signature over the raw body, claim the event, do the work, commit.
 
 ```csharp
 public sealed record PaymentEventCommand(string AccountId, string EventId, string Payload)
@@ -316,18 +318,28 @@ public sealed record PaymentEventCommand(string AccountId, string EventId, strin
     string? IIdempotentRequest.IdempotencyFingerprint => "event";
 }
 
-app.MapPost("/webhooks/payments", async (PaymentEvent paymentEvent, ISender sender, CancellationToken cancellationToken) =>
+app.MapPost("/webhooks/payments", async (HttpRequest request, ISender sender, CancellationToken cancellationToken) =>
 {
+    using MemoryStream body = new();
+    await request.Body.CopyToAsync(body, cancellationToken);
+    if (!WebhookSignature.IsValid(webhookSecret, body.GetBuffer().AsSpan(0, (int)body.Length), request.Headers[WebhookSignature.HeaderName]))
+        return Results.Unauthorized();
+
+    PaymentEvent? paymentEvent = JsonSerializer.Deserialize<PaymentEvent>(body.ToArray(), JsonSerializerOptions.Web);
+    if (paymentEvent is null)
+        return Results.BadRequest();
+
     Result result = await sender.Send(
         new PaymentEventCommand(paymentEvent.AccountId, paymentEvent.Id, paymentEvent.Payload), cancellationToken);
-    return result.IsSuccess ? Results.Ok() : result.ToProblemResult();
+    return result.IsSuccess ? Results.Ok() : result.ToProblemResult(statusCode: StatusCodes.Status500InternalServerError);
 });
 ```
 
+- The signature is an HMAC over the exact bytes the provider sent, so read the raw body and verify it before you deserialize; a bound model has lost those bytes. `WebhookSignature` is the HMAC-SHA256 check of the [end-to-end example](https://github.com/senrecep/CSharpEssentials/blob/main/examples/Examples.Idempotency.EndToEnd/App/WebhookSignature.cs): it decodes the hex header and compares the bytes with `CryptographicOperations.FixedTimeEquals`. An unverified event id must never be claimed, or a forged request turns the real delivery into a duplicate.
 - The scope comes from the command: a webhook has no principal, and the behavior rejects a request without a scope. `Custom("account", ...)` is a legal kind.
 - The fingerprint is constant, so the same event serialized differently is still a duplicate and never `KeyReused`.
 - A duplicate returns the stored success (200), so the provider stops sending it.
-- A failed transaction rolls back and releases the key, and the failure goes back as a non-2xx, so the provider redelivers it and the record is gone. Map failures to a 5xx or let the exception propagate.
+- A failed transaction rolls back and releases the key, and the failure goes back as a 5xx (`ToProblemResult(statusCode: 500)`, or an exception that propagates), so the provider redelivers it and the record is gone. The default `ToProblemResult()` maps a validation or not-found error to a 4xx, which many providers treat as final and never redeliver.
 - Doing the same in your own table (a unique constraint, claim first, then work) is the same pattern as the EF Core store's reserve step; there is no separate API for it.
 - Keep retention longer than the provider's redelivery window.
 
