@@ -3,6 +3,29 @@
 All notable changes to the CSharpEssentials packages are listed here. All packages share one version number.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0](https://github.com/senrecep/CSharpEssentials/compare/v6.5.2...v7.0.0) (2026-10-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **idempotency:** idempotency moves to the new CSharpEssentials.Idempotency core; see [the migration guide](https://github.com/senrecep/CSharpEssentials/blob/main/docs/migration/v6-to-v7-idempotency.md).
+    - `IIdempotencyStore`, `IdempotencyReservation`, `IdempotencyReservationStatus`, `InMemoryIdempotencyStore` and `DistributedCacheIdempotencyStore` are removed from `CSharpEssentials.AspNetCore`; use `IIdempotencyRecordStore`, `InMemoryIdempotencyRecordStore` and `DistributedCacheIdempotencyRecordStore`.
+    - `IdempotencyOptions.KeyScope` and `DefaultKeyScope` are removed; use `ScopeResolver` with `IdempotencyScopes`. Scopes are built only through the `IdempotencyScope` factories, and `AllowUnscopedKeys` is replaced by `UnscopedKeyBehavior`.
+    - `IdempotencyOptions.ShouldStore` is a `Func<IdempotencyOutcome, bool>` instead of a `Func<int, bool>`; `IdempotencyStorePolicies.SuccessOnly` restores the 6.x rule.
+    - `IdempotencyOptions.RetryAfter` is a non-nullable `TimeSpan`; the 409 always carries `Retry-After`.
+    - A 5xx after the handler started is stored for `ServerErrorRetention`; 503, 504, exceptions and aborts after the handler started keep the key in flight until `InFlightTimeout` instead of releasing it.
+    - A key must be printable ASCII other than space, `"` and `\`; other keys get 400 `Idempotency.KeyInvalid`.
+    - `IdempotencyOptions` is resolved as a transient `CurrentValue`, and records use the `idem:v3:` storage key format, so 6.x entries are not read.
+
+### Added
+
+* **idempotency:** production-grade idempotency across http, mediator, messaging and ef core ([42287de](https://github.com/senrecep/CSharpEssentials/commit/42287de0e8a0663cd72c2d203e16315d44a12643))
+
+
+### Fixed
+
+* **idempotency:** store observe results in the business transaction ([#158](https://github.com/senrecep/CSharpEssentials/issues/158)) ([bdcbdd1](https://github.com/senrecep/CSharpEssentials/commit/bdcbdd15cbedda81a95e4e81754c0c594bfade8e))
+
 ## [6.5.2](https://github.com/senrecep/CSharpEssentials/compare/v6.5.1...v6.5.2) (2026-10-10)
 
 
