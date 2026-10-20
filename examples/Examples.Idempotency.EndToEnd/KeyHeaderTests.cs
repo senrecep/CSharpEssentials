@@ -30,6 +30,7 @@ public sealed class KeyHeaderTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.OK, retry.StatusCode);
         Assert.Equal("true", retry.Headers.GetValues("Idempotency-Replayed").Single());
         Assert.Equal(1, provider.Charges);
+        Assert.Equal(1, provider.Calls);
         Assert.Equal(1, await CountPaymentsAsync());
     }
 
@@ -51,6 +52,7 @@ public sealed class KeyHeaderTests(PostgresFixture postgres)
             (await original.Content.ReadFromJsonAsync<CapturedPayment>())!.PaymentId,
             (await retry.Content.ReadFromJsonAsync<CapturedPayment>())!.PaymentId);
         Assert.Equal(1, provider.Charges);
+        Assert.Equal(1, provider.Calls);
         Assert.Equal(1, await CountPaymentsAsync());
     }
 

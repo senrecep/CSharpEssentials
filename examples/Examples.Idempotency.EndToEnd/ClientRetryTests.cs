@@ -32,6 +32,7 @@ public sealed class ClientRetryTests(PostgresFixture postgres)
         Assert.Equal("true", response.Headers.GetValues("Idempotency-Replayed").Single());
         Assert.Equal(network.DroppedBody, await response.Content.ReadAsStringAsync());
         Assert.Equal(1, provider.Charges);
+        Assert.Equal(1, provider.Calls);
         Assert.Equal(1, await CountPaymentsAsync());
     }
 
@@ -52,6 +53,7 @@ public sealed class ClientRetryTests(PostgresFixture postgres)
             (await original.Content.ReadFromJsonAsync<CapturedPayment>())!.PaymentId,
             (await retry.Content.ReadFromJsonAsync<CapturedPayment>())!.PaymentId);
         Assert.Equal(1, provider.Charges);
+        Assert.Equal(1, provider.Calls);
         Assert.Equal(1, await CountPaymentsAsync());
     }
 
@@ -69,6 +71,11 @@ public sealed class ClientRetryTests(PostgresFixture postgres)
         Assert.Equal(1, await CountPaymentsAsync());
     }
 
+    /// <summary>
+    /// The <c>422</c> comes from the database and Mediator layer, not the HTTP layer: each instance keeps its own
+    /// in-memory HTTP store, so the second instance has no stored fingerprint to compare and the conflict is only
+    /// found once the command reaches the shared database.
+    /// </summary>
     [Fact]
     public async Task The_Same_Key_With_Another_Amount_On_Another_Instance_Should_Be_Rejected_By_The_Database_Layer()
     {
