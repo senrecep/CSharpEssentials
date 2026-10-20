@@ -556,6 +556,35 @@ public class IdempotentRetryTests
         IdempotencyHttpProtocol.InFlightCode.Should().Be(IdempotencyErrorCodes.InFlight);
     }
 
+    [Theory]
+    [InlineData("replayed", 1)]
+    [InlineData("in-flight", 3)]
+    [InlineData("business-conflict", 1)]
+    [InlineData("unavailable", 2)]
+    [InlineData("network", 2)]
+    public async Task Handler_Key_Should_Survive_Retries_Like_A_Manual_Key(string outcome, int attempts)
+    {
+        Func<HttpRequestMessage, HttpResponseMessage> first = outcome switch
+        {
+            "replayed" => _ => Replayed(HttpStatusCode.ServiceUnavailable),
+            "in-flight" => _ => InFlight(),
+            "business-conflict" => _ => Problem(HttpStatusCode.Conflict, "Orders.Duplicate"),
+            "unavailable" => _ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+            _ => _ => throw new HttpRequestException("connection reset"),
+        };
+        Func<HttpRequestMessage, HttpResponseMessage> next = outcome == "in-flight" ? first : _ => new HttpResponseMessage(HttpStatusCode.OK);
+        using var scripted = new ScriptedHandler(first, next);
+        using var resilience = new PipelineHandler(Pipeline([]), scripted);
+        using var keyHandler = new IdempotencyKeyHandler(resilience);
+        using var invoker = new HttpMessageInvoker(keyHandler, disposeHandler: false);
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.test/orders");
+
+        using HttpResponseMessage response = await invoker.SendAsync(request, CancellationToken.None);
+
+        scripted.Keys.Should().HaveCount(attempts);
+        scripted.Keys.Distinct().Should().ContainSingle().Which.Should().NotBeNullOrEmpty();
+    }
+
     private static HttpRequestMessage Keyed(HttpMethod method)
     {
         var request = new HttpRequestMessage(method, "https://api.test/orders");
@@ -666,6 +695,25 @@ public class IdempotentRetryTests
             HttpResponseMessage response = steps[Math.Min(Keys.Count, steps.Length) - 1](request);
             response.RequestMessage = request;
             return Task.FromResult(response);
+        }
+    }
+
+    private sealed class PipelineHandler(ResiliencePipeline<HttpResponseMessage> pipeline, HttpMessageHandler inner) : DelegatingHandler(inner)
+    {
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            ResilienceContext context = ResilienceContextPool.Shared.Get(cancellationToken);
+            context.Properties.Set(IdempotentRetry.RequestMessageKey, request);
+            try
+            {
+                return await pipeline.ExecuteAsync(
+                    async ctx => await base.SendAsync(request, ctx.CancellationToken).ConfigureAwait(false),
+                    context).ConfigureAwait(false);
+            }
+            finally
+            {
+                ResilienceContextPool.Shared.Return(context);
+            }
         }
     }
 
