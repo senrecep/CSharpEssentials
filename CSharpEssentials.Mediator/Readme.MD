@@ -358,7 +358,7 @@ A key is only meaningful for its owner, so the behavior scopes it: the request's
 
 So an anonymous or client-credentials request that the HTTP layer lets through is rejected when it reaches an idempotent command. Use `IdempotencyScopes.Client` (or `UserAndTenant`, `Custom`) for machine callers in both layers so both resolve the same scope. `Skip` runs the request without idempotency and logs a warning; `Global` shares one key space across callers. A message consumer has no principal: give the scope from the message (tenant, sending system) or return `IdempotencyScope.Global` deliberately.
 
-In an ASP.NET Core app call `AddIdempotency()` from `CSharpEssentials.AspNetCore`: it registers the `IIdempotencyScopeAccessor` that reads `HttpContext.User`. Without an accessor the resolver gets no principal and, with `Reject`, every keyed request fails with `Idempotency.ScopeRequired`. A failed `Result` carrying `Idempotency.InFlight` that is returned with `ToProblemResult()` or `ToActionResult()` becomes a 409 with the top-level `code` member and `Retry-After`, the same shape as the middleware's 409.
+In an ASP.NET Core app call `AddIdempotency()` from `CSharpEssentials.AspNetCore`: it registers the `IIdempotencyScopeAccessor` that reads `HttpContext.User`. Without an accessor the resolver gets no principal and, with `Reject`, every keyed request fails with `Idempotency.ScopeRequired`. A failed `Result` carrying an idempotency code that is returned with `ToProblemResult()` or `ToActionResult()` gets the middleware's status and top-level `code` member: `Idempotency.InFlight` → 409 with `Retry-After`, `Idempotency.KeyReused` → 422, `KeyMissing`, `KeyInvalid` and `ScopeRequired` → 400.
 
 #### Placement
 

@@ -26,6 +26,56 @@ public sealed class IdempotencyResultProblemTests
                 Result<int>.Failure(Error.Conflict("Order.Paid", "The order is already paid.")).ToProblemResult());
         });
 
+    private static Task<IdempotencyTestHost> StartMediatorAsync() =>
+        IdempotencyTestHost.StartAsync(
+            configureServices: services => services.AddMediatorIdempotencyBehavior(),
+            configureEndpoints: app => app.MapPost("/mediator/orders", async (HttpContext context) =>
+            {
+                using StreamReader reader = new(context.Request.Body);
+                int amount = (await reader.ReadToEndAsync()).Length;
+                IPipelineBehavior<IdemCommand, Result<int>> behavior =
+                    context.RequestServices.GetServices<IPipelineBehavior<IdemCommand, Result<int>>>().Single();
+                Result<int> result = await behavior.Handle(
+                    new IdemCommand(context.Request.Headers["Idempotency-Key"].ToString(), amount),
+                    (command, _) => new ValueTask<Result<int>>(command.Amount),
+                    context.RequestAborted);
+                return result.IsSuccess ? Microsoft.AspNetCore.Http.Results.Ok(result.Value) : result.ToProblemResult();
+            }));
+
+    [Fact]
+    public async Task Same_Key_With_Different_Payload_Should_Return_422_With_The_Same_Code_Over_Middleware_And_Mediator()
+    {
+        await using IdempotencyTestHost middlewareHost = await IdempotencyTestHost.StartAsync();
+        await using IdempotencyTestHost mediatorHost = await StartMediatorAsync();
+
+        await middlewareHost.PostAsync("/orders");
+        IdempotencyResponse middleware = await middlewareHost.PostAsync("/orders", body: """{"item":"pen"}""");
+        await mediatorHost.PostAsync("/mediator/orders");
+        IdempotencyResponse mediator = await mediatorHost.PostAsync("/mediator/orders", body: """{"item":"notebook"}""");
+
+        middleware.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+        mediator.StatusCode.Should().Be(StatusCodes.Status422UnprocessableEntity);
+        JsonNode.Parse(middleware.Body)!.AsObject()["code"]!.GetValue<string>().Should().Be(IdempotencyErrorCodes.KeyReused);
+        JsonNode.Parse(mediator.Body)!.AsObject()["code"]!.GetValue<string>().Should().Be(IdempotencyErrorCodes.KeyReused);
+        mediator.Header("Retry-After").Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(IdempotencyErrorCodes.KeyReused, StatusCodes.Status422UnprocessableEntity)]
+    [InlineData(IdempotencyErrorCodes.InFlight, StatusCodes.Status409Conflict)]
+    [InlineData(IdempotencyErrorCodes.ScopeRequired, StatusCodes.Status400BadRequest)]
+    [InlineData(IdempotencyErrorCodes.KeyMissing, StatusCodes.Status400BadRequest)]
+    [InlineData(IdempotencyErrorCodes.KeyInvalid, StatusCodes.Status400BadRequest)]
+    [InlineData("Order.Invalid", StatusCodes.Status400BadRequest)]
+    public void GetStatusCode_Should_Map_Idempotency_Codes_To_Middleware_Statuses(string code, int expected)
+    {
+        Error error = Error.Validation(code, "Idempotency failure.");
+
+        int status = DefaultErrorStatusCodeMapper.Instance.GetStatusCode(error);
+
+        status.Should().Be(expected);
+    }
+
     [Theory]
     [InlineData("/result/in-flight")]
     [InlineData("/mvc/result/in-flight")]

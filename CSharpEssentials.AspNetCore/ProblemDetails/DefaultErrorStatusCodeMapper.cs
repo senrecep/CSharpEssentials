@@ -1,4 +1,5 @@
 using CSharpEssentials.Errors;
+using CSharpEssentials.Idempotency;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 
@@ -16,11 +17,26 @@ public class DefaultErrorStatusCodeMapper : IErrorStatusCodeMapper
     public static DefaultErrorStatusCodeMapper Instance { get; } = new();
 
     /// <inheritdoc />
-    /// <remarks><see cref="ConditionalRequestErrors.PreconditionFailed"/> maps to 412.</remarks>
-    public virtual int GetStatusCode(Error error) =>
-        ConditionalRequestErrors.IsPreconditionFailed(error)
-            ? StatusCodes.Status412PreconditionFailed
-            : error.Type.ToHttpStatusCode();
+    /// <remarks>
+    /// <see cref="ConditionalRequestErrors.PreconditionFailed"/> maps to 412. The <see cref="IdempotencyErrorCodes"/>
+    /// codes map to the statuses the idempotency middleware sends, whatever their <see cref="ErrorType"/>:
+    /// <see cref="IdempotencyErrorCodes.KeyReused"/> to 422, <see cref="IdempotencyErrorCodes.InFlight"/> to 409, and
+    /// <see cref="IdempotencyErrorCodes.KeyMissing"/>, <see cref="IdempotencyErrorCodes.KeyInvalid"/> and
+    /// <see cref="IdempotencyErrorCodes.ScopeRequired"/> to 400.
+    /// </remarks>
+    public virtual int GetStatusCode(Error error)
+    {
+        if (ConditionalRequestErrors.IsPreconditionFailed(error))
+            return StatusCodes.Status412PreconditionFailed;
+        return error.Code switch
+        {
+            IdempotencyErrorCodes.KeyReused => StatusCodes.Status422UnprocessableEntity,
+            IdempotencyErrorCodes.InFlight => StatusCodes.Status409Conflict,
+            IdempotencyErrorCodes.KeyMissing or IdempotencyErrorCodes.KeyInvalid or IdempotencyErrorCodes.ScopeRequired
+                => StatusCodes.Status400BadRequest,
+            _ => error.Type.ToHttpStatusCode(),
+        };
+    }
 
     /// <inheritdoc />
     public virtual Error SelectPrimaryError(IReadOnlyList<Error> errors)
