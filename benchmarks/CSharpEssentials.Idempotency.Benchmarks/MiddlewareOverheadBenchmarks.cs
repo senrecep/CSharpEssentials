@@ -33,6 +33,12 @@ public class MiddlewareOverheadBenchmarks
     public Task<HttpStatusCode> NoIdempotency() =>
         _host.SendAsync(IdempotencyBenchmarkHost.PlainPath, Body, null);
 
+    /// <summary>
+    /// A first request with a new key. Every 4096 keys the next reservation also sweeps the expired records (see
+    /// <see cref="IdempotencyBenchmarkHost.NextKey"/>), so the mean includes that sweep amortized over the window and the
+    /// store stays bounded.
+    /// </summary>
+    /// <returns>The response status code.</returns>
     [Benchmark]
     public Task<HttpStatusCode> NewKey() =>
         _host.SendAsync(IdempotencyBenchmarkHost.KeyedPath, Body, _host.NextKey());
