@@ -10,6 +10,9 @@ namespace CSharpEssentials.Idempotency;
 /// <see cref="IdempotencyExecutorOptions"/> on every operation, so a mode changed at runtime applies to the next one.
 /// Logs name the record namespace and a hash of the key, never the key or the scope. Decisions are counted in
 /// <see cref="IdempotencyTelemetry.DecisionsInstrumentName"/> with the record namespace as <c>target</c>.
+/// In <see cref="IdempotencyMode.Observe"/> an <see cref="ITransactionalIdempotencyRecordStore"/> is used through its
+/// <see cref="ITransactionalIdempotencyRecordStore.Detached"/> view, so observing never waits on or joins the
+/// business transaction.
 /// </summary>
 public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
 {
@@ -95,6 +98,9 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         IIdempotencyResultCodec<TResult> codec,
         CancellationToken cancellationToken)
     {
+        if (store is ITransactionalIdempotencyRecordStore transactional)
+            store = transactional.Detached;
+
         IdempotencyRecordReservation? reservation = null;
         try
         {

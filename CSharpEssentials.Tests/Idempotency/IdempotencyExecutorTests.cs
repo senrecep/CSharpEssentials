@@ -353,6 +353,30 @@ public sealed class IdempotencyExecutorTests : IDisposable
     }
 
     [Fact]
+    public async Task ExecuteAsync_Should_Use_The_Detached_View_Of_A_Transactional_Store_In_Observe_Mode()
+    {
+        RecordingStore detached = new(new InMemoryIdempotencyRecordStore(_time));
+        IdempotencyExecutor executor = new(new TransactionalStore(_store, detached), new TestOptionsMonitor<IdempotencyExecutorOptions>(_options));
+
+        await executor.ExecuteAsync(Key, "fp", new IdempotencyExecutionOptions { Mode = IdempotencyMode.Observe }, Operation("done"), Codec);
+
+        detached.Calls.Should().Be(2);
+        _store.Calls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Use_A_Transactional_Store_Itself_In_Enforce_Mode()
+    {
+        RecordingStore detached = new(new InMemoryIdempotencyRecordStore(_time));
+        IdempotencyExecutor executor = new(new TransactionalStore(_store, detached), new TestOptionsMonitor<IdempotencyExecutorOptions>(_options));
+
+        await executor.ExecuteAsync(Key, "fp", new IdempotencyExecutionOptions { Mode = IdempotencyMode.Enforce }, Operation("done"), Codec);
+
+        _store.Calls.Should().Be(2);
+        detached.Calls.Should().Be(0);
+    }
+
+    [Fact]
     public async Task ExecuteAsync_Should_Reserve_With_The_Lease_Of_The_Operation_Over_Its_Profile_Over_The_Defaults()
     {
         _options.AddProfile("long", profile => profile.Lease = TimeSpan.FromMinutes(5));
@@ -579,6 +603,22 @@ public sealed class IdempotencyExecutorTests : IDisposable
         Interlocked.Increment(ref _runs);
         return new ValueTask<string>(result);
     };
+
+    private sealed class TransactionalStore(IIdempotencyRecordStore inner, IIdempotencyRecordStore detached) : ITransactionalIdempotencyRecordStore
+    {
+        public IIdempotencyRecordStore Detached => detached;
+
+        public ValueTask<IdempotencyRecordReservation> TryReserveAsync(
+            IdempotencyRecordKey key, string fingerprint, TimeSpan lease, CancellationToken cancellationToken = default) =>
+            inner.TryReserveAsync(key, fingerprint, lease, cancellationToken);
+
+        public ValueTask<bool> CompleteAsync(
+            IdempotencyRecordKey key, string token, string fingerprint, ReadOnlyMemory<byte> payload, TimeSpan retention, CancellationToken cancellationToken = default) =>
+            inner.CompleteAsync(key, token, fingerprint, payload, retention, cancellationToken);
+
+        public ValueTask<bool> ReleaseAsync(IdempotencyRecordKey key, string token, CancellationToken cancellationToken = default) =>
+            inner.ReleaseAsync(key, token, cancellationToken);
+    }
 
     private sealed class RecordingStore(IIdempotencyRecordStore inner) : IIdempotencyRecordStore
     {
