@@ -222,6 +222,25 @@ public sealed partial class IdempotencyModeTests
         host.Logs.Named("Idempotency.Observe.WouldReplay").Should().ContainSingle();
     }
 
+    [Theory]
+    [InlineData(IdempotencyMode.Observe, 0, 2)]
+    [InlineData(IdempotencyMode.Enforce, 2, 0)]
+    public async Task A_Transactional_Store_Should_Be_Used_Through_Its_Detached_View_Only_In_Observe(IdempotencyMode mode, int attached, int detached)
+    {
+        await using IdempotencyTestHost host = await IdempotencyTestHost.StartAsync(options =>
+        {
+            options.Mode = mode;
+            options.UseStore<TransactionalCountingIdempotencyStore>(ServiceLifetime.Singleton);
+        });
+        TransactionalCountingIdempotencyStore store = (TransactionalCountingIdempotencyStore)host.Services.GetRequiredService<IIdempotencyRecordStore>();
+
+        await SettleAsync(host, "/orders");
+        IdempotencyResponse? again = await SettleAsync(host, "/orders");
+
+        again!.Replayed.Should().Be(mode == IdempotencyMode.Enforce);
+        (store.AttachedReservations, store.DetachedReservations).Should().Be((attached, detached));
+    }
+
     [Fact]
     public async Task An_Endpoint_In_Enforce_Should_Replay_When_The_Global_Mode_Is_Off()
     {

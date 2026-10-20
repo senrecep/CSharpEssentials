@@ -24,7 +24,9 @@ namespace CSharpEssentials.AspNetCore;
 /// The fingerprint is a SHA-256 of the method, path, query string and body (the body is buffered to compute it).
 /// The options are read once per request from <see cref="IOptionsMonitor{TOptions}"/>, so a reload applies to the next
 /// request; the endpoint's mode (<see cref="IdempotencyEndpointOptions.Mode"/>, its profile's, else
-/// <see cref="IdempotencyOptions.Mode"/>) decides whether the key is ignored, observed or enforced.
+/// <see cref="IdempotencyOptions.Mode"/>) decides whether the key is ignored, observed or enforced. In Observe an
+/// <see cref="ITransactionalIdempotencyRecordStore"/> is used through its
+/// <see cref="ITransactionalIdempotencyRecordStore.Detached"/> view, so observing never joins the request's transaction.
 /// </summary>
 internal sealed partial class IdempotencyMiddleware(
     RequestDelegate next,
@@ -131,6 +133,8 @@ internal sealed partial class IdempotencyMiddleware(
             store = settings.StoreKey is { } storeKey
                 ? context.RequestServices.GetRequiredKeyedService<IIdempotencyRecordStore>(storeKey)
                 : defaultStore;
+            if (observe && store is ITransactionalIdempotencyRecordStore transactional)
+                store = transactional.Detached;
             fingerprint = await ComputeFingerprintAsync(context.Request, context.RequestAborted).ConfigureAwait(false);
         }
         catch (Exception exception) when (observe && !context.RequestAborted.IsCancellationRequested)
