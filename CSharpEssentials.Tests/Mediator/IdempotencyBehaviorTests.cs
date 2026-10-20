@@ -26,6 +26,7 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     private readonly CapturingLoggerProvider _logs = new();
     private readonly LoggerFactory _loggerFactory;
     private readonly IdempotencyExecutorOptions _executorOptions = new();
+    private readonly TestOptionsMonitor<IdempotencyExecutorOptions> _monitor;
     private readonly IdempotencyBehaviorOptions _options = new();
     private ClaimsPrincipal? _principal = Alice;
     private int _runs;
@@ -34,6 +35,7 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     {
         _store = new RecordingStore(new InMemoryIdempotencyRecordStore(_time));
         _loggerFactory = new LoggerFactory([_logs]);
+        _monitor = new TestOptionsMonitor<IdempotencyExecutorOptions>(_executorOptions);
     }
 
     public void Dispose() => _loggerFactory.Dispose();
@@ -356,8 +358,148 @@ public sealed class IdempotencyBehaviorTests : IDisposable
         Result<int> result = await behavior.Handle(new IdemCommand("has space", 5), (_, _) => Run(42), CancellationToken.None);
 
         result.Value.Should().Be(42);
-        _logs.Named("Idempotency.Observe.WouldRejectKey").Should().ContainSingle()
-            .Which.Message.Should().Contain(IdempotencyErrorCodes.KeyInvalid);
+        _logs.Named("Idempotency.Observe.WouldRejectKeyInvalid").Should().ContainSingle()
+            .Which.EventId.Id.Should().Be(7017);
+    }
+
+    [Fact]
+    public async Task Handle_In_Observe_Mode_Should_Run_A_Request_Without_A_Key_And_Log_It()
+    {
+        _executorOptions.Mode = IdempotencyMode.Observe;
+        IdempotencyBehavior<IdemCommand, Result<int>> behavior = Create<IdemCommand, Result<int>>();
+
+        Result<int> result = await behavior.Handle(new IdemCommand("", 5), (_, _) => Run(42), CancellationToken.None);
+
+        result.Value.Should().Be(42);
+        _logs.Named("Idempotency.Observe.WouldRejectKeyMissing").Should().ContainSingle()
+            .Which.EventId.Id.Should().Be(7016);
+    }
+
+    [Theory]
+    [InlineData(IdempotencyMode.Off)]
+    [InlineData(IdempotencyMode.Observe)]
+    [InlineData(IdempotencyMode.Enforce)]
+    public async Task Handle_Should_Follow_The_Mode_For_Every_Decision(IdempotencyMode mode)
+    {
+        _executorOptions.Mode = mode;
+        IdempotencyBehavior<IdemCommand, Result<int>> behavior = Create<IdemCommand, Result<int>>();
+        List<Result<int>> results = [];
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        results.Add(await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(1), CancellationToken.None));
+        results.Add(await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(2), CancellationToken.None));
+        results.Add(await behavior.Handle(new IdemCommand("k1", 6), (_, _) => Run(3), CancellationToken.None));
+        results.Add(await behavior.Handle(new IdemCommand("", 5), (_, _) => Run(4), CancellationToken.None));
+        results.Add(await behavior.Handle(new IdemCommand("has space", 5), (_, _) => Run(5), CancellationToken.None));
+        _principal = null;
+        results.Add(await behavior.Handle(new IdemCommand("k2", 5), (_, _) => Run(6), CancellationToken.None));
+        _principal = Alice;
+        Task<Result<int>> slow = behavior.Handle(new IdemCommand("k3", 5), async (_, _) =>
+        {
+            await gate.Task;
+            return 7;
+        }, CancellationToken.None).AsTask();
+        results.Add(await behavior.Handle(new IdemCommand("k3", 5), (_, _) => Run(8), CancellationToken.None));
+        gate.SetResult();
+        await slow;
+
+        string[] outcomes = [.. results.Select(static result => result.IsSuccess ? result.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : result.FirstError.Code)];
+        string[] expected = mode == IdempotencyMode.Enforce
+            ?
+            [
+                "1",
+                "1",
+                IdempotencyErrorCodes.KeyReused,
+                IdempotencyErrorCodes.KeyMissing,
+                IdempotencyErrorCodes.KeyInvalid,
+                IdempotencyErrorCodes.ScopeRequired,
+                IdempotencyErrorCodes.InFlight,
+            ]
+            : ["1", "2", "3", "4", "5", "6", "8"];
+        outcomes.Should().Equal(expected);
+        if (mode == IdempotencyMode.Off)
+            _store.Reservations.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Replay_After_A_Runtime_Switch_From_Observe_To_Enforce_What_Observe_Stored()
+    {
+        _monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Observe };
+        IdempotencyBehavior<IdemCommand, Result<int>> behavior = Create<IdemCommand, Result<int>>();
+
+        await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(1), CancellationToken.None);
+        Result<int> observed = await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(2), CancellationToken.None);
+        _monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Enforce };
+        Result<int> enforced = await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(3), CancellationToken.None);
+
+        observed.Value.Should().Be(2);
+        enforced.Value.Should().Be(1);
+        _runs.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Return_InFlight_After_A_Runtime_Switch_From_Observe_To_Enforce()
+    {
+        _monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Observe };
+        IdempotencyBehavior<IdemCommand, Result<int>> behavior = Create<IdemCommand, Result<int>>();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Task<Result<int>> slow = behavior.Handle(new IdemCommand("k1", 5), async (_, _) =>
+        {
+            await gate.Task;
+            return 1;
+        }, CancellationToken.None).AsTask();
+
+        Result<int> observed = await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(2), CancellationToken.None);
+        _monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Enforce };
+        Result<int> enforced = await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(3), CancellationToken.None);
+        gate.SetResult();
+        await slow;
+
+        observed.Value.Should().Be(2);
+        enforced.FirstError.Code.Should().Be(IdempotencyErrorCodes.InFlight);
+    }
+
+    [Theory]
+    [InlineData(IdempotencyMode.Off)]
+    [InlineData(IdempotencyMode.Observe)]
+    [InlineData(IdempotencyMode.Enforce)]
+    public async Task Handle_Should_Count_Decisions_With_The_Mediator_Source_And_The_Request_Type(IdempotencyMode mode)
+    {
+        using IdempotencyDecisionListener listener = new(typeof(IdemMetricsCommand).FullName!);
+        _executorOptions.Mode = mode;
+        IdempotencyBehavior<IdemMetricsCommand, Result<int>> behavior = Create<IdemMetricsCommand, Result<int>>();
+
+        await behavior.Handle(new IdemMetricsCommand("k1"), (_, _) => Run(1), CancellationToken.None);
+        await behavior.Handle(new IdemMetricsCommand("k1"), (_, _) => Run(1), CancellationToken.None);
+        _principal = null;
+        await behavior.Handle(new IdemMetricsCommand("k2"), (_, _) => Run(1), CancellationToken.None);
+
+        string modeTag = mode == IdempotencyMode.Observe ? "observe" : "enforce";
+        IdempotencyDecision[] expected = mode == IdempotencyMode.Off
+            ? []
+            :
+            [
+                new("reserved", modeTag, "mediator", 4),
+                new("stored", modeTag, "mediator", 4),
+                new("replay", modeTag, "mediator", 4),
+                new("unscoped", modeTag, "mediator", 4),
+            ];
+        listener.Decisions.Should().Equal(expected);
+    }
+
+    [Fact]
+    public async Task Handle_In_Observe_Mode_Should_Propagate_A_Resolver_Exception_When_The_Caller_Cancelled()
+    {
+        _executorOptions.Mode = IdempotencyMode.Observe;
+        _options.ScopeResolver = new ThrowingResolver();
+        IdempotencyBehavior<IdemCommand, Result<int>> behavior = Create<IdemCommand, Result<int>>();
+        using CancellationTokenSource cancelled = new();
+        await cancelled.CancelAsync();
+
+        Func<Task> act = () => behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(42), cancelled.Token).AsTask();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("no scope");
+        _runs.Should().Be(0);
     }
 
     [Fact]
@@ -383,8 +525,11 @@ public sealed class IdempotencyBehaviorTests : IDisposable
         Result<int> result = await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(42), CancellationToken.None);
 
         result.Value.Should().Be(42);
-        _logs.Named("Idempotency.Observe.ResolutionFailed").Should().ContainSingle()
-            .Which.Level.Should().Be(LogLevel.Warning);
+        _runs.Should().Be(1);
+        CapturedLog log = _logs.Named("Idempotency.Observe.ResolutionFailed").Should().ContainSingle().Subject;
+        log.Level.Should().Be(LogLevel.Warning);
+        log.EventId.Id.Should().Be(7014);
+        log.Message.Should().NotContain("k1").And.NotContain("alice");
     }
 
     [Fact]
@@ -520,8 +665,8 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     private IdempotencyBehavior<TRequest, TResponse> Create<TRequest, TResponse>()
         where TRequest : IIdempotentRequest, IMessage =>
         new(
-            new IdempotencyExecutor(_store, new TestOptionsMonitor<IdempotencyExecutorOptions>(_executorOptions), logger: _loggerFactory.CreateLogger<IdempotencyExecutor>()),
-            _executorOptions,
+            new IdempotencyExecutor(_store, _monitor, logger: _loggerFactory.CreateLogger<IdempotencyExecutor>()),
+            _monitor,
             _options,
             _loggerFactory.CreateLogger<IdempotencyBehavior<TRequest, TResponse>>(),
             new PrincipalAccessor(() => _principal));
@@ -601,6 +746,8 @@ public sealed class IdempotencyBehaviorTests : IDisposable
 internal sealed record IdemCommand(string IdempotencyKey, int Amount) : ICommand<Result<int>>, IIdempotentRequest;
 
 internal sealed record IdemTransactionalCommand(string IdempotencyKey) : ICommand<Result<int>>, IIdempotentRequest, ITransactionalRequest;
+
+internal sealed record IdemMetricsCommand(string IdempotencyKey) : ICommand<Result<int>>, IIdempotentRequest;
 
 internal sealed record IdemPlainCommand(string IdempotencyKey) : ICommand<Result>, IIdempotentRequest;
 
