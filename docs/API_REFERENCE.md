@@ -975,6 +975,28 @@ HTTP status codes are automatically mapped to `ErrorType` by `HttpStatusCodeMapp
 | `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy`, `CreateResiliencePolicy` (and `<T>` forms) | The same as `ResiliencePolicy` / `ResiliencePolicy<T>` values |
 | `pipeline.ExecuteAsResultAsync(callback, ct)` | Executes a `Func<CancellationToken, Task<Result>>` or `Task<Result<T>>` through the pipeline, returns `Result` |
 
+### Idempotency-Key Client
+
+Client side of the `Idempotency-Key` contract (Section 26). The key is set once per logical call; a retry sends the same `HttpRequestMessage` again, so every attempt carries the same key.
+
+```csharp
+services.AddHttpClient("payments")
+    .AddIdempotencyKeys()
+    .AddStandardResilienceHandler(o => o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey());
+```
+
+| Type / Member | What It Does |
+|---------------|-------------|
+| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates one (UUIDv7 on .NET 9+, v4 on netstandard2.1). A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
+| `HttpRequestBuilder.WithIdempotencyKey(string? key = null)` | Makes or validates the key at call time and stores it in the builder; every `Build()` of that builder sends the same key |
+| `IdempotencyKeyHandler` | Optional `DelegatingHandler`; adds a generated key to POST and PATCH requests without one, keeps an existing key |
+| `AddIdempotencyKeys(this IHttpClientBuilder)` (.NET 9+) | Adds `IdempotencyKeyHandler`. Register it before the resilience handler so it runs once per logical call |
+| `IdempotentRetry.ShouldRetryAsync(request, response, exception, options?, ct)` | The retry decision. Never on `Idempotency-Replayed: true` or caller cancellation. GET/HEAD/PUT/DELETE/OPTIONS: no response, 408, 429, 5xx. Other methods only with a key: no response, 408, 429, 503, 504, and 409 whose problem+json `code` is `Idempotency.InFlight` (body read up to 4 KiB within `ProblemReadTimeout`, then put back). `SsrfBlockedException` is never retried |
+| `IdempotentRetry.GetRetryAfter(response, maxRetryAfter)` | `Retry-After` as delta-seconds or HTTP-date (from the `Date` header, else now), clamped to `[0, maxRetryAfter]`; `null` when absent |
+| `IdempotentRetry.RequestMessageKey` | `ResiliencePropertyKey<HttpRequestMessage>` named `Resilience.Http.RequestMessage`, the key `Microsoft.Extensions.Http.Resilience` uses; set it when you run your own pipeline |
+| `RetryStrategyOptions<HttpResponseMessage>.RetryUnsafeMethodsOnlyWithIdempotencyKey(IdempotentRetryOptions?)` | Sets `ShouldHandle` to `ShouldRetryAsync` and makes a 409 InFlight wait for its capped `Retry-After`; other delays come from the previous `DelayGenerator` or the backoff. Works with `HttpRetryStrategyOptions` |
+| `IdempotentRetryOptions` | `MaxRetryAfter` (30 s, not negative), `ProblemReadTimeout` (2 s, positive) |
+
 ### SSRF Guard (.NET 9+)
 
 Protects `IHttpClientFactory` clients that call URLs supplied by users. Not available on `netstandard2.1`.

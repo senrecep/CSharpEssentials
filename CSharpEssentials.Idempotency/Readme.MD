@@ -172,6 +172,15 @@ give different keys. When that string contains a character outside printable ASC
 [`tests/vectors/idempotency-key-vectors.json`](https://github.com/senrecep/CSharpEssentials/blob/main/tests/vectors/idempotency-key-vectors.json).
 A part with a lone surrogate throws `ArgumentException`.
 
+### Calling an idempotent endpoint
+
+The client side lives in `CSharpEssentials.Http`: `request.SetIdempotencyKey(key)` or
+`HttpRequestBuilder.WithIdempotencyKey(key)` attaches the key once per logical call, and
+`RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries a keyed POST or PATCH with that same key on a missing response,
+408, 429, 503, 504 and `409 Idempotency.InFlight` (after its `Retry-After`), but never a replayed response or a
+`KeyReused`, `KeyInvalid`, `KeyMissing` or `ScopeRequired` error. See
+[Idempotency-Key and safe retries](../CSharpEssentials.Http/Readme.MD#idempotency-key-and-safe-retries).
+
 ### Scopes
 
 ```csharp

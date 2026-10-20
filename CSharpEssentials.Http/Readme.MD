@@ -9,6 +9,7 @@
 - **Fluent Request Builder**: Chain headers, query params, JSON content, and redirects.
 - **Polly Integration**: Retry, timeout, and circuit breaker pipelines.
 - **Query String Helpers**: Build URIs from dictionaries or anonymous objects.
+- **Idempotency-Key client**: `SetIdempotencyKey`, `WithIdempotencyKey` and `AddIdempotencyKeys()` attach a key, and `RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries POST/PATCH only when it is safe.
 - **SSRF Guard** (.NET 9+, not available on netstandard2.1): `AddSsrfGuard()` blocks requests to private, loopback, link-local and metadata addresses, re-validated on every redirect hop.
 
 ## Installation
@@ -83,7 +84,7 @@ Result created = await HttpRequestBuilder
 
 Query values (`WithQuery`, `Uri.WithQueryString`) work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs are resolved against `HttpClient.BaseAddress`.
 
-Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`.
+Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithIdempotencyKey`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`.
 
 ### Enums in route, query and body
 
@@ -140,6 +141,57 @@ Result<User> viaPolicy = await policy.ExecuteAsync(token =>
 ```
 
 `maxRetryAttempts` counts retries after the first attempt. The timeout defaults to 30 seconds. Failed `Result` values are retried like exceptions, except `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors.
+
+### Idempotency-Key and safe retries
+
+These helpers are the client side of the server's [`Idempotency-Key` contract](../CSharpEssentials.Idempotency/Readme.MD). A POST or PATCH can be retried safely only when every attempt carries the same key. The key is set once per logical call, and the retry sends that same `HttpRequestMessage` again, so the key never changes between attempts.
+
+Attach the key to the request:
+
+```csharp
+using var request = new HttpRequestMessage(HttpMethod.Post, "/payments") { Content = JsonContent.Create(payment) };
+string key = request.SetIdempotencyKey();                                   // UUIDv7 on .NET 9+, v4 on netstandard2.1
+request.SetIdempotencyKey(IdempotencyKeys.For("capture", orderId));         // or a deterministic key
+```
+
+`IdempotencyKeys` is in `CSharpEssentials.Idempotency`; any key of printable ASCII other than `"` and `\` is accepted, and an invalid key throws `ArgumentException`.
+
+Or let the builder hold it. The key is made when `WithIdempotencyKey` is called, so every `Build()` of the same builder returns the same key, and a new builder makes a new one:
+
+```csharp
+Result<Payment> result = await HttpRequestBuilder
+    .Post("/payments")
+    .WithJsonContent(payment)
+    .WithIdempotencyKey()
+    .AsResultAsync<Payment>(client);
+```
+
+`IdempotencyKeyHandler` is optional (.NET 9+ for `AddIdempotencyKeys`). It adds a generated key to POST and PATCH requests that have none, and leaves an existing key alone. Register it **before** the resilience handler, so that it runs once per logical call and not once per attempt:
+
+```csharp
+services.AddHttpClient("payments")
+    .AddIdempotencyKeys()
+    .AddStandardResilienceHandler(o => o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey());
+```
+
+`AddStandardResilienceHandler` comes from `Microsoft.Extensions.Http.Resilience`, which you reference yourself. `RetryUnsafeMethodsOnlyWithIdempotencyKey` extends any Polly `RetryStrategyOptions<HttpResponseMessage>`, so it also works in a pipeline you build with `ResiliencePipelineBuilder<HttpResponseMessage>`. When you run such a pipeline yourself, store the request in `context.Properties` under `IdempotentRetry.RequestMessageKey`, so that attempts with no response can be judged too.
+
+The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception)`. You can call it from your own `ShouldHandle`:
+
+| Outcome | GET, HEAD, PUT, DELETE, OPTIONS | POST, PATCH with a key | POST, PATCH without a key |
+|---|---|---|---|
+| Response has `Idempotency-Replayed: true` | no | no | no |
+| No response (`HttpRequestException`, timeout) | yes | yes | no |
+| 408, 429, 503, 504 | yes | yes | no |
+| 500, 502 and other 5xx | yes | no | no |
+| 409 `Idempotency.InFlight` (problem+json `code`) | no | yes, after `Retry-After` | no |
+| Other 409, 400 `KeyMissing`/`KeyInvalid`/`ScopeRequired`, 422 `KeyReused`, 2xx | no | no | no |
+| Caller cancelled the token | no | no | no |
+
+- A 409 is retried only when its `application/problem+json` body has the top-level `code` `Idempotency.InFlight`. At most 4 KiB is read, within `IdempotentRetryOptions.ProblemReadTimeout` (default 2 s). The bytes read are put back, so the body is still readable afterwards. A body that cannot be read, is too long, times out or carries another code is not retried.
+- The 409 waits for its `Retry-After`, as delta-seconds or an HTTP-date (measured from the response `Date` header), capped at `IdempotentRetryOptions.MaxRetryAfter` (default 30 s). Other retries use the configured backoff, or the `DelayGenerator` set before the call.
+- A timeout is an `OperationCanceledException` whose token was not cancelled by the caller. When the caller's token is cancelled, nothing is retried.
+- `SsrfBlockedException` is never retried.
 
 ### Redirect Following
 
