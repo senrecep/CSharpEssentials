@@ -1,6 +1,6 @@
 # CSharpEssentials.Mediator
 
-Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator) source-generator library, with built-in support for `Result<T>`, validation, caching, logging, exception handling, transactions, and resource locks. Request dispatch is generated at compile time by the Mediator source generator; see [Native AOT](#registration) for how the behaviors are registered in a Native AOT app.
+Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator) source-generator library, with built-in support for `Result<T>`, validation, caching, logging, exception handling, transactions, resource locks, and idempotency. Request dispatch is generated at compile time by the Mediator source generator; see [Native AOT](#registration) for how the behaviors are registered in a Native AOT app.
 
 > **Note:** `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` are provided by the `Mediator` package itself. This package adds marker interfaces and pipeline behaviors that integrate with `Result<T>`.
 
@@ -12,6 +12,7 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 - **Caching Behavior**: `IDistributedCache` integration with bypass and failure-cache control.
 - **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled, or runs them through a pluggable `ITransactionRunner` (EF Core implementation in `CSharpEssentials.EntityFrameworkCore`). Commits only when the `Result` succeeds.
 - **Lock Behavior**: Serializes requests that share a resource key through a pluggable `IResourceLock`, placed outside or inside the transaction. Ships an in-process default.
+- **Idempotency Behavior**: Runs an `IIdempotentRequest` at most once per key and caller through the `IIdempotencyExecutor` of `CSharpEssentials.Idempotency`, and replays the stored `Result` to a retry.
 
 ## Installation
 
@@ -292,6 +293,88 @@ Call `AddMediatorLockBehavior` after the other behaviors are registered. With no
 
 With Native AOT, `DefaultPipelineBehaviors` does not include `LockBehavior<,>`. Insert it into your own array right before (outside) or right after (inside) the transaction behavior, and register the `IResourceLock` yourself.
 
+### Idempotency Behavior
+
+Implement `IIdempotentRequest` to run a command at most once per key and caller. A retry with the same key gets the stored response instead of running the handler again:
+
+```csharp
+public record CapturePaymentCommand(string IdempotencyKey, Guid OrderId, decimal Amount)
+    : ICommand<Result<Receipt>>, IIdempotentRequest;
+
+services.AddMediatorBehaviors();
+services.AddMediatorIdempotencyBehavior(o =>
+{
+    o.ScopeResolver = IdempotencyScopes.Client;                         // machine callers; default: IdempotencyScopes.User
+    o.ForRequest<CapturePaymentCommand>(p => p.Profile = "payments");
+});
+services.AddIdempotencyExecutor(o => o.AddProfile("payments", p =>
+{
+    p.Retention = TimeSpan.FromDays(7);
+    p.Lease = TimeSpan.FromMinutes(5);
+}));
+```
+
+`AddMediatorIdempotencyBehavior` also registers the executor and, unless one is registered, the in-memory record store. Configure the executor defaults and profiles with `AddIdempotencyExecutor`, and register your own `IIdempotencyRecordStore` for several instances.
+
+The key is the only required member. The others have defaults:
+
+| Member | Default |
+|--------|---------|
+| `IdempotencyKey` | Required: 1 to 255 printable ASCII characters other than space, `"` and `\`. Take it from the client or build it with `IdempotencyKeys.For(...)` or `IdempotencyKeys.FromMessage(...)` |
+| `IdempotencyScope` | `null`: resolved by `ScopeResolver` from the current caller (`IIdempotencyScopeAccessor`). Return an `IdempotencyScope` factory value to scope the key yourself, for example `IdempotencyScope.Tenant(TenantId)` |
+| `IdempotencyFingerprint` | `null`: the SHA-256 of the request serialized as JSON. The same key with another fingerprint is `KeyReused` |
+| `IdempotencyRetention` / `IdempotencyLease` | `null`: from `ForRequest<T>`, then its profile, then `IdempotencyExecutorOptions` |
+
+The record namespace is the full name of the request type, so two request types never share a record. Outcomes come back as a `Result`:
+
+| Situation | Response |
+|-----------|----------|
+| Same key, same request, completed | The stored `Result`; the handler does not run |
+| Same key, still running | `Error.Conflict("Idempotency.InFlight")`: retry later |
+| Same key, different request | `Error.Validation("Idempotency.KeyReused")`: do not retry |
+| Missing or invalid key | `Error.Validation("Idempotency.KeyMissing")` / `("Idempotency.KeyInvalid")` |
+| No scope resolved | `UnscopedKeyBehavior` (see below) |
+
+A response type that is not a `Result` gets an `EnhancedValidationException` with the same error instead.
+
+What is stored:
+
+| Outcome | Key |
+|---------|-----|
+| Success | Stored for `Retention` (24 hours) |
+| Failed `Result` of an `ITransactionalRequest` | Released, because the transaction rolled back: a retry runs the handler again |
+| Other failed `Result` whose first error is `ErrorType.Unexpected` | Stored for `FailureRetention` (10 minutes), then a retry runs again |
+| Other failed `Result` | Stored for `Retention`, like a success: a business failure is deterministic. `StoreFailures = false` releases every failure instead |
+| Exception thrown by the handler | Stays in flight until `Lease` (1 minute) expires, because the work may be done. A retry before that gets `Idempotency.InFlight`, even when `ExceptionHandlingBehavior` turned the exception into a failed `Result` |
+
+#### Scopes: HTTP and Mediator defaults
+
+A key is only meaningful for its owner, so the behavior scopes it: the request's own `IdempotencyScope` first, then `ScopeResolver` with the principal of `IIdempotencyScopeAccessor`. When neither gives a scope, `UnscopedKeyBehavior` decides. The default differs from the HTTP middleware on purpose:
+
+| Layer | Default | Unscoped keyed request |
+|-------|---------|------------------------|
+| HTTP middleware (`AddIdempotency`) | `Skip` | Runs without idempotency and logs `Idempotency.UnscopedKeySkipped` |
+| Mediator behavior | `Reject` | `Error.Validation("Idempotency.ScopeRequired")` |
+
+So an anonymous or client-credentials request that the HTTP layer lets through is rejected when it reaches an idempotent command. Use `IdempotencyScopes.Client` (or `UserAndTenant`, `Custom`) for machine callers in both layers so both resolve the same scope. `Skip` runs the request without idempotency and logs a warning; `Global` shares one key space across callers. A message consumer has no principal: give the scope from the message (tenant, sending system) or return `IdempotencyScope.Global` deliberately.
+
+In an ASP.NET Core app call `AddIdempotency()` from `CSharpEssentials.AspNetCore`: it registers the `IIdempotencyScopeAccessor` that reads `HttpContext.User`. Without an accessor the resolver gets no principal and, with `Reject`, every keyed request fails with `Idempotency.ScopeRequired`. A failed `Result` carrying `Idempotency.InFlight` that is returned with `ToProblemResult()` or `ToActionResult()` becomes a 409 with the top-level `code` member and `Retry-After`, the same shape as the middleware's 409.
+
+#### Placement
+
+| Placement | Order | Use with |
+|-----------|-------|----------|
+| `OutsideTransaction` (default) | Idempotency → Lock → Transaction → Handler | Any store. The record is written after the commit or rollback. If the process stops between the commit and the write, the key stays in flight until `Lease` expires and a retry after that runs the handler again |
+| `InsideTransaction` | Transaction → Idempotency → Lock → Handler | A record store that enlists in the same transaction, so the record commits or rolls back with the handler's data |
+
+> **Warning:** with `InsideTransaction` and a store that does not enlist in the transaction (the in-memory or distributed cache store), a commit that fails after the record was written leaves a stored response for work that never committed, and a retry replays it.
+
+Call `AddMediatorIdempotencyBehavior` after `AddMediatorBehaviors`, so validation runs first and a validation failure never reserves a key. With no transaction behavior it is appended. Calling it again configures the same options and moves the behavior instead of adding a second one. With Native AOT, `DefaultPipelineBehaviors` does not include `IdempotencyBehavior<,>`. Insert it into your own array, and register an `IdempotencyBehaviorOptions` instance and the executor (`AddIdempotencyExecutor`) yourself.
+
+#### Modes
+
+`IdempotencyExecutorOptions.Mode`, a profile or `ForRequest<T>(p => p.Mode = ...)` sets the mode. In `Off` the behavior only calls the handler. In `Observe` it never blocks: a request it would reject (invalid key, unresolved scope, a scope or fingerprint that throws) and a replay, in-flight or reused key are logged, and the request runs.
+
 ### Logging Behavior
 
 Implement marker interfaces to opt into payload logging.
@@ -321,6 +404,7 @@ Behaviors placed after it in the pipeline (caching, transaction, lock) run insid
 | `ICacheable` | None | Enables `CachingBehavior` |
 | `ITransactionalRequest` | None | Enables `TransactionScopeBehavior` or `TransactionBehavior`, whichever is registered |
 | `ILockedRequest` | None | Enables `LockBehavior` with `LockKey` and optional `LockTimeout` |
+| `IIdempotentRequest` | None | Enables `IdempotencyBehavior` with `IdempotencyKey` and optional `IdempotencyScope`, `IdempotencyFingerprint`, `IdempotencyRetention`, `IdempotencyLease` |
 | `ILoggableRequest` | `IMessage` | Base for logging opt-in |
 | `IRequestLoggable` | `ILoggableRequest` | Log request payload |
 | `IResponseLoggable` | `ILoggableRequest` | Log response payload |
@@ -337,8 +421,9 @@ Behaviors placed after it in the pipeline (caching, transaction, lock) run insid
 | `TransactionScopeBehavior<TRequest,TResponse>` | `AddMediatorBehaviors()`, `AddMediatorTransactionBehavior()` | `TRequest : ITransactionalRequest, IMessage` |
 | `TransactionBehavior<TRequest,TResponse>` | `AddMediatorTransactionRunnerBehavior()`, replaces `TransactionScopeBehavior` | `TRequest : ITransactionalRequest, IMessage` |
 | `LockBehavior<TRequest,TResponse>` | `AddMediatorLockBehavior()` | `TRequest : ILockedRequest, IMessage` |
+| `IdempotencyBehavior<TRequest,TResponse>` | `AddMediatorIdempotencyBehavior()` | `TRequest : IIdempotentRequest, IMessage`; replays and rejections are `Result` failures for `Result` / `Result<T>` responses |
 
-> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior` and `LockBehavior` are scoped as well, because `ITransactionRunner` and database-backed `IResourceLock` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
+> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior`, `LockBehavior` and `IdempotencyBehavior` are scoped as well, because `ITransactionRunner` and database-backed `IResourceLock` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
 
 ## Dependencies
 
@@ -347,5 +432,6 @@ Behaviors placed after it in the pipeline (caching, transaction, lock) run insid
 - `CSharpEssentials.Errors`
 - `CSharpEssentials.Json`
 - `CSharpEssentials.Validation`
+- `CSharpEssentials.Idempotency`
 - `Mediator.Abstractions`
 - `Microsoft.Extensions.Caching.Abstractions`, `Microsoft.Extensions.Logging.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions`

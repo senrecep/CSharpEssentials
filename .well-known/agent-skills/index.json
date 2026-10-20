@@ -77,7 +77,7 @@
     },
     {
       "name": "csharpessentials-mediator",
-      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) and LockBehavior (ILockedRequest).",
+      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).",
       "files": ["SKILL.md"]
     },
     {
