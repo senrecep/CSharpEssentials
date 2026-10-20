@@ -216,13 +216,13 @@ Runs a request at most once per key and caller, and replays the stored `Result` 
 ```csharp
 using CSharpEssentials.Idempotency;   // IdempotencyScope, IdempotencyScopes, IdempotencyExecutionOptions
 
-public record CapturePaymentCommand(string IdempotencyKey, Guid OrderId) : ICommand<Result<Guid>>, IIdempotentRequest;
+public record RefundPaymentCommand(string IdempotencyKey, Guid OrderId) : ICommand<Result<Guid>>, IIdempotentRequest;
 // optional members: IdempotencyScope (built only with IdempotencyScope.User/Tenant/Client/UserAndTenant/Custom/Global),
 // IdempotencyFingerprint (default: SHA-256 of the request JSON), IdempotencyRetention, IdempotencyLease
 
 services.AddMediatorBehaviors();
 services.AddIdempotency();   // ASP.NET Core: gives the behavior the request user (IIdempotencyScopeAccessor)
-services.AddMediatorIdempotencyBehavior(o => o.ForRequest<CapturePaymentCommand>(p => p.Profile = "payments"));
+services.AddMediatorIdempotencyBehavior(o => o.ForRequest<RefundPaymentCommand>(p => p.Profile = "payments"));
 services.AddIdempotencyExecutor(o => o.AddProfile("payments", p => p.Retention = TimeSpan.FromDays(7)));
 ```
 
