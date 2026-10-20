@@ -6,7 +6,7 @@ namespace CSharpEssentials.EntityFrameworkCore.Idempotency;
 /// Records are unique on <see cref="IdempotencyRecord.KeyHash"/>, a fixed-length binary hash, so no collation can merge
 /// two keys. The text columns (<see cref="IdempotencyRecord.Namespace"/>, <see cref="IdempotencyRecord.Scope"/>,
 /// <see cref="IdempotencyRecord.Key"/>) only narrow the store's updates and are compared ordinally after every read;
-/// they get the binary collation of a known provider so that queries of your own compare them as the store does.
+/// they get the binary collation of a known provider so that queries of your own compare them case-sensitively.
 /// </para>
 /// </summary>
 public sealed class IdempotencyRecordModelOptions
@@ -30,7 +30,9 @@ public sealed class IdempotencyRecordModelOptions
     /// The collation of the namespace, scope and key columns. <see langword="null"/> (the default) picks the binary
     /// collation of the provider: <c>C</c> on PostgreSQL, <c>Latin1_General_100_BIN2</c> on SQL Server,
     /// <c>utf8mb4_0900_bin</c> on MySQL (Pomelo and Oracle; set <c>utf8mb4_nopad_bin</c> on MariaDB, which lacks it)
-    /// and <c>BINARY</c> on SQLite, and keeps the database default for any other provider.
+    /// and <c>BINARY</c> on SQLite, and keeps the database default for any other provider. A binary collation only
+    /// makes the columns case-sensitive: SQL Server ignores trailing spaces under every collation, so only
+    /// <see cref="IdempotencyRecord.KeyHash"/> keeps keys that differ by trailing spaces apart there.
     /// </summary>
     public string? KeyCollation { get; set; }
 
