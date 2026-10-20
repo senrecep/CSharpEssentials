@@ -11,7 +11,7 @@ behavior; message consumers, background jobs and other pipelines can use them di
 - **`IdempotencyInbox`**: processes each message at most once per consumer over the executor, with a 7-day `messaging` profile.
 - **Modes**: `Off`, `Observe` and `Enforce`, globally, per profile or per operation, so a new idempotent operation can be rolled out in `Observe` first.
 - **`IIdempotencyRecordStore`**: `TryReserveAsync`, `CompleteAsync` and `ReleaseAsync` with a reservation token, so a request that outlived its lease cannot overwrite or remove the entry of a later retry. Payloads are opaque bytes.
-- **Stores**: `InMemoryIdempotencyRecordStore` (atomic within one process) and `DistributedCacheIdempotencyRecordStore` (any `IDistributedCache`; best-effort, not atomic).
+- **Stores**: `InMemoryIdempotencyRecordStore` (atomic within one process) and `DistributedCacheIdempotencyRecordStore` (any `IDistributedCache`; best-effort, not atomic). `CSharpEssentials.EntityFrameworkCore` adds a transactional store on your `DbContext`.
 - **`IdempotencyRecordKey`**: namespace, scope and key. `ToStorageKey()` gives `idem:v3:{n}:{namespace}|{n}:{scope}|{n}:{key}` with UTF-8 byte lengths, and `global` as the scope of a global key, so two different keys never share a storage key. The constructor takes an `IdempotencyScope?`; `null` or `IdempotencyScope.Global` gives a global key.
 - **Scopes**: `IdempotencyScopes.User`, `Tenant(claim)`, `UserAndTenant(claim)`, `Client`, `Custom(kind, resolve)` and `Global`. The scopes are `user:{id}`, `tenant:{id}`, `client:{id}`, `{kind}:{value}`, `{n}:tenant:{tenantId}/user:{userId}` (`{n}` is the UTF-8 byte length of the tenant part) and `global`. A resolver returns `null` when it cannot tell who the caller is; `IdempotencyScope.Global` is a separate, explicit answer.
 - **`IdempotencyScope`**: built only by its factories, `User(id)`, `Tenant(id)`, `Client(id)`, `UserAndTenant(userId, tenantId)`, `Custom(kind, value)` and `Global`. Every owner scope starts with its kind, so `Tenant("user:42")` (`tenant:user:42`) never matches `User("42")` (`user:42`) and no owner scope can be the `global` part of a global key. `Custom` rejects a `kind` that is empty, contains `:` or `/`, is all digits or has an unpaired surrogate; the built-in kinds `user`, `tenant`, `client` and `global` are reserved in any casing.
@@ -208,14 +208,51 @@ surrogate, which has no UTF-8 encoding. A `Custom` kind cannot contain `:` or `/
 |---|---|
 | `InMemoryIdempotencyRecordStore` | Reservation is atomic within one process. Expired entries are removed on access and by a sweep that runs at most once a minute. |
 | `DistributedCacheIdempotencyRecordStore` | For a single instance or development. `IDistributedCache` has no set-if-absent, so two concurrent requests with the same key can both be reserved. Entries are versioned; an entry it cannot read is treated as absent. |
+| `EfCoreIdempotencyRecordStore<TContext>` (`CSharpEssentials.EntityFrameworkCore`) | Atomic across instances through the primary key of a table in your `DbContext`, a fixed-length hash of the storage key. Records are written inside the context's current transaction, so they commit and roll back with the business data. See [EF Core store](#ef-core-store). |
 
-For strict guarantees across instances, implement `IIdempotencyRecordStore` with one atomic operation for
+For strict guarantees across instances, use the EF Core store or implement `IIdempotencyRecordStore` with one atomic operation for
 `TryReserveAsync` (Redis `SET NX`, a unique index) and token-checked `CompleteAsync` and `ReleaseAsync`, then run the
 `CSharpEssentials.Idempotency.Testing` contract tests against it. See [External stores](#external-stores).
 
-**Store requirement:** a store must compare `Namespace`, `Scope` and `Key` ordinally and case-sensitively. For a SQL
-store that means a binary or case-sensitive collation on those columns; with a case-insensitive one,
-`Tenant("ABC")` and `Tenant("abc")` share a record. The contract tests check this.
+**Store requirement:** a store must compare `Namespace`, `Scope` and `Key` ordinally: case-sensitively and with
+trailing spaces significant. A SQL unique index on the text columns gets this wrong in two ways: a case-insensitive
+collation makes `Tenant("ABC")` and `Tenant("abc")` one record, and a PAD SPACE collation, which ignores trailing
+spaces (SQL Server's `_BIN2` collations, MySQL's `utf8mb4_bin`), makes `Tenant("abc")` and `Tenant("abc ")` one
+record, so one scope can replay another's response. Key a SQL store by a fixed-length hash of `ToStorageKey()` in a
+binary column instead, as the EF Core store does, or use a collation that is binary and NO PAD. The contract tests
+check both.
+
+### EF Core store
+
+`CSharpEssentials.EntityFrameworkCore` has a transactional store. Map the table, register the store and put the Mediator
+idempotency behavior inside the transaction:
+
+```csharp
+protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    modelBuilder.AddIdempotencyRecords(Database.ProviderName);
+
+services.AddEfCoreTransactionRunner<AppDbContext>();
+services.AddMediatorTransactionRunnerBehavior();
+services.AddMediatorIdempotencyBehavior(o => o.Placement = IdempotencyPlacement.InsideTransaction);
+services.AddEfCoreIdempotencyRecordStore<AppDbContext>();
+```
+
+- A request whose transaction rolls back leaves no record, so a webhook or message that failed is processed again
+  when it is redelivered. A duplicate that arrives while the first one is still running waits for its commit and
+  replays its response.
+- Records are keyed by `KeyHash`, the SHA-256 of the storage key in a `binary(32)` column, so the store requirement
+  above holds under any collation. The readable columns get the binary collation of a known provider (`C`,
+  `Latin1_General_100_BIN2`, `utf8mb4_0900_bin`, `BINARY`); `KeyCollation` overrides it.
+- The store needs the `READ COMMITTED` isolation level. Expired rows count as absent; `PurgeExpiredAsync` deletes
+  them, for example from a hosted service.
+- `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` registers it as a keyed store, so only the profiles with
+  `StoreKey = "payments"` use the database and the others keep the default store.
+- In `Observe` the executor and the HTTP middleware write through its `Detached` view, in a context and transaction of
+  their own, so observing does not wait for or fail the business transaction. Those records are not atomic with the
+  business data.
+
+The [EF Core Readme](../CSharpEssentials.EntityFrameworkCore/Readme.MD#idempotency-records) has the details and a purge
+service.
 
 ## External stores
 

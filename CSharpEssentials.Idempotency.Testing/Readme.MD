@@ -32,7 +32,8 @@ The scenarios cover:
 - release of an in-flight key, of a completed key, of an unknown key and with another token;
 - lease expiry, retention of completed payloads, and completion of an expired reservation that nobody took over;
 - a stale token fenced out by the next reservation, and a second completion keeping the first payload;
-- independent keys, namespaces and scopes, global keys that never collide with scoped ones, and parts that contain separators;
+- independent keys, namespaces and scopes, parts that differ only in case or by trailing spaces, global keys that never
+  collide with scoped ones, and parts that contain separators;
 - empty and binary payloads, and a stored payload that does not change with the caller's buffer;
 - parallel reservations of a free key and of an expired key;
 - argument validation.

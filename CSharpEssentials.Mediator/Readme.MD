@@ -365,7 +365,7 @@ In an ASP.NET Core app call `AddIdempotency()` from `CSharpEssentials.AspNetCore
 | Placement | Order | Use with |
 |-----------|-------|----------|
 | `OutsideTransaction` (default) | Idempotency → Lock → Transaction → Handler | Any store. The record is written after the commit or rollback. If the process stops between the commit and the write, the key stays in flight until `Lease` expires and a retry after that runs the handler again |
-| `InsideTransaction` | Transaction → Idempotency → Lock → Handler | A record store that enlists in the same transaction, so the record commits or rolls back with the handler's data |
+| `InsideTransaction` | Transaction → Idempotency → Lock → Handler | A record store that enlists in the same transaction, so the record commits or rolls back with the handler's data, such as `EfCoreIdempotencyRecordStore<TContext>` from `CSharpEssentials.EntityFrameworkCore` |
 
 > **Warning:** with `InsideTransaction` and a store that does not enlist in the transaction (the in-memory or distributed cache store), a commit that fails after the record was written leaves a stored response for work that never committed, and a retry replays it.
 
