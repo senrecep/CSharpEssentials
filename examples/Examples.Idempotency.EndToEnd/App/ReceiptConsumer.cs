@@ -13,6 +13,10 @@ namespace Examples.Idempotency.EndToEnd.App;
 /// A delivery that is still in flight elsewhere, or whose processing failed, is redelivered after
 /// <see cref="RedeliveryDelay"/> instead of being acknowledged.
 /// </summary>
+/// <remarks>
+/// A permanent failure is redelivered forever. Poison-message handling, such as an attempt limit or a dead-letter
+/// queue, is deliberately left out of this example; a production consumer needs it.
+/// </remarks>
 public sealed partial class ReceiptConsumer(MessageBus bus, IServiceScopeFactory scopes, ILogger<ReceiptConsumer> logger) : BackgroundService
 {
     public const string Consumer = "receipts";
