@@ -10,6 +10,8 @@
 - `IdempotencyOptions.ShouldStore` is a `Func<IdempotencyOutcome, bool>` instead of a `Func<int, bool>`. `IdempotencyOutcome` carries `StatusCode` and `HandlerStarted`.
 - `IdempotencyOptions.AllowUnscopedKeys` is removed. Use `UnscopedKeyBehavior`.
 - `IdempotencyOptions` resolved from DI is transient and reflects the current options, instead of a singleton instance. See [Options at runtime](#options-at-runtime).
+- `IdempotencyOptions.RetryAfter` is a non-nullable `TimeSpan` (default 1 second, must be positive). The `Retry-After` header on the 409 can no longer be omitted.
+- A key must be 1 to `MaxKeyLength` printable ASCII characters other than space, `"` and `\` (`IdempotencyKeys.IsValid`). Keys with other characters that 6.x accepted now return 400 `Idempotency.KeyInvalid`.
 - What happens to a key after the request depends on whether the handler started, and the default policy stores more statuses. See [Behavior changes](#behavior-changes).
 
 `UseInMemoryStore()`, `UseDistributedCacheStore()`, `UseStore<TStore>(lifetime)` and the other options keep their names and behavior.
@@ -85,6 +87,11 @@ New startup validation in `AddIdempotency`:
 - `IdempotencyOptions` resolved from DI is now transient: each resolution returns the monitor's current value instead of one singleton instance. Changes made to a resolved instance are lost on the next reload and may not reach endpoints whose settings were already resolved; configure the options through `AddIdempotency` or `Configure<IdempotencyOptions>` instead.
 - A reload that makes the options invalid throws `OptionsValidationException` on every request to an idempotent endpoint until it is fixed. The store is chosen in `AddIdempotency`; a reload does not change it.
 - New `IdempotencyOptions.Mode` (`Enforce` by default, so nothing changes without it): `Observe` stores as `Enforce` does but never answers differently from `Off`, and `Off` ignores the header. Endpoints and profiles override it with `IdempotencyEndpointOptions.Mode` or `[Idempotent(Mode = ...)]`. It does not prevent duplicates in `Observe`; keep that phase short for payments.
+- Every idempotency problem (`Idempotency.KeyMissing`, `KeyInvalid`, `InFlight`, `KeyReused`, `ScopeRequired`) is `application/problem+json` with a top-level `code` member and `errorCodes`. Clients can branch on `code`: `KeyReused` is 422, `InFlight` is 409 with `Retry-After`, the others are 400.
+- A key sent as a structured-field string (`"abc"`) is accepted and names the same record as the bare `abc`. Malformed quoting, several headers or an empty value return 400 `Idempotency.KeyInvalid`.
+- `AddSwagger` in `CSharpEssentials.AspNetCore.Swashbuckle` now calls `AddIdempotencyConventions()`, so generated documents describe the `Idempotency-Key` header and the problem responses of idempotent endpoints. Regenerate any checked-in OpenAPI snapshot.
+- Start new endpoints in `Mode = Observe` and switch to `Enforce` after the decision counters look right; see the [rollout steps](../../CSharpEssentials.Idempotency/Readme.MD#rollout-observe--enforce).
+- For operations where a duplicate must be impossible (payments), the EF Core store (`ITransactionalIdempotencyRecordStore`) commits the key with your data; see [Transactional store for money movement](../../CSharpEssentials.Idempotency/Readme.MD#transactional-store-for-money-movement).
 - Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`), and the middleware's log messages that name a record now include a key hash, never the key or the scope. See the [Idempotency Readme](../../CSharpEssentials.Idempotency/Readme.MD#telemetry).
 
 ## Custom stores
@@ -127,4 +134,5 @@ A Redis store written against the 7.0 interface (one Lua script per operation on
 - Every part of the storage key is written as `{utf8ByteLength}:{value}` and the parts are joined with `|`. A global key writes its scope part as `6:global`, not `-`, for example `idem:v3:4:http|6:global|3:abc`. A scoped key looks like `idem:v3:7:capture|9:tenant:t1|3:abc`. Scopes are built only by the `IdempotencyScope` factories, which always write a kind and a `:`, so no owner scope can be `global`.
 - 7.0 has not been released, so records written by a 7.0 pre-release under the earlier scope strings or the `-` global marker do not need a migration.
 - The middleware writes its responses as payload version 3 and does not read version 2. If a custom store keeps its old keys and returns a 6.x record as a completed payload, the middleware answers that key with `500` and logs an error, without running the handler, until the record expires. Use a new key prefix, or clear the table, when you upgrade a custom store.
+- A custom store on SQL Server must not rely on the column collation to tell `abc` from `abc ` apart: every SQL Server collation, `_BIN2` included, ignores trailing spaces in `=` and unique comparisons. Key the table on a hash of the storage key, as the EF Core store does (`KeyHash binary(32)`), and compare the full key in code.
 - During a rolling deploy, 6.x and 7.0 instances run side by side without seeing each other's records. A retry that reaches a 7.0 instance after the first attempt ran on a 6.x instance runs again. For operations that must not run twice, such as payments, drain traffic before switching or deploy outside the retry window of your clients.
