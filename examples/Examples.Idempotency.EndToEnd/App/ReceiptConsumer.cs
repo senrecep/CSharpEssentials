@@ -10,10 +10,14 @@ namespace Examples.Idempotency.EndToEnd.App;
 /// Issues a receipt for every captured payment. The inbox (<see cref="IdempotencyInbox"/>) keys each delivery with
 /// <see cref="IdempotencyKeys.FromMessage"/>, so a redelivered message is acknowledged without issuing a second
 /// receipt. The inbox runs on the <c>messaging</c> profile, which uses the default store, not the payments database.
+/// A delivery that is still in flight elsewhere, or whose processing failed, is redelivered after
+/// <see cref="RedeliveryDelay"/> instead of being acknowledged.
 /// </summary>
 public sealed partial class ReceiptConsumer(MessageBus bus, IServiceScopeFactory scopes, ILogger<ReceiptConsumer> logger) : BackgroundService
 {
     public const string Consumer = "receipts";
+
+    public static readonly TimeSpan RedeliveryDelay = TimeSpan.FromMilliseconds(200);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -32,13 +36,14 @@ public sealed partial class ReceiptConsumer(MessageBus bus, IServiceScopeFactory
                     cancellationToken: stoppingToken);
 
                 if (status == IdempotencyExecutionStatus.InFlight)
-                    bus.Publish(message);
+                    bus.Redeliver(message, RedeliveryDelay, stoppingToken);
                 else
                     bus.Acknowledge(new MessageDelivery(message.MessageId, status));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
-                LogReceiptFailed(logger, exception, message.MessageId);
+                LogReceiptFailed(logger, exception, message.MessageId, RedeliveryDelay);
+                bus.Redeliver(message, RedeliveryDelay, stoppingToken);
             }
         }
     }
@@ -55,6 +60,6 @@ public sealed partial class ReceiptConsumer(MessageBus bus, IServiceScopeFactory
         await db.SaveChangesAsync(cancellationToken);
     }
 
-    [LoggerMessage(Level = LogLevel.Error, Message = "Issuing the receipt of message {MessageId} failed; it stays unacknowledged.")]
-    private static partial void LogReceiptFailed(ILogger logger, Exception exception, string messageId);
+    [LoggerMessage(Level = LogLevel.Error, Message = "Issuing the receipt of message {MessageId} failed; it stays unacknowledged and is redelivered after {Delay}.")]
+    private static partial void LogReceiptFailed(ILogger logger, Exception exception, string messageId, TimeSpan delay);
 }

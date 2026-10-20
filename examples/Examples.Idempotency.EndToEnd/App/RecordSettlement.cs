@@ -16,9 +16,11 @@ public sealed record RecordSettlement(string EventId, string AccountId, decimal 
 {
     public const string Consumer = "payment-provider-webhook";
 
+    public const string AccountScopeKind = "account";
+
     string IIdempotentRequest.IdempotencyKey => IdempotencyKeys.FromMessage(EventId, Consumer);
 
-    IdempotencyScope? IIdempotentRequest.IdempotencyScope => IdempotencyScope.Client(AccountId);
+    IdempotencyScope? IIdempotentRequest.IdempotencyScope => IdempotencyScope.Custom(AccountScopeKind, AccountId);
 
     string? IIdempotentRequest.IdempotencyFingerprint => Consumer;
 }

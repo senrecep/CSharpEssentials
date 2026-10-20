@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.Errors;
 using CSharpEssentials.EntityFrameworkCore.Idempotency;
 using CSharpEssentials.EntityFrameworkCore.Transactions;
 using CSharpEssentials.Idempotency;
@@ -18,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Examples.Idempotency.EndToEnd.App;
 
@@ -32,7 +34,9 @@ namespace Examples.Idempotency.EndToEnd.App;
 /// Mediator: <see cref="CapturePayment"/> and <see cref="RecordSettlement"/> run on the <c>payments</c> profile, whose
 /// store is the EF Core store of <see cref="PaymentsDbContext"/>. The claim is written in the same transaction as the
 /// payment, so a retry that reaches another instance, or a webhook resent by the provider, finds it and gets the
-/// stored result instead of a second payment.
+/// stored result instead of a second payment. The endpoint parses the header with
+/// <see cref="IdempotencyKeyHeader.TryParse(string?, out string?)"/>, so a key sent as a quoted string is the same key
+/// in both layers.
 /// </description></item>
 /// </list>
 /// The message consumer uses the built-in <c>messaging</c> profile on the default store.
@@ -83,6 +87,8 @@ public static class PaymentsApi
             profile.StoreKey = PaymentsStoreKey;
             profile.Mode = configuration.GetValue(PaymentsModeKey, IdempotencyMode.Enforce);
         }));
+        services.AddSingleton<IOptionsChangeTokenSource<IdempotencyExecutorOptions>>(
+            new ConfigurationChangeTokenSource<IdempotencyExecutorOptions>(configuration));
         services.AddEfCoreIdempotencyRecordStore<PaymentsDbContext>(PaymentsStoreKey);
         services.AddEfCoreTransactionRunner<PaymentsDbContext>();
         services.AddMediatorTransactionRunnerBehavior();
@@ -96,7 +102,7 @@ public static class PaymentsApi
         services.AddScoped<CommandSender>();
         services.AddScoped<ICommandHandler<CapturePayment, Result<CapturedPayment>>, CapturePaymentHandler>();
         services.AddScoped<ICommandHandler<RecordSettlement, Result<Guid>>, RecordSettlementHandler>();
-        services.TryAddScoped<IPaymentProvider, SandboxPaymentProvider>();
+        services.TryAddSingleton<IPaymentProvider, SandboxPaymentProvider>();
 
         services.AddSingleton<MessageBus>();
         services.AddHostedService<ReceiptConsumer>();
@@ -104,12 +110,15 @@ public static class PaymentsApi
 
     private static async Task<IResult> CaptureAsync(
         CapturePaymentRequest body,
-        [FromHeader(Name = "Idempotency-Key")] string key,
+        [FromHeader(Name = "Idempotency-Key")] string? header,
         ClaimsPrincipal user,
         CommandSender sender,
         MessageBus bus,
         CancellationToken cancellationToken)
     {
+        if (!IdempotencyKeyHeader.TryParse(header, out string? key))
+            return Error.Validation(IdempotencyErrorCodes.KeyInvalid, "Send a valid Idempotency-Key header.").ToProblemResult();
+
         string merchantId = user.FindFirstValue(IdempotencyScopes.ClientIdClaimType)!;
         Result<CapturedPayment> result = await sender.SendAsync<CapturePayment, Result<CapturedPayment>>(
             new CapturePayment(merchantId, key, body.Reference, body.Amount),
@@ -144,6 +153,8 @@ public static class PaymentsApi
         Result<Guid> result = await sender.SendAsync<RecordSettlement, Result<Guid>>(
             new RecordSettlement(providerEvent.Id, providerEvent.AccountId, providerEvent.Amount),
             cancellationToken);
-        return result.IsSuccess ? Results.Ok(new { settlementId = result.Value }) : result.ToProblemResult();
+        return result.IsSuccess
+            ? Results.Ok(new { settlementId = result.Value })
+            : result.ToProblemResult(statusCode: StatusCodes.Status500InternalServerError);
     }
 }

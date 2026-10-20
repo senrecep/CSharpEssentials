@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+
+using CSharpEssentials.Idempotency;
 
 using Examples.Idempotency.EndToEnd.App;
 using Examples.Idempotency.EndToEnd.Client;
@@ -63,6 +66,22 @@ public sealed class ClientRetryTests(PostgresFixture postgres)
 
         Assert.Equal(HttpStatusCode.OK, original.StatusCode);
         Assert.Equal(HttpStatusCode.UnprocessableEntity, changed.StatusCode);
+        Assert.Equal(1, await CountPaymentsAsync());
+    }
+
+    [Fact]
+    public async Task The_Same_Key_With_Another_Amount_On_Another_Instance_Should_Be_Rejected_By_The_Database_Layer()
+    {
+        await using PaymentsHost first = await PaymentsHost.StartAsync(postgres.ConnectionString);
+        await using PaymentsHost second = await PaymentsHost.StartAsync(postgres.ConnectionString);
+
+        using HttpResponseMessage original = await first.CreatePaymentsClient(_merchant).CaptureAsync(new CapturePaymentRequest("order-4", 10m), "order-4-capture");
+        using HttpResponseMessage changed = await second.CreatePaymentsClient(_merchant).CaptureAsync(new CapturePaymentRequest("order-4", 99m), "order-4-capture");
+
+        Assert.Equal(HttpStatusCode.OK, original.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, changed.StatusCode);
+        using JsonDocument problem = JsonDocument.Parse(await changed.Content.ReadAsStringAsync());
+        Assert.Equal(IdempotencyErrorCodes.KeyReused, problem.RootElement.GetProperty("code").GetString());
         Assert.Equal(1, await CountPaymentsAsync());
     }
 

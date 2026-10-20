@@ -19,6 +19,9 @@ public sealed class PaymentsClient(HttpClient http, string merchantId)
             .WithIdempotencyKey(idempotencyKey)
             .WithHeader(MerchantAuthenticationHandler.HeaderName, merchantId)
             .Build();
+        if (request.IsFailure)
+            throw new InvalidOperationException($"The capture request could not be built: {request.FirstError.Description}");
+
         using HttpRequestMessage message = request.Value;
         return await http.SendAsync(message, cancellationToken);
     }

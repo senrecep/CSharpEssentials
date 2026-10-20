@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -23,6 +25,7 @@ public sealed class PaymentsHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
     private readonly byte[] _webhookSecret;
+    private readonly ConcurrentBag<HttpClient> _clients = [];
 
     private PaymentsHost(WebApplication app, byte[] webhookSecret)
     {
@@ -69,7 +72,35 @@ public sealed class PaymentsHost : IAsyncDisposable
         {
             BaseAddress = Server.BaseAddress,
         };
+        _clients.Add(http);
         return new PaymentsClient(http, merchantId);
+    }
+
+    /// <summary>
+    /// Sends <c>POST /payments</c> with <paramref name="keyHeader"/> as the raw <c>Idempotency-Key</c> value, for
+    /// clients that write the key as a structured-field string (<c>"abc"</c>), which <see cref="PaymentsClient"/> does
+    /// not.
+    /// </summary>
+    public async Task<HttpResponseMessage> CaptureWithKeyHeaderAsync(string merchantId, CapturePaymentRequest payment, string keyHeader)
+    {
+        using HttpRequestMessage request = new(HttpMethod.Post, "payments")
+        {
+            Content = JsonContent.Create(payment),
+        };
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", keyHeader);
+        request.Headers.Add(MerchantAuthenticationHandler.HeaderName, merchantId);
+        using HttpClient http = Server.CreateClient();
+        return await http.SendAsync(request);
+    }
+
+    /// <summary>
+    /// Changes <see cref="PaymentsApi.PaymentsModeKey"/> and reloads the configuration, the way an edited
+    /// configuration source does, without restarting the instance.
+    /// </summary>
+    public void SwitchPaymentsMode(IdempotencyMode mode)
+    {
+        _app.Configuration[PaymentsApi.PaymentsModeKey] = mode.ToString();
+        ((IConfigurationRoot)_app.Configuration).Reload();
     }
 
     /// <summary>Delivers a webhook the way the payment provider does: a JSON body signed with the shared secret.</summary>
@@ -95,6 +126,8 @@ public sealed class PaymentsHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        foreach (HttpClient client in _clients)
+            client.Dispose();
         await _app.StopAsync();
         await _app.DisposeAsync();
     }

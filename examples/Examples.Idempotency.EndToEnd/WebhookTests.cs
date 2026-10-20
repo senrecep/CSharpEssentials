@@ -42,6 +42,20 @@ public sealed class WebhookTests(PostgresFixture postgres)
         Assert.Equal(1, await CountSettlementsAsync());
     }
 
+    [Fact]
+    public void A_Signature_Should_Be_Compared_As_Bytes_Whatever_The_Hex_Case()
+    {
+        byte[] secret = [1, 2, 3, 4];
+        byte[] body = "{}"u8.ToArray();
+        string signature = WebhookSignature.Compute(secret, body);
+
+        Assert.True(WebhookSignature.IsValid(secret, body, signature));
+        Assert.True(WebhookSignature.IsValid(secret, body, signature.ToUpperInvariant()));
+        Assert.False(WebhookSignature.IsValid(secret, body, "not-hex"));
+        Assert.False(WebhookSignature.IsValid(secret, body, signature[..^2]));
+        Assert.False(WebhookSignature.IsValid(secret, body, null));
+    }
+
     private static async Task<Guid> SettlementIdAsync(HttpResponseMessage response)
     {
         using JsonDocument body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());

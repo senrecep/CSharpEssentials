@@ -1,5 +1,4 @@
 using System.Security.Cryptography;
-using System.Text;
 
 namespace Examples.Idempotency.EndToEnd.App;
 
@@ -15,13 +14,25 @@ public static class WebhookSignature
     public static string Compute(byte[] secret, ReadOnlySpan<byte> body) =>
         Convert.ToHexStringLower(HMACSHA256.HashData(secret, body));
 
+    /// <summary>
+    /// Decodes the hex signature (in either case) and compares the raw HMAC bytes in constant time. A signature that is
+    /// missing or not hex is invalid.
+    /// </summary>
     public static bool IsValid(byte[] secret, ReadOnlySpan<byte> body, string? signature)
     {
         if (string.IsNullOrEmpty(signature))
             return false;
 
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.ASCII.GetBytes(Compute(secret, body)),
-            Encoding.ASCII.GetBytes(signature));
+        byte[] received;
+        try
+        {
+            received = Convert.FromHexString(signature);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(HMACSHA256.HashData(secret, body), received);
     }
 }

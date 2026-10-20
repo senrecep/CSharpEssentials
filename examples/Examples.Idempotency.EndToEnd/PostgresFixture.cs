@@ -31,9 +31,3 @@ public sealed class PostgresFixture : IAsyncLifetime
     public PaymentsDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<PaymentsDbContext>().UseNpgsql(ConnectionString).Options);
 }
-
-[CollectionDefinition(Name)]
-public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
-{
-    public const string Name = "Payments PostgreSQL";
-}
