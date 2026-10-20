@@ -118,6 +118,8 @@ public sealed class SqlIdempotencyRecordStoreTests : IdempotencyRecordStoreContr
 
 Set `UseRealClock => true` for a store whose expiry runs on its own clock (Redis TTL, a database `now()`), and `IsReservationAtomic => false` for a best-effort store. See the [Testing package Readme](../../CSharpEssentials.Idempotency.Testing/Readme.MD).
 
+A Redis store written against the 7.0 interface (one Lua script per operation on a hash with token, fingerprint and payload, keyed by `key.ToStorageKey()`) is in the [External stores](../../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme, together with the atomicity requirements and a DynamoDB note. Start from it when you port a 6.x Redis store.
+
 ## Stored records
 
 - Storage keys start with `idem:v3:` (`IdempotencyRecordKey.DefaultPrefix`) and contain the namespace, so 7.0 does not see the records 6.x wrote under `idempotency:`. Those expire with their 6.x retention.
