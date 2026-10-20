@@ -42,7 +42,7 @@ public sealed class EfCoreIdempotencyHttpObserveRolloutTests(IdempotencyPostgres
         host.Probe.Executions.Should().Be(2);
         retried!.Replayed.Should().BeFalse();
         retried.StatusCode.Should().Be(200);
-        observed?.StatusCode.Should().NotBe(200);
+        observed.Should().BeNull();
         paymentsAfterFailure.Should().Be(0);
         (await CountPaymentsAsync()).Should().Be(1);
     }

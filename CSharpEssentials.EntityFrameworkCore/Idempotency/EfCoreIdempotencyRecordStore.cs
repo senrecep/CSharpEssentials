@@ -43,10 +43,14 @@ namespace CSharpEssentials.EntityFrameworkCore.Idempotency;
 /// transaction, so it commits and rolls back with the business data as in <see cref="IdempotencyMode.Enforce"/>.
 /// A result for a token this instance did not reserve, as in Observe, is written behind a savepoint of the context's
 /// current transaction (on PostgreSQL also of an ambient <c>System.Transactions</c> transaction the connection is
-/// enlisted in): a database error rolls back to the savepoint and is rethrown, so the transaction stays usable and the
-/// business data commits without the record. Observe therefore stores results only under <c>READ COMMITTED</c>: under a
-/// stricter level the write fails with a serialization error, because the release changed the row after the
-/// transaction's snapshot was taken.
+/// enlisted in; when the connection is not enlisted, the result is written without a savepoint): a database error rolls
+/// back to the savepoint and is rethrown, so the transaction stays usable and the business data commits without the
+/// record. Two limits remain. On PostgreSQL, Observe stores results only under <c>READ COMMITTED</c>: under a stricter
+/// level the write fails with a serialization error, because the release changed the row after the transaction's
+/// snapshot was taken; other providers may succeed. On SQL Server a savepoint cannot save a transaction that the server
+/// has doomed, which happens when the connection has <c>XACT_ABORT ON</c> or under <c>SNAPSHOT</c> isolation after an
+/// update conflict (error 3960): the rollback to the savepoint fails, the transaction is lost with the business data,
+/// and the original error is thrown.
 /// </para>
 /// </summary>
 /// <typeparam name="TContext">The context that maps <see cref="IdempotencyRecord"/>.</typeparam>
@@ -192,7 +196,15 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         if (!savepoint)
             return await CompleteCoreAsync(key, token, fingerprint, payload, retention, cancellationToken).ConfigureAwait(false);
 
-        await CreateResultSavepointAsync(transaction, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await CreateResultSavepointAsync(transaction, cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbException) when (transaction is null)
+        {
+            return await CompleteCoreAsync(key, token, fingerprint, payload, retention, cancellationToken).ConfigureAwait(false);
+        }
+
         bool completed;
         try
         {
@@ -200,7 +212,7 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         }
         catch (Exception exception) when (exception is DbException || exception.InnerException is DbException)
         {
-            await RollbackToResultSavepointAsync(transaction).ConfigureAwait(false);
+            _ = await TryRollbackToResultSavepointAsync(transaction).ConfigureAwait(false);
             throw;
         }
 
@@ -227,10 +239,24 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
             ? _context.Database.ExecuteSqlRawAsync("SAVEPOINT " + ResultSavepointName, cancellationToken)
             : transaction.CreateSavepointAsync(ResultSavepointName, cancellationToken);
 
-    private Task RollbackToResultSavepointAsync(IDbContextTransaction? transaction) =>
-        transaction is null
-            ? _context.Database.ExecuteSqlRawAsync("ROLLBACK TO SAVEPOINT " + ResultSavepointName, CancellationToken.None)
-            : transaction.RollbackToSavepointAsync(ResultSavepointName, CancellationToken.None);
+    /// <summary>
+    /// Rolls back to the result savepoint; <see langword="false"/> when the rollback itself failed. The failure is not
+    /// thrown, so that the caller rethrows the database error that made the write fail instead of the rollback's.
+    /// </summary>
+    private async Task<bool> TryRollbackToResultSavepointAsync(IDbContextTransaction? transaction)
+    {
+        try
+        {
+            await (transaction is null
+                ? _context.Database.ExecuteSqlRawAsync("ROLLBACK TO SAVEPOINT " + ResultSavepointName, CancellationToken.None)
+                : transaction.RollbackToSavepointAsync(ResultSavepointName, CancellationToken.None)).ConfigureAwait(false);
+            return true;
+        }
+        catch (Exception rollbackFailure) when (rollbackFailure is DbException or InvalidOperationException)
+        {
+            return false;
+        }
+    }
 
     private Task ReleaseResultSavepointAsync(IDbContextTransaction? transaction, CancellationToken cancellationToken) =>
         transaction is null

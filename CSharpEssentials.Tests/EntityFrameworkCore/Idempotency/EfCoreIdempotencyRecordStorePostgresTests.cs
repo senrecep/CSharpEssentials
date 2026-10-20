@@ -234,6 +234,22 @@ public sealed class EfCoreIdempotencyRecordStorePostgresTests(IdempotencyPostgre
     }
 
     [Fact]
+    public async Task CompleteAsync_Should_Write_Without_A_Savepoint_When_The_Connection_Is_Not_Enlisted_In_The_Ambient_Transaction()
+    {
+        IdempotencyRecordKey key = Key("order-1");
+        string connectionString = new NpgsqlConnectionStringBuilder(postgres.ConnectionString) { Enlist = false }.ConnectionString;
+
+        using (TransactionScope ambient = new(TransactionScopeAsyncFlowOption.Enabled))
+        {
+            await using IdempotencyTestDbContext context = new(new DbContextOptionsBuilder<IdempotencyTestDbContext>().UseNpgsql(connectionString).Options);
+            bool completed = await Store(context).CompleteAsync(key, "detached-token", "fp", "done"u8.ToArray(), TimeSpan.FromHours(1));
+            completed.Should().BeTrue();
+        }
+
+        (await CountRecordsAsync(key)).Should().Be(1);
+    }
+
+    [Fact]
     public async Task Profiles_Should_Write_To_The_Store_Their_StoreKey_Names()
     {
         await using ServiceProvider services = postgres.CreateServices(collection => collection

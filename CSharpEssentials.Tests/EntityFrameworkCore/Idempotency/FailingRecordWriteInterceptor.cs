@@ -27,6 +27,6 @@ internal sealed class FailingRecordWriteInterceptor : DbCommandInterceptor
     private static void Fail(DbCommand command)
     {
         if (command.CommandText.Contains("IdempotencyRecords", StringComparison.Ordinal))
-            command.CommandText = "SELECT 1/0";
+            command.CommandText = "SELECT * FROM cse_missing_table";
     }
 }
