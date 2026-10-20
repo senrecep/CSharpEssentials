@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace CSharpEssentials.Idempotency;
@@ -97,5 +99,20 @@ public sealed record IdempotencyRecordKey
         LengthPrefixed.Append(builder, Namespace).Append('|');
         LengthPrefixed.Append(builder, Scope ?? GlobalScope).Append('|');
         return LengthPrefixed.Append(builder, Key).ToString();
+    }
+
+    /// <summary>
+    /// The first 16 hex digits of the SHA-256 hash of the namespace, scope and key, for logs that tell keys apart
+    /// without revealing them.
+    /// </summary>
+    internal string ToLogHash()
+    {
+        using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        sha256.AppendData(LengthPrefixed.StrictUtf8.GetBytes(ToStorageKey(string.Empty)));
+        byte[] hash = sha256.GetHashAndReset();
+        StringBuilder builder = new(16);
+        for (int index = 0; index < 8; index++)
+            builder.Append(hash[index].ToString("x2", CultureInfo.InvariantCulture));
+        return builder.ToString();
     }
 }

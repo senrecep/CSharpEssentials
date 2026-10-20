@@ -27,4 +27,7 @@ public sealed class IdempotencyExecutionOptions
     /// example a transactional store for payments next to a cache store for everything else.
     /// </summary>
     public string? StoreKey { get; set; }
+
+    /// <summary>The <c>source</c> tag of the decisions the executor records for this operation; <see langword="null"/> gives <c>executor</c>.</summary>
+    internal string? Source { get; set; }
 }

@@ -1,27 +1,30 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.Idempotency;
 
 /// <summary>
-/// The <see cref="IIdempotencyExecutor"/> over an <see cref="IIdempotencyRecordStore"/>. Logs name the record namespace,
-/// never the key or the scope.
+/// The <see cref="IIdempotencyExecutor"/> over an <see cref="IIdempotencyRecordStore"/>. It reads
+/// <see cref="IdempotencyExecutorOptions"/> on every operation, so a mode changed at runtime applies to the next one.
+/// Logs name the record namespace and a hash of the key, never the key or the scope. Decisions are counted in
+/// <see cref="IdempotencyTelemetry.DecisionsInstrumentName"/> with the record namespace as <c>target</c>.
 /// </summary>
 public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
 {
     private readonly IIdempotencyRecordStore _store;
-    private readonly IdempotencyExecutorOptions _options;
+    private readonly IOptionsMonitor<IdempotencyExecutorOptions> _options;
     private readonly IServiceProvider? _services;
     private readonly ILogger _logger;
 
     /// <param name="store">The default store.</param>
-    /// <param name="options">Default settings and profiles.</param>
+    /// <param name="options">Default settings and profiles, read on every operation.</param>
     /// <param name="services">Resolves keyed stores named by <see cref="IdempotencyExecutionOptions.StoreKey"/>.</param>
     /// <param name="logger">Logs decisions and store failures.</param>
     public IdempotencyExecutor(
         IIdempotencyRecordStore store,
-        IdempotencyExecutorOptions options,
+        IOptionsMonitor<IdempotencyExecutorOptions> options,
         IServiceProvider? services = null,
         ILogger<IdempotencyExecutor>? logger = null)
     {
@@ -47,7 +50,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         Guard.NotNull(operation);
         Guard.NotNull(codec);
 
-        var settings = IdempotencyExecutionSettings.Resolve(_options, options, $"the idempotent operation in '{key.Namespace}'");
+        var settings = IdempotencyExecutionSettings.Resolve(_options.CurrentValue, options, $"the idempotent operation in '{key.Namespace}'");
         if (settings.Mode == IdempotencyMode.Off)
             return new(IdempotencyExecutionStatus.Executed, await operation(cancellationToken).ConfigureAwait(false));
 
@@ -57,6 +60,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
 
         IdempotencyRecordReservation reservation =
             await store.TryReserveAsync(key, fingerprint, settings.Lease, cancellationToken).ConfigureAwait(false);
+        Record(reservation.Status, settings, key);
         return reservation.Status switch
         {
             IdempotencyReservationStatus.Reserved =>
@@ -66,6 +70,20 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
             IdempotencyReservationStatus.FingerprintMismatch => new(IdempotencyExecutionStatus.KeyReused, default),
             _ => throw new InvalidOperationException($"The idempotency store returned the unknown reservation status {reservation.Status}."),
         };
+    }
+
+    private static void Record(IdempotencyReservationStatus status, IdempotencyExecutionSettings settings, IdempotencyRecordKey key)
+    {
+        string? decision = status switch
+        {
+            IdempotencyReservationStatus.Reserved => IdempotencyMetrics.Reserved,
+            IdempotencyReservationStatus.Completed => IdempotencyMetrics.Replay,
+            IdempotencyReservationStatus.InFlight => IdempotencyMetrics.InFlight,
+            IdempotencyReservationStatus.FingerprintMismatch => IdempotencyMetrics.KeyReused,
+            _ => null,
+        };
+        if (decision is not null)
+            IdempotencyMetrics.Record(decision, settings.Mode, settings.Source, key.Namespace);
     }
 
     private async ValueTask<IdempotencyExecution<TResult>> ObserveAsync<TResult>(
@@ -84,21 +102,24 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
-            LogObserveReserveFailed(_logger, exception, key.Namespace);
+            LogObserveReserveFailed(_logger, exception, key.Namespace, new IdempotencyKeyHash(key));
         }
+
+        if (reservation is not null)
+            Record(reservation.Status, settings, key);
 
         switch (reservation?.Status)
         {
             case IdempotencyReservationStatus.Reserved:
                 return await RunAsync(store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false);
             case IdempotencyReservationStatus.Completed:
-                LogWouldReplay(_logger, key.Namespace);
+                LogWouldReplay(_logger, key.Namespace, new IdempotencyKeyHash(key));
                 break;
             case IdempotencyReservationStatus.InFlight:
-                LogWouldRejectInFlight(_logger, key.Namespace);
+                LogWouldRejectInFlight(_logger, key.Namespace, new IdempotencyKeyHash(key));
                 break;
             case IdempotencyReservationStatus.FingerprintMismatch:
-                LogWouldRejectKeyReused(_logger, key.Namespace);
+                LogWouldRejectKeyReused(_logger, key.Namespace, new IdempotencyKeyHash(key));
                 break;
             default:
                 break;
@@ -130,7 +151,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         }
         catch (Exception)
         {
-            LogKeptInFlight(_logger, key.Namespace);
+            LogKeptInFlight(_logger, key.Namespace, new IdempotencyKeyHash(key));
             throw;
         }
 
@@ -167,11 +188,17 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
                 _ => throw new InvalidOperationException($"The result codec returned the unknown handling {handling}."),
             };
             if (!settled)
-                LogStaleReservation(_logger, key.Namespace);
+                LogStaleReservation(_logger, key.Namespace, new IdempotencyKeyHash(key));
+            else
+                IdempotencyMetrics.Record(
+                    handling == IdempotencyResultHandling.Release ? IdempotencyMetrics.Released : IdempotencyMetrics.Stored,
+                    settings.Mode,
+                    settings.Source,
+                    key.Namespace);
         }
         catch (Exception exception)
         {
-            LogSettleFailed(_logger, exception, key.Namespace);
+            LogSettleFailed(_logger, exception, key.Namespace, new IdempotencyKeyHash(key));
         }
     }
 
@@ -199,7 +226,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         }
         catch (Exception exception)
         {
-            LogReleaseFailed(_logger, exception, key.Namespace);
+            LogReleaseFailed(_logger, exception, key.Namespace, new IdempotencyKeyHash(key));
         }
     }
 
@@ -213,35 +240,35 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         return _services.GetRequiredKeyedService<IIdempotencyRecordStore>(storeKey);
     }
 
-    [LoggerMessage(EventId = 7101, EventName = "Idempotency.KeptInFlight", Level = LogLevel.Warning,
-        Message = "The idempotent operation in {Namespace} threw after it started; its key stays in flight until its lease expires.")]
-    private static partial void LogKeptInFlight(ILogger logger, string @namespace);
+    [LoggerMessage(EventId = 7003, EventName = "Idempotency.KeptInFlight", Level = LogLevel.Warning,
+        Message = "The idempotent operation in {Namespace} (key hash {KeyHash}) threw after it started; its key stays in flight until its lease expires.")]
+    private static partial void LogKeptInFlight(ILogger logger, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7102, EventName = "Idempotency.StoreFailed", Level = LogLevel.Error,
-        Message = "Storing the outcome of the idempotent operation in {Namespace} failed; its key stays in flight until its lease expires.")]
-    private static partial void LogSettleFailed(ILogger logger, Exception exception, string @namespace);
+    [LoggerMessage(EventId = 7005, EventName = "Idempotency.StoreFailed", Level = LogLevel.Error,
+        Message = "Storing the outcome of the idempotent operation in {Namespace} (key hash {KeyHash}) failed; its key stays in flight until its lease expires.")]
+    private static partial void LogSettleFailed(ILogger logger, Exception exception, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7103, EventName = "Idempotency.StaleReservation", Level = LogLevel.Warning,
-        Message = "The idempotent operation in {Namespace} outlived its reservation, which expired or was taken over; its outcome was not stored. Make the lease longer than the operation's timeout.")]
-    private static partial void LogStaleReservation(ILogger logger, string @namespace);
+    [LoggerMessage(EventId = 7006, EventName = "Idempotency.StaleReservation", Level = LogLevel.Warning,
+        Message = "The idempotent operation in {Namespace} (key hash {KeyHash}) outlived its reservation, which expired or was taken over; its outcome was not stored. Make the lease longer than the operation's timeout.")]
+    private static partial void LogStaleReservation(ILogger logger, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7104, EventName = "Idempotency.ReleaseFailed", Level = LogLevel.Warning,
-        Message = "Releasing the idempotency key in {Namespace} failed; it stays in flight until its lease expires.")]
-    private static partial void LogReleaseFailed(ILogger logger, Exception exception, string @namespace);
+    [LoggerMessage(EventId = 7007, EventName = "Idempotency.ReleaseFailed", Level = LogLevel.Warning,
+        Message = "Releasing the idempotency key in {Namespace} (key hash {KeyHash}) failed; it stays in flight until its lease expires.")]
+    private static partial void LogReleaseFailed(ILogger logger, Exception exception, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7105, EventName = "Idempotency.Observe.WouldReplay", Level = LogLevel.Information,
-        Message = "Observe mode: the idempotent operation in {Namespace} has a stored result that Enforce would replay; it runs again.")]
-    private static partial void LogWouldReplay(ILogger logger, string @namespace);
+    [LoggerMessage(EventId = 7010, EventName = "Idempotency.Observe.WouldReplay", Level = LogLevel.Information,
+        Message = "Observe mode: the idempotent operation in {Namespace} (key hash {KeyHash}) has a stored result that Enforce would replay; it runs again.")]
+    private static partial void LogWouldReplay(ILogger logger, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7106, EventName = "Idempotency.Observe.WouldRejectInFlight", Level = LogLevel.Information,
-        Message = "Observe mode: the key of the idempotent operation in {Namespace} is in flight and Enforce would reject it; it runs anyway.")]
-    private static partial void LogWouldRejectInFlight(ILogger logger, string @namespace);
+    [LoggerMessage(EventId = 7011, EventName = "Idempotency.Observe.WouldRejectInFlight", Level = LogLevel.Information,
+        Message = "Observe mode: the key of the idempotent operation in {Namespace} (key hash {KeyHash}) is in flight and Enforce would reject it; it runs anyway.")]
+    private static partial void LogWouldRejectInFlight(ILogger logger, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7107, EventName = "Idempotency.Observe.WouldRejectKeyReused", Level = LogLevel.Information,
-        Message = "Observe mode: the key of the idempotent operation in {Namespace} was used with another fingerprint and Enforce would reject it; it runs anyway.")]
-    private static partial void LogWouldRejectKeyReused(ILogger logger, string @namespace);
+    [LoggerMessage(EventId = 7012, EventName = "Idempotency.Observe.WouldRejectKeyReused", Level = LogLevel.Information,
+        Message = "Observe mode: the key of the idempotent operation in {Namespace} (key hash {KeyHash}) was used with another fingerprint and Enforce would reject it; it runs anyway.")]
+    private static partial void LogWouldRejectKeyReused(ILogger logger, string @namespace, IdempotencyKeyHash keyHash);
 
-    [LoggerMessage(EventId = 7108, EventName = "Idempotency.Observe.ReserveFailed", Level = LogLevel.Warning,
-        Message = "Observe mode: reserving the key of the idempotent operation in {Namespace} failed; it runs without idempotency.")]
-    private static partial void LogObserveReserveFailed(ILogger logger, Exception exception, string @namespace);
+    [LoggerMessage(EventId = 7015, EventName = "Idempotency.Observe.ReserveFailed", Level = LogLevel.Warning,
+        Message = "Observe mode: reserving the key of the idempotent operation in {Namespace} (key hash {KeyHash}) failed; it runs without idempotency.")]
+    private static partial void LogObserveReserveFailed(ILogger logger, Exception exception, string @namespace, IdempotencyKeyHash keyHash);
 }

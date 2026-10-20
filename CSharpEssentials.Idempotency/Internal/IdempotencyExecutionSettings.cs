@@ -3,13 +3,20 @@ namespace CSharpEssentials.Idempotency;
 /// <summary>The effective settings of an operation: each value from the operation, else its profile, else the executor options.</summary>
 internal readonly struct IdempotencyExecutionSettings
 {
-    private IdempotencyExecutionSettings(IdempotencyMode mode, TimeSpan retention, TimeSpan lease, TimeSpan failureRetention, string? storeKey)
+    private IdempotencyExecutionSettings(
+        IdempotencyMode mode,
+        TimeSpan retention,
+        TimeSpan lease,
+        TimeSpan failureRetention,
+        string? storeKey,
+        string source)
     {
         Mode = mode;
         Retention = retention;
         Lease = lease;
         FailureRetention = failureRetention;
         StoreKey = storeKey;
+        Source = source;
     }
 
     public IdempotencyMode Mode { get; }
@@ -22,6 +29,8 @@ internal readonly struct IdempotencyExecutionSettings
 
     public string? StoreKey { get; }
 
+    public string Source { get; }
+
     /// <exception cref="InvalidOperationException">The profile is unknown or the merged settings are invalid.</exception>
     internal static IdempotencyExecutionSettings Resolve(IdempotencyExecutorOptions options, IdempotencyExecutionOptions? operation, string owner)
     {
@@ -31,7 +40,8 @@ internal readonly struct IdempotencyExecutionSettings
             operation?.Retention ?? profile?.Retention ?? options.Retention,
             operation?.Lease ?? profile?.Lease ?? options.Lease,
             operation?.FailureRetention ?? profile?.FailureRetention ?? options.FailureRetention,
-            operation?.StoreKey ?? profile?.StoreKey);
+            operation?.StoreKey ?? profile?.StoreKey,
+            operation?.Source ?? IdempotencyMetrics.ExecutorSource);
         settings.Validate(options.MaxLease, owner);
         return settings;
     }

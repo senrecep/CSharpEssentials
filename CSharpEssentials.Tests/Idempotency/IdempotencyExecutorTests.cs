@@ -348,7 +348,8 @@ public sealed class IdempotencyExecutorTests : IDisposable
         IdempotencyExecution<string> observed = await RunAsync("done", new IdempotencyExecutionOptions { Mode = IdempotencyMode.Observe });
 
         observed.Status.Should().Be(IdempotencyExecutionStatus.Executed);
-        _logs.Named("Idempotency.Observe.ReserveFailed").Should().ContainSingle();
+        _logs.Named("Idempotency.Observe.ReserveFailed").Should().ContainSingle()
+            .Which.EventId.Id.Should().Be(7015);
     }
 
     [Fact]
@@ -430,7 +431,7 @@ public sealed class IdempotencyExecutorTests : IDisposable
         services.AddKeyedSingleton<IIdempotencyRecordStore>("payments", payments);
         await using ServiceProvider provider = services.BuildServiceProvider();
         _options.AddProfile("payments", profile => profile.StoreKey = "payments");
-        IdempotencyExecutor executor = new(_store, _options, provider);
+        IdempotencyExecutor executor = new(_store, new TestOptionsMonitor<IdempotencyExecutorOptions>(_options), provider);
 
         await executor.ExecuteAsync(Key, "fp", new IdempotencyExecutionOptions { Profile = "payments" }, Operation("paid"), Codec);
 
@@ -468,11 +469,107 @@ public sealed class IdempotencyExecutorTests : IDisposable
         await failing.Should().ThrowAsync<InvalidOperationException>();
 
         CapturedLog log = _logs.Named("Idempotency.KeptInFlight").Single();
-        log.Message.Should().Contain("orders").And.NotContain("k1").And.NotContain("alice");
+        log.Message.Should().Contain("orders").And.Contain(Key.ToLogHash()).And.NotContain("k1").And.NotContain("alice");
+        log.EventId.Id.Should().Be(7003);
+    }
+
+    [Fact]
+    public void ToLogHash_Should_Be_Sixteen_Hex_Digits_That_Differ_Per_Key()
+    {
+        string hash = Key.ToLogHash();
+
+        hash.Should().MatchRegex("^[0-9a-f]{16}$");
+        hash.Should().Be(new IdempotencyRecordKey("orders", IdempotencyScope.User("alice"), "k1").ToLogHash());
+        hash.Should().NotBe(new IdempotencyRecordKey("orders", IdempotencyScope.User("bob"), "k1").ToLogHash());
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Replay_After_A_Runtime_Switch_From_Observe_To_Enforce_What_Observe_Stored()
+    {
+        TestOptionsMonitor<IdempotencyExecutorOptions> monitor = new(new IdempotencyExecutorOptions { Mode = IdempotencyMode.Observe });
+        IdempotencyExecutor executor = new(_store, monitor);
+
+        IdempotencyExecution<string> first = await executor.ExecuteAsync(Key, "fp", null, Operation("A"), Codec);
+        IdempotencyExecution<string> observed = await executor.ExecuteAsync(Key, "fp", null, Operation("B"), Codec);
+        monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Enforce };
+        IdempotencyExecution<string> enforced = await executor.ExecuteAsync(Key, "fp", null, Operation("C"), Codec);
+
+        first.Should().Be(new IdempotencyExecution<string>(IdempotencyExecutionStatus.Executed, "A"));
+        observed.Should().Be(new IdempotencyExecution<string>(IdempotencyExecutionStatus.Executed, "B"));
+        enforced.Should().Be(new IdempotencyExecution<string>(IdempotencyExecutionStatus.Replayed, "A"));
+        _runs.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Reject_An_In_Flight_Key_After_A_Runtime_Switch_From_Observe_To_Enforce()
+    {
+        TestOptionsMonitor<IdempotencyExecutorOptions> monitor = new(new IdempotencyExecutorOptions { Mode = IdempotencyMode.Observe });
+        IdempotencyExecutor executor = new(_store, monitor);
+        await _store.TryReserveAsync(Key, "fp", TimeSpan.FromMinutes(1));
+
+        IdempotencyExecution<string> observed = await executor.ExecuteAsync(Key, "fp", null, Operation("A"), Codec);
+        monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Enforce };
+        IdempotencyExecution<string> enforced = await executor.ExecuteAsync(Key, "fp", null, Operation("B"), Codec);
+
+        observed.Status.Should().Be(IdempotencyExecutionStatus.Executed);
+        enforced.Status.Should().Be(IdempotencyExecutionStatus.InFlight);
+        _runs.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Count_Each_Decision_In_Enforce_Mode()
+    {
+        const string Namespace = "metrics-executor-enforce";
+        using IdempotencyDecisionListener listener = new(Namespace);
+        IdempotencyRecordKey key = new(Namespace, IdempotencyScope.User("alice"), "k1");
+        IdempotencyRecordKey inFlight = new(Namespace, IdempotencyScope.User("alice"), "k2");
+        IdempotencyRecordKey released = new(Namespace, IdempotencyScope.User("alice"), "k3");
+        await _store.TryReserveAsync(inFlight, "fp", TimeSpan.FromMinutes(1));
+
+        await CreateExecutor().ExecuteAsync(key, "fp", null, Operation("done"), Codec);
+        await CreateExecutor().ExecuteAsync(key, "fp", null, Operation("done"), Codec);
+        await CreateExecutor().ExecuteAsync(key, "other-fp", null, Operation("done"), Codec);
+        await CreateExecutor().ExecuteAsync(inFlight, "fp", null, Operation("done"), Codec);
+        await CreateExecutor().ExecuteAsync(released, "fp", null, Operation("rolled-back"), Codec);
+
+        listener.Decisions.Select(static decision => decision.Decision).Should().Equal(
+            "reserved", "stored", "replay", "key_reused", "in_flight", "reserved", "released");
+        listener.Decisions.Should().OnlyContain(static decision =>
+            decision.Mode == "enforce" && decision.Source == "executor" && decision.TagCount == 4);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Count_What_Observe_Mode_Would_Do()
+    {
+        const string Namespace = "metrics-executor-observe";
+        using IdempotencyDecisionListener listener = new(Namespace);
+        IdempotencyRecordKey key = new(Namespace, IdempotencyScope.User("alice"), "k1");
+        IdempotencyExecutionOptions observe = new() { Mode = IdempotencyMode.Observe };
+
+        await CreateExecutor().ExecuteAsync(key, "fp", observe, Operation("done"), Codec);
+        await CreateExecutor().ExecuteAsync(key, "fp", observe, Operation("done"), Codec);
+
+        listener.Decisions.Should().Equal(
+            new IdempotencyDecision("reserved", "observe", "executor", 4),
+            new IdempotencyDecision("stored", "observe", "executor", 4),
+            new IdempotencyDecision("replay", "observe", "executor", 4));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Count_Nothing_In_Off_Mode()
+    {
+        const string Namespace = "metrics-executor-off";
+        using IdempotencyDecisionListener listener = new(Namespace);
+        IdempotencyRecordKey key = new(Namespace, IdempotencyScope.User("alice"), "k1");
+
+        await CreateExecutor().ExecuteAsync(key, "fp", new IdempotencyExecutionOptions { Mode = IdempotencyMode.Off }, Operation("done"), Codec);
+
+        listener.Decisions.Should().BeEmpty();
+        _store.Calls.Should().Be(0);
     }
 
     private IdempotencyExecutor CreateExecutor() =>
-        new(_store, _options, logger: new Logger<IdempotencyExecutor>(_loggerFactory));
+        new(_store, new TestOptionsMonitor<IdempotencyExecutorOptions>(_options), logger: new Logger<IdempotencyExecutor>(_loggerFactory));
 
     private Task<IdempotencyExecution<string>> RunAsync(string result, IdempotencyExecutionOptions? options = null, string key = "k1") =>
         CreateExecutor().ExecuteAsync(new IdempotencyRecordKey("orders", IdempotencyScope.User("alice"), key), "fp", options, Operation(result), Codec).AsTask();

@@ -152,6 +152,52 @@ public sealed class IdempotencyInboxTests
         _runs.Should().Be(0);
     }
 
+    [Theory]
+    [InlineData(IdempotencyMode.Off, 2, IdempotencyExecutionStatus.Executed)]
+    [InlineData(IdempotencyMode.Observe, 2, IdempotencyExecutionStatus.Executed)]
+    [InlineData(IdempotencyMode.Enforce, 1, IdempotencyExecutionStatus.Replayed)]
+    public async Task ProcessAsync_Should_Follow_The_Global_Mode_On_A_Redelivery(IdempotencyMode mode, int runs, IdempotencyExecutionStatus redelivery)
+    {
+        _options.Mode = mode;
+        IdempotencyInbox inbox = CreateInbox();
+
+        await inbox.ProcessAsync("billing", "m-1", Tenant, Handler("charged"), Codec);
+        IdempotencyExecution<string> second = await inbox.ProcessAsync("billing", "m-1", Tenant, Handler("again"), Codec);
+
+        second.Status.Should().Be(redelivery);
+        _runs.Should().Be(runs);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_Should_Replay_What_Observe_Stored_After_A_Runtime_Switch_To_Enforce()
+    {
+        TestOptionsMonitor<IdempotencyExecutorOptions> monitor = new(new IdempotencyExecutorOptions { Mode = IdempotencyMode.Observe });
+        IdempotencyInbox inbox = new(new IdempotencyExecutor(_store, monitor));
+
+        await inbox.ProcessAsync("billing", "m-1", Tenant, Handler("charged"), Codec);
+        await inbox.ProcessAsync("billing", "m-1", Tenant, Handler("again"), Codec);
+        monitor.CurrentValue = new IdempotencyExecutorOptions { Mode = IdempotencyMode.Enforce };
+        IdempotencyExecution<string> enforced = await inbox.ProcessAsync("billing", "m-1", Tenant, Handler("third"), Codec);
+
+        enforced.Should().Be(new IdempotencyExecution<string>(IdempotencyExecutionStatus.Replayed, "charged"));
+        _runs.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_Should_Count_Decisions_With_The_Messaging_Source()
+    {
+        using IdempotencyDecisionListener listener = new("messaging:metrics-inbox");
+        IdempotencyInbox inbox = CreateInbox();
+
+        await inbox.ProcessAsync("metrics-inbox", "m-1", Tenant, Handler("charged"), Codec);
+        await inbox.ProcessAsync("metrics-inbox", "m-1", Tenant, Handler("charged"), Codec, new IdempotencyExecutionOptions { Profile = "messaging" });
+
+        listener.Decisions.Should().Equal(
+            new IdempotencyDecision("reserved", "enforce", "messaging", 4),
+            new IdempotencyDecision("stored", "enforce", "messaging", 4),
+            new IdempotencyDecision("replay", "enforce", "messaging", 4));
+    }
+
     [Fact]
     public void AddIdempotencyExecutor_Should_Register_The_Inbox()
     {
@@ -164,7 +210,7 @@ public sealed class IdempotencyInboxTests
         scope.ServiceProvider.GetRequiredService<IdempotencyInbox>().Should().NotBeNull();
     }
 
-    private IdempotencyInbox CreateInbox() => new(new IdempotencyExecutor(new RetentionRecorder(_store, _retentions), _options));
+    private IdempotencyInbox CreateInbox() => new(new IdempotencyExecutor(new RetentionRecorder(_store, _retentions), new TestOptionsMonitor<IdempotencyExecutorOptions>(_options)));
 
     private Func<CancellationToken, ValueTask<string>> Handler(string result) => _ =>
     {

@@ -6,6 +6,7 @@ using CSharpEssentials.Idempotency;
 using CSharpEssentials.Mediator;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Tests.AspNetCore.Idempotency;
+using CSharpEssentials.Tests.Idempotency;
 
 using FluentAssertions;
 
@@ -519,7 +520,7 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     private IdempotencyBehavior<TRequest, TResponse> Create<TRequest, TResponse>()
         where TRequest : IIdempotentRequest, IMessage =>
         new(
-            new IdempotencyExecutor(_store, _executorOptions, logger: _loggerFactory.CreateLogger<IdempotencyExecutor>()),
+            new IdempotencyExecutor(_store, new TestOptionsMonitor<IdempotencyExecutorOptions>(_executorOptions), logger: _loggerFactory.CreateLogger<IdempotencyExecutor>()),
             _executorOptions,
             _options,
             _loggerFactory.CreateLogger<IdempotencyBehavior<TRequest, TResponse>>(),

@@ -1,11 +1,18 @@
+using System.Text;
 using CSharpEssentials.Idempotency;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace CSharpEssentials.Tests.Idempotency;
 
 public sealed class IdempotencyExecutorOptionsTests
 {
+    private static readonly IIdempotencyResultCodec<string> TextCodec = IdempotencyResultCodec.Create<string>(
+        static value => Encoding.UTF8.GetBytes(value),
+        static payload => Encoding.UTF8.GetString(payload.Span));
+
     [Fact]
     public void Defaults_Should_Match_The_Documented_Values()
     {
@@ -137,6 +144,74 @@ public sealed class IdempotencyExecutorOptionsTests
         using ServiceProvider provider = services.BuildServiceProvider();
 
         provider.GetRequiredService<IdempotencyExecutorOptions>().Mode.Should().Be(IdempotencyMode.Off);
+    }
+
+    [Fact]
+    public void AddIdempotencyExecutor_With_Configure_Should_Not_Run_The_Replaced_Configuration()
+    {
+        ServiceCollection services = new();
+
+        services.AddIdempotencyExecutor(options => options.AddProfile("payments", profile => profile.Retention = TimeSpan.FromDays(1)));
+        services.AddIdempotencyExecutor(options => options.AddProfile("payments", profile => profile.Retention = TimeSpan.FromDays(2)));
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<IdempotencyExecutorOptions>().Profiles["payments"].Retention.Should().Be(TimeSpan.FromDays(2));
+    }
+
+    [Fact]
+    public async Task AddIdempotencyExecutor_Should_Apply_A_Mode_Changed_By_A_Configuration_Reload()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Mode"] = "Off" })
+            .Build();
+        ServiceCollection services = new();
+        services.AddIdempotencyExecutor();
+        services.Configure<IdempotencyExecutorOptions>(configuration);
+        await using ServiceProvider provider = services.BuildServiceProvider();
+        await using AsyncServiceScope scope = provider.CreateAsyncScope();
+        IIdempotencyExecutor executor = scope.ServiceProvider.GetRequiredService<IIdempotencyExecutor>();
+        IdempotencyRecordKey key = new("reload", IdempotencyScope.Global, "k1");
+        int runs = 0;
+        ValueTask<string> Operation(CancellationToken _)
+        {
+            runs++;
+            return new ValueTask<string>("done");
+        }
+
+        await executor.ExecuteAsync(key, "fp", null, Operation, TextCodec);
+        configuration["Mode"] = "Enforce";
+        configuration.Reload();
+        await executor.ExecuteAsync(key, "fp", null, Operation, TextCodec);
+        IdempotencyExecution<string> replayed = await executor.ExecuteAsync(key, "fp", null, Operation, TextCodec);
+
+        replayed.Status.Should().Be(IdempotencyExecutionStatus.Replayed);
+        runs.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task AddIdempotencyExecutor_Should_Throw_On_The_Next_Operation_When_A_Reload_Makes_The_Options_Invalid()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Mode"] = "Enforce" })
+            .Build();
+        ServiceCollection services = new();
+        services.AddIdempotencyExecutor();
+        services.Configure<IdempotencyExecutorOptions>(configuration);
+        await using ServiceProvider provider = services.BuildServiceProvider();
+        await using AsyncServiceScope scope = provider.CreateAsyncScope();
+        IIdempotencyExecutor executor = scope.ServiceProvider.GetRequiredService<IIdempotencyExecutor>();
+
+        configuration["Lease"] = "02:00:00";
+        Action reload = configuration.Reload;
+        Func<Task> act = () => executor.ExecuteAsync(
+            new IdempotencyRecordKey("reload-invalid", IdempotencyScope.Global, "k1"),
+            "fp",
+            null,
+            static _ => new ValueTask<string>("done"),
+            TextCodec).AsTask();
+
+        reload.Should().Throw<AggregateException>().WithInnerException<OptionsValidationException>();
+        await act.Should().ThrowAsync<OptionsValidationException>().WithMessage("*Lease*");
     }
 
     [Fact]

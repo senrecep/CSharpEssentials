@@ -12,6 +12,12 @@ public sealed class IdempotencyInbox(IIdempotencyExecutor executor)
 {
     private const string Fingerprint = "message";
 
+    private static readonly IdempotencyExecutionOptions DefaultOptions = new()
+    {
+        Profile = IdempotencyExecutorOptions.MessagingProfile,
+        Source = IdempotencyMetrics.MessagingSource,
+    };
+
     private static readonly IIdempotencyResultCodec<bool> CompletionCodec = IdempotencyResultCodec.Create(
         static _ => ReadOnlyMemory<byte>.Empty,
         static _ => true);
@@ -76,17 +82,18 @@ public sealed class IdempotencyInbox(IIdempotencyExecutor executor)
 
     private static IdempotencyExecutionOptions WithMessagingProfile(IdempotencyExecutionOptions? options)
     {
-        if (options?.Profile is not null)
-            return options;
+        if (options is null)
+            return DefaultOptions;
 
         return new()
         {
-            Profile = IdempotencyExecutorOptions.MessagingProfile,
-            Mode = options?.Mode,
-            Retention = options?.Retention,
-            Lease = options?.Lease,
-            FailureRetention = options?.FailureRetention,
-            StoreKey = options?.StoreKey,
+            Profile = options.Profile ?? IdempotencyExecutorOptions.MessagingProfile,
+            Mode = options.Mode,
+            Retention = options.Retention,
+            Lease = options.Lease,
+            FailureRetention = options.FailureRetention,
+            StoreKey = options.StoreKey,
+            Source = IdempotencyMetrics.MessagingSource,
         };
     }
 }
