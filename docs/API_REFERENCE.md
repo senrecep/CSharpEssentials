@@ -1316,6 +1316,22 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `EfCoreTransactionRunner<TDbContext>` | Outermost call: execution strategy + `BeginTransactionAsync`, retry re-runs the whole unit. Nested call on the same context: joins `CurrentTransaction` behind a savepoint |
 | `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner`, replacing an earlier one |
 
+### Idempotency Records
+
+Namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`; depends on `CSharpEssentials.Idempotency`.
+
+| Member | What It Does |
+|--------|-------------|
+| `modelBuilder.AddIdempotencyRecords(providerName, configure?)` | Maps `IdempotencyRecord` (`KeyHash`, `Namespace`, `Scope`, `Key`, `Token`, `Fingerprint`, `Payload`, UTC `ExpiresAt`; a global key has the scope `global`) with the primary key `KeyHash` and an index on `ExpiresAt`. Pass `Database.ProviderName`. Throws `ArgumentException` for an empty table name |
+| `IdempotencyRecord.KeyHash` | `binary(32)`: SHA-256 of the UTF-8 length-prefixed storage key. Uniqueness does not depend on the collation, so keys that differ in case or trailing spaces stay separate under a case-insensitive or PAD SPACE collation. The store compares the readable columns ordinally after each read and throws `InvalidOperationException` for a row of another key |
+| `IdempotencyRecordModelOptions` | `TableName` (`IdempotencyRecords`), `Schema`, `KeyCollation` of the readable columns (`null`: `C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server, `utf8mb4_0900_bin` on MySQL, `BINARY` on SQLite, the database default elsewhere; set `utf8mb4_nopad_bin` on MariaDB) |
+| `EfCoreIdempotencyRecordStore<TContext>(context, scopeFactory, timeProvider?)` | `ITransactionalIdempotencyRecordStore` that writes with set-based SQL on the context's connection, inside its current transaction. Reserve: `INSERT … ON CONFLICT DO NOTHING` (PostgreSQL, SQLite) or a plain `INSERT` behind a savepoint, then a read; a concurrent reservation waits for the first transaction. Complete and release are compare-and-set on the token; an expired row is taken over. Needs `READ COMMITTED` |
+| `EfCoreIdempotencyRecordStore<TContext>.Detached` | The same records from a new `TContext` per call in a scope of its own, with the ambient `TransactionScope` suppressed; used in `Observe` mode by the executor and the HTTP middleware |
+| `EfCoreIdempotencyRecordStore<TContext>.PurgeExpiredAsync(ct)` | Deletes expired records in one statement and returns the count |
+| `AddEfCoreIdempotencyRecordStore<TContext>(serviceKey?)` | Registers the store scoped; without a key it replaces the default `IIdempotencyRecordStore` (in any order with `AddIdempotencyExecutor`), with a key it is the keyed store of the profiles whose `StoreKey` matches. An empty key throws `ArgumentException` |
+
+With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBehavior` over `EfCoreTransactionRunner<TContext>`: a request whose transaction rolls back leaves no record.
+
 ### CQRS Context Registration
 
 | Method | What It Does |
@@ -2493,6 +2509,7 @@ Targets `netstandard2.1`, `net9.0`, `net10.0` and `net11.0`; depends only on `Mi
 | `IdempotencyRecordKey(namespace, IdempotencyScope? scope, key)` | `Namespace`, `Scope` (`null` = global; a `null` or `IdempotencyScope.Global` argument gives a global key), `Key`, `IsGlobal`. `ToStorageKey(prefix = "idem:v3:")` gives `{prefix}{n}:{namespace}\|{n}:{scope}\|{n}:{key}` with UTF-8 byte lengths and `global` as the scope of a global key, so no two keys collide and a global key never matches a scoped one |
 | `InMemoryIdempotencyRecordStore()` / `(TimeProvider)` | Atomic within one process; unbounded, expired entries are swept |
 | `DistributedCacheIdempotencyRecordStore(IDistributedCache, keyPrefix?)` | Single instance or development: best effort, `IDistributedCache` has no atomic add or compare. Entries are versioned; an unreadable entry counts as absent |
+| `EfCoreIdempotencyRecordStore<TContext>` (`CSharpEssentials.EntityFrameworkCore`) | Transactional store on your `DbContext`: records commit and roll back with the business data. See section 10, Idempotency Records |
 | External stores (Redis, DynamoDB) | No package: implement `IIdempotencyRecordStore` in your application. The [External stores](../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme lists the atomicity requirements (atomic reserve, token compare-and-set for complete and release), a Redis reference store (one Lua script per operation, run against a Redis container in `examples/Examples.Idempotency.Redis`) and the DynamoDB conditional writes |
 | `IdempotencyScope` | Built only by its factories: `User(id)` (`user:{id}`), `Tenant(id)` (`tenant:{id}`), `Client(id)` (`client:{id}`), `UserAndTenant(userId, tenantId)` (`{n}:tenant:{tenantId}/user:{userId}`), `Custom(kind, value)` (`{kind}:{value}`; `kind` must not be empty, contain `:` or `/`, be all digits or be a reserved built-in kind: `user`, `tenant`, `client`, `global` in any casing) and `Global`. Every factory and the `IdempotencyRecordKey` constructor throw `ArgumentException` for an unpaired surrogate. `Value` is the storage form, `IsGlobal` is true for `Global` and `default`. `Tenant("user:42")` is `tenant:user:42`, never `User("42")` |
 | `IIdempotencyScopeResolver.Resolve(ClaimsPrincipal?)` | Returns `IdempotencyScope?`: `null` means unresolved, `IdempotencyScope.Global` means a deliberate global key |
