@@ -34,6 +34,7 @@ A guide to every package, method, and pattern in the CSharpEssentials ecosystem.
 - [CSharpEssentials: Meta Package](#23-csharpessentials-meta-package)
 - [AspNetCore.OpenApi: OpenAPI Documents](#24-csharpessentialsaspnetcoreopenapi-openapi-documents)
 - [AspNetCore.Swashbuckle: Swagger Documents](#25-csharpessentialsaspnetcoreswashbuckle-swagger-documents)
+- [Idempotency: Transport-Independent Core](#26-csharpessentialsidempotency-transport-independent-core)
 - [Ecosystem Design Patterns](#ecosystem-design-patterns)
 
 ---
@@ -974,6 +975,28 @@ HTTP status codes are automatically mapped to `ErrorType` by `HttpStatusCodeMapp
 | `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy`, `CreateResiliencePolicy` (and `<T>` forms) | The same as `ResiliencePolicy` / `ResiliencePolicy<T>` values |
 | `pipeline.ExecuteAsResultAsync(callback, ct)` | Executes a `Func<CancellationToken, Task<Result>>` or `Task<Result<T>>` through the pipeline, returns `Result` |
 
+### Idempotency-Key Client
+
+Client side of the `Idempotency-Key` contract (Section 26). The key is set once per logical call; a retry sends the same `HttpRequestMessage` again, so every attempt carries the same key.
+
+```csharp
+services.AddHttpClient("payments")
+    .AddIdempotencyKeys()
+    .AddStandardResilienceHandler(o => o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey());
+```
+
+| Type / Member | What It Does |
+|---------------|-------------|
+| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates one (UUIDv7 on .NET 9+, v4 on netstandard2.1). A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
+| `HttpRequestBuilder.WithIdempotencyKey(string? key = null)` | Makes or validates the key at call time and stores it in the builder; every `Build()` of that builder sends the same key |
+| `IdempotencyKeyHandler` | Optional `DelegatingHandler`; adds a generated key to POST and PATCH requests without one, keeps an existing key |
+| `AddIdempotencyKeys(this IHttpClientBuilder)` (.NET 9+) | Adds `IdempotencyKeyHandler`. Register it before the resilience handler so it runs once per logical call |
+| `IdempotentRetry.ShouldRetryAsync(request, response, exception, options?, ct)` | The retry decision. Never on `Idempotency-Replayed: true` or caller cancellation. GET/HEAD/PUT/DELETE/OPTIONS: no response, 408, 429, 5xx. Other methods only with a key: no response, 408, 429, 503, 504, and 409 whose problem+json `code` is `Idempotency.InFlight` (body read up to 4 KiB within `ProblemReadTimeout`, then put back). `SsrfBlockedException` is never retried |
+| `IdempotentRetry.GetRetryAfter(response, maxRetryAfter)` | `Retry-After` as delta-seconds or HTTP-date (from the `Date` header, else now), clamped to `[0, maxRetryAfter]`; `null` when absent |
+| `IdempotentRetry.RequestMessageKey` | `ResiliencePropertyKey<HttpRequestMessage>` named `Resilience.Http.RequestMessage`, the key `Microsoft.Extensions.Http.Resilience` uses; read only when no response arrived. Set it when you run your own pipeline |
+| `RetryStrategyOptions<HttpResponseMessage>.RetryUnsafeMethodsOnlyWithIdempotencyKey(IdempotentRetryOptions?)` | Sets `ShouldHandle` to `ShouldRetryAsync` and makes a retried 409 InFlight, 429 or 503 wait for its capped `Retry-After`; without the header, and for other outcomes, delays come from the previous `DelayGenerator` or the backoff. The request comes from `response.RequestMessage`, or from `RequestMessageKey` when no response arrived. Works with `HttpRetryStrategyOptions` |
+| `IdempotentRetryOptions` | `MaxRetryAfter` (30 s, not negative), `ProblemReadTimeout` (2 s, positive) |
+
 ### SSRF Guard (.NET 9+)
 
 Protects `IHttpClientFactory` clients that call URLs supplied by users. Not available on `netstandard2.1`.
@@ -1293,6 +1316,22 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `EfCoreTransactionRunner<TDbContext>` | Outermost call: execution strategy + `BeginTransactionAsync`, retry re-runs the whole unit. Nested call on the same context: joins `CurrentTransaction` behind a savepoint |
 | `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner`, replacing an earlier one |
 
+### Idempotency Records
+
+Namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`; depends on `CSharpEssentials.Idempotency`.
+
+| Member | What It Does |
+|--------|-------------|
+| `modelBuilder.AddIdempotencyRecords(providerName, configure?)` | Maps `IdempotencyRecord` (`KeyHash`, `Namespace`, `Scope`, `Key`, `Token`, `Fingerprint`, `Payload`, UTC `ExpiresAt`; a global key has the scope `global`) with the primary key `KeyHash` and an index on `ExpiresAt`. Pass `Database.ProviderName`. Throws `ArgumentException` for an empty table name |
+| `IdempotencyRecord.KeyHash` | `binary(32)`: SHA-256 of the UTF-8 length-prefixed storage key. Uniqueness does not depend on the collation, so keys that differ in case or trailing spaces stay separate under a case-insensitive or PAD SPACE collation. The store compares the readable columns ordinally after each read and throws `InvalidOperationException` for a row of another key |
+| `IdempotencyRecordModelOptions` | `TableName` (`IdempotencyRecords`), `Schema`, `KeyCollation` of the readable columns (`null`: `C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server, `utf8mb4_0900_bin` on MySQL, `BINARY` on SQLite, the database default elsewhere; set `utf8mb4_nopad_bin` on MariaDB). It only makes the columns case-sensitive: SQL Server ignores trailing spaces under every collation, `_BIN2` included, so `KeyHash` is what keeps keys that differ by trailing spaces apart. Keep the columns `text` or `varchar` on PostgreSQL (`char(n)` pads) |
+| `EfCoreIdempotencyRecordStore<TContext>(context, scopeFactory, timeProvider?)` | `ITransactionalIdempotencyRecordStore` that writes with set-based SQL on the context's connection, inside its current transaction. Reserve: `INSERT … ON CONFLICT DO NOTHING` (PostgreSQL, SQLite) or a plain `INSERT` behind a savepoint, then a read; a concurrent reservation waits for the first transaction. Complete and release are compare-and-set on the token; an expired row is taken over. Needs `READ COMMITTED` |
+| `EfCoreIdempotencyRecordStore<TContext>.Detached` | The same records from a new `TContext` per call in a scope of its own, with the ambient `TransactionScope` suppressed; used in `Observe` mode by the executor and the HTTP middleware |
+| `EfCoreIdempotencyRecordStore<TContext>.PurgeExpiredAsync(ct)` | Deletes expired records in one statement and returns the count |
+| `AddEfCoreIdempotencyRecordStore<TContext>(serviceKey?)` | Registers the store scoped; without a key it replaces the default `IIdempotencyRecordStore` (in any order with `AddIdempotencyExecutor`), with a key it is the keyed store of the profiles whose `StoreKey` matches. An empty key throws `ArgumentException` |
+
+With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBehavior` over `EfCoreTransactionRunner<TContext>`: a request whose transaction rolls back leaves no record.
+
 ### CQRS Context Registration
 
 | Method | What It Does |
@@ -1468,32 +1507,49 @@ app.UseEnhancedProblemDetails();
 
 | Member | What It Does |
 |--------|-------------|
-| `AddIdempotency(Action<IdempotencyOptions>? = null)` | Registers the options and a store (the in-memory store unless one is already registered) |
+| `AddIdempotency(Action<IdempotencyOptions>? = null)` | Registers the options (read per request through `IOptionsMonitor<IdempotencyOptions>`, validated on every rebuild; `IdempotencyOptions` itself resolves to the current value), a store (the in-memory store unless one is already registered) and, unless one is registered, an `IIdempotencyScopeAccessor` that reads `HttpContext.User` (for the Mediator idempotency behavior) |
 | `UseIdempotency()` | Middleware; call after `UseRouting`, authentication and authorization |
-| `WithIdempotency()` | Adds `IdempotentAttribute` metadata to an endpoint or group (`IEndpointConventionBuilder`) |
-| `[Idempotent]` | Same for an MVC controller or action |
-| `IIdempotencyStore` | `TryReserveAsync(key, fingerprint, inFlightTimeout)`, `CompleteAsync(key, token, fingerprint, IdempotentResponse, retention)`, `ReleaseAsync(key, token)` (in-flight entries only). Complete and Release return `false` and change nothing when another reservation holds the key |
-| `IdempotencyReservation` | `Status` (`Reserved`, `InFlight`, `Completed`, `FingerprintMismatch`), the `Token` when reserved, and the stored `Response` when completed |
-| `IdempotentResponse(int StatusCode, IReadOnlyDictionary<string, string[]> Headers, ReadOnlyMemory<byte> Body)` | A stored response |
-| `InMemoryIdempotencyStore` / `DistributedCacheIdempotencyStore` | Built-in stores; the in-memory one is unbounded, the distributed one is best effort (no atomic add or compare) |
+| `WithIdempotency()` | Adds `IdempotentAttribute` metadata and the execution filter to an endpoint or group (`IEndpointConventionBuilder`); MVC actions get only the metadata |
+| `WithIdempotency(Action<IdempotencyEndpointOptions>)` / `WithIdempotency(string profile)` | Same, with settings of the endpoint or group, or a named profile. An endpoint overrides its group |
+| `[Idempotent]` | Same for an MVC controller or action; it is also the action filter that marks the action as started (after model validation). Named arguments `Profile`, `Mode`, `RetentionSeconds`, `LeaseSeconds`, `ServerErrorRetentionSeconds`, `RequireKey`, `UnscopedKeyBehavior`, `StoreKey`; an action overrides its controller |
+| `IdempotencyEndpointOptions` | Nullable overrides: `Profile`, `Mode`, `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore`, `UnscopedKeyBehavior`, `StoreKey` (service key of a keyed `IIdempotencyRecordStore`). Each unset value falls back to the profile, then to `IdempotencyOptions` |
+| `IdempotencyOptions.AddProfile(string name, Action<IdempotencyEndpointOptions>)` | Registers a named profile (case-insensitive). Throws `ArgumentException` for an empty or duplicate name or a profile that sets `Profile`; an invalid merged profile makes `AddIdempotency` throw `InvalidOperationException` |
+| `IIdempotencyExecutionFeature` | `bool HandlerStarted { get; set; }`, set by the filter right before the handler runs |
+| `IdempotencyKeyHeader.TryParse(string? value, out string? key)` / `TryParse(string? value, int maxKeyLength, out string? key)` | Parses one `Idempotency-Key` header value as the middleware does: unquotes a structured-field string (`"abc"` → `abc`) and validates it with `IdempotencyKeys.IsValid` (default `maxKeyLength` 255, applied to the unquoted key). Pass its key, not the raw header, to a command, so the Mediator layer sees the same key |
+| `IdempotencyFilterInstalledMetadata` | Endpoint metadata that marks an endpoint as having the execution filter (`Instance`) |
+| `IdempotencyOutcome(int StatusCode, bool HandlerStarted)` | What `ShouldStore` decides on |
+| `IdempotencyStorePolicies.Default` / `.SuccessOnly` | Default: 2xx, plus 3xx and 5xx from a started handler. SuccessOnly: 2xx only; it releases 3xx and 5xx |
+| `IdempotentResponse(int StatusCode, IReadOnlyDictionary<string, string[]> Headers, ReadOnlyMemory<byte> Body)` | A stored response, serialized into the record payload |
+
+The store, scope resolvers and keys come from `CSharpEssentials.Idempotency` (section 26).
 
 | Option | Default | Notes |
 |--------|---------|-------|
+| `Mode` | `Enforce` | `Off`: the header is ignored, no scope resolver or store call. `Observe`: answers as `Off` would (no replay, no `Idempotency-Replayed`, no 400/409/422, no `Retry-After`), stores new keys as `Enforce`, logs and counts what `Enforce` would have done. Separate from `IdempotencyExecutorOptions.Mode` |
 | `HeaderName` / `ReplayedHeaderName` | `Idempotency-Key` / `Idempotency-Replayed` | |
 | `Methods` | POST, PATCH | Case-insensitive set |
-| `InFlightTimeout` | 1 minute | Frees the key of a request that never finished; keep it longer than the request timeout |
+| `InFlightTimeout` | 1 minute | Frees the key of a request that never finished; keep it longer than the request timeout. Must not exceed `RetentionPeriod` or `MaxInFlightTimeout` |
+| `MaxInFlightTimeout` | 15 minutes | Upper bound for `InFlightTimeout` |
 | `RetentionPeriod` | 24 hours | How long a completed response is replayed |
+| `ServerErrorRetention` | 10 minutes | How long a stored 5xx is replayed; in (0, `RetentionPeriod`] |
 | `RetryAfter` | 1 second | `Retry-After` on 409; `null` omits it |
 | `MaxKeyLength` | 255 | Longer keys return 400 |
-| `MaxResponseBodySize` | 1 MiB | Larger bodies are not stored (warning logged) |
+| `MaxResponseBodySize` | 1 MiB | Larger bodies are not stored (warning logged); the key is released on 4xx and stays in flight otherwise |
 | `RequireKey` | `false` | `true`: a missing key returns 400 |
-| `ShouldStore` | 2xx | Other statuses release the key |
-| `KeyScope` | `DefaultKeyScope` (`NameIdentifier`, then `sub`) | `null` scope passes through unless `AllowUnscopedKeys` |
-| `AllowUnscopedKeys` | `false` | |
-| `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
-| `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered store |
+| `ShouldStore` | `IdempotencyStorePolicies.Default` | `Func<IdempotencyOutcome, bool>`, asked only after the handler started and for statuses outside `NeverStoreStatusCodes`; `false` releases the key |
+| `NeverStoreStatusCodes` | 503, 504 | From a started handler: not stored, not released; the key stays in flight until `InFlightTimeout`. Not empty, codes in 100-599 |
+| `RequireExecutionFilter` | `false` | `true`: an idempotent endpoint without the execution filter throws instead of logging a warning once. Without the filter only 2xx is stored; every other outcome releases the key |
+| `Namespace` | `http` | Namespace of the records written by the middleware |
+| `ScopeResolver` | `IdempotencyScopes.User` (`NameIdentifier`, then `sub`) | Resolved against `HttpContext.User`; an unresolved (`null`) scope follows `UnscopedKeyBehavior` |
+| `UnscopedKeyBehavior` | `Skip` | `Skip`: run without idempotency and log `Idempotency.UnscopedKeySkipped`; `Reject`: 400 `Idempotency.ScopeRequired`; `Global`: use a global key |
+| `ReplayedHeaders` | `Content-Type`, `Content-Language`, `Location`, `ETag`, `Cache-Control`, `Retry-After` | `Set-Cookie` is never stored; `Content-Encoding`/`Vary` left out so response compression outside the middleware re-encodes replays |
+| `UseInMemoryStore()` / `UseDistributedCacheStore()` / `UseStore<T>(lifetime = Scoped)` | | Replace the registered `IIdempotencyRecordStore` |
 
-Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`.
+Precedence for `Mode`, `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore` and `UnscopedKeyBehavior`, plus the endpoint-only `StoreKey`: endpoint (action > controller, endpoint > group) > profile > global options. The other options are global only. Endpoint settings are resolved and validated on the endpoint's first request and again after the options reload; invalid settings or an unregistered profile throw `InvalidOperationException` on every request of that endpoint.
+
+Responses: replay of the stored response (`Idempotency-Replayed: true`), 409 while the first request runs, 422 when the key was used for a different method, path, query or body, 400 for an invalid key. Invalid options throw in `AddIdempotency`; a reload that makes them invalid throws `OptionsValidationException` on every request to an idempotent endpoint. The store choice is fixed at `AddIdempotency`. A problem written by `ToProblemResult()` / `ToActionResult()` whose errors include an idempotency code gets the middleware shape, whatever the `ErrorType`: the top-level `code` member and the middleware status from `DefaultErrorStatusCodeMapper` (`Idempotency.InFlight` 409, `Idempotency.KeyReused` 422, `Idempotency.KeyMissing`, `KeyInvalid` and `ScopeRequired` 400). `Idempotency.InFlight` also gets `Retry-After` from `IdempotencyOptions.RetryAfter` (1 second when `AddIdempotency` was not called).
+
+Settling the key: a response produced before the handler started (rate limiter, load shedding, binding or model validation failure) or an exception there releases it. A `NeverStoreStatusCodes` status, an exception or an abort after the handler started, and a non-4xx response that cannot be stored (handler-set `Content-Encoding`, `text/event-stream`, oversize) keep it in flight until `InFlightTimeout`. Everything else goes to `ShouldStore`. Log events: `Idempotency.UnscopedKeySkipped`, `Idempotency.KeptInFlight`, `Idempotency.ResponseNotStorable`, `Idempotency.StoreFailed`, `Idempotency.ReleaseFailed`, `Idempotency.StaleReservation`, `Idempotency.StoredResponseUnreadable`, `Idempotency.ExecutionFilterMissing`, `Idempotency.RequestTimeoutExceedsLease` (once per endpoint, when its request timeout is longer than `InFlightTimeout`). In `Observe`: `Idempotency.Observe.WouldReplay`, `.WouldRejectInFlight`, `.WouldRejectKeyReused`, `.WouldRejectScopeRequired`, `.WouldRejectKeyMissing`, `.WouldRejectKeyInvalid`, and the warnings `.ResolutionFailed` (scope resolver, keyed store or fingerprint threw; the request runs once without idempotency) and `.ReserveFailed`. In `Enforce`, or when the client aborted, such an exception propagates. Event ids 7001-7017 are listed in section 26. Log messages carry a key hash, never the key or the scope. Decisions are counted with `source` `http` and the route template as `target`.
 
 ### Conditional requests
 
@@ -1535,6 +1591,8 @@ Reads: `If-None-Match` uses weak comparison and takes precedence over `If-Modifi
 | `AddSwagger<T>(securitySchemeName, securityScheme, assembly?)` (`T : ConfigureSwaggerOptions`, for example `DefaultConfigureSwaggerOptions`) / `UseVersionableSwagger(options?, uiOptions?)` | Swagger with version support (5.0: in `CSharpEssentials.AspNetCore.Swashbuckle`, same namespace; 6.0: Swashbuckle 10, the scheme id is the first argument, e.g. `SecuritySchemes.JwtBearerSchemeName`) |
 | `SwaggerGenOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | How optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described. `SplitPaths` (the `AddSwagger` default from 6.1.0): one path per form (`/orders`, `/orders/{id}`), trailing optionals only, up to three; shorter forms get `{operationId}Without{Param}`, a duplicate operationId throws. `RequiredOnly`: one path, parameters required. `LegacyNonCompliant` (obsolete): the 6.0.0 output, invalid OpenAPI. A route with more than three trailing optionals is logged as a warning (6.2.0). See [the migration note](migration/v6-optional-route-parameters.md) |
 | `OpenApiOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | `CSharpEssentials.AspNetCore.OpenApi` (6.2.0, opt-in): the same forms, operationIds, rules and warning for `Microsoft.AspNetCore.OpenApi` documents, as a document transformer. `OpenApiOptionalRouteParameterMode.SplitPaths` or `RequiredOnly`; a later call on the same options replaces the earlier one and keeps the pipeline position of the first call |
+| `SwaggerGenOptions.AddIdempotencyConventions()` | `CSharpEssentials.AspNetCore.Swashbuckle` (`AddSwagger` calls it): documents the `Idempotency-Key` header (required when the endpoint's `RequireKey` is true), the `Idempotency-Replayed` response header and the 400, 409 (`Retry-After`) and 422 problem responses with their `code` values on `Enforce` idempotent endpoints (`Observe` endpoints get only the optional key header; `Off` none); an own 400, 409 or 422 keeps its description and gets ours appended |
+| `OpenApiOptions.AddIdempotencyConventions()` | `CSharpEssentials.AspNetCore.OpenApi`: the same description for `Microsoft.AspNetCore.OpenApi` documents, as an operation transformer (opt-in) |
 
 ### OpenAPI Enum Schemas (5.0)
 
@@ -1551,7 +1609,7 @@ Both produce the same enum schemas (shared golden files): one component per enum
 
 ## 13. CSharpEssentials.Mediator: Pipeline Behaviors
 
-**What it is:** Pipeline behaviors for the source-generated [Mediator](https://github.com/martinothamar/Mediator) library (`Mediator.Abstractions`) for cross-cutting concerns: validation, logging, exception handling, caching, and transactions.
+**What it is:** Pipeline behaviors for the source-generated [Mediator](https://github.com/martinothamar/Mediator) library (`Mediator.Abstractions`) for cross-cutting concerns: validation, logging, exception handling, caching, transactions, resource locks and idempotency.
 
 **Why it exists:** CQRS handlers often need the same cross-cutting logic: validate input, log execution, convert exceptions to Result failures, cache results, wrap in a transaction. Pipeline behaviors apply these concerns declaratively via marker interfaces rather than repeating code in every handler.
 
@@ -1566,6 +1624,7 @@ Both produce the same enum schemas (shared golden files): one component per enum
 | `TransactionScopeBehavior` | `ITransactionalRequest` | Wraps handler execution in `TransactionScope`; completes only when the `Result` succeeds |
 | `TransactionBehavior` | `ITransactionalRequest` | Runs the handler through the registered `ITransactionRunner`; commits only when the `Result` succeeds. Replaces `TransactionScopeBehavior` when registered |
 | `LockBehavior` | `ILockedRequest` | Holds the `IResourceLock` lock for `LockKey` while the handler runs; waits up to `LockTimeout` (unbounded when `null`) and throws `TimeoutException` when it cannot acquire (a failed `Result` behind `ExceptionHandlingBehavior`). Registered only by `AddMediatorLockBehavior` |
+| `IdempotencyBehavior` | `IIdempotentRequest` | Runs the request at most once per `IdempotencyKey` and scope through `IIdempotencyExecutor` (namespace: the request type's full name) and replays the stored response. Returns `Idempotency.InFlight` (Conflict), `KeyReused`, `KeyMissing`, `KeyInvalid` or `ScopeRequired` (Validation) as a failed `Result`, or throws `EnhancedValidationException` for other response types. Registered only by `AddMediatorIdempotencyBehavior` |
 
 Validation modes (`ValidationMode`): `Enforce` (default, failures stop the request), `LogOnly` (validators run, failures go to the observers, the request continues) and `Off`. `ValidationBehaviorOptions.DefaultMode` sets the default; a request implementing `IValidationModeOverride` returns its own `ValidationMode`. Every `IValidationFailureObserver` in DI receives a `ValidationFailureContext(RequestType, Request, Errors, Mode)` in `Enforce` and `LogOnly` mode; the built-in `LoggingValidationFailureObserver` logs (Warning in `LogOnly`, Debug in `Enforce`) and counts `cse.mediator.validation.failures` on the `CSharpEssentials.Mediator` meter.
 
@@ -1628,6 +1687,7 @@ if (result.IsFailure)
 | `AddMediatorTransactionBehavior()` | Registers `TransactionScopeBehavior`, replacing `TransactionBehavior` in place |
 | `AddMediatorTransactionRunnerBehavior()` | Registers `TransactionBehavior` (scoped), replacing `TransactionScopeBehavior` in place; needs an `ITransactionRunner` |
 | `AddMediatorLockBehavior(placement)` | Registers `LockBehavior` (scoped) just before (`LockPlacement.OutsideTransaction`, default) or just after (`InsideTransaction`) the transaction behavior (at the end when there is none; `InsideTransaction` without one throws `InvalidOperationException`), and `InProcessResourceLock` as the singleton `IResourceLock` unless one is registered. Calling it again moves the behavior |
+| `AddMediatorIdempotencyBehavior(configure?)` | Registers `IdempotencyBehavior` (scoped) just before the lock and transaction behaviors (`IdempotencyPlacement.OutsideTransaction`, default) or just after the transaction behavior (`InsideTransaction`, which throws `InvalidOperationException` without one), its `IdempotencyBehaviorOptions`, and the executor through `AddIdempotencyExecutor`. Calling it again configures the same options and moves the behavior |
 | `MediatorExtensions.DefaultPipelineBehaviors` | Pre-ordered array of the five default behavior types (`TransactionScopeBehavior<,>`, no `LockBehavior<,>`); under Native AOT pass it as `options.PipelineBehaviors` of `AddMediator` (namespace `Microsoft.Extensions.DependencyInjection`) |
 
 ### Resource Locks
@@ -1638,6 +1698,16 @@ if (result.IsFailure)
 | `InProcessResourceLock` | Default: one `SemaphoreSlim` per key, removed when the last holder or waiter leaves. Serializes only within one process; register a distributed implementation for several instances |
 | `ILockedRequest` | `LockKey` and optional `LockTimeout` (default `null`) |
 | `LockPlacement` | `OutsideTransaction` (lock held until the transaction has committed) or `InsideTransaction` (lock taken inside the transaction, for transaction-scoped locks such as `pg_advisory_xact_lock`) |
+
+### Idempotency
+
+| Type | Description |
+|------|-------------|
+| `IIdempotentRequest` | `IdempotencyKey` (required; `IdempotencyKeys.IsValid`), and default-implemented `IdempotencyScope` (`null`: `ScopeResolver`), `IdempotencyFingerprint` (`null`: SHA-256 of the request as JSON), `IdempotencyRetention`, `IdempotencyLease` (`null`: request type, profile, executor defaults) |
+| `IdempotencyBehaviorOptions` | `Placement` (`OutsideTransaction`), `ScopeResolver` (`IdempotencyScopes.User`, resolved against `IIdempotencyScopeAccessor.Principal`), `UnscopedKeyBehavior` (`Reject`; the HTTP middleware defaults to `Skip`), `StoreFailures` (`true`), `SerializerOptions` (`null`), `ForRequest<TRequest>(Action<IdempotencyExecutionOptions>)` for per-type profile, mode, retention, lease, failure retention and store key |
+| `IdempotencyPlacement` | `OutsideTransaction` (Idempotency → Lock → Transaction; any store) or `InsideTransaction` (Transaction → Idempotency → Lock; for a store that enlists in the transaction) |
+
+Stored outcomes: a success for `Retention`; a failed `Result` of an `ITransactionalRequest` releases the key; any other failed `Result` is stored for `FailureRetention` when its first error is `ErrorType.Unexpected`, otherwise for `Retention` (`StoreFailures = false` releases every failure). An exception from the handler keeps the key in flight until the lease expires. `Off` mode calls the handler only; `Observe` logs what it would reject (`Idempotency.Observe.WouldRejectKeyMissing`, `Idempotency.Observe.WouldRejectKeyInvalid`, `Idempotency.Observe.WouldRejectScopeRequired`) and runs the request; a scope resolver or fingerprint that throws logs `Idempotency.Observe.ResolutionFailed` and runs it once without idempotency (in `Enforce`, or when cancelled, it propagates). The mode is read per request through `IOptionsMonitor<IdempotencyExecutorOptions>`. Decisions are counted with `source` `mediator` and the request type as `target`. `Skip` logs `Idempotency.UnscopedKeySkipped`.
 
 ---
 
@@ -2367,6 +2437,7 @@ Targets `net10.0` only, with `Microsoft.AspNetCore.OpenApi` 10.x and `Microsoft.
 |--------|-------------|
 | `OpenApiOptions.AddEnumConventions()` | Adds a schema, an operation and a document transformer. Enums handled by the enum conventions (`[StringEnum]` or generated metadata) get one component each with the wire names in `enum`, `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` and a value table appended to the description. Call `services.AddEnumConventions()` (section 12) as well |
 | `OpenApiOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | Opt-in document transformer: describes `{id?}`, `{id:int?}` and `{page=1}` with valid OpenAPI. A later call on the same options replaces the earlier one |
+| `OpenApiOptions.AddIdempotencyConventions()` | Opt-in operation transformer: the `Idempotency-Key` header (required when `RequireKey` resolves to true), the `Idempotency-Replayed` response header and the 400, 409 (`Retry-After`) and 422 problem responses with `code` values, on idempotent endpoints in `Enforce` mode whose method is in `IdempotencyOptions.Methods`; `Observe` endpoints get only the key header with `required: false`, `Off` endpoints nothing. An own 400, 409 or 422 keeps its description and gets ours appended; the same output as the Swashbuckle package (shared golden file) |
 | `OpenApiOptionalRouteParameterMode.SplitPaths` | One path per form of a route that ends with one to three optional parameters (`/api/archive`, `/api/archive/{year}`, `/api/archive/{year}/{month}`); a shorter form gets the operationId `{operationId}Without{Param}` (`And` between parameters) |
 | `OpenApiOptionalRouteParameterMode.RequiredOnly` | One path per operation, the path parameters marked required |
 
@@ -2418,6 +2489,54 @@ app.UseVersionableSwagger();
 ```
 
 See the migration notes for [5.x to 6.0](migration/v5-to-v6.md) (Swashbuckle 10 and `Microsoft.OpenApi` 2.x) and [optional route parameters](migration/v6-optional-route-parameters.md).
+
+---
+
+## 26. CSharpEssentials.Idempotency: Transport-Independent Core
+
+**What it is:** The record store, scopes, deterministic keys and executor behind the `Idempotency-Key` middleware and the Mediator idempotency behavior, without any HTTP or infrastructure dependency, so message consumers, jobs and other pipelines can use the same store.
+
+```bash
+dotnet add package CSharpEssentials.Idempotency
+dotnet add package CSharpEssentials.Idempotency.Testing   # xUnit contract tests for your own store
+```
+
+Targets `netstandard2.1`, `net9.0`, `net10.0` and `net11.0`; depends only on `Microsoft.Extensions.Caching.Abstractions`, `Microsoft.Extensions.DependencyInjection.Abstractions` and `Microsoft.Extensions.Logging.Abstractions` (and `Microsoft.Bcl.TimeProvider` on `netstandard2.1`). Namespace `CSharpEssentials.Idempotency`.
+
+| Member | What It Does |
+|--------|-------------|
+| `IIdempotencyRecordStore` | `TryReserveAsync(key, fingerprint, lease)`, `CompleteAsync(key, token, fingerprint, payload, retention)`, `ReleaseAsync(key, token)`. Reserve is atomic; the fingerprint is compared before the in-flight state; Complete and Release only change an entry that still carries the token; an expired reservation nobody took over can still complete; Release never removes a completed entry. `Namespace`, `Scope` and `Key` compare ordinally and case-sensitively (a binary or case-sensitive collation for SQL stores) |
+| `IdempotencyRecordReservation` | `Status` (`Reserved`, `InFlight`, `Completed`, `FingerprintMismatch`), `Token` when reserved, `Payload` (`ReadOnlyMemory<byte>?`) when completed |
+| `IdempotencyRecordKey(namespace, IdempotencyScope? scope, key)` | `Namespace`, `Scope` (`null` = global; a `null` or `IdempotencyScope.Global` argument gives a global key), `Key`, `IsGlobal`. `ToStorageKey(prefix = "idem:v3:")` gives `{prefix}{n}:{namespace}\|{n}:{scope}\|{n}:{key}` with UTF-8 byte lengths and `global` as the scope of a global key, so no two keys collide and a global key never matches a scoped one |
+| `InMemoryIdempotencyRecordStore()` / `(TimeProvider)` | Atomic within one process; unbounded, expired entries are swept |
+| `DistributedCacheIdempotencyRecordStore(IDistributedCache, keyPrefix?)` | Single instance or development: best effort, `IDistributedCache` has no atomic add or compare. Entries are versioned; an unreadable entry counts as absent |
+| `EfCoreIdempotencyRecordStore<TContext>` (`CSharpEssentials.EntityFrameworkCore`) | Transactional store on your `DbContext`: records commit and roll back with the business data. See section 10, Idempotency Records |
+| External stores (Redis, DynamoDB) | No package: implement `IIdempotencyRecordStore` in your application. The [External stores](../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme lists the atomicity requirements (atomic reserve, token compare-and-set for complete and release), a Redis reference store (one Lua script per operation, run against a Redis container in `examples/Examples.Idempotency.Redis`) and the DynamoDB conditional writes |
+| `IdempotencyScope` | Built only by its factories: `User(id)` (`user:{id}`), `Tenant(id)` (`tenant:{id}`), `Client(id)` (`client:{id}`), `UserAndTenant(userId, tenantId)` (`{n}:tenant:{tenantId}/user:{userId}`), `Custom(kind, value)` (`{kind}:{value}`; `kind` must not be empty, contain `:` or `/`, be all digits or be a reserved built-in kind: `user`, `tenant`, `client`, `global` in any casing) and `Global`. Every factory and the `IdempotencyRecordKey` constructor throw `ArgumentException` for an unpaired surrogate. `Value` is the storage form, `IsGlobal` is true for `Global` and `default`. `Tenant("user:42")` is `tenant:user:42`, never `User("42")` |
+| `IIdempotencyScopeResolver.Resolve(ClaimsPrincipal?)` | Returns `IdempotencyScope?`: `null` means unresolved, `IdempotencyScope.Global` means a deliberate global key |
+| `IdempotencyScopes` | `User` (`user:{id}`; `NameIdentifier`, then `sub`), `Tenant(claimType)` (`tenant:{id}`), `UserAndTenant(claimType)` (`{n}:tenant:{tenantId}/user:{userId}`, `{n}` is the UTF-8 byte length of the tenant part), `Client` (`client:{id}`; `client_id`, then `azp`), `Custom(kind, Func<ClaimsPrincipal?, string?>)` (`{kind}:{value}`, same `kind` rules as `IdempotencyScope.Custom`), `Global` (`global`). Claim resolvers need an authenticated principal |
+| `IdempotencyKeys` | `For(operation, params ids)`, `FromMessage(messageId, consumer)` (= `For("message", consumer, messageId)`), `ToUuidV5(operation, params ids)` (RFC 9562, namespace `UuidNamespace` = `9c8fbd17-da5f-4f32-a4bf-651721368d5e`), `IsValid(key, maxLength = 255)`. Keys that are not printable ASCII or exceed 255 characters become `h:` + base64url SHA-256; a lone surrogate throws `ArgumentException`. The format is pinned by `tests/vectors/idempotency-key-vectors.json` |
+| `IdempotencyErrorCodes` | `KeyMissing`, `KeyInvalid`, `InFlight`, `KeyReused`, `ScopeRequired`, `UnscopedKeySkipped` |
+| `IIdempotencyExecutor.ExecuteAsync<TResult>(key, fingerprint, options, operation, codec, ct)` | Returns `IdempotencyExecution<TResult>` (`Status`, `Value`, `HasValue`). `IdempotencyExecutionStatus`: `Executed`, `Replayed`, `InFlight`, `KeyReused`. A cancellation before the operation starts releases the key; an exception from the operation is rethrown and keeps the key in flight until the lease expires; a result that cannot be stored keeps it in flight and is still returned |
+| `IIdempotencyResultCodec<TResult>` / `IdempotencyResultCodec.Create(serialize, deserialize, classify?)` | `Serialize`, `Deserialize`, `Classify` → `IdempotencyResultHandling`: `Store` (for `Retention`), `StoreAsFailure` (for `FailureRetention`), `Release` |
+| `IdempotencyExecutorOptions` | `Mode` (`Enforce`), `Retention` (24 h), `Lease` (1 min), `FailureRetention` (10 min), `MaxLease` (15 min), `Profiles`, `AddProfile(name, configure)`, `ResolveMode(options)`; built-in `MessagingProfile` (`"messaging"`, 7-day retention) |
+| `IdempotencyExecutionOptions` | Nullable per-operation or profile settings: `Profile`, `Mode`, `Retention`, `Lease`, `FailureRetention`, `StoreKey` (keyed `IIdempotencyRecordStore`). Operation, then profile, then `IdempotencyExecutorOptions` |
+| `IdempotencyMode` | `Off` (no store access), `Observe` (records as in `Enforce`, but a replay, in-flight or reused key is logged and counted and the operation runs; it does not prevent duplicates), `Enforce` (default) |
+| `IdempotencyTelemetry` | `MeterName` = `CSharpEssentials.Idempotency`, `DecisionsInstrumentName` = `idempotency.decisions`. Tags: `decision` (`reserved`, `replay`, `key_reused`, `in_flight`, `unscoped`, `released`, `stored`), `mode` (`observe`, `enforce`; nothing is recorded in `Off`), `source` (`http`, `mediator`, `messaging`, `executor`), `target` (route template, request type, `messaging:{consumer}` or record namespace). Keys and scopes are never tags; logs carry a 16-hex key hash. Log event ids: 7001 `UnscopedKeySkipped`, 7002 `StoredResponseUnreadable`, 7003 `KeptInFlight`, 7004 `ResponseNotStorable`, 7005 `StoreFailed`, 7006 `StaleReservation`, 7007 `ReleaseFailed`, 7008 `ExecutionFilterMissing`, 7009 `RequestTimeoutExceedsLease`, 7010 `Observe.WouldReplay`, 7011 `Observe.WouldRejectInFlight`, 7012 `Observe.WouldRejectKeyReused`, 7013 `Observe.WouldRejectScopeRequired`, 7014 `Observe.ResolutionFailed`, 7015 `Observe.ReserveFailed`, 7016 `Observe.WouldRejectKeyMissing`, 7017 `Observe.WouldRejectKeyInvalid` (all prefixed `Idempotency.`) |
+| `IdempotencyInbox.ProcessAsync(consumer, messageId, scope, handler, [codec], options?, ct)` | Runs a message handler at most once per consumer: namespace `messaging:{consumer}`, key `IdempotencyKeys.FromMessage(messageId, consumer)`, constant fingerprint, `messaging` profile unless `options.Profile` names another. The handler-only overload returns `IdempotencyExecutionStatus` |
+| `IIdempotencyScopeAccessor` | `ClaimsPrincipal? Principal`, the current caller for pipelines without a request context; `CSharpEssentials.AspNetCore` registers one over `HttpContext.User` |
+| `AddIdempotencyExecutor(configure?)` | Registers `IdempotencyExecutorOptions` (validated here and on every rebuild, read per call through `IOptionsMonitor<IdempotencyExecutorOptions>`, so a configuration reload changes the mode without a restart), a scoped `IIdempotencyExecutor` and `IdempotencyInbox`, and the in-memory store unless a store is registered. With `configure` the options replace earlier ones |
+| `IdempotencyRecordStoreContractTests` (Testing package) | Abstract xUnit class; implement `CreateStore(TimeProvider)` to run every store scenario. `UseRealClock` switches to real waits for stores with their own clock; `IsReservationAtomic = false` relaxes the concurrency checks for best-effort stores |
+
+```csharp
+using CSharpEssentials.Idempotency;
+
+services.AddIdempotencyExecutor();
+
+IdempotencyExecutionStatus status = await inbox.ProcessAsync(
+    "billing.invoice-created", message.Id, IdempotencyScope.Tenant(message.TenantId),
+    token => HandleAsync(message, token), cancellationToken: cancellationToken);
+```
 
 ---
 

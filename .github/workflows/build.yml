@@ -40,6 +40,15 @@ jobs:
       - name: Build Enums end-to-end example
         run: dotnet build examples/Examples.Enums.EndToEnd/Examples.Enums.EndToEnd.csproj --configuration Release -warnaserror
 
+      # The Redis store recipe of the Idempotency Readme, run through the contract test kit against a Redis container.
+      - name: Test Redis idempotency store example
+        run: dotnet test examples/Examples.Idempotency.Redis/Examples.Idempotency.Redis.csproj --configuration Release -warnaserror
+
+      # The idempotency flow wired together (client retry, HTTP endpoint, Mediator command on the EF Core store,
+      # message inbox, provider webhook), run against a PostgreSQL container.
+      - name: Test idempotency end-to-end example
+        run: dotnet test examples/Examples.Idempotency.EndToEnd/Examples.Idempotency.EndToEnd.csproj --configuration Release -warnaserror
+
       # A package consumer that references any single CSharpEssentials package that depends on Enums (Json,
       # EntityFrameworkCore, AspNetCore two hops away, AspNetCore.OpenApi, Validation through Results, Mediator)
       # must get the Enums generator: tests/PackageConsumer fails at run time when [StringEnum] metadata is missing.

@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-efcore
-description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage, Maybe<T>? nullable columns (HasNullableMaybeConversion, ConfigureNullableMaybeConventions) and AddCqrsDbContexts.
+description: Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage, Maybe<T>? nullable columns (HasNullableMaybeConversion, ConfigureNullableMaybeConventions), the transactional idempotency store (AddIdempotencyRecords, EfCoreIdempotencyRecordStore, AddEfCoreIdempotencyRecordStore) and AddCqrsDbContexts.
 ---
 
 # CSharpEssentials.EntityFrameworkCore
@@ -309,6 +309,25 @@ Result result = await runner.ExecuteAsync(
 ```
 
 The outermost call runs inside `CreateExecutionStrategy()` with a transaction, so retrying strategies work (a retry re-runs the whole unit on a cleared change tracker; the context must have no pending changes at the start). A nested call on the same context instance joins the transaction, behind a savepoint when the provider supports them. It needs a relational provider (the InMemory provider throws on `BeginTransactionAsync`) and does not combine with an ambient `TransactionScope`.
+
+---
+
+## Idempotency Records
+
+```csharp
+using CSharpEssentials.EntityFrameworkCore.Idempotency;   // AddIdempotencyRecords, EfCoreIdempotencyRecordStore<TContext>
+
+protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+    modelBuilder.AddIdempotencyRecords(Database.ProviderName);   // then add a migration
+
+builder.Services.AddEfCoreTransactionRunner<AppDbContext>();
+builder.Services.AddMediatorTransactionRunnerBehavior();
+builder.Services.AddMediatorIdempotencyBehavior(o => o.Placement = IdempotencyPlacement.InsideTransaction);
+builder.Services.AddEfCoreIdempotencyRecordStore<AppDbContext>();            // default store
+builder.Services.AddEfCoreIdempotencyRecordStore<AppDbContext>("payments");  // or: keyed store for profiles with StoreKey = "payments"
+```
+
+Records are written with SQL inside the context's current transaction, so a rolled-back request leaves no record and its retry runs again; a concurrent duplicate waits for the first commit and replays its response. The primary key is `KeyHash`, a `binary(32)` SHA-256 of the storage key, so keys that differ in case or trailing spaces stay separate under any collation; the readable `Namespace`/`Scope`/`Key` columns get the provider's binary collation (`KeyCollation` overrides it, e.g. `utf8mb4_nopad_bin` on MariaDB), which only makes them case-sensitive: SQL Server ignores trailing spaces under every collation, `_BIN2` included, so only the `KeyHash` key separates them there (on PostgreSQL never turn the columns into `char(n)`, which pads). Needs `READ COMMITTED`. In `Observe` mode the executor and the HTTP middleware use `store.Detached` (own context and connection, not atomic with the business data). Expired rows count as absent; call `PurgeExpiredAsync` from a hosted service to delete them.
 
 ---
 

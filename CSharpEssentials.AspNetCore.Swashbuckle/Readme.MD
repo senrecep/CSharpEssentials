@@ -77,6 +77,23 @@ builder.Services.Configure<SwaggerGenOptions>(o =>
 
 `AddOptionalRouteParameters` replaces the earlier setting, so call it after `AddSwagger`. `OptionalRouteParameterMode.LegacyNonCompliant` (obsolete) restores the output of 6.0.0 and earlier: `required: false`, `allowEmptyValue: true` and a nullable schema with a `null` default on the path parameter, which is not valid OpenAPI. See [docs/migration/v6-optional-route-parameters.md](../docs/migration/v6-optional-route-parameters.md).
 
+## Idempotency
+
+`SwaggerGenOptions.AddIdempotencyConventions()` (`AddSwagger` calls it) describes the contract of idempotent endpoints (`.WithIdempotency()`, `[Idempotent]`) whose method is in `IdempotencyOptions.Methods`. An `Observe` endpoint gets only the `Idempotency-Key` header, always `required: false`, so clients can start sending keys before `Enforce` is switched on: no `Idempotency-Replayed` header and no 400, 409 or 422 responses. `Off` endpoints, other methods and non-idempotent endpoints are left unchanged. The rest of this section describes `Enforce`.
+
+```csharp
+builder.Services.AddIdempotency();
+builder.Services.AddSwaggerGen(o => o.AddEnumConventions().AddIdempotencyConventions());   // AddSwagger already does both
+```
+
+Each such operation gets:
+
+- the header parameter from `IdempotencyOptions.HeaderName` (default `Idempotency-Key`), `required` when the endpoint's resolved `RequireKey` is true;
+- the `ReplayedHeaderName` header (default `Idempotency-Replayed`) on every 2xx response;
+- `400` (`Idempotency.KeyMissing` when the key is required, `KeyInvalid`, and `ScopeRequired` when the endpoint rejects unscoped keys), `409` (`Idempotency.InFlight`, with a `Retry-After` header) and `422` (`Idempotency.KeyReused`) as `application/problem+json` with a `code` enum.
+
+An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.OpenApi` produces the same description.
+
 ## Enum schemas
 
 ```csharp

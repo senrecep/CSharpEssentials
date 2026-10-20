@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net11.0;net10.0;net9.0;net8.0</TargetFrameworks>
+    <PackageId>CSharpEssentials.Idempotency.Testing</PackageId>
+    <Title>CSharp Essentials Idempotency Testing</Title>
+    <Product>CSharp Essentials Idempotency Testing</Product>
+    <Description>xUnit contract tests for IIdempotencyRecordStore implementations. Derive from
+      IdempotencyRecordStoreContractTests, create your store, and the same scenarios that verify the built-in stores
+      run against it: fingerprint mismatch, token fencing, expiry, isolation and concurrent reservations.</Description>
+    <PackageTags>Idempotency,Testing,xUnit,ContractTests,CSharpEssentials</PackageTags>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageReadmeFile>Readme.MD</PackageReadmeFile>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <DebugType>portable</DebugType>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\icon.png" Pack="true" PackagePath="\" />
+    <None Include="Readme.MD" Pack="true" PackagePath="\" />
+    <None Include="..\LICENCE" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CSharpEssentials.Idempotency"
+      Condition="'$(UseProjectReferences)' != 'true'" />
+
+    <ProjectReference Include="..\CSharpEssentials.Idempotency\CSharpEssentials.Idempotency.csproj"
+      Condition="'$(UseProjectReferences)' == 'true'" />
+  </ItemGroup>
+
+</Project>

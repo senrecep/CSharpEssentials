@@ -157,12 +157,107 @@ public static class MediatorExtensions
                     "LockPlacement.InsideTransaction needs a registered transaction behavior. Call AddMediatorBehaviors, AddMediatorTransactionBehavior or AddMediatorTransactionRunnerBehavior first.");
             services.Add(behavior);
         }
+        else if (placement == LockPlacement.InsideTransaction)
+        {
+            int position = transaction + 1;
+            if (position < services.Count && IsBehavior(services[position], typeof(CSharpEssentials.Mediator.IdempotencyBehavior<,>)))
+                position++;
+            services.Insert(position, behavior);
+        }
         else
         {
-            services.Insert(placement == LockPlacement.InsideTransaction ? transaction + 1 : transaction, behavior);
+            services.Insert(transaction, behavior);
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// Registers <see cref="CSharpEssentials.Mediator.IdempotencyBehavior{TRequest, TResponse}"/> (scoped) for
+    /// <see cref="IIdempotentRequest"/> requests, its <see cref="IdempotencyBehaviorOptions"/>, and the
+    /// <see cref="CSharpEssentials.Idempotency.IIdempotencyExecutor"/> with <c>AddIdempotencyExecutor</c>. Configure the
+    /// executor defaults, profiles and record store with <c>AddIdempotencyExecutor</c> and an
+    /// <see cref="CSharpEssentials.Idempotency.IIdempotencyRecordStore"/> registration.
+    /// <para>
+    /// With <see cref="IdempotencyPlacement.OutsideTransaction"/> the behavior runs before the lock and transaction
+    /// behaviors; with <see cref="IdempotencyPlacement.InsideTransaction"/> right after the transaction behavior and
+    /// before a lock placed inside it. Call it after <c>AddMediatorBehaviors</c>, so validation, logging and exception
+    /// handling run before it: with no lock or transaction behavior registered it is added at the end. Calling it again
+    /// configures the same options and moves the behavior instead of adding a second one.
+    /// </para>
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// The placement is <see cref="IdempotencyPlacement.InsideTransaction"/> and no transaction behavior is registered,
+    /// a setting is invalid, or <see cref="IdempotencyBehaviorOptions"/> is already registered with a factory or type.
+    /// </exception>
+    public static IServiceCollection AddMediatorIdempotencyBehavior(
+        this IServiceCollection services,
+        Action<IdempotencyBehaviorOptions>? configure = null)
+    {
+        services.AddIdempotencyExecutor();
+
+        ServiceDescriptor? existing = services.LastOrDefault(descriptor =>
+            descriptor.ServiceType == typeof(IdempotencyBehaviorOptions) && !descriptor.IsKeyedService);
+        IdempotencyBehaviorOptions options;
+        if (existing is null)
+        {
+            options = new IdempotencyBehaviorOptions();
+            configure?.Invoke(options);
+            services.AddSingleton(options);
+        }
+        else if (existing.ImplementationInstance is IdempotencyBehaviorOptions registered)
+        {
+            options = registered;
+            configure?.Invoke(options);
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"{nameof(IdempotencyBehaviorOptions)} is already registered with a factory or type. Register it as an instance so its placement is known.");
+        }
+
+        if ((uint)options.Placement > (uint)IdempotencyPlacement.InsideTransaction)
+            throw new InvalidOperationException($"IdempotencyBehaviorOptions.Placement ({options.Placement}) is not a defined value.");
+        if ((uint)options.UnscopedKeyBehavior > (uint)CSharpEssentials.Idempotency.UnscopedKeyBehavior.Global)
+            throw new InvalidOperationException($"IdempotencyBehaviorOptions.UnscopedKeyBehavior ({options.UnscopedKeyBehavior}) is not a defined value.");
+        if (options.ScopeResolver is null)
+            throw new InvalidOperationException("IdempotencyBehaviorOptions.ScopeResolver must not be null.");
+
+        for (int index = services.Count - 1; index >= 0; index--)
+        {
+            if (IsBehavior(services[index], typeof(CSharpEssentials.Mediator.IdempotencyBehavior<,>)))
+                services.RemoveAt(index);
+        }
+
+        int transaction = IndexOf(services, IsTransactionBehavior);
+        var behavior = ServiceDescriptor.Scoped(typeof(IPipelineBehavior<,>), typeof(CSharpEssentials.Mediator.IdempotencyBehavior<,>));
+        if (options.Placement == IdempotencyPlacement.InsideTransaction)
+        {
+            if (transaction < 0)
+                throw new InvalidOperationException(
+                    "IdempotencyPlacement.InsideTransaction needs a registered transaction behavior. Call AddMediatorBehaviors, AddMediatorTransactionBehavior or AddMediatorTransactionRunnerBehavior first.");
+            services.Insert(transaction + 1, behavior);
+            return services;
+        }
+
+        int lockBehavior = IndexOf(services, static descriptor => IsBehavior(descriptor, typeof(CSharpEssentials.Mediator.LockBehavior<,>)));
+        int position = transaction < 0 || lockBehavior >= 0 && lockBehavior < transaction ? lockBehavior : transaction;
+        if (position < 0)
+            services.Add(behavior);
+        else
+            services.Insert(position, behavior);
+        return services;
+    }
+
+    private static int IndexOf(IServiceCollection services, Func<ServiceDescriptor, bool> predicate)
+    {
+        for (int index = 0; index < services.Count; index++)
+        {
+            if (predicate(services[index]))
+                return index;
+        }
+
+        return -1;
     }
 
     private static IServiceCollection SetTransactionBehavior(this IServiceCollection services, ServiceDescriptor behavior)

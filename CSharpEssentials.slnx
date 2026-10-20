@@ -21,6 +21,8 @@
   <Project Path="CSharpEssentials.Errors/CSharpEssentials.Errors.csproj" />
   <Project Path="CSharpEssentials.GcpSecretManager/CSharpEssentials.GcpSecretManager.csproj" />
   <Project Path="CSharpEssentials.Http/CSharpEssentials.Http.csproj" />
+  <Project Path="CSharpEssentials.Idempotency/CSharpEssentials.Idempotency.csproj" />
+  <Project Path="CSharpEssentials.Idempotency.Testing/CSharpEssentials.Idempotency.Testing.csproj" />
   <Project Path="CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
 
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
@@ -43,6 +45,7 @@
   <Project Path="tests/CSharpEssentials.AspNetCore.OpenApi.Tests/CSharpEssentials.AspNetCore.OpenApi.Tests.csproj" />
   <Project Path="tests/CSharpEssentials.EntityFrameworkCore.Tests/CSharpEssentials.EntityFrameworkCore.Tests.csproj" />
   <Project Path="tests/CSharpEssentials.Compat.CSharp12/CSharpEssentials.Compat.CSharp12.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.Idempotency.Benchmarks/CSharpEssentials.Idempotency.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Results.Benchmarks/CSharpEssentials.Results.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>

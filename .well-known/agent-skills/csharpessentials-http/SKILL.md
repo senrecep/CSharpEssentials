@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-http
-description: Use when making HTTP calls that should return Result/Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, and Polly.Core-based retry/timeout/circuit-breaker policies.
+description: Use when making HTTP calls that should return Result/Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, Polly.Core-based retry/timeout/circuit-breaker policies, and Idempotency-Key client helpers (SetIdempotencyKey, WithIdempotencyKey, AddIdempotencyKeys, RetryUnsafeMethodsOnlyWithIdempotencyKey).
 ---
 
 # CSharpEssentials.Http
@@ -103,6 +103,31 @@ Result<User> result = await policy.ExecuteAsync(token =>
 - Policies: `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy`, `CreateResiliencePolicy` (plus generic `<T>` forms).
 - Raw Polly pipelines: `CreateRetryPipeline`, `CreateTimeoutPipeline`, `CreateCircuitBreakerPipeline`, `CreateResiliencePipeline`, run with `pipeline.ExecuteAsResultAsync(...)`.
 - Since 4.0 the non-generic policies and pipelines also retry failed `Result` values. `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors are not retried.
+
+---
+
+## Idempotency-Key Client
+
+Retry POST/PATCH only when every attempt carries the same `Idempotency-Key`. Set the key once per logical call; the retry resends the same `HttpRequestMessage`, so the key stays the same.
+
+```csharp
+string key = request.SetIdempotencyKey();                         // generated, or pass IdempotencyKeys.For(...)
+
+Result<Payment> paid = await HttpRequestBuilder.Post("/payments")
+    .WithJsonContent(payment)
+    .WithIdempotencyKey()                                         // made now; every Build() reuses it
+    .AsResultAsync<Payment>(client);
+
+services.AddHttpClient("payments")
+    .AddIdempotencyKeys()                                         // optional, .NET 9+; before the resilience handler
+    .AddStandardResilienceHandler(o => o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey());
+```
+
+- `IdempotentRetry.ShouldRetryAsync(request, response, exception)` is the decision; `RetryUnsafeMethodsOnlyWithIdempotencyKey()` plugs it into any `RetryStrategyOptions<HttpResponseMessage>`.
+- Never retried: `Idempotency-Replayed: true`, caller cancellation, POST/PATCH without a key, 400/422 key errors, business 409s, 2xx, `SsrfBlockedException`.
+- POST/PATCH with a key retry on no response or timeout, 408, 429, 503, 504, and 409 `Idempotency.InFlight`. A 409 InFlight, 429 or 503 waits for its `Retry-After` (capped by `IdempotentRetryOptions.MaxRetryAfter`, 30 s); without it the normal backoff applies. 500/502 are not retried for them; GET/HEAD/PUT/DELETE/OPTIONS also retry every 5xx.
+- The 409 body is read up to 4 KiB within `ProblemReadTimeout` (2 s) and put back; an unreadable or stuck body is not retried.
+- `Microsoft.Extensions.Http.Resilience` is your own reference. The request comes from `response.RequestMessage`; only when no response arrived is it read from `IdempotentRetry.RequestMessageKey`, so in a pipeline you run yourself, set `context.Properties.Set(IdempotentRetry.RequestMessageKey, request)`.
 
 ---
 

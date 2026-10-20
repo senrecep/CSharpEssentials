@@ -7,7 +7,7 @@
     },
     {
       "name": "csharpessentials-aspnetcore",
-      "description": "Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, MapVersionedGroup, versioned Swagger (CSharpEssentials.AspNetCore.Swashbuckle) and enum schemas for Microsoft.AspNetCore.OpenApi (CSharpEssentials.AspNetCore.OpenApi).",
+      "description": "Use when wiring CSharpEssentials into ASP.NET Core. Covers AddEnhancedProblemDetails/UseEnhancedProblemDetails with GlobalExceptionHandler (secure 4.0 ProblemDetails defaults), ToProblemResult/ToActionResult, ResultEndpointFilter with IResultErrorMapper, AddEnumConventions/UseEnumBinding/WithEnumWireFormat for [StringEnum] route/query/header/form values and output format, ConfigureInvalidModelStateResponse, the Idempotency-Key middleware (AddIdempotency, UseIdempotency, WithIdempotency, [Idempotent]), MapVersionedGroup, versioned Swagger (CSharpEssentials.AspNetCore.Swashbuckle) and enum schemas for Microsoft.AspNetCore.OpenApi (CSharpEssentials.AspNetCore.OpenApi).",
       "files": ["SKILL.md"]
     },
     {
@@ -27,7 +27,7 @@
     },
     {
       "name": "csharpessentials-efcore",
-      "description": "Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage, Maybe<T>? nullable columns (HasNullableMaybeConversion, ConfigureNullableMaybeConventions) and AddCqrsDbContexts.",
+      "description": "Use when wiring EF Core with CSharpEssentials domain models. Covers AuditInterceptor/DomainEventInterceptor/SlowQueryInterceptor registered via DI, BaseDbContext (InterceptorsFromServices, DispatchDomainEventsOnSaveChanges), PaginateAsync/Paginate, KeysetPaginateAsync (composite keyset pagination with opaque cursors), batch SoftDeleteAsync, Result queries (FirstOrDefaultAsResultAsync, SaveChangesAsResultAsync), ConfigureEnumConventions for [StringEnum] storage, Maybe<T>? nullable columns (HasNullableMaybeConversion, ConfigureNullableMaybeConventions), the transactional idempotency store (AddIdempotencyRecords, EfCoreIdempotencyRecordStore, AddEfCoreIdempotencyRecordStore) and AddCqrsDbContexts.",
       "files": ["SKILL.md"]
     },
     {
@@ -57,7 +57,12 @@
     },
     {
       "name": "csharpessentials-http",
-      "description": "Use when making HTTP calls that should return Result/Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, and Polly.Core-based retry/timeout/circuit-breaker policies.",
+      "description": "Use when making HTTP calls that should return Result/Result<T> instead of throwing. Covers GetFromJsonAsResultAsync, PostAsJsonAsResultAsync, PutAsJsonAsResultAsync, PatchAsJsonAsResultAsync, DeleteAsResultAsync, SendAsResultAsync on HttpClient, the fluent HttpRequestBuilder (WithHeader, WithQuery, WithJsonContent, FollowRedirects, AsResultAsync), WithQueryString/ToQueryString, HttpStatusCodeMapper, Polly.Core-based retry/timeout/circuit-breaker policies, and Idempotency-Key client helpers (SetIdempotencyKey, WithIdempotencyKey, AddIdempotencyKeys, RetryUnsafeMethodsOnlyWithIdempotencyKey).",
+      "files": ["SKILL.md"]
+    },
+    {
+      "name": "csharpessentials-idempotency",
+      "description": "Use when an operation must run once per key and caller, or a retry or redelivery must not repeat a side effect. Covers IIdempotencyRecordStore (in-memory, distributed cache, EF Core, contract-test kit), IIdempotencyExecutor with profiles and codecs, IdempotencyInbox for message consumers, IdempotencyScope factories, IdempotencyKeys.For/FromMessage/ToUuidV5 deterministic keys, lease versus transactional guarantee modes, Observe to Enforce rollout and the v6 to v7 migration.",
       "files": ["SKILL.md"]
     },
     {
@@ -77,7 +82,7 @@
     },
     {
       "name": "csharpessentials-mediator",
-      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) and LockBehavior (ILockedRequest).",
+      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).",
       "files": ["SKILL.md"]
     },
     {

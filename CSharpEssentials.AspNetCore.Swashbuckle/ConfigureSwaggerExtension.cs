@@ -38,7 +38,7 @@ public static class ConfigureSwaggerExtension
         services.AddSingleton<IConfigureOptions<SwaggerGenOptions>>(provider => new XmlCommentsConfigureOptions(provider, assembly));
         services.ConfigureOptions<TConfigureSwaggerOptions>();
         // After every Configure (XML comments included), so the enum descriptions append to the XML summaries.
-        services.PostConfigure<SwaggerGenOptions>(static options => options.AddEnumConventions());
+        services.PostConfigure<SwaggerGenOptions>(static options => options.AddEnumConventions().AddIdempotencyConventions());
         return services;
     }
 

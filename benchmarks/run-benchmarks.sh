@@ -7,6 +7,7 @@
 #   ./run-benchmarks.sh --quick --tfm net10.0  # fast run on a specific TFM
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks (default: validation)
+#   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,8 +44,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*MapBenchmarks*" "*BindBenchmarks*" "*TapBenchmarks*" "*MatchBenchmarks*" "*EnsureBenchmarks*" "*ThenBenchmarks*" "*TraverseBenchmarks*" "*RenamedMemberBenchmarks*")
         ;;
+    idempotency)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Idempotency.Benchmarks/CSharpEssentials.Idempotency.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/idempotency"
+        ALL_FRAMEWORKS=("net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*MiddlewareOverheadBenchmarks*" "*FingerprintBufferingBenchmarks*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency)" >&2
         exit 1
         ;;
 esac

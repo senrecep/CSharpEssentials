@@ -1,59 +1,48 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 
 namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
-/// Binary format of a <see cref="DistributedCacheIdempotencyStore"/> entry: version, token, fingerprint and, once completed,
-/// the response.
+/// Binary format of the <see cref="IdempotentResponse"/> stored as the payload of an idempotency record: version, status
+/// code, headers and body. Payloads of another version (the version 2 entries written before the record store existed)
+/// or truncated and corrupt payloads are unreadable.
 /// </summary>
 internal static class IdempotencyEntrySerializer
 {
-    private const byte Version = 2;
+    public const byte Version = 3;
 
-    public static byte[] Write(string token, string fingerprint, IdempotentResponse? response)
+    public static byte[] Write(IdempotentResponse response)
     {
         using MemoryStream stream = new();
         using (BinaryWriter writer = new(stream, Encoding.UTF8, leaveOpen: true))
         {
             writer.Write(Version);
-            writer.Write(token);
-            writer.Write(fingerprint);
-            writer.Write(response is not null);
-            if (response is not null)
+            writer.Write(response.StatusCode);
+            writer.Write(response.Headers.Count);
+            foreach (KeyValuePair<string, string[]> header in response.Headers)
             {
-                writer.Write(response.StatusCode);
-                writer.Write(response.Headers.Count);
-                foreach (KeyValuePair<string, string[]> header in response.Headers)
-                {
-                    writer.Write(header.Key);
-                    writer.Write(header.Value.Length);
-                    foreach (string value in header.Value)
-                        writer.Write(value);
-                }
-
-                writer.Write(response.Body.Length);
-                writer.Write(response.Body.Span);
+                writer.Write(header.Key);
+                writer.Write(header.Value.Length);
+                foreach (string value in header.Value)
+                    writer.Write(value);
             }
+
+            writer.Write(response.Body.Length);
+            writer.Write(response.Body.Span);
         }
 
         return stream.ToArray();
     }
 
-    public static bool TryRead(byte[] data, out string token, out string fingerprint, out IdempotentResponse? response)
+    public static bool TryRead(ReadOnlyMemory<byte> payload, [NotNullWhen(true)] out IdempotentResponse? response)
     {
-        token = string.Empty;
-        fingerprint = string.Empty;
         response = null;
         try
         {
-            using BinaryReader reader = new(new MemoryStream(data, writable: false), Encoding.UTF8);
+            using BinaryReader reader = new(new MemoryStream(payload.ToArray(), writable: false), Encoding.UTF8);
             if (reader.ReadByte() != Version)
                 return false;
-
-            token = reader.ReadString();
-            fingerprint = reader.ReadString();
-            if (!reader.ReadBoolean())
-                return true;
 
             int statusCode = reader.ReadInt32();
             int headerCount = ReadCount(reader);
@@ -68,32 +57,21 @@ internal static class IdempotencyEntrySerializer
             }
 
             int bodyLength = ReadCount(reader);
-            byte[] body = reader.ReadBytes(bodyLength);
-            if (body.Length != bodyLength)
+            if (bodyLength != reader.BaseStream.Length - reader.BaseStream.Position)
                 return false;
 
-            response = new IdempotentResponse(statusCode, headers, body);
+            response = new IdempotentResponse(statusCode, headers, reader.ReadBytes(bodyLength));
             return true;
         }
-        catch (InvalidDataException)
+        catch (Exception exception) when (exception is InvalidDataException or EndOfStreamException or FormatException
+                                              or ArgumentException or OverflowException)
         {
-            token = string.Empty;
-            fingerprint = string.Empty;
-            response = null;
-            return false;
-        }
-        catch (Exception exception) when (exception is EndOfStreamException or FormatException or ArgumentException or OverflowException)
-        {
-            token = string.Empty;
-            fingerprint = string.Empty;
             response = null;
             return false;
         }
     }
 
-    /// <summary>
-    /// A count can never exceed the bytes left, so a corrupt length never causes a huge allocation.
-    /// </summary>
+    /// <summary>A count can never exceed the bytes left, so a corrupt length never causes a huge allocation.</summary>
     private static int ReadCount(BinaryReader reader)
     {
         int count = reader.ReadInt32();

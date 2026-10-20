@@ -41,6 +41,7 @@
         <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.Http" Version="[9.0.4,)" />
+        <PackageVersion Include="Microsoft.Extensions.Options" Version="[9.0.4,)" />
     </ItemGroup>
 
     <!-- Mediator -->
@@ -70,6 +71,8 @@
         <PackageVersion Include="CSharpEssentials.Enums" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Errors" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Http" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Idempotency" Version="[$(Version)]" />
+        <PackageVersion Include="CSharpEssentials.Idempotency.Testing" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Json" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Maybe" Version="[$(Version)]" />
         <PackageVersion Include="CSharpEssentials.Mediator" Version="[$(Version)]" />
@@ -106,6 +109,7 @@
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
         <PackageVersion Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
         <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="9.0.4" />
+        <PackageVersion Include="StackExchange.Redis" Version="2.8.31" />
     </ItemGroup>
 
     <!-- Build -->

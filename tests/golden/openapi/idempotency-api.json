@@ -1,0 +1,690 @@
+{
+  "POST /idempotency/business-conflict": {
+    "parameters": [
+      {
+        "description": "Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the Idempotency-Replayed header, and the same key with a different request is rejected. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "headers": {
+          "Idempotency-Replayed": {
+            "description": "true when this response is the stored response of the first request that used the idempotency key.",
+            "schema": {
+              "enum": [
+                "true"
+              ],
+              "type": "string"
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Idempotency.KeyInvalid: the Idempotency-Key header is not a valid key.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyInvalid"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Conflict\n\nIdempotency.InFlight: a request with the same idempotency key is still being processed. Retry the same request after the delay in Retry-After.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before sending the same request again.",
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/EnhancedProblemDetails"
+                },
+                {
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "Idempotency.InFlight"
+                      ],
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "format": "int32",
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "type": "object"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Idempotency.KeyReused: the idempotency key was already used for a different request. Send a new key for a different request.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyReused"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /idempotency/mvc/orders": {
+    "parameters": [
+      {
+        "description": "Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the Idempotency-Replayed header, and the same key with a different request is rejected. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": true,
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "headers": {
+          "Idempotency-Replayed": {
+            "description": "true when this response is the stored response of the first request that used the idempotency key.",
+            "schema": {
+              "enum": [
+                "true"
+              ],
+              "type": "string"
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Idempotency.KeyInvalid: the Idempotency-Key header is not a valid key; Idempotency.KeyMissing: the header is required and was not sent.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyInvalid",
+                    "Idempotency.KeyMissing"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Idempotency.InFlight: a request with the same idempotency key is still being processed. Retry the same request after the delay in Retry-After.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before sending the same request again.",
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.InFlight"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Idempotency.KeyReused: the idempotency key was already used for a different request. Send a new key for a different request.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyReused"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /idempotency/observe": {
+    "parameters": [
+      {
+        "description": "Optional while the endpoint observes idempotency: the key is accepted and recorded but requests are not replayed or rejected yet, so clients can start sending it. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ]
+  },
+  "POST /idempotency/optional": {
+    "parameters": [
+      {
+        "description": "Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the Idempotency-Replayed header, and the same key with a different request is rejected. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "headers": {
+          "Idempotency-Replayed": {
+            "description": "true when this response is the stored response of the first request that used the idempotency key.",
+            "schema": {
+              "enum": [
+                "true"
+              ],
+              "type": "string"
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Idempotency.KeyInvalid: the Idempotency-Key header is not a valid key.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyInvalid"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Idempotency.InFlight: a request with the same idempotency key is still being processed. Retry the same request after the delay in Retry-After.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before sending the same request again.",
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.InFlight"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Idempotency.KeyReused: the idempotency key was already used for a different request. Send a new key for a different request.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyReused"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /idempotency/profile": {
+    "parameters": [
+      {
+        "description": "Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the Idempotency-Replayed header, and the same key with a different request is rejected. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": true,
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "headers": {
+          "Idempotency-Replayed": {
+            "description": "true when this response is the stored response of the first request that used the idempotency key.",
+            "schema": {
+              "enum": [
+                "true"
+              ],
+              "type": "string"
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Idempotency.KeyInvalid: the Idempotency-Key header is not a valid key; Idempotency.KeyMissing: the header is required and was not sent; Idempotency.ScopeRequired: the caller\u0027s scope cannot be resolved.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyInvalid",
+                    "Idempotency.KeyMissing",
+                    "Idempotency.ScopeRequired"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Idempotency.InFlight: a request with the same idempotency key is still being processed. Retry the same request after the delay in Retry-After.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before sending the same request again.",
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.InFlight"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Idempotency.KeyReused: the idempotency key was already used for a different request. Send a new key for a different request.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyReused"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  },
+  "POST /idempotency/required": {
+    "parameters": [
+      {
+        "description": "Makes the request safe to retry: a repeat with the same key and the same request returns the stored response with the Idempotency-Replayed header, and the same key with a different request is rejected. 1 to 255 printable ASCII characters other than space, \u0027\u0022\u0027 and \u0027\\\u0027, optionally quoted.",
+        "in": "header",
+        "name": "Idempotency-Key",
+        "required": true,
+        "schema": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        }
+      }
+    ],
+    "responses": {
+      "200": {
+        "headers": {
+          "Idempotency-Replayed": {
+            "description": "true when this response is the stored response of the first request that used the idempotency key.",
+            "schema": {
+              "enum": [
+                "true"
+              ],
+              "type": "string"
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Idempotency.KeyInvalid: the Idempotency-Key header is not a valid key; Idempotency.KeyMissing: the header is required and was not sent.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyInvalid",
+                    "Idempotency.KeyMissing"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "409": {
+        "description": "Idempotency.InFlight: a request with the same idempotency key is still being processed. Retry the same request after the delay in Retry-After.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before sending the same request again.",
+            "schema": {
+              "format": "int32",
+              "minimum": 1,
+              "type": "integer"
+            }
+          }
+        },
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.InFlight"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      },
+      "422": {
+        "description": "Idempotency.KeyReused: the idempotency key was already used for a different request. Send a new key for a different request.",
+        "content": {
+          "application/problem\u002Bjson": {
+            "schema": {
+              "properties": {
+                "code": {
+                  "enum": [
+                    "Idempotency.KeyReused"
+                  ],
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "status": {
+                  "format": "int32",
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code"
+              ],
+              "type": "object"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,6 @@
 ---
 name: csharpessentials-mediator
-description: Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) and LockBehavior (ILockedRequest).
+description: Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).
 ---
 
 # CSharpEssentials.Mediator
@@ -18,7 +18,7 @@ dotnet add package CSharpEssentials.Mediator
 ## Namespace
 
 ```csharp
-using CSharpEssentials.Mediator;   // ICacheable, ILoggableRequest, ITransactionalRequest, ILockedRequest, ValidationMode, behaviors
+using CSharpEssentials.Mediator;   // ICacheable, ILoggableRequest, ITransactionalRequest, ILockedRequest, IIdempotentRequest, ValidationMode, behaviors
 using Microsoft.Extensions.DependencyInjection;   // AddMediatorBehaviors and the other AddMediator* methods
 ```
 
@@ -208,6 +208,32 @@ services.AddMediatorLockBehavior(); // call after the other behaviors; LockPlace
 ```
 
 On a lock timeout a `Result` handler gets a failed result (`Error.Exception(TimeoutException)`), because `LockBehavior` runs inside `ExceptionHandlingBehavior`. Use `LockPlacement.InsideTransaction` only with transaction-scoped locks such as `pg_advisory_xact_lock`.
+
+## IdempotencyBehavior (IIdempotentRequest)
+
+Runs a request at most once per key and caller, and replays the stored `Result` to a retry. Opt-in per request; the work runs through `IIdempotencyExecutor` from `CSharpEssentials.Idempotency`.
+
+```csharp
+using CSharpEssentials.Idempotency;   // IdempotencyScope, IdempotencyScopes, IdempotencyExecutionOptions
+
+public record RefundPaymentCommand(string IdempotencyKey, Guid OrderId) : ICommand<Result<Guid>>, IIdempotentRequest;
+// optional members: IdempotencyScope (built only with IdempotencyScope.User/Tenant/Client/UserAndTenant/Custom/Global),
+// IdempotencyFingerprint (default: SHA-256 of the request JSON), IdempotencyRetention, IdempotencyLease
+
+services.AddMediatorBehaviors();
+services.AddIdempotency();   // ASP.NET Core: gives the behavior the request user (IIdempotencyScopeAccessor)
+services.AddMediatorIdempotencyBehavior(o => o.ForRequest<RefundPaymentCommand>(p => p.Profile = "payments"));
+services.AddIdempotencyExecutor(o => o.AddProfile("payments", p => p.Retention = TimeSpan.FromDays(7)));
+```
+
+- Key: 1 to 255 printable ASCII characters other than space, `"` and `\`. Missing → `Idempotency.KeyMissing`, invalid → `Idempotency.KeyInvalid` (Validation errors).
+- Scope: `request.IdempotencyScope`, else `ScopeResolver` (default `IdempotencyScopes.User`) on `IIdempotencyScopeAccessor.Principal`. Without an accessor registration the resolver gets `null`. An unresolved scope follows `UnscopedKeyBehavior`: **`Reject` by default here** (`Idempotency.ScopeRequired`), while the HTTP middleware defaults to `Skip`. Machine callers: `ScopeResolver = IdempotencyScopes.Client`.
+- Outcomes: first call runs and stores; a repeat with the same fingerprint replays; a key still running → Conflict `Idempotency.InFlight` (HTTP 409 with `code` and `Retry-After` through `ToProblemResult`/`ToActionResult`); same key, different request → Validation `Idempotency.KeyReused` (HTTP 422 with `code`, as the middleware sends). A non-`Result` response throws `EnhancedValidationException` instead.
+- Stored: success for `Retention`; a failed `Result` with `StoreFailures = true` (default), for `FailureRetention` when its first error is `ErrorType.Unexpected`, else for `Retention`; a failed `ITransactionalRequest` always releases the key (its transaction rolled back); a thrown exception keeps the key in flight until its lease expires.
+- Placement: `IdempotencyPlacement.OutsideTransaction` (default; runs before an outside lock and the transaction) or `InsideTransaction` (runs right inside the transaction, before an inside lock; needs a store that joins that transaction). Call `AddMediatorIdempotencyBehavior` after `AddMediatorBehaviors`; `AddIdempotencyExecutor` with options replaces the defaults it registered.
+- Modes from `IdempotencyExecutorOptions.Mode` or per request: `Enforce`, `Observe` (logs what it would reject, never blocks), `Off`. The mode is read per request through `IOptionsMonitor<IdempotencyExecutorOptions>`, so a configuration reload switches it without a restart; it is separate from the HTTP middleware's `IdempotencyOptions.Mode`. `Observe` does not prevent duplicates; keep it short for commands that move money.
+- In `Observe` a throwing scope resolver or fingerprint logs `Idempotency.Observe.ResolutionFailed` and runs the handler once without idempotency; in `Enforce` or when cancelled it propagates.
+- Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`) with `source` = `mediator` and the request type as `target`; logs carry a key hash, never the key or the scope.
 
 ---
 

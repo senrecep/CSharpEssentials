@@ -6,9 +6,9 @@
     <Title>CSharp Essentials Mediator</Title>
     <Product>CSharp Essentials Mediator</Product>
     <Description>High-performance CQRS and pipeline behaviors built on the Mediator source-generator library.
-      Provides Result-integrated commands, queries, validation, logging, caching, and transaction behaviors
+      Provides Result-integrated commands, queries, validation, logging, caching, transaction, lock and idempotency behaviors
       with a Result-first pipeline.</Description>
-    <PackageTags>Mediator,CQRS,Pipeline,Behavior,Validation,Logging,Caching,Transaction,SourceGenerator,FunctionalProgramming,CSharpEssentials</PackageTags>
+    <PackageTags>Mediator,CQRS,Pipeline,Behavior,Validation,Logging,Caching,Transaction,Idempotency,SourceGenerator,FunctionalProgramming,CSharpEssentials</PackageTags>
     <PackageIcon>icon.png</PackageIcon>
     <PackageReadmeFile>Readme.MD</PackageReadmeFile>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
@@ -37,12 +37,14 @@
     <PackageReference Include="CSharpEssentials.Errors" Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Json" Condition="'$(UseProjectReferences)' != 'true'" />
     <PackageReference Include="CSharpEssentials.Validation" Condition="'$(UseProjectReferences)' != 'true'" />
+    <PackageReference Include="CSharpEssentials.Idempotency" Condition="'$(UseProjectReferences)' != 'true'" />
 
     <ProjectReference Include="..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Maybe\CSharpEssentials.Maybe.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Json\CSharpEssentials.Json.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
     <ProjectReference Include="..\CSharpEssentials.Validation\CSharpEssentials.Validation.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
+    <ProjectReference Include="..\CSharpEssentials.Idempotency\CSharpEssentials.Idempotency.csproj" Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
 </Project>

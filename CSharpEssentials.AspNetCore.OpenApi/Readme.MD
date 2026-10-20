@@ -85,6 +85,23 @@ builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters(OpenApiOptio
 
 A later call on the same options replaces the mode and selector of an earlier one; the transformer keeps the pipeline position of the first call. Each document is described from its own operations, so documents split by `GroupName` (`[ApiExplorerSettings(GroupName = "v2")]`) only get the forms of their own routes. Without `AddOptionalRouteParameters`, the document keeps the framework output: one path per operation (`/api/archive/{year}/{month}`). The Swashbuckle package describes the same routes the same way.
 
+## Idempotency
+
+`options.AddIdempotencyConventions()` describes the contract of idempotent endpoints (`.WithIdempotency()`, `[Idempotent]`) whose method is in `IdempotencyOptions.Methods`. An `Observe` endpoint gets only the `Idempotency-Key` header, always `required: false`, so clients can start sending keys before `Enforce` is switched on: no `Idempotency-Replayed` header and no 400, 409 or 422 responses. `Off` endpoints, other methods and non-idempotent endpoints are left unchanged. The rest of this section describes `Enforce`.
+
+```csharp
+builder.Services.AddIdempotency();
+builder.Services.AddOpenApi("v1", o => o.AddEnumConventions().AddIdempotencyConventions());
+```
+
+Each such operation gets:
+
+- the header parameter from `IdempotencyOptions.HeaderName` (default `Idempotency-Key`), `required` when the endpoint's resolved `RequireKey` is true;
+- the `ReplayedHeaderName` header (default `Idempotency-Replayed`) on every 2xx response;
+- `400` (`Idempotency.KeyMissing` when the key is required, `KeyInvalid`, and `ScopeRequired` when the endpoint rejects unscoped keys), `409` (`Idempotency.InFlight`, with a `Retry-After` header) and `422` (`Idempotency.KeyReused`) as `application/problem+json` with a `code` enum.
+
+An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.Swashbuckle` produces the same description.
+
 ## Scalar
 
 No helper is needed; list the documents:

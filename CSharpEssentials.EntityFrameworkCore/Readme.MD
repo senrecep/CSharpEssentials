@@ -17,6 +17,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Result Helpers**: `FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync` and `SaveChangesAsResultAsync` return `Result<T>` instead of `null` or an exception.
 - **Hard Delete and Data Seeding**: `HardDelete` on a context or set, and `MigrateDataAsync` to sync seed data.
 - **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
+- **Idempotency Records**: `EfCoreIdempotencyRecordStore<TContext>` keeps idempotency records in your `DbContext` and its transaction, so a rolled-back request leaves no record.
 - **Database Error Translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
 
 ## Installation
@@ -587,6 +588,53 @@ The work delegate returns a `ValueTask<T>` and `shouldCommit` decides whether th
 - Only the same `DbContext` instance is joined. Another context type or connection opens its own transaction and is not atomic with this one.
 - It needs a relational provider: the InMemory provider throws on `BeginTransactionAsync` unless `TransactionIgnoredWarning` is ignored. Retrying strategies also refuse to run inside an ambient `TransactionScope`, so don't combine it with `TransactionScopeBehavior`.
 - If the commit itself fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you use a retrying strategy.
+
+### Idempotency Records
+
+`EfCoreIdempotencyRecordStore<TContext>` (namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`) is an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency` that keeps its records in your own `DbContext` and writes them inside the context's current transaction. The record commits and rolls back with the business rows of the same unit of work: a request whose transaction rolls back leaves no record, and its retry runs again.
+
+```csharp
+public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        modelBuilder.AddIdempotencyRecords(Database.ProviderName);
+}
+
+services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+services.AddEfCoreTransactionRunner<AppDbContext>();
+services.AddMediatorTransactionRunnerBehavior();
+services.AddMediatorIdempotencyBehavior(options => options.Placement = IdempotencyPlacement.InsideTransaction);
+services.AddEfCoreIdempotencyRecordStore<AppDbContext>();   // replaces the in-memory store, in any order
+```
+
+Add a migration after `AddIdempotencyRecords`: it maps `IdempotencyRecord` to `IdempotencyRecords` (`TableName`, `Schema`) with the primary key `KeyHash` and an index on `ExpiresAt`. `KeyHash` is a fixed-length `binary(32)`: the SHA-256 of the UTF-8 bytes of the length-prefixed storage key (namespace, scope and key). The readable `Namespace`, `Scope` and `Key` columns sit next to it. A global key is stored with the scope `global`; `ExpiresAt` is UTC.
+
+- **Collation.** Uniqueness does not depend on any collation: two keys share a row only when their hashes are equal, so `KEY-A` and `key-a`, `Tenant("ABC")` and `Tenant("abc")`, or `order-1` and `order-1 ` stay separate records even under a case-insensitive or PAD SPACE collation. The store looks rows up by `KeyHash` and compares the readable columns ordinally before it uses a row; a row whose text belongs to another key makes the reservation throw `InvalidOperationException` instead of replaying a foreign response. `AddIdempotencyRecords(Database.ProviderName)` still gives the readable columns the binary collation of a known provider, so your own queries compare them case-sensitively: `C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server, `utf8mb4_0900_bin` on MySQL (Pomelo and Oracle) and `BINARY` on SQLite. Any other provider keeps the database default. Set `KeyCollation` to override it, for example `utf8mb4_nopad_bin` on MariaDB, which has no `utf8mb4_0900_bin`. These collations only make your own queries case-sensitive. SQL Server ignores trailing spaces in `=` and unique comparisons under every collation, `_BIN2` included, so on SQL Server the `KeyHash` primary key is the only thing that keeps `order-1` and `order-1 ` apart. On PostgreSQL keep the readable columns `text` or `varchar`; `char(n)` pads.
+- **Reservation.** On PostgreSQL and SQLite a reservation is one `INSERT … ON CONFLICT DO NOTHING`; on other providers it is a plain `INSERT` behind a savepoint, rolled back to the savepoint on a duplicate key so the transaction stays usable. A concurrent request for the same key waits on the primary key until the first transaction ends, then replays its stored response, or reserves the key when the first one rolled back. Complete and release change the row only while it carries the reservation's token. An expired row counts as absent and is taken over.
+- **Isolation.** The store needs `READ COMMITTED` (the default of PostgreSQL, SQL Server and MySQL). Under `REPEATABLE READ` or `SERIALIZABLE` a concurrent reservation fails with a serialization error.
+- **Set-based writes.** Records are written with SQL, never through the change tracker, so `SaveChanges`, interceptors and query filters do not see them.
+- **Hybrid profiles.** `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` registers the store as the keyed store of every profile whose `StoreKey` is `"payments"` and keeps the default store for the rest: `o.AddProfile("payments", p => p.StoreKey = "payments")`.
+- **Observe.** In `Observe` the executor and the `Idempotency-Key` middleware write through `Detached`, which resolves a new `TContext` in a scope of its own for every call and suppresses any ambient `TransactionScope`. Observing then never waits for a concurrent request and a failing bookkeeping write cannot fail the business transaction. The records are not atomic with the business data in this mode: a commit that fails after the operation completed leaves a stored response, which a request replays after the switch to `Enforce`. The context must not depend on state that only the request scope has.
+
+Expired records stay in the table until `PurgeExpiredAsync` deletes them in one statement; an expired record already counts as absent, so purging only keeps the table small:
+
+```csharp
+public sealed class IdempotencyPurgeService(IServiceScopeFactory scopeFactory) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        using PeriodicTimer timer = new(TimeSpan.FromHours(1));
+        while (await timer.WaitForNextTickAsync(stoppingToken))
+        {
+            await using AsyncServiceScope scope = scopeFactory.CreateAsyncScope();
+            var store = scope.ServiceProvider.GetRequiredService<EfCoreIdempotencyRecordStore<AppDbContext>>();
+            await store.PurgeExpiredAsync(stoppingToken);
+        }
+    }
+}
+
+services.AddHostedService<IdempotencyPurgeService>();
+```
 
 ### Slow Query Logging
 
