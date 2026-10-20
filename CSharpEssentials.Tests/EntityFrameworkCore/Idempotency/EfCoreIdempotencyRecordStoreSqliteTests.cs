@@ -15,29 +15,19 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore.Idempotency;
 
-/// <summary>A context that maps the records to a custom table.</summary>
-public sealed class CustomTableIdempotencyDbContext(DbContextOptions<CustomTableIdempotencyDbContext> options) : DbContext(options)
-{
-    public const string TableName = "idem_records";
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.AddIdempotencyRecords(records =>
-        {
-            records.TableName = TableName;
-            records.KeyCollation = "NOCASE";
-        });
-}
-
 /// <summary>The EF Core store against SQLite: <c>ON CONFLICT DO NOTHING</c>, the savepoint path and transactions.</summary>
 public sealed class EfCoreIdempotencyRecordStoreSqliteTests : IDisposable
 {
     private static readonly TimeSpan Lease = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan Retention = TimeSpan.FromHours(1);
 
     private static readonly IIdempotencyResultCodec<string> Codec = IdempotencyResultCodec.Create<string>(
         static value => Encoding.UTF8.GetBytes(value),
         static payload => Encoding.UTF8.GetString(payload.Span));
 
     private static readonly IdempotencyRecordKey Key = new("orders", IdempotencyScope.User("alice"), "order-1");
+
+    private static readonly IdempotencyRecordKey PaddedKey = new("orders", IdempotencyScope.User("alice"), "order-1 ");
 
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<IdempotencyTestDbContext> _options;
@@ -47,6 +37,9 @@ public sealed class EfCoreIdempotencyRecordStoreSqliteTests : IDisposable
     {
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
+        _connection.CreateCollation(
+            CustomTableIdempotencyDbContext.Collation,
+            static (left, right) => string.Compare(left.TrimEnd(' '), right.TrimEnd(' '), StringComparison.OrdinalIgnoreCase));
         _options = new DbContextOptionsBuilder<IdempotencyTestDbContext>().UseSqlite(_connection).Options;
         _services = new ServiceCollection().AddDbContext<IdempotencyTestDbContext>(options => options.UseSqlite(_connection)).BuildServiceProvider();
 
@@ -143,19 +136,69 @@ public sealed class EfCoreIdempotencyRecordStoreSqliteTests : IDisposable
     }
 
     [Fact]
-    public async Task The_Store_Should_Write_To_The_Configured_Table()
+    public async Task Keys_Should_Stay_Distinct_Under_A_Case_Insensitive_Padding_Collation()
     {
-        DbContextOptions<CustomTableIdempotencyDbContext> options = new DbContextOptionsBuilder<CustomTableIdempotencyDbContext>().UseSqlite(_connection).Options;
-        await using CustomTableIdempotencyDbContext context = new(options);
-        await context.Database.ExecuteSqlRawAsync(context.Database.GenerateCreateScript());
+        await using CustomTableIdempotencyDbContext context = await CreateCustomTableContextAsync();
         EfCoreIdempotencyRecordStore<CustomTableIdempotencyDbContext> store = new(context, ScopeFactory);
-
         IdempotencyRecordReservation reserved = await store.TryReserveAsync(Key, "fp", Lease);
-        IdempotencyRecordReservation otherCase = await store.TryReserveAsync(new IdempotencyRecordKey("orders", IdempotencyScope.User("alice"), "ORDER-1"), "fp", Lease);
 
-        reserved.Status.Should().Be(IdempotencyReservationStatus.Reserved);
-        otherCase.Status.Should().Be(IdempotencyReservationStatus.InFlight, "the NOCASE collation set on the key columns makes the two keys one record");
-        (await context.Set<IdempotencyRecord>().CountAsync()).Should().Be(1);
+        IdempotencyRecordReservation otherCase = await store.TryReserveAsync(new IdempotencyRecordKey("orders", IdempotencyScope.User("alice"), "ORDER-1"), "other", Lease);
+        IdempotencyRecordReservation trailingSpace = await store.TryReserveAsync(PaddedKey, "other", Lease);
+        IdempotencyRecordReservation paddedScope = await store.TryReserveAsync(new IdempotencyRecordKey("orders", IdempotencyScope.User("alice "), "order-1"), "other", Lease);
+
+        new[] { reserved, otherCase, trailingSpace, paddedScope }.Should().OnlyContain(reservation => reservation.Status == IdempotencyReservationStatus.Reserved);
+        (await context.Set<IdempotencyRecord>().CountAsync()).Should().Be(4);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_Should_Not_Complete_A_Key_That_Only_Matches_Under_The_Collation()
+    {
+        await using CustomTableIdempotencyDbContext context = await CreateCustomTableContextAsync();
+        EfCoreIdempotencyRecordStore<CustomTableIdempotencyDbContext> store = new(context, ScopeFactory);
+        IdempotencyRecordReservation padded = await store.TryReserveAsync(PaddedKey, "fp", Lease);
+        IdempotencyRecordReservation exact = await store.TryReserveAsync(Key, "fp", Lease);
+
+        bool completed = await store.CompleteAsync(Key, exact.Token!, "fp", "exact"u8.ToArray(), Retention);
+        IdempotencyRecordReservation paddedAfter = await store.TryReserveAsync(PaddedKey, "fp", Lease);
+
+        completed.Should().BeTrue();
+        padded.Status.Should().Be(IdempotencyReservationStatus.Reserved);
+        paddedAfter.Status.Should().Be(IdempotencyReservationStatus.InFlight);
+    }
+
+    [Fact]
+    public async Task The_Store_Should_Neither_Return_Nor_Change_A_Row_Of_Its_Hash_That_Holds_Another_Key()
+    {
+        await using IdempotencyTestDbContext context = new(_options);
+        context.IdempotencyRecords.Add(new IdempotencyRecord
+        {
+            KeyHash = IdempotencyRecord.HashKey(Key),
+            Namespace = "orders",
+            Scope = "user:mallory",
+            Key = "order-1",
+            Token = "token",
+            Fingerprint = "fp",
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+        });
+        await context.SaveChangesAsync();
+        EfCoreIdempotencyRecordStore<IdempotencyTestDbContext> store = new(context, ScopeFactory);
+
+        Func<Task> reserve = () => store.TryReserveAsync(Key, "fp", Lease).AsTask();
+        bool completed = await store.CompleteAsync(Key, "token", "fp", "replayed"u8.ToArray(), Retention);
+        bool released = await store.ReleaseAsync(Key, "token");
+
+        await reserve.Should().ThrowAsync<InvalidOperationException>().WithMessage("*another key*");
+        completed.Should().BeFalse();
+        released.Should().BeFalse();
+        (await context.IdempotencyRecords.AsNoTracking().SingleAsync()).Payload.Should().BeNull();
+    }
+
+    [Fact]
+    public void HashKey_Should_Hash_The_Length_Prefixed_Storage_Key()
+    {
+        byte[] hash = IdempotencyRecord.HashKey(Key);
+
+        Convert.ToHexStringLower(hash).Should().Be("c7a35ec1f21705c6264e444789a8190892426b3b2849089322cf8ebd7bc3fe70", "idem:efcore:v1:6:orders|10:user:alice|7:order-1");
     }
 
     [Fact]
@@ -170,6 +213,13 @@ public sealed class EfCoreIdempotencyRecordStoreSqliteTests : IDisposable
     }
 
     private IServiceScopeFactory ScopeFactory => _services.GetRequiredService<IServiceScopeFactory>();
+
+    private async Task<CustomTableIdempotencyDbContext> CreateCustomTableContextAsync()
+    {
+        CustomTableIdempotencyDbContext context = new(new DbContextOptionsBuilder<CustomTableIdempotencyDbContext>().UseSqlite(_connection).Options);
+        await context.Database.ExecuteSqlRawAsync(context.Database.GenerateCreateScript());
+        return context;
+    }
 
     private async Task<IdempotencyExecutionStatus> RunInTransactionAsync(bool commit)
     {

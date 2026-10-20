@@ -10,8 +10,8 @@ namespace CSharpEssentials.EntityFrameworkCore.Idempotency;
 /// <summary>
 /// The <c>INSERT</c> statements of <see cref="EfCoreIdempotencyRecordStore{TContext}"/>, built once per model from the
 /// mapped table and column names, so naming conventions and custom table names are followed. Parameters are the
-/// <c>{0}</c> placeholders of <c>ExecuteSqlRaw</c>: namespace, scope, key, token, fingerprint, then the payload (only
-/// in <see cref="InsertCompleted"/>) and the expiry.
+/// <c>{0}</c> placeholders of <c>ExecuteSqlRaw</c>: key hash, namespace, scope, key, token, fingerprint, then the
+/// payload (only in <see cref="InsertCompleted"/>) and the expiry. <c>ON CONFLICT</c> targets the primary key.
 /// </summary>
 internal sealed class IdempotencyRecordSql
 {
@@ -68,15 +68,18 @@ internal sealed class IdempotencyRecordSql
             Escape(helper.DelimitIdentifier(entity.FindProperty(property)?.GetColumnName(storeObject)
                 ?? throw new InvalidOperationException($"{nameof(IdempotencyRecord)}.{property} is not mapped to a column.")));
 
-        string keyColumns = $"{Column(nameof(IdempotencyRecord.Namespace))}, {Column(nameof(IdempotencyRecord.Scope))}, {Column(nameof(IdempotencyRecord.Key))}";
+        string keyColumns = string.Join(", ", (entity.FindPrimaryKey()
+            ?? throw new InvalidOperationException($"{nameof(IdempotencyRecord)} must have a primary key.")).Properties.Select(property => Column(property.Name)));
         string insert =
-            $"INSERT INTO {Escape(helper.DelimitIdentifier(table, entity.GetSchema()))} ({keyColumns}, {Column(nameof(IdempotencyRecord.Token))}, " +
-            $"{Column(nameof(IdempotencyRecord.Fingerprint))}, {Column(nameof(IdempotencyRecord.Payload))}, {Column(nameof(IdempotencyRecord.ExpiresAt))}) VALUES ({{0}}, {{1}}, {{2}}, {{3}}, {{4}}, ";
+            $"INSERT INTO {Escape(helper.DelimitIdentifier(table, entity.GetSchema()))} ({Column(nameof(IdempotencyRecord.KeyHash))}, " +
+            $"{Column(nameof(IdempotencyRecord.Namespace))}, {Column(nameof(IdempotencyRecord.Scope))}, {Column(nameof(IdempotencyRecord.Key))}, " +
+            $"{Column(nameof(IdempotencyRecord.Token))}, {Column(nameof(IdempotencyRecord.Fingerprint))}, {Column(nameof(IdempotencyRecord.Payload))}, " +
+            $"{Column(nameof(IdempotencyRecord.ExpiresAt))}) VALUES ({{0}}, {{1}}, {{2}}, {{3}}, {{4}}, {{5}}, ";
         string? onConflictDoNothing = context.Database.ProviderName is PostgreSqlProvider or SqliteProvider
             ? $" ON CONFLICT ({keyColumns}) DO NOTHING"
             : null;
 
-        return new IdempotencyRecordSql(insert + "NULL, {5})", insert + "{5}, {6})", onConflictDoNothing);
+        return new IdempotencyRecordSql(insert + "NULL, {6})", insert + "{6}, {7})", onConflictDoNothing);
     }
 
     /// <summary>Doubles the braces of an identifier so <c>ExecuteSqlRaw</c> does not read them as placeholders.</summary>

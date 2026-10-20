@@ -19,5 +19,5 @@ public sealed class IdempotencyTestDbContext(DbContextOptions<IdempotencyTestDbC
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
-        modelBuilder.AddIdempotencyRecords(records => records.UseBinaryKeyCollation(Database.ProviderName));
+        modelBuilder.AddIdempotencyRecords(Database.ProviderName);
 }

@@ -13,37 +13,37 @@ public sealed class IdempotencyRecordModelTests
     [InlineData("Npgsql.EntityFrameworkCore.PostgreSQL", "C")]
     [InlineData("Microsoft.EntityFrameworkCore.SqlServer", "Latin1_General_100_BIN2")]
     [InlineData("Microsoft.EntityFrameworkCore.Sqlite", "BINARY")]
-    [InlineData("Pomelo.EntityFrameworkCore.MySql", "utf8mb4_bin")]
-    [InlineData("MySql.EntityFrameworkCore", "utf8mb4_bin")]
-    public void UseBinaryKeyCollation_Should_Pick_The_Binary_Collation_Of_The_Provider(string provider, string collation)
+    [InlineData("Pomelo.EntityFrameworkCore.MySql", "utf8mb4_0900_bin")]
+    [InlineData("MySql.EntityFrameworkCore", "utf8mb4_0900_bin")]
+    public void AddIdempotencyRecords_Should_Pick_The_Binary_Collation_Of_The_Provider(string provider, string collation)
     {
-        IdempotencyRecordModelOptions options = new();
+        ModelBuilder modelBuilder = new();
 
-        options.UseBinaryKeyCollation(provider);
+        modelBuilder.AddIdempotencyRecords(provider);
 
-        options.KeyCollation.Should().Be(collation);
-    }
-
-    [Fact]
-    public void UseBinaryKeyCollation_Should_Throw_For_An_Unknown_Provider()
-    {
-        IdempotencyRecordModelOptions options = new();
-
-        Action unknown = () => options.UseBinaryKeyCollation("Microsoft.EntityFrameworkCore.InMemory");
-
-        unknown.Should().Throw<NotSupportedException>().WithMessage("*KeyCollation*");
+        TextColumnCollations(modelBuilder).Should().OnlyContain(found => found == collation).And.HaveCount(3);
     }
 
     [Theory]
+    [InlineData("Microsoft.EntityFrameworkCore.InMemory")]
     [InlineData(null)]
-    [InlineData("")]
-    public void UseBinaryKeyCollation_Should_Throw_Without_A_Provider(string? provider)
+    public void AddIdempotencyRecords_Should_Keep_The_Database_Collation_For_An_Unknown_Provider(string? provider)
     {
-        IdempotencyRecordModelOptions options = new();
+        ModelBuilder modelBuilder = new();
 
-        Action missing = () => options.UseBinaryKeyCollation(provider);
+        modelBuilder.AddIdempotencyRecords(provider);
 
-        missing.Should().Throw<ArgumentException>();
+        TextColumnCollations(modelBuilder).Should().OnlyContain(found => found == null);
+    }
+
+    [Fact]
+    public void AddIdempotencyRecords_Should_Prefer_The_Configured_Collation()
+    {
+        ModelBuilder modelBuilder = new();
+
+        modelBuilder.AddIdempotencyRecords("Npgsql.EntityFrameworkCore.PostgreSQL", options => options.KeyCollation = "ucs_basic");
+
+        TextColumnCollations(modelBuilder).Should().OnlyContain(found => found == "ucs_basic");
     }
 
     [Fact]
@@ -51,43 +51,38 @@ public sealed class IdempotencyRecordModelTests
     {
         ModelBuilder modelBuilder = new();
 
-        Action empty = () => modelBuilder.AddIdempotencyRecords(options => options.TableName = string.Empty);
+        Action empty = () => modelBuilder.AddIdempotencyRecords("Npgsql.EntityFrameworkCore.PostgreSQL", options => options.TableName = string.Empty);
 
         empty.Should().Throw<ArgumentException>();
     }
 
     [Fact]
-    public void AddIdempotencyRecords_Should_Key_The_Table_By_Namespace_Scope_And_Key_With_The_Collation()
+    public void AddIdempotencyRecords_Should_Key_The_Table_By_The_Fixed_Length_Key_Hash()
     {
         ModelBuilder modelBuilder = new();
 
-        modelBuilder.AddIdempotencyRecords(options =>
+        modelBuilder.AddIdempotencyRecords(null, options =>
         {
             options.TableName = "records";
             options.Schema = "idem";
-            options.KeyCollation = "C";
         });
         IReadOnlyEntityType entity = modelBuilder.Model.FindEntityType(typeof(IdempotencyRecord))!;
+        IReadOnlyProperty keyHash = entity.FindProperty(nameof(IdempotencyRecord.KeyHash))!;
 
         entity.GetTableName().Should().Be("records");
         entity.GetSchema().Should().Be("idem");
-        entity.FindPrimaryKey()!.Properties.Select(property => property.Name).Should().Equal("Namespace", "Scope", "Key");
+        entity.FindPrimaryKey()!.Properties.Should().ContainSingle().Which.Name.Should().Be(nameof(IdempotencyRecord.KeyHash));
+        keyHash.GetMaxLength().Should().Be(32);
+        keyHash.IsFixedLength().Should().BeTrue();
         entity.GetIndexes().Should().ContainSingle(index => index.Properties.Single().Name == nameof(IdempotencyRecord.ExpiresAt));
-        entity.GetProperties().Where(property => property.GetCollation() == "C").Select(property => property.Name)
-            .Should().BeEquivalentTo("Namespace", "Scope", "Key");
         entity.FindProperty(nameof(IdempotencyRecord.Payload))!.IsNullable.Should().BeTrue();
-        entity.FindProperty(nameof(IdempotencyRecord.Token))!.IsNullable.Should().BeFalse();
+        entity.FindProperty(nameof(IdempotencyRecord.Key))!.IsNullable.Should().BeFalse();
     }
 
-    [Fact]
-    public void AddIdempotencyRecords_Should_Keep_The_Database_Collation_By_Default()
+    private static IEnumerable<string?> TextColumnCollations(ModelBuilder modelBuilder)
     {
-        ModelBuilder modelBuilder = new();
-
-        modelBuilder.AddIdempotencyRecords();
         IReadOnlyEntityType entity = modelBuilder.Model.FindEntityType(typeof(IdempotencyRecord))!;
-
-        entity.GetTableName().Should().Be(IdempotencyRecordModelOptions.DefaultTableName);
-        entity.GetProperties().Should().OnlyContain(property => property.GetCollation() == null);
+        return new[] { nameof(IdempotencyRecord.Namespace), nameof(IdempotencyRecord.Scope), nameof(IdempotencyRecord.Key) }
+            .Select(name => entity.FindProperty(name)!.GetCollation());
     }
 }

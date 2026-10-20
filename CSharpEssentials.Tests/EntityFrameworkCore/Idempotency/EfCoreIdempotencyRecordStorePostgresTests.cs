@@ -53,6 +53,21 @@ public sealed class EfCoreIdempotencyRecordStorePostgresTests(IdempotencyPostgre
     }
 
     [Fact]
+    public async Task Keys_Scopes_And_Namespaces_That_Differ_By_A_Trailing_Space_Should_Be_Distinct_Records()
+    {
+        await using IdempotencyTestDbContext context = postgres.CreateContext();
+        EfCoreIdempotencyRecordStore<IdempotencyTestDbContext> store = Store(context);
+        IdempotencyRecordReservation first = await store.TryReserveAsync(new(_namespace, IdempotencyScope.Tenant("abc"), "key-a"), "fp", Lease);
+
+        IdempotencyRecordReservation key = await store.TryReserveAsync(new(_namespace, IdempotencyScope.Tenant("abc"), "key-a "), "other", Lease);
+        IdempotencyRecordReservation scope = await store.TryReserveAsync(new(_namespace, IdempotencyScope.Tenant("abc "), "key-a"), "other", Lease);
+        IdempotencyRecordReservation @namespace = await store.TryReserveAsync(new(_namespace + " ", IdempotencyScope.Tenant("abc"), "key-a"), "other", Lease);
+
+        new[] { first, key, scope, @namespace }.Should().OnlyContain(reservation => reservation.Status == IdempotencyReservationStatus.Reserved);
+        (await context.IdempotencyRecords.CountAsync(record => record.Namespace.StartsWith(_namespace))).Should().Be(4);
+    }
+
+    [Fact]
     public async Task A_Rolled_Back_Transaction_Should_Leave_Neither_The_Record_Nor_The_Business_Row()
     {
         IdempotencyRecordKey key = Key("order-1");

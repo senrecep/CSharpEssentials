@@ -15,13 +15,19 @@ namespace CSharpEssentials.EntityFrameworkCore.Idempotency;
 /// its retry runs again. Use it with Mediator's <c>IdempotencyPlacement.InsideTransaction</c>; outside a transaction
 /// every call commits on its own.
 /// <para>
-/// A reservation inserts against the primary key (<c>INSERT … ON CONFLICT DO NOTHING</c> on PostgreSQL and SQLite; on
-/// other providers a plain <c>INSERT</c> behind a savepoint, whose unique violation is rolled back to the savepoint so
-/// the transaction stays usable) and reads the row only when the key exists. A concurrent request for the same key waits
-/// on the index until the first transaction ends, then replays its completed response, or reserves the key when it
-/// rolled back. Complete and release change the row only while it carries the reservation's token; an expired row
-/// counts as absent and is taken over. All of this needs the <c>READ COMMITTED</c> isolation level (the default of
-/// PostgreSQL, SQL Server and MySQL); under stricter levels a concurrent reservation fails with a serialization error.
+/// A reservation inserts against the primary key <see cref="IdempotencyRecord.KeyHash"/> (<c>INSERT … ON CONFLICT DO
+/// NOTHING</c> on PostgreSQL and SQLite; on other providers a plain <c>INSERT</c> behind a savepoint, whose unique
+/// violation is rolled back to the savepoint so the transaction stays usable) and reads the row only when the key
+/// exists. A concurrent request for the same key waits on the index until the first transaction ends, then replays its
+/// completed response, or reserves the key when it rolled back. Complete and release change the row only while it
+/// carries the reservation's token; an expired row counts as absent and is taken over. All of this needs the
+/// <c>READ COMMITTED</c> isolation level (the default of PostgreSQL, SQL Server and MySQL); under stricter levels a
+/// concurrent reservation fails with a serialization error.
+/// </para>
+/// <para>
+/// The key hash is fixed-length binary, so no collation can make two keys one record. Every write is also narrowed by
+/// the namespace, scope and key text, and a row read by its hash must hold the same text, compared ordinally; a row
+/// that does not (a hash collision) is never returned: the reservation throws <see cref="InvalidOperationException"/>.
 /// </para>
 /// <para>
 /// The rows are written with set-based SQL, never through the change tracker, so <c>SaveChanges</c>, interceptors and
@@ -96,17 +102,17 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         ArgumentException.ThrowIfNullOrEmpty(fingerprint);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(lease, TimeSpan.Zero);
 
-        string scope = key.Scope ?? IdempotencyRecord.GlobalScope;
+        byte[] hash = IdempotencyRecord.HashKey(key);
         for (int attempt = 0; attempt < MaxReserveAttempts; attempt++)
         {
             DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
             DateTime expiresAt = now + lease;
             string token = Guid.NewGuid().ToString("N");
 
-            if (await TryInsertAsync(key, scope, token, fingerprint, payload: null, expiresAt, cancellationToken).ConfigureAwait(false))
+            if (await TryInsertAsync(key, hash, token, fingerprint, payload: null, expiresAt, cancellationToken).ConfigureAwait(false))
                 return IdempotencyRecordReservation.Reserved(token);
 
-            int takenOver = await Records(key, scope)
+            int takenOver = await Records(key, hash)
                 .Where(record => record.ExpiresAt <= now)
                 .ExecuteUpdateAsync(
                     setters => setters
@@ -119,12 +125,21 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
             if (takenOver == 1)
                 return IdempotencyRecordReservation.Reserved(token);
 
-            var existing = await Records(key, scope)
-                .Where(record => record.ExpiresAt > now)
-                .Select(record => new { record.Fingerprint, record.Payload })
+            var existing = await Records(hash)
+                .Select(record => new { record.Namespace, record.Scope, record.Key, record.Fingerprint, record.Payload, record.ExpiresAt })
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
             if (existing is null)
+                continue;
+            if (!string.Equals(existing.Namespace, key.Namespace, StringComparison.Ordinal)
+                || !string.Equals(existing.Scope, key.Scope ?? IdempotencyRecord.GlobalScope, StringComparison.Ordinal)
+                || !string.Equals(existing.Key, key.Key, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"The {nameof(IdempotencyRecord.KeyHash)} of the idempotency key belongs to a record of another key. The record is not used.");
+            }
+
+            if (existing.ExpiresAt <= now)
                 continue;
             if (!string.Equals(existing.Fingerprint, fingerprint, StringComparison.Ordinal))
                 return IdempotencyRecordReservation.FingerprintMismatch;
@@ -151,12 +166,12 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         ArgumentException.ThrowIfNullOrEmpty(fingerprint);
         ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(retention, TimeSpan.Zero);
 
-        string scope = key.Scope ?? IdempotencyRecord.GlobalScope;
+        byte[] hash = IdempotencyRecord.HashKey(key);
         byte[] stored = payload.ToArray();
         DateTime now = _timeProvider.GetUtcNow().UtcDateTime;
         DateTime expiresAt = now + retention;
 
-        int completed = await Records(key, scope)
+        int completed = await Records(key, hash)
             .Where(record => record.Token == token && record.Payload == null)
             .ExecuteUpdateAsync(
                 setters => setters
@@ -168,7 +183,7 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         if (completed == 1)
             return true;
 
-        int takenOver = await Records(key, scope)
+        int takenOver = await Records(key, hash)
             .Where(record => record.ExpiresAt <= now)
             .ExecuteUpdateAsync(
                 setters => setters
@@ -181,7 +196,7 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         if (takenOver == 1)
             return true;
 
-        return await TryInsertAsync(key, scope, token, fingerprint, stored, expiresAt, cancellationToken).ConfigureAwait(false);
+        return await TryInsertAsync(key, hash, token, fingerprint, stored, expiresAt, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />
@@ -190,7 +205,7 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         ArgumentNullException.ThrowIfNull(key);
         ArgumentException.ThrowIfNullOrEmpty(token);
 
-        int released = await Records(key, key.Scope ?? IdempotencyRecord.GlobalScope)
+        int released = await Records(key, IdempotencyRecord.HashKey(key))
             .Where(record => record.Token == token && record.Payload == null)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -213,13 +228,21 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
             .ExecuteDeleteAsync(cancellationToken);
     }
 
-    private IQueryable<IdempotencyRecord> Records(IdempotencyRecordKey key, string scope)
+    private IQueryable<IdempotencyRecord> Records(byte[] hash) =>
+        _context.Set<IdempotencyRecord>()
+            .IgnoreQueryFilters()
+            .Where(record => record.KeyHash == hash);
+
+    /// <summary>
+    /// The row of <paramref name="hash"/>, narrowed by the text of <paramref name="key"/> so that a write never changes
+    /// the row of another key, whatever the collation of the text columns.
+    /// </summary>
+    private IQueryable<IdempotencyRecord> Records(IdempotencyRecordKey key, byte[] hash)
     {
         string @namespace = key.Namespace;
+        string scope = key.Scope ?? IdempotencyRecord.GlobalScope;
         string value = key.Key;
-        return _context.Set<IdempotencyRecord>()
-            .IgnoreQueryFilters()
-            .Where(record => record.Namespace == @namespace && record.Scope == scope && record.Key == value);
+        return Records(hash).Where(record => record.Namespace == @namespace && record.Scope == scope && record.Key == value);
     }
 
     /// <summary>
@@ -229,7 +252,7 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
     /// </summary>
     private async Task<bool> TryInsertAsync(
         IdempotencyRecordKey key,
-        string scope,
+        byte[] hash,
         string token,
         string fingerprint,
         byte[]? payload,
@@ -237,9 +260,10 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         CancellationToken cancellationToken)
     {
         var sql = IdempotencyRecordSql.For(_context);
+        string scope = key.Scope ?? IdempotencyRecord.GlobalScope;
         object[] parameters = payload is null
-            ? [key.Namespace, scope, key.Key, token, fingerprint, expiresAt]
-            : [key.Namespace, scope, key.Key, token, fingerprint, payload, expiresAt];
+            ? [hash, key.Namespace, scope, key.Key, token, fingerprint, expiresAt]
+            : [hash, key.Namespace, scope, key.Key, token, fingerprint, payload, expiresAt];
 
         string? orNothing = payload is null ? sql.InsertInFlightOrNothing : sql.InsertCompletedOrNothing;
         if (orNothing is not null && !_plainInsert)
@@ -260,7 +284,7 @@ public sealed class EfCoreIdempotencyRecordStore<TContext> : ITransactionalIdemp
         {
             if (savepoint)
                 await transaction!.RollbackToSavepointAsync(SavepointName, CancellationToken.None).ConfigureAwait(false);
-            if (await Records(key, scope).AnyAsync(CancellationToken.None).ConfigureAwait(false))
+            if (await Records(hash).AnyAsync(CancellationToken.None).ConfigureAwait(false))
                 return false;
             throw;
         }
