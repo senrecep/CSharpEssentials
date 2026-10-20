@@ -318,6 +318,9 @@ public sealed record PaymentEventCommand(string AccountId, string EventId, strin
     string? IIdempotentRequest.IdempotencyFingerprint => "event";
 }
 
+byte[] webhookSecret = Convert.FromBase64String(builder.Configuration["PaymentProvider:WebhookSecret"]
+    ?? throw new InvalidOperationException("PaymentProvider:WebhookSecret is not configured."));
+
 app.MapPost("/webhooks/payments", async (HttpRequest request, ISender sender, CancellationToken cancellationToken) =>
 {
     using MemoryStream body = new();
