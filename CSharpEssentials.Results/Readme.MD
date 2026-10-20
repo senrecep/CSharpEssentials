@@ -61,7 +61,7 @@ Result<int> multiError = new[]
 };
 ```
 
-`Result<T>` does not accept `null`: `Result<string> r = (string?)null;` throws `ArgumentNullException`. A `bool` converts to `Result` too: `true` is a success and `false` is the `Error.False` failure. `default(Result)` and `default(Result<T>)` are successes. A failure must hold at least one error: `Result.From` and `Result.Failure` throw `ArgumentException` for an empty collection. Results serialize with `System.Text.Json` (an `errors` array and, for `Result<T>`, a `Value`) and deserialize back to the same state.
+`Result<T>` does not accept `null`: `Result<string> r = (string?)null;` throws `ArgumentNullException`. A `bool` converts to `Result` too: `true` is a success and `false` is the `Error.False` failure. `default(Result)` and `default(Result<T>)` are successes; the `Value` of `default(Result<T>)` is `default(TValue)` (`null` for reference types) even though the nullability annotations say it is set, so call `EnsureNotNull` on results that may come from an uninitialized field or array slot. A failure must hold at least one error: `Result.From` and `Result.Failure` throw `ArgumentException` for an empty collection. Results serialize with `System.Text.Json` (an `errors` array and, for `Result<T>`, a `Value`) and deserialize back to the same state.
 
 Implicit conversion is the idiomatic style. Use the explicit factories when the compiler cannot infer the target type, for example with `var`, in a lambda whose return type is inferred, or as a generic argument:
 
