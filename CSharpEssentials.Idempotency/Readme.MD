@@ -28,6 +28,21 @@ dotnet add package CSharpEssentials.Idempotency
 
 ## Usage
 
+### Guarantee modes
+
+| | Lease mode | Transactional mode |
+|---|---|---|
+| How | A store with a reservation token and a lease: in memory, the [Redis recipe](#external-stores), any store that passes the contract tests | The record is written in the same database transaction as the business data (`EfCoreIdempotencyRecordStore`, Mediator `InsideTransaction`); the primary key settles the race |
+| Duplicates | A run that outlives its lease, or a crash between the side effect and `CompleteAsync`, lets a retry run the operation again after the lease | None for writes in that database: the record and the data commit or roll back together |
+| External side effects | Pass the key on to the downstream system too | Same: a payment provider call is not in your transaction, so send it the deterministic key ([Deterministic keys](#deterministic-keys)) |
+| Use it for | Most operations, and everywhere without a shared database | Money and credit movement, and anything whose duplicate cannot be repaired |
+
+The `Idempotency-Key` middleware of `CSharpEssentials.AspNetCore` is always lease mode: it reserves before and completes
+after the endpoint, outside your handler's transaction, whatever store it uses. For a transactional guarantee over HTTP,
+pass the header key to a Mediator command and run that command `InsideTransaction`; see
+[Transactional store for money movement](#transactional-store-for-money-movement). The middleware (namespace `http`)
+and the behavior (the request type's name) never share a record, so you can keep both.
+
 ### Run an operation once
 
 `IIdempotencyExecutor` wraps any pipeline: a third-party mediator, a job runner or your own dispatcher.
@@ -77,7 +92,7 @@ IdempotencyExecutionStatus status = await inbox.ProcessAsync(
 - The built-in `messaging` profile keeps records for 7 days, so a message redelivered from a dead-letter queue days later is still recognized. Pass `IdempotencyExecutionOptions` to override it, or register a profile named `messaging` to replace it.
 - A generic overload takes a handler with a result and a codec, and returns the `IdempotencyExecution<TResult>`.
 
-### Rollout modes
+### Rollout: Observe → Enforce
 
 | Mode | Behavior |
 |---|---|
@@ -100,6 +115,37 @@ services.Configure<IdempotencyExecutorOptions>(configuration.GetSection("Idempot
 - `Observe` measures duplicates; it does not prevent them. Keep it short for operations that move money.
 - In `Observe` a store that throws while reserving is logged (`Idempotency.Observe.ReserveFailed`) and the operation runs once without idempotency, unless the caller cancelled. In `Enforce` the exception propagates.
 - The `Idempotency-Key` middleware of `CSharpEssentials.AspNetCore` has its own switch, `IdempotencyOptions.Mode`. The Mediator behavior and `IdempotencyInbox` use this one.
+
+To add idempotency to an operation that already has callers:
+
+1. Ship it in `Observe`. Nothing changes for callers; every decision is counted and logged.
+2. Read the [telemetry](#telemetry). `key_reused` shows callers that reuse a key for different content, `in_flight` shows concurrent duplicates, `replay` shows how often a retry would have been answered from the store, and `unscoped` shows callers that send a key without a resolvable scope (the log events name the endpoint or request type, never the key).
+3. Fix what the numbers show (a client that reuses keys, a machine caller that needs `IdempotencyScopes.Client`), then switch to `Enforce` through configuration.
+
+**Residual risk.** `Observe` records are real records. When the business transaction fails after the operation completed
+and its record was written, for example because the commit failed, the record stays, and after the switch to `Enforce` a
+retry with that key replays a result for work that never committed. With the EF Core store this is the one case where the
+record and the data are not atomic: in `Observe` it writes through the `Detached` view (see [EF Core store](#ef-core-store)).
+Keep `Observe` short for operations that move money.
+
+### Lease and retry budget
+
+A lease is how long a key stays in flight when nobody settles it: after a crash, a client abort, an exception or a
+503/504, a retry gets `InFlight` until the lease ends and then runs the operation once more. Pick it by one rule:
+
+> lease ≥ max(the server's request timeout, the client's total retry budget)
+
+A lease shorter than the server's request timeout lets a retry start a second run while the first is still working. A
+lease shorter than the client's total retry budget (for `AddStandardResilienceHandler`, `TotalRequestTimeout`) lets the
+client's last attempt run a second time. The defaults are 1 minute (`IdempotencyExecutorOptions.Lease`,
+`IdempotencyOptions.InFlightTimeout`) and at most 15 minutes (`MaxLease`, `MaxInFlightTimeout`); a lease must not exceed
+its retention either, and all of it is validated at startup. The client retries an `InFlight` answer after its
+`Retry-After` (at most `IdempotentRetryOptions.MaxRetryAfter`, 30 seconds by default), so a long operation needs a
+client that keeps retrying for as long as the lease, or one that polls the result.
+
+Set a longer lease per operation or profile (`IdempotencyExecutionOptions.Lease`, `p.Lease`), not globally. The token a
+reservation carries keeps a request that outlived its lease from overwriting or removing the entry of the retry that took
+over, but its side effects have already happened.
 
 ### Telemetry
 
@@ -172,6 +218,23 @@ give different keys. When that string contains a character outside printable ASC
 [`tests/vectors/idempotency-key-vectors.json`](https://github.com/senrecep/CSharpEssentials/blob/main/tests/vectors/idempotency-key-vectors.json).
 A part with a lone surrogate throws `ArgumentException`.
 
+A caller that is a message handler, not a person, has no random key to retry with: a random key means a new key on every
+redelivery. Derive the key from the business ids, and send the same one downstream:
+
+```csharp
+// consumer: IdempotencyInbox keys the message as IdempotencyKeys.FromMessage(messageId, consumer)
+// command:  one capture per order, however often the event arrives
+string key = IdempotencyKeys.For("capture", orderId.ToString());
+
+// payment provider: the same key, so the provider does not charge twice either
+using HttpRequestMessage request = new(HttpMethod.Post, "/charges") { Content = JsonContent.Create(charge) };
+request.SetIdempotencyKey(key);
+```
+
+The key then makes the side effect single end to end: the inbox drops the duplicate message, the command drops a second
+event for the same order, and the provider drops a repeated call. `ToUuidV5` gives the same key as a UUID for providers
+that insist on one.
+
 ### Calling an idempotent endpoint
 
 The client side lives in `CSharpEssentials.Http`: `request.SetIdempotencyKey(key)` or
@@ -181,7 +244,7 @@ The client side lives in `CSharpEssentials.Http`: `request.SetIdempotencyKey(key
 `KeyReused`, `KeyInvalid`, `KeyMissing` or `ScopeRequired` error. See
 [Idempotency-Key and safe retries](../CSharpEssentials.Http/Readme.MD#idempotency-key-and-safe-retries).
 
-### Scopes
+### Scopes and machine callers
 
 ```csharp
 IIdempotencyScopeResolver resolver = IdempotencyScopes.UserAndTenant("tenant_id");
@@ -202,6 +265,72 @@ The scope factories and the `IdempotencyRecordKey` constructor throw `ArgumentEx
 surrogate, which has no UTF-8 encoding. A `Custom` kind cannot contain `:` or `/`, and `user`, `tenant`, `client` and
 `global` are reserved for the built-in factories in any casing: `Custom("user", id)` throws, use `User(id)`.
 
+A scope is part of the key, so a key means something only to its owner: `consume:42` from two tenants is two records.
+Scopes are built only by the factories, so a raw id such as `"user:42"` cannot collide with the output of another
+factory. `User` needs a user claim, so a machine caller that authenticates with client credentials has none; pick
+`IdempotencyScopes.Client` (`client_id`, then `azp`) for it, or `UserAndTenant` and `Custom` when the owner is the pair.
+`IdempotencyScope.Global` is a deliberate choice to share a key between all callers and never matches a scoped key.
+
+When no scope resolves, `UnscopedKeyBehavior` decides, and the two layers differ on purpose:
+
+| Layer | Default | A keyed request without a scope |
+|---|---|---|
+| HTTP middleware | `Skip` | Runs without idempotency; logs `Idempotency.UnscopedKeySkipped` |
+| Mediator behavior | `Reject` | `Idempotency.ScopeRequired` |
+
+`Reject` over HTTP answers 400; `Idempotency.KeyReused` is 422 and `Idempotency.InFlight` is 409 with `Retry-After`. Use the
+same resolver in both layers, so an HTTP request that reaches an idempotent command resolves the same scope. See
+[Scopes: HTTP and Mediator defaults](../CSharpEssentials.Mediator/Readme.MD#scopes-http-and-mediator-defaults) and the
+[HTTP side](../CSharpEssentials.AspNetCore/Readme.MD#scopes-and-machine-callers).
+
+### Transactional store for money movement
+
+When the side effect is a write to your own database, give the record the same transaction: the EF Core store with the
+Mediator behavior `InsideTransaction`, shown in [EF Core store](#ef-core-store). The command runs in one transaction that
+reserves the key, changes the data and completes the record, so a crash or a rollback leaves neither, and two concurrent
+requests for one key serialize on the primary key. The cost is that a duplicate waits for the first commit.
+
+```csharp
+public sealed record CapturePaymentCommand(Guid OrderId, string IdempotencyKey, decimal Amount)
+    : ICommand<Result<Receipt>>, ITransactionalRequest, IIdempotentRequest;
+```
+
+- A failed `Result` of an `ITransactionalRequest` rolls back, and an exception does too, so in both cases the record rolls back with the data and the retry runs again.
+- Send the provider the deterministic key (`IdempotencyKeys.For("capture", orderId.ToString())`), because its call is outside your transaction.
+- Use the Redis or distributed cache store for operations that have no database transaction to join, and a hybrid for the rest: `AddProfile("payments", p => p.StoreKey = "payments")` with `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` sends only that profile to the database.
+- Over HTTP the middleware can sit in front for the `Idempotency-Key` contract (lease mode); the command's record is what makes the data single.
+
+### Webhook dedupe
+
+Providers deliver at least once and send no `Idempotency-Key`; their event id is the identity. Dedupe it with the Mediator
+behavior and the EF Core store: verify the signature, claim the event, do the work, commit.
+
+```csharp
+public sealed record PaymentEventCommand(string AccountId, string EventId, string Payload)
+    : ICommand<Result>, ITransactionalRequest, IIdempotentRequest
+{
+    public string IdempotencyKey => IdempotencyKeys.FromMessage(EventId, "payments-webhook");
+
+    IdempotencyScope? IIdempotentRequest.IdempotencyScope => IdempotencyScope.Custom("account", AccountId);
+
+    string? IIdempotentRequest.IdempotencyFingerprint => "event";
+}
+
+app.MapPost("/webhooks/payments", async (PaymentEvent paymentEvent, ISender sender, CancellationToken cancellationToken) =>
+{
+    Result result = await sender.Send(
+        new PaymentEventCommand(paymentEvent.AccountId, paymentEvent.Id, paymentEvent.Payload), cancellationToken);
+    return result.IsSuccess ? Results.Ok() : result.ToProblemResult();
+});
+```
+
+- The scope comes from the command: a webhook has no principal, and the behavior rejects a request without a scope. `Custom("account", ...)` is a legal kind.
+- The fingerprint is constant, so the same event serialized differently is still a duplicate and never `KeyReused`.
+- A duplicate returns the stored success (200), so the provider stops sending it.
+- A failed transaction rolls back and releases the key, and the failure goes back as a non-2xx, so the provider redelivers it and the record is gone. Map failures to a 5xx or let the exception propagate.
+- Doing the same in your own table (a unique constraint, claim first, then work) is the same pattern as the EF Core store's reserve step; there is no separate API for it.
+- Keep retention longer than the provider's redelivery window.
+
 ## Stores
 
 | Store | Guarantee |
@@ -217,10 +346,24 @@ For strict guarantees across instances, use the EF Core store or implement `IIde
 **Store requirement:** a store must compare `Namespace`, `Scope` and `Key` ordinally: case-sensitively and with
 trailing spaces significant. A SQL unique index on the text columns gets this wrong in two ways: a case-insensitive
 collation makes `Tenant("ABC")` and `Tenant("abc")` one record, and a PAD SPACE collation, which ignores trailing
-spaces (SQL Server's `_BIN2` collations, MySQL's `utf8mb4_bin`), makes `Tenant("abc")` and `Tenant("abc ")` one
+spaces (every SQL Server collation, `_BIN2` included, and MySQL's `utf8mb4_bin`), makes `Tenant("abc")` and `Tenant("abc ")` one
 record, so one scope can replay another's response. Key a SQL store by a fixed-length hash of `ToStorageKey()` in a
-binary column instead, as the EF Core store does, or use a collation that is binary and NO PAD. The contract tests
-check both.
+binary column instead, as the EF Core store does. That is the only safe way on SQL Server, which ignores trailing
+spaces in `=` and unique comparisons under every collation and has no NO PAD one. Elsewhere a binary NO PAD collation
+also works: PostgreSQL `text` or `varchar` (never `char(n)`, which pads), MySQL `utf8mb4_0900_bin`, MariaDB
+`utf8mb4_nopad_bin`. The contract tests check both.
+
+### Best-effort stores across multiple instances
+
+`DistributedCacheIdempotencyRecordStore` reads the key and then writes it; `IDistributedCache` has no set-if-absent, so
+two instances that see a free key at the same moment both write a reservation and both return `Reserved`. Both run the
+operation. The later write wins, so only its token is valid and the other instance's `CompleteAsync` returns `false`,
+after its side effect already happened. A completed entry is not affected: once it exists, every reader replays it.
+
+Use it for one instance and for development, or where a rare duplicate is harmless. With several instances behind a load
+balancer, or for anything that must not run twice, use the EF Core store or a store with an atomic reserve (Redis `SET NX`
+through the [Redis recipe](#external-stores)), and run the contract tests against it. Override
+`IsReservationAtomic` to `false` in the contract tests of a store you accept as best-effort, so the suite says so.
 
 ### EF Core store
 
