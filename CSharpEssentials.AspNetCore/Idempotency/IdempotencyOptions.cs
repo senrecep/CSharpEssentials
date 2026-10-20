@@ -75,7 +75,7 @@ public sealed class IdempotencyOptions
     /// Longest accepted key, counted after an <c>sf-string</c> value (<c>"abc"</c>) is unquoted; a longer one gets
     /// <c>400</c> <c>Idempotency.KeyInvalid</c>. Default: 255.
     /// </summary>
-    public int MaxKeyLength { get; set; } = 255;
+    public int MaxKeyLength { get; set; } = IdempotencyKeys.MaxKeyLength;
 
     /// <summary>
     /// Largest response body that is stored, in bytes. A larger response is sent unchanged and not stored: a 4xx
