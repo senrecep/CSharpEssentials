@@ -125,9 +125,9 @@ services.AddHttpClient("payments")
 
 - `IdempotentRetry.ShouldRetryAsync(request, response, exception)` is the decision; `RetryUnsafeMethodsOnlyWithIdempotencyKey()` plugs it into any `RetryStrategyOptions<HttpResponseMessage>`.
 - Never retried: `Idempotency-Replayed: true`, caller cancellation, POST/PATCH without a key, 400/422 key errors, business 409s, 2xx, `SsrfBlockedException`.
-- POST/PATCH with a key retry on no response or timeout, 408, 429, 503, 504, and 409 `Idempotency.InFlight` after its `Retry-After` (capped by `IdempotentRetryOptions.MaxRetryAfter`, 30 s). 500/502 are not retried for them; GET/HEAD/PUT/DELETE/OPTIONS also retry every 5xx.
+- POST/PATCH with a key retry on no response or timeout, 408, 429, 503, 504, and 409 `Idempotency.InFlight`. A 409 InFlight, 429 or 503 waits for its `Retry-After` (capped by `IdempotentRetryOptions.MaxRetryAfter`, 30 s); without it the normal backoff applies. 500/502 are not retried for them; GET/HEAD/PUT/DELETE/OPTIONS also retry every 5xx.
 - The 409 body is read up to 4 KiB within `ProblemReadTimeout` (2 s) and put back; an unreadable or stuck body is not retried.
-- `Microsoft.Extensions.Http.Resilience` is your own reference. In a pipeline you run yourself, set `context.Properties.Set(IdempotentRetry.RequestMessageKey, request)`.
+- `Microsoft.Extensions.Http.Resilience` is your own reference. The request comes from `response.RequestMessage`; only when no response arrived is it read from `IdempotentRetry.RequestMessageKey`, so in a pipeline you run yourself, set `context.Properties.Set(IdempotentRetry.RequestMessageKey, request)`.
 
 ---
 

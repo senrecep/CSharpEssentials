@@ -13,8 +13,8 @@ namespace CSharpEssentials.Http;
 public static class IdempotentRetry
 {
     /// <summary>
-    /// The <see cref="ResilienceContext"/> property that carries the request being sent. Its name matches the key that
-    /// <c>Microsoft.Extensions.Http.Resilience</c> uses, so the request is found there when no response arrived.
+    /// The <see cref="ResilienceContext"/> property that carries the request being sent, read only when no response
+    /// arrived. Its name matches the key that <c>Microsoft.Extensions.Http.Resilience</c> uses.
     /// Set it yourself when you run a pipeline outside that handler.
     /// </summary>
     public static ResiliencePropertyKey<HttpRequestMessage> RequestMessageKey { get; } = new("Resilience.Http.RequestMessage");

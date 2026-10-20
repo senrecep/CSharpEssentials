@@ -177,7 +177,7 @@ A part with a lone surrogate throws `ArgumentException`.
 The client side lives in `CSharpEssentials.Http`: `request.SetIdempotencyKey(key)` or
 `HttpRequestBuilder.WithIdempotencyKey(key)` attaches the key once per logical call, and
 `RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries a keyed POST or PATCH with that same key on a missing response,
-408, 429, 503, 504 and `409 Idempotency.InFlight` (after its `Retry-After`), but never a replayed response or a
+408, 429, 503, 504 and `409 Idempotency.InFlight` (a 409 InFlight, 429 or 503 after its `Retry-After`), but never a replayed response or a
 `KeyReused`, `KeyInvalid`, `KeyMissing` or `ScopeRequired` error. See
 [Idempotency-Key and safe retries](../CSharpEssentials.Http/Readme.MD#idempotency-key-and-safe-retries).
 

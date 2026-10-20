@@ -8,13 +8,13 @@ public static class IdempotentRetryStrategyOptionsExtensions
 {
     /// <summary>
     /// Replaces <see cref="RetryStrategyOptions{TResult}.ShouldHandle"/> with <see cref="IdempotentRetry.ShouldRetryAsync"/>
-    /// and makes a <c>409 Idempotency.InFlight</c> wait for its <c>Retry-After</c>, clamped to
-    /// <see cref="IdempotentRetryOptions.MaxRetryAfter"/>. Every other delay comes from the
+    /// and makes a retried <c>409 Idempotency.InFlight</c>, <c>429</c> or <c>503</c> wait for its <c>Retry-After</c>,
+    /// clamped to <see cref="IdempotentRetryOptions.MaxRetryAfter"/>. Without that header, and for every other outcome, the delay comes from the
     /// <see cref="RetryStrategyOptions{TResult}.DelayGenerator"/> set before this call, or from the backoff.
     /// Works with <c>AddStandardResilienceHandler(o =&gt; o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey())</c>,
     /// because <c>HttpRetryStrategyOptions</c> derives from <see cref="RetryStrategyOptions{TResult}"/>.
-    /// The request is taken from <see cref="IdempotentRetry.RequestMessageKey"/>, then from
-    /// <see cref="HttpResponseMessage.RequestMessage"/>; an attempt whose request cannot be found is not retried.
+    /// The request is taken from <see cref="HttpResponseMessage.RequestMessage"/> when a response arrived, and from
+    /// <see cref="IdempotentRetry.RequestMessageKey"/> when none did; an attempt whose request cannot be found is not retried.
     /// </summary>
     /// <param name="options">The retry options to change.</param>
     /// <param name="idempotency">Settings; <see langword="null"/> uses the defaults.</param>
@@ -41,9 +41,9 @@ public static class IdempotentRetryStrategyOptionsExtensions
     private static ValueTask<bool> ShouldHandleAsync(RetryPredicateArguments<HttpResponseMessage> args, IdempotentRetryOptions settings)
     {
         HttpResponseMessage? response = args.Outcome.Result;
-        HttpRequestMessage? request = args.Context.Properties.TryGetValue(IdempotentRetry.RequestMessageKey, out HttpRequestMessage contextRequest)
-            ? contextRequest
-            : response?.RequestMessage;
+        HttpRequestMessage? request = response?.RequestMessage;
+        if (response is null && args.Context.Properties.TryGetValue(IdempotentRetry.RequestMessageKey, out HttpRequestMessage contextRequest))
+            request = contextRequest;
         if (request is null)
             return new ValueTask<bool>(false);
 
@@ -55,7 +55,7 @@ public static class IdempotentRetryStrategyOptionsExtensions
         IdempotentRetryOptions settings,
         Func<RetryDelayGeneratorArguments<HttpResponseMessage>, ValueTask<TimeSpan?>>? previous)
     {
-        if (args.Outcome.Result is { StatusCode: HttpStatusCode.Conflict } response
+        if (args.Outcome.Result is { StatusCode: HttpStatusCode.Conflict or HttpStatusCode.TooManyRequests or HttpStatusCode.ServiceUnavailable } response
             && IdempotentRetry.GetRetryAfter(response, settings.MaxRetryAfter) is { } delay)
         {
             return new ValueTask<TimeSpan?>(delay);

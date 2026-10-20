@@ -174,7 +174,7 @@ services.AddHttpClient("payments")
     .AddStandardResilienceHandler(o => o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey());
 ```
 
-`AddStandardResilienceHandler` comes from `Microsoft.Extensions.Http.Resilience`, which you reference yourself. `RetryUnsafeMethodsOnlyWithIdempotencyKey` extends any Polly `RetryStrategyOptions<HttpResponseMessage>`, so it also works in a pipeline you build with `ResiliencePipelineBuilder<HttpResponseMessage>`. When you run such a pipeline yourself, store the request in `context.Properties` under `IdempotentRetry.RequestMessageKey`, so that attempts with no response can be judged too.
+`AddStandardResilienceHandler` comes from `Microsoft.Extensions.Http.Resilience`, which you reference yourself. `RetryUnsafeMethodsOnlyWithIdempotencyKey` extends any Polly `RetryStrategyOptions<HttpResponseMessage>`, so it also works in a pipeline you build with `ResiliencePipelineBuilder<HttpResponseMessage>`. The request is read from `HttpResponseMessage.RequestMessage` when a response arrived. When none did, it is read from `context.Properties` under `IdempotentRetry.RequestMessageKey`, which `AddStandardResilienceHandler` sets; when you run such a pipeline yourself, set it too, so that attempts with no response can be judged.
 
 The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception)`. You can call it from your own `ShouldHandle`:
 
@@ -182,14 +182,14 @@ The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception)`
 |---|---|---|---|
 | Response has `Idempotency-Replayed: true` | no | no | no |
 | No response (`HttpRequestException`, timeout) | yes | yes | no |
-| 408, 429, 503, 504 | yes | yes | no |
+| 408, 429, 503, 504 (429 and 503 after `Retry-After` when present) | yes | yes | no |
 | 500, 502 and other 5xx | yes | no | no |
 | 409 `Idempotency.InFlight` (problem+json `code`) | no | yes, after `Retry-After` | no |
 | Other 409, 400 `KeyMissing`/`KeyInvalid`/`ScopeRequired`, 422 `KeyReused`, 2xx | no | no | no |
 | Caller cancelled the token | no | no | no |
 
 - A 409 is retried only when its `application/problem+json` body has the top-level `code` `Idempotency.InFlight`. At most 4 KiB is read, within `IdempotentRetryOptions.ProblemReadTimeout` (default 2 s). The bytes read are put back, so the body is still readable afterwards. A body that cannot be read, is too long, times out or carries another code is not retried.
-- The 409 waits for its `Retry-After`, as delta-seconds or an HTTP-date (measured from the response `Date` header), capped at `IdempotentRetryOptions.MaxRetryAfter` (default 30 s). Other retries use the configured backoff, or the `DelayGenerator` set before the call.
+- A retried 409 InFlight, 429 or 503 waits for its `Retry-After`, as delta-seconds or an HTTP-date (measured from the response `Date` header), capped at `IdempotentRetryOptions.MaxRetryAfter` (default 30 s). Without that header, and for every other retry, the delay comes from the configured backoff, or the `DelayGenerator` set before the call.
 - A timeout is an `OperationCanceledException` whose token was not cancelled by the caller. When the caller's token is cancelled, nothing is retried.
 - `SsrfBlockedException` is never retried.
 

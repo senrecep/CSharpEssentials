@@ -131,12 +131,138 @@ public class IdempotentRetryTests
     [Fact]
     public async Task DelayGenerator_Should_Defer_To_The_Previous_Generator_For_Other_Statuses()
     {
-        using var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
+        using var response = new HttpResponseMessage(HttpStatusCode.GatewayTimeout);
         response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(9));
 
         TimeSpan? delay = await GenerateDelayAsync(response, previous: TimeSpan.FromMilliseconds(7));
 
         delay.Should().Be(TimeSpan.FromMilliseconds(7));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task Transient_Status_Should_Be_Retried_After_Its_Capped_Retry_After(HttpStatusCode status)
+    {
+        List<TimeSpan> delays = [];
+        using var handler = new ScriptedHandler(
+            _ =>
+            {
+                var response = new HttpResponseMessage(status);
+                response.Headers.RetryAfter = new RetryConditionHeaderValue(TimeSpan.FromSeconds(2));
+                return response;
+            },
+            _ => new HttpResponseMessage(HttpStatusCode.Created));
+        using HttpRequestMessage request = Keyed(HttpMethod.Post);
+        var options = new IdempotentRetryOptions { MaxRetryAfter = TimeSpan.FromMilliseconds(20) };
+
+        using HttpResponseMessage response = await RunAsync(handler, request, Pipeline(delays, options));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        delays.Should().Equal(TimeSpan.FromMilliseconds(20));
+        handler.Keys.Should().Equal(Key, Key);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task DelayGenerator_Should_Use_Retry_After_Date_On_Transient_Status(HttpStatusCode status)
+    {
+        DateTimeOffset now = new(2026, 10, 20, 12, 0, 0, TimeSpan.Zero);
+        using var response = new HttpResponseMessage(status);
+        response.Headers.Date = now;
+        response.Headers.RetryAfter = new RetryConditionHeaderValue(now.AddMinutes(5));
+
+        TimeSpan? delay = await GenerateDelayAsync(response, new IdempotentRetryOptions { MaxRetryAfter = TimeSpan.FromSeconds(10) });
+
+        delay.Should().Be(TimeSpan.FromSeconds(10));
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.TooManyRequests)]
+    [InlineData(HttpStatusCode.ServiceUnavailable)]
+    public async Task DelayGenerator_Should_Defer_To_The_Previous_Generator_Without_Retry_After(HttpStatusCode status)
+    {
+        using var response = new HttpResponseMessage(status);
+
+        TimeSpan? delay = await GenerateDelayAsync(response, previous: TimeSpan.FromMilliseconds(7));
+
+        delay.Should().Be(TimeSpan.FromMilliseconds(7));
+    }
+
+    [Fact]
+    public async Task Request_Should_Come_From_The_Response_When_One_Arrived()
+    {
+        using var handler = new ScriptedHandler(
+            _ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+            _ => new HttpResponseMessage(HttpStatusCode.Created));
+        using HttpRequestMessage request = Keyed(HttpMethod.Post);
+        using var unrelated = new HttpRequestMessage(HttpMethod.Post, "https://api.test/other");
+        using var invoker = new HttpMessageInvoker(handler, disposeHandler: false);
+        ResilienceContext context = ResilienceContextPool.Shared.Get();
+        context.Properties.Set(IdempotentRetry.RequestMessageKey, unrelated);
+
+        try
+        {
+            using HttpResponseMessage response = await Pipeline([]).ExecuteAsync(
+                async ctx => await invoker.SendAsync(request, ctx.CancellationToken),
+                context);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            handler.Keys.Should().Equal(Key, Key);
+        }
+        finally
+        {
+            ResilienceContextPool.Shared.Return(context);
+        }
+    }
+
+    [Fact]
+    public async Task Request_Should_Come_From_The_Context_Property_When_No_Response_Arrived()
+    {
+        using var handler = new ScriptedHandler(
+            _ => throw new HttpRequestException("connection reset"),
+            _ => new HttpResponseMessage(HttpStatusCode.Created));
+        using HttpRequestMessage request = Keyed(HttpMethod.Post);
+        using var invoker = new HttpMessageInvoker(handler, disposeHandler: false);
+        ResiliencePipeline<HttpResponseMessage> pipeline = new ResiliencePipelineBuilder<HttpResponseMessage>()
+            .AddRetry(new RetryStrategyOptions<HttpResponseMessage> { MaxRetryAttempts = 1, Delay = TimeSpan.Zero }
+                .RetryUnsafeMethodsOnlyWithIdempotencyKey())
+            .Build();
+        ResilienceContext context = ResilienceContextPool.Shared.Get();
+        context.Properties.Set(new ResiliencePropertyKey<HttpRequestMessage>("Resilience.Http.RequestMessage"), request);
+
+        try
+        {
+            using HttpResponseMessage response = await pipeline.ExecuteAsync(
+                async ctx => await invoker.SendAsync(request, ctx.CancellationToken),
+                context);
+
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            handler.Keys.Should().Equal(Key, Key);
+        }
+        finally
+        {
+            ResilienceContextPool.Shared.Return(context);
+        }
+    }
+
+    [Fact]
+    public async Task No_Response_Without_Context_Property_Should_Not_Be_Retried()
+    {
+        using var handler = new ScriptedHandler(_ => throw new HttpRequestException("connection reset"));
+        using HttpRequestMessage request = Keyed(HttpMethod.Post);
+        using var invoker = new HttpMessageInvoker(handler, disposeHandler: false);
+
+        Func<Task> act = async () =>
+        {
+            using HttpResponseMessage response = await Pipeline([]).ExecuteAsync(
+                async token => await invoker.SendAsync(request, token),
+                CancellationToken.None);
+        };
+
+        await act.Should().ThrowAsync<HttpRequestException>();
+        handler.Keys.Should().HaveCount(1);
     }
 
     [Fact]
