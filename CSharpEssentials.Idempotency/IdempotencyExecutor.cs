@@ -10,9 +10,11 @@ namespace CSharpEssentials.Idempotency;
 /// <see cref="IdempotencyExecutorOptions"/> on every operation, so a mode changed at runtime applies to the next one.
 /// Logs name the record namespace and a hash of the key, never the key or the scope. Decisions are counted in
 /// <see cref="IdempotencyTelemetry.DecisionsInstrumentName"/> with the record namespace as <c>target</c>.
-/// In <see cref="IdempotencyMode.Observe"/> an <see cref="ITransactionalIdempotencyRecordStore"/> is used through its
-/// <see cref="ITransactionalIdempotencyRecordStore.Detached"/> view, so observing never waits on or joins the
-/// business transaction.
+/// In <see cref="IdempotencyMode.Observe"/> an <see cref="ITransactionalIdempotencyRecordStore"/> reserves and releases
+/// through its <see cref="ITransactionalIdempotencyRecordStore.Detached"/> view, so the reservation never waits on or
+/// fails the business transaction. A result to store releases that reservation and is then written through the store
+/// itself, in the business transaction: the record exists only when the business work committed, so a retry after the
+/// switch to <see cref="IdempotencyMode.Enforce"/> replays committed work and runs again what rolled back.
 /// </summary>
 public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
 {
@@ -67,7 +69,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         return reservation.Status switch
         {
             IdempotencyReservationStatus.Reserved =>
-                await RunAsync(store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false),
+                await RunAsync(store, store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false),
             IdempotencyReservationStatus.Completed => Replay(key, reservation.Payload.GetValueOrDefault(), codec),
             IdempotencyReservationStatus.InFlight => new(IdempotencyExecutionStatus.InFlight, default),
             IdempotencyReservationStatus.FingerprintMismatch => new(IdempotencyExecutionStatus.KeyReused, default),
@@ -98,13 +100,11 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         IIdempotencyResultCodec<TResult> codec,
         CancellationToken cancellationToken)
     {
-        if (store is ITransactionalIdempotencyRecordStore transactional)
-            store = transactional.Detached;
-
+        IIdempotencyRecordStore reservations = store is ITransactionalIdempotencyRecordStore transactional ? transactional.Detached : store;
         IdempotencyRecordReservation? reservation = null;
         try
         {
-            reservation = await store.TryReserveAsync(key, fingerprint, settings.Lease, cancellationToken).ConfigureAwait(false);
+            reservation = await reservations.TryReserveAsync(key, fingerprint, settings.Lease, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
         {
@@ -117,7 +117,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         switch (reservation?.Status)
         {
             case IdempotencyReservationStatus.Reserved:
-                return await RunAsync(store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false);
+                return await RunAsync(reservations, store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false);
             case IdempotencyReservationStatus.Completed:
                 LogWouldReplay(_logger, key.Namespace, new IdempotencyKeyHash(key));
                 break;
@@ -136,6 +136,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
 
     private async ValueTask<IdempotencyExecution<TResult>> RunAsync<TResult>(
         IIdempotencyRecordStore store,
+        IIdempotencyRecordStore results,
         IdempotencyRecordKey key,
         string token,
         string fingerprint,
@@ -161,17 +162,20 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
             throw;
         }
 
-        await SettleAsync(store, key, token, fingerprint, settings, result, codec).ConfigureAwait(false);
+        await SettleAsync(store, results, key, token, fingerprint, settings, result, codec).ConfigureAwait(false);
         return new(IdempotencyExecutionStatus.Executed, result);
     }
 
     /// <summary>
     /// Stores, stores as a failure or releases the result of an operation that ran. The work is done, so the store
     /// calls ignore cancellation, and a failure here is logged instead of thrown: the caller gets its result and the
-    /// key stays in flight until its lease expires.
+    /// key stays in flight until its lease expires. A result is written to <paramref name="results"/>; when that is not
+    /// the <paramref name="store"/> that holds the reservation, the reservation is released first, so the result is
+    /// written as the record of a key that is gone.
     /// </summary>
     private async ValueTask SettleAsync<TResult>(
         IIdempotencyRecordStore store,
+        IIdempotencyRecordStore results,
         IdempotencyRecordKey key,
         string token,
         string fingerprint,
@@ -182,12 +186,14 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         try
         {
             IdempotencyResultHandling handling = codec.Classify(result);
+            if (handling != IdempotencyResultHandling.Release && !ReferenceEquals(store, results))
+                await TryReleaseAsync(store, key, token).ConfigureAwait(false);
             bool settled = handling switch
             {
-                IdempotencyResultHandling.Store => await store
+                IdempotencyResultHandling.Store => await results
                     .CompleteAsync(key, token, fingerprint, codec.Serialize(result), settings.Retention, CancellationToken.None)
                     .ConfigureAwait(false),
-                IdempotencyResultHandling.StoreAsFailure => await store
+                IdempotencyResultHandling.StoreAsFailure => await results
                     .CompleteAsync(key, token, fingerprint, codec.Serialize(result), settings.FailureRetention, CancellationToken.None)
                     .ConfigureAwait(false),
                 IdempotencyResultHandling.Release => await store.ReleaseAsync(key, token, CancellationToken.None).ConfigureAwait(false),

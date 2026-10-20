@@ -353,7 +353,7 @@ public sealed class IdempotencyExecutorTests : IDisposable
     }
 
     [Fact]
-    public async Task ExecuteAsync_Should_Use_The_Detached_View_Of_A_Transactional_Store_In_Observe_Mode()
+    public async Task ExecuteAsync_Should_Reserve_Through_The_Detached_View_And_Store_Through_The_Transactional_Store_In_Observe_Mode()
     {
         RecordingStore detached = new(new InMemoryIdempotencyRecordStore(_time));
         IdempotencyExecutor executor = new(new TransactionalStore(_store, detached), new TestOptionsMonitor<IdempotencyExecutorOptions>(_options));
@@ -361,6 +361,21 @@ public sealed class IdempotencyExecutorTests : IDisposable
         await executor.ExecuteAsync(Key, "fp", new IdempotencyExecutionOptions { Mode = IdempotencyMode.Observe }, Operation("done"), Codec);
 
         detached.Calls.Should().Be(2);
+        detached.Releases.Should().Be(1);
+        _store.Calls.Should().Be(1);
+        _store.Retentions.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Release_Through_The_Detached_View_Only_In_Observe_Mode()
+    {
+        RecordingStore detached = new(new InMemoryIdempotencyRecordStore(_time));
+        IdempotencyExecutor executor = new(new TransactionalStore(_store, detached), new TestOptionsMonitor<IdempotencyExecutorOptions>(_options));
+
+        await executor.ExecuteAsync(Key, "fp", new IdempotencyExecutionOptions { Mode = IdempotencyMode.Observe }, Operation("rolled-back"), Codec);
+
+        detached.Calls.Should().Be(2);
+        detached.Releases.Should().Be(1);
         _store.Calls.Should().Be(0);
     }
 

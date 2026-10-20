@@ -216,7 +216,7 @@ public sealed class EfCoreIdempotencyRecordStorePostgresTests(IdempotencyPostgre
     }
 
     [Fact]
-    public async Task Observe_Should_Keep_Its_Record_Out_Of_An_Ambient_Transaction()
+    public async Task Observe_Should_Leave_No_Record_When_The_Ambient_Transaction_Rolls_Back()
     {
         IdempotencyRecordKey key = Key("order-1");
 
@@ -230,7 +230,7 @@ public sealed class EfCoreIdempotencyRecordStorePostgresTests(IdempotencyPostgre
         }
 
         (await CountPaymentsAsync(EventId("evt-1"))).Should().Be(0);
-        (await CountRecordsAsync(key)).Should().Be(1);
+        (await CountRecordsAsync(key)).Should().Be(0);
     }
 
     [Fact]
