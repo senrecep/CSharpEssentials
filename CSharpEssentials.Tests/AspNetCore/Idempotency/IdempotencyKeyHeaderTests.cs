@@ -33,6 +33,11 @@ public sealed class IdempotencyKeyHeaderTests
     [InlineData("key 1")]
     [InlineData("\"key 1\"")]
     [InlineData("anahtar-ğ")]
+    [InlineData(" key")]
+    [InlineData("key ")]
+    [InlineData(" \"key\" ")]
+    [InlineData("k\uD800")]
+    [InlineData("\"\uDC00k\"")]
     public void TryParse_Should_Reject_An_Invalid_Value(string? value)
     {
         bool parsed = IdempotencyKeyHeader.TryParse(value, out string? key);
