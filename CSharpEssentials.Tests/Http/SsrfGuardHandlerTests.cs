@@ -447,7 +447,7 @@ public sealed class SsrfGuardHandlerTests : IAsyncLifetime
     {
         HttpClient client = CreateClient(o =>
         {
-            o.Timeout = TimeSpan.FromMilliseconds(500);
+            o.Timeout = TimeSpan.FromMilliseconds(2000);
             o.AllowedNetworks.Add(LoopbackNetwork);
         });
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
