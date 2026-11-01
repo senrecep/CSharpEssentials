@@ -1,0 +1,31 @@
+```
+
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host] : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  cold   : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+
+Job=cold  IterationCount=1  LaunchCount=15  
+RunStrategy=ColdStart  WarmupCount=0  
+
+```
+| Method                 | N   | Mean     | Error    | StdDev   | Ratio | RatioSD | Gen0      | Gen1      | Allocated   | Alloc Ratio |
+|----------------------- |---- |---------:|---------:|---------:|------:|--------:|----------:|----------:|------------:|------------:|
+| **Plain**                  | **10**  | **162.7 ms** |  **2.52 ms** |  **2.35 ms** |  **1.00** |    **0.02** |         **-** |         **-** |  **1093.11 KB** |        **1.00** |
+| CseGenerated           | 10  | 166.1 ms |  1.69 ms |  1.58 ms |  1.02 |    0.02 |         - |         - |   996.43 KB |        0.91 |
+| CseReflection          | 10  | 170.5 ms |  1.71 ms |  1.60 ms |  1.05 |    0.02 |         - |         - |   1134.6 KB |        1.04 |
+| FastEndpoints          | 10  | 214.4 ms |  2.23 ms |  2.09 ms |  1.32 |    0.02 |         - |         - |  1305.91 KB |        1.19 |
+| FastEndpointsSourceGen | 10  | 212.3 ms |  2.02 ms |  1.89 ms |  1.31 |    0.02 |         - |         - |  1285.48 KB |        1.18 |
+|                        |     |          |          |          |       |         |           |           |             |             |
+| **Plain**                  | **100** | **282.9 ms** |  **2.83 ms** |  **2.65 ms** |  **1.00** |    **0.01** |         **-** |         **-** |  **4881.64 KB** |        **1.00** |
+| CseGenerated           | 100 | 299.1 ms |  2.57 ms |  2.41 ms |  1.06 |    0.01 |         - |         - |   5009.8 KB |        1.03 |
+| CseReflection          | 100 | 302.6 ms |  2.96 ms |  2.77 ms |  1.07 |    0.01 |         - |         - |  5454.47 KB |        1.12 |
+| FastEndpoints          | 100 | 291.3 ms |  1.97 ms |  1.84 ms |  1.03 |    0.01 |         - |         - |  6007.02 KB |        1.23 |
+| FastEndpointsSourceGen | 100 | 289.3 ms |  1.73 ms |  1.62 ms |  1.02 |    0.01 |         - |         - |  5867.02 KB |        1.20 |
+|                        |     |          |          |          |       |         |           |           |             |             |
+| **Plain**                  | **500** | **825.1 ms** |  **5.08 ms** |  **4.75 ms** |  **1.00** |    **0.01** | **1000.0000** |         **-** | **22036.49 KB** |        **1.00** |
+| CseGenerated           | 500 | 887.1 ms |  4.77 ms |  4.47 ms |  1.08 |    0.01 | 1000.0000 |         - |  22901.6 KB |        1.04 |
+| CseReflection          | 500 | 896.3 ms |  5.62 ms |  5.26 ms |  1.09 |    0.01 | 1000.0000 |         - | 24504.48 KB |        1.11 |
+| FastEndpoints          | 500 | 653.5 ms | 11.14 ms | 10.42 ms |  0.79 |    0.01 | 2000.0000 | 1000.0000 | 36176.71 KB |        1.64 |
+| FastEndpointsSourceGen | 500 | 644.1 ms |  9.21 ms |  8.61 ms |  0.78 |    0.01 | 2000.0000 | 1000.0000 | 36057.52 KB |        1.64 |

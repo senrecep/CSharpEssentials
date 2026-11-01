@@ -1,0 +1,12 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))"
+          Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../')))" />
+
+  <!-- Let each competitor resolve the transitive versions it declares (FastEndpoints/Carter need
+       FluentValidation >= 12.1, Carter.Analyzers needs Microsoft.CodeAnalysis.CSharp >= 4.14), as a real
+       consumer would; the repo-wide transitive pins are lower. Set here because Directory.Packages.props
+       is imported after Directory.Build.props and would override it there. -->
+  <PropertyGroup>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+</Project>

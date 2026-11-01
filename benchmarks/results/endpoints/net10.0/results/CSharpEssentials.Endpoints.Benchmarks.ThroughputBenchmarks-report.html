@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Endpoints.Benchmarks.ThroughputBenchmarks-20261102-000259</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>Variant       </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Exceptions</th><th>Gen0</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>GetById</td><td>Plain</td><td>8.297 &mu;s</td><td>0.1309 &mu;s</td><td>0.1161 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>8.69 KB</td>
+</tr><tr><td>PostValid</td><td>Plain</td><td>15.091 &mu;s</td><td>0.2724 &mu;s</td><td>0.4242 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>11.66 KB</td>
+</tr><tr><td>PostInvalid</td><td>Plain</td><td>19.757 &mu;s</td><td>0.3922 &mu;s</td><td>0.8608 &mu;s</td><td>-</td><td>0.7324</td><td>-</td><td>13.28 KB</td>
+</tr><tr><td>Delete</td><td>Plain</td><td>6.321 &mu;s</td><td>0.0822 &mu;s</td><td>0.0807 &mu;s</td><td>-</td><td>0.4272</td><td>-</td><td>7.82 KB</td>
+</tr><tr><td>GetById</td><td>CseGenerated</td><td>8.227 &mu;s</td><td>0.0924 &mu;s</td><td>0.0819 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>8.69 KB</td>
+</tr><tr><td>PostValid</td><td>CseGenerated</td><td>14.729 &mu;s</td><td>0.1639 &mu;s</td><td>0.1453 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>11.66 KB</td>
+</tr><tr><td>PostInvalid</td><td>CseGenerated</td><td>22.027 &mu;s</td><td>0.4388 &mu;s</td><td>1.1406 &mu;s</td><td>-</td><td>0.7324</td><td>-</td><td>13.3 KB</td>
+</tr><tr><td>Delete</td><td>CseGenerated</td><td>6.276 &mu;s</td><td>0.1221 &mu;s</td><td>0.1082 &mu;s</td><td>-</td><td>0.4272</td><td>-</td><td>7.82 KB</td>
+</tr><tr><td>GetById</td><td>CseReflection</td><td>7.962 &mu;s</td><td>0.0689 &mu;s</td><td>0.0576 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>8.69 KB</td>
+</tr><tr><td>PostValid</td><td>CseReflection</td><td>14.449 &mu;s</td><td>0.2563 &mu;s</td><td>0.2140 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>11.66 KB</td>
+</tr><tr><td>PostInvalid</td><td>CseReflection</td><td>21.412 &mu;s</td><td>0.4274 &mu;s</td><td>0.9015 &mu;s</td><td>-</td><td>0.7324</td><td>-</td><td>13.3 KB</td>
+</tr><tr><td>Delete</td><td>CseReflection</td><td>6.640 &mu;s</td><td>0.1314 &mu;s</td><td>0.1165 &mu;s</td><td>-</td><td>0.4272</td><td>-</td><td>7.82 KB</td>
+</tr><tr><td>GetById</td><td>Carter</td><td>9.023 &mu;s</td><td>0.1588 &mu;s</td><td>0.1485 &mu;s</td><td>-</td><td>0.4883</td><td>0.4883</td><td>8.69 KB</td>
+</tr><tr><td>PostValid</td><td>Carter</td><td>14.141 &mu;s</td><td>0.2663 &mu;s</td><td>0.2491 &mu;s</td><td>-</td><td>0.4883</td><td>-</td><td>11.38 KB</td>
+</tr><tr><td>PostInvalid</td><td>Carter</td><td>30.252 &mu;s</td><td>0.6011 &mu;s</td><td>1.3689 &mu;s</td><td>-</td><td>1.2207</td><td>1.2207</td><td>21.33 KB</td>
+</tr><tr><td>Delete</td><td>Carter</td><td>6.370 &mu;s</td><td>0.0642 &mu;s</td><td>0.0569 &mu;s</td><td>-</td><td>0.4578</td><td>-</td><td>7.82 KB</td>
+</tr><tr><td>GetById</td><td>FastEndpoints</td><td>10.126 &mu;s</td><td>0.0826 &mu;s</td><td>0.0732 &mu;s</td><td>-</td><td>0.6104</td><td>0.6104</td><td>10.06 KB</td>
+</tr><tr><td>PostValid</td><td>FastEndpoints</td><td>20.148 &mu;s</td><td>0.4051 &mu;s</td><td>1.1945 &mu;s</td><td>-</td><td>0.7324</td><td>-</td><td>12.67 KB</td>
+</tr><tr><td>PostInvalid</td><td>FastEndpoints</td><td>46.300 &mu;s</td><td>0.3571 &mu;s</td><td>0.3166 &mu;s</td><td>2.0000</td><td>1.2207</td><td>-</td><td>23.18 KB</td>
+</tr><tr><td>Delete</td><td>FastEndpoints</td><td>7.869 &mu;s</td><td>0.1009 &mu;s</td><td>0.0843 &mu;s</td><td>-</td><td>0.5493</td><td>-</td><td>9.08 KB</td>
+</tr><tr><td>GetById</td><td>FastE(...)ceGen [22]</td><td>10.455 &mu;s</td><td>0.1324 &mu;s</td><td>0.1173 &mu;s</td><td>-</td><td>0.6104</td><td>0.6104</td><td>10.06 KB</td>
+</tr><tr><td>PostValid</td><td>FastE(...)ceGen [22]</td><td>20.838 &mu;s</td><td>0.4161 &mu;s</td><td>1.0887 &mu;s</td><td>-</td><td>0.7324</td><td>0.7324</td><td>12.67 KB</td>
+</tr><tr><td>PostInvalid</td><td>FastE(...)ceGen [22]</td><td>46.420 &mu;s</td><td>0.6268 &mu;s</td><td>0.5863 &mu;s</td><td>2.0000</td><td>1.2207</td><td>-</td><td>23.18 KB</td>
+</tr><tr><td>Delete</td><td>FastE(...)ceGen [22]</td><td>7.633 &mu;s</td><td>0.1364 &mu;s</td><td>0.1209 &mu;s</td><td>-</td><td>0.5493</td><td>-</td><td>9.05 KB</td>
+</tr></tbody></table>
+</body>
+</html>
