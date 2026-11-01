@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Endpoints.Benchmarks.StartupBenchmarks-20261102-002107</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method          </th><th>N</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Baseline</td><td>10</td><td>1.149 ms</td><td>0.0057 ms</td><td>0.0051 ms</td><td>1.00</td><td>0.01</td><td>19.5313</td><td>3.9063</td><td>329.76 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>10</td><td>11.416 ms</td><td>0.0360 ms</td><td>0.0337 ms</td><td>9.94</td><td>0.05</td><td>31.2500</td><td>15.6250</td><td>647.15 KB</td><td>1.96</td>
+</tr><tr><td>CseGenerated</td><td>10</td><td>11.460 ms</td><td>0.0302 ms</td><td>0.0283 ms</td><td>9.97</td><td>0.05</td><td>31.2500</td><td>15.6250</td><td>661.03 KB</td><td>2.00</td>
+</tr><tr><td>CseReflection</td><td>10</td><td>11.400 ms</td><td>0.0358 ms</td><td>0.0318 ms</td><td>9.92</td><td>0.05</td><td>31.2500</td><td>15.6250</td><td>669.49 KB</td><td>2.03</td>
+</tr><tr><td>FastEndpoints</td><td>10</td><td>4.463 ms</td><td>0.0149 ms</td><td>0.0132 ms</td><td>3.88</td><td>0.02</td><td>39.0625</td><td>15.6250</td><td>700.6 KB</td><td>2.12</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>10</td><td>4.420 ms</td><td>0.0198 ms</td><td>0.0185 ms</td><td>3.85</td><td>0.02</td><td>39.0625</td><td>15.6250</td><td>698.57 KB</td><td>2.12</td>
+</tr><tr><td>Baseline</td><td>100</td><td>1.147 ms</td><td>0.0052 ms</td><td>0.0049 ms</td><td>1.00</td><td>0.01</td><td>19.5313</td><td>3.9063</td><td>329.76 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>100</td><td>101.928 ms</td><td>0.3234 ms</td><td>0.3025 ms</td><td>88.83</td><td>0.44</td><td>200.0000</td><td>-</td><td>3368.77 KB</td><td>10.22</td>
+</tr><tr><td>CseGenerated</td><td>100</td><td>101.676 ms</td><td>0.3745 ms</td><td>0.3503 ms</td><td>88.61</td><td>0.47</td><td>200.0000</td><td>-</td><td>3526.53 KB</td><td>10.69</td>
+</tr><tr><td>CseReflection</td><td>100</td><td>102.503 ms</td><td>1.6055 ms</td><td>1.4232 ms</td><td>89.33</td><td>1.25</td><td>200.0000</td><td>-</td><td>3575.5 KB</td><td>10.84</td>
+</tr><tr><td>FastEndpoints</td><td>100</td><td>30.644 ms</td><td>0.3751 ms</td><td>0.3509 ms</td><td>26.71</td><td>0.32</td><td>153.8462</td><td>-</td><td>3495.53 KB</td><td>10.60</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>100</td><td>30.157 ms</td><td>0.1978 ms</td><td>0.1850 ms</td><td>26.28</td><td>0.19</td><td>153.8462</td><td>-</td><td>3484.79 KB</td><td>10.57</td>
+</tr><tr><td>Baseline</td><td>500</td><td>1.166 ms</td><td>0.0099 ms</td><td>0.0093 ms</td><td>1.00</td><td>0.01</td><td>19.5313</td><td>3.9063</td><td>329.86 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>500</td><td>502.905 ms</td><td>2.9342 ms</td><td>2.7446 ms</td><td>431.33</td><td>4.04</td><td>-</td><td>-</td><td>15429.65 KB</td><td>46.78</td>
+</tr><tr><td>CseGenerated</td><td>500</td><td>505.413 ms</td><td>1.8388 ms</td><td>1.7200 ms</td><td>433.48</td><td>3.64</td><td>-</td><td>-</td><td>16145.97 KB</td><td>48.95</td>
+</tr><tr><td>CseReflection</td><td>500</td><td>520.157 ms</td><td>3.0156 ms</td><td>2.8208 ms</td><td>446.13</td><td>4.17</td><td>1000.0000</td><td>-</td><td>16617.28 KB</td><td>50.38</td>
+</tr><tr><td>FastEndpoints</td><td>500</td><td>146.783 ms</td><td>0.6997 ms</td><td>0.6203 ms</td><td>125.89</td><td>1.10</td><td>666.6667</td><td>-</td><td>15899.03 KB</td><td>48.20</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>500</td><td>146.165 ms</td><td>1.0466 ms</td><td>0.9278 ms</td><td>125.36</td><td>1.24</td><td>666.6667</td><td>-</td><td>15834.79 KB</td><td>48.00</td>
+</tr></tbody></table>
+</body>
+</html>
