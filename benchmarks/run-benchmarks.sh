@@ -3,11 +3,12 @@
 #
 # Usage:
 #   ./run-benchmarks.sh                      # full run — all TFMs, all scenarios, max precision (~60 min)
-#   ./run-benchmarks.sh --quick              # fast run — net9 only, key scenarios, Short job (~10 min)
+#   ./run-benchmarks.sh --quick              # fast run — one TFM (net9.0; net10.0 for endpoints), key scenarios, Short job (~10 min)
 #   ./run-benchmarks.sh --quick --tfm net10.0  # fast run on a specific TFM
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks (default: validation)
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
+#   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,6 +29,9 @@ while [[ $# -gt 0 ]]; do
         *)         EXTRA_ARGS+=("$1"); shift ;;
     esac
 done
+
+# Quick-mode TFM unless a suite overrides it below.
+DEFAULT_TFM="net9.0"
 
 # BenchmarkDotNet treats the whole --filter value as a single glob (no '|' union),
 # so quick-mode key scenarios are run one pattern at a time.
@@ -50,15 +54,22 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*MiddlewareOverheadBenchmarks*" "*FingerprintBufferingBenchmarks*")
         ;;
+    endpoints)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Endpoints.Benchmarks/CSharpEssentials.Endpoints.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/endpoints"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*Startup*" "*Throughput*")
+        # Carter 10 and the AddValidation POST rows need net10.0, so quick mode defaults to it for this suite.
+        DEFAULT_TFM="net10.0"
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints)" >&2
         exit 1
         ;;
 esac
 
 if [[ "$QUICK" == "true" ]]; then
     # Quick mode: single TFM, representative scenarios, Short job (~3-5 min total)
-    DEFAULT_TFM="net9.0"
     FRAMEWORKS=("${CUSTOM_TFM:-$DEFAULT_TFM}")
     PATTERNS=("${QUICK_PATTERNS[@]}")
     JOB_ARGS=(--job Short)

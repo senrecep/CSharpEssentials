@@ -3,6 +3,10 @@
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
         <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+        <!-- The endpoints benchmarks (and the host project BenchmarkDotNet generates under their bin/, which imports no
+             Directory.Build files) reference FastEndpoints and Carter, which need newer transitive versions
+             (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -125,6 +129,15 @@
     <ItemGroup Label="Benchmarks">
         <PackageVersion Include="BenchmarkDotNet" Version="[0.14.0,)" />
         <PackageVersion Include="FluentValidation" Version="[11.11.0,)" />
+        <!-- Competitor libraries for the head-to-head suites: exact pins, stated in each BENCHMARKS.md header. -->
+        <PackageVersion Include="FastEndpoints" Version="8.3.0" />
+        <PackageVersion Include="FastEndpoints.Generator" Version="8.3.0" />
+        <PackageVersion Include="Carter" Version="10.0.0" />
+        <!-- TestServer for the endpoints throughput suite, matched to each TFM's shared framework major. Scoped to that
+             suite so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.4" Condition="'$(TargetFramework)' == 'net9.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" Condition="('$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0') And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
     </ItemGroup>
 
     <!-- Analyzers -->
