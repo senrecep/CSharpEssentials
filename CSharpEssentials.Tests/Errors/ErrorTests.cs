@@ -180,6 +180,33 @@ public class ErrorTests
         new HashSet<Error> { first, second }.Should().ContainSingle();
     }
 
+    [Fact]
+    public void Equality_ExceptionWithInnerException_ShouldBeEqualAndHaveSameHashCode()
+    {
+        Exception exception;
+        try
+        {
+            try
+            {
+                throw new ArgumentException("Inner");
+            }
+            catch (ArgumentException inner)
+            {
+                throw new InvalidOperationException("Outer", inner);
+            }
+        }
+        catch (InvalidOperationException caught)
+        {
+            exception = caught;
+        }
+
+        var first = Error.Exception(exception);
+        var second = Error.Exception(exception);
+
+        first.Should().Be(second);
+        first.GetHashCode().Should().Be(second.GetHashCode());
+    }
+
     #endregion
 
     #region Serialization

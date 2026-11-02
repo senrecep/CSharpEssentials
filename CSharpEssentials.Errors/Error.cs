@@ -236,7 +236,9 @@ public readonly record struct Error : IError
     {
         int combined = 0;
         foreach (KeyValuePair<string, object?> keyValuePair in metadata)
-            combined ^= HashCode.Combine(keyValuePair.Key, keyValuePair.Value);
+            combined ^= HashCode.Combine(
+                keyValuePair.Key,
+                keyValuePair.Value is ErrorMetadata nested ? GetMetadataHashCode(nested) : keyValuePair.Value?.GetHashCode() ?? 0);
 
         return HashCode.Combine(metadata.Count, combined);
     }
@@ -251,9 +253,14 @@ public readonly record struct Error : IError
 
         foreach (KeyValuePair<string, object?> keyValuePair in metadata)
             if (!otherMetadata.TryGetValue(keyValuePair.Key, out object? otherValue) ||
-                !Equals(keyValuePair.Value, otherValue))
+                !MetadataValueEquals(keyValuePair.Value, otherValue))
                 return false;
 
         return true;
     }
+
+    private static bool MetadataValueEquals(object? value, object? otherValue) =>
+        value is ErrorMetadata nested && otherValue is ErrorMetadata otherNested
+            ? CompareMetadata(nested, otherNested)
+            : Equals(value, otherValue);
 }
