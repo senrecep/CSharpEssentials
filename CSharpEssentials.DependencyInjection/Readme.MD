@@ -65,7 +65,7 @@ A decorator's other constructor parameters are resolved like the container does:
 
 ## Generated registry
 
-The package ships a source generator. Each assembly with marked classes gets an `Add{Assembly}Services` method (dots removed, so `Sample.Billing` becomes `AddSampleBillingServices`). It registers the assembly's services, then applies its decorators. It uses no reflection, so it is trim and Native AOT safe.
+The package ships a source generator. Each assembly with marked classes gets an `Add{Assembly}Services` method (dots removed, so `Sample.Billing` becomes `AddSampleBillingServices`). It registers the assembly's services, then applies its decorators. It does not scan assemblies and is trim and Native AOT safe, with no warnings. One reflection step is left: before decorating a registration, it reads the public constructors of the implementation type once to reject a type that injects `[ServiceKey]`. It skips that read when the generator already checked the type at compile time: a non-generic type registered by attribute in the decorator's own assembly, under the same service type and key. Manual registrations, generic types and types from other assemblies still get the read. Microsoft.Extensions.DependencyInjection still constructs `typeof(...)` registrations itself, as it always does.
 
 ```csharp
 builder.Services.AddSampleBillingServices();
@@ -154,7 +154,7 @@ Pass service types that are meant to have several implementations (`TryAddEnumer
 
 ## Migrating from Scrutor
 
-Scrutor scans assemblies at runtime. This package replaces scanning with an attribute on each class and a generated, reflection-free registry.
+Scrutor scans assemblies at runtime. This package replaces scanning with an attribute on each class and a generated registry that needs no assembly scanning.
 
 | Scrutor | CSharpEssentials.DependencyInjection |
 |---|---|
