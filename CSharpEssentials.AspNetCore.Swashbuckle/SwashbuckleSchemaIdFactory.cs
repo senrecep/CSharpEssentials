@@ -6,6 +6,11 @@ namespace CSharpEssentials.AspNetCore.Swagger.Filters;
 public class SwashbuckleSchemaIdFactory
 {
     private readonly Dictionary<string, List<string>> _schemaNameRepetition = [];
+#if NET9_0_OR_GREATER
+    private readonly Lock _gate = new();
+#else
+    private readonly object _gate = new();
+#endif
 
     private string DefaultSchemaIdSelector(Type modelType)
     {
@@ -23,15 +28,21 @@ public class SwashbuckleSchemaIdFactory
     {
         string id = DefaultSchemaIdSelector(modelType);
 
-        if (!_schemaNameRepetition.ContainsKey(id))
-            _schemaNameRepetition.Add(id, []);
-
-        List<string> modelNameList = _schemaNameRepetition[id];
         string fullName = modelType.FullName ?? string.Empty;
-        if (!string.IsNullOrEmpty(fullName) && !modelNameList.Contains(fullName))
-            modelNameList.Add(fullName);
+        int index;
+        lock (_gate)
+        {
+            if (!_schemaNameRepetition.TryGetValue(id, out List<string>? modelNameList))
+            {
+                modelNameList = [];
+                _schemaNameRepetition.Add(id, modelNameList);
+            }
 
-        int index = modelNameList.IndexOf(fullName);
+            if (!string.IsNullOrEmpty(fullName) && !modelNameList.Contains(fullName))
+                modelNameList.Add(fullName);
+
+            index = modelNameList.IndexOf(fullName);
+        }
 
         return $"{id}{(index >= 1 ? index.ToString(CultureInfo.InvariantCulture) : string.Empty)}";
     }

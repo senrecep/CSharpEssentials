@@ -1,4 +1,5 @@
 using CSharpEssentials.AspNetCore.Swagger.Filters;
+using System.Collections.Concurrent;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.AspNetCore;
@@ -54,5 +55,49 @@ public class SwashbuckleSchemaIdFactoryTests
         string schemaId = factory.GetSchemaId(typeof(Dictionary<string, int>));
 
         schemaId.Should().Be("StringInt32Dictionary");
+    }
+
+    [Fact]
+    public void GetSchemaId_Should_GiveEachTypeOneDistinctId_When_CalledConcurrently()
+    {
+        Type[] arguments = [typeof(int), typeof(string), typeof(Guid), typeof(DateTime), typeof(decimal), typeof(bool), typeof(long), typeof(byte)];
+        Type[] definitions = [typeof(List<>), typeof(HashSet<>), typeof(Queue<>), typeof(Stack<>), typeof(LinkedList<>)];
+        Type[] types =
+        [
+            .. definitions.SelectMany(definition => arguments.Select(argument => definition.MakeGenericType(argument))),
+            typeof(FirstScope.Order),
+            typeof(SecondScope.Order),
+            typeof(FirstScope.Item),
+            typeof(SecondScope.Item),
+        ];
+
+        for (int round = 0; round < 300; round++)
+        {
+            var factory = new SwashbuckleSchemaIdFactory();
+            var ids = new ConcurrentDictionary<Type, ConcurrentBag<string>>();
+
+            Parallel.For(0, types.Length * 20, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
+            {
+                Type type = types[i % types.Length];
+                ids.GetOrAdd(type, _ => []).Add(factory.GetSchemaId(type));
+            });
+
+            ids.Values.Should().AllSatisfy(bag => bag.Distinct().Should().ContainSingle());
+            ids.Values.Select(bag => bag.First()).Should().OnlyHaveUniqueItems();
+        }
+    }
+
+    private static class FirstScope
+    {
+        public sealed class Order;
+
+        public sealed class Item;
+    }
+
+    private static class SecondScope
+    {
+        public sealed class Order;
+
+        public sealed class Item;
     }
 }
