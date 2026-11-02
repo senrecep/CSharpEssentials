@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Enums.Comparison.Benchmarks.ParseComparison-20261102-124820</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                  </th><th>Categories</th><th>Valid</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>39.8918 ns</td><td>0.1920 ns</td><td>0.1796 ns</td><td>1.00</td><td>0.0052</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_IsDefinedName</td><td>CaseSensitive</td><td>False</td><td>0.9333 ns</td><td>0.0026 ns</td><td>0.0023 ns</td><td>0.02</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Bcl_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>70.4925 ns</td><td>0.0149 ns</td><td>0.0125 ns</td><td>1.77</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>EnumsNet_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>13.3405 ns</td><td>0.0351 ns</td><td>0.0311 ns</td><td>0.33</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>NetEscapades_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>57.3845 ns</td><td>0.0244 ns</td><td>0.0228 ns</td><td>1.44</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>22.1890 ns</td><td>0.0514 ns</td><td>0.0481 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_IsDefinedName</td><td>CaseSensitive</td><td>True</td><td>0.7398 ns</td><td>0.0026 ns</td><td>0.0023 ns</td><td>0.03</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>43.0744 ns</td><td>0.0413 ns</td><td>0.0366 ns</td><td>1.94</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>EnumsNet_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>17.8628 ns</td><td>0.0443 ns</td><td>0.0415 ns</td><td>0.81</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>NetEscapades_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>28.2404 ns</td><td>0.0220 ns</td><td>0.0205 ns</td><td>1.27</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>60.5683 ns</td><td>0.2606 ns</td><td>0.2437 ns</td><td>1.00</td><td>0.0052</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>Bcl_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>77.5124 ns</td><td>0.0156 ns</td><td>0.0130 ns</td><td>1.28</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>EnumsNet_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>14.6183 ns</td><td>0.0365 ns</td><td>0.0342 ns</td><td>0.24</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>NetEscapades_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>58.1841 ns</td><td>0.0089 ns</td><td>0.0074 ns</td><td>0.96</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>51.9075 ns</td><td>0.0681 ns</td><td>0.0637 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>53.6330 ns</td><td>0.0462 ns</td><td>0.0386 ns</td><td>1.03</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>EnumsNet_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>35.9320 ns</td><td>0.0390 ns</td><td>0.0364 ns</td><td>0.69</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>NetEscapades_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>44.7521 ns</td><td>0.0310 ns</td><td>0.0274 ns</td><td>0.86</td><td>-</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>
