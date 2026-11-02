@@ -2,6 +2,16 @@
 
 Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator) source-generator library, with built-in support for `Result<T>`, validation, caching, logging, exception handling, transactions, resource locks, and idempotency. Request dispatch is generated at compile time by the Mediator source generator; see [Native AOT](#registration) for how the behaviors are registered in a Native AOT app.
 
+> Benchmarks of Mediator 3.0.2 against MediatR 12.5.0, and of these behaviors against hand-written ones (send, publish,
+> startup, behavior cost and Native AOT), are in [BENCHMARKS.md](./BENCHMARKS.md). This package is not a dispatcher, so
+> its dispatch cost is Mediator's: on net10 a send takes 7.8 ns through Mediator and 67.4 ns through MediatR (0
+> behaviors), but Mediator is 1.10× slower from a cold process (35.6 vs 32.4 ms). The validation and exception handling
+> behaviors cost more than hand-written ones on Mediator: 236.2 vs 183.5 ns for valid input, 439.8 vs 262.9 ns and 1,032
+> vs 712 B for invalid input, which is also slower than hand-written MediatR behaviors (428.7 ns). Under Native AOT
+> (samples without `TrimmerRootAssembly`) Mediator runs and MediatR crashes; both CSE samples crash too: `AddValidator`
+> from CSharpEssentials.Validation loses the validator constructor to trimming, and the `Result<T>` failure factory in
+> these behaviors uses reflection. See BENCHMARKS.md.
+
 > **Note:** `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` are provided by the `Mediator` package itself. This package adds marker interfaces and pipeline behaviors that integrate with `Result<T>`.
 
 ## Features
