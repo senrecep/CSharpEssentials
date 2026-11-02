@@ -53,7 +53,10 @@ namespace Sample
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member or a combination of defined flags.</summary>
-        public static bool IsDefined(this global::Sample.Permissions value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Permissions>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.Permissions value) => (unchecked((ulong)(long)value) & 0xFFFFFFFFFFFFFFFCUL) == 0UL;
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.Permissions value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.Permissions> __CreateEnumInfo()
         {

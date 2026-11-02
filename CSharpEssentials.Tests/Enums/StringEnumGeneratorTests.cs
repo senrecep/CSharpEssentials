@@ -273,6 +273,66 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void Generated_IsDefined_And_ToDescription_Should_Match_The_Runtime_Metadata()
+    {
+        AssertMatchesMetadata(Range(-2, 5).Select(static r => (Color)(int)r), static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-2, 260).Select(static r => (GeneratedPermissions)(byte)r).Distinct(), static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-2, 102).Select(static r => (GeneratedAttributes)(int)r), static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-7, 9).Concat([long.MinValue, long.MinValue + 1, long.MaxValue]).Select(static r => (GeneratedSigned)r),
+            static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(new ulong[] { 0, 1, 2, ulong.MaxValue, ulong.MaxValue - 1 }.Select(static r => (GeneratedHuge)r),
+            static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-5, 1002).Concat([int.MinValue, int.MaxValue]).Select(static r => (GeneratedSparse)(int)r),
+            static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-2, 20).Select(static r => (GeneratedNegativeFlags)(int)r).Concat([(GeneratedNegativeFlags)int.MinValue]),
+            static v => v.IsDefined(), static v => v.ToDescription());
+    }
+
+    [Fact]
+    public void ToDescription_Should_Return_The_Description_Of_The_First_Member_With_The_Value()
+    {
+        GeneratedAttributes.Pending.ToDescription().Should().Be("Waiting for work");
+        GeneratedAttributes.Completed.ToDescription().Should().BeNull();
+        ((GeneratedAttributes)42).ToDescription().Should().BeNull();
+        GeneratedSparse.Low.ToDescription().Should().Be("Low end");
+        GeneratedSparse.Shared.ToDescription().Should().BeNull();
+        GeneratedSparse.SharedAlias.ToDescription().Should().BeNull();
+        Color.Red.ToDescription().Should().BeNull();
+    }
+
+    [Fact]
+    public void IsDefined_Should_Cover_Sparse_Negative_And_Extreme_Values()
+    {
+        ((GeneratedSparse)(-3)).IsDefined().Should().BeTrue();
+        ((GeneratedSparse)(-2)).IsDefined().Should().BeFalse();
+        ((GeneratedSparse)1000).IsDefined().Should().BeTrue();
+        GeneratedSigned.Min.IsDefined().Should().BeTrue();
+        ((GeneratedSigned)long.MaxValue).IsDefined().Should().BeFalse();
+        GeneratedHuge.Max.IsDefined().Should().BeTrue();
+        ((GeneratedHuge)1).IsDefined().Should().BeFalse();
+        ((GeneratedPermissions)(1 | 2 | 4)).IsDefined().Should().BeTrue();
+        ((GeneratedPermissions)255).IsDefined().Should().BeFalse();
+        ((GeneratedNegativeFlags)int.MinValue).IsDefined().Should().BeTrue();
+    }
+
+    private static IEnumerable<long> Range(long from, long to)
+    {
+        for (long r = from; r <= to; r++)
+            yield return r;
+    }
+
+    private static void AssertMatchesMetadata<T>(IEnumerable<T> values, Func<T, bool> isDefined, Func<T, string?> description)
+        where T : struct, Enum
+    {
+        EnumInfo<T> info = EnumMetadata.Get<T>();
+        foreach (T value in values)
+        {
+            isDefined(value).Should().Be(info.IsDefined(value), "IsDefined({0})", value);
+            description(value).Should().Be(info.TryGetMember(value, out EnumMemberInfo<T>? member) ? member.Description : null, "ToDescription({0})", value);
+        }
+    }
+
+    [Fact]
     public void Generated_Metadata_Should_Carry_Member_Attributes()
     {
         EnumMetadata.IsRegistered(typeof(GeneratedAttributes)).Should().BeTrue();
@@ -425,4 +485,31 @@ internal enum GeneratedKeywords
 {
     @class,
     @event,
+}
+
+[StringEnum]
+internal enum GeneratedSparse
+{
+    [Description("Low end")]
+    Low = -3,
+
+    Zero = 0,
+
+    Shared = 7,
+
+    [Description("Second name of seven")]
+    [EnumAlias("shared_alias_value")]
+    SharedAlias = 7,
+
+    [Description("High end")]
+    High = 1000,
+}
+
+[StringEnum, Flags]
+internal enum GeneratedNegativeFlags
+{
+    None = 0,
+    One = 1,
+    Four = 4,
+    Sign = int.MinValue,
 }

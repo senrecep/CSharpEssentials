@@ -75,6 +75,7 @@ OrderStatus status = OrderStatus.PendingApproval;
 status.ToWireName();                                // "pending_approval"
 OrderStatusExtensions.PendingApprovalWireName;      // "pending_approval" (const)
 status.IsDefined();                                 // true (flags: a combination of defined flags)
+status.ToDescription();                             // the [Description] text, or null
 
 OrderStatusExtensions.TryParseWire("Approval", out OrderStatus parsed); // true, PendingApproval
 OrderStatusExtensions.ParseWire("pending_approval");                     // PendingApproval

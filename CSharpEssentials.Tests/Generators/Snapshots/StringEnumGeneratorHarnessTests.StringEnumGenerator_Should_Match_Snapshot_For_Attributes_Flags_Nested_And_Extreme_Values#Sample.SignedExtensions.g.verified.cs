@@ -58,7 +58,20 @@ namespace Sample
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>
-        public static bool IsDefined(this global::Sample.Signed value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.Signed value)
+        {
+            switch (value)
+            {
+                case global::Sample.Signed.Negative:
+                case (global::Sample.Signed)(-9223372036854775807L - 1L):
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.Signed value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.Signed> __CreateEnumInfo()
         {

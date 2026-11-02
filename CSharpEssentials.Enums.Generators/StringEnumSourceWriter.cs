@@ -59,7 +59,7 @@ internal static class StringEnumSourceWriter
             w.Line();
 
         if (modern)
-            WriteWireHelpers(w, model, distinct, members, wireNames);
+            WriteWireHelpers(w, model, distinct, members, wireNames, nullableString);
 
         WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), "value.ToString()");
         WriteSwitch(w, model, distinct, "ToSnakeCase", modern ? "Use ToWireName()" : null, static m => Literal(EnumWireNaming.ToLegacySnakeCase(m.Name)), "ToSnakeCaseFallback(value.ToOptimizedString())");
@@ -139,7 +139,8 @@ internal static class StringEnumSourceWriter
         return names;
     }
 
-    private static void WriteWireHelpers(Writer w, EnumModel model, EnumMemberModel[] distinct, EnumMemberModel[] members, string[] wireNames)
+    private static void WriteWireHelpers(Writer w, EnumModel model, EnumMemberModel[] distinct, EnumMemberModel[] members, string[] wireNames,
+        string nullableString)
     {
         string type = model.FullyQualifiedName;
         string info = Enums + ".EnumInfo<" + type + ">";
@@ -201,7 +202,10 @@ internal static class StringEnumSourceWriter
         w.Line();
 
         w.Line("/// <summary>Whether <paramref name=\"value\"/> is a defined member" + (model.IsFlags ? " or a combination of defined flags" : string.Empty) + ".</summary>");
-        w.Line("public static bool IsDefined(this " + type + " value) => " + metadata + ".IsDefined(value);");
+        WriteIsDefined(w, model, distinct);
+        w.Line();
+
+        WriteToDescription(w, model, distinct, nullableString);
         w.Line();
 
         w.Line("internal static " + info + " __CreateEnumInfo()");
@@ -229,6 +233,67 @@ internal static class StringEnumSourceWriter
         w.Line("    (" + Enums + ".EnumStorage)" + model.Storage.ToString(CultureInfo.InvariantCulture) + ");");
         w.Close();
         w.Line();
+    }
+
+    private static void WriteIsDefined(Writer w, EnumModel model, EnumMemberModel[] distinct)
+    {
+        string signature = "public static bool IsDefined(this " + model.FullyQualifiedName + " value)";
+        if (model.IsFlags)
+        {
+            ulong mask = 0;
+            foreach (EnumMemberModel member in distinct)
+            {
+                mask |= member.RawValue;
+            }
+
+            w.Line(~mask == 0
+                ? signature + " => true;"
+                : signature + " => (unchecked((ulong)(long)value) & 0x" + (~mask).ToString("X16", CultureInfo.InvariantCulture) + "UL) == 0UL;");
+            return;
+        }
+
+        w.Line(signature);
+        w.Open();
+        w.Line("switch (value)");
+        w.Open();
+        foreach (EnumMemberModel member in distinct)
+        {
+            w.Line("case " + ValueExpression(model, member) + ":");
+        }
+
+        if (distinct.Length > 0)
+            w.Line("    return true;");
+        w.Line("default:");
+        w.Line("    return false;");
+        w.Close();
+        w.Close();
+    }
+
+    private static void WriteToDescription(Writer w, EnumModel model, EnumMemberModel[] distinct, string nullableString)
+    {
+        EnumMemberModel[] described = [.. distinct.Where(static m => m.Description is not null)];
+        w.Line("/// <summary>The <c>[Description]</c> text of the member declared with <paramref name=\"value\"/>, or <see langword=\"null\"/>.</summary>");
+        string signature = "public static " + nullableString + " ToDescription(this " + model.FullyQualifiedName + " value)";
+        if (described.Length == 0)
+        {
+            w.Line(signature + " => null;");
+            return;
+        }
+
+        w.Line(signature);
+        w.Open();
+        w.Line("switch (value)");
+        w.Open();
+        foreach (EnumMemberModel member in described)
+        {
+            w.Line("case " + ValueExpression(model, member) + ":");
+            w.Line("    return " + Literal(member.Description!) + ";");
+        }
+
+        w.Line("default:");
+        w.Line("    return null;");
+        w.Close();
+        w.Close();
     }
 
     private static void AppendInitializer(StringBuilder line, EnumMemberModel member, List<string> aliases)

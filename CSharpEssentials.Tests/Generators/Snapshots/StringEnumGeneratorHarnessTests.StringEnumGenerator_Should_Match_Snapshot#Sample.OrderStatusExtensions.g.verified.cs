@@ -60,7 +60,21 @@ namespace Sample
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>
-        public static bool IsDefined(this global::Sample.OrderStatus value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.OrderStatus>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.OrderStatus value)
+        {
+            switch (value)
+            {
+                case global::Sample.OrderStatus.Pending:
+                case global::Sample.OrderStatus.InProgress:
+                case global::Sample.OrderStatus.Shipped:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.OrderStatus value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.OrderStatus> __CreateEnumInfo()
         {
