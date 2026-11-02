@@ -10,6 +10,16 @@ public class ResultTToStringTests
 {
     private sealed record Order(int Id);
 
+    private sealed class PlainDto
+    {
+        public int Id { get; init; }
+    }
+
+    private sealed class NullText
+    {
+        public override string? ToString() => null;
+    }
+
     [Fact]
     public void Success_Int_ShouldPrintValue() =>
         Result<int>.Success(42).ToString().Should().Be("Success: 42");
@@ -72,6 +82,30 @@ public class ResultTToStringTests
     [Fact]
     public void Success_Record_ShouldUseRecordToString() =>
         Result<Order>.Success(new Order(1)).ToString().Should().Be("Success: Order { Id = 1 }");
+
+    [Fact]
+    public void Success_ClassWithoutToStringOverride_ShouldPrintTypeName() =>
+        Result<PlainDto>.Success(new PlainDto { Id = 1 }).ToString()
+            .Should().Be($"Success: {typeof(PlainDto).FullName}");
+
+    [Fact]
+    public void Success_ToStringReturnsNull_ShouldPrintEmpty() =>
+        Result<NullText>.Success(new NullText()).ToString().Should().Be("Success: ");
+
+    [Fact]
+    public void Success_Decimal_ShouldUseInvariantCulture()
+    {
+        CultureInfo original = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = new CultureInfo("de-DE");
+            Result<decimal>.Success(1234.5m).ToString().Should().Be("Success: 1234.5");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = original;
+        }
+    }
 
     [Fact]
     public void Failure_SingleError_ShouldKeepFormat()

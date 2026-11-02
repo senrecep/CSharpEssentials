@@ -94,14 +94,10 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IFailure
 
     private static string FormatSuccess(TValue value)
     {
-#if NET6_0_OR_GREATER
-        return string.Create(CultureInfo.InvariantCulture, $"Success: {value}");
-#else
         string? text = value is IFormattable formattable
             ? formattable.ToString(null, CultureInfo.InvariantCulture)
             : value!.ToString();
-        return $"Success: {text}";
-#endif
+        return "Success: " + text;
     }
 
     public bool Equals(Result<TValue> other)
