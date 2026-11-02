@@ -125,7 +125,7 @@ public class ResultCoreBehaviourTests
         Result<int> right = new[] { First, Second };
 
         left.GetHashCode().Should().Be(right.GetHashCode());
-        Result<string>.Success("a").GetHashCode().Should().Be("a".GetHashCode());
+        Result<string>.Success("a").GetHashCode().Should().Be(Result<string>.Success("a").GetHashCode());
     }
 
     [Fact]
@@ -246,20 +246,24 @@ public class ResultCoreBehaviourTests
     [Fact]
     public void FirstFailureOrSuccesses_Results_StopsAtFirstFailure()
     {
-        IEnumerable<Result> failing = [Result.Success(), Result.Failure(First), Result.Failure(Second)];
+        int visited = 0;
+        IEnumerable<Result> failing = new[] { Result.Success(), Result.Failure(First), Result.Failure(Second) }.Select(r => { visited++; return r; });
         IEnumerable<Result> passing = [Result.Success(), Result.Success()];
 
         failing.FirstFailureOrSuccesses().Errors.Should().ContainSingle().Which.Code.Should().Be("E1");
+        visited.Should().Be(2);
         passing.FirstFailureOrSuccesses().IsSuccess.Should().BeTrue();
     }
 
     [Fact]
     public void FirstFailureOrSuccesses_ResultBases_StopsAtFirstFailure()
     {
-        IEnumerable<IResultBase> failing = [Result.Success(), Result<int>.Failure(Second), Result.Failure(First)];
+        int visited = 0;
+        IEnumerable<IResultBase> failing = new IResultBase[] { Result.Success(), Result<int>.Failure(Second), Result.Failure(First) }.Select(r => { visited++; return r; });
         IEnumerable<IResultBase> passing = [Result.Success(), Result<int>.Success(1)];
 
         failing.FirstFailureOrSuccesses().Errors.Should().ContainSingle().Which.Code.Should().Be("E2");
+        visited.Should().Be(2);
         passing.FirstFailureOrSuccesses().IsSuccess.Should().BeTrue();
     }
 

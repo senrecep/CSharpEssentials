@@ -662,7 +662,7 @@ public class ResultTAsyncReceiverOverloadTests
         Action<int> action = seen.Add;
 
         await AsTask(Ok).TapAsync(() => true, action);
-        await AsTask(Ok).TapAsync(() => false, action);
+        await AsTask(Result<int>.Success(7)).TapAsync(() => false, action);
         await AsTask(Failed).TapAsync(() => true, action);
 
         seen.Should().Equal(5);
@@ -688,7 +688,8 @@ public class ResultTAsyncReceiverOverloadTests
         Action<int> action = seen.Add;
 
         await Vt(Ok).TapAsync(() => true, action);
-        await Vt(Ok).TapAsync(() => false, action);
+        await Vt(Result<int>.Success(7)).TapAsync(() => false, action);
+        await Vt(Failed).TapAsync(() => true, action);
 
         seen.Should().Equal(5);
     }
@@ -703,11 +704,11 @@ public class ResultTAsyncReceiverOverloadTests
             return Task.CompletedTask;
         };
 
-        Result<int> skipped = await AsTask(Ok).TapAsync(false, action);
+        Result<int> skipped = await AsTask(Result<int>.Success(7)).TapAsync(false, action);
         Result<int> ran = await AsTask(Ok).TapAsync(true, action);
 
         seen.Should().Equal(5);
-        skipped.Value.Should().Be(5);
+        skipped.Value.Should().Be(7);
         ran.Value.Should().Be(5);
     }
 
