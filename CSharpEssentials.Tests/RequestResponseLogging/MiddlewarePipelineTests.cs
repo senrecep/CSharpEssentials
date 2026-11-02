@@ -291,6 +291,29 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InvokeAsync_Should_ReportCaptureError_When_RewindAfterFailedReadThrows()
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => Task.CompletedTask,
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new DisposedOnFailureStream(new byte[100]);
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().NotThrowAsync();
+        capturedContext!.RequestBody.Should().StartWith("Error capturing request body");
+    }
+
+    [Fact]
     public async Task InvokeAsync_Should_StopCapturing_When_ChunkedBodyExceedsLimit()
     {
         const int bodySize = 11 * 1024 * 1024;
@@ -350,5 +373,19 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
 
             return base.ReadAsync(buffer, cancellationToken);
         }
+    }
+
+    private sealed class DisposedOnFailureStream(byte[] content) : MemoryStream(content)
+    {
+        private bool _failed;
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            _failed = true;
+            throw new IOException("connection reset");
+        }
+
+        public override long Seek(long offset, SeekOrigin loc) =>
+            _failed ? throw new ObjectDisposedException(nameof(DisposedOnFailureStream)) : base.Seek(offset, loc);
     }
 }

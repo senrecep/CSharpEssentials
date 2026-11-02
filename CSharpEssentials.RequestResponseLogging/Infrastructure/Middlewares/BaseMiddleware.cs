@@ -192,10 +192,24 @@ internal abstract class BaseMiddleware
                 _arrayPool.Return(buffer);
             }
 
-            if (context.Request.Body.CanSeek)
-            {
-                context.Request.Body.Seek(0, SeekOrigin.Begin);
-            }
+            RewindRequestBody(context.Request.Body);
+        }
+    }
+
+    private static void RewindRequestBody(Stream body)
+    {
+        if (!body.CanSeek)
+        {
+            return;
+        }
+
+        try
+        {
+            body.Seek(0, SeekOrigin.Begin);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            return;
         }
     }
 
