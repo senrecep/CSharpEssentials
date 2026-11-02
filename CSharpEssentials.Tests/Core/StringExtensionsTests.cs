@@ -207,4 +207,13 @@ public class StringExtensionsTests
     {
         ChildProcessScenario.Run(OversizedInputScenarios.ToSnakeCase);
     }
+
+    [Theory]
+    [InlineData("用户名", "")]
+    [InlineData("user用户Name", "user_name")]
+    [InlineData("cafe\u0301", "cafe")]
+    public void ToSnakeCase_DropsLettersOutsideUppercaseLowercaseAndDigits(string input, string expected)
+    {
+        input.ToSnakeCase().Should().Be(expected);
+    }
 }

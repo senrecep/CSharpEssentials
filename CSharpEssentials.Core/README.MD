@@ -41,6 +41,8 @@ text.ToTitleCase();           // "Hello World"
 text.ToUnderscoreCamelCase(); // "_helloWorld"
 ```
 
+The converters keep only uppercase letters, lowercase letters and decimal digits (Unicode categories `Lu`, `Ll` and `Nd`); everything else starts a new word or is dropped. Letters without case, such as CJK, Arabic, Hebrew or Thai, titlecase letters and combining marks are removed, so `"用户名".ToSnakeCase()` is `""` and `"café"` written with a combining accent becomes `"cafe"`. EF Core enum converters and the Enums generator use the same rule, so it is a stored format and will not change.
+
 ### Collection Extensions
 
 ```csharp
