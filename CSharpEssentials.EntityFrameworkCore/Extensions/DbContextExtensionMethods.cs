@@ -216,24 +216,33 @@ public static class DbContextExtensionMethods
         return entity;
     }
 
-    public static Task<Result> SaveChangesAsResultAsync(
+    public static async Task<Result> SaveChangesAsResultAsync(
         this DbContext context,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            async () => { await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false); },
-            ex => Error.Exception(ex, ErrorType.Unknown),
-            cancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return Result.Success();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return Error.Exception(ex, ErrorType.Unknown);
+        }
     }
 
-    public static Task<Result<int>> SaveChangesAsResultAsync(
+    public static async Task<Result<int>> SaveChangesAsResultAsync(
         this DbContext context,
         bool acceptAllChangesOnSuccess,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync<int>(
-            () => context.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken),
-            ex => Error.Exception(ex, ErrorType.Unknown),
-            cancellationToken);
+        try
+        {
+            return await context.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return Error.Exception(ex, ErrorType.Unknown);
+        }
     }
 }
