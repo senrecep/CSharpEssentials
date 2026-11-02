@@ -45,7 +45,7 @@ public sealed class IdempotencyResponseCaptureTests
 
         IdempotencyResponse response = await host.PostAsync("/stream-shape");
 
-        response.Body.Should().Be("read:False|seek:False|write:True|unsupported:5");
+        response.Body.Should().Be("read:False|seek:False|write:True|unsupported:6");
     }
 
     [Fact]
@@ -134,11 +134,11 @@ public sealed class IdempotencyResponseCaptureTests
                         () => body.Position = 0,
                         () => body.Seek(0, SeekOrigin.Begin),
                         () => body.SetLength(0),
+                        () => _ = body.Read(new byte[1], 0, 1),
                     ];
                     int count = unsupported.Count(Throws);
-                    bool readThrows = Throws(() => _ = body.Read(new byte[1], 0, 1));
                     await context.Response.WriteAsync(
-                        $"read:{body.CanRead && !readThrows}|seek:{body.CanSeek}|write:{body.CanWrite}|unsupported:{count}");
+                        $"read:{body.CanRead}|seek:{body.CanSeek}|write:{body.CanWrite}|unsupported:{count}");
                 }).WithIdempotency();
                 app.MapPost("/two-writes", async (HttpContext context, IdempotencyProbe probe) =>
                 {
