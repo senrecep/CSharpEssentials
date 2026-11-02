@@ -146,6 +146,12 @@ public static class Extensions
     /// <see cref="KeysetPaginationExtensions.KeysetPaginateAsync{T}(IQueryable{T}, IKeysetPaginationRequest, Func{Keyset.KeysetOrdering{T}, Keyset.KeysetOrdering{T}}, CancellationToken)"/>,
     /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
     /// </para>
+    /// <para>
+    /// A <see cref="ICursorPaginationRequest{TCursor}.Cursor"/> equal to <c>default(TCursor)</c> (<c>null</c>, <c>0</c>,
+    /// <see cref="Guid.Empty"/>) means "no cursor" and returns the first page. If a page ends on a row whose cursor value
+    /// is <c>default(TCursor)</c>, the returned <c>Next</c> leads back to the first page, so the cursor column must never
+    /// hold that value.
+    /// </para>
     /// </summary>
     [Obsolete("Single-column cursor pagination skips rows when the cursor column is not unique and does not cap the limit by default. Use KeysetPaginateAsync with a unique key (for example .Descending(x => x.CreatedAt).Ascending(x => x.Id)) instead.")]
     public static async Task<CursorPaginationResponse<T, TCursor>> PaginateAsync<T, TCursor>(
