@@ -158,7 +158,7 @@ public static class StringExtensions
         return skips;
     }
     private static bool CheckCategory(UnicodeCategory previous, UnicodeCategory current) =>
-        previous != current && (current is UnicodeCategory.UppercaseLetter || current is UnicodeCategory.DecimalDigitNumber
+        previous != current && (current is UnicodeCategory.UppercaseLetter or UnicodeCategory.TitlecaseLetter or UnicodeCategory.DecimalDigitNumber
             || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
 
     private static bool InsertSeparator(this bool insertSeparator, UnicodeCategory previous, UnicodeCategory current) =>
@@ -167,5 +167,10 @@ public static class StringExtensions
     private static bool IsSpecialCharacter(UnicodeCategory category) =>
     category is not UnicodeCategory.UppercaseLetter
              and not UnicodeCategory.LowercaseLetter
+             and not UnicodeCategory.TitlecaseLetter
+             and not UnicodeCategory.ModifierLetter
+             and not UnicodeCategory.OtherLetter
+             and not UnicodeCategory.NonSpacingMark
+             and not UnicodeCategory.SpacingCombiningMark
              and not UnicodeCategory.DecimalDigitNumber;
 }

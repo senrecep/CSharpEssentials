@@ -248,13 +248,18 @@ namespace Sample
 
         private static bool CheckCategory(global::System.Globalization.UnicodeCategory previous, global::System.Globalization.UnicodeCategory current)
         {
-            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
+            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.TitlecaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
         }
 
         private static bool IsSpecialCharacter(global::System.Globalization.UnicodeCategory category)
         {
             return category != global::System.Globalization.UnicodeCategory.UppercaseLetter
                 && category != global::System.Globalization.UnicodeCategory.LowercaseLetter
+                && category != global::System.Globalization.UnicodeCategory.TitlecaseLetter
+                && category != global::System.Globalization.UnicodeCategory.ModifierLetter
+                && category != global::System.Globalization.UnicodeCategory.OtherLetter
+                && category != global::System.Globalization.UnicodeCategory.NonSpacingMark
+                && category != global::System.Globalization.UnicodeCategory.SpacingCombiningMark
                 && category != global::System.Globalization.UnicodeCategory.DecimalDigitNumber;
         }
     }

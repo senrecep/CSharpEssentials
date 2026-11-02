@@ -92,7 +92,7 @@ OrderStatusExtensions.GetValues();                  // all members
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are formatted as comma separated wire names of single flags.
 - `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member). They never map an unknown value to the fallback member: `ParseWire("gone")` throws, while `ParseWire("unknown")` returns `Unknown` because that is the member's own wire name.
-- `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values.
+- `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values, except for member names with letters without case or combining marks (see [Upgrading to 8.0](#upgrading-to-80)).
 - `ToSnakeCase()`, `TryParse` and `Parse` are obsolete; use `ToWireName()`, `TryParseWire` and `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`), while `ToWireName()` returns `http_status`. That old spelling is read as an extra alias, so stored values still load.
 
 ## Conventions and runtime API
@@ -238,3 +238,7 @@ Full vocabulary and the normative matrix: [enum conventions design](../docs/desi
 ## Migrating from 4.x
 
 See [Migrating from 4.x to 5.0](../docs/migration/v4-to-v5.md#naming-and-generated-helpers-csharpessentialsenums): obsolete helpers, the `ToSnakeCase()` vs `ToWireName()` difference and the database rollout.
+
+## Upgrading to 8.0
+
+- The legacy spelling (`{Member}SnakeCase`, `{Member}KebabCase`, the obsolete `ToSnakeCase()` and `ToKebabCase()`, and the legacy alias read by `TryParseWire`) follows the 8.0 Core `ToSnakeCase` rule and keeps letters without case, titlecase letters and combining marks. A member named `用户Name` was `name` and is now `用户_name`. Members named only with Latin letters and digits keep their values. If you stored the old spelling of such a member, rewrite the stored values with the new spelling.

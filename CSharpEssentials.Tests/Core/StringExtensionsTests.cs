@@ -209,11 +209,34 @@ public class StringExtensionsTests
     }
 
     [Theory]
-    [InlineData("用户名", "")]
-    [InlineData("user用户Name", "user_name")]
-    [InlineData("cafe\u0301", "cafe")]
-    public void ToSnakeCase_DropsLettersOutsideUppercaseLowercaseAndDigits(string input, string expected)
+    [InlineData("用户名", "用户名")]
+    [InlineData("user用户Name", "user用户_name")]
+    [InlineData("cafe\u0301", "cafe\u0301")]
+    [InlineData("foo\u01C5emal", "foo_\u01C6emal")]
+    [InlineData("עברית שלום", "עברית_שלום")]
+    [InlineData("สวัสดีWorld", "สวัสดี_world")]
+    public void ToSnakeCase_KeepsLettersWithoutCaseTitlecaseLettersAndMarks(string input, string expected)
     {
         input.ToSnakeCase().Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToKebabCase_KeepsArabicLetters()
+    {
+        "مرحبا بالعالم".ToKebabCase().Should().Be("مرحبا-بالعالم");
+    }
+
+    [Fact]
+    public void ToPascalCase_KeepsLettersWithoutCase()
+    {
+        "user_用户_name".ToPascalCase().Should().Be("User用户Name");
+    }
+
+    [Fact]
+    public void ToSnakeCase_KeepsLettersWithoutCase_When_Input_Uses_The_Pooled_Buffer()
+    {
+        string input = string.Concat(Enumerable.Repeat("用户Name", 64));
+
+        input.ToSnakeCase().Should().Be(string.Concat(Enumerable.Repeat("用户_name", 64)));
     }
 }

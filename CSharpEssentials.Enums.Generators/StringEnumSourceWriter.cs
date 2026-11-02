@@ -370,13 +370,18 @@ internal static class StringEnumSourceWriter
         w.Line();
         w.Line("private static bool CheckCategory(global::System.Globalization.UnicodeCategory previous, global::System.Globalization.UnicodeCategory current)");
         w.Open();
-        w.Line("return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));");
+        w.Line("return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.TitlecaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));");
         w.Close();
         w.Line();
         w.Line("private static bool IsSpecialCharacter(global::System.Globalization.UnicodeCategory category)");
         w.Open();
         w.Line("return category != global::System.Globalization.UnicodeCategory.UppercaseLetter");
         w.Line("    && category != global::System.Globalization.UnicodeCategory.LowercaseLetter");
+        w.Line("    && category != global::System.Globalization.UnicodeCategory.TitlecaseLetter");
+        w.Line("    && category != global::System.Globalization.UnicodeCategory.ModifierLetter");
+        w.Line("    && category != global::System.Globalization.UnicodeCategory.OtherLetter");
+        w.Line("    && category != global::System.Globalization.UnicodeCategory.NonSpacingMark");
+        w.Line("    && category != global::System.Globalization.UnicodeCategory.SpacingCombiningMark");
         w.Line("    && category != global::System.Globalization.UnicodeCategory.DecimalDigitNumber;");
         w.Close();
     }

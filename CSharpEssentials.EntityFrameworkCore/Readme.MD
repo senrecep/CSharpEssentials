@@ -714,3 +714,7 @@ public sealed class PostgresConstraintTranslator : IDbErrorTranslator
 ```
 
 The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
+
+## Upgrading to 8.0
+
+- `EnumStoredAs.LegacySnakeCase`, `UseLegacySnakeCase` and `LegacySnakeCaseEnumConverter` write the 8.0 Core `ToSnakeCase` output, which keeps letters without case and combining marks. A member named `用户Name` was stored as `name`, which could not be read back, and is now stored as `用户_name`. Members named only with Latin letters and digits store the same text. Rewrite stored rows of non-Latin members with the new value.

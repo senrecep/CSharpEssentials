@@ -41,7 +41,7 @@ text.ToTitleCase();           // "Hello World"
 text.ToUnderscoreCamelCase(); // "_helloWorld"
 ```
 
-The converters keep only uppercase letters, lowercase letters and decimal digits (Unicode categories `Lu`, `Ll` and `Nd`); everything else starts a new word or is dropped. Letters without case, such as CJK, Arabic, Hebrew or Thai, titlecase letters and combining marks are removed, so `"用户名".ToSnakeCase()` is `""` and `"café"` written with a combining accent becomes `"cafe"`. EF Core enum converters and the Enums generator use the same rule, so it is a stored format and will not change.
+The converters keep letters of every script, combining marks and decimal digits (Unicode categories `Lu`, `Ll`, `Lt`, `Lm`, `Lo`, `Mn`, `Mc` and `Nd`); any other character starts a new word and is dropped. A word starts at an uppercase or titlecase letter, at a digit, and after a dropped character. Letters without case, such as CJK, Arabic, Hebrew or Thai, are kept as they are and continue the current word, so `"用户名".ToSnakeCase()` is `"用户名"` and `"user用户Name".ToSnakeCase()` is `"user用户_name"`. Titlecase letters such as `ǅ` are lowercased like uppercase letters. Letters outside the Basic Multilingual Plane (surrogate pairs) are still dropped. EF Core `LegacySnakeCase` storage and the Enums generator's `SnakeCase` and `KebabCase` output use the same rule.
 
 ### Collection Extensions
 
@@ -185,4 +185,5 @@ Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEs
 
 - `GetRandomItems` throws `ArgumentOutOfRangeException` (parameter `count`) for a negative `count`. It threw `OverflowException` before; update any `catch` that relied on that.
 - `MsToDateTime` returns a `DateTime` with `Kind = Utc`. It returned `Kind = Unspecified` before, with the same ticks. `ToUniversalTime()` no longer shifts it by the local offset, System.Text.Json now writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. If you stored or compared the old value, call `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour.
+- `ToSnakeCase`, `ToKebabCase` and the other case converters keep letters without case (CJK, Arabic, Hebrew, Thai), titlecase letters and combining marks. 7.x dropped them, so `"用户名".ToSnakeCase()` was `""` and `"user用户Name"` was `"user_name"`; they are now `"用户名"` and `"user用户_name"`. Output for names written only in Latin letters and digits does not change. If you stored converted values of non-Latin names, for example through EF Core `LegacySnakeCase` enum storage, rewrite them with the new output.
 - `ToStringFromGuid` and `ToGuidFromString` use the RFC 4648 base64url alphabet (`+` as `-`, `/` as `_`). 7.x used the reverse mapping, so a short ID stored by 7.x that contains `-` or `_` now decodes to a different GUID. Convert stored IDs once by swapping every `-` with `_` and every `_` with `-`, for example `id.Replace('-', '*').Replace('_', '-').Replace('*', '_')`.

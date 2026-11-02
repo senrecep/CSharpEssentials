@@ -95,7 +95,7 @@ internal static class EnumNameConverter
         return new string(chars);
     }
 
-    /// <summary>The 3.x/4.x <c>ToSnakeCase()</c> algorithm (<c>HTTPResponse</c> is <c>httpresponse</c>), read as an alias.</summary>
+    /// <summary>The Core <c>ToSnakeCase()</c> algorithm (<c>HTTPResponse</c> is <c>httpresponse</c>), read as an alias.</summary>
     public static string ToLegacySnakeCase(string name)
     {
         StringBuilder sb = new(name.Length + 4);
@@ -107,7 +107,7 @@ internal static class EnumNameConverter
             if (!IsSpecial(current))
             {
                 bool insertSeparator = previous != current &&
-                    (current is UnicodeCategory.UppercaseLetter or UnicodeCategory.DecimalDigitNumber || IsSpecial(previous) && !IsSpecial(current));
+                    (current is UnicodeCategory.UppercaseLetter or UnicodeCategory.TitlecaseLetter or UnicodeCategory.DecimalDigitNumber || IsSpecial(previous) && !IsSpecial(current));
                 if (insertSeparator && !isFirst)
                     sb.Append('_');
                 sb.Append(char.ToLowerInvariant(c));
@@ -121,5 +121,7 @@ internal static class EnumNameConverter
     }
 
     private static bool IsSpecial(UnicodeCategory category) =>
-        category is not UnicodeCategory.UppercaseLetter and not UnicodeCategory.LowercaseLetter and not UnicodeCategory.DecimalDigitNumber;
+        category is not UnicodeCategory.UppercaseLetter and not UnicodeCategory.LowercaseLetter and not UnicodeCategory.TitlecaseLetter
+            and not UnicodeCategory.ModifierLetter and not UnicodeCategory.OtherLetter and not UnicodeCategory.NonSpacingMark
+            and not UnicodeCategory.SpacingCombiningMark and not UnicodeCategory.DecimalDigitNumber;
 }
