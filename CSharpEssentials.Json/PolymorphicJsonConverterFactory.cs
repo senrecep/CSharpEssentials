@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace CSharpEssentials.Json;
@@ -12,11 +13,14 @@ public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
 {
     /// <summary>
     /// Abstract classes and interfaces, except collections and dictionaries (<see cref="System.Collections.IEnumerable"/>),
-    /// which keep the built-in array/object serialization.
+    /// async streams (<see cref="IAsyncEnumerable{T}"/>) and <see cref="JsonNode"/>,
+    /// which keep the built-in serialization.
     /// </summary>
     public override bool CanConvert(Type typeToConvert) =>
         (typeToConvert.IsAbstract || typeToConvert.IsInterface) &&
-        !typeof(System.Collections.IEnumerable).IsAssignableFrom(typeToConvert);
+        !typeof(System.Collections.IEnumerable).IsAssignableFrom(typeToConvert) &&
+        !typeof(JsonNode).IsAssignableFrom(typeToConvert) &&
+        !(typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
 
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {

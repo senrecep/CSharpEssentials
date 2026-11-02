@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using CSharpEssentials.Json;
 using FluentAssertions;
 
@@ -27,6 +28,10 @@ internal sealed class Triangle : ScannedShape
 {
     public double Base { get; set; }
 }
+
+internal sealed record NodeHolder(JsonNode? Data);
+
+internal sealed record AsyncHolder(IAsyncEnumerable<int> Items);
 
 public class PolymorphicJsonConverterFactoryTests
 {
@@ -149,5 +154,51 @@ public class PolymorphicJsonConverterFactoryTests
 
         shape.Should().BeOfType<Triangle>().Which.Base.Should().Be(3);
         GC.KeepAlive(brokenAssembly);
+    }
+    [Theory]
+    [InlineData(typeof(JsonNode))]
+    [InlineData(typeof(JsonObject))]
+    [InlineData(typeof(JsonArray))]
+    [InlineData(typeof(JsonValue))]
+    public void CanConvert_WithJsonNode_ShouldReturnFalse(Type type)
+    {
+        PolymorphicJsonConverterFactory factory = new();
+
+        factory.CanConvert(type).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Serialize_JsonNodeProperty_ShouldKeepBuiltInShape()
+    {
+        string json = JsonSerializer.Serialize(new NodeHolder(new JsonArray(1, 2)), PolymorphicOptions);
+
+        json.Should().Be("{\"Data\":[1,2]}");
+    }
+
+    [Fact]
+    public void Deserialize_JsonNodeProperty_ShouldReadPlainObject()
+    {
+        NodeHolder? holder = JsonSerializer.Deserialize<NodeHolder>("{\"Data\":{\"a\":1}}", PolymorphicOptions);
+
+        holder!.Data!["a"]!.GetValue<int>().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Serialize_AsyncEnumerableProperty_ShouldWriteArray()
+    {
+        using MemoryStream stream = new();
+
+        await JsonSerializer.SerializeAsync(stream, new AsyncHolder(Range(2)), PolymorphicOptions);
+
+        System.Text.Encoding.UTF8.GetString(stream.ToArray()).Should().Be("{\"Items\":[0,1]}");
+    }
+
+    private static async IAsyncEnumerable<int> Range(int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            await Task.Yield();
+            yield return i;
+        }
     }
 }
