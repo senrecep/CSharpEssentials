@@ -40,7 +40,7 @@ public class ProblemTypeUrisTests
     [InlineData(418)]
     [InlineData(429)]
     [InlineData(599)]
-    public void Rfc9110_Should_ReturnNull_When_StatusCodeIsNotDefinedByTheRfc(int statusCode)
+    public void Rfc9110_Should_ReturnNull_When_StatusCodeHasNoMappedSection(int statusCode)
     {
         ProblemTypeUris.Rfc9110(statusCode).Should().BeNull();
     }
