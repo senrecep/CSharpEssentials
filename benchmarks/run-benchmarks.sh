@@ -10,6 +10,7 @@
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 #   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
 #   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations vs CSharpFunctionalExtensions / ErrorOr / FluentResults
+#   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -69,8 +70,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*CreateComparison*" "*MapComparison*" "*BindComparison*" "*EnsureComparison*" "*MatchComparison*" "*TapComparison*" "*AsyncPipelineComparison*" "*ErrorAggregationComparison*" "*MaybeComparison*")
         ;;
+    di)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.DependencyInjection.Benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/di"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*Registration*" "*Decoration*" "*Resolve*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di)" >&2
         exit 1
         ;;
 esac

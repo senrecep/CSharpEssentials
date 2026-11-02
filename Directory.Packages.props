@@ -3,10 +3,10 @@
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <CentralPackageFloatingVersionsEnabled>true</CentralPackageFloatingVersionsEnabled>
         <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
-        <!-- The endpoints benchmarks (and the host project BenchmarkDotNet generates under their bin/, which imports no
-             Directory.Build files) reference FastEndpoints and Carter, which need newer transitive versions
-             (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+        <!-- The endpoints and dependency injection benchmarks (and the host project BenchmarkDotNet generates under their
+             bin/, which imports no Directory.Build files) reference FastEndpoints, Carter and Scrutor, which need newer
+             transitive versions (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -136,6 +136,10 @@
         <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
         <PackageVersion Include="ErrorOr" Version="2.1.1" />
         <PackageVersion Include="FluentResults" Version="4.0.0" />
+        <PackageVersion Include="Scrutor" Version="7.0.0" />
+        <!-- The container for the DI suite and its Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
+             major Scrutor 7 requires. Scoped to those projects so transitive pinning does not move other projects' container. -->
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot'))" />
         <!-- TestServer for the endpoints throughput suite, matched to each TFM's shared framework major. Scoped to that
              suite so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
