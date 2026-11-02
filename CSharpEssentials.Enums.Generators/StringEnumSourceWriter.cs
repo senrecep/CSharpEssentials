@@ -501,7 +501,7 @@ internal static class StringEnumSourceWriter
         w.Close();
         w.Line();
         w.Line("string name = __flagNames[i];");
-        w.Line("name.AsSpan().CopyTo(span.Slice(position));");
+        w.Line("global::System.MemoryExtensions.AsSpan(name).CopyTo(span.Slice(position));");
         w.Line("position += name.Length;");
         w.Close();
         w.Close(");");

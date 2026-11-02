@@ -281,7 +281,7 @@ namespace Sample
                     }
 
                     string name = __flagNames[i];
-                    name.AsSpan().CopyTo(span.Slice(position));
+                    global::System.MemoryExtensions.AsSpan(name).CopyTo(span.Slice(position));
                     position += name.Length;
                 }
             });
