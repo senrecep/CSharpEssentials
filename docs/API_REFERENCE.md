@@ -501,7 +501,7 @@ string name = GetUser(id)
 
 | Method | What It Does | Replaces |
 |--------|-------------|----------|
-| `TryFirst()` | First element or None | `FirstOrDefault` (no null) |
+| `TryFirst()` | First element or None, including for value types | `FirstOrDefault` |
 | `TryFirst(predicate)` | First matching or None | `FirstOrDefault(pred)` |
 | `TryLast()` | Last element or None | `LastOrDefault` |
 | `TryFind(key)` | Lookup on an `IReadOnlyDictionary<TKey, TValue>` (`Dictionary` qualifies) or None | `TryGetValue` boilerplate |
