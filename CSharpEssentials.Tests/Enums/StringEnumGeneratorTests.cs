@@ -326,7 +326,7 @@ public class StringEnumGeneratorTests
             static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
         AssertFlagsText(Range(0, 40).Select(static r => (GeneratedFlagsNoZero)(uint)r).Concat([(GeneratedFlagsNoZero)uint.MaxValue]),
             static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
-        AssertFlagsText(new ulong[] { 0, 1, 2, 3, 4, 1UL << 63, (1UL << 63) | 1, (1UL << 63) | 2, ulong.MaxValue }.Select(static r => (GeneratedHugeFlags)r),
+        AssertFlagsText(new ulong[] { 0, 1, 2, 3, 4, 1UL << 63, (1UL << 63) | 1, (1UL << 63) | 2, ulong.MaxValue }.Select(static r => (GeneratedHugeBits)r),
             static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
         AssertFlagsText(Range(0, 16).Select(static r => (GeneratedFlagsDuplicate)(int)r).Where(static v => !Enum.IsDefined(v)), static v => v.ToOptimizedString(),
             static v => v.ToLowerCase(), static v => v.ToUpperCase());
@@ -436,6 +436,7 @@ public class StringEnumGeneratorTests
         upper(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToUpper(expected));
     }
 
+    [SuppressMessage("Globalization", "CA1308", Justification = "ToLowerCase is the lower invariant form of the Enum.ToString() text.")]
     private static void AssertFlagsText<T>(IEnumerable<T> values, Func<T, string> optimized, Func<T, string> lower, Func<T, string> upper)
         where T : struct, Enum
     {
@@ -650,6 +651,7 @@ internal enum GeneratedSignBit
 
 [StringEnum, Flags]
 [SuppressMessage("Usage", "CSE0007", Justification = "Fixture for composites over bits without a single flag member.")]
+[SuppressMessage("Major Code Smell", "S4070", Justification = "Fixture for composites over bits without a single flag member.")]
 internal enum GeneratedWidePermissions
 {
     None = 0,
@@ -677,7 +679,7 @@ internal enum GeneratedFlagsNoZero : uint
 }
 
 [StringEnum, Flags]
-internal enum GeneratedHugeFlags : ulong
+internal enum GeneratedHugeBits : ulong
 {
     None = 0,
     Low = 1,
@@ -686,6 +688,7 @@ internal enum GeneratedHugeFlags : ulong
 }
 
 [StringEnum, Flags]
+[SuppressMessage("Design", "CA1069", Justification = "Fixture for two flag members sharing a value.")]
 internal enum GeneratedFlagsDuplicate
 {
     None = 0,

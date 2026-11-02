@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CSharpEssentials.Enums;
 using FluentAssertions;
 
@@ -6,6 +7,7 @@ namespace CSharpEssentials.Enums.Net8.Tests;
 public class Net8FlagsFormatTests
 {
     [Fact]
+    [SuppressMessage("Globalization", "CA1308", Justification = "ToLowerCase is the lower invariant form of the Enum.ToString() text.")]
     public void ToOptimizedString_Should_Match_Enum_ToString_For_Every_Combination()
     {
         for (int raw = 0; raw < 1024; raw++)
