@@ -59,7 +59,6 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         // Compact Formats
         "yyyyMMdd",                         // 20240314
         "yyyy-MM",                          // 2024-03
-        "yyyy'W'ww",                        // 2024W11 (Week 11)
         
         // Detailed ISO Formats
         "yyyy-MM-ddTHH:mm:ss.ffffff",       // 2024-03-14T15:30:45.123456
@@ -68,10 +67,8 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         // RFC and Email Formats
         "ddd, dd MMM yyyy HH:mm:ss 'GMT'",  // Thu, 14 Mar 2024 15:30:45 GMT
         "ddd, dd-MMM-yy HH:mm:ss 'GMT'",    // Thu, 14-Mar-24 15:30:45 GMT
-        "yyyy-MM-dd'T'HH:mm:ssXXX",         // 2024-03-14T15:30:45+03:00
         "yyyy-MM-dd HH:mm:ss zzz",          // 2024-03-14 15:30:45 +03:00
         "dd MMM yyyy HH:mm:ss",             // 14 Mar 2024 15:30:45
-        "yyyy.MM.dd G 'at' HH:mm:ss z",     // 2024.03.14 AD at 15:30:45 GMT
         
         // Compact Timestamp Formats
         "yyyyMMddHHmmss",                   // 20240314153045
@@ -85,10 +82,6 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         "yyyy-MM-dd HH.mm",                 // 2024-03-14 15.30
         "dd/MM/yyyy HH:mm:ss",              // 14/03/2024 15:30:45
         "MM/dd/yyyy HH:mm:ss",              // 03/14/2024 15:30:45 (US format with time)
-        
-        // Week-Based Formats
-        "yyyy'W'ww",                        // 2024W11
-        "yyyy-'W'ww-d",                     // 2024-W11-4 (4th day of week 11)
         
         // Timezone-aware Formats
         "yyyy-MM-ddTHH:mm:sszzz",           // 2024-03-14T15:30:45+03:00

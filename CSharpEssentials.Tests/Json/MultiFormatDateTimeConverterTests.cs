@@ -219,4 +219,13 @@ public class MultiFormatDateTimeConverterTests
         factory.CanConvert(typeof(string)).Should().BeFalse();
         factory.CanConvert(typeof(int)).Should().BeFalse();
     }
+    [Theory]
+    [InlineData("2024W11")]
+    [InlineData("2024-W11-4")]
+    public void Deserialize_WithWeekText_ShouldThrowWithoutListingDeadFormats(string text)
+    {
+        JsonException ex = Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<DateTime>($"\"{text}\"", DefaultOptions));
+
+        ex.Message.Should().NotContain("'W'ww").And.NotContain("XXX").And.NotContain(" G 'at' ");
+    }
 }
