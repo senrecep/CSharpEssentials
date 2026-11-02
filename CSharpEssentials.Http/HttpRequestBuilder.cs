@@ -104,6 +104,14 @@ public sealed class HttpRequestBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sends <paramref name="content"/> as the request body. The builder keeps ownership: <see cref="AsResultAsync(HttpClient?, CancellationToken)"/>
+    /// does not dispose it, so the same builder can send it again, for example on a retry. Content that can be read only once,
+    /// such as a <see cref="StreamContent"/> over a forward-only stream, cannot be sent a second time. Dispose the content when
+    /// the builder is no longer used.
+    /// </summary>
+    /// <param name="content">The request body.</param>
+    /// <returns>This builder.</returns>
     public HttpRequestBuilder WithContent(HttpContent content)
     {
         _content = content;
@@ -236,11 +244,18 @@ public sealed class HttpRequestBuilder
         if (buildResult.IsFailure)
             return buildResult.Errors;
 
-        using HttpRequestMessage request = buildResult.Value;
-        if (_followRedirects)
-            return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken).ConfigureAwait(false);
+        HttpRequestMessage request = buildResult.Value;
+        try
+        {
+            if (_followRedirects)
+                return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken).ConfigureAwait(false);
 
-        return await client.SendAsResultAsync(request, cancellationToken).ConfigureAwait(false);
+            return await client.SendAsResultAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release(request);
+        }
     }
 
     public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default)
@@ -252,10 +267,25 @@ public sealed class HttpRequestBuilder
         if (buildResult.IsFailure)
             return buildResult.Errors;
 
-        using HttpRequestMessage request = buildResult.Value;
-        if (_followRedirects)
-            return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken).ConfigureAwait(false);
+        HttpRequestMessage request = buildResult.Value;
+        try
+        {
+            if (_followRedirects)
+                return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken).ConfigureAwait(false);
 
-        return await client.SendAsResultAsync<T>(request, options, cancellationToken).ConfigureAwait(false);
+            return await client.SendAsResultAsync<T>(request, options, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release(request);
+        }
+    }
+
+    private void Release(HttpRequestMessage request)
+    {
+        if (ReferenceEquals(request.Content, _content))
+            request.Content = null;
+
+        request.Dispose();
     }
 }

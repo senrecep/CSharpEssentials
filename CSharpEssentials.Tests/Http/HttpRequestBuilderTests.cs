@@ -110,7 +110,37 @@ public class HttpRequestBuilderTests
         result.IsFailure.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task AsResultAsync_WithContent_Should_Send_Content_Again_On_Reuse()
+    {
+        using var handler = new BodyRecordingHandler();
+        using var client = new HttpClient(handler);
+        HttpRequestBuilder builder = HttpRequestBuilder.Post("https://test.com/api").WithContent(new StringContent("a"));
+
+        Result first = await builder.AsResultAsync(client);
+        Result second = await builder.AsResultAsync(client);
+        Result<TestDto> third = await builder.AsResultAsync<TestDto>(client);
+        Result<TestDto> fourth = await builder.AsResultAsync<TestDto>(client);
+
+        first.IsSuccess.Should().BeTrue();
+        second.IsSuccess.Should().BeTrue();
+        third.IsSuccess.Should().BeTrue();
+        fourth.IsSuccess.Should().BeTrue();
+        handler.Bodies.Should().Equal("a", "a", "a", "a");
+    }
+
     private sealed record TestDto(int Id, string Name);
+
+    private sealed class BodyRecordingHandler : HttpMessageHandler
+    {
+        public List<string?> Bodies { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Bodies.Add(request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken));
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"id":1,"name":"Test"}""") };
+        }
+    }
 
     private sealed class MockHandler(HttpResponseMessage response) : HttpMessageHandler
     {
