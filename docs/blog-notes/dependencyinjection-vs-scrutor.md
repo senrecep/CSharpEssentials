@@ -9,7 +9,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - Decoration (wrapping a registered service) has no framework API, so it is either a hand-written factory or a library.
 - The question to answer: can registration and decoration be declared on the class, without paying for a scan at startup, per resolve, or under Native AOT?
 
-## What the framework already gives you
+## What the framework already provides
 
 - `Add{Lifetime}`, `TryAdd*`, `TryAddEnumerable`, `Replace`, `RemoveAll`, keyed services (`AddKeyed*`, `[FromKeyedServices]`).
 - No scanning, no attributes, no decoration API. Decoration by hand means `Replace` with a factory that builds the decorator.
@@ -17,26 +17,26 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 ## What each library adds
 
-- **CSharpEssentials.DependencyInjection (CSE).**
+- CSharpEssentials.DependencyInjection (CSE):
   - `[RegisterScoped]` / `[RegisterSingleton]` / `[RegisterTransient]` on the class, with `Key`, `As`, `Strategy`.
   - A source generator writes `Add{Assembly}Services()` (and `AddAllServices()` in applications) as plain `ServiceDescriptor` adds.
   - `[Decorates]` generates decorator factories; `Decorate<TService, TDecorator>()` works at runtime, keyed or not.
   - 9 analyzer rules (CSE2001-CSE2009) and a code fix.
   - Opt-in reflection fallback `AddServicesFromAssemblies`, annotated `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`.
   - `IsAotCompatible` on net8.0+. Depends on DI.Abstractions and Logging.Abstractions.
-- **Scrutor 7.0.0.**
+- Scrutor 7.0.0:
   - Fluent runtime scanning: `Scan(s => s.FromAssemblyOf<T>().AddClasses().AsMatchingInterface()...)`; opt-in `[ServiceDescriptor]` attributes, still scanned at runtime.
   - `Decorate` / `TryDecorate` through `ActivatorUtilities.CreateInstance`; the public overloads do not decorate keyed registrations.
   - No generator, no analyzers, no trim annotations. Depends on DI.Abstractions and DependencyModel 10.0.0.
 
 ## The numbers that matter (net10 unless stated)
 
-1. **Cold startup (fresh process, register + build + resolve every service once).** N=50: Manual 24.88 ms, CseGenerated 26.24 ms (1.06×), Scrutor 34.75 ms (1.40×), CseReflection 38.21 ms (1.54×). N=500: 55.70 / 57.83 / 63.89 / 71.20 ms. Same order on every TFM.
-2. **The generated registry is close to hand-written, not equal.** Cold: +1.36 ms at N=50 and +2.13 ms at N=500, outside error on every TFM except net11 N=50. Warm N=50: 763.58 vs 626.93 ns (1.22×); warm N=500 is a tie on net10 and CseGenerated is faster on net8, net9 and net11.
-3. **The reflection fallback loses to Scrutor.** Cold 38.21 vs 34.75 ms and 71.20 vs 63.89 ms; 1.85× Scrutor's allocation (335.52 vs 181.4 KB at N=50, measured on a 2nd in-process invocation). Warm 2.2-2.3× slower and 3.6-3.7× more allocation (N=50 / N=500).
-4. **Decoration registration (50 manual registrations + 10 decorations).** Manual 952.7 ns / 4.9 KB, CseGenerated 3,572.7 ns / 10.83 KB, CseRuntime 4,817.0 ns / 13.32 KB, Scrutor 11,877.3 ns / 11.46 KB. CseRuntime allocates more than Scrutor on every TFM, and on net11 Scrutor (3,980.5 ns) is faster than CseRuntime (4,581.9 ns).
-5. **Resolve.** Plain resolve ties on net10: 132.6 / 134.5 / 134.4 ns, 360 B each. Exceptions: net9 CseGenerated 156.5 vs 147.7 ns (1.06×); net8 Scrutor 150.9 vs 146.4 ns (1.03×). Decorated resolve: Manual factory 110.1 ns, CseGenerated 164.6 ns (1.49×), CseRuntime 252.2 ns (2.29×), Scrutor 309.6 ns (2.81×).
-6. **Native AOT (net10, linux-x64).** Manual and CseGenerated: 0 IL warnings, 2.2 MB, run and resolve all 50 services. Scrutor: 12 IL warnings, crashes with "Could not find any registered services for type 'IService0'". CseReflection: 4 IL warnings, crashes with "must have exactly one public constructor, but has 0" (documented as not AOT-safe). No sample roots the input assemblies.
+1. Cold startup (fresh process, register + build + resolve every service once). N=50: Manual 24.88 ms, CseGenerated 26.24 ms (1.06×), Scrutor 34.75 ms (1.40×), CseReflection 38.21 ms (1.54×). N=500: 55.70 / 57.83 / 63.89 / 71.20 ms. Same order on every TFM.
+2. The generated registry is close to hand-written code, but not equal to it. Cold: +1.36 ms at N=50 and +2.13 ms at N=500, outside error on every TFM except net11 N=50. Warm N=50: 763.58 vs 626.93 ns (1.22×); warm N=500 is a tie on net10 and CseGenerated is faster on net8, net9 and net11.
+3. The reflection fallback loses to Scrutor. Cold 38.21 vs 34.75 ms and 71.20 vs 63.89 ms; 1.85× Scrutor's allocation (335.52 vs 181.4 KB at N=50, measured on a 2nd in-process invocation). Warm 2.2-2.3× slower and 3.6-3.7× more allocation (N=50 / N=500).
+4. Decoration registration (50 manual registrations + 10 decorations). Manual 952.7 ns / 4.9 KB, CseGenerated 3,572.7 ns / 10.83 KB, CseRuntime 4,817.0 ns / 13.32 KB, Scrutor 11,877.3 ns / 11.46 KB. CseRuntime allocates more than Scrutor on every TFM, and on net11 Scrutor (3,980.5 ns) is faster than CseRuntime (4,581.9 ns).
+5. Plain resolve ties on net10: 132.6 / 134.5 / 134.4 ns, 360 B each. Exceptions: net9 CseGenerated 156.5 vs 147.7 ns (1.06×); net8 Scrutor 150.9 vs 146.4 ns (1.03×). Decorated resolve: Manual factory 110.1 ns, CseGenerated 164.6 ns (1.49×), CseRuntime 252.2 ns (2.29×), Scrutor 309.6 ns (2.81×).
+6. Native AOT (net10, linux-x64). Manual and CseGenerated: 0 IL warnings, 2.2 MB, run and resolve all 50 services. Scrutor: 12 IL warnings, crashes with "Could not find any registered services for type 'IService0'". CseReflection: 4 IL warnings, crashes with "must have exactly one public constructor, but has 0" (documented as not AOT-safe). No sample roots the input assemblies.
 
 ## The reflection finding (state it, do not soften it)
 

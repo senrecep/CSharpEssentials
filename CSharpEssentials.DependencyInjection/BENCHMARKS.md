@@ -1,18 +1,18 @@
 # CSharpEssentials.DependencyInjection: Performance Benchmarks
 
-**vs. Scrutor 7.0.0 and manual Microsoft.Extensions.DependencyInjection registration · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11**
+Compared with Scrutor 7.0.0 and manual Microsoft.Extensions.DependencyInjection registration, measured with BenchmarkDotNet v0.14.0 on an AMD Ryzen 5 5600 under .NET 8, 9, 10 and 11.
 
 ---
 
-## What Was Measured
+## What was measured
 
 Four BenchmarkDotNet classes in `benchmarks/CSharpEssentials.DependencyInjection.Benchmarks/` plus a Native AOT script. Every class uses `[MemoryDiagnoser]`. A self-check (`DiSelfCheck`) runs before the measurements and fails unless every variant registers the same (service type, implementation type, lifetime) set and every service resolves to its own implementation; for decoration it requires exactly IService0..IService9 to be wrapped once.
 
 | # | Class | Measured unit | Columns |
 |---|---|---|---|
-| 1 | `ColdRegistrationBenchmarks` | A fresh process per sample (`RunStrategy.ColdStart`, 15 launches, 1 iteration, no warmup): new `ServiceCollection`, registration, `BuildServiceProvider`, one scope, one resolve of every service, dispose. JIT, assembly loading, reflection scanning and the container's first-resolve work are inside the measurement. **This is the like-for-like startup number.** N = 50, 500 | Manual, CseGenerated, CseReflection, Scrutor |
+| 1 | `ColdRegistrationBenchmarks` | A fresh process per sample (`RunStrategy.ColdStart`, 15 launches, 1 iteration, no warmup): new `ServiceCollection`, registration, `BuildServiceProvider`, one scope, one resolve of every service, dispose. JIT, assembly loading, reflection scanning and the container's first-resolve work are inside the measurement. This is the like-for-like startup number. N = 50, 500 | Manual, CseGenerated, CseReflection, Scrutor |
 | 2 | `RegistrationBenchmarks` | New `ServiceCollection` + registration of N services, warm and in-process. Baseline is the empty collection. N = 50, 500 | Baseline, Manual, CseGenerated, CseReflection, Scrutor |
-| 3 | `DecorationBenchmarks` | New collection, the 50 services registered by hand, then 10 of them (IService0..IService9) decorated, warm. **The unit includes the 50 manual registrations** for every column | Manual, CseGenerated, CseRuntime, Scrutor |
+| 3 | `DecorationBenchmarks` | New collection, the 50 services registered by hand, then 10 of them (IService0..IService9) decorated, warm. The unit includes the 50 manual registrations for every column | Manual, CseGenerated, CseRuntime, Scrutor |
 | 4 | `ResolveBenchmarks` | Provider built once per variant in setup (N = 50); per operation: create a scope, resolve one service, dispose. *Plain* resolves IService15 (depends on IService14) from each library's own registration. *Decorated* resolves IService0 (no dependency) after decorating IService0..IService9 on top of the manual registration | Plain: Manual, CseGenerated, Scrutor. Decorated: Manual, CseGenerated, CseRuntime, Scrutor |
 | 5 | Native AOT (`benchmarks/di-aot/run-di-aot.sh`, not BenchmarkDotNet) | One sample per variant, `PublishAot=true`, net10, linux-x64: register S50, decorate 10, build, resolve all 50, check values | Manual, CseGenerated, CseReflection, Scrutor |
 
@@ -35,7 +35,7 @@ Scrutor's attribute mode (`[ServiceDescriptor]` + `.UsingAttributes()`) has no c
 
 The numbers come from the reports committed under `benchmarks/results/di/{tfm}/results/` and `benchmarks/results/di/aot/aot-report.md`.
 
-**Environment**
+Environment:
 
 | Property | Value |
 |---|---|
@@ -51,27 +51,27 @@ The numbers come from the reports committed under `benchmarks/results/di/{tfm}/r
 
 ---
 
-## Executive Summary
+## Executive summary
 
 Primary runtime: net10. A tie is a difference within the sum of the two BenchmarkDotNet error margins.
 
 | Finding | Details |
 |---|---|
-| **Cold startup: CseGenerated is 1.04-1.06× Manual (small CSE loss)** | net10: 26.24 vs 24.88 ms at N=50, 57.83 vs 55.70 ms at N=500. Outside error on every TFM except net11 N=50 (tie). Allocation (2nd in-process invocation): 116.84 vs 117.07 KB (N=50), 1,019.41 vs 1,190.34 KB (N=500) |
-| **Cold startup: Scrutor takes 1.32× (N=50) and 1.10× (N=500) the CseGenerated time** | net10: 34.75 vs 26.24 ms, 63.89 vs 57.83 ms; Scrutor allocation (2nd in-process invocation) 181.4 / 1,729.87 KB. Same 1.31-1.34× / 1.10-1.11× on every TFM. Scrutor's cold numbers include loading the CSE assembly, because the shared inputs carry CSE attributes (see Caveats) |
-| **CseReflection is slower than Scrutor and allocates more, cold and warm (CSE loss)** | Cold net10: 38.21 vs 34.75 ms (1.10×) and 71.20 vs 63.89 ms (1.11×); allocation (2nd in-process invocation) 335.52 vs 181.4 KB and 3,195.63 vs 1,729.87 KB (1.85×). Warm net10: 108,702 vs 49,016 ns (2.22×) and 1,162,353 vs 505,048 ns (2.30×); 176,395 vs 49,370 B (3.57×). Slower than Scrutor on every TFM |
-| **Warm registration: CseGenerated vs Manual is mixed** | net10: 763.58 vs 626.93 ns at N=50 (1.22×, CSE loss), 6,444.59 vs 6,375.29 ns at N=500 (tie). net11 N=50 1.15× (loss); net9 N=50 tie; CseGenerated is faster than Manual at N=500 on net8, net9 and net11 (0.91-0.96×) and at N=50 on net8. Allocation 4,464 vs 4,376 B (+88 B, the CSE marker descriptor) |
-| **Warm registration favours the reflection variants** | After the first scan the types are loaded, reflection caches are filled and the scanning code is JIT-compiled. Even so, Scrutor takes 78× and CseReflection 173× the Manual time at N=50 on net10. Use the cold table for startup decisions |
-| **Decoration registration: every library is slower than manual factory replacement (CSE loss)** | net10, 50 registrations + 10 decorations: Manual 952.7 ns / 4.9 KB, CseGenerated 3,572.7 ns / 10.83 KB (3.75×), CseRuntime 4,817.0 ns / 13.32 KB (5.06×), Scrutor 11,877.3 ns / 11.46 KB (12.47×) |
-| **CseRuntime decoration allocates more than Scrutor on every TFM, and is slower on net11 (CSE loss)** | 13.01-14.26 KB vs 11.31-11.46 KB. net11: Scrutor 3,980.5 ns vs CseRuntime 4,581.9 ns (1.15×) and CseGenerated 3,459.0 ns. Scrutor drops from 11,877.3 ns (net10) to 3,980.5 ns (net11); not investigated |
-| **Plain resolve: ties on net10 and net11; net9 CseGenerated and net8 Scrutor differ** | net10: 132.6 / 134.5 / 134.4 ns (Manual / CseGenerated / Scrutor), 360 B each. net9: CseGenerated 156.5 vs 147.7 ns (1.06×, outside error, CSE loss). net8: Scrutor 150.9 vs 146.4 ns (1.03×, outside error) |
-| **Decorated resolve: CSE paths slower than manual factory decoration (CSE loss)** | net10: Manual 110.1 ns / 360 B, CseGenerated 164.6 ns / 360 B (1.49×), CseRuntime 252.2 ns / 392 B (2.29×), Scrutor 309.6 ns / 392 B (2.81×). CseGenerated is 1.45-1.69× Manual on every TFM. The manual factory builds the inner service with `new`; CSE and Scrutor resolve it from a hidden keyed registration (see Caveats) |
-| **Native AOT: CseGenerated and Manual publish with 0 IL warnings and run; Scrutor and CseReflection crash** | Scrutor: 12 IL warnings, `DecorationException` at startup. CseReflection: 4 IL warnings, `InvalidOperationException` at startup; it is documented as not AOT-safe (`[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`). No sample roots the input assemblies |
-| **Known CSE finding, not fixed here: the generated decoration path uses metadata reflection** | `ServiceDecoration.TryDecorate` (`CSharpEssentials.DependencyInjection/Internal/ServiceDecoration.cs:20`) calls `EnsureDecoratable` (lines 90-108), which runs `GetConstructors()`, `GetParameters()` and `GetCustomAttribute<ServiceKeyAttribute>()` on the implementation type for every matched descriptor, also when called from the generated `[Decorates]` code. Each `Decorate` call also scans the whole collection. The Readme says the generated registry "uses no reflection" (Readme.MD, "Generated registry") and is "reflection-free" ("Migrating from Scrutor"). Precisely: activation is reflection-free and AOT-safe (0 warnings, sample runs), but decoration does metadata reflection. A follow-up is proposed |
+| Cold startup: CseGenerated is 1.04-1.06× Manual (small CSE loss) | net10: 26.24 vs 24.88 ms at N=50, 57.83 vs 55.70 ms at N=500. Outside error on every TFM except net11 N=50 (tie). Allocation (2nd in-process invocation): 116.84 vs 117.07 KB (N=50), 1,019.41 vs 1,190.34 KB (N=500) |
+| Cold startup: Scrutor takes 1.32× (N=50) and 1.10× (N=500) the CseGenerated time | net10: 34.75 vs 26.24 ms, 63.89 vs 57.83 ms; Scrutor allocation (2nd in-process invocation) 181.4 / 1,729.87 KB. Same 1.31-1.34× / 1.10-1.11× on every TFM. Scrutor's cold numbers include loading the CSE assembly, because the shared inputs carry CSE attributes (see Caveats) |
+| CseReflection is slower than Scrutor and allocates more, cold and warm (CSE loss) | Cold net10: 38.21 vs 34.75 ms (1.10×) and 71.20 vs 63.89 ms (1.11×); allocation (2nd in-process invocation) 335.52 vs 181.4 KB and 3,195.63 vs 1,729.87 KB (1.85×). Warm net10: 108,702 vs 49,016 ns (2.22×) and 1,162,353 vs 505,048 ns (2.30×); 176,395 vs 49,370 B (3.57×). Slower than Scrutor on every TFM |
+| Warm registration: CseGenerated vs Manual is mixed | net10: 763.58 vs 626.93 ns at N=50 (1.22×, CSE loss), 6,444.59 vs 6,375.29 ns at N=500 (tie). net11 N=50 1.15× (loss); net9 N=50 tie; CseGenerated is faster than Manual at N=500 on net8, net9 and net11 (0.91-0.96×) and at N=50 on net8. Allocation 4,464 vs 4,376 B (+88 B, the CSE marker descriptor) |
+| Warm registration favours the reflection variants | After the first scan the types are loaded, reflection caches are filled and the scanning code is JIT-compiled. Even so, Scrutor takes 78× and CseReflection 173× the Manual time at N=50 on net10. Use the cold table for startup decisions |
+| Decoration registration: every library is slower than manual factory replacement (CSE loss) | net10, 50 registrations + 10 decorations: Manual 952.7 ns / 4.9 KB, CseGenerated 3,572.7 ns / 10.83 KB (3.75×), CseRuntime 4,817.0 ns / 13.32 KB (5.06×), Scrutor 11,877.3 ns / 11.46 KB (12.47×) |
+| CseRuntime decoration allocates more than Scrutor on every TFM, and is slower on net11 (CSE loss) | 13.01-14.26 KB vs 11.31-11.46 KB. net11: Scrutor 3,980.5 ns vs CseRuntime 4,581.9 ns (1.15×) and CseGenerated 3,459.0 ns. Scrutor drops from 11,877.3 ns (net10) to 3,980.5 ns (net11); not investigated |
+| Plain resolve: ties on net10 and net11; net9 CseGenerated and net8 Scrutor differ | net10: 132.6 / 134.5 / 134.4 ns (Manual / CseGenerated / Scrutor), 360 B each. net9: CseGenerated 156.5 vs 147.7 ns (1.06×, outside error, CSE loss). net8: Scrutor 150.9 vs 146.4 ns (1.03×, outside error) |
+| Decorated resolve: CSE paths slower than manual factory decoration (CSE loss) | net10: Manual 110.1 ns / 360 B, CseGenerated 164.6 ns / 360 B (1.49×), CseRuntime 252.2 ns / 392 B (2.29×), Scrutor 309.6 ns / 392 B (2.81×). CseGenerated is 1.45-1.69× Manual on every TFM. The manual factory builds the inner service with `new`; CSE and Scrutor resolve it from a hidden keyed registration (see Caveats) |
+| Native AOT: CseGenerated and Manual publish with 0 IL warnings and run; Scrutor and CseReflection crash | Scrutor: 12 IL warnings, `DecorationException` at startup. CseReflection: 4 IL warnings, `InvalidOperationException` at startup; it is documented as not AOT-safe (`[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`). No sample roots the input assemblies |
+| Known CSE finding, not fixed here: the generated decoration path uses metadata reflection | `ServiceDecoration.TryDecorate` (`CSharpEssentials.DependencyInjection/Internal/ServiceDecoration.cs:20`) calls `EnsureDecoratable` (lines 90-108), which runs `GetConstructors()`, `GetParameters()` and `GetCustomAttribute<ServiceKeyAttribute>()` on the implementation type for every matched descriptor, also when called from the generated `[Decorates]` code. Each `Decorate` call also scans the whole collection. The Readme says the generated registry "uses no reflection" (Readme.MD, "Generated registry") and is "reflection-free" ("Migrating from Scrutor"). Precisely: activation is reflection-free and AOT-safe (0 warnings, sample runs), but decoration does metadata reflection. A follow-up is proposed |
 
 ---
 
-## Results by Scenario
+## Results by scenario
 
 ### 1. Cold startup (fresh process: register + build + resolve every service once)
 
@@ -93,7 +93,7 @@ net10, mean of 15 launches. "vs Manual" divides by the Manual mean.
 
 ### 2. Warm registration (in-process, N services into a new collection)
 
-net10. **The BenchmarkDotNet Ratio column in the raw report is relative to the empty-collection Baseline (12.84 ns) and is not quoted.** "vs Manual" below is recomputed from the means.
+net10. The BenchmarkDotNet Ratio column in the raw report is relative to the empty-collection Baseline (12.84 ns), so it is not quoted here. "vs Manual" below is recomputed from the means.
 
 | Variant | N=50 mean | vs Manual | N=50 alloc | N=500 mean | vs Manual | N=500 alloc |
 |---|---:|---:|---:|---:|---:|---:|
@@ -116,7 +116,7 @@ net10. Every row includes the same 50 manual `AddScoped` calls (626.93 ns in sec
 | Scrutor (`Decorate<,>`) | 11,877.3 ns | 12.47 | 11.46 KB | 2.34 |
 
 - All three library paths move the original to a hidden registration and add a factory; the manual row only swaps one descriptor.
-- CSE's `TryDecorate` walks the whole collection for each decorated service and reflects over the implementation's constructors for each match (see the Executive Summary finding). This is consistent with part of the CseGenerated and CseRuntime cost; not profiled (Scrutor also walks the collection).
+- CSE's `TryDecorate` walks the whole collection for each decorated service and reflects over the implementation's constructors for each match (see the executive summary). This is consistent with part of the CseGenerated and CseRuntime cost; not profiled (Scrutor also walks the collection).
 - CseRuntime allocates more than Scrutor on every TFM. On net11 Scrutor (3,980.5 ns) is faster than CseRuntime (4,581.9 ns).
 
 ### 4. Resolve (one scope + one resolve, provider built in setup, N=50)
@@ -197,7 +197,7 @@ Mean (and allocation where it differs) per TFM. Run order net10 → net9 → net
 
 ---
 
-## Feature Matrix
+## Feature matrix
 
 CSE cells come from this repository (csproj, `Readme.MD`, `ServiceSourceWriter.cs`, `Internal/*.cs`). Scrutor links point at tag [`v7.0.0`](https://github.com/khellang/Scrutor/tree/v7.0.0) (commit `7f315da`, matches the 7.0.0 nuspec). Framework links point at Learn or `dotnet/runtime` tag `v10.0.0`. The "measured" row comes from section 5; every other row comes from reading source or docs, not from running code.
 
@@ -222,23 +222,23 @@ CSE cells come from this repository (csproj, `Readme.MD`, `ServiceSourceWriter.c
 
 ## Caveats
 
-- **Warm registration is not like-for-like.** The reflection variants have loaded types, filled reflection caches and JIT-compiled their scanning code before the measured unit. Their warm numbers are lower bounds; the cold table is the startup comparison.
-- **Shared inputs carry CSE attributes.** The input classes have `[RegisterScoped]` and the input assembly contains the CSE generated registry, so the Scrutor process also loads the CSE assembly. That small cost is inside Scrutor's cold numbers.
-- **No Scrutor attribute column.** Scrutor's `[ServiceDescriptor]` mode would need different attributes on the shared input classes. It was not measured.
-- **Scrutor configuration.** `AsMatchingInterface()` (cited from [IServiceTypeSelector.cs L55-L58](https://github.com/khellang/Scrutor/blob/v7.0.0/src/Scrutor/IServiceTypeSelector.cs#L55-L58)) produces the same descriptors as the other variants; the self-check verifies it. `AsImplementedInterfaces()` or `AsSelfWithInterfaces()` would register more descriptors and were not measured.
-- **Manual decoration baseline does less work.** `ManualDecorationS50` builds the inner service with `new Service{i}()` inside the factory; CSE and Scrutor resolve the inner service from a hidden keyed registration. Part of the decorated-resolve gap is that extra container resolve. It is still the gap a user sees when moving from a hand-written factory to a decoration library.
-- **Plain and Decorated resolve rows measure different services** (IService15 with a dependency, IService0 without). Compare rows only within a category.
-- **Generated decoration path reflects.** `EnsureDecoratable` (`Internal/ServiceDecoration.cs:90-108`) runs `GetConstructors()`/`GetParameters()`/`GetCustomAttribute<ServiceKeyAttribute>()` for every matched descriptor, and each `Decorate` call loops over the whole collection, also for `[Decorates]` code. This is metadata reflection only: no dynamic code, 0 AOT warnings, and the AOT sample runs. It contradicts the Readme wording "uses no reflection" ("Generated registry" section) and "reflection-free registry" ("Migrating from Scrutor"). Not fixed in this work; a follow-up is proposed (decide `[ServiceKey]` use at generation time and skip the check on the generated path, or correct the Readme).
-- **AOT warning counts** use `TrimmerSingleWarn=false` and are higher than a default publish shows. No sample uses `TrimmerRootAssembly`; rooting the input assemblies might change the Scrutor and CseReflection outcome and was not tested. AOT wall times (3 ms) were taken on a loaded machine and are not a result.
-- **Cold allocation is not first-call allocation.** In each launch BenchmarkDotNet 0.14 runs the unit a second time in the same process, after the timed invocation, to collect GC stats (`// GC:` line after `// AfterActualRun` in the run log). The allocation column therefore excludes JIT, type loading and first-call reflection-cache allocations; it is the managed allocation of one register + build + resolve-all in an already-warm process.
-- **Machine load.** net10, the primary runtime, ran first at the highest load (1-minute 1.76; 5-minute 3.68). CseRuntime decorated resolve on net10 (252.2 ns) is above its other TFMs (203.0-220.3 ns). Gaps of a few percent are weak evidence even when outside error.
-- **Outliers not investigated.** net8 warm CseReflection is 2.1-2.7× its other TFMs; net11 Scrutor decoration is about 3× faster than on the other TFMs; net9 plain resolve has CseGenerated 1.06× Manual; net8 plain resolve has Scrutor 1.03× Manual.
-- **Ties.** A difference within the sum of the two error margins is reported as a tie.
-- **CSE version.** The CSE column is the 7.0.0 working tree on branch `perf/bench-di`, which may differ from the last version published to NuGet.
+- Warm registration is not like-for-like. The reflection variants have loaded types, filled reflection caches and JIT-compiled their scanning code before the measured unit. Their warm numbers are lower bounds; the cold table is the startup comparison.
+- The shared inputs carry CSE attributes. The input classes have `[RegisterScoped]` and the input assembly contains the CSE generated registry, so the Scrutor process also loads the CSE assembly. That small cost is inside Scrutor's cold numbers.
+- There is no Scrutor attribute column. Scrutor's `[ServiceDescriptor]` mode would need different attributes on the shared input classes. It was not measured.
+- Scrutor is configured with `AsMatchingInterface()` (cited from [IServiceTypeSelector.cs L55-L58](https://github.com/khellang/Scrutor/blob/v7.0.0/src/Scrutor/IServiceTypeSelector.cs#L55-L58)) produces the same descriptors as the other variants; the self-check verifies it. `AsImplementedInterfaces()` or `AsSelfWithInterfaces()` would register more descriptors and were not measured.
+- The manual decoration baseline does less work. `ManualDecorationS50` builds the inner service with `new Service{i}()` inside the factory; CSE and Scrutor resolve the inner service from a hidden keyed registration. Part of the decorated-resolve gap is that extra container resolve. It is still the gap a user sees when moving from a hand-written factory to a decoration library.
+- Plain and Decorated resolve rows measure different services (IService15 with a dependency, IService0 without). Compare rows only within a category.
+- The generated decoration path uses reflection. `EnsureDecoratable` (`Internal/ServiceDecoration.cs:90-108`) runs `GetConstructors()`/`GetParameters()`/`GetCustomAttribute<ServiceKeyAttribute>()` for every matched descriptor, and each `Decorate` call loops over the whole collection, also for `[Decorates]` code. This is metadata reflection only: no dynamic code, 0 AOT warnings, and the AOT sample runs. It contradicts the Readme wording "uses no reflection" ("Generated registry" section) and "reflection-free registry" ("Migrating from Scrutor"). Not fixed in this work; a follow-up is proposed (decide `[ServiceKey]` use at generation time and skip the check on the generated path, or correct the Readme).
+- AOT warning counts use `TrimmerSingleWarn=false` and are higher than a default publish shows. No sample uses `TrimmerRootAssembly`; rooting the input assemblies might change the Scrutor and CseReflection outcome and was not tested. AOT wall times (3 ms) were taken on a loaded machine and are not a result.
+- Cold allocation is not first-call allocation. In each launch BenchmarkDotNet 0.14 runs the unit a second time in the same process, after the timed invocation, to collect GC stats (`// GC:` line after `// AfterActualRun` in the run log). The allocation column therefore excludes JIT, type loading and first-call reflection-cache allocations; it is the managed allocation of one register + build + resolve-all in an already-warm process.
+- net10, the primary runtime, ran first at the highest load (1-minute 1.76; 5-minute 3.68). CseRuntime decorated resolve on net10 (252.2 ns) is above its other TFMs (203.0-220.3 ns). Gaps of a few percent are weak evidence even when outside error.
+- These outliers were not investigated: net8 warm CseReflection is 2.1-2.7× its other TFMs; net11 Scrutor decoration is about 3× faster than on the other TFMs; net9 plain resolve has CseGenerated 1.06× Manual; net8 plain resolve has Scrutor 1.03× Manual.
+- A difference within the sum of the two error margins is reported as a tie.
+- The CSE column is the 7.0.0 working tree on branch `perf/bench-di`, which may differ from the last version published to NuGet.
 
 ---
 
-## How to Reproduce
+## How to reproduce
 
 ```bash
 cd benchmarks
