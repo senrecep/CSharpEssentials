@@ -76,7 +76,15 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
             throw new JsonException($"Unknown type discriminator '{typeName}'.");
         }
 
-        return (T?)JsonSerializer.Deserialize(root.GetRawText(), derivedType, options);
+        PolymorphicJson.EnterNested(options);
+        try
+        {
+            return (T?)JsonSerializer.Deserialize(root.GetRawText(), derivedType, options);
+        }
+        finally
+        {
+            PolymorphicJson.ExitNested();
+        }
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
@@ -88,10 +96,21 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
         }
 
         Type valueType = value.GetType();
+        JsonElement element;
+        PolymorphicJson.EnterNested(options);
+        try
+        {
+            element = JsonSerializer.SerializeToElement(value, valueType, options);
+        }
+        finally
+        {
+            PolymorphicJson.ExitNested();
+        }
+
         writer.WriteStartObject();
         writer.WriteString(TypePropertyName, valueType.FullName);
 
-        foreach (JsonProperty property in JsonSerializer.SerializeToElement(value, valueType, options).EnumerateObject())
+        foreach (JsonProperty property in element.EnumerateObject())
         {
             property.WriteTo(writer);
         }

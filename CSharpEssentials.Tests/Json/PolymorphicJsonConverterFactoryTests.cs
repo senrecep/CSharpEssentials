@@ -71,6 +71,13 @@ internal sealed class OpenGenericDerived<TValue> : OpenGenericBase
     public TValue? Value { get; set; }
 }
 
+internal abstract class LinkBase
+{
+    public LinkBase? Next { get; set; }
+}
+
+internal sealed class Link : LinkBase;
+
 public class PolymorphicJsonConverterFactoryTests
 {
     private static readonly JsonSerializerOptions PolymorphicOptions = new()
@@ -284,6 +291,26 @@ public class PolymorphicJsonConverterFactoryTests
         string json = $"{{\"$type\":\"{typeof(OpenGenericDerived<>).FullName}\"}}";
 
         Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<OpenGenericBase>(json, PolymorphicOptions));
+    }
+
+    [Fact]
+    public void Serialize_WithCycleThroughAbstractMember_ShouldThrowJsonException()
+    {
+        Link link = new();
+        link.Next = link;
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Serialize<LinkBase>(link, PolymorphicOptions));
+    }
+
+    [Fact]
+    public void RoundTrip_WithNestedAbstractChain_ShouldKeepEveryLevel()
+    {
+        LinkBase chain = new Link { Next = new Link { Next = new Link() } };
+
+        string json = JsonSerializer.Serialize(chain, PolymorphicOptions);
+        LinkBase? restored = JsonSerializer.Deserialize<LinkBase>(json, PolymorphicOptions);
+
+        restored!.Next!.Next.Should().BeOfType<Link>().Which.Next.Should().BeNull();
     }
 
     private static AssemblyBuilder DefineDerived(string assemblyName)
