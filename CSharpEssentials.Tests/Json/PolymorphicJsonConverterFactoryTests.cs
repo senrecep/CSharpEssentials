@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using CSharpEssentials.Json;
 using FluentAssertions;
 
@@ -32,6 +33,23 @@ internal sealed class Triangle : ScannedShape
 internal sealed record NodeHolder(JsonNode? Data);
 
 internal sealed record AsyncHolder(IAsyncEnumerable<int> Items);
+
+[JsonDerivedType(typeof(AttrCircle), "circle")]
+internal abstract class AttrShape;
+
+internal sealed class AttrCircle : AttrShape
+{
+    public double Radius { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonDerivedType(typeof(AttrSquare), "square")]
+internal interface IAttrShape;
+
+internal sealed class AttrSquare : IAttrShape
+{
+    public double Side { get; set; }
+}
 
 public class PolymorphicJsonConverterFactoryTests
 {
@@ -200,5 +218,30 @@ public class PolymorphicJsonConverterFactoryTests
             await Task.Yield();
             yield return i;
         }
+    }
+    [Theory]
+    [InlineData(typeof(AttrShape))]
+    [InlineData(typeof(IAttrShape))]
+    public void CanConvert_WithJsonPolymorphicAttributes_ShouldReturnFalse(Type type)
+    {
+        PolymorphicJsonConverterFactory factory = new();
+
+        factory.CanConvert(type).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Deserialize_WithJsonDerivedTypeAttribute_ShouldUseAttributeDiscriminator()
+    {
+        AttrShape? shape = JsonSerializer.Deserialize<AttrShape>("""{"$type":"circle","Radius":1}""", PolymorphicOptions);
+
+        shape.Should().BeOfType<AttrCircle>().Which.Radius.Should().Be(1);
+    }
+
+    [Fact]
+    public void Serialize_WithJsonPolymorphicAttribute_ShouldUseAttributeDiscriminator()
+    {
+        IAttrShape shape = new AttrSquare { Side = 2 };
+
+        JsonSerializer.Serialize(shape, PolymorphicOptions).Should().Be("""{"kind":"square","Side":2}""");
     }
 }

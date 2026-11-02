@@ -156,6 +156,8 @@ Animal? restored = json.ConvertFromJson<Animal>();
 
 `DefaultOptions` applies `PolymorphicJsonConverterFactory` to abstract classes and interfaces; collections and dictionaries keep the built-in array and object serialization. The `$type` value is the concrete type's full name (namespace included) and is written first. On read, `$type` is required and is matched against the non-abstract types of the loaded assemblies that derive from the declared type; a missing or unknown value throws `JsonException`. Discovery uses reflection, so this is not trim or AOT safe: use `[JsonPolymorphic]` with source generation there.
 
+A type marked with `[JsonPolymorphic]` or `[JsonDerivedType]` is left to System.Text.Json, so its own discriminators are used. Async streams (`IAsyncEnumerable<T>`) and `JsonNode` values keep their built-in serialization too.
+
 ### Multi-Format DateTime
 
 `MultiFormatDateTimeConverterFactory` (part of `DefaultOptions` and `DefaultOptionsWithDateTimeConverter`) reads `DateTime` and `DateTime?` from JSON strings in ISO 8601 (with or without `Z` or an offset), `yyyy-MM-dd`, `dd.MM.yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `March 14, 2024`, `14 March 2024`, `yyyyMMdd`, RFC 1123 (`Thu, 14 Mar 2024 15:30:45 GMT`) and other patterns, and from a numeric string of Unix seconds. Unrecognized text throws `JsonException` listing the supported formats; `null` is allowed only for `DateTime?`. Values are written as `yyyy-MM-ddTHH:mm:ss.ffffffzzz`.
@@ -179,3 +181,4 @@ Constructor arguments add formats to the built-in list. Every value is returned 
 ### 8.0
 
 - Members declared as `JsonNode` or `JsonValue` are written without a `$type` wrapper. A `JsonObject` stored by 7.x in such a member carries a `"$type"` key and now reads back with that key inside it; strip `$type` from those stored objects.
+- Abstract types and interfaces marked with `[JsonPolymorphic]` or `[JsonDerivedType]` are no longer handled by `PolymorphicJsonConverterFactory`. They are written with the discriminators from the attributes, and payloads stored with a full CLR name in `$type` no longer read. Rewrite stored `$type` values to the attribute discriminators, or remove the attributes to keep the old format.
