@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
@@ -137,23 +135,6 @@ public static class Extensions
             includeTotalCount,
             maxPageSize);
 
-    private static readonly ConcurrentDictionary<LambdaExpression, Delegate> _cursorSelectorCache = new(
-        Environment.ProcessorCount * 2,
-        31
-    );
-
-    private static TCursor GetCursor<T, TCursor>(
-        this T data,
-        Expression<Func<T, TCursor>> cursorSelector)
-    {
-        return Unsafe.As<Func<T, TCursor>>(
-            _cursorSelectorCache.GetOrAdd(
-                cursorSelector,
-                static key => key.Compile(preferInterpretation: false)
-            )
-        )(data);
-    }
-
     /// <summary>
     /// Single-column cursor pagination: returns the rows whose <paramref name="cursorSelector"/> value is after
     /// <see cref="ICursorPaginationRequest{TCursor}.Cursor"/>. The cursor value is sent as a SQL parameter.
@@ -212,7 +193,7 @@ public static class Extensions
             return new CursorPaginationResponse<T, TCursor>(items, default, hasMore);
         }
 
-        TCursor? nextCursor = items[^1].GetCursor(cursorSelector);
+        TCursor? nextCursor = cursorSelector.Compile(preferInterpretation: true)(items[^1]);
 
         return new CursorPaginationResponse<T, TCursor>(items, nextCursor, hasMore);
     }

@@ -44,6 +44,26 @@ public sealed class ObsoleteCursorPaginationTests
     }
 
     [Fact]
+    public async Task PaginateAsync_Cursor_RepeatedCalls_ShouldNotGrowStaticState()
+    {
+        using PaginationDbContext context = await CreateSeededContextAsync();
+
+        for (int i = 0; i < 100; i++)
+        {
+            CursorPaginationResponse<PaginatedEntity, int> page = await context.PaginatedEntities
+                .PaginateAsync<PaginatedEntity, int>(new CursorPaginationRequest<int> { Limit = 2 }, e => e.Id);
+            page.Next.Should().Be(2);
+        }
+
+        IEnumerable<int> staticCollectionSizes = typeof(Extensions)
+            .GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
+            .Select(f => f.GetValue(null))
+            .OfType<System.Collections.ICollection>()
+            .Select(c => c.Count);
+        staticCollectionSizes.Should().OnlyContain(count => count <= 1);
+    }
+
+    [Fact]
     public async Task PaginateAsync_Cursor_Ascending_ShouldReturnNextPage()
     {
         using PaginationDbContext context = await CreateSeededContextAsync();
