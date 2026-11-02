@@ -349,6 +349,96 @@ public class LoggingValidationFailureObserverTests
         logger.Entries.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData(ValidationMode.Enforce, LogLevel.Debug)]
+    [InlineData(ValidationMode.LogOnly, LogLevel.Warning)]
+    public async Task Behavior_Should_Log_Through_Enabled_Default_Observer(ValidationMode mode, LogLevel expectedLevel)
+    {
+        CapturingLogger logger = new();
+        ValidationBehavior<GatedCommand, Result> behavior = new([new GatedValidator()], [new LoggingValidationFailureObserver(logger)], new() { DefaultMode = mode });
+
+        Result result = await behavior.Handle(new GatedCommand(), (_, _) => new ValueTask<Result>(Result.Success()), default);
+
+        result.IsFailure.Should().Be(mode == ValidationMode.Enforce);
+        logger.Entries.Should().ContainSingle().Which.Level.Should().Be(expectedLevel);
+    }
+
+    [Fact]
+    public async Task Behavior_Should_Count_Through_Default_Observer_When_Logging_Is_Disabled()
+    {
+        int count = 0;
+        using MeterListener listener = new();
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Meter.Name == LoggingValidationFailureObserver.MeterName
+                && instrument.Name == LoggingValidationFailureObserver.FailureCounterName)
+                meterListener.EnableMeasurementEvents(instrument);
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, tags, _) =>
+        {
+            foreach (KeyValuePair<string, object?> tag in tags)
+            {
+                if (tag.Key == "request" && tag.Value as string == nameof(GatedCommand))
+                    Interlocked.Add(ref count, (int)value);
+            }
+        });
+        listener.Start();
+        ValidationBehavior<GatedCommand, Result> behavior = new([new GatedValidator()], [new LoggingValidationFailureObserver()]);
+
+        Result result = await behavior.Handle(new GatedCommand(), (_, _) => new ValueTask<Result>(Result.Success()), default);
+
+        result.IsFailure.Should().BeTrue();
+        count.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Behavior_Should_Notify_Custom_Observer_Next_To_Inactive_Default_Observer()
+    {
+        RecordingObserver recording = new();
+        LoggingValidationFailureObserver inactive = new(new CapturingLogger(LogLevel.None));
+        ValidationBehavior<GatedCommand, Result> behavior = new([new GatedValidator()], [inactive, recording]);
+
+        Result result = await behavior.Handle(new GatedCommand(), (_, _) => new ValueTask<Result>(Result.Success()), default);
+
+        result.IsFailure.Should().BeTrue();
+        recording.Failures.Should().ContainSingle().Which.Errors.Should().ContainSingle(error => error.Code == "Gated");
+    }
+
+    [Theory]
+    [InlineData(ValidationMode.Enforce)]
+    [InlineData(ValidationMode.LogOnly)]
+    public async Task Behavior_Should_Keep_Mode_Semantics_With_Inactive_Default_Observer(ValidationMode mode)
+    {
+        LoggingValidationFailureObserver inactive = new(new CapturingLogger(LogLevel.None));
+        ValidationBehavior<GatedCommand, Result> behavior = new([new GatedValidator()], [inactive], new() { DefaultMode = mode });
+        bool nextCalled = false;
+
+        Result result = await behavior.Handle(
+            new GatedCommand(),
+            (_, _) =>
+            {
+                nextCalled = true;
+                return new ValueTask<Result>(Result.Success());
+            },
+            default);
+
+        nextCalled.Should().Be(mode == ValidationMode.LogOnly);
+        if (mode == ValidationMode.Enforce)
+            result.Errors.Should().ContainSingle(error => error.Code == "Gated");
+        else
+            result.IsSuccess.Should().BeTrue();
+    }
+
+    private sealed record GatedCommand : ICommand<Result>;
+
+    private sealed class GatedValidator : IValidator<GatedCommand>
+    {
+        public int Order => 0;
+
+        public ValueTask<Result<GatedCommand>> ValidateAsync(GatedCommand instance, CancellationToken ct = default) =>
+            new(Result<GatedCommand>.Failure(Error.Validation("Gated", "Gated failure")));
+    }
+
     private sealed class CapturingLogger(LogLevel minimumLevel = LogLevel.Trace) : ILogger<LoggingValidationFailureObserver>
     {
         public List<(LogLevel Level, string Message)> Entries { get; } = [];

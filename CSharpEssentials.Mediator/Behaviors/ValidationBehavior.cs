@@ -82,7 +82,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         if (result.IsSuccess)
             return next(message, cancellationToken);
 
-        if (_observers.Length == 0 && mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory)
+        if (mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory && !AnyObserverListening(mode))
             return new ValueTask<TResponse>(factory.CreateFailure(result.Errors));
 
         return CompleteFailureAsync(message, result.Errors, mode, next, cancellationToken);
@@ -122,7 +122,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        if (_observers.Length > 0)
+        if (AnyObserverListening(mode))
             await NotifyObserversAsync(message, errors, mode, cancellationToken).ConfigureAwait(false);
 
         if (mode == ValidationMode.LogOnly)
@@ -161,6 +161,17 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
 
         Error[] errors = [.. allErrors.Distinct()];
         return errors.Length == 0 ? null : errors;
+    }
+
+    private bool AnyObserverListening(ValidationMode mode)
+    {
+        foreach (IValidationFailureObserver observer in _observers)
+        {
+            if (observer is not LoggingValidationFailureObserver defaultObserver || defaultObserver.IsListening(mode))
+                return true;
+        }
+
+        return false;
     }
 
     private async ValueTask NotifyObserversAsync(
