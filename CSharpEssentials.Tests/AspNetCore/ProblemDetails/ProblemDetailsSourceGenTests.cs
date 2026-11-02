@@ -29,14 +29,16 @@ public class ProblemDetailsSourceGenTests
             services.AddEnhancedProblemDetails();
         await using ServiceProvider provider = services.BuildServiceProvider();
         var context = new DefaultHttpContext { RequestServices = provider };
-        context.Response.Body = new MemoryStream();
+        using var body = new MemoryStream();
+        context.Response.Body = body;
 
         await Error.Conflict("order.conflict", "Order exists").ToProblemResult().ExecuteAsync(context);
 
         context.Response.StatusCode.Should().Be(StatusCodes.Status409Conflict);
-        context.Response.Body.Position = 0;
-        string body = await new StreamReader(context.Response.Body).ReadToEndAsync();
-        body.Should().Contain("\"title\"").And.Contain("order.conflict");
+        body.Position = 0;
+        using var reader = new StreamReader(body);
+        string json = await reader.ReadToEndAsync();
+        json.Should().Contain("\"title\"").And.Contain("order.conflict");
     }
 
     public enum Registration
