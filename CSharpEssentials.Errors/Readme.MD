@@ -174,3 +174,9 @@ This pattern provides discoverability (IDE autocomplete per domain), type-safe e
 ## Upgrading to 8.0
 
 `ErrorMetadata.CreateWithException` and `AddException` no longer store the `Exception` object under `exception`. They store a nested `ErrorMetadata` with `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException`, because System.Text.Json cannot serialize a thrown exception. Code that cast `metadata["exception"]` to `Exception` should read the nested keys instead, or keep the exception in its own variable.
+
+The nested entry keeps only the short type name (`GetType().Name`), the message, the stack trace and the inner exception chain. The full type name, `Data`, `HResult` and the exception object itself are dropped, so code that rethrew `metadata["exception"]` or tested it with `is SqlException` has no key to migrate to. Keep the exception in its own variable if you need its identity.
+
+An exception that was never thrown has no stack trace, so `exceptionStackTrace` falls back to `Environment.StackTrace`. That records where the metadata was built, not where the exception was created, and it costs a stack walk on every call.
+
+`Error` equality and `GetHashCode` now compare nested `ErrorMetadata` values by content. Do not add a metadata instance to itself (directly or through a chain): hashing or comparing such a cycle overflows the stack.
