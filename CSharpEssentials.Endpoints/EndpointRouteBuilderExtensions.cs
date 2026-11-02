@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,6 +46,7 @@ public static class EndpointRouteBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(assemblies);
+        ReflectionEndpointScanner.ThrowIfDynamicCodeUnsupported(RuntimeFeature.IsDynamicCodeSupported);
 
         EndpointMappingOptions options = EndpointMapper.CreateOptions(configure);
         ILogger? logger = app.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(EndpointLog.Category);

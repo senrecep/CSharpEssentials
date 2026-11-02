@@ -65,6 +65,7 @@ app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAs
 - Uses the same discovery rules, ordering, conventions and options as the generated registries.
 - Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007, CSE1008) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the loadable types are mapped and each loader exception is logged at `Warning`.
 - Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Prefer the generated methods in trimmed and Native AOT apps.
+- When dynamic code is not supported (Native AOT), `MapEndpointsFromAssemblies` throws `PlatformNotSupportedException` instead of mapping a partial, trimmed set of routes. Use `Map{Asm}Endpoints` or `MapAllEndpoints` there.
 
 ## API versioning
 

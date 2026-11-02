@@ -189,6 +189,33 @@ public class EndpointFallbackTests
     }
 
     [Fact]
+    public void ThrowIfDynamicCodeUnsupported_Should_Throw_When_Dynamic_Code_Is_Not_Supported()
+    {
+        Action act = static () => ReflectionEndpointScanner.ThrowIfDynamicCodeUnsupported(isDynamicCodeSupported: false);
+
+        act.Should().Throw<PlatformNotSupportedException>()
+            .WithMessage("*Map{Asm}Endpoints*MapAllEndpoints*");
+    }
+
+    [Fact]
+    public void ThrowIfDynamicCodeUnsupported_Should_Not_Throw_When_Dynamic_Code_Is_Supported()
+    {
+        Action act = static () => ReflectionEndpointScanner.ThrowIfDynamicCodeUnsupported(isDynamicCodeSupported: true);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void MapEndpointsFromAssemblies_Should_Map_Without_Throwing_When_No_Assemblies_Are_Given()
+    {
+        using WebApplication app = EndpointTestApp.Create();
+
+        app.MapEndpointsFromAssemblies();
+
+        EndpointTypes(app).Should().BeEmpty();
+    }
+
+    [Fact]
     public void MapEndpointsFromAssemblies_Should_Skip_Invalid_Types_And_Log_Warnings()
     {
         Assembly assembly = Load("Sample.Fallback.Mixed", Usings + MixedSource);
