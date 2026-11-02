@@ -194,8 +194,8 @@ public class StringEnumGeneratorTests
     [Obsolete("Pins the generated fallback of an obsolete generated helper.")]
     public void Fallback_Should_Keep_Letters_Without_Case()
     {
-        (ScriptFlags.用户 | ScriptFlags.名).ToSnakeCase().Should().Be("用户_名");
-        (ScriptFlags.用户 | ScriptFlags.名).ToKebabCase().Should().Be("用户-名");
+        (ScriptParts.用户 | ScriptParts.名).ToSnakeCase().Should().Be("用户_名");
+        (ScriptParts.用户 | ScriptParts.名).ToKebabCase().Should().Be("用户-名");
     }
 
     [Fact]
@@ -368,7 +368,7 @@ internal enum ScriptStatus
 }
 
 [StringEnum, Flags]
-internal enum ScriptFlags
+internal enum ScriptParts
 {
     None = 0,
     用户 = 1,
