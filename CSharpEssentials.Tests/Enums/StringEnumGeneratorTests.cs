@@ -320,6 +320,7 @@ public class StringEnumGeneratorTests
     [Theory]
     [InlineData("")]
     [InlineData("en-US")]
+    [InlineData("sv-SE")]
     [InlineData("tilde")]
     public void Undefined_Values_Should_Format_Like_The_Bcl_Under_Any_Culture(string cultureName)
     {
