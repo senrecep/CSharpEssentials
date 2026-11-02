@@ -673,7 +673,7 @@ Namespaces: the extension methods and `Guider` and `HttpCodes` are in `CSharpEss
 | `source.IsEmpty` (.NET 10+) | Property on `IEnumerable<T>`: `true` when the sequence has no element | `bool` |
 | `str.IsPalindrome` (.NET 10+) | Property on `string`: `true` when it reads the same backwards (null or empty is `true`; case-sensitive) | `bool` |
 | `obj.ExplicitCast<T>()` | `(T)obj` as a fluent call | `T` |
-| `ms.MsToDateTime()` | Unix milliseconds (`long`) to a `DateTime` | `DateTime` |
+| `ms.MsToDateTime()` | Unix milliseconds (`long`) to a UTC `DateTime` (`Kind` is `Utc`) | `DateTime` |
 | `type.GetTypeGroup<TGroup, TType>(group = 100)` | Rounds an enum's numeric value down to a multiple of `group` and returns it as `TGroup` | `TGroup` |
 | `ex.GetInnerExceptions()` / `ex.GetInnerExceptionsMessages()` | The exception and its inner exceptions, outermost first; or their messages | `IEnumerable<...>` |
 

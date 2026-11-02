@@ -149,7 +149,7 @@ int badRequest = HttpCodes.BadRequest;
 object boxed = 42;
 int number = boxed.ExplicitCast<int>();
 
-DateTime when = 1700000000000L.MsToDateTime();   // Unix milliseconds
+DateTime when = 1700000000000L.MsToDateTime();   // Unix milliseconds, Kind is Utc
 
 HttpGroup group = HttpStatus.BadRequest.GetTypeGroup<HttpGroup, HttpStatus>();  // HttpGroup.ClientError
 
@@ -180,3 +180,4 @@ Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEs
 ## Upgrading to 8.0
 
 - `GetRandomItems` throws `ArgumentOutOfRangeException` (parameter `count`) for a negative `count`. It threw `OverflowException` before; update any `catch` that relied on that.
+- `MsToDateTime` returns a `DateTime` with `Kind = Utc`. It returned `Kind = Unspecified` before, with the same ticks. `ToUniversalTime()` no longer shifts it by the local offset, System.Text.Json now writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. If you stored or compared the old value, call `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour.

@@ -24,7 +24,7 @@ public static class GeneralExtensions
     public static Guid ToGuidFromString(this string id) => Guider.ToGuidFromString(id.AsSpan());
 
     public static DateTime MsToDateTime(this long value) =>
-        DateTimeOffset.FromUnixTimeMilliseconds(value).DateTime;
+        DateTimeOffset.FromUnixTimeMilliseconds(value).UtcDateTime;
 
     public static TGroup GetTypeGroup<TGroup, TType>(this TType type, int group = 100)
         where TGroup : Enum

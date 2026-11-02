@@ -743,4 +743,13 @@ public class GeneralExtensionsTests
         string? result = await valueTask;
         result.Should().BeNull();
     }
+
+    [Fact]
+    public void MsToDateTime_ShouldReturnUtcKind()
+    {
+        DateTime result = 0L.MsToDateTime();
+
+        result.Kind.Should().Be(DateTimeKind.Utc);
+        result.ToUniversalTime().Should().Be(DateTime.UnixEpoch);
+    }
 }
