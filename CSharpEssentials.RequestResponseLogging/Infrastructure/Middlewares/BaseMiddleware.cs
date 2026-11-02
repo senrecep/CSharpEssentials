@@ -71,7 +71,7 @@ internal abstract class BaseMiddleware
                _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
     }
 
-    protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext)
+    protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext, Func<RequestResponseContext, Task>? handler = null)
     {
 #if NET6_0_OR_GREATER
 
@@ -97,7 +97,7 @@ internal abstract class BaseMiddleware
 #endif
 
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = GetLoggingConfiguration(httpContext);
-        string requestText;
+        string requestText = "Error occurred during request processing";
         Stream originalBodyStream = httpContext.Response.Body;
         TimeSpan executionTime;
         string responseText;
@@ -109,7 +109,7 @@ internal abstract class BaseMiddleware
         }
         catch (Exception ex) when (_shouldLogErrors)
         {
-            await LogError(httpContext, ex).ConfigureAwait(false);
+            await LogError(httpContext, requestText, ex, handler).ConfigureAwait(false);
             throw;
         }
         finally
@@ -120,7 +120,11 @@ internal abstract class BaseMiddleware
             }
         }
 
-        return await CreateAndLogContext(httpContext, requestText, responseText, executionTime).ConfigureAwait(false);
+        RequestResponseContext context = await CreateAndLogContext(httpContext, requestText, responseText, executionTime).ConfigureAwait(false);
+        if (handler is not null)
+            await handler(context).ConfigureAwait(false);
+
+        return context;
     }
 
     private static (bool IsSkipRequestLogging, bool IsSkipResponseLogging) GetLoggingConfiguration(HttpContext context)
@@ -311,23 +315,26 @@ internal abstract class BaseMiddleware
         return context;
     }
 
-    private async Task LogError(HttpContext context, Exception exception)
+    private async Task LogError(HttpContext context, string requestText, Exception exception, Func<RequestResponseContext, Task>? handler)
     {
-        if (_logWriter is null)
+        if (_logWriter is null && handler is null)
         {
             return;
         }
 
         RequestResponseContext errorContext = new(context)
         {
-            RequestBody = "Error occurred during request processing",
+            RequestBody = requestText,
             ResponseBody = $"Exception: {exception.GetType().Name}, Message: {exception.Message}",
             ResponseCreationTime = TimeSpan.Zero
         };
 
         try
         {
-            await Task.Run(() => _logWriter.Write(errorContext), CancellationToken.None).ConfigureAwait(false);
+            if (_logWriter is not null)
+                await Task.Run(() => _logWriter.Write(errorContext), CancellationToken.None).ConfigureAwait(false);
+            if (handler is not null)
+                await handler(errorContext).ConfigureAwait(false);
         }
         catch
         {

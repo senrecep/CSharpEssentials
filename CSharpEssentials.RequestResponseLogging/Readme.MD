@@ -16,6 +16,10 @@ Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 dotnet add package CSharpEssentials.RequestResponseLogging
 ```
 
+## Upgrading to 8.0
+
+- When the request pipeline throws, the handler set with `UseHandler` now runs before the exception is rethrown, so it sees failed requests too. The logged `RequestBody` holds the captured request body instead of `Error occurred during request processing`; the exception type and message are still in `ResponseBody`. If your handler assumed every call was a completed request, check `ResponseBody` for the `Exception:` prefix.
+
 ## Usage
 
 ### Registration
@@ -40,7 +44,7 @@ Register it after `UseRouting()` when you call `UseRouting()` yourself. The skip
 
 `IgnorePaths` matches by prefix, ignoring case and a trailing `/`: `"/health"` also skips `/health/live` and `/healthz`. Calling it again replaces the earlier list.
 
-The response body is held in memory until the request finishes, then copied to the client, so the response is not streamed. Use `[SkipResponseLogging]` on streaming endpoints (server-sent events, large downloads). A request with a `Content-Length` over 10 MB is not read and is logged as `Request body too large: {n} bytes`; a body without a `Content-Length` (chunked) is read up to 10 MB, then logged as `Request body too large: over 10485760 bytes`, and the endpoint still receives the whole body; an empty body is logged as `Empty request body`, an empty response as `Empty response body`. If the request pipeline throws, the middleware logs `Error occurred during request processing` with the exception type and message in the response field, and rethrows.
+The response body is held in memory until the request finishes, then copied to the client, so the response is not streamed. Use `[SkipResponseLogging]` on streaming endpoints (server-sent events, large downloads). A request with a `Content-Length` over 10 MB is not read and is logged as `Request body too large: {n} bytes`; a body without a `Content-Length` (chunked) is read up to 10 MB, then logged as `Request body too large: over 10485760 bytes`, and the endpoint still receives the whole body; an empty body is logged as `Empty request body`, an empty response as `Empty response body`. If the request pipeline throws, the middleware logs the captured request body with the exception type and message in the response field (`Exception: {type}, Message: {message}`), passes the same context to the `UseHandler` handler, and rethrows. A logger or handler failure on this path is ignored so the original exception reaches the caller.
 
 The level, fields and format come from `LoggingOptions`:
 
@@ -91,7 +95,7 @@ app.AddRequestResponseLogging(opt =>
 
 ### Custom Handler
 
-`UseHandler` receives the `RequestResponseContext` of every logged request after the rest of the pipeline has completed. It runs in addition to the logger when both are set. The context exposes `Url`, `RequestBody`, `ResponseBody`, `ResponseCreationTime` (a `TimeSpan`), `ResponseTime` (`mm:ss.fff` text), `RequestLength` and `ResponseLength`.
+`UseHandler` receives the `RequestResponseContext` of every logged request after the rest of the pipeline has completed or thrown. It runs in addition to the logger when both are set. The context exposes `Url`, `RequestBody`, `ResponseBody`, `ResponseCreationTime` (a `TimeSpan`), `ResponseTime` (`mm:ss.fff` text), `RequestLength` and `ResponseLength`.
 
 ```csharp
 var logger = app.Services.GetRequiredService<ILogger<Program>>();

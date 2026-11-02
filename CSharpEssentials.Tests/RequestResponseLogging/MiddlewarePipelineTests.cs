@@ -379,6 +379,63 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         capturedContext!.ResponseBody.Should().Be("Error writing log: writer failed");
     }
 
+    [Fact]
+    public async Task InvokeAsync_Should_InvokeHandlerWithRequestBody_When_PipelineThrows()
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => throw new InvalidOperationException("endpoint failed"),
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("endpoint failed");
+        capturedContext.Should().NotBeNull();
+        capturedContext!.RequestBody.Should().Be("payload");
+        capturedContext.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: endpoint failed");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_WriteLogWithRequestBody_When_PipelineThrows()
+    {
+        var writer = new CapturingLogWriter();
+        var middleware = new DefaultRequestResponseMiddleware(
+            _ => throw new InvalidOperationException("endpoint failed"),
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        writer.Context!.RequestBody.Should().Be("payload");
+        writer.Context.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: endpoint failed");
+    }
+
+    private sealed class CapturingLogWriter : ILogWriter
+    {
+        public IMessageCreator? MessageCreator => null;
+
+        public RequestResponseContext? Context { get; private set; }
+
+        public Task Write(RequestResponseContext requestResponseContext)
+        {
+            Context = requestResponseContext;
+            return Task.CompletedTask;
+        }
+    }
+
     private sealed class AsyncThrowingLogWriter : ILogWriter
     {
         public IMessageCreator? MessageCreator => null;
