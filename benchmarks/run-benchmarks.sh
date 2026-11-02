@@ -12,6 +12,8 @@
 #   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations vs CSharpFunctionalExtensions / ErrorOr / FluentResults
 #   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor
 #   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors)
+#   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description vs Enums.NET / NetEscapades.EnumGenerators / BCL
+#                                              (net8.0 runs CSE's netstandard2.1 build: the package has no net8 target)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -83,8 +85,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.SendBenchmarks.*" "*.PublishBenchmarks.*" "*.StartupBenchmarks.*" "*.ColdStartupBenchmarks.*" "*.BehaviorBenchmarks.*")
         ;;
+    enums)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Enums.Comparison.Benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/enums"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.ToStringComparison.*" "*.ParseComparison.*" "*.IsDefinedComparison.*" "*.GetValuesComparison.*" "*.FlagsComparison.*" "*.DescriptionComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums)" >&2
         exit 1
         ;;
 esac

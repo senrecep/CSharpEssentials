@@ -50,6 +50,7 @@
   <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/S50.Decorators/CSharpEssentials.DependencyInjection.Benchmarks.Services.S50.Decorators.csproj" />
   <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/S500/CSharpEssentials.DependencyInjection.Benchmarks.Services.S500.csproj" />
   <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/S500.Decorators/CSharpEssentials.DependencyInjection.Benchmarks.Services.S500.Decorators.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Endpoints.Benchmarks/CSharpEssentials.Endpoints.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Endpoints.Benchmarks.Startup/Carter10/CSharpEssentials.Endpoints.Benchmarks.Startup.Carter10.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Endpoints.Benchmarks.Startup/Carter100/CSharpEssentials.Endpoints.Benchmarks.Startup.Carter100.csproj" />
