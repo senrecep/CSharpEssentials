@@ -13,6 +13,15 @@ Functional Result pattern for explicit success/failure handling in .NET. No exce
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
 
+> **Benchmarks:** Create, Map, Bind, Ensure, Match, Tap, a 5-step async pipeline, error aggregation and Maybe against
+> CSharpFunctionalExtensions, ErrorOr and FluentResults are documented in [BENCHMARKS.md](./BENCHMARKS.md).
+> Key findings (net10): Map, Bind, Tap and Match allocate 0 B, like CSharpFunctionalExtensions and ErrorOr
+> (FluentResults 88-344 B). A failure allocates 104 B (ErrorOr 88 B; CSharpFunctionalExtensions 0 B with its string
+> error), and the async pipeline's failure path allocates 584 B vs 480 B for CSharpFunctionalExtensions. Error
+> aggregation takes 237.9 ns / 696 B vs 41.9 ns / 184 B for ErrorOr's manual-list idiom. The package does not set
+> `IsAotCompatible`, `Result<T>.ToString()` uses reflection-based JSON, and it brings CSharpEssentials.Errors, Json,
+> Core and Enums (CSharpFunctionalExtensions has no dependencies).
+
 ## Installation
 
 ```bash
