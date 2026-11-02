@@ -50,12 +50,26 @@ public sealed record SecretManagerConfigurationOptions
     /// <summary>
     /// Gets or sets the number of secrets to load in parallel.
     /// </summary>
-    public int BatchSize { get; set; } = 10;
+    /// <exception cref="ArgumentOutOfRangeException">The value is zero or negative.</exception>
+    public int BatchSize
+    {
+        get;
+        set => field = value > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value), value, "BatchSize must be greater than zero.");
+    } = 10;
 
     /// <summary>
-    /// Gets or sets the number of secrets to retrieve per page.
+    /// Gets or sets the number of secrets to retrieve per page. Zero lets the server choose.
     /// </summary>
-    public int PageSize { get; set; } = 300;
+    /// <exception cref="ArgumentOutOfRangeException">The value is negative.</exception>
+    public int PageSize
+    {
+        get;
+        set => field = value >= 0
+            ? value
+            : throw new ArgumentOutOfRangeException(nameof(value), value, "PageSize must not be negative.");
+    } = 300;
 
     /// <summary>
     /// Adds a project configuration.
