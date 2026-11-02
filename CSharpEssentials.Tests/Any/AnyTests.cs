@@ -195,5 +195,24 @@ public class AnyTests
 
         any1.Should().NotBe(any2);
     }
-}
 
+    [Fact]
+    public void JsonRoundTrip_WithNullReferenceBranch_ShouldKeepIndexAndNullValue()
+    {
+        Any<int, string> any = Any<int, string>.Second(null!);
+
+        string json = JsonSerializer.Serialize(any);
+        Any<int, string> deserialized = JsonSerializer.Deserialize<Any<int, string>>(json);
+
+        deserialized.Index.Should().Be(1);
+        deserialized.Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void JsonDeserialize_WithNullValueTypeBranch_ShouldThrow()
+    {
+        Action act = () => JsonSerializer.Deserialize<Any<int, string>>("""{"Index":0,"Value":null}""");
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+}

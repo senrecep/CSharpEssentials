@@ -51,16 +51,15 @@ public static class Any
 
     internal static (int index, object? value) Deserialize(Dictionary<int, Type> typeMap, int index, object? value)
     {
-#if NET6_0_OR_GREATER
-        ArgumentNullException.ThrowIfNull(value);
-#else
-        if (value is null)
-            throw new ArgumentNullException(nameof(value));
-#endif
-
         if (!typeMap.TryGetValue(index, out Type? type))
             throw new InvalidOperationException($"{index} is not valid index for Any<>");
 
+        if (value is null)
+        {
+            if (type.IsValueType && Nullable.GetUnderlyingType(type) is null)
+                throw new ArgumentNullException(nameof(value));
+            return (index, null);
+        }
 
         if (type.IsInstanceOfType(value))
         {

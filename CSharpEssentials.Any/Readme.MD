@@ -76,7 +76,7 @@ var (text, number) = result;
 
 `IsFirst`, `IsSecond`, `IsThird` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. `Is`, `As` and `TryAs` test the runtime type of the value, not the branch. For a value-type target, `As` returns `default` (so `0` for `int`) when the value is of another type, not `null`; use `Is` or `TryAs` to tell the cases apart.
 
-A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. `ToString()` returns the JSON of the value.
+A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the JSON of the value.
 
 ### Multiple Types
 
@@ -105,3 +105,7 @@ var (drafts, published) = articles
 ```
 
 `Partition` and `Traverse` are available for all arities (`Any<T0,T1>` through `Any<T0,...,T7>`), returning a tuple with one typed array per variant.
+
+## Upgrading
+
+- `{"Index":n,"Value":null}` now deserializes when branch `n` is a reference type or `Nullable<T>`, so a union holding `null` round-trips. Earlier versions threw `ArgumentNullException` for every `null` value. If you relied on that to reject such payloads, check `Value is null` after deserializing.
