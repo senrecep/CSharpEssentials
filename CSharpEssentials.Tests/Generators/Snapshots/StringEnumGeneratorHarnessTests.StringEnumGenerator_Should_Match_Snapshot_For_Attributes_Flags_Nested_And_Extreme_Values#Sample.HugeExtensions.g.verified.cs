@@ -93,7 +93,7 @@ namespace Sample
                 case (global::Sample.Huge)18446744073709551615UL:
                     return "Max";
                 default:
-                    return value.ToString();
+                    return ((ulong)value).ToString();
             }
         }
 
@@ -133,7 +133,7 @@ namespace Sample
                 case (global::Sample.Huge)18446744073709551615UL:
                     return "Max".ToLowerInvariant();
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((ulong)value).ToString();
             }
         }
 
@@ -146,7 +146,7 @@ namespace Sample
                 case (global::Sample.Huge)18446744073709551615UL:
                     return "Max".ToUpperInvariant();
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((ulong)value).ToString();
             }
         }
 

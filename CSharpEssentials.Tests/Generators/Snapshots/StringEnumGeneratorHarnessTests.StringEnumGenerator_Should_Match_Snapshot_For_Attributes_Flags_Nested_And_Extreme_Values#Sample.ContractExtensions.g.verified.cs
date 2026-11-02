@@ -131,7 +131,7 @@ namespace Sample
                 case global::Sample.Contract.Unknown:
                     return "Unknown";
                 default:
-                    return value.ToString();
+                    return ((int)value).ToString();
             }
         }
 
@@ -189,7 +189,7 @@ namespace Sample
                 case global::Sample.Contract.Unknown:
                     return "Unknown".ToLowerInvariant();
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -208,7 +208,7 @@ namespace Sample
                 case global::Sample.Contract.Unknown:
                     return "Unknown".ToUpperInvariant();
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((int)value).ToString();
             }
         }
 

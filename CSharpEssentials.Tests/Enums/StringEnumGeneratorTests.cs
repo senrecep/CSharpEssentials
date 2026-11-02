@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
@@ -315,6 +316,70 @@ public class StringEnumGeneratorTests
         ((GeneratedNegativeFlags)int.MinValue).IsDefined().Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("en-US")]
+    [InlineData("tilde")]
+    public void Undefined_Values_Should_Format_Like_The_Bcl_Under_Any_Culture(string cultureName)
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo culture;
+            if (cultureName == "tilde")
+            {
+                culture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+                culture.NumberFormat.NegativeSign = "~";
+            }
+            else
+            {
+                culture = CultureInfo.GetCultureInfo(cultureName);
+            }
+
+            CultureInfo.CurrentCulture = culture;
+
+            AssertBclText((Color)99, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((Color)(-1), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((Color)int.MinValue, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSigned)(-1), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSigned)long.MaxValue, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedHuge)(ulong.MaxValue - 1), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSparse)0, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSparse)(-4), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((NoZeroMember)0, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedPermissions)8, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText(GeneratedPermissions.Read | GeneratedPermissions.Delete, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedPermissions)(1 | 8), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedNegativeFlags)(-3), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void Undefined_Non_Flags_Values_Should_Format_Without_Allocating_For_Small_Numbers()
+    {
+        Color undefined = (Color)99;
+        _ = undefined.ToOptimizedString();
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++)
+            _ = undefined.ToOptimizedString();
+
+        (GC.GetAllocatedBytesForCurrentThread() - before).Should().Be(0);
+    }
+
+    private static void AssertBclText<T>(T value, Func<T, string> optimized, Func<T, string> lower, Func<T, string> upper)
+        where T : struct, Enum
+    {
+        string expected = value.ToString();
+        optimized(value).Should().Be(expected);
+        lower(value).Should().Be(expected.ToLowerInvariant());
+        upper(value).Should().Be(expected.ToUpperInvariant());
+    }
+
     private static IEnumerable<long> Range(long from, long to)
     {
         for (long r = from; r <= to; r++)
@@ -512,4 +577,11 @@ internal enum GeneratedNegativeFlags
     One = 1,
     Four = 4,
     Sign = int.MinValue,
+}
+
+[StringEnum]
+internal enum NoZeroMember
+{
+    One = 1,
+    Two = 2,
 }

@@ -61,11 +61,12 @@ internal static class StringEnumSourceWriter
         if (modern)
             WriteWireHelpers(w, model, distinct, members, wireNames, nullableString);
 
-        WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), "value.ToString()");
+        string numeric = model.IsFlags ? "value.ToString()" : "((" + model.UnderlyingType + ")value).ToString()";
+        WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), numeric);
         WriteSwitch(w, model, distinct, "ToSnakeCase", modern ? "Use ToWireName()" : null, static m => Literal(EnumWireNaming.ToLegacySnakeCase(m.Name)), "ToSnakeCaseFallback(value.ToOptimizedString())");
         WriteSwitch(w, model, distinct, "ToKebabCase", null, static m => Literal(EnumWireNaming.ToLegacyKebabCase(m.Name)), "ToKebabCaseFallback(value.ToOptimizedString())");
-        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(m.Name) + ".ToLowerInvariant()", "value.ToString().ToLowerInvariant()");
-        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name) + ".ToUpperInvariant()", "value.ToString().ToUpperInvariant()");
+        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(m.Name) + ".ToLowerInvariant()", model.IsFlags ? "value.ToString().ToLowerInvariant()" : numeric);
+        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name) + ".ToUpperInvariant()", model.IsFlags ? "value.ToString().ToUpperInvariant()" : numeric);
         WriteLegacyLookups(w, model, members, nullableString, modern);
         WriteFallbackHelpers(w);
 

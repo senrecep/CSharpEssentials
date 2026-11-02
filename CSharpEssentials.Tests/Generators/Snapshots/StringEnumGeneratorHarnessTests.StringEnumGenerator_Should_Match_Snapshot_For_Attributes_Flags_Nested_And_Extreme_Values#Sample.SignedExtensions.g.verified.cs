@@ -97,7 +97,7 @@ namespace Sample
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
                     return "Min";
                 default:
-                    return value.ToString();
+                    return ((long)value).ToString();
             }
         }
 
@@ -137,7 +137,7 @@ namespace Sample
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
                     return "Min".ToLowerInvariant();
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((long)value).ToString();
             }
         }
 
@@ -150,7 +150,7 @@ namespace Sample
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
                     return "Min".ToUpperInvariant();
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((long)value).ToString();
             }
         }
 

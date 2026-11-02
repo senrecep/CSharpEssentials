@@ -102,7 +102,7 @@ namespace Sample
                 case global::Sample.OrderStatus.Shipped:
                     return "Shipped";
                 default:
-                    return value.ToString();
+                    return ((int)value).ToString();
             }
         }
 
@@ -148,7 +148,7 @@ namespace Sample
                 case global::Sample.OrderStatus.Shipped:
                     return "Shipped".ToLowerInvariant();
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -163,7 +163,7 @@ namespace Sample
                 case global::Sample.OrderStatus.Shipped:
                     return "Shipped".ToUpperInvariant();
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((int)value).ToString();
             }
         }
 

@@ -93,7 +93,7 @@ namespace Sample
                 case global::Sample.Order.Line.Kind.Shipping:
                     return "Shipping";
                 default:
-                    return value.ToString();
+                    return ((int)value).ToString();
             }
         }
 
@@ -133,7 +133,7 @@ namespace Sample
                 case global::Sample.Order.Line.Kind.Shipping:
                     return "Shipping".ToLowerInvariant();
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -146,7 +146,7 @@ namespace Sample
                 case global::Sample.Order.Line.Kind.Shipping:
                     return "Shipping".ToUpperInvariant();
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((int)value).ToString();
             }
         }
 
