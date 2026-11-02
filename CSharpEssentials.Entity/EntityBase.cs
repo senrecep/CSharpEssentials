@@ -34,7 +34,8 @@ public abstract class EntityBase : IEntityBase
 
     public void ClearDomainEvents() => _domainEvents.Clear();
 
-    public void Raise(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
+    public void Raise(IDomainEvent domainEvent) =>
+        _domainEvents.Add(domainEvent ?? throw new ArgumentNullException(nameof(domainEvent)));
 
     public void SetCreatedInfo(DateTimeOffset createdAt, string createdBy) =>
         (CreatedAt, CreatedBy) = (createdAt, createdBy);

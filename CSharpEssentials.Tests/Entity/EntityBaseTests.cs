@@ -43,6 +43,17 @@ public class EntityBaseTests
     }
 
     [Fact]
+    public void Raise_WithNull_ShouldThrowArgumentNullException()
+    {
+        TestEntity entity = new();
+
+        Action act = () => entity.Raise(null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("domainEvent");
+        entity.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Raise_ShouldAddDomainEvent()
     {
         TestEntity entity = new();
