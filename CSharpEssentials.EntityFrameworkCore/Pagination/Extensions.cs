@@ -147,10 +147,9 @@ public static class Extensions
     /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
     /// </para>
     /// <para>
-    /// A <see cref="ICursorPaginationRequest{TCursor}.Cursor"/> equal to <c>default(TCursor)</c> (<c>null</c>, <c>0</c>,
-    /// <see cref="Guid.Empty"/>) means "no cursor" and returns the first page. If a page ends on a row whose cursor value
-    /// is <c>default(TCursor)</c>, the returned <c>Next</c> leads back to the first page, so the cursor column must never
-    /// hold that value.
+    /// The first page is returned when <see cref="ICursorPaginationRequest{TCursor}.HasCursor"/> is <see langword="false"/>.
+    /// A cursor equal to <c>default(TCursor)</c> (<c>0</c>, <see cref="Guid.Empty"/>) is a real position, so a page that
+    /// ends on such a row continues with the next rows.
     /// </para>
     /// </summary>
     [Obsolete("Single-column cursor pagination skips rows when the cursor column is not unique and does not cap the limit by default. Use KeysetPaginateAsync with a unique key (for example .Descending(x => x.CreatedAt).Ascending(x => x.Id)) instead.")]
@@ -167,8 +166,7 @@ public static class Extensions
         request.Normalize();
         IQueryable<T> q = query;
 
-        if (request.Cursor.IsNotNull() &&
-            !EqualityComparer<TCursor>.Default.Equals(request.Cursor, default))
+        if (request.HasCursor && request.Cursor.IsNotNull())
         {
             ParameterExpression parameter = cursorSelector.Parameters[0];
             Expression cursorParameter = Expression.Property(

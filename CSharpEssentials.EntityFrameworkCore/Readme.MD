@@ -124,7 +124,7 @@ await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToke
 await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
 ```
 
-`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own. The obsolete `PaginateAsync` also treats a cursor equal to `default(TCursor)` (`0`, `Guid.Empty`, `null`) as "first page", so a cursor column that can hold that value loops back to page one; `KeysetPaginateAsync` has no such gap.
+`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own. The obsolete `PaginateAsync` returns the first page when `HasCursor` is `false`. `CursorPaginationRequest<TCursor>` sets `HasCursor` whenever `Cursor` is assigned a non-null value, so a cursor of `0` or `Guid.Empty` is a real position and a page that ends on such a row continues with the next rows.
 
 `PaginationRequest.Search` is trimmed by `Normalize` and, when it is not empty and you pass a `search` delegate (`Func<string, Expression<Func<T, bool>>>`), `PaginateAsync` and `Paginate` apply that filter before counting. `PaginationResponse<T>` carries `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`; with `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
 
@@ -723,3 +723,7 @@ public sealed class PostgresConstraintTranslator : IDbErrorTranslator
 ```
 
 The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
+
+## Upgrading to 8.0
+
+- `ICursorPaginationRequest<TCursor>` has a new `HasCursor` property, and the obsolete cursor `PaginateAsync` uses it to decide whether to start at the first page. 7.x treated a cursor equal to `default(TCursor)` (`0`, `Guid.Empty`) as "no cursor", so a page ending on such a row started over at page one. `CursorPaginationRequest<TCursor>` sets `HasCursor` when `Cursor` is assigned a non-null value, including `0`. If you set `Cursor = 0` or `Cursor = Guid.Empty` to mean "first page", leave `Cursor` unset instead. A custom `ICursorPaginationRequest<TCursor>` must implement `HasCursor`; return `false` for a request that has no cursor. The serialized request also gains a read-only `hasCursor` field.
