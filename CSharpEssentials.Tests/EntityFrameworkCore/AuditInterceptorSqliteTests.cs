@@ -39,14 +39,12 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
     private sealed class Shipment : SoftDeletableEntityBase
     {
         public int Id { get; set; }
-        public int OrderId { get; private set; }
         public string Carrier { get; set; } = string.Empty;
     }
 
     private sealed class OrderLine
     {
         public int Id { get; set; }
-        public int OrderId { get; set; }
         public string Product { get; set; } = string.Empty;
     }
 
@@ -80,9 +78,9 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
             {
                 order.Ignore(x => x.DomainEvents);
                 order.OwnsOne(x => x.ShippingAddress);
-                order.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.OrderId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+                order.HasMany(x => x.Lines).WithOne().HasForeignKey("OrderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
                 order.HasMany(x => x.Allocations).WithOne().HasForeignKey("OrderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
-                order.HasMany(x => x.Shipments).WithOne().HasForeignKey(x => x.OrderId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+                order.HasMany(x => x.Shipments).WithOne().HasForeignKey("OrderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<Shipment>().Ignore(x => x.DomainEvents);
             modelBuilder.Entity<Warehouse>()

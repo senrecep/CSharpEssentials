@@ -44,7 +44,7 @@ public class BaseDbContextFinalizerTests
     [Fact]
     public void DisposedContext_ShouldNotRunFinalizer()
     {
-        var logs = new CapturingLoggerProvider();
+        using var logs = new CapturingLoggerProvider();
         using ServiceProvider provider = new ServiceCollection().AddLogging(b => b.AddProvider(logs)).BuildServiceProvider();
 
         CreateContexts(provider, 10, dispose: true);
@@ -57,7 +57,7 @@ public class BaseDbContextFinalizerTests
     [Fact]
     public void UndisposedContext_ShouldStillLogFromFinalizer()
     {
-        var logs = new CapturingLoggerProvider();
+        using var logs = new CapturingLoggerProvider();
         using ServiceProvider provider = new ServiceCollection().AddLogging(b => b.AddProvider(logs)).BuildServiceProvider();
 
         CreateContexts(provider, 10, dispose: false);
