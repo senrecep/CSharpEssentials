@@ -13,7 +13,7 @@ public static class Guider
     private const short _byteCount = 16, _encodedLength = 22, _inputLength = 24;
 
     /// <summary>
-    /// Converts a GUID to a string.
+    /// Converts a GUID to a 22-character RFC 4648 base64url string without padding.
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
@@ -32,8 +32,8 @@ public static class Guider
         for (int i = default; i < _encodedLength; i++)
             chars[i] = span[i] switch
             {
-                _slashByte => _hyphen,
-                _plusByte => _underscore,
+                _plusByte => _hyphen,
+                _slashByte => _underscore,
                 _ => (char)span[i]
             };
 #if NETSTANDARD2_0
@@ -60,8 +60,8 @@ public static class Guider
             char c = id[i];
             span[i] = c switch
             {
-                _hyphen => _slash,
-                _underscore => _plus,
+                _hyphen => _plus,
+                _underscore => _slash,
                 _ when IsBase64Alphanumeric(c) => c,
                 _ => throw new FormatException("The value contains a character that is not part of the URL-safe alphabet.")
             };

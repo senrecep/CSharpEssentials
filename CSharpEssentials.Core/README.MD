@@ -122,7 +122,7 @@ string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
 Guid parsed = shortId.ToGuidFromString();
 ```
 
-The string is standard Base64 with `/` replaced by `-` and `+` replaced by `_`, the reverse of RFC 4648 base64url. Decode it with `ToGuidFromString`; a generic base64url decoder such as `System.Buffers.Text.Base64Url` returns a different GUID whenever the string contains `-` or `_`. Stored short IDs depend on this alphabet, so it will not change.
+The string is RFC 4648 base64url without padding: standard Base64 with `+` replaced by `-` and `/` replaced by `_`. Any base64url codec, such as `System.Buffers.Text.Base64Url` on .NET 9+, decodes it to the same GUID, and `ToGuidFromString` accepts strings that codec produces.
 
 `Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms of the same two conversions. See [Guids](Guids/Readme.MD).
 
@@ -185,3 +185,4 @@ Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEs
 
 - `GetRandomItems` throws `ArgumentOutOfRangeException` (parameter `count`) for a negative `count`. It threw `OverflowException` before; update any `catch` that relied on that.
 - `MsToDateTime` returns a `DateTime` with `Kind = Utc`. It returned `Kind = Unspecified` before, with the same ticks. `ToUniversalTime()` no longer shifts it by the local offset, System.Text.Json now writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. If you stored or compared the old value, call `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour.
+- `ToStringFromGuid` and `ToGuidFromString` use the RFC 4648 base64url alphabet (`+` as `-`, `/` as `_`). 7.x used the reverse mapping, so a short ID stored by 7.x that contains `-` or `_` now decodes to a different GUID. Convert stored IDs once by swapping every `-` with `_` and every `_` with `-`, for example `id.Replace('-', '*').Replace('_', '-').Replace('*', '_')`.

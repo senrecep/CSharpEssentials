@@ -733,7 +733,7 @@ All methods accept an optional `CultureInfo` parameter.
 
 | Method | What It Does |
 |--------|-------------|
-| `guid.ToStringFromGuid()` | 22-character URL-safe short GUID string: Base64 with `/` as `-` and `+` as `_` (the reverse of RFC 4648 base64url, so decode with `ToGuidFromString`) |
+| `guid.ToStringFromGuid()` | 22-character short GUID string in RFC 4648 base64url without padding (`+` as `-`, `/` as `_`), so `System.Buffers.Text.Base64Url` decodes it too |
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid`; throws `FormatException` unless the input is exactly 22 URL-safe characters |
 | `Guider.NewGuid()` | `Guid.CreateVersion7()` on .NET 9+, `Guid.NewGuid()` on older targets |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |

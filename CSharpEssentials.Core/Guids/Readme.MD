@@ -17,7 +17,7 @@ Guid newId = Guider.NewGuid();
 Converts a GUID to a URL-safe string format. The output is:
 
 - Shorter than standard GUID string (22 characters vs 36)
-- URL-safe: standard Base64 with '/' replaced by '-' and '+' replaced by '\_' (the reverse of RFC 4648 Base64url, so decode it with `ToGuidFromString`, not a generic Base64url decoder)
+- URL-safe: RFC 4648 Base64url, so standard Base64 with '+' replaced by '-' and '/' replaced by '\_'. Any Base64url decoder, such as `System.Buffers.Text.Base64Url`, returns the same GUID
 - No padding characters
 - Memory efficient using stack allocation
 

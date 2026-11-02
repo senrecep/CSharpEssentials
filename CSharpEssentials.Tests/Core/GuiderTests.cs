@@ -1,4 +1,4 @@
-using CSharpEssentials.Core;
+﻿using CSharpEssentials.Core;
 using FluentAssertions;
 using static CSharpEssentials.Tests.TestData;
 
@@ -129,15 +129,15 @@ public class GuiderTests
     }
 
     [Fact]
-    public void ToStringFromGuid_UsesSwappedAlphabet_NotRfc4648Base64Url()
+    public void ToStringFromGuid_UsesRfc4648Base64UrlAlphabet()
     {
         Guid guid = new([0xFF, 0xFF, 0xFF, 0xFB, 0xEF, 0xBE, 0xFB, 0xEF, 0xBE, 0xFB, 0xEF, 0xBE, 0xFB, 0xEF, 0xBE, 0xFB]);
 
         string encoded = guid.ToStringFromGuid();
 
         encoded.Should().Contain("-").And.Contain("_");
-        new Guid(System.Buffers.Text.Base64Url.DecodeFromChars(encoded)).Should().NotBe(guid);
-        string rfc = encoded.Replace('-', '*').Replace('_', '-').Replace('*', '_');
-        new Guid(System.Buffers.Text.Base64Url.DecodeFromChars(rfc)).Should().Be(guid);
+        encoded.Should().Be(System.Buffers.Text.Base64Url.EncodeToString(guid.ToByteArray()));
+        new Guid(System.Buffers.Text.Base64Url.DecodeFromChars(encoded)).Should().Be(guid);
+        Guider.ToGuidFromString(System.Buffers.Text.Base64Url.EncodeToString(guid.ToByteArray())).Should().Be(guid);
     }
 }
