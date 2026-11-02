@@ -370,7 +370,7 @@ public class AnyT5Tests
 
         any.GetFirst().Should().Be(0);
         any.ToTuple().First.Should().Be(0);
-        any.Deconstruct(out int first, out string? second, out bool third, out double fourth, out long fifth);
+        any.Deconstruct(out int first, out string? second, out bool _, out double _, out long _);
         first.Should().Be(0);
         second.Should().BeNull();
     }

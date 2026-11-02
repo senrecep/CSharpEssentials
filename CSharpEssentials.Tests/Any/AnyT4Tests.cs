@@ -302,7 +302,7 @@ public class AnyT4Tests
 
         any.GetFirst().Should().Be(0);
         any.ToTuple().First.Should().Be(0);
-        any.Deconstruct(out int first, out string? second, out bool third, out double fourth);
+        any.Deconstruct(out int first, out string? second, out bool _, out double _);
         first.Should().Be(0);
         second.Should().BeNull();
     }

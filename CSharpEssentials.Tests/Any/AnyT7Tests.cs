@@ -514,7 +514,7 @@ public class AnyT7Tests
 
         any.GetFirst().Should().Be(0);
         any.ToTuple().First.Should().Be(0);
-        any.Deconstruct(out int first, out string? second, out bool third, out double fourth, out long fifth, out char sixth, out byte seventh);
+        any.Deconstruct(out int first, out string? second, out bool _, out double _, out long _, out char _, out byte _);
         first.Should().Be(0);
         second.Should().BeNull();
     }
