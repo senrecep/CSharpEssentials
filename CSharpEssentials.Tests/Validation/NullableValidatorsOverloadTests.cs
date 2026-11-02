@@ -143,6 +143,17 @@ public class NullableValidatorsOverloadTests
     }
 
     [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    public async Task InclusiveBetween_ShouldFail_WhenOutsideRange(int value)
+    {
+        Result<M> result = await Validate(value, c => c.InclusiveBetween(1, 5));
+
+        result.FirstError.Code.Should().Be("Value.InclusiveBetween");
+        result.FirstError.Description.Should().Be("'Value' must be between 1 and 5 (inclusive).");
+    }
+
+    [Theory]
     [InlineData(1, true)]
     [InlineData(5, true)]
     [InlineData(0, false)]
