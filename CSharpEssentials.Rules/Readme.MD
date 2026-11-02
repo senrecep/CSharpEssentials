@@ -351,3 +351,4 @@ Result result = await RuleEngine.EvaluateAsync(
 ## Upgrading
 
 - `Linear()` and `RuleEngine.Linear` on an empty array no longer throw `IndexOutOfRangeException`. They return a failed `Result` with the `EMPTY_RULE_ARRAY` validation error, like `And` and `Or`. Replace a `try`/`catch` around an empty `Linear` call with a check of `result.IsFailure`.
+- A custom `IAndRule<TContext, TResult>` or `IAndAsyncRule<TContext, TResult>` whose `Rules` is empty now fails with the `EMPTY_RULE_ARRAY` validation error. Earlier versions failed with a `RuleEngine.Evaluate.*` exception error wrapping an `IndexOutOfRangeException`. Update any code that matches on the old error code.
