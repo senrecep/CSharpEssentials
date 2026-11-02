@@ -33,6 +33,7 @@ Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); t
 Changes in the next major version that need action:
 
 - **Slow query logging hides parameter values by default.** `SlowQueryInterceptor` now follows EF Core's sensitive data setting: values appear in the log and in `SlowQueryContext.Parameters` only when `EnableSensitiveDataLogging()` is on (or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`). Without it, parameters read `@name=?`. Turn sensitive data logging on if you relied on the values.
+- **Soft delete keeps cascaded rows.** When `AuditInterceptor` turns a delete into a soft delete, it now also keeps the tracked entries EF cascade-deleted with it: owned types stay in place, `ISoftDeletable` dependents are soft-deleted, and other dependents of a `Cascade`/`ClientCascade` relationship are left unchanged. Before, tracked required dependents were physically deleted and owned columns were nulled (or the save failed on a `NOT NULL` column). If you relied on the old behaviour, delete the children in a separate save, or mark the root with `MarkAsHardDeleted()`.
 
 ## Usage
 
@@ -49,6 +50,8 @@ services.AddDbContext<MyDbContext>((sp, options) =>
 ```
 
 On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons.
+
+EF Core deletes tracked owned types and `Cascade`/`ClientCascade` dependents as soon as you call `Remove` (the default `CascadeDeleteTiming.Immediate`). When the root becomes a soft delete, the interceptor keeps those entries too: owned types stay, `ISoftDeletable` dependents are soft-deleted, and other dependents go back to `Unchanged` (pending edits on them are still saved). A dependent you removed yourself in the same save looks the same as a cascaded one and is kept, so remove it in its own `SaveChanges`. Optional dependents with `SetNull`/`ClientSetNull` still get their foreign key set to null by EF.
 
 `AddAuditInterceptor` takes a `Func<string>`, a `Func<IServiceProvider, string>`, or the typed `Func<TUserId>` / `Func<IServiceProvider, TUserId>` forms (the user id is stored with `ToString()`). To resolve the user from the request, use the `IServiceProvider` form:
 

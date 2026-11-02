@@ -2,6 +2,7 @@ using CSharpEssentials.Entity.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
@@ -13,6 +14,13 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 ///   <item><see cref="EntityState.Modified"/>: sets <see cref="IModificationAudit.SetUpdatedInfo"/>.</item>
 ///   <item><see cref="EntityState.Deleted"/> on <see cref="ISoftDeletable"/> (non-hard), converts to soft delete.</item>
 /// </list>
+/// <para>
+/// When an entity is soft-deleted, tracked entries that EF already cascade-deleted with it (owned types and
+/// dependents of a <see cref="DeleteBehavior.Cascade"/> or <see cref="DeleteBehavior.ClientCascade"/> relationship)
+/// are kept as well: an <see cref="ISoftDeletable"/> dependent is soft-deleted, any other is set back to
+/// <see cref="EntityState.Unchanged"/>. A dependent removed explicitly in the same save cannot be told apart from a
+/// cascaded one and is kept too; save that removal separately.
+/// </para>
 /// </summary>
 public sealed class AuditInterceptor(
     TimeProvider timeProvider,
@@ -44,7 +52,9 @@ public sealed class AuditInterceptor(
         string userId = userProvider.GetCurrentUserId();
         DateTimeOffset now = timeProvider.GetUtcNow();
 
-        foreach (EntityEntry entry in context.ChangeTracker.Entries())
+        List<EntityEntry> entries = [.. context.ChangeTracker.Entries()];
+        List<EntityEntry> softDeleted = [];
+        foreach (EntityEntry entry in entries)
         {
             if (entry.State == EntityState.Added && entry.Entity is ICreationAudit creationAudit)
                 creationAudit.SetCreatedInfo(now, userId);
@@ -54,7 +64,72 @@ public sealed class AuditInterceptor(
             {
                 softDeletable.MarkAsDeleted(now, userId);
                 entry.State = EntityState.Modified;
+                softDeleted.Add(entry);
             }
         }
+
+        if (softDeleted.Count > 0)
+            RestoreCascadedDependents(entries, softDeleted, now, userId);
+    }
+
+    private static void RestoreCascadedDependents(
+        List<EntityEntry> entries, List<EntityEntry> kept, DateTimeOffset now, string userId)
+    {
+        bool changed = true;
+        while (changed)
+        {
+            changed = false;
+            foreach (EntityEntry entry in entries)
+            {
+                if (entry.State != EntityState.Deleted || !IsCascadedFromKept(entry, kept))
+                    continue;
+
+                if (entry.Entity is ISoftDeletable softDeletable && !softDeletable.IsHardDeleted)
+                {
+                    softDeletable.MarkAsDeleted(now, userId);
+                    entry.State = EntityState.Modified;
+                }
+                else
+                {
+                    entry.State = EntityState.Unchanged;
+                    entry.DetectChanges();
+                }
+
+                kept.Add(entry);
+                changed = true;
+            }
+        }
+    }
+
+    private static bool IsCascadedFromKept(EntityEntry dependent, List<EntityEntry> kept)
+    {
+        foreach (IForeignKey foreignKey in dependent.Metadata.GetForeignKeys())
+        {
+            if (!foreignKey.IsOwnership
+                && foreignKey.DeleteBehavior is not (DeleteBehavior.Cascade or DeleteBehavior.ClientCascade))
+                continue;
+
+            foreach (EntityEntry principal in kept)
+            {
+                if (foreignKey.PrincipalEntityType.IsAssignableFrom(principal.Metadata)
+                    && KeysMatch(foreignKey, dependent, principal))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool KeysMatch(IForeignKey foreignKey, EntityEntry dependent, EntityEntry principal)
+    {
+        for (int i = 0; i < foreignKey.Properties.Count; i++)
+        {
+            object? dependentValue = dependent.Property(foreignKey.Properties[i].Name).CurrentValue;
+            object? principalValue = principal.Property(foreignKey.PrincipalKey.Properties[i].Name).CurrentValue;
+            if (dependentValue is null || !dependentValue.Equals(principalValue))
+                return false;
+        }
+
+        return true;
     }
 }
