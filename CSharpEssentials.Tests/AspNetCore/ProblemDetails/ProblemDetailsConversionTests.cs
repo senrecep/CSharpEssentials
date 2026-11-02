@@ -98,7 +98,7 @@ public class ProblemDetailsConversionTests
 
         EnhancedProblemDetails problem = ProblemOf(result);
         problem.Status.Should().Be(404);
-        problem.ErrorCodes.Should().BeEquivalentTo(["name.required", "order.notFound"]);
+        problem.ErrorCodes.Should().BeEquivalentTo("name.required", "order.notFound");
     }
 
     [Fact]

@@ -115,21 +115,13 @@ public sealed class IdempotencyResponseCaptureTests
             },
             configureEndpoints: app =>
             {
-                app.MapPost("/sync-write", (HttpContext context, IdempotencyProbe probe) =>
-                {
-                    AllowSynchronousIO(context);
-                    int execution = probe.Execute();
-                    context.Response.StatusCode = StatusCodes.Status201Created;
-                    byte[] head = Encoding.UTF8.GetBytes($"sync-{execution}");
-                    context.Response.Body.Write(head, 0, head.Length);
-                    context.Response.Body.Flush();
-                    context.Response.Body.Write("|tail"u8);
-                    return Task.CompletedTask;
-                }).WithIdempotency();
+                app.MapPost("/sync-write", (HttpContext context, IdempotencyProbe probe) => WriteSynchronously(context, probe.Execute()))
+                    .WithIdempotency();
                 app.MapPost("/array-write", async (HttpContext context, IdempotencyProbe probe) =>
                 {
                     byte[] bytes = Encoding.UTF8.GetBytes($"array-{probe.Execute()}");
-                    await context.Response.Body.WriteAsync(bytes, 0, bytes.Length, context.RequestAborted);
+                    Func<byte[], int, int, CancellationToken, Task> writeArray = context.Response.Body.WriteAsync;
+                    await writeArray(bytes, 0, bytes.Length, context.RequestAborted);
                 }).WithIdempotency();
                 app.MapPost("/stream-shape", async (HttpContext context, IdempotencyProbe probe) =>
                 {
@@ -164,11 +156,16 @@ public sealed class IdempotencyResponseCaptureTests
                 }).WithIdempotency();
             });
 
-    private static void AllowSynchronousIO(HttpContext context)
+    private static void WriteSynchronously(HttpContext context, int execution)
     {
         IHttpBodyControlFeature? feature = context.Features.Get<IHttpBodyControlFeature>();
         feature.Should().NotBeNull();
-        feature!.AllowSynchronousIO = true;
+        feature.AllowSynchronousIO = true;
+        context.Response.StatusCode = StatusCodes.Status201Created;
+        byte[] head = Encoding.UTF8.GetBytes($"sync-{execution}");
+        context.Response.Body.Write(head, 0, head.Length);
+        context.Response.Body.Flush();
+        context.Response.Body.Write("|tail"u8);
     }
 
     private static bool Throws(Action action)

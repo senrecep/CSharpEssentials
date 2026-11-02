@@ -87,7 +87,7 @@ public class EnumBindingSourceTests
 
         var response = await GetAsync(host, "/mvc/dto/bad-route?st=bad-query&readOnly=bad-ignored", ("X-Status", "bad-header"));
 
-        response.ShouldBeEnumBindingProblem().Select(error => error.Code).Should().BeEquivalentTo(["st", "X-Status", "Kind"]);
+        response.ShouldBeEnumBindingProblem().Select(error => error.Code).Should().BeEquivalentTo("st", "X-Status", "Kind");
     }
 
     [Fact]
