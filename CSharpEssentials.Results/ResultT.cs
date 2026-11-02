@@ -110,7 +110,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IFailure
     public override int GetHashCode()
     {
         if (IsSuccess)
-            return _value.GetHashCode();
+            return _value is null ? 0 : EqualityComparer<TValue>.Default.GetHashCode(_value);
         return ResultLogic.CreateErrorCodeHash(ErrorsOrEmptyArray);
     }
 

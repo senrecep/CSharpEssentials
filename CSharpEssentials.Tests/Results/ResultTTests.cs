@@ -214,4 +214,14 @@ public class ResultTTests
     }
 
     #endregion
+
+    [Fact]
+    public void GetHashCode_Should_NotThrow_When_SuccessValueIsNull()
+    {
+        Result<string> result = default;
+
+        Action act = () => result.GetHashCode();
+
+        act.Should().NotThrow();
+    }
 }
