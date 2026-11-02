@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.DependencyInjection.Benchmarks.ResolveBenchmarks-20261102-053456</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method         </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>DecoratedManual</td><td>Decorated</td><td>126.8 ns</td><td>1.80 ns</td><td>1.69 ns</td><td>1.00</td><td>0.02</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>DecoratedCseGenerated</td><td>Decorated</td><td>190.6 ns</td><td>1.28 ns</td><td>1.13 ns</td><td>1.50</td><td>0.02</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>DecoratedCseRuntime</td><td>Decorated</td><td>220.3 ns</td><td>2.44 ns</td><td>2.28 ns</td><td>1.74</td><td>0.03</td><td>0.0234</td><td>392 B</td><td>1.09</td>
+</tr><tr><td>DecoratedScrutor</td><td>Decorated</td><td>350.0 ns</td><td>3.37 ns</td><td>2.99 ns</td><td>2.76</td><td>0.04</td><td>0.0234</td><td>392 B</td><td>1.09</td>
+</tr><tr><td>PlainManual</td><td>Plain</td><td>146.4 ns</td><td>1.13 ns</td><td>1.05 ns</td><td>1.00</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>PlainCseGenerated</td><td>Plain</td><td>147.3 ns</td><td>1.56 ns</td><td>1.46 ns</td><td>1.01</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>PlainScrutor</td><td>Plain</td><td>150.9 ns</td><td>1.18 ns</td><td>1.05 ns</td><td>1.03</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>

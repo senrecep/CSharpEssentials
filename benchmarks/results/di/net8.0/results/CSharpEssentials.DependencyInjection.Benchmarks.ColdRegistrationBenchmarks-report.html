@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.DependencyInjection.Benchmarks.ColdRegistrationBenchmarks-20261102-053046</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host] : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  cold   : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Job=cold  IterationCount=1  LaunchCount=15  
+RunStrategy=ColdStart  WarmupCount=0  
+</code></pre>
+
+<table>
+<thead><tr><th>Method </th><th>N</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Manual</td><td>50</td><td>22.18 ms</td><td>0.334 ms</td><td>0.312 ms</td><td>1.00</td><td>0.02</td><td>117.04 KB</td><td>1.00</td>
+</tr><tr><td>CseGenerated</td><td>50</td><td>23.47 ms</td><td>0.419 ms</td><td>0.392 ms</td><td>1.06</td><td>0.02</td><td>116.76 KB</td><td>1.00</td>
+</tr><tr><td>CseReflection</td><td>50</td><td>35.76 ms</td><td>0.258 ms</td><td>0.241 ms</td><td>1.61</td><td>0.02</td><td>403.36 KB</td><td>3.45</td>
+</tr><tr><td>Scrutor</td><td>50</td><td>31.48 ms</td><td>0.497 ms</td><td>0.465 ms</td><td>1.42</td><td>0.03</td><td>181.3 KB</td><td>1.55</td>
+</tr><tr><td>Manual</td><td>500</td><td>49.24 ms</td><td>0.563 ms</td><td>0.527 ms</td><td>1.00</td><td>0.01</td><td>1187.49 KB</td><td>1.00</td>
+</tr><tr><td>CseGenerated</td><td>500</td><td>51.63 ms</td><td>0.606 ms</td><td>0.567 ms</td><td>1.05</td><td>0.02</td><td>1064.57 KB</td><td>0.90</td>
+</tr><tr><td>CseReflection</td><td>500</td><td>66.47 ms</td><td>0.368 ms</td><td>0.344 ms</td><td>1.35</td><td>0.02</td><td>3871.52 KB</td><td>3.26</td>
+</tr><tr><td>Scrutor</td><td>500</td><td>57.32 ms</td><td>0.440 ms</td><td>0.412 ms</td><td>1.16</td><td>0.01</td><td>1723.06 KB</td><td>1.45</td>
+</tr></tbody></table>
+</body>
+</html>
