@@ -27,7 +27,7 @@ internal sealed partial class SecretManagerConfigurationProvider(
     private static readonly TimeSpan DefaultRetryBaseDelay = TimeSpan.FromSeconds(2);
 
     private readonly TimeSpan _retryBaseDelay = retryBaseDelay ?? DefaultRetryBaseDelay;
-    private readonly ConcurrentDictionary<string, string?> _data = new();
+    private readonly ConcurrentDictionary<string, string?> _data = new(StringComparer.OrdinalIgnoreCase);
     private readonly ILogger _logger = options.LoggerFactory?.CreateLogger<SecretManagerConfigurationProvider>()
         ?? NullLogger<SecretManagerConfigurationProvider>.Instance;
 
@@ -51,7 +51,7 @@ internal sealed partial class SecretManagerConfigurationProvider(
                 }
             }
 
-            Data = new Dictionary<string, string?>(_data, StringComparer.Ordinal);
+            Data = new Dictionary<string, string?>(_data, StringComparer.OrdinalIgnoreCase);
         }
         catch (Exception ex)
         {
@@ -79,7 +79,7 @@ internal sealed partial class SecretManagerConfigurationProvider(
             if (filteredSecrets.Count == 0)
                 return [];
 
-            var resultDict = new Dictionary<string, string?>(StringComparer.Ordinal);
+            var resultDict = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
             for (int i = 0; i < filteredSecrets.Count; i += options.BatchSize)
             {
@@ -111,7 +111,7 @@ internal sealed partial class SecretManagerConfigurationProvider(
         ProjectSecretLoadContext context,
         Secret secret)
     {
-        var resultDict = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var resultDict = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -145,7 +145,7 @@ internal sealed partial class SecretManagerConfigurationProvider(
         try
         {
             using var document = JsonDocument.Parse(jsonValue);
-            var tempData = new Dictionary<string, string?>(StringComparer.Ordinal);
+            var tempData = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
             FlattenJson(tempData, document.RootElement, result.Key);
 
             if (tempData.Count > 0)

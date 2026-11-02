@@ -48,7 +48,7 @@ Secrets are loaded once, synchronously, when `AddGcpSecretManager` is called (`C
 | `SecretIds` | Load these secrets by id, in addition to the prefix matches. With neither `PrefixFilters` nor `SecretIds`, every secret of the project is loaded. |
 | `RawSecretIds`, `RawSecretPrefixes` | Secrets that are stored as one string and not parsed as JSON (see below). |
 
-`SecretManagerConfigurationOptions` also has `BatchSize` (secrets read in parallel per project, default `10`) and `PageSize` (secrets per list request, default `300`, `0` lets the server choose). Setting `BatchSize` to zero or less, or `PageSize` below zero, throws `ArgumentOutOfRangeException`. The latest version of every secret is read. When several projects or secrets produce the same key, the first one wins (projects in the order you added them).
+`SecretManagerConfigurationOptions` also has `BatchSize` (secrets read in parallel per project, default `10`) and `PageSize` (secrets per list request, default `300`, `0` lets the server choose). Setting `BatchSize` to zero or less, or `PageSize` below zero, throws `ArgumentOutOfRangeException`. The latest version of every secret is read. Keys are case-insensitive, like the rest of .NET configuration: `database__password` is read as `Database:Password`. When several projects or secrets produce the same key, ignoring case, the first one wins (projects in the order you added them).
 
 ### Logging
 
@@ -122,3 +122,4 @@ Bind the section as usual (`builder.Configuration.GetSection("MyApp:Database").G
 ### Upgrading from 7.x
 
 - `BatchSize` must be greater than zero and `PageSize` must not be negative; other values now throw `ArgumentOutOfRangeException` when set. Before, a `BatchSize` of zero or less hung startup and a negative `PageSize` loaded no secrets. Remove the setting or use a valid value.
+- Configuration keys from secrets are now case-insensitive. Before, `database__password` did not match `Database:Password`, and secrets whose ids differ only by case (`Key` and `key`) gave two keys; now the first one in list order wins. Rename such secrets if you need both values.
