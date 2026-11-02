@@ -13,6 +13,7 @@ internal sealed class EnumNameLookup<TValue> where TValue : class
     private readonly Dictionary<string, TValue> _items;
 #else
     private readonly bool _ignoreCase;
+    private readonly bool _fullHash;
     private readonly int _shift;
     private readonly int[] _buckets;
     private readonly int[] _hashes;
@@ -42,6 +43,16 @@ internal sealed class EnumNameLookup<TValue> where TValue : class
         while (1 << bits < count * 2)
         {
             bits++;
+        }
+
+        HashSet<int> sampled = [];
+        foreach (string key in map.Keys)
+        {
+            if (!sampled.Add(Hash(key.AsSpan())))
+            {
+                _fullHash = true;
+                break;
+            }
         }
 
         _shift = 32 - bits;
@@ -85,17 +96,28 @@ internal sealed class EnumNameLookup<TValue> where TValue : class
     private int Bucket(int hash) => (int)(unchecked((uint)hash * 2654435769u) >> _shift);
 
     /// <remarks>
-    /// Hashes the length and five sampled chars (first, last and three in between). Ignoring case, ASCII chars are folded with
-    /// <c>| 0x20</c> and every non-ASCII char hashes alike: OrdinalIgnoreCase never equates a non-ASCII char with an ASCII one and
-    /// never changes the length, so keys that compare equal hash equal.
+    /// Hashes the length and five sampled chars (first, last and three in between), or every char when two keys of the table share
+    /// a sampled hash, so names that differ only between the samples (<c>Error_001_Code</c>, <c>Error_002_Code</c>) never chain.
+    /// Ignoring case, ASCII chars are folded with <c>| 0x20</c> and every non-ASCII char hashes alike: OrdinalIgnoreCase never
+    /// equates a non-ASCII char with an ASCII one and never changes the length, so keys that compare equal hash equal.
     /// </remarks>
     private int Hash(ReadOnlySpan<char> key)
     {
         int length = key.Length;
+        int hash = length;
+        if (_fullHash)
+        {
+            foreach (char c in key)
+            {
+                hash = unchecked(hash * 31 + Sample(c));
+            }
+
+            return hash;
+        }
+
         if (length == 0)
             return 0;
 
-        int hash = length;
         hash = unchecked(hash * 31 + Sample(key[0]));
         hash = unchecked(hash * 31 + Sample(key[length >> 2]));
         hash = unchecked(hash * 31 + Sample(key[length >> 1]));

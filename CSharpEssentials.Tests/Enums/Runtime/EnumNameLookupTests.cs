@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Reflection;
 using CSharpEssentials.Enums;
 using FluentAssertions;
 
@@ -8,6 +9,25 @@ public class EnumNameLookupTests
 {
     private static EnumNameLookup<string> Lookup(StringComparer comparer, params string[] keys) =>
         new(keys.Select((key, i) => new KeyValuePair<string, string>(key, key + "#" + i)), comparer);
+
+    private static int LongestChain(EnumNameLookup<string> lookup)
+    {
+        int[] buckets = Field<int[]>(lookup, "_buckets");
+        int[] next = Field<int[]>(lookup, "_next");
+        int longest = 0;
+        foreach (int head in buckets)
+        {
+            int length = 0;
+            for (int i = head - 1; i >= 0; i = next[i])
+                length++;
+            longest = Math.Max(longest, length);
+        }
+
+        return longest;
+    }
+
+    private static T Field<T>(object target, string name) =>
+        (T)target.GetType().GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(target)!;
 
     [Fact]
     public void OrdinalIgnoreCase_Should_Never_Equate_A_Non_Ascii_Char_With_An_Ascii_Char()
@@ -68,6 +88,22 @@ public class EnumNameLookupTests
 
         exact.Find("Code2000".AsSpan()).Should().BeNull();
         ignoreCase.Find(new string('c', 4096).AsSpan()).Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("Error_{0:D3}_Code")]
+    [InlineData("Level{0:D2}x")]
+    public void Names_That_Differ_Only_Between_Sampled_Chars_Should_Not_Chain(string format)
+    {
+        string[] keys = [.. Enumerable.Range(0, 100).Select(i => string.Format(CultureInfo.InvariantCulture, format, i))];
+        foreach (StringComparer comparer in new[] { StringComparer.Ordinal, StringComparer.OrdinalIgnoreCase })
+        {
+            EnumNameLookup<string> lookup = Lookup(comparer, keys);
+
+            for (int i = 0; i < keys.Length; i++)
+                lookup.Find(keys[i].AsSpan()).Should().Be(keys[i] + "#" + i);
+            LongestChain(lookup).Should().BeLessThanOrEqualTo(4);
+        }
     }
 
     [Fact]
