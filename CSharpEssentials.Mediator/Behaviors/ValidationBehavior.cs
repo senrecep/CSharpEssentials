@@ -82,10 +82,11 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         if (result.IsSuccess)
             return next(message, cancellationToken);
 
-        if (mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory && !AnyObserverListening(mode))
+        bool notify = AnyObserverListening(mode);
+        if (mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory && !notify)
             return new ValueTask<TResponse>(factory.CreateFailure(result.Errors));
 
-        return CompleteFailureAsync(message, result.Errors, mode, next, cancellationToken);
+        return CompleteFailureAsync(message, result.Errors, mode, notify, next, cancellationToken);
     }
 
     private async ValueTask<TResponse> AwaitValidationAsync(
@@ -99,7 +100,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         if (result.IsSuccess)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
-        return await CompleteFailureAsync(message, result.Errors, mode, next, cancellationToken).ConfigureAwait(false);
+        return await CompleteFailureAsync(message, result.Errors, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<TResponse> ValidateGroupsAsync(
@@ -112,17 +113,18 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         if (errors is null)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
-        return await CompleteFailureAsync(message, errors, mode, next, cancellationToken).ConfigureAwait(false);
+        return await CompleteFailureAsync(message, errors, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
     }
 
     private async ValueTask<TResponse> CompleteFailureAsync(
         TRequest message,
         Error[] errors,
         ValidationMode mode,
+        bool notify,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        if (AnyObserverListening(mode))
+        if (notify)
             await NotifyObserversAsync(message, errors, mode, cancellationToken).ConfigureAwait(false);
 
         if (mode == ValidationMode.LogOnly)
