@@ -22,7 +22,7 @@ public class ErrorTypeExtensionsTests
 
     [Theory]
     [MemberData(nameof(Spellings))]
-    public void ToWireName_ShouldReturnSnakeCaseName(ErrorType type, string name, string snake, string kebab)
+    public void CaseHelpers_ShouldReturnExpectedSpellings(ErrorType type, string name, string snake, string kebab)
     {
         type.ToWireName().Should().Be(snake);
         type.ToOptimizedString().Should().Be(name);
