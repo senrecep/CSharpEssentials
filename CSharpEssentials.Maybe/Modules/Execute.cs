@@ -166,7 +166,7 @@ public static partial class MaybeExtensions
         if (maybe.HasNoValue)
             return;
 
-        await valueTask(maybe.Value).ConfigureAwait(false);
+        await valueTask(maybe.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
 
