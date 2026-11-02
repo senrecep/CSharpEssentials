@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CSharpEssentials.RequestResponseLogging;
 using CSharpEssentials.RequestResponseLogging.Infrastructure.MessageCreators;
 using FluentAssertions;
@@ -209,6 +210,29 @@ public sealed class LogMessageCreatorTests
         (string logString, _) = creator.Create(context);
 
         logString.Should().Contain("corr-999");
+    }
+
+    [Fact]
+    public void Create_Should_WriteValidJsonHeaders_When_HeaderValueHasQuotesAndBackslashes()
+    {
+        const string headerValue = "\"Not A;Brand\";v=\"1\", C:\\path";
+        var options = new LoggingOptions
+        {
+            UseSeparateContext = false,
+            LoggingFields = [LogFields.Headers],
+            HeaderKeys = ["sec-ch-ua"]
+        };
+        var creator = new LogMessageCreator(options);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["sec-ch-ua"] = headerValue;
+        var context = new RequestResponseContext(httpContext);
+
+        (string logString, _) = creator.Create(context);
+
+        string headersJson = logString["Headers: ".Length..].Trim();
+        using JsonDocument document = JsonDocument.Parse(headersJson);
+        document.RootElement[0].GetProperty("sec-ch-ua").GetString().Should().Be(headerValue);
     }
 
     [Fact]
