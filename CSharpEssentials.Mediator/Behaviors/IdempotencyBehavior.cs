@@ -4,7 +4,6 @@ using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
 using CSharpEssentials.Idempotency;
-using CSharpEssentials.ResultPattern;
 using CSharpEssentials.ResultPattern.Interfaces;
 
 using Mediator;
@@ -29,9 +28,6 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
     where TRequest : IIdempotentRequest, IMessage
 {
     private static readonly string RequestType = typeof(TRequest).FullName ?? typeof(TRequest).Name;
-    private static readonly bool IsResult = typeof(TResponse) == BehaviorCache.ResultType;
-    private static readonly bool IsGenericResult =
-        typeof(TResponse).IsGenericType && typeof(TResponse).GetGenericTypeDefinition() == BehaviorCache.GenericResultType;
 
     private readonly IIdempotencyExecutor _executor;
     private readonly IOptionsMonitor<IdempotencyExecutorOptions> _executorOptions;
@@ -192,14 +188,10 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
 #endif
     }
 
-    private static TResponse Failure(Error error)
-    {
-        if (IsResult)
-            return (TResponse)(object)Result.Failure(error);
-        if (IsGenericResult)
-            return (TResponse)BehaviorCache.GetOrCreateFactory(typeof(TResponse))([error]);
-        throw new EnhancedValidationException([error]);
-    }
+    private static TResponse Failure(Error error) =>
+        FailureResponse<TResponse>.Factory is { } factory
+            ? factory.CreateFailure([error])
+            : throw new EnhancedValidationException([error]);
 
     [LoggerMessage(EventId = 7001, EventName = IdempotencyErrorCodes.UnscopedKeySkipped, Level = LogLevel.Warning,
         Message = "The idempotency key of {RequestType} has no scope, so the request runs without idempotency.")]

@@ -259,4 +259,31 @@ public class ValidationBehaviorTests
 
         result.IsSuccess.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Handle_Should_Return_The_Validator_Errors_Without_Copying()
+    {
+        Error[] errors = [Error.Validation("NameRequired", "Name is required")];
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new FixedResultValidator(errors)]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Errors.Should().BeSameAs(errors);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Throw_EnhancedValidationException_When_TResponse_Is_Nullable_Result()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>?> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+
+        Func<Task> act = () => behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>?>(42), default).AsTask();
+
+        await act.Should().ThrowAsync<EnhancedValidationException>();
+    }
+}
+
+internal sealed class FixedResultValidator(Error[] errors) : IValidator<TestValidationCommand>
+{
+    public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
+        new(Result<TestValidationCommand>.Failure(errors));
 }

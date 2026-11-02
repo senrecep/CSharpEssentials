@@ -53,7 +53,7 @@ services.AddMediator(options =>
 
 Pipeline order: **Validation → Logging → Exception handling → Caching → Transaction**
 
-This package is not marked `IsAotCompatible`. The behaviors themselves are not reflection-free: `ValidationBehavior` and `ExceptionHandlingBehavior` build `Result<T>` failure responses with reflection and a compiled expression, and `CachingBehavior` and `LoggingBehavior` serialize requests and responses with reflection-based `System.Text.Json`. Publish with trimming or Native AOT only after testing the behaviors you use.
+This package is not marked `IsAotCompatible`. `ValidationBehavior`, `ExceptionHandlingBehavior` and `IdempotencyBehavior` build `Result` and `Result<T>` failure responses without reflection. `CachingBehavior`, `LoggingBehavior` and `IdempotencyBehavior` still serialize requests and responses with reflection-based `System.Text.Json`. Publish with trimming or Native AOT only after testing the behaviors you use.
 
 > See [Mediator §4.4: Use pipeline behaviors](https://github.com/martinothamar/Mediator#44-use-pipeline-behaviors) for the full Native AOT pipeline behavior documentation.
 

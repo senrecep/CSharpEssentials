@@ -10,8 +10,6 @@ namespace CSharpEssentials.Mediator;
 public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IMessage
 {
-    private readonly Type _responseType = typeof(TResponse);
-
     // Validators are grouped by Order (ascending) and materialized once at construction time.
     // Hot path never pays the GroupBy/OrderBy cost, groups are iterated directly.
     private readonly IValidator<TRequest>[][] _orderedGroups;
@@ -73,7 +71,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         if (_orderedGroups is [{ Length: 1 } onlyGroup])
         {
             Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken).ConfigureAwait(false);
-            return singleResult.IsFailure ? [.. singleResult.Errors] : null;
+            return singleResult.IsFailure ? singleResult.Errors : null;
         }
 
         // Groups are pre-sorted by Order (ascending) in the constructor.
@@ -198,24 +196,12 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// <summary>
     /// Maps validation errors to <typeparamref name="TResponse"/>:
     /// <list type="bullet">
-    ///   <item><see cref="Result"/>: <c>Result.Failure(errors)</c> returned directly.</item>
-    ///   <item><see cref="Result{T}"/>: <c>Result&lt;T&gt;.Failure(errors)</c> via compiled factory.</item>
+    ///   <item><see cref="Result"/> and <see cref="Result{T}"/>: a failure carrying <paramref name="errors"/>, built without reflection.</item>
     ///   <item>Any other type: <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
     /// </list>
     /// </summary>
-    private TResponse BuildFailureResponse(Error[] errors)
-    {
-        if (_responseType == BehaviorCache.ResultType)
-            return (TResponse)(object)Result.Failure(errors);
-
-        if (_responseType.IsGenericType
-            && _responseType.GetGenericTypeDefinition() == BehaviorCache.GenericResultType)
-            return CreateGenericResultResponse(errors);
-
-        // TResponse cannot carry error information: delegate to GlobalExceptionHandler.
-        throw new EnhancedValidationException(errors);
-    }
-
-    private TResponse CreateGenericResultResponse(Error[] errors) =>
-        (TResponse)BehaviorCache.GetOrCreateFactory(_responseType)(errors);
+    private static TResponse BuildFailureResponse(Error[] errors) =>
+        FailureResponse<TResponse>.Factory is { } factory
+            ? factory.CreateFailure(errors)
+            : throw new EnhancedValidationException(errors);
 }

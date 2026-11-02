@@ -19,25 +19,13 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IMessage
 {
-    private readonly Type _responseType = typeof(TResponse);
-
-    // Computed once at construction time: never pays the IsGenericType check on every request.
-    private readonly bool _canHandleResponse;
-
-    public ExceptionHandlingBehavior()
-    {
-        Type t = typeof(TResponse);
-        _canHandleResponse = t == BehaviorCache.ResultType
-            || t.IsGenericType && t.GetGenericTypeDefinition() == BehaviorCache.GenericResultType;
-    }
-
     public ValueTask<TResponse> Handle(
         TRequest message,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
         // When TResponse cannot carry error info, skip exception wrapping entirely, zero overhead.
-        if (!_canHandleResponse)
+        if (FailureResponse<TResponse>.Factory is null)
             return next(message, cancellationToken);
 
         try
@@ -46,7 +34,7 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
             // Sync-complete fast path, no state-machine allocation on the happy path.
             if (vt.IsCompletedSuccessfully)
                 return vt;
-            return WrapAsync(vt, _responseType);
+            return WrapAsync(vt);
         }
         catch (OperationCanceledException)
         {
@@ -54,10 +42,10 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
         }
         catch (Exception ex)
         {
-            return new ValueTask<TResponse>(BuildFailureResponse(Error.Exception(ex), _responseType));
+            return new ValueTask<TResponse>(BuildFailureResponse(Error.Exception(ex)));
         }
 
-        static async ValueTask<TResponse> WrapAsync(ValueTask<TResponse> vt, Type responseType)
+        static async ValueTask<TResponse> WrapAsync(ValueTask<TResponse> vt)
         {
             try
             {
@@ -69,23 +57,10 @@ public sealed class ExceptionHandlingBehavior<TRequest, TResponse>
             }
             catch (Exception ex)
             {
-                return BuildFailureResponse(Error.Exception(ex), responseType);
+                return BuildFailureResponse(Error.Exception(ex));
             }
         }
     }
 
-    /// <summary>
-    /// Maps a single <paramref name="error"/> to <typeparamref name="TResponse"/>:
-    /// <list type="bullet">
-    ///   <item><see cref="Result"/>: <c>Result.Failure(error)</c> returned directly.</item>
-    ///   <item><see cref="Result{T}"/>: <c>Result&lt;T&gt;.Failure(error)</c> via compiled factory.</item>
-    /// </list>
-    /// </summary>
-    private static TResponse BuildFailureResponse(Error error, Type responseType)
-    {
-        if (responseType == BehaviorCache.ResultType)
-            return (TResponse)(object)Result.Failure(error);
-
-        return (TResponse)BehaviorCache.GetOrCreateFactory(responseType)([error]);
-    }
+    private static TResponse BuildFailureResponse(Error error) => FailureResponse<TResponse>.Factory!.CreateFailure([error]);
 }
