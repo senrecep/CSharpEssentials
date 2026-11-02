@@ -12,17 +12,30 @@ public class SwashbuckleSchemaIdFactory
     private readonly object _gate = new();
 #endif
 
+    /// <summary>
+    /// Builds every id from the namespace-qualified type name (<c>NsB.Order</c>, generic arguments in front), so the
+    /// ids do not depend on the order in which types are first seen. Off by default: the short names and the
+    /// first-seen numeric suffixes stay unchanged.
+    /// </summary>
+    public bool QualifyWithNamespace { get; init; }
+
     private string DefaultSchemaIdSelector(Type modelType)
     {
+        if (QualifyWithNamespace && modelType.IsArray)
+            return DefaultSchemaIdSelector(modelType.GetElementType()!) + "Array";
+
         if (!modelType.IsConstructedGenericType)
-            return modelType.Name.Replace("[]", "Array");
+            return TypeName(modelType).Replace("[]", "Array");
 
         string prefix = modelType.GetGenericArguments()
             .Select(DefaultSchemaIdSelector)
             .Aggregate((previous, current) => previous + current);
 
-        return prefix + modelType.Name.Split('`')[0];
+        return prefix + TypeName(modelType.GetGenericTypeDefinition()).Split('`')[0];
     }
+
+    private string TypeName(Type type) =>
+        QualifyWithNamespace && type.FullName is { } fullName ? fullName.Replace('+', '.') : type.Name;
 
     public string GetSchemaId(Type modelType)
     {

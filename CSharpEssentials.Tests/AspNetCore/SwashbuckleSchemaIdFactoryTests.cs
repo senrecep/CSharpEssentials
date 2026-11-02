@@ -87,6 +87,25 @@ public class SwashbuckleSchemaIdFactoryTests
         }
     }
 
+    [Fact]
+    public void GetSchemaId_Should_NotDependOnFirstSeenOrder_When_QualifyWithNamespaceIsSet()
+    {
+        var firstSeenFirst = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = true };
+        var secondSeenFirst = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = true };
+
+        firstSeenFirst.GetSchemaId(typeof(FirstScope.Order));
+        string afterFirst = firstSeenFirst.GetSchemaId(typeof(SecondScope.Order));
+        string beforeFirst = secondSeenFirst.GetSchemaId(typeof(SecondScope.Order));
+        secondSeenFirst.GetSchemaId(typeof(FirstScope.Order));
+
+        afterFirst.Should().Be(beforeFirst)
+            .And.Be("CSharpEssentials.Tests.AspNetCore.SwashbuckleSchemaIdFactoryTests.SecondScope.Order");
+        secondSeenFirst.GetSchemaId(typeof(List<SecondScope.Order[]>))
+            .Should().Be("CSharpEssentials.Tests.AspNetCore.SwashbuckleSchemaIdFactoryTests.SecondScope.OrderArraySystem.Collections.Generic.List");
+        secondSeenFirst.GetSchemaId(typeof(List<int>[]))
+            .Should().Be("System.Int32System.Collections.Generic.ListArray");
+    }
+
     private static class FirstScope
     {
         public sealed class Order;
