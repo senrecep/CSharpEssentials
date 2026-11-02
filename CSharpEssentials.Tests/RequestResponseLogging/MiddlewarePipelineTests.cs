@@ -1,3 +1,4 @@
+using System.IO.Pipelines;
 using CSharpEssentials.RequestResponseLogging;
 using CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
 using CSharpEssentials.RequestResponseLogging.LogWriters;
@@ -286,6 +287,52 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
 
         capturedContext!.RequestBody.Should().StartWith("Error capturing request body");
         positionSeenByEndpoint.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_StopCapturing_When_ChunkedBodyExceedsLimit()
+    {
+        const int bodySize = 11 * 1024 * 1024;
+        long bytesSeenByEndpoint = 0;
+        RequestResponseContext? capturedContext = null;
+
+        _host = await CreateHostBuilder(
+            opts => opts.UseHandler(ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            }),
+            async ctx =>
+            {
+                byte[] chunk = new byte[81920];
+                int read;
+                while ((read = await ctx.Request.Body.ReadAsync(chunk)) > 0)
+                {
+                    bytesSeenByEndpoint += read;
+                }
+            }).StartAsync();
+        var client = _host.GetTestClient();
+
+        var pipe = new Pipe();
+        Task writer = Task.Run(async () =>
+        {
+            byte[] chunk = new byte[1024 * 1024];
+            Array.Fill(chunk, (byte)'a');
+            for (int i = 0; i < bodySize / chunk.Length; i++)
+            {
+                await pipe.Writer.WriteAsync(chunk);
+            }
+
+            await pipe.Writer.CompleteAsync();
+        });
+        using var content = new StreamContent(pipe.Reader.AsStream());
+
+        await client.PostAsync("/upload", content);
+        await writer;
+
+        content.Headers.ContentLength.Should().BeNull();
+        capturedContext!.RequestBody.Should().StartWith("Request body too large");
+        bytesSeenByEndpoint.Should().Be(bodySize);
     }
 
     private sealed class ThrowOnceStream(byte[] content, long throwAtPosition) : MemoryStream(content)

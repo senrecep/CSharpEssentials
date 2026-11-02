@@ -160,8 +160,15 @@ internal abstract class BaseMiddleware
             buffer = _arrayPool.Rent(_bufferSize);
 
             int bytesRead;
+            long totalBytesRead = 0;
             while ((bytesRead = await context.Request.Body.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
             {
+                totalBytesRead += bytesRead;
+                if (totalBytesRead > MaxRequestBodySize)
+                {
+                    return $"Request body too large: over {MaxRequestBodySize} bytes";
+                }
+
                 await requestStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
             }
 

@@ -40,7 +40,7 @@ Register it after `UseRouting()` when you call `UseRouting()` yourself. The skip
 
 `IgnorePaths` matches by prefix, ignoring case and a trailing `/`: `"/health"` also skips `/health/live` and `/healthz`. Calling it again replaces the earlier list.
 
-The response body is held in memory until the request finishes, then copied to the client, so the response is not streamed. Use `[SkipResponseLogging]` on streaming endpoints (server-sent events, large downloads). A request with a `Content-Length` over 10 MB is not read and is logged as `Request body too large: {n} bytes`; an empty body is logged as `Empty request body`, an empty response as `Empty response body`. If the request pipeline throws, the middleware logs `Error occurred during request processing` with the exception type and message in the response field, and rethrows.
+The response body is held in memory until the request finishes, then copied to the client, so the response is not streamed. Use `[SkipResponseLogging]` on streaming endpoints (server-sent events, large downloads). A request with a `Content-Length` over 10 MB is not read and is logged as `Request body too large: {n} bytes`; a body without a `Content-Length` (chunked) is read up to 10 MB, then logged as `Request body too large: over 10485760 bytes`, and the endpoint still receives the whole body; an empty body is logged as `Empty request body`, an empty response as `Empty response body`. If the request pipeline throws, the middleware logs `Error occurred during request processing` with the exception type and message in the response field, and rethrows.
 
 The level, fields and format come from `LoggingOptions`:
 
