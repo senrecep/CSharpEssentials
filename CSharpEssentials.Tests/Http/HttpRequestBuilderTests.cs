@@ -115,7 +115,8 @@ public class HttpRequestBuilderTests
     {
         using var handler = new BodyRecordingHandler();
         using var client = new HttpClient(handler);
-        HttpRequestBuilder builder = HttpRequestBuilder.Post("https://test.com/api").WithContent(new StringContent("a"));
+        using var content = new StringContent("a");
+        HttpRequestBuilder builder = HttpRequestBuilder.Post("https://test.com/api").WithContent(content);
 
         Result first = await builder.AsResultAsync(client);
         Result second = await builder.AsResultAsync(client);
