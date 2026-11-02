@@ -43,6 +43,21 @@ public class MaybeAsyncChainOverloadTests
     }
 
     [Fact]
+    public void SelectMany_SingleSelector_ShouldBind()
+    {
+        Maybe<int>.From(2).SelectMany(x => Maybe<string>.From($"v{x}")).Value.Should().Be("v2");
+        Maybe<int>.From(2).SelectMany(_ => Maybe<string>.None).HasNoValue.Should().BeTrue();
+        Maybe<int>.None.SelectMany(x => Maybe<string>.From($"v{x}")).HasNoValue.Should().BeTrue();
+    }
+
+    [Fact]
+    public void StaticFrom_Factory_ShouldWrapResultOrNone()
+    {
+        CSharpEssentials.Maybe.Maybe.From(() => "x").Value.Should().Be("x");
+        CSharpEssentials.Maybe.Maybe.From<string>(() => null).HasNoValue.Should().BeTrue();
+    }
+
+    [Fact]
     public void QuerySyntax_WithTwoFroms_ShouldProjectWhenBothHaveValues()
     {
         Maybe<int> a = Maybe<int>.From(2);
