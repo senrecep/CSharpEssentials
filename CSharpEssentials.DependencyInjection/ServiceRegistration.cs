@@ -104,35 +104,25 @@ public static class ServiceRegistration
     }
 
     /// <summary>
-    /// Decorates every registration of <paramref name="serviceType"/> with <paramref name="serviceKey"/> using
-    /// <paramref name="decorator"/>. Used by generated registries.
+    /// Applies <paramref name="decorators"/> in order, as consecutive decorate calls would: each decorates every registration of its
+    /// service type and key, and a later decorator of the same service wraps an earlier one. Every decorator is validated before
+    /// any registration is replaced, so a failure leaves <paramref name="services"/> unchanged. Used by generated registries.
     /// </summary>
     /// <param name="services">The service collection.</param>
-    /// <param name="serviceType">The decorated service type.</param>
-    /// <param name="serviceKey">The service key of the decorated registrations, or <see langword="null"/> for non-keyed registrations.</param>
-    /// <param name="decorator">Creates the decorator from the inner service and the service provider.</param>
-    /// <param name="verifiedImplementations">
-    /// Implementation types already known not to inject <see cref="ServiceKeyAttribute"/>; their constructors are not inspected.
-    /// </param>
+    /// <param name="decorators">The decorators to apply, in order.</param>
     /// <exception cref="InvalidOperationException">
-    /// No registration matches, or an original implementation injects <see cref="ServiceKeyAttribute"/>.
+    /// A decorator matches no registration, or an original implementation injects <see cref="ServiceKeyAttribute"/>.
     /// </exception>
-    public static void Decorate(
-        IServiceCollection services,
-        Type serviceType,
-        object? serviceKey,
-        Func<object, IServiceProvider, object> decorator,
-        Type[] verifiedImplementations)
+    public static void Decorate(IServiceCollection services, DecoratorRegistration[] decorators)
     {
         Guard.NotNull(services);
-        Guard.NotNull(serviceType);
-        Guard.NotNull(decorator);
-        Guard.NotNull(verifiedImplementations);
-
-        if (!ServiceDecoration.TryDecorate(services, serviceType, serviceKey, decorator, verifiedImplementations))
+        Guard.NotNull(decorators);
+        foreach (DecoratorRegistration decorator in decorators)
         {
-            throw ServiceDecoration.NothingToDecorate(serviceType, serviceKey, decoratorType: null);
+            Guard.NotNull(decorator);
         }
+
+        ServiceDecoration.DecorateAll(services, decorators);
     }
 
     private static void LogDuplicate(ILogger logger, ServiceDescriptor existing, ServiceDescriptor descriptor, RegistrationStrategy strategy)

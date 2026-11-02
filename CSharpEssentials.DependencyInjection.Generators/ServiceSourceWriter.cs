@@ -19,6 +19,8 @@ internal static class ServiceSourceWriter
 
     private const string Registration = "global::CSharpEssentials.DependencyInjection.ServiceRegistration";
 
+    private const string DecoratorEntry = "global::CSharpEssentials.DependencyInjection.DecoratorRegistration";
+
     private const string NeverBrowsable =
         "[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]";
 
@@ -105,6 +107,23 @@ internal static class ServiceSourceWriter
                 .Append(" = new global::System.Type[] { ").Append(field.Key).Append(" };\n");
         }
 
+        for (int orderIndex = 0; orderIndex < orders.Length; orderIndex++)
+        {
+            sb.Append('\n');
+            sb.Append("        private static readonly ").Append(DecoratorEntry).Append("[] Decorators")
+                .Append(orderIndex.ToString(CultureInfo.InvariantCulture)).Append(" = new ").Append(DecoratorEntry).Append("[]\n");
+            sb.Append("        {\n");
+            for (int index = 0; index < decorators.Length; index++)
+            {
+                if (decorators[index].Order == orders[orderIndex])
+                {
+                    WriteDecorator(sb, decorators[index], verifiedArguments[index]);
+                }
+            }
+
+            sb.Append("        };\n");
+        }
+
         sb.Append('\n');
         sb.Append("        /// <summary>Applies the decorators declared in this assembly.</summary>\n");
         sb.Append("        /// <param name=\"services\">The service collection.</param>\n");
@@ -127,17 +146,11 @@ internal static class ServiceSourceWriter
         {
             sb.Append("            switch (order)\n");
             sb.Append("            {\n");
-            foreach (int order in orders)
+            for (int orderIndex = 0; orderIndex < orders.Length; orderIndex++)
             {
-                sb.Append("                case ").Append(order.ToString(CultureInfo.InvariantCulture)).Append(":\n");
-                for (int index = 0; index < decorators.Length; index++)
-                {
-                    if (decorators[index].Order == order)
-                    {
-                        WriteDecorator(sb, decorators[index], verifiedArguments[index]);
-                    }
-                }
-
+                sb.Append("                case ").Append(orders[orderIndex].ToString(CultureInfo.InvariantCulture)).Append(":\n");
+                sb.Append("                    ").Append(Registration).Append(".Decorate(services, Decorators")
+                    .Append(orderIndex.ToString(CultureInfo.InvariantCulture)).Append(");\n");
                 sb.Append("                    break;\n");
             }
 
@@ -298,19 +311,18 @@ internal static class ServiceSourceWriter
 
     private static void WriteDecorator(StringBuilder sb, DecoratorModel decorator, string verifiedArgument)
     {
-        sb.Append("                    ").Append(Registration).Append(".Decorate(\n");
-        sb.Append("                        services,\n");
-        sb.Append("                        typeof(").Append(decorator.ServiceType).Append("),\n");
-        sb.Append("                        ").Append(decorator.Key ?? "null").Append(",\n");
-        sb.Append("                        (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
+        sb.Append("            new ").Append(DecoratorEntry).Append("(\n");
+        sb.Append("                typeof(").Append(decorator.ServiceType).Append("),\n");
+        sb.Append("                ").Append(decorator.Key ?? "null").Append(",\n");
+        sb.Append("                (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
         for (int index = 0; index < decorator.Parameters.Count; index++)
         {
             sb.Append(index == 0 ? "\n" : ",\n");
-            sb.Append("                            ").Append(FormatArgument(decorator.Parameters[index], decorator.Key));
+            sb.Append("                    ").Append(FormatArgument(decorator.Parameters[index], decorator.Key));
         }
 
         sb.Append("),\n");
-        sb.Append("                        ").Append(verifiedArgument).Append(");\n");
+        sb.Append("                ").Append(verifiedArgument).Append("),\n");
     }
 
     private static string FormatArgument(DecoratorParameterModel parameter, string? key) => parameter.Kind switch

@@ -1,11 +1,19 @@
+using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.DependencyInjection;
 
 internal static class ServiceDecoration
 {
+    private static readonly ConditionalWeakTable<Type, object> ServiceKeyInjection = [];
+
+    private static readonly object InjectsKey = new();
+
+    private static readonly object InjectsNoKey = new();
+
     public static bool TryDecorate(
         IServiceCollection services,
         Type serviceType,
@@ -14,31 +22,117 @@ internal static class ServiceDecoration
         Type[] verifiedImplementations)
     {
         int count = services.Count;
-        bool matched = false;
+        int first = -1;
+        List<int>? rest = null;
         for (int index = 0; index < count; index++)
         {
             ServiceDescriptor descriptor = services[index];
             if (descriptor.Matches(serviceType, serviceKey))
             {
                 EnsureDecoratable(descriptor, verifiedImplementations);
-                matched = true;
+                if (first < 0)
+                {
+                    first = index;
+                }
+                else
+                {
+                    (rest ??= []).Add(index);
+                }
             }
         }
 
-        if (!matched)
+        if (first < 0)
         {
             return false;
         }
 
-        for (int index = 0; index < count; index++)
+        Replace(services, first, decorator);
+        if (rest is not null)
         {
-            if (services[index].Matches(serviceType, serviceKey))
+            foreach (int index in rest)
             {
                 Replace(services, index, decorator);
             }
         }
 
         return true;
+    }
+
+    public static void DecorateAll(IServiceCollection services, DecoratorRegistration[] decorators)
+    {
+        int count = services.Count;
+        int[] matchedIndexes = ArrayPool<int>.Shared.Rent(count);
+        int[] matchedOwners = ArrayPool<int>.Shared.Rent(count);
+        try
+        {
+            ulong serviceTypes = 0;
+            foreach (DecoratorRegistration decorator in decorators)
+            {
+                serviceTypes |= HashBit(decorator.ServiceType);
+            }
+
+            int matched = 0;
+            for (int index = 0; index < count; index++)
+            {
+                ServiceDescriptor descriptor = services[index];
+                int owner = (serviceTypes & HashBit(descriptor.ServiceType)) == 0 ? -1 : FindOwner(descriptor, decorators);
+                if (owner >= 0)
+                {
+                    matchedIndexes[matched] = index;
+                    matchedOwners[matched] = owner;
+                    matched++;
+                }
+            }
+
+            for (int position = 0; position < decorators.Length; position++)
+            {
+                if (FindOwner(decorators[position], decorators, position) == position)
+                {
+                    Validate(services, decorators[position], position, matchedIndexes, matchedOwners, matched);
+                }
+            }
+
+            for (int position = 0; position < decorators.Length; position++)
+            {
+                int owner = FindOwner(decorators[position], decorators, position);
+                for (int match = 0; match < matched; match++)
+                {
+                    if (matchedOwners[match] == owner)
+                    {
+                        Replace(services, matchedIndexes[match], decorators[position].Decorator);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            ArrayPool<int>.Shared.Return(matchedIndexes);
+            ArrayPool<int>.Shared.Return(matchedOwners);
+        }
+    }
+
+    private static void Validate(
+        IServiceCollection services,
+        DecoratorRegistration decorator,
+        int owner,
+        int[] matchedIndexes,
+        int[] matchedOwners,
+        int matched)
+    {
+        bool found = false;
+        for (int match = 0; match < matched; match++)
+        {
+            if (matchedOwners[match] == owner)
+            {
+                EnsureDecoratable(services[matchedIndexes[match]], decorator.VerifiedImplementations);
+                found = true;
+            }
+        }
+
+        if (!found)
+        {
+            throw NothingToDecorate(decorator.ServiceType, decorator.ServiceKey, decoratorType: null);
+        }
     }
 
     [RequiresDynamicCode("Closes the open-generic decorator for each matching closed registration.")]
@@ -106,11 +200,45 @@ internal static class ServiceDecoration
             return;
         }
 
-        if (InjectsServiceKey(implementationType))
+        if (!ServiceKeyInjection.TryGetValue(implementationType, out object? injection))
+        {
+            injection = InjectsServiceKey(implementationType) ? InjectsKey : InjectsNoKey;
+            ServiceKeyInjection.AddOrUpdate(implementationType, injection);
+        }
+
+        if (injection == InjectsKey)
         {
             throw new InvalidOperationException(
                 $"'{implementationType.FullName}' injects [ServiceKey] and cannot be decorated, because its hidden inner registration uses a private key.");
         }
+    }
+
+    private static ulong HashBit(Type type) => 1UL << (type.GetHashCode() & 63);
+
+    private static int FindOwner(ServiceDescriptor descriptor, DecoratorRegistration[] decorators)
+    {
+        for (int position = 0; position < decorators.Length; position++)
+        {
+            if (descriptor.Matches(decorators[position].ServiceType, decorators[position].ServiceKey))
+            {
+                return position;
+            }
+        }
+
+        return -1;
+    }
+
+    private static int FindOwner(DecoratorRegistration decorator, DecoratorRegistration[] decorators, int position)
+    {
+        for (int earlier = 0; earlier < position; earlier++)
+        {
+            if (decorators[earlier].ServiceType == decorator.ServiceType && Equals(decorators[earlier].ServiceKey, decorator.ServiceKey))
+            {
+                return earlier;
+            }
+        }
+
+        return position;
     }
 
     private static bool InjectsServiceKey([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
@@ -132,15 +260,13 @@ internal static class ServiceDecoration
     private static void Replace(IServiceCollection services, int index, Func<object, IServiceProvider, object> decorator)
     {
         ServiceDescriptor original = services[index];
-        DecoratedServiceKey innerKey = new(original.ServiceType);
+        DecoratedServiceKey innerKey = new(original.ServiceType, decorator);
         ServiceDescriptor inner = CreateInner(original, innerKey);
-        Type innerServiceType = inner.ServiceType;
+        innerKey.InnerServiceType = inner.ServiceType;
 
-        services[index] = new ServiceDescriptor(
-            original.ServiceType,
-            original.ServiceKey,
-            (provider, _) => decorator(provider.GetRequiredKeyedService(innerServiceType, innerKey), provider),
-            original.Lifetime);
+        services[index] = original.ServiceKey is null
+            ? new ServiceDescriptor(original.ServiceType, innerKey.Decorate, original.Lifetime)
+            : new ServiceDescriptor(original.ServiceType, original.ServiceKey, (provider, _) => innerKey.Decorate(provider), original.Lifetime);
         services.Add(inner);
     }
 
@@ -177,8 +303,13 @@ internal static class ServiceDecoration
 
     private sealed class DecoratedService;
 
-    private sealed class DecoratedServiceKey(Type serviceType)
+    private sealed class DecoratedServiceKey(Type serviceType, Func<object, IServiceProvider, object> decorator)
     {
+        public Type InnerServiceType { get; set; } = typeof(DecoratedService);
+
+        public object Decorate(IServiceProvider provider) =>
+            decorator(provider.GetRequiredKeyedService(InnerServiceType, this), provider);
+
         public override string ToString() => $"decorated inner of {serviceType.FullName}";
     }
 }

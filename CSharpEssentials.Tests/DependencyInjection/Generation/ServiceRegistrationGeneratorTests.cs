@@ -337,8 +337,8 @@ public class ServiceRegistrationGeneratorTests
 
         run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
         string registry = ServiceGeneration.GeneratedSources(run)["GeneratorTestsServiceRegistry.g.cs"];
-        registry.Should().Contain("new global::Sample.KeyedDecorator(\n                            (global::Sample.IGreeter)inner,\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, \"loud\"),\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))")
-            .And.Contain("new global::Sample.PlainDecorator(\n                            (global::Sample.IGreeter)inner,\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))");
+        registry.Should().Contain("new global::Sample.KeyedDecorator(\n                    (global::Sample.IGreeter)inner,\n                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, \"loud\"),\n                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))")
+            .And.Contain("new global::Sample.PlainDecorator(\n                    (global::Sample.IGreeter)inner,\n                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))");
     }
 
     [Fact]
@@ -421,8 +421,8 @@ public class ServiceRegistrationGeneratorTests
                 "typeof(global::Sample.HiddenKeyGreeter), typeof(global::Sample.PlainGreeter), typeof(global::Sample.TwoConstructorGreeter) };")
             .And.NotContain("VerifiedImplementations1")
             .And.NotContain("typeof(global::Sample.PartialGreeter) }");
-        CountOccurrences(registry, "VerifiedImplementations0);").Should().Be(2);
-        CountOccurrences(registry, "global::System.Array.Empty<global::System.Type>());").Should().Be(2);
+        CountOccurrences(registry, "VerifiedImplementations0),").Should().Be(2);
+        CountOccurrences(registry, "global::System.Array.Empty<global::System.Type>()),").Should().Be(2);
     }
 
     private static int CountOccurrences(string text, string value)
