@@ -194,11 +194,13 @@ public class StringResultExtensionsTests
     [Fact]
     public void TrimStart_Should_RemoveWholeCultureMatch_When_InputHasIgnorableLeadingChar()
     {
+        if (!IgnorableCharsSupported())
+            return;
         CultureInfo previous = CultureInfo.CurrentCulture;
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         try
         {
-            Result<string> result = "­hello".TrimStart("hello");
+            Result<string> result = "\u00ADhello".TrimStart("hello");
 
             result.Value.Should().Be("");
         }
@@ -211,11 +213,13 @@ public class StringResultExtensionsTests
     [Fact]
     public void TrimEnd_Should_RemoveWholeCultureMatch_When_InputHasIgnorableTrailingChar()
     {
+        if (!IgnorableCharsSupported())
+            return;
         CultureInfo previous = CultureInfo.CurrentCulture;
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
         try
         {
-            Result<string> result = "hello­".TrimEnd("hello");
+            Result<string> result = "hello\u00AD".TrimEnd("hello");
 
             result.Value.Should().Be("");
         }
@@ -224,4 +228,7 @@ public class StringResultExtensionsTests
             CultureInfo.CurrentCulture = previous;
         }
     }
+
+    private static bool IgnorableCharsSupported() =>
+        CultureInfo.InvariantCulture.CompareInfo.IsPrefix("\u00ADhello", "hello", CompareOptions.None);
 }
