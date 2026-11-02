@@ -51,6 +51,18 @@ internal sealed class AttrSquare : IAttrShape
     public double Side { get; set; }
 }
 
+internal interface IFill;
+
+internal sealed class Solid : IFill
+{
+    public string Color { get; set; } = string.Empty;
+}
+
+internal sealed class FilledCircle : BaseShape
+{
+    public IFill? Fill { get; set; }
+}
+
 public class PolymorphicJsonConverterFactoryTests
 {
     private static readonly JsonSerializerOptions PolymorphicOptions = new()
@@ -243,5 +255,15 @@ public class PolymorphicJsonConverterFactoryTests
         IAttrShape shape = new AttrSquare { Side = 2 };
 
         JsonSerializer.Serialize(shape, PolymorphicOptions).Should().Be("""{"kind":"square","Side":2}""");
+    }
+    [Fact]
+    public void RoundTrip_WithNestedInterfaceProperty_ShouldKeepDerivedType()
+    {
+        BaseShape shape = new FilledCircle { Fill = new Solid { Color = "red" } };
+
+        string json = JsonSerializer.Serialize(shape, PolymorphicOptions);
+        BaseShape? restored = JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions);
+
+        restored.Should().BeOfType<FilledCircle>().Which.Fill.Should().BeOfType<Solid>().Which.Color.Should().Be("red");
     }
 }
