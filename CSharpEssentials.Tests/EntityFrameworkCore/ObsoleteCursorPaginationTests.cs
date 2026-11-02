@@ -178,7 +178,7 @@ public sealed class ObsoleteCursorPaginationTests
     {
         using PaginationDbContext context = await CreateSeededContextAsync();
 
-        var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 10, Search = "Item09" };
+        var request = new CursorPaginationRequest<int> { Limit = 10, Search = "Item09" };
         CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(
                 request,
@@ -195,7 +195,7 @@ public sealed class ObsoleteCursorPaginationTests
     {
         using PaginationDbContext context = await CreateSeededContextAsync(count: 5, name: "Same");
 
-        var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 3 };
+        var request = new CursorPaginationRequest<int> { Limit = 3 };
         CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(
                 request,
