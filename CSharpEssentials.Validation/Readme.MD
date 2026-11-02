@@ -422,7 +422,7 @@ services.AddValidatorsFromAssemblies([
 
 Default lifetime: `Scoped`. Pass a `ServiceLifetime` parameter to override.
 
-`AddValidatorsFromAssembly` / `AddValidatorsFromAssemblies` discover validators by reflection, so a trimmed or Native AOT app registers them with `AddValidator<T, TValidator>()` instead.
+`AddValidatorsFromAssembly` / `AddValidatorsFromAssemblies` discover validators by reflection and are marked `[RequiresUnreferencedCode]`, so the trim analyzer flags their call sites. `AddValidator<T, TValidator>()` keeps the validator constructor through trimming and is safe in trimmed and Native AOT apps.
 
 Registration uses `TryAddEnumerable`, so registering the same validator twice (for example, `AddValidator` and an assembly scan) adds it once.
 

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -10,6 +11,8 @@ namespace CSharpEssentials.Validation.Extensions;
 /// </summary>
 public static class ValidatorServiceCollectionExtensions
 {
+    private const string ScanMessage = "Discovers validators by reflection; their constructors may be trimmed. Use AddValidator<T, TValidator>() in trimmed or Native AOT apps.";
+
     /// <summary>
     /// Registers a single validator explicitly.
     /// Registering the same implementation type more than once is a no-op —
@@ -20,7 +23,7 @@ public static class ValidatorServiceCollectionExtensions
     /// services.AddValidator&lt;CreateUserRequest, CreateUserValidator&gt;();
     /// </code>
     /// </example>
-    public static IServiceCollection AddValidator<T, TValidator>(
+    public static IServiceCollection AddValidator<T, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TValidator>(
         this IServiceCollection services,
         ServiceLifetime lifetime = ServiceLifetime.Scoped)
         where TValidator : class, IValidator<T>
@@ -51,6 +54,7 @@ public static class ValidatorServiceCollectionExtensions
     /// services.AddValidatorsFromAssembly(typeof(CreateUserValidator).Assembly);
     /// </code>
     /// </example>
+    [RequiresUnreferencedCode(ScanMessage)]
     public static IServiceCollection AddValidatorsFromAssembly(
         this IServiceCollection services,
         Assembly assembly,
@@ -74,9 +78,7 @@ public static class ValidatorServiceCollectionExtensions
         }
         catch (ReflectionTypeLoadException ex)
         {
-#pragma warning disable IDE0305
             types = [.. ex.Types.OfType<Type>()];
-#pragma warning restore IDE0305
         }
 
         foreach (Type type in types)
@@ -102,6 +104,7 @@ public static class ValidatorServiceCollectionExtensions
     /// Scans all assemblies in <paramref name="assemblies"/> and registers all
     /// <see cref="IValidator{T}"/> implementations found within them.
     /// </summary>
+    [RequiresUnreferencedCode(ScanMessage)]
     public static IServiceCollection AddValidatorsFromAssemblies(
         this IServiceCollection services,
         IEnumerable<Assembly> assemblies,
