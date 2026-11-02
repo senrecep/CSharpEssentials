@@ -1,10 +1,10 @@
 # CSharpEssentials.Results: Performance Benchmarks
 
-**vs. CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1, FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11**
+Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
 
 ---
 
-## What Was Measured
+## What was measured
 
 Nine scenarios, one benchmark class each, in `benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/`. Every class uses `[MemoryDiagnoser]`, CSE as the baseline, and a `[Params]` switch for the success and failure path. A `[GlobalSetup]` parity check runs every library on the same input and refuses to start if the outcomes differ (success value, or error count and first message).
 
@@ -22,7 +22,7 @@ Nine scenarios, one benchmark class each, in `benchmarks/CSharpEssentials.Result
 
 Every competitor method carries a comment with the README or source URL at the pinned version. Errors are `static readonly` (CFE: a `const string`, its default error type), so error construction is outside the timing except where the operation itself builds the failure. The numbers come from the reports committed under `benchmarks/results/results-comparison/{tfm}/results/` (default BenchmarkDotNet job).
 
-**Environment**
+### Environment
 
 | Property | Value |
 |---|---|
@@ -39,31 +39,31 @@ Every competitor method carries a comment with the README or source URL at the p
 
 ---
 
-## Executive Summary
+## Executive summary
 
-Primary runtime: net10. Allocation is the headline. A tie is a difference within the sum of the two BenchmarkDotNet error margins. An absolute time difference under 1 ns is reported as noise even when it falls outside error; many of these operations take under 2 ns.
+Primary runtime: net10. The main result is allocation. A tie is a difference within the sum of the two BenchmarkDotNet error margins. An absolute time difference under 1 ns is reported as noise even when it falls outside error; many of these operations take under 2 ns.
 
 | Finding | Details |
 |---|---|
-| **Map, Bind, Tap, Match, Ensure (pass), Create (success): 0 B for CSE, CFE and ErrorOr; FluentResults 88-344 B** | net10: FluentResults Map 256 B / 56.9 ns (success), Bind 320 B / 69.7 ns, Create 112 B / 22.7 ns, Match-to-string on failure 240 B / 76.3 ns. CSE, CFE and ErrorOr stay under 2.8 ns. Same byte counts on every TFM for CSE, CFE and ErrorOr; FluentResults allocates 8-64 B more on net8 and 24 B more on net9 for Match to string on failure (264 B) |
-| **Create failure: CSE allocates more than ErrorOr and CFE (CSE loss)** | 104 B / 23.6 ns for CSE, 88 B / 18.4 ns for ErrorOr, 0 B / 0.34 ns for CFE. CSE wraps the error in an `Error[]`, ErrorOr in a `List<Error>`; CFE stores the string in its struct, so it allocates nothing. FluentResults: 344 B / 92.7 ns. Same bytes on every TFM, except FluentResults on net8 (384 B) |
-| **Ensure failure: same pattern (CSE loss)** | 104 B / 24.7 ns for CSE, 88 B / 18.9 ns for ErrorOr, 0 B / 1.8 ns for CFE (string error). Same bytes on every TFM |
-| **Map, Bind, Ensure (pass): CSE = ErrorOr; CFE 1.0-1.3 ns slower on net10** | Map success 0.576 / 0.577 / 1.899 ns (CSE / ErrorOr / CFE). On net8 and net9 CFE takes 8.4-9.1 ns for Map, Bind and Ensure, and 7.3-7.4 ns for Create, against 0.85-1.5 ns for CSE (0.15-0.17 ns for Create success). On net10 and net11 CFE drops to about 2 ns for Map, Bind and Ensure and to 0.07-0.34 ns for Create. This looks like a runtime/JIT effect; not investigated |
-| **Match on failure: ErrorOr about 1.1-1.6 ns faster (small CSE loss)** | Match to int on failure: 1.151 vs 2.241 ns on net10; 1.08 vs 2.70 ns on net8, 0.99 vs 2.21 ns on net9, 1.01 vs 2.23 ns on net11. Match to string on failure: 0.90 vs 2.35 ns on net8, 0.91 vs 2.06 ns on net9 (net10 0.98 ns, net11 0.78 ns: noise). CFE's Match to int takes about 2.3 ns on every TFM, about 1.2 ns slower than CSE on success and than ErrorOr on both paths; CFE's Match to string on success is 1.0-1.1 ns slower than CSE on net9 and net11; on net8 ErrorOr's Tap failure is 1.2 ns slower than CSE. The remaining Match and Tap gaps are under 1 ns |
-| **Async pipeline, success, completed tasks: CSE fastest, allocation tie with CFE** | 95.07 ns / 480 B for CSE, 104.30 ns / 480 B for CFE (1.10×), 112.01 ns / 560 B for ErrorOr (1.18×). CSE is faster than CFE on every TFM |
-| **Async pipeline, success, yielding: time tie, CSE allocates 64 B more than CFE (CSE loss)** | 1,591.97 ns / 943 B for CSE, 1,609.77 ns / 879 B for CFE (tie on time), 1,849.47 ns / 1,036 B for ErrorOr |
-| **Async pipeline, failure at step 1: CFE allocates less and is faster on both paths (CSE loss)** | Completed: 123.45 ns / 584 B for CSE vs 109.73 ns / 480 B for CFE (CSE takes 1.13× as long and allocates 1.22×). Yielding: 1,680.14 ns / 1,048 B vs 1,625.30 ns / 879 B (1.03× time, outside error; 1.19× allocation). CFE is faster on the completed failure path on every TFM; on net11 the yielding failure path is a tie. ErrorOr allocates more than CSE on every async row (648 B and 1,126 B on failure) |
-| **Error aggregation, all-fail: ErrorOr 5.7× faster with 3.8× less allocation; FluentResults 14% faster (CSE loss)** | 237.91 ns / 696 B for CSE, 41.86 ns / 184 B for ErrorOr, 205.11 ns / 712 B for FluentResults, 372.08 ns / 784 B for CFE (1.56× CSE). The idioms differ: ErrorOr's documented idiom fills a `List<Error>` by hand and builds no per-check results (see section 8). FluentResults is faster than CSE on net9, net10 and net11 and slower on net8 (254.0 vs 214.1 ns) |
-| **Error aggregation, all-pass: ErrorOr allocates less (CSE loss)** | 16.01 ns / 80 B for CSE, 11.27 ns / 32 B for ErrorOr, 30.80 ns / 160 B for CFE, 100.54 ns / 368 B for FluentResults. CSE allocates 112 B here on net8 and net9 |
-| **Maybe: tie with CFE on net9-net11; one CSE loss on net8** | Both allocate 0 B in every operation. Every net10 mean is at most 1.14 ns and every CSE vs CFE gap is under 0.3 ns. On net8, Bind on None takes 6.92 ns for CSE vs 5.54 ns for CFE (1.25×) |
-| **Yielding pipeline on net11: 1.5-1.9× slower than net10; ErrorOr slows least and beats CSE on success (CSE loss)** | Success: 2,876.75 ns for ErrorOr vs 3,009.78 ns for CSE (1.05×, outside error), CFE 2,993.30 ns (tie with CSE). Failure: all three within error (2,919-2,968 ns). Growth vs net10: CSE 1.89×/1.77×, CFE 1.86×/1.81×, ErrorOr 1.56×/1.51×. Allocation unchanged. Not investigated |
-| **AOT and dependencies: known gap, no fix in this release** | CSharpEssentials.Results, Errors and Maybe do not set `IsAotCompatible` (neither do the three competitors), so the trim analyzer never runs on them. `Result<T>.ToString()` on success calls `ConvertToJson`, reflection-based System.Text.Json annotated `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`. `ErrorMetadata` stores `object?` values. Results pulls in Errors and Json, which bring Core and Enums; CFE has no runtime dependencies. For a thin layer: `Result`/`Result<T>` are readonly record structs and Map/Bind/Tap/Match/Ensure (pass) allocate 0 B. Against: the reflection-based `ToString()`, the `object?` metadata bag, four transitive CSharpEssentials packages (CFE: none), and no `IsAotCompatible`. The "trim and AOT friendly" wording used for Endpoints and DependencyInjection does not apply to Results today |
+| Map, Bind, Tap, Match, Ensure (pass), Create (success): 0 B for CSE, CFE and ErrorOr; FluentResults 88-344 B | net10: FluentResults Map 256 B / 56.9 ns (success), Bind 320 B / 69.7 ns, Create 112 B / 22.7 ns, Match-to-string on failure 240 B / 76.3 ns. CSE, CFE and ErrorOr stay under 2.8 ns. Same byte counts on every TFM for CSE, CFE and ErrorOr; FluentResults allocates 8-64 B more on net8 and 24 B more on net9 for Match to string on failure (264 B) |
+| Create failure: CSE allocates more than ErrorOr and CFE (CSE loss) | 104 B / 23.6 ns for CSE, 88 B / 18.4 ns for ErrorOr, 0 B / 0.34 ns for CFE. CSE wraps the error in an `Error[]`, ErrorOr in a `List<Error>`; CFE stores the string in its struct, so it allocates nothing. FluentResults: 344 B / 92.7 ns. Same bytes on every TFM, except FluentResults on net8 (384 B) |
+| Ensure failure: same pattern (CSE loss) | 104 B / 24.7 ns for CSE, 88 B / 18.9 ns for ErrorOr, 0 B / 1.8 ns for CFE (string error). Same bytes on every TFM |
+| Map, Bind, Ensure (pass): CSE = ErrorOr; CFE 1.0-1.3 ns slower on net10 | Map success 0.576 / 0.577 / 1.899 ns (CSE / ErrorOr / CFE). On net8 and net9 CFE takes 8.4-9.1 ns for Map, Bind and Ensure, and 7.3-7.4 ns for Create, against 0.85-1.5 ns for CSE (0.15-0.17 ns for Create success). On net10 and net11 CFE drops to about 2 ns for Map, Bind and Ensure and to 0.07-0.34 ns for Create. This looks like a runtime/JIT effect; not investigated |
+| Match on failure: ErrorOr about 1.1-1.6 ns faster (small CSE loss) | Match to int on failure: 1.151 vs 2.241 ns on net10; 1.08 vs 2.70 ns on net8, 0.99 vs 2.21 ns on net9, 1.01 vs 2.23 ns on net11. Match to string on failure: 0.90 vs 2.35 ns on net8, 0.91 vs 2.06 ns on net9 (net10 0.98 ns, net11 0.78 ns: noise). CFE's Match to int takes about 2.3 ns on every TFM, about 1.2 ns slower than CSE on success and than ErrorOr on both paths; CFE's Match to string on success is 1.0-1.1 ns slower than CSE on net9 and net11; on net8 ErrorOr's Tap failure is 1.2 ns slower than CSE. The remaining Match and Tap gaps are under 1 ns |
+| Async pipeline, success, completed tasks: CSE fastest, allocation tie with CFE | 95.07 ns / 480 B for CSE, 104.30 ns / 480 B for CFE (1.10×), 112.01 ns / 560 B for ErrorOr (1.18×). CSE is faster than CFE on every TFM |
+| Async pipeline, success, yielding: time tie, CSE allocates 64 B more than CFE (CSE loss) | 1,591.97 ns / 943 B for CSE, 1,609.77 ns / 879 B for CFE (tie on time), 1,849.47 ns / 1,036 B for ErrorOr |
+| Async pipeline, failure at step 1: CFE allocates less and is faster on both paths (CSE loss) | Completed: 123.45 ns / 584 B for CSE vs 109.73 ns / 480 B for CFE (CSE takes 1.13× as long and allocates 1.22×). Yielding: 1,680.14 ns / 1,048 B vs 1,625.30 ns / 879 B (1.03× time, outside error; 1.19× allocation). CFE is faster on the completed failure path on every TFM; on net11 the yielding failure path is a tie. ErrorOr allocates more than CSE on every async row (648 B and 1,126 B on failure) |
+| Error aggregation, all-fail: ErrorOr 5.7× faster with 3.8× less allocation; FluentResults 14% faster (CSE loss) | 237.91 ns / 696 B for CSE, 41.86 ns / 184 B for ErrorOr, 205.11 ns / 712 B for FluentResults, 372.08 ns / 784 B for CFE (1.56× CSE). The idioms differ: ErrorOr's documented idiom fills a `List<Error>` by hand and builds no per-check results (see section 8). FluentResults is faster than CSE on net9, net10 and net11 and slower on net8 (254.0 vs 214.1 ns) |
+| Error aggregation, all-pass: ErrorOr allocates less (CSE loss) | 16.01 ns / 80 B for CSE, 11.27 ns / 32 B for ErrorOr, 30.80 ns / 160 B for CFE, 100.54 ns / 368 B for FluentResults. CSE allocates 112 B here on net8 and net9 |
+| Maybe: tie with CFE on net9-net11; one CSE loss on net8 | Both allocate 0 B in every operation. Every net10 mean is at most 1.14 ns and every CSE vs CFE gap is under 0.3 ns. On net8, Bind on None takes 6.92 ns for CSE vs 5.54 ns for CFE (1.25×) |
+| Yielding pipeline on net11: 1.5-1.9× slower than net10; ErrorOr slows least and beats CSE on success (CSE loss) | Success: 2,876.75 ns for ErrorOr vs 3,009.78 ns for CSE (1.05×, outside error), CFE 2,993.30 ns (tie with CSE). Failure: all three within error (2,919-2,968 ns). Growth vs net10: CSE 1.89×/1.77×, CFE 1.86×/1.81×, ErrorOr 1.56×/1.51×. Allocation unchanged. Not investigated |
+| AOT and dependencies: known gap, no fix in this release | CSharpEssentials.Results, Errors and Maybe do not set `IsAotCompatible` (neither do the three competitors), so the trim analyzer never runs on them. `Result<T>.ToString()` on success calls `ConvertToJson`, reflection-based System.Text.Json annotated `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`. `ErrorMetadata` stores `object?` values. Results pulls in Errors and Json, which bring Core and Enums; CFE has no runtime dependencies. For a thin layer: `Result`/`Result<T>` are readonly record structs and Map/Bind/Tap/Match/Ensure (pass) allocate 0 B. Against: the reflection-based `ToString()`, the `object?` metadata bag, four transitive CSharpEssentials packages (CFE: none), and no `IsAotCompatible`. The "trim and AOT friendly" wording used for Endpoints and DependencyInjection does not apply to Results today |
 
 ---
 
-## Results by Scenario
+## Results by scenario
 
-All tables: net10, mean and allocated bytes per operation. "vs CSE" divides the library's mean by the CSE mean (above 1.00 = slower than CSE). A dash means the library has no column in that class (reason in the What Was Measured table).
+All tables: net10, mean and allocated bytes per operation. "vs CSE" divides the library's mean by the CSE mean (above 1.00 = slower than CSE). A dash means the library has no column in that class (reason in the What was measured table).
 
 ### 1. Create
 
@@ -213,7 +213,7 @@ Mean / allocated per TFM for the rows where libraries differ. Map, Bind, Tap, Ma
 
 ---
 
-## Feature Matrix
+## Feature matrix
 
 CSE cells come from this repository (each csproj, `Directory.Build.props`, `Readme.MD`, `ResultT.cs`, `CSharpEssentials.Errors/ErrorMetadata.cs`, `CSharpEssentials.Json/Extensions.cs`). Competitor links point at the pinned tags: CFE `v3.7.0`, ErrorOr `v2.1.1` (repository now at `error-or/error-or`), FluentResults `v4.0` (no `v4.0.0` tag; commit matches the 4.0.0 nuspec). Nothing was trim-analyzed or AOT-published for this table.
 
@@ -236,19 +236,19 @@ On the AOT row the four libraries are equal on paper: none declares `IsAotCompat
 
 ## Caveats
 
-- **String errors in CFE.** Every CFE number uses its default `Result<T>` with a `string` error. That is why CFE allocates 0 B on Create and Ensure failure and less on the async failure path. A `Result<T, E>` column with a typed error was not benchmarked, so the cost of typed errors in CFE is unknown here.
-- **Different aggregation idioms.** ErrorOr's documented aggregation builds no per-check results; the other three do. The ErrorOr row measures less work, by design of its idiom. CSE's typed `Result<T>.Combine` was not measured.
-- **Missing columns.** FluentResults has no Ensure, Tap or Maybe and only two of the five async steps, so it has no column there. Its Match column uses property access, the README's processing idiom. ErrorOr and FluentResults have no Maybe.
-- **Sub-nanosecond rows.** Many rows are under 2 ns. Differences under 1 ns are reported as noise. Near-zero Maybe rows are indistinguishable from an empty method.
-- **Runtime effects.** CFE's 7-9 ns on net8/net9 against about 2 ns on net10/net11, the 4.9-7.1 ns Maybe rows on net8/net9, and the 1.5-1.9× slower yielding rows on net11 affect libraries as a group and were not investigated. They are reported, not explained.
-- **net8 uses CSE's netstandard2.1 build.** Results, Errors and Maybe do not target net8.0, so the net8 column runs CSE's netstandard2.1 assembly against competitor assets built for net8. net8 gaps may reflect that build, not only the runtime.
-- **net9 aggregation outlier.** CSE all-fail took 423.2 ns on net9 against 214-238 ns on the other TFMs, with the same allocation.
-- **Machine load.** Load average 0.96-1.44 at the sampled points with a desktop session running. Lower than the endpoints run, but gaps of a few percent on the async rows are still weak evidence even when outside error.
-- **CSE version.** The CSE column is the 7.0.0 working tree on branch `perf/bench-results`, which may differ from the last version published to NuGet.
+- Every CFE number uses its default `Result<T>` with a `string` error. That is why CFE allocates 0 B on Create and Ensure failure and less on the async failure path. A `Result<T, E>` column with a typed error was not benchmarked, so the cost of typed errors in CFE is unknown here.
+- The aggregation idioms differ. ErrorOr's documented aggregation builds no per-check results; the other three do. The ErrorOr row measures less work, by design of its idiom. CSE's typed `Result<T>.Combine` was not measured.
+- FluentResults has no Ensure, Tap or Maybe and only two of the five async steps, so it has no column there. Its Match column uses property access, the README's processing idiom. ErrorOr and FluentResults have no Maybe.
+- Many rows are under 2 ns. Differences under 1 ns are reported as noise. Near-zero Maybe rows are indistinguishable from an empty method.
+- CFE's 7-9 ns on net8/net9 against about 2 ns on net10/net11, the 4.9-7.1 ns Maybe rows on net8/net9, and the 1.5-1.9× slower yielding rows on net11 affect libraries as a group and were not investigated. They are reported, not explained.
+- net8 uses CSE's netstandard2.1 build. Results, Errors and Maybe do not target net8.0, so the net8 column runs CSE's netstandard2.1 assembly against competitor assets built for net8. net8 gaps may reflect that build, not only the runtime.
+- net9 aggregation outlier: CSE all-fail took 423.2 ns on net9 against 214-238 ns on the other TFMs, with the same allocation.
+- Machine load: load average 0.96-1.44 at the sampled points with a desktop session running. Lower than the endpoints run, but gaps of a few percent on the async rows are still weak evidence even when outside error.
+- The CSE column is the 7.0.0 working tree on branch `perf/bench-results`, which may differ from the last version published to NuGet.
 
 ---
 
-## How to Reproduce
+## How to reproduce
 
 ```bash
 cd benchmarks
