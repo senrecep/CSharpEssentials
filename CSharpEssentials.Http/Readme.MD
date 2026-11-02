@@ -92,7 +92,7 @@ Result created = await HttpRequestBuilder
 
 Query values (`WithQuery`, `Uri.WithQueryString`) work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs are resolved against `HttpClient.BaseAddress`.
 
-Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithIdempotencyKey`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`. A content header passed to `WithHeader`, such as `Content-Type` or `Content-Language`, is set on the body and replaces the value the content already has.
+Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithIdempotencyKey`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`. A content header passed to `WithHeader`, such as `Content-Type` or `Content-Language`, is set on the body and replaces the value the content already has. Calling `WithHeader` again with the same content header adds another value.
 
 ### Enums in route, query and body
 

@@ -186,11 +186,14 @@ public sealed class HttpRequestBuilder
         else if (_content is not null)
             request.Content = _content;
 
+        var replacedContentHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach ((string key, string value) in _headers)
         {
             if (!request.Headers.TryAddWithoutValidation(key, value) && request.Content is not null)
             {
-                request.Content.Headers.Remove(key);
+                if (replacedContentHeaders.Add(key))
+                    request.Content.Headers.Remove(key);
+
                 request.Content.Headers.TryAddWithoutValidation(key, value);
             }
         }

@@ -158,6 +158,22 @@ public class HttpRequestBuilderTests
         request.Content!.Headers.ContentLanguage.Should().Equal("de");
     }
 
+    [Fact]
+    public void Build_WithRepeatedContentHeader_Should_Keep_All_Values_Across_Builds()
+    {
+        using var content = new StringContent("a");
+        HttpRequestBuilder builder = HttpRequestBuilder.Post("https://test.com/api")
+            .WithContent(content)
+            .WithHeader("Content-Language", "en")
+            .WithHeader("Content-Language", "de");
+
+        using (HttpRequestMessage first = builder.Build().Value)
+            first.Content!.Headers.ContentLanguage.Should().Equal("en", "de");
+
+        using HttpRequestMessage second = builder.Build().Value;
+        second.Content!.Headers.ContentLanguage.Should().Equal("en", "de");
+    }
+
     private sealed record TestDto(int Id, string Name);
 
     private sealed class BodyRecordingHandler : HttpMessageHandler
