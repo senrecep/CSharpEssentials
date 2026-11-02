@@ -99,14 +99,18 @@ public static class HttpClientRedirectExtensions
 
             response.Dispose();
 
+            Uri? previousUri = currentRequest.RequestUri;
+            Uri target = redirectUri.IsAbsoluteUri || previousUri is null
+                ? redirectUri
+                : new Uri(previousUri, redirectUri);
+
             HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest, response.StatusCode).ConfigureAwait(false);
+            newRequest.RequestUri = target;
+            if (previousUri is not null)
+                HttpRedirectRules.StripCredentialsIfCrossOrigin(newRequest, previousUri, target);
 
             if (currentRequest != request)
                 currentRequest.Dispose();
-
-            newRequest.RequestUri = redirectUri.IsAbsoluteUri || currentRequest.RequestUri is null
-                ? redirectUri
-                : new Uri(currentRequest.RequestUri, redirectUri);
 
             currentRequest = newRequest;
             redirects++;

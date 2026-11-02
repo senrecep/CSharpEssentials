@@ -266,6 +266,30 @@ public class HttpClientRedirectExtensionsTests
         second.Body.Should().Be(expectedMethod == "GET" ? null : "payload");
     }
 
+    [Theory]
+    [InlineData("https://b.test/y", false)]
+    [InlineData("http://a.test/y", false)]
+    [InlineData("https://a.test:8443/y", false)]
+    [InlineData("https://a.test/y", true)]
+    [InlineData("/y", true)]
+    public async Task SendWithRedirectsAsResultAsync_Should_Strip_Credentials_On_Cross_Origin_Redirect(string location, bool sameOrigin)
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/x"
+            ? Redirect(HttpStatusCode.Found, location)
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://a.test/x"));
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "token");
+        request.Headers.TryAddWithoutValidation("Cookie", "session=1");
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        RecordedRequest second = handler.Requests[1];
+        second.Authorization.Should().Be(sameOrigin ? "Bearer token" : null);
+        second.Cookie.Should().Be(sameOrigin ? "session=1" : null);
+    }
+
     private static HttpResponseMessage Redirect(HttpStatusCode status, string location)
     {
         var response = new HttpResponseMessage(status);

@@ -5,8 +5,6 @@ namespace CSharpEssentials.Http;
 
 internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundRequestPolicy requestPolicy) : DelegatingHandler
 {
-    private const string CookieHeader = "Cookie";
-
     private volatile bool _primaryHandlerVerified;
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -131,18 +129,10 @@ internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundReques
     {
         HttpRedirectRules.TrySwitchToGet(request, statusCode);
 
-        if (!IsSameOrigin(previousUri, location))
-        {
-            request.Headers.Authorization = null;
-            request.Headers.ProxyAuthorization = null;
-            request.Headers.Remove(CookieHeader);
-        }
+        HttpRedirectRules.StripCredentialsIfCrossOrigin(request, previousUri, location);
 
         request.RequestUri = location;
     }
-
-    private static bool IsSameOrigin(Uri first, Uri second) =>
-        Uri.Compare(first, second, UriComponents.SchemeAndServer, UriFormat.UriEscaped, StringComparison.OrdinalIgnoreCase) == 0;
 
     private HttpResponseMessage Guard(HttpResponseMessage response, Uri? requestUri, ref CancellationTokenSource? timeout)
     {

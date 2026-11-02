@@ -22,6 +22,7 @@ dotnet add package CSharpEssentials.Http
 
 - `SendWithRedirectsAsResultAsync` and `FollowRedirects()` follow only 301, 302, 303, 307 and 308. A 300, 304 or 305 is now returned as its own status error (for example `Http.304`) instead of being followed or failing with `Http.MissingRedirectLocation`. Check for `Http.304` if you sent conditional requests.
 - A 303, and a 301 or 302 after a POST, is now followed with a GET and no body, as RFC 9110 and the SSRF guard do. 307 and 308 still repeat the method and body. Answer with 307 or 308 if a server needs the POST repeated.
+- A redirect that changes scheme, host or port no longer carries `Authorization`, `Proxy-Authorization` or `Cookie` to the new origin. If a trusted sibling host needs the credentials, send a new request to it with the headers set.
 
 ## Usage
 
@@ -207,7 +208,7 @@ Result<User> result = await HttpRequestBuilder
     .AsResultAsync<User>(client);
 ```
 
-Only 301, 302, 303, 307 and 308 are followed. Any other status, including 304, is returned as is. A 303, and a 301 or 302 after a POST, becomes a GET with no body. 307 and 308 keep the method and body.
+Only 301, 302, 303, 307 and 308 are followed. Any other status, including 304, is returned as is. A 303, and a 301 or 302 after a POST, becomes a GET with no body. 307 and 308 keep the method and body. `Authorization`, `Proxy-Authorization` and `Cookie` are removed when a redirect changes scheme, host or port.
 
 ### SSRF Guard
 
