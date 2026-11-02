@@ -684,6 +684,28 @@ public class SecretManagerConfigurationProviderTests
     }
 
     [Fact]
+    public void Load_Should_Disable_Client_Retry_When_Accessing_Secret()
+    {
+        var secrets = new List<Secret> { CreateSecret("project", "raw-secret") };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, []);
+        CallSettings? capturedSettings = null;
+        mockClient.Setup(x => x.AccessSecretVersionAsync(It.IsAny<AccessSecretVersionRequest>(), It.IsAny<CallSettings>()))
+            .Callback((AccessSecretVersionRequest _, CallSettings settings) => capturedSettings = settings)
+            .ReturnsAsync(new AccessSecretVersionResponse
+            {
+                Payload = new SecretPayload { Data = ByteString.CopyFromUtf8("value") }
+            });
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        capturedSettings.Should().NotBeNull();
+        capturedSettings.Retry.Should().NotBeNull();
+        capturedSettings.Retry.MaxAttempts.Should().Be(1);
+    }
+
+    [Fact]
     public void Load_Should_Not_Retry_Listing_When_Non_Rpc_Exception_Is_Thrown()
     {
         var mockClient = new Mock<SecretManagerServiceClient>();

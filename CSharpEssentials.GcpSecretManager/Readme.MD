@@ -76,7 +76,7 @@ and `Projects` are settable and `AddProject` returns the options for chaining.
 
 Listing a project's secrets and accessing each secret version use `CSharpEssentials.Resilience`
 (`RetryIfFailed` with a `shouldRetry` predicate). Only `ResourceExhausted` and `Unavailable` are
-retried: 3 retries with exponential backoff (2s, 4s, 8s). Any other status, such as
+retried: 3 retries with exponential backoff (2s, 4s, 8s). The client library's own retry for secret access is turned off, so these are the only retries. Any other status, such as
 `PermissionDenied` or `NotFound`, fails immediately. When retries are exhausted the original
 `RpcException` is logged once at `Error`: a listing failure skips that project, an access failure
 skips that secret, and loading continues.
