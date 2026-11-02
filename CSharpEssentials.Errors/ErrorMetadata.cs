@@ -80,7 +80,7 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 #if NET6_0_OR_GREATER
             sb.Append(string.Create(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}"));
 #else
-            sb.Append($"{{ {key}: {value} }}");
+            sb.Append(FormattableString.Invariant($"{{ {key}: {value} }}"));
 #endif
             if (i < Count - 1)
                 sb.Append(", ");

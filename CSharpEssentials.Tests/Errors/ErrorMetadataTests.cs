@@ -1,3 +1,4 @@
+using System.Globalization;
 using CSharpEssentials.Errors;
 using FluentAssertions;
 
@@ -214,5 +215,25 @@ public class ErrorMetadataTests
     }
 
     #endregion
-}
 
+    #region Formatting
+
+    [Fact]
+    public void ToString_UnderTurkishCulture_ShouldFormatValuesInvariantly()
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("tr-TR");
+        try
+        {
+            var metadata = new ErrorMetadata { ["amount"] = 2.5 };
+
+            metadata.ToString().Should().Be("[{ amount: 2.5 }]");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    #endregion
+}
