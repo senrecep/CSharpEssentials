@@ -202,6 +202,8 @@ public record GetUserQuery(Guid Id) : IQuery<Result<User>>, ICacheable
 
 Requires `IDistributedCache` registered in DI. The response is stored and read as JSON (`System.Text.Json`), so it must round-trip through it.
 
+If a cached entry can no longer be read as `TResponse` (for example after an incompatible change to the response type), the behavior logs a warning, removes the entry and calls the handler. Earlier versions threw on every request until the entry expired. Errors from the cache backend itself are not caught and still fail the request.
+
 ### Transaction Scope Behavior
 
 Implement `ITransactionalRequest` on any command.

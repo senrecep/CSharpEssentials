@@ -165,4 +165,38 @@ public class CachingBehaviorTests
         result.IsFailure.Should().BeTrue();
         cache.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
     }
+
+    [Fact]
+    public async Task Handle_Should_Fall_Back_To_Handler_When_Cached_Entry_Cannot_Be_Deserialized()
+    {
+        var logger = new CapturingLogger<CachingBehavior<TestCacheableQuery, Result<string>>>();
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.GetAsync("test:1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes("{\"Value\":{\"x\":1}}"));
+
+        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger, cache.Object);
+
+        Result<string> result = await behavior.Handle(new TestCacheableQuery("1"), SuccessNext, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be("from-handler");
+        cache.Verify(c => c.RemoveAsync("test:1", It.IsAny<CancellationToken>()), Times.Once);
+        cache.Verify(c => c.SetAsync("test:1", It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fall_Back_To_Handler_When_Cached_Entry_Is_Json_Null()
+    {
+        var logger = new CapturingLogger<CachingBehavior<TestCacheableQuery, Result<string>>>();
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.GetAsync("test:1", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes("null"));
+
+        var behavior = new CachingBehavior<TestCacheableQuery, Result<string>>(logger, cache.Object);
+
+        Result<string> result = await behavior.Handle(new TestCacheableQuery("1"), SuccessNext, default);
+
+        result.Value.Should().Be("from-handler");
+        cache.Verify(c => c.RemoveAsync("test:1", It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
