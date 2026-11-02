@@ -177,15 +177,15 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Contract.PendingApproval:
-                    return "PendingApproval".ToLowerInvariant();
+                    return "pendingapproval";
                 case global::Sample.Contract.HTTPShipped:
-                    return "HTTPShipped".ToLowerInvariant();
+                    return "httpshipped";
                 case global::Sample.Contract.OnHold:
-                    return "OnHold".ToLowerInvariant();
+                    return "onhold";
                 case (global::Sample.Contract)3:
-                    return "Paused".ToLowerInvariant();
+                    return "paused";
                 case global::Sample.Contract.Unknown:
-                    return "Unknown".ToLowerInvariant();
+                    return "unknown";
                 default:
                     return ((int)value).ToString();
             }
@@ -196,15 +196,15 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Contract.PendingApproval:
-                    return "PendingApproval".ToUpperInvariant();
+                    return "PENDINGAPPROVAL";
                 case global::Sample.Contract.HTTPShipped:
-                    return "HTTPShipped".ToUpperInvariant();
+                    return "HTTPSHIPPED";
                 case global::Sample.Contract.OnHold:
-                    return "OnHold".ToUpperInvariant();
+                    return "ONHOLD";
                 case (global::Sample.Contract)3:
-                    return "Paused".ToUpperInvariant();
+                    return "PAUSED";
                 case global::Sample.Contract.Unknown:
-                    return "Unknown".ToUpperInvariant();
+                    return "UNKNOWN";
                 default:
                     return ((int)value).ToString();
             }

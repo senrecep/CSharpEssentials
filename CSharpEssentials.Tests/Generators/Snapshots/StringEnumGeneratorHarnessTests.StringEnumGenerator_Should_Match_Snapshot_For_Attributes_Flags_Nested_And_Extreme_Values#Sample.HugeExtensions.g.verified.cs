@@ -127,9 +127,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Huge.Zero:
-                    return "Zero".ToLowerInvariant();
+                    return "zero";
                 case (global::Sample.Huge)18446744073709551615UL:
-                    return "Max".ToLowerInvariant();
+                    return "max";
                 default:
                     return ((ulong)value).ToString();
             }
@@ -140,9 +140,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Huge.Zero:
-                    return "Zero".ToUpperInvariant();
+                    return "ZERO";
                 case (global::Sample.Huge)18446744073709551615UL:
-                    return "Max".ToUpperInvariant();
+                    return "MAX";
                 default:
                     return ((ulong)value).ToString();
             }

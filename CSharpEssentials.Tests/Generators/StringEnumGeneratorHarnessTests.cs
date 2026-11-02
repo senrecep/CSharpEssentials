@@ -197,6 +197,16 @@ public class StringEnumGeneratorHarnessTests
     }
 
     [Fact]
+    public void StringEnumGenerator_Should_Emit_Precomputed_Case_Literals()
+    {
+        GeneratorRun run = GeneratorHarness.Run(CreateCompilation(), [.. EnumsAssembly.Value.Generators]);
+
+        string generated = run.Result.GeneratedTrees.Single(static t => t.FilePath.EndsWith("OrderStatusExtensions.g.cs", StringComparison.Ordinal)).ToString();
+        generated.Should().Contain("return \"inprogress\";").And.Contain("return \"INPROGRESS\";")
+            .And.NotContain("\"InProgress\".ToLowerInvariant()").And.NotContain("\"InProgress\".ToUpperInvariant()");
+    }
+
+    [Fact]
     public void StringEnumGenerator_Should_Return_Cached_Outputs_When_Compilation_Is_Identical()
     {
         CSharpCompilation compilation = CreateCompilation();

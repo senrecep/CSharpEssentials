@@ -127,9 +127,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Order.State.Open:
-                    return "Open".ToLowerInvariant();
+                    return "open";
                 case global::Sample.Order.State.Closed:
-                    return "Closed".ToLowerInvariant();
+                    return "closed";
                 default:
                     return ((int)value).ToString();
             }
@@ -140,9 +140,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Order.State.Open:
-                    return "Open".ToUpperInvariant();
+                    return "OPEN";
                 case global::Sample.Order.State.Closed:
-                    return "Closed".ToUpperInvariant();
+                    return "CLOSED";
                 default:
                     return ((int)value).ToString();
             }

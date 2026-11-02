@@ -67,8 +67,8 @@ internal static class StringEnumSourceWriter
         WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), numeric);
         WriteSwitch(w, model, distinct, "ToSnakeCase", modern ? "Use ToWireName()" : null, static m => Literal(EnumWireNaming.ToLegacySnakeCase(m.Name)), "ToSnakeCaseFallback(value.ToOptimizedString())");
         WriteSwitch(w, model, distinct, "ToKebabCase", null, static m => Literal(EnumWireNaming.ToLegacyKebabCase(m.Name)), "ToKebabCaseFallback(value.ToOptimizedString())");
-        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(m.Name) + ".ToLowerInvariant()", model.IsFlags ? flagsText + ".ToLowerInvariant()" : numeric);
-        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name) + ".ToUpperInvariant()", model.IsFlags ? flagsText + ".ToUpperInvariant()" : numeric);
+        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(CultureInfo.InvariantCulture.TextInfo.ToLower(m.Name)), model.IsFlags ? flagsText + ".ToLowerInvariant()" : numeric);
+        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name.ToUpperInvariant()), model.IsFlags ? flagsText + ".ToUpperInvariant()" : numeric);
         WriteLegacyLookups(w, model, members, nullableString, modern);
         if (flags is not null)
             WriteFlagsFormatter(w, model, flags);

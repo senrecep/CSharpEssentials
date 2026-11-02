@@ -131,9 +131,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Signed.Negative:
-                    return "Negative".ToLowerInvariant();
+                    return "negative";
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
-                    return "Min".ToLowerInvariant();
+                    return "min";
                 default:
                     return ((long)value).ToString();
             }
@@ -144,9 +144,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Signed.Negative:
-                    return "Negative".ToUpperInvariant();
+                    return "NEGATIVE";
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
-                    return "Min".ToUpperInvariant();
+                    return "MIN";
                 default:
                     return ((long)value).ToString();
             }

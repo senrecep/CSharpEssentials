@@ -140,11 +140,11 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.OrderStatus.Pending:
-                    return "Pending".ToLowerInvariant();
+                    return "pending";
                 case global::Sample.OrderStatus.InProgress:
-                    return "InProgress".ToLowerInvariant();
+                    return "inprogress";
                 case global::Sample.OrderStatus.Shipped:
-                    return "Shipped".ToLowerInvariant();
+                    return "shipped";
                 default:
                     return ((int)value).ToString();
             }
@@ -155,11 +155,11 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.OrderStatus.Pending:
-                    return "Pending".ToUpperInvariant();
+                    return "PENDING";
                 case global::Sample.OrderStatus.InProgress:
-                    return "InProgress".ToUpperInvariant();
+                    return "INPROGRESS";
                 case global::Sample.OrderStatus.Shipped:
-                    return "Shipped".ToUpperInvariant();
+                    return "SHIPPED";
                 default:
                     return ((int)value).ToString();
             }

@@ -127,9 +127,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Order.Line.Kind.Product:
-                    return "Product".ToLowerInvariant();
+                    return "product";
                 case global::Sample.Order.Line.Kind.Shipping:
-                    return "Shipping".ToLowerInvariant();
+                    return "shipping";
                 default:
                     return ((int)value).ToString();
             }
@@ -140,9 +140,9 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Order.Line.Kind.Product:
-                    return "Product".ToUpperInvariant();
+                    return "PRODUCT";
                 case global::Sample.Order.Line.Kind.Shipping:
-                    return "Shipping".ToUpperInvariant();
+                    return "SHIPPING";
                 default:
                     return ((int)value).ToString();
             }

@@ -129,13 +129,13 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Permissions.None:
-                    return "None".ToLowerInvariant();
+                    return "none";
                 case global::Sample.Permissions.Read:
-                    return "Read".ToLowerInvariant();
+                    return "read";
                 case global::Sample.Permissions.Write:
-                    return "Write".ToLowerInvariant();
+                    return "write";
                 case global::Sample.Permissions.ReadWrite:
-                    return "ReadWrite".ToLowerInvariant();
+                    return "readwrite";
                 default:
                     return __FormatFlags(value).ToLowerInvariant();
             }
@@ -146,13 +146,13 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Permissions.None:
-                    return "None".ToUpperInvariant();
+                    return "NONE";
                 case global::Sample.Permissions.Read:
-                    return "Read".ToUpperInvariant();
+                    return "READ";
                 case global::Sample.Permissions.Write:
-                    return "Write".ToUpperInvariant();
+                    return "WRITE";
                 case global::Sample.Permissions.ReadWrite:
-                    return "ReadWrite".ToUpperInvariant();
+                    return "READWRITE";
                 default:
                     return __FormatFlags(value).ToUpperInvariant();
             }
