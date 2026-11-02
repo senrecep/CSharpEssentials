@@ -28,6 +28,12 @@ dotnet add package CSharpEssentials.EntityFrameworkCore
 
 Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
 
+## Upgrade Notes
+
+Changes in the next major version that need action:
+
+- **Slow query logging hides parameter values by default.** `SlowQueryInterceptor` now follows EF Core's sensitive data setting: values appear in the log and in `SlowQueryContext.Parameters` only when `EnableSensitiveDataLogging()` is on (or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`). Without it, parameters read `@name=?`. Turn sensitive data logging on if you relied on the values.
+
 ## Usage
 
 ### Audit Interceptor
@@ -653,7 +659,7 @@ public sealed class MetricsSlowQueryHandler : ISlowQueryHandler
 }
 ```
 
-Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameter values, and passed to the `ISlowQueryHandler` when one is registered. Parameter values can be sensitive; keep that in mind before shipping the logs.
+Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameters, and passed to the `ISlowQueryHandler` when one is registered. Parameter values are included only when the context has `EnableSensitiveDataLogging()` turned on; otherwise each parameter is written as `@name=?`. If the handler throws, the exception is logged as a warning and the command still succeeds.
 
 ### Database Error Translation
 
