@@ -206,6 +206,15 @@ namespace Sample
             return new global::Sample.Order.Line.Kind[] { global::Sample.Order.Line.Kind.Product, global::Sample.Order.Line.Kind.Shipping };
         }
 
+        private static readonly string[] __names = new string[] { "Product", "Shipping" };
+        private static readonly global::Sample.Order.Line.Kind[] __values = new global::Sample.Order.Line.Kind[] { global::Sample.Order.Line.Kind.Product, global::Sample.Order.Line.Kind.Shipping };
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Order.Line.Kind> Values => __values;
+
         public static int AsUnderlyingType(this global::Sample.Order.Line.Kind value)
         {
             return (int)value;

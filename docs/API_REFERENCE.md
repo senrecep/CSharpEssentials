@@ -1747,7 +1747,8 @@ Wire name priority: `[JsonStringEnumMemberName]`, `[EnumMember(Value)]`, `[Strin
 | `{Member}WireName` | Wire name constant |
 | `value.ToOptimizedString()` / `ToKebabCase()` / `ToLowerCase()` / `ToUpperCase()` | Member name, 4.x kebab case, lower or upper case |
 | `value.AsUnderlyingType()` | Underlying numeric value |
-| `{Enum}Extensions.IsDefined(name)` / `GetNames()` / `GetValues()` | Member name check, member names, values |
+| `{Enum}Extensions.IsDefined(name)` / `GetNames()` / `GetValues()` | Member name check, member names, values (new arrays per call) |
+| `{Enum}Extensions.Names` / `Values` | Member names and values as cached `IReadOnlyList`s; reading them allocates nothing |
 | `{Member}SnakeCase` / `{Member}KebabCase` | 4.x constants, unchanged |
 | `value.ToSnakeCase()`, `TryParse`, `Parse` | `[Obsolete]`: use `ToWireName()`, `TryParseWire`, `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`, wire name `http_status`) |
 

@@ -224,6 +224,15 @@ namespace Sample
             return new global::Sample.Permissions[] { global::Sample.Permissions.None, global::Sample.Permissions.Read, global::Sample.Permissions.Write, global::Sample.Permissions.ReadWrite };
         }
 
+        private static readonly string[] __names = new string[] { "None", "Read", "Write", "ReadWrite" };
+        private static readonly global::Sample.Permissions[] __values = new global::Sample.Permissions[] { global::Sample.Permissions.None, global::Sample.Permissions.Read, global::Sample.Permissions.Write, global::Sample.Permissions.ReadWrite };
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Permissions> Values => __values;
+
         public static byte AsUnderlyingType(this global::Sample.Permissions value)
         {
             return (byte)value;

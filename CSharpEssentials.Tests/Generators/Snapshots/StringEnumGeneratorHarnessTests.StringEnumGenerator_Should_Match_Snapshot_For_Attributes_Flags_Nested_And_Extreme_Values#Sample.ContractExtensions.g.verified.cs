@@ -280,6 +280,15 @@ namespace Sample
             return new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown };
         }
 
+        private static readonly string[] __names = new string[] { "PendingApproval", "HTTPShipped", "OnHold", "Paused", "Unknown" };
+        private static readonly global::Sample.Contract[] __values = new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown };
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Contract> Values => __values;
+
         public static int AsUnderlyingType(this global::Sample.Contract value)
         {
             return (int)value;

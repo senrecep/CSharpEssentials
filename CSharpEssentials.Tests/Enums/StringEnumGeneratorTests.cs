@@ -138,6 +138,18 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void Names_And_Values_Should_Match_The_Array_Methods_And_Be_Cached()
+    {
+        ColorExtensions.Names.Should().Equal(ColorExtensions.GetNames());
+        ColorExtensions.Values.Should().Equal(ColorExtensions.GetValues());
+        GeneratedPermissionsExtensions.Names.Should().Equal(GeneratedPermissionsExtensions.GetNames());
+        GeneratedPermissionsExtensions.Values.Should().Equal(GeneratedPermissionsExtensions.GetValues());
+        ColorExtensions.Names.Should().BeSameAs(ColorExtensions.Names);
+        ColorExtensions.Values.Should().BeSameAs(ColorExtensions.Values);
+        ColorExtensions.GetNames().Should().NotBeSameAs(ColorExtensions.GetNames());
+    }
+
+    [Fact]
     public void AsUnderlyingType_Should_Return_Numeric_Value()
     {
         Color c = Color.Blue;

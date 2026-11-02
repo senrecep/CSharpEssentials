@@ -87,8 +87,10 @@ status.ToLowerCase();                               // "pendingapproval"
 status.ToUpperCase();                               // "PENDINGAPPROVAL"
 status.AsUnderlyingType();                          // 1
 OrderStatusExtensions.IsDefined("PendingApproval"); // true (member names)
-OrderStatusExtensions.GetNames();                   // member names
-OrderStatusExtensions.GetValues();                  // all members
+OrderStatusExtensions.GetNames();                   // member names (a new array per call)
+OrderStatusExtensions.GetValues();                  // all members (a new array per call)
+OrderStatusExtensions.Names;                        // member names, cached IReadOnlyList<string>
+OrderStatusExtensions.Values;                       // all members, cached IReadOnlyList<OrderStatus>
 ```
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are formatted as comma separated wire names of single flags.

@@ -227,6 +227,15 @@ namespace Sample
             return new global::Sample.OrderStatus[] { global::Sample.OrderStatus.Pending, global::Sample.OrderStatus.InProgress, global::Sample.OrderStatus.Shipped };
         }
 
+        private static readonly string[] __names = new string[] { "Pending", "InProgress", "Shipped" };
+        private static readonly global::Sample.OrderStatus[] __values = new global::Sample.OrderStatus[] { global::Sample.OrderStatus.Pending, global::Sample.OrderStatus.InProgress, global::Sample.OrderStatus.Shipped };
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.OrderStatus> Values => __values;
+
         public static int AsUnderlyingType(this global::Sample.OrderStatus value)
         {
             return (int)value;

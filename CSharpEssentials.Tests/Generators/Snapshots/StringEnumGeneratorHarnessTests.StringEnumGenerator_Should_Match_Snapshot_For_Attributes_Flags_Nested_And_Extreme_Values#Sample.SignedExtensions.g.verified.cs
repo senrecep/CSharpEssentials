@@ -214,6 +214,15 @@ namespace Sample
             return new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias };
         }
 
+        private static readonly string[] __names = new string[] { "Negative", "Min", "Alias" };
+        private static readonly global::Sample.Signed[] __values = new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias };
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Signed> Values => __values;
+
         public static long AsUnderlyingType(this global::Sample.Signed value)
         {
             return (long)value;

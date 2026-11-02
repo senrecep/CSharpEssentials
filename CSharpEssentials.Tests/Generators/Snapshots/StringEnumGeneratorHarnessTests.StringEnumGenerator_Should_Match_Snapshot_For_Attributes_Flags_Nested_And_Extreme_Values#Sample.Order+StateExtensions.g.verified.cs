@@ -206,6 +206,15 @@ namespace Sample
             return new global::Sample.Order.State[] { global::Sample.Order.State.Open, global::Sample.Order.State.Closed };
         }
 
+        private static readonly string[] __names = new string[] { "Open", "Closed" };
+        private static readonly global::Sample.Order.State[] __values = new global::Sample.Order.State[] { global::Sample.Order.State.Open, global::Sample.Order.State.Closed };
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Order.State> Values => __values;
+
         public static int AsUnderlyingType(this global::Sample.Order.State value)
         {
             return (int)value;

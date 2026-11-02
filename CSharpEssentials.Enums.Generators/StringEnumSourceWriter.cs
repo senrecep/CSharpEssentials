@@ -417,6 +417,19 @@ internal static class StringEnumSourceWriter
         w.Close();
         w.Line();
 
+        if (modern)
+        {
+            w.Line("private static readonly string[] __names = new string[] { " + string.Join(", ", members.Select(static m => Literal(m.Name))) + " };");
+            w.Line("private static readonly " + type + "[] __values = new " + type + "[] { " + string.Join(", ", members.Select(m => ValueExpression(model, m))) + " };");
+            w.Line();
+            w.Line("/// <summary>The member names in declaration order. Cached: unlike <see cref=\"GetNames\"/>, reading it allocates nothing.</summary>");
+            w.Line("public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;");
+            w.Line();
+            w.Line("/// <summary>The member values in declaration order. Cached: unlike <see cref=\"GetValues\"/>, reading it allocates nothing.</summary>");
+            w.Line("public static global::System.Collections.Generic.IReadOnlyList<" + type + "> Values => __values;");
+            w.Line();
+        }
+
         w.Line("public static " + model.UnderlyingType + " AsUnderlyingType(this " + type + " value)");
         w.Open();
         w.Line("return (" + model.UnderlyingType + ")value;");
