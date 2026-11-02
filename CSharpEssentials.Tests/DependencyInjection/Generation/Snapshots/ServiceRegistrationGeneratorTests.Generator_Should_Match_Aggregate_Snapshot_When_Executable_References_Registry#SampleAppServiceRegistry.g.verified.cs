@@ -107,6 +107,8 @@ namespace Microsoft.Extensions.DependencyInjection
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
         public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 1, 2 };
 
+        private static readonly global::System.Type[] VerifiedImplementations0 = new global::System.Type[] { typeof(global::Sample.EuGreeter) };
+
         /// <summary>Applies the decorators declared in this assembly.</summary>
         /// <param name="services">The service collection.</param>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
@@ -134,7 +136,7 @@ namespace Microsoft.Extensions.DependencyInjection
                         (inner, sp) => new global::Sample.EuDecorator(
                             (global::Sample.IGreeter)inner,
                             (global::Sample.Region)(object)global::Sample.Region.Eu),
-                        global::System.Array.Empty<global::System.Type>());
+                        VerifiedImplementations0);
                     break;
                 case 2:
                     global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(

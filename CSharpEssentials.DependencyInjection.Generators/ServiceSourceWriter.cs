@@ -82,6 +82,9 @@ internal static class ServiceSourceWriter
             .OrderBy(static decorator => decorator.Order)
             .ThenBy(static decorator => decorator.SortName, StringComparer.Ordinal)];
         int[] orders = [.. decorators.Select(static decorator => decorator.Order).Distinct()];
+        RegistrationModel[] registrations = [.. types.SelectMany(static type => type.Registrations)];
+        Dictionary<string, string> verifiedFields = [];
+        string[] verifiedArguments = [.. decorators.Select(decorator => GetVerifiedArgument(decorator, registrations, verifiedFields))];
 
         sb.Append("        /// <summary>Gets the distinct decorator orders declared in this assembly, ascending.</summary>\n");
         sb.Append("        ").Append(NeverBrowsable).Append('\n');
@@ -93,6 +96,13 @@ internal static class ServiceSourceWriter
         else
         {
             sb.Append("new int[] { ").Append(string.Join(", ", orders.Select(static order => order.ToString(CultureInfo.InvariantCulture)))).Append(" };\n");
+        }
+
+        foreach (KeyValuePair<string, string> field in verifiedFields.OrderBy(static field => field.Value.Length).ThenBy(static field => field.Value, StringComparer.Ordinal))
+        {
+            sb.Append('\n');
+            sb.Append("        private static readonly global::System.Type[] ").Append(field.Value)
+                .Append(" = new global::System.Type[] { ").Append(field.Key).Append(" };\n");
         }
 
         sb.Append('\n');
@@ -120,9 +130,12 @@ internal static class ServiceSourceWriter
             foreach (int order in orders)
             {
                 sb.Append("                case ").Append(order.ToString(CultureInfo.InvariantCulture)).Append(":\n");
-                foreach (DecoratorModel decorator in decorators.Where(decorator => decorator.Order == order))
+                for (int index = 0; index < decorators.Length; index++)
                 {
-                    WriteDecorator(sb, decorator);
+                    if (decorators[index].Order == order)
+                    {
+                        WriteDecorator(sb, decorators[index], verifiedArguments[index]);
+                    }
                 }
 
                 sb.Append("                    break;\n");
@@ -260,7 +273,30 @@ internal static class ServiceSourceWriter
         }
     }
 
-    private static void WriteDecorator(StringBuilder sb, DecoratorModel decorator)
+    private static string GetVerifiedArgument(DecoratorModel decorator, RegistrationModel[] registrations, Dictionary<string, string> verifiedFields)
+    {
+        string[] verified = [.. registrations
+            .Where(registration => registration.VerifiedForDecoration &&
+                string.Equals(registration.Key, decorator.Key, StringComparison.Ordinal) &&
+                registration.Services.Any(service => !service.Forwarded && string.Equals(service.ServiceType, decorator.ServiceType, StringComparison.Ordinal)))
+            .Select(static registration => "typeof(" + registration.ImplementationType + ")")
+            .Distinct(StringComparer.Ordinal)];
+        if (verified.Length == 0)
+        {
+            return "global::System.Array.Empty<global::System.Type>()";
+        }
+
+        string types = string.Join(", ", verified);
+        if (!verifiedFields.TryGetValue(types, out string? field))
+        {
+            field = "VerifiedImplementations" + verifiedFields.Count.ToString(CultureInfo.InvariantCulture);
+            verifiedFields.Add(types, field);
+        }
+
+        return field;
+    }
+
+    private static void WriteDecorator(StringBuilder sb, DecoratorModel decorator, string verifiedArgument)
     {
         sb.Append("                    ").Append(Registration).Append(".Decorate(\n");
         sb.Append("                        services,\n");
@@ -274,7 +310,7 @@ internal static class ServiceSourceWriter
         }
 
         sb.Append("),\n");
-        sb.Append("                        global::System.Array.Empty<global::System.Type>());\n");
+        sb.Append("                        ").Append(verifiedArgument).Append(");\n");
     }
 
     private static string FormatArgument(DecoratorParameterModel parameter, string? key) => parameter.Kind switch
