@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -12,6 +14,7 @@ internal static class EnhancedProblemDetailsWriter
 {
     internal const string ContentType = "application/problem+json";
     private static readonly JsonSerializerOptions DefaultJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> WithProblemMetadata = [];
 
     /// <summary>
     /// Writes through <see cref="IProblemDetailsService"/> when <c>AddEnhancedProblemDetails</c> is registered.
@@ -66,8 +69,21 @@ internal static class EnhancedProblemDetailsWriter
         await httpContext.Response.WriteAsJsonAsync(
             context.ProblemDetails,
             context.ProblemDetails.GetType(),
-            jsonOptions,
+            AddProblemMetadata(jsonOptions),
             ContentType,
             httpContext.RequestAborted).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// The application's options with <see cref="EnhancedProblemDetailsJsonContext"/> appended to the resolvers, so
+    /// the application's metadata still wins and the problem types resolve without reflection (Native AOT).
+    /// Options without a resolver keep the reflection default while it is enabled.
+    /// </summary>
+    internal static JsonSerializerOptions AddProblemMetadata(JsonSerializerOptions options) =>
+        options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault
+            ? options
+            : WithProblemMetadata.GetValue(options, static source => new JsonSerializerOptions(source)
+            {
+                TypeInfoResolver = JsonTypeInfoResolver.Combine(source.TypeInfoResolver, EnhancedProblemDetailsJsonContext.Default),
+            });
 }

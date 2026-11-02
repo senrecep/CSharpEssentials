@@ -33,6 +33,7 @@ public static partial class Extensions
         services.TryAddSingleton<EnhancedProblemDetailsMarker>();
         services.TryAddSingleton<IErrorStatusCodeMapper>(DefaultErrorStatusCodeMapper.Instance);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProblemDetailsOptions>, EnhancedProblemDetailsPostConfigure>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>, EnhancedProblemDetailsJsonOptionsSetup>());
         return services;
     }
 
