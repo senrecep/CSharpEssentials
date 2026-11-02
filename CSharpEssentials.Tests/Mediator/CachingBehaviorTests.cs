@@ -181,6 +181,7 @@ public class CachingBehaviorTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("from-handler");
         logger.Messages.Should().ContainSingle(m => m.StartsWith("Cached value for key test:1 could not be deserialized", StringComparison.Ordinal));
+        logger.Messages.Should().NotContain("Cache hit for key test:1");
         cache.Verify(c => c.RemoveAsync("test:1", It.IsAny<CancellationToken>()), Times.Once);
         cache.Verify(c => c.SetAsync("test:1", It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
     }

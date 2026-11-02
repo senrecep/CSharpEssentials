@@ -26,9 +26,11 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         byte[]? cachedBytes = await cache.GetAsync(message.CacheKey, cancellationToken).ConfigureAwait(false);
         if (cachedBytes is not null && cachedBytes.Length > 0)
         {
-            LogCacheHit(logger, message.CacheKey);
             if (TryDeserialize(cachedBytes, out TResponse? cached))
+            {
+                LogCacheHit(logger, message.CacheKey);
                 return cached;
+            }
 
             LogCacheEntryUnreadable(logger, message.CacheKey);
             await cache.RemoveAsync(message.CacheKey, cancellationToken).ConfigureAwait(false);
