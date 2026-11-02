@@ -214,7 +214,7 @@ internal static class AssemblyServiceScanner
         Func<object, IServiceProvider, object> factory = DecoratorActivator.Create(decoratorType, serviceType, key);
         void Apply(IServiceCollection services)
         {
-            if (!ServiceDecoration.TryDecorate(services, serviceType, key, factory))
+            if (!ServiceDecoration.TryDecorate(services, serviceType, key, factory, Type.EmptyTypes))
             {
                 throw ServiceDecoration.NothingToDecorate(serviceType, key, decoratorType);
             }

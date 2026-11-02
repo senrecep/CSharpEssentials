@@ -56,7 +56,7 @@ public static class ServiceCollectionDecorationExtensions
         Guard.NotNull(services);
 
         Func<object, IServiceProvider, object> decorator = DecoratorActivator.Create(typeof(TDecorator), typeof(TService), serviceKey);
-        return ServiceDecoration.TryDecorate(services, typeof(TService), serviceKey, decorator);
+        return ServiceDecoration.TryDecorate(services, typeof(TService), serviceKey, decorator, Type.EmptyTypes);
     }
 
     /// <summary>
@@ -80,7 +80,7 @@ public static class ServiceCollectionDecorationExtensions
         Guard.NotNull(services);
         Guard.NotNull(decorator);
 
-        if (!ServiceDecoration.TryDecorate(services, typeof(TService), serviceKey, (inner, provider) => decorator((TService)inner, provider)))
+        if (!ServiceDecoration.TryDecorate(services, typeof(TService), serviceKey, (inner, provider) => decorator((TService)inner, provider), Type.EmptyTypes))
         {
             throw ServiceDecoration.NothingToDecorate(typeof(TService), serviceKey, decoratorType: null);
         }

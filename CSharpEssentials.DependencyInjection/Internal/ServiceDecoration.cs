@@ -10,24 +10,35 @@ internal static class ServiceDecoration
         IServiceCollection services,
         Type serviceType,
         object? serviceKey,
-        Func<object, IServiceProvider, object> decorator)
+        Func<object, IServiceProvider, object> decorator,
+        Type[] verifiedImplementations)
     {
-        List<int> matches = [];
-        for (int index = 0; index < services.Count; index++)
+        int count = services.Count;
+        bool matched = false;
+        for (int index = 0; index < count; index++)
         {
-            if (services[index].Matches(serviceType, serviceKey))
+            ServiceDescriptor descriptor = services[index];
+            if (descriptor.Matches(serviceType, serviceKey))
             {
-                EnsureDecoratable(services[index]);
-                matches.Add(index);
+                EnsureDecoratable(descriptor, verifiedImplementations);
+                matched = true;
             }
         }
 
-        foreach (int index in matches)
+        if (!matched)
         {
-            Replace(services, index, decorator);
+            return false;
         }
 
-        return matches.Count > 0;
+        for (int index = 0; index < count; index++)
+        {
+            if (services[index].Matches(serviceType, serviceKey))
+            {
+                Replace(services, index, decorator);
+            }
+        }
+
+        return true;
     }
 
     [RequiresDynamicCode("Closes the open-generic decorator for each matching closed registration.")]
@@ -63,7 +74,7 @@ internal static class ServiceDecoration
                 descriptor.ServiceType.GetGenericTypeDefinition() == serviceType &&
                 keyFilter(descriptor.ServiceKey))
             {
-                EnsureDecoratable(descriptor);
+                EnsureDecoratable(descriptor, Type.EmptyTypes);
                 Type closedDecorator = decoratorType.MakeGenericType(descriptor.ServiceType.GenericTypeArguments);
                 plan.Add((index, DecoratorActivator.Create(closedDecorator, descriptor.ServiceType, descriptor.ServiceKey)));
             }
@@ -87,23 +98,35 @@ internal static class ServiceDecoration
             $"was found to decorate{(decoratorType is null ? string.Empty : $" with '{decoratorType.FullName}'")}. " +
             "Register the service before applying its decorators.");
 
-    private static void EnsureDecoratable(ServiceDescriptor descriptor)
+    private static void EnsureDecoratable(ServiceDescriptor descriptor, Type[] verifiedImplementations)
     {
         Type? implementationType = descriptor.IsKeyedService ? descriptor.KeyedImplementationType : descriptor.ImplementationType;
-        if (implementationType is null)
+        if (implementationType is null || Array.IndexOf(verifiedImplementations, implementationType) >= 0)
         {
             return;
         }
 
-        bool injectsServiceKey = implementationType
-            .GetConstructors()
-            .SelectMany(static constructor => constructor.GetParameters())
-            .Any(static parameter => parameter.GetCustomAttribute<ServiceKeyAttribute>() is not null);
-        if (injectsServiceKey)
+        if (InjectsServiceKey(implementationType))
         {
             throw new InvalidOperationException(
                 $"'{implementationType.FullName}' injects [ServiceKey] and cannot be decorated, because its hidden inner registration uses a private key.");
         }
+    }
+
+    private static bool InjectsServiceKey([DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type type)
+    {
+        foreach (ConstructorInfo constructor in type.GetConstructors())
+        {
+            foreach (ParameterInfo parameter in constructor.GetParameters())
+            {
+                if (parameter.IsDefined(typeof(ServiceKeyAttribute), inherit: false))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static void Replace(IServiceCollection services, int index, Func<object, IServiceProvider, object> decorator)

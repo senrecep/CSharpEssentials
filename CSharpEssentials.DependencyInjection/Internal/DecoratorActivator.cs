@@ -32,13 +32,27 @@ internal static class DecoratorActivator
 
         ConstructorInfo constructor = constructors[0];
         ParameterInfo[] parameters = constructor.GetParameters();
-        if (parameters.Count(parameter => parameter.ParameterType == serviceType) != 1)
+        int innerCount = 0;
+        foreach (ParameterInfo parameter in parameters)
+        {
+            if (parameter.ParameterType == serviceType)
+            {
+                innerCount++;
+            }
+        }
+
+        if (innerCount != 1)
         {
             throw new InvalidOperationException(
                 $"The constructor of decorator '{decoratorType.FullName}' must have exactly one parameter of the decorated service type '{serviceType.FullName}'.");
         }
 
-        Func<object, IServiceProvider, object?>[] resolvers = [.. parameters.Select(parameter => CreateResolver(parameter, serviceType, serviceKey))];
+        var resolvers = new Func<object, IServiceProvider, object?>[parameters.Length];
+        for (int index = 0; index < parameters.Length; index++)
+        {
+            resolvers[index] = CreateResolver(parameters[index], serviceType, serviceKey);
+        }
+
         return (inner, provider) =>
         {
             object?[] arguments = new object?[resolvers.Length];
