@@ -2475,7 +2475,7 @@ Targets `net8.0`, `net9.0`, `net10.0` and `net11.0` with `Swashbuckle.AspNetCore
 | `SecuritySchemes.JwtBearerSchemeName` / `SecuritySchemes.JwtBearerTokenSecurity` | `"Bearer"` and an HTTP bearer `OpenApiSecurityScheme` (`JWT`) |
 | `SwaggerGenOptions.AddEnumConventions()` | `EnumSchemaFilter` and an operation filter; `AddSwagger` already calls it. Writes the OpenAPI 3.0 shape |
 | `SwaggerGenOptions.AddOptionalRouteParameters(mode = SplitPaths, operationIdSelector?)` | Replaces the earlier setting, so call it after `AddSwagger`. `OptionalRouteParameterMode` has `SplitPaths`, `RequiredOnly` and the obsolete `LegacyNonCompliant` (the 6.0.0 output, invalid OpenAPI) |
-| `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory` | Public types in `CSharpEssentials.AspNetCore.Swagger.Filters`; `GetSchemaId(Type)` builds the schema id from the type name with the generic arguments in front (`Box<Dto>` becomes `DtoBox`) |
+| `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory` | Public types in `CSharpEssentials.AspNetCore.Swagger.Filters`; `GetSchemaId(Type)` builds the schema id from the namespace-qualified type name with the generic arguments in front (`NsB.Order`, `NsB.OrderSystem.Collections.Generic.List`); `QualifyWithNamespace = false` gives the 7.x short names (`Box<Dto>` becomes `DtoBox`, numeric suffix in first-seen order) |
 
 ```csharp
 using CSharpEssentials.AspNetCore;

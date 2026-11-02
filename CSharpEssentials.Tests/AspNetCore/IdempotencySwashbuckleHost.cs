@@ -1,4 +1,5 @@
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.AspNetCore.Swagger.Filters;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
@@ -10,7 +11,10 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.Tests.AspNetCore;
 
-/// <summary>Builds the Swashbuckle document of <see cref="IdempotencyApi"/>.</summary>
+/// <summary>
+/// Builds the Swashbuckle document of <see cref="IdempotencyApi"/> with the short schema ids that
+/// Microsoft.AspNetCore.OpenApi also uses, so both documents can be compared with one golden file.
+/// </summary>
 internal static class IdempotencySwashbuckleHost
 {
     public static async Task<string> GetJsonAsync(
@@ -29,7 +33,11 @@ internal static class IdempotencySwashbuckleHost
             new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" },
             typeof(IdempotencySwashbuckleHost).Assembly);
         builder.Services.AddControllers().AddIdempotencyControllers();
-        builder.Services.Configure<SwaggerGenOptions>(options => options.SwaggerDoc(IdempotencyApi.Document, new OpenApiInfo { Title = "Idempotency", Version = "1" }));
+        builder.Services.Configure<SwaggerGenOptions>(options =>
+        {
+            options.SwaggerDoc(IdempotencyApi.Document, new OpenApiInfo { Title = "Idempotency", Version = "1" });
+            options.CustomSchemaIds(new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false }.GetSchemaId);
+        });
         if (configure is not null)
             builder.Services.PostConfigure(configure);
 

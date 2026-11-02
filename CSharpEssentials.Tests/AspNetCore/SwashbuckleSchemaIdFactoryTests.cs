@@ -9,7 +9,7 @@ public class SwashbuckleSchemaIdFactoryTests
     [Fact]
     public void GetSchemaId_ForSimpleType_ShouldReturnTypeName()
     {
-        var factory = new SwashbuckleSchemaIdFactory();
+        var factory = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false };
 
         string schemaId = factory.GetSchemaId(typeof(string));
 
@@ -19,7 +19,7 @@ public class SwashbuckleSchemaIdFactoryTests
     [Fact]
     public void GetSchemaId_ForGenericType_ShouldReturnFormattedName()
     {
-        var factory = new SwashbuckleSchemaIdFactory();
+        var factory = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false };
 
         string schemaId = factory.GetSchemaId(typeof(List<string>));
 
@@ -29,7 +29,7 @@ public class SwashbuckleSchemaIdFactoryTests
     [Fact]
     public void GetSchemaId_ForArrayType_ShouldReturnArraySuffix()
     {
-        var factory = new SwashbuckleSchemaIdFactory();
+        var factory = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false };
 
         string schemaId = factory.GetSchemaId(typeof(int[]));
 
@@ -39,7 +39,7 @@ public class SwashbuckleSchemaIdFactoryTests
     [Fact]
     public void GetSchemaId_ForSameTypeTwice_ShouldReturnSameId()
     {
-        var factory = new SwashbuckleSchemaIdFactory();
+        var factory = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false };
 
         string schemaId1 = factory.GetSchemaId(typeof(DateTime));
         string schemaId2 = factory.GetSchemaId(typeof(DateTime));
@@ -50,7 +50,7 @@ public class SwashbuckleSchemaIdFactoryTests
     [Fact]
     public void GetSchemaId_ForNestedGeneric_ShouldReturnFormattedName()
     {
-        var factory = new SwashbuckleSchemaIdFactory();
+        var factory = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false };
 
         string schemaId = factory.GetSchemaId(typeof(Dictionary<string, int>));
 
@@ -73,7 +73,7 @@ public class SwashbuckleSchemaIdFactoryTests
 
         for (int round = 0; round < 300; round++)
         {
-            var factory = new SwashbuckleSchemaIdFactory();
+            var factory = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false };
             var ids = new ConcurrentDictionary<Type, ConcurrentBag<string>>();
 
             Parallel.For(0, types.Length * 20, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
@@ -88,10 +88,21 @@ public class SwashbuckleSchemaIdFactoryTests
     }
 
     [Fact]
-    public void GetSchemaId_Should_NotDependOnFirstSeenOrder_When_QualifyWithNamespaceIsSet()
+    public void GetSchemaId_Should_QualifyWithNamespace_ByDefault()
     {
-        var firstSeenFirst = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = true };
-        var secondSeenFirst = new SwashbuckleSchemaIdFactory { QualifyWithNamespace = true };
+        var factory = new SwashbuckleSchemaIdFactory();
+
+        factory.QualifyWithNamespace.Should().BeTrue();
+        factory.GetSchemaId(typeof(string)).Should().Be("System.String");
+        factory.GetSchemaId(typeof(List<string>)).Should().Be("System.StringSystem.Collections.Generic.List");
+        factory.GetSchemaId(typeof(int[])).Should().Be("System.Int32Array");
+    }
+
+    [Fact]
+    public void GetSchemaId_Should_NotDependOnFirstSeenOrder_ByDefault()
+    {
+        var firstSeenFirst = new SwashbuckleSchemaIdFactory();
+        var secondSeenFirst = new SwashbuckleSchemaIdFactory();
 
         firstSeenFirst.GetSchemaId(typeof(FirstScope.Order));
         string afterFirst = firstSeenFirst.GetSchemaId(typeof(SecondScope.Order));

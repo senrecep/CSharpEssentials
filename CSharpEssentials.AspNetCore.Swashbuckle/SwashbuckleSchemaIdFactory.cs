@@ -14,10 +14,11 @@ public class SwashbuckleSchemaIdFactory
 
     /// <summary>
     /// Builds every id from the namespace-qualified type name (<c>NsB.Order</c>, generic arguments in front), so the
-    /// ids do not depend on the order in which types are first seen. Off by default: the short names and the
-    /// first-seen numeric suffixes stay unchanged.
+    /// ids do not depend on the order in which types are first seen. On by default. Set it to <see langword="false"/>
+    /// to get the 7.x short names (<c>Order</c>, <c>DtoBox</c>), where two types that share a name get a numeric
+    /// suffix in the order they are first seen.
     /// </summary>
-    public bool QualifyWithNamespace { get; init; }
+    public bool QualifyWithNamespace { get; init; } = true;
 
     private string DefaultSchemaIdSelector(Type modelType)
     {
