@@ -1,0 +1,11 @@
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))"
+          Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../')))" />
+
+  <!-- Let Scrutor resolve the transitive versions it declares (Microsoft.Extensions.DependencyInjection.Abstractions
+       and Microsoft.Extensions.DependencyModel 10), as a real consumer would; the repo-wide transitive pins are lower. Set here because Directory.Packages.props
+       is imported after Directory.Build.props and would override it there. -->
+  <PropertyGroup>
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+</Project>
