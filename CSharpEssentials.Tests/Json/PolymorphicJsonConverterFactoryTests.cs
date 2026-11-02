@@ -157,7 +157,13 @@ public class PolymorphicJsonConverterFactoryTests
     [InlineData(typeof(IDictionary<string, object?>))]
     [InlineData(typeof(IReadOnlyList<BaseShape>))]
     [InlineData(typeof(System.Collections.IEnumerable))]
-    public void CanConvert_WithCollectionInterface_ShouldReturnFalse(Type type)
+    [InlineData(typeof(JsonNode))]
+    [InlineData(typeof(JsonObject))]
+    [InlineData(typeof(JsonArray))]
+    [InlineData(typeof(JsonValue))]
+    [InlineData(typeof(AttrShape))]
+    [InlineData(typeof(IAttrShape))]
+    public void CanConvert_WithExcludedType_ShouldReturnFalse(Type type)
     {
         PolymorphicJsonConverterFactory factory = new();
 
@@ -192,17 +198,6 @@ public class PolymorphicJsonConverterFactoryTests
 
         shape.Should().BeOfType<Triangle>().Which.Base.Should().Be(3);
         GC.KeepAlive(brokenAssembly);
-    }
-    [Theory]
-    [InlineData(typeof(JsonNode))]
-    [InlineData(typeof(JsonObject))]
-    [InlineData(typeof(JsonArray))]
-    [InlineData(typeof(JsonValue))]
-    public void CanConvert_WithJsonNode_ShouldReturnFalse(Type type)
-    {
-        PolymorphicJsonConverterFactory factory = new();
-
-        factory.CanConvert(type).Should().BeFalse();
     }
 
     [Fact]
@@ -239,15 +234,6 @@ public class PolymorphicJsonConverterFactoryTests
             yield return i;
         }
     }
-    [Theory]
-    [InlineData(typeof(AttrShape))]
-    [InlineData(typeof(IAttrShape))]
-    public void CanConvert_WithJsonPolymorphicAttributes_ShouldReturnFalse(Type type)
-    {
-        PolymorphicJsonConverterFactory factory = new();
-
-        factory.CanConvert(type).Should().BeFalse();
-    }
 
     [Fact]
     public void Deserialize_WithJsonDerivedTypeAttribute_ShouldUseAttributeDiscriminator()
@@ -264,6 +250,7 @@ public class PolymorphicJsonConverterFactoryTests
 
         JsonSerializer.Serialize(shape, PolymorphicOptions).Should().Be("""{"kind":"square","Side":2}""");
     }
+
     [Fact]
     public void RoundTrip_WithNestedInterfaceProperty_ShouldKeepDerivedType()
     {
@@ -274,6 +261,7 @@ public class PolymorphicJsonConverterFactoryTests
 
         restored.Should().BeOfType<FilledCircle>().Which.Fill.Should().BeOfType<Solid>().Which.Color.Should().Be("red");
     }
+
     [Fact]
     public void Deserialize_WithDuplicateDerivedTypeNames_ShouldUseFirstAndKeepWorking()
     {

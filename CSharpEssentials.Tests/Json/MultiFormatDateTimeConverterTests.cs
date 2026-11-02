@@ -219,6 +219,7 @@ public class MultiFormatDateTimeConverterTests
         factory.CanConvert(typeof(string)).Should().BeFalse();
         factory.CanConvert(typeof(int)).Should().BeFalse();
     }
+
     [Theory]
     [InlineData("2024W11")]
     [InlineData("2024-W11-4")]
@@ -228,6 +229,7 @@ public class MultiFormatDateTimeConverterTests
 
         ex.Message.Should().NotContain("'W'ww").And.NotContain("XXX").And.NotContain(" G 'at' ");
     }
+
     [Theory]
     [InlineData("999999999999999")]
     [InlineData("-999999999999999")]
@@ -243,6 +245,7 @@ public class MultiFormatDateTimeConverterTests
 
         dateTime.Should().Be(new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc));
     }
+
     [Fact]
     public void Serialize_WithUnspecifiedKind_ShouldWriteAsUtc()
     {
