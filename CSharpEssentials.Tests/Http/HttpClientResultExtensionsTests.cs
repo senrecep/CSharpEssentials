@@ -197,6 +197,46 @@ public class HttpClientResultExtensionsTests
         result.Value.Name.Should().Be("Sent");
     }
 
+    [Fact]
+    public async Task GetFromJsonAsResultAsync_WithMalformedJson_Should_Return_ValidationError()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{not json") };
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task PostAsJsonAsResultAsync_WithEmptyBody_Should_Return_ValidationError()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.NoContent);
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        Result<TestDto> result = await client.PostAsJsonAsResultAsync<TestDto>(new Uri("https://test.com"), new { Name = "Created" });
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_WithMalformedJson_Should_Return_ValidationError()
+    {
+        using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{not json") };
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com"));
+        Result<TestDto> result = await client.SendWithRedirectsAsResultAsync<TestDto>(request);
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Validation);
+    }
+
     private sealed record TestDto(int Id, string Name);
 
     private sealed class MockHandler(HttpResponseMessage response) : HttpMessageHandler

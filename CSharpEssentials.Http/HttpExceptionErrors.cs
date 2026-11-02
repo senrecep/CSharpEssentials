@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CSharpEssentials.Errors;
 
 namespace CSharpEssentials.Http;
@@ -18,6 +19,9 @@ internal static class HttpExceptionErrors
                 return Error.Forbidden(SsrfBlockedCode, SsrfBlockedDescription, new ErrorMetadata(ReasonMetadataKey, blocked.Reason));
         }
 #endif
+        if (exception is JsonException)
+            return Error.Exception(exception, ErrorType.Validation);
+
         if (exception is TaskCanceledException { InnerException: TimeoutException })
             return Error.Exception(TimeoutCode, exception, ErrorType.Unexpected);
 

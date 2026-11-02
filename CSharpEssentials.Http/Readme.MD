@@ -24,6 +24,7 @@ dotnet add package CSharpEssentials.Http
 - A 303, and a 301 or 302 after a POST, is now followed with a GET and no body, as RFC 9110 and the SSRF guard do. 307 and 308 still repeat the method and body. Answer with 307 or 308 if a server needs the POST repeated.
 - A redirect that changes scheme, host or port no longer carries `Authorization`, `Proxy-Authorization` or `Cookie` to the new origin. If a trusted sibling host needs the credentials, send a new request to it with the headers set.
 - `HttpRequestBuilder.AsResultAsync` no longer disposes the content passed to `WithContent`, so the builder can send it again. Dispose it yourself (`using var content = ...`) once the builder is done, for example to release a file opened for a `StreamContent`.
+- An empty or malformed JSON body read by `GetFromJsonAsResultAsync<T>`, `PostAsJsonAsResultAsync<T>`, `PutAsJsonAsResultAsync<T>`, `PatchAsJsonAsResultAsync<T>`, `SendAsResultAsync<T>`, `SendWithRedirectsAsResultAsync<T>` or `HttpRequestBuilder.AsResultAsync<T>` now fails with `ErrorType.Validation` instead of `ErrorType.Unexpected`, the same as `ReadFromJsonAsResultAsync<T>`. Resilience retries no longer repeat such a call. Update any check or retry predicate that matched `Unexpected` for a bad body.
 
 ## Usage
 
@@ -46,7 +47,7 @@ Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Re
 
 `PutAsJsonAsResultAsync<T>` and `PatchAsJsonAsResultAsync<T>` follow the same shape. `PostAsResultAsync` and `PutAsResultAsync` send a ready-made `HttpContent` and return a plain `Result`, and `SendAsResultAsync` / `SendAsResultAsync<T>` send an `HttpRequestMessage`. JSON uses `EnhancedJsonSerializerOptions.DefaultOptions` unless you pass `options`.
 
-A 2xx response whose body is empty or cannot be deserialized to `T` returns a `NotFound` error. A response read from an `HttpContent` you already hold goes through `ReadAsStringAsResultAsync` and `ReadFromJsonAsResultAsync<T>`; a `JsonException` there becomes an `ErrorType.Validation` error.
+A 2xx response whose body deserializes to `null` (the JSON literal `null`) returns a `NotFound` error. A body that is empty or is not valid JSON for `T` throws a `JsonException`, which every helper here, including `SendWithRedirectsAsResultAsync<T>`, `HttpRequestBuilder.AsResultAsync<T>` and `ReadFromJsonAsResultAsync<T>` on an `HttpContent` you already hold, returns as an `ErrorType.Validation` error.
 
 ### Status code mapping
 

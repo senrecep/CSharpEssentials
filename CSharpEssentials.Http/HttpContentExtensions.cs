@@ -18,13 +18,7 @@ public static class HttpContentExtensions
                 return await content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 #endif
             },
-            ex =>
-            {
-                if (ex is JsonException)
-                    return Error.Exception(ex, ErrorType.Validation);
-
-                return HttpExceptionErrors.ToError(ex);
-            },
+            HttpExceptionErrors.ToError,
             cancellationToken);
     }
 
@@ -41,13 +35,7 @@ public static class HttpContentExtensions
                     return Error.NotFound(description: "Response body was empty or could not be deserialized.");
                 return value;
             },
-            ex =>
-            {
-                if (ex is JsonException)
-                    return Error.Exception(ex, ErrorType.Validation);
-
-                return HttpExceptionErrors.ToError(ex);
-            },
+            HttpExceptionErrors.ToError,
             cancellationToken);
     }
 }
