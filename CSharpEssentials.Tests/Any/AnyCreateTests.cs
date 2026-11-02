@@ -99,7 +99,8 @@ public class AnyCreateTests
     [Fact]
     public void Constructor_WithJsonElement_ShouldConvertToTargetType()
     {
-        JsonElement element = JsonDocument.Parse("42").RootElement;
+        using JsonDocument document = JsonDocument.Parse("42");
+        JsonElement element = document.RootElement;
 
         var any = new Any<int, string>(0, element);
 
