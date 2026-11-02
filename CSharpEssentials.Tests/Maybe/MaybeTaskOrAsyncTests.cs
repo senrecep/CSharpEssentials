@@ -89,7 +89,7 @@ public class MaybeTaskOrAsyncTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        Func<Task> act = () => source.Task.OrAsync(9, cts.Token);
+        Func<Task> act = () => source.Task.OrAsync(9, cts.Token).WaitAsync(TimeSpan.FromSeconds(5));
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
@@ -174,7 +174,7 @@ public class MaybeTaskOrAsyncTests
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
-        Func<Task> act = async () => await new ValueTask<Maybe<int>>(source.Task).OrAsync(9, cts.Token);
+        Func<Task> act = async () => await new ValueTask<Maybe<int>>(source.Task).OrAsync(9, cts.Token).AsTask().WaitAsync(TimeSpan.FromSeconds(5));
 
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
