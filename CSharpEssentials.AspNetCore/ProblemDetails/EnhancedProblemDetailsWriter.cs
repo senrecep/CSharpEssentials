@@ -77,13 +77,19 @@ internal static class EnhancedProblemDetailsWriter
     /// <summary>
     /// The application's options with <see cref="EnhancedProblemDetailsJsonContext"/> appended to the resolvers, so
     /// the application's metadata still wins and the problem types resolve without reflection (Native AOT).
-    /// Options without a resolver keep the reflection default while it is enabled.
+    /// Options that already resolve the problem types (no resolver or the reflection resolver while reflection is
+    /// enabled, or the context already in the chain) are returned unchanged.
     /// </summary>
     internal static JsonSerializerOptions AddProblemMetadata(JsonSerializerOptions options) =>
-        options.TypeInfoResolver is null && JsonSerializer.IsReflectionEnabledByDefault
+        ResolvesProblemTypes(options)
             ? options
             : WithProblemMetadata.GetValue(options, static source => new JsonSerializerOptions(source)
             {
                 TypeInfoResolver = JsonTypeInfoResolver.Combine(source.TypeInfoResolver, EnhancedProblemDetailsJsonContext.Default),
             });
+
+    private static bool ResolvesProblemTypes(JsonSerializerOptions options) =>
+        options.TypeInfoResolverChain.Contains(EnhancedProblemDetailsJsonContext.Default)
+        || JsonSerializer.IsReflectionEnabledByDefault
+            && (options.TypeInfoResolver is null || options.TypeInfoResolverChain.Any(static resolver => resolver is DefaultJsonTypeInfoResolver));
 }
