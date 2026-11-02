@@ -5,8 +5,10 @@
         <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
         <!-- The endpoints and dependency injection benchmarks (and the host project BenchmarkDotNet generates under their
              bin/, which imports no Directory.Build files) reference FastEndpoints, Carter and Scrutor, which need newer
-             transitive versions (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+             transitive versions (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. The mediator benchmarks
+             share the DI suite's container (Microsoft.Extensions.DependencyInjection 10.0.0), which fails restore with NU1109
+             (Abstractions 10.0.0 downgraded to the 9.0.4 pin) while pinning is on. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -137,9 +139,12 @@
         <PackageVersion Include="ErrorOr" Version="2.1.1" />
         <PackageVersion Include="FluentResults" Version="4.0.0" />
         <PackageVersion Include="Scrutor" Version="7.0.0" />
-        <!-- The container for the DI suite and its Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
+        <!-- 12.5.0: the last Apache-2.0 MediatR; 13+ needs a license key (https://github.com/jbogard/MediatR/wiki/License-Key-Configuration). -->
+        <PackageVersion Include="MediatR" Version="12.5.0" />
+        <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2" />
+        <!-- The container for the DI and mediator suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
              major Scrutor 7 requires. Scoped to those projects so transitive pinning does not move other projects' container. -->
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot'))" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot'))" />
         <!-- TestServer for the endpoints throughput suite, matched to each TFM's shared framework major. Scoped to that
              suite so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />

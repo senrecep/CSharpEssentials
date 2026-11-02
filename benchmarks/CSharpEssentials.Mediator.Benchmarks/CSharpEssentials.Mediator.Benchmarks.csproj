@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1822;CA1050;CA1812;S101;S3903;S1118;CA1515;S2068;IDE0008;IDE0021;IDE0005;IDE0078</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="MediatR" />
+    <!-- CSharpEssentials.Mediator floats Mediator.Abstractions at [3.0.1,); the generated code must run on the abstractions of its own generator version. -->
+    <PackageReference Include="Mediator.Abstractions" VersionOverride="3.0.2" />
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.Mediator\CSharpEssentials.Mediator.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Mediator.Benchmarks.Handlers\MediatR50\CSharpEssentials.Mediator.Benchmarks.Handlers.MediatR50.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Mediator.Benchmarks.Handlers\Mediator50\CSharpEssentials.Mediator.Benchmarks.Handlers.Mediator50.csproj" />
+  </ItemGroup>
+
+</Project>
