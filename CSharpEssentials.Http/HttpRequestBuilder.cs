@@ -181,16 +181,22 @@ public sealed class HttpRequestBuilder
 
         var request = new HttpRequestMessage(_method, uriResult.Value);
 
-        foreach ((string key, string value) in _headers)
-            request.Headers.TryAddWithoutValidation(key, value);
-
-        if (_idempotencyKey is not null)
-            request.SetIdempotencyKey(_idempotencyKey);
-
         if (_jsonValue is not null)
             request.Content = JsonContent.Create(_jsonValue, options: _jsonOptions ?? ResolveJsonOptions());
         else if (_content is not null)
             request.Content = _content;
+
+        foreach ((string key, string value) in _headers)
+        {
+            if (!request.Headers.TryAddWithoutValidation(key, value) && request.Content is not null)
+            {
+                request.Content.Headers.Remove(key);
+                request.Content.Headers.TryAddWithoutValidation(key, value);
+            }
+        }
+
+        if (_idempotencyKey is not null)
+            request.SetIdempotencyKey(_idempotencyKey);
 
         return request;
     }

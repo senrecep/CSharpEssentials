@@ -129,6 +129,35 @@ public class HttpRequestBuilderTests
         handler.Bodies.Should().Equal("a", "a", "a", "a");
     }
 
+    [Fact]
+    public void Build_WithContentTypeHeader_Should_Set_Content_Header()
+    {
+        using var content = new StringContent("<a/>");
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Post("https://test.com/api")
+            .WithContent(content)
+            .WithHeader("Content-Type", "application/xml")
+            .WithHeader("Content-Language", "de")
+            .Build();
+
+        result.IsSuccess.Should().BeTrue();
+        using HttpRequestMessage request = result.Value;
+        request.Content!.Headers.ContentType!.MediaType.Should().Be("application/xml");
+        request.Content.Headers.ContentLanguage.Should().Equal("de");
+    }
+
+    [Fact]
+    public void Build_WithJsonContent_And_ContentLanguage_Should_Set_Content_Header()
+    {
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Post("https://test.com/api")
+            .WithHeader("Content-Language", "de")
+            .WithJsonContent(new { Name = "Alice" })
+            .Build();
+
+        result.IsSuccess.Should().BeTrue();
+        using HttpRequestMessage request = result.Value;
+        request.Content!.Headers.ContentLanguage.Should().Equal("de");
+    }
+
     private sealed record TestDto(int Id, string Name);
 
     private sealed class BodyRecordingHandler : HttpMessageHandler
