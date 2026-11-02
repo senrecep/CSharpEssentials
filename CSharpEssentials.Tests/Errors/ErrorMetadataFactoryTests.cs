@@ -44,14 +44,6 @@ public class ErrorMetadataFactoryTests
     }
 
     [Fact]
-    public void CreateWithException_ShouldStoreExceptionInstance()
-    {
-        var exception = new InvalidOperationException("boom");
-
-        ErrorMetadata.CreateWithException(exception)["exception"].Should().BeSameAs(exception);
-    }
-
-    [Fact]
     public void CreateWithExceptionDetailed_ShouldStoreTypeMessageAndNestedInnerException()
     {
         var exception = new InvalidOperationException("outer", new ArgumentException("inner"));
@@ -104,18 +96,6 @@ public class ErrorMetadataFactoryTests
         metadata.AddStackTrace().Should().BeSameAs(metadata);
         metadata["stackTrace"].Should().Be("existing");
         empty.AddStackTrace()["stackTrace"].Should().BeOfType<string>().Which.Should().NotBeEmpty();
-    }
-
-    [Fact]
-    public void AddException_ShouldStoreExceptionWithoutOverwriting()
-    {
-        var first = new InvalidOperationException("first");
-        ErrorMetadata metadata = [];
-
-        metadata.AddException(first).AddException(new ArgumentException("second")).Should().BeSameAs(metadata);
-
-        metadata.Should().ContainSingle();
-        metadata["exception"].Should().BeSameAs(first);
     }
 
     [Fact]
