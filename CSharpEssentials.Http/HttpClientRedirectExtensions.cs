@@ -23,50 +23,12 @@ public static class HttpClientRedirectExtensions
         return await Result.TryAsync(
             async () =>
             {
-                HttpRequestMessage currentRequest = request;
-                int redirects = 0;
+                Result<HttpResponseMessage> sent = await SendFollowingRedirectsAsync(client, request, maxRedirects, cancellationToken).ConfigureAwait(false);
+                if (sent.IsFailure)
+                    return sent.Errors;
 
-                while (true)
-                {
-                    HttpResponseMessage response = await client.SendAsync(
-                        currentRequest,
-                        HttpCompletionOption.ResponseHeadersRead,
-                        cancellationToken).ConfigureAwait(false);
-
-                    if (!IsRedirectStatusCode(response.StatusCode))
-                        return HandleResponse(response);
-
-                    if (redirects >= maxRedirects)
-                    {
-                        response.Dispose();
-                        return Error.Unexpected(
-                            "Http.RedirectLimitExceeded",
-                            $"Redirect limit exceeded after {maxRedirects} attempts. Last URI: {currentRequest.RequestUri}");
-                    }
-
-                    Uri? redirectUri = response.Headers.Location;
-                    if (redirectUri is null)
-                    {
-                        response.Dispose();
-                        return Error.Unexpected(
-                            "Http.MissingRedirectLocation",
-                            "Redirect response missing Location header.");
-                    }
-
-                    response.Dispose();
-
-                    HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest).ConfigureAwait(false);
-
-                    if (currentRequest != request)
-                        currentRequest.Dispose();
-
-                    newRequest.RequestUri = redirectUri.IsAbsoluteUri
-                        ? redirectUri
-                        : new Uri(currentRequest.RequestUri!, redirectUri);
-
-                    currentRequest = newRequest;
-                    redirects++;
-                }
+                using HttpResponseMessage response = sent.Value;
+                return HandleResponse(response);
             },
             HandleException,
             cancellationToken).ConfigureAwait(false);
@@ -88,53 +50,67 @@ public static class HttpClientRedirectExtensions
         return await Result.TryAsync(
             async () =>
             {
-                HttpRequestMessage currentRequest = request;
-                int redirects = 0;
+                Result<HttpResponseMessage> sent = await SendFollowingRedirectsAsync(client, request, maxRedirects, cancellationToken).ConfigureAwait(false);
+                if (sent.IsFailure)
+                    return sent.Errors;
 
-                while (true)
-                {
-                    HttpResponseMessage response = await client.SendAsync(
-                        currentRequest,
-                        HttpCompletionOption.ResponseHeadersRead,
-                        cancellationToken).ConfigureAwait(false);
-
-                    if (!IsRedirectStatusCode(response.StatusCode))
-                        return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
-
-                    if (redirects >= maxRedirects)
-                    {
-                        response.Dispose();
-                        return Error.Unexpected(
-                            "Http.RedirectLimitExceeded",
-                            $"Redirect limit exceeded after {maxRedirects} attempts. Last URI: {currentRequest.RequestUri}");
-                    }
-
-                    Uri? redirectUri = response.Headers.Location;
-                    if (redirectUri is null)
-                    {
-                        response.Dispose();
-                        return Error.Unexpected(
-                            "Http.MissingRedirectLocation",
-                            "Redirect response missing Location header.");
-                    }
-
-                    response.Dispose();
-
-                    HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest).ConfigureAwait(false);
-
-                    if (currentRequest != request)
-                        currentRequest.Dispose();
-
-                    newRequest.RequestUri = redirectUri.IsAbsoluteUri
-                        ? redirectUri
-                        : new Uri(currentRequest.RequestUri!, redirectUri);
-
-                    currentRequest = newRequest;
-                    redirects++;
-                }
+                using HttpResponseMessage response = sent.Value;
+                return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<Result<HttpResponseMessage>> SendFollowingRedirectsAsync(
+        HttpClient client,
+        HttpRequestMessage request,
+        int maxRedirects,
+        CancellationToken cancellationToken)
+    {
+        HttpRequestMessage currentRequest = request;
+        int redirects = 0;
+
+        while (true)
+        {
+            HttpResponseMessage response = await client.SendAsync(
+                currentRequest,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken).ConfigureAwait(false);
+
+            if (!IsRedirectStatusCode(response.StatusCode))
+                return response;
+
+            if (redirects >= maxRedirects)
+            {
+                response.Dispose();
+                return Error.Unexpected(
+                    "Http.RedirectLimitExceeded",
+                    $"Redirect limit exceeded after {maxRedirects} attempts. Last URI: {currentRequest.RequestUri}");
+            }
+
+            Uri? redirectUri = response.Headers.Location;
+            if (redirectUri is null)
+            {
+                response.Dispose();
+                return Error.Unexpected(
+                    "Http.MissingRedirectLocation",
+                    "Redirect response missing Location header.");
+            }
+
+            response.Dispose();
+
+            HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest).ConfigureAwait(false);
+
+            if (currentRequest != request)
+                currentRequest.Dispose();
+
+            newRequest.RequestUri = redirectUri.IsAbsoluteUri || currentRequest.RequestUri is null
+                ? redirectUri
+                : new Uri(currentRequest.RequestUri, redirectUri);
+
+            currentRequest = newRequest;
+            redirects++;
+        }
     }
 
     private static bool IsRedirectStatusCode(HttpStatusCode statusCode)

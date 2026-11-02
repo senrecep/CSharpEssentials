@@ -167,7 +167,56 @@ public class HttpClientRedirectExtensionsTests
         handler.RequestCount.Should().Be(2);
     }
 
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_Should_Dispose_Final_Response()
+    {
+        using var content = new TrackingContent();
+        using var response = new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = content };
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com/api"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsFailure.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_Generic_Should_Dispose_Final_Response()
+    {
+        using var content = new TrackingContent();
+        using var response = new HttpResponseMessage(HttpStatusCode.NotFound) { Content = content };
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com/api"));
+        Result<TestDto> result = await client.SendWithRedirectsAsResultAsync<TestDto>(request);
+
+        result.IsFailure.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
     private sealed record TestDto(int Id, string Name);
+
+    private sealed class TrackingContent : HttpContent
+    {
+        public bool Disposed { get; private set; }
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => Task.CompletedTask;
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
 
     private sealed class MockHandler(HttpResponseMessage response) : HttpMessageHandler
     {
