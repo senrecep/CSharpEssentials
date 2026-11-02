@@ -1,6 +1,4 @@
-#if NET5_0_OR_GREATER
 using System.Globalization;
-#endif
 using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 
@@ -25,9 +23,11 @@ public static class StringResultExtensions
             return Error.Validation(code: "InputIsEmpty", description: "Input is null or empty.");
         if (prefixToRemove.IsEmpty())
             return Error.Validation(code: "PrefixIsEmpty", description: "Prefix is null or empty.");
-#if NET5_0_OR_GREATER
         if (TryGetCultureComparison(comparisonType, out CompareInfo? compareInfo, out CompareOptions options))
+#if NET5_0_OR_GREATER
             return compareInfo.IsPrefix(input.AsSpan(), prefixToRemove.AsSpan(), options, out int matchLength) ? input[matchLength..] : input;
+#else
+            return compareInfo.IsPrefix(input, prefixToRemove, options) ? input[PrefixMatchLength(compareInfo, input, prefixToRemove, options)..] : input;
 #endif
         return input.StartsWith(prefixToRemove, comparisonType) ? input[prefixToRemove.Length..] : input;
     }
@@ -49,14 +49,15 @@ public static class StringResultExtensions
             return Error.Validation(code: "InputIsEmpty", description: "Input is null or empty.");
         if (suffixToRemove.IsEmpty())
             return Error.Validation(code: "SuffixIsEmpty", description: "Suffix is null or empty.");
-#if NET5_0_OR_GREATER
         if (TryGetCultureComparison(comparisonType, out CompareInfo? compareInfo, out CompareOptions options))
+#if NET5_0_OR_GREATER
             return compareInfo.IsSuffix(input.AsSpan(), suffixToRemove.AsSpan(), options, out int matchLength) ? input[..^matchLength] : input;
+#else
+            return compareInfo.IsSuffix(input, suffixToRemove, options) ? input[..^SuffixMatchLength(compareInfo, input, suffixToRemove, options)] : input;
 #endif
         return input.EndsWith(suffixToRemove, comparisonType) ? input[..^suffixToRemove.Length] : input;
     }
 
-#if NET5_0_OR_GREATER
     private static bool TryGetCultureComparison(
         StringComparison comparisonType,
         [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out CompareInfo? compareInfo,
@@ -73,6 +74,27 @@ public static class StringResultExtensions
             ? CompareOptions.IgnoreCase
             : CompareOptions.None;
         return compareInfo is not null;
+    }
+#if !NET5_0_OR_GREATER
+
+    private static int PrefixMatchLength(CompareInfo compareInfo, string input, string prefix, CompareOptions options)
+    {
+        for (int length = 0; length < input.Length; length++)
+        {
+            if (compareInfo.Compare(input, 0, length, prefix, 0, prefix.Length, options) == 0)
+                return length;
+        }
+        return input.Length;
+    }
+
+    private static int SuffixMatchLength(CompareInfo compareInfo, string input, string suffix, CompareOptions options)
+    {
+        for (int length = 0; length < input.Length; length++)
+        {
+            if (compareInfo.Compare(input, input.Length - length, length, suffix, 0, suffix.Length, options) == 0)
+                return length;
+        }
+        return input.Length;
     }
 #endif
 }
