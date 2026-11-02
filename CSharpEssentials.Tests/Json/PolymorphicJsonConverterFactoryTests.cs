@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -61,6 +62,13 @@ internal sealed class Solid : IFill
 internal sealed class FilledCircle : BaseShape
 {
     public IFill? Fill { get; set; }
+}
+
+internal abstract class OpenGenericBase;
+
+internal sealed class OpenGenericDerived<TValue> : OpenGenericBase
+{
+    public TValue? Value { get; set; }
 }
 
 public class PolymorphicJsonConverterFactoryTests
@@ -265,5 +273,38 @@ public class PolymorphicJsonConverterFactoryTests
         BaseShape? restored = JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions);
 
         restored.Should().BeOfType<FilledCircle>().Which.Fill.Should().BeOfType<Solid>().Which.Color.Should().Be("red");
+    }
+    [Fact]
+    public void Deserialize_WithDuplicateDerivedTypeNames_ShouldUseFirstAndKeepWorking()
+    {
+        AssemblyBuilder first = DefineDerived("PolymorphicDup.First");
+        AssemblyBuilder second = DefineDerived("PolymorphicDup.Second");
+        string json = """{"$type":"Dup.Shape"}""";
+
+        DuplicateNameBase? shape = JsonSerializer.Deserialize<DuplicateNameBase>(json, PolymorphicOptions);
+        DuplicateNameBase? again = JsonSerializer.Deserialize<DuplicateNameBase>(json, PolymorphicOptions);
+
+        shape.Should().NotBeNull();
+        again!.GetType().FullName.Should().Be("Dup.Shape");
+        GC.KeepAlive(first);
+        GC.KeepAlive(second);
+    }
+
+    [Fact]
+    public void Deserialize_WithOpenGenericDiscriminator_ShouldThrowJsonException()
+    {
+        string json = $"{{\"$type\":\"{typeof(OpenGenericDerived<>).FullName}\"}}";
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<OpenGenericBase>(json, PolymorphicOptions));
+    }
+
+    private static AssemblyBuilder DefineDerived(string assemblyName)
+    {
+        AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.RunAndCollect);
+        TypeBuilder type = assembly.DefineDynamicModule(assemblyName)
+            .DefineType("Dup.Shape", TypeAttributes.Public | TypeAttributes.Sealed, typeof(DuplicateNameBase));
+        type.DefineDefaultConstructor(MethodAttributes.Public);
+        type.CreateType();
+        return assembly;
     }
 }

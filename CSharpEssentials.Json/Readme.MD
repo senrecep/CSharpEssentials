@@ -154,7 +154,7 @@ string json = dog.ConvertToJson(); // {"$type":"Zoo.Dog","breed":"Labrador","nam
 Animal? restored = json.ConvertFromJson<Animal>();
 ```
 
-`DefaultOptions` applies `PolymorphicJsonConverterFactory` to abstract classes and interfaces; collections and dictionaries keep the built-in array and object serialization. The `$type` value is the concrete type's full name (namespace included) and is written first. On read, `$type` is required and is matched against the non-abstract types of the loaded assemblies that derive from the declared type; a missing or unknown value throws `JsonException`. Discovery uses reflection, so this is not trim or AOT safe: use `[JsonPolymorphic]` with source generation there.
+`DefaultOptions` applies `PolymorphicJsonConverterFactory` to abstract classes and interfaces; collections and dictionaries keep the built-in array and object serialization. The `$type` value is the concrete type's full name (namespace included) and is written first. On read, `$type` is required and is matched against the non-abstract types of the loaded assemblies that derive from the declared type; a missing or unknown value throws `JsonException`. The scan runs once per declared type, on first use, so assemblies loaded later are not seen. Open generic types are skipped, and when two loaded types share a full name the first one found wins. Discovery uses reflection, so this is not trim or AOT safe: use `[JsonPolymorphic]` with source generation there.
 
 A type marked with `[JsonPolymorphic]` or `[JsonDerivedType]` is left to System.Text.Json, so its own discriminators are used. Async streams (`IAsyncEnumerable<T>`) and `JsonNode` values keep their built-in serialization too.
 

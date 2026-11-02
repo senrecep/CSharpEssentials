@@ -38,10 +38,13 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
     private static readonly Lazy<Dictionary<string, Type>> TypeCache = new(() =>
     {
         Type baseType = typeof(T);
-        return AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(GetLoadableTypes)
-            .Where(t => baseType.IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-            .ToDictionary(t => t.FullName ?? t.Name);
+        Dictionary<string, Type> types = [];
+        foreach (Type type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(GetLoadableTypes))
+        {
+            if (baseType.IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract && !type.ContainsGenericParameters)
+                types.TryAdd(type.FullName ?? type.Name, type);
+        }
+        return types;
     });
 
     // A partially loadable assembly (e.g. a proxy assembly still emitting types) must not break discovery
