@@ -17,12 +17,12 @@ public readonly record struct Error : IError
     /// <summary>
     /// Gets the unique error code.
     /// </summary>
-    public string Code { get; init; }
+    public string Code { get; init => field = value ?? throw new ArgumentNullException(nameof(Code)); }
 
     /// <summary>
     /// Gets the error description.
     /// </summary>
-    public string Description { get; init; }
+    public string Description { get; init => field = value ?? throw new ArgumentNullException(nameof(Description)); }
 
     /// <summary>
     /// Gets the error type.

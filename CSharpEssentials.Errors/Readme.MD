@@ -180,3 +180,5 @@ The nested entry keeps only the short type name (`GetType().Name`), the message,
 An exception that was never thrown has no stack trace, so `exceptionStackTrace` falls back to `Environment.StackTrace`. That records where the metadata was built, not where the exception was created, and it costs a stack walk on every call.
 
 `Error` equality and `GetHashCode` now compare nested `ErrorMetadata` values by content. Do not add a metadata instance to itself (directly or through a chain): hashing or comparing such a cycle overflows the stack.
+
+`Code` and `Description` reject `null` in `with` expressions too. `error with { Code = null! }` used to produce an `Error` with a null code; it now throws `ArgumentNullException`, as the factory methods already did.

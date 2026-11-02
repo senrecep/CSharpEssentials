@@ -250,5 +250,40 @@ public class ErrorTests
     }
 
     #endregion
-}
 
+    #region Init Validation
+
+    [Fact]
+    public void With_NullCode_ShouldThrowArgumentNullException()
+    {
+        Error error = Error.Failure("Code", "Description");
+
+        Action act = () => _ = error with { Code = null! };
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName(nameof(Error.Code));
+    }
+
+    [Fact]
+    public void With_NullDescription_ShouldThrowArgumentNullException()
+    {
+        Error error = Error.Failure("Code", "Description");
+
+        Action act = () => _ = error with { Description = null! };
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName(nameof(Error.Description));
+    }
+
+    [Fact]
+    public void With_NewCodeAndDescription_ShouldKeepOtherValues()
+    {
+        Error error = Error.NotFound("Code", "Description");
+
+        Error changed = error with { Code = "Other", Description = "Changed" };
+
+        changed.Code.Should().Be("Other");
+        changed.Description.Should().Be("Changed");
+        changed.Type.Should().Be(ErrorType.NotFound);
+    }
+
+    #endregion
+}
