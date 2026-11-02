@@ -209,6 +209,19 @@ public class AnyTests
     }
 
     [Fact]
+    public void JsonRoundTrip_WithNullNullableBranch_ShouldKeepIndexAndNullValue()
+    {
+        Any<int?, string> any = Any<int?, string>.First(null);
+
+        string json = JsonSerializer.Serialize(any);
+        Any<int?, string> deserialized = JsonSerializer.Deserialize<Any<int?, string>>(json);
+
+        deserialized.Index.Should().Be(0);
+        deserialized.GetFirst().Should().BeNull();
+        deserialized.Value.Should().BeNull();
+    }
+
+    [Fact]
     public void JsonDeserialize_WithNullValueTypeBranch_ShouldThrow()
     {
         Action act = () => JsonSerializer.Deserialize<Any<int, string>>("""{"Index":0,"Value":null}""");
