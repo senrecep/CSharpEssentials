@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Mediator.Benchmarks.SendBenchmarks-20261102-111954</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method     </th><th>Behaviors</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>MediatR</td><td>0</td><td>90.636 ns</td><td>0.7137 ns</td><td>0.6676 ns</td><td>1.00</td><td>0.0157</td><td>264 B</td><td>1.00</td>
+</tr><tr><td>MediatorIMediator</td><td>0</td><td>11.278 ns</td><td>0.0049 ns</td><td>0.0046 ns</td><td>0.12</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>MediatorConcrete</td><td>0</td><td>2.976 ns</td><td>0.0088 ns</td><td>0.0083 ns</td><td>0.03</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>MediatR</td><td>2</td><td>229.688 ns</td><td>1.1734 ns</td><td>1.0402 ns</td><td>1.00</td><td>0.0386</td><td>648 B</td><td>1.00</td>
+</tr><tr><td>MediatorIMediator</td><td>2</td><td>17.105 ns</td><td>0.0244 ns</td><td>0.0228 ns</td><td>0.07</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>MediatorConcrete</td><td>2</td><td>25.261 ns</td><td>0.0111 ns</td><td>0.0099 ns</td><td>0.11</td><td>-</td><td>-</td><td>0.00</td>
+</tr></tbody></table>
+</body>
+</html>
