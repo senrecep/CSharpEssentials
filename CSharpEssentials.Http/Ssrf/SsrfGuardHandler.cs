@@ -129,16 +129,7 @@ internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundReques
 
     private static void PrepareRedirect(HttpRequestMessage request, HttpStatusCode statusCode, Uri previousUri, Uri location)
     {
-        bool switchToGet = statusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found
-            ? request.Method == HttpMethod.Post
-            : statusCode == HttpStatusCode.SeeOther && request.Method != HttpMethod.Get && request.Method != HttpMethod.Head;
-
-        if (switchToGet)
-        {
-            request.Method = HttpMethod.Get;
-            request.Content = null;
-            request.Headers.TransferEncodingChunked = false;
-        }
+        HttpRedirectRules.TrySwitchToGet(request, statusCode);
 
         if (!IsSameOrigin(previousUri, location))
         {

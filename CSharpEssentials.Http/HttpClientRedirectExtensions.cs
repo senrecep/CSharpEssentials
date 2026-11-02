@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
@@ -98,7 +99,7 @@ public static class HttpClientRedirectExtensions
 
             response.Dispose();
 
-            HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest).ConfigureAwait(false);
+            HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest, response.StatusCode).ConfigureAwait(false);
 
             if (currentRequest != request)
                 currentRequest.Dispose();
@@ -112,7 +113,7 @@ public static class HttpClientRedirectExtensions
         }
     }
 
-    private static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage request)
+    private static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage request, HttpStatusCode statusCode)
     {
         var clone = new HttpRequestMessage(request.Method, request.RequestUri);
 
@@ -121,7 +122,7 @@ public static class HttpClientRedirectExtensions
 
         clone.Version = request.Version;
 
-        if (request.Content is null)
+        if (HttpRedirectRules.TrySwitchToGet(clone, statusCode) || request.Content is null)
             return clone;
 
         clone.Content = new ByteArrayContent(await request.Content.ReadAsByteArrayAsync().ConfigureAwait(false));

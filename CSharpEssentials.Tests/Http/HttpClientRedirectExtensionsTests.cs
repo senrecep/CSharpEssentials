@@ -238,6 +238,34 @@ public class HttpClientRedirectExtensionsTests
         handler.Requests[2].ContentType.Should().StartWith("text/plain");
     }
 
+    [Theory]
+    [InlineData("POST", HttpStatusCode.SeeOther, "GET")]
+    [InlineData("PUT", HttpStatusCode.SeeOther, "GET")]
+    [InlineData("POST", HttpStatusCode.Found, "GET")]
+    [InlineData("POST", HttpStatusCode.MovedPermanently, "GET")]
+    [InlineData("PUT", HttpStatusCode.Found, "PUT")]
+    [InlineData("POST", HttpStatusCode.TemporaryRedirect, "POST")]
+    [InlineData("POST", HttpStatusCode.PermanentRedirect, "POST")]
+    public async Task SendWithRedirectsAsResultAsync_Should_Apply_Redirect_Method_Rules(string method, HttpStatusCode status, string expectedMethod)
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/submit"
+            ? Redirect(status, "/result")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri("https://test.com/submit"))
+        {
+            Content = new StringContent("payload")
+        };
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        RecordedRequest second = handler.Requests[1];
+        second.Uri.Should().Be(new Uri("https://test.com/result"));
+        second.Method.Method.Should().Be(expectedMethod);
+        second.Body.Should().Be(expectedMethod == "GET" ? null : "payload");
+    }
+
     private static HttpResponseMessage Redirect(HttpStatusCode status, string location)
     {
         var response = new HttpResponseMessage(status);
