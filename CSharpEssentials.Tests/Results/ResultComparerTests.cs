@@ -348,4 +348,31 @@ public class ResultComparerTests
     }
 
     #endregion
+
+    [Fact]
+    public void ResultComparerT_GetHashCode_Should_UseCustomComparer_When_Provided()
+    {
+        var customComparer = EqualityComparer<string>.Create(
+            (a, b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase),
+            s => s?.ToUpperInvariant().GetHashCode() ?? 0);
+        var comparer = new ResultComparer<string>(customComparer);
+        IResult<string> x = "hello".ToResult();
+        IResult<string> y = "HELLO".ToResult();
+
+        int hashX = comparer.GetHashCode(x);
+        int hashY = comparer.GetHashCode(y);
+
+        hashX.Should().Be(hashY);
+    }
+
+    [Fact]
+    public void ResultComparerT_GetHashCode_Should_NotThrow_When_SuccessValueIsNull()
+    {
+        var comparer = new ResultComparer<string>();
+        IResult<string> result = default(Result<string>);
+
+        Action act = () => comparer.GetHashCode(result);
+
+        act.Should().NotThrow();
+    }
 }
