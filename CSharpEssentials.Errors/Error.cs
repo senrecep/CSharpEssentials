@@ -226,18 +226,20 @@ public readonly record struct Error : IError
         hashCode.Add(Type);
         hashCode.Add(NumericType);
 
-        if (Metadata is null)
-            return hashCode.ToHashCode();
-
-        foreach (KeyValuePair<string, object?> keyValuePair in Metadata)
-        {
-            hashCode.Add(keyValuePair.Key);
-            hashCode.Add(keyValuePair.Value);
-        }
+        if (Metadata is not null)
+            hashCode.Add(GetMetadataHashCode(Metadata));
 
         return hashCode.ToHashCode();
     }
 
+    private static int GetMetadataHashCode(ErrorMetadata metadata)
+    {
+        int combined = 0;
+        foreach (KeyValuePair<string, object?> keyValuePair in metadata)
+            combined ^= HashCode.Combine(keyValuePair.Key, keyValuePair.Value);
+
+        return HashCode.Combine(metadata.Count, combined);
+    }
 
     private static bool CompareMetadata(ErrorMetadata metadata, ErrorMetadata otherMetadata)
     {

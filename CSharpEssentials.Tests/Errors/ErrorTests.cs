@@ -169,6 +169,17 @@ public class ErrorTests
         error1.Should().NotBe(error2);
     }
 
+    [Fact]
+    public void Equality_WithMetadataInDifferentOrder_ShouldHaveSameHashCode()
+    {
+        var first = Error.Validation("C", "D", new ErrorMetadata { { "a", 1 }, { "b", 2 } });
+        var second = Error.Validation("C", "D", new ErrorMetadata { { "b", 2 }, { "a", 1 } });
+
+        first.Should().Be(second);
+        first.GetHashCode().Should().Be(second.GetHashCode());
+        new HashSet<Error> { first, second }.Should().ContainSingle();
+    }
+
     #endregion
 
     #region Serialization
