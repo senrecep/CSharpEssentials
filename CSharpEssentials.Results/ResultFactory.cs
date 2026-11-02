@@ -32,6 +32,8 @@ public readonly partial record struct Result
     /// <returns></returns>
     public static Result Failure(Error[] errors) => new(true, ResultLogic.ValidateErrorsArray(errors));
 
+    Result IFailureFactory<Result>.CreateFailure(Error[] errors) => Failure(errors);
+
     /// <summary>
     /// Converts a collection of errors to a result.
     /// </summary>

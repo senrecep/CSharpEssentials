@@ -5,7 +5,7 @@ using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result : IResult
+public readonly partial record struct Result : IResult, IFailureFactory<Result>
 {
     private readonly Error[]? _errors = null;
 

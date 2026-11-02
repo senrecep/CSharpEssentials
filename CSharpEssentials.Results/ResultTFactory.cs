@@ -33,6 +33,8 @@ public readonly partial record struct Result<TValue>
     /// <returns></returns>
     public static Result<TValue> Failure(Error[] errors) => new(false, default, ResultLogic.ValidateErrorsArray(errors));
 
+    Result<TValue> IFailureFactory<Result<TValue>>.CreateFailure(Error[] errors) => Failure(errors);
+
     /// <summary>
     /// Converts a collection of errors to a result.
     /// </summary>

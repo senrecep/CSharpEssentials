@@ -6,7 +6,7 @@ using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result<TValue> : IResult<TValue>
+public readonly partial record struct Result<TValue> : IResult<TValue>, IFailureFactory<Result<TValue>>
 {
     private readonly Error[]? _errors = null;
     private readonly TValue? _value = default;

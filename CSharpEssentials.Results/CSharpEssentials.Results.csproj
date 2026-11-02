@@ -45,4 +45,9 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Mediator" />
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
 </Project>
