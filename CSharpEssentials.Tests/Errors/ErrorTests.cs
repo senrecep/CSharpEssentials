@@ -243,8 +243,10 @@ public class ErrorTests
         JsonElement written = json.RootElement.GetProperty("Metadata").GetProperty("exception");
         written.GetProperty("exceptionType").GetString().Should().Be("InvalidOperationException");
         written.GetProperty("exceptionMessage").GetString().Should().Be("Boom");
-        Action serializeAdded = () => JsonSerializer.Serialize(added);
-        serializeAdded.Should().NotThrow();
+        using var addedJson = JsonDocument.Parse(JsonSerializer.Serialize(added));
+        JsonElement addedWritten = addedJson.RootElement.GetProperty("Metadata").GetProperty("exception");
+        addedWritten.GetProperty("exceptionType").GetString().Should().Be("InvalidOperationException");
+        addedWritten.GetProperty("exceptionMessage").GetString().Should().Be("Boom");
     }
 
     #endregion

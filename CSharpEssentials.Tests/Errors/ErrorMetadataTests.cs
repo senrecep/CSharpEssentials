@@ -37,7 +37,21 @@ public class ErrorMetadataTests
 
         var metadata = ErrorMetadata.CreateWithException(exception);
 
-        metadata.Should().ContainKey("exception");
+        ErrorMetadata nested = metadata["exception"].Should().BeOfType<ErrorMetadata>().Subject;
+        nested["exceptionType"].Should().Be("InvalidOperationException");
+        nested["exceptionMessage"].Should().Be("Test exception");
+    }
+
+    [Fact]
+    public void AddException_ShouldStoreNestedExceptionInfo()
+    {
+        Exception exception = new InvalidOperationException("Test exception");
+
+        var metadata = new ErrorMetadata().AddException(exception);
+
+        ErrorMetadata nested = metadata["exception"].Should().BeOfType<ErrorMetadata>().Subject;
+        nested["exceptionType"].Should().Be("InvalidOperationException");
+        nested["exceptionMessage"].Should().Be("Test exception");
     }
 
     [Fact]
