@@ -316,6 +316,40 @@ public class ValidationBehaviorTests
     }
 
     [Fact]
+    public async Task Handle_Should_Return_Canceled_Task_Instead_Of_Throwing_When_Validator_Throws_Cancellation_Synchronously()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([new SyncCancellingValidator()]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), SuccessNext, default);
+
+        pending.IsCanceled.Should().BeTrue();
+        Func<Task> act = () => pending.AsTask();
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fault_Instead_Of_Throwing_When_Next_Throws_Synchronously()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([new StubValidator()]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), (_, _) => throw new InvalidOperationException("next exploded"), default);
+
+        pending.IsFaulted.Should().BeTrue();
+        Func<Task> act = () => pending.AsTask();
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("next exploded");
+    }
+
+    [Fact]
+    public void Handle_Should_Fault_Instead_Of_Throwing_When_Next_Throws_Synchronously_Without_Validators()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), (_, _) => throw new InvalidOperationException("next exploded"), default);
+
+        pending.IsFaulted.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Handle_Should_Call_Next_When_Async_Validator_Passes()
     {
         ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new YieldingValidator(null)]);
@@ -370,4 +404,10 @@ internal sealed class YieldingValidator(Error[]? errors) : IValidator<TestValida
         await Task.Yield();
         return errors is null ? instance : Result<TestValidationCommand>.Failure(errors);
     }
+}
+
+internal sealed class SyncCancellingValidator : IValidator<TestValidationCommand>
+{
+    public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
+        throw new OperationCanceledException();
 }

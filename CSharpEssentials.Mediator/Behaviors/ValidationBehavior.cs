@@ -43,6 +43,27 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         if (cancellationToken.IsCancellationRequested)
             return new ValueTask<TResponse>(Task.FromCanceled<TResponse>(cancellationToken));
 
+        try
+        {
+            return HandleCore(message, next, cancellationToken);
+        }
+        catch (OperationCanceledException oce)
+        {
+            TaskCompletionSource<TResponse> canceled = new();
+            canceled.TrySetCanceled(oce.CancellationToken);
+            return new ValueTask<TResponse>(canceled.Task);
+        }
+        catch (Exception ex)
+        {
+            return new ValueTask<TResponse>(Task.FromException<TResponse>(ex));
+        }
+    }
+
+    private ValueTask<TResponse> HandleCore(
+        TRequest message,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
         ValidationMode mode = message is IValidationModeOverride modeOverride
             ? modeOverride.ValidationMode
             : _defaultMode;
