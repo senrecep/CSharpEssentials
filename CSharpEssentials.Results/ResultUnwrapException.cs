@@ -17,7 +17,7 @@ public sealed class ResultUnwrapException : InvalidOperationException
     /// </summary>
     /// <param name="errors">The errors that caused the unwrap to fail.</param>
     public ResultUnwrapException(Error[] errors)
-        : base($"Cannot unwrap a failed result. Errors: {string.Join(", ", errors.Select(e => e.Code))}") => Errors = errors;
+        : base(BuildMessage(errors)) => Errors = errors;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ResultUnwrapException"/> class with a specified message.
@@ -26,4 +26,15 @@ public sealed class ResultUnwrapException : InvalidOperationException
     /// <param name="errors">The errors that caused the unwrap to fail.</param>
     public ResultUnwrapException(string message, Error[] errors)
         : base(message) => Errors = errors;
+
+    private static string BuildMessage(Error[] errors)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(errors);
+#else
+        if (errors is null)
+            throw new ArgumentNullException(nameof(errors));
+#endif
+        return $"Cannot unwrap a failed result. Errors: {string.Join(", ", errors.Select(e => e.Code))}";
+    }
 }
