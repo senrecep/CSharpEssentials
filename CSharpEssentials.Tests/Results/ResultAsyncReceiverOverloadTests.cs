@@ -35,9 +35,11 @@ public class ResultAsyncReceiverOverloadTests
     {
         Func<Error[], IEnumerable<Error>> onFailure = errors => errors.AsEnumerable().Reverse();
 
-        Result result = await Vt(Failed).ElseAsync(onFailure);
+        Result failed = await Vt(Failed).ElseAsync(onFailure);
+        Result succeeded = await Vt(Result.Success()).ElseAsync(onFailure);
 
-        result.Errors.Select(e => e.Code).Should().Equal("E2", "E1");
+        failed.Errors.Select(e => e.Code).Should().Equal("E2", "E1");
+        succeeded.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -55,9 +57,11 @@ public class ResultAsyncReceiverOverloadTests
     {
         Func<Error[], Task<Error>> onFailure = errors => Task.FromResult(Error.Conflict("LAST", errors[^1].Code));
 
-        Result result = await Vt(Failed).ElseAsync(onFailure);
+        Result failed = await Vt(Failed).ElseAsync(onFailure);
+        Result succeeded = await Vt(Result.Success()).ElseAsync(onFailure);
 
-        result.Errors.Should().ContainSingle().Which.Description.Should().Be("E2");
+        failed.Errors.Should().ContainSingle().Which.Description.Should().Be("E2");
+        succeeded.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -65,9 +69,11 @@ public class ResultAsyncReceiverOverloadTests
     {
         Func<Error[], Task<IEnumerable<Error>>> onFailure = errors => Task.FromResult<IEnumerable<Error>>([.. errors, Replacement]);
 
-        Result result = await Vt(Failed).ElseAsync(onFailure);
+        Result failed = await Vt(Failed).ElseAsync(onFailure);
+        Result succeeded = await Vt(Result.Success()).ElseAsync(onFailure);
 
-        result.Errors.Select(e => e.Code).Should().Equal("E1", "E2", "REPLACED");
+        failed.Errors.Select(e => e.Code).Should().Equal("E1", "E2", "REPLACED");
+        succeeded.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -78,6 +84,116 @@ public class ResultAsyncReceiverOverloadTests
 
         failed.Errors.Should().ContainSingle().Which.Code.Should().Be("REPLACED");
         succeeded.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ElseAsync_ValueTask_ValueTaskErrorFactory_ReplacesErrorsOnFailure()
+    {
+        Func<Error[], ValueTask<Error>> onFailure = errors => ValueTask.FromResult(Error.Conflict("COUNT", $"{errors.Length}"));
+
+        Result failed = await Vt(Failed).ElseAsync(onFailure);
+        Result succeeded = await Vt(Result.Success()).ElseAsync(onFailure);
+
+        failed.Errors.Should().ContainSingle().Which.Description.Should().Be("2");
+        succeeded.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ElseAsync_ValueTask_ValueTaskErrorsFactory_ReplacesErrorsOnFailure()
+    {
+        Func<Error[], ValueTask<IEnumerable<Error>>> onFailure = errors => ValueTask.FromResult(errors.AsEnumerable().Reverse());
+
+        Result failed = await Vt(Failed).ElseAsync(onFailure);
+        Result succeeded = await Vt(Result.Success()).ElseAsync(onFailure);
+
+        failed.Errors.Select(e => e.Code).Should().Equal("E2", "E1");
+        succeeded.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ElseAsync_ValueTask_ValueTaskOfError_ReplacesErrorsOnFailure()
+    {
+        Result failed = await Vt(Failed).ElseAsync(ValueTask.FromResult(Replacement));
+        Result succeeded = await Vt(Result.Success()).ElseAsync(ValueTask.FromResult(Replacement));
+
+        failed.Errors.Should().ContainSingle().Which.Code.Should().Be("REPLACED");
+        succeeded.IsSuccess.Should().BeTrue();
+    }
+
+    #endregion
+
+    #region ElseDoAsync on ValueTask<Result>
+
+    [Fact]
+    public async Task ElseDoAsync_ValueTask_TaskAction_RunsOnlyOnFailure()
+    {
+        var seen = new List<string>();
+        Func<Error[], Task> onFailure = errors =>
+        {
+            seen.AddRange(errors.Select(e => e.Code));
+            return Task.CompletedTask;
+        };
+
+        Result succeeded = await Vt(Result.Success()).ElseDoAsync(onFailure);
+        Result failed = await Vt(Failed).ElseDoAsync(onFailure);
+
+        seen.Should().Equal("E1", "E2");
+        succeeded.IsSuccess.Should().BeTrue();
+        failed.Errors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ElseDoAsync_ValueTask_ValueTaskAction_RunsOnlyOnFailure()
+    {
+        var seen = new List<string>();
+        Func<Error[], ValueTask> onFailure = errors =>
+        {
+            seen.AddRange(errors.Select(e => e.Code));
+            return ValueTask.CompletedTask;
+        };
+
+        Result succeeded = await Vt(Result.Success()).ElseDoAsync(onFailure);
+        Result failed = await Vt(Failed).ElseDoAsync(onFailure);
+
+        seen.Should().Equal("E1", "E2");
+        succeeded.IsSuccess.Should().BeTrue();
+        failed.Errors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ElseDoFirstAsync_ValueTask_TaskAction_RunsOnlyOnFailureWithFirstError()
+    {
+        var seen = new List<string>();
+        Func<Error, Task> onFirstFailure = error =>
+        {
+            seen.Add(error.Code);
+            return Task.CompletedTask;
+        };
+
+        Result succeeded = await Vt(Result.Success()).ElseDoFirstAsync(onFirstFailure);
+        Result failed = await Vt(Failed).ElseDoFirstAsync(onFirstFailure);
+
+        seen.Should().Equal("E1");
+        succeeded.IsSuccess.Should().BeTrue();
+        failed.Errors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ElseDoFirstAsync_ValueTask_ValueTaskAction_RunsOnlyOnFailureWithFirstError()
+    {
+        var seen = new List<string>();
+        Func<Error, ValueTask> onFirstFailure = error =>
+        {
+            seen.Add(error.Code);
+            return ValueTask.CompletedTask;
+        };
+
+        Result succeeded = await Vt(Result.Success()).ElseDoFirstAsync(onFirstFailure);
+        Result failed = await Vt(Failed).ElseDoFirstAsync(onFirstFailure);
+
+        seen.Should().Equal("E1");
+        succeeded.IsSuccess.Should().BeTrue();
+        failed.Errors.Should().HaveCount(2);
     }
 
     #endregion
@@ -394,10 +510,88 @@ public class ResultAsyncReceiverOverloadTests
         int calls = 0;
         Action action = () => calls++;
 
-        await Vt(Result.Success()).TapAsync(() => true, action);
         await Vt(Result.Success()).TapAsync(() => false, action);
-        await Vt(Failed).TapAsync(() => true, action);
+        calls.Should().Be(0);
 
+        await Vt(Result.Success()).TapAsync(() => true, action);
+        calls.Should().Be(1);
+
+        await Vt(Failed).TapAsync(() => true, action);
+        calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TapAsync_ValueTask_BoolConditionAndAction_RunsOnlyWhenConditionHolds()
+    {
+        int calls = 0;
+        Action action = () => calls++;
+
+        await Vt(Result.Success()).TapAsync(false, action);
+        calls.Should().Be(0);
+
+        await Vt(Result.Success()).TapAsync(true, action);
+        calls.Should().Be(1);
+
+        await Vt(Failed).TapAsync(true, action);
+        calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TapAsync_ValueTask_ValueTaskAction_RunsOnlyOnSuccess()
+    {
+        int calls = 0;
+        Func<ValueTask> action = () =>
+        {
+            calls++;
+            return ValueTask.CompletedTask;
+        };
+
+        Result success = await Vt(Result.Success()).TapAsync(action);
+        calls.Should().Be(1);
+
+        Result failure = await Vt(Failed).TapAsync(action);
+        calls.Should().Be(1);
+        success.IsSuccess.Should().BeTrue();
+        failure.Errors.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task TapAsync_ValueTask_BoolConditionAndValueTaskAction_RunsOnlyWhenConditionHolds()
+    {
+        int calls = 0;
+        Func<ValueTask> action = () =>
+        {
+            calls++;
+            return ValueTask.CompletedTask;
+        };
+
+        await Vt(Result.Success()).TapAsync(false, action);
+        calls.Should().Be(0);
+
+        await Vt(Result.Success()).TapAsync(true, action);
+        calls.Should().Be(1);
+
+        await Vt(Failed).TapAsync(true, action);
+        calls.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task TapAsync_ValueTask_ConditionAndValueTaskAction_RunsOnlyWhenConditionHolds()
+    {
+        int calls = 0;
+        Func<ValueTask> action = () =>
+        {
+            calls++;
+            return ValueTask.CompletedTask;
+        };
+
+        await Vt(Result.Success()).TapAsync(() => false, action);
+        calls.Should().Be(0);
+
+        await Vt(Result.Success()).TapAsync(() => true, action);
+        calls.Should().Be(1);
+
+        await Vt(Failed).TapAsync(() => true, action);
         calls.Should().Be(1);
     }
 
