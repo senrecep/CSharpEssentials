@@ -392,4 +392,14 @@ public class TheseTests
         rights.Should().HaveCount(2);
         boths.Should().HaveCount(1);
     }
+
+    [Fact]
+    public void Partition_Should_ThrowArgumentNullException_When_SourceIsNull()
+    {
+        IEnumerable<These<string, int>> source = null!;
+
+        Action act = () => source.Partition();
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("source");
+    }
 }
