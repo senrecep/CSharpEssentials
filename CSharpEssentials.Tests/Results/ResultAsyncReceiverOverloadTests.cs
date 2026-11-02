@@ -572,8 +572,11 @@ public class ResultAsyncReceiverOverloadTests
     [Fact]
     public void Try_ActionWithHandler_ReturnsSuccessOrHandledError()
     {
-        Result ok = Result.Try(() => { }, ex => Error.Failure("HANDLED", ex.Message));
-        Result caught = Result.Try(() => throw new InvalidOperationException("boom"), ex => Error.Failure("HANDLED", ex.Message));
+        Action noop = () => { };
+        Action throwing = () => throw new InvalidOperationException("boom");
+
+        Result ok = Result.Try(noop, ex => Error.Failure("HANDLED", ex.Message));
+        Result caught = Result.Try(throwing, ex => Error.Failure("HANDLED", ex.Message));
 
         ok.IsSuccess.Should().BeTrue();
         caught.FirstError.Code.Should().Be("HANDLED");
