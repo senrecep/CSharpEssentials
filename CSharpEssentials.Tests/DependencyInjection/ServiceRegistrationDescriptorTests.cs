@@ -55,6 +55,7 @@ public class ServiceRegistrationDescriptorTests
 
         act.Should().Throw<InvalidOperationException>()
             .WithMessage($"*key 'a'*by 'instance of {typeof(SecondStore).FullName}'*allow 'factory' to be added*");
+        services.Should().ContainSingle();
     }
 
     [Fact]
