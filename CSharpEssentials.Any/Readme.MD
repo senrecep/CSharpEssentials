@@ -108,4 +108,4 @@ var (drafts, published) = articles
 
 ## Upgrading
 
-- `{"Index":n,"Value":null}` now deserializes when branch `n` is a reference type or `Nullable<T>`, so a union holding `null` round-trips. Earlier versions threw `ArgumentNullException` for every `null` value. If you relied on that to reject such payloads, check `Value is null` after deserializing.
+- A `null` value is now accepted when its branch is a reference type or `Nullable<T>`. This applies to JSON deserialization (`{"Index":n,"Value":null}` now round-trips) and to the public `(int index, object? value)` constructor, so `new Any<int, string>(1, null)` no longer throws. Earlier versions threw `ArgumentNullException` for every `null` value. If you relied on that to reject such input, check `Value is null` after constructing or deserializing.
