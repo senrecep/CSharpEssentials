@@ -213,7 +213,7 @@ internal static class AssemblyServiceScanner
         EnsureImplements(decoratorType, serviceType);
         if (decoratorType.IsGenericTypeDefinition)
         {
-            return (order, services => ServiceDecoration.DecorateOpenGeneric(services, serviceType, decoratorType, candidate => Equals(candidate, key)));
+            return (order, services => ServiceDecoration.DecorateOpenGeneric(services, serviceType, decoratorType, candidate => Equals(candidate, key), TrimmedConstructorHint));
         }
 
         Func<object, IServiceProvider, object> factory = DecoratorActivator.Create(decoratorType, serviceType, key, TrimmedConstructorHint);

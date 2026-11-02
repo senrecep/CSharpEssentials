@@ -310,6 +310,34 @@ public class ServiceCollectionRegistrationExtensionsTests
     }
 
     [Fact]
+    public void AddServicesFromAssemblies_Should_ThrowNamingTrimming_When_OpenGenericDecoratorHasNoPublicConstructor()
+    {
+        ServiceCollection services = new();
+        string name = "DynamicDecorators" + Guid.NewGuid().ToString("N");
+        AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.RunAndCollect);
+        ModuleBuilder module = assembly.DefineDynamicModule(name);
+        TypeBuilder decorator = module.DefineType("GenericDecorator", TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed);
+        GenericTypeParameterBuilder[] parameters = decorator.DefineGenericParameters("T");
+        decorator.AddInterfaceImplementation(typeof(IProgress<>).MakeGenericType(parameters));
+        decorator.DefineDefaultConstructor(MethodAttributes.Private);
+        MethodBuilder report = decorator.DefineMethod(
+            nameof(IProgress<int>.Report),
+            MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
+            typeof(void),
+            [parameters[0]]);
+        report.GetILGenerator().Emit(OpCodes.Ret);
+        decorator.SetCustomAttribute(new CustomAttributeBuilder(typeof(DecoratesAttribute).GetConstructor([typeof(Type)])!, [typeof(IProgress<>)]));
+        decorator.CreateType();
+        Type closedService = typeof(IProgress<int>);
+        services.AddSingleton(closedService, _ => new object());
+
+        Action act = () => services.AddServicesFromAssemblies(TestAssembly, assembly);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must have exactly one public constructor, but has 0. *Native AOT*Add{Asm}Services*Decorate<TService, TDecorator>()*");
+    }
+
+    [Fact]
     public void AddServicesFromAssemblies_Should_SkipAssembly_When_AssemblyIsExcluded()
     {
         string name = "ExcludedRegistrations" + Guid.NewGuid().ToString("N");

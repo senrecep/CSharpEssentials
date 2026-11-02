@@ -141,7 +141,8 @@ internal static class ServiceDecoration
         IServiceCollection services,
         Type serviceType,
         Type decoratorType,
-        Func<object?, bool> keyFilter)
+        Func<object?, bool> keyFilter,
+        string? missingConstructorHint = null)
     {
         if (!serviceType.IsGenericTypeDefinition || !decoratorType.IsGenericTypeDefinition)
         {
@@ -170,7 +171,7 @@ internal static class ServiceDecoration
             {
                 EnsureDecoratable(descriptor, Type.EmptyTypes);
                 Type closedDecorator = decoratorType.MakeGenericType(descriptor.ServiceType.GenericTypeArguments);
-                plan.Add((index, DecoratorActivator.Create(closedDecorator, descriptor.ServiceType, descriptor.ServiceKey)));
+                plan.Add((index, DecoratorActivator.Create(closedDecorator, descriptor.ServiceType, descriptor.ServiceKey, missingConstructorHint)));
             }
         }
 
