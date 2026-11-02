@@ -23,12 +23,11 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
     private readonly Func<TEnum, ulong> _toRaw;
     private readonly Func<ulong, TEnum> _fromRaw;
     private readonly Dictionary<ulong, EnumMemberInfo<TEnum>> _byRaw;
-    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _wireExact;
-    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _wireIgnoreCase;
-    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _memberExact;
-    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _memberIgnoreCase;
-    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _aliasExact;
-    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _aliasIgnoreCase;
+    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _exactAll;
+    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _exactNoMembers;
+    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _ignoreCaseAll;
+    private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _ignoreCaseNoMembers;
+    private readonly EnumNameLookup<EnumMemberInfo<TEnum>>? _wireExact;
     private readonly string[] _wireNames;
     private readonly string[] _inputWireNames;
 
@@ -73,12 +72,15 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         _wireNames = [.. _members.Select(static m => m.WireName)];
         _inputWireNames = [.. _members.Where(static m => !m.IsFallback).Select(static m => m.WireName)];
 
-        _wireExact = new(_members.Select(static m => Pair(m.WireName, m)), StringComparer.Ordinal);
-        _wireIgnoreCase = new(_members.Select(static m => Pair(m.WireName, m)), StringComparer.OrdinalIgnoreCase);
-        _memberExact = new(_members.Select(static m => Pair(m.MemberName, m)), StringComparer.Ordinal);
-        _memberIgnoreCase = new(_members.Select(static m => Pair(m.MemberName, m)), StringComparer.OrdinalIgnoreCase);
-        _aliasExact = new(_members.SelectMany(static m => m.Aliases.Select(alias => Pair(alias, m))), StringComparer.Ordinal);
-        _aliasIgnoreCase = new(_members.SelectMany(static m => m.Aliases.Select(alias => Pair(alias, m))), StringComparer.OrdinalIgnoreCase);
+        KeyValuePair<string, EnumMemberInfo<TEnum>>[] wires = [.. _members.Select(static m => Pair(m.WireName, m))];
+        KeyValuePair<string, EnumMemberInfo<TEnum>>[] names = [.. _members.Select(static m => Pair(m.MemberName, m))];
+        KeyValuePair<string, EnumMemberInfo<TEnum>>[] aliases = [.. _members.SelectMany(static m => m.Aliases.Select(alias => Pair(alias, m)))];
+        _exactAll = new([.. wires, .. names, .. aliases], StringComparer.Ordinal);
+        _exactNoMembers = new([.. wires, .. aliases], StringComparer.Ordinal);
+        _ignoreCaseAll = new([.. wires, .. names, .. aliases], StringComparer.OrdinalIgnoreCase);
+        _ignoreCaseNoMembers = new([.. wires, .. aliases], StringComparer.OrdinalIgnoreCase);
+        if (_wireNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != _wireNames.Distinct(StringComparer.Ordinal).Count())
+            _wireExact = new(wires, StringComparer.Ordinal);
     }
 
     /// <inheritdoc />
@@ -137,22 +139,32 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
     /// </summary>
     public bool TryParse(CharText text, EnumReadMode mode, EnumConventions conventions, out TEnum value, [NotNullWhen(false)] out EnumValueError? error)
     {
+        if (TryParse(text, mode, conventions, out value))
+        {
+            error = null;
+            return true;
+        }
+
+        error = CreateError(ToText(text), mode == EnumReadMode.Input);
+        return false;
+    }
+
+    /// <summary>
+    /// Parses one token with the same rules as the overload that reports an <see cref="EnumValueError"/>, without building
+    /// the error, so a rejected value allocates nothing.
+    /// </summary>
+    public bool TryParse(CharText text, EnumReadMode mode, EnumConventions conventions, out TEnum value)
+    {
         _ = conventions ?? throw new ArgumentNullException(nameof(conventions));
 
         bool input = mode == EnumReadMode.Input;
         value = default;
 #if NETSTANDARD2_0
         if (string.IsNullOrEmpty(text))
-        {
-            error = CreateError(text, input);
             return false;
-        }
 #else
         if (text.IsEmpty)
-        {
-            error = CreateError(string.Empty, input);
             return false;
-        }
 #endif
 
         EnumMemberInfo<TEnum>? member = FindByName(text, input, conventions);
@@ -176,7 +188,6 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
                  TryUseFallback(mode, conventions, out value);
         }
 
-        error = ok ? null : CreateError(ToText(text), input);
         return ok;
     }
 
@@ -275,12 +286,10 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
     private EnumMemberInfo<TEnum>? FindByName(CharText text, bool input, EnumConventions conventions)
     {
         bool ignoreCase = !input || conventions.CaseInsensitive;
-        EnumMemberInfo<TEnum>? member = _wireExact.Find(text);
-        if (member is null && ignoreCase)
-            member = _wireIgnoreCase.Find(text);
-        if (member is null && (!input || conventions.AcceptMemberNames))
-            member = (ignoreCase ? _memberIgnoreCase : _memberExact).Find(text);
-        return member ?? (ignoreCase ? _aliasIgnoreCase : _aliasExact).Find(text);
+        bool members = !input || conventions.AcceptMemberNames;
+        if (!ignoreCase)
+            return (members ? _exactAll : _exactNoMembers).Find(text);
+        return _wireExact?.Find(text) ?? (members ? _ignoreCaseAll : _ignoreCaseNoMembers).Find(text);
     }
 
     private static bool TryAcceptMember(EnumMemberInfo<TEnum> member, bool input, out TEnum value)

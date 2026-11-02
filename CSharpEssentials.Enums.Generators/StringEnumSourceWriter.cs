@@ -185,7 +185,7 @@ internal static class StringEnumSourceWriter
         w.Line("return false;");
         w.Close();
         w.Line();
-        w.Line("return " + metadata + ".TryParse(text, " + Enums + ".EnumReadMode.Data, __WireReadConventions, out value, out _);");
+        w.Line("return " + metadata + ".TryParse(text, " + Enums + ".EnumReadMode.Data, __WireReadConventions, out value);");
         w.Close();
         w.Line();
 

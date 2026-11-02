@@ -1,4 +1,5 @@
 using CSharpEssentials.Enums;
+using CSharpEssentials.Tests.Enums;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Enums.Runtime;
@@ -182,5 +183,105 @@ public class EnumInfoParserTests
         tiny.Should().Be(TinyValue.Low);
         Info<TinyValue>().TryParse("-129", EnumReadMode.Data, Defaults, out _, out _).Should().BeFalse();
         Info<TinyValue>().TryParseNumber(200L, EnumReadMode.Data, Defaults, out _, out _).Should().BeFalse();
+    }
+
+    private static readonly string[] AgreementInputs =
+    [
+        "", " ", " pending", "pending ", "pending", "PENDING", "in_progress", "InProgress", "inprogress", "Started", "running",
+        "done", "finished", "Completed", "cancelled_by_user", "http_status", "httpstatus", "HTTPStatus", "aborted", "unknown",
+        "Unknown", "bogus", "0", "1", "5", "99", "100", "+1", "-0", "-1", "1.0", "0x1", ".5", "00000000000000000000001",
+        "18446744073709551615", "18446744073709551616", "-9223372036854775808", "-5", "7", "read", "write", "read_write",
+        "ReadWrite", "3", "7", "8", "255", "256", "read,write", new string('x', 80),
+    ];
+
+    private static readonly EnumConventions[] AgreementConventions =
+    [
+        Defaults,
+        Defaults with { UnknownValue = UnknownEnumValueHandling.Reject },
+        Defaults with { CaseInsensitive = false },
+        Defaults with { AcceptMemberNames = false },
+        Defaults with { AcceptNumbers = false },
+        Defaults with { CaseInsensitive = false, AcceptMemberNames = false, AcceptNumbers = false },
+    ];
+
+    [Fact]
+    public void TryParse_Without_Error_Should_Agree_With_The_Error_Overload()
+    {
+        AssertAgreement(Info<ParserStatus>());
+        AssertAgreement(Info<StrictStatus>());
+        AssertAgreement(Info<ParserPermissions>());
+        AssertAgreement(Info<ParserAccess>());
+        AssertAgreement(Info<HugeValue>());
+        AssertAgreement(Info<SignedValue>());
+        AssertAgreement(Info<TinyValue>());
+    }
+
+    [Fact]
+    public void Input_Mode_Should_Report_The_Fallback_Value_On_Rejection_In_Both_Overloads()
+    {
+        EnumInfo<ParserStatus> info = Info<ParserStatus>();
+
+        info.TryParse("unknown", EnumReadMode.Input, Defaults, out ParserStatus withoutError).Should().BeFalse();
+        info.TryParse("unknown", EnumReadMode.Input, Defaults, out ParserStatus withError, out EnumValueError? error).Should().BeFalse();
+
+        withoutError.Should().Be(ParserStatus.Unknown);
+        withError.Should().Be(ParserStatus.Unknown);
+        error!.Value.Should().Be("unknown");
+    }
+
+    [Fact]
+    public void Error_Value_Should_Be_Truncated_To_64_Chars()
+    {
+        string text = new('x', 80);
+
+        Info<ParserStatus>().TryParse(text, EnumReadMode.Input, Defaults, out _, out EnumValueError? error).Should().BeFalse();
+
+        error!.Value.Should().Be(new string('x', 64) + "…");
+    }
+
+    [Fact]
+    public void EnumValueParser_Without_Error_Should_Parse_Generated_Enums()
+    {
+        EnumValueParser.TryParse("in_progress", EnumReadMode.Input, Defaults, out Status value).Should().BeTrue();
+        value.Should().Be(Status.InProgress);
+        EnumValueParser.TryParse("bogus", EnumReadMode.Input, Defaults, out Status _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryParse_Without_Error_Should_Not_Allocate_On_Hit_Or_Miss()
+    {
+        EnumInfo<ParserStatus> info = Info<ParserStatus>();
+        EnumConventions reject = Defaults with { UnknownValue = UnknownEnumValueHandling.Reject };
+        string[] inputs = ["in_progress", "IN_PROGRESS", "Started", "bogus", "99", "1"];
+        foreach (string text in inputs)
+            info.TryParse(text, EnumReadMode.Data, reject, out _);
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++)
+        {
+            foreach (string text in inputs)
+                info.TryParse(text, EnumReadMode.Data, reject, out _);
+        }
+
+        (GC.GetAllocatedBytesForCurrentThread() - before).Should().Be(0);
+    }
+
+    private static void AssertAgreement<T>(EnumInfo<T> info) where T : struct, Enum
+    {
+        foreach (EnumConventions conventions in AgreementConventions)
+        {
+            foreach (EnumReadMode mode in new[] { EnumReadMode.Input, EnumReadMode.Data })
+            {
+                foreach (string text in AgreementInputs)
+                {
+                    bool withError = info.TryParse(text, mode, conventions, out T errorValue, out EnumValueError? error);
+                    bool withoutError = info.TryParse(text, mode, conventions, out T value);
+
+                    withoutError.Should().Be(withError, "'{0}' in {1}", text, mode);
+                    value.Should().Be(errorValue, "'{0}' in {1}", text, mode);
+                    (error is null).Should().Be(withError);
+                }
+            }
+        }
     }
 }
