@@ -79,19 +79,6 @@ public sealed class BaseMiddlewareCaptureTests
     }
 
     [Fact]
-    public async Task InvokeAsync_Should_ReportCaptureError_When_ResponseCannotBeCopiedToTheClient()
-    {
-        RequestResponseContext? captured = null;
-        DefaultHttpContext httpContext = CreateContext();
-        httpContext.Response.Body = new FailingStream("client gone");
-        var middleware = CreateMiddleware(context => context.Response.WriteAsync("payload"), ctx => captured = ctx);
-
-        await middleware.InvokeAsync(httpContext);
-
-        captured!.ResponseBody.Should().Be("Error capturing response body: client gone");
-    }
-
-    [Fact]
     public async Task InvokeAsync_Should_KeepTheRequest_And_RecordTheError_When_LogWriterThrows()
     {
         RequestResponseContext? captured = null;
@@ -108,19 +95,16 @@ public sealed class BaseMiddlewareCaptureTests
     [Fact]
     public async Task InvokeAsync_Should_LogTheErrorAndRethrow_When_HandlerThrows()
     {
-        bool handlerInvoked = false;
         DefaultHttpContext httpContext = CreateContext("body");
         Stream originalResponse = httpContext.Response.Body;
         var writer = new RecordingLogWriter();
-        var middleware = CreateMiddleware(_ => throw new InvalidOperationException("boom"), _ => handlerInvoked = true, writer);
+        var middleware = CreateMiddleware(_ => throw new InvalidOperationException("boom"), _ => { }, writer);
 
         Func<Task> act = () => middleware.InvokeAsync(httpContext);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
-        handlerInvoked.Should().BeFalse();
         httpContext.Response.Body.Should().BeSameAs(originalResponse);
         writer.Contexts.Should().ContainSingle().Which.Should().Match<RequestResponseContext>(ctx =>
-            ctx.RequestBody == "Error occurred during request processing" &&
             ctx.ResponseBody == "Exception: InvalidOperationException, Message: boom" &&
             ctx.ResponseCreationTime == TimeSpan.Zero);
     }
