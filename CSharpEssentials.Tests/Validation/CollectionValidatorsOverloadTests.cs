@@ -112,8 +112,8 @@ public class CollectionValidatorsOverloadTests
 
     public static TheoryData<Action<RuleChain<M, IEnumerable<int>?>>> CountRules => new()
     {
-        c => c.MinCount(1),
-        c => c.MinCount(1, CustomError),
+        c => c.MinCount(4),
+        c => c.MinCount(4, CustomError),
         c => c.MaxCount(0),
         c => c.MaxCount(0, CustomError),
         c => c.CountBetween(1, 2),

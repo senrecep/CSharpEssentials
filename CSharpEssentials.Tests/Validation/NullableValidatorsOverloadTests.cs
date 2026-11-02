@@ -17,10 +17,10 @@ public class NullableValidatorsOverloadTests
 
     public static TheoryData<Action<RuleChain<M, int?>>> AllRules => new()
     {
-        c => c.GreaterThan(5),
-        c => c.GreaterThan(5, CustomError),
-        c => c.GreaterThanOrEqualTo(5),
-        c => c.GreaterThanOrEqualTo(5, CustomError),
+        c => c.GreaterThan(500),
+        c => c.GreaterThan(500, CustomError),
+        c => c.GreaterThanOrEqualTo(500),
+        c => c.GreaterThanOrEqualTo(500, CustomError),
         c => c.LessThan(5),
         c => c.LessThan(5, CustomError),
         c => c.LessThanOrEqualTo(5),
@@ -151,6 +151,17 @@ public class NullableValidatorsOverloadTests
 
         result.FirstError.Code.Should().Be("Value.InclusiveBetween");
         result.FirstError.Description.Should().Be("'Value' must be between 1 and 5 (inclusive).");
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(5)]
+    public async Task ExclusiveBetween_ShouldFail_WhenOnBounds(int value)
+    {
+        Result<M> result = await Validate(value, c => c.ExclusiveBetween(1, 5));
+
+        result.FirstError.Code.Should().Be("Value.ExclusiveBetween");
+        result.FirstError.Description.Should().Be("'Value' must be between 1 and 5 (exclusive).");
     }
 
     [Theory]
