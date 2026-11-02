@@ -243,4 +243,14 @@ public class MultiFormatDateTimeConverterTests
 
         dateTime.Should().Be(new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc));
     }
+    [Fact]
+    public void Serialize_WithUnspecifiedKind_ShouldWriteAsUtc()
+    {
+        DateTime unspecified = new(2024, 3, 14, 15, 30, 45, DateTimeKind.Unspecified);
+
+        string json = JsonSerializer.Serialize(unspecified, DefaultOptions);
+
+        JsonSerializer.Deserialize<string>(json).Should().Be("2024-03-14T15:30:45.000000+00:00");
+        JsonSerializer.Deserialize<DateTime>(json, DefaultOptions).Ticks.Should().Be(unspecified.Ticks);
+    }
 }

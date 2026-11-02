@@ -150,7 +150,10 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         var dateTime = value as DateTime?;
         if (dateTime.HasValue)
         {
-            writer.WriteStringValue(dateTime.Value.ToString(_defaultFormat, CultureInfo.InvariantCulture));
+            DateTime toWrite = dateTime.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(dateTime.Value, DateTimeKind.Utc)
+                : dateTime.Value;
+            writer.WriteStringValue(toWrite.ToString(_defaultFormat, CultureInfo.InvariantCulture));
         }
         else if (_isNullable)
         {
