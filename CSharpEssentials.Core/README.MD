@@ -176,3 +176,7 @@ Result result = await transactionRunner.ExecuteAsync(
 ```
 
 Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEssentials.Results](../CSharpEssentials.Results/Readme.MD).
+
+## Upgrading to 8.0
+
+- `GetRandomItems` throws `ArgumentOutOfRangeException` (parameter `count`) for a negative `count`. It threw `OverflowException` before; update any `catch` that relied on that.

@@ -17,6 +17,12 @@ public static class RandomItemsExtensions
     }
     public static T[] GetRandomItems<T>(this Span<T> source, int count)
     {
+#if NET8_0_OR_GREATER
+        ArgumentOutOfRangeException.ThrowIfNegative(count);
+#else
+        if (count < 0)
+            throw new ArgumentOutOfRangeException(nameof(count), count, "The count must not be negative.");
+#endif
         int sourceLength = source.Length;
         if (count >= sourceLength)
         {

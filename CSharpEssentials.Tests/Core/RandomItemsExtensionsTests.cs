@@ -119,4 +119,14 @@ public class RandomItemsExtensionsTests
     {
         ChildProcessScenario.Run(OversizedInputScenarios.GetRandomItems);
     }
+
+    [Fact]
+    public void GetRandomItems_WithNegativeCount_ShouldThrowArgumentOutOfRange()
+    {
+        int[] source = [1, 2, 3];
+
+        Action act = () => source.GetRandomItems(-1);
+
+        act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("count");
+    }
 }
