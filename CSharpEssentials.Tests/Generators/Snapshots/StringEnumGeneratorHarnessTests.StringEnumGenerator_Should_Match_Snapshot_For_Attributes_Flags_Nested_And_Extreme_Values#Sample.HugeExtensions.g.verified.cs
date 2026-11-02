@@ -206,8 +206,8 @@ namespace Sample
             return new global::Sample.Huge[] { global::Sample.Huge.Zero, (global::Sample.Huge)18446744073709551615UL };
         }
 
-        private static readonly string[] __names = new string[] { "Zero", "Max" };
-        private static readonly global::Sample.Huge[] __values = new global::Sample.Huge[] { global::Sample.Huge.Zero, (global::Sample.Huge)18446744073709551615UL };
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Zero", "Max" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Huge> __values = global::System.Array.AsReadOnly(new global::Sample.Huge[] { global::Sample.Huge.Zero, (global::Sample.Huge)18446744073709551615UL });
 
         /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
         public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;

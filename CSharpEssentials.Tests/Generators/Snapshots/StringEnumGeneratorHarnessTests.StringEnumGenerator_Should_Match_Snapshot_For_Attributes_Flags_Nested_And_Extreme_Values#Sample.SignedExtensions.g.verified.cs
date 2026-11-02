@@ -214,8 +214,8 @@ namespace Sample
             return new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias };
         }
 
-        private static readonly string[] __names = new string[] { "Negative", "Min", "Alias" };
-        private static readonly global::Sample.Signed[] __values = new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias };
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Negative", "Min", "Alias" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Signed> __values = global::System.Array.AsReadOnly(new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias });
 
         /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
         public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;

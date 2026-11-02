@@ -280,8 +280,8 @@ namespace Sample
             return new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown };
         }
 
-        private static readonly string[] __names = new string[] { "PendingApproval", "HTTPShipped", "OnHold", "Paused", "Unknown" };
-        private static readonly global::Sample.Contract[] __values = new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown };
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "PendingApproval", "HTTPShipped", "OnHold", "Paused", "Unknown" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Contract> __values = global::System.Array.AsReadOnly(new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown });
 
         /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
         public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;

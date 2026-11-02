@@ -206,8 +206,8 @@ namespace Sample
             return new global::Sample.Order.State[] { global::Sample.Order.State.Open, global::Sample.Order.State.Closed };
         }
 
-        private static readonly string[] __names = new string[] { "Open", "Closed" };
-        private static readonly global::Sample.Order.State[] __values = new global::Sample.Order.State[] { global::Sample.Order.State.Open, global::Sample.Order.State.Closed };
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Open", "Closed" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Order.State> __values = global::System.Array.AsReadOnly(new global::Sample.Order.State[] { global::Sample.Order.State.Open, global::Sample.Order.State.Closed });
 
         /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
         public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;

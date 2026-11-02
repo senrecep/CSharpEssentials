@@ -423,8 +423,8 @@ internal static class StringEnumSourceWriter
 
         if (modern)
         {
-            w.Line("private static readonly string[] __names = new string[] { " + string.Join(", ", members.Select(static m => Literal(m.Name))) + " };");
-            w.Line("private static readonly " + type + "[] __values = new " + type + "[] { " + string.Join(", ", members.Select(m => ValueExpression(model, m))) + " };");
+            w.Line("private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { " + string.Join(", ", members.Select(static m => Literal(m.Name))) + " });");
+            w.Line("private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<" + type + "> __values = global::System.Array.AsReadOnly(new " + type + "[] { " + string.Join(", ", members.Select(m => ValueExpression(model, m))) + " });");
             w.Line();
             w.Line("/// <summary>The member names in declaration order. Cached: unlike <see cref=\"GetNames\"/>, reading it allocates nothing.</summary>");
             w.Line("public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;");

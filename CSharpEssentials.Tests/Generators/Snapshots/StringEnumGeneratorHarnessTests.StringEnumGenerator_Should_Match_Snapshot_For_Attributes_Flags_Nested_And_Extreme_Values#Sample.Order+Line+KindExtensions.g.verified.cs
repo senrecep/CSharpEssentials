@@ -206,8 +206,8 @@ namespace Sample
             return new global::Sample.Order.Line.Kind[] { global::Sample.Order.Line.Kind.Product, global::Sample.Order.Line.Kind.Shipping };
         }
 
-        private static readonly string[] __names = new string[] { "Product", "Shipping" };
-        private static readonly global::Sample.Order.Line.Kind[] __values = new global::Sample.Order.Line.Kind[] { global::Sample.Order.Line.Kind.Product, global::Sample.Order.Line.Kind.Shipping };
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Product", "Shipping" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Order.Line.Kind> __values = global::System.Array.AsReadOnly(new global::Sample.Order.Line.Kind[] { global::Sample.Order.Line.Kind.Product, global::Sample.Order.Line.Kind.Shipping });
 
         /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
         public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;

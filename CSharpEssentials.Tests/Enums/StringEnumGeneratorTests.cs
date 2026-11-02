@@ -147,6 +147,8 @@ public class StringEnumGeneratorTests
         ColorExtensions.Names.Should().BeSameAs(ColorExtensions.Names);
         ColorExtensions.Values.Should().BeSameAs(ColorExtensions.Values);
         ColorExtensions.GetNames().Should().NotBeSameAs(ColorExtensions.GetNames());
+        ColorExtensions.Names.Should().NotBeAssignableTo<string[]>();
+        ColorExtensions.Values.Should().NotBeAssignableTo<Color[]>();
     }
 
     [Fact]
