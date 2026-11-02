@@ -118,9 +118,10 @@ public sealed class AuditInterceptor(
     {
         for (int i = 0; i < foreignKey.Properties.Count; i++)
         {
+            IProperty principalProperty = foreignKey.PrincipalKey.Properties[i];
             object? dependentValue = dependent.Property(foreignKey.Properties[i].Name).CurrentValue;
-            object? principalValue = principal.Property(foreignKey.PrincipalKey.Properties[i].Name).CurrentValue;
-            if (dependentValue is null || !dependentValue.Equals(principalValue))
+            object? principalValue = principal.Property(principalProperty.Name).CurrentValue;
+            if (dependentValue is null || !principalProperty.GetKeyValueComparer().Equals(dependentValue, principalValue))
                 return false;
         }
 

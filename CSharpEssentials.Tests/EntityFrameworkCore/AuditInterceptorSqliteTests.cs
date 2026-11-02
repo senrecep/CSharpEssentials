@@ -38,11 +38,24 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         public string Product { get; set; } = string.Empty;
     }
 
+    private sealed class Folder : SoftDeletableEntityBase
+    {
+        public byte[] Id { get; set; } = [];
+        public List<FolderItem> Items { get; set; } = [];
+    }
+
+    private sealed class FolderItem
+    {
+        public int Id { get; set; }
+    }
+
     private sealed class OrderContext(SqliteConnection connection, AuditInterceptor interceptor) : DbContext
     {
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<OrderLine> Lines => Set<OrderLine>();
         public DbSet<Shipment> Shipments => Set<Shipment>();
+        public DbSet<Folder> Folders => Set<Folder>();
+        public DbSet<FolderItem> FolderItems => Set<FolderItem>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
             optionsBuilder.UseSqlite(connection).AddInterceptors(interceptor);
@@ -57,6 +70,11 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
                 order.HasMany(x => x.Shipments).WithOne().HasForeignKey(x => x.OrderId).IsRequired().OnDelete(DeleteBehavior.Cascade);
             });
             modelBuilder.Entity<Shipment>().Ignore(x => x.DomainEvents);
+            modelBuilder.Entity<Folder>(folder =>
+            {
+                folder.Ignore(x => x.DomainEvents);
+                folder.HasMany(x => x.Items).WithOne().HasForeignKey("FolderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 
@@ -80,6 +98,7 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
             Lines = [new OrderLine { Id = 10, Product = "Apple" }, new OrderLine { Id = 11, Product = "Pear" }],
             Shipments = [new Shipment { Id = 20, Carrier = "Post" }]
         });
+        context.Folders.Add(new Folder { Id = [1, 2, 3], Items = [new FolderItem { Id = 30 }] });
         context.SaveChanges();
     }
 
@@ -189,5 +208,20 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         AssertOrderKept();
         using OrderContext verify = CreateContext();
         verify.Shipments.AsNoTracking().IgnoreQueryFilters().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SoftDelete_WithBinaryKey_ShouldKeepCascadedDependents()
+    {
+        using (OrderContext context = CreateContext())
+        {
+            Folder folder = context.Folders.Include(x => x.Items).Single();
+            context.Folders.Remove(folder);
+            context.SaveChanges();
+        }
+
+        using OrderContext verify = CreateContext();
+        verify.Folders.AsNoTracking().Single().IsDeleted.Should().BeTrue();
+        verify.FolderItems.AsNoTracking().Select(i => i.Id).Should().Equal(30);
     }
 }
