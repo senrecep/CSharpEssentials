@@ -173,6 +173,23 @@ public class DependencyInjectionAnalyzerTests
     }
 
     [Fact]
+    public async Task Analyzer_Should_Report_CSE2009_When_Colliding_Referenced_Assembly_Names_Start_With_Framework_Prefix()
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            "public static class Program { public static void Main() { } }",
+            OutputKind.ConsoleApplication,
+            "Sample.App",
+            ServiceGeneration.CreateLibraryReference("SystemsInventory.Services"),
+            ServiceGeneration.CreateLibraryReference("SystemsInventoryServices"));
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, ServiceGeneration.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE2009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith(
+                "Assemblies 'SystemsInventory.Services', 'SystemsInventoryServices' all generate the service registry 'Microsoft.Extensions.DependencyInjection.SystemsInventoryServicesServiceRegistry'");
+    }
+
+    [Fact]
     public async Task Analyzer_Should_Report_CSE2009_When_Referenced_Registry_Name_Collides_With_Own_Registry()
     {
         CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
