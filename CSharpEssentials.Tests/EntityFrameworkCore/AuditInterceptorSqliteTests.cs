@@ -21,6 +21,14 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         public string Number { get; set; } = string.Empty;
         public Address ShippingAddress { get; set; } = new();
         public List<OrderLine> Lines { get; set; } = [];
+        public List<Shipment> Shipments { get; set; } = [];
+    }
+
+    private sealed class Shipment : SoftDeletableEntityBase
+    {
+        public int Id { get; set; }
+        public int OrderId { get; private set; }
+        public string Carrier { get; set; } = string.Empty;
     }
 
     private sealed class OrderLine
@@ -34,17 +42,22 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
     {
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<OrderLine> Lines => Set<OrderLine>();
+        public DbSet<Shipment> Shipments => Set<Shipment>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
             optionsBuilder.UseSqlite(connection).AddInterceptors(interceptor);
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<Order>(order =>
             {
                 order.Ignore(x => x.DomainEvents);
                 order.OwnsOne(x => x.ShippingAddress);
                 order.HasMany(x => x.Lines).WithOne().HasForeignKey(x => x.OrderId).IsRequired().OnDelete(DeleteBehavior.Cascade);
+                order.HasMany(x => x.Shipments).WithOne().HasForeignKey(x => x.OrderId).IsRequired().OnDelete(DeleteBehavior.Cascade);
             });
+            modelBuilder.Entity<Shipment>().Ignore(x => x.DomainEvents);
+        }
     }
 
     private readonly SqliteConnection _connection = new("DataSource=:memory:");
@@ -64,7 +77,8 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
             Id = 1,
             Number = "A-1",
             ShippingAddress = new Address { Street = "Main St 1", City = "Springfield" },
-            Lines = [new OrderLine { Id = 10, Product = "Apple" }, new OrderLine { Id = 11, Product = "Pear" }]
+            Lines = [new OrderLine { Id = 10, Product = "Apple" }, new OrderLine { Id = 11, Product = "Pear" }],
+            Shipments = [new Shipment { Id = 20, Carrier = "Post" }]
         });
         context.SaveChanges();
     }
@@ -159,5 +173,21 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         using OrderContext verify = CreateContext();
         verify.Orders.AsNoTracking().Should().BeEmpty();
         verify.Lines.AsNoTracking().Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SoftDelete_WithHardDeletedSoftDeletableDependent_ShouldDeleteDependent()
+    {
+        using (OrderContext context = CreateContext())
+        {
+            Order order = context.Orders.Include(x => x.Lines).Include(x => x.Shipments).Single();
+            order.Shipments[0].MarkAsHardDeleted();
+            context.Orders.Remove(order);
+            context.SaveChanges();
+        }
+
+        AssertOrderKept();
+        using OrderContext verify = CreateContext();
+        verify.Shipments.AsNoTracking().IgnoreQueryFilters().Should().BeEmpty();
     }
 }

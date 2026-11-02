@@ -18,8 +18,9 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 /// When an entity is soft-deleted, tracked entries that EF already cascade-deleted with it (owned types and
 /// dependents of a <see cref="DeleteBehavior.Cascade"/> or <see cref="DeleteBehavior.ClientCascade"/> relationship)
 /// are kept as well: an <see cref="ISoftDeletable"/> dependent is soft-deleted, any other is set back to
-/// <see cref="EntityState.Unchanged"/>. A dependent removed explicitly in the same save cannot be told apart from a
-/// cascaded one and is kept too; save that removal separately.
+/// <see cref="EntityState.Unchanged"/>. A dependent marked with <see cref="ISoftDeletable.MarkAsHardDeleted"/> is
+/// still deleted. A dependent removed explicitly in the same save cannot be told apart from a cascaded one and is
+/// kept too; save that removal separately.
 /// </para>
 /// </summary>
 public sealed class AuditInterceptor(
@@ -69,11 +70,11 @@ public sealed class AuditInterceptor(
         }
 
         if (softDeleted.Count > 0)
-            RestoreCascadedDependents(entries, softDeleted, now, userId);
+            RestoreCascadedDependents(entries, softDeleted);
     }
 
     private static void RestoreCascadedDependents(
-        List<EntityEntry> entries, List<EntityEntry> kept, DateTimeOffset now, string userId)
+        List<EntityEntry> entries, List<EntityEntry> kept)
     {
         bool changed = true;
         while (changed)
@@ -81,20 +82,13 @@ public sealed class AuditInterceptor(
             changed = false;
             foreach (EntityEntry entry in entries)
             {
-                if (entry.State != EntityState.Deleted || !IsCascadedFromKept(entry, kept))
+                if (entry.State != EntityState.Deleted
+                    || entry.Entity is ISoftDeletable { IsHardDeleted: true }
+                    || !IsCascadedFromKept(entry, kept))
                     continue;
 
-                if (entry.Entity is ISoftDeletable softDeletable && !softDeletable.IsHardDeleted)
-                {
-                    softDeletable.MarkAsDeleted(now, userId);
-                    entry.State = EntityState.Modified;
-                }
-                else
-                {
-                    entry.State = EntityState.Unchanged;
-                    entry.DetectChanges();
-                }
-
+                entry.State = EntityState.Unchanged;
+                entry.DetectChanges();
                 kept.Add(entry);
                 changed = true;
             }
