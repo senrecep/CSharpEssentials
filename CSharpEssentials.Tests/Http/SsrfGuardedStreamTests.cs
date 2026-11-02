@@ -69,6 +69,35 @@ public class SsrfGuardedStreamTests
     }
 
     [Fact]
+    public async Task ReadAsync_Should_Throw_Timeout_When_Timeout_Token_Cancelled_With_Caller_Token()
+    {
+        using var timeout = new CancellationTokenSource();
+        using var caller = new CancellationTokenSource();
+        await using var stream = new SsrfGuardedStream(new MemoryStream([1, 2, 3]), null, RequestUri, timeout.Token);
+
+        (await stream.ReadAsync(new byte[1].AsMemory(), caller.Token)).Should().Be(1);
+        await timeout.CancelAsync();
+
+        SsrfBlockedException exception = (await FluentActions.Awaiting(() => stream.ReadAsync(new byte[1].AsMemory(), caller.Token).AsTask())
+            .Should().ThrowAsync<SsrfBlockedException>()).Which;
+        exception.Reason.Should().Be(SsrfBlockReason.Timeout);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Should_Throw_OperationCanceled_When_Caller_Token_Cancelled()
+    {
+        using var timeout = new CancellationTokenSource();
+        using var caller = new CancellationTokenSource();
+        await using var stream = new SsrfGuardedStream(new MemoryStream([1, 2, 3]), null, RequestUri, timeout.Token);
+
+        (await stream.ReadAsync(new byte[1].AsMemory(), caller.Token)).Should().Be(1);
+        await caller.CancelAsync();
+
+        await FluentActions.Awaiting(() => stream.ReadAsync(new byte[1].AsMemory(), caller.Token).AsTask())
+            .Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public void Stream_Should_Be_ReadOnly_And_Not_Seekable()
     {
         using var stream = new SsrfGuardedStream(new MemoryStream(), null, RequestUri, CancellationToken.None);
