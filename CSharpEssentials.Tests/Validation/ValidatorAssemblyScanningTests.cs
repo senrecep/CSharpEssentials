@@ -53,14 +53,24 @@ public class ValidatorAssemblyScanningTests
     }
 
     [Fact]
-    public void AddValidatorsFromAssembly_ShouldSkipAbstractAndOpenGenericValidators()
+    public void AddValidatorsFromAssembly_ShouldSkipAbstractValidators()
     {
         ServiceCollection services = new();
 
         services.AddValidatorsFromAssembly(TestAssembly);
 
-        services.Select(d => d.ImplementationType).Should()
-            .NotContain([typeof(AbstractScanModelValidator), typeof(OpenGenericValidator<>)]);
+        services.Select(d => d.ImplementationType).Should().NotContain(typeof(AbstractScanModelValidator));
+    }
+
+    [Fact]
+    public void AddValidatorsFromAssembly_ShouldNotThrow_WhenAssemblyContainsOpenGenericValidator()
+    {
+        ServiceCollection services = new();
+
+        Action act = () => services.AddValidatorsFromAssembly(TestAssembly);
+
+        act.Should().NotThrow();
+        services.Select(d => d.ImplementationType).Should().NotContain(typeof(OpenGenericValidator<>));
     }
 
     [Fact]
