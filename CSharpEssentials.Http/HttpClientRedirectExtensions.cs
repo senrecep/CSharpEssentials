@@ -1,4 +1,3 @@
-using System.Net;
 using System.Text.Json;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
@@ -77,7 +76,7 @@ public static class HttpClientRedirectExtensions
                 HttpCompletionOption.ResponseHeadersRead,
                 cancellationToken).ConfigureAwait(false);
 
-            if (!IsRedirectStatusCode(response.StatusCode))
+            if (!HttpRedirectRules.IsRedirect(response.StatusCode))
                 return response;
 
             if (redirects >= maxRedirects)
@@ -111,12 +110,6 @@ public static class HttpClientRedirectExtensions
             currentRequest = newRequest;
             redirects++;
         }
-    }
-
-    private static bool IsRedirectStatusCode(HttpStatusCode statusCode)
-    {
-        int code = (int)statusCode;
-        return code is >= 300 and < 400;
     }
 
     private static async Task<HttpRequestMessage> CloneHttpRequestMessageAsync(HttpRequestMessage request)

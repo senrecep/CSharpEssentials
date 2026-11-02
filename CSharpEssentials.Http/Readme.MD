@@ -18,6 +18,10 @@
 dotnet add package CSharpEssentials.Http
 ```
 
+## Upgrading to 8.0
+
+- `SendWithRedirectsAsResultAsync` and `FollowRedirects()` follow only 301, 302, 303, 307 and 308. A 300, 304 or 305 is now returned as its own status error (for example `Http.304`) instead of being followed or failing with `Http.MissingRedirectLocation`. Check for `Http.304` if you sent conditional requests.
+
 ## Usage
 
 ### GET, POST, PUT, PATCH, DELETE as Result
@@ -201,6 +205,8 @@ Result<User> result = await HttpRequestBuilder
     .FollowRedirects(maxRedirects: 3)
     .AsResultAsync<User>(client);
 ```
+
+Only 301, 302, 303, 307 and 308 are followed. Any other status, including 304, is returned as is.
 
 ### SSRF Guard
 

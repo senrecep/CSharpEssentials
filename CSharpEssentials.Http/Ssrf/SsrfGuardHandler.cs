@@ -117,8 +117,7 @@ internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundReques
 
     private static Uri? GetRedirectLocation(HttpResponseMessage response, Uri requestUri)
     {
-        if (response.StatusCode is not (HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther
-            or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect))
+        if (!HttpRedirectRules.IsRedirect(response.StatusCode))
             return null;
 
         Uri? location = response.Headers.Location;

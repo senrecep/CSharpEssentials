@@ -197,6 +197,24 @@ public class HttpClientRedirectExtensionsTests
         content.Disposed.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.NotModified)]
+    [InlineData(HttpStatusCode.MultipleChoices)]
+    [InlineData(HttpStatusCode.UseProxy)]
+    public async Task SendWithRedirectsAsResultAsync_WithNonRedirect3xx_Should_Return_Status_Error(HttpStatusCode status)
+    {
+        using var response = new HttpResponseMessage(status);
+        response.Headers.Location = new Uri("https://test.com/other");
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com/api"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be($"Http.{(int)status}");
+    }
+
     private sealed record TestDto(int Id, string Name);
 
     private sealed class TrackingContent : HttpContent
