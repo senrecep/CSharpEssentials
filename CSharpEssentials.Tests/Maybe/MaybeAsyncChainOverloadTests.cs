@@ -105,8 +105,9 @@ public class MaybeAsyncChainOverloadTests
         int calls = 0;
 
         await SomeTask(3).ExecuteNoValueAsync(() => calls++);
-        await NoneTask().ExecuteNoValueAsync(() => calls++);
+        calls.Should().Be(0);
 
+        await NoneTask().ExecuteNoValueAsync(() => calls++);
         calls.Should().Be(1);
     }
 
@@ -116,8 +117,9 @@ public class MaybeAsyncChainOverloadTests
         int calls = 0;
 
         await SomeTask(3).ExecuteNoValueAsync(() => { calls++; return Task.CompletedTask; });
-        await NoneTask().ExecuteNoValueAsync(() => { calls++; return Task.CompletedTask; });
+        calls.Should().Be(0);
 
+        await NoneTask().ExecuteNoValueAsync(() => { calls++; return Task.CompletedTask; });
         calls.Should().Be(1);
     }
 
@@ -127,8 +129,9 @@ public class MaybeAsyncChainOverloadTests
         int calls = 0;
 
         await SomeValueTask(3).ExecuteNoValueAsync(() => calls++);
-        await NoneValueTask().ExecuteNoValueAsync(() => calls++);
+        calls.Should().Be(0);
 
+        await NoneValueTask().ExecuteNoValueAsync(() => calls++);
         calls.Should().Be(1);
     }
 
@@ -138,8 +141,9 @@ public class MaybeAsyncChainOverloadTests
         int calls = 0;
 
         await SomeValueTask(3).ExecuteNoValueAsync(() => { calls++; return ValueTask.CompletedTask; });
-        await NoneValueTask().ExecuteNoValueAsync(() => { calls++; return ValueTask.CompletedTask; });
+        calls.Should().Be(0);
 
+        await NoneValueTask().ExecuteNoValueAsync(() => { calls++; return ValueTask.CompletedTask; });
         calls.Should().Be(1);
     }
 
@@ -151,7 +155,7 @@ public class MaybeAsyncChainOverloadTests
         await cts.CancelAsync();
         int calls = 0;
 
-        Func<Task> act = () => source.Task.ExecuteNoValueAsync(() => calls++, cts.Token);
+        Func<Task> act = () => source.Task.ExecuteNoValueAsync(() => calls++, cts.Token).WaitAsync(TimeSpan.FromSeconds(5));
 
         await act.Should().ThrowAsync<OperationCanceledException>();
         calls.Should().Be(0);
