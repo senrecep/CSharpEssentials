@@ -1374,19 +1374,48 @@ public class RuleEngineTests
     #region Linear - Empty Arrays
 
     [Fact]
-    public void Linear_IRule_Empty_ShouldThrow()
+    public void Linear_IRule_Empty_ShouldReturnEmptyRuleArrayError()
     {
         IRule<TestContext>[] rules = [];
-        Action act = () => RuleEngine.Linear(rules, new TestContext());
-        act.Should().Throw<Exception>();
+        Result result = RuleEngine.Linear(rules, new TestContext());
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
     }
 
     [Fact]
-    public void Linear_Func_Empty_ShouldThrow()
+    public void Linear_IAsyncRule_Empty_ShouldReturnEmptyRuleArrayError()
+    {
+        IAsyncRule<TestContext>[] rules = [];
+        Result result = RuleEngine.Linear(rules, new TestContext());
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
+    }
+
+    [Fact]
+    public void Linear_IRuleTResult_Empty_ShouldReturnEmptyRuleArrayError()
+    {
+        IRule<TestContext, int>[] rules = [];
+        Result<int> result = RuleEngine.Linear(rules, new TestContext());
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
+    }
+
+    [Fact]
+    public void Linear_IAsyncRuleTResult_Empty_ShouldReturnEmptyRuleArrayError()
+    {
+        IAsyncRule<TestContext, int>[] rules = [];
+        Result<int> result = RuleEngine.Linear(rules, new TestContext());
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
+    }
+
+    [Fact]
+    public void Linear_Func_Empty_ShouldReturnEmptyRuleArrayError()
     {
         Func<TestContext, Result>[] rules = [];
-        Action act = () => RuleEngine.Linear(rules, new TestContext());
-        act.Should().Throw<Exception>();
+        Result result = RuleEngine.Linear(rules, new TestContext());
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
     }
 
     #endregion
