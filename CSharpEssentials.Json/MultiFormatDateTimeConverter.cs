@@ -98,6 +98,8 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
 public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
 {
     private const string _defaultFormat = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
+    private const long MinUnixSeconds = -62135596800;
+    private const long MaxUnixSeconds = 253402300799;
     private readonly string[] _formats;
     private readonly string _supportedFormats;
     private readonly bool _isNullable;
@@ -133,7 +135,8 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         }
 
         // Try Unix timestamp as fallback (pure numeric string)
-        if (long.TryParse(dateString, out long unixSeconds))
+        if (long.TryParse(dateString, NumberStyles.Integer, CultureInfo.InvariantCulture, out long unixSeconds) &&
+            unixSeconds >= MinUnixSeconds && unixSeconds <= MaxUnixSeconds)
         {
             DateTime unixDate = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
             return (T)(object)unixDate;

@@ -228,4 +228,19 @@ public class MultiFormatDateTimeConverterTests
 
         ex.Message.Should().NotContain("'W'ww").And.NotContain("XXX").And.NotContain(" G 'at' ");
     }
+    [Theory]
+    [InlineData("999999999999999")]
+    [InlineData("-999999999999999")]
+    public void Deserialize_WithOutOfRangeUnixSeconds_ShouldThrowJsonException(string text)
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<DateTime>($"\"{text}\"", DefaultOptions));
+    }
+
+    [Fact]
+    public void Deserialize_WithMaxUnixSeconds_ShouldReturnLastSecond()
+    {
+        DateTime dateTime = JsonSerializer.Deserialize<DateTime>("\"253402300799\"", DefaultOptions);
+
+        dateTime.Should().Be(new DateTime(9999, 12, 31, 23, 59, 59, DateTimeKind.Utc));
+    }
 }
