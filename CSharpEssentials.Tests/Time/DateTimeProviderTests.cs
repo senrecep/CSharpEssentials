@@ -163,4 +163,18 @@ public class DateTimeProviderTests
         provider.UtcNowDate.Should().Be(DateOnly.FromDateTime(fakeTimeProvider.GetUtcNow().DateTime));
         provider.UtcNowTime.Should().Be(TimeOnly.FromDateTime(fakeTimeProvider.GetUtcNow().DateTime));
     }
+
+    [Fact]
+    public void UtcNowDate_And_UtcNowTime_Should_UseUtc_When_TimeProviderReturnsNonZeroOffset()
+    {
+        DateTimeProvider provider = new(new OffsetTimeProvider(new DateTimeOffset(2024, 6, 15, 1, 0, 0, TimeSpan.FromHours(3))));
+
+        provider.UtcNowDate.Should().Be(new DateOnly(2024, 6, 14));
+        provider.UtcNowTime.Should().Be(new TimeOnly(22, 0));
+    }
+
+    private sealed class OffsetTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
 }
