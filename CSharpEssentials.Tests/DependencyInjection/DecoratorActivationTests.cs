@@ -45,10 +45,7 @@ public class DecoratorActivationTests
         public string Describe(T sample) => $"{sample}";
     }
 
-    private sealed class UnrelatedDecorator<T>(IRepository<T> inner)
-    {
-        public override string ToString() => inner.Describe(default!);
-    }
+    private sealed class UnrelatedDecorator<T> : List<T>;
 
     [Fact]
     public void Decorate_Should_Throw_When_DecoratorIsAbstract()
@@ -59,6 +56,18 @@ public class DecoratorActivationTests
         Action act = () => services.Decorate<IGreeter, AbstractGreeter>();
 
         act.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(AbstractGreeter).FullName}*abstract*");
+        services.Should().ContainSingle().Which.ImplementationType.Should().Be<Greeter>();
+    }
+
+    [Fact]
+    public void Decorate_Should_Throw_When_DecoratorIsInterface()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IGreeter, Greeter>();
+
+        Action act = () => services.Decorate<IGreeter, IGreeter>();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(IGreeter).FullName}*abstract*");
         services.Should().ContainSingle().Which.ImplementationType.Should().Be<Greeter>();
     }
 
@@ -89,7 +98,7 @@ public class DecoratorActivationTests
     }
 
     [Fact]
-    public void Decorate_Should_KeyInnerRegistrationWithDescriptiveKey()
+    public void Decorate_Should_RegisterInnerAsKeyedConcreteType_When_OriginalHasImplementationType()
     {
         ServiceCollection services = new();
         services.AddScoped<IGreeter, Greeter>();
@@ -97,6 +106,9 @@ public class DecoratorActivationTests
         services.Decorate<IGreeter>((inner, _) => inner);
 
         services.Should().HaveCount(2);
-        services[1].ServiceKey!.ToString().Should().Be($"decorated inner of {typeof(IGreeter).FullName}");
+        services[1].IsKeyedService.Should().BeTrue();
+        services[1].ServiceType.Should().Be<Greeter>();
+        services[1].KeyedImplementationType.Should().Be<Greeter>();
+        services[1].Lifetime.Should().Be(ServiceLifetime.Scoped);
     }
 }
