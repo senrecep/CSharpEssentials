@@ -2,6 +2,16 @@
 
 One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]` and a bundled source generator writes its metadata and helpers at compile time: no reflection, trim and NativeAOT safe.
 
+> Benchmarks against Enums.NET 5.0.0, NetEscapades.EnumGenerators 1.0.0-beta21 (a prerelease; no stable version
+> exists) and the BCL are in [BENCHMARKS.md](./BENCHMARKS.md). `ToOptimizedString` ties the fastest column on net10
+> (0.5439 ns) and net8; NetEscapades is faster on net9 and net11. All three libraries publish under Native AOT, and CSE
+> and NetEscapades do so with 0 IL warnings. CSE loses elsewhere: `IsDefined` takes 3.9082 ns against 0.4209 ns, and descriptions
+> and `ToString` of an undefined value are slower. Parsing a valid name is slower than Enums.NET on net10 (22.1890 vs
+> 17.8628 ns case-sensitive, 51.9075 vs 35.9320 ns ignore-case) and is the slowest column on net8 and net9. A rejected
+> input parses 2.99× to 4.14× slower than Enums.NET on net10 and allocates 88 B. `GetNames` allocates 184 B where Enums.NET
+> allocates nothing, the AOT binary is 1.9 MB against 1.2 MB for NetEscapades, and on net8 (the netstandard2.1 build)
+> parsing allocates on every call.
+
 ## Installation
 
 ```bash
