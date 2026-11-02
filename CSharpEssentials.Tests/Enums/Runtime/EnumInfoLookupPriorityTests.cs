@@ -120,11 +120,3 @@ public class EnumInfoLookupPriorityTests
         }
     }
 }
-
-public enum LookupProbe
-{
-    X,
-    Y,
-    Z,
-    W,
-}

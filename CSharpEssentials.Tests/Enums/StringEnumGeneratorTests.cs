@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
@@ -285,7 +286,7 @@ public class StringEnumGeneratorTests
             static v => v.IsDefined(), static v => v.ToDescription());
         AssertMatchesMetadata(Range(-5, 1002).Concat([int.MinValue, int.MaxValue]).Select(static r => (GeneratedSparse)(int)r),
             static v => v.IsDefined(), static v => v.ToDescription());
-        AssertMatchesMetadata(Range(-2, 20).Select(static r => (GeneratedNegativeFlags)(int)r).Concat([(GeneratedNegativeFlags)int.MinValue]),
+        AssertMatchesMetadata(Range(-2, 20).Select(static r => (GeneratedSignBit)(int)r).Concat([(GeneratedSignBit)int.MinValue]),
             static v => v.IsDefined(), static v => v.ToDescription());
     }
 
@@ -313,7 +314,7 @@ public class StringEnumGeneratorTests
         ((GeneratedHuge)1).IsDefined().Should().BeFalse();
         ((GeneratedPermissions)(1 | 2 | 4)).IsDefined().Should().BeTrue();
         ((GeneratedPermissions)255).IsDefined().Should().BeFalse();
-        ((GeneratedNegativeFlags)int.MinValue).IsDefined().Should().BeTrue();
+        ((GeneratedSignBit)int.MinValue).IsDefined().Should().BeTrue();
     }
 
     [Theory]
@@ -350,7 +351,7 @@ public class StringEnumGeneratorTests
             AssertBclText((GeneratedPermissions)8, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
             AssertBclText(GeneratedPermissions.Read | GeneratedPermissions.Delete, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
             AssertBclText((GeneratedPermissions)(1 | 8), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
-            AssertBclText((GeneratedNegativeFlags)(-3), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSignBit)(-3), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
         }
         finally
         {
@@ -376,8 +377,8 @@ public class StringEnumGeneratorTests
     {
         string expected = value.ToString();
         optimized(value).Should().Be(expected);
-        lower(value).Should().Be(expected.ToLowerInvariant());
-        upper(value).Should().Be(expected.ToUpperInvariant());
+        lower(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToLower(expected));
+        upper(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToUpper(expected));
     }
 
     private static IEnumerable<long> Range(long from, long to)
@@ -564,14 +565,15 @@ internal enum GeneratedSparse
 
     [Description("Second name of seven")]
     [EnumAlias("shared_alias_value")]
-    SharedAlias = 7,
+    SharedAlias = Shared,
 
     [Description("High end")]
     High = 1000,
 }
 
 [StringEnum, Flags]
-internal enum GeneratedNegativeFlags
+[SuppressMessage("Usage", "CSE0007", Justification = "Fixture for a flag in the sign bit, which sign-extends to 64 bits.")]
+internal enum GeneratedSignBit
 {
     None = 0,
     One = 1,
