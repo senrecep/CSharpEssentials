@@ -215,6 +215,56 @@ public class HttpClientRedirectExtensionsTests
         result.FirstError.Code.Should().Be($"Http.{(int)status}");
     }
 
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_WithTwo307Hops_Should_Resend_Body_On_Every_Hop()
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/start" => Redirect(HttpStatusCode.TemporaryRedirect, "https://test.com/a"),
+            "/a" => Redirect(HttpStatusCode.TemporaryRedirect, "https://test.com/b"),
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+        });
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("https://test.com/start"))
+        {
+            Content = new StringContent("payload")
+        };
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        handler.Requests.Select(r => r.Body).Should().Equal("payload", "payload", "payload");
+        handler.Requests.Select(r => r.Method).Should().AllBeEquivalentTo(HttpMethod.Post);
+        handler.Requests[2].ContentType.Should().StartWith("text/plain");
+    }
+
+    private static HttpResponseMessage Redirect(HttpStatusCode status, string location)
+    {
+        var response = new HttpResponseMessage(status);
+        response.Headers.Location = new Uri(location, UriKind.RelativeOrAbsolute);
+        return response;
+    }
+
+    private sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? Body, string? ContentType, string? Authorization, string? Cookie);
+
+    private sealed class ScriptedHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        public List<RecordedRequest> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string? body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+            Requests.Add(new RecordedRequest(
+                request.Method,
+                request.RequestUri!,
+                body,
+                request.Content?.Headers.ContentType?.ToString(),
+                request.Headers.Authorization?.ToString(),
+                request.Headers.TryGetValues("Cookie", out IEnumerable<string>? cookies) ? string.Join("; ", cookies) : null));
+            return respond(request);
+        }
+    }
+
     private sealed record TestDto(int Id, string Name);
 
     private sealed class TrackingContent : HttpContent

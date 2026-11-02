@@ -124,7 +124,7 @@ public static class HttpClientRedirectExtensions
         if (request.Content is null)
             return clone;
 
-        clone.Content = new StreamContent(await request.Content.ReadAsStreamAsync().ConfigureAwait(false));
+        clone.Content = new ByteArrayContent(await request.Content.ReadAsByteArrayAsync().ConfigureAwait(false));
 
         foreach (KeyValuePair<string, IEnumerable<string>> contentHeader in request.Content.Headers)
             clone.Content.Headers.TryAddWithoutValidation(contentHeader.Key, contentHeader.Value);
