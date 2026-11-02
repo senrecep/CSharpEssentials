@@ -11,7 +11,8 @@ internal static class DecoratorActivator
     public static Func<object, IServiceProvider, object> Create(
         [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] Type decoratorType,
         Type serviceType,
-        object? serviceKey)
+        object? serviceKey,
+        string? missingConstructorHint = null)
     {
         if (decoratorType.IsAbstract || decoratorType.IsInterface)
         {
@@ -27,7 +28,8 @@ internal static class DecoratorActivator
         if (constructors.Length != 1)
         {
             throw new InvalidOperationException(
-                $"Decorator '{decoratorType.FullName}' must have exactly one public constructor, but has {constructors.Length}.");
+                $"Decorator '{decoratorType.FullName}' must have exactly one public constructor, but has {constructors.Length}." +
+                (constructors.Length == 0 && missingConstructorHint is not null ? " " + missingConstructorHint : string.Empty));
         }
 
         ConstructorInfo constructor = constructors[0];

@@ -115,7 +115,7 @@ services.AddServicesFromAssemblies(typeof(Program).Assembly);
 services.AddServicesFromAssemblies(logger, typeof(Program).Assembly); // warns on unloadable types, logs duplicates at Debug
 ```
 
-The fallback uses reflection, so it is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Use the generated `Add{Assembly}Services()` method for trimmed and Native AOT applications.
+The fallback uses reflection, so it is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Use the generated `Add{Assembly}Services()` method for trimmed and Native AOT applications. Trimming can remove constructors that only the fallback uses; a decorator left without a public constructor then fails with an error that names trimming and these alternatives. `Decorate<TService, TDecorator>()` keeps the decorator constructor through its annotation, so it also works in trimmed apps.
 
 ## Testing for duplicate registrations
 
