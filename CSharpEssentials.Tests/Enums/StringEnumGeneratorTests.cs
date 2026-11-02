@@ -318,6 +318,33 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void Flags_ToOptimizedString_Should_Match_Enum_ToString()
+    {
+        AssertFlagsText(Range(0, 255).Select(static r => (GeneratedPermissions)(byte)r), static v => v.ToOptimizedString(),
+            static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(0, 1023).Select(static r => (GeneratedWidePermissions)(int)r).Concat([(GeneratedWidePermissions)(-1), (GeneratedWidePermissions)int.MinValue]),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(0, 40).Select(static r => (GeneratedFlagsNoZero)(uint)r).Concat([(GeneratedFlagsNoZero)uint.MaxValue]),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(new ulong[] { 0, 1, 2, 3, 4, 1UL << 63, (1UL << 63) | 1, (1UL << 63) | 2, ulong.MaxValue }.Select(static r => (GeneratedHugeFlags)r),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(0, 16).Select(static r => (GeneratedFlagsDuplicate)(int)r).Where(static v => !Enum.IsDefined(v)), static v => v.ToOptimizedString(),
+            static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(-2, 20).Select(static r => (GeneratedSignBit)(int)r).Concat([(GeneratedSignBit)int.MinValue, (GeneratedSignBit)(int.MinValue | 5)]),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+    }
+
+    [Fact]
+    public void Flags_ToOptimizedString_Should_Use_Composite_Members_Like_Enum_ToString()
+    {
+        (GeneratedPermissions.Read | GeneratedPermissions.Write | GeneratedPermissions.Delete).ToOptimizedString().Should().Be("ReadWrite, Delete");
+        (GeneratedPermissions.Write | GeneratedPermissions.Delete).ToOptimizedString().Should().Be("Write, Delete");
+        ((GeneratedPermissions)8).ToOptimizedString().Should().Be("8");
+        ((GeneratedPermissions)9).ToOptimizedString().Should().Be("9");
+        ((GeneratedFlagsNoZero)0).ToOptimizedString().Should().Be("0");
+    }
+
+    [Fact]
     public void ToDescription_Should_Return_The_Description_Of_The_First_Member_With_The_Value()
     {
         GeneratedAttributes.Pending.ToDescription().Should().Be("Waiting for work");
@@ -407,6 +434,18 @@ public class StringEnumGeneratorTests
         optimized(value).Should().Be(expected);
         lower(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToLower(expected));
         upper(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToUpper(expected));
+    }
+
+    private static void AssertFlagsText<T>(IEnumerable<T> values, Func<T, string> optimized, Func<T, string> lower, Func<T, string> upper)
+        where T : struct, Enum
+    {
+        foreach (T value in values)
+        {
+            string expected = value.ToString();
+            optimized(value).Should().Be(expected, "{0}", expected);
+            lower(value).Should().Be(expected.ToLowerInvariant(), "{0}", expected);
+            upper(value).Should().Be(expected.ToUpperInvariant(), "{0}", expected);
+        }
     }
 
     private static IEnumerable<long> Range(long from, long to)
@@ -607,6 +646,53 @@ internal enum GeneratedSignBit
     One = 1,
     Four = 4,
     Sign = int.MinValue,
+}
+
+[StringEnum, Flags]
+[SuppressMessage("Usage", "CSE0007", Justification = "Fixture for composites over bits without a single flag member.")]
+internal enum GeneratedWidePermissions
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Execute = 4,
+    Delete = 8,
+    Share = 16,
+    Archive = 32,
+    Audit = 64,
+    Admin = 128,
+    ReadWrite = Read | Write,
+    Owner = 256 | 512,
+    Everything = Admin | Audit | Archive | Share | Delete | Execute | ReadWrite,
+}
+
+[StringEnum, Flags]
+[SuppressMessage("Usage", "CSE0006", Justification = "Fixture for formatting zero without a zero member.")]
+internal enum GeneratedFlagsNoZero : uint
+{
+    One = 1,
+    Two = 2,
+    Eight = 8,
+    Top = 0x80000000,
+}
+
+[StringEnum, Flags]
+internal enum GeneratedHugeFlags : ulong
+{
+    None = 0,
+    Low = 1,
+    Next = 2,
+    Top = 1UL << 63,
+}
+
+[StringEnum, Flags]
+internal enum GeneratedFlagsDuplicate
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Modify = 2,
+    Delete = 4,
 }
 
 [StringEnum]

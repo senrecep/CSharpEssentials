@@ -61,13 +61,17 @@ internal static class StringEnumSourceWriter
         if (modern)
             WriteWireHelpers(w, model, distinct, members, wireNames, nullableString);
 
-        string numeric = model.IsFlags ? "value.ToString()" : "((" + model.UnderlyingType + ")value).ToString()";
+        EnumMemberModel[]? flags = modern && model.IsFlags ? FlagCandidates(model, members) : null;
+        string flagsText = flags is null ? "value.ToString()" : "__FormatFlags(value)";
+        string numeric = model.IsFlags ? flagsText : "((" + model.UnderlyingType + ")value).ToString()";
         WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), numeric);
         WriteSwitch(w, model, distinct, "ToSnakeCase", modern ? "Use ToWireName()" : null, static m => Literal(EnumWireNaming.ToLegacySnakeCase(m.Name)), "ToSnakeCaseFallback(value.ToOptimizedString())");
         WriteSwitch(w, model, distinct, "ToKebabCase", null, static m => Literal(EnumWireNaming.ToLegacyKebabCase(m.Name)), "ToKebabCaseFallback(value.ToOptimizedString())");
-        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(m.Name) + ".ToLowerInvariant()", model.IsFlags ? "value.ToString().ToLowerInvariant()" : numeric);
-        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name) + ".ToUpperInvariant()", model.IsFlags ? "value.ToString().ToUpperInvariant()" : numeric);
+        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(m.Name) + ".ToLowerInvariant()", model.IsFlags ? flagsText + ".ToLowerInvariant()" : numeric);
+        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name) + ".ToUpperInvariant()", model.IsFlags ? flagsText + ".ToUpperInvariant()" : numeric);
         WriteLegacyLookups(w, model, members, nullableString, modern);
+        if (flags is not null)
+            WriteFlagsFormatter(w, model, flags);
         WriteFallbackHelpers(w);
 
         w.Close();
@@ -434,6 +438,77 @@ internal static class StringEnumSourceWriter
         w.Open();
         w.Line("return (" + model.UnderlyingType + ")value;");
         w.Close();
+        w.Line();
+    }
+
+    /// <summary>
+    /// The non-zero members in ascending unsigned order, which is the order <c>Enum.ToString()</c> joins flag names in; null when
+    /// the formatter would not match it (two members share a value, a signed member is negative, or more than 64 candidates).
+    /// </summary>
+    private static EnumMemberModel[]? FlagCandidates(EnumModel model, EnumMemberModel[] members)
+    {
+        EnumMemberModel[] candidates = [.. members.Where(static m => m.RawValue != 0).OrderBy(static m => m.RawValue)];
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (i > 0 && candidates[i].RawValue == candidates[i - 1].RawValue || model.IsSigned && unchecked((long)candidates[i].RawValue) < 0)
+                return null;
+        }
+
+        return candidates.Length <= 64 ? candidates : null;
+    }
+
+    /// <summary>
+    /// Writes <c>__FormatFlags</c>, the <c>Enum.ToString()</c> text of a value that is not a declared member: flags are taken
+    /// greedily from the largest value down, a value with bits left over (or zero) is left to <c>Enum.ToString()</c>, and the names
+    /// are joined in ascending order with <c>", "</c> into a string of the exact length.
+    /// </summary>
+    private static void WriteFlagsFormatter(Writer w, EnumModel model, EnumMemberModel[] flags)
+    {
+        string type = model.FullyQualifiedName;
+        w.Line("#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER");
+        w.Line("private static readonly string[] __flagNames = new string[] { " + string.Join(", ", flags.Select(static m => Literal(m.Name))) + " };");
+        w.Line();
+        w.Line("private static string __FormatFlags(" + type + " value)");
+        w.Open();
+        w.Line("ulong remaining = unchecked((ulong)(long)value);");
+        w.Line("ulong found = 0UL;");
+        w.Line("int length = -2;");
+        for (int i = flags.Length - 1; i >= 0; i--)
+        {
+            string bits = "0x" + flags[i].RawValue.ToString("X", CultureInfo.InvariantCulture) + "UL";
+            w.Line("if ((remaining & " + bits + ") == " + bits + ")");
+            w.Open();
+            w.Line("remaining &= ~" + bits + ";");
+            w.Line("found |= 0x" + (1UL << i).ToString("X", CultureInfo.InvariantCulture) + "UL;");
+            w.Line("length += " + (flags[i].Name.Length + 2).ToString(CultureInfo.InvariantCulture) + ";");
+            w.Close();
+        }
+
+        w.Line();
+        w.Line("if (remaining != 0UL || found == 0UL)");
+        w.Line("    return value.ToString();");
+        w.Line("return string.Create(length, found, static (span, set) =>");
+        w.Open();
+        w.Line("int position = 0;");
+        w.Line("for (int i = 0; set != 0UL; i++, set >>= 1)");
+        w.Open();
+        w.Line("if ((set & 1UL) == 0UL)");
+        w.Line("    continue;");
+        w.Line("if (position != 0)");
+        w.Open();
+        w.Line("span[position++] = ',';");
+        w.Line("span[position++] = ' ';");
+        w.Close();
+        w.Line();
+        w.Line("string name = __flagNames[i];");
+        w.Line("name.AsSpan().CopyTo(span.Slice(position));");
+        w.Line("position += name.Length;");
+        w.Close();
+        w.Close(");");
+        w.Close();
+        w.Line("#else");
+        w.Line("private static string __FormatFlags(" + type + " value) => value.ToString();");
+        w.Line("#endif");
         w.Line();
     }
 

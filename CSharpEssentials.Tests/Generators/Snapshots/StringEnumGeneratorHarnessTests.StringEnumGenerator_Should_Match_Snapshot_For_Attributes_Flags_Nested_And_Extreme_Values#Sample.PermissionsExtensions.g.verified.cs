@@ -85,7 +85,7 @@ namespace Sample
                 case global::Sample.Permissions.ReadWrite:
                     return "ReadWrite";
                 default:
-                    return value.ToString();
+                    return __FormatFlags(value);
             }
         }
 
@@ -137,7 +137,7 @@ namespace Sample
                 case global::Sample.Permissions.ReadWrite:
                     return "ReadWrite".ToLowerInvariant();
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return __FormatFlags(value).ToLowerInvariant();
             }
         }
 
@@ -154,7 +154,7 @@ namespace Sample
                 case global::Sample.Permissions.ReadWrite:
                     return "ReadWrite".ToUpperInvariant();
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return __FormatFlags(value).ToUpperInvariant();
             }
         }
 
@@ -237,6 +237,58 @@ namespace Sample
         {
             return (byte)value;
         }
+
+        #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        private static readonly string[] __flagNames = new string[] { "Read", "Write", "ReadWrite" };
+
+        private static string __FormatFlags(global::Sample.Permissions value)
+        {
+            ulong remaining = unchecked((ulong)(long)value);
+            ulong found = 0UL;
+            int length = -2;
+            if ((remaining & 0x3UL) == 0x3UL)
+            {
+                remaining &= ~0x3UL;
+                found |= 0x4UL;
+                length += 11;
+            }
+            if ((remaining & 0x2UL) == 0x2UL)
+            {
+                remaining &= ~0x2UL;
+                found |= 0x2UL;
+                length += 7;
+            }
+            if ((remaining & 0x1UL) == 0x1UL)
+            {
+                remaining &= ~0x1UL;
+                found |= 0x1UL;
+                length += 6;
+            }
+
+            if (remaining != 0UL || found == 0UL)
+                return value.ToString();
+            return string.Create(length, found, static (span, set) =>
+            {
+                int position = 0;
+                for (int i = 0; set != 0UL; i++, set >>= 1)
+                {
+                    if ((set & 1UL) == 0UL)
+                        continue;
+                    if (position != 0)
+                    {
+                        span[position++] = ',';
+                        span[position++] = ' ';
+                    }
+
+                    string name = __flagNames[i];
+                    name.AsSpan().CopyTo(span.Slice(position));
+                    position += name.Length;
+                }
+            });
+        }
+        #else
+        private static string __FormatFlags(global::Sample.Permissions value) => value.ToString();
+        #endif
 
         private static string ToSnakeCaseFallback(string input)
         {
