@@ -342,7 +342,7 @@ public class ServiceRegistrationGeneratorTests
     }
 
     [Fact]
-    public void Generator_Should_Verify_Only_Same_Compilation_Types_Without_ServiceKey_Constructors()
+    public void Generator_Should_Verify_Only_Same_Compilation_NonPartial_Types_Without_ServiceKey_Constructors()
     {
         const string source = """
             using CSharpEssentials.DependencyInjection;
@@ -385,6 +385,9 @@ public class ServiceRegistrationGeneratorTests
                     private HiddenKeyGreeter([ServiceKey] string key) { }
                 }
 
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed partial class PartialGreeter : IGreeter;
+
                 [RegisterScoped(typeof(IGreeter), Key = "other")]
                 public sealed class OtherKeyGreeter : IGreeter;
 
@@ -416,7 +419,8 @@ public class ServiceRegistrationGeneratorTests
         registry.Should().Contain(
                 "private static readonly global::System.Type[] VerifiedImplementations0 = new global::System.Type[] { " +
                 "typeof(global::Sample.HiddenKeyGreeter), typeof(global::Sample.PlainGreeter), typeof(global::Sample.TwoConstructorGreeter) };")
-            .And.NotContain("VerifiedImplementations1");
+            .And.NotContain("VerifiedImplementations1")
+            .And.NotContain("typeof(global::Sample.PartialGreeter) }");
         CountOccurrences(registry, "VerifiedImplementations0);").Should().Be(2);
         CountOccurrences(registry, "global::System.Array.Empty<global::System.Type>());").Should().Be(2);
     }

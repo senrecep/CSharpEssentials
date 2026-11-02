@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CSharpEssentials.DependencyInjection.Generators;
 
@@ -129,10 +131,14 @@ internal static class ServiceTypeInspector
             lifetime,
             ReadKey(attribute),
             strategy is { IsNull: false } value ? ConstantFormatter.Format(value) : DefaultStrategy,
-            !type.IsGenericType && !InjectsServiceKey(type),
+            !type.IsGenericType && !IsPartial(type) && !InjectsServiceKey(type),
             new EquatableArray<ServiceModel>(models));
         registrations.Add(new InspectedRegistration(model, attribute));
     }
+
+    private static bool IsPartial(INamedTypeSymbol type) =>
+        type.DeclaringSyntaxReferences.Any(static reference =>
+            reference.GetSyntax() is TypeDeclarationSyntax declaration && declaration.Modifiers.Any(SyntaxKind.PartialKeyword));
 
     private static bool InjectsServiceKey(INamedTypeSymbol type) =>
         type.InstanceConstructors
