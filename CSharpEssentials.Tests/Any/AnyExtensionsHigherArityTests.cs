@@ -596,4 +596,143 @@ public class AnyExtensionsHigherArityTests
     }
 
     #endregion
+
+    #region Middle positions
+
+    [Fact]
+    public void Deconstruct_AnyT4_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double> third = true;
+        (int a, string? b, bool c, double d) = third;
+
+        (a, b, c, d).Should().Be((0, (string?)null, true, 0d));
+    }
+
+    [Fact]
+    public void ToTuple_AnyT4_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double> third = true;
+
+        third.ToTuple().Should().Be((0, (string?)null, true, 0d));
+    }
+
+    [Fact]
+    public void Deconstruct_AnyT5_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long> third = true;
+        Any<int, string, bool, double, long> fourth = 2.5;
+        (int a3, string? b3, bool c3, double d3, long e3) = third;
+        (int a4, string? b4, bool c4, double d4, long e4) = fourth;
+
+        (a3, b3, c3, d3, e3).Should().Be((0, (string?)null, true, 0d, 0L));
+        (a4, b4, c4, d4, e4).Should().Be((0, (string?)null, false, 2.5, 0L));
+    }
+
+    [Fact]
+    public void ToTuple_AnyT5_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long> third = true;
+        Any<int, string, bool, double, long> fourth = 2.5;
+
+        third.ToTuple().Should().Be((0, (string?)null, true, 0d, 0L));
+        fourth.ToTuple().Should().Be((0, (string?)null, false, 2.5, 0L));
+    }
+
+    [Fact]
+    public void Deconstruct_AnyT6_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long, decimal> third = true;
+        Any<int, string, bool, double, long, decimal> fourth = 2.5;
+        Any<int, string, bool, double, long, decimal> fifth = 7L;
+        (int a3, string? b3, bool c3, double d3, long e3, decimal f3) = third;
+        (int a4, string? b4, bool c4, double d4, long e4, decimal f4) = fourth;
+        (int a5, string? b5, bool c5, double d5, long e5, decimal f5) = fifth;
+
+        (a3, b3, c3, d3, e3, f3).Should().Be((0, (string?)null, true, 0d, 0L, 0m));
+        (a4, b4, c4, d4, e4, f4).Should().Be((0, (string?)null, false, 2.5, 0L, 0m));
+        (a5, b5, c5, d5, e5, f5).Should().Be((0, (string?)null, false, 0d, 7L, 0m));
+    }
+
+    [Fact]
+    public void ToTuple_AnyT6_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long, decimal> third = true;
+        Any<int, string, bool, double, long, decimal> fourth = 2.5;
+        Any<int, string, bool, double, long, decimal> fifth = 7L;
+
+        third.ToTuple().Should().Be((0, (string?)null, true, 0d, 0L, 0m));
+        fourth.ToTuple().Should().Be((0, (string?)null, false, 2.5, 0L, 0m));
+        fifth.ToTuple().Should().Be((0, (string?)null, false, 0d, 7L, 0m));
+    }
+
+    [Fact]
+    public void Deconstruct_AnyT7_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long, decimal, Guid> third = true;
+        Any<int, string, bool, double, long, decimal, Guid> fourth = 2.5;
+        Any<int, string, bool, double, long, decimal, Guid> fifth = 7L;
+        Any<int, string, bool, double, long, decimal, Guid> sixth = 9.9m;
+        (int a3, string? b3, bool c3, double d3, long e3, decimal f3, Guid g3) = third;
+        (int a4, string? b4, bool c4, double d4, long e4, decimal f4, Guid g4) = fourth;
+        (int a5, string? b5, bool c5, double d5, long e5, decimal f5, Guid g5) = fifth;
+        (int a6, string? b6, bool c6, double d6, long e6, decimal f6, Guid g6) = sixth;
+
+        (a3, b3, c3, d3, e3, f3, g3).Should().Be((0, (string?)null, true, 0d, 0L, 0m, Guid.Empty));
+        (a4, b4, c4, d4, e4, f4, g4).Should().Be((0, (string?)null, false, 2.5, 0L, 0m, Guid.Empty));
+        (a5, b5, c5, d5, e5, f5, g5).Should().Be((0, (string?)null, false, 0d, 7L, 0m, Guid.Empty));
+        (a6, b6, c6, d6, e6, f6, g6).Should().Be((0, (string?)null, false, 0d, 0L, 9.9m, Guid.Empty));
+    }
+
+    [Fact]
+    public void ToTuple_AnyT7_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long, decimal, Guid> third = true;
+        Any<int, string, bool, double, long, decimal, Guid> fourth = 2.5;
+        Any<int, string, bool, double, long, decimal, Guid> fifth = 7L;
+        Any<int, string, bool, double, long, decimal, Guid> sixth = 9.9m;
+
+        third.ToTuple().Should().Be((0, (string?)null, true, 0d, 0L, 0m, Guid.Empty));
+        fourth.ToTuple().Should().Be((0, (string?)null, false, 2.5, 0L, 0m, Guid.Empty));
+        fifth.ToTuple().Should().Be((0, (string?)null, false, 0d, 7L, 0m, Guid.Empty));
+        sixth.ToTuple().Should().Be((0, (string?)null, false, 0d, 0L, 9.9m, Guid.Empty));
+    }
+
+    [Fact]
+    public void Deconstruct_AnyT8_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long, decimal, Guid, char> third = true;
+        Any<int, string, bool, double, long, decimal, Guid, char> fourth = 2.5;
+        Any<int, string, bool, double, long, decimal, Guid, char> fifth = 7L;
+        Any<int, string, bool, double, long, decimal, Guid, char> sixth = 9.9m;
+        Any<int, string, bool, double, long, decimal, Guid, char> seventh = SampleGuid;
+        (int a3, string? b3, bool c3, double d3, long e3, decimal f3, Guid g3, char h3) = third;
+        (int a4, string? b4, bool c4, double d4, long e4, decimal f4, Guid g4, char h4) = fourth;
+        (int a5, string? b5, bool c5, double d5, long e5, decimal f5, Guid g5, char h5) = fifth;
+        (int a6, string? b6, bool c6, double d6, long e6, decimal f6, Guid g6, char h6) = sixth;
+        (int a7, string? b7, bool c7, double d7, long e7, decimal f7, Guid g7, char h7) = seventh;
+
+        (a3, b3, c3, d3, e3, f3, g3, h3).Should().Be((0, (string?)null, true, 0d, 0L, 0m, Guid.Empty, '\0'));
+        (a4, b4, c4, d4, e4, f4, g4, h4).Should().Be((0, (string?)null, false, 2.5, 0L, 0m, Guid.Empty, '\0'));
+        (a5, b5, c5, d5, e5, f5, g5, h5).Should().Be((0, (string?)null, false, 0d, 7L, 0m, Guid.Empty, '\0'));
+        (a6, b6, c6, d6, e6, f6, g6, h6).Should().Be((0, (string?)null, false, 0d, 0L, 9.9m, Guid.Empty, '\0'));
+        (a7, b7, c7, d7, e7, f7, g7, h7).Should().Be((0, (string?)null, false, 0d, 0L, 0m, SampleGuid, '\0'));
+    }
+
+    [Fact]
+    public void ToTuple_AnyT8_MiddlePositions_ShouldReturnOnlyThatPosition()
+    {
+        Any<int, string, bool, double, long, decimal, Guid, char> third = true;
+        Any<int, string, bool, double, long, decimal, Guid, char> fourth = 2.5;
+        Any<int, string, bool, double, long, decimal, Guid, char> fifth = 7L;
+        Any<int, string, bool, double, long, decimal, Guid, char> sixth = 9.9m;
+        Any<int, string, bool, double, long, decimal, Guid, char> seventh = SampleGuid;
+
+        third.ToTuple().Should().Be((0, (string?)null, true, 0d, 0L, 0m, Guid.Empty, '\0'));
+        fourth.ToTuple().Should().Be((0, (string?)null, false, 2.5, 0L, 0m, Guid.Empty, '\0'));
+        fifth.ToTuple().Should().Be((0, (string?)null, false, 0d, 7L, 0m, Guid.Empty, '\0'));
+        sixth.ToTuple().Should().Be((0, (string?)null, false, 0d, 0L, 9.9m, Guid.Empty, '\0'));
+        seventh.ToTuple().Should().Be((0, (string?)null, false, 0d, 0L, 0m, SampleGuid, '\0'));
+    }
+
+    #endregion
 }
