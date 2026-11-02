@@ -342,6 +342,23 @@ public class EndpointsGeneratorTests
         EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs").Should().NotContain("SampleHostEndpointRegistry");
     }
 
+    [Theory]
+    [InlineData("SystemMonitor.Api", "SystemMonitorApiEndpointRegistry")]
+    [InlineData("MicrosoftGraphClient", "MicrosoftGraphClientEndpointRegistry")]
+    public void Generator_Should_Map_Referenced_Registry_When_Assembly_Name_Starts_With_Framework_Prefix(string assemblyName, string registry)
+    {
+        CSharpCompilation api = Compile(assemblyName, OutputKind.DynamicallyLinkedLibrary, LibrarySource);
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [api.ToMetadataReference()],
+            HostSource));
+
+        ShouldCompile(run);
+        EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs").Should().Contain($"{registry}.MapEndpoints(app, options);");
+    }
+
     [Fact]
     public void Generator_Should_Ignore_Referenced_Assemblies_Without_Endpoints_Reference()
     {
