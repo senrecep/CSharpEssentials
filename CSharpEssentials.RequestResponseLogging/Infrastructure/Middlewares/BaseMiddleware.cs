@@ -120,7 +120,7 @@ internal abstract class BaseMiddleware
             }
         }
 
-        return CreateAndLogContext(httpContext, requestText, responseText, executionTime);
+        return await CreateAndLogContext(httpContext, requestText, responseText, executionTime).ConfigureAwait(false);
     }
 
     private static (bool IsSkipRequestLogging, bool IsSkipResponseLogging) GetLoggingConfiguration(HttpContext context)
@@ -285,7 +285,7 @@ internal abstract class BaseMiddleware
         return responseText;
     }
 
-    private RequestResponseContext CreateAndLogContext(
+    private async Task<RequestResponseContext> CreateAndLogContext(
         HttpContext httpContext,
         string requestText,
         string responseText,
@@ -300,7 +300,8 @@ internal abstract class BaseMiddleware
 
         try
         {
-            _logWriter?.Write(context);
+            if (_logWriter is not null)
+                await _logWriter.Write(context).ConfigureAwait(false);
         }
         catch (Exception ex) when (_shouldLogErrors)
         {

@@ -1,5 +1,6 @@
 using System.IO.Pipelines;
 using CSharpEssentials.RequestResponseLogging;
+using CSharpEssentials.RequestResponseLogging.Infrastructure.Interfaces;
 using CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
 using CSharpEssentials.RequestResponseLogging.LogWriters;
 using FluentAssertions;
@@ -357,6 +358,36 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         content.Headers.ContentLength.Should().BeNull();
         capturedContext!.RequestBody.Should().StartWith("Request body too large");
         bytesSeenByEndpoint.Should().Be(bodySize);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_ReportWriteError_When_LogWriterFailsAsynchronously()
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => Task.CompletedTask,
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new AsyncThrowingLogWriter(),
+            []);
+
+        await middleware.InvokeAsync(new DefaultHttpContext());
+
+        capturedContext!.ResponseBody.Should().Be("Error writing log: writer failed");
+    }
+
+    private sealed class AsyncThrowingLogWriter : ILogWriter
+    {
+        public IMessageCreator? MessageCreator => null;
+
+        public async Task Write(RequestResponseContext requestResponseContext)
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("writer failed");
+        }
     }
 
     private sealed class ThrowOnceStream(byte[] content, long throwAtPosition) : MemoryStream(content)
