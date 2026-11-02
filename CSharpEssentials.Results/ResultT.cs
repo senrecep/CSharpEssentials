@@ -15,7 +15,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IFailure
     private Result(bool isSuccess, TValue? value = default, Error[]? errorsOrEmptyArray = null)
     {
         _value = isSuccess ? value : default;
-        _errors = !isSuccess ? errorsOrEmptyArray : null;
+        _errors = !isSuccess ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : null;
     }
     private Result(TValue value)
     {

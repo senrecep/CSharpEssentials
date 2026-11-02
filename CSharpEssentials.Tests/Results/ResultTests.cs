@@ -214,5 +214,23 @@ public class ResultTests
     }
 
     #endregion
-}
 
+    [Theory]
+    [InlineData("{\"IsFailure\":true}")]
+    [InlineData("{\"IsFailure\":true,\"errors\":null}")]
+    [InlineData("{\"IsFailure\":true,\"errors\":[]}")]
+    public void JsonDeserialization_Should_Throw_When_FailureHasNoErrors(string json)
+    {
+        Action act = () => JsonSerializer.Deserialize<Result>(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void JsonDeserialization_Should_ReturnSuccess_When_FailureFlagIsFalse()
+    {
+        Result deserialized = JsonSerializer.Deserialize<Result>("{\"IsFailure\":false,\"errors\":[]}");
+
+        deserialized.IsSuccess.Should().BeTrue();
+    }
+}

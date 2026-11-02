@@ -224,4 +224,23 @@ public class ResultTTests
 
         act.Should().NotThrow();
     }
+
+    [Theory]
+    [InlineData("{\"IsSuccess\":false}")]
+    [InlineData("{\"IsSuccess\":false,\"errors\":null}")]
+    [InlineData("{\"IsSuccess\":false,\"errors\":[]}")]
+    public void JsonDeserialization_Should_Throw_When_FailureHasNoErrors(string json)
+    {
+        Action act = () => JsonSerializer.Deserialize<Result<int>>(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void JsonSerialization_Success_Should_WriteIsSuccessFlag()
+    {
+        string json = JsonSerializer.Serialize(42.ToResult());
+
+        json.Should().Contain("\"IsSuccess\":true");
+    }
 }

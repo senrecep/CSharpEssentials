@@ -362,3 +362,11 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 // Works on Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
+
+## Upgrade notes
+
+### Deserializing a failure without errors
+
+A failed result must carry at least one error, and deserialization now enforces that. JSON with `"IsFailure": true` (for `Result`) or `"IsSuccess": false` (for `Result<T>`) and a missing, `null` or empty `errors` array throws `JsonException`. Earlier versions read `{"IsFailure":true}` as a success and `"errors":[]` as a failure whose `FirstError` and `ToString()` threw.
+
+Payloads written by this library already include the flag and the errors. Check hand-written or third-party payloads: a `Result<T>` success must include `"IsSuccess": true`, because a missing flag reads as `false`, and every failure needs at least one error.
