@@ -40,6 +40,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+    <InternalsVisibleTo Include="CSharpEssentials.Enums.Net8.Tests" />
   </ItemGroup>
 
   <Import Project="..\build\PackGenerator.targets" />
