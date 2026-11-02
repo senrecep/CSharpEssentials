@@ -159,7 +159,7 @@ public static class StringEnumNaming
             {
                 string token = part.Trim();
                 if (token.Length == 0 || !allowIntegerValues && IsNumber(token) ||
-                    !info.TryParse(token, EnumReadMode.Data, ReadConventions, out TEnum parsed, out _))
+                    !info.TryParse(token, EnumReadMode.Data, ReadConventions, out TEnum parsed))
                     return null;
                 raw |= info.ToRawValue(parsed);
             }

@@ -150,7 +150,7 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         {
             int comma = text[start..].IndexOf(',');
             int end = comma < 0 ? text.Length : start + comma;
-            if (!info.TryParse(text[start..end].Trim(), mode, conventions, out TEnum flag, out _))
+            if (!info.TryParse(text[start..end].Trim(), mode, conventions, out TEnum flag))
                 throw new EnumValueJsonException(info.CreateError(text.ToString(), mode));
             raw |= info.ToRawValue(flag);
             start = end + 1;
