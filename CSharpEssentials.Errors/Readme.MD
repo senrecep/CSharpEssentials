@@ -47,7 +47,7 @@ Error withMeta = Error.NotFound(
         .AddMetadata("RequestPath", "/api/users/123"));
 ```
 
-`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts.
+`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts. `exception` holds a nested `ErrorMetadata` with the `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException` keys, so the metadata stays serializable with System.Text.Json.
 
 ### Combining Errors
 
@@ -170,3 +170,7 @@ public Result PlaceOrder(Cart cart, decimal balance)
 ```
 
 This pattern provides discoverability (IDE autocomplete per domain), type-safe error codes, and centralised descriptions, all without inheritance.
+
+## Upgrading to 8.0
+
+`ErrorMetadata.CreateWithException` and `AddException` no longer store the `Exception` object under `exception`. They store a nested `ErrorMetadata` with `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException`, because System.Text.Json cannot serialize a thrown exception. Code that cast `metadata["exception"]` to `Exception` should read the nested keys instead, or keep the exception in its own variable.

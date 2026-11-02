@@ -16,7 +16,7 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
     public static ErrorMetadata CreateEmpty() => [];
     public static ErrorMetadata CreateWithStackTrace() => new("stackTrace", Environment.StackTrace);
-    public static ErrorMetadata CreateWithException(Exception ex) => new("exception", ex);
+    public static ErrorMetadata CreateWithException(Exception ex) => new("exception", CreateWithExceptionDetailed(ex));
     public static ErrorMetadata CreateWithExceptionDetailed(Exception exception)
     {
         var metadata = new ErrorMetadata()
@@ -46,7 +46,7 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
     public ErrorMetadata AddException(Exception ex)
     {
-        TryAdd("exception", ex);
+        TryAdd("exception", CreateWithExceptionDetailed(ex));
         return this;
     }
 

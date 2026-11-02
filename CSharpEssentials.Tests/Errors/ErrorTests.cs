@@ -223,6 +223,30 @@ public class ErrorTests
         deserialized.Type.Should().Be(error.Type);
     }
 
+    [Fact]
+    public void JsonSerialization_WithThrownExceptionMetadata_ShouldWriteExceptionDetails()
+    {
+        Exception exception;
+        try
+        {
+            throw new InvalidOperationException("Boom");
+        }
+        catch (InvalidOperationException caught)
+        {
+            exception = caught;
+        }
+
+        var error = Error.Failure("C", "D", ErrorMetadata.CreateWithException(exception));
+        var added = Error.Failure("C", "D", new ErrorMetadata().AddException(exception));
+
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(error));
+        JsonElement written = json.RootElement.GetProperty("Metadata").GetProperty("exception");
+        written.GetProperty("exceptionType").GetString().Should().Be("InvalidOperationException");
+        written.GetProperty("exceptionMessage").GetString().Should().Be("Boom");
+        Action serializeAdded = () => JsonSerializer.Serialize(added);
+        serializeAdded.Should().NotThrow();
+    }
+
     #endregion
 }
 
