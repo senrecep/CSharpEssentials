@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 
 namespace CSharpEssentials.Http;
 
@@ -35,6 +36,9 @@ internal static class HttpRedirectRules
         request.Headers.Remove(CookieHeader);
     }
 
-    private static bool IsSameOrigin(Uri first, Uri second) =>
+    internal static bool HasCredentials(HttpHeaders headers) =>
+        headers.Contains("Authorization") || headers.Contains("Proxy-Authorization") || headers.Contains(CookieHeader);
+
+    internal static bool IsSameOrigin(Uri first, Uri second) =>
         Uri.Compare(first, second, UriComponents.SchemeAndServer, UriFormat.UriEscaped, StringComparison.OrdinalIgnoreCase) == 0;
 }

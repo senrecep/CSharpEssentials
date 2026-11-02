@@ -290,6 +290,43 @@ public class HttpClientRedirectExtensionsTests
         second.Cookie.Should().Be(sameOrigin ? "session=1" : null);
     }
 
+    [Theory]
+    [InlineData("Authorization", "Bearer token")]
+    [InlineData("Proxy-Authorization", "Basic cHJveHk=")]
+    [InlineData("Cookie", "session=1")]
+    public async Task SendWithRedirectsAsResultAsync_Should_Refuse_Cross_Origin_Redirect_When_Default_Headers_Carry_Credentials(string header, string value)
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/x"
+            ? Redirect(HttpStatusCode.Found, "https://b.test/y")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.TryAddWithoutValidation(header, value);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://a.test/x"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Http.CrossOriginRedirect");
+        result.FirstError.Type.Should().Be(ErrorType.Forbidden);
+        handler.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_Should_Keep_Default_Authorization_On_Same_Origin_Redirect()
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/x"
+            ? Redirect(HttpStatusCode.Found, "/y")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "token");
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://a.test/x"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        handler.Requests[1].Authorization.Should().Be("Bearer token");
+    }
+
     private static HttpResponseMessage Redirect(HttpStatusCode status, string location)
     {
         var response = new HttpResponseMessage(status);

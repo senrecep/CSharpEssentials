@@ -104,6 +104,15 @@ public static class HttpClientRedirectExtensions
                 ? redirectUri
                 : new Uri(previousUri, redirectUri);
 
+            if (previousUri is not null
+                && !HttpRedirectRules.IsSameOrigin(previousUri, target)
+                && HttpRedirectRules.HasCredentials(client.DefaultRequestHeaders))
+            {
+                return Error.Forbidden(
+                    "Http.CrossOriginRedirect",
+                    $"Redirect to another origin refused because HttpClient.DefaultRequestHeaders carries credentials. Target URI: {target}");
+            }
+
             HttpRequestMessage newRequest = await CloneHttpRequestMessageAsync(currentRequest, response.StatusCode).ConfigureAwait(false);
             newRequest.RequestUri = target;
             if (previousUri is not null)
