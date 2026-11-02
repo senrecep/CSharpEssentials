@@ -29,7 +29,7 @@ public sealed class EnumToFormattedStringConverter<TEnum> : ValueConverter<TEnum
 
     private static TEnum Read(string value)
     {
-        if (!IsNumber(value) && EnumMetadata.Get<TEnum>().TryParse(value, EnumReadMode.Data, ReadConventions, out TEnum result, out _))
+        if (!IsNumber(value) && EnumMetadata.Get<TEnum>().TryParse(value, EnumReadMode.Data, ReadConventions, out TEnum result))
             return result;
 
         foreach (TEnum member in Enum.GetValues<TEnum>())
