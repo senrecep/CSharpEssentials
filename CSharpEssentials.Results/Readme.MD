@@ -91,6 +91,8 @@ var (isSuccess, value2, errors) = result;   // Result<T>; Result deconstructs to
 
 `Value` is `default` on a failure. `Errors`, `FirstError` and `LastError` on a success return the sentinel errors `Error.NoErrors`, `Error.NoFirstError` and `Error.NoLastError`; `ErrorsOrEmptyArray` returns an empty array instead. `TryGet(out value, out errors)` returns `true` for a success. `Result<T>.ToResult()` drops the value, and `Result<T>` values support `==`, `Equals`, LINQ query syntax (`from a in r1 from b in r2 select a + b`) and `r1 + r2` (a `Result<T[]>` that collects every value or every error).
 
+`ToString()` is for logs and debugging. A success prints `Success: ` plus the value's own `ToString()`, formatted with `CultureInfo.InvariantCulture` when the value is `IFormattable`, so a class without a `ToString` override prints its type name. Earlier versions printed the value as JSON. For JSON, call `result.Value.ConvertToJson()` from `CSharpEssentials.Json`.
+
 ### Chaining
 
 ```csharp
