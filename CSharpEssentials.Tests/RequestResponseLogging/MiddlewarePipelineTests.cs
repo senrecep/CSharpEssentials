@@ -261,6 +261,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
 
         await act.Should().NotThrowAsync();
     }
+
     [Fact]
     public async Task InvokeAsync_Should_RewindRequestBody_When_BodyReadThrowsPartway()
     {
