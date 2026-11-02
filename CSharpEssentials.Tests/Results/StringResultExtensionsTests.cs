@@ -1,3 +1,4 @@
+using System.Globalization;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using FluentAssertions;
@@ -189,4 +190,38 @@ public class StringResultExtensionsTests
     }
 
     #endregion
+
+    [Fact]
+    public void TrimStart_Should_RemoveWholeCultureMatch_When_InputHasIgnorableLeadingChar()
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+        try
+        {
+            Result<string> result = "­hello".TrimStart("hello");
+
+            result.Value.Should().Be("");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void TrimEnd_Should_RemoveWholeCultureMatch_When_InputHasIgnorableTrailingChar()
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-US");
+        try
+        {
+            Result<string> result = "hello­".TrimEnd("hello");
+
+            result.Value.Should().Be("");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
 }
