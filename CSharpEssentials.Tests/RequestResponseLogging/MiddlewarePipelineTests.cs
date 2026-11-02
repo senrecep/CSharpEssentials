@@ -1,4 +1,6 @@
 using CSharpEssentials.RequestResponseLogging;
+using CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
+using CSharpEssentials.RequestResponseLogging.LogWriters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -257,5 +259,48 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         Func<Task> act = () => client.GetAsync("/test");
 
         await act.Should().NotThrowAsync();
+    }
+    [Fact]
+    public async Task InvokeAsync_Should_RewindRequestBody_When_BodyReadThrowsPartway()
+    {
+        long? positionSeenByEndpoint = null;
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            ctx =>
+            {
+                positionSeenByEndpoint = ctx.Request.Body.Position;
+                return Task.CompletedTask;
+            },
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new ThrowOnceStream(new byte[10_000], throwAtPosition: 4096);
+
+        await middleware.InvokeAsync(httpContext);
+
+        capturedContext!.RequestBody.Should().StartWith("Error capturing request body");
+        positionSeenByEndpoint.Should().Be(0);
+    }
+
+    private sealed class ThrowOnceStream(byte[] content, long throwAtPosition) : MemoryStream(content)
+    {
+        private bool _thrown;
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_thrown && Position >= throwAtPosition)
+            {
+                _thrown = true;
+                throw new IOException("connection reset");
+            }
+
+            return base.ReadAsync(buffer, cancellationToken);
+        }
     }
 }

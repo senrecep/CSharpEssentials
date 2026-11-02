@@ -172,10 +172,7 @@ internal abstract class BaseMiddleware
 
             requestStream.Seek(0, SeekOrigin.Begin);
             using var reader = new StreamReader(requestStream, Encoding.UTF8, leaveOpen: true);
-            string requestBody = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
-
-            context.Request.Body.Seek(0, SeekOrigin.Begin);
-            return requestBody;
+            return await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -186,6 +183,11 @@ internal abstract class BaseMiddleware
             if (buffer is not null)
             {
                 _arrayPool.Return(buffer);
+            }
+
+            if (context.Request.Body.CanSeek)
+            {
+                context.Request.Body.Seek(0, SeekOrigin.Begin);
             }
         }
     }
