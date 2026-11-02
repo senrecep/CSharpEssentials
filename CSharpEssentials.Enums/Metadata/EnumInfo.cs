@@ -172,7 +172,18 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
     public bool TryParse(CharText text, EnumReadMode mode, EnumConventions conventions, out TEnum value)
     {
         _ = conventions ?? throw new ArgumentNullException(nameof(conventions));
+        return TryParseCore(text, mode, conventions, out value);
+    }
 
+    /// <summary>
+    /// Parses one token with the <see cref="EnumReadMode.Data"/> rules and <see cref="UnknownEnumValueHandling.Reject"/>: every
+    /// known spelling and the number of a defined member are accepted, and an unknown value is never mapped to the fallback member.
+    /// Generated <c>TryParseWire</c> calls it, so code that only parses wire values never builds an <see cref="EnumConventions"/>.
+    /// </summary>
+    public bool TryParseWire(CharText text, out TEnum value) => TryParseCore(text, EnumReadMode.Data, null, out value);
+
+    private bool TryParseCore(CharText text, EnumReadMode mode, EnumConventions? conventions, out TEnum value)
+    {
         bool input = mode == EnumReadMode.Input;
         value = default;
 #if NETSTANDARD2_0
@@ -192,7 +203,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         else if (EnumNumberParser<TEnum>.LooksNumeric(text))
         {
             // A malformed or out of range number is never mapped to the fallback member.
-            ok = (!input || conventions.AcceptNumbers) &&
+            ok = (!input || conventions is { AcceptNumbers: true }) &&
                  EnumNumberParser<TEnum>.TryParse(text, out ulong raw) &&
                  TryAcceptRaw(raw, mode, conventions, out value);
         }
@@ -299,10 +310,10 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
     private bool IsDefinedRaw(ulong raw) =>
         _byRaw.ContainsKey(raw) || IsFlags && (raw & ~DefinedMask) == 0;
 
-    private EnumMemberInfo<TEnum>? FindByName(CharText text, bool input, EnumConventions conventions)
+    private EnumMemberInfo<TEnum>? FindByName(CharText text, bool input, EnumConventions? conventions)
     {
-        bool ignoreCase = !input || conventions.CaseInsensitive;
-        bool members = !input || conventions.AcceptMemberNames;
+        bool ignoreCase = !input || conventions is { CaseInsensitive: true };
+        bool members = !input || conventions is { AcceptMemberNames: true };
         if (!ignoreCase)
             return (members ? _exactAll : _exactNoMembers).Find(text);
         return _wireExact?.Find(text) ?? (members ? _ignoreCaseAll : _ignoreCaseNoMembers).Find(text);
@@ -315,7 +326,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         return !(input && member.IsFallback);
     }
 
-    private bool TryAcceptRaw(ulong raw, EnumReadMode mode, EnumConventions conventions, out TEnum value)
+    private bool TryAcceptRaw(ulong raw, EnumReadMode mode, EnumConventions? conventions, out TEnum value)
     {
         if (_byRaw.TryGetValue(raw, out EnumMemberInfo<TEnum>? member))
             return TryAcceptMember(member, mode == EnumReadMode.Input, out value);
@@ -328,9 +339,9 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         return TryUseFallback(mode, conventions, out value);
     }
 
-    private bool TryUseFallback(EnumReadMode mode, EnumConventions conventions, out TEnum value)
+    private bool TryUseFallback(EnumReadMode mode, EnumConventions? conventions, out TEnum value)
     {
-        if (mode == EnumReadMode.Data && conventions.UnknownValue == UnknownEnumValueHandling.UseFallback && Fallback is not null)
+        if (mode == EnumReadMode.Data && conventions is { UnknownValue: UnknownEnumValueHandling.UseFallback } && Fallback is not null)
         {
             value = Fallback.Value;
             return true;

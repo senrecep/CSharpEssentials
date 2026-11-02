@@ -266,6 +266,21 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void ParseWire_Should_Report_The_Same_Error_As_The_Data_Mode_Parser()
+    {
+        string longText = new('x', 80);
+        EnumConventions reject = EnumConventions.Default with { UnknownValue = UnknownEnumValueHandling.Reject };
+        EnumMetadata.Get<Status>().TryParse(longText, EnumReadMode.Data, reject, out _, out EnumValueError? expected).Should().BeFalse();
+
+        Action parse = () => StatusExtensions.ParseWire(longText);
+
+        EnumValueError error = parse.Should().Throw<EnumValueException>().Which.Error;
+        error.Value.Should().Be(expected!.Value).And.Be(new string('x', 64) + "…");
+        error.AllowedValues.Should().Equal(expected.AllowedValues);
+        error.EnumType.Should().Be(expected.EnumType);
+    }
+
+    [Fact]
     public void IsDefined_Extension_Should_Be_Flags_Aware()
     {
         Color.Blue.IsDefined().Should().BeTrue();

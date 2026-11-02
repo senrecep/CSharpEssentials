@@ -18,8 +18,6 @@ namespace Sample
         public const string AliasKebabCase = "alias";
         public const string AliasWireName = "alias";
 
-        private static readonly global::CSharpEssentials.Enums.EnumConventions __WireReadConventions = global::CSharpEssentials.Enums.EnumConventions.Default with { UnknownValue = global::CSharpEssentials.Enums.UnknownEnumValueHandling.Reject };
-
         /// <summary>The canonical wire name. Throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> for undefined values.</summary>
         public static string ToWireName(this global::Sample.Signed value)
         {
@@ -43,7 +41,7 @@ namespace Sample
                 return false;
             }
 
-            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>().TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out value);
+            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>().TryParseWire(text, out value);
         }
 
         /// <summary>Parses like <see cref="TryParseWire"/> and throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> on failure.</summary>
@@ -52,9 +50,9 @@ namespace Sample
             global::CSharpEssentials.Enums.EnumInfo<global::Sample.Signed> info = global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>();
             if (text is null)
                 throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(null, global::CSharpEssentials.Enums.EnumReadMode.Data));
-            if (info.TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out global::Sample.Signed value, out global::CSharpEssentials.Enums.EnumValueError? error))
+            if (info.TryParseWire(text, out global::Sample.Signed value))
                 return value;
-            throw new global::CSharpEssentials.Enums.EnumValueException(error);
+            throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(text, global::CSharpEssentials.Enums.EnumReadMode.Data));
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>

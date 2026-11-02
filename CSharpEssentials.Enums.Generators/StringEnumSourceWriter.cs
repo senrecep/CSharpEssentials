@@ -147,10 +147,6 @@ internal static class StringEnumSourceWriter
         string info = Enums + ".EnumInfo<" + type + ">";
         string metadata = Enums + ".EnumMetadata.Get<" + type + ">()";
 
-        w.Line("private static readonly " + Enums + ".EnumConventions __WireReadConventions = " + Enums
-            + ".EnumConventions.Default with { UnknownValue = " + Enums + ".UnknownEnumValueHandling.Reject };");
-        w.Line();
-
         w.Line("/// <summary>The canonical wire name. Throws <see cref=\"" + Enums + ".EnumValueException\"/> for undefined values.</summary>");
         w.Line("public static string ToWireName(this " + type + " value)");
         w.Open();
@@ -186,7 +182,7 @@ internal static class StringEnumSourceWriter
         w.Line("return false;");
         w.Close();
         w.Line();
-        w.Line("return " + metadata + ".TryParse(text, " + Enums + ".EnumReadMode.Data, __WireReadConventions, out value);");
+        w.Line("return " + metadata + ".TryParseWire(text, out value);");
         w.Close();
         w.Line();
 
@@ -196,9 +192,9 @@ internal static class StringEnumSourceWriter
         w.Line(info + " info = " + metadata + ";");
         w.Line("if (text is null)");
         w.Line("    throw new " + Enums + ".EnumValueException(info.CreateError(null, " + Enums + ".EnumReadMode.Data));");
-        w.Line("if (info.TryParse(text, " + Enums + ".EnumReadMode.Data, __WireReadConventions, out " + type + " value, out " + Enums + ".EnumValueError? error))");
+        w.Line("if (info.TryParseWire(text, out " + type + " value))");
         w.Line("    return value;");
-        w.Line("throw new " + Enums + ".EnumValueException(error);");
+        w.Line("throw new " + Enums + ".EnumValueException(info.CreateError(text, " + Enums + ".EnumReadMode.Data));");
         w.Close();
         w.Line();
 

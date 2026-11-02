@@ -217,6 +217,30 @@ public class EnumInfoParserTests
     }
 
     [Fact]
+    public void TryParseWire_Should_Agree_With_Data_Mode_That_Rejects_Unknown_Values()
+    {
+        AssertWireAgreement(Info<ParserStatus>());
+        AssertWireAgreement(Info<StrictStatus>());
+        AssertWireAgreement(Info<ParserPermissions>());
+        AssertWireAgreement(Info<ParserAccess>());
+        AssertWireAgreement(Info<HugeValue>());
+        AssertWireAgreement(Info<SignedValue>());
+        AssertWireAgreement(Info<TinyValue>());
+    }
+
+    [Fact]
+    public void TryParseWire_Should_Never_Use_The_Fallback_Member()
+    {
+        EnumInfo<ParserStatus> info = Info<ParserStatus>();
+
+        info.TryParseWire("bogus", out ParserStatus value).Should().BeFalse();
+        value.Should().Be(default(ParserStatus));
+        info.TryParseWire("unknown", out value).Should().BeTrue();
+        value.Should().Be(ParserStatus.Unknown);
+        info.TryParseWire("99", out _).Should().BeFalse();
+    }
+
+    [Fact]
     public void Input_Mode_Should_Report_The_Fallback_Value_On_Rejection_In_Both_Overloads()
     {
         EnumInfo<ParserStatus> info = Info<ParserStatus>();
@@ -264,6 +288,18 @@ public class EnumInfoParserTests
         }
 
         (GC.GetAllocatedBytesForCurrentThread() - before).Should().Be(0);
+    }
+
+    private static void AssertWireAgreement<T>(EnumInfo<T> info) where T : struct, Enum
+    {
+        EnumConventions reject = Defaults with { UnknownValue = UnknownEnumValueHandling.Reject };
+        foreach (string text in AgreementInputs)
+        {
+            bool expected = info.TryParse(text, EnumReadMode.Data, reject, out T expectedValue);
+
+            info.TryParseWire(text, out T value).Should().Be(expected, "'{0}'", text);
+            value.Should().Be(expectedValue, "'{0}'", text);
+        }
     }
 
     private static void AssertAgreement<T>(EnumInfo<T> info) where T : struct, Enum
