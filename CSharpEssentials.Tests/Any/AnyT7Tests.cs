@@ -506,4 +506,16 @@ public class AnyT7Tests
         any.Index.Should().Be(6);
         any.GetSeventh().Should().Be(TestGuid);
     }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long, char, byte> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool third, out double fourth, out long fifth, out char sixth, out byte seventh);
+        first.Should().Be(0);
+        second.Should().BeNull();
+    }
 }

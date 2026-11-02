@@ -25,8 +25,8 @@ public readonly struct Any<T0, T1>
     [JsonIgnore]
     public bool IsSecond => Index == 1;
 
-    public T0 GetFirst() => Index == 0 ? (T0)Value! : throw Any.InvalidOperation;
-    public T1 GetSecond() => Index == 1 ? (T1)Value! : throw Any.InvalidOperation;
+    public T0 GetFirst() => Index == 0 ? Any.Unbox<T0>(Value) : throw Any.InvalidOperation;
+    public T1 GetSecond() => Index == 1 ? Any.Unbox<T1>(Value) : throw Any.InvalidOperation;
 
     public static implicit operator Any<T0, T1>(T0 value) => new(value);
     public static implicit operator Any<T0, T1>(T1 value) => new(value);

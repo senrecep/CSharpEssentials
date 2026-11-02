@@ -580,4 +580,16 @@ public class AnyT8Tests
         any.Index.Should().Be(7);
         any.GetEighth().Should().Be('x');
     }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long, char, byte, short> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool third, out double fourth, out long fifth, out char sixth, out byte seventh, out short eighth);
+        first.Should().Be(0);
+        second.Should().BeNull();
+    }
 }

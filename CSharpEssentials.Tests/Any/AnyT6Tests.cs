@@ -433,4 +433,16 @@ public class AnyT6Tests
         any.Index.Should().Be(5);
         any.GetSixth().Should().Be(3.99m);
     }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long, char> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool third, out double fourth, out long fifth, out char sixth);
+        first.Should().Be(0);
+        second.Should().BeNull();
+    }
 }

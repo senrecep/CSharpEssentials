@@ -362,4 +362,16 @@ public class AnyT5Tests
         any.Index.Should().Be(4);
         any.GetFifth().Should().Be(99L);
     }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool third, out double fourth, out long fifth);
+        first.Should().Be(0);
+        second.Should().BeNull();
+    }
 }

@@ -294,4 +294,16 @@ public class AnyT4Tests
         any.Index.Should().Be(3);
         any.GetFourth().Should().Be(3.14);
     }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool third, out double fourth);
+        first.Should().Be(0);
+        second.Should().BeNull();
+    }
 }

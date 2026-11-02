@@ -75,6 +75,8 @@ public static class Any
         throw new InvalidOperationException($"Value is not valid type for Any<>");
     }
 
+    internal static T Unbox<T>(object? value) => value is null ? default! : (T)value;
+
     internal static Exception InvalidOperation => new InvalidOperationException("No value");
 
 }

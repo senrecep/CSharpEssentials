@@ -50,14 +50,14 @@ public readonly struct Any<T0, T1, T2, T3, T4, T5, T6, T7>
     public bool IsEighth => Index == 7;
 
 
-    public T0 GetFirst() => Index == 0 ? (T0)Value! : throw Any.InvalidOperation;
-    public T1 GetSecond() => Index == 1 ? (T1)Value! : throw Any.InvalidOperation;
-    public T2 GetThird() => Index == 2 ? (T2)Value! : throw Any.InvalidOperation;
-    public T3 GetFourth() => Index == 3 ? (T3)Value! : throw Any.InvalidOperation;
-    public T4 GetFifth() => Index == 4 ? (T4)Value! : throw Any.InvalidOperation;
-    public T5 GetSixth() => Index == 5 ? (T5)Value! : throw Any.InvalidOperation;
-    public T6 GetSeventh() => Index == 6 ? (T6)Value! : throw Any.InvalidOperation;
-    public T7 GetEighth() => Index == 7 ? (T7)Value! : throw Any.InvalidOperation;
+    public T0 GetFirst() => Index == 0 ? Any.Unbox<T0>(Value) : throw Any.InvalidOperation;
+    public T1 GetSecond() => Index == 1 ? Any.Unbox<T1>(Value) : throw Any.InvalidOperation;
+    public T2 GetThird() => Index == 2 ? Any.Unbox<T2>(Value) : throw Any.InvalidOperation;
+    public T3 GetFourth() => Index == 3 ? Any.Unbox<T3>(Value) : throw Any.InvalidOperation;
+    public T4 GetFifth() => Index == 4 ? Any.Unbox<T4>(Value) : throw Any.InvalidOperation;
+    public T5 GetSixth() => Index == 5 ? Any.Unbox<T5>(Value) : throw Any.InvalidOperation;
+    public T6 GetSeventh() => Index == 6 ? Any.Unbox<T6>(Value) : throw Any.InvalidOperation;
+    public T7 GetEighth() => Index == 7 ? Any.Unbox<T7>(Value) : throw Any.InvalidOperation;
 
     public static implicit operator Any<T0, T1, T2, T3, T4, T5, T6, T7>(T0 value) => new(value);
     public static implicit operator Any<T0, T1, T2, T3, T4, T5, T6, T7>(T1 value) => new(value);

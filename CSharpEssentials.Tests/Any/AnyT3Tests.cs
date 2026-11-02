@@ -228,4 +228,16 @@ public class AnyT3Tests
         any.Index.Should().Be(2);
         any.GetThird().Should().BeTrue();
     }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool third);
+        first.Should().Be(0);
+        second.Should().BeNull();
+    }
 }
