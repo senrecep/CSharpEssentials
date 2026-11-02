@@ -73,29 +73,46 @@ public sealed class AuditInterceptor(
             RestoreCascadedDependents(entries, softDeleted);
     }
 
-    private static void RestoreCascadedDependents(
-        List<EntityEntry> entries, List<EntityEntry> kept)
+    private static void RestoreCascadedDependents(List<EntityEntry> entries, List<EntityEntry> softDeleted)
     {
+        Dictionary<(IKey Key, object?[] Values), EntityEntry> entriesByKey = [with(KeyValuesComparer.Instance)];
+        List<EntityEntry> pending = [];
+        foreach (EntityEntry entry in entries)
+        {
+            foreach (IKey key in entry.Metadata.GetKeys())
+            {
+                if (ReadValues(entry, key.Properties) is { } values)
+                    entriesByKey.TryAdd((key, values), entry);
+            }
+
+            if (entry.State == EntityState.Deleted && entry.Entity is not ISoftDeletable { IsHardDeleted: true })
+                pending.Add(entry);
+        }
+
+        HashSet<EntityEntry> kept = [with(ReferenceEqualityComparer.Instance), .. softDeleted];
         bool changed = true;
         while (changed)
         {
             changed = false;
-            foreach (EntityEntry entry in entries)
+            for (int i = pending.Count - 1; i >= 0; i--)
             {
-                if (entry.State != EntityState.Deleted
-                    || entry.Entity is ISoftDeletable { IsHardDeleted: true }
-                    || !IsCascadedFromKept(entry, kept))
+                EntityEntry entry = pending[i];
+                if (!IsCascadedFromKept(entry, entriesByKey, kept))
                     continue;
 
                 entry.State = EntityState.Unchanged;
                 entry.DetectChanges();
                 kept.Add(entry);
+                pending.RemoveAt(i);
                 changed = true;
             }
         }
     }
 
-    private static bool IsCascadedFromKept(EntityEntry dependent, List<EntityEntry> kept)
+    private static bool IsCascadedFromKept(
+        EntityEntry dependent,
+        Dictionary<(IKey Key, object?[] Values), EntityEntry> entriesByKey,
+        HashSet<EntityEntry> kept)
     {
         foreach (IForeignKey foreignKey in dependent.Metadata.GetForeignKeys())
         {
@@ -103,28 +120,54 @@ public sealed class AuditInterceptor(
                 && foreignKey.DeleteBehavior is not (DeleteBehavior.Cascade or DeleteBehavior.ClientCascade))
                 continue;
 
-            foreach (EntityEntry principal in kept)
-            {
-                if (foreignKey.PrincipalEntityType.IsAssignableFrom(principal.Metadata)
-                    && KeysMatch(foreignKey, dependent, principal))
-                    return true;
-            }
+            if (ReadValues(dependent, foreignKey.Properties) is { } values
+                && entriesByKey.TryGetValue((foreignKey.PrincipalKey, values), out EntityEntry? principal)
+                && kept.Contains(principal))
+                return true;
         }
 
         return false;
     }
 
-    private static bool KeysMatch(IForeignKey foreignKey, EntityEntry dependent, EntityEntry principal)
+    private static object?[]? ReadValues(EntityEntry entry, IReadOnlyList<IProperty> properties)
     {
-        for (int i = 0; i < foreignKey.Properties.Count; i++)
+        object?[] values = new object?[properties.Count];
+        for (int i = 0; i < properties.Count; i++)
         {
-            IProperty principalProperty = foreignKey.PrincipalKey.Properties[i];
-            object? dependentValue = dependent.Property(foreignKey.Properties[i].Name).CurrentValue;
-            object? principalValue = principal.Property(principalProperty.Name).CurrentValue;
-            if (dependentValue is null || !principalProperty.GetKeyValueComparer().Equals(dependentValue, principalValue))
-                return false;
+            values[i] = entry.Property(properties[i]).CurrentValue;
+            if (values[i] is null)
+                return null;
         }
 
-        return true;
+        return values;
+    }
+
+    private sealed class KeyValuesComparer : IEqualityComparer<(IKey Key, object?[] Values)>
+    {
+        public static readonly KeyValuesComparer Instance = new();
+
+        public bool Equals((IKey Key, object?[] Values) x, (IKey Key, object?[] Values) y)
+        {
+            if (!ReferenceEquals(x.Key, y.Key))
+                return false;
+
+            for (int i = 0; i < x.Values.Length; i++)
+            {
+                if (!x.Key.Properties[i].GetKeyValueComparer().Equals(x.Values[i], y.Values[i]))
+                    return false;
+            }
+
+            return true;
+        }
+
+        public int GetHashCode((IKey Key, object?[] Values) obj)
+        {
+            HashCode hash = new();
+            hash.Add(obj.Key);
+            for (int i = 0; i < obj.Values.Length; i++)
+                hash.Add(obj.Key.Properties[i].GetKeyValueComparer().GetHashCode(obj.Values[i]));
+
+            return hash.ToHashCode();
+        }
     }
 }
