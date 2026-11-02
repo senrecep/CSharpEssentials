@@ -51,7 +51,7 @@ internal abstract class EnumBindingNormalizer
                     continue;
                 }
 
-                if (!info.TryParse(token, EnumReadMode.Input, conventions, out TEnum flag, out _))
+                if (!info.TryParse(token, EnumReadMode.Input, conventions, out TEnum flag))
                     return false;
                 raw |= info.ToRawValue(flag);
             }
@@ -66,7 +66,7 @@ internal abstract class EnumBindingNormalizer
 
         private bool TryAdd(string token, List<string> output)
         {
-            if (!info.TryParse(token, EnumReadMode.Input, conventions, out TEnum value, out _))
+            if (!info.TryParse(token, EnumReadMode.Input, conventions, out TEnum value))
                 return false;
             output.Add(ToBinderText(value));
             return true;
