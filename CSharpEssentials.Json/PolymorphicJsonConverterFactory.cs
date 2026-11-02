@@ -12,16 +12,19 @@ public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
 {
     /// <summary>
     /// Abstract classes and interfaces, except collections and dictionaries (<see cref="System.Collections.IEnumerable"/>),
-    /// async streams (<see cref="IAsyncEnumerable{T}"/>), <see cref="JsonNode"/> and types marked with
+    /// async streams (types implementing <see cref="IAsyncEnumerable{T}"/>), <see cref="JsonNode"/> and types marked with
     /// <see cref="JsonPolymorphicAttribute"/> or <see cref="JsonDerivedTypeAttribute"/>, which keep the built-in serialization.
     /// </summary>
     public override bool CanConvert(Type typeToConvert) =>
         (typeToConvert.IsAbstract || typeToConvert.IsInterface) &&
         !typeof(System.Collections.IEnumerable).IsAssignableFrom(typeToConvert) &&
         !typeof(JsonNode).IsAssignableFrom(typeToConvert) &&
-        !(typeToConvert.IsGenericType && typeToConvert.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)) &&
+        !typeToConvert.GetInterfaces().Append(typeToConvert).Any(IsAsyncEnumerable) &&
         !typeToConvert.IsDefined(typeof(JsonPolymorphicAttribute), false) &&
         !typeToConvert.IsDefined(typeof(JsonDerivedTypeAttribute), false);
+
+    private static bool IsAsyncEnumerable(Type type) =>
+        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
 
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {

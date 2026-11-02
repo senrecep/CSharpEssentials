@@ -71,6 +71,13 @@ internal sealed class OpenGenericDerived<TValue> : OpenGenericBase
     public TValue? Value { get; set; }
 }
 
+internal interface IItemStream<out TItem> : IAsyncEnumerable<TItem>;
+
+internal abstract class ItemStream : IAsyncEnumerable<int>
+{
+    public abstract IAsyncEnumerator<int> GetAsyncEnumerator(CancellationToken cancellationToken = default);
+}
+
 internal abstract class LinkBase
 {
     public LinkBase? Next { get; set; }
@@ -170,6 +177,9 @@ public class PolymorphicJsonConverterFactoryTests
     [InlineData(typeof(JsonValue))]
     [InlineData(typeof(AttrShape))]
     [InlineData(typeof(IAttrShape))]
+    [InlineData(typeof(IAsyncEnumerable<int>))]
+    [InlineData(typeof(IItemStream<int>))]
+    [InlineData(typeof(ItemStream))]
     public void CanConvert_WithExcludedType_ShouldReturnFalse(Type type)
     {
         PolymorphicJsonConverterFactory factory = new();
