@@ -103,6 +103,38 @@ public static class ServiceRegistration
         services.Add(ServiceDescriptor.Singleton(new RegisteredAssemblyMarker(assembly)));
     }
 
+    /// <summary>
+    /// Decorates every registration of <paramref name="serviceType"/> with <paramref name="serviceKey"/> using
+    /// <paramref name="decorator"/>. Used by generated registries.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="serviceType">The decorated service type.</param>
+    /// <param name="serviceKey">The service key of the decorated registrations, or <see langword="null"/> for non-keyed registrations.</param>
+    /// <param name="decorator">Creates the decorator from the inner service and the service provider.</param>
+    /// <param name="verifiedImplementations">
+    /// Implementation types already known not to inject <see cref="ServiceKeyAttribute"/>; their constructors are not inspected.
+    /// </param>
+    /// <exception cref="InvalidOperationException">
+    /// No registration matches, or an original implementation injects <see cref="ServiceKeyAttribute"/>.
+    /// </exception>
+    public static void Decorate(
+        IServiceCollection services,
+        Type serviceType,
+        object? serviceKey,
+        Func<object, IServiceProvider, object> decorator,
+        Type[] verifiedImplementations)
+    {
+        Guard.NotNull(services);
+        Guard.NotNull(serviceType);
+        Guard.NotNull(decorator);
+        Guard.NotNull(verifiedImplementations);
+
+        if (!ServiceDecoration.TryDecorate(services, serviceType, serviceKey, decorator, verifiedImplementations))
+        {
+            throw ServiceDecoration.NothingToDecorate(serviceType, serviceKey, decoratorType: null);
+        }
+    }
+
     private static void LogDuplicate(ILogger logger, ServiceDescriptor existing, ServiceDescriptor descriptor, RegistrationStrategy strategy)
     {
         if (!logger.IsEnabled(LogLevel.Debug))

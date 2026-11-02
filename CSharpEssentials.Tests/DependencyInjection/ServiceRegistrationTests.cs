@@ -13,6 +13,18 @@ public class ServiceRegistrationTests
 
     private sealed class SecondStore : IStore;
 
+    private sealed class KeyAwareStore([ServiceKey] object key) : IStore
+    {
+        public object Key { get; } = key;
+    }
+
+    private sealed class StoreDecorator(IStore inner) : IStore
+    {
+        public IStore Inner { get; } = inner;
+    }
+
+    private static object DecorateStore(object inner, IServiceProvider provider) => new StoreDecorator((IStore)inner);
+
     private static ServiceDescriptor First(object? key = null) => new(typeof(IStore), key, typeof(FirstStore), ServiceLifetime.Scoped);
 
     private static ServiceDescriptor Second(object? key = null) => new(typeof(IStore), key, typeof(SecondStore), ServiceLifetime.Scoped);
@@ -140,5 +152,68 @@ public class ServiceRegistrationTests
         ServiceRegistration.Apply(services, logger, Second(), RegistrationStrategy.Add);
 
         logger.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Decorate_Should_WrapRegistration()
+    {
+        IServiceCollection services = Services(First());
+
+        ServiceRegistration.Decorate(services, typeof(IStore), null, DecorateStore, Type.EmptyTypes);
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IStore>().Should().BeOfType<StoreDecorator>()
+            .Which.Inner.Should().BeOfType<FirstStore>();
+    }
+
+    [Fact]
+    public void Decorate_Should_ThrowAndLeaveServicesUnchanged_When_UnverifiedOriginalInjectsServiceKey()
+    {
+        IServiceCollection services = Services(First("a"), new ServiceDescriptor(typeof(IStore), "a", typeof(KeyAwareStore), ServiceLifetime.Scoped));
+        ServiceDescriptor[] before = [.. services];
+
+        Action act = () => ServiceRegistration.Decorate(services, typeof(IStore), "a", DecorateStore, [typeof(FirstStore)]);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(KeyAwareStore).FullName}*[ServiceKey]*");
+        services.Should().Equal(before);
+    }
+
+    [Fact]
+    public void Decorate_Should_SkipServiceKeyCheck_When_ImplementationIsVerified()
+    {
+        IServiceCollection services = Services(new ServiceDescriptor(typeof(IStore), "a", typeof(KeyAwareStore), ServiceLifetime.Scoped));
+
+        ServiceRegistration.Decorate(services, typeof(IStore), "a", DecorateStore, [typeof(KeyAwareStore)]);
+
+        services.Should().HaveCount(2);
+        services[0].KeyedImplementationFactory.Should().NotBeNull();
+        services[1].ServiceType.Should().Be<KeyAwareStore>();
+    }
+
+    [Fact]
+    public void Decorate_Should_Throw_When_NothingMatches()
+    {
+        IServiceCollection services = Services(First("a"));
+
+        Action act = () => ServiceRegistration.Decorate(services, typeof(IStore), null, DecorateStore, Type.EmptyTypes);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage($"No registration of service '{typeof(IStore).FullName}' with key '(none)' was found to decorate. *");
+        services.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Decorate_Should_Throw_When_ArgumentIsNull()
+    {
+        IServiceCollection services = Services(First());
+
+        ((Action)(() => ServiceRegistration.Decorate(null!, typeof(IStore), null, DecorateStore, Type.EmptyTypes)))
+            .Should().Throw<ArgumentNullException>().WithParameterName("services");
+        ((Action)(() => ServiceRegistration.Decorate(services, null!, null, DecorateStore, Type.EmptyTypes)))
+            .Should().Throw<ArgumentNullException>().WithParameterName("serviceType");
+        ((Action)(() => ServiceRegistration.Decorate(services, typeof(IStore), null, null!, Type.EmptyTypes)))
+            .Should().Throw<ArgumentNullException>().WithParameterName("decorator");
+        ((Action)(() => ServiceRegistration.Decorate(services, typeof(IStore), null, DecorateStore, null!)))
+            .Should().Throw<ArgumentNullException>().WithParameterName("verifiedImplementations");
     }
 }

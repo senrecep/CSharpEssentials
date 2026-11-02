@@ -19,8 +19,6 @@ internal static class ServiceSourceWriter
 
     private const string Registration = "global::CSharpEssentials.DependencyInjection.ServiceRegistration";
 
-    private const string Decoration = "global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions";
-
     private const string NeverBrowsable =
         "[global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]";
 
@@ -264,8 +262,10 @@ internal static class ServiceSourceWriter
 
     private static void WriteDecorator(StringBuilder sb, DecoratorModel decorator)
     {
-        sb.Append("                    ").Append(Decoration).Append(".Decorate<").Append(decorator.ServiceType).Append(">(\n");
+        sb.Append("                    ").Append(Registration).Append(".Decorate(\n");
         sb.Append("                        services,\n");
+        sb.Append("                        typeof(").Append(decorator.ServiceType).Append("),\n");
+        sb.Append("                        ").Append(decorator.Key ?? "null").Append(",\n");
         sb.Append("                        (inner, sp) => new ").Append(decorator.DecoratorType).Append('(');
         for (int index = 0; index < decorator.Parameters.Count; index++)
         {
@@ -274,12 +274,12 @@ internal static class ServiceSourceWriter
         }
 
         sb.Append("),\n");
-        sb.Append("                        serviceKey: ").Append(decorator.Key ?? "null").Append(");\n");
+        sb.Append("                        global::System.Array.Empty<global::System.Type>());\n");
     }
 
     private static string FormatArgument(DecoratorParameterModel parameter, string? key) => parameter.Kind switch
     {
-        DecoratorParameterKind.Inner => "inner",
+        DecoratorParameterKind.Inner => "(" + parameter.Type + ")inner",
         DecoratorParameterKind.ServiceKey => key is null
             ? "default(" + parameter.Type + ")!"
             : "(" + parameter.Type + ")(object)" + key,

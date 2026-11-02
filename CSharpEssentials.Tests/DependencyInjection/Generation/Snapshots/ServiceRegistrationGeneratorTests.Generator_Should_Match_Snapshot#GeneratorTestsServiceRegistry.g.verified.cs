@@ -127,22 +127,26 @@ namespace Microsoft.Extensions.DependencyInjection
             switch (order)
             {
                 case 1:
-                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
+                    global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(
                         services,
+                        typeof(global::Sample.IGreeter),
+                        global::Sample.Region.Eu,
                         (inner, sp) => new global::Sample.EuDecorator(
-                            inner,
+                            (global::Sample.IGreeter)inner,
                             (global::Sample.Region)(object)global::Sample.Region.Eu),
-                        serviceKey: global::Sample.Region.Eu);
+                        global::System.Array.Empty<global::System.Type>());
                     break;
                 case 2:
-                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
+                    global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(
                         services,
+                        typeof(global::Sample.IGreeter),
+                        null,
                         (inner, sp) => new global::Sample.LoudGreeter(
-                            inner,
+                            (global::Sample.IGreeter)inner,
                             global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IClock>(sp),
                             global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, "shared"),
                             (int)(sp.GetService(typeof(int)) ?? (object?)3)!),
-                        serviceKey: null);
+                        global::System.Array.Empty<global::System.Type>());
                     break;
             }
         }
