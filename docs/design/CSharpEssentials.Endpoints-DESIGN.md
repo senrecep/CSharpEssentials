@@ -364,6 +364,7 @@ public static class EndpointRouteBuilderExtensions
 }
 ```
 
+- When `RuntimeFeature.IsDynamicCodeSupported` is false (Native AOT), the method throws `PlatformNotSupportedException` before scanning, even with no assemblies; use the generated `Map{Asm}Endpoints` / `MapAllEndpoints`.
 - Discovery uses the same rules as the generator (§5.1): it skips abstract, open-generic, inaccessible (the CSE1001 set), cyclic, conflicting and excluded types, and skips assemblies with `[ExcludeFromMapping]`. It uses the same ordering and the same `EndpointMapper`.
 - On `ReflectionTypeLoadException`, it maps the loadable types and **logs** every loader exception (with the type name when available) at `Warning`, category `CSharpEssentials.Endpoints`. Nothing is silently swallowed.
 - Invalid types that the analyzer would report as errors are skipped and logged at `Warning`, because there is no compile-time check on this path.
