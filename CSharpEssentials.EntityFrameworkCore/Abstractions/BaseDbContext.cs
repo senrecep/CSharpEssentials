@@ -179,6 +179,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         LogContextDisposed(_instanceId);
         base.Dispose();
         _serviceScope.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public override async ValueTask DisposeAsync()
@@ -189,6 +190,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
             await asyncScope.DisposeAsync().ConfigureAwait(false);
         else
             _serviceScope.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private void TryAddInterceptor<TInterceptor>(
