@@ -1,6 +1,6 @@
 # Blog notes: CSharpEssentials.Endpoints vs FastEndpoints vs Carter
 
-Raw material for a post. These notes are not the post. Every number comes from `CSharpEssentials.Endpoints/BENCHMARKS.md`, which reads `benchmarks/results/endpoints/{tfm}/results/*.csv` and `benchmarks/results/endpoints/aot/aot-report.md`. The machine was an AMD Ryzen 5 5600 running a desktop session, with a 1-minute load average of 2.8-3.9 at the sampled points. The SDK was 11.0.100-rc.1, with BenchmarkDotNet 0.14.0. Primary runtime is .NET 10.0.11.
+Raw material for a post, not the post itself. Every number comes from `CSharpEssentials.Endpoints/BENCHMARKS.md`, which reads `benchmarks/results/endpoints/{tfm}/results/*.csv` and `benchmarks/results/endpoints/aot/aot-report.md`. The machine was an AMD Ryzen 5 5600 running a desktop session, with a 1-minute load average of 2.8-3.9 at the sampled points. The SDK was 11.0.100-rc.1, with BenchmarkDotNet 0.14.0. Primary runtime is .NET 10.0.11.
 
 ## The problem
 
@@ -20,7 +20,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 ## How each library fills the gap
 
-- **CSharpEssentials.Endpoints.**
+- CSharpEssentials.Endpoints:
   - You write an `IEndpoint` type with a static abstract `Map(IEndpointRouteBuilder)`.
   - Groups are `IEndpointGroup` types plus `[EndpointGroup<T>]`.
   - A source generator writes a registry, so mapping is `app.Map{Asm}Endpoints()`.
@@ -28,12 +28,12 @@ Raw material for a post. These notes are not the post. Every number comes from `
   - The route calls stay in user code, so binding, filters, OpenAPI and RDG are the stock ones.
   - An analyzer warns about instance state (CSE1004) and duplicate routes (CSE1005).
   - A reflection scanner (`MapEndpointsFromAssemblies`) exists as an opt-in fallback. It is annotated as not trim/AOT safe.
-- **Carter 10.0.0.**
+- Carter 10.0.0:
   - `ICarterModule` with `AddRoutes`, optionally the `CarterModule` base class.
   - Modules are found through `DependencyContext` + `GetTypes()` and registered as DI singletons.
   - Routes are still plain Minimal APIs.
   - Brings in FluentValidation, Microsoft.Extensions.DependencyModel and Carter.Analyzers. The analyzers package depends on the Roslyn compiler package; whether that DLL reaches publish output was not checked.
-- **FastEndpoints 8.3.0.**
+- FastEndpoints 8.3.0:
   - A base class per endpoint, assembly scanning by default, and an optional source generator.
   - Its own request binder.
   - Each endpoint is instantiated once at startup and once per request.
@@ -41,25 +41,25 @@ Raw material for a post. These notes are not the post. Every number comes from `
   - FluentValidation built in.
   - Native AOT is documented only with FastEndpoints.Generator.
 
-## The numbers that matter (net10 unless stated)
+## The numbers (net10 unless stated)
 
 Cold startup is the fair startup figure: a fresh process, timed until every endpoint has answered once. Warm startup is not comparable, because FastEndpoints defers per-endpoint setup to the first request.
 
-1. **Cold start, 10 endpoints: 169.6 ms for CSE vs 218.7 ms for FastEndpoints.** CSE takes 22% less time, and the direction holds on net8, net9 and net11. Plain Minimal APIs take 167.1 ms and Carter 171.4 ms, both ties with CSE.
-2. **Cold start, 500 endpoints: 1,120.5 ms for CSE vs 678.9 ms for FastEndpoints.** CSE takes 1.65× as long. This is a CSE loss, and it holds at N=100 too (353.8 vs 313.9 ms) on every TFM. Plain Minimal APIs take 1,080.3 ms (1.59× FastEndpoints, vs 1.65× for CSE). This points to RequestDelegateFactory building each handler at startup, which CSE inherits; not profiled. RDG was off in these JIT runs, and its effect was not measured.
-3. **Per request, GET: 8.227 µs for CSE, 8.297 µs Plain, 9.023 µs Carter, 10.126 µs FastEndpoints.** FastEndpoints takes 1.23× as long and allocates 10.06 KB vs 8.69 KB.
-4. **Invalid POST: 22.027 µs for CSE vs 46.300 µs for FastEndpoints**, which takes 2.10× as long and throws 2 exceptions per request. The other side: plain Minimal APIs answer the same invalid POST in 19.757 µs, 10% less than CSE, with the same validation engine. Carter is 4% faster than CSE on a valid POST (14.141 vs 14.729 µs).
-5. **Native AOT (net10, linux-x64):**
+1. Cold start, 10 endpoints: 169.6 ms for CSE vs 218.7 ms for FastEndpoints. CSE takes 22% less time, and the direction holds on net8, net9 and net11. Plain Minimal APIs take 167.1 ms and Carter 171.4 ms, both ties with CSE.
+2. Cold start, 500 endpoints: 1,120.5 ms for CSE vs 678.9 ms for FastEndpoints. CSE takes 1.65× as long. This is a CSE loss, and it holds at N=100 too (353.8 vs 313.9 ms) on every TFM. Plain Minimal APIs take 1,080.3 ms (1.59× FastEndpoints, vs 1.65× for CSE). This points to RequestDelegateFactory building each handler at startup, which CSE inherits; not profiled. RDG was off in these JIT runs, and its effect was not measured.
+3. Per request, GET: 8.227 µs for CSE, 8.297 µs Plain, 9.023 µs Carter, 10.126 µs FastEndpoints. FastEndpoints takes 1.23× as long and allocates 10.06 KB vs 8.69 KB.
+4. Invalid POST: 22.027 µs for CSE vs 46.300 µs for FastEndpoints, which takes 2.10× as long and throws 2 exceptions per request. On the other hand, plain Minimal APIs answer the same invalid POST in 19.757 µs, 10% less than CSE, with the same validation engine. Carter is 4% faster than CSE on a valid POST (14.141 vs 14.729 µs).
+5. Native AOT (net10, linux-x64):
    - CseGenerated publishes with 0 IL warnings, a 10.4 MB binary and 72 ms to the first 200.
    - Plain: 10.3 MB, 71 ms.
    - FastEndpoints + Generator: 0 warnings, 15.2 MB, 81 ms.
    - Carter (8 warnings) and FastEndpoints with reflection discovery (4 warnings) crash at startup with this setup.
    - CSE's own reflection scanner publishes with 4 warnings, and its routes return 404/405.
 
-## Honest caveats to keep in the post
+## Caveats to keep in the post
 
 - The startup cost of CSE is the startup cost of Minimal APIs. At 500 endpoints FastEndpoints starts faster likely because it skips RequestDelegateFactory (each route maps to one parameterless delegate); this was inferred from source, not profiled. Do not frame CSE as the fastest at startup. It is about equal to plain Minimal APIs and Carter: within error on net10, about 7% over Plain at N=500 on net8, net9 and net11.
-- On net10, the source-generated registry gives no measurable cold-start gain over CSE's own reflection scanner (1,120.5 vs 1,110.5 ms at N=500, a tie). What the generator buys is Native AOT and trimming safety, not milliseconds.
+- On net10, the source-generated registry gives no measurable cold-start gain over CSE's own reflection scanner (1,120.5 vs 1,110.5 ms at N=500, a tie). The generator pays off in Native AOT and trimming safety, not in startup time.
 - Validation engines differ: DataAnnotations + `AddValidation()` for Plain and CSE, FluentValidation for Carter and FastEndpoints. The POST rows compare whole stacks, and they exist only on net10 and net11.
 - Machine load was 2.8-3.9. CseGenerated and CseReflection run the same request pipeline, yet differ by 3-11% in throughput, so per-request gaps under about 10% are weak evidence. Differences within error are reported as ties.
 - Cold-startup allocation comes from BenchmarkDotNet's separate MemoryDiagnoser run, not from the timed launch. At N=500 FastEndpoints allocates 1.6× more (36,798 KB vs 22,749 KB).
