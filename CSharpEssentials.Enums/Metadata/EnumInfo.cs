@@ -69,17 +69,33 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         }
 
         DefinedMask = mask;
-        _wireNames = [.. _members.Select(static m => m.WireName)];
-        _inputWireNames = [.. _members.Where(static m => !m.IsFallback).Select(static m => m.WireName)];
+        _wireNames = new string[_members.Length];
+        List<string> inputWireNames = [];
+        var wires = new KeyValuePair<string, EnumMemberInfo<TEnum>>[_members.Length];
+        var names = new KeyValuePair<string, EnumMemberInfo<TEnum>>[_members.Length];
+        List<KeyValuePair<string, EnumMemberInfo<TEnum>>> aliases = [];
+        for (int i = 0; i < _members.Length; i++)
+        {
+            EnumMemberInfo<TEnum> member = _members[i];
+            _wireNames[i] = member.WireName;
+            if (!member.IsFallback)
+                inputWireNames.Add(member.WireName);
+            wires[i] = Pair(member.WireName, member);
+            names[i] = Pair(member.MemberName, member);
+            foreach (string alias in member.Aliases)
+            {
+                aliases.Add(Pair(alias, member));
+            }
+        }
 
-        KeyValuePair<string, EnumMemberInfo<TEnum>>[] wires = [.. _members.Select(static m => Pair(m.WireName, m))];
-        KeyValuePair<string, EnumMemberInfo<TEnum>>[] names = [.. _members.Select(static m => Pair(m.MemberName, m))];
-        KeyValuePair<string, EnumMemberInfo<TEnum>>[] aliases = [.. _members.SelectMany(static m => m.Aliases.Select(alias => Pair(alias, m)))];
+        _inputWireNames = [.. inputWireNames];
         _exactAll = new([.. wires, .. names, .. aliases], StringComparer.Ordinal);
         _exactNoMembers = new([.. wires, .. aliases], StringComparer.Ordinal);
         _ignoreCaseAll = new([.. wires, .. names, .. aliases], StringComparer.OrdinalIgnoreCase);
         _ignoreCaseNoMembers = new([.. wires, .. aliases], StringComparer.OrdinalIgnoreCase);
-        if (_wireNames.Distinct(StringComparer.OrdinalIgnoreCase).Count() != _wireNames.Distinct(StringComparer.Ordinal).Count())
+        HashSet<string> ignoreCaseWireNames = [with(StringComparer.OrdinalIgnoreCase), .. _wireNames];
+        HashSet<string> exactWireNames = [with(StringComparer.Ordinal), .. _wireNames];
+        if (ignoreCaseWireNames.Count != exactWireNames.Count)
             _wireExact = new(wires, StringComparer.Ordinal);
     }
 

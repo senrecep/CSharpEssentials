@@ -49,6 +49,24 @@ public class EnumNameLookupTests
     }
 
     [Fact]
+    public void OrdinalIgnoreCase_Should_Never_Equate_A_Non_Ascii_Char_With_An_Ascii_Char()
+    {
+        List<string> matches = [];
+        for (int c = 0x80; c <= char.MaxValue; c++)
+        {
+            char nonAscii = (char)c;
+            for (int a = 0; a < 0x80; a++)
+            {
+                char ascii = (char)a;
+                if (MemoryExtensions.Equals([nonAscii], [ascii], StringComparison.OrdinalIgnoreCase))
+                    matches.Add($"U+{c:X4} = U+{a:X4}");
+            }
+        }
+
+        matches.Should().BeEmpty();
+    }
+
+    [Fact]
     public void Lookups_Should_Find_Every_Key_Of_A_Large_Table_With_Shared_Buckets()
     {
         string[] keys = [.. Enumerable.Range(0, 500).Select(static i => "member_" + i.ToString(System.Globalization.CultureInfo.InvariantCulture))];
