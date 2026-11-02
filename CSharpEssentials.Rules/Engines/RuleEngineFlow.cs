@@ -10,8 +10,12 @@ public static partial class RuleEngine
     private static TRule? ConditionalBranch<TRule>(bool isFailure, TRule? success, TRule? failure) where TRule : class =>
         isFailure ? failure : success;
 
-    private static Result<TResult> FirstAndValue<TResult>(Result<TResult[]> andResult) =>
-        andResult.IsFailure ? andResult.Errors : andResult.Value[0];
+    private static Result<TResult> FirstAndValue<TResult>(Result<TResult[]> andResult)
+    {
+        if (andResult.IsFailure)
+            return andResult.Errors;
+        return andResult.Value.Length == 0 ? RuleErrors.EmptyRuleArrayError : andResult.Value[0];
+    }
 
     private static bool IsCallerCancellation(Exception exception, CancellationToken cancellationToken) =>
         exception is OperationCanceledException && cancellationToken.IsCancellationRequested;
