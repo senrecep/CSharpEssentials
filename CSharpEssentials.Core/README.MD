@@ -118,9 +118,11 @@ ValueTask<string> vt = value.AsValueTask();
 
 ```csharp
 Guid id = Guider.NewGuid();          // Version 7 on .NET 9+
-string shortId = id.ToStringFromGuid(); // URL-safe Base64 (22 chars)
+string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
 Guid parsed = shortId.ToGuidFromString();
 ```
+
+The string is standard Base64 with `/` replaced by `-` and `+` replaced by `_`, the reverse of RFC 4648 base64url. Decode it with `ToGuidFromString`; a generic base64url decoder such as `System.Buffers.Text.Base64Url` returns a different GUID whenever the string contains `-` or `_`. Stored short IDs depend on this alphabet, so it will not change.
 
 `Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms of the same two conversions. See [Guids](Guids/Readme.MD).
 
