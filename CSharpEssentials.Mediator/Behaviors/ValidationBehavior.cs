@@ -35,24 +35,72 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         _defaultMode = options?.DefaultMode ?? ValidationMode.Enforce;
     }
 
-    public async ValueTask<TResponse> Handle(
+    public ValueTask<TResponse> Handle(
         TRequest message,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested)
+            return new ValueTask<TResponse>(Task.FromCanceled<TResponse>(cancellationToken));
 
         ValidationMode mode = message is IValidationModeOverride modeOverride
             ? modeOverride.ValidationMode
             : _defaultMode;
 
         if (mode == ValidationMode.Off || _orderedGroups.Length == 0)
+            return next(message, cancellationToken);
+
+        if (_orderedGroups is not [[IValidator<TRequest> validator]])
+            return ValidateGroupsAsync(message, mode, next, cancellationToken);
+
+        ValueTask<Result<TRequest>> validation = RunSafeAsync(validator, message, cancellationToken);
+        if (!validation.IsCompletedSuccessfully)
+            return AwaitValidationAsync(validation, message, mode, next, cancellationToken);
+
+        Result<TRequest> result = validation.GetAwaiter().GetResult();
+        if (result.IsSuccess)
+            return next(message, cancellationToken);
+
+        if (_observers.Length == 0 && mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory)
+            return new ValueTask<TResponse>(factory.CreateFailure(result.Errors));
+
+        return CompleteFailureAsync(message, result.Errors, mode, next, cancellationToken);
+    }
+
+    private async ValueTask<TResponse> AwaitValidationAsync(
+        ValueTask<Result<TRequest>> validation,
+        TRequest message,
+        ValidationMode mode,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        Result<TRequest> result = await validation.ConfigureAwait(false);
+        if (result.IsSuccess)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
+        return await CompleteFailureAsync(message, result.Errors, mode, next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<TResponse> ValidateGroupsAsync(
+        TRequest message,
+        ValidationMode mode,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
         Error[]? errors = await ValidateAsync(message, cancellationToken).ConfigureAwait(false);
         if (errors is null)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
+        return await CompleteFailureAsync(message, errors, mode, next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<TResponse> CompleteFailureAsync(
+        TRequest message,
+        Error[] errors,
+        ValidationMode mode,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
         if (_observers.Length > 0)
             await NotifyObserversAsync(message, errors, mode, cancellationToken).ConfigureAwait(false);
 
@@ -63,17 +111,10 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     }
 
     /// <summary>
-    /// Runs the validators and returns the errors, or <see langword="null"/> when the request is valid.
+    /// Runs the validator groups and returns the errors, or <see langword="null"/> when the request is valid.
     /// </summary>
     private async ValueTask<Error[]?> ValidateAsync(TRequest message, CancellationToken cancellationToken)
     {
-        // Single validator fast path: skips group iteration and List allocation entirely.
-        if (_orderedGroups is [{ Length: 1 } onlyGroup])
-        {
-            Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken).ConfigureAwait(false);
-            return singleResult.IsFailure ? singleResult.Errors : null;
-        }
-
         // Groups are pre-sorted by Order (ascending) in the constructor.
         // Within each group validators run concurrently; groups run sequentially.
         // Errors accumulate in group order so lower-Order errors appear first.

@@ -280,10 +280,94 @@ public class ValidationBehaviorTests
 
         await act.Should().ThrowAsync<EnhancedValidationException>();
     }
+
+    [Fact]
+    public async Task Handle_Should_Complete_Synchronously_When_Enforce_Fails_For_Result_Without_Observers()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+
+        ValueTask<Result<int>> pending = behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        pending.IsCompletedSuccessfully.Should().BeTrue();
+        Result<int> result = await pending;
+        result.FirstError.Code.Should().Be("NameRequired");
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fault_Instead_Of_Throwing_When_TResponse_Is_Not_Result()
+    {
+        ValidationBehavior<TestValidationCommand, string> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+
+        ValueTask<string> pending = behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<string>("ok"), default);
+
+        pending.IsFaulted.Should().BeTrue();
+        Func<Task> act = () => pending.AsTask();
+        await act.Should().ThrowAsync<EnhancedValidationException>();
+    }
+
+    [Fact]
+    public void Handle_Should_Return_Canceled_Task_Instead_Of_Throwing_When_Token_Already_Cancelled()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([new StubValidator()]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), SuccessNext, new CancellationToken(canceled: true));
+
+        pending.IsCanceled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Call_Next_When_Async_Validator_Passes()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new YieldingValidator(null)]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand("ok"), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Return_Failure_When_Async_Validator_Fails()
+    {
+        Error[] errors = [Error.Validation("NameRequired", "Name is required")];
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new YieldingValidator(errors)]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Errors.Should().BeSameAs(errors);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Throw_EnhancedValidationException_When_Async_Validator_Fails_For_Non_Result()
+    {
+        ValidationBehavior<TestValidationCommand, string> behavior = new([new YieldingValidator([Error.Validation("NameRequired", "Name is required")])]);
+
+        Func<Task> act = () => behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<string>("ok"), default).AsTask();
+
+        await act.Should().ThrowAsync<EnhancedValidationException>();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Call_Next_When_There_Are_No_Validators()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Value.Should().Be(42);
+    }
 }
 
 internal sealed class FixedResultValidator(Error[] errors) : IValidator<TestValidationCommand>
 {
     public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
         new(Result<TestValidationCommand>.Failure(errors));
+}
+
+internal sealed class YieldingValidator(Error[]? errors) : IValidator<TestValidationCommand>
+{
+    public async ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default)
+    {
+        await Task.Yield();
+        return errors is null ? instance : Result<TestValidationCommand>.Failure(errors);
+    }
 }
