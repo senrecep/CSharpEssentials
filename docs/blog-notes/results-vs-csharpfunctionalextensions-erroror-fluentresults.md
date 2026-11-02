@@ -16,32 +16,32 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 ## What each library adds
 
-- **CSharpEssentials.Results (CSE).**
+- CSharpEssentials.Results (CSE).
   - `readonly record struct Result` / `Result<T>`; failure holds an `Error[]`.
   - Typed `Error` struct with code, description, `ErrorType` and `object?` metadata.
   - Map, Bind/Then, Ensure, Tap, Match, with Task and ValueTask overloads on every TFM.
   - `CombineAll` / `Combine` for aggregation, `Try`/`TryAsync`. Maybe lives in a separate package.
   - Depends on CSharpEssentials.Errors and Json, which bring Core and Enums.
-- **CSharpFunctionalExtensions 3.7.0.**
+- CSharpFunctionalExtensions 3.7.0.
   - `readonly struct Result<T>` with a `string` error by default; `Result<T, E>` for typed errors.
   - One error per result; `Combine` joins messages with ", ".
   - Maybe in the same package. No runtime dependencies.
-- **ErrorOr 2.1.1.**
+- ErrorOr 2.1.1.
   - `readonly record struct ErrorOr<T>`, typed `Error` struct, `List<Error>`.
   - Then/ThenDo/FailIf/Match; Task only. No Maybe.
   - Aggregation idiom in the README is a hand-filled `List<Error>`.
-- **FluentResults 4.0.0.**
+- FluentResults 4.0.0.
   - `Result` / `Result<T>` are classes; errors are an `IError` class hierarchy with nested reasons.
   - Bind, Map, Merge, Try. No Ensure, Tap, Match or Maybe.
   - Depends on Microsoft.Extensions.Logging.Abstractions and System.Threading.Tasks.Extensions.
 
-## The numbers that matter (net10 unless stated)
+## Main numbers (net10 unless stated)
 
-1. **Chaining is free for the three struct libraries.** Map, Bind, Tap and Match allocate 0 B for CSE, CFE and ErrorOr, under 2.8 ns each. FluentResults allocates 88-344 B per step (Map success 256 B / 56.9 ns).
-2. **A failure is not free in CSE.** Create failure: 104 B / 23.6 ns for CSE, 88 B / 18.4 ns for ErrorOr, 0 B / 0.34 ns for CFE (string error kept inline), 344 B / 92.7 ns for FluentResults. Ensure failure repeats this: 104 / 88 / 0 B. CSE loses here on every TFM.
-3. **Async 5-step pipeline.** Success with completed tasks: CSE 95.07 ns / 480 B, CFE 104.30 ns / 480 B, ErrorOr 112.01 ns / 560 B. Failure at step 1: CSE 123.45 ns / 584 B against CFE 109.73 ns / 480 B (CSE loss). Yielding failure: 1,048 B vs 879 B. Yielding success: time tie, 943 B vs 879 B.
-4. **Error aggregation, three failing checks.** CSE 237.91 ns / 696 B, ErrorOr 41.86 ns / 184 B (5.7× faster, 3.8× less allocation), FluentResults 205.11 ns / 712 B, CFE 372.08 ns / 784 B. ErrorOr's idiom builds no per-check results, so it does less work.
-5. **Maybe.** CSE and CFE tie: 0 B everywhere, every operation at most 1.14 ns, gaps under 0.3 ns. Exception on net8: Bind on None takes 6.92 ns for CSE vs 5.54 ns for CFE.
+1. Chaining is free for the three struct libraries. Map, Bind, Tap and Match allocate 0 B for CSE, CFE and ErrorOr, under 2.8 ns each. FluentResults allocates 88-344 B per step (Map success 256 B / 56.9 ns).
+2. A failure is not free in CSE. Create failure: 104 B / 23.6 ns for CSE, 88 B / 18.4 ns for ErrorOr, 0 B / 0.34 ns for CFE (string error kept inline), 344 B / 92.7 ns for FluentResults. Ensure failure repeats this: 104 / 88 / 0 B. CSE loses here on every TFM.
+3. Async 5-step pipeline. Success with completed tasks: CSE 95.07 ns / 480 B, CFE 104.30 ns / 480 B, ErrorOr 112.01 ns / 560 B. Failure at step 1: CSE 123.45 ns / 584 B against CFE 109.73 ns / 480 B (CSE loss). Yielding failure: 1,048 B vs 879 B. Yielding success: time tie, 943 B vs 879 B.
+4. Error aggregation, three failing checks. CSE 237.91 ns / 696 B, ErrorOr 41.86 ns / 184 B (5.7× faster, 3.8× less allocation), FluentResults 205.11 ns / 712 B, CFE 372.08 ns / 784 B. ErrorOr's idiom builds no per-check results, so it does less work.
+5. Maybe. CSE and CFE tie: 0 B everywhere, every operation at most 1.14 ns, gaps under 0.3 ns. Exception on net8: Bind on None takes 6.92 ns for CSE vs 5.54 ns for CFE.
 
 ## The AOT and dependency gap
 
@@ -51,7 +51,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - Installing Results brings Errors, Json, Core and Enums (plus the Enums generator and analyzers). CFE brings nothing.
 - For a thin layer: the result types are readonly record structs and chaining allocates 0 B. Against: the reflection-based `ToString()`, the `object?` metadata, four transitive packages and no `IsAotCompatible`. The "trim and AOT friendly" wording used for the Endpoints and DependencyInjection packages does not apply to Results today. State it as a known gap; no fix is part of this work.
 
-## Honest caveats to keep in the post
+## Caveats to keep in the post
 
 - CFE was measured with its default string error. Its 0 B failure paths come from that; a typed `Result<T, E>` was not benchmarked.
 - Aggregation idioms differ. Compare the ErrorOr row as "what its README tells you to write", not as the same work. CSE's typed `Result<T>.Combine(r1, r2, r3)` was not measured.
