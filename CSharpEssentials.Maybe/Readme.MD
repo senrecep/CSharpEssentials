@@ -158,7 +158,7 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 | `TryFirst()`, `TryFirst(predicate)`, `TryLast()`, `TryLast(predicate)` | `Maybe<T>` | First or last element, `None` when there is none |
 | `dictionary.TryFind(key)` | `Maybe<TValue>` | Lookup on an `IReadOnlyDictionary` |
 
-`TryFirst` is built on `FirstOrDefault`: for a sequence of value types such as `int[]`, an empty sequence or a predicate without a match gives `Some(default)` instead of `None`. `TryLast` and the other helpers do not have this limitation.
+`TryFirst` and `TryLast` return `None` for an empty sequence or a predicate without a match, for value types too. A `null` element gives `None`.
 
 ### Choosing between `T?`, `Maybe<T>` and `Result<T>`
 
@@ -231,3 +231,9 @@ Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 // Async
 Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
 ```
+
+## Upgrade notes
+
+### TryFirst on value-type sequences
+
+`TryFirst()` and `TryFirst(predicate)` used to return `Some(default)` for a value-type sequence such as `int[]` when the sequence was empty or nothing matched. They now return `None`, like `TryLast`. Code that read `Value` from that `Some(0)` should check `HasValue` or use `GetValueOrDefault`.
