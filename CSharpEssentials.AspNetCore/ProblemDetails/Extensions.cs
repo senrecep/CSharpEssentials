@@ -324,6 +324,6 @@ public static partial class Extensions
         ErrorType.Unexpected => "Unexpected Error",
         ErrorType.Failure => "Server Failure",
         ErrorType.Unknown => "Unknown Error",
-        _ => throw new NotImplementedException(),
+        _ => "Unknown Error",
     };
 }
