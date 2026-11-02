@@ -32,29 +32,64 @@ public static partial class ResultExtensions
     public static Result CombineAll(this IEnumerable<Result> source)
     {
         source = EnsureSource(source);
-        List<Error> errors = [];
+        if (source is Result[] array)
+            return CombineArray(array);
 
+        List<Error>? errors = null;
         foreach (Result result in source)
         {
             if (result.IsFailure)
-                errors.AddRange(result.ErrorsOrEmptyArray);
+                (errors ??= []).AddRange(result.Errors);
         }
 
-        return errors.Count == 0 ? Result.Success() : errors;
+        if (errors is null)
+            return Result.Success();
+        Error[] combined = [.. errors];
+        return Result.Failure(combined);
     }
 
     public static Result CombineAll(this IEnumerable<IResultBase> source)
     {
         source = EnsureSource(source);
-        List<Error> errors = [];
+        List<Error>? errors = null;
 
         foreach (IResultBase result in source)
         {
             if (result.IsFailure)
-                errors.AddRange(result.ErrorsOrEmptyArray);
+                (errors ??= []).AddRange(result.ErrorsOrEmptyArray);
         }
 
-        return errors.Count == 0 ? Result.Success() : errors;
+        if (errors is null)
+            return Result.Success();
+        Error[] combined = [.. errors];
+        return Result.Failure(combined);
+    }
+
+    private static Result CombineArray(Result[] results)
+    {
+        int count = 0;
+        foreach (Result result in results)
+        {
+            if (result.IsFailure)
+                count += result.Errors.Length;
+        }
+
+        if (count == 0)
+            return Result.Success();
+
+        var errors = new Error[count];
+        int index = 0;
+        foreach (Result result in results)
+        {
+            if (result.IsFailure)
+            {
+                Error[] resultErrors = result.Errors;
+                resultErrors.CopyTo(errors, index);
+                index += resultErrors.Length;
+            }
+        }
+
+        return Result.Failure(errors);
     }
 
     public static Result<TValue[]> CombineAll<TValue>(this IEnumerable<Result<TValue>> source) => source.Sequence();

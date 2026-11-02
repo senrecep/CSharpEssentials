@@ -14,7 +14,7 @@ public readonly partial record struct Result
     /// <param name="onFailure">A function to execute on failure, providing an array of errors.</param>
     /// <returns>The result of the matching function.</returns>
     public T Match<T>(Func<T> onSuccess, Func<Error[], T> onFailure) =>
-        IsFailure ? onFailure(Errors) : onSuccess();
+        IsFailure ? onFailure(_errors) : onSuccess();
 
     /// <summary>
     /// Asynchronously matches the result by executing the corresponding async function for success or failure.

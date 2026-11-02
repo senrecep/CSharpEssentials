@@ -16,7 +16,7 @@ public readonly partial record struct Result
     /// </summary>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static Result Failure(Error error) => From(error);
+    public static Result Failure(Error error) => new(true, [error]);
 
     /// <summary>
     /// Creates a new failure result.
@@ -100,7 +100,7 @@ public readonly partial record struct Result
     /// <typeparam name="TValue"></typeparam>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static Result<TValue> Failure<TValue>(Error error) => Result<TValue>.From(error);
+    public static Result<TValue> Failure<TValue>(Error error) => Result<TValue>.Failure(error);
     /// <summary>
     /// Creates a new failure result.
     /// </summary>
@@ -121,7 +121,7 @@ public readonly partial record struct Result
     /// <typeparam name="TValue"></typeparam>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static Result<TValue> From<TValue>(Error error) => Result<TValue>.From(error);
+    public static Result<TValue> From<TValue>(Error error) => Result<TValue>.Failure(error);
     /// <summary>
     /// Converts a collection of errors to a result.
     /// </summary>
@@ -131,11 +131,7 @@ public readonly partial record struct Result
     public static Result<TValue> From<TValue>(params IEnumerable<Error> errors) => Result<TValue>.From(errors);
 
 
-#if NET8_0_OR_GREATER
-    public static implicit operator Result(Error error) => new([error]);
-#else
-    public static implicit operator Result(Error error) => new([error]);
-#endif
+    public static implicit operator Result(Error error) => new(true, [error]);
     public static implicit operator Result(Error[] errors) => Failure(errors);
     public static implicit operator Result(List<Error> errors) => new(errors);
     public static implicit operator Result(HashSet<Error> errors) => new(errors);
