@@ -1,0 +1,11 @@
+global using CSharpEssentials.Errors;
+global using CSharpEssentials.Maybe;
+global using CSharpEssentials.ResultPattern;
+global using Cfe = CSharpFunctionalExtensions;
+global using Eo = ErrorOr;
+global using Fr = FluentResults;
+global using static CSharpFunctionalExtensions.AsyncResultExtensionsBothOperands;
+global using static CSharpFunctionalExtensions.AsyncResultExtensionsLeftOperand;
+global using static CSharpFunctionalExtensions.MaybeExtensions;
+global using static CSharpFunctionalExtensions.ResultExtensions;
+global using static ErrorOr.ErrorOrExtensions;

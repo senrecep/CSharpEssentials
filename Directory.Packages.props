@@ -133,6 +133,9 @@
         <PackageVersion Include="FastEndpoints" Version="8.3.0" />
         <PackageVersion Include="FastEndpoints.Generator" Version="8.3.0" />
         <PackageVersion Include="Carter" Version="10.0.0" />
+        <PackageVersion Include="CSharpFunctionalExtensions" Version="3.7.0" />
+        <PackageVersion Include="ErrorOr" Version="2.1.1" />
+        <PackageVersion Include="FluentResults" Version="4.0.0" />
         <!-- TestServer for the endpoints throughput suite, matched to each TFM's shared framework major. Scoped to that
              suite so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />

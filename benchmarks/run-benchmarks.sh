@@ -9,6 +9,7 @@
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks (default: validation)
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 #   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
+#   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations vs CSharpFunctionalExtensions / ErrorOr / FluentResults
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -62,8 +63,14 @@ case "$SUITE" in
         # Carter 10 and the AddValidation POST rows need net10.0, so quick mode defaults to it for this suite.
         DEFAULT_TFM="net10.0"
         ;;
+    results-comparison)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Results.Comparison.Benchmarks/CSharpEssentials.Results.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/results-comparison"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*CreateComparison*" "*MapComparison*" "*BindComparison*" "*EnsureComparison*" "*MatchComparison*" "*TapComparison*" "*AsyncPipelineComparison*" "*ErrorAggregationComparison*" "*MaybeComparison*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison)" >&2
         exit 1
         ;;
 esac
