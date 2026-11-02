@@ -159,9 +159,9 @@ public class DateTimeProviderTests
         provider.TimeZone.Should().Be(TimeZoneInfo.Local);
         provider.TimeZoneUtc.Should().Be(TimeZoneInfo.Utc);
         provider.UtcNow.Should().Be(fakeTimeProvider.GetUtcNow());
-        provider.UtcNowDateTime.Should().Be(fakeTimeProvider.GetUtcNow().DateTime);
-        provider.UtcNowDate.Should().Be(DateOnly.FromDateTime(fakeTimeProvider.GetUtcNow().DateTime));
-        provider.UtcNowTime.Should().Be(TimeOnly.FromDateTime(fakeTimeProvider.GetUtcNow().DateTime));
+        provider.UtcNowDateTime.Should().Be(fakeTimeProvider.GetUtcNow().UtcDateTime);
+        provider.UtcNowDate.Should().Be(DateOnly.FromDateTime(fakeTimeProvider.GetUtcNow().UtcDateTime));
+        provider.UtcNowTime.Should().Be(TimeOnly.FromDateTime(fakeTimeProvider.GetUtcNow().UtcDateTime));
     }
 
     [Fact]
