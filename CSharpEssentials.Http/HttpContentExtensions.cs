@@ -1,6 +1,7 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Http;
@@ -28,15 +29,29 @@ public static class HttpContentExtensions
             cancellationToken);
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public static Task<Result<T>> ReadFromJsonAsResultAsync<T>(
         this HttpContent content,
         JsonSerializerOptions? options = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        ReadFromJsonAsResultAsync(content, HttpJson.Reader<T>(options), cancellationToken);
+
+    public static Task<Result<T>> ReadFromJsonAsResultAsync<T>(
+        this HttpContent content,
+        JsonTypeInfo<T> typeInfo,
+        CancellationToken cancellationToken = default) =>
+        ReadFromJsonAsResultAsync(content, HttpJson.Reader(typeInfo), cancellationToken);
+
+    private static Task<Result<T>> ReadFromJsonAsResultAsync<T>(
+        HttpContent content,
+        Func<HttpContent, CancellationToken, Task<T?>> read,
+        CancellationToken cancellationToken)
     {
         return Result.TryAsync<T>(
             async () =>
             {
-                T? value = await content.ReadFromJsonAsync<T>(options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
+                T? value = await read(content, cancellationToken).ConfigureAwait(false);
                 if (value is null)
                     return Error.NotFound(description: "Response body was empty or could not be deserialized.");
                 return value;

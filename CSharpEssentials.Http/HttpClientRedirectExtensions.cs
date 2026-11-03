@@ -1,7 +1,8 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Http;
@@ -72,12 +73,30 @@ public static class HttpClientRedirectExtensions
             cancellationToken).ConfigureAwait(false);
     }
 
-    public static async Task<Result<T>> SendWithRedirectsAsResultAsync<T>(
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
+    public static Task<Result<T>> SendWithRedirectsAsResultAsync<T>(
         this HttpClient? client,
         HttpRequestMessage? request,
         JsonSerializerOptions? options = null,
         int maxRedirects = 5,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default) =>
+        SendWithRedirectsCoreAsync(client, request, HttpJson.Reader<T>(options), maxRedirects, cancellationToken);
+
+    public static Task<Result<T>> SendWithRedirectsAsResultAsync<T>(
+        this HttpClient? client,
+        HttpRequestMessage? request,
+        JsonTypeInfo<T> typeInfo,
+        int maxRedirects = 5,
+        CancellationToken cancellationToken = default) =>
+        SendWithRedirectsCoreAsync(client, request, HttpJson.Reader(typeInfo), maxRedirects, cancellationToken);
+
+    private static async Task<Result<T>> SendWithRedirectsCoreAsync<T>(
+        HttpClient? client,
+        HttpRequestMessage? request,
+        Func<HttpContent, CancellationToken, Task<T?>> read,
+        int maxRedirects,
+        CancellationToken cancellationToken)
     {
         if (client is null)
             return Error.Validation("Http.ClientRequired", "HttpClient cannot be null.");
@@ -99,7 +118,7 @@ public static class HttpClientRedirectExtensions
                         cancellationToken).ConfigureAwait(false);
 
                     if (!IsRedirectStatusCode(response.StatusCode))
-                        return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
+                        return await HttpClientResultExtensions.HandleResponseAsync(response, read, cancellationToken).ConfigureAwait(false);
 
                     if (redirects >= maxRedirects)
                     {
@@ -125,9 +144,7 @@ public static class HttpClientRedirectExtensions
                     if (currentRequest != request)
                         currentRequest.Dispose();
 
-                    newRequest.RequestUri = redirectUri.IsAbsoluteUri
-                        ? redirectUri
-                        : new Uri(currentRequest.RequestUri!, redirectUri);
+                    newRequest.RequestUri = ResolveRedirectUri(currentRequest, redirectUri);
 
                     currentRequest = newRequest;
                     redirects++;
@@ -136,6 +153,13 @@ public static class HttpClientRedirectExtensions
             HandleException,
             cancellationToken).ConfigureAwait(false);
     }
+
+    private static Uri ResolveRedirectUri(HttpRequestMessage request, Uri redirectUri) =>
+#if NETSTANDARD2_1
+        redirectUri.IsAbsoluteUri ? redirectUri : new Uri(request.RequestUri, redirectUri);
+#else
+        redirectUri.IsAbsoluteUri ? redirectUri : new Uri(request.RequestUri!, redirectUri);
+#endif
 
     private static bool IsRedirectStatusCode(HttpStatusCode statusCode)
     {
@@ -169,27 +193,6 @@ public static class HttpClientRedirectExtensions
     {
         if (response.IsSuccessStatusCode)
             return Result.Success();
-
-        var error = HttpStatusCodeMapper.ToError(response.StatusCode);
-        return error;
-    }
-
-    private static async Task<Result<T>> HandleResponseAsync<T>(
-        HttpResponseMessage response,
-        JsonSerializerOptions? options,
-        CancellationToken cancellationToken)
-    {
-        if (response.IsSuccessStatusCode)
-        {
-            T? value = await response.Content.ReadFromJsonAsync<T>(
-                options ?? EnhancedJsonSerializerOptions.DefaultOptions,
-                cancellationToken).ConfigureAwait(false);
-
-            if (value is null)
-                return Error.NotFound(description: "Response body was empty or could not be deserialized.");
-
-            return value;
-        }
 
         var error = HttpStatusCodeMapper.ToError(response.StatusCode);
         return error;
