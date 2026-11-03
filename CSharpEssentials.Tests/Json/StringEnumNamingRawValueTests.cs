@@ -1,5 +1,6 @@
 using CSharpEssentials.Enums;
 using CSharpEssentials.Json;
+using CSharpEssentials.Tests.Enums;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Json;
@@ -31,6 +32,21 @@ public sealed class StringEnumNamingRawValueTests
     public void GetName_NonGeneric_Should_Map_Every_Integral_Number_Type_To_The_Wire_Name(object number)
     {
         StringEnumNaming.GetName(typeof(RawStatus), number).Should().Be("pending_approval");
+    }
+
+    public static TheoryData<object> NegativeRawNumbers() => new()
+    {
+        (sbyte)-5,
+        (short)-5,
+        -5,
+        -5L
+    };
+
+    [Theory]
+    [MemberData(nameof(NegativeRawNumbers))]
+    public void GetName_NonGeneric_Should_Sign_Extend_Negative_Numbers(object number)
+    {
+        StringEnumNaming.GetName(typeof(GeneratedSigned), number).Should().Be("negative");
     }
 
     [Fact]
