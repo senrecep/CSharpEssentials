@@ -15,26 +15,6 @@ internal static class DomainEventCollector
     private static readonly ConcurrentDictionary<Type, DomainEventTiming> TimingCache = new();
 
     /// <summary>
-    /// Collects and clears domain events from all tracked entities, preserving per-entity list order.
-    /// Events are returned entity-by-entity in ChangeTracker order; within each entity
-    /// they appear in the order they were raised (list index).
-    /// </summary>
-    internal static IDomainEvent[] Collect(DbContext context)
-    {
-        List<IDomainEvent> collected = [];
-
-        foreach (IDomainEventHolder entity in context.ChangeTracker
-            .Entries<IDomainEventHolder>()
-            .Select(e => e.Entity))
-        {
-            collected.AddRange(entity.DomainEvents);
-            entity.ClearDomainEvents();
-        }
-
-        return [.. collected];
-    }
-
-    /// <summary>
     /// Collects and clears domain events from all tracked entities, keeping each entity with its events
     /// so they can be put back with <see cref="Restore"/>.
     /// </summary>

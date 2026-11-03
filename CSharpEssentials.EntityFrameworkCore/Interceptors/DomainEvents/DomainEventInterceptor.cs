@@ -34,14 +34,22 @@ public sealed partial class DomainEventInterceptor(
         if (eventData.Context is null)
             return base.SavingChanges(eventData, result);
 
-        IDomainEvent[] allEvents = DomainEventCollector.Collect(eventData.Context);
-        if (allEvents.Length == 0)
+        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected = DomainEventCollector.CollectByEntity(eventData.Context);
+        if (collected.Count == 0)
             return base.SavingChanges(eventData, result);
 
-        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming(allEvents);
+        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming([.. collected.SelectMany(static c => c.Events)]);
 
-        if (beforeSave.Length > 0)
-            PublishEventsAsync(beforeSave, CancellationToken.None).GetAwaiter().GetResult();
+        try
+        {
+            if (beforeSave.Length > 0)
+                PublishEventsAsync(beforeSave, CancellationToken.None).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            DomainEventCollector.Restore(collected, afterSave);
+            throw;
+        }
 
         InterceptionResult<int> returnValue = base.SavingChanges(eventData, result);
 
@@ -58,14 +66,22 @@ public sealed partial class DomainEventInterceptor(
         if (eventData.Context is null)
             return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
-        IDomainEvent[] allEvents = DomainEventCollector.Collect(eventData.Context);
-        if (allEvents.Length == 0)
+        List<(IDomainEventHolder Entity, IDomainEvent[] Events)> collected = DomainEventCollector.CollectByEntity(eventData.Context);
+        if (collected.Count == 0)
             return await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
-        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming(allEvents);
+        (IDomainEvent[] beforeSave, IDomainEvent[] afterSave) = DomainEventCollector.SplitByTiming([.. collected.SelectMany(static c => c.Events)]);
 
-        if (beforeSave.Length > 0)
-            await PublishEventsAsync(beforeSave, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (beforeSave.Length > 0)
+                await PublishEventsAsync(beforeSave, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            DomainEventCollector.Restore(collected, afterSave);
+            throw;
+        }
 
         InterceptionResult<int> returnValue = await base.SavingChangesAsync(eventData, result, cancellationToken).ConfigureAwait(false);
 
