@@ -151,6 +151,7 @@
         <!-- 12.5.0: the last Apache-2.0 MediatR; 13+ needs a license key (https://github.com/jbogard/MediatR/wiki/License-Key-Configuration). -->
         <PackageVersion Include="MediatR" Version="12.5.0" />
         <PackageVersion Include="Mediator.SourceGenerator" Version="3.0.2" />
+        <PackageVersion Include="AsyncKeyedLock" Version="8.1.2" />
         <PackageVersion Include="Enums.NET" Version="5.0.0" />
         <!-- No stable NetEscapades.EnumGenerators release exists; 1.0.0-beta21 is the latest prerelease. -->
         <PackageVersion Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />

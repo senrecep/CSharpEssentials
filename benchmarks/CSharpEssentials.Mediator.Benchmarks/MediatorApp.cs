@@ -79,5 +79,17 @@ public static class MediatorApp
         MediatorS50.Add(new ServiceCollection())
             .Count(static d => d.ServiceType.IsGenericType && d.ServiceType.GetGenericTypeDefinition() == typeof(IRequestHandler<,>));
 
+    /// <summary>
+    /// Adds the one <c>AddMediator</c> registration of the project to <paramref name="services"/>, so containers built
+    /// outside this class (see <see cref="BehaviorApp"/>) use the same generated mediator and options.
+    /// </summary>
+    /// <param name="services">The collection.</param>
+    /// <returns><paramref name="services"/>.</returns>
+    public static IServiceCollection Register(IServiceCollection services)
+    {
+        Add(services);
+        return services;
+    }
+
     private static void Add(IServiceCollection services) => services.AddMediator(static options => options.Assemblies = [typeof(Ping)]);
 }
