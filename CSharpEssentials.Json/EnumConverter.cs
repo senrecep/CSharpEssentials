@@ -24,6 +24,7 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
     private const int StackBufferLength = 256;
     private const int PreviewLength = 64;
 
+    // Mirrors EnumTypeTraits<TEnum>.IsSigned and FormatRaw, which are internal to CSharpEssentials.Enums.
     private static readonly bool IsSigned =
         Type.GetTypeCode(typeof(TEnum)) is TypeCode.SByte or TypeCode.Int16 or TypeCode.Int32 or TypeCode.Int64;
 
@@ -79,8 +80,15 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
     public override TEnum ReadAsPropertyName(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
         ReadString(ref reader, splitLegacyFlags: true);
 
-    public override void WriteAsPropertyName(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options) =>
-        writer.WritePropertyName(info.IsDefined(value) ? info.Format(value, writeAs) : UndefinedNumber(value));
+    public override void WriteAsPropertyName(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
+    {
+        if (info.IsFlags)
+            writer.WritePropertyName(info.IsDefined(value) ? info.Format(value, writeAs) : UndefinedNumber(value));
+        else if (!info.TryGetMember(value, out EnumMemberInfo<TEnum>? member))
+            writer.WritePropertyName(UndefinedNumber(value));
+        else
+            writer.WritePropertyName(writeAs == EnumWireFormat.Number ? member.NumericText : member.WireName);
+    }
 
     private TEnum ReadScalar(ref Utf8JsonReader reader, bool splitLegacyFlags)
     {
