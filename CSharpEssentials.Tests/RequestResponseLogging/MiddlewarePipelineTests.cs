@@ -180,6 +180,50 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InvokeAsync_Should_IgnoreOnlyRootPath_When_RootIsIgnored()
+    {
+        var loggedPaths = new List<string>();
+
+        _host = await CreateHostBuilder(opts =>
+        {
+            opts.IgnorePaths("/");
+            opts.UseHandler(ctx =>
+            {
+                loggedPaths.Add(ctx.Context.Request.Path.Value!);
+                return Task.CompletedTask;
+            });
+        }).StartAsync();
+
+        var client = _host.GetTestClient();
+        await client.GetAsync("/");
+        await client.GetAsync("/api/test");
+
+        loggedPaths.Should().Equal("/api/test");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_SkipNullAndEmptyEntries_When_IgnoredPathsContainThem()
+    {
+        var loggedPaths = new List<string>();
+
+        _host = await CreateHostBuilder(opts =>
+        {
+            opts.IgnorePaths(null!, "", "/health");
+            opts.UseHandler(ctx =>
+            {
+                loggedPaths.Add(ctx.Context.Request.Path.Value!);
+                return Task.CompletedTask;
+            });
+        }).StartAsync();
+
+        var client = _host.GetTestClient();
+        await client.GetAsync("/health");
+        await client.GetAsync("/api/test");
+
+        loggedPaths.Should().Equal("/api/test");
+    }
+
+    [Fact]
     public async Task InvokeAsync_Should_SkipRequestLogging_When_SkipRequestResponseLoggingAttributePresent()
     {
         RequestResponseContext? capturedContext = null;

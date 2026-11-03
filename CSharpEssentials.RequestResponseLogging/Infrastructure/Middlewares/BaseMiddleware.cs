@@ -15,6 +15,7 @@ internal abstract class BaseMiddleware
     private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
     private readonly ILogWriter? _logWriter;
     private readonly HashSet<string> _ignoredPaths;
+    private readonly bool _ignoreRootPath;
     private readonly RecyclableMemoryStreamManager _recyclableMemoryStreamManager;
     private readonly bool _shouldLogErrors = true;
     private readonly int _bufferSize = DefaultBufferSize;
@@ -47,8 +48,9 @@ internal abstract class BaseMiddleware
 #endif
 
         _logWriter = logWriter is not NullLogWriter ? logWriter : null;
+        _ignoreRootPath = ignoredPaths.Any(p => !string.IsNullOrEmpty(p) && p.TrimEnd('/').Length == 0);
         _ignoredPaths = new HashSet<string>(
-            ignoredPaths.Select(p => p.TrimEnd('/')),
+            ignoredPaths.Where(p => p is not null).Select(p => p.TrimEnd('/')).Where(p => p.Length > 0),
             StringComparer.OrdinalIgnoreCase
         );
         _recyclableMemoryStreamManager = new RecyclableMemoryStreamManager();
@@ -67,9 +69,11 @@ internal abstract class BaseMiddleware
                 throw new ArgumentNullException(nameof(context));
 
 #endif
-        string? requestPath = context.Request.Path.Value?.TrimEnd('/');
-        return !string.IsNullOrEmpty(requestPath) &&
-               _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
+        string requestPath = context.Request.Path.Value?.TrimEnd('/') ?? string.Empty;
+        if (requestPath.Length == 0)
+            return _ignoreRootPath;
+
+        return _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
     }
 
     protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext, Func<RequestResponseContext, Task>? handler = null)
