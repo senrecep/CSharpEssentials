@@ -186,6 +186,7 @@ public sealed class RuleEngineCompositeHeadTests
             ctx);
 
         result.Value.Should().Be(7);
+        ctx.Log.Should().Equal("a", "b");
     }
 
     [Fact]
