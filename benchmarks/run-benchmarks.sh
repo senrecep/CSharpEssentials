@@ -12,12 +12,12 @@
 #                                              (net8.0 runs CSE's netstandard2.1 build)
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
-#   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
+#   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints; OperationNaming and empty-prefix MapGroup cost at N=500
 #   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations, Error create/equality/exception/ToString/JSON, Sequence/CombineAll, Try/TryAsync, Maybe collection helpers vs CSharpFunctionalExtensions / ErrorOr / FluentResults
 #   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor; TryAdd at N=50/500/2000 and transient decorator resolve
 #   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors); validator fan-out, idempotency, lock, caching and logging behaviors vs hand-written MediatR/Mediator behaviors and AsyncKeyedLock
 #                                              (net8.0 runs CSE's netstandard2.1 builds: no CSE package in this suite has a net8 target)
-#   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description vs Enums.NET / NetEscapades.EnumGenerators / BCL
+#   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description, boxed formatting and reflection-built names/values vs Enums.NET / NetEscapades.EnumGenerators / BCL
 #                                              (net8.0 runs CSE's netstandard2.1 build: the package has no net8 target)
 #   ./run-benchmarks.sh --project any          # Any construct/match/try-pick/partition/JSON/ToString vs OneOf / Dunet, These vs hand-written record
 #                                              (net8.0 runs CSE's netstandard2.1 build: the packages have no net8 target)
@@ -86,7 +86,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Endpoints.Benchmarks/CSharpEssentials.Endpoints.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/endpoints"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*Startup*" "*Throughput*")
+        QUICK_PATTERNS=("*Startup*" "*Throughput*" "*.OperationNamingBenchmarks.*" "*.OperationNameReadBenchmarks.*" "*.EmptyPrefixGroupBenchmarks.*")
         # Carter 10 and the AddValidation POST rows need net10.0, so quick mode defaults to it for this suite.
         DEFAULT_TFM="net10.0"
         ;;
@@ -112,7 +112,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Enums.Comparison.Benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/enums"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*.ToStringComparison.*" "*.ParseComparison.*" "*.IsDefinedComparison.*" "*.GetValuesComparison.*" "*.FlagsComparison.*" "*.DescriptionComparison.*")
+        QUICK_PATTERNS=("*.ToStringComparison.*" "*.ParseComparison.*" "*.IsDefinedComparison.*" "*.GetValuesComparison.*" "*.FlagsComparison.*" "*.DescriptionComparison.*" "*.BoxedFormatComparison.*" "*.ReflectionInfoComparison.*")
         ;;
     any)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Any.Comparison.Benchmarks/CSharpEssentials.Any.Comparison.Benchmarks.csproj"
