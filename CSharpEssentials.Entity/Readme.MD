@@ -2,6 +2,9 @@
 
 DDD foundation for .NET entities with auditing, soft deletion, and domain events.
 
+> Benchmarks of the `EntityBase` domain event list against a hand-written list (read, raise and clear, collect)
+> are in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **`EntityBase<TId>`**: Typed IDs with creation and modification audit fields. `EntityBase` is the same without an ID.
