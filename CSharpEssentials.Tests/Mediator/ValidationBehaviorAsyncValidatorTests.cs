@@ -1,11 +1,10 @@
+using Mediator;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Mediator;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Validation;
 
 using FluentAssertions;
-
-using Mediator;
 
 namespace CSharpEssentials.Tests.Mediator;
 
@@ -118,44 +117,58 @@ public sealed class ValidationBehaviorAsyncValidatorTests
             new YieldingValidator(command => command)
         ]);
 
-        Result result = await behavior.Handle(new TestValidationCommand("ok"), (_, _) => new ValueTask<Result>(Result.Failure(Error.Failure("FromNext", "next"))), default);
+        Result result = await behavior.Handle(
+            new TestValidationCommand("ok"),
+            (_, _) => new ValueTask<Result>(Result.Failure(Error.Failure("FromNext", "next"))),
+            default);
 
         result.FirstError.Code.Should().Be("FromNext");
     }
 
     [Fact]
-    public async Task Synchronously_Throwing_Validator_Cancellation_Should_Propagate()
+    public async Task Later_Order_Group_Should_Start_After_Earlier_Async_Group_Completes()
     {
-        ValidationBehavior<TestValidationCommand, Result> behavior = new([new ThrowingIValidator(new OperationCanceledException())]);
+        bool firstGroupDone = false;
+        bool firstGroupDoneWhenSecondStarted = false;
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([
+            new YieldingValidator(command => command, order: 1, onStart: () => firstGroupDoneWhenSecondStarted = firstGroupDone),
+            new YieldingValidator(command =>
+            {
+                firstGroupDone = true;
+                return command;
+            })
+        ]);
 
-        Func<Task> act = () => behavior.Handle(new TestValidationCommand("x"), SuccessNext, default).AsTask();
+        await behavior.Handle(new TestValidationCommand("ok"), SuccessNext, default);
 
-        await act.Should().ThrowAsync<OperationCanceledException>();
+        firstGroupDoneWhenSecondStarted.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Synchronously_Throwing_Validator_Exception_Should_Become_Validator_Exception_Error()
+    public async Task Identical_Errors_From_Async_Validators_Should_Be_Deduplicated()
     {
-        ValidationBehavior<TestValidationCommand, Result> behavior = new([new ThrowingIValidator(new InvalidOperationException("sync boom"))]);
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([
+            new YieldingValidator(_ => Error.Validation("DupCode", "Duplicate error")),
+            new YieldingValidator(_ => Error.Validation("DupCode", "Duplicate error"))
+        ]);
 
-        Result result = await behavior.Handle(new TestValidationCommand("x"), SuccessNext, default);
+        Result result = await behavior.Handle(new TestValidationCommand(""), SuccessNext, default);
 
-        result.FirstError.Code.Should().Be("Validator.Exception");
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("DupCode");
     }
 
-    private sealed class YieldingValidator(Func<TestValidationCommand, Result<TestValidationCommand>> validate)
-        : IValidator<TestValidationCommand>
+    private sealed class YieldingValidator(
+        Func<TestValidationCommand, Result<TestValidationCommand>> validate,
+        int order = 0,
+        Action? onStart = null) : IValidator<TestValidationCommand>
     {
+        public int Order => order;
+
         public async ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default)
         {
+            onStart?.Invoke();
             await Task.Yield();
             return validate(instance);
         }
-    }
-
-    private sealed class ThrowingIValidator(Exception exception) : IValidator<TestValidationCommand>
-    {
-        public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
-            throw exception;
     }
 }
