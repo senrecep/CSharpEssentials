@@ -1,8 +1,7 @@
+using Mediator;
 using CSharpEssentials.Mediator;
 
 using FluentAssertions;
-
-using Mediator;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -24,7 +23,7 @@ public sealed class MediatorExtensionsDefaultsTests
     [Fact]
     public void DefaultPipelineBehaviors_Should_Match_AddMediatorBehaviors_Registration_Order()
     {
-        ServiceCollection services = new();
+        var services = new ServiceCollection();
 
         services.AddMediatorBehaviors();
 
@@ -36,7 +35,7 @@ public sealed class MediatorExtensionsDefaultsTests
     [Fact]
     public void AddMediatorValidationOptions_Should_Configure_Existing_Instance()
     {
-        ServiceCollection services = new();
+        var services = new ServiceCollection();
         services.AddMediatorValidationOptions();
 
         services.AddMediatorValidationOptions(options => options.DefaultMode = ValidationMode.LogOnly);
@@ -49,7 +48,7 @@ public sealed class MediatorExtensionsDefaultsTests
     [Fact]
     public void AddMediatorValidationBehavior_With_Configure_Should_Update_Options_Registered_By_AddMediatorBehaviors()
     {
-        ServiceCollection services = new();
+        var services = new ServiceCollection();
         services.AddMediatorBehaviors();
 
         services.AddMediatorValidationBehavior(options => options.DefaultMode = ValidationMode.Off);
@@ -62,7 +61,7 @@ public sealed class MediatorExtensionsDefaultsTests
     [Fact]
     public void AddMediatorValidationOptions_Should_Ignore_Keyed_Options_Registration()
     {
-        ServiceCollection services = new();
+        var services = new ServiceCollection();
         ValidationBehaviorOptions keyed = new() { DefaultMode = ValidationMode.Off };
         services.AddKeyedSingleton("tenant", keyed);
 
