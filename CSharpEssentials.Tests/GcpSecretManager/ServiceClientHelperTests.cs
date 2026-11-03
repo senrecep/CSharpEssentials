@@ -8,7 +8,7 @@ public sealed class ServiceClientHelperTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void CreateWithRegion_Should_ThrowArgumentException_When_CredentialsPathIsNullOrEmpty(string? credentialsPath)
+    public void CreateWithRegion_WithNullOrEmptyCredentialsPath_ShouldThrowArgumentException(string? credentialsPath)
     {
         var helper = new ServiceClientHelper();
 
