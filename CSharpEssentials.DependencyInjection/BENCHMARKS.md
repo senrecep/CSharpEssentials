@@ -2,6 +2,8 @@
 
 Compared with Scrutor 7.0.0 and manual Microsoft.Extensions.DependencyInjection registration, measured with BenchmarkDotNet v0.14.0 on an AMD Ryzen 5 5600 under .NET 8, 9, 10 and 11.
 
+The same suite has two newer classes that have not had a full run yet, TryAdd registration at N = 50, 500 and 2000 and transient decorator resolve. They are described in [Pending: TryAdd and transient decorator resolve](#pending-tryadd-and-transient-decorator-resolve).
+
 ---
 
 ## What was measured
@@ -197,6 +199,41 @@ Mean (and allocation where it differs) per TFM. Run order net10 → net9 → net
 
 ---
 
+## Pending: TryAdd and transient decorator resolve
+
+**Status: draft.** These two classes build on net8.0 to net11.0, and their parity self-check passes on every TFM. No full default-job run has been done, so this section has no numbers yet. The reports will be committed under `benchmarks/results/di/{tfm}/results/` next to the ones above. Short-job (`--quick`) numbers are not published.
+
+The rules are the same as for the classes above: `[MemoryDiagnoser]`, the hand-written Microsoft.Extensions.DependencyInjection code as the baseline, a doc URL above every Scrutor and framework row, and a `[GlobalSetup]` parity check that `--self-check` also runs. Scrutor is pinned to 7.0.0, the latest stable release on NuGet on 2026-11-04 (MIT).
+
+| Class | Measured unit | Rows | Label |
+|---|---|---|---|
+| `TryAddBenchmarks` | Register N scoped services with TryAdd semantics into a new collection, warm and in-process. `N` = 50, 500 or 2000 | ManualTryAdd (baseline, `TryAddScoped` per service), CseGenerated (`[RegisterScoped(Strategy = RegistrationStrategy.TryAdd)]` and the generated registry), CseReflection (`AddServicesFromAssemblies`), Scrutor (`UsingRegistrationStrategy(RegistrationStrategy.Skip)`), ManualAdd (`AddScoped` per service) | The four TryAdd rows are like-for-like. ManualAdd is a reference only: it has no duplicate check |
+| `TransientDecoratorBenchmarks` | One resolve of a decorated transient `IService0` from the root provider, built once in setup | Manual (baseline, a hand-written `Replace` factory), CseGenerated (`[Decorates]`), CseRuntime (`Decorate<TService, TDecorator>`), Scrutor (`Decorate<TService, TDecorator>`) | Like-for-like: same services, decorators, lifetime and resolve |
+
+Inputs: `TryAddBenchmarks` uses three new generated libraries, T50, T500 and T2000, from `generate-services.py`. They hold the same interfaces, classes and dependency rule as S50 and S500. The only change is the `Strategy = RegistrationStrategy.TryAdd` attribute property. The S50 and S500 output of the script did not change. `TransientDecoratorBenchmarks` registers S50's IService0 to IService9 as transient by hand, then decorates all ten with the S50.Decorators classes.
+
+Methodology:
+- On an empty collection every TryAdd row scans the collection once per added descriptor, so all four are O(N^2). Microsoft `TryAdd` loops the collection, Scrutor `Skip` calls Microsoft `TryAdd` ([RegistrationStrategy.cs L47-L50](https://github.com/khellang/Scrutor/blob/v7.0.0/src/Scrutor/RegistrationStrategy.cs#L47-L50)), and CSE loops it in `ServiceRegistration.FindFirst` (`ServiceRegistration.cs:33-35,119-130`). N = 2000 is there to show that growth. It is shared by all three libraries, not a CSE cost.
+- Warm is not like-for-like for the reflection rows, as in section 2: CseReflection and Scrutor look cheaper here than in a real application, which registers once per process.
+- `ResolveBenchmarks` resolves scoped decorated services in a new scope per operation. `TransientDecoratorBenchmarks` drops the scope and uses transients, so every resolve activates the decorator and its inner service again. The services are not disposable, so the root provider does not track them.
+
+What the parity check enforces:
+- TryAdd: for every variant and N, the collection holds exactly N scoped type registrations of the T{N} types, plus one CSE marker for the two CSE rows, and a scope resolves `0..N-1`. Separately, each of the four TryAdd variants runs over a collection that already holds `IService0`, and `IService0` must still have exactly one descriptor.
+- Transient decoration: in every variant IService0 to IService9 resolve to 1000 + i, the last non-keyed descriptor of each is transient, and two resolves of IService0 return different instances.
+
+Semantic differences:
+- The manual decoration factory builds the inner service with `new`. CSE and Scrutor resolve the inner service from a hidden keyed registration. Part of the gap is that extra resolve, as in section 4.
+- CseGenerated calls the decorator constructor from generated code. CseRuntime builds the decorator with `ConstructorInfo.Invoke` and a new argument array per resolve (`Internal/DecoratorActivator.cs:42-51`), after the keyed inner lookup (`Internal/ServiceDecoration.cs:119`). Scrutor uses `ActivatorUtilities.CreateInstance` per resolve ([DecorationStrategy.cs L37](https://github.com/khellang/Scrutor/blob/v7.0.0/src/Scrutor/DecorationStrategy.cs#L37)).
+
+Feature matrix for these classes, from reading each library's source and docs (not measured):
+
+| Feature | CSharpEssentials.DependencyInjection | Scrutor 7.0.0 | Manual Microsoft.Extensions.DependencyInjection |
+|---|---|---|---|
+| TryAdd cost model | A linear scan per descriptor in `FindFirst` | `Skip` calls Microsoft `TryAdd`, a linear scan per descriptor | `TryAdd` loops the collection per descriptor |
+| Transient decorator activation per resolve | Generated: a direct constructor call in a lambda. Runtime: `ConstructorInfo.Invoke`, an argument array and a keyed inner lookup | `ActivatorUtilities.CreateInstance` | A factory lambda |
+
+---
+
 ## Feature matrix
 
 CSE cells come from this repository (csproj, `Readme.MD`, `ServiceSourceWriter.cs`, `Internal/*.cs`). Scrutor links point at tag [`v7.0.0`](https://github.com/khellang/Scrutor/tree/v7.0.0) (commit `7f315da`, matches the 7.0.0 nuspec). Framework links point at Learn or `dotnet/runtime` tag `v10.0.0`. The "measured" row comes from section 5; every other row comes from reading source or docs, not from running code.
@@ -242,11 +279,11 @@ CSE cells come from this repository (csproj, `Readme.MD`, `ServiceSourceWriter.c
 
 ```bash
 cd benchmarks
-./run-benchmarks.sh --project di                       # all TFMs (net8-net11), all four classes, committed configuration
+./run-benchmarks.sh --project di                       # all TFMs (net8-net11), every class, committed configuration
 ./run-benchmarks.sh --project di --tfm net10.0         # one TFM
 ./run-benchmarks.sh --project di --quick --tfm net10.0 # one TFM, Short job
 ./di-aot/run-di-aot.sh                                 # Native AOT report (all four samples)
-python3 CSharpEssentials.DependencyInjection.Benchmarks/generate-services.py   # regenerate the S50/S500 input libraries
+python3 CSharpEssentials.DependencyInjection.Benchmarks/generate-services.py   # regenerate the S50/S500 and T50/T500/T2000 input libraries
 ```
 
-`--quick` without `--tfm` runs on net9.0, the script default for this suite. Its patterns are `*Registration*` (which also matches `ColdRegistrationBenchmarks`), `*Decoration*` and `*Resolve*`; the Short job's numbers are not comparable with the committed ones. Results are stored per framework under `benchmarks/results/di/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/di/aot/aot-report.md`; raw publish and run logs go to `benchmarks/results/di/aot/logs/`.
+`--quick` without `--tfm` runs on net9.0, the script default for this suite. Its patterns are `*Registration*` (which also matches `ColdRegistrationBenchmarks`), `*Decoration*`, `*Resolve*`, `*.TryAddBenchmarks.*` and `*.TransientDecoratorBenchmarks.*`; the Short job's numbers are not comparable with the committed ones. Results are stored per framework under `benchmarks/results/di/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/di/aot/aot-report.md`; raw publish and run logs go to `benchmarks/results/di/aot/logs/`.
