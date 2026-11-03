@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.ResultPattern.Interfaces;
@@ -31,7 +32,7 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff = true,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline pipeline = RetryPipelineCache.Get(maxAttempts, delay, exponentialBackoff);
+        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff);
 
         Result<T> result;
         try
@@ -57,7 +58,7 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff = true,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline pipeline = RetryPipelineCache.Get(maxAttempts, delay, exponentialBackoff);
+        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff);
 
         Result result;
         try
@@ -110,7 +111,7 @@ public static class ResilienceResultExtensions
             throw new ArgumentNullException(nameof(shouldRetry));
 #endif
 
-        ResiliencePipeline pipeline = BuildPipeline(maxAttempts, delay, exponentialBackoff, shouldRetry);
+        ResiliencePipeline<Result<T>> pipeline = BuildPipeline<Result<T>>(maxAttempts, delay, exponentialBackoff, shouldRetry);
 
         Result<T> result;
         try
@@ -143,7 +144,7 @@ public static class ResilienceResultExtensions
             throw new ArgumentNullException(nameof(shouldRetry));
 #endif
 
-        ResiliencePipeline pipeline = BuildPipeline(maxAttempts, delay, exponentialBackoff, shouldRetry);
+        ResiliencePipeline<Result> pipeline = BuildPipeline<Result>(maxAttempts, delay, exponentialBackoff, shouldRetry);
 
         Result result;
         try
@@ -163,27 +164,28 @@ public static class ResilienceResultExtensions
     // Predicate pipelines are not cached: a delegate cannot key the cache safely (lambdas that capture state are new
     // instances on every call, so the cache would fill with entries that are never hit). Building a retry pipeline is
     // a few allocations, negligible next to an operation that is worth retrying.
-    private static ResiliencePipeline BuildPipeline(
+    private static ResiliencePipeline<TResult> BuildPipeline<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>(
         int maxAttempts,
         TimeSpan? delay,
         bool exponentialBackoff,
-        Func<Error, bool> shouldRetry) =>
-        BuildRetryPipeline(
+        Func<Error, bool> shouldRetry)
+        where TResult : IResultBase =>
+        BuildRetryPipeline<TResult>(
             maxAttempts,
             delay ?? DefaultDelay,
             exponentialBackoff,
             args => new ValueTask<bool>(args.Outcome.Exception is { } ex
                 ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
                     && shouldRetry(ResilienceClassifier.ToError(ex))
-                : args.Outcome.Result is IResultBase result && ResilienceClassifier.IsRetryable(result, shouldRetry)));
+                : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result, shouldRetry)));
 
-    private static ResiliencePipeline BuildRetryPipeline(
+    private static ResiliencePipeline<TResult> BuildRetryPipeline<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>(
         int maxAttempts,
         TimeSpan delay,
         bool exponentialBackoff,
-        Func<RetryPredicateArguments<object>, ValueTask<bool>> shouldHandle) =>
-        new ResiliencePipelineBuilder()
-            .AddRetry(new RetryStrategyOptions
+        Func<RetryPredicateArguments<TResult>, ValueTask<bool>> shouldHandle) =>
+        new ResiliencePipelineBuilder<TResult>()
+            .AddRetry(new RetryStrategyOptions<TResult>
             {
                 MaxRetryAttempts = maxAttempts,
                 Delay = delay,
@@ -192,29 +194,30 @@ public static class ResilienceResultExtensions
             })
             .Build();
 
-    private static class RetryPipelineCache
+    private static class RetryPipelineCache<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>
+        where TResult : IResultBase
     {
-        // The pipelines are not typed, so Result and every Result<T> share them and the cap. The Count check is not
-        // atomic, so concurrent callers can overshoot it slightly, which is acceptable for a cache bound.
+        // The cap applies per closed generic type (Result and each Result<T>). The Count check is not atomic,
+        // so concurrent callers can overshoot it slightly, which is acceptable for a cache bound.
         private const int MaxEntries = 64;
 
-        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff), ResiliencePipeline> Pipelines = new();
+        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff), ResiliencePipeline<TResult>> Pipelines = new();
 
-        internal static ResiliencePipeline Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff)
+        internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff)
         {
             (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff) key = (maxAttempts, delay ?? DefaultDelay, exponentialBackoff);
-            if (Pipelines.TryGetValue(key, out ResiliencePipeline? cached))
+            if (Pipelines.TryGetValue(key, out ResiliencePipeline<TResult>? cached))
             {
                 return cached;
             }
 
-            ResiliencePipeline pipeline = BuildRetryPipeline(
+            ResiliencePipeline<TResult> pipeline = BuildRetryPipeline<TResult>(
                 key.MaxAttempts,
                 key.Delay,
                 key.ExponentialBackoff,
                 static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
                     ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                    : args.Outcome.Result is IResultBase result && ResilienceClassifier.IsRetryable(result)));
+                    : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result)));
 
             return Pipelines.Count < MaxEntries ? Pipelines.GetOrAdd(key, pipeline) : pipeline;
         }
