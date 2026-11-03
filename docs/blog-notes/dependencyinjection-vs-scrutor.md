@@ -77,6 +77,7 @@ Things to say when the numbers exist:
 - The manual factory builds the inner service with `new`. CSE and Scrutor resolve it from a hidden keyed registration, so part of any gap is that extra resolve.
 
 Expected losses (name them first):
+- TryAdd: CseGenerated should be slower than hand-written `TryAddScoped`. Both scan once per service, but CSE's `FindFirst` (`ServiceRegistration.cs:119-130`) runs `foreach` over `IServiceCollection`, which allocates an enumerator per call and makes interface calls per element.
 - Transient decorator resolve: CseGenerated and CseRuntime should be slower than the Manual factory. Both resolve the inner service from an extra keyed registration. CseRuntime also pays `ConstructorInfo.Invoke` and a new argument array. The committed scoped decorated-resolve rows already go this way.
 
 Possible angle:
