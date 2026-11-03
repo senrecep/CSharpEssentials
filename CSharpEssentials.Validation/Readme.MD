@@ -527,11 +527,10 @@ Result<User> asyncResult = await GetUserCommand()
 
 ## FluentValidation Comparison
 
-> **Benchmarks:** Head-to-head numbers across 23 scenarios (construction, invalid path, valid path,
-> collections, async, nested, cascade) are documented in [BENCHMARKS.md](./BENCHMARKS.md).
-> Key findings (net9): validator construction is about **800× faster**, invalid paths are **6-8× faster** with
-> **3-5.6× less memory**, complex/large-collection valid paths beat FV on both time and memory,
-> and large collections (50 items) run **2.9× faster** with **25% less allocation**.
+> **Benchmarks:** the 23 FluentValidation scenarios (construction, invalid and valid paths, collections, async,
+> nested, cascade), plus baselines against FluentValidation, DataAnnotations and Microsoft.Extensions.Validation,
+> the enum validators, the `For` overloads and the assembly scan, are described in [BENCHMARKS.md](./BENCHMARKS.md).
+> Numbers are pending a re-run on FluentValidation 12.2.0.
 
 | | CSharpEssentials.Validation | FluentValidation |
 |---|---|---|
