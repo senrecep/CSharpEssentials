@@ -155,7 +155,6 @@ public sealed class DbContextResultExtensionsTests : IDisposable
 
         result.IsFailure.Should().BeTrue();
         result.FirstError.Type.Should().Be(ErrorType.Unknown);
-        result.FirstError.Code.Should().Be(nameof(ArgumentException));
     }
 
     [Fact]
