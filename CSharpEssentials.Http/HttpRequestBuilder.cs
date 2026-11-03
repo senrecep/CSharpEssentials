@@ -121,8 +121,15 @@ public sealed class HttpRequestBuilder
         return this;
     }
 
-    public HttpRequestBuilder WithJsonContent<T>(T value, JsonTypeInfo<T> typeInfo)
+    // A distinct name, not a WithJsonContent overload: WithJsonContent(dto, null) would bind to it and throw.
+    public HttpRequestBuilder WithJsonTypeInfoContent<T>(T value, JsonTypeInfo<T> typeInfo)
     {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(typeInfo);
+#else
+        if (typeInfo is null)
+            throw new ArgumentNullException(nameof(typeInfo));
+#endif
         _jsonContent = value is null ? null : () => JsonContent.Create(value, typeInfo);
         _content = null;
         return this;

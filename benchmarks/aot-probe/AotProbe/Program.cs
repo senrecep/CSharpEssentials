@@ -47,7 +47,7 @@ Check("Resilience", retried.IsSuccess && retried.Value == 7 && attempts == 2);
 using HttpClient client = new(new EchoHandler()) { BaseAddress = new Uri("http://probe.local/") };
 Result<ProbeDto> fetched = await client.GetFromJsonAsResultAsync(new Uri("items", UriKind.Relative), ProbeJsonContext.Default.ProbeDto);
 Result<ProbeDto> posted = await HttpRequestBuilder.Post("items")
-    .WithJsonContent(new ProbeDto("sent", 3), ProbeJsonContext.Default.ProbeDto)
+    .WithJsonTypeInfoContent(new ProbeDto("sent", 3), ProbeJsonContext.Default.ProbeDto)
     .AsResultAsync(client, ProbeJsonContext.Default.ProbeDto);
 Check("Http", fetched.IsSuccess && fetched.Value.Name == "get" && posted.IsSuccess && posted.Value is { Name: "echo", Count: 3 });
 
