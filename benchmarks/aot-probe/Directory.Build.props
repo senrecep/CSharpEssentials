@@ -1,0 +1,11 @@
+<!-- Native AOT probe: not part of CSharpEssentials.slnx. Built only by run-aot-probe.sh. -->
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Same analyzer relaxation as the other AOT samples: this is a sample, not a package. -->
+  <PropertyGroup>
+    <AnalysisMode>None</AnalysisMode>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+</Project>
