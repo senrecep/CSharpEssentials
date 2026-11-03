@@ -51,7 +51,8 @@ internal sealed class EnumUsage
     /// <summary>
     /// The <c>default</c> of a scalar usage in <paramref name="format"/>: one wire name or number, or the wire names of the single
     /// flags of a <see cref="FlagsAttribute"/> value in the string format. <see langword="null"/> when there is no default or it
-    /// is not a defined value.
+    /// is not a defined value. The frameworks serialize the default with the enum converter before this runs, so an undefined value
+    /// fails the document unless the Swashbuckle data contract resolver is wrapped (<c>AddSwagger</c> does it).
     /// </summary>
     public IReadOnlyList<string>? FormatDefault(object? value, EnumWireFormat format)
     {
