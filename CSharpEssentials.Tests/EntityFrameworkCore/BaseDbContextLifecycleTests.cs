@@ -102,6 +102,30 @@ public class BaseDbContextLifecycleTests
         }
     }
 
+    private sealed class NestedSaveOutbox : IDomainEventOutbox
+    {
+        private int _calls;
+
+        public LifecycleDbContext? Context { get; set; }
+
+        public List<IDomainEvent> Stored { get; } = [];
+
+        public async Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        {
+            if (++_calls > 1)
+            {
+                Stored.AddRange(domainEvents);
+                return;
+            }
+
+            var inner = new EventEntity();
+            inner.Raise(new AfterEvent("inner"));
+            Context!.Entities.Add(inner);
+            await Context.SaveChangesAsync(cancellationToken);
+            throw new InvalidOperationException("outbox failed");
+        }
+    }
+
     private sealed class ScopedDisposable : IDisposable
     {
         public bool Disposed { get; private set; }
@@ -552,6 +576,27 @@ public class BaseDbContextLifecycleTests
 
         act.Should().Throw<InvalidOperationException>().WithMessage("outbox failed");
         context.Entities.Count().Should().Be(1);
+        entity.DomainEvents.Should().Equal(after);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_RestoreAfterSaveEvents_When_OutboxSavesSameContextAndThenFails()
+    {
+        NestedSaveOutbox outbox = new();
+        using ServiceProvider provider = BuildProvider(services =>
+            services.AddSingleton<IDomainEventOutbox>(outbox));
+        using LifecycleDbContext context = CreateContext(provider, dispatchDomainEvents: true);
+        outbox.Context = context;
+        var entity = new EventEntity();
+        var after = new AfterEvent("after");
+        entity.Raise(after);
+        context.Entities.Add(entity);
+
+        Func<Task> act = () => context.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("outbox failed");
+        outbox.Stored.Should().ContainSingle().Which.Should().BeOfType<AfterEvent>()
+            .Which.Name.Should().Be("inner");
         entity.DomainEvents.Should().Equal(after);
     }
 

@@ -109,6 +109,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
         if (afterSave.Length > 0)
         {
+            List<(IDomainEventHolder Entity, IDomainEvent[] Events)>? outerCollected = _afterSaveCollected;
             _afterSaveCollected = collected;
             try
             {
@@ -117,7 +118,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
             }
             finally
             {
-                _afterSaveCollected = null;
+                _afterSaveCollected = outerCollected;
             }
         }
 
@@ -150,6 +151,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
         if (afterSave.Length > 0)
         {
+            List<(IDomainEventHolder Entity, IDomainEvent[] Events)>? outerCollected = _afterSaveCollected;
             _afterSaveCollected = collected;
             try
             {
@@ -157,7 +159,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
             }
             finally
             {
-                _afterSaveCollected = null;
+                _afterSaveCollected = outerCollected;
             }
         }
 
