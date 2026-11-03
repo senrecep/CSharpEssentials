@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 
@@ -79,8 +80,8 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers <see cref="AuditInterceptor"/> along with <see cref="TimeProvider"/>
-    /// (if not already registered) as a ready-to-use audit pipeline.
+    /// Registers <see cref="AuditInterceptor"/> and <see cref="TimeProvider.System"/>, each only if not
+    /// already registered, as a ready-to-use audit pipeline.
     /// </summary>
     /// <example>
     /// <code>
@@ -135,8 +136,8 @@ public static class AuditServiceCollectionExtensions
 
     private static void TryAddAuditInterceptorCore(this IServiceCollection services)
     {
-        services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<AuditInterceptor>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<AuditInterceptor>();
     }
 
     // ── Internal implementations ────────────────────────────────────────

@@ -3,6 +3,7 @@ using CSharpEssentials.EntityFrameworkCore.Interceptors;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
@@ -173,5 +174,28 @@ public class AuditInterceptorTests
         provider.GetService<AuditInterceptor>().Should().NotBeNull();
 
         provider.Dispose();
+    }
+
+    [Fact]
+    public void AddAuditInterceptor_ShouldKeepTimeProviderRegisteredBefore()
+    {
+        FakeTimeProvider clock = new();
+        ServiceCollection services = new();
+        services.AddSingleton<TimeProvider>(clock);
+        services.AddAuditInterceptor(() => "user");
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<TimeProvider>().Should().BeSameAs(clock);
+    }
+
+    [Fact]
+    public void AddAuditInterceptor_CalledTwice_ShouldRegisterOneInterceptorAndOneTimeProvider()
+    {
+        ServiceCollection services = new();
+        services.AddAuditInterceptor(() => "first");
+        services.AddAuditInterceptor(() => "second");
+
+        services.Should().ContainSingle(d => d.ServiceType == typeof(AuditInterceptor));
+        services.Should().ContainSingle(d => d.ServiceType == typeof(TimeProvider));
     }
 }
