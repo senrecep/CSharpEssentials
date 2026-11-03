@@ -218,5 +218,6 @@ public class MultiFormatDateTimeConverterTests
 
         factory.CanConvert(typeof(string)).Should().BeFalse();
         factory.CanConvert(typeof(int)).Should().BeFalse();
+        factory.CanConvert(typeof(DateTimeOffset)).Should().BeFalse();
     }
 }

@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using CSharpEssentials.Json;
 using FluentAssertions;
@@ -10,20 +11,6 @@ public sealed class MultiFormatDateTimeConverterNullTests
     {
         Converters = { new MultiFormatDateTimeConverterFactory() }
     };
-
-    [Fact]
-    public void Deserialize_Null_Into_NonNullable_Should_Throw()
-    {
-        Action act = () => JsonSerializer.Deserialize<DateTime>("null", Options);
-
-        act.Should().Throw<JsonException>();
-    }
-
-    [Fact]
-    public void Deserialize_Null_Into_Nullable_Should_Return_Null()
-    {
-        JsonSerializer.Deserialize<DateTime?>("null", Options).Should().BeNull();
-    }
 
     [Fact]
     public void Deserialize_EmptyString_Into_NonNullable_Should_Throw()
@@ -48,38 +35,14 @@ public sealed class MultiFormatDateTimeConverterNullTests
     }
 
     [Fact]
-    public void Serialize_Null_Nullable_Should_Write_Null()
-    {
-        JsonSerializer.Serialize<DateTime?>(null, Options).Should().Be("null");
-    }
-
-    [Fact]
-    public void Serialize_Nullable_With_Value_Should_Write_Default_Format()
-    {
-        DateTime? value = new DateTime(2024, 3, 14, 15, 30, 45, DateTimeKind.Utc);
-
-        JsonSerializer.Deserialize<string>(JsonSerializer.Serialize(value, Options)).Should().Be("2024-03-14T15:30:45.000000+00:00");
-    }
-
-    [Fact]
     public void Converter_Write_Null_For_Nullable_Should_Write_Null_Token()
     {
-        var converter = new MultiFormatDateTimeConverter<DateTime?>(true, ["yyyy-MM-dd"]);
-        using var stream = new MemoryStream();
-        using (var writer = new Utf8JsonWriter(stream))
+        MultiFormatDateTimeConverter<DateTime?> converter = new(true, ["yyyy-MM-dd"]);
+        using MemoryStream stream = new();
+        using (Utf8JsonWriter writer = new(stream))
             converter.Write(writer, null, Options);
 
-        System.Text.Encoding.UTF8.GetString(stream.ToArray()).Should().Be("null");
+        Encoding.UTF8.GetString(stream.ToArray()).Should().Be("null");
     }
 
-    [Fact]
-    public void CanConvert_Should_Accept_Only_DateTime_And_Nullable_DateTime()
-    {
-        var factory = new MultiFormatDateTimeConverterFactory();
-
-        factory.CanConvert(typeof(DateTime)).Should().BeTrue();
-        factory.CanConvert(typeof(DateTime?)).Should().BeTrue();
-        factory.CanConvert(typeof(DateTimeOffset)).Should().BeFalse();
-        factory.CanConvert(typeof(string)).Should().BeFalse();
-    }
 }
