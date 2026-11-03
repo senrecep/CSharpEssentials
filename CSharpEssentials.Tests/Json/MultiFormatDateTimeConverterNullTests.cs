@@ -62,6 +62,17 @@ public sealed class MultiFormatDateTimeConverterNullTests
     }
 
     [Fact]
+    public void Converter_Write_Null_For_Nullable_Should_Write_Null_Token()
+    {
+        var converter = new MultiFormatDateTimeConverter<DateTime?>(true, ["yyyy-MM-dd"]);
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream))
+            converter.Write(writer, null, Options);
+
+        System.Text.Encoding.UTF8.GetString(stream.ToArray()).Should().Be("null");
+    }
+
+    [Fact]
     public void CanConvert_Should_Accept_Only_DateTime_And_Nullable_DateTime()
     {
         var factory = new MultiFormatDateTimeConverterFactory();
