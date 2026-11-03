@@ -232,11 +232,11 @@ public class ConditionalStringEnumConverterTests
     }
 
     [Fact]
-    public void Serialize_ShouldThrow_ForUndefinedValue()
+    public void Serialize_ShouldWriteNumber_ForUndefinedValue()
     {
-        Action act = () => JsonSerializer.Serialize((TestStringEnumType)999, StringEnumOptions);
+        string json = JsonSerializer.Serialize((TestStringEnumType)999, StringEnumOptions);
 
-        act.Should().Throw<EnumValueException>();
+        json.Should().Be("999");
     }
 
     [Theory]

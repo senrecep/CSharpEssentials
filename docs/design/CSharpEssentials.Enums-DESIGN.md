@@ -216,9 +216,10 @@ Output:
 | Outgoing route/query | `pending_approval` | `1` |
 | EF column (`Storage = String`) | `pending_approval` | not affected (storage is separate) |
 | EF column (`Storage = Integer`) | `1` | `1` |
-| Undefined value | `EnumValueException` before anything is written | same |
+| Undefined value, JSON | the number, `42` (dictionary key `"42"`); flags with undefined bits are one number | same |
+| Undefined value, other layers | `EnumValueException` before anything is written | same |
 
-The exception rows matter: an undefined value created in code (`(OrderStatus)42`) is never written to a response, a database or a message. Writing it is a bug and fails loudly at the boundary.
+An undefined value created in code (`(OrderStatus)42`) is never written to a database or an outgoing request: it fails loudly at that boundary. JSON writes it as its number instead, so a response or an OpenAPI default does not fail. Reads are not symmetric: `Input` mode rejects that number, `Data` mode maps it to the fallback member or rejects it.
 
 ### 5.1 Flags
 

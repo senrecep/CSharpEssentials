@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -9,6 +10,12 @@ namespace CSharpEssentials.Json;
 /// <summary>
 /// Reads and writes one enum type with <see cref="EnumInfo{TEnum}"/>. Created by <see cref="EnumConverterFactory"/>.
 /// </summary>
+/// <remarks>
+/// An undefined value, including a <see cref="FlagsAttribute"/> value with bits no member covers, is written as its underlying
+/// number (as a property name: the number text) in every <see cref="EnumWireFormat"/>. Reads do not mirror this: an undefined
+/// number is rejected in <see cref="EnumReadMode.Input"/> mode and handled by <see cref="EnumConventions.UnknownValue"/> in
+/// <see cref="EnumReadMode.Data"/> mode.
+/// </remarks>
 internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions conventions, EnumReadMode mode, EnumWireFormat writeAs)
     : JsonConverter<TEnum> where TEnum : struct, Enum
 {
@@ -16,6 +23,9 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
     private const int MaxNumberLength = 20;
     private const int StackBufferLength = 256;
     private const int PreviewLength = 64;
+
+    private static readonly bool IsSigned =
+        Type.GetTypeCode(typeof(TEnum)) is TypeCode.SByte or TypeCode.Int16 or TypeCode.Int32 or TypeCode.Int64;
 
     private readonly int _maxTokenLength = MaxSpelling(info);
 
@@ -35,6 +45,12 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
     {
+        if (!info.IsDefined(value))
+        {
+            writer.WriteRawValue(UndefinedNumber(value), skipInputValidation: true);
+            return;
+        }
+
         if (writeAs == EnumWireFormat.Number)
         {
             WriteNumber(writer, value);
@@ -47,7 +63,6 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
             return;
         }
 
-        // Validate and decompose before anything is written, so an undefined value never leaves a partial array behind.
         List<string> names = [];
         info.FormatFlags(value, names);
         writer.WriteStartArray();
@@ -60,7 +75,7 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         ReadString(ref reader, splitLegacyFlags: true);
 
     public override void WriteAsPropertyName(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options) =>
-        writer.WritePropertyName(info.Format(value, writeAs));
+        writer.WritePropertyName(info.IsDefined(value) ? info.Format(value, writeAs) : UndefinedNumber(value));
 
     private TEnum ReadScalar(ref Utf8JsonReader reader, bool splitLegacyFlags)
     {
@@ -230,7 +245,15 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         return info.FromRawValue(raw);
     }
 
-    // Format throws EnumValueException for an undefined value before anything is written; the text is an invariant integer.
+    // The text is an invariant integer.
     private void WriteNumber(Utf8JsonWriter writer, TEnum value) =>
         writer.WriteRawValue(info.Format(value, EnumWireFormat.Number), skipInputValidation: true);
+
+    private string UndefinedNumber(TEnum value)
+    {
+        ulong raw = info.ToRawValue(value);
+        return IsSigned
+            ? unchecked((long)raw).ToString(CultureInfo.InvariantCulture)
+            : raw.ToString(CultureInfo.InvariantCulture);
+    }
 }

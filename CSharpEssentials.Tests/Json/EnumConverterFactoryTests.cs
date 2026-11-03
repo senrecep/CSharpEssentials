@@ -242,11 +242,43 @@ public class EnumConverterFactoryTests
     [Theory]
     [InlineData(EnumWireFormat.String)]
     [InlineData(EnumWireFormat.Number)]
-    public void Write_Should_Throw_For_An_Undefined_Value(EnumWireFormat format)
+    public void Write_Should_Write_An_Undefined_Value_As_Its_Number(EnumWireFormat format)
     {
-        Action act = () => JsonSerializer.Serialize((JsonOrderStatus)42, Options(writeAs: format));
+        string json = JsonSerializer.Serialize((JsonOrderStatus)42, Options(writeAs: format));
 
-        act.Should().Throw<EnumValueException>().Which.Error.Value.Should().Be("42");
+        json.Should().Be("42");
+    }
+
+    [Fact]
+    public void Write_Should_Write_Undefined_Values_With_The_Sign_Of_The_Underlying_Type()
+    {
+        string negative = JsonSerializer.Serialize((FormatterLong)(-5), Options());
+        string unsigned = JsonSerializer.Serialize((FormatterULong)(ulong.MaxValue - 1), Options());
+
+        negative.Should().Be("-5");
+        unsigned.Should().Be("18446744073709551614");
+    }
+
+    [Theory]
+    [InlineData(EnumWireFormat.String)]
+    [InlineData(EnumWireFormat.Number)]
+    public void Write_Should_Write_An_Undefined_Dictionary_Key_As_Its_Number(EnumWireFormat format)
+    {
+        Dictionary<JsonOrderStatus, int> map = new() { [(JsonOrderStatus)42] = 1 };
+
+        string json = JsonSerializer.Serialize(map, Options(writeAs: format));
+
+        json.Should().Be("{\"42\":1}");
+    }
+
+    [Fact]
+    public void Read_Should_Still_Reject_The_Number_Written_For_An_Undefined_Value_In_Input_Mode()
+    {
+        string json = JsonSerializer.Serialize((JsonOrderStatus)42, Options());
+
+        Action act = () => Read<JsonOrderStatus>(json, EnumReadMode.Input);
+
+        act.Should().Throw<EnumValueJsonException>();
     }
 
     [Fact]
@@ -329,12 +361,14 @@ public class EnumConverterFactoryTests
         json.Should().Be("7");
     }
 
-    [Fact]
-    public void Write_Should_Throw_For_An_Undefined_Flag()
+    [Theory]
+    [InlineData(8, "8")]
+    [InlineData(9, "9")]
+    public void Write_Should_Write_A_Flags_Value_With_Undefined_Bits_As_Its_Number(int value, string expected)
     {
-        Action act = () => JsonSerializer.Serialize((JsonPermissions)8, Options());
+        string json = JsonSerializer.Serialize((JsonPermissions)value, Options());
 
-        act.Should().Throw<EnumValueException>();
+        json.Should().Be(expected);
     }
 
     public static TheoryData<string, EnumReadMode, JsonPermissions> FlagsInputs()
