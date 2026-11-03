@@ -45,7 +45,7 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a typed <see cref="IAuditUserIdProvider{TUserId}"/> with a factory delegate.
+    /// Registers <see cref="IAuditUserIdProvider"/> from a typed user ID factory delegate; the ID is stored with <c>ToString()</c>.
     /// </summary>
     /// <example>
     /// <code>
@@ -63,7 +63,7 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a typed <see cref="IAuditUserIdProvider{TUserId}"/> with a simple value factory.
+    /// Registers <see cref="IAuditUserIdProvider"/> from a typed user ID value factory; the ID is stored with <c>ToString()</c>.
     /// </summary>
     /// <example>
     /// <code>
