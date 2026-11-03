@@ -13,6 +13,9 @@ Maybe (Option) monad for null-safe, expressive code. Avoid `NullReferenceExcepti
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Errors`. `Maybe<T>` and the non-generic `Maybe` (for `Maybe.None`, `Maybe.From`, `Maybe.FromAsync` and `Maybe.FromTry`) live in the `CSharpEssentials.Maybe` namespace.
 
+> **Benchmarks:** `TryFirst`, `TryLast`, `TryFind` and `Choose` against CSharpFunctionalExtensions and hand-written loops are
+> documented in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Installation
 
 ```bash
