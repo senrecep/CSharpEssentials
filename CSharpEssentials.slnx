@@ -77,5 +77,6 @@
   <Project Path="benchmarks/CSharpEssentials.Mediator.Benchmarks.Handlers/Mediator50/CSharpEssentials.Mediator.Benchmarks.Handlers.Mediator50.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Results.Benchmarks/CSharpEssentials.Results.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/CSharpEssentials.Results.Comparison.Benchmarks.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.Rules.Comparison.Benchmarks/CSharpEssentials.Rules.Comparison.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj" />
 </Solution>

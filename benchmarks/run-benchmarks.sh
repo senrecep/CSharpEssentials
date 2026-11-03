@@ -3,10 +3,14 @@
 #
 # Usage:
 #   ./run-benchmarks.sh                      # full run — all TFMs, all scenarios, max precision (~60 min)
-#   ./run-benchmarks.sh --quick              # fast run — one TFM (net9.0; net10.0 for endpoints and efcore), key scenarios, Short job (~10 min)
+#   ./run-benchmarks.sh --quick              # fast run — one TFM (net9.0; net10.0 for validation, endpoints and efcore), key scenarios, Short job (~10 min)
 #   ./run-benchmarks.sh --quick --tfm net10.0  # fast run on a specific TFM
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
-#   ./run-benchmarks.sh --project results    # Results async matrix benchmarks (default: validation)
+#   ./run-benchmarks.sh --project validation  # model validation vs FluentValidation / DataAnnotations / Microsoft.Extensions.Validation (net10+), enum validators, For overloads, assembly scan (the default suite)
+#                                              (net8.0 runs CSE's netstandard2.1 build)
+#   ./run-benchmarks.sh --project rules        # sync/async trees, prebuilt vs rebuilt Linear, short-circuit vs hand-written; NRules / RulesEngine reference columns
+#                                              (net8.0 runs CSE's netstandard2.1 build)
+#   ./run-benchmarks.sh --project results    # Results async matrix benchmarks
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 #   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
 #   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations vs CSharpFunctionalExtensions / ErrorOr / FluentResults
@@ -53,9 +57,17 @@ DEFAULT_TFM="net9.0"
 case "$SUITE" in
     validation)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Validation.Benchmarks/CSharpEssentials.Validation.Benchmarks.csproj"
-        RESULTS_DIR="$SCRIPT_DIR/results"
-        ALL_FRAMEWORKS=("net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*Simple*" "*Wide*" "*Complex*" "*Cascade*" "*Construction*" "*LargeCollection*")
+        RESULTS_DIR="$SCRIPT_DIR/results/validation"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.SimpleValidationBenchmarks.*" "*.StringValidationBenchmarks.*" "*.ComparableValidationBenchmarks.*" "*.CollectionValidationBenchmarks.*" "*.NestedValidationBenchmarks.*" "*.CollectionItemValidationBenchmarks.*" "*.ConditionalValidationBenchmarks.*" "*.CustomPredicateBenchmarks.*" "*.AsyncPredicateBenchmarks.*" "*.CascadeContinueBenchmarks.*" "*.ComplexValidationBenchmarks.*" "*.StringLengthRangeBenchmarks.*" "*.StringContentBenchmarks.*" "*.ExclusiveBetweenBenchmarks.*" "*.NullableValidationBenchmarks.*" "*.StringEqualityBenchmarks.*" "*.LargeCollectionBenchmarks.*" "*.WideModelBenchmarks.*" "*.DeepNestedBenchmarks.*" "*.CascadeStopBenchmarks.*" "*.ValidatorConstructionBenchmarks.*" "*.MultipleRegexBenchmarks.*" "*.PrecompiledRegexBenchmarks.*" "*.BaselineSimpleComparison.*" "*.BaselineWideComparison.*" "*.ForOverloadComparison.*" "*.EnumDefinedComparison.*" "*.EnumFlagsComparison.*" "*.EnumOneOfComparison.*" "*.AssemblyScanComparison.*" "*.AssemblyScanColdComparison.*")
+        # Microsoft.Extensions.Validation ships net10.0 only, so quick mode defaults to net10.0 for this suite.
+        DEFAULT_TFM="net10.0"
+        ;;
+    rules)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Rules.Comparison.Benchmarks/CSharpEssentials.Rules.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/rules"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.SyncTreeComparison.*" "*.ConditionalComparison.*" "*.MixedAsyncTreeComparison.*" "*.LinearBuildComparison.*" "*.ShortCircuitComparison.*" "*.ReferenceEngineComparison.*")
         ;;
     results)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Results.Benchmarks/CSharpEssentials.Results.Benchmarks.csproj"
@@ -134,7 +146,7 @@ case "$SUITE" in
         DEFAULT_TFM="net10.0"
         ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore)" >&2
         exit 1
         ;;
 esac
