@@ -45,6 +45,17 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
     {
+        if (!info.IsFlags)
+        {
+            if (!info.TryGetMember(value, out EnumMemberInfo<TEnum>? member))
+                writer.WriteRawValue(UndefinedNumber(value), skipInputValidation: true);
+            else if (writeAs == EnumWireFormat.Number)
+                writer.WriteRawValue(member.NumericText, skipInputValidation: true);
+            else
+                writer.WriteStringValue(member.WireName);
+            return;
+        }
+
         if (!info.IsDefined(value))
         {
             writer.WriteRawValue(UndefinedNumber(value), skipInputValidation: true);
@@ -54,12 +65,6 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         if (writeAs == EnumWireFormat.Number)
         {
             WriteNumber(writer, value);
-            return;
-        }
-
-        if (!info.IsFlags)
-        {
-            writer.WriteStringValue(info.Format(value, EnumWireFormat.String));
             return;
         }
 
