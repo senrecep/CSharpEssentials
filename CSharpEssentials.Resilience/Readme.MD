@@ -2,6 +2,9 @@
 
 HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) with `Result<T>` integration. Composable `ResiliencePolicy` builder backed by Polly v8 (`Polly.Core`) for transient fault handling without exceptions.
 
+> Benchmarks against Polly.Core (policy overhead, composed policies, `RetryIfFailed` and `Result` boxing) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Installation
 
 ```bash
