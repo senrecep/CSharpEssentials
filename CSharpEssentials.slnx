@@ -52,6 +52,9 @@
   <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/S50.Decorators/CSharpEssentials.DependencyInjection.Benchmarks.Services.S50.Decorators.csproj" />
   <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/S500/CSharpEssentials.DependencyInjection.Benchmarks.Services.S500.csproj" />
   <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/S500.Decorators/CSharpEssentials.DependencyInjection.Benchmarks.Services.S500.Decorators.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/T50/CSharpEssentials.DependencyInjection.Benchmarks.Services.T50.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/T500/CSharpEssentials.DependencyInjection.Benchmarks.Services.T500.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.Services/T2000/CSharpEssentials.DependencyInjection.Benchmarks.Services.T2000.csproj" />
   <Project Path="benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Endpoints.Benchmarks/CSharpEssentials.Endpoints.Benchmarks.csproj" />

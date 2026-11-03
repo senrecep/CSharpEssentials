@@ -18,6 +18,9 @@
     <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\S50\CSharpEssentials.DependencyInjection.Benchmarks.Services.S50.csproj" />
     <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\S50.Decorators\CSharpEssentials.DependencyInjection.Benchmarks.Services.S50.Decorators.csproj" />
     <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\S500\CSharpEssentials.DependencyInjection.Benchmarks.Services.S500.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\T50\CSharpEssentials.DependencyInjection.Benchmarks.Services.T50.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\T500\CSharpEssentials.DependencyInjection.Benchmarks.Services.T500.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\T2000\CSharpEssentials.DependencyInjection.Benchmarks.Services.T2000.csproj" />
   </ItemGroup>
 
 </Project>

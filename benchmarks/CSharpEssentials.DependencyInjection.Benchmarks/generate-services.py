@@ -5,12 +5,15 @@ For N in 50 and 500: S{N} holds IService{i}/Service{i} (i < N), each [RegisterSc
 is a positive multiple of 5 takes IService{i-1} as a constructor dependency, plus ManualS{N}.Register (hand-written
 AddScoped calls) and CatalogS{N}.Values (resolves every service). S{N}.Decorators holds Service{i}Decorator for
 i < 10, each [Decorates(typeof(IService{i}))], plus ManualDecorationS{N}.Apply (descriptor replacement by hand).
-Every variant consumes the same S{N} assembly.
+For N in 50, 500 and 2000: T{N} holds the same services with [RegisterScoped(Strategy = RegistrationStrategy.TryAdd)],
+plus ManualTryAddT{N}.Register (hand-written TryAddScoped calls), ManualAddT{N}.Register (AddScoped) and CatalogT{N}.Values.
+Every variant consumes the same S{N} or T{N} assembly.
 Run from anywhere: python3 benchmarks/CSharpEssentials.DependencyInjection.Benchmarks/generate-services.py
 """
 from pathlib import Path
 
 SIZES = (50, 500)
+TRYADD_SIZES = (50, 500, 2000)
 DECORATED = 10
 DECORATOR_OFFSET = 1000
 ROOT = Path(__file__).resolve().parent.parent / "CSharpEssentials.DependencyInjection.Benchmarks.Services"
@@ -30,13 +33,18 @@ def has_dependency(i: int) -> bool:
     return i > 0 and i % 5 == 0
 
 
-def service(i: int) -> str:
+REGISTER = "[global::CSharpEssentials.DependencyInjection.RegisterScoped]"
+REGISTER_TRYADD = ("[global::CSharpEssentials.DependencyInjection.RegisterScoped("
+                   "Strategy = global::CSharpEssentials.DependencyInjection.RegistrationStrategy.TryAdd)]")
+
+
+def service(i: int, attribute: str = REGISTER) -> str:
     if has_dependency(i):
-        return (f"[global::CSharpEssentials.DependencyInjection.RegisterScoped]\n"
+        return (f"{attribute}\n"
                 f"public sealed class Service{i}(IService{i - 1} previous) : IService{i}\n{{\n"
                 f"    public IService{i - 1} Previous {{ get; }} = previous;\n\n"
                 f"    public int Value() => {i};\n}}\n")
-    return (f"[global::CSharpEssentials.DependencyInjection.RegisterScoped]\n"
+    return (f"{attribute}\n"
             f"public sealed class Service{i} : IService{i}\n{{\n    public int Value() => {i};\n}}\n")
 
 
@@ -58,6 +66,27 @@ def services(n: int) -> str:
             + f"    public static void Register({DI}.IServiceCollection services)\n    {{\n"
             + "\n".join(manual) + "\n    }\n}\n"
             + f"\npublic static class CatalogS{n}\n{{\n"
+            + "    public static int[] Values(global::System.IServiceProvider sp) =>\n    [\n"
+            + "\n".join(values) + "\n    ];\n}\n")
+
+
+def tryadd_services(n: int) -> str:
+    interfaces = [f"public interface IService{i}\n{{\n    int Value();\n}}\n" for i in range(n)]
+    impls = [service(i, REGISTER_TRYADD) for i in range(n)]
+    tryadd = [f"        {DI}.Extensions.ServiceCollectionDescriptorExtensions.TryAddScoped<IService{i}, Service{i}>(services);" for i in range(n)]
+    add = [f"        {DI}.ServiceCollectionServiceExtensions.AddScoped<IService{i}, Service{i}>(services);" for i in range(n)]
+    values = [f"        {DI}.ServiceProviderServiceExtensions.GetRequiredService<IService{i}>(sp).Value()," for i in range(n)]
+    return (f'\n[assembly: global::CSharpEssentials.DependencyInjection.ServiceRegistryName("T{n}")]\n'
+            + f"\nnamespace {PREFIX}.T{n};\n\n" + "\n".join(interfaces) + "\n" + "\n".join(impls)
+            + "\n// https://learn.microsoft.com/dotnet/api/microsoft.extensions.dependencyinjection.extensions.servicecollectiondescriptorextensions.tryaddscoped\n"
+            + f"public static class ManualTryAddT{n}\n{{\n"
+            + f"    public static void Register({DI}.IServiceCollection services)\n    {{\n"
+            + "\n".join(tryadd) + "\n    }\n}\n"
+            + "\n// https://learn.microsoft.com/dotnet/core/extensions/dependency-injection/service-registration\n"
+            + f"public static class ManualAddT{n}\n{{\n"
+            + f"    public static void Register({DI}.IServiceCollection services)\n    {{\n"
+            + "\n".join(add) + "\n    }\n}\n"
+            + f"\npublic static class CatalogT{n}\n{{\n"
             + "    public static int[] Values(global::System.IServiceProvider sp) =>\n    [\n"
             + "\n".join(values) + "\n    ];\n}\n")
 
@@ -118,6 +147,8 @@ def main() -> None:
         write(f"S{n}", csproj(), services(n))
         ref = f'\n    <ProjectReference Include="..\\S{n}\\{PREFIX}.S{n}.csproj" />'
         write(f"S{n}.Decorators", csproj(ref), decorators(n))
+    for n in TRYADD_SIZES:
+        write(f"T{n}", csproj(), tryadd_services(n))
 
 
 if __name__ == "__main__":

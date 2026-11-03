@@ -9,6 +9,7 @@ public static class Program
         if (args is ["--self-check"])
         {
             DiSelfCheck.VerifyAll();
+            DiExtSelfCheck.VerifyAll();
             return;
         }
 
