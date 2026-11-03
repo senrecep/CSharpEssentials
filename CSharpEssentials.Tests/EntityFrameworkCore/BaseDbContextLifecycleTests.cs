@@ -102,6 +102,12 @@ public class BaseDbContextLifecycleTests
         }
     }
 
+    private sealed class ThrowingPublisher : IDomainEventPublisher
+    {
+        public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("publisher failed");
+    }
+
     private sealed class NestedSaveOutbox : IDomainEventOutbox
     {
         private int _calls;
@@ -577,6 +583,23 @@ public class BaseDbContextLifecycleTests
         act.Should().Throw<InvalidOperationException>().WithMessage("outbox failed");
         context.Entities.Count().Should().Be(1);
         entity.DomainEvents.Should().Equal(after);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_KeepAfterSaveEventsCleared_When_PublisherFails()
+    {
+        using ServiceProvider provider = BuildProvider(services =>
+            services.AddSingleton<IDomainEventPublisher>(new ThrowingPublisher()));
+        using LifecycleDbContext context = CreateContext(provider, dispatchDomainEvents: true);
+        var entity = new EventEntity();
+        entity.Raise(new AfterEvent("after"));
+        context.Entities.Add(entity);
+
+        Func<Task> act = () => context.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("publisher failed");
+        (await context.Entities.CountAsync()).Should().Be(1);
+        entity.DomainEvents.Should().BeEmpty();
     }
 
     [Fact]
