@@ -16,6 +16,8 @@
 #                                              (net8.0 runs CSE's netstandard2.1 build: the package has no net8 target)
 #   ./run-benchmarks.sh --project any          # Any construct/match/try-pick/partition/JSON/ToString vs OneOf / Dunet, These vs hand-written record
 #                                              (net8.0 runs CSE's netstandard2.1 build: the packages have no net8 target)
+#   ./run-benchmarks.sh --project json         # Json enum/polymorphic/DateTime vs System.Text.Json / Macross.Json.Extensions; Core case/Guider/random/WithCancellation vs BCL / Humanizer / ShortGuid
+#                                              (net8.0 runs CSE's netstandard2.1 builds and System.Text.Json 9.0.x from NuGet)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -99,8 +101,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.ConstructComparison.*" "*.MatchComparison.*" "*.TryPickComparison.*" "*.PartitionComparison.*" "*.JsonComparison.*" "*.ToStringComparison.*" "*.TheseMatchComparison.*" "*.ThesePipelineComparison.*" "*.ThesePartitionComparison.*" "*.TheseJsonComparison.*")
         ;;
+    json)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Json.Comparison.Benchmarks/CSharpEssentials.Json.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/json"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.EnumComparison.*" "*.EnumFlagsComparison.*" "*.PolymorphicComparison.*" "*.DateTimeComparison.*" "*.CaseConversionComparison.*" "*.GuiderComparison.*" "*.RandomItemsComparison.*" "*.WithCancellationComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json)" >&2
         exit 1
         ;;
 esac

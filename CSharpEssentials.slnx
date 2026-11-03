@@ -68,6 +68,7 @@
   <Project Path="benchmarks/CSharpEssentials.Endpoints.Benchmarks.Throughput/CarterHost/CSharpEssentials.Endpoints.Benchmarks.Throughput.CarterHost.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Endpoints.Benchmarks.Throughput/FastEndpointsHost/CSharpEssentials.Endpoints.Benchmarks.Throughput.FastEndpointsHost.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Idempotency.Benchmarks/CSharpEssentials.Idempotency.Benchmarks.csproj" />
+  <Project Path="benchmarks/CSharpEssentials.Json.Comparison.Benchmarks/CSharpEssentials.Json.Comparison.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Mediator.Benchmarks/CSharpEssentials.Mediator.Benchmarks.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Mediator.Benchmarks.Handlers/MediatR50/CSharpEssentials.Mediator.Benchmarks.Handlers.MediatR50.csproj" />
   <Project Path="benchmarks/CSharpEssentials.Mediator.Benchmarks.Handlers/Mediator50/CSharpEssentials.Mediator.Benchmarks.Handlers.Mediator50.csproj" />
