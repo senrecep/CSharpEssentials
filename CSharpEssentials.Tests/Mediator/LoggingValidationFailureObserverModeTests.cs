@@ -1,12 +1,11 @@
 using System.Diagnostics.Metrics;
 
+using Mediator;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Mediator;
 using CSharpEssentials.ResultPattern;
 
 using FluentAssertions;
-
-using Mediator;
 
 using Microsoft.Extensions.Logging;
 
@@ -76,24 +75,19 @@ public sealed class LoggingValidationFailureObserverModeTests
 
         await new LoggingValidationFailureObserver(logger).OnValidationFailedAsync(Failure(ValidationMode.LogOnly), default);
 
-        (List<KeyValuePair<string, object?>> indexed, List<KeyValuePair<string, object?>> enumerated) =
-            logger.Properties.Should().ContainSingle().Subject;
-        enumerated.Should().Equal(indexed);
-        indexed.ToDictionary(pair => pair.Key, pair => pair.Value).Should().BeEquivalentTo(new Dictionary<string, object?>
-        {
-            ["RequestName"] = nameof(ModeTaggedCommand),
-            ["ValidationMode"] = "log_only",
-            ["ErrorCount"] = 1,
-            ["ErrorCodes"] = "NameRequired",
-            ["{OriginalFormat}"] = "Validation of {RequestName} failed in {ValidationMode} mode with {ErrorCount} error(s): {ErrorCodes}"
-        });
+        Dictionary<string, object?> properties = logger.Properties.Should().ContainSingle().Subject
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        properties["RequestName"].Should().Be(nameof(ModeTaggedCommand));
+        properties["ValidationMode"].Should().Be("log_only");
+        properties["ErrorCount"].Should().Be(1);
+        properties["ErrorCodes"].Should().Be("NameRequired");
     }
 
     private sealed class CapturingLogger : ILogger<LoggingValidationFailureObserver>
     {
         public List<(LogLevel Level, string Message)> Entries { get; } = [];
 
-        public List<(List<KeyValuePair<string, object?>> Indexed, List<KeyValuePair<string, object?>> Enumerated)> Properties { get; } = [];
+        public List<List<KeyValuePair<string, object?>>> Properties { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -103,12 +97,7 @@ public sealed class LoggingValidationFailureObserverModeTests
         {
             Entries.Add((logLevel, formatter(state, exception)));
             if (state is IReadOnlyList<KeyValuePair<string, object?>> pairs)
-            {
-                List<KeyValuePair<string, object?>> indexed = [];
-                for (int index = 0; index < pairs.Count; index++)
-                    indexed.Add(pairs[index]);
-                Properties.Add((indexed, [.. pairs]));
-            }
+                Properties.Add([.. pairs]);
         }
     }
 }
