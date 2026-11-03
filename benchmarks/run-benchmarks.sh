@@ -13,7 +13,7 @@
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 #   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
-#   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations vs CSharpFunctionalExtensions / ErrorOr / FluentResults
+#   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations, Error create/equality/exception/ToString/JSON, Sequence/CombineAll, Try/TryAsync, Maybe collection helpers vs CSharpFunctionalExtensions / ErrorOr / FluentResults
 #   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor
 #   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors)
 #   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description vs Enums.NET / NetEscapades.EnumGenerators / BCL
@@ -93,7 +93,7 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Results.Comparison.Benchmarks/CSharpEssentials.Results.Comparison.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/results-comparison"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*CreateComparison*" "*MapComparison*" "*BindComparison*" "*EnsureComparison*" "*MatchComparison*" "*TapComparison*" "*AsyncPipelineComparison*" "*ErrorAggregationComparison*" "*MaybeComparison*")
+        QUICK_PATTERNS=("*CreateComparison*" "*MapComparison*" "*BindComparison*" "*EnsureComparison*" "*MatchComparison*" "*TapComparison*" "*AsyncPipelineComparison*" "*ErrorAggregationComparison*" "*MaybeComparison*" "*.ErrorFactoryComparison.*" "*.ErrorEqualityComparison.*" "*.ErrorExceptionComparison.*" "*.ErrorMetadataToStringComparison.*" "*.ErrorToStringComparison.*" "*.ErrorJsonComparison.*" "*.SequenceComparison.*" "*.TryComparison.*" "*.TryAsyncComparison.*" "*.MaybeCollectionComparison.*")
         ;;
     di)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.DependencyInjection.Benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.csproj"
