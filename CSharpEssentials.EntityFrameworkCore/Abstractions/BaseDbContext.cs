@@ -53,6 +53,12 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     /// publish the earlier events twice.
     /// </para>
     /// <para>
+    /// An outbox that adds rows to this context and then throws leaves those rows tracked, so the retry saves
+    /// them and stores the events again; remove them before rethrowing. After a rolled-back explicit transaction,
+    /// the entity stays tracked as unchanged with its after-save events back, so a retry stores events for a row
+    /// that is not in the database.
+    /// </para>
+    /// <para>
     /// Do not combine with <see cref="DomainEventInterceptor"/>; when this is <c>true</c>,
     /// <see cref="DbContextInterceptors.DomainEvents"/> in <see cref="InterceptorsFromServices"/> is ignored.
     /// An interceptor added to the options directly still runs but sees no events, because they are
