@@ -61,3 +61,40 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - "A generated dispatcher, then the behaviors on top": Mediator's 0 B sends against MediatR's per-send allocation, and what CSE adds back on top of that.
 - "Where CSE loses": valid input against hand-written Mediator, invalid input against both, and the two AOT crashes. Name the losses first.
 - "Cold start is not free for generated code": Mediator 1.07-1.10× MediatR from a fresh process, while the warm numbers say the opposite.
+
+## Newer scenarios (no numbers yet)
+
+Seven classes were added after the run above: validator fan-out, validation scope, idempotency, lock, lock contention, caching and logging. They build and pass their parity check on every TFM, but no full run has been done. `CSharpEssentials.Mediator/BENCHMARKS.md` describes them under "Pending". Do not quote numbers for them until the full run is committed.
+
+What each one asks:
+- Validator fan-out. Three validators on one request. Does grouping by `Order` cost more than running the validators one by one? CSE does extra work here on purpose: groups, `Distinct`, failure observers.
+- Validation scope. What a request scope pays to build the validation behavior. This only matters for a scoped mediator or for MediatR resolved per request.
+- Idempotency. A replayed request and a request that fails and releases its key. Neither MediatR nor Mediator has this feature, so CSE is compared with a small hand-written store. That store is a lower bound, not a feature match.
+- Lock. One uncontended send through a keyed lock, CSE against AsyncKeyedLock 8.1.2.
+- Lock contention. 8 workers on one key, one key each, or a new key per operation. AsyncKeyedLock is the baseline.
+- Caching. A hit and a miss over the distributed memory cache.
+- Logging. A disabled logger and an enabled one, with and without JSON payloads.
+
+Things to say when the numbers exist:
+- The new request types changed the generated Mediator class and the MediatR containers of the older classes. The full run reruns every class, so older numbers can move a little. Say so if they do.
+- Each CSE container registers only the behavior under test. A real app that follows the Readme also registers `AddMediatorBehaviors()`.
+- The net8 rows run the netstandard2.1 build of every CSE package: no CSE package in this suite has a net8 target. That includes the CSE Results, Validation and Json code the hand-written columns use, so the columns stay comparable, but no net8 row is net8-native CSE code. Logging, locking and the default fingerprint take different code there.
+
+Costs already visible in the source, to check against the run (not fixed in this work):
+- `CachingBehavior` reads `CacheKey` up to four times per miss. With the Readme's interpolated key that builds the string each time.
+- The in-memory idempotency store allocates a Guid string and an entry before it looks the key up, so a replay pays for both.
+- `IdempotencyBehavior` allocates a closure and an options object per request. The default fingerprint serializes and hashes the whole request on every send.
+- `ValidationBehavior` groups the validators with LINQ in its constructor, so a scoped behavior pays that per scope.
+- `InProcessResourceLock` takes one lock shared by every key to rent and return each entry, and creates a semaphore for every new key.
+- `LoggingBehavior` reads the type names on every call.
+
+Expected losses (name them first):
+- Validator fan-out: CSE should be slower than the hand-written behaviors. It groups by `Order`, runs `Distinct` and calls the failure observers.
+- Validation scope: CSE should be slower. Its constructor groups the validators with LINQ.
+- Idempotency: CSE should be slower than the hand-written store. That store is a lower bound by design.
+- Caching miss: CSE should be slower. It reads `CacheKey` up to four times.
+- Logging: CSE should be slower. It reads the type names on every call.
+
+Angles this adds:
+- "Behaviors you would otherwise write yourself": idempotency, locking and caching have no counterpart in either dispatcher. Compare with the hand-written lower bound and say what the extra cost buys.
+- "A keyed lock, two ways": CSE's lock against AsyncKeyedLock under no contention, full contention and key churn.

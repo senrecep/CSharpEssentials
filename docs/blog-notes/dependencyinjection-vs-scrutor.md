@@ -61,3 +61,23 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - "A scan you pay at every start": the cold table, generated registry 1.04-1.06× hand-written against Scrutor's 1.15-1.42× (cold, all TFMs), and AOT where the scan finds nothing.
 - "Where CSE loses": the reflection fallback against Scrutor, the generated registry against hand-written code, decoration against a hand-written factory, CseRuntime allocation and net11 decoration against Scrutor, and the metadata reflection on the generated decoration path. Name the losses first.
 - "Keyed services and decoration": what Scrutor's public `Decorate` cannot reach, and what that costs CSE per decoration.
+
+## Newer scenarios (no numbers yet)
+
+Two classes were added after the run above, TryAdd registration and transient decorator resolve. They build and pass their parity check on every TFM, but no full run has been done. `CSharpEssentials.DependencyInjection/BENCHMARKS.md` describes them under "Pending". Do not quote numbers for them until the full run is committed.
+
+What each one asks:
+- TryAdd. Register 50, 500 or 2000 services that must not replace an existing registration. Rows: hand-written `TryAddScoped`, the CSE generated registry with `Strategy = RegistrationStrategy.TryAdd`, the CSE reflection fallback, and Scrutor with `RegistrationStrategy.Skip`. Plain `AddScoped` is there as a reference with no duplicate check.
+- Transient decorator resolve. Resolve a decorated transient service from the root provider, with no scope. Every resolve builds the decorator again, so the activation path is what the rows show.
+
+Things to say when the numbers exist:
+- TryAdd is O(N^2) on an empty collection in all three libraries. Each one scans the collection for every service it adds. N = 2000 shows that. It is not a CSE-only cost.
+- The warm caveat from the registration section applies: the reflection rows look cheaper warm than at a real startup.
+- CSE's runtime `Decorate<TService, TDecorator>` builds the decorator with `ConstructorInfo.Invoke` and a new argument array on every resolve. The generated `[Decorates]` path calls the constructor directly. Scrutor uses `ActivatorUtilities.CreateInstance`.
+- The manual factory builds the inner service with `new`. CSE and Scrutor resolve it from a hidden keyed registration, so part of any gap is that extra resolve.
+
+Expected losses (name them first):
+- Transient decorator resolve: CseGenerated and CseRuntime should be slower than the Manual factory. Both resolve the inner service from an extra keyed registration. CseRuntime also pays `ConstructorInfo.Invoke` and a new argument array. The committed scoped decorated-resolve rows already go this way.
+
+Possible angle:
+- "TryAdd is a scan": all three libraries pay the same linear scan per service, so the gap between them is what each adds around it.
