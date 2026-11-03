@@ -5,7 +5,6 @@ using CSharpEssentials.Errors;
 using CSharpEssentials.Http;
 using CSharpEssentials.Idempotency;
 using CSharpEssentials.RequestResponseLogging;
-using CSharpEssentials.Resilience;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.Rules;
 using CSharpEssentials.These;
@@ -26,30 +25,57 @@ void Check(string package, bool ok)
 Check("Time", new DateTime(2026, 11, 3, 0, 0, 0, DateTimeKind.Utc).NextDayOfWeek(DayOfWeek.Monday) == new DateTime(2026, 11, 9, 0, 0, 0, DateTimeKind.Utc));
 
 These<Error, int> these = TheseExtensions.FromResult(Result<int>.Success(41)).Map(x => x + 1);
-Check("These", these.IsRight && these.RightOrDefault == 42);
+string both = These<Error, int>.Both(Error.Validation("Warn"), 1).Match(_ => "left", _ => "right", (_, v) => $"both{v}");
+Check("These", these.IsRight && these.RightOrDefault == 42 && both == "both1" && these.ToResult().Value == 42);
 
 Result rules = RuleEngine.And<int>([x => x > 0 ? Result.Success() : Error.Validation("Positive"), x => x < 10 ? Result.Success() : Error.Validation("Small")], 5);
-Check("Rules", rules.IsSuccess);
+Func<int, Result>[] alternatives = [x => x < 0 ? Result.Success() : Error.Validation("Negative"), x => x == 5 ? Result.Success() : Error.Validation("Five")];
+Result anyOf = await RuleEngine.EvaluateAsync(alternatives.Or(), 5);
+Check("Rules", rules.IsSuccess && anyOf.IsSuccess);
 
 Order order = new();
 order.SetCreatedInfo(DateTimeOffset.UnixEpoch.AddDays(1), "probe");
-Check("Entity", order.CreatedBy == "probe");
+order.SetUpdatedInfo(DateTimeOffset.UnixEpoch.AddDays(2), "editor");
+order.Raise(new OrderPlaced());
+order.MarkAsDeleted(DateTimeOffset.UnixEpoch.AddDays(3), "admin");
+bool deleted = order.IsDeleted;
+order.Restore();
+Check("Entity", order.CreatedBy == "probe" && order.UpdatedBy == "editor" && order.DomainEvents.Count == 1 && deleted && !order.IsDeleted);
 
 List<CloneableItem> items = [new(1), new(2)];
 List<CloneableItem> clones = items.Clone().ToList();
 Check("Clone", clones.Count == 2 && !ReferenceEquals(clones[0], items[0]) && clones[1].Value == 2);
 
-int attempts = 0;
-Func<CancellationToken, Task<Result<int>>> flaky = _ => Task.FromResult(++attempts < 2 ? Result<int>.Failure(Error.Unexpected("Flaky")) : Result<int>.Success(7));
-Result<int> retried = await flaky.RetryIfFailed(maxAttempts: 2, delay: TimeSpan.FromMilliseconds(1));
-Check("Resilience", retried.IsSuccess && retried.Value == 7 && attempts == 2);
-
-using HttpClient client = new(new EchoHandler()) { BaseAddress = new Uri("http://probe.local/") };
-Result<ProbeDto> fetched = await client.GetFromJsonAsResultAsync(new Uri("items", UriKind.Relative), ProbeJsonContext.Default.ProbeDto);
+using EchoHandler echo = new();
+using HttpClient client = new(echo) { BaseAddress = new UriBuilder(Uri.UriSchemeHttps, "probe.local").Uri };
+var info = ProbeJsonContext.Default.ProbeDto;
+Uri itemsUri = new("items", UriKind.Relative);
+ProbeDto sent = new("sent", 3);
+Result<ProbeDto> fetched = await client.GetFromJsonAsResultAsync(itemsUri, info);
+Result<ProbeDto> postedDirect = await client.PostAsJsonAsResultAsync(itemsUri, sent, info, info);
+Result<ProbeDto> put = await client.PutAsJsonAsResultAsync(itemsUri, sent, info, info);
+Result<ProbeDto> patched = await client.PatchAsJsonAsResultAsync(itemsUri, sent, info, info);
+using HttpRequestMessage sendRequest = new(HttpMethod.Get, itemsUri);
+Result<ProbeDto> sentResult = await client.SendAsResultAsync(sendRequest, info);
+using HttpRequestMessage redirectRequest = new(HttpMethod.Get, new Uri(client.BaseAddress, "redirect"));
+Result<ProbeDto> redirected = await client.SendWithRedirectsAsResultAsync(redirectRequest, info);
 Result<ProbeDto> posted = await HttpRequestBuilder.Post("items")
-    .WithJsonTypeInfoContent(new ProbeDto("sent", 3), ProbeJsonContext.Default.ProbeDto)
-    .AsResultAsync(client, ProbeJsonContext.Default.ProbeDto);
-Check("Http", fetched.IsSuccess && fetched.Value.Name == "get" && posted.IsSuccess && posted.Value is { Name: "echo", Count: 3 });
+    .WithJsonTypeInfoContent(sent, info)
+    .AsResultAsync(client, info);
+Result<ProbeDto> builderRedirected = await HttpRequestBuilder.Get(new Uri(client.BaseAddress, "redirect"))
+    .FollowRedirects()
+    .AsResultAsync(client, info);
+using HttpContent body = System.Net.Http.Json.JsonContent.Create(sent, info);
+Result<ProbeDto> read = await body.ReadFromJsonAsResultAsync(info);
+Check("Http", fetched.Value is { Name: "get" }
+    && postedDirect.Value is { Name: "echo POST", Count: 3 }
+    && put.Value is { Name: "echo PUT", Count: 3 }
+    && patched.Value is { Name: "echo PATCH", Count: 3 }
+    && sentResult.Value is { Name: "get" }
+    && redirected.Value is { Name: "get" }
+    && posted.Value is { Name: "echo POST", Count: 3 }
+    && builderRedirected.Value is { Name: "get" }
+    && read.Value is { Name: "sent", Count: 3 });
 
 ServiceCollection services = new();
 services.AddIdempotencyExecutor();

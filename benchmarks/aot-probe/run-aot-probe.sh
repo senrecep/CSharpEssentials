@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Native AOT probe for the packages this repo marks IsAotCompatible (Time, These, Rules, Entity, Clone, Resilience,
-# Http, Idempotency, RequestResponseLogging). Publishes AotProbe from a clean obj with TrimmerSingleWarn=false (set in
-# the csproj), lists the distinct IL warnings with their source, then runs the native binary, which prints
-# "OK <package>" for each package and exits 0 only when every check passes.
-# Usage: run-aot-probe.sh   Env: STRICT=1 keeps the repo's warnings-as-errors on, so any IL warning fails the publish.
+# Native AOT probe for the packages this branch marks IsAotCompatible (Time, These, Rules, Entity, Clone, Http,
+# Idempotency, RequestResponseLogging). Publishes AotProbe from a clean obj with TrimmerSingleWarn=false (set in the
+# csproj) and the repo's warnings-as-errors, so any IL warning fails the publish, then runs the native binary, which
+# prints "OK <package>" for each package and exits 0 only when every check passes.
+# Usage: run-aot-probe.sh
 set -euo pipefail
 
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -15,9 +15,7 @@ trap cleanup EXIT
 
 # Clean first: an incremental publish skips CoreCompile and drops the analyzer warnings.
 rm -rf "$HERE/AotProbe/bin" "$HERE/AotProbe/obj"
-twae=()
-[[ ${STRICT:-0} == 1 ]] || twae=(-p:TreatWarningsAsErrors=false)
-dotnet publish "$PROJ" -c Release -r linux-x64 -m:2 "${twae[@]}" -o "$WORK/out" --tl:off -clp:NoSummary >"$WORK/publish.log" 2>&1 || {
+dotnet publish "$PROJ" -c Release -r linux-x64 -m:2 -o "$WORK/out" --tl:off -clp:NoSummary >"$WORK/publish.log" 2>&1 || {
     cat "$WORK/publish.log"
     exit 1
 }
