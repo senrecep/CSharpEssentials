@@ -138,6 +138,8 @@ Resilience-specific errors are returned as `Error` values:
 
 When retries exhaust, the last exception is returned as `Error.Exception(ex, ErrorType.Unexpected)`, with the exception type name as code.
 
+An exception thrown by the `WithFallback` delegate is returned the same way, as an `Unexpected` error.
+
 Cancellation of the caller's token is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback. If the caller cancels after an attempt returned a retryable failed `Result`, `ExecuteAsync`, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException` instead of returning that result. This is the same whether the cancel lands during an attempt or during the backoff delay, and it also applies right after the final attempt: cancellation wins over returning the last failed result. It also applies to policies without a retry strategy, such as a circuit-breaker-only or timeout-only policy. This rule covers returned failures only: if the operation throws an exception other than `OperationCanceledException` while the caller's token is cancelled, the exception is returned as an `Unexpected` error. An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is treated as a normal failure: it is retried and it triggers the fallback.
 
 A `default(ResiliencePolicy)` or `default(ResiliencePolicy<T>)` behaves like `Create()`.
@@ -175,3 +177,7 @@ Result<Data> result = await ResiliencePolicy
     })
     .ExecuteAsync(_ => _api.GetData());
 ```
+
+## Upgrading to 8.0
+
+An exception thrown by the `WithFallback` delegate is now returned as an `ErrorType.Unexpected` error, like an exception from the operation itself. Earlier versions returned it as `ErrorType.Failure`. Update code that checks the error type of a failed fallback.

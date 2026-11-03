@@ -301,6 +301,30 @@ public class ResiliencePolicyRegressionTests
         result.Value.Should().Be(99);
     }
 
+    [Fact]
+    public async Task Generic_WithFallback_Value_Should_Return_Unexpected_When_Fallback_Throws()
+    {
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithFallback(_ => Task.FromException<int>(new InvalidOperationException("fallback")));
+
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Failure("Op.Failed", "failed"))));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
+    }
+
+    [Fact]
+    public async Task Generic_WithFallback_Result_Should_Return_Unexpected_When_Fallback_Throws()
+    {
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithFallback(_ => Task.FromException<Result<int>>(new InvalidOperationException("fallback")));
+
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Failure("Op.Failed", "failed"))));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
+    }
+
     private static void ThrowInternalCancellation()
     {
         using CancellationTokenSource internalCts = new();
