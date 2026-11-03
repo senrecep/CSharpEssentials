@@ -39,6 +39,9 @@ public static class StringEnumNaming
     /// <summary>
     /// Gets the wire name of an enum value or of a number of the underlying type.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="enumType"/> is not an enum, or <paramref name="value"/> is neither that enum nor an integral number.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="enumType"/> has no generated metadata.</exception>
     /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
     public static string GetName(Type enumType, object value, JsonNamingPolicy? namingPolicy = null)
     {
