@@ -43,7 +43,7 @@ public class BaselineSimpleComparison
         (_options, _info) = MeValidation.Resolve(typeof(SignupRequest));
         Parity.Same(nameof(BaselineSimpleComparison),
             ("expected", expected),
-            (nameof(MicrosoftExtensionsValidation), Parity.Of(MicrosoftExtensionsValidation().AsTask().GetAwaiter().GetResult().ValidationErrors)));
+            (nameof(MicrosoftExtensionsValidation), Parity.Of(MicrosoftExtensionsValidation().AsTask().GetAwaiter().GetResult())));
 #endif
     }
 
@@ -68,11 +68,11 @@ public class BaselineSimpleComparison
     // https://github.com/dotnet/aspnetcore/blob/v10.0.14/src/Validation/src/ValidationOptions.cs
     // https://github.com/dotnet/aspnetcore/blob/v10.0.14/src/Validation/src/IValidatableInfo.cs
     [Benchmark]
-    public async ValueTask<ValidateContext> MicrosoftExtensionsValidation()
+    public async ValueTask<Dictionary<string, string[]>?> MicrosoftExtensionsValidation()
     {
         var context = new ValidateContext { ValidationOptions = _options, ValidationContext = new Annotations.ValidationContext(_model) };
         await _info.ValidateAsync(_model, context, default);
-        return context;
+        return context.ValidationErrors;
     }
 #endif
 }
