@@ -2,6 +2,9 @@
 
 Discriminated Unions (Sum Types) for .NET. A type-safe way to represent a value that can be one of several fixed types.
 
+> Benchmarks against OneOf 3.0.271 and Dunet 1.16.2 (construct, match, try-pick, partition, JSON and ToString) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **Unions of 2 to 8 types**: `Any<T0, T1>` through `Any<T0, ..., T7>`.
