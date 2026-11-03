@@ -14,8 +14,9 @@
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
 #   ./run-benchmarks.sh --project endpoints    # Endpoint mapping startup and request throughput vs Carter / FastEndpoints
 #   ./run-benchmarks.sh --project results-comparison  # Result/Maybe operations, Error create/equality/exception/ToString/JSON, Sequence/CombineAll, Try/TryAsync, Maybe collection helpers vs CSharpFunctionalExtensions / ErrorOr / FluentResults
-#   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor
-#   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors)
+#   ./run-benchmarks.sh --project di           # Service registration, decoration and resolve vs Scrutor; TryAdd at N=50/500/2000 and transient decorator resolve
+#   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors); validator fan-out, idempotency, lock, caching and logging behaviors vs hand-written MediatR/Mediator behaviors and AsyncKeyedLock
+#                                              (net8.0 runs CSE's netstandard2.1 builds: no CSE package in this suite has a net8 target)
 #   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description vs Enums.NET / NetEscapades.EnumGenerators / BCL
 #                                              (net8.0 runs CSE's netstandard2.1 build: the package has no net8 target)
 #   ./run-benchmarks.sh --project any          # Any construct/match/try-pick/partition/JSON/ToString vs OneOf / Dunet, These vs hand-written record
@@ -99,13 +100,13 @@ case "$SUITE" in
         PROJECT="$SCRIPT_DIR/CSharpEssentials.DependencyInjection.Benchmarks/CSharpEssentials.DependencyInjection.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/di"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*Registration*" "*Decoration*" "*Resolve*")
+        QUICK_PATTERNS=("*Registration*" "*Decoration*" "*Resolve*" "*.TryAddBenchmarks.*" "*.TransientDecoratorBenchmarks.*")
         ;;
     mediator)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Mediator.Benchmarks/CSharpEssentials.Mediator.Benchmarks.csproj"
         RESULTS_DIR="$SCRIPT_DIR/results/mediator"
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
-        QUICK_PATTERNS=("*.SendBenchmarks.*" "*.PublishBenchmarks.*" "*.StartupBenchmarks.*" "*.ColdStartupBenchmarks.*" "*.BehaviorBenchmarks.*")
+        QUICK_PATTERNS=("*.SendBenchmarks.*" "*.PublishBenchmarks.*" "*.StartupBenchmarks.*" "*.ColdStartupBenchmarks.*" "*.BehaviorBenchmarks.*" "*.ValidationFanOutBenchmarks.*" "*.ValidationScopeBenchmarks.*" "*.IdempotencyBehaviorBenchmarks.*" "*.LockBehaviorBenchmarks.*" "*.LockContentionBenchmarks.*" "*.CachingBehaviorBenchmarks.*" "*.LoggingBehaviorBenchmarks.*")
         ;;
     enums)
         PROJECT="$SCRIPT_DIR/CSharpEssentials.Enums.Comparison.Benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks.csproj"
