@@ -28,6 +28,8 @@ dotnet add package CSharpEssentials.EntityFrameworkCore
 
 Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
 
+This package is not Native AOT compatible, because EF Core's Native AOT support is experimental, needs precompiled queries and is not available on net8.0 ([EF Core NativeAOT and precompiled queries](https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries)).
+
 ## Usage
 
 ### Audit Interceptor

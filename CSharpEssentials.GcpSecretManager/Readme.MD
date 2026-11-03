@@ -16,6 +16,8 @@ Integrates Google Cloud Secret Manager into the .NET Configuration system. Load 
 dotnet add package CSharpEssentials.GcpSecretManager
 ```
 
+This package is not Native AOT compatible: it builds on Google.Cloud.SecretManager.V1, whose Google.Api.Gax, Google.Apis.Auth and Newtonsoft.Json dependencies are reflection-based and make no Native AOT support claim ([Google.Cloud.SecretManager.V1 docs](https://cloud.google.com/dotnet/docs/reference/Google.Cloud.SecretManager.V1/latest)).
+
 ## Usage
 
 ### Setup via Code
