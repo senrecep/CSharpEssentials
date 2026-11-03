@@ -2,6 +2,10 @@
 
 Production-ready ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, enum conventions, and Result endpoint filters.
 
+> Benchmarks against plain ASP.NET Core, Hellang.Middleware.ProblemDetails, Marvin.Cache.Headers and SharpGrip.FluentValidation.AutoValidation
+> (Result endpoint filter, enum binding, conditional GET, problem details, validation filter) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **Enhanced Problem Details**: One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
