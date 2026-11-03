@@ -7,14 +7,15 @@ namespace CSharpEssentials.AspNetCore;
 /// <summary>
 /// Writes no <c>default</c> for an undefined enum value: Swashbuckle serializes a <c>[DefaultValue]</c> or parameter default
 /// with the enum converter before any schema filter runs, and the converter throws <see cref="EnumValueException"/> for
-/// values like <c>(OrderStatus)42</c>. Other contracts are returned unchanged.
+/// values like <c>(OrderStatus)42</c>. Object, array and dictionary contracts of an enum and contracts of other types are returned
+/// unchanged.
 /// </summary>
 internal sealed class EnumDefaultDataContractResolver(ISerializerDataContractResolver inner) : ISerializerDataContractResolver
 {
     public DataContract GetDataContractForType(Type type)
     {
         DataContract contract = inner.GetDataContractForType(type);
-        if (!(Nullable.GetUnderlyingType(type) ?? type).IsEnum)
+        if (!(Nullable.GetUnderlyingType(type) ?? type).IsEnum || contract.DataType is DataType.Object or DataType.Array or DataType.Dictionary)
             return contract;
 
         Func<object, string> converter = contract.JsonConverter;
