@@ -272,6 +272,16 @@ public class EnumConverterFactoryTests
     }
 
     [Fact]
+    public void Read_Should_Read_The_Number_Written_For_An_Undefined_Value_As_The_Fallback_Member_In_Data_Mode()
+    {
+        string json = JsonSerializer.Serialize((JsonOrderStatus)42, Options());
+
+        JsonOrderStatus value = Read<JsonOrderStatus>(json, EnumReadMode.Data);
+
+        value.Should().Be(JsonOrderStatus.Unknown);
+    }
+
+    [Fact]
     public void Read_Should_Still_Reject_The_Number_Written_For_An_Undefined_Value_In_Input_Mode()
     {
         string json = JsonSerializer.Serialize((JsonOrderStatus)42, Options());
@@ -362,13 +372,27 @@ public class EnumConverterFactoryTests
     }
 
     [Theory]
-    [InlineData(8, "8")]
-    [InlineData(9, "9")]
-    public void Write_Should_Write_A_Flags_Value_With_Undefined_Bits_As_Its_Number(int value, string expected)
+    [InlineData(8, EnumWireFormat.String, "8")]
+    [InlineData(9, EnumWireFormat.String, "9")]
+    [InlineData(8, EnumWireFormat.Number, "8")]
+    [InlineData(9, EnumWireFormat.Number, "9")]
+    public void Write_Should_Write_A_Flags_Value_With_Undefined_Bits_As_Its_Number(int value, EnumWireFormat format, string expected)
     {
-        string json = JsonSerializer.Serialize((JsonPermissions)value, Options());
+        string json = JsonSerializer.Serialize((JsonPermissions)value, Options(writeAs: format));
 
         json.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(EnumWireFormat.String)]
+    [InlineData(EnumWireFormat.Number)]
+    public void Write_Should_Write_An_Undefined_Flags_Dictionary_Key_As_Its_Number(EnumWireFormat format)
+    {
+        Dictionary<JsonPermissions, int> map = new() { [(JsonPermissions)9] = 1 };
+
+        string json = JsonSerializer.Serialize(map, Options(writeAs: format));
+
+        json.Should().Be("{\"9\":1}");
     }
 
     public static TheoryData<string, EnumReadMode, JsonPermissions> FlagsInputs()
