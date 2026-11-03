@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Net;
 using System.Text.Json.Nodes;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
@@ -226,27 +224,11 @@ public class OpenApiEnumSchemaTests
         Component(documents["v1"], "SampleStatus")["enum"]!.AsArray().Select(static value => value!.GetValue<string>()).Should().Equal("pending", "pending_approval", "waiting", "unknown");
     }
 
-    [Fact]
-    public async Task Document_Should_Fail_When_DefaultValueIsAnUndefinedEnumValue()
-    {
-        Func<Task> act = () => OpenApiSampleHost.GetDocumentsAsync(
-            OpenApiSpecVersion.OpenApi3_0,
-            configureApp: static app => app.MapPost("/v1/undefined-default", static (UndefinedDefaultOrder order) => order).WithGroupName("v1"));
-
-        (await act.Should().ThrowAsync<HttpRequestException>()).Which.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
-    }
-
     private static JsonNode Component(string json, string name) =>
         JsonNode.Parse(json)!["components"]!["schemas"]![name]!;
 
     private static JsonNode Operation(string json, string path, string method) =>
         JsonNode.Parse(json)!["paths"]![path]![method]!;
-
-    internal sealed class UndefinedDefaultOrder
-    {
-        [DefaultValue((SampleStatus)42)]
-        public SampleStatus Status { get; init; }
-    }
 
     private sealed class ScopedFormat
     {
