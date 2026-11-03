@@ -37,10 +37,12 @@ public sealed class JsonConvertOptionsTests
     }
 
     [Fact]
-    public void ConvertFromJson_Should_Throw_On_Malformed_Json()
+    public void ConvertFromJson_NonGeneric_Should_Use_The_Given_Options()
     {
-        Action act = () => "{".ConvertFromJson<Person>(SnakeOptions);
+        Type returnType = new Person("Ada", 36).GetType();
 
-        act.Should().Throw<JsonException>();
+        object? person = """{"first_name":"Ada","years_old":36}""".ConvertFromJson(returnType, SnakeOptions);
+
+        person.Should().Be(new Person("Ada", 36));
     }
 }
