@@ -301,7 +301,7 @@ The two domain event paths differ in when `AfterSave` events are handled:
 |---|---|---|
 | `AfterSave` events | after the save completes | in `SavingChanges`, before the database write |
 | Outbox write | not atomic with the save: the save is already committed when `StoreAsync` runs; inside an explicit transaction it runs before that transaction commits | before the save, in the same `SaveChanges` call |
-| Save fails | `AfterSave` events are put back on their entities, so a retry dispatches them | `AfterSave` events are put back when a `BeforeSave` publish throws; a later failure comes after they are dispatched |
+| Save fails | `AfterSave` events are put back on their entities, so a retry dispatches them | `AfterSave` events are put back when a `BeforeSave` publish throws. They are not put back when the `AfterSave` dispatch itself throws or when the database write fails |
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
