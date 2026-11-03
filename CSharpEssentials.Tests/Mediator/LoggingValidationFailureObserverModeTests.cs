@@ -69,15 +69,46 @@ public sealed class LoggingValidationFailureObserverModeTests
         modes.Should().ContainSingle().Which.Should().Be(modeText);
     }
 
+    [Fact]
+    public async Task Should_Log_Structured_Properties()
+    {
+        CapturingLogger logger = new();
+
+        await new LoggingValidationFailureObserver(logger).OnValidationFailedAsync(Failure(ValidationMode.LogOnly), default);
+
+        (List<KeyValuePair<string, object?>> indexed, List<KeyValuePair<string, object?>> enumerated) =
+            logger.Properties.Should().ContainSingle().Subject;
+        enumerated.Should().Equal(indexed);
+        indexed.ToDictionary(pair => pair.Key, pair => pair.Value).Should().BeEquivalentTo(new Dictionary<string, object?>
+        {
+            ["RequestName"] = nameof(ModeTaggedCommand),
+            ["ValidationMode"] = "log_only",
+            ["ErrorCount"] = 1,
+            ["ErrorCodes"] = "NameRequired",
+            ["{OriginalFormat}"] = "Validation of {RequestName} failed in {ValidationMode} mode with {ErrorCount} error(s): {ErrorCodes}"
+        });
+    }
+
     private sealed class CapturingLogger : ILogger<LoggingValidationFailureObserver>
     {
         public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public List<(List<KeyValuePair<string, object?>> Indexed, List<KeyValuePair<string, object?>> Enumerated)> Properties { get; } = [];
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
         public bool IsEnabled(LogLevel logLevel) => true;
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
             Entries.Add((logLevel, formatter(state, exception)));
+            if (state is IReadOnlyList<KeyValuePair<string, object?>> pairs)
+            {
+                List<KeyValuePair<string, object?>> indexed = [];
+                for (int index = 0; index < pairs.Count; index++)
+                    indexed.Add(pairs[index]);
+                Properties.Add((indexed, [.. pairs]));
+            }
+        }
     }
 }
