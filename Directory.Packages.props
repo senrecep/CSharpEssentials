@@ -9,8 +9,9 @@
              share the DI suite's container (Microsoft.Extensions.DependencyInjection 10.0.0), which fails restore with NU1109
              (Abstractions 10.0.0 downgraded to the 9.0.4 pin) while pinning is on. The Http comparison suite's generated host
              fails the same way: Microsoft.Extensions.Http.Resilience 10.x needs Microsoft.Extensions.* 9.0.21 or later. The AspNetCore
-             comparison suite fails with NU1109 too: Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+             comparison suite fails with NU1109 too: Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0.
+             The EntityFrameworkCore comparison suite runs EF Core 8, 9 and 10 side by side, which the central [9.0.4,10) EF pin would fight. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -173,6 +174,11 @@
         <PackageVersion Include="Marvin.Cache.Headers" Version="7.2.0" />
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
         <PackageVersion Include="SharpGrip.FluentValidation.AutoValidation.Endpoints" Version="2.0.0" />
+        <!-- Competitor libraries for the EntityFrameworkCore comparison suite. MR and EntityFrameworkCore.Exceptions ship net10.0 only;
+             X.PagedList.EF replaces X.PagedList.EntityFramework, which targets classic EF6. -->
+        <PackageVersion Include="MR.EntityFrameworkCore.KeysetPagination" Version="1.6.0" />
+        <PackageVersion Include="X.PagedList.EF" Version="10.6.0" />
+        <PackageVersion Include="EntityFrameworkCore.Exceptions.Sqlite" Version="10.0.1" />
         <!-- The container for the DI and mediator suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
              major Scrutor 7 requires. Scoped to those projects so transitive pinning does not move other projects' container. -->
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot'))" />

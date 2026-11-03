@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./run-benchmarks.sh                      # full run — all TFMs, all scenarios, max precision (~60 min)
-#   ./run-benchmarks.sh --quick              # fast run — one TFM (net9.0; net10.0 for endpoints), key scenarios, Short job (~10 min)
+#   ./run-benchmarks.sh --quick              # fast run — one TFM (net9.0; net10.0 for endpoints and efcore), key scenarios, Short job (~10 min)
 #   ./run-benchmarks.sh --quick --tfm net10.0  # fast run on a specific TFM
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks (default: validation)
@@ -22,6 +22,8 @@
 #                                              (net8.0 runs CSE's netstandard2.1 builds; every CSE and Polly row runs Polly.Core 8.9.0)
 #   ./run-benchmarks.sh --project aspnetcore   # ResultEndpointFilter, enum binding, ConditionalGet, problem+json, validation filter vs BCL / Hellang.Middleware.ProblemDetails / Marvin.Cache.Headers / SharpGrip; idempotent replay vs IdempotentAPI; executor/stores/keys; request logging vs HttpLogging / Serilog.AspNetCore
 #                                              (net8.0 runs the netstandard2.1 builds of CSE.Idempotency, Results, Errors and Validation)
+#   ./run-benchmarks.sh --project efcore       # SaveChanges with audit/domain-event interceptors, keyset and offset paging, enum converters, MigrateDataAsync, context lifetime, DB error translation, DomainEvents reads vs EF Core / MR.EntityFrameworkCore.KeysetPagination / X.PagedList.EF / EntityFrameworkCore.Exceptions.Sqlite
+#                                              (net8.0 has CSE and hand-written rows only, net9.0 adds X.PagedList.EF, net10.0/net11.0 add MR and EF.Exceptions; net11.0 runs CSE's net10.0 build on EF Core 10)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -123,8 +125,16 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.ResultFilterComparison.*" "*.EnumBindingComparison.*" "*.ConditionalGetComparison.*" "*.ProblemDetailsComparison.*" "*.ValidationFilterComparison.*" "*.IdempotentReplayComparison.*" "*.IdempotencyExecutorBenchmarks.*" "*.IdempotencyStoreBenchmarks.*" "*.IdempotencyStoreContentionBenchmarks.*" "*.IdempotencyKeyBenchmarks.*" "*.RequestLoggingComparison.*" "*.RequestLoggingMetadataComparison.*")
         ;;
+    efcore)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/efcore"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.SaveChangesAuditComparison.*" "*.SaveChangesDomainEventsComparison.*" "*.KeysetPaginationComparison.*" "*.OffsetPaginationComparison.*" "*.EnumConverterComparison.*" "*.MigrateDataComparison.*" "*.DbContextLifetimeComparison.*" "*.DbErrorTranslationComparison.*" "*.DbErrorClassificationComparison.*" "*.DomainEventsReadComparison.*")
+        # MR.EntityFrameworkCore.KeysetPagination 1.6.0 and EntityFrameworkCore.Exceptions.Sqlite 10.0.1 ship net10.0 only, so quick mode defaults to it.
+        DEFAULT_TFM="net10.0"
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore)" >&2
         exit 1
         ;;
 esac
