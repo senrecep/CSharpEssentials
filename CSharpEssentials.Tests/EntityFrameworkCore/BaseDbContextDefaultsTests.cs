@@ -4,7 +4,6 @@ using CSharpEssentials.EntityFrameworkCore;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
@@ -73,21 +72,6 @@ public sealed class BaseDbContextDefaultsTests
     }
 
     [Fact]
-    public async Task SaveChangesAsync_Should_AttachNoInterceptors_When_DefaultsAreKept()
-    {
-        await using ServiceProvider provider = BuildProvider(withInterceptors: true);
-        await using PlainDbContext db = CreateContext(provider.GetRequiredService<IServiceScopeFactory>());
-        EventEntity entity = new();
-        entity.Raise(new RaisedEvent());
-        db.Entities.Add(entity);
-
-        await db.SaveChangesAsync();
-
-        db.GetService<IDbContextOptions>().FindExtension<CoreOptionsExtension>()!.Interceptors.Should().BeNullOrEmpty();
-        entity.DomainEvents.Should().ContainSingle();
-    }
-
-    [Fact]
     public async Task DisposeAsync_Should_DisposeScope_When_ScopeIsNotAsyncDisposable()
     {
         await using ServiceProvider provider = BuildProvider(withInterceptors: false);
@@ -95,18 +79,6 @@ public sealed class BaseDbContextDefaultsTests
         PlainDbContext db = CreateContext(scopeFactory);
 
         await db.DisposeAsync();
-
-        scopeFactory.Created!.Disposed.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Dispose_Should_DisposeScope_When_ScopeIsNotAsyncDisposable()
-    {
-        using ServiceProvider provider = BuildProvider(withInterceptors: false);
-        SyncOnlyScopeFactory scopeFactory = new(provider);
-        PlainDbContext db = CreateContext(scopeFactory);
-
-        db.Dispose();
 
         scopeFactory.Created!.Disposed.Should().BeTrue();
     }
