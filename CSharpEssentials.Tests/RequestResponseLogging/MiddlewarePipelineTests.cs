@@ -446,6 +446,57 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         writer.Contexts[1].RequestBody.Should().Be("payload");
     }
 
+    [Fact]
+    public async Task InvokeAsync_Should_LogCapturedBodyAndRethrow_When_CopyToClientFails()
+    {
+        var writer = new CapturingLogWriter();
+        var handled = new List<string?>();
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            ctx => ctx.Response.WriteAsync("hello"),
+            ctx =>
+            {
+                handled.Add(ctx.ResponseBody);
+                return Task.CompletedTask;
+            },
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new ThrowingWriteStream();
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<IOException>().WithMessage("client gone");
+        string[] expected = ["hello", "Exception: IOException, Message: client gone"];
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal(expected);
+        handled.Should().Equal(expected);
+        httpContext.Response.Body.Should().BeOfType<ThrowingWriteStream>();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_LogCapturedBodyAndRethrow_When_CopyFailsWithoutHandler()
+    {
+        var writer = new CapturingLogWriter();
+        var middleware = new DefaultRequestResponseMiddleware(
+            ctx => ctx.Response.WriteAsync("hello"),
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new ThrowingWriteStream();
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<IOException>().WithMessage("client gone");
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal(
+            "hello",
+            "Exception: IOException, Message: client gone");
+    }
+
+    private sealed class ThrowingWriteStream : MemoryStream
+    {
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
+            throw new IOException("client gone");
+    }
+
     private sealed class CapturingLogWriter : ILogWriter
     {
         public IMessageCreator? MessageCreator => null;
