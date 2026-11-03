@@ -66,3 +66,64 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - "Struct results cost nothing until something fails": the 0 B chaining rows against FluentResults, then the 104 B / 88 B / 0 B failure row, and what a string error buys and costs.
 - "Where CSE loses": failure creation, the async failure path against CFE, aggregation against ErrorOr and FluentResults, Match on failure against ErrorOr, Maybe Bind on None against CFE on net8, and the net11 yielding success path against ErrorOr. Name the losses first.
 - "Dependencies and AOT are part of the cost": the package chain and the reflection-based `ToString()`, set against CFE's zero dependencies.
+
+## New classes, results pending
+
+Ten classes were added to the same suite after the run above. They have no numbers yet. The full default-job run is pending, and short-job numbers are not used here. The drafts are `CSharpEssentials.Errors/BENCHMARKS.md`, `CSharpEssentials.Maybe/BENCHMARKS.md` and the pending section of `CSharpEssentials.Results/BENCHMARKS.md`.
+
+### ErrorFactoryComparison
+
+- Creating an error, plain and with three metadata entries. CSE and ErrorOr build the same struct shape, so that pair is like-for-like.
+- FluentResults allocates a class, an empty metadata dictionary and an empty reasons list per error, and has no code or type. Label it.
+- CFE has no column: its default error is a string, so there is nothing to build.
+- Angle: what a typed error costs over a string, and whether a struct error stays cheap once metadata is attached.
+
+### ErrorEqualityComparison
+
+- `Equals`, `GetHashCode` and a `HashSet` of 100 errors, CSE against ErrorOr.
+- Both hash metadata in insertion order while `Equals` ignores order. Two equal errors can land in different hash buckets. This is a shared bug, worth one honest paragraph.
+- FluentResults compares errors by reference, so it cannot be in this table.
+
+### ErrorExceptionComparison
+
+- CSE `Error.Exception(ex)` copies the type name, the stack trace text and the message into metadata. ErrorOr has no bridge, and FluentResults keeps a reference.
+- A never-thrown exception makes CSE call `Environment.StackTrace`, a stack walk. A thrown one formats its trace on every call.
+- Expect CSE to be the slowest row here. Say it first and explain what the extra work buys.
+
+### ErrorMetadataToStringComparison
+
+- `ErrorMetadata.ToString()` against a hand-written loop at 1, 8 and 32 entries.
+- The CSE method is O(n²) because it calls `ElementAtOrDefault(i)` inside a loop. The curve is the point of the class.
+- Expect CSE to lose to the hand-written loop, and the gap to grow with the entry count.
+
+### ErrorToStringComparison
+
+- Without metadata, CSE and ErrorOr print the same record text.
+- With metadata, and for a success `Result<int>`, every library prints something different. Those rows are labelled.
+- CSE `Result<int>.ToString()` goes through reflection-based JSON. This ties back to the AOT section above.
+- Expect the CSE `Result` row to be the slowest because of the JSON call.
+
+### ErrorJsonComparison
+
+- Serialize: CSE and ErrorOr write the same JSON with default options. Like-for-like.
+- Deserialize is CSE only. ErrorOr silently comes back as `default`, and FluentResults throws and its README says not to serialize results.
+- Known CSE gaps: metadata does not round-trip to an equal error, and metadata holding an exception throws on serialize.
+
+### SequenceComparison
+
+- Turning N results into one, typed (`Sequence`) and untyped (`CombineAll`), at N = 10 and 100, with all success or one failure.
+- CFE `Combine` is lazy, so its row adds `ToArray`. ErrorOr has no API and uses the README's manual list. Both are labelled.
+
+### TryComparison and TryAsyncComparison
+
+- Wrapping `int.Parse` that succeeds or throws. CSE, CFE and FluentResults each turn the exception into a cached error, so they do the same work.
+- Expect the exception to dominate the failure rows. The success path and the async state machine are where the libraries differ.
+- A second CSE row uses `Error.Exception(ex)`, the Readme idiom. It shows what the detailed error adds on top of the throw.
+
+### MaybeCollectionComparison
+
+- `TryFirst`, `TryLast`, `TryFind` and `Choose`, CSE against CFE and hand-written loops, over a `List` and a lazy sequence of 1000 strings.
+- Strings on purpose: with `int` elements both libraries return `Some(0)` on some misses. That is a bug in both, worth a sentence.
+- CSE `TryLast` walks the whole list. CFE copies a lazy source to a list for `TryFirst` and `TryLast`. Both `TryFind` implementations do two lookups.
+- Expect CSE to lose `TryLast` and `TryLastWhere` on a `List` to CFE, and `TryFind` to the hand-written `TryGetValue`.
+- Angle: small helpers that look free can scan or copy the whole input.
