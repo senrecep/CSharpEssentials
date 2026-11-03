@@ -109,6 +109,33 @@ public class SwashbuckleEnumDefaultTests
         ResolverDescriptor(services).Should().BeSameAs(resolver);
     }
 
+    [Fact]
+    public void AddSwagger_Should_KeepTheWrappedResolver_When_CalledAfterAddSwaggerEnumConventions()
+    {
+        var services = new ServiceCollection();
+        services.AddSwaggerEnumConventions();
+        ServiceDescriptor resolver = ResolverDescriptor(services);
+
+        AddSwagger(services);
+
+        ResolverDescriptor(services).Should().BeSameAs(resolver);
+    }
+
+    [Fact]
+    public void AddSwaggerEnumConventions_Should_NotRegisterSwaggerGenAgain_When_CalledAfterAddSwaggerGen()
+    {
+        var services = new ServiceCollection();
+        services.AddSwaggerGen();
+        int configurators = GeneratorConfiguratorCount(services);
+
+        services.AddSwaggerEnumConventions();
+
+        GeneratorConfiguratorCount(services).Should().Be(configurators);
+    }
+
+    private static int GeneratorConfiguratorCount(ServiceCollection services) =>
+        services.Count(static descriptor => descriptor.ServiceType == typeof(IConfigureOptions<SwaggerGeneratorOptions>));
+
     private static ServiceDescriptor ResolverDescriptor(ServiceCollection services) =>
         services.Single(static descriptor => descriptor.ServiceType == typeof(ISerializerDataContractResolver));
 

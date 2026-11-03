@@ -1,5 +1,6 @@
 using CSharpEssentials.AspNetCore.Swagger.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.AspNetCore;
@@ -29,7 +30,7 @@ public static class SwaggerEnumConventionsExtensions
     }
 
     /// <summary>
-    /// Registers Swashbuckle (<c>AddSwaggerGen()</c>), adds <see cref="AddEnumConventions(SwaggerGenOptions)"/> after every
+    /// Registers Swashbuckle (<c>AddSwaggerGen()</c>) when it is not registered yet, adds <see cref="AddEnumConventions(SwaggerGenOptions)"/> after every
     /// other configuration, and wraps the registered <c>ISerializerDataContractResolver</c> so that an undefined enum default
     /// such as <c>[DefaultValue((OrderStatus)42)]</c> is left out instead of failing the document. A resolver registered by type
     /// is not wrapped. Call it after registering your own resolver. Calling it twice, or together with <c>AddSwagger</c>, registers
@@ -41,7 +42,8 @@ public static class SwaggerEnumConventionsExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.AddSwaggerGen();
+        if (!services.Any(static descriptor => descriptor.ServiceType == typeof(ISwaggerProvider)))
+            services.AddSwaggerGen();
         EnumDefaultDataContractResolver.Decorate(services);
         services.PostConfigure<SwaggerGenOptions>(static options => options.AddEnumConventions());
         return services;
