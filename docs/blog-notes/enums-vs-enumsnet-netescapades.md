@@ -93,3 +93,23 @@ The code paths below were read, not profiled.
 - "The cost of a good error message": 88 B per rejected input, paid even when `TryParseWire` discards the error.
 - "Your package's net8 story is its netstandard build": parse allocates on every call on net8 only.
 - "Where CSE loses": IsDefined, Description, undefined ToString, parse speed on valid and invalid input (invalid is 2.99× and 4.14× Enums.NET on net10, and the BCL beats CSE parse on net8, net9 and net11), invalid-input allocation, net8 parse allocation on every call, GetNames allocation and AOT binary size. Name the losses first.
+
+## Newer scenarios (no numbers yet)
+
+Two classes were added after the run above: boxed formatting and reflection-built names and values. They build and pass their parity check on every TFM, but no full run has been done. `CSharpEssentials.Enums/BENCHMARKS.md` describes them under "Pending". Do not quote numbers for them until the full run is committed.
+
+What each one asks:
+- Boxed formatting. The caller has an enum only as an `object`, as an HTTP client adapter does. How does CSE's `EnumValueFormatter.Format(object, conventions)` compare with `object.ToString()` and Enums.NET's `AsString(Type, object)`? A second category formats a boxed array of eight values into one list. Only CSE has a collection formatter, so the BCL and Enums.NET rows are hand-written loops. NetEscapades has no column: it has no API that takes an `object`.
+- Reflection-built names and values. The enum has no attribute and the caller has only a `Type`. How does CSE's `GetOrCreateWithReflection` compare with `Enum.GetNames(Type)`, `Enum.GetValuesAsUnderlyingType(Type)` and Enums.NET's cached `GetNames(Type)` and `GetMembers(Type)`?
+
+Expected losses, from reading the source. Name them first:
+- A boxed format looks the type up in the registry twice: once in the default `CanHandle` check and once to get the metadata. It also allocates a visitor per call. Expect CSE to be slower and to allocate more than the BCL and Enums.NET here. A row with `CanHandle` set to always true shows how much of that is the first lookup.
+- For an enum without `[StringEnum]`, every `GetOrCreateWithReflection` call misses the registry twice, runs `RuntimeHelpers.RunModuleConstructor`, and then reads a `ConcurrentDictionary`. Expect it to be slower than Enums.NET's cached lookup. A row that reuses an info it already holds shows the lookup cost.
+- Not measured: reflection-built infos box the value on every format, `IsDefined` and member lookup.
+
+Things to say when the numbers exist:
+- Format: the value is boxed once in setup, and no row boxes it again. FormatMany: every row, CSE's `TryFormatMany` included, enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each of the eight elements per call. That cost is the same in every row.
+- `Shade` uses PascalCase wire names so every library writes the same text. With CSE's default snake_case naming the outputs would differ.
+- There is no undefined-value row. CSE throws for an undefined value while the BCL writes the number.
+
+Possible angle: "formatting when you only have an object". Show the typed CSE call next to the boxed one, and what the boxed path adds.

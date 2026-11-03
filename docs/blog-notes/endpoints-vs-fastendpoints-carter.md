@@ -72,3 +72,24 @@ Cold startup is the fair startup figure: a fresh process, timed until every endp
 - "Organization without a framework": a thin layer over Minimal APIs. For: ties Plain in cold startup on net10 and in GET/DELETE on every TFM except net9 DELETE (Plain 2% faster); 0 IL warnings under AOT, 10.4 vs 10.3 MB. Against: +3-7% cold startup over Plain at N≥100 on net8/net9/net11, +17% cold allocation at N=10 on net10 (1,119 vs 959 KB), +4-5% allocation at N=500, and 1.11× Plain's time on an invalid POST with the same validation engine.
 - "Where FastEndpoints wins": large-N cold start, and why (it does not use RequestDelegateFactory per handler; Plain Minimal APIs show the same large-N cost, 1,080.3 ms at N=500; not profiled, and RDG was off).
 - "What the source generator is for": AOT and trimming, shown by the CseReflection 404s, not startup time.
+
+## Newer scenarios (no numbers yet)
+
+Three classes were added after the run above: operation naming, name reads and the empty-prefix group. They build and pass their self-check on every TFM, but no full run has been done. `CSharpEssentials.Endpoints/BENCHMARKS.md` describes them under "Pending". Do not quote numbers for them until the full run is committed.
+
+What each one asks, all at 500 endpoints:
+- Operation naming. What does an endpoint name cost at startup? CSE's `OperationNaming.None`, `TypeName` and `Custom(type.Name)` on the generated library, and plain `MapGet` with and without `WithName(...)`. Every row reads every name, because TypeName resolves names on the first read.
+- Name reads. What does reading 500 names cost once the app is built? TypeName names against plain `EndpointNameMetadata` names.
+- The empty-prefix group. CSE wraps each endpoint type in `MapGroup("")`. What does that cost against mapping straight onto the app, with the same routes and handlers?
+
+Expected losses, from reading the source. Name them first:
+- Every read of a TypeName name takes a lock, even after the names are resolved. Expect the TypeName read row to be slower than the two plain reads.
+- TypeName adds a lookup and a lock per endpoint while mapping, and a string key, two LINQ scans and another lock per endpoint at build. Expect TypeName above None and above Custom.
+- The per-type group adds one data source per endpoint type: 500 against 1 here. Expect the grouped row to be slower and to allocate more.
+
+Things to say when the numbers exist:
+- FastEndpoints always names its endpoints and has no switch to turn that off, so it has no row. Its naming cost is inside its startup numbers above.
+- Carter has no naming policy. Its users call `WithName` per route, which the hand-written row covers. Carter's `CarterModule` base class wraps each module in a group too. That was read from the source, not measured.
+- The whole CSE startup cost against plain Minimal APIs is in the startup numbers above. The group row isolates one part of it.
+
+Possible angle: "what naming and the per-type group cost at 500 endpoints".
