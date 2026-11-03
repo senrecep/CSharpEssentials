@@ -180,4 +180,4 @@ Result<Data> result = await ResiliencePolicy
 
 ## Upgrading to 8.0
 
-An exception thrown by the `WithFallback` delegate is now returned as an `ErrorType.Unexpected` error, like an exception from the operation itself. Earlier versions returned it as `ErrorType.Failure`. Update code that checks the error type of a failed fallback.
+An exception thrown by the `WithFallback` delegate is now returned as an `ErrorType.Unexpected` error, like an exception from the operation itself. Earlier versions returned it as `ErrorType.Failure`. Update code that checks the error type of a failed fallback. A `TimeoutRejectedException` or `BrokenCircuitException` thrown by the fallback delegate now gets the same codes as on the operation itself, `Resilience.Timeout` or `Resilience.CircuitBroken`, instead of the exception type name.
