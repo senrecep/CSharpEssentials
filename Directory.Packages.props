@@ -7,8 +7,9 @@
              bin/, which imports no Directory.Build files) reference FastEndpoints, Carter and Scrutor, which need newer
              transitive versions (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. The mediator benchmarks
              share the DI suite's container (Microsoft.Extensions.DependencyInjection 10.0.0), which fails restore with NU1109
-             (Abstractions 10.0.0 downgraded to the 9.0.4 pin) while pinning is on. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+             (Abstractions 10.0.0 downgraded to the 9.0.4 pin) while pinning is on. The Http comparison suite's generated host
+             fails the same way: Microsoft.Extensions.Http.Resilience 10.x needs Microsoft.Extensions.* 9.0.21 or later. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -63,7 +64,10 @@
         <PackageVersion Include="Microsoft.Extensions.Configuration" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="[9.0.4,)" />
         <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="[3.0.1,)" />
-        <PackageVersion Include="Polly.Core" Version="[8.0.0,9.0.0)" />
+        <!-- The Http comparison suite pins the latest Polly.Core so its CSE and Polly rows run the same engine; Microsoft.Extensions.Http.Resilience
+             there also needs Polly.Core 8.4.2 or later, above the range's 8.0.0 floor. -->
+        <PackageVersion Include="Polly.Core" Version="[8.0.0,9.0.0)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks'))" />
+        <PackageVersion Include="Polly.Core" Version="8.9.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks'))" />
     </ItemGroup>
 
     <!-- CSharpEssentials Internal Packages -->
@@ -150,6 +154,10 @@
         <PackageVersion Include="OneOf.Serialization.SystemTextJson" Version="1.1.1" />
         <PackageVersion Include="Dunet" Version="1.16.2" />
         <PackageVersion Include="Macross.Json.Extensions" Version="3.0.0" />
+        <PackageVersion Include="Refit" Version="16.4.0" />
+        <PackageVersion Include="Flurl.Http" Version="4.0.2" />
+        <PackageVersion Include="RestSharp" Version="114.1.0" />
+        <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
         <!-- Scoped to the Json comparison suite: Roslyn Workspaces brings Humanizer.Core 2.x into the code-fix projects, and
              transitive pinning would move them to 3.x. -->
         <PackageVersion Include="Humanizer.Core" Version="3.0.10" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Json.Comparison.Benchmarks'))" />

@@ -18,6 +18,8 @@
 #                                              (net8.0 runs CSE's netstandard2.1 build: the packages have no net8 target)
 #   ./run-benchmarks.sh --project json         # Json enum/polymorphic/DateTime vs System.Text.Json / Macross.Json.Extensions; Core case/Guider/random/WithCancellation vs BCL / Humanizer / ShortGuid
 #                                              (net8.0 runs CSE's netstandard2.1 builds and System.Text.Json 9.0.x from NuGet)
+#   ./run-benchmarks.sh --project http         # Http GET/POST/404/build/query vs Refit / Flurl.Http / RestSharp / BCL; Resilience policy overhead, Merge nesting, RetryIfFailed, Result boxing vs Polly.Core / Microsoft.Extensions.Http.Resilience
+#                                              (net8.0 runs CSE's netstandard2.1 builds; every CSE and Polly row runs Polly.Core 8.9.0)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -107,8 +109,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.EnumComparison.*" "*.EnumFlagsComparison.*" "*.PolymorphicComparison.*" "*.DateTimeComparison.*" "*.CaseConversionComparison.*" "*.GuiderComparison.*" "*.RandomItemsComparison.*" "*.WithCancellationComparison.*")
         ;;
+    http)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Http.Comparison.Benchmarks/CSharpEssentials.Http.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/http"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.GetJsonComparison.*" "*.PostJsonComparison.*" "*.NotFoundComparison.*" "*.RequestBuildComparison.*" "*.QueryStringComparison.*" "*.HttpResilienceComparison.*" "*.PolicyOverheadComparison.*" "*.ComposedPolicyComparison.*" "*.RetryIfFailedComparison.*" "*.ResultBoxingComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http)" >&2
         exit 1
         ;;
 esac
