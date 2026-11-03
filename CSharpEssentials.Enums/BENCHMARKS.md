@@ -6,6 +6,8 @@ NetEscapades.EnumGenerators has never shipped a stable release. Every 1.x versio
 
 CSE is a source generator plus a small runtime library. `[StringEnum]` makes the generator write an `{Enum}Extensions` class and the enum's metadata. Some generated helpers are `switch` statements over constants (`ToOptimizedString`, `ToWireName`, `IsDefined(string)`, `GetNames`, `GetValues`). Others forward to the runtime metadata (`IsDefined(value)`, `TryParseWire`, descriptions). That split explains most of the results below.
 
+The same suite has two newer classes that have not had a full run yet: boxed formatting and reflection-built names and values. They are described in [Pending: boxed formatting and reflection-built metadata](#pending-boxed-formatting-and-reflection-built-metadata).
+
 ---
 
 ## What was measured
@@ -316,6 +318,60 @@ Enums.NET links point at tag [`5.0.0`](https://github.com/TylerBrinkley/Enums.NE
 - The feature matrix comes from reading source and docs, except the measured AOT row.
 - A difference within the sum of the two error margins is reported as a tie.
 - The CSE column is the 7.0.0 working tree on branch `perf/bench-enums`, which may differ from the last version published to NuGet.
+
+---
+
+## Pending: boxed formatting and reflection-built metadata
+
+**Status: draft.** These two classes build on net8.0 to net11.0, and their parity self-check passes on every TFM. No full default-job run has been done, so this section has no numbers yet. The reports will be committed under `benchmarks/results/enums/{tfm}/results/` next to the ones above. Short-job (`--quick`) numbers are not published. The full run (`./run-benchmarks.sh --project enums`) includes them, and the `--quick` patterns select them too. [How to reproduce](#how-to-reproduce) still says six classes. With these two, the suite has eight.
+
+The rules are the same as for the six classes above. Every class has `[MemoryDiagnoser]`. CSE is the baseline in each category. A doc URL sits above every row. `[GlobalSetup]` runs the parity check, and `--self-check` runs it without BenchmarkDotNet.
+
+Pinned versions, checked on NuGet on 2026-11-04:
+
+| Package | Version | License (nuspec) |
+|---|---|---|
+| Enums.NET | 5.0.0 (latest stable) | MIT |
+| NetEscapades.EnumGenerators | 1.0.0-beta21 (no stable release exists). Not used by these two classes | MIT |
+
+| Class | Measured unit | Rows | Label |
+|---|---|---|---|
+| `BoxedFormatComparison`, category Format | Format `Shade.Indigo`, boxed once in setup, as "Indigo" | CSE `EnumValueFormatter.Format(object, EnumConventions.Default)` (baseline), BCL `object.ToString()`, Enums.NET `Enums.AsString(Type, object)` | Like-for-like |
+| `BoxedFormatComparison`, category Format | Same | CSE with `CanHandle = _ => true` | CSE configuration row with the same output. It shows the cost of the default registry check |
+| `BoxedFormatComparison`, category Format | Same, unboxed | CSE `EnumValueFormatter.Format(Shade, EnumWireFormat.String)` | Reference only. It shows what boxing and the visitor cost |
+| `BoxedFormatComparison`, category FormatMany | A boxed `Shade[]` of all eight members into one list. Returns the entry count plus the summed lengths | CSE `TryFormatMany` (baseline), a BCL loop over `ToString()`, an Enums.NET loop over `AsString(Type, object)` | Like-for-like on output. The BCL and Enums.NET rows are hand-written loops, because neither library has a collection formatter |
+| `ReflectionInfoComparison`, category Names | All 20 names of `PlainStatus` from a `Type`, summed lengths | CSE `GetOrCreateWithReflection(Type, PascalCase).WireNames` (baseline), BCL `Enum.GetNames(Type)`, Enums.NET `Enums.GetNames(Type)` | Like-for-like |
+| `ReflectionInfoComparison`, category Names | Same | CSE `WireNames` of an info held from setup | Reference only. No lookup, so the lookup cost is visible |
+| `ReflectionInfoComparison`, category Values | All 20 values of `PlainStatus` from a `Type`, summed as `long` | CSE `Members[i].RawValue` (baseline), BCL `Enum.GetValuesAsUnderlyingType(Type)` with `Convert.ToInt64`, Enums.NET `Enums.GetMembers(Type)` with `ToInt64()` | Like-for-like on the result |
+
+Methodology:
+- Format: the value is boxed once in setup, and no row boxes it again. FormatMany: every row, CSE's `TryFormatMany` included, enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each of the eight elements per call. That cost is the same in every row.
+- `Shade` has `[StringEnum(Naming = EnumNaming.PascalCase)]`. Its wire names equal its member names, so CSE, the BCL and Enums.NET write the same text. The existing `Color` enum uses snake_case wire names, so it is not reused.
+- `PlainStatus` has the members and values of `Status` and no attribute at all. CSE has no generated metadata for it, so `GetOrCreateWithReflection` takes the reflection path. The self-check fails if `PlainStatus` is ever registered.
+- Every CSE row in `ReflectionInfoComparison` except the held-info reference row (`CSharpEssentials_HeldNames`) calls `GetOrCreateWithReflection` per invocation. That is the documented API: it builds the info once and caches it. The enum type is held in a field, as a caller that has only a `Type` would hold it.
+- NetEscapades.EnumGenerators has no column. Its generated methods take the typed enum, never an `object`, and need `[EnumExtensions]` on the enum.
+- There is no undefined-value row. For an undefined value CSE throws `EnumValueException` while the BCL returns the number ("99"), so the outputs differ.
+- The BCL `GetValuesAsUnderlyingType(Type)` returns a new array per call, and `Array.GetValue` boxes each element. That is the cost of the non-generic API. CSE lists members in declaration order and Enums.NET in value order. The sums do not depend on order, and `PlainStatus` values ascend anyway.
+
+What the parity check enforces:
+- Format: every row returns "Indigo".
+- FormatMany: every row returns the same total, computed from `Enum.GetNames<Shade>()`, and the same list text "Red,Orange,Yellow,Green,Cyan,Blue,Indigo,Violet".
+- Names and Values: every row returns the sum computed from `Enum.GetNames<Status>()` and `Enum.GetValues<Status>()`.
+
+Feature matrix for these classes, from reading each library's source and docs (not measured):
+
+| Feature | BCL | Enums.NET 5.0.0 | NetEscapades.EnumGenerators 1.0.0-beta21 | CSharpEssentials.Enums 7.0.0 |
+|---|---|---|---|---|
+| Format a boxed enum (`object`) | `object.ToString()` on the boxed enum | `Enums.AsString(Type, object)` ([Enums.cs#L3439](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L3439)) | None: generated methods take the typed enum | `EnumValueFormatter.Format` and `TryFormat(object, EnumConventions)`. Needs generated metadata |
+| Format a collection of boxed enums | None | None | None | `EnumValueFormatter.TryFormatMany` (one entry per value; flags split into single flags) |
+| Names and values from a `Type` for an enum without an attribute | `Enum.GetNames(Type)`, `Enum.GetValuesAsUnderlyingType(Type)`: a new array per call | `Enums.GetNames(Type)`, `Enums.GetMembers(Type)`: cached per type ([Enums.cs#L3040](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L3040)) | None: needs `[EnumExtensions]` | `EnumMetadata.GetOrCreateWithReflection(Type, EnumNaming)`: cached, annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` |
+
+Expected losses, read from the source (not fixed in this work; check them against the full run):
+- Boxed format. `EnumValueFormatter.cs:110-112`: the default `CanHandle` (`EnumConventions.cs:42-43`) calls `EnumMetadata.IsRegistered`, which looks the type up in the registry. Line 112 then looks it up again, so each boxed format does two registry lookups. `:57`, `:78` and `:92` allocate a visitor per call, and `:83` allocates a `List<string>` per collection. Expect the CSE boxed rows to be slower and to allocate more than the BCL and Enums.NET. The `CanHandle = _ => true` row shows the share of the first lookup.
+- Reflection names and values. `EnumMetadata.cs:45-59` with `:80`: for an enum without `[StringEnum]`, every `GetOrCreateWithReflection` call misses the registry snapshot, checks `IsEnum`, calls `RuntimeHelpers.RunModuleConstructor`, misses again, and then looks up a `ConcurrentDictionary` with a `(Type, EnumNaming)` key. Expect `CSharpEssentials_Names` to be well above the held-info row, and likely above Enums.NET's cached `GetNames(Type)`.
+- Not measured here: reflection-built infos box the value with `Convert.ToInt64(object)` on every `Format`, `IsDefined` and member lookup (`ReflectionEnumInfoBuilder.cs:55` and `:61-64`), and `FromRawValue` boxes through `Enum.ToObject` (`:56`). The Names and Values rows read precomputed `RawValue`s, so they do not reach this code.
+
+Left out of this phase: a `Format` or `IsDefined` row on a reflection-built info (it would show the boxing above), `EnumMetadata.TryGet(Type)` against a `ConcurrentDictionary` baseline, and an invalid-parse row for the netstandard2.1 build.
 
 ---
 
