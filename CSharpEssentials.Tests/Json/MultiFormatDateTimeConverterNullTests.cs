@@ -44,5 +44,4 @@ public sealed class MultiFormatDateTimeConverterNullTests
 
         Encoding.UTF8.GetString(stream.ToArray()).Should().Be("null");
     }
-
 }
