@@ -12,7 +12,7 @@ dotnet add package CSharpEssentials.AspNetCore.Swashbuckle
 
 Targets net8.0, net9.0, net10.0 and net11.0 with `Swashbuckle.AspNetCore` 10.2.3 or later (below 11) and `Microsoft.OpenApi` 2.x (2.7.5 or later) on every target. Filters and `MapType` factories you add next to these use the Microsoft.OpenApi 2.x model (`using Microsoft.OpenApi;`, `IOpenApiSchema`, `JsonSchemaType`, `JsonNode`).
 
-This package is not Native AOT compatible, because Swashbuckle.AspNetCore.SwaggerGen builds its documents with reflection and does not support Native AOT ([Swashbuckle.AspNetCore#2550](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/issues/2550)); use `CSharpEssentials.AspNetCore.OpenApi` in Native AOT apps.
+This package is not Native AOT compatible, because Swashbuckle.AspNetCore.SwaggerGen builds its documents with reflection. Swashbuckle's own [v10 migration guide](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md) points apps that need native AoT support to Microsoft.AspNetCore.OpenApi, so use `CSharpEssentials.AspNetCore.OpenApi` in Native AOT apps.
 
 ## Swagger with Versioning
 
