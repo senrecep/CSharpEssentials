@@ -9,6 +9,7 @@ public static class Program
         if (args is ["--self-check"])
         {
             EnumsSelfCheck.VerifyAll();
+            EnumsExtSelfCheck.VerifyAll();
             return;
         }
 
