@@ -14,6 +14,8 @@
 #   ./run-benchmarks.sh --project mediator     # Send, publish, startup and behavior cost: MediatR vs Mediator (+ CSE behaviors)
 #   ./run-benchmarks.sh --project enums        # ToString, parse, IsDefined, GetValues, flags, description vs Enums.NET / NetEscapades.EnumGenerators / BCL
 #                                              (net8.0 runs CSE's netstandard2.1 build: the package has no net8 target)
+#   ./run-benchmarks.sh --project any          # Any construct/match/try-pick/partition/JSON/ToString vs OneOf / Dunet, These vs hand-written record
+#                                              (net8.0 runs CSE's netstandard2.1 build: the packages have no net8 target)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -91,8 +93,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.ToStringComparison.*" "*.ParseComparison.*" "*.IsDefinedComparison.*" "*.GetValuesComparison.*" "*.FlagsComparison.*" "*.DescriptionComparison.*")
         ;;
+    any)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Any.Comparison.Benchmarks/CSharpEssentials.Any.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/any"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.ConstructComparison.*" "*.MatchComparison.*" "*.TryPickComparison.*" "*.PartitionComparison.*" "*.JsonComparison.*" "*.ToStringComparison.*" "*.TheseMatchComparison.*" "*.ThesePipelineComparison.*" "*.ThesePartitionComparison.*" "*.TheseJsonComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any)" >&2
         exit 1
         ;;
 esac

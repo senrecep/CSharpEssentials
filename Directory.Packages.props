@@ -145,6 +145,10 @@
         <PackageVersion Include="Enums.NET" Version="5.0.0" />
         <!-- No stable NetEscapades.EnumGenerators release exists; 1.0.0-beta21 is the latest prerelease. -->
         <PackageVersion Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />
+        <PackageVersion Include="OneOf" Version="3.0.271" />
+        <!-- OneOf ships no System.Text.Json converter; this third-party add-on (MIT) is the JSON column's only option. -->
+        <PackageVersion Include="OneOf.Serialization.SystemTextJson" Version="1.1.1" />
+        <PackageVersion Include="Dunet" Version="1.16.2" />
         <!-- The container for the DI and mediator suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
              major Scrutor 7 requires. Scoped to those projects so transitive pinning does not move other projects' container. -->
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot'))" />
