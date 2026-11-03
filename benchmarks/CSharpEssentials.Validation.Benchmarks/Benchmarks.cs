@@ -205,6 +205,13 @@ public class SimpleValidationBenchmarks
     {
         _valid = TestData.ValidUser;
         _invalid = TestData.InvalidUser;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(SimpleValidationBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(SimpleValidationBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(SimpleValidationBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-Simple-Valid")]
@@ -232,7 +239,13 @@ public class StringValidationBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUser;
+    public void Setup()
+    {
+        _valid = TestData.ValidUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(StringValidationBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-String")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -253,7 +266,13 @@ public class ComparableValidationBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUser;
+    public void Setup()
+    {
+        _valid = TestData.ValidUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(ComparableValidationBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Comparable")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -274,7 +293,13 @@ public class CollectionValidationBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUser;
+    public void Setup()
+    {
+        _valid = TestData.ValidUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(CollectionValidationBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Collection")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -295,7 +320,13 @@ public class NestedValidationBenchmarks
     private Order _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidOrder;
+    public void Setup()
+    {
+        _valid = TestData.ValidOrder;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(NestedValidationBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Nested")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -316,7 +347,13 @@ public class CollectionItemValidationBenchmarks
     private Order _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidOrder;
+    public void Setup()
+    {
+        _valid = TestData.ValidOrder;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(CollectionItemValidationBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-CollectionItem")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -342,6 +379,12 @@ public class ConditionalValidationBenchmarks
     {
         _business = TestData.BusinessOrder;
         _personal = TestData.PersonalOrder;
+        string cseBusiness = Parity.Of(CseBusiness());
+        string fvBusiness = Parity.Of(FvBusiness());
+        Parity.Same(nameof(ConditionalValidationBenchmarks), ("CSE", cseBusiness), ("FV", fvBusiness));
+        string csePersonal = Parity.Of(CsePersonal());
+        string fvPersonal = Parity.Of(FvPersonal());
+        Parity.Same(nameof(ConditionalValidationBenchmarks), ("CSE", csePersonal), ("FV", fvPersonal));
     }
 
     [Benchmark(Description = "CSE-Conditional-Business")]
@@ -374,6 +417,13 @@ public class CustomPredicateBenchmarks
     {
         _valid = TestData.ValidUser;
         _invalid = TestData.AdminUser;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(CustomPredicateBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(CustomPredicateBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(CustomPredicateBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-Must-Valid")]
@@ -401,7 +451,13 @@ public class AsyncPredicateBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUser;
+    public void Setup()
+    {
+        _valid = TestData.ValidUser;
+        string cseAsync = Parity.Of(CseAsync().GetAwaiter().GetResult());
+        string fvAsync = Parity.Of(FvAsync().GetAwaiter().GetResult());
+        Parity.Same(nameof(AsyncPredicateBenchmarks), ("CSE", cseAsync), ("FV", fvAsync));
+    }
 
     [Benchmark(Description = "CSE-MustAsync")]
     public async Task<object> CseAsync() => await _cse.ValidateAsync(_valid);
@@ -422,7 +478,14 @@ public class CascadeContinueBenchmarks
     private User _invalid = null!;
 
     [GlobalSetup]
-    public void Setup() => _invalid = TestData.WeakPasswordUser;
+    public void Setup()
+    {
+        _invalid = TestData.WeakPasswordUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Failed(nameof(CascadeContinueBenchmarks), ("CSE", cse), ("FV", fv));
+        Parity.Same(nameof(CascadeContinueBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Cascade-Continue")]
     public object Cse() => _cse.ValidateAsync(_invalid).Run();
@@ -448,6 +511,13 @@ public class ComplexValidationBenchmarks
     {
         _valid = TestData.ValidOrder;
         _invalid = TestData.InvalidOrder;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(ComplexValidationBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(ComplexValidationBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(ComplexValidationBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-Complex-Valid")]
@@ -480,6 +550,13 @@ public class StringLengthRangeBenchmarks
     {
         _valid = TestData.ValidUser;
         _invalid = TestData.InvalidUser;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(StringLengthRangeBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(StringLengthRangeBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(StringLengthRangeBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-LengthRange-Valid")]
@@ -508,7 +585,13 @@ public class StringContentBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUser;
+    public void Setup()
+    {
+        _valid = TestData.ValidUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(StringContentBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-StringContent")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -529,7 +612,13 @@ public class ExclusiveBetweenBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUser;
+    public void Setup()
+    {
+        _valid = TestData.ValidUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(ExclusiveBetweenBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-ExclusiveBetween")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -555,6 +644,13 @@ public class NullableValidationBenchmarks
     {
         _valid = TestData.ValidProduct;
         _invalid = TestData.InvalidProduct;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(NullableValidationBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(NullableValidationBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(NullableValidationBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-Nullable-Valid")]
@@ -582,7 +678,13 @@ public class StringEqualityBenchmarks
     private Product _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidProduct;
+    public void Setup()
+    {
+        _valid = TestData.ValidProduct;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(StringEqualityBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Equality")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -603,7 +705,13 @@ public class LargeCollectionBenchmarks
     private Order _large = null!;
 
     [GlobalSetup]
-    public void Setup() => _large = TestData.LargeOrder;
+    public void Setup()
+    {
+        _large = TestData.LargeOrder;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(LargeCollectionBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-LargeCollection")]
     public object Cse() => _cse.ValidateAsync(_large).Run();
@@ -629,6 +737,13 @@ public class WideModelBenchmarks
     {
         _valid = TestData.ValidWideModel;
         _invalid = TestData.InvalidWideModel;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(WideModelBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(WideModelBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(WideModelBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-Wide-Valid")]
@@ -656,7 +771,13 @@ public class DeepNestedBenchmarks
     private DeepOrder _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidDeepOrder;
+    public void Setup()
+    {
+        _valid = TestData.ValidDeepOrder;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(DeepNestedBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-DeepNested")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();
@@ -677,7 +798,14 @@ public class CascadeStopBenchmarks
     private User _invalid = null!;
 
     [GlobalSetup]
-    public void Setup() => _invalid = TestData.WeakPasswordUser;
+    public void Setup()
+    {
+        _invalid = TestData.WeakPasswordUser;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Failed(nameof(CascadeStopBenchmarks), ("CSE", cse), ("FV", fv));
+        Parity.Same(nameof(CascadeStopBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Cascade-Stop")]
     public object Cse() => _cse.ValidateAsync(_invalid).Run();
@@ -695,6 +823,13 @@ public class CascadeStopBenchmarks
 [MemoryDiagnoser]
 public class ValidatorConstructionBenchmarks
 {
+    [GlobalSetup]
+    public void Setup()
+    {
+        Parity.NotNull(nameof(ValidatorConstructionBenchmarks), Cse());
+        Parity.NotNull(nameof(ValidatorConstructionBenchmarks), Fv());
+    }
+
     [Benchmark(Description = "CSE-Ctor")]
     public object Cse() => new CseUserValidator();
 
@@ -719,6 +854,13 @@ public class MultipleRegexBenchmarks
     {
         _valid = TestData.ValidUserWithPassword;
         _invalid = TestData.WeakPasswordUser;
+        string cseValid = Parity.Of(CseValid());
+        string fvValid = Parity.Of(FvValid());
+        Parity.Same(nameof(MultipleRegexBenchmarks), ("CSE", cseValid), ("FV", fvValid));
+        string cseInvalid = Parity.Of(CseInvalid());
+        string fvInvalid = Parity.Of(FvInvalid());
+        Parity.Failed(nameof(MultipleRegexBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
+        Parity.Same(nameof(MultipleRegexBenchmarks), ("CSE", cseInvalid), ("FV", fvInvalid));
     }
 
     [Benchmark(Description = "CSE-MultiRegex-Valid")]
@@ -746,7 +888,13 @@ public class PrecompiledRegexBenchmarks
     private User _valid = null!;
 
     [GlobalSetup]
-    public void Setup() => _valid = TestData.ValidUserWithPassword;
+    public void Setup()
+    {
+        _valid = TestData.ValidUserWithPassword;
+        string cse = Parity.Of(Cse());
+        string fv = Parity.Of(Fv());
+        Parity.Same(nameof(PrecompiledRegexBenchmarks), ("CSE", cse), ("FV", fv));
+    }
 
     [Benchmark(Description = "CSE-Regex-Precompiled")]
     public object Cse() => _cse.ValidateAsync(_valid).Run();

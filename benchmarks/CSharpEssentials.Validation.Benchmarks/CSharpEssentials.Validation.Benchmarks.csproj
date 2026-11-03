@@ -7,14 +7,31 @@
     <NoWarn>$(NoWarn);CA1822;CA1050;CA1812;S101;S3903;S1118;CA1515;S2068;IDE0008;IDE0021;IDE0005;IDE0078</NoWarn>
   </PropertyGroup>
 
+  <!-- Every Microsoft.Extensions.Validation entry point is [Experimental("ASP0029")] (https://aka.ms/aspnet/analyzer/ASP0029). -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0'">
+    <NoWarn>$(NoWarn);ASP0029</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\CSharpEssentials.Enums\build\CSharpEssentials.Enums.props" />
+
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="FluentValidation" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0'">
+    <PackageReference Include="Microsoft.Extensions.Validation" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\CSharpEssentials.Validation\CSharpEssentials.Validation.csproj" />
     <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

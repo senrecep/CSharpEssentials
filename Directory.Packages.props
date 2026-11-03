@@ -10,8 +10,9 @@
              (Abstractions 10.0.0 downgraded to the 9.0.4 pin) while pinning is on. The Http comparison suite's generated host
              fails the same way: Microsoft.Extensions.Http.Resilience 10.x needs Microsoft.Extensions.* 9.0.21 or later. The AspNetCore
              comparison suite fails with NU1109 too: Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0.
-             The EntityFrameworkCore comparison suite runs EF Core 8, 9 and 10 side by side, which the central [9.0.4,10) EF pin would fight. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+             The EntityFrameworkCore comparison suite runs EF Core 8, 9 and 10 side by side, which the central [9.0.4,10) EF pin would fight.
+             The Validation suite fails with NU1109 too: Microsoft.Extensions.Validation 10.0.14 needs Microsoft.Extensions.* 10.0.14. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Validation.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -136,9 +137,9 @@
     <!-- Benchmarks -->
     <ItemGroup Label="Benchmarks">
         <PackageVersion Include="BenchmarkDotNet" Version="[0.14.0,)" />
-        <!-- The AspNetCore comparison suite pins the latest FluentValidation for its SharpGrip validation rows. -->
-        <PackageVersion Include="FluentValidation" Version="[11.11.0,)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks'))" />
-        <PackageVersion Include="FluentValidation" Version="12.2.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks'))" />
+        <!-- The latest FluentValidation for every suite: the Validation comparison, the AspNetCore suite's SharpGrip rows and RulesEngine's
+             transitive dependency (it asks for 11.11.0 or later). -->
+        <PackageVersion Include="FluentValidation" Version="12.2.0" />
         <!-- Competitor libraries for the head-to-head suites: exact pins, stated in each BENCHMARKS.md header. -->
         <PackageVersion Include="FastEndpoints" Version="8.3.0" />
         <PackageVersion Include="FastEndpoints.Generator" Version="8.3.0" />
@@ -179,9 +180,15 @@
         <PackageVersion Include="MR.EntityFrameworkCore.KeysetPagination" Version="1.6.0" />
         <PackageVersion Include="X.PagedList.EF" Version="10.6.0" />
         <PackageVersion Include="EntityFrameworkCore.Exceptions.Sqlite" Version="10.0.1" />
-        <!-- The container for the DI and mediator suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
-             major Scrutor 7 requires. Scoped to those projects so transitive pinning does not move other projects' container. -->
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot'))" />
+        <!-- Competitor libraries for the Validation and Rules comparison suites. Microsoft.Extensions.Validation ships net10.0 only;
+             NRules and RulesEngine are reference columns in the Rules suite. -->
+        <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
+        <PackageVersion Include="Microsoft.Extensions.Validation" Version="10.0.14" />
+        <PackageVersion Include="NRules" Version="1.0.4" />
+        <PackageVersion Include="RulesEngine" Version="6.0.1" />
+        <!-- The container for the DI, mediator and Validation suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
+             major Scrutor 7 and Microsoft.Extensions.Validation require. Scoped to those projects so transitive pinning does not move other projects' container. -->
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Validation.Benchmarks'))" />
         <!-- TestServer for the endpoints throughput and AspNetCore comparison suites, matched to each TFM's shared framework major.
              Scoped to those suites so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
         <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
