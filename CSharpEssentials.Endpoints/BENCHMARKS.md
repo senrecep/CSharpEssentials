@@ -2,6 +2,8 @@
 
 Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
 
+The same suite has three newer classes that have not had a full run yet: operation naming, name reads and the empty-prefix group. They are described in [Pending: operation naming and the empty-prefix group](#pending-operation-naming-and-the-empty-prefix-group).
+
 ---
 
 ## What was measured
@@ -222,6 +224,55 @@ CSE cells come from this repository (csproj, Readme, `ReflectionEndpointScanner.
 - The net11 warm Baseline is 0.52 ms against about 1.14 ms on the other TFMs, so vs-Baseline ratios are not comparable across TFMs. None are quoted here.
 - Carter runs with one module per endpoint, matching CSE's one type per endpoint. Carter apps that group many routes per module would build fewer modules.
 - AOT startup is the median of 5 runs with three routes on a loaded machine. Rerun it on a quiet machine before quoting the startup column.
+
+---
+
+## Pending: operation naming and the empty-prefix group
+
+**Status: draft.** These three classes build on net8.0 to net11.0, and their self-check passes on every TFM. No full default-job run has been done, so this section has no numbers yet. The reports will be committed under `benchmarks/results/endpoints/{tfm}/results/` next to the ones above. Short-job (`--quick`) numbers are not published. The full run (`./run-benchmarks.sh --project endpoints`) includes them, and the `--quick` patterns select them too.
+
+Every class has `[MemoryDiagnoser]`. A doc URL sits above every row. `[GlobalSetup]` runs the self-check, and `--self-check` runs it without BenchmarkDotNet.
+
+Versions: these classes use no competitor package. Carter 10.0.0 and FastEndpoints 8.3.0 (both MIT, both the latest stable on NuGet on 2026-11-04) appear in the feature matrix only.
+
+| Class | Measured unit | Rows | Label |
+|---|---|---|---|
+| `OperationNamingBenchmarks`, category Cse | Build an app with the generated `Cse500` library, enumerate every endpoint, read every endpoint name. Returns the named count | `OperationNaming.None` (baseline, 0 names), `TypeName` (500), `Custom(type.Name)` (500) | TypeName and Custom give the same 500 names. None is the no-name baseline |
+| `OperationNamingBenchmarks`, category HandWritten | The same unit with 500 loop-built endpoints | `MapGet` (baseline, 0 names), `MapGet(...).WithName(...)` (500) | How a plain Minimal API app, and a Carter `ICarterModule` app, names endpoints |
+| `OperationNameReadBenchmarks` | Read the name of all 500 endpoints of an app that is already built and resolved. Returns the summed name lengths | TypeName app (baseline), Custom app, hand-written `WithName` app | Same 500 names in every row. The hand-written row is a reference |
+| `EmptyPrefixGroupBenchmarks` | Build an app with 500 loop-built endpoints and enumerate them. Returns the endpoint count | `MapGet` on the app (baseline), `MapGroup("").MapGet` per endpoint | Like-for-like. The group is the only difference |
+
+Methodology:
+- N is 500 in every class.
+- The measured unit is the warm startup unit of `StartupBenchmarks` without services: slim builder, Build, the mapping call, a full enumeration of every endpoint data source, dispose.
+- The naming rows read every endpoint name. CSE resolves TypeName names on the first read, so a unit that only enumerated endpoints would skip that work and understate TypeName.
+- The Cse rows reuse the generated `Cse500` library of `StartupBenchmarks`. The hand-written rows use 500 routes and handlers built once in a loop, with the same handler shape (one int route parameter, `Results.Ok` of the shared record). The two categories use different handler instances, so compare rows inside a category, not across.
+- `EmptyPrefixGroupBenchmarks` isolates one part of CSE's mapping cost. The whole CSE cost at N=500 (Plain against CseGenerated) is already in `StartupBenchmarks`.
+- FastEndpoints has no row. It always names its endpoints inside its own mapping and has no switch to turn that off, so a row would measure its whole startup, which `StartupBenchmarks` already covers. Its `ShortNames` setting also lives in static state, which would leak between rows in the one-process self-check.
+- Carter has no row. It has no naming policy; its users call `WithName` per route, which the HandWritten category covers. Its `CarterModule` base class wraps each module in a `MapGroup`. A measured row would need a new generated library, so it is in the feature matrix only.
+
+What the self-check enforces:
+- Every app maps exactly the 500 expected `GET /items{i}/{id:int}` routes (the existing route check).
+- None and plain `MapGet` name 0 endpoints. TypeName, Custom and `WithName` name all 500, and their name sets are the same: `Item{i}Endpoint` for i = 0 to 499.
+- The three read rows return the same summed name length.
+- The direct app has 1 endpoint data source and the grouped app has 500. Both answer `GET /items499/7` with 200 and `{"id":7,"name":"item499"}`.
+
+Feature matrix for these classes, from reading each library's source and docs (not measured):
+
+| Feature | Plain Minimal APIs | CSharpEssentials.Endpoints | Carter 10.0.0 | FastEndpoints 8.3.0 |
+|---|---|---|---|---|
+| Automatic endpoint names (operationId) | None; `WithName(...)` per route | Opt-in `OperationNaming.TypeName` or `Custom(...)`; the default is `None`. TypeName resolves names on the first read | None; `WithName(...)` per route. `CarterModule.WithName` sets one fixed name on the whole module group ([ICarterModule.cs#L115-L124](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/ICarterModule.cs#L115-L124), [CarterExtensions.cs#L67-L69](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/CarterExtensions.cs#L67-L69)) | Always on: `NameGenerator`, the full type name without dots by default, `ShortNames` for the class name ([EndpointRouteMapper.cs#L65-L71](https://github.com/FastEndpoints/FastEndpoints/blob/v8.3/Src/Library/Main/EndpointRouteMapper.cs#L65-L71), [EndpointOptions.cs#L14-L29](https://github.com/FastEndpoints/FastEndpoints/blob/v8.3/Src/Library/Config/EndpointOptions.cs#L14-L29), [docs](https://fast-endpoints.com/docs/openapi-documents#short-endpoint-names)) |
+| When names are fixed | At map time | TypeName: on the first read, and again after any later mapping call | At map time | At map time (`WithName`) |
+| Route group per endpoint | None | One `MapGroup("")` per endpoint type, always (`EndpointMapper.cs:93`) | `ICarterModule`: none. `CarterModule` base class: one `MapGroup(basePath)` per module, `""` by default ([CarterExtensions.cs#L35](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/CarterExtensions.cs#L35), [ICarterModule.cs#L50](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/ICarterModule.cs#L50)) | None: `MapMethods` on the app |
+
+Expected losses, read from the source (not fixed in this work; check them against the full run):
+- Every read of a TypeName name takes the registry lock, even after the names are resolved (`OperationNameMetadata.cs:7` calls `OperationNameRegistry.cs:120-132`). Expect the TypeName read row to be slower than the two plain field reads.
+- TypeName does more work per endpoint while mapping and building. At map time: a `ConditionalWeakTable` lookup and a lock (`EndpointMapper.cs:113-115`, `OperationNameRegistry.cs:39` and `:42-67`). At build: a `string.Create` key, LINQ `OfType().LastOrDefault()` twice and another lock (`OperationNameRegistry.cs:69-104`). Expect TypeName above None and above Custom.
+- CSE wraps each endpoint type in its own `MapGroup(string.Empty)` (`EndpointMapper.cs:93`), which adds a group data source per type: 500 against 1 here. Expect the grouped row to be slower and to allocate more than direct mapping.
+
+A TypeName name can also change after it was read: a later mapping call resets the resolved state (`OperationNameRegistry.cs:62`, `:80`, `:99`, `:114`). This is a correctness note, not a cost.
+
+Left out of this phase: an OpenAPI document build, `AutoTagFromGroup`, `LogDiscovered`, and a measured Carter `CarterModule` row.
 
 ---
 
