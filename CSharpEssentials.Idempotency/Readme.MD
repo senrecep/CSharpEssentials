@@ -5,6 +5,10 @@ deterministic keys built from business ids, plus an executor that runs an operat
 `CSharpEssentials.AspNetCore` uses them for its HTTP middleware, `CSharpEssentials.Mediator` for its idempotency
 behavior; message consumers, background jobs and other pipelines can use them directly.
 
+> Benchmarks against IdempotentAPI (HTTP replay over the same distributed cache) and hand-written baselines
+> (executor, inbox, record stores, deterministic keys) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **`IIdempotencyExecutor`**: reserves a key, runs the operation once, stores its result and replays it to a retry; answers `Executed`, `Replayed`, `InFlight` or `KeyReused`. A codec (`IIdempotencyResultCodec<T>`, or `IdempotencyResultCodec.Create`) serializes the result and classifies it as `Store`, `StoreAsFailure` (kept for the shorter `FailureRetention`) or `Release`. Registered by `AddIdempotencyExecutor`.
