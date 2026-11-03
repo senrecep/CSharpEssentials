@@ -27,4 +27,23 @@ public static class SwaggerEnumConventionsExtensions
         options.OperationFilter<EnumOperationFilter>();
         return options;
     }
+
+    /// <summary>
+    /// Registers Swashbuckle (<c>AddSwaggerGen()</c>), adds <see cref="AddEnumConventions(SwaggerGenOptions)"/> after every
+    /// other configuration, and wraps the registered <c>ISerializerDataContractResolver</c> so that an undefined enum default
+    /// such as <c>[DefaultValue((OrderStatus)42)]</c> is left out instead of failing the document. A resolver registered by type
+    /// is not wrapped. Call it after registering your own resolver. Calling it twice, or together with <c>AddSwagger</c>, registers
+    /// once. <c>AddSwagger</c> calls it.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <returns><paramref name="services"/>.</returns>
+    public static IServiceCollection AddSwaggerEnumConventions(this IServiceCollection services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        services.AddSwaggerGen();
+        EnumDefaultDataContractResolver.Decorate(services);
+        services.PostConfigure<SwaggerGenOptions>(static options => options.AddEnumConventions());
+        return services;
+    }
 }

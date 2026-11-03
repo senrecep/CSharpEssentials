@@ -32,7 +32,7 @@ internal sealed class EnumDefaultDataContractResolver(ISerializerDataContractRes
         });
     }
 
-    /// <summary>Wraps the registered resolver; a resolver registered by type is left as it is.</summary>
+    /// <summary>Wraps the registered resolver once; a resolver registered by type is left as it is.</summary>
     public static void Decorate(IServiceCollection services)
     {
         int index = services.Count - 1;
@@ -42,6 +42,9 @@ internal sealed class EnumDefaultDataContractResolver(ISerializerDataContractRes
             return;
 
         ServiceDescriptor descriptor = services[index];
+        if (descriptor.ImplementationFactory?.Target is Decorator)
+            return;
+
         Func<IServiceProvider, ISerializerDataContractResolver>? create = descriptor switch
         {
             { ImplementationInstance: ISerializerDataContractResolver instance } => _ => instance,
@@ -51,9 +54,11 @@ internal sealed class EnumDefaultDataContractResolver(ISerializerDataContractRes
         if (create is null)
             return;
 
-        services[index] = ServiceDescriptor.Describe(
-            typeof(ISerializerDataContractResolver),
-            provider => new EnumDefaultDataContractResolver(create(provider)),
-            descriptor.Lifetime);
+        services[index] = ServiceDescriptor.Describe(typeof(ISerializerDataContractResolver), new Decorator(create).Create, descriptor.Lifetime);
+    }
+
+    private sealed class Decorator(Func<IServiceProvider, ISerializerDataContractResolver> create)
+    {
+        public EnumDefaultDataContractResolver Create(IServiceProvider provider) => new(create(provider));
     }
 }

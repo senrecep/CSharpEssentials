@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.AspNetCore.Swagger.Filters;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -11,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -68,16 +70,69 @@ public class SwashbuckleEnumDefaultTests
         contract.Should().BeSameAs(ObjectEnumResolver.Contract);
     }
 
-    private static async Task<JsonNode> GetDocumentAsync()
+    [Fact]
+    public async Task Document_Should_OmitTheDefault_When_AddSwaggerGenIsFollowedByAddSwaggerEnumConventions()
+    {
+        JsonNode document = await GetDocumentAsync(static services =>
+        {
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen(static options => options.AddEnumConventions());
+            services.AddSwaggerEnumConventions();
+        });
+
+        Property(document, nameof(UndefinedDefaultOrder), "status").ToJsonString().Should().NotContain("\"default\"");
+        Property(document, nameof(UndefinedDefaultOrder), "definedStatus")["default"]!.GetValue<string>().Should().Be("pending_approval");
+    }
+
+    [Fact]
+    public void AddSwaggerEnumConventions_Should_RegisterOnce_When_CalledTwice()
+    {
+        var services = new ServiceCollection();
+        services.AddSwaggerEnumConventions();
+        ServiceDescriptor resolver = ResolverDescriptor(services);
+
+        services.AddSwaggerEnumConventions();
+
+        ResolverDescriptor(services).Should().BeSameAs(resolver);
+        EnumSchemaFilterCount(services).Should().Be(1);
+    }
+
+    [Fact]
+    public void AddSwaggerEnumConventions_Should_RegisterOnce_When_CalledAfterAddSwagger()
+    {
+        var services = new ServiceCollection();
+        AddSwagger(services);
+        ServiceDescriptor resolver = ResolverDescriptor(services);
+
+        services.AddSwaggerEnumConventions();
+
+        ResolverDescriptor(services).Should().BeSameAs(resolver);
+    }
+
+    private static ServiceDescriptor ResolverDescriptor(ServiceCollection services) =>
+        services.Single(static descriptor => descriptor.ServiceType == typeof(ISerializerDataContractResolver));
+
+    private static int EnumSchemaFilterCount(ServiceCollection services)
+    {
+        services.AddLogging();
+        using ServiceProvider provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<IOptions<SwaggerGenOptions>>().Value
+            .SchemaFilterDescriptors.Count(static descriptor => descriptor.Type == typeof(EnumSchemaFilter));
+    }
+
+    private static void AddSwagger(IServiceCollection services) =>
+        services.AddSwagger<DefaultConfigureSwaggerOptions>(
+            "Bearer",
+            new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" },
+            typeof(SwashbuckleEnumDefaultTests).Assembly);
+
+    private static async Task<JsonNode> GetDocumentAsync(Action<IServiceCollection>? configureServices = null)
     {
         WebApplicationBuilder builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
         builder.Services.AddEnumConventions();
-        builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(
-            "Bearer",
-            new OpenApiSecurityScheme { Type = SecuritySchemeType.Http, Scheme = "bearer", BearerFormat = "JWT" },
-            typeof(SwashbuckleEnumDefaultTests).Assembly);
+        (configureServices ?? AddSwagger)(builder.Services);
 
         await using WebApplication app = builder.Build();
         app.UseSwagger();
