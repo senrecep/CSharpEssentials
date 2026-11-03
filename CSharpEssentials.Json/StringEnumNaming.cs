@@ -136,7 +136,7 @@ public static class StringEnumNaming
         public string Visit<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum =>
             FormatName(info, value is TEnum typed ? typed : info.FromRawValue(ToRaw(value)));
 
-        private static ulong ToRaw(object number) => number switch
+        private static ulong ToRaw(object value) => value switch
         {
             sbyte v => unchecked((ulong)v),
             short v => unchecked((ulong)v),
@@ -146,7 +146,7 @@ public static class StringEnumNaming
             ushort v => v,
             uint v => v,
             ulong v => v,
-            _ => throw new ArgumentException($"Unsupported enum value type '{number.GetType()}'.", nameof(number)),
+            _ => throw new ArgumentException($"Unsupported enum value type '{value.GetType()}'.", nameof(value)),
         };
     }
 
