@@ -26,7 +26,7 @@ public sealed class SwashbuckleEnumUsageTests
     }
 
     [Fact]
-    public async Task Property_Should_HaveNoDefault_When_TheDefaultValueIsTextThatNamesNoMember()
+    public async Task Property_Should_HaveNoDefault_When_TheDefaultValueIsText()
     {
         JsonNode properties = await DefaultsPropertiesAsync();
 
