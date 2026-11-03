@@ -20,6 +20,8 @@
 #                                              (net8.0 runs CSE's netstandard2.1 builds and System.Text.Json 9.0.x from NuGet)
 #   ./run-benchmarks.sh --project http         # Http GET/POST/404/build/query vs Refit / Flurl.Http / RestSharp / BCL; Resilience policy overhead, Merge nesting, RetryIfFailed, Result boxing vs Polly.Core / Microsoft.Extensions.Http.Resilience
 #                                              (net8.0 runs CSE's netstandard2.1 builds; every CSE and Polly row runs Polly.Core 8.9.0)
+#   ./run-benchmarks.sh --project aspnetcore   # ResultEndpointFilter, enum binding, ConditionalGet, problem+json, validation filter vs BCL / Hellang.Middleware.ProblemDetails / Marvin.Cache.Headers / SharpGrip; idempotent replay vs IdempotentAPI; executor/stores/keys; request logging vs HttpLogging / Serilog.AspNetCore
+#                                              (net8.0 runs the netstandard2.1 builds of CSE.Idempotency, Results, Errors and Validation)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -115,8 +117,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.GetJsonComparison.*" "*.PostJsonComparison.*" "*.NotFoundComparison.*" "*.RequestBuildComparison.*" "*.QueryStringComparison.*" "*.HttpResilienceComparison.*" "*.PolicyOverheadComparison.*" "*.ComposedPolicyComparison.*" "*.RetryIfFailedComparison.*" "*.ResultBoxingComparison.*")
         ;;
+    aspnetcore)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.AspNetCore.Comparison.Benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/aspnetcore"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.ResultFilterComparison.*" "*.EnumBindingComparison.*" "*.ConditionalGetComparison.*" "*.ProblemDetailsComparison.*" "*.ValidationFilterComparison.*" "*.IdempotentReplayComparison.*" "*.IdempotencyExecutorBenchmarks.*" "*.IdempotencyStoreBenchmarks.*" "*.IdempotencyStoreContentionBenchmarks.*" "*.IdempotencyKeyBenchmarks.*" "*.RequestLoggingComparison.*" "*.RequestLoggingMetadataComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore)" >&2
         exit 1
         ;;
 esac

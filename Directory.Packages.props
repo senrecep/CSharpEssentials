@@ -8,8 +8,9 @@
              transitive versions (FluentValidation 12, Microsoft.Extensions.* 10) than the pins below. The mediator benchmarks
              share the DI suite's container (Microsoft.Extensions.DependencyInjection 10.0.0), which fails restore with NU1109
              (Abstractions 10.0.0 downgraded to the 9.0.4 pin) while pinning is on. The Http comparison suite's generated host
-             fails the same way: Microsoft.Extensions.Http.Resilience 10.x needs Microsoft.Extensions.* 9.0.21 or later. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+             fails the same way: Microsoft.Extensions.Http.Resilience 10.x needs Microsoft.Extensions.* 9.0.21 or later. The AspNetCore
+             comparison suite fails with NU1109 too: Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -134,7 +135,9 @@
     <!-- Benchmarks -->
     <ItemGroup Label="Benchmarks">
         <PackageVersion Include="BenchmarkDotNet" Version="[0.14.0,)" />
-        <PackageVersion Include="FluentValidation" Version="[11.11.0,)" />
+        <!-- The AspNetCore comparison suite pins the latest FluentValidation for its SharpGrip validation rows. -->
+        <PackageVersion Include="FluentValidation" Version="[11.11.0,)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks'))" />
+        <PackageVersion Include="FluentValidation" Version="12.2.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks'))" />
         <!-- Competitor libraries for the head-to-head suites: exact pins, stated in each BENCHMARKS.md header. -->
         <PackageVersion Include="FastEndpoints" Version="8.3.0" />
         <PackageVersion Include="FastEndpoints.Generator" Version="8.3.0" />
@@ -162,14 +165,22 @@
              transitive pinning would move them to 3.x. -->
         <PackageVersion Include="Humanizer.Core" Version="3.0.10" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Json.Comparison.Benchmarks'))" />
         <PackageVersion Include="CSharpVitamins.ShortGuid" Version="2.0.0" />
+        <!-- Competitor libraries for the aspnetcore comparison suite -->
+        <PackageVersion Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
+        <PackageVersion Include="IdempotentAPI" Version="2.6.0" />
+        <PackageVersion Include="IdempotentAPI.MinimalAPI" Version="3.2.0" />
+        <PackageVersion Include="IdempotentAPI.Cache.DistributedCache" Version="2.2.0" />
+        <PackageVersion Include="Marvin.Cache.Headers" Version="7.2.0" />
+        <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+        <PackageVersion Include="SharpGrip.FluentValidation.AutoValidation.Endpoints" Version="2.0.0" />
         <!-- The container for the DI and mediator suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
              major Scrutor 7 requires. Scoped to those projects so transitive pinning does not move other projects' container. -->
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot'))" />
-        <!-- TestServer for the endpoints throughput suite, matched to each TFM's shared framework major. Scoped to that
-             suite so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.4" Condition="'$(TargetFramework)' == 'net9.0' And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" Condition="('$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0') And $(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks'))" />
+        <!-- TestServer for the endpoints throughput and AspNetCore comparison suites, matched to each TFM's shared framework major.
+             Scoped to those suites so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.4" Condition="'$(TargetFramework)' == 'net9.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" Condition="('$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0') And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
     </ItemGroup>
 
     <!-- Analyzers -->
