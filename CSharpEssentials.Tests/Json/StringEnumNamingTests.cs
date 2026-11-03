@@ -290,8 +290,10 @@ public class StringEnumNamingTests
     public void GetName_WithUnsupportedValueType_ShouldReportValueParameter()
     {
         Action getName = () => StringEnumNaming.GetName(typeof(NamingStatus), "Active");
+        Action getNameOtherEnum = () => StringEnumNaming.GetName(typeof(NamingStatus), AcronymKind.IOError);
 
         getName.Should().Throw<ArgumentException>().WithParameterName("value");
+        getNameOtherEnum.Should().Throw<ArgumentException>().WithParameterName("value");
     }
 
     [Fact]
