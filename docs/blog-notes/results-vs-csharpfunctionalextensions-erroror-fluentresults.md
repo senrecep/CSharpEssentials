@@ -101,7 +101,7 @@ Ten classes were added to the same suite after the run above. They have no numbe
 - Without metadata, CSE and ErrorOr print the same record text.
 - With metadata, and for a success `Result<int>`, every library prints something different. Those rows are labelled.
 - CSE `Result<int>.ToString()` goes through reflection-based JSON. This ties back to the AOT section above.
-- Expect the CSE `Result` row to be the slowest because of the JSON call.
+- Expect the CSE `Result` row to lose to CFE because of the JSON call. ErrorOr prints the whole record, so do not assume CSE is the slowest row.
 
 ### ErrorJsonComparison
 
