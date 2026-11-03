@@ -2,6 +2,10 @@
 
 Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 
+> Benchmarks against the framework's HttpLogging and Serilog.AspNetCore (request and response bodies of 1 KB to 1 MB,
+> a metadata-only event per request) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **Detailed Logging**: Request/Response bodies, headers, path, method, timing, sizes.
