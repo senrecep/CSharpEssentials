@@ -2,11 +2,13 @@
 
 Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
 
+The same suite has ten newer classes that have not had a full run yet. Sequence, CombineAll, Try and TryAsync are described in [Pending: Sequence, CombineAll, Try and TryAsync](#pending-sequence-combineall-try-and-tryasync). The `Error` classes are in [CSharpEssentials.Errors/BENCHMARKS.md](../CSharpEssentials.Errors/BENCHMARKS.md), and the Maybe collection helpers are in [CSharpEssentials.Maybe/BENCHMARKS.md](../CSharpEssentials.Maybe/BENCHMARKS.md).
+
 ---
 
 ## What was measured
 
-Nine scenarios, one benchmark class each, in `benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/`. Every class uses `[MemoryDiagnoser]`, CSE as the baseline, and a `[Params]` switch for the success and failure path. A `[GlobalSetup]` parity check runs every library on the same input and refuses to start if the outcomes differ (success value, or error count and first message).
+Nine measured scenarios, one benchmark class each, in `benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/`. The ten newer classes in that folder are listed under Pending and in the Errors and Maybe pages. Every class uses `[MemoryDiagnoser]`, CSE as the baseline, and a `[Params]` switch for the success and failure path. A `[GlobalSetup]` parity check runs every library on the same input and refuses to start if the outcomes differ (success value, or error count and first message).
 
 | # | Class | Operation | Columns |
 |---|---|---|---|
@@ -213,6 +215,36 @@ Mean / allocated per TFM for the rows where libraries differ. Map, Bind, Tap, Ma
 
 ---
 
+## Pending: Sequence, CombineAll, Try and TryAsync
+
+**Status: draft.** These three classes build, and their parity self-check passes on every TFM. No full default-job run has been done, so this section has no numbers yet. The reports will be committed under `benchmarks/results/results-comparison/{tfm}/results/` next to the ones above. Short-job (`--quick`) numbers are not published.
+
+The rules are the same as for the nine classes above: `[MemoryDiagnoser]`, CSE as the baseline, a `[GlobalSetup]` parity check (also run by `--self-check`), and a doc URL above every library row.
+
+| Class | Measured unit | Rows | Label |
+|---|---|---|---|
+| `SequenceComparison` | `Sequence`: N typed results to one result with every value. `CombineAll`: N untyped results to one result. `N` = 10 or 100, `Succeed` = true, or false with one failure at index N/2. Values are `0..N-1` | CSE `Sequence()` and `CombineAll()`; CFE `Combine` plus `.Map(ToArray)` and `Result.Combine`; ErrorOr a hand-written loop into `List<int>` and `List<Error>`; FluentResults `Result.Merge` | CSE vs FluentResults like-for-like. CFE labelled (adds `ToArray`). ErrorOr labelled (README manual idiom) |
+| `TryComparison` | `int.Parse` of `"42"` or `"x"` through a delegate built once in setup | CSE `Result.Try` with a cached error; CSE `Result.Try` with `Error.Exception(ex)`; CFE `Result.Try`; FluentResults `Result.Try`; ErrorOr a hand-written `try`/`catch` | CSE, CFE and FluentResults like-for-like (each handler returns a cached error). The `Error.Exception` row is the CSE Readme `#safe-execution` idiom. The cached-error baseline is there to match CFE and FluentResults. The `Error.Exception` row and the ErrorOr row are labelled |
+| `TryAsyncComparison` | the same parse in an `async Task<int>`. `Yield` = false completes synchronously, true awaits `Task.Yield()` first | CSE `Result.TryAsync`; CFE `Result.Try`; FluentResults `Result.Try`; ErrorOr a hand-written async `try`/`catch` | CSE, CFE and FluentResults like-for-like. ErrorOr labelled. Only the cached-error handler is measured, because the `Error.Exception` cost is the one measured in `TryComparison` |
+
+Parity keys: on success the value count and sum (`ok:<count>:<sum>`) or `ok:42`; on failure `fail:1:Order is invalid`. The `Error.Exception` row is checked for one error with code `FormatException`.
+
+Semantic differences:
+- CFE `Combine` returns a lazy `IEnumerable<T>`. The row adds `ToArray`, so every column hands back materialized values.
+- FluentResults `Merge` returns its values as a `List<T>` behind `IEnumerable<T>`. CSE `Sequence` returns `T[]`.
+- ErrorOr has no Sequence, Combine or Try. Its rows follow the README: a manual error list, and a `try`/`catch` that returns an error.
+- CFE keeps one string error; FluentResults `Result.Try` and CFE `Result.Try` take an optional handler, and CSE requires one.
+- `Error.Exception` builds three metadata entries, including the stack trace text, so on failure it adds the cost measured by `ErrorExceptionComparison` in the Errors suite.
+
+Feature matrix for these classes, from reading each library's source and docs (not measured):
+
+| Feature | CSE | ErrorOr 2.1.1 | FluentResults 4.0.0 | CFE 3.7.0 |
+|---|---|---|---|---|
+| Sequence of typed results | `Sequence()` gives `T[]` | manual list | `Merge` gives a `List<T>` | `Combine` gives a lazy `IEnumerable<T>` |
+| Try / TryAsync | `Result.Try` and `TryAsync`; the handler is required, and a cancelled token propagates instead of becoming an error | none | `Result.Try`, optional handler | `Result.Try`, optional handler |
+
+---
+
 ## Feature matrix
 
 CSE cells come from this repository (each csproj, `Directory.Build.props`, `Readme.MD`, `ResultT.cs`, `CSharpEssentials.Errors/ErrorMetadata.cs`, `CSharpEssentials.Json/Extensions.cs`). Competitor links point at the pinned tags: CFE `v3.7.0`, ErrorOr `v2.1.1` (repository now at `error-or/error-or`), FluentResults `v4.0` (no `v4.0.0` tag; commit matches the 4.0.0 nuspec). Nothing was trim-analyzed or AOT-published for this table.
@@ -252,9 +284,9 @@ On the AOT row the four libraries are equal on paper: none declares `IsAotCompat
 
 ```bash
 cd benchmarks
-./run-benchmarks.sh --project results-comparison                       # all TFMs (net8-net11), all nine classes, default job
+./run-benchmarks.sh --project results-comparison                       # all TFMs (net8-net11), all classes, default job
 ./run-benchmarks.sh --project results-comparison --tfm net10.0         # one TFM, default job
-./run-benchmarks.sh --project results-comparison --quick --tfm net10.0 # one TFM, all nine classes, Short job
+./run-benchmarks.sh --project results-comparison --quick --tfm net10.0 # one TFM, all classes, Short job
 ```
 
 `--quick` without `--tfm` runs on net9.0, the script default for this suite, and uses BenchmarkDotNet's Short job, so its numbers are not comparable with the committed ones. Results are stored per framework under `benchmarks/results/results-comparison/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML).
