@@ -6,6 +6,8 @@ CSharpEssentials.Mediator (CSE) is not a dispatcher. It ships no `IMediator`, no
 
 MediatR is pinned to 12.5.0, the last release under Apache-2.0. The latest stable release, 14.2.0, is dual-licensed (RPL-1.5 or a separate commercial license) and expects a license key ([v14.2.0 LICENSE.md](https://github.com/jbogard/MediatR/blob/v14.2.0/LICENSE.md), [license key setup](https://github.com/jbogard/MediatR/blob/v14.2.0/README.md)). It was not used for that reason.
 
+The same suite has seven newer classes that have not had a full run yet: validator fan-out, validation scope, idempotency, lock, lock contention, caching and logging behaviors. They are described in [Pending: validator fan-out, idempotency, lock, caching and logging behaviors](#pending-validator-fan-out-idempotency-lock-caching-and-logging-behaviors).
+
 ---
 
 ## What was measured
@@ -206,6 +208,79 @@ Mean (and allocation where it is not 0 B) per TFM. Run order net10 → net9 → 
 
 ---
 
+## Pending: validator fan-out, idempotency, lock, caching and logging behaviors
+
+**Status: draft.** These seven classes build on net8.0 to net11.0, and their parity self-check passes on every TFM. No full default-job run has been done, so this section has no numbers yet. The reports will be committed under `benchmarks/results/mediator/{tfm}/results/` next to the ones above. Short-job (`--quick`) numbers are not published.
+
+The rules are the same as for Part B. Every class has `[MemoryDiagnoser]`. The hand-written Mediator behavior is the baseline, then Cse, then the hand-written MediatR behavior. `LockContentionBenchmarks` has no mediator; AsyncKeyedLock is its baseline. A doc URL sits above every competitor and BCL row. `[GlobalSetup]` runs the parity check, and `--self-check` runs every setup for every parameter value.
+
+Pinned versions, checked on NuGet on 2026-11-04:
+
+| Package | Version | License (nuspec) |
+|---|---|---|
+| MediatR | 12.5.0 (latest stable is 14.2.0; see the license note at the top) | Apache-2.0 |
+| Mediator.SourceGenerator / Mediator.Abstractions | 3.0.2 (latest stable) | MIT |
+| AsyncKeyedLock | 8.1.2 (latest stable) | MIT |
+| Microsoft.Extensions.Caching.Memory | 9.0.4 (CPM range `[9.0.4,)` resolves to its lower bound), for `AddDistributedMemoryCache` | MIT |
+
+| Class | Measured unit | Rows | Label |
+|---|---|---|---|
+| `ValidationFanOutBenchmarks` | One send of `CreateCustomer` through a validation behavior with three validators (Name, Email, Age). `Groups` = One (all Order 0) or Two (Name and Email at Order 0, Age at Order 1). `Input` = Valid or Invalid | Hand-written Mediator, Cse `ValidationBehavior`, hand-written MediatR. The hand-written behaviors run the validators one by one in `Order` and collect the errors | Like-for-like on outcome: same codes in the same order. CSE extras are listed below |
+| `ValidationScopeBenchmarks` | Not a send. One new scope that resolves the validation behavior: the scope, three scoped validators and one behavior constructor | Same three rows, from the `Groups = One` containers | What a scoped mediator, or MediatR resolved from a request scope, pays per request. With this suite's singleton Mediator it is paid once |
+| `IdempotencyBehaviorBenchmarks` | One send of `PlaceOrder`. `Path` = Replay (a stored success is replayed) or ExecuteRelease (the handler fails, the key is reserved and released). `Fingerprint` = Supplied, Default, or DefaultLarge (4096-character field) | Cse `IdempotencyBehavior` with `StoreFailures = false` and the in-memory store; hand-written behaviors over a small `ConcurrentDictionary` store | Lower bound, not a feature match. Neither MediatR nor Mediator has an idempotency behavior |
+| `LockBehaviorBenchmarks` | One send of `ReserveStock`, single thread, no contention | Cse `LockBehavior` over `InProcessResourceLock`; hand-written behaviors over a static `AsyncKeyedLocker<string>` as its README shows | Like-for-like: no timeout, cancellable wait |
+| `LockContentionBenchmarks` | 8 workers, 256 acquire, increment, release operations each, 2048 per invocation. `Keys` = OneKey, PerWorker, or Unique (a new key per operation) | AsyncKeyedLock (baseline), Cse `InProcessResourceLock`, hand-written `ConcurrentDictionary<string, SemaphoreSlim>` | The hand-written row is a reference only: it never removes a semaphore |
+| `CachingBehaviorBenchmarks` | One send of `GetProduct` over the distributed memory cache. `Path` = Hit or Miss (every column removes the entry after the send) | Cse `CachingBehavior`; hand-written behaviors with the same get, deserialize, set and `[LoggerMessage]` calls | Like-for-like on bytes stored. Neither MediatR nor Mediator has a caching behavior |
+| `LoggingBehaviorBenchmarks` | One send of `LogPing` or `LogPayloadPing`. `Logger` = Disabled (`NullLogger<T>`) or Enabled (a logger that formats every message). `Payload` = None or RequestResponse | Cse `LoggingBehavior`; hand-written open generic behaviors with the same three `[LoggerMessage]` templates and the same JSON options | Like-for-like on messages. The MediatR wiki logging sample does less work, so it is cited, not measured |
+
+Methodology:
+- Every container is built with plain `BuildServiceProvider()` and resolved from the root provider, as in Part B. Scoped behaviors become root-scoped singletons, and the singleton Mediator builds each pipeline once.
+- The CSE Readme registers `AddMediatorBehaviors()` next to each behavior. Each CSE container here registers only the behavior under test, so each row isolates one behavior. That is a deliberate narrowing.
+- Every container registers `ILogger<T>` as `NullLogger<T>`, except the Enabled logging rows.
+- Mediator containers use the one `AddMediator` call of the project through `MediatorApp.Register`. MediatR containers scan the benchmark assembly and add the behavior with `cfg.AddBehavior` or `cfg.AddOpenBehavior` and the same lifetime CSE uses.
+- The net8.0 rows run the netstandard2.1 build of every CSE package (Mediator, Idempotency, Validation, Results, Errors, Json, Maybe have no net8 target). The hand-written columns use the same CSE Results, Validation and Json builds, so the comparison between columns holds, but no net8 row is net8-native CSE code. The netstandard2.1 build runs different code in these behaviors: `LoggingBehavior` allocates a `Stopwatch` (`LoggingBehavior.cs:26`), `InProcessResourceLock` locks an `object` instead of a `Lock` (`InProcessResourceLock.cs:13-17`), and the default fingerprint uses `SHA256.Create()` and a manual hex loop (`IdempotencyBehavior.cs:182-191`). Do not read the net8 rows as the same code.
+- The new request types change the code the five older classes measure. Mediator generates one dispatcher for every message type in the project, so `SendBenchmarks` and `BehaviorBenchmarks` now dispatch through a larger generated class. MediatR's assembly scan registers the new handlers in the older containers too. The new handlers take no constructor dependencies, so the older containers still build. The next full run must rerun every class. The older numbers above were measured before these types existed.
+
+What the parity check enforces:
+- Every container resolves exactly the behavior it claims, by type, for each request type.
+- Validation: success 31 for the valid customer and exactly `Name.NotEmpty,Email.NotEmpty,Age.InclusiveBetween` for the invalid one, in every column and for both `Groups`.
+- Scope: each row returns 1.
+- Idempotency: Replay returns success 6 and two more sends do not run the handler. ExecuteRelease returns `Quantity.Zero` and runs the handler exactly once per send. A black-box check stores a request with no fingerprint, then sends the same key with the uppercase hex SHA-256 of that request's default JSON as a supplied fingerprint. It must replay in every column, which proves each column computes the same fingerprint.
+- Lock: success 6, the key is held while the handler runs (a probe inside the handler asks the lock), and the key is free after the send.
+- Contention: every column counts exactly 2048, three times in a row. With OneKey the count is a plain shared increment, so a lock that does not exclude would lose some.
+- Caching: the three containers store the same bytes for the same response. Hit runs the handler once for two sends. Miss runs it once per send.
+- Logging: success 42 in every column. With Enabled, exactly three messages per send; the first two are equal across columns and the third starts with `Request <name> took `.
+
+Semantic differences, labelled in each class summary:
+- Validation fan-out: CSE groups the validators by `Order` and runs the validators of one group concurrently. Here every validator completes synchronously, so that is a no-op, but the group array is still built. CSE also removes duplicate errors with LINQ `Distinct` on failure, type-tests the request for `IValidationModeOverride`, calls the failure observers and builds the failure through `BehaviorCache`. The hand-written behaviors run in sequence and do none of that.
+- Validation scope: the CSE constructor groups with `GroupBy`, `OrderBy`, `Select` and `ToArray`, and copies the observers. The hand-written constructors sort with `OrderBy` and copy.
+- Idempotency: the hand-written store has no lease or retention expiry, no scope, no key format check, no modes, no metrics, no options monitor read, no per-request settings object and no reservation token. The first run that stores a success is not measured: it needs a new key per call, and the store would grow with every invocation.
+- Lock: CSE goes through `IResourceLock` and releases with an `IAsyncDisposable` handle. AsyncKeyedLock releases with a pooled `IDisposable`.
+- Contention: the hand-written row never removes or disposes a semaphore. In Unique it only pays for lookups after the first invocation and keeps 2048 semaphores alive. CSE and AsyncKeyedLock remove the entry when the last holder releases it.
+- Caching: the request builds its key as the CSE Readme shows, with an interpolated `CacheKey` property (`Readme.MD:199`). CSE reads that property up to four times per miss and twice per hit, so it builds the key string each time. The hand-written behaviors read it once. CSE also type-tests the response for `IResultBase` on every miss.
+- Logging: CSE reads the request and response type names on every call. The hand-written behaviors keep them in static fields.
+
+Costs read from the source, to check against the full run (not fixed in this work):
+- `CachingBehavior.cs:25,28,33,45,46` read `message.CacheKey` (line 30 reads it again on the error path). `:41` creates a `DistributedCacheEntryOptions` on every set.
+- `InMemoryIdempotencyRecordStore.cs:47` allocates a Guid string and an `Entry` before the lookup, so every replay pays for them.
+- `IdempotencyBehavior.cs:145` allocates a closure per request, `:165-174` an options object per request, and `:178` serializes the whole request on every send that uses the default fingerprint.
+- `ValidationBehavior.cs:31-36` runs LINQ grouping in the constructor, so on every scope. `:102` runs `Distinct` on every failure. `:121` is an async `Task<Result<TRequest>[]>` per validator group on the path with more than one validator.
+- `InProcessResourceLock.cs:82,97` take one lock shared by every key for each rent and return. `:86` and `:110` create an `Entry` and a `SemaphoreSlim` per new key, and `:78` a `Handle` per acquisition.
+- `LoggingBehavior.cs:20-21` read the type names on every call.
+
+Feature matrix for these classes, from reading each library's source and docs (not measured):
+
+| Feature | CSharpEssentials.Mediator | MediatR 12.5.0 | Mediator 3.0.2 | AsyncKeyedLock 8.1.2 |
+|---|---|---|---|---|
+| Several validators per request | `ValidationBehavior` groups them by `Order`, runs one group concurrently, and removes duplicate errors | None built in; write a behavior | None built in; README 3.3.1 shows a single-check behavior that throws | n/a |
+| Idempotency | `IdempotencyBehavior` and an executor, with in-memory, distributed cache and EF Core stores, fingerprint, scope, lease and modes | None | None | n/a |
+| Keyed lock | `LockBehavior` over `IResourceLock` (in-process by default, pluggable for a distributed lock). A timeout throws `TimeoutException`. Not reentrant | None | None | Keyed semaphores, pooling (default pool size 20), a striped variant, `MaxCount`, timeouts through `LockOrNullAsync` and `TryLock`, conditional locking |
+| Response caching | `CachingBehavior` over `IDistributedCache`, reflection-based `System.Text.Json`, no hook for serializer options | None | None | n/a |
+| Request logging | `LoggingBehavior`, opt-in by marker interface, `[LoggerMessage]`, optional JSON payloads, elapsed time | A wiki sample with interpolated strings | None built in; README 3.3.2 has an error logging sample only | n/a |
+| License | MIT | Apache-2.0 (13.0.0 and later: RPL-1.5 or commercial) | MIT | MIT |
+
+---
+
 ## Feature matrix
 
 MediatR links point at tag [`v12.5.0`](https://github.com/jbogard/MediatR/tree/v12.5.0) (commit `8a64581`, the nuspec's repository commit) and the MediatR wiki, which tracks the current release and is cited only where the 12.5.0 source agrees. Mediator links point at tag [`v3.0.2`](https://github.com/martinothamar/Mediator/tree/v3.0.2) (commit `31583e1`, the nuspecs' repository commit). CSE cells come from this repository. The Native AOT row comes from section 6; every other row comes from reading source, nuspecs or docs, not from running code.
@@ -253,11 +328,11 @@ MediatR links point at tag [`v12.5.0`](https://github.com/jbogard/MediatR/tree/v
 
 ```bash
 cd benchmarks
-./run-benchmarks.sh --project mediator                       # all TFMs (net8-net11), all five classes, committed configuration
+./run-benchmarks.sh --project mediator                       # all TFMs (net8-net11), every class, committed configuration
 ./run-benchmarks.sh --project mediator --tfm net10.0         # one TFM
 ./run-benchmarks.sh --project mediator --quick --tfm net10.0 # one TFM, Short job
 ./mediator-aot/run-mediator-aot.sh                           # Native AOT report (all four samples)
 python3 CSharpEssentials.Mediator.Benchmarks/generate-handlers.py   # regenerate the 50-handler input libraries
 ```
 
-`--quick` without `--tfm` runs on net9.0, the script default for this suite. Its patterns select each of the five classes; the Short job's numbers are not comparable with the committed ones. Results are stored per framework under `benchmarks/results/mediator/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/mediator/aot/aot-report.md`; raw publish and run logs go to `benchmarks/results/mediator/aot/logs/`. `run-mediator-aot.sh` accepts variant names to run a subset and `RUNS` (default 5) for the wall-time median.
+`--quick` without `--tfm` runs on net9.0, the script default for this suite. Its patterns select each class, one pattern per class; the Short job's numbers are not comparable with the committed ones. Results are stored per framework under `benchmarks/results/mediator/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/mediator/aot/aot-report.md`; raw publish and run logs go to `benchmarks/results/mediator/aot/logs/`. `run-mediator-aot.sh` accepts variant names to run a subset and `RUNS` (default 5) for the wall-time median.
