@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using CSharpEssentials.ResultPattern.Interfaces;
@@ -163,7 +164,7 @@ public static class ResilienceResultExtensions
     // Predicate pipelines are not cached: a delegate cannot key the cache safely (lambdas that capture state are new
     // instances on every call, so the cache would fill with entries that are never hit). Building a retry pipeline is
     // a few allocations, negligible next to an operation that is worth retrying.
-    private static ResiliencePipeline<TResult> BuildPipeline<TResult>(
+    private static ResiliencePipeline<TResult> BuildPipeline<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>(
         int maxAttempts,
         TimeSpan? delay,
         bool exponentialBackoff,
@@ -178,7 +179,7 @@ public static class ResilienceResultExtensions
                     && shouldRetry(ResilienceClassifier.ToError(ex))
                 : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result, shouldRetry)));
 
-    private static ResiliencePipeline<TResult> BuildRetryPipeline<TResult>(
+    private static ResiliencePipeline<TResult> BuildRetryPipeline<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>(
         int maxAttempts,
         TimeSpan delay,
         bool exponentialBackoff,
@@ -193,7 +194,7 @@ public static class ResilienceResultExtensions
             })
             .Build();
 
-    private static class RetryPipelineCache<TResult>
+    private static class RetryPipelineCache<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TResult>
         where TResult : IResultBase
     {
         // The cap applies per closed generic type (Result and each Result<T>). The Count check is not atomic,
