@@ -419,19 +419,42 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         Func<Task> act = () => middleware.InvokeAsync(httpContext);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
-        writer.Context!.RequestBody.Should().Be("payload");
-        writer.Context.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: endpoint failed");
+        RequestResponseContext logged = writer.Contexts.Should().ContainSingle().Subject;
+        logged.RequestBody.Should().Be("payload");
+        logged.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: endpoint failed");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_LogHandlerFailureAndRethrowOriginal_When_PipelineAndHandlerThrow()
+    {
+        var writer = new CapturingLogWriter();
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => throw new InvalidOperationException("endpoint failed"),
+            _ => throw new ArgumentException("handler failed"),
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("endpoint failed");
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal(
+            "Exception: InvalidOperationException, Message: endpoint failed",
+            "Error writing log: handler failed");
+        writer.Contexts[1].RequestBody.Should().Be("payload");
     }
 
     private sealed class CapturingLogWriter : ILogWriter
     {
         public IMessageCreator? MessageCreator => null;
 
-        public RequestResponseContext? Context { get; private set; }
+        public List<RequestResponseContext> Contexts { get; } = [];
 
         public Task Write(RequestResponseContext requestResponseContext)
         {
-            Context = requestResponseContext;
+            Contexts.Add(requestResponseContext);
             return Task.CompletedTask;
         }
     }

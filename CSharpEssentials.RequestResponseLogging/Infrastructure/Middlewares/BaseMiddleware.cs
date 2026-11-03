@@ -329,12 +329,33 @@ internal abstract class BaseMiddleware
             ResponseCreationTime = TimeSpan.Zero
         };
 
+        await TryWriteErrorLog(errorContext).ConfigureAwait(false);
+        if (handler is null)
+            return;
+
         try
         {
-            if (_logWriter is not null)
-                await Task.Run(() => _logWriter.Write(errorContext), CancellationToken.None).ConfigureAwait(false);
-            if (handler is not null)
-                await handler(errorContext).ConfigureAwait(false);
+            await handler(errorContext).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await TryWriteErrorLog(new RequestResponseContext(context)
+            {
+                RequestBody = requestText,
+                ResponseBody = $"Error writing log: {ex.Message}",
+                ResponseCreationTime = TimeSpan.Zero
+            }).ConfigureAwait(false);
+        }
+    }
+
+    private async Task TryWriteErrorLog(RequestResponseContext errorContext)
+    {
+        if (_logWriter is null)
+            return;
+
+        try
+        {
+            await Task.Run(() => _logWriter.Write(errorContext), CancellationToken.None).ConfigureAwait(false);
         }
         catch
         {
