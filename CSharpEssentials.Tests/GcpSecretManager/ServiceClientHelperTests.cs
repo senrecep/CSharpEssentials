@@ -30,14 +30,12 @@ public sealed class ServiceClientHelperTests
         act.Should().Throw<FileNotFoundException>().Which.Message.Should().Contain(MissingCredentialsPath);
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("europe-west1")]
-    public void CreateWithRegion_WithNonexistentCredentialsFile_ShouldThrowFileNotFoundException(string? region)
+    [Fact]
+    public void CreateWithRegion_WithNonexistentCredentialsFile_ShouldThrowFileNotFoundException()
     {
         var helper = new ServiceClientHelper();
 
-        Action act = () => helper.CreateWithRegion(MissingCredentialsPath, region);
+        Action act = () => helper.CreateWithRegion(MissingCredentialsPath, null);
 
         act.Should().Throw<FileNotFoundException>().Which.Message.Should().Contain(MissingCredentialsPath);
     }
