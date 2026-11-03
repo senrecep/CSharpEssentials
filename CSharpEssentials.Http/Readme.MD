@@ -2,6 +2,10 @@
 
 `HttpClient` extensions that return `Result<T>` instead of throwing exceptions. Built-in status-code-to-error mapping, fluent request builder, Polly resilience, and redirect handling.
 
+> Benchmarks against HttpClient with System.Net.Http.Json, Refit, Flurl.Http, RestSharp and Microsoft.Extensions.Http.Resilience
+> (JSON GET and POST, 404 without exceptions, request building, query strings, a retry policy) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **Result-based HTTP**: `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
