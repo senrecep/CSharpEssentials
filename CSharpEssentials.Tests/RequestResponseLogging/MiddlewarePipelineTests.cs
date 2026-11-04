@@ -648,6 +648,32 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         capturedContext!.RequestBody.Should().Be(payload);
     }
 
+    [Theory]
+    [InlineData(new byte[0], "Empty request body")]
+    [InlineData(new byte[] { 0xEF, 0xBB, 0xBF, 0x7B, 0x7D }, "{}")]
+    [InlineData(new byte[] { 0xEF, 0xBB, 0xBF }, "")]
+    public async Task InvokeAsync_Should_DecodeRequestBody_When_BodyIsEmptyOrStartsWithBom(byte[] body, string expected)
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => Task.CompletedTask,
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new NonSeekableStream(body);
+        httpContext.Request.ContentLength = body.Length;
+
+        await middleware.InvokeAsync(httpContext);
+
+        capturedContext!.RequestBody.Should().Be(expected);
+    }
+
     private sealed class ThrowingWriteStream : MemoryStream
     {
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>

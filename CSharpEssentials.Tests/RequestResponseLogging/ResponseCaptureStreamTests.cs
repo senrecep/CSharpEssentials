@@ -33,6 +33,20 @@ public sealed class ResponseCaptureStreamTests
     }
 
     [Fact]
+    public async Task WriteAsync_Should_ThrowAndNotCapture_When_TokenIsCancelled()
+    {
+        var client = new MemoryStream();
+        var capture = new MemoryStream();
+        await using var stream = new ResponseCaptureStream(client, capture);
+
+        Func<Task> act = async () => await stream.WriteAsync("data"u8.ToArray(), new CancellationToken(canceled: true));
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        client.Length.Should().Be(0);
+        capture.Length.Should().Be(0);
+    }
+
+    [Fact]
     public void Dispose_Should_LeaveInnerStreamsOpen()
     {
         var client = new MemoryStream();
