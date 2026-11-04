@@ -5,6 +5,8 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 > Benchmarks against plain EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions
 > (SaveChanges with audit and domain events, keyset and offset paging, enum converters, MigrateDataAsync, context lifetime,
 > database error translation) are in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+> Design-time cost of the bundled CSE3001 analyzer (against a no-op analyzer) is described in
+> [the analyzer BENCHMARKS.md](../CSharpEssentials.EntityFrameworkCore.Generators/BENCHMARKS.md). Results are pending the full run.
 
 ## Features
 
