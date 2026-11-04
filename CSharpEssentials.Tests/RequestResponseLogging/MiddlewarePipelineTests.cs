@@ -571,7 +571,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
     {
         var logger = new RecordingLogger(enabled: true);
         var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), new LoggingOptions { LoggingFields = [LogFields.Path] });
-        var requestBody = new MemoryStream("payload"u8.ToArray());
+        var requestBody = new NonSeekableStream("payload"u8.ToArray());
         var responseBody = new MemoryStream();
         Stream? requestSeen = null;
         Stream? responseSeen = null;
