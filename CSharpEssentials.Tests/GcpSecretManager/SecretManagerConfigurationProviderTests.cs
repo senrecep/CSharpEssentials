@@ -645,6 +645,67 @@ public class SecretManagerConfigurationProviderTests
     }
 
     [Fact]
+    public void Load_Should_Match_Keys_Case_Insensitively()
+    {
+        var secrets = new List<Secret> { CreateSecret("project", "database__password") };
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/database__password/versions/latest"] = "pw"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        provider.TryGet("Database:Password", out string? value).Should().BeTrue();
+        value.Should().Be("pw");
+    }
+
+    [Theory]
+    [InlineData(new[] { "Key", "key" }, "upper")]
+    [InlineData(new[] { "key", "Key" }, "lower")]
+    public void Load_Should_Keep_First_Value_By_List_Order_When_Keys_Differ_Only_By_Case(string[] secretIds, string expected)
+    {
+        var secrets = secretIds.Select(id => CreateSecret("project", id)).ToList();
+        var values = new Dictionary<string, string>
+        {
+            ["projects/project/secrets/Key/versions/latest"] = "upper",
+            ["projects/project/secrets/key/versions/latest"] = "lower"
+        };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, values);
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        provider.TryGet("KEY", out string? value).Should().BeTrue();
+        value.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Load_Should_Disable_Client_Retry_When_Accessing_Secret()
+    {
+        var secrets = new List<Secret> { CreateSecret("project", "raw-secret") };
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, []);
+        CallSettings? capturedSettings = null;
+        mockClient.Setup(x => x.AccessSecretVersionAsync(It.IsAny<AccessSecretVersionRequest>(), It.IsAny<CallSettings>()))
+            .Callback((AccessSecretVersionRequest _, CallSettings settings) => capturedSettings = settings)
+            .ReturnsAsync(new AccessSecretVersionResponse
+            {
+                Payload = new SecretPayload { Data = ByteString.CopyFromUtf8("value") }
+            });
+        SecretManagerConfigurationProvider provider = CreateProvider(
+            mockClient, [new ProjectSecretConfiguration { ProjectId = "project" }]);
+
+        provider.Load();
+
+        capturedSettings.Should().NotBeNull();
+        capturedSettings.Retry.Should().NotBeNull();
+        capturedSettings.Retry.MaxAttempts.Should().Be(1);
+    }
+
+    [Fact]
     public void Load_Should_Not_Retry_Listing_When_Non_Rpc_Exception_Is_Thrown()
     {
         var mockClient = new Mock<SecretManagerServiceClient>();

@@ -5,30 +5,26 @@ namespace CSharpEssentials.RequestResponseLogging.Infrastructure.MessageCreators
 internal sealed class LogMessageWithContextCreator : BaseLogMessageCreator, ILogMessageCreator
 {
     private readonly LoggingOptions _loggingOptions;
+    private readonly LogFields[] _fields;
+    private readonly string _template;
 
-    public LogMessageWithContextCreator(LoggingOptions loggingOptions) => _loggingOptions = loggingOptions;
-
-    public (string logString, List<string?>? values) Create(RequestResponseContext requestResponseContext)
+    public LogMessageWithContextCreator(LoggingOptions loggingOptions)
     {
-#if NET8_0_OR_GREATER
-#pragma warning disable IDE0028
-        List<string?> valueList = _loggingOptions.LoggingFields.Count > 0 ?
-        new List<string?>(_loggingOptions.LoggingFields.Count) : new List<string?>();
-#pragma warning restore IDE0028
-#else
-        List<string?> valueList = _loggingOptions.LoggingFields.Count > 0 ?
-        new List<string?>(_loggingOptions.LoggingFields.Count) : new List<string?>();
-#endif
-
+        _loggingOptions = loggingOptions;
+        _fields = [.. loggingOptions.LoggingFields];
         var sb = new StringBuilder();
-
-        foreach (LogFields logField in _loggingOptions.LoggingFields)
-        {
-            string? generatedStr = GenerateLogStringByField(requestResponseContext, _loggingOptions, logField);
+        foreach (LogFields logField in _fields)
             sb.AppendFormat(CultureInfo.InvariantCulture, "{0}: {1}{2}", logField, "{" + logField + "}", Environment.NewLine);
-            valueList.Add(generatedStr);
-        }
 
-        return (sb.ToString(), valueList);
+        _template = sb.ToString();
+    }
+
+    public (string logString, object?[]? values) Create(RequestResponseContext requestResponseContext)
+    {
+        object?[] values = new object?[_fields.Length];
+        for (int i = 0; i < values.Length; i++)
+            values[i] = GenerateLogStringByField(requestResponseContext, _loggingOptions, _fields[i]);
+
+        return (_template, values);
     }
 }

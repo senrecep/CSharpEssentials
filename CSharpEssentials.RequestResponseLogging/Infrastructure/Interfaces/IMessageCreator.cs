@@ -2,5 +2,5 @@
 
 internal interface IMessageCreator
 {
-    (string logString, List<string?>? values) Create(RequestResponseContext requestResponseContext);
+    (string logString, object?[]? values) Create(RequestResponseContext requestResponseContext);
 }

@@ -35,6 +35,30 @@ public class SecretManagerConfigurationOptionsTests
         options.Projects.Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void BatchSize_Should_ThrowArgumentOutOfRangeException_When_NotPositive(int batchSize)
+    {
+        var options = new SecretManagerConfigurationOptions();
+
+        Action act = () => options.BatchSize = batchSize;
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+        options.BatchSize.Should().Be(10);
+    }
+
+    [Fact]
+    public void PageSize_Should_ThrowArgumentOutOfRangeException_When_Negative()
+    {
+        var options = new SecretManagerConfigurationOptions();
+
+        Action act = () => options.PageSize = -1;
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+        options.PageSize.Should().Be(300);
+    }
+
     [Fact]
     public void AddProject_ShouldAddProject()
     {

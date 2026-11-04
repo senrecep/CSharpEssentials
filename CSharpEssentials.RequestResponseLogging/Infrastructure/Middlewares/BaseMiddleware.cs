@@ -10,10 +10,12 @@ internal abstract class BaseMiddleware
     private const string DefaultResponseText = "Skipped logging response body";
     private const int DefaultBufferSize = 4096;
     private const int MaxRequestBodySize = 1024 * 1024 * 10;
+    private const int DefaultBufferThreshold = 1024 * 30;
+    private const int MaxPooledBufferThreshold = 1024 * 1024;
 
-    private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
     private readonly ILogWriter? _logWriter;
     private readonly HashSet<string> _ignoredPaths;
+    private readonly bool _ignoreRootPath;
     private readonly RecyclableMemoryStreamManager _recyclableMemoryStreamManager;
     private readonly bool _shouldLogErrors = true;
     private readonly int _bufferSize = DefaultBufferSize;
@@ -46,8 +48,9 @@ internal abstract class BaseMiddleware
 #endif
 
         _logWriter = logWriter is not NullLogWriter ? logWriter : null;
+        _ignoreRootPath = ignoredPaths.Any(p => !string.IsNullOrEmpty(p) && p.TrimEnd('/').Length == 0);
         _ignoredPaths = new HashSet<string>(
-            ignoredPaths.Select(p => p.TrimEnd('/')),
+            ignoredPaths.Where(p => p is not null).Select(p => p.TrimEnd('/')).Where(p => p.Length > 0),
             StringComparer.OrdinalIgnoreCase
         );
         _recyclableMemoryStreamManager = new RecyclableMemoryStreamManager();
@@ -66,12 +69,14 @@ internal abstract class BaseMiddleware
                 throw new ArgumentNullException(nameof(context));
 
 #endif
-        string? requestPath = context.Request.Path.Value?.TrimEnd('/');
-        return !string.IsNullOrEmpty(requestPath) &&
-               _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
+        string requestPath = context.Request.Path.Value?.TrimEnd('/') ?? string.Empty;
+        if (requestPath.Length == 0)
+            return _ignoreRootPath;
+
+        return _ignoredPaths.Any(ignorePath => requestPath.StartsWith(ignorePath, StringComparison.OrdinalIgnoreCase));
     }
 
-    protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext)
+    protected async Task<RequestResponseContext> InvokeMiddleware(RequestDelegate next, HttpContext httpContext, Func<RequestResponseContext, Task>? handler = null)
     {
 #if NET6_0_OR_GREATER
 
@@ -97,7 +102,9 @@ internal abstract class BaseMiddleware
 #endif
 
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = GetLoggingConfiguration(httpContext);
-        string requestText;
+        isSkipRequestLogging |= handler is null && _logWriter is not { NeedsRequestBody: true };
+        isSkipResponseLogging |= handler is null && _logWriter is not { NeedsResponseBody: true };
+        string requestText = "Error occurred during request processing";
         Stream originalBodyStream = httpContext.Response.Body;
         TimeSpan executionTime;
         string responseText;
@@ -109,7 +116,7 @@ internal abstract class BaseMiddleware
         }
         catch (Exception ex) when (_shouldLogErrors)
         {
-            await LogError(httpContext, ex).ConfigureAwait(false);
+            await LogError(httpContext, requestText, ex, handler).ConfigureAwait(false);
             throw;
         }
         finally
@@ -120,7 +127,11 @@ internal abstract class BaseMiddleware
             }
         }
 
-        return CreateAndLogContext(httpContext, requestText, responseText, executionTime);
+        RequestResponseContext context = await CreateAndLogContext(httpContext, requestText, responseText, executionTime).ConfigureAwait(false);
+        if (handler is not null)
+            await handler(context).ConfigureAwait(false);
+
+        return context;
     }
 
     private static (bool IsSkipRequestLogging, bool IsSkipResponseLogging) GetLoggingConfiguration(HttpContext context)
@@ -150,32 +161,29 @@ internal abstract class BaseMiddleware
             return $"Request body too large: {context.Request.ContentLength} bytes";
         }
 
-        context.Request.EnableBuffering();
-        byte[]? buffer = null;
+        context.Request.EnableBuffering((int)Math.Clamp(context.Request.ContentLength ?? 0, DefaultBufferThreshold, MaxPooledBufferThreshold));
+        Stream body = context.Request.Body;
+        char[]? buffer = null;
 
         try
         {
-            RecyclableMemoryStream requestStream = _recyclableMemoryStreamManager.GetStream();
-            await using ConfiguredAsyncDisposable requestStreamScope = requestStream.ConfigureAwait(false);
-            buffer = _arrayPool.Rent(_bufferSize);
+            long start = body.Position;
+            using var reader = new StreamReader(body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: _bufferSize, leaveOpen: true);
+            buffer = ArrayPool<char>.Shared.Rent(_bufferSize);
+            var text = new StringBuilder();
 
-            int bytesRead;
-            while ((bytesRead = await context.Request.Body.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
+            int charsRead;
+            while ((charsRead = await reader.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
             {
-                await requestStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
+                if (body.Position - start > MaxRequestBodySize)
+                {
+                    return $"Request body too large: over {MaxRequestBodySize} bytes";
+                }
+
+                text.Append(buffer, 0, charsRead);
             }
 
-            if (requestStream.Length == 0)
-            {
-                return "Empty request body";
-            }
-
-            requestStream.Seek(0, SeekOrigin.Begin);
-            using var reader = new StreamReader(requestStream, Encoding.UTF8, leaveOpen: true);
-            string requestBody = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
-
-            context.Request.Body.Seek(0, SeekOrigin.Begin);
-            return requestBody;
+            return body.Position == start ? "Empty request body" : text.ToString();
         }
         catch (Exception ex)
         {
@@ -185,8 +193,27 @@ internal abstract class BaseMiddleware
         {
             if (buffer is not null)
             {
-                _arrayPool.Return(buffer);
+                ArrayPool<char>.Shared.Return(buffer);
             }
+
+            RewindRequestBody(context.Request.Body);
+        }
+    }
+
+    private static void RewindRequestBody(Stream body)
+    {
+        if (!body.CanSeek)
+        {
+            return;
+        }
+
+        try
+        {
+            body.Seek(0, SeekOrigin.Begin);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            return;
         }
     }
 
@@ -203,11 +230,10 @@ internal abstract class BaseMiddleware
 
         RecyclableMemoryStream responseBody = _recyclableMemoryStreamManager.GetStream();
         await using ConfiguredAsyncDisposable responseBodyScope = responseBody.ConfigureAwait(false);
-        httpContext.Response.Body = responseBody;
+        httpContext.Response.Body = new ResponseCaptureStream(originalBodyStream, responseBody);
 
         TimeSpan elapsedTime = await ExecuteWithTiming(next, httpContext).ConfigureAwait(false);
-        string responseText = await CaptureResponseBody(responseBody, originalBodyStream).ConfigureAwait(false);
-        return (elapsedTime, responseText);
+        return (elapsedTime, await CaptureResponseBody(responseBody).ConfigureAwait(false));
     }
 
     private static async Task<TimeSpan> ExecuteWithTiming(RequestDelegate next, HttpContext httpContext)
@@ -223,7 +249,7 @@ internal abstract class BaseMiddleware
 #endif
     }
 
-    private async Task<string> CaptureResponseBody(MemoryStream responseBody, Stream originalBodyStream)
+    private static async Task<string> CaptureResponseBody(MemoryStream responseBody)
     {
         if (responseBody.Length == 0)
         {
@@ -231,38 +257,19 @@ internal abstract class BaseMiddleware
         }
 
         responseBody.Seek(0, SeekOrigin.Begin);
-        byte[]? buffer = null;
-        string responseText;
 
         try
         {
-            buffer = _arrayPool.Rent(_bufferSize);
             using var reader = new StreamReader(responseBody, leaveOpen: true);
-            responseText = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
-
-            responseBody.Seek(0, SeekOrigin.Begin);
-            int bytesRead;
-            while ((bytesRead = await responseBody.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
-            {
-                await originalBodyStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
-            }
+            return await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             return $"Error capturing response body: {ex.Message}";
         }
-        finally
-        {
-            if (buffer is not null)
-            {
-                _arrayPool.Return(buffer);
-            }
-        }
-
-        return responseText;
     }
 
-    private RequestResponseContext CreateAndLogContext(
+    private async Task<RequestResponseContext> CreateAndLogContext(
         HttpContext httpContext,
         string requestText,
         string responseText,
@@ -277,7 +284,8 @@ internal abstract class BaseMiddleware
 
         try
         {
-            _logWriter?.Write(context);
+            if (_logWriter is not null)
+                await _logWriter.Write(context).ConfigureAwait(false);
         }
         catch (Exception ex) when (_shouldLogErrors)
         {
@@ -287,19 +295,43 @@ internal abstract class BaseMiddleware
         return context;
     }
 
-    private async Task LogError(HttpContext context, Exception exception)
+    private async Task LogError(HttpContext context, string requestText, Exception exception, Func<RequestResponseContext, Task>? handler)
     {
-        if (_logWriter is null)
+        if (_logWriter is null && handler is null)
         {
             return;
         }
 
         RequestResponseContext errorContext = new(context)
         {
-            RequestBody = "Error occurred during request processing",
+            RequestBody = requestText,
             ResponseBody = $"Exception: {exception.GetType().Name}, Message: {exception.Message}",
             ResponseCreationTime = TimeSpan.Zero
         };
+
+        await TryWriteErrorLog(errorContext).ConfigureAwait(false);
+        if (handler is null)
+            return;
+
+        try
+        {
+            await handler(errorContext).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            await TryWriteErrorLog(new RequestResponseContext(context)
+            {
+                RequestBody = requestText,
+                ResponseBody = $"Error writing log: {ex.Message}",
+                ResponseCreationTime = TimeSpan.Zero
+            }).ConfigureAwait(false);
+        }
+    }
+
+    private async Task TryWriteErrorLog(RequestResponseContext errorContext)
+    {
+        if (_logWriter is null)
+            return;
 
         try
         {
