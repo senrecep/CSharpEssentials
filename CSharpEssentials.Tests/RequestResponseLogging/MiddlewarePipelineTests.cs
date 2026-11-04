@@ -492,7 +492,7 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InvokeAsync_Should_LogCapturedBodyAndRethrow_When_CopyToClientFails()
+    public async Task InvokeAsync_Should_LogErrorAndRethrow_When_WriteToClientFails()
     {
         var writer = new CapturingLogWriter();
         var handled = new List<string?>();
@@ -511,14 +511,14 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         Func<Task> act = () => middleware.InvokeAsync(httpContext);
 
         await act.Should().ThrowAsync<IOException>().WithMessage("client gone");
-        string[] expected = ["hello", "Exception: IOException, Message: client gone"];
+        string[] expected = ["Exception: IOException, Message: client gone"];
         writer.Contexts.Select(c => c.ResponseBody).Should().Equal(expected);
         handled.Should().Equal(expected);
         httpContext.Response.Body.Should().BeOfType<ThrowingWriteStream>();
     }
 
     [Fact]
-    public async Task InvokeAsync_Should_LogCapturedBodyAndRethrow_When_CopyFailsWithoutHandler()
+    public async Task InvokeAsync_Should_LogErrorAndRethrow_When_WriteToClientFailsWithoutHandler()
     {
         var writer = new CapturingLogWriter();
         var middleware = new DefaultRequestResponseMiddleware(
@@ -531,9 +531,39 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         Func<Task> act = () => middleware.InvokeAsync(httpContext);
 
         await act.Should().ThrowAsync<IOException>().WithMessage("client gone");
-        writer.Contexts.Select(c => c.ResponseBody).Should().Equal(
-            "hello",
-            "Exception: IOException, Message: client gone");
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal("Exception: IOException, Message: client gone");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_SendResponseBytesBeforeEndpointCompletes_When_ResponseIsCaptured()
+    {
+        var clientBody = new MemoryStream();
+        long? bytesSentBeforeEndpointReturned = null;
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            async ctx =>
+            {
+                await ctx.Response.WriteAsync("first,");
+                await ctx.Response.Body.FlushAsync();
+                bytesSentBeforeEndpointReturned = clientBody.Length;
+                await ctx.Response.WriteAsync("second");
+            },
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = clientBody;
+
+        await middleware.InvokeAsync(httpContext);
+
+        bytesSentBeforeEndpointReturned.Should().Be("first,".Length);
+        System.Text.Encoding.UTF8.GetString(clientBody.ToArray()).Should().Be("first,second");
+        capturedContext!.ResponseBody.Should().Be("first,second");
+        httpContext.Response.Body.Should().BeSameAs(clientBody);
     }
 
     [Fact]

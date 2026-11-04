@@ -1,6 +1,5 @@
 ﻿using System.Buffers;
 using System.Runtime.CompilerServices;
-using System.Runtime.ExceptionServices;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
@@ -14,7 +13,6 @@ internal abstract class BaseMiddleware
     private const int DefaultBufferThreshold = 1024 * 30;
     private const int MaxPooledBufferThreshold = 1024 * 1024;
 
-    private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
     private readonly ILogWriter? _logWriter;
     private readonly HashSet<string> _ignoredPaths;
     private readonly bool _ignoreRootPath;
@@ -110,12 +108,11 @@ internal abstract class BaseMiddleware
         Stream originalBodyStream = httpContext.Response.Body;
         TimeSpan executionTime;
         string responseText;
-        ExceptionDispatchInfo? copyFailure;
 
         try
         {
             requestText = await CaptureRequestBodyIfEnabled(httpContext, isSkipRequestLogging).ConfigureAwait(false);
-            (executionTime, responseText, copyFailure) = await ProcessResponse(next, httpContext, originalBodyStream, isSkipResponseLogging).ConfigureAwait(false);
+            (executionTime, responseText) = await ProcessResponse(next, httpContext, originalBodyStream, isSkipResponseLogging).ConfigureAwait(false);
         }
         catch (Exception ex) when (_shouldLogErrors)
         {
@@ -133,12 +130,6 @@ internal abstract class BaseMiddleware
         RequestResponseContext context = await CreateAndLogContext(httpContext, requestText, responseText, executionTime).ConfigureAwait(false);
         if (handler is not null)
             await handler(context).ConfigureAwait(false);
-
-        if (copyFailure is not null)
-        {
-            await LogError(httpContext, requestText, copyFailure.SourceException, handler).ConfigureAwait(false);
-            copyFailure.Throw();
-        }
 
         return context;
     }
@@ -226,7 +217,7 @@ internal abstract class BaseMiddleware
         }
     }
 
-    private async Task<(TimeSpan ElapsedTime, string ResponseText, ExceptionDispatchInfo? CopyFailure)> ProcessResponse(
+    private async Task<(TimeSpan ElapsedTime, string ResponseText)> ProcessResponse(
         RequestDelegate next,
         HttpContext httpContext,
         Stream originalBodyStream,
@@ -234,16 +225,15 @@ internal abstract class BaseMiddleware
     {
         if (isSkipResponseLogging)
         {
-            return (await ExecuteWithTiming(next, httpContext).ConfigureAwait(false), DefaultResponseText, null);
+            return (await ExecuteWithTiming(next, httpContext).ConfigureAwait(false), DefaultResponseText);
         }
 
         RecyclableMemoryStream responseBody = _recyclableMemoryStreamManager.GetStream();
         await using ConfiguredAsyncDisposable responseBodyScope = responseBody.ConfigureAwait(false);
-        httpContext.Response.Body = responseBody;
+        httpContext.Response.Body = new ResponseCaptureStream(originalBodyStream, responseBody);
 
         TimeSpan elapsedTime = await ExecuteWithTiming(next, httpContext).ConfigureAwait(false);
-        (string responseText, ExceptionDispatchInfo? copyFailure) = await CaptureResponseBody(responseBody, originalBodyStream).ConfigureAwait(false);
-        return (elapsedTime, responseText, copyFailure);
+        return (elapsedTime, await CaptureResponseBody(responseBody).ConfigureAwait(false));
     }
 
     private static async Task<TimeSpan> ExecuteWithTiming(RequestDelegate next, HttpContext httpContext)
@@ -259,46 +249,24 @@ internal abstract class BaseMiddleware
 #endif
     }
 
-    private async Task<(string ResponseText, ExceptionDispatchInfo? CopyFailure)> CaptureResponseBody(MemoryStream responseBody, Stream originalBodyStream)
+    private static async Task<string> CaptureResponseBody(MemoryStream responseBody)
     {
         if (responseBody.Length == 0)
         {
-            return ("Empty response body", null);
+            return "Empty response body";
         }
 
         responseBody.Seek(0, SeekOrigin.Begin);
-        string responseText;
 
         try
         {
             using var reader = new StreamReader(responseBody, leaveOpen: true);
-            responseText = await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
+            return await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            return ($"Error capturing response body: {ex.Message}", null);
+            return $"Error capturing response body: {ex.Message}";
         }
-
-        byte[] buffer = _arrayPool.Rent(_bufferSize);
-        try
-        {
-            responseBody.Seek(0, SeekOrigin.Begin);
-            int bytesRead;
-            while ((bytesRead = await responseBody.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
-            {
-                await originalBodyStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
-            }
-        }
-        catch (Exception ex)
-        {
-            return (responseText, ExceptionDispatchInfo.Capture(ex));
-        }
-        finally
-        {
-            _arrayPool.Return(buffer);
-        }
-
-        return (responseText, null);
     }
 
     private async Task<RequestResponseContext> CreateAndLogContext(
