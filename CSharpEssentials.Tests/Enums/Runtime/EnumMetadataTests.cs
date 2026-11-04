@@ -58,6 +58,23 @@ public class EnumMetadataTests
     }
 
     [Fact]
+    public void WireNames_Should_Be_A_Read_Only_Collection_That_Copies_In_Bulk()
+    {
+        IEnumInfo info = EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+        ICollection<string> names = info.WireNames.Should().BeAssignableTo<ICollection<string>>().Subject;
+
+        names.IsReadOnly.Should().BeTrue();
+        names.Contains("done").Should().BeTrue();
+        names.Contains("missing").Should().BeFalse();
+        info.WireNames.ToArray().Should().Equal(info.WireNames);
+        new List<string>(info.WireNames).Should().Equal(info.WireNames);
+        ((Action)(() => names.Add("x"))).Should().Throw<NotSupportedException>();
+        ((Action)names.Clear).Should().Throw<NotSupportedException>();
+        ((Action)(() => names.Remove("done"))).Should().Throw<NotSupportedException>();
+        info.WireNames.Should().HaveCount(7);
+    }
+
+    [Fact]
     public void Reflection_Metadata_Should_Reject_Non_Enum_Types()
     {
         Action act = () => EnumMetadata.GetOrCreateWithReflection(typeof(int));
