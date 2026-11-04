@@ -19,6 +19,8 @@ Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generato
 > takes 1.23-2.10× as long per request. The POST rows compare a DataAnnotations stack (Plain, CSE) with FluentValidation stacks (Carter
 > and FastEndpoints). FastEndpoints defers per-endpoint setup to the first request, so only the cold startup figures
 > are like-for-like. The generated path publishes as Native AOT with 0 IL warnings.
+> Design-time cost of the bundled source generator (cold and incremental runs against Immediate.Apis) is described in
+> [the generator BENCHMARKS.md](../CSharpEssentials.Endpoints.Generators/BENCHMARKS.md). Results are pending the full run.
 
 ## Endpoints and groups
 
