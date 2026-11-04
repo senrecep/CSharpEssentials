@@ -26,14 +26,15 @@ Guid second = Guider.NewMonotonicGuid();
 // second.CompareTo(first) > 0, even inside the same millisecond
 ```
 
-How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counter. The timestamp and the counter are packed into one number. A new ID starts from the current time, with the counter seeded from the time inside the millisecond. If that is not greater than the last packed value, because the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock. Random bytes come from `Guid.NewGuid()` on every target, so the call does not allocate.
+How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold the time inside the millisecond in steps of 1/4096 ms (RFC 9562 section 6.2, method 3). The first 6 bits of `rand_b` hold a counter (method 1). The timestamp, the fraction and the counter are packed into one number. A new ID starts from the current time with the counter at 0. If that is not greater than the last packed value, because another ID took the same 1/4096 ms step or the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the fraction, and a fraction overflow into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock. Random bytes come from `Guid.NewGuid()` on every target, so the call does not allocate.
 
 What it costs:
 
-- Each ID has 62 random bits instead of 74.
+- Each ID has 56 random bits instead of 74: the counter takes 6 bits of `rand_b`.
 - All threads update one shared value. In a quick benchmark with 6 threads it cost about 11% more per ID than `Guid.NewGuid()` on .NET 9, because the random bits cost far more than the shared update.
 - The order holds within one process, and within one loaded copy of the assembly: two `AssemblyLoadContext`s or .NET Framework AppDomains each keep their own value. Two processes or machines can still produce IDs that interleave.
-- The counter allows 4096 IDs per millisecond, about 4 per microsecond across all threads. One thread stays below that (about 1.2 per microsecond on the test machine), but several threads at full speed can pass it. Above that rate the encoded timestamp runs ahead of the clock, by roughly (IDs / 4096) ms minus the elapsed time, and keeps drifting for as long as the rate holds. It catches up once the rate drops. A clock that goes backwards has the same effect until the clock passes the last timestamp.
+- The fraction and the counter allow 262,144 IDs per millisecond (64 in each 1/4096 ms step), about 262 per microsecond across all threads. That is far above what one process makes: in a test, 1,000,000 IDs from a tight loop kept the encoded timestamp within 1 ms of the clock. Above that rate the encoded timestamp runs ahead of the clock, by roughly (IDs / 262,144) ms minus the elapsed time, and catches up once the rate drops. A clock that goes backwards keeps the timestamp at the last value until the clock passes it.
+- The counter starts at 0 in each step, so it shows how many IDs the process made in that 1/4096 ms.
 
 Use `NewGuid()` when IDs only need to be unique and roughly time ordered. Use `NewMonotonicGuid()` when code relies on the creation order of IDs made by one process, for example a cursor or an append-only log.
 

@@ -4,8 +4,8 @@ namespace CSharpEssentials.Core;
 
 internal static class GuidV7
 {
-    private const int _byteCount = 16, _counterBits = 12;
-    private const long _counterSlots = 1 << _counterBits;
+    private const int _byteCount = 16, _fractionBits = 12, _counterBits = 6, _timestampShift = _fractionBits + _counterBits;
+    private const long _fractionSlots = 1 << _fractionBits, _counterMask = (1 << _counterBits) - 1;
     private const long _unixEpochTicks = 621_355_968_000_000_000;
 
     private static long _lastPacked;
@@ -35,16 +35,17 @@ internal static class GuidV7
     internal static long Pack(long last, long utcTicks)
     {
         long sinceEpoch = utcTicks - _unixEpochTicks;
-        long counter = sinceEpoch % TimeSpan.TicksPerMillisecond * _counterSlots / TimeSpan.TicksPerMillisecond;
-        long packed = (sinceEpoch / TimeSpan.TicksPerMillisecond << _counterBits) | counter;
+        long fraction = sinceEpoch % TimeSpan.TicksPerMillisecond * _fractionSlots / TimeSpan.TicksPerMillisecond;
+        long packed = ((sinceEpoch / TimeSpan.TicksPerMillisecond << _fractionBits) | fraction) << _counterBits;
         return packed > last ? packed : last + 1;
     }
 
     internal static Guid ComposePacked(long packed, Span<byte> bigEndian)
     {
-        bigEndian[6] = (byte)((packed >> 8) & 0x0F);
-        bigEndian[7] = (byte)packed;
-        return Compose(packed >> _counterBits, bigEndian);
+        bigEndian[6] = (byte)((packed >> (_counterBits + 8)) & 0x0F);
+        bigEndian[7] = (byte)(packed >> _counterBits);
+        bigEndian[8] = (byte)(packed & _counterMask);
+        return Compose(packed >> _timestampShift, bigEndian);
     }
 
     internal static Guid Compose(long unixMs, Span<byte> bigEndian)

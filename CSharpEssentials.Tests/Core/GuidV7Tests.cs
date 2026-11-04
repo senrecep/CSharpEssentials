@@ -24,7 +24,7 @@ public sealed class GuidV7Tests
     private static long UnixMs(byte[] b) =>
         ((long)b[0] << 40) | ((long)b[1] << 32) | ((long)b[2] << 24) | ((long)b[3] << 16) | ((long)b[4] << 8) | b[5];
 
-    private static long Packed(byte[] b) => (UnixMs(b) << 12) | ((long)(b[6] & 0x0F) << 8) | b[7];
+    private static long Packed(byte[] b) => (UnixMs(b) << 18) | ((long)(b[6] & 0x0F) << 14) | ((long)b[7] << 6) | (b[8] & 0x3FL);
 
     private static long Ticks(long unixMs) => DateTimeOffset.FromUnixTimeMilliseconds(unixMs).UtcTicks;
 
@@ -82,14 +82,55 @@ public sealed class GuidV7Tests
     }
 
     [Fact]
-    public void Pack_ShouldEncodeTheClockAndSeedTheCounterFromSubMillisecondTime()
+    public void Pack_ShouldEncodeTheClockAndSubMillisecondFractionWithACounterAtZero()
     {
         long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
         long packed = GuidV7.Pack(0, Ticks(unixMs) + (_ticksPerMs / 2));
 
-        (packed >> 12).Should().Be(unixMs);
-        (packed & 0xFFF).Should().Be(2048);
+        (packed >> 18).Should().Be(unixMs);
+        ((packed >> 6) & 0xFFF).Should().Be(2048);
+        (packed & 0x3F).Should().Be(0);
+    }
+
+    [Fact]
+    public void Pack_WhenTheFractionRepeats_ShouldIncrementTheCounterInRandB()
+    {
+        long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        long ticks = Ticks(unixMs) + (_ticksPerMs / 2);
+        long first = GuidV7.Pack(0, ticks);
+
+        long second = GuidV7.Pack(first, ticks);
+        byte[] b = BigEndian(GuidV7.ComposePacked(second, new byte[16]));
+
+        second.Should().Be(first + 1);
+        (b[8] & 0x3F).Should().Be(1);
+        (b[8] >> 6).Should().Be(0b10);
+        Packed(b).Should().Be(second);
+    }
+
+    [Fact]
+    public void Pack_WhenTheCounterRollsOver_ShouldCarryIntoTheFraction()
+    {
+        long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        long last = (unixMs << 18) | (5 << 6) | 0x3F;
+
+        long next = GuidV7.Pack(last, Ticks(unixMs));
+
+        next.Should().Be((unixMs << 18) | (6 << 6));
+    }
+
+    [Fact]
+    public void NewMonotonicGuid_WhenCalledInATightLoop_ShouldKeepTheTimestampWithinOneMillisecondOfTheClock()
+    {
+        Span<byte> b = stackalloc byte[16];
+        Guid last = Guid.Empty;
+        for (int i = 0; i < 1_000_000; i++)
+            last = Guider.NewMonotonicGuid();
+        long clockMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+        last.TryWriteBytes(b, bigEndian: true, out _).Should().BeTrue();
+        UnixMs(b.ToArray()).Should().BeLessThanOrEqualTo(clockMs + 1);
     }
 
     [Fact]
@@ -141,10 +182,11 @@ public sealed class GuidV7Tests
     }
 
     [Fact]
-    public void NewMonotonicGuid_WhenCalledFromManyThreads_ShouldReturnUniqueIds()
+    public void NewMonotonicGuid_WhenCalledFromManyThreads_ShouldReturnUniqueIdsThatIncreaseOnEachThread()
     {
         const int threads = 64, perThread = 5_000;
         ConcurrentBag<byte[]> all = [];
+        int outOfOrder = 0;
         using Barrier barrier = new(threads);
 
         Thread[] workers = Enumerable.Range(0, threads).Select(_ => new Thread(() =>
@@ -153,6 +195,9 @@ public sealed class GuidV7Tests
             barrier.SignalAndWait();
             for (int i = 0; i < perThread; i++)
                 local[i] = BigEndian(Guider.NewMonotonicGuid());
+            for (int i = 1; i < perThread; i++)
+                if (local[i].AsSpan().SequenceCompareTo(local[i - 1]) <= 0)
+                    Interlocked.Increment(ref outOfOrder);
             foreach (byte[] id in local)
                 all.Add(id);
         })).ToArray();
@@ -161,6 +206,7 @@ public sealed class GuidV7Tests
         foreach (Thread worker in workers)
             worker.Join();
 
+        outOfOrder.Should().Be(0);
         all.Should().HaveCount(threads * perThread);
         all.Select(b => new Guid(b, bigEndian: true)).Distinct().Should().HaveCount(threads * perThread);
         all.Select(Packed).Distinct().Should().HaveCount(threads * perThread);
@@ -170,13 +216,13 @@ public sealed class GuidV7Tests
     public void Pack_WhenCounterOverflows_ShouldCarryIntoTimestamp()
     {
         long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        long last = (unixMs << 12) | 0xFFF;
+        long last = (unixMs << 18) | 0x3FFFF;
         Guid lastGuid = GuidV7.ComposePacked(last, new byte[16]);
 
         long next = GuidV7.Pack(last, Ticks(unixMs));
         Guid nextGuid = GuidV7.ComposePacked(next, new byte[16]);
 
-        next.Should().Be((unixMs + 1) << 12);
+        next.Should().Be((unixMs + 1) << 18);
         UnixMs(BigEndian(nextGuid)).Should().Be(unixMs + 1);
         Packed(BigEndian(nextGuid)).Should().Be(next);
         BigEndian(nextGuid).AsSpan().SequenceCompareTo(BigEndian(lastGuid)).Should().BePositive();
