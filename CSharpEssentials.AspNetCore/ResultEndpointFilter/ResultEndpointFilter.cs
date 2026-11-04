@@ -1,5 +1,4 @@
 using CSharpEssentials.Errors;
-
 using CSharpEssentials.ResultPattern.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
