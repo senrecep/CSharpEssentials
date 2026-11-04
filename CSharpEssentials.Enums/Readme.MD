@@ -1,6 +1,6 @@
 # CSharpEssentials.Enums
 
-One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]` and a bundled source generator writes its metadata and helpers at compile time: no reflection, trim and NativeAOT safe.
+One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]` and a bundled source generator writes its metadata and helpers at compile time. The generated code uses no reflection and is trim and NativeAOT safe.
 
 > Benchmarks against Enums.NET 5.0.0, NetEscapades.EnumGenerators 1.0.0-beta21 (a prerelease; no stable version
 > exists) and the BCL are in [BENCHMARKS.md](./BENCHMARKS.md). `ToOptimizedString` ties the fastest column on net10

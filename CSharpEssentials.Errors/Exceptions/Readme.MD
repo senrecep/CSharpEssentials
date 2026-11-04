@@ -1,17 +1,17 @@
-# Exception Types in CSharpEssentials
+# Exception types in CSharpEssentials
 
-CSharpEssentials provides custom exception types for error handling. They are designed to work with the functional programming paradigm and the Error management system. Both live in the `CSharpEssentials.Exceptions` namespace of the `CSharpEssentials.Errors` package.
+CSharpEssentials has two exception types that carry `Error` values, so code that throws can still hand typed errors to the `Result` pattern. Both live in the `CSharpEssentials.Exceptions` namespace of the `CSharpEssentials.Errors` package.
 
 ```csharp
 using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
 ```
 
-## Available Exception Types
+## Available exception types
 
 ### 1. DomainException
 
-`DomainException` is designed for domain-specific business rule violations. It takes an `Error` object as a parameter and exposes it through the `Error` property. The exception `Message` is the `Description` of the error.
+`DomainException` is for business rule violations in the domain. It takes an `Error` and exposes it through the `Error` property. The exception `Message` is the `Description` of the error.
 
 ```csharp
 public class DomainException : Exception
@@ -41,7 +41,7 @@ catch (DomainException ex)
 
 ### 2. EnhancedValidationException
 
-`EnhancedValidationException` is designed for handling multiple validation errors. It takes an array of `Error` objects and provides access to them through the `Errors` property. The exception `Message` is `Validation failed with {n} errors`.
+`EnhancedValidationException` carries several validation errors. It takes an `Error[]` and exposes it through the `Errors` property. The exception `Message` is `Validation failed with {n} errors`.
 
 ```csharp
 public class EnhancedValidationException : Exception
@@ -74,9 +74,9 @@ catch (EnhancedValidationException ex)
 }
 ```
 
-## Integration with Error System
+## Integration with the error system
 
-These exceptions are designed to work directly with the Error system. The `Result` types come from the `CSharpEssentials.Results` package (`using CSharpEssentials.ResultPattern;`), and an `Error` or an `Error[]` converts implicitly to `Result<T>`:
+Catch either exception and return its errors as a result. The `Result` types come from the `CSharpEssentials.Results` package (`using CSharpEssentials.ResultPattern;`), and an `Error` or an `Error[]` converts implicitly to `Result<T>`:
 
 ```csharp
 public Result<User> CreateUser(UserDto dto)
@@ -119,17 +119,13 @@ public Result<User> CreateUser(UserDto dto)
 
 With `CSharpEssentials.AspNetCore`, its global exception handler turns a `DomainException` into a ProblemDetails response for its `Error`, using the HTTP status of the error's `ErrorType`, and an `EnhancedValidationException` into a 400 response that carries its errors.
 
-## Best Practices
+## Best practices
 
-1. **Use DomainException for Single Errors**: When you have a single business rule violation or domain error.
-2. **Use EnhancedValidationException for Multiple Errors**: When you need to collect and report multiple validation errors at once.
-3. **Error Creation**: Create appropriate Error objects using the Error factory methods (Error.Validation, Error.Failure, etc.).
-4. **Error Properties**: Make use of the Error properties (Code, Description, Type) when creating errors.
-5. **Result Integration**: Use the exceptions with the Result pattern for functional error handling.
+Throw `DomainException` for a single business rule violation or domain error, and `EnhancedValidationException` when you collect several validation errors and report them at once. Create the errors with the `Error` factory methods (`Error.Validation`, `Error.Failure` and so on) and use their `Code`, `Description` and `Type` properties. Where the caller works with `Result`, catch the exception and return its errors, as in the example above.
 
-## Example Scenarios
+## Example scenarios
 
-### Domain Exception Example
+### Domain exception example
 
 ```csharp
 public void ProcessOrder(Order order)
@@ -154,7 +150,7 @@ public void ProcessOrder(Order order)
 }
 ```
 
-### Enhanced Validation Example
+### Enhanced validation example
 
 ```csharp
 public void ValidateUser(UserDto user)

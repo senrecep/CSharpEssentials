@@ -1,8 +1,8 @@
 # CSharpEssentials
 
-Meta-package that bundles the core functional modules of the ecosystem. Install this to get the most commonly used packages in one reference.
+Meta-package that bundles the core functional modules. Install it to get the most commonly used packages through one reference.
 
-## Included Packages
+## Included packages
 
 - `CSharpEssentials.Core`
 - `CSharpEssentials.Errors`

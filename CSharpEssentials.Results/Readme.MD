@@ -1,15 +1,15 @@
 # CSharpEssentials.Results
 
-Functional Result pattern for explicit success/failure handling in .NET. No exceptions for control flow.
+Functional Result pattern for explicit success/failure handling in .NET, without exceptions for control flow.
 
 ## Features
 
 - **Result & Result<T>**: Value-type results with implicit conversions from values and errors.
-- **Railway Oriented Programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
-- **Error Aggregation**: Collect multiple validation errors in one result.
-- **Async Support**: Full async/await across all extension methods.
-- **Safe Execution**: `Result.Try`, `Result.TryAsync` and `TryCatch` wrap exceptions into results.
-- **Recovery and Inspection**: `Else`, `Compensate`, `Recover`, `TapError`, `Match`, `Switch`, `Unwrap`.
+- **Railway-oriented programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
+- **Error aggregation**: Collect multiple validation errors in one result.
+- **Async**: async/await across all extension methods.
+- **Safe execution**: `Result.Try`, `Result.TryAsync` and `TryCatch` wrap exceptions into results.
+- **Recovery and inspection**: `Else`, `Compensate`, `Recover`, `TapError`, `Match`, `Switch`, `Unwrap`.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
 
@@ -30,7 +30,7 @@ dotnet add package CSharpEssentials.Results
 
 ## Usage
 
-### Creating Results
+### Creating results
 
 ```csharp
 using CSharpEssentials.ResultPattern;
@@ -53,7 +53,7 @@ public Result DeleteUser(int id)
 }
 ```
 
-### Returning Failures
+### Returning failures
 
 Return the `Error` itself. `Error`, `Error[]`, `List<Error>` and `HashSet<Error>` convert implicitly to `Result` and `Result<T>`, and a `T` value converts to `Result<T>`:
 
@@ -79,7 +79,7 @@ var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "User alr
 Task<Result<int>> pending = Task.FromResult(Result.Success(42));
 ```
 
-### Inspecting a Result
+### Inspecting a result
 
 ```csharp
 Result<int> result = GetUser(10);
@@ -141,7 +141,7 @@ GetUser(10).Switch(
 
 `MatchFirst` and `MatchLast` (and `SwitchFirst`, `SwitchLast`) hand the handler a single `Error` instead of the array. On a non-generic `Result` the handlers take no value and the failure handler parameter is named `onFailure`.
 
-### Combining Results
+### Combining results
 
 ```csharp
 var r1 = Result.Success();
@@ -152,7 +152,7 @@ Result combined = Result.And(r1, r2, r3); // Failure: returns r3's errors; Resul
 Result all = new[] { r1, r2, r3 }.CombineAll(); // Failure: collects the errors of every failing result
 ```
 
-### Safe Execution
+### Safe execution
 
 ```csharp
 Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exception(ex));
@@ -160,7 +160,7 @@ Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exc
 
 `Result.TryAsync` converts exceptions to errors the same way, but when the `CancellationToken` you pass is cancelled it lets the `OperationCanceledException` propagate instead of turning it into an `Error`. An `OperationCanceledException` that did not come from your token (for example an `HttpClient` timeout) is still passed to the error handler.
 
-### Mapping Errors
+### Mapping errors
 
 ```csharp
 // Per-error mapper: runs once for every error, in order. Never called on success.
@@ -190,7 +190,7 @@ Result<User> fromCache = await GetCachedUserAsync(id)
     .MapErrorAsync(errors => CollapseAsync(errors));
 ```
 
-### Operations Reference
+### Operations reference
 
 Every operation returns a new `Result`; handlers run only on the side named in the table. The `Async` counterparts are listed under [Async](#async).
 
@@ -306,7 +306,7 @@ Unchanged:
 
 Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before, and since 6.5.0 on `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` (`ValueTask` sources) and `Result.TryAsync`. Use C# 13 or later, or type the handler.
 
-### Collection Extensions
+### Collection extensions
 
 Batch operations on sequences of results:
 
@@ -356,7 +356,7 @@ Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync()
 - On .NET 9+ with `LangVersion` 12, untyped `async` lambdas can be ambiguous between the `Task` and `ValueTask` overloads (CS0121), the same as `MapErrorAsync`. Use `LangVersion` 13+ or a typed delegate.
 - Overloads: `Func<T, Task<Result<U>>>` and `Func<T, CancellationToken, Task<Result<U>>>` on all targets; the `ValueTask` selector twins are available on .NET 9+. `SequenceAsync` accepts `IEnumerable<Task<Result<T>>>` and `IEnumerable<ValueTask<Result<T>>>`.
 
-### TapIf: Conditional Side Effects
+### TapIf: conditional side effects
 
 ```csharp
 Result<int> result = 42;

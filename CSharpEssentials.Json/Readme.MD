@@ -1,17 +1,17 @@
 # CSharpEssentials.Json
 
-Enhanced JSON serialization utilities on top of `System.Text.Json`.
+JSON serialization helpers on top of `System.Text.Json`.
 
 > Benchmarks against System.Text.Json built-ins and Macross.Json.Extensions 3.0.0 (enums, flags, polymorphism and DateTime reads) are in
 > [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
 
 ## Features
 
-- **Enum Conventions**: `[StringEnum]` enums read and write their wire names (`AddEnumConventions`); other enums keep the host's behavior.
-- **Multi-Format DateTime**: Read `DateTime` and `DateTime?` from many date formats automatically.
-- **Polymorphism**: Derived types from any assembly join a `[JsonPolymorphic]` base through `[JsonTypeDiscriminator]`, with a source generator for native AOT; bases without attributes keep a `$type` discriminator.
-- **Pre-Configured Options**: CamelCase, ignore cycles, ignore nulls, relaxed escaping, plus a strict preset.
-- **JsonElement Helpers**: `ToClrObject` turns a `JsonElement` into plain CLR values.
+- Enum conventions: `[StringEnum]` enums read and write their wire names (`AddEnumConventions`); other enums keep the host's behavior.
+- Multi-format DateTime: reads `DateTime` and `DateTime?` from many date formats automatically.
+- Polymorphism: derived types from any assembly join a `[JsonPolymorphic]` base through `[JsonTypeDiscriminator]`, with a source generator for native AOT; bases without attributes keep a `$type` discriminator.
+- Pre-configured options: camelCase, ignore cycles, ignore nulls, relaxed escaping, plus a strict preset.
+- JsonElement helpers: `ToClrObject` turns a `JsonElement` into plain CLR values.
 
 ## Installation
 
@@ -23,7 +23,7 @@ Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. It depends on `CSha
 
 ## Usage
 
-### Pre-Configured Options
+### Pre-configured options
 
 ```csharp
 using CSharpEssentials.Json;
@@ -52,7 +52,7 @@ var target = new JsonSerializerOptions();
 EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
 ```
 
-### Quick Extensions
+### Quick extensions
 
 `ConvertToJson`, `ConvertFromJson` and `ConvertToJsonDocument<T>` use `EnhancedJsonSerializerOptions.DefaultOptions` (or the options you pass) through reflection-based serialization. They are annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`; in trimmed or NativeAOT apps call `JsonSerializer` with a `JsonSerializerContext` instead.
 
@@ -72,7 +72,7 @@ public record User(string Name, int Age);
 
 `ConvertToJsonDocument()` on a `string` takes no options: it parses the text as JSON, and text that is not valid JSON becomes a JSON string value in the document. It returns `null` only when every strategy fails. `ConvertToJsonDocument<T>(options)` on any other value serializes it to a document.
 
-### JsonElement to CLR Values
+### JsonElement to CLR values
 
 `Dictionary<string, object>` and `object` deserialize to `JsonElement`. `ToClrObject` turns them into plain values: objects become `Dictionary<string, object?>`, arrays `List<object?>`, numbers `int`, `long`, `decimal` or `double` (first that fits).
 
@@ -86,7 +86,7 @@ var data = (Dictionary<string, object?>)doc.RootElement.ToClrObject()!;
 // data["id"] is int, data["price"] is decimal, data["tags"] is List<object?>
 ```
 
-### Enum Conventions
+### Enum conventions
 
 `AddEnumConventions` adds the enum converter for every enum with generated metadata (`[StringEnum]`, see [CSharpEssentials.Enums](../CSharpEssentials.Enums/Readme.MD)). Other enums are left to the converters already on the options, so a plain enum stays a number unless you add `JsonStringEnumConverter` yourself.
 
@@ -298,7 +298,7 @@ Animal? restored = json.ConvertFromJson<Animal>();
 
 A type marked with `[JsonPolymorphic]` or `[JsonDerivedType]` is left to System.Text.Json and the path above. Async streams (any type that implements `IAsyncEnumerable<T>`) and `JsonNode` values keep their built-in serialization too.
 
-### Multi-Format DateTime
+### Multi-format DateTime
 
 `MultiFormatDateTimeConverterFactory` (part of `DefaultOptions` and `DefaultOptionsWithDateTimeConverter`) reads `DateTime` and `DateTime?` from JSON strings in ISO 8601 (with or without `Z` or an offset), `yyyy-MM-dd`, `dd.MM.yyyy`, `dd/MM/yyyy`, `MM/dd/yyyy`, `March 14, 2024`, `14 March 2024`, `yyyyMMdd`, RFC 1123 (`Thu, 14 Mar 2024 15:30:45 GMT`) and other patterns, and from a numeric string of Unix seconds. Unrecognized text throws `JsonException` listing the supported formats; `null` is allowed only for `DateTime?`. Values are written as `yyyy-MM-ddTHH:mm:ss.ffffffzzz`; a `DateTime` with `Kind` `Unspecified` is written as UTC (`+00:00`), so it reads back unchanged.
 

@@ -1,12 +1,12 @@
-# CSharpEssentials Extension Methods
+# CSharpEssentials extension methods
 
-This library provides extension methods that add functional programming helpers to C# and improve code readability.
+Extension methods that add functional programming helpers to C# and make code easier to read.
 
-## String Extensions
+## String extensions
 
 Extension methods for string manipulation (namespace `CSharpEssentials.Core`):
 
-### Case Conversion Methods
+### Case conversion methods
 
 Every conversion takes an optional `CultureInfo` (invariant culture when omitted), for example `"istanbul".ToPascalCase(CultureInfo.GetCultureInfo("tr-TR"))`.
 
@@ -39,7 +39,7 @@ Every conversion takes an optional `CultureInfo` (invariant culture when omitted
 
 The conversions work in a `stackalloc` buffer for short inputs and rent from `ArrayPool<char>` for longer ones, so they are safe on large strings.
 
-## Random Item Extensions
+## Random item extensions
 
 Extension methods for random item selection with `RandomNumberGenerator` (cryptographically secure). They exist for `T[]`, `List<T>` and `Span<T>`:
 
@@ -59,9 +59,9 @@ string randomWord = words.GetRandomItem();
 // Selects a random word from the span
 ```
 
-## General Extensions
+## General extensions
 
-### Null and Empty Checks
+### Null and empty checks
 
 ```csharp
 string? text = null;
@@ -73,7 +73,7 @@ bool isNotNull = text.IsNotNull();  // true if not null (works for any T)
 
 `IsEmpty` and `IsNotEmpty` are for `string?` only. All four carry `[NotNullWhen]` annotations, so the compiler treats the value as non-null after a successful `IsNotEmpty()` or `IsNotNull()` check.
 
-### Boolean Extensions and Functional Programming
+### Boolean extensions and functional programming
 
 ```csharp
 bool condition = true;
@@ -88,7 +88,7 @@ condition.IfFalse(() => Console.WriteLine("Condition false"));
 // Executes action if condition is false
 ```
 
-### Null Object Pattern Implementation
+### Null object pattern implementation
 
 ```csharp
 string? text = "Hello";
@@ -114,7 +114,7 @@ text.IfNotNull(() => Console.WriteLine("Has a value"));
 
 Every `IfNotNull` / `IfNull` overload returns a `bool`: `true` when the value was not null for `IfNotNull`, `true` when it was null for `IfNull`.
 
-### Task Extensions and Asynchronous Programming
+### Task extensions and asynchronous programming
 
 ```csharp
 // Converting synchronous values to Tasks
@@ -129,9 +129,9 @@ await valueTask.WithCancellation(cancellationToken);
 
 `WithCancellation` exists for `Task`, `Task<T>`, `ValueTask` and `ValueTask<T>`. It throws `OperationCanceledException` as soon as the token is cancelled, but it does not cancel the underlying operation. A completed task, or a token that cannot be cancelled, returns the original task unchanged.
 
-## Collection Extensions
+## Collection extensions
 
-### Conditional Collection Operations
+### Conditional collection operations
 
 ```csharp
 var list = new List<int>();
@@ -144,7 +144,7 @@ list.IfAddRange(condition: true, [1, 2, 3]);
 // Adds all items if condition is true
 ```
 
-### LINQ Extensions and Functional Queries
+### LINQ extensions and functional queries
 
 ```csharp
 // Conditional where clause
@@ -167,7 +167,7 @@ bool allTrue = boolList.AllTrue();   // True if all elements are true
 bool allFalse = boolList.AllFalse(); // True if all elements are false
 ```
 
-### Enumerable Extensions and Fluent Interface
+### Enumerable extensions and fluent interface
 
 ```csharp
 // Fluent interface usage with ForEach
@@ -178,7 +178,7 @@ items.ForEach(item => Console.WriteLine(item))  // Runs the action for each item
 
 `ForEach` is lazy and returns each item after running the action. Nothing runs until the sequence is enumerated. When `items` is a `List<T>`, the instance method `List<T>.ForEach` (returns `void`) is chosen instead; call `items.AsEnumerable().ForEach(...)` to use this one.
 
-### Range Checks
+### Range checks
 
 ```csharp
 5.IsBetween(1, 10);            // true  (inclusive)
@@ -187,7 +187,7 @@ items.ForEach(item => Console.WriteLine(item))  // Runs the action for each item
 
 Both work for any `IComparable<T>`.
 
-### Other General Extensions
+### Other general extensions
 
 ```csharp
 object boxed = 42;
@@ -209,7 +209,7 @@ public enum HttpGroup { Success = 200, ClientError = 400 }
 
 On .NET 10 and later, `using CSharpEssentials;` also brings the C# 14 extension members `IEnumerable<T>.IsEmpty` (a property equal to `!source.Any()`) and `string.IsPalindrome` (a property).
 
-## Exception Extensions
+## Exception extensions
 
 Helper methods for exception handling:
 
@@ -230,7 +230,7 @@ catch (Exception ex)
 }
 ```
 
-## HTTP Status Codes
+## HTTP status codes
 
 `HttpCodes` holds `int` constants for common status codes (`HttpCodes.Ok`, `HttpCodes.NotFound`, `HttpCodes.UnprocessableEntity`, `HttpCodes.TooManyRequests`, ...).
 
