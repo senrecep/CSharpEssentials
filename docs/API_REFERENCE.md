@@ -1747,7 +1747,8 @@ Wire name priority: `[JsonStringEnumMemberName]`, `[EnumMember(Value)]`, `[Strin
 | `{Member}WireName` | Wire name constant |
 | `value.ToOptimizedString()` / `ToKebabCase()` / `ToLowerCase()` / `ToUpperCase()` | Member name, 4.x kebab case, lower or upper case |
 | `value.AsUnderlyingType()` | Underlying numeric value |
-| `{Enum}Extensions.IsDefined(name)` / `GetNames()` / `GetValues()` | Member name check, member names, values |
+| `{Enum}Extensions.IsDefined(name)` / `GetNames()` / `GetValues()` | Member name check, member names, values (new arrays per call) |
+| `{Enum}Extensions.Names` / `Values` | Member names and values as cached `IReadOnlyList`s; reading them allocates nothing |
 | `{Member}SnakeCase` / `{Member}KebabCase` | 4.x constants, unchanged |
 | `value.ToSnakeCase()`, `TryParse`, `Parse` | `[Obsolete]`: use `ToWireName()`, `TryParseWire`, `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`, wire name `http_status`) |
 
@@ -1760,7 +1761,7 @@ Nested enums are supported (`Order.State` gets `Order_StateExtensions`).
 | `EnumValueParser.TryParse<TEnum>(text, mode, conventions, out value, out error)` / `TryParseNumber` | Parses one token |
 | `EnumValueFormatter.Format<TEnum>(value, format)` / `FormatFlags` / `TryFormat` / `TryFormatMany` | Formats as wire name or number |
 | `EnumValueError` / `EnumValueException` | Enum type, value, allowed values and path of a rejected value |
-| `EnumMetadata.Get<TEnum>()` / `TryGet` / `IsRegistered(Type)` | Generated metadata (`EnumInfo<TEnum>`: `Members`, `WireNames`, `Fallback`, `IsFlags`, `Storage`) |
+| `EnumMetadata.Get<TEnum>()` / `TryGet` / `IsRegistered(Type)` | Generated metadata (`EnumInfo<TEnum>`: `Members`, `WireNames`, `Fallback`, `IsFlags`, `Storage`, `TryParseWire(text, out value)` for the `Data` rules without the fallback member) |
 | `EnumMetadata.GetOrCreateWithReflection(Type)` | Opt-in reflection metadata; `[RequiresUnreferencedCode]`, `[RequiresDynamicCode]` |
 
 Analyzers CSE0002 to CSE0016 (CSE0011 is not used) check duplicate wire names and aliases, fallback and flags rules, invalid names, migrations and enums the generator cannot reach; see the [Enums Readme](../CSharpEssentials.Enums/Readme.MD#diagnostics) for the table with fixes, and the [design document](design/CSharpEssentials.Enums-DESIGN.md) for the per-layer behavior. Upgrading: [Migrating from 4.x to 5.0](migration/v4-to-v5.md).

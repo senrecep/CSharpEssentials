@@ -15,8 +15,6 @@ namespace Sample
         public const string MaxKebabCase = "max";
         public const string MaxWireName = "max";
 
-        private static readonly global::CSharpEssentials.Enums.EnumConventions __WireReadConventions = global::CSharpEssentials.Enums.EnumConventions.Default with { UnknownValue = global::CSharpEssentials.Enums.UnknownEnumValueHandling.Reject };
-
         /// <summary>The canonical wire name. Throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> for undefined values.</summary>
         public static string ToWireName(this global::Sample.Huge value)
         {
@@ -40,7 +38,7 @@ namespace Sample
                 return false;
             }
 
-            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Huge>().TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out value, out _);
+            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Huge>().TryParseWire(text, out value);
         }
 
         /// <summary>Parses like <see cref="TryParseWire"/> and throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> on failure.</summary>
@@ -49,13 +47,26 @@ namespace Sample
             global::CSharpEssentials.Enums.EnumInfo<global::Sample.Huge> info = global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Huge>();
             if (text is null)
                 throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(null, global::CSharpEssentials.Enums.EnumReadMode.Data));
-            if (info.TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out global::Sample.Huge value, out global::CSharpEssentials.Enums.EnumValueError? error))
+            if (info.TryParseWire(text, out global::Sample.Huge value))
                 return value;
-            throw new global::CSharpEssentials.Enums.EnumValueException(error);
+            throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(text, global::CSharpEssentials.Enums.EnumReadMode.Data));
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>
-        public static bool IsDefined(this global::Sample.Huge value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Huge>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.Huge value)
+        {
+            switch (value)
+            {
+                case global::Sample.Huge.Zero:
+                case (global::Sample.Huge)18446744073709551615UL:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.Huge value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.Huge> __CreateEnumInfo()
         {
@@ -80,7 +91,7 @@ namespace Sample
                 case (global::Sample.Huge)18446744073709551615UL:
                     return "Max";
                 default:
-                    return value.ToString();
+                    return ((ulong)value).ToString();
             }
         }
 
@@ -116,11 +127,11 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Huge.Zero:
-                    return "Zero".ToLowerInvariant();
+                    return "zero";
                 case (global::Sample.Huge)18446744073709551615UL:
-                    return "Max".ToLowerInvariant();
+                    return "max";
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((ulong)value).ToString();
             }
         }
 
@@ -129,11 +140,11 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Huge.Zero:
-                    return "Zero".ToUpperInvariant();
+                    return "ZERO";
                 case (global::Sample.Huge)18446744073709551615UL:
-                    return "Max".ToUpperInvariant();
+                    return "MAX";
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((ulong)value).ToString();
             }
         }
 
@@ -194,6 +205,15 @@ namespace Sample
         {
             return new global::Sample.Huge[] { global::Sample.Huge.Zero, (global::Sample.Huge)18446744073709551615UL };
         }
+
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Zero", "Max" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Huge> __values = global::System.Array.AsReadOnly(new global::Sample.Huge[] { global::Sample.Huge.Zero, (global::Sample.Huge)18446744073709551615UL });
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Huge> Values => __values;
 
         public static ulong AsUnderlyingType(this global::Sample.Huge value)
         {

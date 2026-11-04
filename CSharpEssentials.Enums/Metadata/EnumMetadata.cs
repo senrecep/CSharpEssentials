@@ -1,9 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-#if NET9_0_OR_GREATER
-using System.Collections.Frozen;
-#endif
 
 namespace CSharpEssentials.Enums;
 
@@ -22,11 +19,7 @@ public static class EnumMetadata
 #endif
     private static readonly ConcurrentDictionary<(Type Type, EnumNaming Naming), IEnumInfo> ReflectionCache = new();
     private static readonly Dictionary<Type, Lazy<IEnumInfo>> Registered = [];
-#if NET9_0_OR_GREATER
-    private static FrozenDictionary<Type, Lazy<IEnumInfo>>? _snapshot;
-#else
     private static Dictionary<Type, Lazy<IEnumInfo>>? _snapshot;
-#endif
 
     /// <summary>Gets the generated metadata of <typeparamref name="TEnum"/>.</summary>
     /// <exception cref="InvalidOperationException">The enum is not marked <see cref="StringEnumAttribute"/> (or its project uses C# 8 or older).</exception>
@@ -121,20 +114,12 @@ public static class EnumMetadata
 
     private static bool Lookup(Type enumType, [NotNullWhen(true)] out IEnumInfo? info)
     {
-#if NET9_0_OR_GREATER
-        FrozenDictionary<Type, Lazy<IEnumInfo>>? snapshot = Volatile.Read(ref _snapshot);
-#else
         Dictionary<Type, Lazy<IEnumInfo>>? snapshot = Volatile.Read(ref _snapshot);
-#endif
         if (snapshot is null)
         {
             lock (Gate)
             {
-#if NET9_0_OR_GREATER
-                snapshot = _snapshot ??= Registered.ToFrozenDictionary();
-#else
-                snapshot = _snapshot ??= Registered.ToDictionary(static entry => entry.Key, static entry => entry.Value);
-#endif
+                snapshot = _snapshot ??= [with(Registered)];
             }
         }
 

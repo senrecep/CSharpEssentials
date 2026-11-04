@@ -21,8 +21,6 @@ namespace Sample
         public const string ReadWriteKebabCase = "read-write";
         public const string ReadWriteWireName = "read_write";
 
-        private static readonly global::CSharpEssentials.Enums.EnumConventions __WireReadConventions = global::CSharpEssentials.Enums.EnumConventions.Default with { UnknownValue = global::CSharpEssentials.Enums.UnknownEnumValueHandling.Reject };
-
         /// <summary>The canonical wire name. Throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> for undefined values.</summary>
         public static string ToWireName(this global::Sample.Permissions value)
         {
@@ -38,7 +36,7 @@ namespace Sample
                 return false;
             }
 
-            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Permissions>().TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out value, out _);
+            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Permissions>().TryParseWire(text, out value);
         }
 
         /// <summary>Parses like <see cref="TryParseWire"/> and throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> on failure.</summary>
@@ -47,13 +45,16 @@ namespace Sample
             global::CSharpEssentials.Enums.EnumInfo<global::Sample.Permissions> info = global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Permissions>();
             if (text is null)
                 throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(null, global::CSharpEssentials.Enums.EnumReadMode.Data));
-            if (info.TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out global::Sample.Permissions value, out global::CSharpEssentials.Enums.EnumValueError? error))
+            if (info.TryParseWire(text, out global::Sample.Permissions value))
                 return value;
-            throw new global::CSharpEssentials.Enums.EnumValueException(error);
+            throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(text, global::CSharpEssentials.Enums.EnumReadMode.Data));
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member or a combination of defined flags.</summary>
-        public static bool IsDefined(this global::Sample.Permissions value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Permissions>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.Permissions value) => (unchecked((ulong)(long)value) & 0xFFFFFFFFFFFFFFFCUL) == 0UL;
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.Permissions value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.Permissions> __CreateEnumInfo()
         {
@@ -84,7 +85,7 @@ namespace Sample
                 case global::Sample.Permissions.ReadWrite:
                     return "ReadWrite";
                 default:
-                    return value.ToString();
+                    return __FormatFlags(value);
             }
         }
 
@@ -128,15 +129,15 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Permissions.None:
-                    return "None".ToLowerInvariant();
+                    return "none";
                 case global::Sample.Permissions.Read:
-                    return "Read".ToLowerInvariant();
+                    return "read";
                 case global::Sample.Permissions.Write:
-                    return "Write".ToLowerInvariant();
+                    return "write";
                 case global::Sample.Permissions.ReadWrite:
-                    return "ReadWrite".ToLowerInvariant();
+                    return "readwrite";
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return __FormatFlags(value).ToLowerInvariant();
             }
         }
 
@@ -145,15 +146,15 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Permissions.None:
-                    return "None".ToUpperInvariant();
+                    return "NONE";
                 case global::Sample.Permissions.Read:
-                    return "Read".ToUpperInvariant();
+                    return "READ";
                 case global::Sample.Permissions.Write:
-                    return "Write".ToUpperInvariant();
+                    return "WRITE";
                 case global::Sample.Permissions.ReadWrite:
-                    return "ReadWrite".ToUpperInvariant();
+                    return "READWRITE";
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return __FormatFlags(value).ToUpperInvariant();
             }
         }
 
@@ -223,10 +224,71 @@ namespace Sample
             return new global::Sample.Permissions[] { global::Sample.Permissions.None, global::Sample.Permissions.Read, global::Sample.Permissions.Write, global::Sample.Permissions.ReadWrite };
         }
 
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "None", "Read", "Write", "ReadWrite" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Permissions> __values = global::System.Array.AsReadOnly(new global::Sample.Permissions[] { global::Sample.Permissions.None, global::Sample.Permissions.Read, global::Sample.Permissions.Write, global::Sample.Permissions.ReadWrite });
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Permissions> Values => __values;
+
         public static byte AsUnderlyingType(this global::Sample.Permissions value)
         {
             return (byte)value;
         }
+
+        #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
+        private static readonly string[] __flagNames = new string[] { "Read", "Write", "ReadWrite" };
+
+        private static string __FormatFlags(global::Sample.Permissions value)
+        {
+            ulong remaining = unchecked((ulong)(long)value);
+            ulong found = 0UL;
+            int length = -2;
+            if ((remaining & 0x3UL) == 0x3UL)
+            {
+                remaining &= ~0x3UL;
+                found |= 0x4UL;
+                length += 11;
+            }
+            if ((remaining & 0x2UL) == 0x2UL)
+            {
+                remaining &= ~0x2UL;
+                found |= 0x2UL;
+                length += 7;
+            }
+            if ((remaining & 0x1UL) == 0x1UL)
+            {
+                remaining &= ~0x1UL;
+                found |= 0x1UL;
+                length += 6;
+            }
+
+            if (remaining != 0UL || found == 0UL)
+                return value.ToString();
+            return string.Create(length, found, static (span, set) =>
+            {
+                int position = 0;
+                for (int i = 0; set != 0UL; i++, set >>= 1)
+                {
+                    if ((set & 1UL) == 0UL)
+                        continue;
+                    if (position != 0)
+                    {
+                        span[position++] = ',';
+                        span[position++] = ' ';
+                    }
+
+                    string name = __flagNames[i];
+                    global::System.MemoryExtensions.AsSpan(name).CopyTo(span.Slice(position));
+                    position += name.Length;
+                }
+            });
+        }
+        #else
+        private static string __FormatFlags(global::Sample.Permissions value) => value.ToString();
+        #endif
 
         private static string ToSnakeCaseFallback(string input)
         {

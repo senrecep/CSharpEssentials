@@ -75,6 +75,7 @@ OrderStatus status = OrderStatus.PendingApproval;
 status.ToWireName();                                // "pending_approval"
 OrderStatusExtensions.PendingApprovalWireName;      // "pending_approval" (const)
 status.IsDefined();                                 // true (flags: a combination of defined flags)
+status.ToDescription();                             // the [Description] text, or null
 
 OrderStatusExtensions.TryParseWire("Approval", out OrderStatus parsed); // true, PendingApproval
 OrderStatusExtensions.ParseWire("pending_approval");                     // PendingApproval
@@ -86,12 +87,15 @@ status.ToLowerCase();                               // "pendingapproval"
 status.ToUpperCase();                               // "PENDINGAPPROVAL"
 status.AsUnderlyingType();                          // 1
 OrderStatusExtensions.IsDefined("PendingApproval"); // true (member names)
-OrderStatusExtensions.GetNames();                   // member names
-OrderStatusExtensions.GetValues();                  // all members
+OrderStatusExtensions.GetNames();                   // member names (a new array per call)
+OrderStatusExtensions.GetValues();                  // all members (a new array per call)
+OrderStatusExtensions.Names;                        // member names, cached IReadOnlyList<string>
+OrderStatusExtensions.Values;                       // all members, cached IReadOnlyList<OrderStatus>
 ```
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are formatted as comma separated wire names of single flags.
 - `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member). They never map an unknown value to the fallback member: `ParseWire("gone")` throws, while `ParseWire("unknown")` returns `Unknown` because that is the member's own wire name.
+- `ToDescription()` is a new generated member. It returns the member's `[Description]` text, and `null` (not the member name) for a member without one, an undefined value or a `[Flags]` combination. Because it lives in the enum's namespace, it takes precedence over a generic `ToDescription(this Enum)` helper at call sites there, and a `ToDescription(this YourEnum)` extension in the same namespace becomes an ambiguous call (CS0121). Rename or remove your own extension when you upgrade.
 - `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values.
 - `ToSnakeCase()`, `TryParse` and `Parse` are obsolete; use `ToWireName()`, `TryParseWire` and `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`), while `ToWireName()` returns `http_status`. That old spelling is read as an extra alias, so stored values still load.
 

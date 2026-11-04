@@ -59,14 +59,19 @@ internal static class StringEnumSourceWriter
             w.Line();
 
         if (modern)
-            WriteWireHelpers(w, model, distinct, members, wireNames);
+            WriteWireHelpers(w, model, distinct, members, wireNames, nullableString);
 
-        WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), "value.ToString()");
+        EnumMemberModel[]? flags = modern && model.IsFlags ? FlagCandidates(model, members) : null;
+        string flagsText = flags is null ? "value.ToString()" : "__FormatFlags(value)";
+        string numeric = model.IsFlags ? flagsText : "((" + model.UnderlyingType + ")value).ToString()";
+        WriteSwitch(w, model, distinct, "ToOptimizedString", null, static m => Literal(m.Name), numeric);
         WriteSwitch(w, model, distinct, "ToSnakeCase", modern ? "Use ToWireName()" : null, static m => Literal(EnumWireNaming.ToLegacySnakeCase(m.Name)), "ToSnakeCaseFallback(value.ToOptimizedString())");
         WriteSwitch(w, model, distinct, "ToKebabCase", null, static m => Literal(EnumWireNaming.ToLegacyKebabCase(m.Name)), "ToKebabCaseFallback(value.ToOptimizedString())");
-        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(m.Name) + ".ToLowerInvariant()", "value.ToString().ToLowerInvariant()");
-        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(m.Name) + ".ToUpperInvariant()", "value.ToString().ToUpperInvariant()");
+        WriteSwitch(w, model, distinct, "ToLowerCase", null, static m => Literal(CultureInfo.InvariantCulture.TextInfo.ToLower(m.Name)), model.IsFlags ? flagsText + ".ToLowerInvariant()" : numeric);
+        WriteSwitch(w, model, distinct, "ToUpperCase", null, static m => Literal(CultureInfo.InvariantCulture.TextInfo.ToUpper(m.Name)), model.IsFlags ? flagsText + ".ToUpperInvariant()" : numeric);
         WriteLegacyLookups(w, model, members, nullableString, modern);
+        if (flags is not null)
+            WriteFlagsFormatter(w, model, flags);
         WriteFallbackHelpers(w);
 
         w.Close();
@@ -139,15 +144,12 @@ internal static class StringEnumSourceWriter
         return names;
     }
 
-    private static void WriteWireHelpers(Writer w, EnumModel model, EnumMemberModel[] distinct, EnumMemberModel[] members, string[] wireNames)
+    private static void WriteWireHelpers(Writer w, EnumModel model, EnumMemberModel[] distinct, EnumMemberModel[] members, string[] wireNames,
+        string nullableString)
     {
         string type = model.FullyQualifiedName;
         string info = Enums + ".EnumInfo<" + type + ">";
         string metadata = Enums + ".EnumMetadata.Get<" + type + ">()";
-
-        w.Line("private static readonly " + Enums + ".EnumConventions __WireReadConventions = " + Enums
-            + ".EnumConventions.Default with { UnknownValue = " + Enums + ".UnknownEnumValueHandling.Reject };");
-        w.Line();
 
         w.Line("/// <summary>The canonical wire name. Throws <see cref=\"" + Enums + ".EnumValueException\"/> for undefined values.</summary>");
         w.Line("public static string ToWireName(this " + type + " value)");
@@ -184,7 +186,7 @@ internal static class StringEnumSourceWriter
         w.Line("return false;");
         w.Close();
         w.Line();
-        w.Line("return " + metadata + ".TryParse(text, " + Enums + ".EnumReadMode.Data, __WireReadConventions, out value, out _);");
+        w.Line("return " + metadata + ".TryParseWire(text, out value);");
         w.Close();
         w.Line();
 
@@ -194,14 +196,17 @@ internal static class StringEnumSourceWriter
         w.Line(info + " info = " + metadata + ";");
         w.Line("if (text is null)");
         w.Line("    throw new " + Enums + ".EnumValueException(info.CreateError(null, " + Enums + ".EnumReadMode.Data));");
-        w.Line("if (info.TryParse(text, " + Enums + ".EnumReadMode.Data, __WireReadConventions, out " + type + " value, out " + Enums + ".EnumValueError? error))");
+        w.Line("if (info.TryParseWire(text, out " + type + " value))");
         w.Line("    return value;");
-        w.Line("throw new " + Enums + ".EnumValueException(error);");
+        w.Line("throw new " + Enums + ".EnumValueException(info.CreateError(text, " + Enums + ".EnumReadMode.Data));");
         w.Close();
         w.Line();
 
         w.Line("/// <summary>Whether <paramref name=\"value\"/> is a defined member" + (model.IsFlags ? " or a combination of defined flags" : string.Empty) + ".</summary>");
-        w.Line("public static bool IsDefined(this " + type + " value) => " + metadata + ".IsDefined(value);");
+        WriteIsDefined(w, model, distinct);
+        w.Line();
+
+        WriteToDescription(w, model, distinct, nullableString);
         w.Line();
 
         w.Line("internal static " + info + " __CreateEnumInfo()");
@@ -229,6 +234,67 @@ internal static class StringEnumSourceWriter
         w.Line("    (" + Enums + ".EnumStorage)" + model.Storage.ToString(CultureInfo.InvariantCulture) + ");");
         w.Close();
         w.Line();
+    }
+
+    private static void WriteIsDefined(Writer w, EnumModel model, EnumMemberModel[] distinct)
+    {
+        string signature = "public static bool IsDefined(this " + model.FullyQualifiedName + " value)";
+        if (model.IsFlags)
+        {
+            ulong mask = 0;
+            foreach (EnumMemberModel member in distinct)
+            {
+                mask |= member.RawValue;
+            }
+
+            w.Line(~mask == 0
+                ? signature + " => true;"
+                : signature + " => (unchecked((ulong)(long)value) & 0x" + (~mask).ToString("X16", CultureInfo.InvariantCulture) + "UL) == 0UL;");
+            return;
+        }
+
+        w.Line(signature);
+        w.Open();
+        w.Line("switch (value)");
+        w.Open();
+        foreach (EnumMemberModel member in distinct)
+        {
+            w.Line("case " + ValueExpression(model, member) + ":");
+        }
+
+        if (distinct.Length > 0)
+            w.Line("    return true;");
+        w.Line("default:");
+        w.Line("    return false;");
+        w.Close();
+        w.Close();
+    }
+
+    private static void WriteToDescription(Writer w, EnumModel model, EnumMemberModel[] distinct, string nullableString)
+    {
+        EnumMemberModel[] described = [.. distinct.Where(static m => m.Description is not null)];
+        w.Line("/// <summary>The <c>[Description]</c> text of the member declared with <paramref name=\"value\"/>, or <see langword=\"null\"/>.</summary>");
+        string signature = "public static " + nullableString + " ToDescription(this " + model.FullyQualifiedName + " value)";
+        if (described.Length == 0)
+        {
+            w.Line(signature + " => null;");
+            return;
+        }
+
+        w.Line(signature);
+        w.Open();
+        w.Line("switch (value)");
+        w.Open();
+        foreach (EnumMemberModel member in described)
+        {
+            w.Line("case " + ValueExpression(model, member) + ":");
+            w.Line("    return " + Literal(member.Description!) + ";");
+        }
+
+        w.Line("default:");
+        w.Line("    return null;");
+        w.Close();
+        w.Close();
     }
 
     private static void AppendInitializer(StringBuilder line, EnumMemberModel member, List<string> aliases)
@@ -355,10 +421,94 @@ internal static class StringEnumSourceWriter
         w.Close();
         w.Line();
 
+        if (modern)
+        {
+            w.Line("private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { " + string.Join(", ", members.Select(static m => Literal(m.Name))) + " });");
+            w.Line("private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<" + type + "> __values = global::System.Array.AsReadOnly(new " + type + "[] { " + string.Join(", ", members.Select(m => ValueExpression(model, m))) + " });");
+            w.Line();
+            w.Line("/// <summary>The member names in declaration order. Cached: unlike <see cref=\"GetNames\"/>, reading it allocates nothing.</summary>");
+            w.Line("public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;");
+            w.Line();
+            w.Line("/// <summary>The member values in declaration order. Cached: unlike <see cref=\"GetValues\"/>, reading it allocates nothing.</summary>");
+            w.Line("public static global::System.Collections.Generic.IReadOnlyList<" + type + "> Values => __values;");
+            w.Line();
+        }
+
         w.Line("public static " + model.UnderlyingType + " AsUnderlyingType(this " + type + " value)");
         w.Open();
         w.Line("return (" + model.UnderlyingType + ")value;");
         w.Close();
+        w.Line();
+    }
+
+    /// <summary>
+    /// The non-zero members in ascending unsigned order, which is the order <c>Enum.ToString()</c> joins flag names in; null when
+    /// the formatter would not match it (two members share a value, a signed member is negative, or more than 64 candidates).
+    /// </summary>
+    private static EnumMemberModel[]? FlagCandidates(EnumModel model, EnumMemberModel[] members)
+    {
+        EnumMemberModel[] candidates = [.. members.Where(static m => m.RawValue != 0).OrderBy(static m => m.RawValue)];
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (i > 0 && candidates[i].RawValue == candidates[i - 1].RawValue || model.IsSigned && unchecked((long)candidates[i].RawValue) < 0)
+                return null;
+        }
+
+        return candidates.Length <= 64 ? candidates : null;
+    }
+
+    /// <summary>
+    /// Writes <c>__FormatFlags</c>, the <c>Enum.ToString()</c> text of a value that is not a declared member: flags are taken
+    /// greedily from the largest value down, a value with bits left over (or zero) is left to <c>Enum.ToString()</c>, and the names
+    /// are joined in ascending order with <c>", "</c> into a string of the exact length.
+    /// </summary>
+    private static void WriteFlagsFormatter(Writer w, EnumModel model, EnumMemberModel[] flags)
+    {
+        string type = model.FullyQualifiedName;
+        w.Line("#if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER");
+        w.Line("private static readonly string[] __flagNames = new string[] { " + string.Join(", ", flags.Select(static m => Literal(m.Name))) + " };");
+        w.Line();
+        w.Line("private static string __FormatFlags(" + type + " value)");
+        w.Open();
+        w.Line("ulong remaining = unchecked((ulong)(long)value);");
+        w.Line("ulong found = 0UL;");
+        w.Line("int length = -2;");
+        for (int i = flags.Length - 1; i >= 0; i--)
+        {
+            string bits = "0x" + flags[i].RawValue.ToString("X", CultureInfo.InvariantCulture) + "UL";
+            w.Line("if ((remaining & " + bits + ") == " + bits + ")");
+            w.Open();
+            w.Line("remaining &= ~" + bits + ";");
+            w.Line("found |= 0x" + (1UL << i).ToString("X", CultureInfo.InvariantCulture) + "UL;");
+            w.Line("length += " + (flags[i].Name.Length + 2).ToString(CultureInfo.InvariantCulture) + ";");
+            w.Close();
+        }
+
+        w.Line();
+        w.Line("if (remaining != 0UL || found == 0UL)");
+        w.Line("    return value.ToString();");
+        w.Line("return string.Create(length, found, static (span, set) =>");
+        w.Open();
+        w.Line("int position = 0;");
+        w.Line("for (int i = 0; set != 0UL; i++, set >>= 1)");
+        w.Open();
+        w.Line("if ((set & 1UL) == 0UL)");
+        w.Line("    continue;");
+        w.Line("if (position != 0)");
+        w.Open();
+        w.Line("span[position++] = ',';");
+        w.Line("span[position++] = ' ';");
+        w.Close();
+        w.Line();
+        w.Line("string name = __flagNames[i];");
+        w.Line("global::System.MemoryExtensions.AsSpan(name).CopyTo(span.Slice(position));");
+        w.Line("position += name.Length;");
+        w.Close();
+        w.Close(");");
+        w.Close();
+        w.Line("#else");
+        w.Line("private static string __FormatFlags(" + type + " value) => value.ToString();");
+        w.Line("#endif");
         w.Line();
     }
 
