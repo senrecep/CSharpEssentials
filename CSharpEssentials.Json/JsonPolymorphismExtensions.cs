@@ -34,7 +34,7 @@ public static class JsonPolymorphismExtensions
     public static JsonSerializerOptions AddPolymorphism(this JsonSerializerOptions options)
     {
         _ = options ?? throw new ArgumentNullException(nameof(options));
-        IJsonTypeInfoResolver inner = options.TypeInfoResolver ?? throw new InvalidOperationException(
+        IJsonTypeInfoResolver inner = Detach(options.TypeInfoResolver) ?? throw new InvalidOperationException(
             "Set TypeInfoResolver (for example to a JsonSerializerContext) before AddPolymorphism, or use AddPolymorphismWithReflection.");
         return Apply(options, inner, new PolymorphismModifier(inner, null));
     }
@@ -55,7 +55,7 @@ public static class JsonPolymorphismExtensions
     {
         _ = options ?? throw new ArgumentNullException(nameof(options));
         _ = trustedAssemblies ?? throw new ArgumentNullException(nameof(trustedAssemblies));
-        IJsonTypeInfoResolver inner = options.TypeInfoResolver ?? new DefaultJsonTypeInfoResolver();
+        IJsonTypeInfoResolver inner = Detach(options.TypeInfoResolver) ?? new DefaultJsonTypeInfoResolver();
         Apply(options, inner, new PolymorphismModifier(inner, new PolymorphismScanner([.. trustedAssemblies])));
         if (!options.Converters.Any(static converter => converter is ClrTypeNameConverterFactory))
             options.Converters.Add(new ClrTypeNameConverterFactory());
@@ -70,7 +70,7 @@ public static class JsonPolymorphismExtensions
     internal static bool TryApplyTo(JsonSerializerOptions source, JsonSerializerOptions target)
     {
         if (source.TypeInfoResolver is not { } wrapped || !Wrapped.TryGetValue(wrapped, out StrongBox<PolymorphismScanner?>? scanner) ||
-            target.TypeInfoResolver is not { } inner)
+            Detach(target.TypeInfoResolver) is not { } inner)
         {
             return false;
         }
@@ -80,6 +80,14 @@ public static class JsonPolymorphismExtensions
 
         return true;
     }
+
+    /// <summary>
+    /// Copies the options' own <see cref="JsonSerializerOptions.TypeInfoResolverChain"/> into a new resolver. System.Text.Json 9 refills
+    /// that chain with the value given to <see cref="JsonSerializerOptions.TypeInfoResolver"/>, so a wrapper around the chain itself
+    /// would end up inside it and recurse until the stack overflows. Any other resolver is returned as is.
+    /// </summary>
+    private static IJsonTypeInfoResolver? Detach(IJsonTypeInfoResolver? resolver) =>
+        resolver is null ? null : JsonTypeInfoResolver.Combine(resolver);
 
     private static JsonSerializerOptions Apply(JsonSerializerOptions options, IJsonTypeInfoResolver inner, PolymorphismModifier modifier)
     {

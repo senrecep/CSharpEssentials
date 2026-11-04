@@ -352,6 +352,34 @@ public class JsonPolymorphismTests
     }
 
     [Fact]
+    public void AddPolymorphism_Should_Wrap_A_Resolver_Built_With_The_Chain()
+    {
+        JsonSerializerOptions options = new();
+        options.TypeInfoResolverChain.Add(new DefaultJsonTypeInfoResolver());
+
+        options.AddPolymorphism();
+        string json = JsonSerializer.Serialize<IFixtureEvent>(new FixtureOrderPlaced(Id, 1), options);
+
+        json.Should().Be($$"""{"$event":"order.placed.v1","Id":"{{Id}}","Total":1}""");
+    }
+
+    [Fact]
+    public void ApplyTo_Should_Wrap_A_Target_Resolver_Built_With_The_Chain_Once()
+    {
+        JsonSerializerOptions target = new(JsonSerializerDefaults.Web) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() };
+        target.TypeInfoResolverChain.Insert(0, PolymorphismTestContext.Default);
+
+        EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
+        IJsonTypeInfoResolver? first = target.TypeInfoResolver;
+        EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
+        string json = JsonSerializer.Serialize<IFixtureEvent>(new FixtureOrderPlaced(Id, 1), target);
+
+        target.TypeInfoResolver.Should().BeSameAs(first);
+        json.Should().Be($$"""{"$event":"order.placed.v1","id":"{{Id}}","total":1}""");
+        JsonSerializer.Deserialize<IFixtureEvent>(json, target).Should().Be(new FixtureOrderPlaced(Id, 1));
+    }
+
+    [Fact]
     public void ApplyTo_Should_Use_The_Source_Resolver_When_The_Target_Has_None()
     {
         JsonSerializerOptions target = new();
