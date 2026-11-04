@@ -246,6 +246,27 @@ public class ValidationBehaviorTests
     }
 
     [Fact]
+    public async Task Handle_Should_Keep_Group_Order_For_Each_Behavior_Built_For_The_Same_Request_Type()
+    {
+        ValidationBehavior<TestValidationCommand, Result> sameOrder = new([
+            new OrderedStubValidator(3, "E_A", "Error A"),
+            new OrderedStubValidator(3, "E_B", "Error B")
+        ]);
+        ValidationBehavior<TestValidationCommand, Result> mixedOrder = new([
+            new OrderedStubValidator(2, "E_LATE", "Error late"),
+            new OrderedStubValidator(1, "E_EARLY", "Error early"),
+            new OrderedStubValidator(2, "E_LATE_2", "Error late 2")
+        ]);
+        TestValidationCommand command = new("");
+
+        Result same = await sameOrder.Handle(command, SuccessNext, default);
+        Result mixed = await mixedOrder.Handle(command, SuccessNext, default);
+
+        same.Errors.Select(e => e.Code).Should().BeEquivalentTo("E_A", "E_B");
+        mixed.Errors.Select(e => e.Code).Should().Equal("E_EARLY", "E_LATE", "E_LATE_2");
+    }
+
+    [Fact]
     public async Task Handle_Should_CallNext_WhenAllOrderedGroupsPass()
     {
         // Multiple validators (all Order=0) all pass → next must be called.

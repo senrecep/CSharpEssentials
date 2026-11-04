@@ -26,13 +26,24 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         IEnumerable<IValidationFailureObserver> observers,
         ValidationBehaviorOptions? options = null)
     {
-        _orderedGroups = [..
-            validators
-                .GroupBy(v => v.Order)
-                .OrderBy(g => g.Key)
-                .Select(g => g.ToArray())];
+        _orderedGroups = Group([.. validators]);
         _observers = [.. observers];
         _defaultMode = options?.DefaultMode ?? ValidationMode.Enforce;
+    }
+
+    private static IValidator<TRequest>[][] Group(IValidator<TRequest>[] validators)
+    {
+        if (validators.Length == 0)
+            return [];
+
+        int order = validators[0].Order;
+        for (int index = 1; index < validators.Length; index++)
+        {
+            if (validators[index].Order != order)
+                return [.. validators.GroupBy(v => v.Order).OrderBy(g => g.Key).Select(g => g.ToArray())];
+        }
+
+        return [validators];
     }
 
     public ValueTask<TResponse> Handle(
