@@ -52,7 +52,7 @@ public class ErrorMetadataFactoryTests
 
         metadata["exceptionType"].Should().Be(nameof(InvalidOperationException));
         metadata["exceptionMessage"].Should().Be("outer");
-        metadata["exceptionStackTrace"].Should().BeOfType<string>().Which.Should().NotBeEmpty();
+        metadata.Should().ContainKey("exceptionStackTrace").WhoseValue.Should().BeNull();
         ErrorMetadata inner = metadata["innerException"].Should().BeOfType<ErrorMetadata>().Subject;
         inner["exceptionType"].Should().Be(nameof(ArgumentException));
         inner["exceptionMessage"].Should().Be("inner");
