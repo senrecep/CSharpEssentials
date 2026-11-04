@@ -737,6 +737,7 @@ All methods accept an optional `CultureInfo` parameter.
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid`; throws `FormatException` unless the input is exactly 22 URL-safe characters |
 | `Guider.NewGuid()` | RFC 9562 version 7 GUID on every target, built in the package with random bits from a per-thread `RandomNumberGenerator` pool (AppContext switch `CSharpEssentials.Guider.DisableRandomPool` takes them from `Guid.NewGuid()` instead) |
 | `Guider.NewMonotonicGuid()` | Version 7 GUID with the sub-millisecond time in `rand_a` and a 6-bit counter at the start of `rand_b` (262,144 IDs per ms before the timestamp runs ahead); 56 random bits; each call returns a value greater than the last one in the same process (per loaded copy of the assembly) |
+| `Guider.NewSqlServerGuid()` | Version 8 GUID for SQL Server `uniqueidentifier` order: Unix ms big-endian in bytes 10 to 15, then the sub-millisecond time and counter of `NewMonotonicGuid()` in bytes 8, 9 and 7; 56 random bits; strictly increasing in `SqlGuid` order within the process, not ordered as bytes or strings |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
 
 ### Other Types

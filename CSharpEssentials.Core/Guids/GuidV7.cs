@@ -45,6 +45,19 @@ internal static class GuidV7
         Span<byte> bytes = stackalloc byte[_byteCount];
         long utcTicks = DateTime.UtcNow.Ticks;
         FillRandom(bytes, utcTicks, _usePool);
+        return ComposePacked(NextPacked(utcTicks), bytes);
+    }
+
+    internal static Guid NewSqlServerGuid()
+    {
+        Span<byte> bytes = stackalloc byte[_byteCount];
+        long utcTicks = DateTime.UtcNow.Ticks;
+        FillRandom(bytes, utcTicks, _usePool);
+        return ComposeSqlServer(NextPacked(utcTicks), bytes);
+    }
+
+    private static long NextPacked(long utcTicks)
+    {
         long last, packed;
         do
         {
@@ -52,7 +65,7 @@ internal static class GuidV7
             packed = Pack(last, utcTicks);
         }
         while (Interlocked.CompareExchange(ref _lastPacked[_lastPackedSlot], packed, last) != last);
-        return ComposePacked(packed, bytes);
+        return packed;
     }
 
     internal static long Pack(long last, long utcTicks)
@@ -82,12 +95,34 @@ internal static class GuidV7
         b[5] = (byte)unixMs;
         b[6] = (byte)((b[6] & 0x0F) | 0x70);
         b[8] = (byte)((b[8] & 0x3F) | 0x80);
-        return new Guid(
+        return FromBigEndian(b);
+    }
+
+    internal static Guid ComposeSqlServer(long packed, Span<byte> bigEndian)
+    {
+        Span<byte> b = bigEndian;
+        long unixMs = packed >> _timestampShift;
+        int sequence = (int)(packed & ((1 << _timestampShift) - 1));
+        b.Slice(10, 6).CopyTo(b);
+        b[6] = (byte)((b[6] & 0x0F) | 0x80);
+        b[7] = (byte)((sequence << 4) | (b[7] & 0x0F));
+        b[8] = (byte)(0x80 | (sequence >> 12));
+        b[9] = (byte)(sequence >> 4);
+        b[10] = (byte)(unixMs >> 40);
+        b[11] = (byte)(unixMs >> 32);
+        b[12] = (byte)(unixMs >> 24);
+        b[13] = (byte)(unixMs >> 16);
+        b[14] = (byte)(unixMs >> 8);
+        b[15] = (byte)unixMs;
+        return FromBigEndian(b);
+    }
+
+    private static Guid FromBigEndian(ReadOnlySpan<byte> b) =>
+        new(
             (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3],
             (short)((b[4] << 8) | b[5]),
             (short)((b[6] << 8) | b[7]),
             b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
-    }
 
     internal static void FillRandom(Span<byte> bytes, long utcTicks, bool usePool)
     {

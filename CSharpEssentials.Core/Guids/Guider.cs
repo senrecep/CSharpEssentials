@@ -115,4 +115,17 @@ public static class Guider
     /// </remarks>
     /// <returns>A version 7 GUID that is greater than the previous one when compared as big-endian bytes or with <see cref="Guid.CompareTo(Guid)"/>.</returns>
     public static Guid NewMonotonicGuid() => GuidV7.NewMonotonicGuid();
+
+    /// <summary>
+    /// Creates a new RFC 9562 version 8 GUID that sorts by creation time in SQL Server <c>uniqueidentifier</c> order, the order of
+    /// <see cref="System.Data.SqlTypes.SqlGuid"/>: the Unix millisecond timestamp sits big-endian in the last 6 bytes, which SQL Server
+    /// compares first, and the time inside the millisecond and the counter of <see cref="NewMonotonicGuid"/> follow in the bytes it compares next.
+    /// </summary>
+    /// <remarks>
+    /// Each GUID is greater than every GUID this method or <see cref="NewMonotonicGuid"/> returned before in the same process, in SQL Server order.
+    /// IDs from different processes interleave by their millisecond. The value is not in time order for <see cref="Guid.CompareTo(Guid)"/>, string
+    /// order or byte order, so use it only for SQL Server columns. Each ID carries 56 random bits and reveals its creation time.
+    /// </remarks>
+    /// <returns>A version 8 GUID that is greater than the previous one when compared as <see cref="System.Data.SqlTypes.SqlGuid"/>.</returns>
+    public static Guid NewSqlServerGuid() => GuidV7.NewSqlServerGuid();
 }
