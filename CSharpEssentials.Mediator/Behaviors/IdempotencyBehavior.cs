@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 
 using CSharpEssentials.Errors;
@@ -198,11 +197,11 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
 
     private static string Fingerprint(TRequest message, JsonSerializerOptions? serializerOptions)
     {
-        byte[] json = JsonSerializer.SerializeToUtf8Bytes(message, serializerOptions);
 #if NET5_0_OR_GREATER
-        return Convert.ToHexString(SHA256.HashData(json));
+        return Sha256JsonStream.HashToHex(message, serializerOptions);
 #else
-        using var sha256 = SHA256.Create();
+        byte[] json = JsonSerializer.SerializeToUtf8Bytes(message, serializerOptions);
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
         byte[] hash = sha256.ComputeHash(json);
         char[] hex = new char[hash.Length * 2];
         for (int index = 0; index < hash.Length; index++)
