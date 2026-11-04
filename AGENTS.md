@@ -24,7 +24,7 @@ Current version: 7.0.0 <!-- x-release-please-version -->
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: One public type per file, filename matches type name
 - Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`
-- Endpoints, DependencyInjection, EntityFrameworkCore and Enums keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
+- Endpoints, DependencyInjection, EntityFrameworkCore, Enums and Json keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
 
 ## Releasing
 
