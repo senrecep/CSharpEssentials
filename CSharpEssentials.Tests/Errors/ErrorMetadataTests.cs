@@ -235,5 +235,19 @@ public class ErrorMetadataTests
         }
     }
 
+    [Fact]
+    public void ToString_WithSeveralEntries_ShouldListEachInInsertionOrder()
+    {
+        var metadata = new ErrorMetadata { ["a"] = 1, ["b"] = "two", ["c"] = null };
+
+        metadata.ToString().Should().Be("[{ a: 1 }, { b: two }, { c:  }]");
+    }
+
+    [Fact]
+    public void ToString_WhenEmpty_ShouldReturnEmptyBrackets()
+    {
+        new ErrorMetadata().ToString().Should().Be("[]");
+    }
+
     #endregion
 }

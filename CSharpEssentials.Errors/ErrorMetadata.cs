@@ -74,16 +74,15 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
     public override string ToString()
     {
         var sb = new StringBuilder();
-        for (int i = 0; i < Count; i++)
+        foreach ((string key, object? value) in this)
         {
-            (string? key, object? value) = this.ElementAtOrDefault(i);
+            if (sb.Length > 0)
+                sb.Append(", ");
 #if NET6_0_OR_GREATER
             sb.Append(string.Create(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}"));
 #else
             sb.Append(FormattableString.Invariant($"{{ {key}: {value} }}"));
 #endif
-            if (i < Count - 1)
-                sb.Append(", ");
         }
         return $"[{sb}]";
     }
