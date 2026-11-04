@@ -426,6 +426,7 @@ public class EndpointsGeneratorTests
             """);
         MethodInfo isCandidate = EndpointCompilations.Generators.Value.Generators.Single().GetGeneratorType()
             .GetMethod("IsCandidate", BindingFlags.NonPublic | BindingFlags.Static)!;
+        isCandidate.Should().NotBeNull();
 
         string[] candidates = [.. tree.GetRoot().DescendantNodes()
             .OfType<BaseTypeDeclarationSyntax>()
@@ -488,6 +489,7 @@ public class EndpointsGeneratorTests
     [InlineData("public abstract class BaseEndpoint", "public sealed class Derived : BaseEndpoint;", false)]
     [InlineData("public abstract class BaseEndpoint<T>", "public sealed class Derived : BaseEndpoint<int>;", false)]
     [InlineData("public abstract class BaseEndpoint", "public sealed partial class Derived : BaseEndpoint;", true)]
+    [InlineData("public abstract class BaseEndpoint", "public sealed class Derived : BaseEndpoint { public static new void Map(IEndpointRouteBuilder app) => BaseEndpoint.Map(app); }", true)]
     public void Generator_Should_Map_Type_That_Inherits_Map_Only_When_Partial(string baseDeclaration, string derivedDeclaration, bool mapped)
     {
         GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
@@ -511,6 +513,7 @@ public class EndpointsGeneratorTests
             """));
 
         ShouldCompile(run);
+        run.OutputDiagnostics.Should().NotContain(static d => d.Id == "CS0108");
         string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
         registry.Contains("global::Sample.Api.Derived", StringComparison.Ordinal).Should().Be(mapped);
     }
