@@ -140,8 +140,10 @@ public static class ServiceRegistration
 
     private static ServiceDescriptor? FindFirst(IServiceCollection services, ServiceDescriptor descriptor)
     {
-        foreach (ServiceDescriptor candidate in services)
+        int count = services.Count;
+        for (int index = 0; index < count; index++)
         {
+            ServiceDescriptor candidate = services[index];
             if (candidate.Matches(descriptor.ServiceType, descriptor.ServiceKey))
             {
                 return candidate;
@@ -154,8 +156,10 @@ public static class ServiceRegistration
     private static bool ContainsImplementation(IServiceCollection services, ServiceDescriptor descriptor)
     {
         object? identity = descriptor.GetImplementationIdentity();
-        foreach (ServiceDescriptor candidate in services)
+        int count = services.Count;
+        for (int index = 0; index < count; index++)
         {
+            ServiceDescriptor candidate = services[index];
             if (candidate.Matches(descriptor.ServiceType, descriptor.ServiceKey) && Equals(candidate.GetImplementationIdentity(), identity))
             {
                 return true;
