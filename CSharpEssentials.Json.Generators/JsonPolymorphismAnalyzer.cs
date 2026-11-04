@@ -1,13 +1,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace CSharpEssentials.Json.Generators;
 
 /// <summary>
 /// Reports problems of <c>[JsonTypeDiscriminator]</c> types, derived types of polymorphic bases and <c>[JsonPolymorphicProperty]</c>
-/// members (CSE4001 to CSE4005 and CSE4007 to CSE4011).
+/// members (CSE4001 to CSE4005 and CSE4007 to CSE4012).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
@@ -24,7 +25,8 @@ public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
             JsonPolymorphismDiagnostics.NoPolymorphicBase,
             JsonPolymorphismDiagnostics.PropertyNotPolymorphic,
             JsonPolymorphismDiagnostics.Unreachable,
-            JsonPolymorphismDiagnostics.NotListed);
+            JsonPolymorphismDiagnostics.NotListed,
+            JsonPolymorphismDiagnostics.PositionalParameter);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -37,13 +39,15 @@ public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
                 return;
 
             ConcurrentBag<ValueUse> uses = [];
-            start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, uses), SymbolKind.NamedType);
+            bool aot = start.Options.AnalyzerConfigOptionsProvider.GlobalOptions.TryGetValue("build_property.EnableAotAnalyzer", out string? enableAot) &&
+                string.Equals(enableAot, "true", StringComparison.OrdinalIgnoreCase);
+            start.RegisterSymbolAction(symbolContext => AnalyzeType(symbolContext, uses, aot), SymbolKind.NamedType);
             start.RegisterSymbolAction(AnalyzeMember, SymbolKind.Property, SymbolKind.Field);
             start.RegisterCompilationEndAction(end => ReportDuplicates(end, uses));
         });
     }
 
-    private static void AnalyzeType(SymbolAnalysisContext context, ConcurrentBag<ValueUse> uses)
+    private static void AnalyzeType(SymbolAnalysisContext context, ConcurrentBag<ValueUse> uses, bool aot)
     {
         var type = (INamedTypeSymbol)context.Symbol;
         Location location = type.Locations.FirstOrDefault() ?? Location.None;
@@ -78,7 +82,7 @@ public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
 
         foreach (INamedTypeSymbol ancestor in ancestors)
         {
-            AnalyzeDerived(context, type, ancestor, value, hasConverter, location, uses);
+            AnalyzeDerived(context, type, ancestor, value, hasConverter, location, uses, aot);
         }
     }
 
@@ -89,7 +93,8 @@ public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
         object? value,
         bool hasConverter,
         Location location,
-        ConcurrentBag<ValueUse> uses)
+        ConcurrentBag<ValueUse> uses,
+        bool aot)
     {
         (ITypeSymbol Type, object? Value)[] declared = [.. PolymorphismSymbols.DeclaredDerivedTypes(ancestor)];
         (ITypeSymbol Type, object? Value)? listed = declared.Any(entry => SymbolEqualityComparer.Default.Equals(entry.Type, type))
@@ -115,7 +120,15 @@ public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
         else if (declared.Length == 0)
         {
             string clrName = PolymorphismSymbols.ClrFullName(type);
-            context.ReportDiagnostic(Diagnostic.Create(JsonPolymorphismDiagnostics.MissingDiscriminator, location, Name(type), Name(ancestor), clrName));
+            context.ReportDiagnostic(Diagnostic.Create(
+                JsonPolymorphismDiagnostics.MissingDiscriminator,
+                location,
+                aot ? DiagnosticSeverity.Warning : DiagnosticSeverity.Info,
+                additionalLocations: null,
+                properties: null,
+                Name(type),
+                Name(ancestor),
+                clrName));
             uses.Add(new ValueUse(ancestor, clrName, type));
             ReportNameConflicts(context, ancestor, type, location);
         }
@@ -173,6 +186,9 @@ public sealed class JsonPolymorphismAnalyzer : DiagnosticAnalyzer
             return;
 
         Location location = member.Locations.FirstOrDefault() ?? Location.None;
+        if (attribute.ApplicationSyntaxReference?.GetSyntax(context.CancellationToken).FirstAncestorOrSelf<ParameterSyntax>() is not null)
+            context.ReportDiagnostic(Diagnostic.Create(JsonPolymorphismDiagnostics.PositionalParameter, location, member.Name));
+
         if (PolymorphismSymbols.ElementBase(type) is not { } baseType)
         {
             context.ReportDiagnostic(Diagnostic.Create(JsonPolymorphismDiagnostics.PropertyNotPolymorphic, location, member.Name, type.ToDisplayString()));

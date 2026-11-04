@@ -103,12 +103,21 @@ public class JsonPolymorphismAnalyzerTests
     }
 
     [Fact]
-    public async Task CSE4005_Should_Warn_For_A_Derived_Type_Without_A_Value()
+    public async Task CSE4005_Should_Report_Info_For_A_Derived_Type_Without_A_Value()
     {
         Diagnostic diagnostic = await SingleAsync("CSE4005", "public sealed class A : IEvent { }");
 
-        diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Info);
         Message(diagnostic).Should().Contain("CLR name 'Sample.A'");
+    }
+
+    [Fact]
+    public async Task CSE4005_Should_Warn_When_The_Aot_Analyzer_Is_Enabled()
+    {
+        TestAnalyzerConfigOptionsProvider options = new(new Dictionary<string, string> { ["build_property.EnableAotAnalyzer"] = "true" });
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync("public sealed class A : IEvent { }", options);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE4005").Which.Severity.Should().Be(DiagnosticSeverity.Warning);
     }
 
     [Fact]
@@ -196,6 +205,32 @@ public class JsonPolymorphismAnalyzerTests
     }
 
     [Fact]
+    public async Task CSE4012_Should_Report_The_Attribute_On_A_Positional_Record_Parameter()
+    {
+        Diagnostic diagnostic = await SingleAsync("CSE4012", """
+            [JsonTypeDiscriminator("a")] public sealed class A : IEvent { }
+            public sealed record Data([property: JsonPolymorphicProperty("k")] IEvent? Value);
+            """);
+
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
+        Message(diagnostic).Should().StartWith("[property: JsonPolymorphicProperty] on parameter 'Value'");
+    }
+
+    [Fact]
+    public async Task CSE4012_Should_Not_Report_A_Declared_Record_Property()
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync("""
+            [JsonTypeDiscriminator("a")] public sealed class A : IEvent { }
+            public sealed record Data
+            {
+                [JsonPolymorphicProperty("k")] public IEvent? Value { get; init; }
+            }
+            """);
+
+        diagnostics.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task CSE4011_Should_Report_An_Unlisted_Subtype_Of_A_Closed_Base()
     {
         Diagnostic diagnostic = await SingleAsync("CSE4011", """
@@ -216,11 +251,13 @@ public class JsonPolymorphismAnalyzerTests
         return diagnostics.Should().ContainSingle(d => d.Id == id).Subject;
     }
 
-    private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
+    private static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source, TestAnalyzerConfigOptionsProvider? options = null)
     {
         CSharpCompilation compilation = GeneratorHarness.CreateCompilation([], [typeof(JsonTypeDiscriminatorAttribute).Assembly])
             .AddSyntaxTrees(CSharpSyntaxTree.ParseText(Header + source, new CSharpParseOptions(LanguageVersion.Latest), path: "Source.cs"));
-        return AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, JsonAssembly.Value.Analyzers);
+        return options is null
+            ? AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, JsonAssembly.Value.Analyzers)
+            : AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, JsonAssembly.Value.Analyzers, options);
     }
 
     private static string Message(Diagnostic diagnostic) => diagnostic.GetMessage(CultureInfo.InvariantCulture);

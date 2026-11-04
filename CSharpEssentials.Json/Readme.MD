@@ -256,13 +256,14 @@ public interface IEvent;
 | CSE4002 | Warning | `[JsonTypeDiscriminator]` on a type the base already lists; the base value wins |
 | CSE4003 | Error | `[JsonTypeDiscriminator]` on an abstract type, an interface or a generic type |
 | CSE4004 | Warning | The discriminator name equals a member's JSON name (ignoring case) |
-| CSE4005 | Warning | A derived type of a base without `[JsonDerivedType]` has no `[JsonTypeDiscriminator]` |
-| CSE4006 | Warning | A `JsonSerializerContext` lists a base but not one of its `[JsonTypeDiscriminator]` types (code fix) |
+| CSE4005 | Info, Warning in AOT projects | A derived type of a base without `[JsonDerivedType]` has no `[JsonTypeDiscriminator]`. It is a warning when `EnableAotAnalyzer` is true (`PublishAot` or `IsAotCompatible`), because `AddPolymorphism` leaves such a type out |
+| CSE4006 | Warning | A `JsonSerializerContext` lists a base but not one of its `[JsonTypeDiscriminator]` types declared in the same project (code fix) |
 | CSE4007 | Warning | A derived type has its own `[JsonConverter]` and is left out |
 | CSE4008 | Warning | `[JsonTypeDiscriminator]` on a type whose bases have no System.Text.Json polymorphism attribute |
 | CSE4009 | Warning | `[JsonPolymorphicProperty]` on a member that holds no polymorphic base |
 | CSE4010 | Warning | A type generated code cannot reach (private, protected, file-local or generic) |
 | CSE4011 | Info | A derived type of a base with `[JsonDerivedType]` is neither listed nor valued, so writing it throws |
+| CSE4012 | Warning | `[property: JsonPolymorphicProperty]` on a positional record parameter, which generated code does not see; declare the property or use `AddPolymorphismWithReflection` |
 
 #### Limits
 

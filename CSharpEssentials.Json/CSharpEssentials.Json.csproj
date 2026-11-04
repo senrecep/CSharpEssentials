@@ -12,7 +12,7 @@
       JSON utilities and custom converters for System.Text.Json in C#.
       Includes MultiFormatDateTimeConverter, PolymorphicJsonConverterFactory,
       JsonOptions, and polymorphism across assemblies ([JsonTypeDiscriminator], AddPolymorphism)
-      with a bundled source generator and analyzers (CSE4001-CSE4011).
+      with a bundled source generator and analyzers (CSE4001-CSE4012).
       Essential for advanced JSON serialization scenarios.
     </Description>
     <PackageTags>
