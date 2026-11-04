@@ -216,9 +216,10 @@ Output:
 | Outgoing route/query | `pending_approval` | `1` |
 | EF column (`Storage = String`) | `pending_approval` | not affected (storage is separate) |
 | EF column (`Storage = Integer`) | `1` | `1` |
-| Undefined value | `EnumValueException` before anything is written | same |
+| Undefined value, STJ JSON (`AddEnumConventions`, `HasJsonConversion`) | the number, `42` (dictionary key `"42"`); flags with undefined bits are one number | same |
+| Undefined value, other layers (enum columns, `ToJson()` JSON columns, route, query) | `EnumValueException` before anything is written | same |
 
-The exception rows matter: an undefined value created in code (`(OrderStatus)42`) is never written to a response, a database or a message. Writing it is a bug and fails loudly at the boundary.
+An undefined value created in code (`(OrderStatus)42`) is never written to an enum column, a route or a query string: it fails loudly at that boundary. Everything serialized through System.Text.Json with the enum converter (responses, OpenAPI defaults, request bodies, `HasJsonConversion` properties) writes it as its number instead. EF `ToJson()` JSON columns use `EnumColumnCodec` and still throw. Reads are not symmetric: `Input` mode rejects that number, `Data` mode maps it to the fallback member or rejects it.
 
 ### 5.1 Flags
 

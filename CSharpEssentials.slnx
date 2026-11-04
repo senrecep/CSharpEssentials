@@ -24,6 +24,8 @@
   <Project Path="CSharpEssentials.Idempotency/CSharpEssentials.Idempotency.csproj" />
   <Project Path="CSharpEssentials.Idempotency.Testing/CSharpEssentials.Idempotency.Testing.csproj" />
   <Project Path="CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
+  <Project Path="CSharpEssentials.Json.CodeFixes/CSharpEssentials.Json.CodeFixes.csproj" />
+  <Project Path="CSharpEssentials.Json.Generators/CSharpEssentials.Json.Generators.csproj" />
 
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
   <Project Path="CSharpEssentials.Mediator/CSharpEssentials.Mediator.csproj" />
@@ -41,6 +43,8 @@
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionA/CSharpEssentials.Tests.Fixtures.DependencyInjectionA.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionB/CSharpEssentials.Tests.Fixtures.DependencyInjectionB.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.EnumsContracts/CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.JsonCore/CSharpEssentials.Tests.Fixtures.JsonCore.csproj" />
+  <Project Path="tests/CSharpEssentials.Tests.Fixtures.JsonEvents/CSharpEssentials.Tests.Fixtures.JsonEvents.csproj" />
   <Project Path="tests/CSharpEssentials.Tests.Fixtures.OpenApiSample/CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
   <Project Path="tests/CSharpEssentials.AspNetCore.OpenApi.Tests/CSharpEssentials.AspNetCore.OpenApi.Tests.csproj" />
   <Project Path="tests/CSharpEssentials.EntityFrameworkCore.Tests/CSharpEssentials.EntityFrameworkCore.Tests.csproj" />

@@ -66,6 +66,16 @@
     </ItemGroup>
   </Target>
 
+  <Target Name="CopyJsonAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <None Include="@(Analyzer)"
+            Condition="'%(Filename)%(Extension)' == 'CSharpEssentials.Json.Generators.dll'"
+            Link="Analyzers\CSharpEssentials.Json.Generators.dll"
+            CopyToOutputDirectory="PreserveNewest"
+            Visible="false" />
+    </ItemGroup>
+  </Target>
+
   <Target Name="CopyEntityFrameworkCoreAnalyzerForTests" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
     <ItemGroup>
       <None Include="@(Analyzer)"
@@ -95,6 +105,12 @@
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsA\CSharpEssentials.Tests.Fixtures.EndpointsA.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EndpointsB\CSharpEssentials.Tests.Fixtures.EndpointsB.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.EnumsContracts\CSharpEssentials.Tests.Fixtures.EnumsContracts.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Json.Generators\CSharpEssentials.Json.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.Json.CodeFixes\CSharpEssentials.Json.CodeFixes.csproj" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.JsonCore\CSharpEssentials.Tests.Fixtures.JsonCore.csproj" />
+    <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.JsonEvents\CSharpEssentials.Tests.Fixtures.JsonEvents.csproj" />
     <ProjectReference Include="..\tests\CSharpEssentials.Tests.Fixtures.OpenApiSample\CSharpEssentials.Tests.Fixtures.OpenApiSample.csproj" />
     <ProjectReference
       Include="..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />

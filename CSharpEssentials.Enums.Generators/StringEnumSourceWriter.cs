@@ -119,9 +119,7 @@ internal static class StringEnumSourceWriter
         w.Line();
         w.Line("namespace System.Runtime.CompilerServices");
         w.Open();
-        w.Line(GeneratedCode);
-        w.Line("[global::System.AttributeUsage(global::System.AttributeTargets.Method, Inherited = false)]");
-        w.Line("internal sealed class ModuleInitializerAttribute : global::System.Attribute");
+        w.Line("internal sealed partial class ModuleInitializerAttribute : global::System.Attribute");
         w.Open();
         w.Close();
         w.Close();

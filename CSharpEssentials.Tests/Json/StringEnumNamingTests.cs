@@ -287,6 +287,16 @@ public class StringEnumNamingTests
     }
 
     [Fact]
+    public void GetName_WithUnsupportedValueType_ShouldReportValueParameter()
+    {
+        Action getName = () => StringEnumNaming.GetName(typeof(NamingStatus), "Active");
+        Action getNameOtherEnum = () => StringEnumNaming.GetName(typeof(NamingStatus), AcronymKind.IOError);
+
+        getName.Should().Throw<ArgumentException>().WithParameterName("value");
+        getNameOtherEnum.Should().Throw<ArgumentException>().WithParameterName("value");
+    }
+
+    [Fact]
     public void Enums_Without_Generated_Metadata_Should_Throw_Instead_Of_Using_Reflection()
     {
         Action getName = () => StringEnumNaming.GetName(PlainKind.First);

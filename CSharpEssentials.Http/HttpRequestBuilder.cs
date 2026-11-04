@@ -272,6 +272,7 @@ public sealed class HttpRequestBuilder
                 options.AddEnumConventions(conventions, EnumReadMode.Data, writeAs);
                 options.Converters.Add(new MultiFormatDateTimeConverterFactory());
                 options.Converters.Add(new PolymorphicJsonConverterFactory());
+                options.AddPolymorphismWithReflection();
             }));
     }
 

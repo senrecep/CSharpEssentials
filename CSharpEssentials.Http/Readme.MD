@@ -100,7 +100,7 @@ Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: 
 
 ### Enums in route, query and body
 
-Enums with `[StringEnum]` are written as wire names; `WithEnumConventions(conventions, EnumWireFormat.Number)` writes numbers for servers that accept only integers. Flags and enum collections become repeated query keys, and an undefined value is never sent.
+Enums with `[StringEnum]` are written as wire names; `WithEnumConventions(conventions, EnumWireFormat.Number)` writes numbers for servers that accept only integers. Flags and enum collections become repeated query keys, and an undefined value is never sent in a route or query string. In a JSON body it is sent as its number.
 
 ```csharp
 using CSharpEssentials.Enums;
