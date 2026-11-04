@@ -243,6 +243,77 @@ public class EnumToStringConverterTests
         }
     }
 
+    [Flags]
+    internal enum LegacyAccess
+    {
+        None = 0,
+        ReadHTTP = 1,
+        Write2 = 2,
+        Alias = Write2,
+        All = ReadHTTP | Write2
+    }
+
+    private static string ReferenceWrite<TEnum>(TEnum value) where TEnum : struct, Enum => value.ToString().ToSnakeCase();
+
+    private static TEnum ReferenceRead<TEnum>(string value) where TEnum : struct, Enum =>
+        Enum.Parse<TEnum>(value.ToPascalCase(), true);
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    [InlineData(5)]
+    [InlineData(-1)]
+    public void LegacyConverter_ShouldMatchUncachedFormat_ForMembersCombinationsAndUndefinedValues(int raw)
+    {
+        LegacyAccess value = (LegacyAccess)raw;
+        ValueConverter<LegacyAccess, string> legacy = new LegacySnakeCaseEnumConverter<LegacyAccess>();
+
+        string written = (string)legacy.ConvertToProvider(value)!;
+
+        written.Should().Be(ReferenceWrite(value));
+        legacy.ConvertFromProvider(written).Should().Be(ReferenceRead<LegacyAccess>(written));
+    }
+
+    [Theory]
+    [InlineData("read_http")]
+    [InlineData("READHTTP")]
+    [InlineData("Write2")]
+    [InlineData("write_2")]
+    [InlineData("alias")]
+    [InlineData("all")]
+    [InlineData("3")]
+    public void LegacyConverter_ShouldMatchUncachedRead_ForAnyCasingAndFormat(string stored)
+    {
+        ValueConverter<LegacyAccess, string> legacy = new LegacySnakeCaseEnumConverter<LegacyAccess>();
+
+        legacy.ConvertFromProvider(stored).Should().Be(ReferenceRead<LegacyAccess>(stored));
+    }
+
+    [Fact]
+    public void LegacyConverter_ShouldThrowLikeUncachedRead_ForUnknownName()
+    {
+        ValueConverter<LegacyAccess, string> legacy = new LegacySnakeCaseEnumConverter<LegacyAccess>();
+
+        Action act = () => legacy.ConvertFromProvider("missing");
+
+        act.Should().Throw<ArgumentException>();
+        FluentActions.Invoking(() => ReferenceRead<LegacyAccess>("missing")).Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void LegacyConverter_ShouldReuseTheStoredName_ForDefinedMembers()
+    {
+        ValueConverter<AcronymValue, string> legacy = new LegacySnakeCaseEnumConverter<AcronymValue>();
+
+        object? first = legacy.ConvertToProvider(AcronymValue.HTTPStatus);
+        object? second = legacy.ConvertToProvider(AcronymValue.HTTPStatus);
+
+        second.Should().BeSameAs(first);
+    }
+
     [Fact]
     public void LegacyConverter_ShouldRoundTrip()
     {
