@@ -1,4 +1,4 @@
-# Enums End to End Example
+# Enums end to end example
 
 One `[StringEnum]` enum and one `[Flags]` enum travel through every layer with a single `EnumConventions` instance: JSON bodies, route/query/header binding, response output, OpenAPI and an EF Core (PostgreSQL) column. See [Enums end to end](../../README.MD#enums-end-to-end) and the [design document](../../docs/design/CSharpEssentials.Enums-DESIGN.md).
 

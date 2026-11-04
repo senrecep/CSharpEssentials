@@ -1,8 +1,8 @@
-# CSharpEssentials.AspNetCore Example
+# CSharpEssentials.AspNetCore example
 
 This project demonstrates `CSharpEssentials.AspNetCore` with MVC controllers, integrated with `CSharpEssentials.Results` and `CSharpEssentials.Errors`, and uses `CSharpEssentials.AspNetCore.Swashbuckle` for the Swagger document.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | File | Description |
 |---------|------|-------------|
@@ -12,10 +12,10 @@ This project demonstrates `CSharpEssentials.AspNetCore` with MVC controllers, in
 | **Model Validation Response** | `Program.cs` | `ConfigureModelValidatorResponse()` returns invalid model state as an enhanced problem |
 | **JSON Configuration** | `Program.cs` | `ConfigureSystemTextJson(configureOptions: ...)` applies the `CSharpEssentials.Json` options with `WriteIndented` |
 | **API Versioning** | `Program.cs`, `Controllers/*.cs` | `AddAndConfigureApiVersioning(...)`; URL-segment versioning (`/api/v1/products`) |
-| **Swagger** | `Program.cs` | `AddSwaggerGen` with `EnumSchemaFilter` and `SwashbuckleSchemaIdFactory` (see Swagger Enum Display) |
+| **Swagger** | `Program.cs` | `AddSwaggerGen` with `EnumSchemaFilter` and `SwashbuckleSchemaIdFactory` (see Swagger enum display) |
 | **Result Chaining** | `Services/OrderService.cs` | `Then()` composes multiple validation steps |
 
-## Running the Project
+## Running the project
 
 ```bash
 cd examples/Examples.AspNetCore
@@ -24,7 +24,7 @@ ASPNETCORE_ENVIRONMENT=Development dotnet run
 
 The project has no launch profile, so Kestrel listens on `http://localhost:5000` and the environment is `Production` unless you set it. Swagger is only enabled in `Development`: open `http://localhost:5000/swagger` to explore the API. (`UseHttpsRedirection()` logs `Failed to determine the https port for redirect` without an HTTPS endpoint; it does not break the requests.)
 
-## API Endpoints
+## API endpoints
 
 ### Products
 
@@ -45,9 +45,9 @@ The project has no launch profile, so Kestrel listens on `http://localhost:5000`
 | POST | `/api/v1/orders` | Place an order (chained business rules) |
 | GET | `/api/v1/orders/{id}` | Always returns a 404 problem: the lookup is simulated |
 
-## Result Pattern in Action
+## Result pattern in action
 
-### Before (Traditional Exception-Based)
+### Before (traditional, exception-based)
 
 ```csharp
 public Product GetById(Guid id)
@@ -59,7 +59,7 @@ public Product GetById(Guid id)
 }
 ```
 
-### After (Result Pattern)
+### After (Result pattern)
 
 ```csharp
 public Result<Product> GetById(Guid id)
@@ -72,7 +72,7 @@ public Result<Product> GetById(Guid id)
 }
 ```
 
-### Controller Mapping
+### Controller mapping
 
 ```csharp
 public class ProductsController(IProductService productService) : ControllerBase
@@ -88,7 +88,7 @@ public class ProductsController(IProductService productService) : ControllerBase
 }
 ```
 
-## Result Chaining
+## Result chaining
 
 The `OrderService.PlaceOrder` method chains multiple business rules:
 
@@ -104,7 +104,7 @@ public Result<Order> PlaceOrder(Guid productId, int quantity)
 
 If any step fails, the chain short-circuits and returns the first error set.
 
-## Error Types
+## Error types
 
 | Error Type | HTTP Status | Use Case |
 |------------|-------------|----------|
@@ -114,7 +114,7 @@ If any step fails, the chain short-circuits and returns the first error set.
 | `Error.Unauthorized()` | 401 | Authentication required |
 | `Error.Forbidden()` | 403 | Permission denied |
 
-## Swagger Enum Display
+## Swagger enum display
 
 `Program.cs` adds `options.SchemaFilter<EnumSchemaFilter>()`. `EnumSchemaFilter` (package `CSharpEssentials.AspNetCore.Swashbuckle`, namespace `CSharpEssentials.AspNetCore`) describes the enums that the enum conventions handle: `[StringEnum]` enums, whose metadata the `CSharpEssentials.Enums` generator creates. `ProductCategory` and `OrderStatus` in this project are plain enums, and the project does not reference the generator, so the filter leaves them alone and Swagger shows the framework schema:
 

@@ -1,8 +1,8 @@
-# CSharpEssentials (Main Package) Example
+# CSharpEssentials (main package) example
 
 This console application demonstrates how several `CSharpEssentials` packages work together, and the helpers that the `CSharpEssentials` meta-package adds itself.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Packages Used | Description |
 |---------|---------------|-------------|

@@ -1,15 +1,15 @@
-# CSharpEssentials.GcpSecretManager Example
+# CSharpEssentials.GcpSecretManager example
 
 This console application shows the configuration types of `CSharpEssentials.GcpSecretManager`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|
-| **Configuration Options** | `SecretManagerConfigurationOptions` collects projects with `AddProject` |
-| **Project Configuration** | `ProjectSecretConfiguration` with `ProjectId`, `SecretIds`, `PrefixFilters` and `RawSecretPrefixes`; `IsRawSecret` tells which secrets are kept as raw text instead of being parsed as JSON |
-| **Multiple Projects** | Two projects with different filters in one options object |
-| **Wiring (commented)** | `Program.cs` only mentions `AddGcpSecretManager` in a comment, on an `IConfigurationBuilder` variable; that call does not compile against `IConfigurationBuilder` (see the note below) |
+| Configuration options | `SecretManagerConfigurationOptions` collects projects with `AddProject` |
+| Project configuration | `ProjectSecretConfiguration` with `ProjectId`, `SecretIds`, `PrefixFilters` and `RawSecretPrefixes`; `IsRawSecret` tells which secrets are kept as raw text instead of being parsed as JSON |
+| Multiple projects | Two projects with different filters in one options object |
+| Wiring (commented) | `Program.cs` only mentions `AddGcpSecretManager` in a comment, on an `IConfigurationBuilder` variable; that call does not compile against `IConfigurationBuilder` (see the note below) |
 
 ## Running
 
