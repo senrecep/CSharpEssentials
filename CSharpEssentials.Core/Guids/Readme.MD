@@ -31,7 +31,7 @@ How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counte
 What it costs:
 
 - Each ID has 62 random bits instead of 74.
-- All threads update one shared value. In a quick benchmark with 6 threads the cost per ID stayed within the noise of `Guid.NewGuid()` and `NewGuid()`, because the random bits cost far more than the shared update.
+- All threads update one shared value. In a quick benchmark with 6 threads it cost about 11% more per ID than `Guid.NewGuid()` on .NET 9, because the random bits cost far more than the shared update.
 - The order holds within one process, and within one loaded copy of the assembly: two `AssemblyLoadContext`s or .NET Framework AppDomains each keep their own value. Two processes or machines can still produce IDs that interleave.
 - The counter allows 4096 IDs per millisecond, about 4 per microsecond across all threads. One thread stays below that (about 1.2 per microsecond on the test machine), but several threads at full speed can pass it. Above that rate the encoded timestamp runs ahead of the clock, by roughly (IDs / 4096) ms minus the elapsed time, and keeps drifting for as long as the rate holds. It catches up once the rate drops. A clock that goes backwards has the same effect until the clock passes the last timestamp.
 
