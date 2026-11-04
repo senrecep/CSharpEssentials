@@ -22,6 +22,10 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 /// still deleted. A dependent removed explicitly in the same save cannot be told apart from a cascaded one and is
 /// kept too; save that removal separately.
 /// </para>
+/// <para>
+/// <see cref="IAuditUserIdProvider"/> and the clock are read once per save, and only when the save has an entry to
+/// stamp; a save with no auditable entries creates no DI scope and does not call the provider.
+/// </para>
 /// </summary>
 public sealed class AuditInterceptor(
     TimeProvider timeProvider,
@@ -48,22 +52,25 @@ public sealed class AuditInterceptor(
 
     private void UpdateAuditableEntities(DbContext context)
     {
-        using IServiceScope scope = serviceScopeFactory.CreateScope();
-        IAuditUserIdProvider userProvider = scope.ServiceProvider.GetRequiredService<IAuditUserIdProvider>();
-        string userId = userProvider.GetCurrentUserId();
-        DateTimeOffset now = timeProvider.GetUtcNow();
-
+        (DateTimeOffset Now, string UserId)? stamp = null;
         List<EntityEntry> entries = [.. context.ChangeTracker.Entries()];
         List<EntityEntry> softDeleted = [];
         foreach (EntityEntry entry in entries)
         {
             if (entry.State == EntityState.Added && entry.Entity is ICreationAudit creationAudit)
-                creationAudit.SetCreatedInfo(now, userId);
+            {
+                stamp ??= CreateStamp();
+                creationAudit.SetCreatedInfo(stamp.Value.Now, stamp.Value.UserId);
+            }
             else if (entry.State == EntityState.Modified && entry.Entity is IModificationAudit modificationAudit)
-                modificationAudit.SetUpdatedInfo(now, userId);
+            {
+                stamp ??= CreateStamp();
+                modificationAudit.SetUpdatedInfo(stamp.Value.Now, stamp.Value.UserId);
+            }
             else if (entry.State == EntityState.Deleted && entry.Entity is ISoftDeletable softDeletable && !softDeletable.IsHardDeleted)
             {
-                softDeletable.MarkAsDeleted(now, userId);
+                stamp ??= CreateStamp();
+                softDeletable.MarkAsDeleted(stamp.Value.Now, stamp.Value.UserId);
                 entry.State = EntityState.Modified;
                 softDeleted.Add(entry);
             }
@@ -71,6 +78,13 @@ public sealed class AuditInterceptor(
 
         if (softDeleted.Count > 0)
             RestoreCascadedDependents(entries, softDeleted);
+    }
+
+    private (DateTimeOffset Now, string UserId) CreateStamp()
+    {
+        using IServiceScope scope = serviceScopeFactory.CreateScope();
+        string userId = scope.ServiceProvider.GetRequiredService<IAuditUserIdProvider>().GetCurrentUserId();
+        return (timeProvider.GetUtcNow(), userId);
     }
 
     private static void RestoreCascadedDependents(List<EntityEntry> entries, List<EntityEntry> softDeleted)
