@@ -18,6 +18,7 @@ Extensions, interceptors, and utilities for Entity Framework Core. Audit trails,
 - **Hard Delete and Data Seeding**: `HardDelete` on a context or set, and `MigrateDataAsync` to sync seed data.
 - **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
 - **Idempotency Records**: `EfCoreIdempotencyRecordStore<TContext>` keeps idempotency records in your `DbContext` and its transaction, so a rolled-back request leaves no record.
+- **Ordered GUID keys**: Opt-in, provider-aware time-ordered values for generated `Guid` keys, with a SQL Server layout.
 - **Database Error Translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
 
 ## Installation
@@ -654,6 +655,48 @@ public sealed class MetricsSlowQueryHandler : ISlowQueryHandler
 ```
 
 Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameter values, and passed to the `ISlowQueryHandler` when one is registered. Parameter values can be sensitive; keep that in mind before shipping the logs.
+
+### Ordered GUID keys
+
+EF Core and the provider choose how `Guid` keys are generated, and this package leaves that alone unless you opt in:
+
+```csharp
+protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.UseOrderedGuidKeys();                                  // layout picked from the provider
+    // configurationBuilder.UseOrderedGuidKeys(OrderedGuidLayout.SqlServer);    // or the same layout on every provider
+}
+
+// one property, without the convention; compiled models support both factories
+modelBuilder.Entity<Order>().Property(x => x.Id).HasValueGeneratorFactory<Version7GuidValueGeneratorFactory>();
+```
+
+The convention covers every non-nullable `Guid` primary key that EF Core generates on add. It skips foreign keys and keys with a value generator, a default value, default value SQL or computed SQL of their own, and anything configured explicitly wins over it. It sets the factory type, not a generator instance, so compiled models work.
+
+| Layout | Values | Sorts by creation time in |
+|---|---|---|
+| `Version7` | `Guider.NewMonotonicGuid()`: RFC 9562 version 7, strictly increasing within the process | big-endian bytes, the string form and `Guid.CompareTo` |
+| `SqlServer` | `Guider.NewSqlServerGuid()`: RFC 9562 version 8, milliseconds in the last 6 bytes, strictly increasing within the process | SQL Server `uniqueidentifier` order (`SqlGuid`) only |
+
+What each provider stores and what `UseOrderedGuidKeys()` picks:
+
+| Provider | Column and comparison | Default generator without this package | Picked layout |
+|---|---|---|---|
+| SQL Server | `uniqueidentifier`; compares bytes 10 to 15 first, then 8 to 9, 6 to 7, 4 to 5 and 0 to 3 | `SequentialGuidValueGenerator`: ordered within one generator instance | `SqlServer` |
+| PostgreSQL (Npgsql) | `uuid`; compares the 16 bytes in RFC order | version 4 on Npgsql 8; version 7 on Npgsql 9 and later | `Version7` |
+| SQLite | `TEXT`, uppercase with hyphens; compares ordinally | version 4 | `Version7` |
+| Pomelo MySQL | `GuidFormat` `Char36` (the default), `Char32` or `Binary16` keep RFC order; `TimeSwapBinary16` and `LittleEndianBinary16` reorder the bytes | ticks in the first 8 bytes, with its own byte layout for `LittleEndianBinary16` | `Version7` |
+| Any other provider (MySql.EntityFrameworkCore, in-memory, Cosmos, Oracle, MongoDB) | not checked by this package | the provider's | none, unless you pass a layout |
+
+Notes:
+
+- On SQL Server the default generator is already sequential inside one app instance. It seeds a counter from the clock when the generator is created, so several instances, or one restarted instance, write into separate ranges of the index. `SqlServer` values follow the clock in every instance, so concurrent instances all append near the end of the index. In a single test run against SQL Server 2022 in a container (20,000 single-row inserts into a clustered key, `char(200)` rows), one process left 0.5% fragmentation with either generator. Four processes started 1 second apart left 96.9% fragmentation with the default generator and 11.2% with `SqlServer`, with pages 96% and 92% full. Version 4 and `NewMonotonicGuid()` left 99% fragmentation and pages 67% full with one and with four processes, and `NewGuid()` the same with one process.
+- Npgsql 9 and later already generate version 7 values. Opting in there only makes values from one process strictly increasing inside a millisecond.
+- With Pomelo `TimeSwapBinary16` or `LittleEndianBinary16`, do not opt in. Version 7 values do not sort in either format. Under `LittleEndianBinary16` Pomelo's own generator does sort; under `TimeSwapBinary16` neither does, because the stored value starts with bytes that hold low tick bits. This package cannot see the `GuidFormat` of the connection.
+- A `Version7` value sorts randomly in SQL Server, and a `SqlServer` value sorts randomly everywhere else. Pass a layout only when the default pick is wrong for your columns.
+- The order holds within one process. Values from different processes interleave by their millisecond.
+
+**Security.** Both layouts show the time a row was created, to the millisecond, to anyone who sees the key, and carry 56 random bits instead of the 122 of `Guid.NewGuid()`. Do not use them for keys that must stay secret or hard to guess, such as tokens, invitation links or password reset ids.
 
 ### Database Error Translation
 
