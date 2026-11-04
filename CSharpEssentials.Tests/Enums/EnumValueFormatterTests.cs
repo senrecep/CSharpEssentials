@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CSharpEssentials.Enums;
 using FluentAssertions;
 
@@ -308,6 +309,32 @@ public class EnumValueFormatterTests
 
         formatted.Should().BeFalse();
         values.Should().Equal("existing");
+    }
+
+    [Fact]
+    public void TryFormatMany_Should_Not_Touch_A_Caller_Collection_That_Is_Not_A_List_When_An_Item_Is_Not_Handled()
+    {
+        ObservableCollection<string> values = ["existing"];
+        int changes = 0;
+        values.CollectionChanged += (_, _) => changes++;
+
+        bool formatted = EnumValueFormatter.TryFormatMany(
+            new object[] { FormatterInt.MinValue, FormatterInt.SecondValue, DayOfWeek.Monday }, Conventions, values);
+
+        formatted.Should().BeFalse();
+        values.Should().Equal("existing");
+        changes.Should().Be(0);
+    }
+
+    [Fact]
+    public void TryFormatMany_Should_Add_Collection_Items_To_A_Caller_Collection_That_Is_Not_A_List()
+    {
+        ObservableCollection<string> values = ["existing"];
+
+        bool formatted = EnumValueFormatter.TryFormatMany(new[] { FormatterInt.MinValue, FormatterInt.SecondValue }, Conventions, values);
+
+        formatted.Should().BeTrue();
+        values.Should().Equal("existing", "min_value", "second_value");
     }
 }
 

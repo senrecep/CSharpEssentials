@@ -86,7 +86,9 @@ public static class EnumValueFormatter
         if (value is string || value is not IEnumerable items)
             return false;
 
-        int start = values.Count;
+        List<string>? staged = values.GetType() == typeof(List<string>) ? null : [];
+        IList<string> target = staged ?? values;
+        int start = target.Count;
         bool hasItems = false;
         try
         {
@@ -96,18 +98,24 @@ public static class EnumValueFormatter
                     continue;
                 if (!TryGetInfo(item, conventions, out IEnumInfo? itemInfo))
                 {
-                    RemoveFrom(values, start);
+                    RemoveFrom(target, start);
                     return false;
                 }
 
-                AddFormatted(itemInfo, item, wireFormat, values);
+                AddFormatted(itemInfo, item, wireFormat, target);
                 hasItems = true;
             }
         }
         catch
         {
-            RemoveFrom(values, start);
+            RemoveFrom(target, start);
             throw;
+        }
+
+        if (staged is not null)
+        {
+            foreach (string text in staged)
+                values.Add(text);
         }
 
         return hasItems;
