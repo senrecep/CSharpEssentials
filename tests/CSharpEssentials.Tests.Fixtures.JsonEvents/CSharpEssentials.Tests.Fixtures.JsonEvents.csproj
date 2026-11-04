@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A service assembly: it owns its events and registers them from its generated module initializer. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CSharpEssentials.Tests.Fixtures.JsonCore\CSharpEssentials.Tests.Fixtures.JsonCore.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Json.Generators\CSharpEssentials.Json.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>
