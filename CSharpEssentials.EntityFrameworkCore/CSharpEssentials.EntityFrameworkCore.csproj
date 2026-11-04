@@ -11,7 +11,7 @@
     <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
-      EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance,NamingConventions</PackageTags>
+      EntityFrameworkCore,Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,SoftDelete,AuditTrail,QueryFilters,OptimisticConcurrency,PostgreSQL,DDD,SlowQueryMonitoring,BaseEntity,QueryPerformance</PackageTags>
     <Description>Enhances Entity Framework Core with functional programming patterns and
       DDD-friendly features. Includes base entity classes, soft delete support, audit trails, query
       filters, optimistic concurrency, PostgreSQL integration, query performance monitoring, and
@@ -45,8 +45,8 @@
   <!-- EF Core packages - each target framework is compiled against (and capped to) its own EF major,
        because EF APIs such as ExecuteUpdate are not binary compatible across majors. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[10.0.0,11)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[10.0.1,11)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="[10.0.1,11)" />
     <!-- EF 10 needs the 10.x Microsoft.Extensions packages; lift the central (transitively pinned) 9.x versions. -->
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" VersionOverride="[10.0.1,)" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" VersionOverride="[10.0.1,)" />
@@ -55,12 +55,12 @@
     <PackageReference Include="Microsoft.Extensions.Options" VersionOverride="[10.0.1,)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="[9.0.4,10)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="EFCore.NamingConventions" VersionOverride="[8.0.0,9)" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.0,9)" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="[8.0.0,9)" />
   </ItemGroup>
 
   <!-- Dependencies: EntityFrameworkCore depends on Core, Entity, Enums, Json, Maybe, Results and Idempotency -->

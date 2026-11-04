@@ -714,3 +714,7 @@ public sealed class PostgresConstraintTranslator : IDbErrorTranslator
 ```
 
 The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
+
+## Upgrading to 8.0
+
+- The package no longer depends on `EFCore.NamingConventions`. It never used it, but 7.x brought it in, so `UseSnakeCaseNamingConvention()` and the other naming convention methods compiled without a direct reference. If you call them, add `EFCore.NamingConventions` to your project with the major that matches your EF Core version. `Microsoft.EntityFrameworkCore.Relational` is now a direct dependency instead of a transitive one, so nothing changes there.
