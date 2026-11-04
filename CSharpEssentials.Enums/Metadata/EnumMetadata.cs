@@ -68,6 +68,9 @@ public static class EnumMetadata
         if (!enumType.IsEnum)
             throw new ArgumentException($"'{enumType.FullName}' is not an enum type.", nameof(enumType));
 
+        if (ReflectionCache.TryGetValue((enumType, naming), out IEnumInfo? cached))
+            return Lookup(enumType, out IEnumInfo? registered) ? registered : cached;
+
         return TryGet(enumType, out IEnumInfo? info)
             ? info
             : ReflectionCache.GetOrAdd((enumType, naming), static key => ReflectionEnumInfoBuilder.Build(key.Type, key.Naming));

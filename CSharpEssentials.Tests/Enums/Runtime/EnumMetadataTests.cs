@@ -101,6 +101,23 @@ public class EnumMetadataTests
     }
 
     [Fact]
+    public void Registered_Metadata_Should_Replace_Cached_Reflection_Metadata()
+    {
+        IEnumInfo reflected = EnumMetadata.GetOrCreateWithReflection(typeof(RegisteredAfterReflection));
+        EnumMetadata.GetOrCreateWithReflection(typeof(RegisteredAfterReflection)).Should().BeSameAs(reflected);
+        EnumInfo<RegisteredAfterReflection> info = new(
+            [new EnumMemberInfo<RegisteredAfterReflection>(RegisteredAfterReflection.Only, 0, "Only", "the-only")],
+            static v => unchecked((ulong)(long)v),
+            static r => unchecked((RegisteredAfterReflection)(long)r),
+            isFlags: false,
+            EnumStorage.Integer);
+
+        EnumMetadata.Register(info);
+
+        EnumMetadata.GetOrCreateWithReflection(typeof(RegisteredAfterReflection)).Should().BeSameAs(info);
+    }
+
+    [Fact]
     public void RegisterRange_Should_Build_Metadata_Once_On_First_Lookup()
     {
         int calls = 0;
