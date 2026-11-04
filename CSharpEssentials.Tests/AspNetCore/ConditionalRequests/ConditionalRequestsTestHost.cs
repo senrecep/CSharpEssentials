@@ -261,6 +261,7 @@ internal sealed class ConditionalRequestsTestHost : IAsyncDisposable
         app.MapGet("/versioned-doc", () => new VersionedDocument(3, "ignored")).WithConditionalGet();
         app.MapGet("/tenant-doc", () => new TenantDocument(4, 5)).WithConditionalGet();
         app.MapGet("/plain/{name}", (string name) => new PlainItem(name)).WithConditionalGet();
+        app.MapGet("/plain-large", () => new PlainItem(new string('x', 100_000))).WithConditionalGet();
         app.MapGet("/version", (string version) => new VersionedItem(1, version)).WithConditionalGet();
         app.MapGet("/async-items", (EnumerationCounter counter) => counter.Items()).WithConditionalGet();
         app.MapGet("/existing-etag", (HttpContext httpContext) =>
