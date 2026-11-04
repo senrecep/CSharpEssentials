@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -8,6 +9,11 @@ namespace CSharpEssentials.Any;
 /// Reading keeps the caller's <see cref="JsonSerializerOptions"/> with the parsed value, so the union deserializes the value
 /// for its branch type with those options. It is public so that System.Text.Json source generation can create it.
 /// </summary>
+/// <remarks>
+/// Use it only on the <c>Value</c> property of <c>Any&lt;...&gt;</c>. On any other property, reading returns an internal
+/// wrapper type that callers cannot use.
+/// </remarks>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public sealed class AnyValueJsonConverter : JsonConverter<object>
 {
     /// <inheritdoc />
