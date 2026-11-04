@@ -20,8 +20,7 @@ public static class HttpClientResultExtensions
     {
         try
         {
-            using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
-            return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await GetCoreAsync(client, requestUri, HttpJson.Reader<T>(options), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -163,8 +162,7 @@ public static class HttpClientResultExtensions
     {
         try
         {
-            using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
-            return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await GetCoreAsync(client, requestUri, HttpJson.Reader(typeInfo), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
@@ -248,6 +246,16 @@ public static class HttpClientResultExtensions
     private static Task<Result> ExecuteAsync(Func<Task<Result>> action, CancellationToken cancellationToken)
     {
         return Result.TryAsync(action, HandleException, cancellationToken);
+    }
+
+    private static async ValueTask<Result<T>> GetCoreAsync<T>(
+        HttpClient client,
+        Uri? requestUri,
+        Func<HttpContent, CancellationToken, Task<T?>> read,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return await HandleResponseAsync(response, read, cancellationToken).ConfigureAwait(false);
     }
 
     internal static async Task<Result<T>> HandleResponseAsync<T>(
