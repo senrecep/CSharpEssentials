@@ -267,4 +267,45 @@ public sealed class LogMessageCreatorTests
         logString.Should().Contain("/all");
         logString.Should().Contain("PUT");
     }
+
+    [Fact]
+    public void Create_Should_ReuseTemplateAndMatchValues_When_UsingSeparateContext()
+    {
+        var options = new LoggingOptions { LoggingFields = [LogFields.Method, LogFields.Path] };
+        var creator = new LogMessageWithContextCreator(options);
+
+        (string first, object?[]? firstValues) = creator.Create(CreateContext(path: "/a", method: "GET"));
+        (string second, object?[]? secondValues) = creator.Create(CreateContext(path: "/b", method: "POST"));
+
+        string nl = Environment.NewLine;
+        first.Should().Be($"Method: {{Method}}{nl}Path: {{Path}}{nl}");
+        second.Should().BeSameAs(first);
+        firstValues.Should().Equal("GET", "/a");
+        secondValues.Should().Equal("POST", "/b");
+    }
+
+    [Fact]
+    public void Create_Should_KeepTemplateAndValuesAligned_When_FieldsChangeAfterCreation()
+    {
+        var options = new LoggingOptions { LoggingFields = [LogFields.Path] };
+        var creator = new LogMessageWithContextCreator(options);
+        options.LoggingFields.Add(LogFields.Method);
+
+        (string logString, object?[]? values) = creator.Create(CreateContext(path: "/a"));
+
+        logString.Should().Be($"Path: {{Path}}{Environment.NewLine}");
+        values.Should().Equal("/a");
+    }
+
+    [Fact]
+    public void Create_Should_IgnoreFieldsAddedAfterCreation_When_NotUsingSeparateContext()
+    {
+        var options = new LoggingOptions { UseSeparateContext = false, LoggingFields = [LogFields.Path] };
+        var creator = new LogMessageCreator(options);
+        options.LoggingFields.Add(LogFields.Method);
+
+        (string logString, _) = creator.Create(CreateContext(path: "/a"));
+
+        logString.Should().Be($"Path: /a{Environment.NewLine}");
+    }
 }
