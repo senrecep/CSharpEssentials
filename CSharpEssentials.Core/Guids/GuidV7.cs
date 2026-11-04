@@ -1,36 +1,26 @@
-using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 
 namespace CSharpEssentials.Core;
 
 internal static class GuidV7
 {
-    private const int _byteCount = 16, _poolSize = 4096, _counterBits = 12;
+    private const int _byteCount = 16, _counterBits = 12;
     private const long _counterSlots = 1 << _counterBits;
     private const long _unixEpochTicks = 621_355_968_000_000_000;
-
-#if NETSTANDARD2_0
-    private static readonly RandomNumberGenerator _random = RandomNumberGenerator.Create();
-#endif
-
-    [ThreadStatic]
-    private static byte[]? _pool;
-
-    [ThreadStatic]
-    private static int _poolOffset;
 
     private static long _lastPacked;
 
     internal static Guid NewGuid()
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
-        FillRandom(bytes.Slice(6));
+        FillRandom(bytes);
         return Compose((DateTime.UtcNow.Ticks - _unixEpochTicks) / TimeSpan.TicksPerMillisecond, bytes);
     }
 
     internal static Guid NewMonotonicGuid()
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
-        FillRandom(bytes.Slice(8));
+        FillRandom(bytes);
         long utcTicks = DateTime.UtcNow.Ticks;
         long last, packed;
         do
@@ -75,24 +65,15 @@ internal static class GuidV7
             b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
     }
 
-    private static void FillRandom(Span<byte> destination)
+    private static void FillRandom(Span<byte> bytes)
     {
-        byte[]? pool = _pool;
-        if (pool is null)
-        {
-            pool = _pool = new byte[_poolSize];
-            _poolOffset = _poolSize;
-        }
-        if (_poolOffset > _poolSize - destination.Length)
-        {
-#if NETSTANDARD2_0
-            _random.GetBytes(pool);
+        var random = Guid.NewGuid();
+#if NETSTANDARD
+        MemoryMarshal.Write(bytes, ref random);
 #else
-            RandomNumberGenerator.Fill(pool);
+        MemoryMarshal.Write(bytes, in random);
 #endif
-            _poolOffset = 0;
-        }
-        pool.AsSpan(_poolOffset, destination.Length).CopyTo(destination);
-        _poolOffset += destination.Length;
+        bytes[6] = bytes[0];
+        bytes[7] = bytes[1];
     }
 }
