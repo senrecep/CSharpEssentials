@@ -76,7 +76,7 @@ var (text, number) = result;
 
 `IsFirst`, `IsSecond`, `IsThird` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. `Is`, `As` and `TryAs` test the runtime type of the value, not the branch. For a value-type target, `As` returns `default` (so `0` for `int`) when the value is of another type, not `null`; use `Is` or `TryAs` to tell the cases apart.
 
-A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the JSON of the value.
+A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. The value is read with the `JsonSerializerOptions` you pass to `JsonSerializer`, so a naming policy or converter applies to it too. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the JSON of the value.
 
 ### Multiple Types
 
@@ -106,6 +106,7 @@ var (drafts, published) = articles
 
 `Partition` and `Traverse` are available for all arities (`Any<T0,T1>` through `Any<T0,...,T7>`), returning a tuple with one typed array per variant.
 
-## Upgrading
+## Upgrading to 8.0
 
 - A `null` value is now accepted when its branch is a reference type or `Nullable<T>`. This applies to JSON deserialization (`{"Index":n,"Value":null}` now round-trips) and to the public `(int index, object? value)` constructor, so `new Any<int, string>(1, null)` no longer throws. Earlier versions threw `ArgumentNullException` for every `null` value. If you relied on that to reject such input, check `Value is null` after constructing or deserializing.
+- JSON deserialization now reads the value with the caller's `JsonSerializerOptions`. Earlier versions ignored them and always used `EnhancedJsonSerializerOptions.DefaultOptions` (camelCase, case-insensitive, enum and date converters), so a snake_case payload lost its properties. If your payloads relied on those defaults, pass `EnhancedJsonSerializerOptions.DefaultOptions` (or options with the same settings) to `JsonSerializer.Deserialize`.

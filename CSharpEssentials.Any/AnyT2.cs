@@ -18,6 +18,7 @@ public readonly struct Any<T0, T1>
     private Any(T1 value) => (Index, Value) = (1, value);
 
     public int Index { get; }
+    [JsonConverter(typeof(AnyValueJsonConverter))]
     public object? Value { get; }
 
     [JsonIgnore]

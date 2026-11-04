@@ -61,6 +61,11 @@ public static class Any
             return (index, null);
         }
 
+        if (value is AnyJsonValue json)
+        {
+            return (index, json.Element.Deserialize(type, json.Options));
+        }
+
         if (type.IsInstanceOfType(value))
         {
             return (index, value);
@@ -68,7 +73,7 @@ public static class Any
 
         if (value is JsonElement je)
         {
-            return (index, je.GetRawText().ConvertFromJson(type));
+            return (index, je.Deserialize(type, EnhancedJsonSerializerOptions.DefaultOptions));
         }
 
         throw new InvalidOperationException($"Value is not valid type for Any<>");

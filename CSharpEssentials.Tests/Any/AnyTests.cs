@@ -6,6 +6,9 @@ namespace CSharpEssentials.Tests.Any;
 
 public class AnyTests
 {
+    private static readonly JsonSerializerOptions SnakeCaseOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    private static readonly JsonSerializerOptions CaseSensitiveOptions = new() { PropertyNameCaseInsensitive = false };
+
     [Fact]
     public void Create_WithFirstType_ShouldCreateAny()
     {
@@ -227,5 +230,41 @@ public class AnyTests
         Action act = () => JsonSerializer.Deserialize<Any<int, string>>("""{"Index":0,"Value":null}""");
 
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void JsonRoundTrip_WithSnakeCaseOptions_ShouldKeepInnerProperties()
+    {
+        Any<int, SnakeCasePerson> any = new SnakeCasePerson { FirstName = "Ada" };
+
+        string json = JsonSerializer.Serialize(any, SnakeCaseOptions);
+        Any<int, SnakeCasePerson> deserialized = JsonSerializer.Deserialize<Any<int, SnakeCasePerson>>(json, SnakeCaseOptions);
+
+        json.Should().Contain("first_name");
+        deserialized.GetSecond().FirstName.Should().Be("Ada");
+    }
+
+    [Fact]
+    public void JsonDeserialize_ShouldUseCallerOptionsForInnerValue()
+    {
+        Any<int, SnakeCasePerson> deserialized = JsonSerializer.Deserialize<Any<int, SnakeCasePerson>>(
+            """{"Index":1,"Value":{"firstName":"Ada"}}""", CaseSensitiveOptions);
+
+        deserialized.GetSecond().FirstName.Should().BeNull();
+    }
+
+    [Fact]
+    public void Constructor_WithJsonElementValue_ShouldDeserializeWithDefaultOptions()
+    {
+        using JsonDocument document = JsonDocument.Parse("""{"firstName":"Ada"}""");
+
+        var any = new Any<int, SnakeCasePerson>(1, document.RootElement);
+
+        any.GetSecond().FirstName.Should().Be("Ada");
+    }
+
+    public sealed class SnakeCasePerson
+    {
+        public string? FirstName { get; set; }
     }
 }
