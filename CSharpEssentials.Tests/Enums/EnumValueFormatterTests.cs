@@ -116,6 +116,26 @@ public class EnumValueFormatterTests
     }
 
     [Fact]
+    public void TryFormat_Should_Apply_The_Default_CanHandle_Of_Derived_Conventions()
+    {
+        EnumConventions derived = Conventions with { AcceptNumbers = false };
+
+        EnumValueFormatter.TryFormat(FormatterInt.SecondValue, derived, out string? text).Should().BeTrue();
+        text.Should().Be("second_value");
+        EnumValueFormatter.TryFormat(DayOfWeek.Monday, derived, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryFormat_Should_Throw_When_A_Custom_CanHandle_Accepts_An_Enum_Without_Metadata()
+    {
+        EnumConventions conventions = Conventions with { CanHandle = static _ => true };
+
+        Action act = () => EnumValueFormatter.TryFormat(DayOfWeek.Monday, conventions, out _);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*DayOfWeek*");
+    }
+
+    [Fact]
     public void TryFormat_Should_Throw_For_An_Undefined_Value()
     {
         Action act = () => EnumValueFormatter.TryFormat((FormatterInt)42, Conventions, out _);

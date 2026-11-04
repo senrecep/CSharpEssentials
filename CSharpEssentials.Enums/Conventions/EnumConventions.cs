@@ -8,6 +8,8 @@ namespace CSharpEssentials.Enums;
 /// </remarks>
 public sealed record EnumConventions
 {
+    internal static readonly Func<Type, bool> DefaultCanHandle = static type => EnumMetadata.IsRegistered(type) || IsStringEnum(type);
+
     /// <summary>The default conventions.</summary>
     public static EnumConventions Default { get; } = new();
 
@@ -39,6 +41,8 @@ public sealed record EnumConventions
     /// Which enum types the conventions apply to. Default: enums with generated metadata and <see cref="StringEnumAttribute"/> enums
     /// without it, so a missing generator fails loudly instead of silently writing numbers.
     /// </summary>
-    public Func<Type, bool> CanHandle { get; init; } = static type =>
-        EnumMetadata.IsRegistered(type) || type is not null && type.IsEnum && type.IsDefined(typeof(StringEnumAttribute), inherit: false);
+    public Func<Type, bool> CanHandle { get; init; } = DefaultCanHandle;
+
+    internal static bool IsStringEnum(Type? type) =>
+        type is not null && type.IsEnum && type.IsDefined(typeof(StringEnumAttribute), inherit: false);
 }

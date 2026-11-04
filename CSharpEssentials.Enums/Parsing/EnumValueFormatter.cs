@@ -134,10 +134,21 @@ public static class EnumValueFormatter
             return false;
 
         Type type = value.GetType();
-        if (!conventions.CanHandle(type))
+        if (ReferenceEquals(conventions.CanHandle, EnumConventions.DefaultCanHandle))
+        {
+            if (EnumMetadata.TryGet(type, out info))
+                return true;
+            if (!EnumConventions.IsStringEnum(type))
+                return false;
+        }
+        else if (!conventions.CanHandle(type))
+        {
             return false;
-        if (EnumMetadata.TryGet(type, out info))
+        }
+        else if (EnumMetadata.TryGet(type, out info))
+        {
             return true;
+        }
 
         throw new InvalidOperationException(
             $"Enum '{type.FullName}' is handled by the enum conventions but has no generated metadata. Rebuild its project with the " +
