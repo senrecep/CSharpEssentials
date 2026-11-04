@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Globalization;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
@@ -30,6 +31,10 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     private readonly int _maxTokenLength = MaxSpelling(info);
 
+    private readonly Dictionary<ulong, JsonEncodedText> _encodedNames = EncodeNames(info);
+
+    private readonly ulong[] _rawValues = [.. info.TypedMembers.Select(static m => m.RawValue)];
+
     // 4.x flags text ("read, write") holds every flag once, with a separator and a space between them.
     private readonly int _maxLegacyFlagsLength = info.IsFlags ? (MaxSpelling(info) + 2) * Math.Max(info.TypedMembers.Count, 1) : 0;
 
@@ -46,10 +51,13 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     public override void Write(Utf8JsonWriter writer, TEnum value, JsonSerializerOptions options)
     {
+        ulong raw = info.ToRawValue(value);
         if (!info.IsFlags)
         {
-            if (!info.TryGetMember(value, out EnumMemberInfo<TEnum>? member))
-                writer.WriteRawValue(UndefinedNumber(value), skipInputValidation: true);
+            if (writeAs == EnumWireFormat.String && UsesStandardEncoder(writer) && _encodedNames.TryGetValue(raw, out JsonEncodedText name))
+                writer.WriteStringValue(name);
+            else if (!info.TryGetMember(value, out EnumMemberInfo<TEnum>? member))
+                WriteNumber(writer, raw);
             else if (writeAs == EnumWireFormat.Number)
                 writer.WriteRawValue(member.NumericText, skipInputValidation: true);
             else
@@ -57,15 +65,17 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
             return;
         }
 
-        if (!info.IsDefined(value))
+        if (!info.IsDefined(value) || writeAs == EnumWireFormat.Number)
         {
-            writer.WriteRawValue(UndefinedNumber(value), skipInputValidation: true);
+            WriteNumber(writer, raw);
             return;
         }
 
-        if (writeAs == EnumWireFormat.Number)
+        if (UsesStandardEncoder(writer) && WriteFlagNames(raw, writer: null))
         {
-            WriteNumber(writer, value);
+            writer.WriteStartArray();
+            WriteFlagNames(raw, writer);
+            writer.WriteEndArray();
             return;
         }
 
@@ -258,9 +268,69 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         return info.FromRawValue(raw);
     }
 
-    // The text is an invariant integer.
-    private void WriteNumber(Utf8JsonWriter writer, TEnum value) =>
-        writer.WriteRawValue(info.Format(value, EnumWireFormat.Number), skipInputValidation: true);
+    private static void WriteNumber(Utf8JsonWriter writer, ulong raw)
+    {
+        if (IsSigned)
+            writer.WriteNumberValue(unchecked((long)raw));
+        else
+            writer.WriteNumberValue(raw);
+    }
+
+    private static bool UsesStandardEncoder(Utf8JsonWriter writer) =>
+        writer.Options.Encoder is null ||
+        ReferenceEquals(writer.Options.Encoder, JavaScriptEncoder.Default) ||
+        ReferenceEquals(writer.Options.Encoder, JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
+
+    /// <summary>
+    /// The wire name of the member <see cref="EnumInfo{TEnum}.TryGetMember"/> returns for each value, for names the default
+    /// encoder leaves unchanged; those are written the same by the relaxed encoder as well.
+    /// </summary>
+    private static Dictionary<ulong, JsonEncodedText> EncodeNames(EnumInfo<TEnum> info)
+    {
+        Dictionary<ulong, JsonEncodedText> names = [];
+        foreach (EnumMemberInfo<TEnum> member in info.TypedMembers)
+        {
+            var encoded = JsonEncodedText.Encode(member.WireName);
+            if (info.TryGetMember(member.Value, out EnumMemberInfo<TEnum>? first) && ReferenceEquals(first, member) && encoded.Value == member.WireName)
+                names[member.RawValue] = encoded;
+        }
+
+        return names;
+    }
+
+    /// <summary>
+    /// Mirrors <see cref="EnumInfo{TEnum}.FormatFlags"/>: single flags in declaration order, then the composites that cover
+    /// the bits left. Returns <see langword="false"/> when a bit stays uncovered or a name is not pre-encoded; with no
+    /// <paramref name="writer"/> it only checks.
+    /// </summary>
+    private bool WriteFlagNames(ulong raw, Utf8JsonWriter? writer)
+    {
+        ulong remaining = raw;
+        foreach (ulong flag in _rawValues)
+        {
+            if (flag != 0 && (flag & (flag - 1)) == 0 && (remaining & flag) != 0 && !TakeFlags(flag, ref remaining, writer))
+                return false;
+        }
+
+        foreach (ulong flags in _rawValues)
+        {
+            if (remaining == 0)
+                break;
+            if (flags != 0 && (raw & flags) == flags && (remaining & flags) != 0 && !TakeFlags(flags, ref remaining, writer))
+                return false;
+        }
+
+        return remaining == 0;
+    }
+
+    private bool TakeFlags(ulong flags, ref ulong remaining, Utf8JsonWriter? writer)
+    {
+        if (!_encodedNames.TryGetValue(flags, out JsonEncodedText name))
+            return false;
+        writer?.WriteStringValue(name);
+        remaining &= ~flags;
+        return true;
+    }
 
     private string UndefinedNumber(TEnum value)
     {
