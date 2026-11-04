@@ -402,4 +402,23 @@ public class TheseTests
 
         act.Should().Throw<ArgumentNullException>().WithParameterName("source");
     }
+
+    [Fact]
+    public void Partition_Should_KeepValuesAndOrder_And_PutDefaultInBoths()
+    {
+        var items = new[]
+        {
+            These<string, int>.Right(1),
+            These<string, int>.Left("e1"),
+            These<string, int>.Both("w1", 2),
+            default,
+            These<string, int>.Right(3),
+        };
+
+        var (lefts, rights, boths) = items.Partition();
+
+        lefts.Should().Equal("e1");
+        rights.Should().Equal(1, 3);
+        boths.Should().Equal(("w1", 2), (null!, 0));
+    }
 }

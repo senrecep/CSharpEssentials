@@ -18,10 +18,12 @@ public static class TheseCollectionExtensions
 
         foreach (These<TError, TValue> item in source)
         {
-            item.Match(
-                onLeft: e => { lefts.Add(e); return 0; },
-                onRight: a => { rights.Add(a); return 0; },
-                onBoth: (e, a) => { boths.Add((e, a)); return 0; });
+            if (item.IsLeft)
+                lefts.Add(item.LeftOrDefault!);
+            else if (item.IsRight)
+                rights.Add(item.RightOrDefault!);
+            else
+                boths.Add((item.LeftOrDefault!, item.RightOrDefault!));
         }
 
         return (lefts, rights, boths);
