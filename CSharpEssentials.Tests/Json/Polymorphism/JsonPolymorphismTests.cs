@@ -480,7 +480,10 @@ internal sealed class ScannedLeaf : IScanned;
 
 internal abstract class ScannedAbstract : IScanned;
 
-internal sealed class ScannedGeneric<T> : IScanned;
+internal sealed class ScannedGeneric<T> : IScanned
+{
+    public T? Value { get; init; }
+}
 
 [JsonConverter(typeof(ScannedConverter))]
 internal sealed class ScannedWithConverter : IScanned;

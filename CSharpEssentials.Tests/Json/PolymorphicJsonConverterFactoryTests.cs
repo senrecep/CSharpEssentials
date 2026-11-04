@@ -102,6 +102,11 @@ public class PolymorphicJsonConverterFactoryTests
         Converters = { new PolymorphicJsonConverterFactory() }
     };
 
+    private static readonly JsonSerializerOptions FactoryOnlyOptions = new()
+    {
+        Converters = { new PolymorphicJsonConverterFactory() },
+    };
+
     private static readonly JsonSerializerOptions SmallBufferOptions = new()
     {
         DefaultBufferSize = 16,
@@ -413,11 +418,9 @@ public class PolymorphicJsonConverterFactoryTests
     [Fact]
     public void Deserialize_WithUserTypeBehindFrameworkInterface_ShouldWork()
     {
-        JsonSerializerOptions options = new();
-        options.Converters.Add(new PolymorphicJsonConverterFactory());
         string json = """{"$type":"CSharpEssentials.Tests.Json.DisposableResource","Name":"a"}""";
 
-        IDisposable? value = JsonSerializer.Deserialize<IDisposable>(json, options);
+        IDisposable? value = JsonSerializer.Deserialize<IDisposable>(json, FactoryOnlyOptions);
 
         value.Should().BeOfType<DisposableResource>().Which.Name.Should().Be("a");
     }
