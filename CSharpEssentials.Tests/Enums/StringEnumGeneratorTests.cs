@@ -197,6 +197,24 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void Constants_Should_Keep_Letters_Without_Case_And_Marks()
+    {
+        ScriptStatus.用户Name.ToString().Should().Be("用户Name");
+        ScriptStatusExtensions.用户NameSnakeCase.Should().Be("用户_name");
+        ScriptStatusExtensions.用户NameKebabCase.Should().Be("用户-name");
+        ScriptStatusExtensions.Cafe\u0301SnakeCase.Should().Be("cafe\u0301");
+        ScriptStatusExtensions.用户NameSnakeCase.Should().Be(CSharpEssentials.Core.StringExtensions.ToSnakeCase(nameof(ScriptStatus.用户Name)));
+    }
+
+    [Fact]
+    [Obsolete("Pins the generated fallback of an obsolete generated helper.")]
+    public void Fallback_Should_Keep_Letters_Without_Case()
+    {
+        (ScriptParts.用户 | ScriptParts.名).ToSnakeCase().Should().Be("用户_名");
+        (ScriptParts.用户 | ScriptParts.名).ToKebabCase().Should().Be("用户-名");
+    }
+
+    [Fact]
     public void Constants_Should_Handle_Consecutive_Uppercase()
     {
         HttpStatusExtensions.OKSnakeCase.Should().Be("ok");
@@ -536,6 +554,21 @@ internal enum HttpStatus
     OK,
     NotFound,
     HTTPResponse
+}
+
+[StringEnum]
+internal enum ScriptStatus
+{
+    用户Name,
+    Cafe\u0301,
+}
+
+[StringEnum, Flags]
+internal enum ScriptParts
+{
+    None = 0,
+    用户 = 1,
+    名 = 2,
 }
 
 internal static class NestedEnumContainer

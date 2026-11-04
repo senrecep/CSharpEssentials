@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using CSharpEssentials.Core;
 using CSharpEssentials.Enums;
 using CSharpEssentials.EntityFrameworkCore.Converters;
@@ -34,6 +34,13 @@ public class EnumToStringConverterTests
         IOError,
         Value1,
         PendingApproval
+    }
+
+    [StringEnum]
+    internal enum ScriptValue
+    {
+        用户Name,
+        Other
     }
 
     [StringEnum]
@@ -211,6 +218,17 @@ public class EnumToStringConverterTests
 
         result.Should().Be(expected);
         result.Should().Be(value.ToString().ToSnakeCase());
+    }
+
+    [Fact]
+    public void LegacyConverter_ShouldRoundTripMembersWithLettersWithoutCase()
+    {
+        ValueConverter<ScriptValue, string> converter = new LegacySnakeCaseEnumConverter<ScriptValue>();
+
+        string? stored = converter.ConvertToProvider(ScriptValue.用户Name) as string;
+
+        stored.Should().Be("用户_name");
+        converter.ConvertFromProvider(stored).Should().Be(ScriptValue.用户Name);
     }
 
     [Theory]

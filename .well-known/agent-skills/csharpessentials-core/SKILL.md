@@ -44,7 +44,7 @@ Also available: `ToTitleCase`, `ToTrainCase`, `ToUnderscoreCamelCase`. Each take
 ## GUID Utilities
 
 ```csharp
-// Version 7 (time-sortable) GUID on .NET 9+, Guid.NewGuid() on older targets
+// Version 7 (time-sortable) GUID on every target
 Guid id = Guider.NewGuid();
 
 // Compact, URL-safe 22-character string and back
@@ -115,7 +115,7 @@ int status = HttpCodes.NotFound;                 // 404; HTTP status code consta
 
 ## Best Practices
 
-- Use `Guider.NewGuid()` for database primary keys. On .NET 9+ it returns time-sortable version 7 GUIDs
+- Use `Guider.NewGuid()` for database primary keys. It returns time-sortable version 7 GUIDs on every target
 - `WithoutNulls()` keeps nullable annotations correct, unlike `.Where(x => x != null)`
 - `IfNotNull()` is a statement form; for transforms use `Maybe<T>.Map()` instead
 - `WithCancellation` stops waiting; it does not cancel the underlying task

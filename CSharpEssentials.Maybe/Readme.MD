@@ -244,3 +244,7 @@ Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(Ge
 ### TryLast(predicate) on lists
 
 `TryLast(predicate)` on an `IList<T>` or `IReadOnlyList<T>` now calls the predicate from the last element backwards and stops at the first match, the way `Enumerable.LastOrDefault` does. The result is the same, but a predicate with side effects sees fewer calls in a different order. Other sequences are still enumerated from the start.
+
+### Cancellation in async operations
+
+Async operations that take a `CancellationToken` and wait on a task source (`Maybe.FromAsync`, `AsMaybeAsync`, `MapAsync`, `BindAsync`, `TapAsync`, `WhereAsync`, `OrAsync`, `ToResultAsync` and the rest) wait through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while they wait, they throw `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.

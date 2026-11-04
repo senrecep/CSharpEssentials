@@ -1,5 +1,3 @@
-using CSharpEssentials.Core;
-
 namespace CSharpEssentials.Http;
 
 /// <summary>Wire names of the <c>Idempotency-Key</c> contract shared by the client helpers.</summary>
@@ -12,7 +10,7 @@ internal static class IdempotencyHttpProtocol
     internal const string ProblemJsonMediaType = "application/problem+json";
     internal const int MaxProblemBytes = 4096;
 
-    internal static string NewKey() => Guider.NewGuid().ToString("D");
+    internal static string NewKey() => Guid.NewGuid().ToString("D");
 
     internal static string Validate(string key, string parameterName)
     {

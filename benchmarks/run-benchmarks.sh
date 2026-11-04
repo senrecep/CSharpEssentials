@@ -37,6 +37,7 @@
 #                                              (Unchase.Swashbuckle.AspNetCore.Extensions is not compared: no Swashbuckle 10 support)
 #   ./run-benchmarks.sh --project generators   # Source generator design-time cost: cold and incremental CSharpGeneratorDriver runs vs Immediate.Apis / Injectio / NetEscapades.EnumGenerators; EF query-filter analyzer vs a no-op analyzer
 #                                              (host Roslyn 5.9.0 on every TFM; inputs are in-memory projects of 200 and 1000 files)
+#   ./run-benchmarks.sh --project core     # Core GUID generation benchmarks
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -181,8 +182,14 @@ case "$SUITE" in
         # The compiler that loads these generators runs on .NET 10 or later, so quick mode defaults to net10.0.
         DEFAULT_TFM="net10.0"
         ;;
+    core)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Core.Benchmarks/CSharpEssentials.Core.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/core"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*GuidBenchmarks*" "*GuidParallelBenchmarks*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore | baselines | openapi | swashbuckle | generators)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore | baselines | openapi | swashbuckle | generators | core)" >&2
         exit 1
         ;;
 esac

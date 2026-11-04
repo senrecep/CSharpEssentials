@@ -10,11 +10,17 @@ internal static class RandomNumberGeneratorPolyfill
             throw new ArgumentOutOfRangeException(nameof(fromInclusive), "Range is invalid.");
 
         using var rng = new RNGCryptoServiceProvider();
-        int range = toExclusive - fromInclusive;
+        uint range = (uint)(toExclusive - fromInclusive);
+        const ulong outcomes = 1UL << 32;
+        ulong limit = outcomes - outcomes % range;
         byte[] bytes = new byte[4];
-        rng.GetBytes(bytes);
-        uint random = BitConverter.ToUInt32(bytes, 0);
-        return fromInclusive + (int)(random % (uint)range);
+        uint random;
+        do
+        {
+            rng.GetBytes(bytes);
+            random = BitConverter.ToUInt32(bytes, 0);
+        } while (random >= limit);
+        return fromInclusive + (int)(random % range);
     }
 }
 

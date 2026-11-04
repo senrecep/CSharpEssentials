@@ -12,7 +12,7 @@ Foundational utilities and extensions for everyday .NET development. Zero intern
 - **Range Checks**: `IsBetween` / `IsBetweenExclusive` for any `IComparable<T>`.
 - **Functional Extensions**: Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`), `IsNull` / `IsNotNull`, string `IsEmpty` / `IsNotEmpty`.
 - **Task Helpers**: `WithCancellation` (for `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`), `AsTask`, `AsValueTask`.
-- **GUID Utilities**: URL-safe Base64 encoding, Version 7 GUID generation on .NET 9+.
+- **GUID Utilities**: URL-safe Base64 encoding, version 7 and strictly increasing version 7 GUIDs on every target.
 - **Exception Helpers**: Flatten inner exceptions and messages.
 - **HTTP Constants**: Common status codes as `int` constants (`HttpCodes`).
 - **Transaction Abstraction**: `ITransactionRunner`, implemented by data-access packages.
@@ -43,6 +43,8 @@ text.ToTrainCase();           // "Hello-World"
 text.ToTitleCase();           // "Hello World"
 text.ToUnderscoreCamelCase(); // "_helloWorld"
 ```
+
+The converters keep letters of every script, combining marks and decimal digits (Unicode categories `Lu`, `Ll`, `Lt`, `Lm`, `Lo`, `Mn`, `Mc` and `Nd`); any other character starts a new word and is dropped. A word starts at an uppercase or titlecase letter, at a digit, and after a dropped character. Letters without case, such as CJK, Arabic, Hebrew or Thai, are kept as they are and continue the current word, so `"用户名".ToSnakeCase()` is `"用户名"` and `"user用户Name".ToSnakeCase()` is `"user用户_name"`. Titlecase letters such as `ǅ` are lowercased like uppercase letters. Letters outside the Basic Multilingual Plane (surrogate pairs) are still dropped. EF Core `LegacySnakeCase` storage and the Enums generator's `SnakeCase` and `KebabCase` output use the same rule.
 
 ### Collection Extensions
 
@@ -113,15 +115,19 @@ Task<string> task = value.AsTask();
 ValueTask<string> vt = value.AsValueTask();
 ```
 
-`WithCancellation` stops waiting and throws `OperationCanceledException` when the token is cancelled. It does not cancel the underlying task, and it returns the original task when the token cannot be cancelled.
+`WithCancellation` stops waiting and throws `OperationCanceledException` when the token is cancelled. On .NET 9 and later it is `Task.WaitAsync`, so the exception is the `TaskCanceledException` subclass and carries the token. It does not cancel the underlying task, and it returns the original task when the token cannot be cancelled.
 
 ### GUID Utilities
 
 ```csharp
-Guid id = Guider.NewGuid();          // Version 7 on .NET 9+
-string shortId = id.ToStringFromGuid(); // URL-safe Base64 (22 chars)
+Guid id = Guider.NewGuid();          // Version 7 on every target
+Guid ordered = Guider.NewMonotonicGuid(); // Version 7, strictly increasing in this process
+Guid sqlKey = Guider.NewSqlServerGuid();  // Version 8, ordered for SQL Server uniqueidentifier
+string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
 Guid parsed = shortId.ToGuidFromString();
 ```
+
+The string is RFC 4648 base64url without padding: standard Base64 with `+` replaced by `-` and `/` replaced by `_`. Any base64url codec, such as `System.Buffers.Text.Base64Url` on .NET 9+, decodes it to the same GUID, and `ToGuidFromString` accepts strings that codec produces.
 
 `Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms of the same two conversions. See [Guids](Guids/Readme.MD).
 
@@ -152,7 +158,7 @@ int badRequest = HttpCodes.BadRequest;
 object boxed = 42;
 int number = boxed.ExplicitCast<int>();
 
-DateTime when = 1700000000000L.MsToDateTime();   // Unix milliseconds
+DateTime when = 1700000000000L.MsToDateTime();   // Unix milliseconds, Kind is Utc
 
 HttpGroup group = HttpStatus.BadRequest.GetTypeGroup<HttpGroup, HttpStatus>();  // HttpGroup.ClientError
 
@@ -179,3 +185,12 @@ Result result = await transactionRunner.ExecuteAsync(
 ```
 
 Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEssentials.Results](../CSharpEssentials.Results/Readme.MD).
+
+## Upgrading to 8.0
+
+- `GetRandomItems` throws `ArgumentOutOfRangeException` (parameter `count`) for a negative `count`. It threw `OverflowException` before; update any `catch` that relied on that.
+- `MsToDateTime` returns a `DateTime` with `Kind = Utc`. It returned `Kind = Unspecified` before, with the same ticks. `ToUniversalTime()` no longer shifts it by the local offset, System.Text.Json now writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. If you stored or compared the old value, call `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour.
+- `ToSnakeCase`, `ToKebabCase` and the other case converters keep letters without case (CJK, Arabic, Hebrew, Thai), titlecase letters and combining marks. 7.x dropped them, so `"用户名".ToSnakeCase()` was `""` and `"user用户Name"` was `"user_name"`; they are now `"用户名"` and `"user用户_name"`. Output for names written only in Latin letters and digits does not change. If you stored converted values of non-Latin names, for example through EF Core `LegacySnakeCase` enum storage, rewrite them with the new output.
+- `ToStringFromGuid` and `ToGuidFromString` use the RFC 4648 base64url alphabet (`+` as `-`, `/` as `_`). 7.x used the reverse mapping, so a short ID stored by 7.x that contains `-` or `_` now decodes to a different GUID. Convert stored IDs once by swapping every `-` with `_` and every `_` with `-`, for example `id.Replace('-', '*').Replace('_', '-').Replace('*', '_')`.
+- `Guider.NewGuid()` on the `netstandard2.0` and `netstandard2.1` assets, and so on .NET 8 and .NET Framework, returns RFC 9562 version 7 GUIDs instead of version 4. The first 6 bytes hold the creation time. Use `Guid.NewGuid()` where an ID must not reveal when it was created. On every target the random bits now come from a per-thread pool; apps that run in a cloned virtual machine or a checkpointed and restored process should read [Cloned processes](Guids/Readme.MD#cloned-processes).
+- `WithCancellation` on the .NET 9, 10 and 11 targets throws `TaskCanceledException`, a subclass of `OperationCanceledException`, when the token is cancelled. 7.x threw `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it, but an exact type check such as `ex.GetType() == typeof(OperationCanceledException)` or xUnit `Assert.ThrowsAsync<OperationCanceledException>` no longer matches. The `netstandard2.0` and `netstandard2.1` assets still throw `OperationCanceledException`.

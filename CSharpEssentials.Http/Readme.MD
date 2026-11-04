@@ -180,9 +180,11 @@ Attach the key to the request:
 
 ```csharp
 using var request = new HttpRequestMessage(HttpMethod.Post, "/payments") { Content = JsonContent.Create(payment) };
-string key = request.SetIdempotencyKey();                                   // UUIDv7 on .NET 9+, v4 on netstandard2.1
+string key = request.SetIdempotencyKey();                                   // random UUIDv4
 request.SetIdempotencyKey(IdempotencyKeys.For("capture", orderId));         // or a deterministic key
 ```
+
+A generated key is a random UUIDv4 from `Guid.NewGuid()`. A version 7 key would show when the request was made, and the server only needs the key to be unique, not ordered.
 
 `IdempotencyKeys` is in `CSharpEssentials.Idempotency`; any key of printable ASCII other than `"` and `\` is accepted, and an invalid key throws `ArgumentException`.
 

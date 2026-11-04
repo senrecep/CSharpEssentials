@@ -15,6 +15,7 @@ public class TimeExtensionsTests
 
         result.HasValue.Should().BeTrue();
         result.Value.Should().BeCloseTo(new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc), TimeSpan.FromSeconds(1));
+        result.Value.Kind.Should().Be(DateTimeKind.Utc);
     }
 
     [Fact]

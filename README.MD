@@ -295,6 +295,7 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- Coming from 7.x and using `CSharpEssentials.Core`? Read [Upgrading to 8.0](CSharpEssentials.Core/README.MD#upgrading-to-80). `GetRandomItems` throws `ArgumentOutOfRangeException` for a negative `count`, `MsToDateTime` returns a `DateTime` with `Kind = Utc`, `ToSnakeCase` and the other case converters keep letters without case such as CJK, and `ToStringFromGuid` uses the RFC 4648 base64url alphabet, so short IDs stored by 7.x need a one-time `-`/`_` swap. `Guider.NewGuid` returns version 7 GUIDs on every target, including .NET 8 and .NET Framework.
 - Coming from 6.x with the `Idempotency-Key` middleware or a custom idempotency store? Read [Migrating idempotency from 6.x to 7.0](docs/migration/v6-to-v7-idempotency.md). 7.0 moves the store into `CSharpEssentials.Idempotency` and replaces `KeyScope` with `ScopeResolver`.
 - From 6.4.0, the task-returning members of `Result` and `Maybe` have `Async` names, and the unsuffixed names are obsolete. Read [Async naming and the async overload matrix](docs/migration/v6-async-naming.md).
 - Coming from 5.x? Read [Migrating from 5.x to 6.0](docs/migration/v5-to-v6.md). 6.0 moves the Swashbuckle support to Swashbuckle 10 and Microsoft.OpenApi 2.x on every target, makes the single-column cursor `PaginateAsync` obsolete in favor of `KeysetPaginateAsync` and caps the offset page size at 100 by default.

@@ -1,5 +1,4 @@
 ﻿using System.Buffers.Text;
-using System.Runtime.CompilerServices;
 #if !NETSTANDARD
 using System.Runtime.InteropServices;
 #endif
@@ -13,7 +12,7 @@ public static class Guider
     private const short _byteCount = 16, _encodedLength = 22, _inputLength = 24;
 
     /// <summary>
-    /// Converts a GUID to a string.
+    /// Converts a GUID to a 22-character RFC 4648 base64url string without padding.
     /// </summary>
     /// <param name="id"></param>
     /// <returns></returns>
@@ -32,8 +31,8 @@ public static class Guider
         for (int i = default; i < _encodedLength; i++)
             chars[i] = span[i] switch
             {
-                _slashByte => _hyphen,
-                _plusByte => _underscore,
+                _plusByte => _hyphen,
+                _slashByte => _underscore,
                 _ => (char)span[i]
             };
 #if NETSTANDARD2_0
@@ -60,8 +59,8 @@ public static class Guider
             char c = id[i];
             span[i] = c switch
             {
-                _hyphen => _slash,
-                _underscore => _plus,
+                _hyphen => _plus,
+                _underscore => _slash,
                 _ when IsBase64Alphanumeric(c) => c,
                 _ => throw new FormatException("The value contains a character that is not part of the URL-safe alphabet.")
             };
@@ -90,14 +89,43 @@ public static class Guider
         c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9';
 
     /// <summary>
-    /// Creates a new GUID.
+    /// Creates a new RFC 9562 version 7 GUID: a 48-bit Unix millisecond timestamp followed by random bits.
+    /// IDs from different milliseconds sort by creation time while the system clock does not move backwards; IDs created in the same millisecond have no set order.
     /// </summary>
-    /// <returns></returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Guid NewGuid()
-#if NET9_0_OR_GREATER
-        => Guid.CreateVersion7();
-#else
-        => Guid.NewGuid();
-#endif
+    /// <remarks>
+    /// The random bits come from a per-thread pool of bytes filled by <see cref="System.Security.Cryptography.RandomNumberGenerator"/>
+    /// and salted with one <see cref="Guid.NewGuid"/> per refill. The first ID after a pause of more than 1 ms on a thread takes fresh
+    /// bits from <see cref="Guid.NewGuid"/> instead, and that GUID becomes the new salt. A cloned virtual machine or a checkpointed and restored process can still repeat
+    /// an ID when it serves work before its restored clock is resynced; the Guids Readme describes the case. Set the
+    /// AppContext switch <c>CSharpEssentials.Guider.DisableRandomPool</c> to <see langword="true"/> before the first call to take the
+    /// random bits from <see cref="Guid.NewGuid"/> on every call.
+    /// </remarks>
+    /// <returns>A version 7 GUID with the layout of <c>Guid.CreateVersion7()</c>.</returns>
+    public static Guid NewGuid() => GuidV7.NewGuid();
+
+    /// <summary>
+    /// Creates a new RFC 9562 version 7 GUID that is strictly greater than every GUID this method returned before in the same process (per loaded copy of the assembly).
+    /// The 12 bits after the version hold the time inside the millisecond and the first 6 bits of <c>rand_b</c> hold a counter,
+    /// so IDs created in the same millisecond also sort in creation order.
+    /// </summary>
+    /// <remarks>
+    /// The counter allows 64 IDs in each 1/4096 of a millisecond, 262,144 IDs per millisecond across all threads. Above that rate,
+    /// or while the clock stalls or moves backwards, the value moves one past the last one and the encoded timestamp runs ahead
+    /// of the clock until the rate drops. The order holds within one process only. Each ID carries 56 random bits instead of 74.
+    /// </remarks>
+    /// <returns>A version 7 GUID that is greater than the previous one when compared as big-endian bytes or with <see cref="Guid.CompareTo(Guid)"/>.</returns>
+    public static Guid NewMonotonicGuid() => GuidV7.NewMonotonicGuid();
+
+    /// <summary>
+    /// Creates a new RFC 9562 version 8 GUID that sorts by creation time in SQL Server <c>uniqueidentifier</c> order, the order of
+    /// <see cref="System.Data.SqlTypes.SqlGuid"/>: the Unix millisecond timestamp sits big-endian in the last 6 bytes, which SQL Server
+    /// compares first, and the time inside the millisecond and the counter of <see cref="NewMonotonicGuid"/> follow in the bytes it compares next.
+    /// </summary>
+    /// <remarks>
+    /// Each GUID is greater than every GUID this method returned before in the same process, in SQL Server order.
+    /// IDs from different processes interleave by their millisecond. The value is not in time order for <see cref="Guid.CompareTo(Guid)"/>, string
+    /// order or byte order, so use it only for SQL Server columns. Each ID carries 56 random bits and reveals its creation time.
+    /// </remarks>
+    /// <returns>A version 8 GUID that is greater than the previous one when compared as <see cref="System.Data.SqlTypes.SqlGuid"/>.</returns>
+    public static Guid NewSqlServerGuid() => GuidV7.NewSqlServerGuid();
 }

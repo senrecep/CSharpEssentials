@@ -34,6 +34,10 @@
     <PackageReference Include="System.Threading.Tasks.Extensions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+  </ItemGroup>
+
   <!-- Package content -->
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />

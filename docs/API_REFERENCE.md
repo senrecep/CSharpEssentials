@@ -673,7 +673,7 @@ Namespaces: the extension methods and `Guider` and `HttpCodes` are in `CSharpEss
 | `source.IsEmpty` (.NET 10+) | Property on `IEnumerable<T>`: `true` when the sequence has no element | `bool` |
 | `str.IsPalindrome` (.NET 10+) | Property on `string`: `true` when it reads the same backwards (null or empty is `true`; case-sensitive) | `bool` |
 | `obj.ExplicitCast<T>()` | `(T)obj` as a fluent call | `T` |
-| `ms.MsToDateTime()` | Unix milliseconds (`long`) to a `DateTime` | `DateTime` |
+| `ms.MsToDateTime()` | Unix milliseconds (`long`) to a UTC `DateTime` (`Kind` is `Utc`) | `DateTime` |
 | `type.GetTypeGroup<TGroup, TType>(group = 100)` | Rounds an enum's numeric value down to a multiple of `group` and returns it as `TGroup` | `TGroup` |
 | `ex.GetInnerExceptions()` / `ex.GetInnerExceptionsMessages()` | The exception and its inner exceptions, outermost first; or their messages | `IEnumerable<...>` |
 
@@ -733,9 +733,11 @@ All methods accept an optional `CultureInfo` parameter.
 
 | Method | What It Does |
 |--------|-------------|
-| `guid.ToStringFromGuid()` | URL-safe Base64-encoded short GUID string |
+| `guid.ToStringFromGuid()` | 22-character short GUID string in RFC 4648 base64url without padding (`+` as `-`, `/` as `_`), so `System.Buffers.Text.Base64Url` decodes it too |
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid`; throws `FormatException` unless the input is exactly 22 URL-safe characters |
-| `Guider.NewGuid()` | `Guid.CreateVersion7()` on .NET 9+, `Guid.NewGuid()` on older targets |
+| `Guider.NewGuid()` | RFC 9562 version 7 GUID on every target, built in the package with random bits from a per-thread `RandomNumberGenerator` pool (AppContext switch `CSharpEssentials.Guider.DisableRandomPool` takes them from `Guid.NewGuid()` instead) |
+| `Guider.NewMonotonicGuid()` | Version 7 GUID with the sub-millisecond time in `rand_a` and a 6-bit counter at the start of `rand_b` (262,144 IDs per ms before the timestamp runs ahead); 56 random bits; each call returns a value greater than the last one in the same process (per loaded copy of the assembly) |
+| `Guider.NewSqlServerGuid()` | Version 8 GUID for SQL Server `uniqueidentifier` order: Unix ms big-endian in bytes 10 to 15, then the sub-millisecond time and counter of `NewMonotonicGuid()` in bytes 8, 9 and 7; 56 random bits; strictly increasing in `SqlGuid` order within the process, not ordered as bytes or strings |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
 
 ### Other Types
@@ -987,7 +989,7 @@ services.AddHttpClient("payments")
 
 | Type / Member | What It Does |
 |---------------|-------------|
-| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates one (UUIDv7 on .NET 9+, v4 on netstandard2.1). A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
+| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates a random UUIDv4, so the key does not reveal when the request was made. A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
 | `HttpRequestBuilder.WithIdempotencyKey(string? key = null)` | Makes or validates the key at call time and stores it in the builder; every `Build()` of that builder sends the same key |
 | `IdempotencyKeyHandler` | Optional `DelegatingHandler`; adds a generated key to POST and PATCH requests without one, keeps an existing key |
 | `AddIdempotencyKeys(this IHttpClientBuilder)` (.NET 9+) | Adds `IdempotencyKeyHandler`. Register it before the resilience handler so it runs once per logical call |
@@ -1229,6 +1231,7 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 | `MaybeConversion<T>()` | EF value conversion for `Maybe<T>` properties to a `NOT NULL` column. Lossy: `None` of a value type is stored as `default(T)` and read back as `Some(default(T))`; `None` of a reference type fails on insert. Use `Maybe<T>?` with the methods below to store absence |
 | `HasNullableMaybeConversion<T>()` | `PropertyBuilder<Maybe<T>?>` extension (`T : struct` or `T : class`): stores the property in a nullable `T` column; `null` and `None` are written as `NULL` and read back as `null` (`NullableMaybeConverter<T>`, `NullableMaybeReferenceConverter<T>`) |
 | `ConfigureNullableMaybeConventions()` | `ModelConfigurationBuilder` extension: applies `HasNullableMaybeConversion` to every public read-write `Maybe<T>?` property of entity, owned, derived and complex types; skips ignored properties and user conversions. `Maybe<T?>?` is unsupported (EF fails the model build). `[RequiresDynamicCode]`: use a compiled model under NativeAOT |
+| `UseOrderedGuidKeys(OrderedGuidLayout? layout = null)` | `ModelConfigurationBuilder` extension, opt-in: generated non-nullable `Guid` primary keys (not foreign keys, no own generator, value conversion, default or computed SQL) get `SqlServerGuidValueGeneratorFactory` on SQL Server and `Version7GuidValueGeneratorFactory` on PostgreSQL and SQLite; other providers are left alone unless `layout` is given. The factories are public for per-property `HasValueGeneratorFactory<T>()` and compiled models |
 | `HasJsonConversion<T>()` | Stores complex properties as JSON |
 
 `Maybe<T>?` queries: use `== null` / `!HasValue` for absence, `!= null` for presence and `== Maybe<T>.From(value)` for a value. `== Maybe<T>.None` matches no `NULL` row. `Flatten()` (CSharpEssentials.Maybe) turns the loaded `Maybe<T>?` into `Maybe<T>`.

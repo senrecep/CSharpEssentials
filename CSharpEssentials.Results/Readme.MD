@@ -372,10 +372,14 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
 
-## Upgrade notes
+## Upgrading to 8.0
 
 ### Deserializing a failure without errors
 
 A failed result must carry at least one error, and deserialization now enforces that. JSON with `"IsFailure": true` (for `Result`) or `"IsSuccess": false` (for `Result<T>`) and a missing, `null` or empty `errors` array throws `JsonException`. Earlier versions read `{"IsFailure":true}` as a success and `"errors":[]` as a failure whose `FirstError` and `ToString()` threw.
 
 Payloads written by this library already include the flag and the errors. Check hand-written or third-party payloads: a `Result<T>` success must include `"IsSuccess": true`, because a missing flag reads as `false`, and every failure needs at least one error.
+
+### Cancellation in async operations
+
+Async operations that take a `CancellationToken` and wait on a task source (`MapAsync`, `BindAsync`, `TapAsync`, `MatchAsync`, `EnsureAsync`, `ThenAsync`, `TryAsync` and the rest) wait through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while they wait, they throw `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.

@@ -6,8 +6,10 @@ namespace CSharpEssentials.Tests.Core;
 [Collection(NonParallelGcCollection.Name)]
 public class WithCancellationUnobservedTests
 {
-    [Fact]
-    public async Task WithCancellation_WhenAbandonedTaskFaultsLater_ShouldNotRaiseUnobservedTaskException()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WithCancellation_WhenAbandonedTaskFaultsLater_ShouldNotRaiseUnobservedTaskException(bool cancelBeforeWaiting)
     {
         string marker = Guid.NewGuid().ToString();
         bool unobserved = false;
@@ -20,7 +22,7 @@ public class WithCancellationUnobservedTests
         TaskScheduler.UnobservedTaskException += Handler;
         try
         {
-            await AbandonAndFaultAsync(marker);
+            await AbandonAndFaultAsync(marker, cancelBeforeWaiting);
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
@@ -34,13 +36,17 @@ public class WithCancellationUnobservedTests
         }
     }
 
-    private static async Task AbandonAndFaultAsync(string marker)
+    private static async Task AbandonAndFaultAsync(string marker, bool cancelBeforeWaiting)
     {
         using CancellationTokenSource cts = new();
-        await cts.CancelAsync();
+        if (cancelBeforeWaiting)
+            await cts.CancelAsync();
         var tcs = new TaskCompletionSource<int>();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => tcs.Task.WithCancellation(cts.Token));
+        Task<int> waiting = tcs.Task.WithCancellation(cts.Token);
+        if (!cancelBeforeWaiting)
+            await cts.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => waiting);
         tcs.SetException(new InvalidOperationException(marker));
     }
 }
