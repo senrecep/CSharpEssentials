@@ -31,13 +31,14 @@ internal sealed class PolymorphismScanner(Assembly[] trustedAssemblies)
 
     private (Type Type, object Value)[] Scan(Type baseType)
     {
-        IEnumerable<Assembly> assemblies = trustedAssemblies.Length > 0
-            ? trustedAssemblies
-            : AppDomain.CurrentDomain.GetAssemblies().Where(static assembly => !PolymorphicTypeScan.IsFrameworkAssembly(assembly));
+        IEnumerable<Assembly> assemblies = trustedAssemblies.Length > 0 ? trustedAssemblies : AppDomain.CurrentDomain.GetAssemblies();
 
         List<(Type Type, object Value)> found = [];
         foreach (Assembly assembly in assemblies.Distinct())
         {
+            if (PolymorphicTypeScan.IsFrameworkAssembly(assembly))
+                continue;
+
             foreach (Type type in PolymorphicTypeScan.GetLoadableTypes(assembly))
             {
                 if (IsCandidate(baseType, type))
@@ -55,8 +56,7 @@ internal sealed class PolymorphismScanner(Assembly[] trustedAssemblies)
         !type.IsInterface &&
         !type.ContainsGenericParameters &&
         !type.IsByRefLike &&
-        !type.IsDefined(typeof(JsonConverterAttribute), false) &&
-        !PolymorphicTypeScan.IsFrameworkAssembly(type.Assembly);
+        !type.IsDefined(typeof(JsonConverterAttribute), false);
 
     private static bool IsPolymorphicBase(Type type) =>
         type.IsDefined(typeof(JsonPolymorphicAttribute), false) || type.IsDefined(typeof(JsonDerivedTypeAttribute), false);
