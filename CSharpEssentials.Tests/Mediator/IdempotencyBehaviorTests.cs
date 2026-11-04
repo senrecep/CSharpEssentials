@@ -306,6 +306,19 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task Handle_Should_Use_Request_Type_Settings_Changed_After_The_First_Request()
+    {
+        _options.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(2));
+        IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>> behavior = Create<IdemOptionalRetentionCommand, Result<int>>();
+
+        await behavior.Handle(new IdemOptionalRetentionCommand("k1", null), (_, _) => Run(1), CancellationToken.None);
+        _options.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(3));
+        await behavior.Handle(new IdemOptionalRetentionCommand("k2", null), (_, _) => Run(2), CancellationToken.None);
+
+        _store.Retentions.Should().Equal(TimeSpan.FromHours(2), TimeSpan.FromHours(3));
+    }
+
+    [Fact]
     public async Task Handle_Should_Fingerprint_The_Request_As_The_Sha256_Of_Its_Json()
     {
         _options.SerializerOptions = new JsonSerializerOptions

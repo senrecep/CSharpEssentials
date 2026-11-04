@@ -45,7 +45,7 @@ public sealed class IdempotencyBehaviorOptions
     /// A request instance's <see cref="IIdempotentRequest.IdempotencyRetention"/> and
     /// <see cref="IIdempotentRequest.IdempotencyLease"/> win over these; a setting left <see langword="null"/> comes
     /// from the profile, else from <see cref="IdempotencyExecutorOptions"/>. Calling it again for the same type
-    /// configures the same settings. Configure them before the first request: the behavior reads them once per request type.
+    /// configures the same settings.
     /// </summary>
     public IdempotencyBehaviorOptions ForRequest<TRequest>(Action<IdempotencyExecutionOptions> configure)
         where TRequest : IIdempotentRequest

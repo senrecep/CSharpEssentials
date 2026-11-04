@@ -169,7 +169,7 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
 
     private static RequestSettings SharedSettings(IdempotencyExecutionOptions? requestOptions)
     {
-        if (s_settings is { } cached && ReferenceEquals(cached.Source, requestOptions))
+        if (s_settings is { } cached && ReferenceEquals(cached.Source, requestOptions) && cached.Matches(requestOptions))
             return cached;
 
         RequestSettings settings = new(requestOptions);
@@ -250,6 +250,14 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
         public IdempotencyExecutionOptions Observe { get; } = Settings(source, IdempotencyMode.Observe, null, null);
 
         public IdempotencyExecutionOptions Enforce { get; } = Settings(source, IdempotencyMode.Enforce, null, null);
+
+        public bool Matches(IdempotencyExecutionOptions? options) =>
+            options is null
+            || Observe.Profile == options.Profile
+            && Observe.Retention == options.Retention
+            && Observe.Lease == options.Lease
+            && Observe.FailureRetention == options.FailureRetention
+            && Observe.StoreKey == options.StoreKey;
     }
 
     private sealed class ResponseCodec(JsonSerializerOptions? serializerOptions, bool releaseFailures) : IIdempotencyResultCodec<TResponse>
