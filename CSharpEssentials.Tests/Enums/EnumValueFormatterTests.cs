@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using CSharpEssentials.Enums;
+using CSharpEssentials.Tests.Fixtures.EnumsContracts;
 using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Enums;
@@ -127,13 +128,43 @@ public class EnumValueFormatterTests
     }
 
     [Fact]
-    public void TryFormat_Should_Throw_When_A_Custom_CanHandle_Accepts_An_Enum_Without_Metadata()
+    public void TryFormat_Should_Throw_When_The_Default_CanHandle_Accepts_A_StringEnum_Without_Metadata()
     {
-        EnumConventions conventions = Conventions with { CanHandle = static _ => true };
+        List<string> values = [];
 
-        Action act = () => EnumValueFormatter.TryFormat(DayOfWeek.Monday, conventions, out _);
+        Action format = () => EnumValueFormatter.TryFormat(UnreachableHolder<int>.Status.SecondValue, Conventions, out _);
+        Action formatMany = () => EnumValueFormatter.TryFormatMany(UnreachableHolder<int>.Status.SecondValue, Conventions, values);
 
-        act.Should().Throw<InvalidOperationException>().WithMessage("*DayOfWeek*");
+        format.Should().Throw<InvalidOperationException>().WithMessage("*no generated metadata*");
+        formatMany.Should().Throw<InvalidOperationException>().WithMessage("*no generated metadata*");
+        values.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void TryFormat_Should_Format_Through_The_Visitor_For_A_Foreign_EnumInfo()
+    {
+        EnumInfo<FormatterForeignInfo> typed = new(
+            [
+                new EnumMemberInfo<FormatterForeignInfo>(FormatterForeignInfo.First, 0, "First", "first"),
+                new EnumMemberInfo<FormatterForeignInfo>(FormatterForeignInfo.Second, 1, "Second", "second"),
+            ],
+            static v => unchecked((ulong)(long)v),
+            static r => unchecked((FormatterForeignInfo)(long)r),
+            isFlags: false,
+            EnumStorage.Default);
+        EnumMetadata.RegisterRange([new(typeof(FormatterForeignInfo), () => new ForwardingEnumInfo(typed))]);
+        List<string> values = [];
+
+        bool formatted = EnumValueFormatter.TryFormat(FormatterForeignInfo.Second, Conventions, out string? text);
+        bool formattedMany = EnumValueFormatter.TryFormatMany(
+            new[] { FormatterForeignInfo.First, FormatterForeignInfo.Second }, Conventions, values);
+
+        EnumMetadata.TryGet(typeof(FormatterForeignInfo), out IEnumInfo? info).Should().BeTrue();
+        info.Should().BeOfType<ForwardingEnumInfo>();
+        formatted.Should().BeTrue();
+        text.Should().Be("second");
+        formattedMany.Should().BeTrue();
+        values.Should().Equal("first", "second");
     }
 
     [Fact]
@@ -336,6 +367,33 @@ public class EnumValueFormatterTests
         formatted.Should().BeTrue();
         values.Should().Equal("existing", "min_value", "second_value");
     }
+
+    private sealed class ForwardingEnumInfo(IEnumInfo inner) : IEnumInfo
+    {
+        public Type EnumType => inner.EnumType;
+
+        public Type UnderlyingType => inner.UnderlyingType;
+
+        public bool IsFlags => inner.IsFlags;
+
+        public ulong DefinedMask => inner.DefinedMask;
+
+        public EnumStorage Storage => inner.Storage;
+
+        public IReadOnlyList<IEnumMemberInfo> Members => inner.Members;
+
+        public IEnumMemberInfo? Fallback => inner.Fallback;
+
+        public IReadOnlyList<string> WireNames => inner.WireNames;
+
+        public TResult Accept<TResult>(IEnumInfoVisitor<TResult> visitor) => inner.Accept(visitor);
+    }
+}
+
+public enum FormatterForeignInfo
+{
+    First,
+    Second,
 }
 
 [StringEnum]
