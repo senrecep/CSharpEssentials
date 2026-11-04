@@ -2,6 +2,8 @@
 
 Type-safe generic cloning for .NET. Provides a strongly-typed `ICloneable<T>` alternative to the legacy `System.ICloneable`, plus extension methods for cloning collections.
 
+> **Benchmarks:** `Clone().ToList()`, the array and lazy sources and the `IQueryable<T>` overload against hand-written loops, `List<T>.ConvertAll` and `Array.ConvertAll` at 10 and 1,000 items are described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
+
 ## Features
 
 - **Generic `ICloneable<out T>`**: Type-safe, covariant cloning interface with a single `T Clone()` method.
