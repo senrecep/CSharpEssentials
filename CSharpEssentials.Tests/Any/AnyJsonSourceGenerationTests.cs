@@ -19,6 +19,16 @@ public partial class AnyJsonSourceGenerationTests
         deserialized.GetSecond().FirstName.Should().Be("Ada");
     }
 
+    [Fact]
+    public void Deserialize_WithSourceGeneratedContextMissingBranchType_ShouldThrowNotSupportedException()
+    {
+        Action act = () => JsonSerializer.Deserialize(
+            """{"index":1,"value":{"first_name":"Ada"}}""",
+            MissingBranchContext.Default.AnyInt32UnregisteredPerson);
+
+        act.Should().Throw<NotSupportedException>();
+    }
+
     public sealed class GeneratedPerson
     {
         public string? FirstName { get; set; }
@@ -29,4 +39,14 @@ public partial class AnyJsonSourceGenerationTests
     [JsonSerializable(typeof(GeneratedPerson))]
     [JsonSerializable(typeof(int))]
     internal sealed partial class SnakeCaseContext : JsonSerializerContext;
+
+    public sealed class UnregisteredPerson
+    {
+        public string? FirstName { get; set; }
+    }
+
+    [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.SnakeCaseLower)]
+    [JsonSerializable(typeof(Any<int, UnregisteredPerson>))]
+    [JsonSerializable(typeof(int))]
+    internal sealed partial class MissingBranchContext : JsonSerializerContext;
 }
