@@ -270,6 +270,7 @@ public interface IEvent;
 - System.Text.Json caches a base's contract per options instance. A derived type registered after the base was first used, for example from a plugin loaded later, is not added to that instance.
 - A value typed as `object` whose runtime type derives from two unrelated polymorphic bases gets no discriminator (System.Text.Json's ambiguity rule).
 - Generic bases are not registered by the generator; `AddPolymorphismWithReflection` still finds their derived types.
+- `[JsonPolymorphicProperty]` and `[JsonAcceptClrTypeNames]` serialize their values in a nested call. With `ReferenceHandler.Preserve` or a custom `ReferenceHandler` they throw `NotSupportedException`, because the nested call cannot share `$id` references. With `ReferenceHandler.IgnoreCycles` a cycle through such a value is cut one level later than usual.
 
 #### Bases without attributes
 

@@ -15,6 +15,9 @@ internal sealed class ClrTypeNameConverterFactory : JsonConverterFactory
         typeToConvert.IsDefined(typeof(JsonAcceptClrTypeNamesAttribute), false) &&
         (typeToConvert.IsDefined(typeof(JsonPolymorphicAttribute), false) || typeToConvert.IsDefined(typeof(JsonDerivedTypeAttribute), false));
 
-    public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
-        (JsonConverter?)Activator.CreateInstance(typeof(ClrTypeNameConverter<>).MakeGenericType(typeToConvert));
+    public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
+    {
+        JsonPolymorphismExtensions.ThrowIfReferencesArePreserved(options);
+        return (JsonConverter?)Activator.CreateInstance(typeof(ClrTypeNameConverter<>).MakeGenericType(typeToConvert));
+    }
 }

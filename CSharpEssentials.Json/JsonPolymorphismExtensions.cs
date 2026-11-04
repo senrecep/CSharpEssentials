@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
 namespace CSharpEssentials.Json;
@@ -79,6 +80,20 @@ public static class JsonPolymorphismExtensions
             Apply(target, inner, new PolymorphismModifier(inner, scanner.Value));
 
         return true;
+    }
+
+    /// <summary>
+    /// Throws when <paramref name="options"/> preserve references. The converters of <see cref="JsonPolymorphicPropertyAttribute"/> and
+    /// <see cref="JsonAcceptClrTypeNamesAttribute"/> serialize their value in a nested call, which cannot share the outer reference map.
+    /// </summary>
+    internal static void ThrowIfReferencesArePreserved(JsonSerializerOptions options)
+    {
+        if (options.ReferenceHandler is { } handler && !ReferenceEquals(handler, ReferenceHandler.IgnoreCycles))
+        {
+            throw new NotSupportedException(
+                "[JsonPolymorphicProperty] and [JsonAcceptClrTypeNames] do not support ReferenceHandler.Preserve or a custom ReferenceHandler: " +
+                "their values are serialized in a nested call that cannot share references. Use ReferenceHandler.IgnoreCycles or none.");
+        }
     }
 
     /// <summary>

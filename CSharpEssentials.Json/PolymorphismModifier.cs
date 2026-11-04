@@ -37,6 +37,8 @@ internal sealed class PolymorphismModifier(IJsonTypeInfoResolver inner, Polymorp
 
             property.CustomConverter = JsonPolymorphism.GetProperty(declaringType, member.Name)?.ConverterFactory?.Invoke()
                 ?? scanner?.CreatePropertyConverter(member, property.PropertyType);
+            if (property.CustomConverter is not null)
+                JsonPolymorphismExtensions.ThrowIfReferencesArePreserved(typeInfo.Options);
         }
     }
 

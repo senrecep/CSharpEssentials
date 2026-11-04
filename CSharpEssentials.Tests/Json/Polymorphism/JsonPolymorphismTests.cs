@@ -260,6 +260,24 @@ public class JsonPolymorphismTests
     }
 
     [Fact]
+    public void Preserved_References_Should_Throw_For_Property_Names_And_Clr_Names()
+    {
+        JsonSerializerOptions generated = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+        {
+            TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
+            ReferenceHandler = ReferenceHandler.Preserve,
+        }.AddPolymorphism();
+        JsonSerializerOptions scanned = new JsonSerializerOptions(JsonSerializerDefaults.Web) { ReferenceHandler = ReferenceHandler.Preserve }
+            .AddPolymorphismWithReflection(typeof(JsonPolymorphismTests).Assembly);
+
+        Action property = () => JsonSerializer.Serialize(new ValueHolder(), generated);
+        Action legacy = () => JsonSerializer.Serialize<ILegacyEvent>(new LegacyCreated(), scanned);
+
+        property.Should().Throw<NotSupportedException>().WithMessage("*ReferenceHandler*");
+        legacy.Should().Throw<NotSupportedException>().WithMessage("*ReferenceHandler*");
+    }
+
+    [Fact]
     public void Without_AcceptClrTypeNames_A_Full_Name_Should_Not_Read()
     {
         Action act = () => JsonSerializer.Deserialize<ITestEvent>(
