@@ -23,8 +23,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         _serviceScope = serviceScopeFactory.CreateScope();
         ServiceProvider = _serviceScope.ServiceProvider;
         Logger = ServiceProvider.GetRequiredService<ILogger<TContext>>();
-        if (Logger.IsEnabled(LogLevel.Information))
-            LogContextCreated(ContextId.InstanceId);
+        LogContextCreated(ContextId.InstanceId);
     }
 
     /// <summary>
@@ -215,14 +214,13 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
     ~BaseDbContext()
     {
-        if (Logger?.IsEnabled(LogLevel.Information) == true)
+        if (Logger is not null)
             LogContextDestructed(ContextId.InstanceId);
     }
 
     public override void Dispose()
     {
-        if (Logger.IsEnabled(LogLevel.Information))
-            LogContextDisposed(ContextId.InstanceId);
+        LogContextDisposed(ContextId.InstanceId);
         base.Dispose();
         _serviceScope.Dispose();
         GC.SuppressFinalize(this);
@@ -230,8 +228,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
     public override async ValueTask DisposeAsync()
     {
-        if (Logger.IsEnabled(LogLevel.Information))
-            LogContextDisposed(ContextId.InstanceId);
+        LogContextDisposed(ContextId.InstanceId);
         await base.DisposeAsync().ConfigureAwait(false);
         if (_serviceScope is IAsyncDisposable asyncScope)
             await asyncScope.DisposeAsync().ConfigureAwait(false);
