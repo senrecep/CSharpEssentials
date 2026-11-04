@@ -90,14 +90,16 @@ public static class Guider
         c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9';
 
     /// <summary>
-    /// Creates a new GUID.
+    /// Creates a new RFC 9562 version 7 GUID: a 48-bit Unix millisecond timestamp followed by random bits.
+    /// IDs from different milliseconds sort by creation time; IDs created in the same millisecond have no set order.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>A version 7 GUID. On .NET 9 and later this is <c>Guid.CreateVersion7()</c>; other targets build the same layout.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Guid NewGuid()
 #if NET9_0_OR_GREATER
         => Guid.CreateVersion7();
 #else
-        => Guid.NewGuid();
+        => GuidV7.NewGuid();
 #endif
+
 }

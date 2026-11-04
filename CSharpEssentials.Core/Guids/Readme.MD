@@ -6,11 +6,23 @@ The `Guider` class provides methods for working with GUIDs (Globally Unique Iden
 
 ### 1. NewGuid()
 
-Creates a new GUID. On .NET 9 and later it uses `Guid.CreateVersion7()`, a time-ordered Version 7 GUID that suits database keys. On `netstandard2.0` and `netstandard2.1` it falls back to `Guid.NewGuid()` (random, Version 4).
+Creates an [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#name-uuid-version-7) version 7 GUID on every target. The first 48 bits are the Unix time in milliseconds, big-endian, followed by the version nibble `7`, the variant bits `10` and 74 random bits. IDs from different milliseconds sort by creation time. IDs created in the same millisecond have no set order.
+
+On .NET 9 and later it calls `Guid.CreateVersion7()`. On `netstandard2.0` and `netstandard2.1` the package builds the same bit layout itself, with the random bits from `RandomNumberGenerator`. A .NET 8 app uses the `netstandard2.1` build, so it gets version 7 too.
 
 ```csharp
 Guid newId = Guider.NewGuid();
 ```
+
+The `netstandard` builds read random bytes from a per-thread 4 KiB buffer that is refilled from `RandomNumberGenerator`. Reading the generator once per ID cost about 1 µs on the test machine. With the buffer it costs about 60 ns. The call does not allocate after the buffer exists.
+
+### SQL Server ordering
+
+Version 7 GUIDs are ordered when compared byte by byte from the first byte, which is how `Guid.CompareTo`, PostgreSQL `uuid` and string sorting compare them. SQL Server's `uniqueidentifier` compares the last 6 bytes first ([Comparing GUID and uniqueidentifier values](https://learn.microsoft.com/sql/connect/ado-net/sql/compare-guid-uniqueidentifier-values)). Those bytes are random in a version 7 GUID, so `NewGuid()` does not give sequential index order in a SQL Server `uniqueidentifier` column.
+
+### Upgrading to 8.0
+
+On `netstandard2.0` and `netstandard2.1`, and so on .NET 8 and .NET Framework, `NewGuid()` now returns version 7 GUIDs instead of random version 4 GUIDs. The first 6 bytes show when the ID was created. If an ID must not reveal its creation time, use `Guid.NewGuid()`.
 
 ### 2. ToStringFromGuid(Guid)
 
@@ -53,7 +65,7 @@ The input must be exactly 22 characters from `A-Z`, `a-z`, `0-9`, `-` and `_`. A
 
 ## Best Practices
 
-1. Use `NewGuid()` when you need database-friendly sequential GUIDs (.NET 9+; earlier targets get random GUIDs)
+1. Use `NewGuid()` for time-ordered database keys on every target
 2. Use the string conversion methods when you need URL-safe GUID representations
 3. The methods are thread-safe and can be used in concurrent operations
 

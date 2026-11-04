@@ -150,7 +150,7 @@ Attach the key to the request:
 
 ```csharp
 using var request = new HttpRequestMessage(HttpMethod.Post, "/payments") { Content = JsonContent.Create(payment) };
-string key = request.SetIdempotencyKey();                                   // UUIDv7 on .NET 9+, v4 on netstandard2.1
+string key = request.SetIdempotencyKey();                                   // UUIDv7 on every target
 request.SetIdempotencyKey(IdempotencyKeys.For("capture", orderId));         // or a deterministic key
 ```
 

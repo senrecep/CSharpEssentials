@@ -735,7 +735,7 @@ All methods accept an optional `CultureInfo` parameter.
 |--------|-------------|
 | `guid.ToStringFromGuid()` | 22-character short GUID string in RFC 4648 base64url without padding (`+` as `-`, `/` as `_`), so `System.Buffers.Text.Base64Url` decodes it too |
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid`; throws `FormatException` unless the input is exactly 22 URL-safe characters |
-| `Guider.NewGuid()` | `Guid.CreateVersion7()` on .NET 9+, `Guid.NewGuid()` on older targets |
+| `Guider.NewGuid()` | RFC 9562 version 7 GUID on every target: `Guid.CreateVersion7()` on .NET 9+, the same layout built in the package on netstandard2.0/2.1 |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
 
 ### Other Types
@@ -987,7 +987,7 @@ services.AddHttpClient("payments")
 
 | Type / Member | What It Does |
 |---------------|-------------|
-| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates one (UUIDv7 on .NET 9+, v4 on netstandard2.1). A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
+| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates one (UUIDv7 on every target). A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
 | `HttpRequestBuilder.WithIdempotencyKey(string? key = null)` | Makes or validates the key at call time and stores it in the builder; every `Build()` of that builder sends the same key |
 | `IdempotencyKeyHandler` | Optional `DelegatingHandler`; adds a generated key to POST and PATCH requests without one, keeps an existing key |
 | `AddIdempotencyKeys(this IHttpClientBuilder)` (.NET 9+) | Adds `IdempotencyKeyHandler`. Register it before the resilience handler so it runs once per logical call |

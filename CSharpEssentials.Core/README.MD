@@ -117,7 +117,7 @@ ValueTask<string> vt = value.AsValueTask();
 ### GUID Utilities
 
 ```csharp
-Guid id = Guider.NewGuid();          // Version 7 on .NET 9+
+Guid id = Guider.NewGuid();          // Version 7 on every target
 string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
 Guid parsed = shortId.ToGuidFromString();
 ```
