@@ -258,6 +258,7 @@ public class MultiFormatDateTimeConverterTests
         JsonSerializer.Deserialize<string>(json).Should().Be("2024-03-14T15:30:45.000000+00:00");
         JsonSerializer.Deserialize<DateTime>(json, DefaultOptions).Ticks.Should().Be(unspecified.Ticks);
     }
+
     public static TheoryData<string> IsoShapedTexts =>
     [
         "2024-03-14",
@@ -268,6 +269,8 @@ public class MultiFormatDateTimeConverterTests
         "2024-03-14T15:30:45+03:00",
         "2024-03-14T15:30:45-05:30",
         "2024-03-14T15:30:45.123456",
+        "2024-03-14T15:30:45.123+03",
+        "2024-03-14T15:30:45.123-05",
         "2024-03-14T15:30:45.123456+03:00",
         "2024-03-14T15:30:45.123456-00:00",
         "0001-01-01T00:00:00Z",

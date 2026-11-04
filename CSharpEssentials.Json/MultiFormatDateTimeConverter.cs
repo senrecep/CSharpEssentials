@@ -191,7 +191,7 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         {
             19 => IsDigit(s[18]),
             20 => s[19] == (byte)'Z',
-            23 or 26 => s[19] == (byte)'.' && IsDigit(s[^1]),
+            23 or 26 => s[19] == (byte)'.' && AllDigits(s[20..]),
             24 => s[19] == (byte)'.' && s[23] == (byte)'Z',
             25 => IsSign(s[19]) && s[22] == (byte)':',
             32 => s[19] == (byte)'.' && IsSign(s[26]) && s[29] == (byte)':',
@@ -200,6 +200,17 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
     }
 
     private static bool IsDigit(byte value) => value is >= (byte)'0' and <= (byte)'9';
+
+    private static bool AllDigits(ReadOnlySpan<byte> s)
+    {
+        foreach (byte value in s)
+        {
+            if (!IsDigit(value))
+                return false;
+        }
+
+        return true;
+    }
 
     private static bool IsSign(byte value) => value is (byte)'+' or (byte)'-';
 
