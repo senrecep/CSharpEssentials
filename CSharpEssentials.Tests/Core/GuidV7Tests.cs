@@ -102,12 +102,21 @@ public sealed class GuidV7Tests
         return (bytes.AsSpan(6, 8).ToArray(), leftover);
     }
 
+    private static void DrainPoolUntil(long utcTicks, Func<int, bool> stop)
+    {
+        while (!stop(GuidV7.CurrentPoolOffset()))
+            GuidV7.FillRandom(new byte[16], utcTicks, usePool: true);
+    }
+
+    private static void DrainPoolToASafeOffset(long utcTicks) => DrainPoolUntil(utcTicks, offset => offset <= _poolSize - 20);
+
     [Fact]
     public void FillRandom_WhenCalledAgainWithinOneMillisecond_ShouldTakeTheNextPoolBytesUnderTheSameSalt()
     {
         long now = DateTime.UtcNow.Ticks;
         GuidV7.FillRandom(new byte[16], now, usePool: true);
         GuidV7.FillRandom(new byte[16], now, usePool: true);
+        DrainPoolToASafeOffset(now);
         byte[] salt = Salt();
 
         (byte[] taken, byte[] leftover) = TakeAndPeekLeftover(now + _ticksPerMs);
@@ -125,6 +134,7 @@ public sealed class GuidV7Tests
         long now = DateTime.UtcNow.Ticks;
         GuidV7.FillRandom(new byte[16], now, usePool: true);
         GuidV7.FillRandom(new byte[16], now, usePool: true);
+        DrainPoolToASafeOffset(now);
         byte[] oldSalt = Salt();
 
         TookFreshNewGuidBits(now + step, usePool: true).Should().BeTrue();
@@ -132,6 +142,27 @@ public sealed class GuidV7Tests
 
         Salt().Should().NotEqual(oldSalt);
         taken.Should().Equal(Xor(leftover, Salt()));
+    }
+
+    [Fact]
+    public void FillRandom_WhenThePoolRunsOut_ShouldRefillItAndTakeANewGuidAsTheSalt()
+    {
+        long now = DateTime.UtcNow.Ticks;
+        GuidV7.FillRandom(new byte[16], now, usePool: true);
+        GuidV7.FillRandom(new byte[16], now, usePool: true);
+        for (int refill = 0; refill < 3; refill++)
+        {
+            DrainPoolUntil(now, offset => offset == _poolSize - 4);
+            byte[] oldSalt = Salt();
+
+            byte[] bytes = new byte[16];
+            GuidV7.FillRandom(bytes, now, usePool: true);
+
+            GuidV7.CurrentPoolOffset().Should().Be(10);
+            Salt().Should().NotEqual(oldSalt);
+            new Guid(GuidV7.CurrentPool()!.AsSpan(_poolSize, 16)).Version.Should().Be(4);
+            bytes.AsSpan(6, 8).ToArray().Should().Equal(Xor(GuidV7.CurrentPool()!.AsSpan(0, 8).ToArray(), Salt()));
+        }
     }
 
     [Fact]
