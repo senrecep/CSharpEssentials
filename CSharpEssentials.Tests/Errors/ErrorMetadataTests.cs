@@ -68,6 +68,44 @@ public class ErrorMetadataTests
     }
 
     [Fact]
+    public void CreateWithExceptionDetailed_WithUnthrownException_ShouldStoreNullStackTrace()
+    {
+        Exception exception = new InvalidOperationException("Never thrown");
+
+        var metadata = ErrorMetadata.CreateWithExceptionDetailed(exception);
+
+        metadata["exceptionStackTrace"].Should().BeNull();
+    }
+
+    [Fact]
+    public void AddExceptionDetailed_WithUnthrownException_ShouldStoreNullStackTrace()
+    {
+        Exception exception = new InvalidOperationException("Never thrown");
+
+        var metadata = new ErrorMetadata().AddExceptionDetailed(exception);
+
+        metadata["exceptionStackTrace"].Should().BeNull();
+    }
+
+    [Fact]
+    public void CreateWithExceptionDetailed_WithThrownException_ShouldStoreItsStackTrace()
+    {
+        Exception exception;
+        try
+        {
+            throw new InvalidOperationException("Thrown");
+        }
+        catch (InvalidOperationException ex)
+        {
+            exception = ex;
+        }
+
+        var metadata = ErrorMetadata.CreateWithExceptionDetailed(exception);
+
+        metadata["exceptionStackTrace"].Should().Be(exception.StackTrace).And.NotBeNull();
+    }
+
+    [Fact]
     public void CreateWithExceptionDetailed_WithInnerException_ShouldContainInfo()
     {
         Exception innerException = new ArgumentException("Inner");

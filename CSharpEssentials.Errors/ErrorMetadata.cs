@@ -22,7 +22,7 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
         var metadata = new ErrorMetadata()
         {
                 { "exceptionType", exception.GetType().Name},
-                { "exceptionStackTrace", exception.StackTrace ?? Environment.StackTrace},
+                { "exceptionStackTrace", exception.StackTrace },
                 { "exceptionMessage", exception.Message },
         };
         if (exception.InnerException is not null)
@@ -53,7 +53,7 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
     public ErrorMetadata AddExceptionDetailed(Exception exception)
     {
         TryAdd("exceptionType", exception.GetType().Name);
-        TryAdd("exceptionStackTrace", exception.StackTrace ?? Environment.StackTrace);
+        TryAdd("exceptionStackTrace", exception.StackTrace);
         TryAdd("exceptionMessage", exception.Message);
 
         if (exception.InnerException is not null)

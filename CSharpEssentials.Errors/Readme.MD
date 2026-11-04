@@ -71,7 +71,7 @@ catch (Exception ex)
 }
 ```
 
-`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
+`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
 
 ```csharp
 Error custom = Error.Exception("Orders.SaveFailed", "The order could not be saved.", ex, ErrorType.Unexpected);
@@ -177,7 +177,7 @@ This pattern provides discoverability (IDE autocomplete per domain), type-safe e
 
 The nested entry keeps only the short type name (`GetType().Name`), the message, the stack trace and the inner exception chain. The full type name, `Data`, `HResult` and the exception object itself are dropped, so code that rethrew `metadata["exception"]` or tested it with `is SqlException` has no key to migrate to. Keep the exception in its own variable if you need its identity.
 
-An exception that was never thrown has no stack trace, so `exceptionStackTrace` falls back to `Environment.StackTrace`. That records where the metadata was built, not where the exception was created, and it costs a stack walk on every call.
+`exceptionStackTrace` holds `exception.StackTrace` and nothing else. An exception that was never thrown has no stack trace, so the key is present with a `null` value. Earlier versions fell back to `Environment.StackTrace`, which recorded where the metadata was built rather than where the exception came from and cost a full stack walk on every call. Call `AddStackTrace()` if you want the current call stack.
 
 `Error` equality and `GetHashCode` now compare nested `ErrorMetadata` values by content. Do not add a metadata instance to itself (directly or through a chain): hashing or comparing such a cycle overflows the stack.
 
