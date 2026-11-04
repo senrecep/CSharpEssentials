@@ -25,6 +25,7 @@ The three libraries store a union in different ways, and most of the results fol
 
 The code is in `benchmarks/CSharpEssentials.Any.Comparison.Benchmarks/`, in six BenchmarkDotNet classes. The same project also holds the four These classes, which are documented in [CSharpEssentials.These/BENCHMARKS.md](../CSharpEssentials.These/BENCHMARKS.md).
 - Every class has `[MemoryDiagnoser]`.
+- `ConstructComparison` and `TryPickComparison` repeat their operation over a 1024-element array and report the time per element (`OperationsPerInvoke = 1024`). One call is too short for BenchmarkDotNet to resolve: in a single-call version, CSE `FromText` and `ByCase` on text measured below 0.001 ns.
 - CSE is the baseline in every category that has a like-for-like CSE row.
 - Each class checks parity in `[GlobalSetup]`, and `--self-check` runs the same check. Every row in a category must give the same result for the same input, or the run fails.
 - Rows that do different work go in a category of their own and are not compared with anything.

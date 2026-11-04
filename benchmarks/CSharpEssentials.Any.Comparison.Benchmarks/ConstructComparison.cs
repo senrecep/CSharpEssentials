@@ -14,6 +14,11 @@ namespace CSharpEssentials.Any.Comparison.Benchmarks;
 /// class, so every value is a heap object by design. FromText is the control: there CSE stores a reference and does not
 /// box, while Dunet still allocates its variant.
 /// </para>
+/// <para>
+/// One construction takes about a nanosecond or less, below what a single call can resolve, so every row stores
+/// <see cref="Inputs.Batch"/> values into a preallocated array of its own union type and reports the time per value
+/// (<c>OperationsPerInvoke</c>). The store is the same for every library and keeps the JIT from dropping the work.
+/// </para>
 /// </summary>
 [MemoryDiagnoser]
 [CategoriesColumn]
@@ -23,6 +28,9 @@ public class ConstructComparison
     private const string FromInt = "FromInt";
     private const string FromText = "FromText";
 
+    private readonly Any<int, string>[] _cseSink = new Any<int, string>[Inputs.Batch];
+    private readonly OneOf<int, string>[] _oneOfSink = new OneOf<int, string>[Inputs.Batch];
+    private readonly IntOrText[] _dunetSink = new IntOrText[Inputs.Batch];
     private int _int;
     private string _text = null!;
 
@@ -44,51 +52,63 @@ public class ConstructComparison
     }
 
     // https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Any/Readme.MD#creating-unions
-    [Benchmark(Baseline = true), BenchmarkCategory(FromInt)]
+    [Benchmark(Baseline = true, OperationsPerInvoke = Inputs.Batch), BenchmarkCategory(FromInt)]
     public Any<int, string> CSharpEssentials_FromInt()
     {
-        Any<int, string> u = _int;
-        return u;
+        Any<int, string>[] sink = _cseSink;
+        for (int i = 0; i < sink.Length; i++)
+            sink[i] = _int;
+        return sink[^1];
     }
 
     // https://github.com/mcintyre321/OneOf/blob/6e02dbe75d0f20f198c640d4c04190a85c5ac9e6/README.md#as-a-method-return-value
-    [Benchmark, BenchmarkCategory(FromInt)]
+    [Benchmark(OperationsPerInvoke = Inputs.Batch), BenchmarkCategory(FromInt)]
     public OneOf<int, string> OneOf_FromInt()
     {
-        OneOf<int, string> u = _int;
-        return u;
+        OneOf<int, string>[] sink = _oneOfSink;
+        for (int i = 0; i < sink.Length; i++)
+            sink[i] = _int;
+        return sink[^1];
     }
 
     // https://github.com/domn1995/dunet/blob/945c38e48c048d7062edc392e19196b3cef1227f/Readme.md#implicit-conversions
-    [Benchmark, BenchmarkCategory(FromInt)]
+    [Benchmark(OperationsPerInvoke = Inputs.Batch), BenchmarkCategory(FromInt)]
     public IntOrText Dunet_FromInt()
     {
-        IntOrText u = _int;
-        return u;
+        IntOrText[] sink = _dunetSink;
+        for (int i = 0; i < sink.Length; i++)
+            sink[i] = _int;
+        return sink[^1];
     }
 
     // https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Any/Readme.MD#creating-unions
-    [Benchmark(Baseline = true), BenchmarkCategory(FromText)]
+    [Benchmark(Baseline = true, OperationsPerInvoke = Inputs.Batch), BenchmarkCategory(FromText)]
     public Any<int, string> CSharpEssentials_FromText()
     {
-        Any<int, string> u = _text;
-        return u;
+        Any<int, string>[] sink = _cseSink;
+        for (int i = 0; i < sink.Length; i++)
+            sink[i] = _text;
+        return sink[^1];
     }
 
     // https://github.com/mcintyre321/OneOf/blob/6e02dbe75d0f20f198c640d4c04190a85c5ac9e6/README.md#as-a-method-return-value
-    [Benchmark, BenchmarkCategory(FromText)]
+    [Benchmark(OperationsPerInvoke = Inputs.Batch), BenchmarkCategory(FromText)]
     public OneOf<int, string> OneOf_FromText()
     {
-        OneOf<int, string> u = _text;
-        return u;
+        OneOf<int, string>[] sink = _oneOfSink;
+        for (int i = 0; i < sink.Length; i++)
+            sink[i] = _text;
+        return sink[^1];
     }
 
     // https://github.com/domn1995/dunet/blob/945c38e48c048d7062edc392e19196b3cef1227f/Readme.md#implicit-conversions
-    [Benchmark, BenchmarkCategory(FromText)]
+    [Benchmark(OperationsPerInvoke = Inputs.Batch), BenchmarkCategory(FromText)]
     public IntOrText Dunet_FromText()
     {
-        IntOrText u = _text;
-        return u;
+        IntOrText[] sink = _dunetSink;
+        for (int i = 0; i < sink.Length; i++)
+            sink[i] = _text;
+        return sink[^1];
     }
 
     private static string Read(Any<int, string> u) => u.Match(first: static v => Parity.Of(v), second: static s => s).Result!;

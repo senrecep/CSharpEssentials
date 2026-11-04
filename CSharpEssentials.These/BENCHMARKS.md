@@ -12,6 +12,7 @@ What the comparison answers: how much CSE's delegate-based API costs compared wi
 
 The four These classes are in `benchmarks/CSharpEssentials.Any.Comparison.Benchmarks/`, next to the Any classes ([CSharpEssentials.Any/BENCHMARKS.md](../CSharpEssentials.Any/BENCHMARKS.md)).
 - Every class has `[MemoryDiagnoser]`, and CSE is the baseline.
+- `TheseMatchComparison` folds a 1024-element array and reports the time per fold (`OperationsPerInvoke = 1024`). In a single-call version the hand-written row was too short for BenchmarkDotNet to tell apart from an empty method.
 - Each class checks parity in `[GlobalSetup]`, and `--self-check` runs the same check. The CSE row and the hand-written row must give the same result, or the run fails.
 
 | # | Class | Measured unit | Expected |

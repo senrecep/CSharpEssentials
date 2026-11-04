@@ -12,6 +12,7 @@ internal static class Inputs
     public const string TextValue = "forty-two";
     public const string Warning = "warn";
     public const int Count = 1000;
+    public const int Batch = 1024;
 
     public static readonly string[] Texts = [.. Enumerable.Range(0, Count).Select(static i => "t" + i.ToString(CultureInfo.InvariantCulture))];
 
