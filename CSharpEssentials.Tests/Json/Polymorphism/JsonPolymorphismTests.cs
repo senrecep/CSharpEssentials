@@ -57,7 +57,7 @@ public class JsonPolymorphismTests
     }
 
     [Fact]
-    public void Generated_Should_Register_Events_From_Another_Assembly_Through_The_Chain()
+    public void Generated_Should_Register_Events_From_Another_Assembly()
     {
         string json = JsonSerializer.Serialize<IFixtureEvent>(new FixtureOrderCancelled(Id, "late"), Generated);
 
@@ -78,8 +78,10 @@ public class JsonPolymorphismTests
     {
         Action act = () => JsonSerializer.Serialize<IFixtureDuplicateEvent>(new TestDuplicateTwo(), Generated);
 
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*'duplicate'*FixtureDuplicateOne, CSharpEssentials.Tests.Fixtures.JsonEvents*TestDuplicateTwo, CSharpEssentials.Tests*");
+        InvalidOperationException exception = act.Should().Throw<InvalidOperationException>().Which;
+        exception.Message.Should().Contain("'duplicate'")
+            .And.Contain("FixtureDuplicateOne, CSharpEssentials.Tests.Fixtures.JsonEvents")
+            .And.Contain("TestDuplicateTwo, CSharpEssentials.Tests");
     }
 
     [Fact]
@@ -376,7 +378,7 @@ public class JsonPolymorphismTests
     }
 
     [Fact]
-    public void Registry_Should_Ignore_A_Repeated_Registration()
+    public void Registry_Should_Not_Throw_Or_Change_The_Output_For_A_Repeated_Registration()
     {
         Action act = () => JsonPolymorphism.Register(
         [
