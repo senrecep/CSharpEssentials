@@ -685,14 +685,14 @@ What each provider stores and what `UseOrderedGuidKeys()` picks:
 | SQL Server | `uniqueidentifier`; compares bytes 10 to 15 first, then 8 to 9, 6 to 7, 4 to 5 and 0 to 3 | `SequentialGuidValueGenerator`: ordered within one generator instance | `SqlServer` |
 | PostgreSQL (Npgsql) | `uuid`; compares the 16 bytes in RFC order | version 4 on Npgsql 8; version 7 on Npgsql 9 and later | `Version7` |
 | SQLite | `TEXT`, uppercase with hyphens; compares ordinally | version 4 | `Version7` |
-| Pomelo MySQL | `GuidFormat` `Char36` (the default), `Char32` or `Binary16` keep RFC order; `TimeSwapBinary16` and `LittleEndianBinary16` reorder the bytes | ticks in the first 8 bytes, with its own byte layout for `LittleEndianBinary16` | `Version7` |
+| Pomelo MySQL | `GuidFormat` `Char36` (the default), `Char32` or `Binary16` keep RFC order; `TimeSwapBinary16` and `LittleEndianBinary16` reorder the bytes | ticks first, laid out per `GuidFormat`; sorts in every format except `TimeSwapBinary16` | none, unless you pass a layout |
 | Any other provider (MySql.EntityFrameworkCore, in-memory, Cosmos, Oracle, MongoDB) | not checked by this package | the provider's | none, unless you pass a layout |
 
 Notes:
 
 - On SQL Server the default generator is already sequential inside one app instance. It seeds a counter from the clock when the generator is created, so several instances, or one restarted instance, write into separate ranges of the index. `SqlServer` values follow the clock in every instance, so concurrent instances all append near the end of the index. In a single test run against SQL Server 2022 in a container (20,000 single-row inserts into a clustered key, `char(200)` rows), one process left 0.5% fragmentation with either generator. Four processes started 1 second apart left 96.9% fragmentation with the default generator and 11.2% with `SqlServer`, with pages 96% and 92% full. Version 4 and `NewMonotonicGuid()` left 99% fragmentation and pages 67% full with one and with four processes, and `NewGuid()` the same with one process.
 - Npgsql 9 and later already generate version 7 values. Opting in there only makes values from one process strictly increasing inside a millisecond.
-- With Pomelo `TimeSwapBinary16` or `LittleEndianBinary16`, do not opt in. Version 7 values do not sort in either format. Under `LittleEndianBinary16` Pomelo's own generator does sort; under `TimeSwapBinary16` neither does, because the stored value starts with bytes that hold low tick bits. This package cannot see the `GuidFormat` of the connection.
+- On Pomelo, pass `Version7` only for `Char36`, `Char32` or `Binary16`, and only if you want this package's generator. Version 7 values do not sort under `TimeSwapBinary16` or `LittleEndianBinary16`. This package cannot see the `GuidFormat` of the connection.
 - A `Version7` value sorts randomly in SQL Server, and a `SqlServer` value sorts randomly everywhere else. Pass a layout only when the default pick is wrong for your columns.
 - The order holds within one process. Values from different processes interleave by their millisecond.
 

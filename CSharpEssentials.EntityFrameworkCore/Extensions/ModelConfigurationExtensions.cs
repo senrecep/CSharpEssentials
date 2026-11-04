@@ -113,9 +113,9 @@ public static class ModelConfigurationExtensions
     /// <remarks>
     /// <para>
     /// Without <paramref name="layout"/>: <see cref="OrderedGuidLayout.SqlServer"/> on SQL Server, <see cref="OrderedGuidLayout.Version7"/>
-    /// on PostgreSQL (Npgsql), SQLite and Pomelo MySQL, and no change on any other provider. On Pomelo version 7 sorts only with
-    /// <c>GuidFormat</c> <c>Char36</c> (the default), <c>Char32</c> or <c>Binary16</c>; do not opt in with <c>TimeSwapBinary16</c> or
-    /// <c>LittleEndianBinary16</c>.
+    /// on PostgreSQL (Npgsql) and SQLite, and no change on any other provider. Pomelo MySQL is left alone because its own generator
+    /// already sorts in every <c>GuidFormat</c> except <c>TimeSwapBinary16</c>; pass <see cref="OrderedGuidLayout.Version7"/> there only
+    /// with <c>Char36</c>, <c>Char32</c> or <c>Binary16</c>.
     /// </para>
     /// <para>
     /// Keys that are foreign keys, nullable, or have a value generator, a default value, default value SQL or computed SQL

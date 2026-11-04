@@ -13,7 +13,6 @@ internal sealed class OrderedGuidKeyConvention(OrderedGuidLayout? layout, string
     [
         EnumStorageConvention.PostgresProvider,
         EnumStorageConvention.SqliteProvider,
-        "Pomelo.EntityFrameworkCore.MySql",
     ];
 
     internal static OrderedGuidLayout? Resolve(OrderedGuidLayout? layout, string? providerName) =>

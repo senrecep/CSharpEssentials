@@ -95,7 +95,7 @@ public sealed class OrderedGuidLayoutOrderTests
     [InlineData("Microsoft.EntityFrameworkCore.SqlServer", null, OrderedGuidLayout.SqlServer)]
     [InlineData("Npgsql.EntityFrameworkCore.PostgreSQL", null, OrderedGuidLayout.Version7)]
     [InlineData("Microsoft.EntityFrameworkCore.Sqlite", null, OrderedGuidLayout.Version7)]
-    [InlineData("Pomelo.EntityFrameworkCore.MySql", null, OrderedGuidLayout.Version7)]
+    [InlineData("Pomelo.EntityFrameworkCore.MySql", null, null)]
     [InlineData("MySql.EntityFrameworkCore", null, null)]
     [InlineData("Microsoft.EntityFrameworkCore.InMemory", null, null)]
     [InlineData("Oracle.EntityFrameworkCore", null, null)]
