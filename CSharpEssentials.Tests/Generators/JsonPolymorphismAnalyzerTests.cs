@@ -103,21 +103,12 @@ public class JsonPolymorphismAnalyzerTests
     }
 
     [Fact]
-    public async Task CSE4005_Should_Report_Info_For_A_Derived_Type_Without_A_Value()
+    public async Task CSE4005_Should_Warn_For_A_Derived_Type_Without_A_Value()
     {
         Diagnostic diagnostic = await SingleAsync("CSE4005", "public sealed class A : IEvent { }");
 
-        diagnostic.Severity.Should().Be(DiagnosticSeverity.Info);
+        diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
         Message(diagnostic).Should().Contain("CLR name 'Sample.A'");
-    }
-
-    [Fact]
-    public async Task CSE4005_Should_Warn_When_The_Aot_Analyzer_Is_Enabled()
-    {
-        TestAnalyzerConfigOptionsProvider options = new(new Dictionary<string, string> { ["build_property.EnableAotAnalyzer"] = "true" });
-        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync("public sealed class A : IEvent { }", options);
-
-        diagnostics.Should().ContainSingle(static d => d.Id == "CSE4005").Which.Severity.Should().Be(DiagnosticSeverity.Warning);
     }
 
     [Fact]

@@ -50,11 +50,11 @@ internal static class JsonPolymorphismDiagnostics
         "Derived type of an open polymorphic base has no [JsonTypeDiscriminator]",
         "'{0}' derives from '{1}' but has no [JsonTypeDiscriminator]; AddPolymorphismWithReflection writes its CLR name '{2}' and AddPolymorphism leaves it out",
         Category,
-        DiagnosticSeverity.Info,
+        DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
-        description: "A CLR name changes when the type is renamed or moved, which breaks stored payloads. Add [JsonTypeDiscriminator] " +
-            "with a stable value such as \"order.created.v1\". Reported as a warning when EnableAotAnalyzer is true (PublishAot or " +
-            "IsAotCompatible), because AddPolymorphism is then the only path.");
+        description: "A CLR name changes when the type is renamed or moved, which breaks stored payloads, and AddPolymorphism " +
+            "throws NotSupportedException when it writes such a type. Add [JsonTypeDiscriminator] with a stable value such as " +
+            "\"order.created.v1\".");
 
     public static readonly DiagnosticDescriptor MissingFromContext = new(
         "CSE4006",

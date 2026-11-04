@@ -185,7 +185,7 @@ For a base with `[JsonPolymorphic]` or `[JsonDerivedType]`, the derived types co
 
 1. `[JsonDerivedType(typeof(X), "x")]` on the base. System.Text.Json reads these; CSharpEssentials never changes them. When a listed type also has `[JsonTypeDiscriminator]`, the base value wins (CSE4002).
 2. Generated registrations from `[JsonTypeDiscriminator]` on derived types, in any assembly. This step uses no reflection.
-3. With `AddPolymorphismWithReflection` only, and only for a base with no `[JsonDerivedType]`: a scan of the given assemblies, or of every loaded assembly except .NET framework assemblies when none are given. A type with `[JsonTypeDiscriminator]` gets its value; a type without one gets its CLR full name (CSE4005 reports it, as a warning in AOT projects). Abstract types, open generic types, by-ref-like types, types with their own `[JsonConverter]` and types System.Text.Json cannot configure are skipped.
+3. With `AddPolymorphismWithReflection` only, and only for a base with no `[JsonDerivedType]`: a scan of the given assemblies, or of every loaded assembly except .NET framework assemblies when none are given. A type with `[JsonTypeDiscriminator]` gets its value; a type without one gets its CLR full name (CSE4005 warns about it). Abstract types, open generic types, by-ref-like types, types with their own `[JsonConverter]` and types System.Text.Json cannot configure are skipped.
 
 ```csharp
 options.AddPolymorphismWithReflection(typeof(OrderPlaced).Assembly, typeof(UserCreated).Assembly);
@@ -256,7 +256,7 @@ public interface IEvent;
 | CSE4002 | Warning | `[JsonTypeDiscriminator]` on a type the base already lists; the base value wins |
 | CSE4003 | Error | `[JsonTypeDiscriminator]` on an abstract type, an interface or a generic type |
 | CSE4004 | Warning | The discriminator name equals a member's JSON name (ignoring case) |
-| CSE4005 | Info, Warning in AOT projects | A derived type of a base without `[JsonDerivedType]` has no `[JsonTypeDiscriminator]`. It is a warning when `EnableAotAnalyzer` is true (`PublishAot` or `IsAotCompatible`), because `AddPolymorphism` leaves such a type out |
+| CSE4005 | Warning | A derived type of a base without `[JsonDerivedType]` has no `[JsonTypeDiscriminator]`. `AddPolymorphismWithReflection` writes its CLR name, which breaks when the type is renamed, and `AddPolymorphism` leaves it out |
 | CSE4006 | Warning | A `JsonSerializerContext` lists a base but not one of its `[JsonTypeDiscriminator]` types declared in the same project (code fix) |
 | CSE4007 | Warning | A derived type has its own `[JsonConverter]` and is left out |
 | CSE4008 | Warning | `[JsonTypeDiscriminator]` on a type whose bases have no System.Text.Json polymorphism attribute |
