@@ -1,4 +1,5 @@
 using System.Data.SqlTypes;
+using System.Security.Cryptography;
 using CSharpEssentials.Core;
 using FluentAssertions;
 
@@ -38,13 +39,12 @@ public sealed class SqlServerGuidTests
     {
         long start = (1_700_000_000_000L << 18) - 70;
         byte[] random = new byte[16];
-        var rng = new Random(7);
-        rng.NextBytes(random);
+        RandomNumberGenerator.Fill(random);
         SqlGuid previous = new(GuidV7.ComposeSqlServer(start, (byte[])random.Clone()));
 
         for (long packed = start + 1; packed < start + 600_000; packed += 1 + (packed % 3))
         {
-            rng.NextBytes(random);
+            RandomNumberGenerator.Fill(random);
             SqlGuid current = new(GuidV7.ComposeSqlServer(packed, random));
             current.CompareTo(previous).Should().BePositive();
             previous = current;
