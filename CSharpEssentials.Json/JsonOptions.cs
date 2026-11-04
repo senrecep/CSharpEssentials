@@ -121,9 +121,9 @@ public static class EnhancedJsonSerializerOptions
         target.UnknownTypeHandling = source.UnknownTypeHandling;
         target.UnmappedMemberHandling = source.UnmappedMemberHandling;
         target.WriteIndented = source.WriteIndented;
+        target.AllowOutOfOrderMetadataProperties = source.AllowOutOfOrderMetadataProperties;
 
 #if NET9_0_OR_GREATER
-        target.AllowOutOfOrderMetadataProperties = source.AllowOutOfOrderMetadataProperties;
         target.IndentCharacter = source.IndentCharacter;
         target.IndentSize = source.IndentSize;
         target.NewLine = source.NewLine;
