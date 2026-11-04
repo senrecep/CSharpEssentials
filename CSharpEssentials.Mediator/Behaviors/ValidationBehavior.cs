@@ -10,8 +10,6 @@ namespace CSharpEssentials.Mediator;
 public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : IMessage
 {
-    private readonly Type _responseType = typeof(TResponse);
-
     // Validators are grouped by Order (ascending) and materialized once at construction time.
     // Hot path never pays the GroupBy/OrderBy cost, groups are iterated directly.
     private readonly IValidator<TRequest>[][] _orderedGroups;
@@ -28,34 +26,116 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         IEnumerable<IValidationFailureObserver> observers,
         ValidationBehaviorOptions? options = null)
     {
-        _orderedGroups = [..
-            validators
-                .GroupBy(v => v.Order)
-                .OrderBy(g => g.Key)
-                .Select(g => g.ToArray())];
+        _orderedGroups = Group([.. validators]);
         _observers = [.. observers];
         _defaultMode = options?.DefaultMode ?? ValidationMode.Enforce;
     }
 
-    public async ValueTask<TResponse> Handle(
+    private static IValidator<TRequest>[][] Group(IValidator<TRequest>[] validators)
+    {
+        if (validators.Length == 0)
+            return [];
+
+        int order = validators[0].Order;
+        for (int index = 1; index < validators.Length; index++)
+        {
+            if (validators[index].Order != order)
+                return [.. validators.GroupBy(v => v.Order).OrderBy(g => g.Key).Select(g => g.ToArray())];
+        }
+
+        return [validators];
+    }
+
+    public ValueTask<TResponse> Handle(
         TRequest message,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        if (cancellationToken.IsCancellationRequested)
+            return new ValueTask<TResponse>(Task.FromCanceled<TResponse>(cancellationToken));
 
+        try
+        {
+            return HandleCore(message, next, cancellationToken);
+        }
+        catch (OperationCanceledException oce)
+        {
+            TaskCompletionSource<TResponse> canceled = new();
+            canceled.TrySetCanceled(oce.CancellationToken);
+            return new ValueTask<TResponse>(canceled.Task);
+        }
+        catch (Exception ex)
+        {
+            return new ValueTask<TResponse>(Task.FromException<TResponse>(ex));
+        }
+    }
+
+    private ValueTask<TResponse> HandleCore(
+        TRequest message,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
         ValidationMode mode = message is IValidationModeOverride modeOverride
             ? modeOverride.ValidationMode
             : _defaultMode;
 
         if (mode == ValidationMode.Off || _orderedGroups.Length == 0)
+            return next(message, cancellationToken);
+
+        if (_orderedGroups is not [[IValidator<TRequest> validator]])
+            return ValidateGroupsAsync(message, mode, next, cancellationToken);
+
+        ValueTask<Result<TRequest>> validation = RunSafeAsync(validator, message, cancellationToken);
+        if (!validation.IsCompletedSuccessfully)
+            return AwaitValidationAsync(validation, message, mode, next, cancellationToken);
+
+        Result<TRequest> result = validation.GetAwaiter().GetResult();
+        if (result.IsSuccess)
+            return next(message, cancellationToken);
+
+        bool notify = AnyObserverListening(mode);
+        if (mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory && !notify)
+            return new ValueTask<TResponse>(factory.CreateFailure(result.Errors));
+
+        return CompleteFailureAsync(message, result.Errors, mode, notify, next, cancellationToken);
+    }
+
+    private async ValueTask<TResponse> AwaitValidationAsync(
+        ValueTask<Result<TRequest>> validation,
+        TRequest message,
+        ValidationMode mode,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        Result<TRequest> result = await validation.ConfigureAwait(false);
+        if (result.IsSuccess)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
+        return await CompleteFailureAsync(message, result.Errors, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<TResponse> ValidateGroupsAsync(
+        TRequest message,
+        ValidationMode mode,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
         Error[]? errors = await ValidateAsync(message, cancellationToken).ConfigureAwait(false);
         if (errors is null)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
-        if (_observers.Length > 0)
+        return await CompleteFailureAsync(message, errors, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async ValueTask<TResponse> CompleteFailureAsync(
+        TRequest message,
+        Error[] errors,
+        ValidationMode mode,
+        bool notify,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        CancellationToken cancellationToken)
+    {
+        if (notify)
             await NotifyObserversAsync(message, errors, mode, cancellationToken).ConfigureAwait(false);
 
         if (mode == ValidationMode.LogOnly)
@@ -65,17 +145,10 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     }
 
     /// <summary>
-    /// Runs the validators and returns the errors, or <see langword="null"/> when the request is valid.
+    /// Runs the validator groups and returns the errors, or <see langword="null"/> when the request is valid.
     /// </summary>
     private async ValueTask<Error[]?> ValidateAsync(TRequest message, CancellationToken cancellationToken)
     {
-        // Single validator fast path: skips group iteration and List allocation entirely.
-        if (_orderedGroups is [{ Length: 1 } onlyGroup])
-        {
-            Result<TRequest> singleResult = await RunSafeAsync(onlyGroup[0], message, cancellationToken).ConfigureAwait(false);
-            return singleResult.IsFailure ? [.. singleResult.Errors] : null;
-        }
-
         // Groups are pre-sorted by Order (ascending) in the constructor.
         // Within each group validators run concurrently; groups run sequentially.
         // Errors accumulate in group order so lower-Order errors appear first.
@@ -101,6 +174,17 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
 
         Error[] errors = [.. allErrors.Distinct()];
         return errors.Length == 0 ? null : errors;
+    }
+
+    private bool AnyObserverListening(ValidationMode mode)
+    {
+        foreach (IValidationFailureObserver observer in _observers)
+        {
+            if (observer is not LoggingValidationFailureObserver defaultObserver || defaultObserver.IsListening(mode))
+                return true;
+        }
+
+        return false;
     }
 
     private async ValueTask NotifyObserversAsync(
@@ -198,24 +282,12 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// <summary>
     /// Maps validation errors to <typeparamref name="TResponse"/>:
     /// <list type="bullet">
-    ///   <item><see cref="Result"/>: <c>Result.Failure(errors)</c> returned directly.</item>
-    ///   <item><see cref="Result{T}"/>: <c>Result&lt;T&gt;.Failure(errors)</c> via compiled factory.</item>
+    ///   <item><see cref="Result"/> and <see cref="Result{T}"/>: a failure carrying <paramref name="errors"/>, built without reflection.</item>
     ///   <item>Any other type: <see cref="EnhancedValidationException"/> thrown for <c>GlobalExceptionHandler</c>.</item>
     /// </list>
     /// </summary>
-    private TResponse BuildFailureResponse(Error[] errors)
-    {
-        if (_responseType == BehaviorCache.ResultType)
-            return (TResponse)(object)Result.Failure(errors);
-
-        if (_responseType.IsGenericType
-            && _responseType.GetGenericTypeDefinition() == BehaviorCache.GenericResultType)
-            return CreateGenericResultResponse(errors);
-
-        // TResponse cannot carry error information: delegate to GlobalExceptionHandler.
-        throw new EnhancedValidationException(errors);
-    }
-
-    private TResponse CreateGenericResultResponse(Error[] errors) =>
-        (TResponse)BehaviorCache.GetOrCreateFactory(_responseType)(errors);
+    private static TResponse BuildFailureResponse(Error[] errors) =>
+        FailureResponse<TResponse>.Factory is { } factory
+            ? factory.CreateFailure(errors)
+            : throw new EnhancedValidationException(errors);
 }

@@ -47,6 +47,15 @@ internal sealed record TestZeroExpirationQuery(string Id) : IQuery<Result<string
     public bool CacheFailures => false;
 }
 
+internal sealed class TestChangingCacheKeyQuery : IQuery<Result<string>>, ICacheable
+{
+    public int CacheKeyReads { get; private set; }
+    public string CacheKey => $"changing:{++CacheKeyReads}";
+    public TimeSpan Expiration => TimeSpan.FromMinutes(5);
+    public bool BypassCache => false;
+    public bool CacheFailures => false;
+}
+
 public class CachingBehaviorTests
 {
     private static readonly MessageHandlerDelegate<TestCacheableQuery, Result<string>> SuccessNext =
@@ -201,5 +210,26 @@ public class CachingBehaviorTests
         result.Value.Should().Be("from-handler");
         logger.Messages.Should().ContainSingle(m => m.StartsWith("Cached value for key test:1 could not be deserialized", StringComparison.Ordinal));
         cache.Verify(c => c.RemoveAsync("test:1", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Read_CacheKey_Once_And_Set_Under_The_Key_It_Looked_Up()
+    {
+        var logger = new CapturingLogger<CachingBehavior<TestChangingCacheKeyQuery, Result<string>>>();
+        var cache = new Mock<IDistributedCache>();
+        cache.Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync((byte[]?)null);
+
+        var behavior = new CachingBehavior<TestChangingCacheKeyQuery, Result<string>>(logger, cache.Object);
+        var query = new TestChangingCacheKeyQuery();
+
+        Result<string> result = await behavior.Handle(
+            query,
+            (message, ct) => new ValueTask<Result<string>>(Result.Success<string>("from-handler")),
+            default);
+
+        result.IsSuccess.Should().BeTrue();
+        query.CacheKeyReads.Should().Be(1);
+        cache.Verify(c => c.GetAsync("changing:1", It.IsAny<CancellationToken>()), Times.Once);
+        cache.Verify(c => c.SetAsync("changing:1", It.IsAny<byte[]>(), It.IsAny<DistributedCacheEntryOptions>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 }

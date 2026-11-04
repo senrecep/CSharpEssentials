@@ -23,21 +23,22 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         if (message.BypassCache)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
-        byte[]? cachedBytes = await cache.GetAsync(message.CacheKey, cancellationToken).ConfigureAwait(false);
+        string cacheKey = message.CacheKey;
+        byte[]? cachedBytes = await cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         if (cachedBytes is not null && cachedBytes.Length > 0)
         {
             if (TryDeserialize(cachedBytes, out TResponse? cached))
             {
-                LogCacheHit(logger, message.CacheKey);
+                LogCacheHit(logger, cacheKey);
                 return cached;
             }
 
-            LogCacheEntryUnreadable(logger, message.CacheKey);
-            await cache.RemoveAsync(message.CacheKey, cancellationToken).ConfigureAwait(false);
+            LogCacheEntryUnreadable(logger, cacheKey);
+            await cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         }
         else
         {
-            LogCacheMiss(logger, message.CacheKey);
+            LogCacheMiss(logger, cacheKey);
         }
 
         TResponse result = await next(message, cancellationToken).ConfigureAwait(false);
@@ -50,8 +51,8 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         if (message.Expiration > TimeSpan.Zero)
             options.AbsoluteExpirationRelativeToNow = message.Expiration;
 
-        await cache.SetAsync(message.CacheKey, serialized, options, cancellationToken).ConfigureAwait(false);
-        LogCacheSet(logger, message.CacheKey);
+        await cache.SetAsync(cacheKey, serialized, options, cancellationToken).ConfigureAwait(false);
+        LogCacheSet(logger, cacheKey);
 
         return result;
     }

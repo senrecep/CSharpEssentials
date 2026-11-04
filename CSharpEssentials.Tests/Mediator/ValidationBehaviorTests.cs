@@ -246,6 +246,27 @@ public class ValidationBehaviorTests
     }
 
     [Fact]
+    public async Task Handle_Should_Keep_Group_Order_For_Each_Behavior_Built_For_The_Same_Request_Type()
+    {
+        ValidationBehavior<TestValidationCommand, Result> sameOrder = new([
+            new OrderedStubValidator(3, "E_A", "Error A"),
+            new OrderedStubValidator(3, "E_B", "Error B")
+        ]);
+        ValidationBehavior<TestValidationCommand, Result> mixedOrder = new([
+            new OrderedStubValidator(2, "E_LATE", "Error late"),
+            new OrderedStubValidator(1, "E_EARLY", "Error early"),
+            new OrderedStubValidator(2, "E_LATE_2", "Error late 2")
+        ]);
+        TestValidationCommand command = new("");
+
+        Result same = await sameOrder.Handle(command, SuccessNext, default);
+        Result mixed = await mixedOrder.Handle(command, SuccessNext, default);
+
+        same.Errors.Select(e => e.Code).Should().Equal("E_A", "E_B");
+        mixed.Errors.Select(e => e.Code).Should().Equal("E_EARLY", "E_LATE", "E_LATE_2");
+    }
+
+    [Fact]
     public async Task Handle_Should_CallNext_WhenAllOrderedGroupsPass()
     {
         // Multiple validators (all Order=0) all pass → next must be called.
@@ -259,4 +280,155 @@ public class ValidationBehaviorTests
 
         result.IsSuccess.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task Handle_Should_Return_The_Validator_Errors_Without_Copying()
+    {
+        Error[] errors = [Error.Validation("NameRequired", "Name is required")];
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new FixedResultValidator(errors)]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Errors.Should().BeSameAs(errors);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Throw_EnhancedValidationException_When_TResponse_Is_Nullable_Result()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>?> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+
+        Func<Task> act = () => behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>?>(42), default).AsTask();
+
+        await act.Should().ThrowAsync<EnhancedValidationException>();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Complete_Synchronously_When_Enforce_Fails_For_Result_Without_Observers()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+
+        ValueTask<Result<int>> pending = behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        pending.IsCompletedSuccessfully.Should().BeTrue();
+        Result<int> result = await pending;
+        result.FirstError.Code.Should().Be("NameRequired");
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fault_Instead_Of_Throwing_When_TResponse_Is_Not_Result()
+    {
+        ValidationBehavior<TestValidationCommand, string> behavior = new([new StubValidator("NameRequired", "Name is required")]);
+
+        ValueTask<string> pending = behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<string>("ok"), default);
+
+        pending.IsFaulted.Should().BeTrue();
+        Func<Task> act = () => pending.AsTask();
+        await act.Should().ThrowAsync<EnhancedValidationException>();
+    }
+
+    [Fact]
+    public void Handle_Should_Return_Canceled_Task_Instead_Of_Throwing_When_Token_Already_Cancelled()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([new StubValidator()]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), SuccessNext, new CancellationToken(canceled: true));
+
+        pending.IsCanceled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Return_Canceled_Task_Instead_Of_Throwing_When_Validator_Throws_Cancellation_Synchronously()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([new SyncCancellingValidator()]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), SuccessNext, default);
+
+        pending.IsCanceled.Should().BeTrue();
+        Func<Task> act = () => pending.AsTask();
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fault_Instead_Of_Throwing_When_Next_Throws_Synchronously()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([new StubValidator()]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), (_, _) => throw new InvalidOperationException("next exploded"), default);
+
+        pending.IsFaulted.Should().BeTrue();
+        Func<Task> act = () => pending.AsTask();
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("next exploded");
+    }
+
+    [Fact]
+    public void Handle_Should_Fault_Instead_Of_Throwing_When_Next_Throws_Synchronously_Without_Validators()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([]);
+
+        ValueTask<Result> pending = behavior.Handle(new TestValidationCommand("test"), (_, _) => throw new InvalidOperationException("next exploded"), default);
+
+        pending.IsFaulted.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Call_Next_When_Async_Validator_Passes()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new YieldingValidator(null)]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand("ok"), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Return_Failure_When_Async_Validator_Fails()
+    {
+        Error[] errors = [Error.Validation("NameRequired", "Name is required")];
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([new YieldingValidator(errors)]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Errors.Should().BeSameAs(errors);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Throw_EnhancedValidationException_When_Async_Validator_Fails_For_Non_Result()
+    {
+        ValidationBehavior<TestValidationCommand, string> behavior = new([new YieldingValidator([Error.Validation("NameRequired", "Name is required")])]);
+
+        Func<Task> act = () => behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<string>("ok"), default).AsTask();
+
+        await act.Should().ThrowAsync<EnhancedValidationException>();
+    }
+
+    [Fact]
+    public async Task Handle_Should_Call_Next_When_There_Are_No_Validators()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Value.Should().Be(42);
+    }
+}
+
+internal sealed class FixedResultValidator(Error[] errors) : IValidator<TestValidationCommand>
+{
+    public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
+        new(Result<TestValidationCommand>.Failure(errors));
+}
+
+internal sealed class YieldingValidator(Error[]? errors) : IValidator<TestValidationCommand>
+{
+    public async ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default)
+    {
+        await Task.Yield();
+        return errors is null ? instance : Result<TestValidationCommand>.Failure(errors);
+    }
+}
+
+internal sealed class SyncCancellingValidator : IValidator<TestValidationCommand>
+{
+    public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
+        throw new OperationCanceledException();
 }

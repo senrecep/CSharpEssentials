@@ -1,4 +1,7 @@
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 
 using CSharpEssentials.Errors;
 using CSharpEssentials.Exceptions;
@@ -277,6 +280,76 @@ public sealed class IdempotencyBehaviorTests : IDisposable
 
         _store.Retentions.Should().Equal(TimeSpan.FromHours(5));
         _store.Leases.Should().Equal(TimeSpan.FromMinutes(4));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fall_Back_To_The_Request_Type_Settings_After_A_Request_That_Overrides_Them()
+    {
+        _options.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(2));
+        IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>> behavior = Create<IdemOptionalRetentionCommand, Result<int>>();
+
+        await behavior.Handle(new IdemOptionalRetentionCommand("k1", null), (_, _) => Run(1), CancellationToken.None);
+        await behavior.Handle(new IdemOptionalRetentionCommand("k2", TimeSpan.FromHours(5)), (_, _) => Run(2), CancellationToken.None);
+        await behavior.Handle(new IdemOptionalRetentionCommand("k3", null), (_, _) => Run(3), CancellationToken.None);
+
+        IdempotencyBehaviorOptions otherOptions = new();
+        otherOptions.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(7));
+        IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>> other = new(
+            new IdempotencyExecutor(_store, _monitor, logger: _loggerFactory.CreateLogger<IdempotencyExecutor>()),
+            _monitor,
+            otherOptions,
+            _loggerFactory.CreateLogger<IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>>>(),
+            new PrincipalAccessor(() => _principal));
+        await other.Handle(new IdemOptionalRetentionCommand("k4", null), (_, _) => Run(4), CancellationToken.None);
+
+        _store.Retentions.Should().Equal(TimeSpan.FromHours(2), TimeSpan.FromHours(5), TimeSpan.FromHours(2), TimeSpan.FromHours(7));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Use_Request_Type_Settings_Changed_After_The_First_Request()
+    {
+        _options.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(2));
+        IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>> behavior = Create<IdemOptionalRetentionCommand, Result<int>>();
+
+        await behavior.Handle(new IdemOptionalRetentionCommand("k1", null), (_, _) => Run(1), CancellationToken.None);
+        _options.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(3));
+        await behavior.Handle(new IdemOptionalRetentionCommand("k2", null), (_, _) => Run(2), CancellationToken.None);
+
+        _store.Retentions.Should().Equal(TimeSpan.FromHours(2), TimeSpan.FromHours(3));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fingerprint_The_Request_As_The_Sha256_Of_Its_Json()
+    {
+        _options.SerializerOptions = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+        };
+        IdempotencyBehavior<IdemNoteCommand, Result<int>> behavior = Create<IdemNoteCommand, Result<int>>();
+        IdemNoteCommand small = new("k1", "çay <ü> \"note\"");
+        IdemNoteCommand large = new("k2", new string('ş', 100_000));
+
+        await behavior.Handle(small, (_, _) => Run(1), CancellationToken.None);
+        await behavior.Handle(large, (_, _) => Run(2), CancellationToken.None);
+
+        _store.Fingerprints.Should().Equal(
+            Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(small, _options.SerializerOptions))),
+            Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(large, _options.SerializerOptions))));
+    }
+
+    [Fact]
+    public async Task Handle_Should_Fingerprint_A_Request_Correctly_After_Another_Fingerprint_Threw()
+    {
+        _executorOptions.Mode = IdempotencyMode.Observe;
+        IdempotencyBehavior<IdemThrowingCommand, Result<int>> behavior = Create<IdemThrowingCommand, Result<int>>();
+        IdemThrowingCommand valid = new("k2", new string('a', 50_000), Throw: false);
+
+        await behavior.Handle(new IdemThrowingCommand("k1", new string('a', 50_000), Throw: true), (_, _) => Run(1), CancellationToken.None);
+        await behavior.Handle(valid, (_, _) => Run(2), CancellationToken.None);
+
+        _runs.Should().Be(2);
+        _store.Fingerprints.Should().Equal(Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(valid))));
     }
 
     [Fact]
@@ -768,4 +841,16 @@ internal sealed record IdemTimedCommand(string IdempotencyKey, TimeSpan Retentio
     TimeSpan? IIdempotentRequest.IdempotencyRetention => Retention;
 
     TimeSpan? IIdempotentRequest.IdempotencyLease => Lease;
+}
+
+internal sealed record IdemOptionalRetentionCommand(string IdempotencyKey, TimeSpan? Retention) : ICommand<Result<int>>, IIdempotentRequest
+{
+    TimeSpan? IIdempotentRequest.IdempotencyRetention => Retention;
+}
+
+internal sealed record IdemNoteCommand(string IdempotencyKey, string Note) : ICommand<Result<int>>, IIdempotentRequest;
+
+internal sealed record IdemThrowingCommand(string IdempotencyKey, string Note, bool Throw) : ICommand<Result<int>>, IIdempotentRequest
+{
+    public string Last => Throw ? throw new InvalidOperationException("not serializable") : "last";
 }
