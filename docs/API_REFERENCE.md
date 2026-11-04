@@ -1,45 +1,45 @@
-# CSharpEssentials API Reference
+# CSharpEssentials API reference
 
 A guide to every package, method, and pattern in the CSharpEssentials ecosystem.
 
-> **Philosophy:** Values over exceptions. Explicit over implicit. Composable over monolithic.
-> Every abstraction exists to make C# code safer, more composable, and more expressive, bridging OOP and Functional Programming without abandoning either.
+> **Philosophy:** Return failures as values instead of throwing exceptions, keep behavior explicit, and build from small parts that compose.
+> The abstractions are there to make C# code safer, easier to compose and more expressive. They mix object-oriented and functional programming without giving up either.
 
 ---
 
-## Table of Contents
+## Table of contents
 
-- [Errors: The Foundation](#1-csharpessentialserrors-the-foundation)
-- [Results: Railway-Oriented Programming](#2-csharpessentialsresults-railway-oriented-programming)
-- [Maybe: Explicit Optionals](#3-csharpessentialsmaybe-explicit-optionals)
-- [Any: Discriminated Unions](#4-csharpessentialsany-discriminated-unions)
-- [Core: Utility Belt](#5-csharpessentialscore-utility-belt)
-- [Rules: Composable Business Rules](#6-csharpessentialsrules-composable-business-rules)
-- [Entity: DDD Building Blocks](#7-csharpessentialsentity-ddd-building-blocks)
-- [Http: Result-Returning HTTP Client](#8-csharpessentialshttp-result-returning-http-client)
-- [Resilience: Transient Fault Handling](#9-csharpessentialsresilience-transient-fault-handling)
-- [EntityFrameworkCore: EF Core Integration](#10-csharpessentialsentityframeworkcore-ef-core-integration)
-- [Json: Serialization Defaults](#11-csharpessentialsjson-serialization-defaults)
-- [AspNetCore: API Layer](#12-csharpessentialsaspnetcore-api-layer)
-- [Mediator: Pipeline Behaviors](#13-csharpessentialsmediator-pipeline-behaviors)
-- [Enums: Source-Generated String Enums](#14-csharpessentialsenums-source-generated-string-enums)
-- [Time: Testable Clock](#15-csharpessentialstime-testable-clock)
-- [Clone: Deep Copy](#16-csharpessentialsclone-deep-copy)
-- [RequestResponseLogging: HTTP Logging Middleware](#17-csharpessentialsrequestresponselogging-http-logging-middleware)
-- [GcpSecretManager: Secret Configuration](#18-csharpessentialsgcpsecretmanager-secret-configuration)
-- [Validation: Model-First Validation](#19-csharpessentialsvalidation-model-first-validation)
-- [These: 3-State Union](#20-csharpessentialsthese-3-state-union)
-- [Endpoints: Source-Generated Endpoint Mapping](#21-csharpessentialsendpoints-source-generated-endpoint-mapping)
-- [DependencyInjection: Attribute-Based Registration](#22-csharpessentialsdependencyinjection-attribute-based-registration)
-- [CSharpEssentials: Meta Package](#23-csharpessentials-meta-package)
-- [AspNetCore.OpenApi: OpenAPI Documents](#24-csharpessentialsaspnetcoreopenapi-openapi-documents)
-- [AspNetCore.Swashbuckle: Swagger Documents](#25-csharpessentialsaspnetcoreswashbuckle-swagger-documents)
-- [Idempotency: Transport-Independent Core](#26-csharpessentialsidempotency-transport-independent-core)
-- [Ecosystem Design Patterns](#ecosystem-design-patterns)
+- [Errors: the foundation](#1-csharpessentialserrors-the-foundation)
+- [Results: railway-oriented programming](#2-csharpessentialsresults-railway-oriented-programming)
+- [Maybe: explicit optionals](#3-csharpessentialsmaybe-explicit-optionals)
+- [Any: discriminated unions](#4-csharpessentialsany-discriminated-unions)
+- [Core: utility belt](#5-csharpessentialscore-utility-belt)
+- [Rules: composable business rules](#6-csharpessentialsrules-composable-business-rules)
+- [Entity: DDD building blocks](#7-csharpessentialsentity-ddd-building-blocks)
+- [Http: Result-returning HTTP client](#8-csharpessentialshttp-result-returning-http-client)
+- [Resilience: transient fault handling](#9-csharpessentialsresilience-transient-fault-handling)
+- [EntityFrameworkCore: EF Core integration](#10-csharpessentialsentityframeworkcore-ef-core-integration)
+- [Json: serialization defaults](#11-csharpessentialsjson-serialization-defaults)
+- [AspNetCore: API layer](#12-csharpessentialsaspnetcore-api-layer)
+- [Mediator: pipeline behaviors](#13-csharpessentialsmediator-pipeline-behaviors)
+- [Enums: source-generated string enums](#14-csharpessentialsenums-source-generated-string-enums)
+- [Time: testable clock](#15-csharpessentialstime-testable-clock)
+- [Clone: deep copy](#16-csharpessentialsclone-deep-copy)
+- [RequestResponseLogging: HTTP logging middleware](#17-csharpessentialsrequestresponselogging-http-logging-middleware)
+- [GcpSecretManager: secret configuration](#18-csharpessentialsgcpsecretmanager-secret-configuration)
+- [Validation: model-first validation](#19-csharpessentialsvalidation-model-first-validation)
+- [These: 3-state union](#20-csharpessentialsthese-3-state-union)
+- [Endpoints: source-generated endpoint mapping](#21-csharpessentialsendpoints-source-generated-endpoint-mapping)
+- [DependencyInjection: attribute-based registration](#22-csharpessentialsdependencyinjection-attribute-based-registration)
+- [CSharpEssentials: meta package](#23-csharpessentials-meta-package)
+- [AspNetCore.OpenApi: OpenAPI documents](#24-csharpessentialsaspnetcoreopenapi-openapi-documents)
+- [AspNetCore.Swashbuckle: Swagger documents](#25-csharpessentialsaspnetcoreswashbuckle-swagger-documents)
+- [Idempotency: transport-independent core](#26-csharpessentialsidempotency-transport-independent-core)
+- [Ecosystem design patterns](#ecosystem-design-patterns)
 
 ---
 
-## 1. CSharpEssentials.Errors: The Foundation
+## 1. CSharpEssentials.Errors: the foundation
 
 **What it is:** A structured error value type that replaces exceptions for expected failures.
 
@@ -47,7 +47,7 @@ A guide to every package, method, and pattern in the CSharpEssentials ecosystem.
 
 Every other package in the ecosystem builds on this type.
 
-### Error Factory Methods
+### Error factory methods
 
 | Method | Creates | HTTP Mapping | When to Use |
 |--------|---------|-------------|-------------|
@@ -64,7 +64,7 @@ All factory methods accept an optional `ErrorMetadata? metadata` parameter for a
 
 `ErrorType` has eight members: `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden` and `Unknown`. `Unknown` has no factory; the EF Core `SaveChangesAsResultAsync` uses it.
 
-### Error Composition
+### Error composition
 
 | Operation | What It Does |
 |-----------|-------------|
@@ -72,7 +72,7 @@ All factory methods accept an optional `ErrorMetadata? metadata` parameter for a
 | `Error.CreateMany(e1, e2, e3)` | Creates an error array explicitly |
 | `implicit operator Error[]` | A single `Error` auto-converts to `Error[]` where needed |
 
-### Error Extensions
+### Error extensions
 
 | Method | What It Does |
 |--------|-------------|
@@ -84,7 +84,7 @@ All factory methods accept an optional `ErrorMetadata? metadata` parameter for a
 
 `ToHttpStatusCode`, `ToErrorType` and `ToIntType` are in namespace `CSharpEssentials.Errors`.
 
-### Special Values
+### Special values
 
 | Value | Purpose |
 |-------|---------|
@@ -118,7 +118,7 @@ Error[] allErrors = validationError + conflictError;
 
 ---
 
-## 2. CSharpEssentials.Results: Railway-Oriented Programming
+## 2. CSharpEssentials.Results: railway-oriented programming
 
 > **Note:** The NuGet package is named `CSharpEssentials.Results`, but the actual C# namespace is `CSharpEssentials.ResultPattern`. Add `using CSharpEssentials.ResultPattern;` in your code.
 
@@ -128,7 +128,7 @@ Error[] allErrors = validationError + conflictError;
 
 Two core types: `Result` (no value, just success/failure) and `Result<T>` (carries a value on success).
 
-### Creating Results
+### Creating results
 
 | Method | Returns | When to Use |
 |--------|---------|-------------|
@@ -154,7 +154,7 @@ Two core types: `Result` (no value, just success/failure) and `Result<T>` (carri
 | `Result.Failure<T>(error \| errors)` | `Result<T>` | Typed failure without naming the struct |
 | `Result<int> r = 42;` | `Result<int>` | Implicit operator for ergonomic creation |
 
-### Chaining: The Success Railway
+### Chaining: the success railway
 
 These methods execute only when the result is successful. On failure, they pass the error through unchanged.
 
@@ -177,7 +177,7 @@ Result<OrderDto> result = GetUser(userId)
     .Map(o => new OrderDto(o.Id, o.Total));
 ```
 
-### Side Effects: Observe Without Changing the Railway
+### Side effects: observe without changing the railway
 
 | Method | Runs On | What It Does |
 |--------|---------|-------------|
@@ -197,7 +197,7 @@ result
     .TapError(errors => _logger.LogWarning("Failed: {Errors}", errors));
 ```
 
-### Error Handling: Recovery and Transformation
+### Error handling: recovery and transformation
 
 | Method | What It Does | When to Use |
 |--------|-------------|-------------|
@@ -236,7 +236,7 @@ Result result = InternalOperation()
 
 Per-error async mappers run sequentially, in order. On success no mapper is called and no async state machine is created for the instance overloads. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
 
-### Extracting Values: Leaving the Railway
+### Extracting values: leaving the railway
 
 | Method | Safety | What It Does |
 |--------|--------|-------------|
@@ -263,7 +263,7 @@ string message = result.Match(
 result.Finally(r => _metrics.Record(r.IsSuccess ? "success" : "failure"));
 ```
 
-### Combining Multiple Results
+### Combining multiple results
 
 | Method | Strategy | What It Does |
 |--------|----------|-------------|
@@ -298,7 +298,7 @@ Result<Config> config = Result<Config>.Or(
     LoadFromDefaults());
 ```
 
-### LINQ Query Syntax
+### LINQ query syntax
 
 `Result<T>` implements `Select` and `SelectMany`, enabling LINQ comprehension syntax:
 
@@ -310,7 +310,7 @@ var result =
     select new InvoiceDto(user.Name, order.Total, payment.Method);
 ```
 
-### Async Support
+### Async support
 
 Most chaining, side-effect, recovery and extraction members have `Task<Result>` and `ValueTask<Result>` extension variants with `CancellationToken` support (see the matrix below; `Recover`, `RecoverFirst`, `EnsureNotNull`, `Unwrap` and `TryGet` have none). Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
 
@@ -358,7 +358,7 @@ Binding rules:
 
 Behaviour changes when recompiling: `TapAsync` with an `async` lambda on a `Task`/`ValueTask` source is now awaited (it used to bind `Action` and run as `async void`), so is a non-`async` lambda that returns a `Task` on a `Task` source (it used to bind `Action` and discard the task), and `MapAsync` with an `async` lambda on a `ValueTask<Result<T>>` source now returns `ValueTask<Result<U>>` (it used to return `ValueTask<Result<Task<U>>>`). A non-`async` lambda that returns a `Task` on a `ValueTask` source, or a `ValueTask` on a `Task` source, still binds `Action` and its result is discarded. 6.5.0 adds these .NET 9+ changes on `ValueTask` sources: `SwitchFirstAsync`/`SwitchLastAsync` with two non-`async` lambdas that return a `ValueTask` now await them (they used to bind the `Action` pair and discard them); `FinallyAsync` with a lambda returning `ValueTask` now awaits it and returns `ValueTask<Result..>` (it used to return `ValueTask<ValueTask>`); `FinallyAsync` with a lambda returning `ValueTask<T>`, or an `async` lambda returning a value, now returns `ValueTask<T>` (it used to return `ValueTask<ValueTask<T>>` or `ValueTask<Task<T>>`); and `FinallyAsync` with a non-`async` lambda returning `Task<T>` now awaits it and returns `ValueTask<Result..>` (it used to return `ValueTask<Task<T>>`). 6.5.0 also changes the conditional `TapAsync(condition, action)` on every target: on a `Task`/`ValueTask` source it now awaits an `async` lambda (it used to run as `async void`) and a non-`async` lambda that returns the source's flavour, `Task` or `ValueTask` (it used to be discarded). See [the async naming migration guide](migration/v6-async-naming.md).
 
-### Collection Extensions
+### Collection extensions
 
 Batch operations on sequences of results, without manually looping.
 
@@ -425,13 +425,13 @@ Result<int[]> values = await tasks.SequenceAsync();
 
 ---
 
-## 3. CSharpEssentials.Maybe: Explicit Optionals
+## 3. CSharpEssentials.Maybe: explicit optionals
 
 **What it is:** An Option/Maybe monad that explicitly represents the presence or absence of a value.
 
-**Why it exists:** `null` is invisible in C# type signatures (even with nullable reference types, it's a warning, not an error). `Maybe<T>` makes optionality a first-class citizen: you cannot access the value without acknowledging it might not exist. Unlike `Result`, Maybe does not carry a reason for absence, it simply says "there is no value."
+**Why it exists:** `null` is invisible in C# type signatures (even with nullable reference types, it's a warning, not an error). `Maybe<T>` puts optionality in the type: you cannot access the value without acknowledging it might not exist. Unlike `Result`, Maybe does not carry a reason for absence, it simply says "there is no value."
 
-### Creating Maybe Values
+### Creating Maybe values
 
 | Method | Creates | When to Use |
 |--------|---------|-------------|
@@ -465,7 +465,7 @@ Maybe<string> displayName = GetUser(id)
 
 Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`.
 
-### Extracting Values
+### Extracting values
 
 | Method | Safety | What It Does |
 |--------|--------|-------------|
@@ -487,7 +487,7 @@ string name = GetUser(id)
     .GetValueOrDefault("Anonymous");
 ```
 
-### Side Effects
+### Side effects
 
 | Method | Runs On | What It Does |
 |--------|---------|-------------|
@@ -497,7 +497,7 @@ string name = GetUser(id)
 | `TapIf(cond, action)` | Has value + condition | Conditional side effect, returns self |
 | `TapNone(action)` / `TapNoneAsync(asyncAction)` | No value | Side effect when empty, returns self |
 
-### Collection Helpers
+### Collection helpers
 
 | Method | What It Does | Replaces |
 |--------|-------------|----------|
@@ -540,7 +540,7 @@ Result<User> found = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFo
 
 `Maybe<T>.None` never equals a non-null plain `T`: `Maybe<int>.None == 0` is `false`, while `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence: `Maybe<string>.None == null` is `true` and `Maybe<string>.From("a") == null` is `false`, in either operand order. A typed `null` means absence, but `Equals(object?)` and `maybe == (object?)null` follow the BCL rule that `x.Equals(null)` is `false`: `Maybe<string>.None.Equals((object?)null)` and `Maybe<string>.None == (object?)null` are both `false`. The static type of the operand picks the rule, so cast to `T?` or use `HasNoValue` to test for absence. Prefer `HasNoValue` over `== null` or `== default` for clarity. For a value type `T`, `maybe == default` means `default(T)` (so `Maybe<int>.None == default` is `false`), and `Maybe<int> == null` does not compile cleanly (CS9342, a known overload ambiguity), so use `HasNoValue`. `ToString()` returns `Some(value)` or `None`; `IFormattable` values are formatted with the invariant culture.
 
-### Maybe-Result Bridge
+### Maybe-Result bridge
 
 | Method | Direction | What It Does |
 |--------|-----------|-------------|
@@ -556,7 +556,7 @@ Result<User> result = FindUser(id)   // returns Maybe<User>
     .ToMaybeResult(Error.NotFound("User.NotFound", "User does not exist"));
 ```
 
-### Collection Extensions
+### Collection extensions
 
 | Method | What It Does |
 |--------|-------------|
@@ -575,13 +575,13 @@ var (values, missingCount) = maybes.Partition();
 
 ---
 
-## 4. CSharpEssentials.Any: Discriminated Unions
+## 4. CSharpEssentials.Any: discriminated unions
 
 **What it is:** Type-safe union types for C#. `Any<T0, T1>` through `Any<T0, ..., T7>`, a value that holds exactly one of N possible types.
 
 **Why it exists:** C# has no native discriminated unions (until future language versions). When a method can return different types, developers resort to `object`, `dynamic`, marker interfaces, or separate result classes. `Any<T0, T1>` provides compile-time type safety with exhaustive matching: if you forget a case, the compiler tells you.
 
-### Creating Unions
+### Creating unions
 
 | Method | What It Does |
 |--------|-------------|
@@ -604,7 +604,7 @@ var (values, missingCount) = maybes.Partition();
 
 The struct is JSON serializable through `[JsonConstructor]` on `Any(int index, object? value)`.
 
-### Pattern Matching
+### Pattern matching
 
 | Method | Returns | What It Does |
 |--------|---------|-------------|
@@ -632,7 +632,7 @@ articleState.Switch(
 );
 ```
 
-### Collection Extensions
+### Collection extensions
 
 Scatter a sequence of unions into per-type arrays. Works for all arities (`Any<T0,T1>` through `Any<T0,...,T7>`).
 
@@ -652,7 +652,7 @@ Console.WriteLine($"{users.Length} succeeded, {errors.Length} failed");
 
 ---
 
-## 5. CSharpEssentials.Core: Utility Belt
+## 5. CSharpEssentials.Core: utility belt
 
 **What it is:** Foundational extension methods used across every project: null checks, string conversions, collection helpers, and async utilities.
 
@@ -660,7 +660,7 @@ Console.WriteLine($"{users.Length} succeeded, {errors.Length} failed");
 
 Namespaces: the extension methods and `Guider` and `HttpCodes` are in `CSharpEssentials.Core`; the .NET 10+ extension members (`IsEmpty`, `IsPalindrome`) are in `CSharpEssentials`; `ITransactionRunner` is in `CSharpEssentials.Transactions`.
 
-### Null and Boolean Guards
+### Null and Boolean guards
 
 | Method | What It Does | Returns |
 |--------|-------------|---------|
@@ -677,7 +677,7 @@ Namespaces: the extension methods and `Guider` and `HttpCodes` are in `CSharpEss
 | `type.GetTypeGroup<TGroup, TType>(group = 100)` | Rounds an enum's numeric value down to a multiple of `group` and returns it as `TGroup` | `TGroup` |
 | `ex.GetInnerExceptions()` / `ex.GetInnerExceptionsMessages()` | The exception and its inner exceptions, outermost first; or their messages | `IEnumerable<...>` |
 
-### Conditional Execution
+### Conditional execution
 
 | Method | What It Does |
 |--------|-------------|
@@ -686,7 +686,7 @@ Namespaces: the extension methods and `Guider` and `HttpCodes` are in `CSharpEss
 | `value.IfNotNull(action)` | Executes action if non-null (with optional else branch) |
 | `value.IfNull(action)` | Executes action if null (with optional else branch) |
 
-### String Case Conversions
+### String case conversions
 
 All methods accept an optional `CultureInfo` parameter.
 
@@ -701,7 +701,7 @@ All methods accept an optional `CultureInfo` parameter.
 | `ToTitleCase()` | `"hello world"` | `"Hello World"` |
 | `ToUnderscoreCamelCase()` | `"HelloWorld"` | `"_helloWorld"` |
 
-### Collection Extensions
+### Collection extensions
 
 | Method | What It Does |
 |--------|-------------|
@@ -714,14 +714,14 @@ All methods accept an optional `CultureInfo` parameter.
 | `ForEach(action)` | Lazy: yields each item and runs the action while the sequence is enumerated |
 | `AllTrue()` / `AllFalse()` | Checks bool collections |
 
-### Comparison Helpers
+### Comparison helpers
 
 | Method | What It Does |
 |--------|-------------|
 | `value.IsBetween(min, max)` | `true` when `min <= value <= max` (any `IComparable<T>`) |
 | `value.IsBetweenExclusive(min, max)` | `true` when `min < value < max` |
 
-### Async Helpers
+### Async helpers
 
 | Method | What It Does |
 |--------|-------------|
@@ -729,7 +729,7 @@ All methods accept an optional `CultureInfo` parameter.
 | `value.AsValueTask()` | Wraps value in completed `ValueTask` |
 | `task.WithCancellation(ct)` | Adds `CancellationToken` support to any `Task`, `Task<T>`, `ValueTask` or `ValueTask<T>`: stops waiting and throws `OperationCanceledException` when the token is cancelled; the underlying operation is not cancelled |
 
-### Guid Utilities
+### Guid utilities
 
 | Method | What It Does |
 |--------|-------------|
@@ -740,7 +740,7 @@ All methods accept an optional `CultureInfo` parameter.
 | `Guider.NewSqlServerGuid()` | Version 8 GUID for SQL Server `uniqueidentifier` order: Unix ms big-endian in bytes 10 to 15, then the sub-millisecond time and counter of `NewMonotonicGuid()` in bytes 8, 9 and 7; 56 random bits; strictly increasing in `SqlGuid` order within the process, not ordered as bytes or strings |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
 
-### Other Types
+### Other types
 
 | Type | What It Does |
 |------|-------------|
@@ -749,13 +749,13 @@ All methods accept an optional `CultureInfo` parameter.
 
 ---
 
-## 6. CSharpEssentials.Rules: Composable Business Rules
+## 6. CSharpEssentials.Rules: composable business rules
 
 **What it is:** A rules engine where each rule is an independent, testable unit that returns `Result`. Rules compose into trees via AND, OR, Linear (sequential), and Conditional (if/else) strategies.
 
 **Why it exists:** Complex business validation often ends up as deeply nested if/else blocks or procedural validators that are hard to test, reuse, or compose. The rules engine treats each rule as a first-class object that can be combined declaratively.
 
-### Rule Types
+### Rule types
 
 | Interface | Strategy | Behavior |
 |-----------|----------|----------|
@@ -827,7 +827,7 @@ Result checkout = await RuleEngine.EvaluateAsync(
 
 ---
 
-## 7. CSharpEssentials.Entity: DDD Building Blocks
+## 7. CSharpEssentials.Entity: DDD building blocks
 
 **What it is:** Base classes for Domain-Driven Design entities with audit fields, domain events, and soft deletion.
 
@@ -879,13 +879,13 @@ Extends `EntityBase` with (`SoftDeletableEntityBase<TId>` adds the typed `Id`):
 
 ---
 
-## 8. CSharpEssentials.Http: Result-Returning HTTP Client
+## 8. CSharpEssentials.Http: Result-returning HTTP client
 
 **What it is:** Extension methods and a fluent builder that wrap `HttpClient` calls to return `Result<T>` instead of throwing exceptions or requiring manual status code checks.
 
 **Why it exists:** Raw `HttpClient` usage involves checking `IsSuccessStatusCode`, handling `HttpRequestException`, deserializing manually, and mapping status codes to domain errors. This package does all of that and returns `Result<T>`.
 
-### Fluent Request Builder
+### Fluent request builder
 
 ```csharp
 Result<UserDto> result = await HttpRequestBuilder
@@ -931,7 +931,7 @@ Result<OrderDto> order = await HttpRequestBuilder
 
 Pass `jsonOptions` built once with `new JsonSerializerOptions(JsonSerializerDefaults.Web).AddEnumConventions(conventions, EnumReadMode.Data, writeAs)` so responses are read tolerantly (names, numbers and the fallback member). `QueryStringExtensions` has the same enum handling: `ToQueryString(source, conventions, format)` and `WithQueryString(name, value, conventions, format)`.
 
-### HttpClient Extensions
+### HttpClient extensions
 
 | Method | What It Does |
 |--------|-------------|
@@ -949,7 +949,7 @@ The extensions take a `Uri`, not a `string`: `client.GetFromJsonAsResultAsync<Us
 
 Cancellation follows the `Result.TryAsync` rule: only the caller's `cancellationToken` throws `OperationCanceledException`. An HTTP timeout (a `TaskCanceledException` wrapping a `TimeoutException`, as `HttpClient.Timeout` throws) returns a failed `Result` with `ErrorType.Unexpected` and code `Http.Timeout`; a Polly attempt or total timeout (for example from `Microsoft.Extensions.Http.Resilience`) surfaces as `TimeoutRejectedException` and keeps that type name as code; any other cancellation and any other transport exception returns `ErrorType.Unexpected` with the exception type name as code, except an SSRF guard block, which returns `ErrorType.Forbidden` with code `Http.SsrfBlocked` (see below). The same applies to `SendWithRedirectsAsResultAsync`, `HttpRequestBuilder.AsResultAsync` and `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>`. **Behaviour change in 6.5.0:** a timeout or a non-caller cancellation used to throw `OperationCanceledException`.
 
-### Status Code Mapping
+### Status code mapping
 
 HTTP status codes are automatically mapped to `ErrorType` by `HttpStatusCodeMapper.ToErrorType(HttpStatusCode)`; `HttpStatusCodeMapper.ToError(statusCode, description?)` builds the `Error` with code `Http.{status}` (for example `Http.404`):
 
@@ -964,7 +964,7 @@ HTTP status codes are automatically mapped to `ErrorType` by `HttpStatusCodeMapp
 | 402, 405, 406 and every other 4xx | `Failure` |
 | 5xx | `Unexpected` |
 
-### Resilience (Polly Integration)
+### Resilience (Polly integration)
 
 > **Legacy:** These static helpers on `HttpClientResilienceExtensions` are kept for compatibility; the `CSharpEssentials.Resilience` package (Section 9) is the supported API. Prefer `ResiliencePolicy` / `ResiliencePolicy<T>` for new code.
 
@@ -977,7 +977,7 @@ HTTP status codes are automatically mapped to `ErrorType` by `HttpStatusCodeMapp
 | `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy`, `CreateResiliencePolicy` (and `<T>` forms) | The same as `ResiliencePolicy` / `ResiliencePolicy<T>` values |
 | `pipeline.ExecuteAsResultAsync(callback, ct)` | Executes a `Func<CancellationToken, Task<Result>>` or `Task<Result<T>>` through the pipeline, returns `Result` |
 
-### Idempotency-Key Client
+### Idempotency-Key client
 
 Client side of the `Idempotency-Key` contract (Section 26). The key is set once per logical call; a retry sends the same `HttpRequestMessage` again, so every attempt carries the same key.
 
@@ -999,7 +999,7 @@ services.AddHttpClient("payments")
 | `RetryStrategyOptions<HttpResponseMessage>.RetryUnsafeMethodsOnlyWithIdempotencyKey(IdempotentRetryOptions?)` | Sets `ShouldHandle` to `ShouldRetryAsync` and makes a retried 409 InFlight, 429 or 503 wait for its capped `Retry-After`; without the header, and for other outcomes, delays come from the previous `DelayGenerator` or the backoff. The request comes from `response.RequestMessage`, or from `RequestMessageKey` when no response arrived. Works with `HttpRetryStrategyOptions` |
 | `IdempotentRetryOptions` | `MaxRetryAfter` (30 s, not negative), `ProblemReadTimeout` (2 s, positive) |
 
-### SSRF Guard (.NET 9+)
+### SSRF guard (.NET 9+)
 
 Protects `IHttpClientFactory` clients that call URLs supplied by users. Not available on `netstandard2.1`.
 
@@ -1020,13 +1020,13 @@ services.AddHttpClient("webhooks").AddSsrfGuard(o => o.Timeout = TimeSpan.FromSe
 
 ---
 
-## 9. CSharpEssentials.Resilience: Transient Fault Handling
+## 9. CSharpEssentials.Resilience: transient fault handling
 
 **What it is:** HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) with `Result<T>` integration. Composable `ResiliencePolicy` builder backed by Polly v8.
 
-**Why it exists:** Transient faults are inevitable in distributed systems. This package provides a clean, composable API for handling retries, timeouts, circuit breakers, and fallbacks without coupling to any specific transport (HTTP, database, message queue, etc.).
+**Why it exists:** Distributed systems always run into transient faults. This package handles retries, timeouts, circuit breakers and fallbacks through one composable API that is not tied to a specific transport (HTTP, database, message queue, etc.).
 
-### Quick Start
+### Quick start
 
 ```csharp
 using CSharpEssentials.Resilience;
@@ -1068,7 +1068,7 @@ Result<Product> product = await ResiliencePolicy<Product>
 
 The non-generic policy has no `WithFallback`; use `ResiliencePolicy<T>`. Retry handles exceptions and failed `Result`s with the same rule as the typed policy (below), so a `Func<CancellationToken, Task<Result>>` that returns a retryable failure is retried. The package depends on `Polly.Core` `[8.0.0, 9.0.0)`.
 
-### ResiliencePolicy\<T\> (Result-Aware)
+### ResiliencePolicy\<T\> (Result-aware)
 
 The generic variant automatically filters retryable errors: `Unauthorized`, `Forbidden`, `NotFound`, and `Validation` errors are **not** retried.
 
@@ -1081,7 +1081,7 @@ The generic variant automatically filters retryable errors: `Unauthorized`, `For
 | `.WithFallback(fallbackAsync)` | Adds fallback that returns `T` or `Result<T>` |
 | `.ExecuteAsync(action)` | Executes through pipeline, returns `Result<T>` |
 
-### Delegate Extensions
+### Delegate extensions
 
 ```csharp
 // Direct execution — wraps any Func<Task<T>> in a Result
@@ -1093,7 +1093,7 @@ Func<CancellationToken, Task<User>> loadWithToken = ct => _db.GetUser(id, ct);
 Result<User> sameUser = await loadWithToken.ExecuteAsync(cancellationToken);
 ```
 
-### Retry Extensions
+### Retry extensions
 
 ```csharp
 Func<CancellationToken, Task<Result<User>>> getUser = ct => _db.GetUser(id, ct);
@@ -1112,7 +1112,7 @@ Result<User> retried = await getUser.RetryIfFailed(
 | `func.RetryIfFailed(shouldRetry, maxAttempts = 3, delay, exponentialBackoff = true, ct)` | Same, with a `Func<Error, bool>` deciding which failures are retried |
 | `func.ExecuteAsync(ct)` | Runs a `Func<Task>`, `Func<Task<T>>`, `Func<Task<Result<T>>>` (or their `CancellationToken` forms) and returns `Result` / `Result<T>` |
 
-### Error Handling
+### Error handling
 
 | Error Code | When |
 |-----------|------|
@@ -1123,7 +1123,7 @@ When retries exhaust, the last exception is returned as `ErrorType.Unexpected`. 
 
 Cancellation: when the caller's `CancellationToken` is cancelled, `ExecuteAsync` and `RetryIfFailed` throw `OperationCanceledException` instead of returning a failed `Result`. This also applies when the cancellation lands during a retry delay or right after the last attempt.
 
-### Configuration Options
+### Configuration options
 
 ```csharp
 var options = new ResiliencePolicyOptions
@@ -1145,13 +1145,13 @@ Result<User> user = await ResiliencePolicy
 
 ---
 
-## 10. CSharpEssentials.EntityFrameworkCore: EF Core Integration
+## 10. CSharpEssentials.EntityFrameworkCore: EF Core integration
 
 **What it is:** EF Core extensions that bring the Result pattern to database operations, plus pagination, audit interceptors, and CQRS context separation.
 
 **Why it exists:** EF Core returns `null` from queries and throws on save failures. This package wraps those operations in `Result<T>`, provides automatic audit field population, and supports separating read/write contexts for CQRS architectures.
 
-### Result-Returning Query Extensions
+### Result-returning query extensions
 
 | Method | What It Does | Replaces |
 |--------|-------------|----------|
@@ -1175,7 +1175,7 @@ Result<User> user = await ResiliencePolicy
 
 `PaginationDefaults.MaxPageSize` (100) is the default offset page size cap. `IPaginationRequest.Normalize()` enforces minimums and lowers `PageSize` to 100; `Normalize(int maxPageSize)` uses another cap (`int.MaxValue` turns it off). `ICursorPaginationRequest<TCursor>.Normalize()` only enforces minimums and `Normalize(int maxLimit)` opts in to a cap; it serves only the obsolete cursor overload. Its `HasCursor` decides whether that overload starts at the first page; `CursorPaginationRequest<TCursor>` sets it when `Cursor` is assigned a non-null value, so `0` and `Guid.Empty` are real cursors. A cap below 1 throws `ArgumentOutOfRangeException`. These are default interface methods, so call them through the interface type.
 
-#### Keyset Pagination Types
+#### Keyset pagination types
 
 Namespaces: `CSharpEssentials.EntityFrameworkCore.Pagination` (extensions), `.Pagination.Requests`, `.Pagination.Responses`, `.Pagination.Keyset`.
 
@@ -1195,7 +1195,7 @@ Namespaces: `CSharpEssentials.EntityFrameworkCore.Pagination` (extensions), `.Pa
 
 Cursor format: base64url (no padding) of `{"v":1,"d":"a"|"b","k":"<key fingerprint>","p":[values]}`, then `ICursorProtector.Protect`. Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime` (`Kind` preserved), `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly`, enums (not `ulong`-based). The provider must also translate ordering and comparison of the key type (SQLite does not for `decimal`, `DateTimeOffset`, `TimeSpan`).
 
-### Batch Operations
+### Batch operations
 
 | Method | What It Does |
 |--------|-------------|
@@ -1205,7 +1205,7 @@ Cursor format: base64url (no padding) of `{"v":1,"d":"a"|"b","k":"<key fingerpri
 
 Batch updates bypass the change tracker and `SaveChanges` interceptors (audit, domain events), and require a relational provider.
 
-### Database Error Translation
+### Database error translation
 
 Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 
@@ -1218,7 +1218,7 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 | `AddDbErrorTranslation()` | Registers `DbErrorTranslation` as a singleton |
 | `AddDbErrorTranslator<TTranslator>()` | Adds a singleton `IDbErrorTranslator` (once per type) and `DbErrorTranslation` |
 
-### Entity Configuration
+### Entity configuration
 
 | Method | What It Does |
 |--------|-------------|
@@ -1236,7 +1236,7 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 
 `Maybe<T>?` queries: use `== null` / `!HasValue` for absence, `!= null` for presence and `== Maybe<T>.From(value)` for a value. `== Maybe<T>.None` matches no `NULL` row. `Flatten()` (CSharpEssentials.Maybe) turns the loaded `Maybe<T>?` into `Maybe<T>`.
 
-### Named Query Filters (net10.0, EF Core 10)
+### Named query filters (net10.0, EF Core 10)
 
 | Member | What It Does |
 |--------|-------------|
@@ -1247,7 +1247,7 @@ Namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`.
 
 EF Core rejects anonymous and named filters on the same entity type, so use these instead of `ApplySoftDeleteQueryFilter()`, not next to it; they throw `InvalidOperationException` when the entity type already has an anonymous filter. Named keys do not switch off the anonymous filter, so move the model to the named filter before the queries. Pass keys in a `static readonly` array or `new[] { ... }`: EF Core 10.0.x recompiles the query when they come from a collection expression or a `List`. Analyzer CSE3001 (Info; raise with `dotnet_diagnostic.CSE3001.severity = warning`) reports parameterless `IgnoreQueryFilters()` when the referenced EF Core has the named overload; its code fix passes `new[] { QueryFilterNames.SoftDelete }` for entities that implement `ISoftDeletableBase`.
 
-### Enum Conventions
+### Enum conventions
 
 | Method | What It Does |
 |--------|-------------|
@@ -1272,7 +1272,7 @@ modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.
 
 Properties with your own `HasConversion` are skipped. See the EF Core package README for column types per provider.
 
-### Enum Migration Helpers
+### Enum migration helpers
 
 | Method | What It Does |
 |--------|-------------|
@@ -1311,7 +1311,7 @@ Opt-in hooks; both are off by default.
 
 Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interceptor attachment. Use either `DispatchDomainEventsOnSaveChanges` or `DomainEventInterceptor`, not both; events collected by the context are cleared before the interceptor runs, so they are never dispatched twice.
 
-### Transaction Runner
+### Transaction runner
 
 | Member | What It Does |
 |--------|-------------|
@@ -1319,7 +1319,7 @@ Overriding `OnConfiguring` without calling `base.OnConfiguring` disables interce
 | `EfCoreTransactionRunner<TDbContext>` | Outermost call: execution strategy + `BeginTransactionAsync`, retry re-runs the whole unit. Nested call on the same context: joins `CurrentTransaction` behind a savepoint |
 | `AddEfCoreTransactionRunner<TDbContext>()` | Registers the runner as the scoped `ITransactionRunner`, replacing an earlier one |
 
-### Idempotency Records
+### Idempotency records
 
 Namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`; depends on `CSharpEssentials.Idempotency`.
 
@@ -1335,7 +1335,7 @@ Namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`; depends on `CSharp
 
 With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBehavior` over `EfCoreTransactionRunner<TContext>`: a request whose transaction rolls back leaves no record.
 
-### CQRS Context Registration
+### CQRS context registration
 
 | Method | What It Does |
 |--------|-------------|
@@ -1349,11 +1349,11 @@ With Mediator, use `IdempotencyPlacement.InsideTransaction` and `TransactionBeha
 
 ---
 
-## 11. CSharpEssentials.Json: Serialization Defaults
+## 11. CSharpEssentials.Json: serialization defaults
 
 **What it is:** Pre-configured `System.Text.Json` options and custom converters.
 
-**Why it exists:** Every project configures the same JSON settings: camelCase, lenient parsing, enum handling. This package provides sensible defaults and converters for polymorphic types and multi-format dates.
+**Why it exists:** Every project configures the same JSON settings: camelCase, lenient parsing, enum handling. This package ships those defaults, plus converters for polymorphic types and multi-format dates.
 
 | Member | What It Does |
 |--------|-------------|
@@ -1398,13 +1398,13 @@ StringEnumNaming.TryParse<HttpKind>("HTTPStatus", out var kind);      // true
 
 ---
 
-## 12. CSharpEssentials.AspNetCore: API Layer
+## 12. CSharpEssentials.AspNetCore: API layer
 
 **What it is:** ASP.NET Core integration that automatically maps `Result`/`Error` types to proper HTTP responses using ProblemDetails.
 
-**Why it exists:** Without this, every controller action needs boilerplate to convert `ErrorType.NotFound` to `404`, `ErrorType.Validation` to `400`, etc. This package eliminates that mapping code entirely.
+**Why it exists:** Without this, every controller action needs boilerplate to convert `ErrorType.NotFound` to `404`, `ErrorType.Validation` to `400`, etc. This package removes that mapping code.
 
-### Result to HTTP Mapping
+### Result to HTTP mapping
 
 | Method | What It Does |
 |--------|-------------|
@@ -1466,7 +1466,7 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 app.UseEnhancedProblemDetails();
 ```
 
-### Extension Points
+### Extension points
 
 | Interface | Purpose | Register with |
 |-----------|---------|---------------|
@@ -1477,7 +1477,7 @@ app.UseEnhancedProblemDetails();
 
 `ExceptionProblem(int? StatusCode, string? Title, string? Detail, IReadOnlyList<Error>? Errors)` is the result of a mapper.
 
-### GlobalExceptionHandler Mapping
+### GlobalExceptionHandler mapping
 
 `DefaultExceptionProblemMapper` runs after any registered mapper:
 
@@ -1491,7 +1491,7 @@ app.UseEnhancedProblemDetails();
 
 `InvalidOperationException`, `ApplicationException` and `ValidationException` no longer return 400; register an `IExceptionProblemMapper` to restore that.
 
-### Enum Conventions and Binding
+### Enum conventions and binding
 
 | Method | What It Does |
 |--------|-------------|
@@ -1583,7 +1583,7 @@ Settling the key: a response produced before the handler started (rate limiter, 
 
 Reads: `If-None-Match` uses weak comparison and takes precedence over `If-Modified-Since`; an unparsable date is ignored. `Last-Modified` has second precision and is capped at now (`TimeProvider` from DI, else the system clock). A 304 has no body and keeps the headers already on the response. A response whose handler already set `ETag` is left untouched. Strings (also `Result<string>`), `ProblemDetails`, `null`, failed `Result<T>` and non-2xx results pass through. Works with `ResultEndpointFilter` in either order. A custom `IErrorStatusCodeMapper` that does not derive from `DefaultErrorStatusCodeMapper` must map `PreconditionFailedCode` to 412 itself; a registered `IResultErrorMapper` decides the `ResultEndpointFilter` response.
 
-### API Versioning
+### API versioning
 
 | Method | What It Does |
 |--------|-------------|
@@ -1598,7 +1598,7 @@ Reads: `If-None-Match` uses weak comparison and takes precedence over `If-Modifi
 | `services.AddSwaggerEnumConventions()` | `CSharpEssentials.AspNetCore.Swashbuckle` (`AddSwagger` calls it): registers `AddSwaggerGen()`, adds `SwaggerGenOptions.AddEnumConventions()` after every other configuration and wraps the registered `ISerializerDataContractResolver`, so an undefined enum default such as `[DefaultValue((OrderStatus)42)]` is left out instead of returning 500. Call it after `AddSwaggerGen` and after registering your own resolver; a resolver registered by type is not wrapped. Calling it twice, or with `AddSwagger`, registers once |
 | `OpenApiOptions.AddIdempotencyConventions()` | `CSharpEssentials.AspNetCore.OpenApi`: the same description for `Microsoft.AspNetCore.OpenApi` documents, as an operation transformer (opt-in) |
 
-### OpenAPI Enum Schemas (5.0)
+### OpenAPI enum schemas (5.0)
 
 Two packages describe the enums the way the enum conventions write them; a host references one of them, never both. Both use Microsoft.OpenApi 2.x (6.0).
 
@@ -1611,7 +1611,7 @@ Both produce the same enum schemas (shared golden files): one component per enum
 
 ---
 
-## 13. CSharpEssentials.Mediator: Pipeline Behaviors
+## 13. CSharpEssentials.Mediator: pipeline behaviors
 
 **What it is:** Pipeline behaviors for the source-generated [Mediator](https://github.com/martinothamar/Mediator) library (`Mediator.Abstractions`) for cross-cutting concerns: validation, logging, exception handling, caching, transactions, resource locks and idempotency.
 
@@ -1634,7 +1634,7 @@ Validation modes (`ValidationMode`): `Enforce` (default, failures stop the reque
 
 ### ExceptionHandlingBehavior
 
-Singleton behavior that sits between `LoggingBehavior` and `CachingBehavior`. No interface or attribute needed. It activates automatically when `TResponse` is `Result` or `Result<T>`. Handlers returning other types pass through with zero overhead.
+Singleton behavior that sits between `LoggingBehavior` and `CachingBehavior`. It needs no interface or attribute and activates automatically when `TResponse` is `Result` or `Result<T>`. Handlers returning other types pass through with zero overhead.
 
 `Error.Exception(ex)` shape:
 
@@ -1694,7 +1694,7 @@ if (result.IsFailure)
 | `AddMediatorIdempotencyBehavior(configure?)` | Registers `IdempotencyBehavior` (scoped) just before the lock and transaction behaviors (`IdempotencyPlacement.OutsideTransaction`, default) or just after the transaction behavior (`InsideTransaction`, which throws `InvalidOperationException` without one), its `IdempotencyBehaviorOptions`, and the executor through `AddIdempotencyExecutor`. Calling it again configures the same options and moves the behavior |
 | `MediatorExtensions.DefaultPipelineBehaviors` | Pre-ordered array of the five default behavior types (`TransactionScopeBehavior<,>`, no `LockBehavior<,>`); under Native AOT pass it as `options.PipelineBehaviors` of `AddMediator` (namespace `Microsoft.Extensions.DependencyInjection`) |
 
-### Resource Locks
+### Resource locks
 
 | Type | Description |
 |------|-------------|
@@ -1715,7 +1715,7 @@ Stored outcomes: a success for `Retention`; a failed `Result` of an `ITransactio
 
 ---
 
-## 14. CSharpEssentials.Enums: Source-Generated String Enums
+## 14. CSharpEssentials.Enums: source-generated string enums
 
 **What it is:** A source generator, metadata and conventions that give every enum member one spelling (the wire name) across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP.
 
@@ -1772,7 +1772,7 @@ Analyzers CSE0002 to CSE0016 (CSE0011 is not used) check duplicate wire names an
 
 ---
 
-## 15. CSharpEssentials.Time: Testable Clock
+## 15. CSharpEssentials.Time: testable clock
 
 **What it is:** An `IDateTimeProvider` interface that wraps the system clock for testability.
 
@@ -1799,7 +1799,7 @@ int age = new DateOnly(1990, 5, 1).GetAge(clock);                          // 36
 
 ---
 
-## 16. CSharpEssentials.Clone: Deep Copy
+## 16. CSharpEssentials.Clone: deep copy
 
 **What it is:** A type-safe `ICloneable<T>` and collection helpers. You write the copy logic in `Clone()` (compose nested clones for a deep copy); the package does no reflection or serialization.
 
@@ -1811,7 +1811,7 @@ int age = new DateOnly(1990, 5, 1).GetAge(clock);                          // 36
 
 ---
 
-## 17. CSharpEssentials.RequestResponseLogging: HTTP Logging Middleware
+## 17. CSharpEssentials.RequestResponseLogging: HTTP logging middleware
 
 **What it is:** ASP.NET Core middleware that logs HTTP request and response bodies.
 
@@ -1839,7 +1839,7 @@ A skipped body is logged as `Skipped logging request body` / `Skipped logging re
 
 ---
 
-## 18. CSharpEssentials.GcpSecretManager: Secret Configuration
+## 18. CSharpEssentials.GcpSecretManager: secret configuration
 
 **What it is:** Plugs Google Cloud Secret Manager into the .NET `IConfiguration` system.
 
@@ -1890,7 +1890,7 @@ builder.Configuration.AddGcpSecretManager(options =>
 
 ---
 
-## 19. CSharpEssentials.Validation: Model-First Validation
+## 19. CSharpEssentials.Validation: model-first validation
 
 **What it is:** A high-performance, model-first validation library that returns `Result<T>` natively.
 
@@ -1902,7 +1902,7 @@ dotnet add package CSharpEssentials.Validation
 
 Namespaces: `CSharpEssentials.Validation` (`Validator<T>`, `Validator`, `IValidator<T>`, `RuleContext<T>`, `CascadeMode`, `ValidateWith`/`ValidateWithAsync`), `CSharpEssentials.Validation.Validators` (the rule methods below) and `CSharpEssentials.Validation.Extensions` (DI registration). The samples assume all three are imported.
 
-### Defining a Validator
+### Defining a validator
 
 ```csharp
 public class CreateUserCommandValidator : Validator<CreateUserCommand>
@@ -1942,7 +1942,7 @@ Result<CreateUserCommand> checkedAsync = await Validator.ValidateAsync(command, 
 
 `Validator.ValidateAsync` (static utility class) and `Validator<T>` (abstract base class) are two independent types defined in the same file. The static form does not delegate to `Validator<T>` internally.
 
-### String Validators
+### String validators
 
 | Method | Fails When |
 |--------|-----------|
@@ -1959,7 +1959,7 @@ Result<CreateUserCommand> checkedAsync = await Validator.ValidateAsync(command, 
 
 All string validators except `NotEmpty` / `NotNull` **skip** `null` values silently.
 
-### Comparable Validators (`int`, `decimal`, `DateTime`, …)
+### Comparable validators (`int`, `decimal`, `DateTime`, …)
 
 ```csharp
 rules.For(() => model.Age)
@@ -1973,7 +1973,7 @@ rules.For(() => model.Age)
     .NotEqual(0);
 ```
 
-### Nullable Struct Validators (`int?`, `DateTime?`, …)
+### Nullable struct validators (`int?`, `DateTime?`, …)
 
 All comparable validators work on nullable value types: `null` is silently skipped.
 
@@ -1982,7 +1982,7 @@ rules.For(() => model.ExpiresAt).GreaterThan(DateTime.UtcNow);
 // null → no error   |   value < now → error
 ```
 
-### Enum Validators
+### Enum validators
 
 | Rule | Error code | Passes when |
 |---|---|---|
@@ -1992,7 +1992,7 @@ rules.For(() => model.ExpiresAt).GreaterThan(DateTime.UtcNow);
 
 A `null` nullable value passes. The message is the binding error text and lists the allowed values (`'42' is not a valid OrderStatus. Allowed values: pending, in_progress.`). Each rule also takes a custom `message` or an `Error`.
 
-### Collection Validators
+### Collection validators
 
 Works with any nullable collection: `List<T>?`, `IEnumerable<T>?`, `IList<T>?`, `IReadOnlyList<T>?`, `T[]?`, and any type implementing `IEnumerable`.
 
@@ -2018,7 +2018,7 @@ rules.For(() => model.Password)
     .Matches(@"[0-9]", message: "Must contain a digit.");
 ```
 
-### Custom Predicates
+### Custom predicates
 
 ```csharp
 // Sync
@@ -2031,7 +2031,7 @@ await rules.For(() => model.Email)
                       "Email.NotUnique", "Email is already taken.");
 ```
 
-### Nested Object Validation
+### Nested object validation
 
 `SetValidatorAsync` works with both non-nullable and nullable reference type properties, with no null-forgiving operator (`!`) required. `null` values are skipped automatically.
 
@@ -2045,7 +2045,7 @@ await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidat
 // Error codes are prefixed: "Address.City.NotEmpty", "Address.ZipCode.Matches"
 ```
 
-### Collection Item Validation
+### Collection item validation
 
 ```csharp
 // Sync — error codes: "Tags[0].NotEmpty", "Tags[1].MaxLength"
@@ -2062,9 +2062,9 @@ await rules.ForEachAsync(() => model.Items, async (item, itemRules, ct) =>
 }, ct);
 ```
 
-### Native Conditional Rules
+### Native conditional rules
 
-`Configure` receives the live model, so any C# control flow works directly. No `When()`/`Unless()` DSL needed.
+`Configure` receives the live model, so any C# control flow works directly. There is no `When()`/`Unless()` DSL.
 
 ```csharp
 public class CheckoutValidator : Validator<Checkout>
@@ -2085,7 +2085,7 @@ public class CheckoutValidator : Validator<Checkout>
 }
 ```
 
-### Validator Composition
+### Validator composition
 
 ```csharp
 public class PaidCheckoutValidator : Validator<Checkout>
@@ -2098,7 +2098,7 @@ public class PaidCheckoutValidator : Validator<Checkout>
 }
 ```
 
-### DI Registration
+### DI registration
 
 | Method | What It Does |
 |--------|-------------|
@@ -2108,11 +2108,11 @@ public class PaidCheckoutValidator : Validator<Checkout>
 
 Default lifetime: `Scoped`. Pass a `lifetime` parameter to override. Registration uses `TryAddEnumerable`, so registering the same validator type twice (for example `AddValidator` and an assembly scan) adds it only once. Different validator types for the same `T` are all registered, and `ValidationBehavior` aggregates and deduplicates results from all of them.
 
-### Validator Ordering
+### Validator ordering
 
 Override `Order` on `Validator<T>` to control execution sequence when multiple validators target the same model. Validators sharing the same `Order` run concurrently; groups with lower `Order` complete before higher-`Order` groups begin. All groups execute regardless of earlier failures. Errors are accumulated and deduplicated.
 
-### Mediator Pipeline Integration
+### Mediator pipeline integration
 
 ```csharp
 services.AddMediatorValidationBehavior();
@@ -2122,7 +2122,7 @@ services.AddMediatorBehaviors();
 
 Validation runs before the handler. On failure the handler is never invoked. `Result` / `Result<T>` handlers receive `Result.Failure` directly; all other handler return types trigger `EnhancedValidationException` (caught by `GlobalExceptionHandler`). Non-cancellation exceptions thrown by a validator are caught and converted to `Error.Exception("Validator.Exception", ex)` so validator bugs never rethrow through the pipeline.
 
-### Railway Validation Bindings
+### Railway validation bindings
 
 `ValidateWith` / `ValidateWithAsync` plug validators directly into a `Result<T>` railway. If the result is already a failure, the validator is skipped entirely.
 
@@ -2157,7 +2157,7 @@ Short-circuits immediately: if `result.IsFailure` before validation runs, the ex
 
 ---
 
-## 20. CSharpEssentials.These: 3-State Union
+## 20. CSharpEssentials.These: 3-state union
 
 **What it is:** A `readonly record struct` that holds Left (error only), Right (value only), or Both (error + value simultaneously), the only functional type in the ecosystem that can carry both sides at once.
 
@@ -2201,7 +2201,7 @@ Short-circuits immediately: if `result.IsFailure` before validation runs, the ex
 
 Both are extensions on `These<Error, TValue>`.
 
-### Collection Extensions
+### Collection extensions
 
 | Method | What It Does |
 |--------|-------------|
@@ -2225,7 +2225,7 @@ These<string, int> doubled = These<string, int>.Both("warn", 5)
 var (lefts, rights, boths) = items.Partition();
 ```
 
-### JSON Support
+### JSON support
 
 `These<TError, TValue>` is fully serializable via `System.Text.Json`. The `[JsonConstructor]` private constructor enables round-trip without a custom converter.
 
@@ -2249,7 +2249,7 @@ bool isBoth = back.IsBoth;   // true
 
 ---
 
-## 21. CSharpEssentials.Endpoints: Source-Generated Endpoint Mapping
+## 21. CSharpEssentials.Endpoints: source-generated endpoint mapping
 
 **What it is:** Organizes ASP.NET Core Minimal API endpoints into types and groups. A bundled source generator writes a reflection-free registry per assembly. Route calls stay in your code, so binding, filters, `IResult`, OpenAPI and the Request Delegate Generator work unchanged. Targets `net11.0`, `net10.0`, `net9.0`, `net8.0`.
 
@@ -2270,7 +2270,7 @@ public sealed class CreateApp : IEndpoint
 }
 ```
 
-### Declaring Endpoints
+### Declaring endpoints
 
 | Type/Attribute | What It Does |
 |----------------|-------------|
@@ -2313,7 +2313,7 @@ app.MapAppsEndpoints(options =>
 | `AutoTagFromGroup` | Tags untagged endpoints with the innermost group name (`UsersGroup` → `Users`) |
 | `LogDiscovered` | Logs mapped and filtered endpoint types at `Debug`, category `CSharpEssentials.Endpoints` |
 
-### Routes and Authorization
+### Routes and authorization
 
 | Member | What It Does |
 |--------|-------------|
@@ -2346,7 +2346,7 @@ group.RequireRoles("admin", "editor");
 
 ---
 
-## 22. CSharpEssentials.DependencyInjection: Attribute-Based Registration
+## 22. CSharpEssentials.DependencyInjection: attribute-based registration
 
 **What it is:** Attribute-based service registration and decoration for `Microsoft.Extensions.DependencyInjection`. A bundled source generator writes an `Add{Assembly}Services` method that needs no assembly scanning and is trim and Native AOT safe; every strategy is key-aware. Targets `net11.0`, `net10.0`, `net9.0`, `net8.0`, `netstandard2.1` (generic attribute forms need `net7.0` or later).
 
@@ -2375,7 +2375,7 @@ public sealed class LoggingOrderService(IOrderService inner) : IOrderService { }
 | `[Decorates(typeof(TService), Order = n)]` / `[Decorates<TService>]` | Decorates every matching registration in ascending `Order`, keeping lifetime and key; `Key` selects a keyed registration |
 | `[ExcludeFromRegistration]` | Opts a class or an assembly out |
 
-### Registration and Decoration
+### Registration and decoration
 
 | Member | What It Does |
 |--------|-------------|
@@ -2412,7 +2412,7 @@ Decorated originals move to a hidden registration under a private key, so they n
 
 ---
 
-## 23. CSharpEssentials: Meta Package
+## 23. CSharpEssentials: meta package
 
 **What it is:** One package reference that brings in the core libraries:
 
@@ -2424,7 +2424,7 @@ It references `CSharpEssentials.Any`, `Clone`, `Core`, `Entity`, `Enums`, `Error
 
 ---
 
-## 24. CSharpEssentials.AspNetCore.OpenApi: OpenAPI Documents
+## 24. CSharpEssentials.AspNetCore.OpenApi: OpenAPI documents
 
 **What it is:** The `Microsoft.AspNetCore.OpenApi` integration of the enum conventions and of optional route parameters.
 
@@ -2455,11 +2455,11 @@ builder.Services.AddOpenApi("v1", o => o.AddEnumConventions().AddOptionalRoutePa
 app.MapOpenApi();
 ```
 
-A host that does not reference `Microsoft.AspNetCore.OpenApi` itself fails with `CS9137` until it enables the interceptor namespace: `<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>`. The enum schema rules (flags, nullable per OpenAPI version, numeric wire format, fallback members) are listed under "OpenAPI Enum Schemas" in section 12, and the package README has the optional route parameter rules.
+A host that does not reference `Microsoft.AspNetCore.OpenApi` itself fails with `CS9137` until it enables the interceptor namespace: `<InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.OpenApi.Generated</InterceptorsNamespaces>`. The enum schema rules (flags, nullable per OpenAPI version, numeric wire format, fallback members) are listed under "OpenAPI enum schemas" in section 12, and the package README has the optional route parameter rules.
 
 ---
 
-## 25. CSharpEssentials.AspNetCore.Swashbuckle: Swagger Documents
+## 25. CSharpEssentials.AspNetCore.Swashbuckle: Swagger documents
 
 **What it is:** The Swashbuckle integration of `CSharpEssentials.AspNetCore`: versioned Swagger setup, schema ids, a JWT security scheme, the enum conventions and optional route parameters.
 
@@ -2497,7 +2497,7 @@ See the migration notes for [5.x to 6.0](migration/v5-to-v6.md) (Swashbuckle 10 
 
 ---
 
-## 26. CSharpEssentials.Idempotency: Transport-Independent Core
+## 26. CSharpEssentials.Idempotency: transport-independent core
 
 **What it is:** The record store, scopes, deterministic keys and executor behind the `Idempotency-Key` middleware and the Mediator idempotency behavior, without any HTTP or infrastructure dependency, so message consumers, jobs and other pipelines can use the same store.
 
@@ -2545,9 +2545,9 @@ IdempotencyExecutionStatus status = await inbox.ProcessAsync(
 
 ---
 
-## Ecosystem Design Patterns
+## Ecosystem design patterns
 
-### The Type Bridge System
+### The type bridge system
 
 The ecosystem provides natural transformations between its core types:
 
@@ -2560,7 +2560,7 @@ HTTP response ──── HttpStatusCodeMapper ───► Error → Result
 EF Core null ───── *AsResultAsync ─────────► Result
 ```
 
-### Pattern Summary
+### Pattern summary
 
 | Pattern | Where Used | Purpose |
 |---------|-----------|---------|
@@ -2578,7 +2578,7 @@ EF Core null ───── *AsResultAsync ─────────► Resul
 | **Discriminated union** | `Any<T0,...,T7>` | Type-safe sum types |
 | **Interpreter** | `RuleEngine.Evaluate` | Recursive rule tree evaluation |
 
-### Choosing Between Types
+### Choosing between types
 
 | Scenario | Use |
 |----------|-----|
