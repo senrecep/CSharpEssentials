@@ -28,8 +28,8 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
     private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _ignoreCaseAll;
     private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _ignoreCaseNoMembers;
     private readonly EnumNameLookup<EnumMemberInfo<TEnum>>? _wireExact;
-    private readonly string[] _wireNames;
-    private readonly string[] _inputWireNames;
+    private readonly ReadOnlyArray<string> _wireNames;
+    private readonly ReadOnlyArray<string> _inputWireNames;
 
     /// <summary>
     /// Creates the metadata. Called by generated code and by <see cref="EnumMetadata.GetOrCreateWithReflection"/>.
@@ -69,7 +69,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
         }
 
         DefinedMask = mask;
-        _wireNames = new string[_members.Length];
+        string[] wireNames = new string[_members.Length];
         List<string> inputWireNames = [];
         var wires = new KeyValuePair<string, EnumMemberInfo<TEnum>>[_members.Length];
         var names = new KeyValuePair<string, EnumMemberInfo<TEnum>>[_members.Length];
@@ -77,7 +77,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
         for (int i = 0; i < _members.Length; i++)
         {
             EnumMemberInfo<TEnum> member = _members[i];
-            _wireNames[i] = member.WireName;
+            wireNames[i] = member.WireName;
             if (!member.IsFallback)
                 inputWireNames.Add(member.WireName);
             wires[i] = Pair(member.WireName, member);
@@ -88,13 +88,14 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
             }
         }
 
-        _inputWireNames = [.. inputWireNames];
+        _wireNames = new(wireNames);
+        _inputWireNames = new([.. inputWireNames]);
         _exactAll = new([.. wires, .. names, .. aliases], StringComparer.Ordinal);
         _exactNoMembers = new([.. wires, .. aliases], StringComparer.Ordinal);
         _ignoreCaseAll = new([.. wires, .. names, .. aliases], StringComparer.OrdinalIgnoreCase);
         _ignoreCaseNoMembers = new([.. wires, .. aliases], StringComparer.OrdinalIgnoreCase);
-        HashSet<string> ignoreCaseWireNames = [with(StringComparer.OrdinalIgnoreCase), .. _wireNames];
-        HashSet<string> exactWireNames = [with(StringComparer.Ordinal), .. _wireNames];
+        HashSet<string> ignoreCaseWireNames = [with(StringComparer.OrdinalIgnoreCase), .. wireNames];
+        HashSet<string> exactWireNames = [with(StringComparer.Ordinal), .. wireNames];
         if (ignoreCaseWireNames.Count != exactWireNames.Count)
             _wireExact = new(wires, StringComparer.Ordinal);
     }

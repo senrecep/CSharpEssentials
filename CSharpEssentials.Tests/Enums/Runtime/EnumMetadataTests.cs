@@ -43,6 +43,21 @@ public class EnumMetadataTests
     }
 
     [Fact]
+    public void WireNames_And_Allowed_Values_Should_Not_Expose_The_Cached_Arrays()
+    {
+        IEnumInfo info = EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+        var typed = (EnumInfo<ParserStatus>)info;
+
+        info.WireNames.Should().NotBeAssignableTo<string[]>();
+        info.WireNames.Should().BeSameAs(info.WireNames);
+        typed.CreateError("x", EnumReadMode.Data).AllowedValues.Should().NotBeAssignableTo<string[]>();
+        typed.CreateError("x", EnumReadMode.Input).AllowedValues.Should().NotBeAssignableTo<string[]>();
+        typed.CreateError("x", EnumReadMode.Data).Should().Be(typed.CreateError("x", EnumReadMode.Data));
+        Func<string> outOfRange = () => info.WireNames[info.WireNames.Count];
+        outOfRange.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public void Reflection_Metadata_Should_Reject_Non_Enum_Types()
     {
         Action act = () => EnumMetadata.GetOrCreateWithReflection(typeof(int));
