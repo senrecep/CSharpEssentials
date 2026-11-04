@@ -28,6 +28,7 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
     where TRequest : IIdempotentRequest, IMessage
 {
     private static readonly string RequestType = typeof(TRequest).FullName ?? typeof(TRequest).Name;
+    private static RequestSettings? s_settings;
 
     private readonly IIdempotencyExecutor _executor;
     private readonly IOptionsMonitor<IdempotencyExecutorOptions> _executorOptions;
@@ -158,16 +159,42 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
     /// the behavior already resolved, so a mode changed while the request runs cannot make the executor reject what
     /// Observe mode let through.
     /// </summary>
-    private IdempotencyExecutionOptions SettingsFor(TRequest message, IdempotencyMode mode) => new()
+    private IdempotencyExecutionOptions SettingsFor(TRequest message, IdempotencyMode mode)
     {
-        Profile = _requestOptions?.Profile,
-        Mode = mode,
-        Retention = message.IdempotencyRetention ?? _requestOptions?.Retention,
-        Lease = message.IdempotencyLease ?? _requestOptions?.Lease,
-        FailureRetention = _requestOptions?.FailureRetention,
-        StoreKey = _requestOptions?.StoreKey,
-        Source = IdempotencyMetrics.MediatorSource,
-    };
+        if (message.IdempotencyRetention is not null || message.IdempotencyLease is not null)
+            return Settings(_requestOptions, mode, message.IdempotencyRetention, message.IdempotencyLease);
+
+        RequestSettings settings = SharedSettings(_requestOptions);
+        return mode == IdempotencyMode.Observe ? settings.Observe : settings.Enforce;
+    }
+
+    private static RequestSettings SharedSettings(IdempotencyExecutionOptions? requestOptions)
+    {
+        if (s_settings is { } cached && ReferenceEquals(cached.Source, requestOptions))
+            return cached;
+
+        RequestSettings settings = new(requestOptions);
+        s_settings = settings;
+        return settings;
+    }
+
+    private static IdempotencyExecutionOptions Settings(
+        IdempotencyExecutionOptions? requestOptions,
+        IdempotencyMode mode,
+        TimeSpan? retention,
+        TimeSpan? lease)
+    {
+        return new()
+        {
+            Profile = requestOptions?.Profile,
+            Mode = mode,
+            Retention = retention ?? requestOptions?.Retention,
+            Lease = lease ?? requestOptions?.Lease,
+            FailureRetention = requestOptions?.FailureRetention,
+            StoreKey = requestOptions?.StoreKey,
+            Source = IdempotencyMetrics.MediatorSource,
+        };
+    }
 
     private static string Fingerprint(TRequest message, JsonSerializerOptions? serializerOptions)
     {
@@ -212,6 +239,19 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
     [LoggerMessage(EventId = 7017, EventName = "Idempotency.Observe.WouldRejectKeyInvalid", Level = LogLevel.Information,
         Message = "Observe mode: {RequestType} would be rejected because its idempotency key is invalid; it runs without idempotency.")]
     private static partial void LogObserveWouldRejectKeyInvalid(ILogger logger, string requestType);
+
+    /// <summary>
+    /// The settings of a request that sets no retention or lease of its own, built once per request type and shared:
+    /// the executor only reads them.
+    /// </summary>
+    private sealed class RequestSettings(IdempotencyExecutionOptions? source)
+    {
+        public IdempotencyExecutionOptions? Source { get; } = source;
+
+        public IdempotencyExecutionOptions Observe { get; } = Settings(source, IdempotencyMode.Observe, null, null);
+
+        public IdempotencyExecutionOptions Enforce { get; } = Settings(source, IdempotencyMode.Enforce, null, null);
+    }
 
     private sealed class ResponseCodec(JsonSerializerOptions? serializerOptions, bool releaseFailures) : IIdempotencyResultCodec<TResponse>
     {

@@ -280,6 +280,29 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     }
 
     [Fact]
+    public async Task Handle_Should_Fall_Back_To_The_Request_Type_Settings_After_A_Request_That_Overrides_Them()
+    {
+        _options.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(2));
+        IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>> behavior = Create<IdemOptionalRetentionCommand, Result<int>>();
+
+        await behavior.Handle(new IdemOptionalRetentionCommand("k1", null), (_, _) => Run(1), CancellationToken.None);
+        await behavior.Handle(new IdemOptionalRetentionCommand("k2", TimeSpan.FromHours(5)), (_, _) => Run(2), CancellationToken.None);
+        await behavior.Handle(new IdemOptionalRetentionCommand("k3", null), (_, _) => Run(3), CancellationToken.None);
+
+        IdempotencyBehaviorOptions otherOptions = new();
+        otherOptions.ForRequest<IdemOptionalRetentionCommand>(settings => settings.Retention = TimeSpan.FromHours(7));
+        IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>> other = new(
+            new IdempotencyExecutor(_store, _monitor, logger: _loggerFactory.CreateLogger<IdempotencyExecutor>()),
+            _monitor,
+            otherOptions,
+            _loggerFactory.CreateLogger<IdempotencyBehavior<IdemOptionalRetentionCommand, Result<int>>>(),
+            new PrincipalAccessor(() => _principal));
+        await other.Handle(new IdemOptionalRetentionCommand("k4", null), (_, _) => Run(4), CancellationToken.None);
+
+        _store.Retentions.Should().Equal(TimeSpan.FromHours(2), TimeSpan.FromHours(5), TimeSpan.FromHours(2), TimeSpan.FromHours(7));
+    }
+
+    [Fact]
     public async Task Handle_Should_Reject_An_Unscoped_Key_By_Default()
     {
         _principal = null;
@@ -768,4 +791,9 @@ internal sealed record IdemTimedCommand(string IdempotencyKey, TimeSpan Retentio
     TimeSpan? IIdempotentRequest.IdempotencyRetention => Retention;
 
     TimeSpan? IIdempotentRequest.IdempotencyLease => Lease;
+}
+
+internal sealed record IdemOptionalRetentionCommand(string IdempotencyKey, TimeSpan? Retention) : ICommand<Result<int>>, IIdempotentRequest
+{
+    TimeSpan? IIdempotentRequest.IdempotencyRetention => Retention;
 }
