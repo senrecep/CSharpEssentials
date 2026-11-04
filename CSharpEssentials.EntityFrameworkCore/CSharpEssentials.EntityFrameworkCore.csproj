@@ -56,6 +56,7 @@
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <!-- Keep in sync with the central Microsoft.EntityFrameworkCore range; a central Relational entry breaks net10 restore (NU1109) under transitive pinning. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" VersionOverride="[9.0.4,10)" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
