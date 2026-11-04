@@ -21,6 +21,16 @@ public class IdempotencyKeyTests
     }
 
     [Fact]
+    public void SetIdempotencyKey_Should_Generate_A_Random_Version_4_Guid()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.test/orders");
+
+        string key = request.SetIdempotencyKey();
+
+        Guid.Parse(key).Version.Should().Be(4);
+    }
+
+    [Fact]
     public void SetIdempotencyKey_Should_Replace_An_Existing_Key()
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.test/orders");
