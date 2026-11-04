@@ -1,6 +1,7 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -287,6 +288,34 @@ public class DbContextExtensionMethodsTests
     }
 
     [Fact]
+    public async Task MigrateDataAsync_Core_ShouldReuseCompiledKeySelectors_AcrossCalls()
+    {
+        var options = new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
+        {
+            Query = q => q,
+            EntityKeyProperty = e => e.Id,
+            DataKeyProperty = s => s.Key,
+            IsUpdatedFunc = (e, s) => e.Name != s.Name,
+            UpdateFunc = (e, s) =>
+            {
+                e.Name = s.Name;
+                return e;
+            },
+            Converter = s => new SimpleEntity { Id = s.Key, Name = s.Name }
+        };
+        Func<SimpleEntity, int> entityKey = options.EntityKeySelector;
+        Func<SimpleSeed, int> dataKey = options.DataKeySelector;
+
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        await context.MigrateDataAsync(new[] { new SimpleSeed { Key = 1, Name = "A" } }, options);
+        await context.MigrateDataAsync(new[] { new SimpleSeed { Key = 1, Name = "B" }, new SimpleSeed { Key = 2, Name = "C" } }, options);
+
+        options.EntityKeySelector.Should().BeSameAs(entityKey);
+        options.DataKeySelector.Should().BeSameAs(dataKey);
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Name).Should().Equal("B", "C");
+    }
+
+    [Fact]
     public async Task MigrateDataAsync_Core_ShouldUpdateExistingEntities()
     {
         using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
@@ -383,6 +412,68 @@ public class DbContextExtensionMethodsTests
 
         Func<Task> act = async () => await context.SaveChangesAsResultAsync(true, cts.Token);
 
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    private sealed class BlockingSaveInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            Started.TrySetResult();
+            await Release.Task.ConfigureAwait(false);
+            return result;
+        }
+    }
+
+    [Fact]
+    public async Task SaveChangesAsResultAsync_CancelledMidSave_ShouldWaitForEfBeforeCompleting()
+    {
+        var interceptor = new BlockingSaveInterceptor();
+        var options = new DbContextOptionsBuilder<ChangeTrackerDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(interceptor)
+            .Options;
+        using var context = new ChangeTrackerDbContext(options);
+        context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
+        using var cts = new CancellationTokenSource();
+
+        Task<Result> save = context.SaveChangesAsResultAsync(cts.Token);
+        await interceptor.Started.Task;
+        await cts.CancelAsync();
+        await Task.Delay(100);
+
+        save.IsCompleted.Should().BeFalse();
+        interceptor.Release.SetResult();
+        Func<Task> act = async () => await save;
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsResultAsync_WithAcceptAll_CancelledMidSave_ShouldWaitForEfBeforeCompleting()
+    {
+        var interceptor = new BlockingSaveInterceptor();
+        var options = new DbContextOptionsBuilder<ChangeTrackerDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(interceptor)
+            .Options;
+        using var context = new ChangeTrackerDbContext(options);
+        context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
+        using var cts = new CancellationTokenSource();
+
+        Task<Result<int>> save = context.SaveChangesAsResultAsync(true, cts.Token);
+        await interceptor.Started.Task;
+        await cts.CancelAsync();
+        await Task.Delay(100);
+
+        save.IsCompleted.Should().BeFalse();
+        interceptor.Release.SetResult();
+        Func<Task> act = async () => await save;
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 

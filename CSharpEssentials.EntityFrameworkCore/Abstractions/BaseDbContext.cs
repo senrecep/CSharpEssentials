@@ -1,4 +1,3 @@
-using CSharpEssentials.Core;
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
@@ -13,8 +12,8 @@ namespace CSharpEssentials.EntityFrameworkCore;
 public abstract partial class BaseDbContext<TContext> : DbContext
     where TContext : DbContext
 {
-    private readonly Guid _instanceId = Guider.NewGuid();
     private readonly IServiceScope _serviceScope;
+    private List<(IDomainEventHolder Entity, IDomainEvent[] Events)>? _afterSaveCollected;
     protected readonly ILogger<TContext> Logger;
     protected readonly IServiceProvider ServiceProvider;
 
@@ -24,7 +23,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         _serviceScope = serviceScopeFactory.CreateScope();
         ServiceProvider = _serviceScope.ServiceProvider;
         Logger = ServiceProvider.GetRequiredService<ILogger<TContext>>();
-        LogContextCreated(_instanceId);
+        LogContextCreated(ContextId.InstanceId);
     }
 
     /// <summary>
@@ -45,7 +44,17 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     /// After-save events are dispatched once the save has completed, so storing them in an
     /// <see cref="IDomainEventOutbox"/> is not atomic with the save. Inside an explicit transaction they are
     /// dispatched before that transaction commits. When the save fails, the after-save events are put back on
-    /// their entities so a retry dispatches them.
+    /// their entities so a retry dispatches them. They are also put back when the default
+    /// <see cref="DispatchDomainEventsAsync"/> stores them in the outbox and <see cref="IDomainEventOutbox.StoreAsync"/>
+    /// throws; a later <c>SaveChanges</c> dispatches them again even with no pending changes. When
+    /// <see cref="IDomainEventPublisher"/> throws while publishing them, they stay cleared, because a retry would
+    /// publish the earlier events twice.
+    /// </para>
+    /// <para>
+    /// An outbox that adds rows to this context and then throws leaves those rows tracked, so the retry saves
+    /// them and stores the events again; remove them before rethrowing. After a rolled-back explicit transaction,
+    /// the entity stays tracked as unchanged with its after-save events back, so a retry stores events for a row
+    /// that is not in the database.
     /// </para>
     /// <para>
     /// Do not combine with <see cref="DomainEventInterceptor"/>; when this is <c>true</c>,
@@ -103,8 +112,19 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         }
 
         if (afterSave.Length > 0)
-            DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, CancellationToken.None)
-                .GetAwaiter().GetResult();
+        {
+            List<(IDomainEventHolder Entity, IDomainEvent[] Events)>? outerCollected = _afterSaveCollected;
+            _afterSaveCollected = collected;
+            try
+            {
+                DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, CancellationToken.None)
+                    .GetAwaiter().GetResult();
+            }
+            finally
+            {
+                _afterSaveCollected = outerCollected;
+            }
+        }
 
         return result;
     }
@@ -134,7 +154,18 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         }
 
         if (afterSave.Length > 0)
-            await DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, cancellationToken).ConfigureAwait(false);
+        {
+            List<(IDomainEventHolder Entity, IDomainEvent[] Events)>? outerCollected = _afterSaveCollected;
+            _afterSaveCollected = collected;
+            try
+            {
+                await DispatchDomainEventsAsync(afterSave, DomainEventTiming.AfterSave, cancellationToken).ConfigureAwait(false);
+            }
+            finally
+            {
+                _afterSaveCollected = outerCollected;
+            }
+        }
 
         return result;
     }
@@ -147,6 +178,8 @@ public abstract partial class BaseDbContext<TContext> : DbContext
     /// when one is registered, otherwise to <see cref="IDomainEventPublisher"/>;
     /// <see cref="DomainEventTiming.BeforeSave"/> events always go to <see cref="IDomainEventPublisher"/>.
     /// Throws <see cref="InvalidOperationException"/> when the required publisher is not registered.
+    /// When the outbox throws while storing <see cref="DomainEventTiming.AfterSave"/> events, they are put back on
+    /// their entities before the exception is rethrown. An override that does not call this method gets no restore.
     /// </para>
     /// </summary>
     protected virtual async Task DispatchDomainEventsAsync(
@@ -159,7 +192,17 @@ public abstract partial class BaseDbContext<TContext> : DbContext
             IDomainEventOutbox? outbox = ServiceProvider.GetService<IDomainEventOutbox>();
             if (outbox is not null)
             {
-                await outbox.StoreAsync(domainEvents, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    await outbox.StoreAsync(domainEvents, cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    if (_afterSaveCollected is not null)
+                        DomainEventCollector.Restore(_afterSaveCollected, [.. domainEvents]);
+                    throw;
+                }
+
                 return;
             }
         }
@@ -171,24 +214,27 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
     ~BaseDbContext()
     {
-        LogContextDestructed(_instanceId);
+        if (Logger is not null)
+            LogContextDestructed(ContextId.InstanceId);
     }
 
     public override void Dispose()
     {
-        LogContextDisposed(_instanceId);
+        LogContextDisposed(ContextId.InstanceId);
         base.Dispose();
         _serviceScope.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     public override async ValueTask DisposeAsync()
     {
-        LogContextDisposed(_instanceId);
+        LogContextDisposed(ContextId.InstanceId);
         await base.DisposeAsync().ConfigureAwait(false);
         if (_serviceScope is IAsyncDisposable asyncScope)
             await asyncScope.DisposeAsync().ConfigureAwait(false);
         else
             _serviceScope.Dispose();
+        GC.SuppressFinalize(this);
     }
 
     private void TryAddInterceptor<TInterceptor>(

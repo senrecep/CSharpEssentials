@@ -28,6 +28,13 @@ dotnet add package CSharpEssentials.EntityFrameworkCore
 
 Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
 
+## Upgrade Notes
+
+Changes in the next major version that need action:
+
+- **Slow query logging hides parameter values by default.** `SlowQueryInterceptor` now follows EF Core's sensitive data setting: values appear in the log and in `SlowQueryContext.Parameters` only when `EnableSensitiveDataLogging()` is on (or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`). Without it, parameters read `@name=?`. Turn sensitive data logging on if you relied on the values.
+- **Soft delete keeps cascaded rows.** When `AuditInterceptor` turns a delete into a soft delete, it now also keeps the tracked entries EF cascade-deleted with it: owned types stay in place, `ISoftDeletable` dependents are soft-deleted, and other dependents of a `Cascade`/`ClientCascade` relationship are left unchanged. Before, tracked required dependents were physically deleted and owned columns were nulled (or the save failed on a `NOT NULL` column). If you relied on the old behaviour, delete the children in a separate save, or mark the root with `MarkAsHardDeleted()`.
+
 ## Usage
 
 ### Audit Interceptor
@@ -42,7 +49,9 @@ services.AddDbContext<MyDbContext>((sp, options) =>
            .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
 ```
 
-On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons.
+On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons, each only when that service is not registered yet, so a `TimeProvider` you registered before is kept and calling it twice adds no second interceptor.
+
+EF Core deletes tracked owned types and `Cascade`/`ClientCascade` dependents as soon as you call `Remove` (the default `CascadeDeleteTiming.Immediate`). When the root becomes a soft delete, the interceptor keeps those entries too: owned types stay, `ISoftDeletable` dependents are soft-deleted, and other dependents go back to `Unchanged`. Pending edits on them are still saved with the default snapshot change tracking; with a notification-based `ChangeTrackingStrategy` they can be lost, so save those edits before removing the root. A dependent marked with `MarkAsHardDeleted()` is still deleted. A dependent that is also cascade-deleted from another principal deleted in the same save is deleted with it. A dependent you removed yourself in the same save looks the same as a cascaded one and is kept, so remove it in its own `SaveChanges`. Optional dependents with `SetNull`/`ClientSetNull` still get their foreign key set to null by EF.
 
 `AddAuditInterceptor` takes a `Func<string>`, a `Func<IServiceProvider, string>`, or the typed `Func<TUserId>` / `Func<IServiceProvider, TUserId>` forms (the user id is stored with `ToString()`). To resolve the user from the request, use the `IServiceProvider` form:
 
@@ -51,7 +60,7 @@ services.AddAuditInterceptor(sp =>
     sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst("sub")?.Value ?? "anonymous");
 ```
 
-`AddAuditUserIdProvider` (same overloads) registers only the scoped `IAuditUserIdProvider`, not the interceptor. Use it, or your own `IAuditUserIdProvider` / `IAuditUserIdProvider<TUserId>` class, when you register the interceptor yourself: `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();` (`AddAuditInterceptor` registers `TimeProvider.System` unconditionally, so it replaces a `TimeProvider` registered before it; register yours after it).
+`AddAuditUserIdProvider` (same overloads) registers only the scoped `IAuditUserIdProvider`, not the interceptor. Use it, or your own `IAuditUserIdProvider` / `IAuditUserIdProvider<TUserId>` class, when you register the interceptor yourself: `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();`.
 
 ### Domain Event Interceptor
 
@@ -84,7 +93,7 @@ public sealed class MyPublisher : IDomainEventPublisher
 }
 ```
 
-`DomainEventInterceptor` takes the events of every tracked `IDomainEventHolder` in `SavingChanges`, clears them from the entities, publishes the `BeforeSave` events through `IDomainEventPublisher` and then handles the `AfterSave` events (see the comparison table under BaseDbContext). `IDomainEventOutbox.StoreAsync` receives the `AfterSave` events instead of the publisher when an outbox is registered.
+`DomainEventInterceptor` takes the events of every tracked `IDomainEventHolder` in `SavingChanges`, clears them from the entities, publishes the `BeforeSave` events through `IDomainEventPublisher` and then handles the `AfterSave` events (see the comparison table under BaseDbContext). `IDomainEventOutbox.StoreAsync` receives the `AfterSave` events instead of the publisher when an outbox is registered. When publishing a `BeforeSave` event throws, or `StoreAsync` throws, the `AfterSave` events are put back on their entities, as with `DispatchDomainEventsOnSaveChanges`; `BeforeSave` events are not put back. When the publisher throws while publishing the `AfterSave` events, they stay cleared, since the ones published before the failure would be published again on a retry.
 
 ### Pagination
 
@@ -115,7 +124,7 @@ await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToke
 await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
 ```
 
-`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own.
+`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own. The obsolete `PaginateAsync` returns the first page when `HasCursor` is `false`. `CursorPaginationRequest<TCursor>` sets `HasCursor` whenever `Cursor` is assigned a non-null value, so a cursor of `0` or `Guid.Empty` is a real position and a page that ends on such a row continues with the next rows.
 
 `PaginationRequest.Search` is trimmed by `Normalize` and, when it is not empty and you pass a `search` delegate (`Func<string, Expression<Func<T, bool>>>`), `PaginateAsync` and `Paginate` apply that filter before counting. `PaginationResponse<T>` carries `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`; with `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
 
@@ -292,7 +301,7 @@ The two domain event paths differ in when `AfterSave` events are handled:
 |---|---|---|
 | `AfterSave` events | after the save completes | in `SavingChanges`, before the database write |
 | Outbox write | not atomic with the save: the save is already committed when `StoreAsync` runs; inside an explicit transaction it runs before that transaction commits | before the save, in the same `SaveChanges` call |
-| Save fails | `AfterSave` events are put back on their entities, so a retry dispatches them | events are already dispatched |
+| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them. They are also put back when `StoreAsync` throws after the save, and a later `SaveChanges` stores them again; they stay cleared when `IDomainEventPublisher` throws while publishing them. An outbox that adds rows to the context and then throws should remove them first, or the retry saves them and stores the events twice. After a rolled-back explicit transaction, a retry stores the put-back events for a row that is not in the database | `AfterSave` events are put back when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
@@ -653,7 +662,7 @@ public sealed class MetricsSlowQueryHandler : ISlowQueryHandler
 }
 ```
 
-Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameter values, and passed to the `ISlowQueryHandler` when one is registered. Parameter values can be sensitive; keep that in mind before shipping the logs.
+Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameters, and passed to the `ISlowQueryHandler` when one is registered. Parameter values are included only when the context has `EnableSensitiveDataLogging()` turned on; otherwise each parameter is written as `@name=?`. If the handler throws, the exception is logged as a warning and the command still succeeds.
 
 ### Database Error Translation
 
@@ -714,3 +723,8 @@ public sealed class PostgresConstraintTranslator : IDbErrorTranslator
 ```
 
 The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
+
+## Upgrading to 8.0
+
+- `ICursorPaginationRequest<TCursor>` has a new `HasCursor` property, and the obsolete cursor `PaginateAsync` uses it to decide whether to start at the first page. 7.x treated a cursor equal to `default(TCursor)` (`0`, `Guid.Empty`) as "no cursor", so a page ending on such a row started over at page one. `CursorPaginationRequest<TCursor>` sets `HasCursor` when `Cursor` is assigned a non-null value, including `0`. If you set `Cursor = 0` or `Cursor = Guid.Empty` to mean "first page", leave `Cursor` unset instead. A custom `ICursorPaginationRequest<TCursor>` must implement `HasCursor`; return `false` for a request that has no cursor. The serialized request also gains a read-only `hasCursor` field.
+- `AddAuditInterceptor` registers `TimeProvider.System` and `AuditInterceptor` only when they are not registered yet. 7.x added both every time, so a `TimeProvider` registered before the call was replaced by `TimeProvider.System` and repeated calls added more `AuditInterceptor` registrations. If you registered your `TimeProvider` after `AddAuditInterceptor` to work around this, either order now works; if you relied on `TimeProvider.System` replacing an earlier registration, remove that registration.

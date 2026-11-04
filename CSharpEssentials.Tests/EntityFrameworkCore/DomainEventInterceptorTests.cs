@@ -48,6 +48,12 @@ public class DomainEventInterceptorTests
         }
     }
 
+    private sealed class ThrowingPublisher : IDomainEventPublisher
+    {
+        public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("publish failed");
+    }
+
     private sealed class TrackingOutbox : IDomainEventOutbox
     {
         public List<IDomainEvent> Stored { get; } = [];
@@ -59,16 +65,22 @@ public class DomainEventInterceptorTests
         }
     }
 
+    private sealed class ThrowingOutbox : IDomainEventOutbox
+    {
+        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("outbox failed");
+    }
+
     // ── Setup ───────────────────────────────────────────────────────
 
     private static (TestDbContext Db, TrackingPublisher Publisher, ServiceProvider Provider) CreateContext(
-        IDomainEventOutbox? outbox = null)
+        IDomainEventOutbox? outbox = null, IDomainEventPublisher? publisherOverride = null)
     {
         ServiceCollection services = new();
         services.AddLogging();
 
         TrackingPublisher publisher = new();
-        services.AddSingleton<IDomainEventPublisher>(publisher);
+        services.AddSingleton(publisherOverride ?? publisher);
 
         if (outbox is not null)
             services.AddSingleton(outbox);
@@ -232,6 +244,128 @@ public class DomainEventInterceptorTests
         publisher.Published.Should().HaveCount(1);
         publisher.Published[0].Should().BeOfType<TestEvent>()
             .Which.Name.Should().Be("AsyncEvent");
+
+        await db.DisposeAsync();
+        await provider.DisposeAsync();
+    }
+
+    [Fact]
+    public void SavingChanges_WhenBeforeSavePublishFails_ShouldRestoreAfterSaveEvents()
+    {
+        (TestDbContext db, TrackingPublisher _, ServiceProvider provider) =
+            CreateContext(publisherOverride: new ThrowingPublisher());
+
+        EventEntity entity = new() { Name = "Test" };
+        var after = new TestEvent("After");
+        entity.Raise(new BeforeSaveEvent("Before"));
+        entity.Raise(after);
+        db.Entities.Add(entity);
+
+        Action act = () => db.SaveChanges();
+
+        act.Should().Throw<InvalidOperationException>();
+        entity.DomainEvents.Should().Equal(after);
+
+        db.Dispose();
+        provider.Dispose();
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenBeforeSavePublishFails_ShouldRestoreAfterSaveEvents()
+    {
+        (TestDbContext db, TrackingPublisher _, ServiceProvider provider) =
+            CreateContext(publisherOverride: new ThrowingPublisher());
+
+        EventEntity entity = new() { Name = "Test" };
+        var after = new TestEvent("After");
+        entity.Raise(new BeforeSaveEvent("Before"));
+        entity.Raise(after);
+        db.Entities.Add(entity);
+
+        Func<Task> act = () => db.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        entity.DomainEvents.Should().Equal(after);
+
+        await db.DisposeAsync();
+        await provider.DisposeAsync();
+    }
+
+    [Fact]
+    public void SavingChanges_WhenOutboxStoreFails_ShouldRestoreAfterSaveEvents()
+    {
+        (TestDbContext db, TrackingPublisher publisher, ServiceProvider provider) = CreateContext(new ThrowingOutbox());
+
+        EventEntity entity = new() { Name = "Test" };
+        var after = new TestEvent("After");
+        entity.Raise(new BeforeSaveEvent("Before"));
+        entity.Raise(after);
+        db.Entities.Add(entity);
+
+        Action act = () => db.SaveChanges();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("outbox failed");
+        publisher.Published.Should().ContainSingle().Which.Should().BeOfType<BeforeSaveEvent>();
+        entity.DomainEvents.Should().Equal(after);
+
+        db.Dispose();
+        provider.Dispose();
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenOutboxStoreFails_ShouldRestoreAfterSaveEvents()
+    {
+        (TestDbContext db, TrackingPublisher publisher, ServiceProvider provider) = CreateContext(new ThrowingOutbox());
+
+        EventEntity entity = new() { Name = "Test" };
+        var after = new TestEvent("After");
+        entity.Raise(new BeforeSaveEvent("Before"));
+        entity.Raise(after);
+        db.Entities.Add(entity);
+
+        Func<Task> act = () => db.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("outbox failed");
+        publisher.Published.Should().ContainSingle().Which.Should().BeOfType<BeforeSaveEvent>();
+        entity.DomainEvents.Should().Equal(after);
+
+        await db.DisposeAsync();
+        await provider.DisposeAsync();
+    }
+
+    [Fact]
+    public void SavingChanges_WhenAfterSavePublishFails_ShouldNotRestoreEvents()
+    {
+        (TestDbContext db, TrackingPublisher _, ServiceProvider provider) =
+            CreateContext(publisherOverride: new ThrowingPublisher());
+
+        EventEntity entity = new() { Name = "Test" };
+        entity.Raise(new TestEvent("After"));
+        db.Entities.Add(entity);
+
+        Action act = () => db.SaveChanges();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("publish failed");
+        entity.DomainEvents.Should().BeEmpty();
+
+        db.Dispose();
+        provider.Dispose();
+    }
+
+    [Fact]
+    public async Task SavingChangesAsync_WhenAfterSavePublishFails_ShouldNotRestoreEvents()
+    {
+        (TestDbContext db, TrackingPublisher _, ServiceProvider provider) =
+            CreateContext(publisherOverride: new ThrowingPublisher());
+
+        EventEntity entity = new() { Name = "Test" };
+        entity.Raise(new TestEvent("After"));
+        db.Entities.Add(entity);
+
+        Func<Task> act = () => db.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("publish failed");
+        entity.DomainEvents.Should().BeEmpty();
 
         await db.DisposeAsync();
         await provider.DisposeAsync();

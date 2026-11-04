@@ -839,7 +839,7 @@ Result checkout = await RuleEngine.EvaluateAsync(
 | `CreatedBy` | `string?` | Who created it |
 | `UpdatedAt` | `DateTimeOffset?` | When last updated |
 | `UpdatedBy` | `string?` | Who last updated it |
-| `DomainEvents` | `IReadOnlyList<IDomainEvent>` | Pending domain events (a snapshot, safe to iterate while raising or clearing) |
+| `DomainEvents` | `IReadOnlyList<IDomainEvent>` | Pending domain events as a read-only live view; copy it before raising or clearing while iterating |
 | `Raise(event)` | method | Queues a domain event for later dispatch |
 | `ClearDomainEvents()` | method | Clears the event queue (call after publishing) |
 | `SetCreatedInfo(at, by)` | method | Sets creation audit fields; throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue` |
@@ -1171,7 +1171,7 @@ Result<User> user = await ResiliencePolicy
 | `KeysetPaginateAsync(query, request, k => k.Descending(...).Ascending(...), ct)` | Composite keyset pagination → `Result<KeysetPaginationResponse<T>>`; reads `limit + 1` rows, no `COUNT`; bad cursors return `Error.Validation` |
 | `KeysetPaginateAsync(query, request, keys, options, ct)` / `(query, request, ordering[, options], ct)` | Same, with `KeysetPaginationOptions` or a reusable `KeysetOrdering<T>` |
 
-`PaginationDefaults.MaxPageSize` (100) is the default offset page size cap. `IPaginationRequest.Normalize()` enforces minimums and lowers `PageSize` to 100; `Normalize(int maxPageSize)` uses another cap (`int.MaxValue` turns it off). `ICursorPaginationRequest<TCursor>.Normalize()` only enforces minimums and `Normalize(int maxLimit)` opts in to a cap; it serves only the obsolete cursor overload. A cap below 1 throws `ArgumentOutOfRangeException`. These are default interface methods, so call them through the interface type.
+`PaginationDefaults.MaxPageSize` (100) is the default offset page size cap. `IPaginationRequest.Normalize()` enforces minimums and lowers `PageSize` to 100; `Normalize(int maxPageSize)` uses another cap (`int.MaxValue` turns it off). `ICursorPaginationRequest<TCursor>.Normalize()` only enforces minimums and `Normalize(int maxLimit)` opts in to a cap; it serves only the obsolete cursor overload. Its `HasCursor` decides whether that overload starts at the first page; `CursorPaginationRequest<TCursor>` sets it when `Cursor` is assigned a non-null value, so `0` and `Guid.Empty` are real cursors. A cap below 1 throws `ArgumentOutOfRangeException`. These are default interface methods, so call them through the interface type.
 
 #### Keyset Pagination Types
 

@@ -75,7 +75,7 @@ foreach (var evt in order.DomainEvents)
 order.ClearDomainEvents();
 ```
 
-`DomainEvents` returns a snapshot, so raising or clearing events while you loop over it is safe. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
+`DomainEvents` is a read-only live view of the entity's events, so reading it does not copy the list. Raising or clearing events while you loop over it throws `InvalidOperationException`; copy it first with `[.. order.DomainEvents]`, and keep a copy if you clear the events before you dispatch them. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
 
 ### Event Timing
 
@@ -89,3 +89,7 @@ public record OrderValidationEvent(Guid OrderId) : IDomainEvent;
 ```
 
 The attribute only labels the event; `CSharpEssentials.EntityFrameworkCore` reads it. `BaseDbContext` with `DispatchDomainEventsOnSaveChanges` publishes `AfterSave` events once the save has succeeded. `DomainEventInterceptor` dispatches them inside `SavingChanges`, still before the database write, so that an outbox can store them in the same save.
+
+## Upgrading to 8.0
+
+- `EntityBase.DomainEvents` returns a read-only live view instead of a new copy on every read. 7.x copied the list each time, so a reference kept before `ClearDomainEvents()` still held the old events, and raising or clearing inside a `foreach` over it was safe. Now a kept reference shows later `Raise` and `ClearDomainEvents` calls, and changing the events during a `foreach` throws `InvalidOperationException`. If you read the events and then clear them, copy them first: `IDomainEvent[] events = [.. entity.DomainEvents];`.
