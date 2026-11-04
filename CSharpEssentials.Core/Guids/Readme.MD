@@ -53,7 +53,7 @@ How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold the time
 What it costs:
 
 - Each ID has 56 random bits instead of 74: the counter takes 6 bits of `rand_b`.
-- All threads update one shared value. With 6 threads it cost 30 to 105 ns per ID in a quick benchmark, against 13 to 16 ns for `NewGuid()`, because the threads take turns on that value. The number moves a lot between runs. See [Cost](#cost).
+- All threads update one shared value. With 6 threads it cost 28 to 31 ns per ID in a quick benchmark, against 12.5 to 16.5 ns for `NewGuid()`. See [Cost](#cost).
 - The order holds within one process, and within one loaded copy of the assembly: two `AssemblyLoadContext`s or .NET Framework AppDomains each keep their own value. Two processes or machines can still produce IDs that interleave.
 - The fraction and the counter allow 262,144 IDs per millisecond (64 in each 1/4096 ms step), about 262 per microsecond across all threads. That is far above what one process makes: in a test, 1,000,000 IDs from a tight loop kept the encoded timestamp within 1 ms of the clock. Above that rate the encoded timestamp runs ahead of the clock, by roughly (IDs / 262,144) ms minus the elapsed time, and catches up once the rate drops. A clock that goes backwards keeps the timestamp at the last value until the clock passes it.
 - The counter starts at 0 in each step, so it shows how many IDs the process made in that 1/4096 ms.
@@ -62,20 +62,20 @@ Use `NewGuid()` when IDs only need to be unique and roughly time ordered. Use `N
 
 ### Cost
 
-Time per ID from a quick BenchmarkDotNet ShortRun on a 12-core Linux machine, 1-minute load average 1.8 to 4.4. Every row allocated 0 bytes. The .NET 8 column runs the `netstandard2.1` asset, and .NET 8 has no `Guid.CreateVersion7()`. The 6-thread rows run 6 threads that each make 20,000 IDs.
+Time per ID from a quick BenchmarkDotNet ShortRun on a 12-core Linux machine, 1-minute load average 1.3 to 4.7. Every row allocated 0 bytes. The .NET 8 column runs the `netstandard2.1` asset, and .NET 8 has no `Guid.CreateVersion7()`. The 6-thread rows run 6 threads that each make 20,000 IDs.
 
 | Method | .NET 8 | .NET 9 | .NET 10 | .NET 11 |
 |---|---:|---:|---:|---:|
-| `Guid.NewGuid()` (version 4) | 748 ns | 764 ns | 762 ns | 58 ns |
-| `Guid.CreateVersion7()` | n/a | 820 ns | 791 ns | 90 ns |
-| `Guider.NewGuid()` | 72 ns | 70 ns | 60 ns | 52 ns |
-| `Guider.NewMonotonicGuid()` | 85 ns | 82 ns | 76 ns | 70 ns |
-| 6 threads: `Guid.NewGuid()` | 153 ns | 162 ns | 165 ns | 14.2 ns |
-| 6 threads: `Guid.CreateVersion7()` | n/a | 164 ns | 158 ns | 18.6 ns |
-| 6 threads: `Guider.NewGuid()` | 15.5 ns | 15.6 ns | 13.6 ns | 12.6 ns |
-| 6 threads: `Guider.NewMonotonicGuid()` | 105 ns | 30.2 ns | 52.2 ns | 52.2 ns |
+| `Guid.NewGuid()` (version 4) | 766 ns | 759 ns | 739 ns | 59 ns |
+| `Guid.CreateVersion7()` | n/a | 801 ns | 782 ns | 91 ns |
+| `Guider.NewGuid()` | 71 ns | 70 ns | 60 ns | 54 ns |
+| `Guider.NewMonotonicGuid()` | 84 ns | 81 ns | 75 ns | 71 ns |
+| 6 threads: `Guid.NewGuid()` | 152 ns | 152 ns | 151 ns | 12.7 ns |
+| 6 threads: `Guid.CreateVersion7()` | n/a | 164 ns | 159 ns | 18.7 ns |
+| 6 threads: `Guider.NewGuid()` | 16.5 ns | 15.7 ns | 14.0 ns | 12.5 ns |
+| 6 threads: `Guider.NewMonotonicGuid()` | 30.6 ns | 29.2 ns | 27.8 ns | 28.2 ns |
 
-On .NET 8, 9 and 10 the BCL reads the operating system once per GUID, so the pool makes an ID 10 to 13 times cheaper on one thread and 10 to 12 times cheaper with 6 threads. On .NET 11 the BCL read is much cheaper, and `Guider.NewGuid()` is still faster than `Guid.CreateVersion7()`. These rows come from tight loops. The first ID after a pause of more than 1 ms takes the `Guid.NewGuid()` path, so a thread that makes a few IDs at a time pays about what `Guid.CreateVersion7()` costs for the first one. In a Stopwatch probe that paused 1.5 ms before each burst, `Guider.NewGuid()` was within about 15% of the BCL for bursts of one ID on .NET 8, 9 and 10 and faster from two IDs on. On .NET 11 it was 25 to 30 ns slower for bursts of one or three IDs, equal at two, and faster from five on.
+On .NET 8, 9 and 10 the BCL reads the operating system once per GUID, so the pool makes an ID 11 to 13 times cheaper on one thread and 9 to 11 times cheaper with 6 threads. On .NET 11 the BCL read is much cheaper, and `Guider.NewGuid()` is still faster than `Guid.CreateVersion7()`. These rows come from tight loops. The first ID after a pause of more than 1 ms takes the `Guid.NewGuid()` path, so a thread that makes a few IDs at a time pays about what `Guid.CreateVersion7()` costs for the first one. In a Stopwatch probe that paused 1.5 ms before each burst, `Guider.NewGuid()` was within about 15% of the BCL for bursts of one ID on .NET 8, 9 and 10 and faster from two IDs on. On .NET 11 it was about 10 ns slower for bursts of one ID, about equal at two, and faster from three on. Bursts of one or two IDs on .NET 11 timed very differently from run to run on the test machine, so treat those two rows as close to even.
 
 ### SQL Server ordering
 
