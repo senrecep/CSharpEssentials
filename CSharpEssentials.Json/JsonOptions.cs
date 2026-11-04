@@ -10,8 +10,9 @@ namespace CSharpEssentials.Json;
 /// Shared <see cref="JsonSerializerOptions"/> presets and helpers.
 /// </summary>
 /// <remarks>
-/// <see cref="DefaultOptions"/> includes <see cref="PolymorphicJsonConverterFactory"/>, which discovers derived types by
-/// reflection, so the type is not trim or native AOT safe.
+/// <see cref="DefaultOptions"/> includes <see cref="PolymorphicJsonConverterFactory"/> and
+/// <see cref="JsonPolymorphismExtensions.AddPolymorphismWithReflection"/>, which discover derived types by reflection, so the type is
+/// not trim or native AOT safe.
 /// </remarks>
 [RequiresUnreferencedCode(PolymorphicJson.Message)]
 [RequiresDynamicCode(PolymorphicJson.Message)]
@@ -31,9 +32,11 @@ public static class EnhancedJsonSerializerOptions
     };
 
     /// <summary>
-    /// Strict JSON serializer options that reject trailing commas, comments, and unmapped members.
+    /// Strict JSON serializer options that reject trailing commas, comments, and unmapped members. Polymorphic bases marked with
+    /// <see cref="JsonPolymorphicAttribute"/> or <see cref="JsonDerivedTypeAttribute"/> get their derived types from
+    /// <see cref="JsonPolymorphismExtensions.AddPolymorphismWithReflection"/>.
     /// </summary>
-    public static readonly JsonSerializerOptions StrictOptions = new(JsonSerializerDefaults.Web)
+    public static readonly JsonSerializerOptions StrictOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web)
     {
         ReferenceHandler = ReferenceHandler.IgnoreCycles,
         WriteIndented = false,
@@ -44,16 +47,19 @@ public static class EnhancedJsonSerializerOptions
         AllowTrailingCommas = false,
         ReadCommentHandling = JsonCommentHandling.Disallow,
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
-    };
+    }.AddPolymorphismWithReflection();
 
     /// <summary>
-    /// The default JSON serializer options.
+    /// The default JSON serializer options. Abstract types and interfaces without System.Text.Json polymorphism attributes use
+    /// <see cref="PolymorphicJsonConverterFactory"/>; bases with them use <see cref="JsonPolymorphismExtensions.AddPolymorphismWithReflection"/>,
+    /// which also lets the discriminator appear anywhere in the object.
     /// </summary>
     public static readonly JsonSerializerOptions DefaultOptions = DefaultOptionsWithoutConverters.Create(options =>
     {
         options.AddEnumConventions(EnumConventions.Default);
         options.Converters.Add(new MultiFormatDateTimeConverterFactory());
         options.Converters.Add(new PolymorphicJsonConverterFactory());
+        options.AddPolymorphismWithReflection();
     });
 
     /// <summary>
