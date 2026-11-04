@@ -38,6 +38,14 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 `<Version>` in `Directory.Build.props` is the only version source. Internal package pins (`[$(Version)]`), `AssemblyVersion` and `FileVersion` derive from it.
 
+## Third-party dependencies
+
+- Don't reference a package the code does not use. Remove it instead of hiding it.
+- If a dependency is used only inside the package and none of its types appear in the public API, set `PrivateAssets="compile;contentfiles;analyzers;build"` on the `PackageReference`. Consumers still get it at runtime but cannot compile against it. Check that the packed nuspec lists it with `exclude="Compile,Build,Analyzers"`.
+- If its types appear in the public API, keep it visible and treat its major version as part of our API.
+- Keep version ranges as wide as the code allows. Add an upper bound only where the next major is known to break us, such as the EF Core major per target framework, and say why in a comment.
+- Hiding compile assets does not change version resolution. NuGet still picks one version of the package for the whole app.
+
 ## Don't
 
 - Don't use `dynamic` type — defeats the purpose of the type-safe libraries.

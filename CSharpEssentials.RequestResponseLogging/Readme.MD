@@ -31,6 +31,7 @@ dotnet add package CSharpEssentials.RequestResponseLogging
 - `IgnorePaths("/")` now skips only the root path. Before, it skipped every request except the root, because `"/"` trimmed to an empty prefix that every path starts with. A `null` or empty entry is now skipped instead of throwing or matching everything. To skip all requests, leave the middleware out.
 - `LoggingFields` is now read once, when `AddRequestResponseLogging` runs. Adding or removing fields on the `LoggingOptions` instance after that has no effect. Before, the logger read the list on every request. Set the fields before you register the middleware.
 - Without a `UseHandler` handler, the middleware now reads the request body only when `LoggingFields` contains `Request` or `RequestLength`, and the response body only when it contains `Response` or `ResponseLength`. What gets logged is the same. When the request body is not read, `Request.Body` is left as the server gave it, so it is no longer seekable for later middleware or endpoints. If your code rewinds the request body, call `Request.EnableBuffering()` yourself. With a handler, both bodies are still captured on every request.
+- `Microsoft.IO.RecyclableMemoryStream` is still installed with the package and used at runtime, but your code can no longer compile against it through this package. If you use `RecyclableMemoryStreamManager` or other `Microsoft.IO` types yourself, add `Microsoft.IO.RecyclableMemoryStream` to your project.
 
 ## Usage
 
