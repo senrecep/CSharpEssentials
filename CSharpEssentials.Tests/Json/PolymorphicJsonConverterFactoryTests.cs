@@ -323,6 +323,66 @@ public class PolymorphicJsonConverterFactoryTests
         restored!.Next!.Next.Should().BeOfType<Link>().Which.Next.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData("[1]")]
+    [InlineData("\"CSharpEssentials.Tests.Json.Circle\"")]
+    [InlineData("1")]
+    public void Deserialize_WithNonObjectValue_ShouldThrowJsonException(string json)
+    {
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions));
+    }
+
+    [Fact]
+    public void Deserialize_WithTypeOnlyOnNestedObject_ShouldThrowJsonException()
+    {
+        string json = """{"Fill":{"$type":"CSharpEssentials.Tests.Json.Solid","Color":"red"}}""";
+
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions));
+    }
+
+    [Fact]
+    public void Deserialize_WithEscapedTypePropertyName_ShouldReadDiscriminator()
+    {
+        string json = """{"\u0024type":"CSharpEssentials.Tests.Json.Circle","Radius":2}""";
+
+        JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions).Should().BeOfType<Circle>().Which.Radius.Should().Be(2);
+    }
+
+    [Fact]
+    public void Deserialize_WithDuplicateTypeProperty_ShouldUseTheLastOne()
+    {
+        string json = """{"$type":"CSharpEssentials.Tests.Json.Circle","$type":"CSharpEssentials.Tests.Json.Rectangle","Width":3}""";
+
+        JsonSerializer.Deserialize<BaseShape>(json, PolymorphicOptions).Should().BeOfType<Rectangle>().Which.Width.Should().Be(3);
+    }
+
+    [Fact]
+    public void Deserialize_ArrayOfShapes_ShouldReadEveryElement()
+    {
+        string json = """[{"$type":"CSharpEssentials.Tests.Json.Circle","Radius":1},{"Width":2,"$type":"CSharpEssentials.Tests.Json.Rectangle"},null]""";
+
+        List<BaseShape?>? shapes = JsonSerializer.Deserialize<List<BaseShape?>>(json, PolymorphicOptions);
+
+        shapes.Should().HaveCount(3);
+        shapes![0].Should().BeOfType<Circle>().Which.Radius.Should().Be(1);
+        shapes[1].Should().BeOfType<Rectangle>().Which.Width.Should().Be(2);
+        shapes[2].Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeserializeAsync_WithTypeLastAfterNestedObject_ShouldReadAcrossBuffers()
+    {
+        string json = """{"Fill":{"$type":"CSharpEssentials.Tests.Json.Solid","Color":"red"},"Type":"filled","$type":"CSharpEssentials.Tests.Json.FilledCircle"}""";
+        JsonSerializerOptions options = new() { DefaultBufferSize = 16, Converters = { new PolymorphicJsonConverterFactory() } };
+        using MemoryStream stream = new(System.Text.Encoding.UTF8.GetBytes(json));
+
+        BaseShape? shape = await JsonSerializer.DeserializeAsync<BaseShape>(stream, options);
+
+        FilledCircle circle = shape.Should().BeOfType<FilledCircle>().Subject;
+        circle.Type.Should().Be("filled");
+        circle.Fill.Should().BeOfType<Solid>().Which.Color.Should().Be("red");
+    }
+
     private static AssemblyBuilder DefineDerived(string assemblyName)
     {
         AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(assemblyName), AssemblyBuilderAccess.RunAndCollect);

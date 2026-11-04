@@ -65,15 +65,11 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
 
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        using var doc = JsonDocument.ParseValue(ref reader);
-        JsonElement root = doc.RootElement;
-
-        if (!root.TryGetProperty(TypePropertyName, out JsonElement typeProperty))
+        if (!TryReadTypeName(reader, out string? typeName))
         {
             throw new JsonException($"Missing required property '{TypePropertyName}' for polymorphic deserialization.");
         }
 
-        string? typeName = typeProperty.GetString();
         if (typeName == null || !TypeCache.Value.TryGetValue(typeName, out Type? derivedType))
         {
             throw new JsonException($"Unknown type discriminator '{typeName}'.");
@@ -82,12 +78,33 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
         PolymorphicJson.EnterNested(options);
         try
         {
-            return (T?)JsonSerializer.Deserialize(root.GetRawText(), derivedType, options);
+            return (T?)JsonSerializer.Deserialize(ref reader, derivedType, options);
         }
         finally
         {
             PolymorphicJson.ExitNested();
         }
+    }
+
+    private static bool TryReadTypeName(Utf8JsonReader probe, out string? typeName)
+    {
+        typeName = null;
+        bool found = false;
+        if (probe.TokenType != JsonTokenType.StartObject)
+            return false;
+
+        int depth = probe.CurrentDepth;
+        while (probe.Read() && probe.CurrentDepth > depth)
+        {
+            if (probe.TokenType != JsonTokenType.PropertyName || probe.CurrentDepth != depth + 1 || !probe.ValueTextEquals(TypePropertyName))
+                continue;
+
+            probe.Read();
+            typeName = probe.GetString();
+            found = true;
+        }
+
+        return found;
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
