@@ -92,6 +92,12 @@ public class PolymorphicJsonConverterFactoryTests
         Converters = { new PolymorphicJsonConverterFactory() }
     };
 
+    private static readonly JsonSerializerOptions SmallBufferOptions = new()
+    {
+        DefaultBufferSize = 16,
+        Converters = { new PolymorphicJsonConverterFactory() }
+    };
+
     [Fact]
     public void Serialize_WithPolymorphicType_ShouldIncludeTypeDiscriminator()
     {
@@ -373,10 +379,9 @@ public class PolymorphicJsonConverterFactoryTests
     public async Task DeserializeAsync_WithTypeLastAfterNestedObject_ShouldReadAcrossBuffers()
     {
         string json = """{"Fill":{"$type":"CSharpEssentials.Tests.Json.Solid","Color":"red"},"Type":"filled","$type":"CSharpEssentials.Tests.Json.FilledCircle"}""";
-        JsonSerializerOptions options = new() { DefaultBufferSize = 16, Converters = { new PolymorphicJsonConverterFactory() } };
         using MemoryStream stream = new(System.Text.Encoding.UTF8.GetBytes(json));
 
-        BaseShape? shape = await JsonSerializer.DeserializeAsync<BaseShape>(stream, options);
+        BaseShape? shape = await JsonSerializer.DeserializeAsync<BaseShape>(stream, SmallBufferOptions);
 
         FilledCircle circle = shape.Should().BeOfType<FilledCircle>().Subject;
         circle.Type.Should().Be("filled");
