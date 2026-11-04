@@ -1868,25 +1868,6 @@ builder.Configuration.AddGcpSecretManager(options =>
 
 `AddProject(null)` and `Projects = null` throw `ArgumentNullException`. `Projects` is copy-on-write, so copies made with `with` never share changes. Listing and reading secrets retry through `CSharpEssentials.Resilience` (`RetryIfFailed` with a `shouldRetry` predicate): only `ResourceExhausted` and `Unavailable` are retried, 3 times with exponential backoff; any other status fails at once. A failed listing skips that project, a failed read skips that secret, and loading continues.
 
-------|-------------|
-| `SecretManagerConfigurationSource` | `IConfigurationSource` for Secret Manager |
-| `SecretManagerConfigurationProvider` | Loads secrets as configuration values |
-| `SecretManagerConfigurationOptions` | `sealed record` options: `Projects` / `AddProject(...)` (fluent), `CredentialsPath`, `Loader`, `LoggerFactory` (optional `ILoggerFactory`; no console output), `LoadFromAppSettings`, `ConfigurationSectionName`, `BatchSize` (default 10), `PageSize` (default 300) |
-| `ProjectSecretConfiguration` | `sealed record` per project: `ProjectId`, `Region` (null = global endpoint), `PrefixFilters`, `SecretIds`, `RawSecretIds`, `RawSecretPrefixes` (raw secrets are not parsed as JSON) |
-| `configuration.AddGcpSecretManager(options => ...)` | Adds the source to an `IConfigurationManager` (for example `builder.Configuration`) |
-
-```csharp
-builder.Configuration.AddGcpSecretManager(options =>
-{
-    options.AddProject(new ProjectSecretConfiguration
-    {
-        ProjectId = "my-gcp-project",
-        PrefixFilters = ["MyApp__"]
-    });
-});
-```
-
-`AddProject(null)` and `Projects = null` throw `ArgumentNullException`. `Projects` is copy-on-write, so copies made with `with` never share changes. Listing and reading secrets retry through `CSharpEssentials.Resilience` (`RetryIfFailed` with a `shouldRetry` predicate): only `ResourceExhausted` and `Unavailable` are retried, 3 times with exponential backoff; any other status fails at once. A failed listing skips that project, a failed read skips that secret, and loading continues.
 
 ---
 
