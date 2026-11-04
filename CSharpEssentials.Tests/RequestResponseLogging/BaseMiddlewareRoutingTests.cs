@@ -128,7 +128,7 @@ public sealed class BaseMiddlewareRoutingTests
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("boom");
         RequestResponseContext logged = writer.Written.Should().ContainSingle().Subject;
-        logged.RequestBody.Should().Be("Error occurred during request processing");
+        logged.RequestBody.Should().Be("payload");
         logged.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: boom");
         httpContext.Response.Body.Should().BeSameAs(originalBody);
     }
