@@ -122,7 +122,7 @@ public static class Guider
     /// compares first, and the time inside the millisecond and the counter of <see cref="NewMonotonicGuid"/> follow in the bytes it compares next.
     /// </summary>
     /// <remarks>
-    /// Each GUID is greater than every GUID this method or <see cref="NewMonotonicGuid"/> returned before in the same process, in SQL Server order.
+    /// Each GUID is greater than every GUID this method returned before in the same process, in SQL Server order.
     /// IDs from different processes interleave by their millisecond. The value is not in time order for <see cref="Guid.CompareTo(Guid)"/>, string
     /// order or byte order, so use it only for SQL Server columns. Each ID carries 56 random bits and reveals its creation time.
     /// </remarks>

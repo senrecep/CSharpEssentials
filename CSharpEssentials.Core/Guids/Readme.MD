@@ -81,7 +81,7 @@ On .NET 8, 9 and 10 the BCL reads the operating system once per GUID, so the poo
 
 Version 7 GUIDs are ordered when compared byte by byte from the first byte, which is how `Guid.CompareTo`, PostgreSQL `uuid` and string sorting compare them. SQL Server's `uniqueidentifier` compares the last 6 bytes first ([Comparing GUID and uniqueidentifier values](https://learn.microsoft.com/sql/connect/ado-net/sql/compare-guid-uniqueidentifier-values)). Those bytes are random in a version 7 GUID, so neither `NewGuid()` nor `NewMonotonicGuid()` gives sequential index order in a SQL Server `uniqueidentifier` column.
 
-`Guider.NewSqlServerGuid()` returns an RFC 9562 version 8 GUID laid out for that order: the Unix milliseconds sit big-endian in the last 6 bytes, and the time inside the millisecond and the counter of `NewMonotonicGuid()` follow in the bytes SQL Server compares next. Each value is greater than the previous one from the same process in `SqlGuid` order, and it carries 56 random bits. It does not sort by time anywhere else, so use it only for SQL Server columns. The EntityFrameworkCore package uses it for `UseOrderedGuidKeys()` on SQL Server.
+`Guider.NewSqlServerGuid()` returns an RFC 9562 version 8 GUID laid out for that order: the Unix milliseconds sit big-endian in the last 6 bytes, and the time inside the millisecond and the counter of `NewMonotonicGuid()` follow in the bytes SQL Server compares next. Each value is greater than the previous `NewSqlServerGuid()` value from the same process in `SqlGuid` order, and it carries 56 random bits. It does not sort by time anywhere else, so use it only for SQL Server columns. The EntityFrameworkCore package uses it for `UseOrderedGuidKeys()` on SQL Server.
 
 ### Upgrading to 8.0
 
