@@ -19,7 +19,7 @@ internal static class EntityTags
         return new EntityTagHeaderValue($"\"{tag}\"");
     }
 
-    public static string Hash(byte[] bytes) => WebEncoders.Base64UrlEncode(SHA256.HashData(bytes));
+    private static string Hash(byte[] bytes) => WebEncoders.Base64UrlEncode(SHA256.HashData(bytes));
 
     private static bool IsOpaqueTag(string value)
     {

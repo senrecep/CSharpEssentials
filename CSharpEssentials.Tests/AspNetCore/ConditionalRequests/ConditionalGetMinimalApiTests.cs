@@ -1,5 +1,7 @@
 using System.Net;
+using System.Security.Cryptography;
 using FluentAssertions;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 
@@ -290,6 +292,18 @@ public sealed class ConditionalGetMinimalApiTests
         again.ETag().Should().Be(first.ETag());
         other.ETag().Should().NotBe(first.ETag());
         notModified.StatusCode.Should().Be(HttpStatusCode.NotModified);
+    }
+
+    [Fact]
+    public async Task WithConditionalGet_Should_HashWholeBody_When_BodyIsLargerThanSerializerBuffer()
+    {
+        await using ConditionalRequestsTestHost host = await ConditionalRequestsTestHost.StartAsync(o => o.UseBodyHashFallback = true);
+
+        using HttpResponseMessage response = await host.GetAsync("/plain-large");
+        byte[] body = await response.Content.ReadAsByteArrayAsync();
+
+        body.Length.Should().BeGreaterThan(100_000);
+        response.ETag().Should().Be($"W/\"{WebEncoders.Base64UrlEncode(SHA256.HashData(body))}\"");
     }
 
     [Fact]
