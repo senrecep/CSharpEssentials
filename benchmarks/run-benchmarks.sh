@@ -8,6 +8,7 @@
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
 #   ./run-benchmarks.sh --project results    # Results async matrix benchmarks (default: validation)
 #   ./run-benchmarks.sh --project idempotency  # Idempotency middleware and fingerprint benchmarks
+#   ./run-benchmarks.sh --project core     # Core GUID generation benchmarks
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -50,8 +51,14 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*MiddlewareOverheadBenchmarks*" "*FingerprintBufferingBenchmarks*")
         ;;
+    core)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Core.Benchmarks/CSharpEssentials.Core.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/core"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*GuidBenchmarks*" "*GuidParallelBenchmarks*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | results | idempotency | core)" >&2
         exit 1
         ;;
 esac
