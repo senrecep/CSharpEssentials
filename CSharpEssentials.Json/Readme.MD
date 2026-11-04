@@ -177,9 +177,7 @@ DateTime custom = JsonSerializer.Deserialize<DateTime>("\"14.03.2024 10-20\"", o
 
 Constructor arguments add formats to the built-in list. Every value is returned as UTC (`DateTime.Kind` is `Utc`) regardless of the host time zone: input without an offset is read as UTC, input with an offset or `Z` is converted to UTC, and a Unix-seconds string becomes the matching UTC instant. A date-only value such as `"14.03.2024"` is midnight UTC on that date. Slash dates are tried as `dd/MM/yyyy` before `MM/dd/yyyy`, so `"03/04/2024"` reads as 3 April.
 
-## Upgrade Notes
-
-### 8.0
+## Upgrading to 8.0
 
 - Members declared as `JsonNode` or `JsonValue` are written without a `$type` wrapper. A `JsonObject` stored by 7.x in such a member carries a `"$type"` key and now reads back with that key inside it; strip `$type` from those stored objects.
 - Abstract types and interfaces marked with `[JsonPolymorphic]` or `[JsonDerivedType]` are no longer handled by `PolymorphicJsonConverterFactory`. They are written with the discriminators from the attributes, and payloads stored with a full CLR name in `$type` no longer read. Rewrite stored `$type` values to the attribute discriminators, or remove the attributes to keep the old format.
@@ -187,3 +185,4 @@ Constructor arguments add formats to the built-in list. Every value is returned 
 - `MultiFormatDateTimeConverter` throws `JsonException` for a Unix-seconds string outside the `DateTime` range. Before, it threw `ArgumentOutOfRangeException`. Catch `JsonException` instead.
 - `MultiFormatDateTimeConverter` writes a `DateTime` with `Kind` `Unspecified` as UTC (`+00:00`). Before, it used the host's local offset, so a round trip on a non-UTC host shifted the value. Set `Kind` to `Local` before serializing if the value is local time.
 - The enum converter writes an undefined value as its underlying number (`42`, dictionary key `"42"`) instead of throwing `EnumValueException`. A `[Flags]` value with undefined bits is written as one number, not an array. Reads still reject undefined numbers in `Input` mode. `HasJsonConversion` properties save such a value too, and loading it gives the `[EnumFallback]` member or throws when the enum has none. Check `EnumInfo<TEnum>.IsDefined` before serializing if an undefined value must still fail.
+- `PolymorphicJsonConverterFactory` no longer picks derived types from .NET framework assemblies (assemblies signed with a Microsoft framework key). A payload on an `IDisposable` or `ICloneable` member could name any loaded framework type with a public parameterless constructor; such a `$type` now throws `JsonException`. Your own types that implement those interfaces still read. If you stored a framework type behind an interface, wrap it in your own type.

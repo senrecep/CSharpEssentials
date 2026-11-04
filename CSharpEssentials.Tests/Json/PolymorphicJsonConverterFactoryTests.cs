@@ -31,6 +31,16 @@ internal sealed class Triangle : ScannedShape
     public double Base { get; set; }
 }
 
+internal sealed class DisposableResource : IDisposable
+{
+    public string Name { get; set; } = string.Empty;
+
+    public void Dispose()
+    {
+        Name = string.Empty;
+    }
+}
+
 internal sealed record NodeHolder(JsonNode? Data);
 
 internal sealed record AsyncHolder(IAsyncEnumerable<int> Items);
@@ -386,6 +396,30 @@ public class PolymorphicJsonConverterFactoryTests
         FilledCircle circle = shape.Should().BeOfType<FilledCircle>().Subject;
         circle.Type.Should().Be("filled");
         circle.Fill.Should().BeOfType<Solid>().Which.Color.Should().Be("red");
+    }
+
+    [Fact]
+    public void Deserialize_WithFrameworkTypeName_ShouldThrow()
+    {
+        JsonSerializerOptions options = new();
+        options.Converters.Add(new PolymorphicJsonConverterFactory());
+        string json = """{"$type":"System.IO.MemoryStream"}""";
+
+        Action act = () => JsonSerializer.Deserialize<IDisposable>(json, options);
+
+        act.Should().Throw<JsonException>().WithMessage("*Unknown type discriminator 'System.IO.MemoryStream'*");
+    }
+
+    [Fact]
+    public void Deserialize_WithUserTypeBehindFrameworkInterface_ShouldWork()
+    {
+        JsonSerializerOptions options = new();
+        options.Converters.Add(new PolymorphicJsonConverterFactory());
+        string json = """{"$type":"CSharpEssentials.Tests.Json.DisposableResource","Name":"a"}""";
+
+        IDisposable? value = JsonSerializer.Deserialize<IDisposable>(json, options);
+
+        value.Should().BeOfType<DisposableResource>().Which.Name.Should().Be("a");
     }
 
     private static AssemblyBuilder DefineDerived(string assemblyName)

@@ -42,26 +42,19 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
     {
         Type baseType = typeof(T);
         Dictionary<string, Type> types = [];
-        foreach (Type type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(GetLoadableTypes))
+        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            if (baseType.IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract && !type.ContainsGenericParameters)
-                types.TryAdd(type.FullName ?? type.Name, type);
+            if (PolymorphicTypeScan.IsFrameworkAssembly(assembly))
+                continue;
+
+            foreach (Type type in PolymorphicTypeScan.GetLoadableTypes(assembly))
+            {
+                if (baseType.IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract && !type.ContainsGenericParameters)
+                    types.TryAdd(type.FullName ?? type.Name, type);
+            }
         }
         return types;
     });
-
-    // A partially loadable assembly (e.g. a proxy assembly still emitting types) must not break discovery
-    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
-    {
-        try
-        {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException ex)
-        {
-            return ex.Types.OfType<Type>();
-        }
-    }
 
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
