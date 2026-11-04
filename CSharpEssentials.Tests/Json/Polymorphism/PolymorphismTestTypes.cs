@@ -6,77 +6,77 @@ using CSharpEssentials.Tests.Fixtures.JsonCore;
 namespace CSharpEssentials.Tests.Json.Polymorphism;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "$event")]
-public interface ITestEvent;
+internal interface ITestEvent;
 
 [JsonTypeDiscriminator("user.created.v1")]
-public sealed record UserCreated(Guid Id) : ITestEvent;
+internal sealed record UserCreated(Guid Id) : ITestEvent;
 
 [JsonTypeDiscriminator(7)]
-public sealed record UserDeleted(Guid Id) : ITestEvent;
+internal sealed record UserDeleted(Guid Id) : ITestEvent;
 
-public sealed record UserRenamed(Guid Id, string Name) : ITestEvent;
+internal sealed record UserRenamed(Guid Id, string Name) : ITestEvent;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "t")]
 [JsonDerivedType(typeof(ClosedCircle), "circle")]
 [JsonDerivedType(typeof(ClosedSquare), "square")]
-public abstract class ClosedShape;
+internal abstract class ClosedShape;
 
-public sealed class ClosedCircle : ClosedShape
+internal sealed class ClosedCircle : ClosedShape
 {
     public double Radius { get; set; }
 }
 
 [JsonTypeDiscriminator("sq")]
-public sealed class ClosedSquare : ClosedShape
+internal sealed class ClosedSquare : ClosedShape
 {
     public double Side { get; set; }
 }
 
 [JsonTypeDiscriminator("tri")]
-public sealed class ClosedTriangle : ClosedShape
+internal sealed class ClosedTriangle : ClosedShape
 {
     public double Height { get; set; }
 }
 
 [JsonDerivedType(typeof(Cat), "cat")]
-public abstract class Pet
+internal abstract class Pet
 {
     public string Name { get; set; } = string.Empty;
 }
 
-public sealed class Cat : Pet;
+internal sealed class Cat : Pet;
 
 [JsonTypeDiscriminator("dog")]
-public sealed class Dog : Pet;
+internal sealed class Dog : Pet;
 
 [JsonPolymorphic]
-public class Animal
+internal class Animal
 {
     public string Name { get; set; } = string.Empty;
 }
 
 [JsonTypeDiscriminator("bird")]
-public sealed class Bird : Animal
+internal sealed class Bird : Animal
 {
     public bool CanFly { get; set; }
 }
 
 [JsonPolymorphic]
-public interface IValue;
+internal interface IValue;
 
 [JsonTypeDiscriminator("text")]
-public sealed class TextValue : IValue
+internal sealed class TextValue : IValue
 {
     public string Text { get; set; } = string.Empty;
 }
 
 [JsonTypeDiscriminator("number")]
-public sealed class NumberValue : IValue
+internal sealed class NumberValue : IValue
 {
     public decimal Number { get; set; }
 }
 
-public class ValueHolder
+internal class ValueHolder
 {
     [JsonPolymorphicProperty("values")]
     public IValue? Value { get; set; }
@@ -95,26 +95,26 @@ public class ValueHolder
     public ValueHolder? Child { get; set; }
 }
 
-public sealed class SpecialValueHolder : ValueHolder
+internal sealed class SpecialValueHolder : ValueHolder
 {
     public string Extra { get; set; } = string.Empty;
 }
 
 [JsonPolymorphic]
 [JsonAcceptClrTypeNames]
-public interface ILegacyEvent;
+internal interface ILegacyEvent;
 
 [JsonTypeDiscriminator("legacy.created")]
-public sealed class LegacyCreated : ILegacyEvent
+internal sealed class LegacyCreated : ILegacyEvent
 {
     public string Name { get; set; } = string.Empty;
 }
 
 [JsonPolymorphic]
-public interface IOrphan;
+internal interface IOrphan;
 
 [JsonTypeDiscriminator("duplicate")]
-public sealed class TestDuplicateTwo : IFixtureDuplicateEvent;
+internal sealed class TestDuplicateTwo : IFixtureDuplicateEvent;
 
 [JsonSerializable(typeof(IFixtureEvent))]
 [JsonSerializable(typeof(Fixtures.JsonEvents.FixtureOrderPlaced))]
@@ -125,4 +125,4 @@ public sealed class TestDuplicateTwo : IFixtureDuplicateEvent;
 [JsonSerializable(typeof(TextValue))]
 [JsonSerializable(typeof(NumberValue))]
 [JsonSourceGenerationOptions(JsonSerializerDefaults.Web, AllowOutOfOrderMetadataProperties = true)]
-public sealed partial class PolymorphismTestContext : JsonSerializerContext;
+internal sealed partial class PolymorphismTestContext : JsonSerializerContext;

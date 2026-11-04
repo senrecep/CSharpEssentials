@@ -338,6 +338,40 @@ public class JsonPolymorphismTests
         JsonSerializer.Deserialize<IScanned>(json, options).Should().BeOfType<ScannedLeaf>();
     }
 
+    [Fact]
+    public void ApplyTo_Should_Keep_The_Target_Resolver_And_Add_Polymorphism()
+    {
+        TrackingResolver tracking = new();
+        JsonSerializerOptions target = new() { TypeInfoResolver = JsonTypeInfoResolver.Combine(tracking, new DefaultJsonTypeInfoResolver()) };
+
+        EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
+        string json = JsonSerializer.Serialize<IFixtureEvent>(new FixtureOrderPlaced(Id, 1), target);
+
+        tracking.Calls.Should().BePositive();
+        json.Should().Be($$"""{"$event":"order.placed.v1","id":"{{Id}}","total":1}""");
+    }
+
+    [Fact]
+    public void ApplyTo_Should_Use_The_Source_Resolver_When_The_Target_Has_None()
+    {
+        JsonSerializerOptions target = new();
+
+        EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
+
+        target.TypeInfoResolver.Should().BeSameAs(EnhancedJsonSerializerOptions.DefaultOptions.TypeInfoResolver);
+    }
+
+    private sealed class TrackingResolver : IJsonTypeInfoResolver
+    {
+        public int Calls { get; private set; }
+
+        public JsonTypeInfo? GetTypeInfo(Type type, JsonSerializerOptions options)
+        {
+            Calls++;
+            return null;
+        }
+    }
+
     private sealed class HiddenHolder
     {
         [JsonPolymorphicProperty("k")]
@@ -345,21 +379,21 @@ public class JsonPolymorphismTests
     }
 }
 
-public sealed record PlainRecord(string Name);
+internal sealed record PlainRecord(string Name);
 
 [JsonPolymorphic]
-public interface IScanned;
+internal interface IScanned;
 
-public sealed class ScannedLeaf : IScanned;
+internal sealed class ScannedLeaf : IScanned;
 
-public abstract class ScannedAbstract : IScanned;
+internal abstract class ScannedAbstract : IScanned;
 
-public sealed class ScannedGeneric<T> : IScanned;
+internal sealed class ScannedGeneric<T> : IScanned;
 
 [JsonConverter(typeof(ScannedConverter))]
-public sealed class ScannedWithConverter : IScanned;
+internal sealed class ScannedWithConverter : IScanned;
 
-public sealed class ScannedConverter : JsonConverter<ScannedWithConverter>
+internal sealed class ScannedConverter : JsonConverter<ScannedWithConverter>
 {
     public override ScannedWithConverter Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) => new();
 
