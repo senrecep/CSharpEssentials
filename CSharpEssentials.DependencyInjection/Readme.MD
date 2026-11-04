@@ -2,6 +2,16 @@
 
 Attribute-based service registration and decoration for `Microsoft.Extensions.DependencyInjection`. Mark a class, and it is registered with key-aware strategies. Decorate any registration, keyed or not, without touching its consumers.
 
+> Benchmarks against Scrutor 7.0.0 and manual registration (cold startup, warm registration, decoration, resolve and
+> Native AOT) are in [BENCHMARKS.md](./BENCHMARKS.md). On net10, cold register + build + resolve takes 26.2 ms for the
+> generated registry, 24.9 ms by hand and 34.8 ms for Scrutor (N = 50; 57.8 / 55.7 / 63.9 ms at N = 500). The
+> reflection fallback is slower than Scrutor (38.2 ms) and allocates more. Decorated resolve takes 164.6 ns, against
+> 110.1 ns for a hand-written factory and 309.6 ns for Scrutor. The generated path publishes with Native AOT without
+> warnings; Scrutor and the reflection fallback crash under AOT (samples without `TrimmerRootAssembly`). Decoration,
+> including on the generated path, still reads constructor metadata by reflection (no AOT warnings); see BENCHMARKS.md.
+> Design-time cost of the bundled source generator (cold and incremental runs against Injectio) is described in
+> [the generator BENCHMARKS.md](../CSharpEssentials.DependencyInjection.Generators/BENCHMARKS.md). Results are pending the full run.
+
 ## Installation
 
 ```bash

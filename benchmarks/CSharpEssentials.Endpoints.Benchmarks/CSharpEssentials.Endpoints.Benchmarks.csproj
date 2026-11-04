@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\CSharpEssentials.Endpoints\build\CSharpEssentials.Endpoints.props" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1822;CA1050;CA1812;S101;S3903;S1118;CA1515;S2068;IDE0008;IDE0021;IDE0005;IDE0078</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.Endpoints\CSharpEssentials.Endpoints.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Endpoints.Generators\CSharpEssentials.Endpoints.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Throughput\FastEndpointsHost\CSharpEssentials.Endpoints.Benchmarks.Throughput.FastEndpointsHost.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Plain10\CSharpEssentials.Endpoints.Benchmarks.Startup.Plain10.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Plain100\CSharpEssentials.Endpoints.Benchmarks.Startup.Plain100.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Plain500\CSharpEssentials.Endpoints.Benchmarks.Startup.Plain500.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Cse10\CSharpEssentials.Endpoints.Benchmarks.Startup.Cse10.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Cse100\CSharpEssentials.Endpoints.Benchmarks.Startup.Cse100.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Cse500\CSharpEssentials.Endpoints.Benchmarks.Startup.Cse500.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Fe10\CSharpEssentials.Endpoints.Benchmarks.Startup.Fe10.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Fe100\CSharpEssentials.Endpoints.Benchmarks.Startup.Fe100.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Fe500\CSharpEssentials.Endpoints.Benchmarks.Startup.Fe500.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' And '$(TargetFramework)' != 'net9.0'">
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Throughput\CarterHost\CSharpEssentials.Endpoints.Benchmarks.Throughput.CarterHost.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Carter10\CSharpEssentials.Endpoints.Benchmarks.Startup.Carter10.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Carter100\CSharpEssentials.Endpoints.Benchmarks.Startup.Carter100.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.Endpoints.Benchmarks.Startup\Carter500\CSharpEssentials.Endpoints.Benchmarks.Startup.Carter500.csproj" />
+  </ItemGroup>
+
+</Project>

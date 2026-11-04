@@ -4,6 +4,8 @@ Swashbuckle (Swagger) integration for `CSharpEssentials.AspNetCore`: versioned S
 
 > One host, one OpenAPI package: reference either `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle) or `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`), never both. Both use `Microsoft.OpenApi` 2.x.
 
+> **Benchmarks:** document generation for 50 Minimal API endpoints and 30 enums, plain `AddSwaggerGen` against the CSE enum, idempotency and optional route conventions and the full `AddSwagger` setup, warm and first document, is described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
+
 ## Installation
 
 ```bash

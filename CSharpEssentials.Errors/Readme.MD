@@ -12,6 +12,9 @@ Structured, type-safe error handling for .NET. Errors are data, not exceptions.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Core` and `CSharpEssentials.Enums`.
 
+> **Benchmarks:** creating errors, equality and hashing, errors from exceptions, metadata and record `ToString`, and JSON against
+> ErrorOr and FluentResults are documented in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Installation
 
 ```bash

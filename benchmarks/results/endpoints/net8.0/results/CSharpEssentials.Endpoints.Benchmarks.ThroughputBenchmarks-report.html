@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Endpoints.Benchmarks.ThroughputBenchmarks-20261102-002712</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method</th><th>Variant       </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Exceptions</th><th>Gen1</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>GetById</td><td>Plain</td><td>9.532 &mu;s</td><td>0.1803 &mu;s</td><td>0.1852 &mu;s</td><td>0.4883</td><td>-</td><td>-</td><td>9.11 KB</td>
+</tr><tr><td>Delete</td><td>Plain</td><td>7.584 &mu;s</td><td>0.1332 &mu;s</td><td>0.1246 &mu;s</td><td>0.4883</td><td>-</td><td>-</td><td>7.96 KB</td>
+</tr><tr><td>GetById</td><td>CseGenerated</td><td>9.482 &mu;s</td><td>0.0799 &mu;s</td><td>0.0667 &mu;s</td><td>0.5493</td><td>-</td><td>-</td><td>9.11 KB</td>
+</tr><tr><td>Delete</td><td>CseGenerated</td><td>7.381 &mu;s</td><td>0.1368 &mu;s</td><td>0.1280 &mu;s</td><td>0.4883</td><td>-</td><td>-</td><td>7.96 KB</td>
+</tr><tr><td>GetById</td><td>CseReflection</td><td>9.688 &mu;s</td><td>0.1425 &mu;s</td><td>0.1332 &mu;s</td><td>0.5493</td><td>-</td><td>-</td><td>9.11 KB</td>
+</tr><tr><td>Delete</td><td>CseReflection</td><td>7.352 &mu;s</td><td>0.0505 &mu;s</td><td>0.0448 &mu;s</td><td>0.4883</td><td>-</td><td>-</td><td>7.96 KB</td>
+</tr><tr><td>GetById</td><td>FastEndpoints</td><td>12.195 &mu;s</td><td>0.2423 &mu;s</td><td>0.3064 &mu;s</td><td>0.6104</td><td>-</td><td>0.6104</td><td>10.48 KB</td>
+</tr><tr><td>Delete</td><td>FastEndpoints</td><td>9.085 &mu;s</td><td>0.1092 &mu;s</td><td>0.0968 &mu;s</td><td>0.5493</td><td>-</td><td>-</td><td>9.22 KB</td>
+</tr><tr><td>GetById</td><td>FastE(...)ceGen [22]</td><td>12.029 &mu;s</td><td>0.2153 &mu;s</td><td>0.3156 &mu;s</td><td>0.6104</td><td>-</td><td>-</td><td>10.48 KB</td>
+</tr><tr><td>Delete</td><td>FastE(...)ceGen [22]</td><td>9.119 &mu;s</td><td>0.0824 &mu;s</td><td>0.0688 &mu;s</td><td>0.5493</td><td>-</td><td>-</td><td>9.22 KB</td>
+</tr></tbody></table>
+</body>
+</html>

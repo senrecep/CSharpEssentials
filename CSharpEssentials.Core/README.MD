@@ -2,6 +2,9 @@
 
 Foundational utilities and extensions for everyday .NET development. Zero internal dependencies.
 
+> Benchmarks against the BCL, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0 (case conversion, GUID text, random items and WithCancellation) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **String Conversions**: Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.

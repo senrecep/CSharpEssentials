@@ -2,6 +2,8 @@
 
 Composable, functional rule engine for .NET. Define business logic as small, reusable rules and combine them with a fluent API.
 
+> **Benchmarks:** sync and async trees, prebuilt vs rebuilt chains, short-circuit vs hand-written if/else, NRules and RulesEngine as reference columns: [BENCHMARKS.md](./BENCHMARKS.md).
+
 ## Features
 
 - **Three definition styles**: Class, `Func` field, or inline lambda. All are first-class.

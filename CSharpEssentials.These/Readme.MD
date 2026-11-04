@@ -2,6 +2,9 @@
 
 `These<TError, TValue>` is a three-state discriminated union: `Left` (error only), `Right` (value only), or `Both` (error and value together). Unlike `Result<T>`, it does not treat the presence of an error as an automatic failure. Use it when partial success carries a meaningful value alongside a warning or non-fatal error.
 
+> Benchmarks against a hand-written record (match, a Map/FlatMap/Match pipeline, partition and JSON) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **Three-state union**: `Left`, `Right`, `Both` with explicit state flags.

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1822;CA1050;CA1812;S101;S3903;S1118;CA1515;S2068;IDE0008;IDE0021;IDE0005;IDE0078</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+    <PackageReference Include="Scrutor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.DependencyInjection\CSharpEssentials.DependencyInjection.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\S50\CSharpEssentials.DependencyInjection.Benchmarks.Services.S50.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\S50.Decorators\CSharpEssentials.DependencyInjection.Benchmarks.Services.S50.Decorators.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\S500\CSharpEssentials.DependencyInjection.Benchmarks.Services.S500.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\T50\CSharpEssentials.DependencyInjection.Benchmarks.Services.T50.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\T500\CSharpEssentials.DependencyInjection.Benchmarks.Services.T500.csproj" />
+    <ProjectReference Include="..\CSharpEssentials.DependencyInjection.Benchmarks.Services\T2000\CSharpEssentials.DependencyInjection.Benchmarks.Services.T2000.csproj" />
+  </ItemGroup>
+
+</Project>

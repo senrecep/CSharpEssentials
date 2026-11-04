@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Comparison.Benchmarks.MapComparison-20261102-032118</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method              </th><th>Succeed</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>1.3026 ns</td><td>0.0015 ns</td><td>0.0014 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>8.9181 ns</td><td>0.0016 ns</td><td>0.0015 ns</td><td>6.85</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr</td><td>False</td><td>2.0264 ns</td><td>0.0028 ns</td><td>0.0026 ns</td><td>1.56</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults</td><td>False</td><td>162.6351 ns</td><td>1.4074 ns</td><td>1.3165 ns</td><td>124.86</td><td>0.99</td><td>0.0219</td><td>368 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>0.9414 ns</td><td>0.0046 ns</td><td>0.0043 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>8.9346 ns</td><td>0.0022 ns</td><td>0.0020 ns</td><td>9.49</td><td>0.04</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr</td><td>True</td><td>0.9426 ns</td><td>0.0025 ns</td><td>0.0023 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults</td><td>True</td><td>132.9675 ns</td><td>0.5695 ns</td><td>0.5327 ns</td><td>141.25</td><td>0.83</td><td>0.0172</td><td>288 B</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

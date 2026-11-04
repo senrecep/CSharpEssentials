@@ -10,6 +10,18 @@ dotnet add package CSharpEssentials.Endpoints
 
 Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzer and code fix are bundled in the package.
 
+> Benchmarks: cold and warm startup (10/100/500 endpoints), request throughput and Native AOT against plain Minimal APIs,
+> Carter and FastEndpoints are documented in [BENCHMARKS.md](./BENCHMARKS.md).
+> On net10, cold startup is within error of plain Minimal APIs and Carter. Per-request time is within
+> 10% of both on GET, DELETE and valid POST (Carter is 4% faster on a valid POST). On an invalid POST, plain Minimal
+> APIs takes 10% less time than CSE with the same validation engine, and Carter takes 1.37× as long. Against
+> FastEndpoints, cold startup takes 22% less time at 10 endpoints but 1.65× as long at 500 endpoints; FastEndpoints
+> takes 1.23-2.10× as long per request. The POST rows compare a DataAnnotations stack (Plain, CSE) with FluentValidation stacks (Carter
+> and FastEndpoints). FastEndpoints defers per-endpoint setup to the first request, so only the cold startup figures
+> are like-for-like. The generated path publishes as Native AOT with 0 IL warnings.
+> Design-time cost of the bundled source generator (cold and incremental runs against Immediate.Apis) is described in
+> [the generator BENCHMARKS.md](../CSharpEssentials.Endpoints.Generators/BENCHMARKS.md). Results are pending the full run.
+
 ## Endpoints and groups
 
 ```csharp

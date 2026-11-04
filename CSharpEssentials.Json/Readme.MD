@@ -2,6 +2,9 @@
 
 Enhanced JSON serialization utilities on top of `System.Text.Json`.
 
+> Benchmarks against System.Text.Json built-ins and Macross.Json.Extensions 3.0.0 (enums, flags, polymorphism and DateTime reads) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **Enum Conventions**: `[StringEnum]` enums read and write their wire names (`AddEnumConventions`); other enums keep the host's behavior.
