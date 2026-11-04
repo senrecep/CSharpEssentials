@@ -2,8 +2,8 @@
 # Run all benchmarks for every supported .NET framework and store results separately.
 #
 # Usage:
-#   ./run-benchmarks.sh                      # full run — all TFMs, all scenarios, max precision (~60 min)
-#   ./run-benchmarks.sh --quick              # fast run — one TFM (net9.0; net10.0 for validation, endpoints, efcore and generators), key scenarios, Short job (~10 min)
+#   ./run-benchmarks.sh                      # full run: all TFMs, all scenarios, max precision (~60 min)
+#   ./run-benchmarks.sh --quick              # fast run: one TFM (net9.0; net10.0 for validation, endpoints, efcore and generators), key scenarios, Short job (~10 min)
 #   ./run-benchmarks.sh --quick --tfm net10.0  # fast run on a specific TFM
 #   ./run-benchmarks.sh -- --filter "*Wide*" # pass extra BenchmarkDotNet args
 #   ./run-benchmarks.sh --project validation  # model validation vs FluentValidation / DataAnnotations / Microsoft.Extensions.Validation (net10+), enum validators, For overloads, assembly scan (the default suite)
@@ -205,6 +205,7 @@ else
 fi
 
 mkdir -p "$RESULTS_DIR"
+ANY_FAILED=false
 
 echo ""
 echo "======================================================="
@@ -220,6 +221,7 @@ for TFM in "${FRAMEWORKS[@]}"; do
     FAILED=false
     for PATTERN in "${PATTERNS[@]}"; do
         echo "  → filter: $PATTERN"
+        PATTERN_LOG="$(mktemp)"
         if dotnet run -c Release \
             --framework "$TFM" \
             --project "$PROJECT" \
@@ -229,17 +231,24 @@ for TFM in "${FRAMEWORKS[@]}"; do
             --artifacts "$ARTIFACTS" \
             "${JOB_ARGS[@]}" \
             "${EXTRA_ARGS[@]}" \
-            2>&1 | tee -a "$ARTIFACTS/run.log"; then
+            2>&1 | tee "$PATTERN_LOG"; then
             :
         else
             FAILED=true
         fi
+        # BenchmarkDotNet exits 0 when a benchmark throws and its row shows NA; its summary lists those under this header.
+        if grep -q "Benchmarks with issues" "$PATTERN_LOG"; then
+            FAILED=true
+        fi
+        cat "$PATTERN_LOG" >> "$ARTIFACTS/run.log"
+        rm -f "$PATTERN_LOG"
     done
 
     if [[ "$FAILED" == "false" ]]; then
-        echo "  ✓ $TFM completed — results in $ARTIFACTS/results/"
+        echo "  ✓ $TFM completed, results in $ARTIFACTS/results/"
     else
-        echo "  ✗ $TFM failed — see $ARTIFACTS/run.log"
+        ANY_FAILED=true
+        echo "  ✗ $TFM failed or has NA rows, see $ARTIFACTS/run.log"
     fi
 done
 
@@ -250,3 +259,7 @@ for TFM in "${FRAMEWORKS[@]}"; do
     echo "    $TFM → $RESULTS_DIR/$TFM/results/"
 done
 echo "======================================================="
+
+if [[ "$ANY_FAILED" == "true" ]]; then
+    exit 1
+fi
