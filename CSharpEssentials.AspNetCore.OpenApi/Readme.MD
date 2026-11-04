@@ -4,6 +4,8 @@
 
 > One host, one OpenAPI package: reference either `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle), never both. Both use `Microsoft.OpenApi` 2.x.
 
+> **Benchmarks:** document generation for 50 Minimal API endpoints and 30 enums, plain `AddOpenApi` against the CSE enum, idempotency and optional route conventions, warm and first document, is described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
+
 ## Installation
 
 ```bash
