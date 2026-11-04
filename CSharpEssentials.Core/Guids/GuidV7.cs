@@ -9,6 +9,7 @@ internal static class GuidV7
     private const long _fractionSlots = 1 << _fractionBits, _counterMask = (1 << _counterBits) - 1;
     private const int _poolSize = 1024, _randomStart = 6, _randomLength = _byteCount - _randomStart;
     private const long _unixEpochTicks = 621_355_968_000_000_000;
+    private const int _lastPackedSlot = 8;
     internal const string DisableRandomPoolSwitch = "CSharpEssentials.Guider.DisableRandomPool";
 
     private static readonly bool _usePool = !(AppContext.TryGetSwitch(DisableRandomPoolSwitch, out bool disabled) && disabled);
@@ -25,7 +26,7 @@ internal static class GuidV7
     [ThreadStatic]
     private static long _lastCallTicks;
 
-    private static long _lastPacked;
+    private static readonly long[] _lastPacked = new long[_lastPackedSlot * 2];
 
     internal static byte[]? CurrentPool() => _pool;
 
@@ -47,10 +48,10 @@ internal static class GuidV7
         long last, packed;
         do
         {
-            last = Volatile.Read(ref _lastPacked);
+            last = Volatile.Read(ref _lastPacked[_lastPackedSlot]);
             packed = Pack(last, utcTicks);
         }
-        while (Interlocked.CompareExchange(ref _lastPacked, packed, last) != last);
+        while (Interlocked.CompareExchange(ref _lastPacked[_lastPackedSlot], packed, last) != last);
         return ComposePacked(packed, bytes);
     }
 
