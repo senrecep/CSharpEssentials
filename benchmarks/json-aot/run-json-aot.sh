@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Native AOT check for the generated polymorphism path: publishes JsonAot (events in its own assembly, IEvent in JsonAotCore,
-# a JsonSerializerContext plus AddPolymorphism, no reflection API) with Native AOT, fails on any IL, C# or CSE warning, then runs the
-# binary, which exits 0 only when the round trips match.
+# Native AOT check for the generated polymorphism path: publishes JsonAot (IEvent in JsonAotCore, the events in JsonAotEvents, whose
+# registry the exe's registry calls, a JsonSerializerContext plus AddPolymorphism, no reflection API) with Native AOT, fails on any
+# IL, C# or CSE warning, then runs the binary, which exits 0 only when the round trips match.
 # Usage: run-json-aot.sh
 set -euo pipefail
 
@@ -9,7 +9,8 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 WORK=$(mktemp -d)
 
 cleanup() {
-    rm -rf "$HERE/JsonAot/bin" "$HERE/JsonAot/obj" "$HERE/JsonAotCore/bin" "$HERE/JsonAotCore/obj" "$WORK"
+    rm -rf "$HERE/JsonAot/bin" "$HERE/JsonAot/obj" "$HERE/JsonAotCore/bin" "$HERE/JsonAotCore/obj" \
+        "$HERE/JsonAotEvents/bin" "$HERE/JsonAotEvents/obj" "$WORK"
 }
 trap cleanup EXIT
 

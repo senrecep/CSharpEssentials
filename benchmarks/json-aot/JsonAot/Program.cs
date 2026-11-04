@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Json;
 using JsonAotCore;
+using JsonAotEvents;
 
 namespace JsonAot;
 

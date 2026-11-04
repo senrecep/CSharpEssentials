@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using JsonAotCore;
+using JsonAotEvents;
 
 namespace JsonAot;
 

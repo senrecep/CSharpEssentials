@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JsonAotCore\JsonAotCore.csproj" />
+    <ProjectReference Include="..\JsonAotEvents\JsonAotEvents.csproj" />
     <ProjectReference Include="..\..\..\CSharpEssentials.Json.Generators\CSharpEssentials.Json.Generators.csproj"
                       OutputItemType="Analyzer"
                       ReferenceOutputAssembly="false" />
