@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using CSharpEssentials.Clone;
 using FluentAssertions;
 
@@ -213,5 +214,18 @@ public class CloneExtensionsTests
         var cloned = source.AsQueryable().Clone().ToList();
 
         cloned[0].Child.Should().NotBeSameAs(source[0].Child);
+    }
+
+    [Fact]
+    public void Clone_IQueryable_ShouldCloneInMemoryWithoutProviderExpression()
+    {
+        List<TestCloneable> source =
+        [
+            new() { Value = 1, Name = "Item1" }
+        ];
+
+        IQueryable<TestCloneable> cloned = source.AsQueryable().Clone();
+
+        cloned.Expression.NodeType.Should().Be(ExpressionType.Constant);
     }
 }

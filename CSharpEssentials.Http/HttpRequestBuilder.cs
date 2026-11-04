@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
@@ -19,8 +21,7 @@ public sealed class HttpRequestBuilder
     private EnumConventions? _enumConventions;
     private EnumWireFormat? _enumWriteAs;
     private HttpContent? _content;
-    private object? _jsonValue;
-    private JsonSerializerOptions? _jsonOptions;
+    private Func<HttpContent>? _jsonContent;
     private bool _followRedirects;
     private int _maxRedirects = 5;
     private string? _idempotencyKey;
@@ -115,14 +116,29 @@ public sealed class HttpRequestBuilder
     public HttpRequestBuilder WithContent(HttpContent content)
     {
         _content = content;
-        _jsonValue = null;
+        _jsonContent = null;
         return this;
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public HttpRequestBuilder WithJsonContent(object value, JsonSerializerOptions? options = null)
     {
-        _jsonValue = value;
-        _jsonOptions = options;
+        _jsonContent = value is null ? null : () => JsonContent.Create(value, options: options ?? ResolveJsonOptions());
+        _content = null;
+        return this;
+    }
+
+    // A distinct name, not a WithJsonContent overload: WithJsonContent(dto, null) would bind to it and throw.
+    public HttpRequestBuilder WithJsonTypeInfoContent<T>(T value, JsonTypeInfo<T> typeInfo)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(typeInfo);
+#else
+        if (typeInfo is null)
+            throw new ArgumentNullException(nameof(typeInfo));
+#endif
+        _jsonContent = value is null ? null : () => JsonContent.Create(value, typeInfo);
         _content = null;
         return this;
     }
@@ -181,8 +197,8 @@ public sealed class HttpRequestBuilder
 
         var request = new HttpRequestMessage(_method, uriResult.Value);
 
-        if (_jsonValue is not null)
-            request.Content = JsonContent.Create(_jsonValue, options: _jsonOptions ?? ResolveJsonOptions());
+        if (_jsonContent is not null)
+            request.Content = _jsonContent();
         else if (_content is not null)
             request.Content = _content;
 
@@ -229,6 +245,8 @@ public sealed class HttpRequestBuilder
         return new Uri(template, UriKind.RelativeOrAbsolute);
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     private JsonSerializerOptions ResolveJsonOptions()
     {
         if (_enumConventions is null)
@@ -267,6 +285,8 @@ public sealed class HttpRequestBuilder
         }
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (client is null)
@@ -296,5 +316,28 @@ public sealed class HttpRequestBuilder
             request.Content = null;
 
         request.Dispose();
+    }
+
+    public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonTypeInfo<T> typeInfo, CancellationToken cancellationToken = default)
+    {
+        if (client is null)
+            return Error.Validation("HttpRequestBuilder.ClientRequired", "HttpClient cannot be null.");
+
+        Result<HttpRequestMessage> buildResult = Build();
+        if (buildResult.IsFailure)
+            return buildResult.Errors;
+
+        HttpRequestMessage request = buildResult.Value;
+        try
+        {
+            if (_followRedirects)
+                return await client.SendWithRedirectsAsResultAsync(request, typeInfo, _maxRedirects, cancellationToken).ConfigureAwait(false);
+
+            return await client.SendAsResultAsync(request, typeInfo, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release(request);
+        }
     }
 }

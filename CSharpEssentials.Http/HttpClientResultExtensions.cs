@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern;
@@ -7,6 +9,8 @@ namespace CSharpEssentials.Http;
 
 public static class HttpClientResultExtensions
 {
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public static Task<Result<T>> GetFromJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
@@ -17,12 +21,14 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken);
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public static Task<Result<T>> PostAsJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
@@ -34,7 +40,7 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken);
@@ -53,6 +59,8 @@ public static class HttpClientResultExtensions
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public static Task<Result<T>> PutAsJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
@@ -64,7 +72,7 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken);
@@ -83,6 +91,8 @@ public static class HttpClientResultExtensions
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public static Task<Result<T>> PatchAsJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
@@ -95,7 +105,7 @@ public static class HttpClientResultExtensions
             {
                 using HttpContent content = JsonContent.Create(value, options: options ?? EnhancedJsonSerializerOptions.DefaultOptions);
                 HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken);
@@ -125,6 +135,8 @@ public static class HttpClientResultExtensions
         }, cancellationToken).ConfigureAwait(false);
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public static Task<Result<T>> SendAsResultAsync<T>(
         this HttpClient client,
         HttpRequestMessage request,
@@ -135,7 +147,94 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync<T>(response, options, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
+            },
+            HandleException,
+            cancellationToken);
+    }
+
+    public static Task<Result<T>> GetFromJsonAsResultAsync<T>(
+        this HttpClient client,
+        Uri? requestUri,
+        JsonTypeInfo<T> typeInfo,
+        CancellationToken cancellationToken = default)
+    {
+        return Result.TryAsync(
+            async () =>
+            {
+                HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
+            },
+            HandleException,
+            cancellationToken);
+    }
+
+    public static Task<Result<T>> PostAsJsonAsResultAsync<TValue, T>(
+        this HttpClient client,
+        Uri? requestUri,
+        TValue value,
+        JsonTypeInfo<TValue> valueTypeInfo,
+        JsonTypeInfo<T> typeInfo,
+        CancellationToken cancellationToken = default)
+    {
+        return Result.TryAsync(
+            async () =>
+            {
+                HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
+            },
+            HandleException,
+            cancellationToken);
+    }
+
+    public static Task<Result<T>> PutAsJsonAsResultAsync<TValue, T>(
+        this HttpClient client,
+        Uri? requestUri,
+        TValue value,
+        JsonTypeInfo<TValue> valueTypeInfo,
+        JsonTypeInfo<T> typeInfo,
+        CancellationToken cancellationToken = default)
+    {
+        return Result.TryAsync(
+            async () =>
+            {
+                HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
+            },
+            HandleException,
+            cancellationToken);
+    }
+
+    public static Task<Result<T>> PatchAsJsonAsResultAsync<TValue, T>(
+        this HttpClient client,
+        Uri? requestUri,
+        TValue value,
+        JsonTypeInfo<TValue> valueTypeInfo,
+        JsonTypeInfo<T> typeInfo,
+        CancellationToken cancellationToken = default)
+    {
+        return Result.TryAsync(
+            async () =>
+            {
+                using HttpContent content = JsonContent.Create(value, valueTypeInfo);
+                HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
+            },
+            HandleException,
+            cancellationToken);
+    }
+
+    public static Task<Result<T>> SendAsResultAsync<T>(
+        this HttpClient client,
+        HttpRequestMessage request,
+        JsonTypeInfo<T> typeInfo,
+        CancellationToken cancellationToken = default)
+    {
+        return Result.TryAsync(
+            async () =>
+            {
+                HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken);
@@ -148,11 +247,14 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(action, HandleException, cancellationToken);
     }
 
-    private static async Task<Result<T>> HandleResponseAsync<T>(HttpResponseMessage response, JsonSerializerOptions? options, CancellationToken cancellationToken)
+    internal static async Task<Result<T>> HandleResponseAsync<T>(
+        HttpResponseMessage response,
+        Func<HttpContent, CancellationToken, Task<T?>> read,
+        CancellationToken cancellationToken)
     {
         if (response.IsSuccessStatusCode)
         {
-            T? value = await response.Content.ReadFromJsonAsync<T>(options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
+            T? value = await read(response.Content, cancellationToken).ConfigureAwait(false);
             if (value is null)
                 return Error.NotFound(description: "Response body was empty or could not be deserialized.");
             return value;

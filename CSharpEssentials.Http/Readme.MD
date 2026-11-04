@@ -114,6 +114,24 @@ Build `options` once with `new JsonSerializerOptions(JsonSerializerDefaults.Web)
 
 Roll out consumers before producers: a server moves its output from `Number` to `String` only after every client reads names.
 
+### Native AOT and source-generated JSON
+
+The overloads that take `JsonSerializerOptions` are marked `RequiresUnreferencedCode` and `RequiresDynamicCode`. In trimmed or Native AOT apps, pass a `JsonTypeInfo<T>` from a `JsonSerializerContext` instead:
+
+```csharp
+[JsonSerializable(typeof(User))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+
+Result<User> user = await client.GetFromJsonAsResultAsync(uri, AppJsonContext.Default.User);
+Result<User> created = await client.PostAsJsonAsResultAsync(uri, newUser, AppJsonContext.Default.User, AppJsonContext.Default.User);
+
+Result<User> sent = await HttpRequestBuilder.Post("users")
+    .WithJsonTypeInfoContent(newUser, AppJsonContext.Default.User)
+    .AsResultAsync(client, AppJsonContext.Default.User);
+```
+
+`PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `SendAsResultAsync`, `SendWithRedirectsAsResultAsync` and `ReadFromJsonAsResultAsync` have the same `JsonTypeInfo<T>` overloads. Because of them, a call that passes a literal `null` or `default` as the options argument (`GetFromJsonAsResultAsync<T>(uri, null)`) is now ambiguous; drop the argument or pass `(JsonSerializerOptions?)null`.
+
 ### Query String Builder
 
 ```csharp

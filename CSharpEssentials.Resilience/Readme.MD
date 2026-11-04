@@ -8,6 +8,8 @@ HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) wi
 dotnet add package CSharpEssentials.Resilience
 ```
 
+This package is not marked Native AOT compatible. A Native AOT publish that uses it gets ILC warning IL3054 from Polly's `DelegatingComponent.ExecuteCore` (generic recursion; ILC says an exception is thrown at run time if that code path is reached), and Polly's `AddRetry<TResult>` asks for `DynamicallyAccessedMemberTypes.All` on the result type, which the retry extensions cannot meet for `Result<T>` without trim warnings.
+
 ## Namespaces
 
 ```csharp
