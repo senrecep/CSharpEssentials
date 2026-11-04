@@ -54,7 +54,10 @@ public static class EnumValueFormatter
             return false;
         }
 
-        text = info.Accept(new FormatVisitor(value, format ?? conventions.WriteAs));
+        EnumWireFormat wireFormat = format ?? conventions.WriteAs;
+        text = info is IBoxedEnumFormatter formatter
+            ? formatter.FormatBoxed(value, wireFormat)
+            : info.Accept(new FormatVisitor(value, wireFormat));
         return true;
     }
 
@@ -75,29 +78,53 @@ public static class EnumValueFormatter
 
         EnumWireFormat wireFormat = format ?? conventions.WriteAs;
         if (TryGetInfo(value, conventions, out IEnumInfo? info))
-            return info.Accept(new FormatManyVisitor(value, wireFormat, values));
+        {
+            AddFormatted(info, value, wireFormat, values);
+            return true;
+        }
 
         if (value is string || value is not IEnumerable items)
             return false;
 
-        List<string> formatted = [];
+        int start = values.Count;
         bool hasItems = false;
-        foreach (object? item in items)
+        try
         {
-            if (item is null)
-                continue;
-            if (!TryGetInfo(item, conventions, out IEnumInfo? itemInfo))
-                return false;
+            foreach (object? item in items)
+            {
+                if (item is null)
+                    continue;
+                if (!TryGetInfo(item, conventions, out IEnumInfo? itemInfo))
+                {
+                    RemoveFrom(values, start);
+                    return false;
+                }
 
-            hasItems = itemInfo.Accept(new FormatManyVisitor(item, wireFormat, formatted));
+                AddFormatted(itemInfo, item, wireFormat, values);
+                hasItems = true;
+            }
+        }
+        catch
+        {
+            RemoveFrom(values, start);
+            throw;
         }
 
-        if (!hasItems)
-            return false;
+        return hasItems;
+    }
 
-        foreach (string text in formatted)
-            values.Add(text);
-        return true;
+    private static void AddFormatted(IEnumInfo info, object value, EnumWireFormat format, IList<string> values)
+    {
+        if (info is IBoxedEnumFormatter formatter)
+            formatter.AddFormatted(value, format, values);
+        else
+            _ = info.Accept(new FormatManyVisitor(value, format, values));
+    }
+
+    private static void RemoveFrom(IList<string> values, int start)
+    {
+        for (int i = values.Count - 1; i >= start; i--)
+            values.RemoveAt(i);
     }
 
     private static bool TryGetInfo([NotNullWhen(true)] object? value, EnumConventions conventions, [NotNullWhen(true)] out IEnumInfo? info)

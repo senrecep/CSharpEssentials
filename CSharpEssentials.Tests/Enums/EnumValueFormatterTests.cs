@@ -265,6 +265,30 @@ public class EnumValueFormatterTests
 
         act.Should().Throw<EnumValueException>();
     }
+
+    [Fact]
+    public void TryFormatMany_Should_Leave_Values_Unchanged_When_An_Item_Throws()
+    {
+        List<string> values = ["existing"];
+
+        Action act = () => EnumValueFormatter.TryFormatMany(
+            new[] { FormatterInt.MinValue, FormatterInt.SecondValue, (FormatterInt)42 }, Conventions, values);
+
+        act.Should().Throw<EnumValueException>();
+        values.Should().Equal("existing");
+    }
+
+    [Fact]
+    public void TryFormatMany_Should_Leave_Values_Unchanged_When_A_Later_Item_Is_Not_Handled()
+    {
+        List<string> values = ["existing"];
+
+        bool formatted = EnumValueFormatter.TryFormatMany(
+            new object[] { FormatterInt.MinValue, FormatterInt.SecondValue, DayOfWeek.Monday }, Conventions, values);
+
+        formatted.Should().BeFalse();
+        values.Should().Equal("existing");
+    }
 }
 
 [StringEnum]

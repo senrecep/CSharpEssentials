@@ -15,7 +15,7 @@ namespace CSharpEssentials.Enums;
 /// Instances are created by generated code (<c>[StringEnum]</c>) and registered in <see cref="EnumMetadata"/>, or created by
 /// <see cref="EnumMetadata.GetOrCreateWithReflection"/>.
 /// </remarks>
-public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
+public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum : struct, Enum
 {
     private const int MaxErrorValueLength = 64;
 
@@ -292,6 +292,16 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         if (!IsDefinedRaw(raw))
             throw Undefined(raw);
         Decompose(raw, names);
+    }
+
+    string IBoxedEnumFormatter.FormatBoxed(object value, EnumWireFormat format) => Format((TEnum)value, format);
+
+    void IBoxedEnumFormatter.AddFormatted(object value, EnumWireFormat format, IList<string> values)
+    {
+        if (IsFlags && format == EnumWireFormat.String)
+            FormatFlags((TEnum)value, values);
+        else
+            values.Add(Format((TEnum)value, format));
     }
 
     /// <summary>
