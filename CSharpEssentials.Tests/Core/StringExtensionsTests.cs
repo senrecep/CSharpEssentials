@@ -239,4 +239,45 @@ public class StringExtensionsTests
 
         input.ToSnakeCase().Should().Be(string.Concat(Enumerable.Repeat("用户_name", 64)));
     }
+
+    [Theory]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(129)]
+    [InlineData(256)]
+    [InlineData(257)]
+    [InlineData(600)]
+    public void ToSnakeCase_Fits_When_Every_Character_Needs_A_Separator(int pairs)
+    {
+        string input = string.Concat(Enumerable.Repeat("A1", pairs));
+
+        input.ToSnakeCase().Should().Be(string.Join("_", Enumerable.Repeat("a_1", pairs)));
+        input.ToTitleCase().Should().Be(string.Join(" ", Enumerable.Repeat("A 1", pairs)));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(255)]
+    [InlineData(256)]
+    [InlineData(600)]
+    public void ToUnderscoreCamelCase_Fits_When_Input_Has_No_Separators(int length)
+    {
+        string input = new('a', length);
+
+        input.ToUnderscoreCamelCase().Should().Be("_" + input);
+    }
+
+    [Fact]
+    public void ToSnakeCase_Handles_Mixed_Ascii_And_Non_Ascii_Characters()
+    {
+        "Über_straßeName用户ID9".ToSnakeCase().Should().Be("über_straße_name用户_id_9");
+        "Über_straßeName用户ID9".ToMacroCase().Should().Be("ÜBER_STRAßE_NAME用户_ID_9");
+    }
+
+    [Fact]
+    public void ToMacroCase_WithTurkishCulture_Uses_The_Culture_For_Ascii_Letters()
+    {
+        "isim".ToMacroCase(CultureInfo.GetCultureInfo("tr-TR")).Should().Be("İSİM");
+        "isim".ToMacroCase().Should().Be("ISIM");
+    }
 }

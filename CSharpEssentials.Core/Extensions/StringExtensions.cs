@@ -11,7 +11,7 @@ public static class StringExtensions
     private const char Space = ' ';
     private const int One = 1;
     private const int Zero = 0;
-    private const int StackAllocThreshold = 256;
+    private const int StackAllocThreshold = 512;
 
     private enum CaseType
     {
@@ -43,14 +43,9 @@ public static class StringExtensions
         bool isFirstCharacter = true;
         bool insertSeparator = caseType is not CaseType.Camel and not CaseType.UnderscoreCamel;
 
-        int extraSize = caseType == CaseType.UnderscoreCamel ? One : Zero;
-        int spanSize = caseType is CaseType.Pascal or CaseType.Camel or CaseType.UnderscoreCamel
-            ? CalculateSpanSizeForPascalOrCamelCase(value) + extraSize
-            : CalculateSpanSizeForKebabOrSnakeCase(value);
-
-        int bufferLength = value.Length + spanSize;
+        int bufferLength = NeedsSeparator(caseType) ? value.Length * 2 : value.Length + One;
         char[]? rented = bufferLength <= StackAllocThreshold ? null : ArrayPool<char>.Shared.Rent(bufferLength);
-        Span<char> newString = rented is null ? stackalloc char[StackAllocThreshold] : rented;
+        Span<char> newString = rented is null ? stackalloc char[bufferLength] : rented;
         try
         {
             int newIndex = caseType == CaseType.UnderscoreCamel ? One : Zero;
@@ -65,7 +60,7 @@ public static class StringExtensions
             for (int i = Zero; i < value.Length; i++)
             {
                 UnicodeCategory previous = current;
-                current = char.GetUnicodeCategory(value[i]);
+                current = GetCategory(value[i]);
                 insertSeparator = insertSeparator.InsertSeparator(previous, current);
 
                 if (!IsSpecialCharacter(current))
@@ -111,11 +106,23 @@ public static class StringExtensions
         };
     }
 
-    private static char ToUpper(char c, CultureInfo? culture) =>
-        culture is null ? char.ToUpperInvariant(c) : char.ToUpper(c, culture);
+    private static char ToUpper(char c, CultureInfo? culture)
+    {
+        if (culture is not null)
+            return char.ToUpper(c, culture);
+        if (c >= 128)
+            return char.ToUpperInvariant(c);
+        return c is >= 'a' and <= 'z' ? (char)(c - 32) : c;
+    }
 
-    private static char ToLower(char c, CultureInfo? culture) =>
-        culture is null ? char.ToLowerInvariant(c) : char.ToLower(c, culture);
+    private static char ToLower(char c, CultureInfo? culture)
+    {
+        if (culture is not null)
+            return char.ToLower(c, culture);
+        if (c >= 128)
+            return char.ToLowerInvariant(c);
+        return c is >= 'A' and <= 'Z' ? (char)(c + 32) : c;
+    }
 
     private static bool NeedsSeparator(CaseType caseType) =>
         caseType is CaseType.Kebab or CaseType.Snake or CaseType.Macro or CaseType.Train or CaseType.Title;
@@ -130,33 +137,17 @@ public static class StringExtensions
     };
 
 
-    private static int CalculateSpanSizeForKebabOrSnakeCase(ReadOnlySpan<char> text)
+    private static UnicodeCategory GetCategory(char c)
     {
-        UnicodeCategory previous = char.GetUnicodeCategory(text[Zero]);
-        int skips = IsSpecialCharacter(previous) ? One : Zero;
-        int divs = Zero;
-        for (int i = One; i < text.Length; i++)
-        {
-            UnicodeCategory current = char.GetUnicodeCategory(text[i]);
-            skips += IsSpecialCharacter(current) ? One : Zero;
-            divs += CheckCategory(previous, current) ? One : Zero;
-            previous = current;
-        }
-        int result = divs - skips;
-        return result > Zero ? result : Zero;
+        if (c >= 128)
+            return char.GetUnicodeCategory(c);
+        if (c is >= 'a' and <= 'z')
+            return UnicodeCategory.LowercaseLetter;
+        if (c is >= 'A' and <= 'Z')
+            return UnicodeCategory.UppercaseLetter;
+        return c is >= '0' and <= '9' ? UnicodeCategory.DecimalDigitNumber : UnicodeCategory.OtherSymbol;
     }
 
-
-    private static int CalculateSpanSizeForPascalOrCamelCase(ReadOnlySpan<char> text)
-    {
-        int skips = Zero;
-        for (int i = Zero; i < text.Length - One; i++)
-        {
-            UnicodeCategory current = char.GetUnicodeCategory(text[i]);
-            skips -= IsSpecialCharacter(current) ? One : Zero;
-        }
-        return skips;
-    }
     private static bool CheckCategory(UnicodeCategory previous, UnicodeCategory current) =>
         previous != current && (current is UnicodeCategory.UppercaseLetter or UnicodeCategory.TitlecaseLetter or UnicodeCategory.DecimalDigitNumber
             || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
