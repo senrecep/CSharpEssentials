@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CSharpEssentials.Entity.Interfaces;
 
 namespace CSharpEssentials.Entity;
@@ -8,6 +9,7 @@ namespace CSharpEssentials.Entity;
 public abstract class EntityBase : IEntityBase
 {
     private readonly List<IDomainEvent> _domainEvents = [];
+    private ReadOnlyCollection<IDomainEvent>? _domainEventsView;
 
 #if NET9_0_OR_GREATER
     public DateTimeOffset CreatedAt
@@ -30,7 +32,12 @@ public abstract class EntityBase : IEntityBase
 
     public string? UpdatedBy { get; private set; }
 
-    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEvents.ToList().AsReadOnly();
+    /// <summary>
+    /// A read-only live view of the raised events: it reflects later <see cref="Raise"/> and
+    /// <see cref="ClearDomainEvents"/> calls. Copy it (for example with <c>[.. entity.DomainEvents]</c>) before
+    /// clearing or raising while you iterate.
+    /// </summary>
+    public IReadOnlyList<IDomainEvent> DomainEvents => _domainEventsView ??= _domainEvents.AsReadOnly();
 
     public void ClearDomainEvents() => _domainEvents.Clear();
 

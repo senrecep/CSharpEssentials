@@ -839,7 +839,7 @@ Result checkout = await RuleEngine.EvaluateAsync(
 | `CreatedBy` | `string?` | Who created it |
 | `UpdatedAt` | `DateTimeOffset?` | When last updated |
 | `UpdatedBy` | `string?` | Who last updated it |
-| `DomainEvents` | `IReadOnlyList<IDomainEvent>` | Pending domain events (a snapshot, safe to iterate while raising or clearing) |
+| `DomainEvents` | `IReadOnlyList<IDomainEvent>` | Pending domain events as a read-only live view; copy it before raising or clearing while iterating |
 | `Raise(event)` | method | Queues a domain event for later dispatch |
 | `ClearDomainEvents()` | method | Clears the event queue (call after publishing) |
 | `SetCreatedInfo(at, by)` | method | Sets creation audit fields; throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue` |

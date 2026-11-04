@@ -119,9 +119,32 @@ public class EntityBaseTests
         entity.Raise(domainEvent);
         IReadOnlyList<IDomainEvent> events = entity.DomainEvents;
 
-        events.Should().NotBeNull();
-        // The list is read-only, so we can't modify it directly
-        // This is tested by the fact that ClearDomainEvents works
+        events.Should().BeOfType<System.Collections.ObjectModel.ReadOnlyCollection<IDomainEvent>>();
+        ((ICollection<IDomainEvent>)events).IsReadOnly.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DomainEvents_ShouldBeLiveView_ThatReflectsLaterRaiseAndClear()
+    {
+        TestEntity entity = new();
+        TestDomainEvent first = new() { Message = "First" };
+        TestDomainEvent second = new() { Message = "Second" };
+        entity.Raise(first);
+
+        IReadOnlyList<IDomainEvent> events = entity.DomainEvents;
+        entity.Raise(second);
+
+        events.Should().Equal(first, second);
+        entity.ClearDomainEvents();
+        events.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DomainEvents_ShouldReturnSameInstance_OnEveryRead()
+    {
+        TestEntity entity = new();
+
+        entity.DomainEvents.Should().BeSameAs(entity.DomainEvents);
     }
 
     [Fact]
