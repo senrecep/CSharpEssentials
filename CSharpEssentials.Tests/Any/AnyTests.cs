@@ -173,12 +173,20 @@ public class AnyTests
     }
 
     [Fact]
-    public void ToString_ShouldReturnJson()
+    public void ToString_ShouldReturnTheValueToString()
     {
         Any<int, string> any = 42;
         string str = any.ToString();
 
-        str.Should().NotBeNullOrEmpty();
+        str.Should().Be("42");
+    }
+
+    [Fact]
+    public void ToString_WithNullValue_ShouldReturnEmptyString()
+    {
+        Any<int, string> any = default;
+
+        any.ToString().Should().BeEmpty();
     }
 
     [Fact]

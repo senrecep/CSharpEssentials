@@ -327,6 +327,13 @@ public class AnyT6Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string, bool, double, long, decimal> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string, bool, double, long, decimal> original = 42;

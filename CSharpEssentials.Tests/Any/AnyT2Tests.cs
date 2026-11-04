@@ -130,6 +130,13 @@ public class AnyT2Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string> original = 42;

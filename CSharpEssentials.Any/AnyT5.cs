@@ -1,6 +1,5 @@
 
 using System.Text.Json.Serialization;
-using CSharpEssentials.Json;
 
 namespace CSharpEssentials.Any;
 
@@ -107,5 +106,5 @@ public readonly struct Any<T0, T1, T2, T3, T4>
     public static Any<T0, T1, T2, T3, T4> Fourth(T3 value) => value;
     public static Any<T0, T1, T2, T3, T4> Fifth(T4 value) => value;
 
-    public override string ToString() => Value.ConvertToJson();
+    public override string ToString() => Value?.ToString() ?? string.Empty;
 }
