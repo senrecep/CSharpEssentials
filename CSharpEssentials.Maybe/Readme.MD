@@ -158,7 +158,7 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 | `TryFirst()`, `TryFirst(predicate)`, `TryLast()`, `TryLast(predicate)` | `Maybe<T>` | First or last element, `None` when there is none |
 | `dictionary.TryFind(key)` | `Maybe<TValue>` | Lookup on an `IReadOnlyDictionary` |
 
-`TryFirst` is built on `FirstOrDefault`: for a sequence of value types such as `int[]`, an empty sequence or a predicate without a match gives `Some(default)` instead of `None`. `TryLast` and the other helpers do not have this limitation.
+`TryFirst` is built on `FirstOrDefault`: for a sequence of value types such as `int[]`, an empty sequence or a predicate without a match gives `Some(default)` instead of `None`. `TryLast` and the other helpers do not have this limitation. On an `IList<T>` or `IReadOnlyList<T>`, `TryLast` reads the last element by index, and `TryLast(predicate)` walks from the end and stops at the first match.
 
 ### Choosing between `T?`, `Maybe<T>` and `Result<T>`
 
@@ -231,3 +231,7 @@ Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 // Async
 Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
 ```
+
+## Upgrading to 8.0
+
+`TryLast(predicate)` on an `IList<T>` or `IReadOnlyList<T>` now calls the predicate from the last element backwards and stops at the first match, the way `Enumerable.LastOrDefault` does. The result is the same, but a predicate with side effects sees fewer calls in a different order. Other sequences are still enumerated from the start.
