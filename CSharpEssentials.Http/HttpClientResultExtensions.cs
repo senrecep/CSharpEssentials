@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern;
@@ -11,20 +12,21 @@ public static class HttpClientResultExtensions
 {
     [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
     [RequiresDynamicCode(HttpJson.SerializationMessage)]
-    public static Task<Result<T>> GetFromJsonAsResultAsync<T>(
+    public static async Task<Result<T>> GetFromJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
         JsonSerializerOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            async () =>
-            {
-                using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
-            },
-            HandleException,
-            cancellationToken);
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return HandleException(ex);
+        }
     }
 
     [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
@@ -153,20 +155,21 @@ public static class HttpClientResultExtensions
             cancellationToken);
     }
 
-    public static Task<Result<T>> GetFromJsonAsResultAsync<T>(
+    public static async Task<Result<T>> GetFromJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
         JsonTypeInfo<T> typeInfo,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            async () =>
-            {
-                using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
-            },
-            HandleException,
-            cancellationToken);
+        try
+        {
+            using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+            return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return HandleException(ex);
+        }
     }
 
     public static Task<Result<T>> PostAsJsonAsResultAsync<TValue, T>(
