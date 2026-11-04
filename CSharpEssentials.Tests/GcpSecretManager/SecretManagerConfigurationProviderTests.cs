@@ -688,6 +688,45 @@ public class SecretManagerConfigurationProviderTests
         failingEnumerator.Verify(x => x.MoveNextAsync(), Times.Once);
     }
 
+    [Fact]
+    public async Task LoadAsync_WhenLoaderRejectsEverySecret_ShouldNotAccessAnySecretVersion()
+    {
+        List<Secret> secrets = [CreateSecret("project", "ignored")];
+        Mock<SecretManagerServiceClient> mockClient = CreateMockClient(secrets, []);
+        var loader = new Mock<ISecretManagerConfigurationLoader>();
+        loader.Setup(x => x.ShouldLoadSecret(It.IsAny<Secret>(), It.IsAny<ProjectSecretConfiguration>()))
+            .Returns(false);
+        var config = new ProjectSecretConfiguration { ProjectId = "project" };
+        SecretManagerConfigurationProvider provider = CreateProvider(mockClient, [config], loader.Object);
+
+        await provider.LoadAsync();
+
+        provider.GetChildKeys([], null).Should().BeEmpty();
+        loader.Verify(x => x.ShouldLoadSecret(secrets[0], config), Times.Once);
+        mockClient.Verify(
+            x => x.AccessSecretVersionAsync(It.IsAny<AccessSecretVersionRequest>(), It.IsAny<CallSettings>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task LoadAsync_WhenProjectContextIsIncomplete_ShouldLogCriticalErrorAndRethrow()
+    {
+        var logger = new CapturingLogger();
+        var options = new SecretManagerConfigurationOptions { LoggerFactory = new CapturingLoggerFactory(logger) };
+        var provider = new SecretManagerConfigurationProvider(
+            [new ProjectSecretLoadContext(Mock.Of<SecretManagerServiceClient>(), null!, new ProjectSecretConfiguration { ProjectId = "project" })],
+            new DefaultSecretManagerConfigurationLoader(),
+            options);
+
+        Func<Task> act = provider.LoadAsync;
+
+        Exception thrown = (await act.Should().ThrowAsync<Exception>()).Which;
+        logger.Entries.Should().ContainSingle(e =>
+            e.Level == LogLevel.Error &&
+            e.Exception == thrown &&
+            e.Message == "Critical error during secret loading");
+    }
+
     private sealed class CapturingLoggerFactory(ILogger logger) : ILoggerFactory
     {
         public void AddProvider(ILoggerProvider provider) { }
