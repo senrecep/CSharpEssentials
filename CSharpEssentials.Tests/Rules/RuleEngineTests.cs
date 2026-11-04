@@ -519,6 +519,22 @@ public class RuleEngineTests
         result.IsFailure.Should().BeTrue();
     }
 
+    [Fact]
+    public void Evaluate_IAndRule_ChildFailure_ShouldStopAndReturnItsErrors()
+    {
+        TestContext ctx = new();
+        var error = Error.Failure("E1", "Fail");
+        IAndRule<TestContext> rule = new AndRule(
+            new SimpleRule(_ => Result.Success()),
+            [
+                new SimpleRule(c => { c.ExecutedRules.Add("R1"); return Result.Failure(error); }),
+                new SimpleRule(c => { c.ExecutedRules.Add("R2"); return Result.Success(); })
+            ]);
+        Result result = RuleEngine.Evaluate(rule, ctx);
+        result.Errors.Should().ContainSingle().Which.Code.Should().Be("E1");
+        ctx.ExecutedRules.Should().Equal("R1");
+    }
+
     #endregion
 
     #region Evaluate - IAndAsyncRule<TContext>
