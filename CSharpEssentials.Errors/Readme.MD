@@ -177,7 +177,7 @@ This pattern provides discoverability (IDE autocomplete per domain), type-safe e
 
 The nested entry keeps only the short type name (`GetType().Name`), the message, the stack trace and the inner exception chain. The full type name, `Data`, `HResult` and the exception object itself are dropped, so code that rethrew `metadata["exception"]` or tested it with `is SqlException` has no key to migrate to. Keep the exception in its own variable if you need its identity.
 
-`exceptionStackTrace` holds `exception.StackTrace` and nothing else. An exception that was never thrown has no stack trace, so the key is present with a `null` value. Earlier versions fell back to `Environment.StackTrace`, which recorded where the metadata was built rather than where the exception came from and cost a full stack walk on every call. Call `AddStackTrace()` if you want the current call stack.
+`exceptionStackTrace` holds `exception.StackTrace` and nothing else. An exception that was never thrown has no stack trace, so the key is present with a `null` value. Earlier versions fell back to `Environment.StackTrace`, which recorded where the metadata was built rather than where the exception came from and cost a full stack walk on every call. Call `AddStackTrace()` if you want the current call stack. Because the key no longer depends on the call site, `Error.Exception` values built from the same unthrown exception now compare equal.
 
 `Error` equality and `GetHashCode` now compare nested `ErrorMetadata` values by content. Do not add a metadata instance to itself (directly or through a chain): hashing or comparing such a cycle overflows the stack.
 
