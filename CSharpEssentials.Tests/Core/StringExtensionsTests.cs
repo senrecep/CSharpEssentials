@@ -257,14 +257,16 @@ public class StringExtensionsTests
 
     [Theory]
     [InlineData(1)]
-    [InlineData(255)]
-    [InlineData(256)]
+    [InlineData(511)]
+    [InlineData(512)]
     [InlineData(600)]
     public void ToUnderscoreCamelCase_Fits_When_Input_Has_No_Separators(int length)
     {
         string input = new('a', length);
 
         input.ToUnderscoreCamelCase().Should().Be("_" + input);
+        input.ToCamelCase().Should().Be(input);
+        input.ToPascalCase().Should().Be("A" + input[1..]);
     }
 
     [Fact]
