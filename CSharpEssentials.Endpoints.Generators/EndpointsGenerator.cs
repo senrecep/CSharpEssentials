@@ -85,7 +85,7 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
         });
     }
 
-    private static bool IsCandidate(SyntaxNode node)
+    internal static bool IsCandidate(SyntaxNode node)
     {
         if (node is not TypeDeclarationSyntax type || type is InterfaceDeclarationSyntax)
         {

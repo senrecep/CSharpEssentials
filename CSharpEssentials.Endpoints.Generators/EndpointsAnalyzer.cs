@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace CSharpEssentials.Endpoints.Generators;
 
 /// <summary>
-/// Reports endpoint and group types that the endpoints generator cannot map, duplicate routes and explicit endpoint names that cannot be reserved or repeat (CSE1001–CSE1011).
+/// Reports endpoint and group types that the endpoints generator cannot map, duplicate routes and explicit endpoint names that cannot be reserved or repeat (CSE1001–CSE1012).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
@@ -26,7 +26,8 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
         EndpointDiagnostics.RefStructType,
         EndpointDiagnostics.RegistryNameCollision,
         EndpointDiagnostics.DuplicateEndpointName,
-        EndpointDiagnostics.NonConstantEndpointName);
+        EndpointDiagnostics.NonConstantEndpointName,
+        EndpointDiagnostics.InheritedMapNotGenerated);
 
     /// <inheritdoc />
     public override void Initialize(AnalysisContext context)
@@ -40,9 +41,18 @@ public sealed class EndpointsAnalyzer : DiagnosticAnalyzer
                 symbolContext =>
                 {
                     AnalyzeType(symbolContext);
-                    if (symbolContext.Symbol is INamedTypeSymbol type && EndpointSymbolRules.GetGeneratedChain(type) is not null)
+                    if (symbolContext.Symbol is not INamedTypeSymbol type || EndpointSymbolRules.GetGeneratedChain(type) is null)
+                    {
+                        return;
+                    }
+
+                    if (type.DeclaringSyntaxReferences.Any(reference => EndpointsGenerator.IsCandidate(reference.GetSyntax(symbolContext.CancellationToken))))
                     {
                         ownEndpoints.Add(type.ToDisplayString());
+                    }
+                    else if (!EndpointSymbolRules.IsExcluded(type))
+                    {
+                        symbolContext.ReportDiagnostic(Diagnostic.Create(EndpointDiagnostics.InheritedMapNotGenerated, type.Locations.FirstOrDefault(), type.ToDisplayString()));
                     }
                 },
                 SymbolKind.NamedType);

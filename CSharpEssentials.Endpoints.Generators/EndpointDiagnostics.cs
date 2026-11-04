@@ -120,4 +120,14 @@ internal static class EndpointDiagnostics
         isEnabledByDefault: true,
         description: "Generated registries reserve constant names set with WithName(...) or with EndpointNameAttribute, EndpointNameMetadata or RouteNameMetadata in WithMetadata(...). A name that is computed at runtime outside an IEndpoint or IEndpointGroup type is not known to OperationNaming.TypeName. Use a constant, or map the endpoint through an IEndpoint type.",
         helpLinkUri: HelpLink);
+
+    public static readonly DiagnosticDescriptor InheritedMapNotGenerated = new(
+        "CSE1012",
+        "Endpoint inherits Map and is not mapped by the generator",
+        "Endpoint '{0}' inherits Map from a base class and is not mapped by the generator; declare static Map on it or make it partial",
+        Category,
+        DiagnosticSeverity.Warning,
+        isEnabledByDefault: true,
+        description: "The generator maps a non-partial type only when the type declares static Map itself. A non-partial class that inherits Map from an endpoint base class is left out of the generated registry, so MapAllEndpoints does not map it.",
+        helpLinkUri: HelpLink);
 }
