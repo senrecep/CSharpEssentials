@@ -167,7 +167,213 @@ public class HttpClientRedirectExtensionsTests
         handler.RequestCount.Should().Be(2);
     }
 
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_Should_Dispose_Final_Response()
+    {
+        using var content = new TrackingContent();
+        using var response = new HttpResponseMessage(HttpStatusCode.InternalServerError) { Content = content };
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com/api"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsFailure.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_Generic_Should_Dispose_Final_Response()
+    {
+        using var content = new TrackingContent();
+        using var response = new HttpResponseMessage(HttpStatusCode.NotFound) { Content = content };
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com/api"));
+        Result<TestDto> result = await client.SendWithRedirectsAsResultAsync<TestDto>(request);
+
+        result.IsFailure.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.NotModified)]
+    [InlineData(HttpStatusCode.MultipleChoices)]
+    [InlineData(HttpStatusCode.UseProxy)]
+    public async Task SendWithRedirectsAsResultAsync_WithNonRedirect3xx_Should_Return_Status_Error(HttpStatusCode status)
+    {
+        using var response = new HttpResponseMessage(status);
+        response.Headers.Location = new Uri("https://test.com/other");
+        using var handler = new MockHandler(response);
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com/api"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be($"Http.{(int)status}");
+    }
+
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_WithTwo307Hops_Should_Resend_Body_On_Every_Hop()
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath switch
+        {
+            "/start" => Redirect(HttpStatusCode.TemporaryRedirect, "https://test.com/a"),
+            "/a" => Redirect(HttpStatusCode.TemporaryRedirect, "https://test.com/b"),
+            _ => new HttpResponseMessage(HttpStatusCode.OK)
+        });
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri("https://test.com/start"))
+        {
+            Content = new StringContent("payload")
+        };
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        handler.Requests.Select(r => r.Body).Should().Equal("payload", "payload", "payload");
+        handler.Requests.Select(r => r.Method).Should().AllBeEquivalentTo(HttpMethod.Post);
+        handler.Requests[2].ContentType.Should().StartWith("text/plain");
+    }
+
+    [Theory]
+    [InlineData("POST", HttpStatusCode.SeeOther, "GET")]
+    [InlineData("PUT", HttpStatusCode.SeeOther, "GET")]
+    [InlineData("POST", HttpStatusCode.Found, "GET")]
+    [InlineData("POST", HttpStatusCode.MovedPermanently, "GET")]
+    [InlineData("PUT", HttpStatusCode.Found, "PUT")]
+    [InlineData("POST", HttpStatusCode.TemporaryRedirect, "POST")]
+    [InlineData("POST", HttpStatusCode.PermanentRedirect, "POST")]
+    public async Task SendWithRedirectsAsResultAsync_Should_Apply_Redirect_Method_Rules(string method, HttpStatusCode status, string expectedMethod)
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/submit"
+            ? Redirect(status, "/result")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(new HttpMethod(method), new Uri("https://test.com/submit"))
+        {
+            Content = new StringContent("payload")
+        };
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        RecordedRequest second = handler.Requests[1];
+        second.Uri.Should().Be(new Uri("https://test.com/result"));
+        second.Method.Method.Should().Be(expectedMethod);
+        second.Body.Should().Be(expectedMethod == "GET" ? null : "payload");
+    }
+
+    [Theory]
+    [InlineData("https://b.test/y", false)]
+    [InlineData("http://a.test/y", false)]
+    [InlineData("https://a.test:8443/y", false)]
+    [InlineData("https://a.test/y", true)]
+    [InlineData("/y", true)]
+    public async Task SendWithRedirectsAsResultAsync_Should_Strip_Credentials_On_Cross_Origin_Redirect(string location, bool sameOrigin)
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/x"
+            ? Redirect(HttpStatusCode.Found, location)
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://a.test/x"));
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "token");
+        request.Headers.TryAddWithoutValidation("Cookie", "session=1");
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        RecordedRequest second = handler.Requests[1];
+        second.Authorization.Should().Be(sameOrigin ? "Bearer token" : null);
+        second.Cookie.Should().Be(sameOrigin ? "session=1" : null);
+    }
+
+    [Theory]
+    [InlineData("Authorization", "Bearer token")]
+    [InlineData("Proxy-Authorization", "Basic cHJveHk=")]
+    [InlineData("Cookie", "session=1")]
+    public async Task SendWithRedirectsAsResultAsync_Should_Refuse_Cross_Origin_Redirect_When_Default_Headers_Carry_Credentials(string header, string value)
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/x"
+            ? Redirect(HttpStatusCode.Found, "https://b.test/y")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.TryAddWithoutValidation(header, value);
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://a.test/x"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("Http.CrossOriginRedirect");
+        result.FirstError.Type.Should().Be(ErrorType.Forbidden);
+        handler.Requests.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SendWithRedirectsAsResultAsync_Should_Keep_Default_Authorization_On_Same_Origin_Redirect()
+    {
+        using var handler = new ScriptedHandler(request => request.RequestUri!.AbsolutePath == "/x"
+            ? Redirect(HttpStatusCode.Found, "/y")
+            : new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "token");
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://a.test/x"));
+        Result result = await client.SendWithRedirectsAsResultAsync(request);
+
+        result.IsSuccess.Should().BeTrue();
+        handler.Requests[1].Authorization.Should().Be("Bearer token");
+    }
+
+    private static HttpResponseMessage Redirect(HttpStatusCode status, string location)
+    {
+        var response = new HttpResponseMessage(status);
+        response.Headers.Location = new Uri(location, UriKind.RelativeOrAbsolute);
+        return response;
+    }
+
+    private sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? Body, string? ContentType, string? Authorization, string? Cookie);
+
+    private sealed class ScriptedHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        public List<RecordedRequest> Requests { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            string? body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
+            Requests.Add(new RecordedRequest(
+                request.Method,
+                request.RequestUri!,
+                body,
+                request.Content?.Headers.ContentType?.ToString(),
+                request.Headers.Authorization?.ToString(),
+                request.Headers.TryGetValues("Cookie", out IEnumerable<string>? cookies) ? string.Join("; ", cookies) : null));
+            return respond(request);
+        }
+    }
+
     private sealed record TestDto(int Id, string Name);
+
+    private sealed class TrackingContent : HttpContent
+    {
+        public bool Disposed { get; private set; }
+
+        protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) => Task.CompletedTask;
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return true;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
+    }
 
     private sealed class MockHandler(HttpResponseMessage response) : HttpMessageHandler
     {
