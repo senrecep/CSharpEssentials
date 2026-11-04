@@ -26,12 +26,12 @@ Guid second = Guider.NewMonotonicGuid();
 // second.CompareTo(first) > 0, even inside the same millisecond
 ```
 
-How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counter. The timestamp and the counter are packed into one number. A new ID starts from the current time, with the counter seeded from the time inside the millisecond. If that is not greater than the last packed value, because the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock.
+How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counter. The timestamp and the counter are packed into one number. A new ID starts from the current time, with the counter seeded from the time inside the millisecond. If that is not greater than the last packed value, because the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock. Random bytes come from the same per-thread buffer as the `netstandard` build of `NewGuid()`, on every target, so the call does not allocate.
 
 What it costs:
 
 - Each ID has 62 random bits instead of 74.
-- All threads update one shared value. Under contention from 6 threads it took about 48 ns per ID against about 13 ns for `NewGuid()` in a quick benchmark.
+- All threads update one shared value. In a quick benchmark with 6 threads it took about 48 ns per ID, against about 13 ns for the same code without the shared value.
 - The order holds within one process. Two processes or machines can still produce IDs that interleave.
 - If the process creates more than 4096 IDs in one millisecond, or the clock goes backwards, the timestamp in the ID runs ahead of the clock until the clock catches up.
 
