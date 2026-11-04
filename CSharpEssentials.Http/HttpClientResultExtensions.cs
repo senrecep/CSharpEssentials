@@ -20,7 +20,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -39,7 +39,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -54,7 +54,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.PostAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.PostAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -71,7 +71,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -86,7 +86,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.PutAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.PutAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -104,7 +104,7 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 using HttpContent content = JsonContent.Create(value, options: options ?? EnhancedJsonSerializerOptions.DefaultOptions);
-                HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -118,7 +118,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -130,7 +130,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -146,7 +146,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -162,7 +162,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -180,7 +180,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -198,7 +198,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -217,7 +217,7 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 using HttpContent content = JsonContent.Create(value, valueTypeInfo);
-                HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -233,7 +233,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,

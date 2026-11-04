@@ -197,11 +197,61 @@ public class HttpClientResultExtensionsTests
         result.Value.Name.Should().Be("Sent");
     }
 
+    [Fact]
+    public async Task GetFromJsonAsResultAsync_Should_Dispose_Response()
+    {
+        var content = new TrackingContent("""{"id":1,"name":"Test"}""");
+        using var handler = new MockHandler(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        using var client = new HttpClient(handler);
+
+        Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
+
+        result.IsSuccess.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetFromJsonAsResultAsync_WithFailureStatus_Should_Dispose_Response()
+    {
+        var content = new TrackingContent("""{"title":"missing"}""");
+        using var handler = new MockHandler(new HttpResponseMessage(HttpStatusCode.NotFound) { Content = content });
+        using var client = new HttpClient(handler);
+
+        Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
+
+        result.IsFailure.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeleteAsResultAsync_Should_Dispose_Response()
+    {
+        var content = new TrackingContent(string.Empty);
+        using var handler = new MockHandler(new HttpResponseMessage(HttpStatusCode.NoContent) { Content = content });
+        using var client = new HttpClient(handler);
+
+        Result result = await client.DeleteAsResultAsync(new Uri("https://test.com"));
+
+        result.IsSuccess.Should().BeTrue();
+        content.Disposed.Should().BeTrue();
+    }
+
     private sealed record TestDto(int Id, string Name);
 
     private sealed class MockHandler(HttpResponseMessage response) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
             => Task.FromResult(response);
+    }
+
+    private sealed class TrackingContent(string body) : StringContent(body)
+    {
+        public bool Disposed { get; private set; }
+
+        protected override void Dispose(bool disposing)
+        {
+            Disposed = true;
+            base.Dispose(disposing);
+        }
     }
 }
