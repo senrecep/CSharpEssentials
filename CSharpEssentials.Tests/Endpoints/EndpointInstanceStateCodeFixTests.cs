@@ -54,6 +54,21 @@ public class EndpointInstanceStateCodeFixTests
         }
         """,
         """
+        public abstract class EndpointBase
+        {
+            protected EndpointBase(int x) => System.GC.KeepAlive(x);
+        }
+
+        public sealed class Chained : EndpointBase, IEndpoint
+        {
+            public Chained(int x) : base(x)
+            {
+            }
+
+            public static void Map(IEndpointRouteBuilder app) => app.MapGet("/chained", () => "chained");
+        }
+        """,
+        """
         public sealed record Positional(string Name) : IEndpoint
         {
             public static void Map(IEndpointRouteBuilder app) => app.MapGet("/record", () => "record");

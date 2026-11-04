@@ -616,6 +616,22 @@ public class EndpointsAnalyzerTests
     }
 
     [Fact]
+    public async Task Analyzer_Should_Report_CSE1009_When_Colliding_Referenced_Assembly_Names_Start_With_Framework_Prefix()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [RegistryReference("SystemMonitor.Api"), RegistryReference("SystemMonitorApi")],
+            "namespace Sample.Host; public sealed class Marker;");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE1009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith(
+                "Assemblies 'SystemMonitor.Api', 'SystemMonitorApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.SystemMonitorApiEndpointRegistry'");
+    }
+
+    [Fact]
     public async Task Analyzer_Should_Report_CSE1009_When_Referenced_Registry_Name_Collides_With_Own_Registry()
     {
         CSharpCompilation compilation = EndpointCompilations.Create(

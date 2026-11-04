@@ -3,6 +3,7 @@ using System.Composition;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
 using Microsoft.CodeAnalysis.CodeFixes;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.CodeAnalysis.FindSymbols;
@@ -109,7 +110,8 @@ public sealed class EndpointInstanceStateCodeFixProvider : CodeFixProvider
                 case PropertyDeclarationSyntax property:
                     removals.Add(property);
                     break;
-                case ConstructorDeclarationSyntax constructor:
+                case ConstructorDeclarationSyntax constructor
+                    when !ChainsToBaseWithArguments(constructor):
                     removals.Add(constructor);
                     break;
                 case TypeDeclarationSyntax { ParameterList: { } parameters } declaration
@@ -124,6 +126,10 @@ public sealed class EndpointInstanceStateCodeFixProvider : CodeFixProvider
 
         return true;
     }
+
+    private static bool ChainsToBaseWithArguments(ConstructorDeclarationSyntax constructor) =>
+        constructor.Initializer is { ArgumentList.Arguments.Count: > 0 } initializer &&
+        initializer.IsKind(SyntaxKind.BaseConstructorInitializer);
 
     private static bool IsInside(Location location, IReadOnlyList<SyntaxNode> removals) =>
         removals.Any(node => node.SyntaxTree == location.SourceTree && node.FullSpan.Contains(location.SourceSpan));

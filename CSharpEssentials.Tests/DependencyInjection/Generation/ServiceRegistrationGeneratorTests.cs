@@ -476,6 +476,24 @@ public class ServiceRegistrationGeneratorTests
         run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
     }
 
+    [Theory]
+    [InlineData("SystemsInventory.Services", "SystemsInventoryServicesServiceRegistry")]
+    [InlineData("MicrosoftGraphClient", "MicrosoftGraphClientServiceRegistry")]
+    public void Generator_Should_Aggregate_Referenced_Registry_When_Assembly_Name_Starts_With_Framework_Prefix(string assemblyName, string registry)
+    {
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            ProgramSource,
+            OutputKind.ConsoleApplication,
+            "Sample.App",
+            ServiceGeneration.CreateLibraryReference(assemblyName));
+
+        GeneratorRun run = ServiceGeneration.Run(compilation);
+
+        ServiceGeneration.GeneratedSources(run)["SampleAppServiceAggregate.g.cs"].Should()
+            .Contain($"{registry}.RegisterServices(services, logger);");
+        run.OutputCompilation.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+    }
+
     [Fact]
     public void Generator_Should_Skip_Referenced_Registries_When_Their_Names_Collide()
     {
