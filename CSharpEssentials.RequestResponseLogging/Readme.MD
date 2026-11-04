@@ -16,6 +16,10 @@ Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 dotnet add package CSharpEssentials.RequestResponseLogging
 ```
 
+## Upgrading to 8.0
+
+- `Microsoft.IO.RecyclableMemoryStream` is still installed with the package and used at runtime, but your code can no longer compile against it through this package. If you use `RecyclableMemoryStreamManager` or other `Microsoft.IO` types yourself, add `Microsoft.IO.RecyclableMemoryStream` to your project.
+
 ## Usage
 
 ### Registration
