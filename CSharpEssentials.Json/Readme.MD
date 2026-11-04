@@ -185,7 +185,7 @@ For a base with `[JsonPolymorphic]` or `[JsonDerivedType]`, the derived types co
 
 1. `[JsonDerivedType(typeof(X), "x")]` on the base. System.Text.Json reads these; CSharpEssentials never changes them. When a listed type also has `[JsonTypeDiscriminator]`, the base value wins (CSE4002).
 2. Generated registrations from `[JsonTypeDiscriminator]` on derived types, in any assembly. This step uses no reflection.
-3. With `AddPolymorphismWithReflection` only, and only for a base with no `[JsonDerivedType]`: a scan of the given assemblies, or of every loaded assembly except .NET framework assemblies when none are given. A type with `[JsonTypeDiscriminator]` gets its value; a type without one gets its CLR full name (CSE4005 warns). Abstract types, open generic types, by-ref-like types, types with their own `[JsonConverter]` and types System.Text.Json cannot configure are skipped.
+3. With `AddPolymorphismWithReflection` only, and only for a base with no `[JsonDerivedType]`: a scan of the given assemblies, or of every loaded assembly except .NET framework assemblies when none are given. A type with `[JsonTypeDiscriminator]` gets its value; a type without one gets its CLR full name (CSE4005 reports it, as a warning in AOT projects). Abstract types, open generic types, by-ref-like types, types with their own `[JsonConverter]` and types System.Text.Json cannot configure are skipped.
 
 ```csharp
 options.AddPolymorphismWithReflection(typeof(OrderPlaced).Assembly, typeof(UserCreated).Assembly);
