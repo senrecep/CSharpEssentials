@@ -29,6 +29,8 @@
 #                                              (net8.0 runs the netstandard2.1 builds of CSE.Idempotency, Results, Errors and Validation)
 #   ./run-benchmarks.sh --project efcore       # SaveChanges with audit/domain-event interceptors, keyset and offset paging, enum converters, MigrateDataAsync, context lifetime, DB error translation, DomainEvents reads vs EF Core / MR.EntityFrameworkCore.KeysetPagination / X.PagedList.EF / EntityFrameworkCore.Exceptions.Sqlite
 #                                              (net8.0 has CSE and hand-written rows only, net9.0 adds X.PagedList.EF, net10.0/net11.0 add MR and EF.Exceptions; net11.0 runs CSE's net10.0 build on EF Core 10)
+#   ./run-benchmarks.sh --project baselines    # Time clock reads and DateOnly/TimeOnly/weekday/age helpers vs TimeProvider / DateTimeOffset / hand-written; Clone list/array/lazy/queryable vs hand-written loops / ConvertAll
+#                                              (net8.0 runs CSE's netstandard2.1 builds: only UtcNow, UtcNowDateTime and the DateTime NextDayOfWeek rows exist there)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -146,8 +148,14 @@ case "$SUITE" in
         # MR.EntityFrameworkCore.KeysetPagination 1.6.0 and EntityFrameworkCore.Exceptions.Sqlite 10.0.1 ship net10.0 only, so quick mode defaults to it.
         DEFAULT_TFM="net10.0"
         ;;
+    baselines)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.Baselines.Benchmarks/CSharpEssentials.Baselines.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/baselines"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.ClockComparison.*" "*.TimeConversionComparison.*" "*.CloneComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore | baselines)" >&2
         exit 1
         ;;
 esac
