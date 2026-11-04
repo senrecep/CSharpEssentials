@@ -30,7 +30,7 @@ public class GuidV7Tests
 
     [Theory]
     [MemberData(nameof(Generators))]
-    public void Generated_ids_carry_version_7_and_variant_10(string generator)
+    public void Generate_ShouldSetVersion7AndVariant10(string generator)
     {
         for (int i = 0; i < _rfcSampleSize; i++)
         {
@@ -47,7 +47,7 @@ public class GuidV7Tests
     [Theory]
     [InlineData("NewGuid")]
     [InlineData("portable")]
-    public void Stateless_timestamp_matches_the_clock(string generator)
+    public void NewGuid_ShouldEncodeTheCurrentUnixMilliseconds(string generator)
     {
         long before = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         Guid guid = Generate(generator);
@@ -56,8 +56,33 @@ public class GuidV7Tests
         UnixMs(BigEndian(guid)).Should().BeInRange(before, after);
     }
 
+    [Theory]
+    [InlineData("NewGuid")]
+    [InlineData("portable")]
+    public void NewGuid_ShouldFillEveryRandomBit(string generator)
+    {
+        byte[] randomMask = [0, 0, 0, 0, 0, 0, 0x0F, 0xFF, 0x3F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF];
+        byte[] seenOne = new byte[16];
+        byte[] seenZero = new byte[16];
+        for (int i = 0; i < 1_000; i++)
+        {
+            byte[] b = BigEndian(Generate(generator));
+            for (int j = 0; j < 16; j++)
+            {
+                seenOne[j] |= b[j];
+                seenZero[j] |= (byte)~b[j];
+            }
+        }
+
+        for (int j = 0; j < 16; j++)
+        {
+            (seenOne[j] & randomMask[j]).Should().Be(randomMask[j]);
+            (seenZero[j] & randomMask[j]).Should().Be(randomMask[j]);
+        }
+    }
+
     [Fact]
-    public void Pack_timestamp_matches_the_given_clock_and_seeds_the_counter_from_sub_millisecond_time()
+    public void Pack_ShouldEncodeTheClockAndSeedTheCounterFromSubMillisecondTime()
     {
         long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
@@ -68,7 +93,7 @@ public class GuidV7Tests
     }
 
     [Fact]
-    public void Compose_matches_the_bit_layout_of_Guid_CreateVersion7()
+    public void Compose_ShouldMatchTheLayoutOfGuidCreateVersion7()
     {
         DateTimeOffset start = DateTimeOffset.UtcNow;
         for (int i = 0; i < 1_000; i++)
@@ -84,7 +109,7 @@ public class GuidV7Tests
     }
 
     [Fact]
-    public void Compose_writes_version_and_variant_over_any_random_bits()
+    public void Compose_ShouldOverwriteVersionAndVariantBits()
     {
         byte[] ones = Enumerable.Repeat((byte)0xFF, 16).ToArray();
         byte[] zeros = new byte[16];
@@ -97,7 +122,7 @@ public class GuidV7Tests
     }
 
     [Fact]
-    public void NewMonotonicGuid_is_strictly_increasing_on_one_thread()
+    public void NewMonotonicGuid_WhenCalledOnOneThread_ShouldStrictlyIncrease()
     {
         Guid previous = Guider.NewMonotonicGuid();
         byte[] previousBytes = BigEndian(previous);
@@ -116,7 +141,7 @@ public class GuidV7Tests
     }
 
     [Fact]
-    public void NewMonotonicGuid_is_unique_across_threads()
+    public void NewMonotonicGuid_WhenCalledFromManyThreads_ShouldReturnUniqueIds()
     {
         const int threads = 64, perThread = 5_000;
         ConcurrentBag<byte[]> all = [];
@@ -142,7 +167,7 @@ public class GuidV7Tests
     }
 
     [Fact]
-    public void Pack_carries_counter_overflow_into_the_timestamp()
+    public void Pack_WhenCounterOverflows_ShouldCarryIntoTimestamp()
     {
         long unixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         long last = (unixMs << 12) | 0xFFF;
@@ -155,36 +180,41 @@ public class GuidV7Tests
         UnixMs(BigEndian(nextGuid)).Should().Be(unixMs + 1);
         Packed(BigEndian(nextGuid)).Should().Be(next);
         BigEndian(nextGuid).AsSpan().SequenceCompareTo(BigEndian(lastGuid)).Should().BePositive();
+        nextGuid.CompareTo(lastGuid).Should().BePositive();
         nextGuid.Version.Should().Be(7);
     }
 
     [Fact]
-    public void Pack_keeps_ids_increasing_when_the_clock_goes_backwards_or_stalls()
+    public void Pack_WhenClockGoesBackwardsOrStalls_ShouldKeepIncreasing()
     {
         long now = DateTime.UtcNow.Ticks;
         long[] clock = [now, now - TimeSpan.TicksPerSecond, now - TimeSpan.TicksPerDay, now, now, now - 1, now + _ticksPerMs];
         long last = 0;
         byte[] previous = new byte[16];
+        Guid previousGuid = Guid.Empty;
         Span<byte> random = stackalloc byte[16];
 
         foreach (long ticks in clock)
         {
             long packed = GuidV7.Pack(last, ticks);
             RandomNumberGenerator.Fill(random);
-            byte[] current = BigEndian(GuidV7.ComposePacked(packed, random.ToArray()));
+            Guid currentGuid = GuidV7.ComposePacked(packed, random.ToArray());
+            byte[] current = BigEndian(currentGuid);
 
             packed.Should().BeGreaterThan(last);
             current.AsSpan().SequenceCompareTo(previous).Should().BePositive();
+            currentGuid.CompareTo(previousGuid).Should().BePositive();
             Packed(current).Should().Be(packed);
 
             last = packed;
             previous = current;
+            previousGuid = currentGuid;
         }
     }
 
     [Theory]
     [MemberData(nameof(Generators))]
-    public void Generators_do_not_allocate(string generator)
+    public void Generate_ShouldNotAllocate(string generator)
     {
         for (int i = 0; i < 1_000; i++)
             Generate(generator);
