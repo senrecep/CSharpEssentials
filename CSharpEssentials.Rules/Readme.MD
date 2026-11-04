@@ -164,7 +164,7 @@ Result longer = RuleEngine.Evaluate(
     ctx);
 ```
 
-`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, so it behaves the same as `a.Next(b.Next(c))` and `new[] { a, b, c }.Linear()`: a failing `b` stops the chain and `c` is not evaluated.
+`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, so it behaves the same as `a.Next(b.Next(c))` and `new[] { a, b, c }.Linear()`: a failing `b` stops the chain and `c` is not evaluated. An empty array gives a rule that fails with `EMPTY_RULE_ARRAY`, the same error `And` and `Or` return for no rules.
 
 ### Static shortcuts
 
@@ -347,3 +347,8 @@ Result result = await RuleEngine.EvaluateAsync(
 - Rules must observe `ct`. The token is checked before each rule runs, but a rule that is already running is awaited until it returns; `EvaluateAsync` never abandons it.
 
 `Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.
+
+## Upgrading
+
+- `Linear()` and `RuleEngine.Linear` on an empty array no longer throw `IndexOutOfRangeException`. They return a failed `Result` with the `EMPTY_RULE_ARRAY` validation error, like `And` and `Or`. Replace a `try`/`catch` around an empty `Linear` call with a check of `result.IsFailure`.
+- A custom `IAndRule<TContext, TResult>` or `IAndAsyncRule<TContext, TResult>` whose `Rules` is empty now fails with the `EMPTY_RULE_ARRAY` validation error. Earlier versions failed with a `RuleEngine.Evaluate.*` exception error wrapping an `IndexOutOfRangeException`. Update any code that matches on the old error code.

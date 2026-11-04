@@ -3,6 +3,7 @@ using CSharpEssentials.Resilience;
 using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 using Polly;
+using Polly.Timeout;
 
 namespace CSharpEssentials.Tests.Resilience;
 
@@ -299,6 +300,45 @@ public class ResiliencePolicyRegressionTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(99);
+    }
+
+    [Fact]
+    public async Task Generic_WithFallback_Value_Should_Return_Unexpected_When_Fallback_Throws()
+    {
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithFallback(_ => Task.FromException<int>(new InvalidOperationException("fallback")));
+
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Failure("Op.Failed", "failed"))));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
+        result.FirstError.Code.Should().Be(nameof(InvalidOperationException));
+    }
+
+    [Fact]
+    public async Task Generic_WithFallback_Result_Should_Return_Unexpected_When_Fallback_Throws()
+    {
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithFallback(_ => Task.FromException<Result<int>>(new InvalidOperationException("fallback")));
+
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Failure("Op.Failed", "failed"))));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Unexpected);
+        result.FirstError.Code.Should().Be(nameof(InvalidOperationException));
+    }
+
+    [Fact]
+    public async Task Generic_WithFallback_Value_Should_Return_Timeout_Code_When_Fallback_Throws_TimeoutRejected()
+    {
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create()
+            .WithFallback(_ => Task.FromException<int>(new TimeoutRejectedException()));
+
+        Result<int> result = await policy.ExecuteAsync(_ => Task.FromResult(Result<int>.Failure(Error.Failure("Op.Failed", "failed"))));
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Type.Should().Be(ErrorType.Failure);
+        result.FirstError.Code.Should().Be("Resilience.Timeout");
     }
 
     private static void ThrowInternalCancellation()

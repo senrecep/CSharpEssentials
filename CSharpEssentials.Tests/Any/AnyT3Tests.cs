@@ -176,6 +176,13 @@ public class AnyT3Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string, bool> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string, bool> original = 42;
@@ -227,5 +234,17 @@ public class AnyT3Tests
         var any = Any<int, string, bool>.Third(true);
         any.Index.Should().Be(2);
         any.GetThird().Should().BeTrue();
+    }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool _);
+        first.Should().Be(0);
+        second.Should().BeNull();
     }
 }

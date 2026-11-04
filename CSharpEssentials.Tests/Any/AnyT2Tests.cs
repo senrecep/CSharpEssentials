@@ -130,6 +130,13 @@ public class AnyT2Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string> original = 42;
@@ -163,5 +170,17 @@ public class AnyT2Tests
         var any = Any<int, string>.Second("hello");
         any.Index.Should().Be(1);
         any.GetSecond().Should().Be("hello");
+    }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second);
+        first.Should().Be(0);
+        second.Should().BeNull();
     }
 }

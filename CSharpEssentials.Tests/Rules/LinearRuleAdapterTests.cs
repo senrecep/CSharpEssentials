@@ -94,14 +94,6 @@ public class LinearRuleAdapterTests
     }
 
     [Fact]
-    public void Linear_IRule_Empty_ShouldThrow()
-    {
-        IRule<TestContext>[] rules = [];
-        Action act = () => RuleEngine.Linear(rules, new TestContext());
-        act.Should().Throw<Exception>();
-    }
-
-    [Fact]
     public void Linear_IRule_Mutation_ShouldPreserveState()
     {
         TestContext ctx = new() { Value = 0 };

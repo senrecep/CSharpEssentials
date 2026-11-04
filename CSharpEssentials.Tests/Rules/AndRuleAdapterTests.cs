@@ -255,4 +255,29 @@ public class AndRuleAdapterTests
     }
 
     #endregion
+
+    private sealed class EmptyAndRuleT : IAndRule<TestContext, int>
+    {
+        public IRuleBase<TestContext, int>[] Rules => [];
+
+        public Result<int> Evaluate(TestContext context, CancellationToken cancellationToken = default) => Result.Success(0);
+    }
+
+    [Fact]
+    public void And_CustomAndRuleTResult_WithEmptyRules_ShouldReturnEmptyRuleArrayError()
+    {
+        Result<int> result = RuleEngine.Evaluate(new EmptyAndRuleT(), new TestContext());
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
+    }
+
+    [Fact]
+    public async Task And_CustomAndRuleTResult_WithEmptyRules_ShouldReturnEmptyRuleArrayError_Async()
+    {
+        Result<int> result = await RuleEngine.EvaluateAsync(new EmptyAndRuleT(), new TestContext());
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("EMPTY_RULE_ARRAY");
+    }
 }
