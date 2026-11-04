@@ -202,7 +202,7 @@ public sealed class LoggerFactoryLogWriterTests
             UseSeparateContext = true,
             LoggingFields = [LogFields.Path]
         };
-        var writer = new LoggerFactoryLogWriter(CreateFactory(logger), options);
+        var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), options);
         var requestFeature = new Mock<IHttpRequestFeature>();
         requestFeature.SetupProperty(f => f.Path, "/test");
         var httpContext = new DefaultHttpContext();
@@ -223,7 +223,7 @@ public sealed class LoggerFactoryLogWriterTests
             UseSeparateContext = true,
             LoggingFields = [LogFields.Path, LogFields.Request]
         };
-        var writer = new LoggerFactoryLogWriter(CreateFactory(logger), options);
+        var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), options);
 
         await writer.Write(CreateContext(requestBody: "{\"id\":1}"));
         await writer.Write(CreateContext(requestBody: "second"));
@@ -236,24 +236,5 @@ public sealed class LoggerFactoryLogWriterTests
             new KeyValuePair<string, object?>("Path", "/test"),
             new KeyValuePair<string, object?>("Request", "second"),
             new KeyValuePair<string, object?>("{OriginalFormat}", $"Path: {{Path}}{nl}Request: {{Request}}{nl}"));
-    }
-
-    private static ILoggerFactory CreateFactory(ILogger logger)
-    {
-        var factory = new Mock<ILoggerFactory>();
-        factory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(logger);
-        return factory.Object;
-    }
-
-    private sealed class RecordingLogger(bool enabled) : ILogger
-    {
-        public List<(string Message, IReadOnlyList<KeyValuePair<string, object?>> State)> Entries { get; } = [];
-
-        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-
-        public bool IsEnabled(LogLevel logLevel) => enabled;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
-            Entries.Add((formatter(state, exception), ((IReadOnlyList<KeyValuePair<string, object?>>)state!).ToList()));
     }
 }

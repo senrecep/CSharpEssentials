@@ -18,6 +18,8 @@ internal sealed class LoggerFactoryLogWriter : ILogWriter
         MessageCreator = options.UseSeparateContext
                             ? new LogMessageWithContextCreator(options)
                             : new LogMessageCreator(options);
+        NeedsRequestBody = options.LoggingFields.Contains(LogFields.Request) || options.LoggingFields.Contains(LogFields.RequestLength);
+        NeedsResponseBody = options.LoggingFields.Contains(LogFields.Response) || options.LoggingFields.Contains(LogFields.ResponseLength);
     }
 #endif
 
@@ -25,8 +27,16 @@ internal sealed class LoggerFactoryLogWriter : ILogWriter
     public IMessageCreator MessageCreator { get; } = options.UseSeparateContext
                             ? new LogMessageWithContextCreator(options)
                             : new LogMessageCreator(options);
+
+    public bool NeedsRequestBody { get; } = options.LoggingFields.Contains(LogFields.Request) || options.LoggingFields.Contains(LogFields.RequestLength);
+
+    public bool NeedsResponseBody { get; } = options.LoggingFields.Contains(LogFields.Response) || options.LoggingFields.Contains(LogFields.ResponseLength);
 #else
     public IMessageCreator MessageCreator { get; }
+
+    public bool NeedsRequestBody { get; }
+
+    public bool NeedsResponseBody { get; }
 #endif
 
     public Task Write(RequestResponseContext requestResponseContext)

@@ -535,6 +535,55 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
             "Exception: IOException, Message: client gone");
     }
 
+    [Fact]
+    public async Task InvokeAsync_Should_LeaveBodiesUntouched_When_NoBodyFieldIsLogged()
+    {
+        var logger = new RecordingLogger(enabled: true);
+        var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), new LoggingOptions { LoggingFields = [LogFields.Path] });
+        var requestBody = new MemoryStream("payload"u8.ToArray());
+        var responseBody = new MemoryStream();
+        Stream? requestSeen = null;
+        Stream? responseSeen = null;
+        var middleware = new DefaultRequestResponseMiddleware(
+            ctx =>
+            {
+                requestSeen = ctx.Request.Body;
+                responseSeen = ctx.Response.Body;
+                return Task.CompletedTask;
+            },
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/orders";
+        httpContext.Request.Body = requestBody;
+        httpContext.Response.Body = responseBody;
+
+        await middleware.InvokeAsync(httpContext);
+
+        requestSeen.Should().BeSameAs(requestBody);
+        requestBody.Position.Should().Be(0);
+        responseSeen.Should().BeSameAs(responseBody);
+        logger.Entries.Should().ContainSingle().Which.Message.Should().Be($"Path: /orders{Environment.NewLine}");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_CaptureBodies_When_OnlyLengthFieldsAreLogged()
+    {
+        var logger = new RecordingLogger(enabled: true);
+        var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), new LoggingOptions { LoggingFields = [LogFields.RequestLength, LogFields.ResponseLength] });
+        var middleware = new DefaultRequestResponseMiddleware(ctx => ctx.Response.WriteAsync("hello"), writer, []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+        httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(httpContext);
+
+        string nl = Environment.NewLine;
+        logger.Entries.Should().ContainSingle().Which.Message.Should().Be($"RequestLength: 7{nl}ResponseLength: 5{nl}");
+    }
+
     private sealed class ThrowingWriteStream : MemoryStream
     {
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>

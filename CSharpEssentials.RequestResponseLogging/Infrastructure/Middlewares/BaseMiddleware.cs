@@ -102,6 +102,8 @@ internal abstract class BaseMiddleware
 #endif
 
         (bool isSkipRequestLogging, bool isSkipResponseLogging) = GetLoggingConfiguration(httpContext);
+        isSkipRequestLogging |= handler is null && _logWriter is not { NeedsRequestBody: true };
+        isSkipResponseLogging |= handler is null && _logWriter is not { NeedsResponseBody: true };
         string requestText = "Error occurred during request processing";
         Stream originalBodyStream = httpContext.Response.Body;
         TimeSpan executionTime;
