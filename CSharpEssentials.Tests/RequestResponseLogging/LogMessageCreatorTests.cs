@@ -42,7 +42,7 @@ public sealed class LogMessageCreatorTests
         var creator = new LogMessageCreator(options);
         var context = CreateContext();
 
-        (string logString, List<string?>? values) = creator.Create(context);
+        (string logString, object?[]? values) = creator.Create(context);
 
         logString.Should().NotBeNullOrEmpty();
         values.Should().BeNull();
@@ -246,7 +246,7 @@ public sealed class LogMessageCreatorTests
         var creator = new LogMessageCreator(options);
         var context = CreateContext();
 
-        (string logString, List<string?>? values) = creator.Create(context);
+        (string logString, object?[]? values) = creator.Create(context);
 
         logString.Should().BeEmpty();
         values.Should().BeNull();

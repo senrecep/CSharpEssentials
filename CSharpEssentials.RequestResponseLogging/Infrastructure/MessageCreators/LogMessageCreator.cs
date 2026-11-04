@@ -4,7 +4,7 @@ namespace CSharpEssentials.RequestResponseLogging.Infrastructure.MessageCreators
 
 internal sealed class LogMessageCreator(LoggingOptions loggingOptions) : BaseLogMessageCreator, ILogMessageCreator
 {
-    public (string logString, List<string?>? values) Create(RequestResponseContext requestResponseContext)
+    public (string logString, object?[]? values) Create(RequestResponseContext requestResponseContext)
     {
         var sb = new StringBuilder();
 

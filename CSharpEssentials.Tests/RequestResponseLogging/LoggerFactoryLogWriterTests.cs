@@ -2,6 +2,7 @@ using CSharpEssentials.RequestResponseLogging;
 using CSharpEssentials.RequestResponseLogging.LogWriters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -190,5 +191,69 @@ public sealed class LoggerFactoryLogWriterTests
         Func<Task> act = () => writer.Write(context);
 
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task Write_Should_NotBuildMessage_When_LevelIsDisabled()
+    {
+        var logger = new RecordingLogger(enabled: false);
+        var options = new LoggingOptions
+        {
+            UseSeparateContext = true,
+            LoggingFields = [LogFields.Path]
+        };
+        var writer = new LoggerFactoryLogWriter(CreateFactory(logger), options);
+        var requestFeature = new Mock<IHttpRequestFeature>();
+        requestFeature.SetupProperty(f => f.Path, "/test");
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set(requestFeature.Object);
+
+        await writer.Write(new RequestResponseContext(httpContext));
+
+        requestFeature.VerifyGet(f => f.Path, Times.Never);
+        logger.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Write_Should_LogTemplateWithValues_When_UseSeparateContextIsTrue()
+    {
+        var logger = new RecordingLogger(enabled: true);
+        var options = new LoggingOptions
+        {
+            UseSeparateContext = true,
+            LoggingFields = [LogFields.Path, LogFields.Request]
+        };
+        var writer = new LoggerFactoryLogWriter(CreateFactory(logger), options);
+
+        await writer.Write(CreateContext(requestBody: "{\"id\":1}"));
+        await writer.Write(CreateContext(requestBody: "second"));
+
+        string nl = Environment.NewLine;
+        logger.Entries.Select(e => e.Message).Should().Equal(
+            $"Path: /test{nl}Request: {{\"id\":1}}{nl}",
+            $"Path: /test{nl}Request: second{nl}");
+        logger.Entries[1].State.Should().Equal(
+            new KeyValuePair<string, object?>("Path", "/test"),
+            new KeyValuePair<string, object?>("Request", "second"),
+            new KeyValuePair<string, object?>("{OriginalFormat}", $"Path: {{Path}}{nl}Request: {{Request}}{nl}"));
+    }
+
+    private static ILoggerFactory CreateFactory(ILogger logger)
+    {
+        var factory = new Mock<ILoggerFactory>();
+        factory.Setup(f => f.CreateLogger(It.IsAny<string>())).Returns(logger);
+        return factory.Object;
+    }
+
+    private sealed class RecordingLogger(bool enabled) : ILogger
+    {
+        public List<(string Message, IReadOnlyList<KeyValuePair<string, object?>> State)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => enabled;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((formatter(state, exception), ((IReadOnlyList<KeyValuePair<string, object?>>)state!).ToList()));
     }
 }

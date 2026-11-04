@@ -31,19 +31,17 @@ internal sealed class LoggerFactoryLogWriter : ILogWriter
 
     public Task Write(RequestResponseContext requestResponseContext)
     {
-        (string logString, List<string?> values) = MessageCreator.Create(requestResponseContext);
-        object?[]? parameters = null;
-
-        if (values is not null)
-            parameters = [.. values];
-#pragma warning disable CA2254
 #if NET8_0_OR_GREATER
-        if (_logger.IsEnabled(options.LoggingLevel))
-            _logger.Log(options.LoggingLevel, logString, parameters ?? []);
+        LogLevel level = options.LoggingLevel;
 #else
-        if (_logger.IsEnabled(_loggingLevel))
-            _logger.Log(_loggingLevel, logString, parameters ?? []);
+        LogLevel level = _loggingLevel;
 #endif
+        if (!_logger.IsEnabled(level))
+            return Task.CompletedTask;
+
+        (string logString, object?[]? values) = MessageCreator.Create(requestResponseContext);
+#pragma warning disable CA2254
+        _logger.Log(level, logString, values ?? []);
 #pragma warning restore CA2254
 
         return Task.CompletedTask;
