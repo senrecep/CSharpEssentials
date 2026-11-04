@@ -31,6 +31,10 @@
 #                                              (net8.0 has CSE and hand-written rows only, net9.0 adds X.PagedList.EF, net10.0/net11.0 add MR and EF.Exceptions; net11.0 runs CSE's net10.0 build on EF Core 10)
 #   ./run-benchmarks.sh --project baselines    # Time clock reads and DateOnly/TimeOnly/weekday/age helpers vs TimeProvider / DateTimeOffset / hand-written; Clone list/array/lazy/queryable vs hand-written loops / ConvertAll
 #                                              (net8.0 runs CSE's netstandard2.1 builds: only UtcNow, UtcNowDateTime and the DateTime NextDayOfWeek rows exist there)
+#   ./run-benchmarks.sh --project openapi      # Document generation for 50 endpoints and 30 enums, plain AddOpenApi vs the CSE enum, idempotency and optional-route conventions; warm and first-document
+#                                              (net10.0 only: the package targets net10.0)
+#   ./run-benchmarks.sh --project swashbuckle  # The same against plain AddSwaggerGen, plus the full AddSwagger setup
+#                                              (Unchase.Swashbuckle.AspNetCore.Extensions is not compared: no Swashbuckle 10 support)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -154,8 +158,21 @@ case "$SUITE" in
         ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
         QUICK_PATTERNS=("*.ClockComparison.*" "*.TimeConversionComparison.*" "*.CloneComparison.*")
         ;;
+    openapi)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.AspNetCore.OpenApi.Benchmarks/CSharpEssentials.AspNetCore.OpenApi.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/openapi"
+        ALL_FRAMEWORKS=("net10.0")
+        QUICK_PATTERNS=("*.OpenApiDocumentComparison.*" "*.OpenApiFirstDocumentComparison.*")
+        DEFAULT_TFM="net10.0"
+        ;;
+    swashbuckle)
+        PROJECT="$SCRIPT_DIR/CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks/CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks.csproj"
+        RESULTS_DIR="$SCRIPT_DIR/results/swashbuckle"
+        ALL_FRAMEWORKS=("net8.0" "net9.0" "net10.0" "net11.0")
+        QUICK_PATTERNS=("*.SwashbuckleDocumentComparison.*" "*.SwashbuckleFirstDocumentComparison.*")
+        ;;
     *)
-        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore | baselines)" >&2
+        echo "Unknown --project '$SUITE' (expected: validation | rules | results | idempotency | endpoints | results-comparison | di | mediator | enums | any | json | http | aspnetcore | efcore | baselines | openapi | swashbuckle)" >&2
         exit 1
         ;;
 esac
