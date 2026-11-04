@@ -11,6 +11,8 @@ internal abstract class BaseMiddleware
     private const string DefaultResponseText = "Skipped logging response body";
     private const int DefaultBufferSize = 4096;
     private const int MaxRequestBodySize = 1024 * 1024 * 10;
+    private const int DefaultBufferThreshold = 1024 * 30;
+    private const int MaxPooledBufferThreshold = 1024 * 1024;
 
     private static readonly ArrayPool<byte> _arrayPool = ArrayPool<byte>.Shared;
     private readonly ILogWriter? _logWriter;
@@ -168,36 +170,29 @@ internal abstract class BaseMiddleware
             return $"Request body too large: {context.Request.ContentLength} bytes";
         }
 
-        context.Request.EnableBuffering();
-        byte[]? buffer = null;
+        context.Request.EnableBuffering((int)Math.Clamp(context.Request.ContentLength ?? 0, DefaultBufferThreshold, MaxPooledBufferThreshold));
+        Stream body = context.Request.Body;
+        char[]? buffer = null;
 
         try
         {
-            RecyclableMemoryStream requestStream = _recyclableMemoryStreamManager.GetStream();
-            await using ConfiguredAsyncDisposable requestStreamScope = requestStream.ConfigureAwait(false);
-            buffer = _arrayPool.Rent(_bufferSize);
+            long start = body.Position;
+            using var reader = new StreamReader(body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            buffer = ArrayPool<char>.Shared.Rent(_bufferSize);
+            var text = new StringBuilder();
 
-            int bytesRead;
-            long totalBytesRead = 0;
-            while ((bytesRead = await context.Request.Body.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
+            int charsRead;
+            while ((charsRead = await reader.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
             {
-                totalBytesRead += bytesRead;
-                if (totalBytesRead > MaxRequestBodySize)
+                if (body.Position - start > MaxRequestBodySize)
                 {
                     return $"Request body too large: over {MaxRequestBodySize} bytes";
                 }
 
-                await requestStream.WriteAsync(buffer.AsMemory(0, bytesRead), CancellationToken.None).ConfigureAwait(false);
+                text.Append(buffer, 0, charsRead);
             }
 
-            if (requestStream.Length == 0)
-            {
-                return "Empty request body";
-            }
-
-            requestStream.Seek(0, SeekOrigin.Begin);
-            using var reader = new StreamReader(requestStream, Encoding.UTF8, leaveOpen: true);
-            return await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
+            return body.Position == start ? "Empty request body" : text.ToString();
         }
         catch (Exception ex)
         {
@@ -207,7 +202,7 @@ internal abstract class BaseMiddleware
         {
             if (buffer is not null)
             {
-                _arrayPool.Return(buffer);
+                ArrayPool<char>.Shared.Return(buffer);
             }
 
             RewindRequestBody(context.Request.Body);

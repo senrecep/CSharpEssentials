@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -584,6 +585,39 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         logger.Entries.Should().ContainSingle().Which.Message.Should().Be($"RequestLength: 7{nl}ResponseLength: 5{nl}");
     }
 
+    [Fact]
+    public async Task InvokeAsync_Should_KeepRequestBodyInMemory_When_ContentLengthIsLargerThanDefaultBufferThreshold()
+    {
+        string payload = new('a', 64 * 1024);
+        bool? bufferedInMemory = null;
+        string? bodySeenByEndpoint = null;
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            async ctx =>
+            {
+                bufferedInMemory = ((FileBufferingReadStream)ctx.Request.Body).InMemory;
+                using var reader = new StreamReader(ctx.Request.Body);
+                bodySeenByEndpoint = await reader.ReadToEndAsync();
+            },
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new NonSeekableStream(System.Text.Encoding.UTF8.GetBytes(payload));
+        httpContext.Request.ContentLength = payload.Length;
+
+        await middleware.InvokeAsync(httpContext);
+
+        bufferedInMemory.Should().BeTrue();
+        bodySeenByEndpoint.Should().Be(payload);
+        capturedContext!.RequestBody.Should().Be(payload);
+    }
+
     private sealed class ThrowingWriteStream : MemoryStream
     {
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
@@ -612,6 +646,11 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
             await Task.Yield();
             throw new InvalidOperationException("writer failed");
         }
+    }
+
+    private sealed class NonSeekableStream(byte[] content) : MemoryStream(content)
+    {
+        public override bool CanSeek => false;
     }
 
     private sealed class ThrowOnceStream(byte[] content, long throwAtPosition) : MemoryStream(content)
