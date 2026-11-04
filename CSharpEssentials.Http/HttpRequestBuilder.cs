@@ -177,15 +177,7 @@ public sealed class HttpRequestBuilder
         Result<Uri> uriResult;
         try
         {
-            uriResult = ApplyRouteValues(_uri, conventions);
-            if (uriResult.IsSuccess && _queryParameters.Count > 0)
-            {
-                List<KeyValuePair<string, string?>> pairs = [];
-                foreach ((string key, object? value) in _queryParameters)
-                    QueryStringExtensions.AddValues(pairs, key, value, conventions, _enumWriteAs);
-
-                uriResult = uriResult.Value.AppendQuery(QueryStringExtensions.BuildQuery(pairs));
-            }
+            uriResult = ResolveUri(_uri, conventions);
         }
         catch (EnumValueException exception)
         {
@@ -222,12 +214,33 @@ public sealed class HttpRequestBuilder
 
     private static readonly ConditionalWeakTable<EnumConventions, ConcurrentDictionary<EnumWireFormat, JsonSerializerOptions>> JsonOptionsCache = [];
 
-    private Result<Uri> ApplyRouteValues(Uri uri, EnumConventions conventions)
+    private Result<Uri> ResolveUri(Uri uri, EnumConventions conventions)
     {
-        if (_routeValues.Count == 0)
-            return uri;
+        string? template = null;
+        if (_routeValues.Count > 0)
+        {
+            Result<string> routed = ApplyRouteValues(uri.OriginalString, conventions);
+            if (routed.IsFailure)
+                return routed.Errors;
+            template = routed.Value;
+        }
 
-        string template = uri.OriginalString;
+        if (_queryParameters.Count == 0)
+            return template is null ? uri : new Uri(template, UriKind.RelativeOrAbsolute);
+
+        List<KeyValuePair<string, string?>> pairs = [];
+        foreach ((string key, object? value) in _queryParameters)
+            QueryStringExtensions.AddValues(pairs, key, value, conventions, _enumWriteAs);
+
+        Result<string> query = QueryStringExtensions.BuildQuery(pairs);
+        if (template is null || query.IsFailure)
+            return uri.AppendQuery(query);
+
+        return QueryStringExtensions.AppendQuery(template, query.Value, uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
+    }
+
+    private Result<string> ApplyRouteValues(string template, EnumConventions conventions)
+    {
         foreach ((string name, object? value) in _routeValues)
         {
             string placeholder = "{" + name + "}";
@@ -242,7 +255,7 @@ public sealed class HttpRequestBuilder
             template = template.Replace(placeholder, Uri.EscapeDataString(text), StringComparison.Ordinal);
         }
 
-        return new Uri(template, UriKind.RelativeOrAbsolute);
+        return template;
     }
 
     [RequiresUnreferencedCode(HttpJson.SerializationMessage)]

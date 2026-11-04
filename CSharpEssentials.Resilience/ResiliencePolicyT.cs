@@ -13,7 +13,7 @@ public readonly partial struct ResiliencePolicy<T>
     private ResiliencePipeline<Result<T>> GetPipeline() => _pipeline ?? ResiliencePipeline<Result<T>>.Empty;
 
     public static ResiliencePolicy<T> Create() =>
-        new(new ResiliencePipelineBuilder<Result<T>>().Build());
+        new(ResiliencePipeline<Result<T>>.Empty);
 
     public static ResiliencePolicy<T> FromPipeline(ResiliencePipeline<Result<T>> pipeline) =>
         new(pipeline);
@@ -44,11 +44,12 @@ public readonly partial struct ResiliencePolicy<T>
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token =>
+                static async (callback, token) =>
                 {
-                    T value = await action(token).ConfigureAwait(false);
+                    T value = await callback(token).ConfigureAwait(false);
                     return Result<T>.Success(value);
                 },
+                action,
                 cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -67,7 +68,7 @@ public readonly partial struct ResiliencePolicy<T>
         Result<T> result;
         try
         {
-            result = await pipeline.ExecuteAsync(async token => await action(token).ConfigureAwait(false), cancellationToken).ConfigureAwait(false);
+            result = await pipeline.ExecuteAsync(static async (callback, token) => await callback(token).ConfigureAwait(false), action, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -80,6 +81,11 @@ public readonly partial struct ResiliencePolicy<T>
     private ResiliencePolicy<T> Merge(ResiliencePipeline<Result<T>> additionalPipeline)
     {
         ResiliencePipeline<Result<T>> existing = GetPipeline();
+        if (existing == ResiliencePipeline<Result<T>>.Empty)
+        {
+            return new(additionalPipeline);
+        }
+
         ResiliencePipeline<Result<T>> merged = new ResiliencePipelineBuilder<Result<T>>()
             .AddPipeline(existing)
             .AddPipeline(additionalPipeline)

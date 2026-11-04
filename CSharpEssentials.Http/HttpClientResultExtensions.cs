@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using CSharpEssentials.Core;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern;
@@ -11,20 +12,20 @@ public static class HttpClientResultExtensions
 {
     [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
     [RequiresDynamicCode(HttpJson.SerializationMessage)]
-    public static Task<Result<T>> GetFromJsonAsResultAsync<T>(
+    public static async Task<Result<T>> GetFromJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
         JsonSerializerOptions? options = null,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            async () =>
-            {
-                HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
-            },
-            HandleException,
-            cancellationToken);
+        try
+        {
+            return await GetCoreAsync(client, requestUri, HttpJson.Reader<T>(options), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return HandleException(ex);
+        }
     }
 
     [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
@@ -39,7 +40,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -54,7 +55,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.PostAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.PostAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -71,7 +72,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, options ?? EnhancedJsonSerializerOptions.DefaultOptions, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -86,7 +87,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.PutAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.PutAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -104,7 +105,7 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 using HttpContent content = JsonContent.Create(value, options: options ?? EnhancedJsonSerializerOptions.DefaultOptions);
-                HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -118,7 +119,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.DeleteAsync(requestUri, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -130,7 +131,7 @@ public static class HttpClientResultExtensions
     {
         return await ExecuteAsync(async () =>
         {
-            HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
             return HandleResponse(response);
         }, cancellationToken).ConfigureAwait(false);
     }
@@ -146,27 +147,27 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader<T>(options), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
             cancellationToken);
     }
 
-    public static Task<Result<T>> GetFromJsonAsResultAsync<T>(
+    public static async Task<Result<T>> GetFromJsonAsResultAsync<T>(
         this HttpClient client,
         Uri? requestUri,
         JsonTypeInfo<T> typeInfo,
         CancellationToken cancellationToken = default)
     {
-        return Result.TryAsync(
-            async () =>
-            {
-                HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
-                return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
-            },
-            HandleException,
-            cancellationToken);
+        try
+        {
+            return await GetCoreAsync(client, requestUri, HttpJson.Reader(typeInfo), cancellationToken).WithCancellation(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return HandleException(ex);
+        }
     }
 
     public static Task<Result<T>> PostAsJsonAsResultAsync<TValue, T>(
@@ -180,7 +181,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PostAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -198,7 +199,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PutAsJsonAsync(requestUri, value, valueTypeInfo, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -217,7 +218,7 @@ public static class HttpClientResultExtensions
             async () =>
             {
                 using HttpContent content = JsonContent.Create(value, valueTypeInfo);
-                HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.PatchAsync(requestUri, content, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -233,7 +234,7 @@ public static class HttpClientResultExtensions
         return Result.TryAsync(
             async () =>
             {
-                HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
+                using HttpResponseMessage response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 return await HandleResponseAsync(response, HttpJson.Reader(typeInfo), cancellationToken).ConfigureAwait(false);
             },
             HandleException,
@@ -245,6 +246,16 @@ public static class HttpClientResultExtensions
     private static Task<Result> ExecuteAsync(Func<Task<Result>> action, CancellationToken cancellationToken)
     {
         return Result.TryAsync(action, HandleException, cancellationToken);
+    }
+
+    private static async ValueTask<Result<T>> GetCoreAsync<T>(
+        HttpClient client,
+        Uri? requestUri,
+        Func<HttpContent, CancellationToken, Task<T?>> read,
+        CancellationToken cancellationToken)
+    {
+        using HttpResponseMessage response = await client.GetAsync(requestUri, cancellationToken).ConfigureAwait(false);
+        return await HandleResponseAsync(response, read, cancellationToken).ConfigureAwait(false);
     }
 
     internal static async Task<Result<T>> HandleResponseAsync<T>(
