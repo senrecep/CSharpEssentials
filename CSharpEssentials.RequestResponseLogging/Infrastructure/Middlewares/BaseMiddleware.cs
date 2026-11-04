@@ -168,7 +168,7 @@ internal abstract class BaseMiddleware
         try
         {
             long start = body.Position;
-            using var reader = new StreamReader(body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, leaveOpen: true);
+            using var reader = new StreamReader(body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: _bufferSize, leaveOpen: true);
             buffer = ArrayPool<char>.Shared.Rent(_bufferSize);
             var text = new StringBuilder();
 
