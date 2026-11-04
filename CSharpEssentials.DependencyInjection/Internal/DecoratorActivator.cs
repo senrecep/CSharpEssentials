@@ -55,16 +55,38 @@ internal static class DecoratorActivator
             resolvers[index] = CreateResolver(parameters[index], serviceType, serviceKey);
         }
 
-        return (inner, provider) =>
+#if NET8_0_OR_GREATER
+        var invoker = ConstructorInvoker.Create(constructor);
+        return resolvers.Length switch
         {
-            object?[] arguments = new object?[resolvers.Length];
-            for (int index = 0; index < resolvers.Length; index++)
-            {
-                arguments[index] = resolvers[index](inner, provider);
-            }
-
-            return constructor.Invoke(BindingFlags.DoNotWrapExceptions, binder: null, arguments, culture: null);
+            1 => (inner, provider) => invoker.Invoke(resolvers[0](inner, provider)),
+            2 => (inner, provider) => invoker.Invoke(resolvers[0](inner, provider), resolvers[1](inner, provider)),
+            3 => (inner, provider) => invoker.Invoke(
+                resolvers[0](inner, provider),
+                resolvers[1](inner, provider),
+                resolvers[2](inner, provider)),
+            4 => (inner, provider) => invoker.Invoke(
+                resolvers[0](inner, provider),
+                resolvers[1](inner, provider),
+                resolvers[2](inner, provider),
+                resolvers[3](inner, provider)),
+            _ => (inner, provider) => invoker.Invoke(Resolve(resolvers, inner, provider)),
         };
+#else
+        return (inner, provider) =>
+            constructor.Invoke(BindingFlags.DoNotWrapExceptions, binder: null, Resolve(resolvers, inner, provider), culture: null);
+#endif
+    }
+
+    private static object?[] Resolve(Func<object, IServiceProvider, object?>[] resolvers, object inner, IServiceProvider provider)
+    {
+        object?[] arguments = new object?[resolvers.Length];
+        for (int index = 0; index < resolvers.Length; index++)
+        {
+            arguments[index] = resolvers[index](inner, provider);
+        }
+
+        return arguments;
     }
 
     private static Func<object, IServiceProvider, object?> CreateResolver(ParameterInfo parameter, Type serviceType, object? serviceKey)

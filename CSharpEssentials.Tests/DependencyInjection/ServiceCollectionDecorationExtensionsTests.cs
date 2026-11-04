@@ -55,6 +55,28 @@ public class ServiceCollectionDecorationExtensionsTests
         public string Greet() => $"{prefix.Value}{key}:{inner.Greet()}{suffix}{(optional is null ? "-" : "+")}";
     }
 
+    private sealed class TwoArgumentGreeter(IPrefix prefix, IGreeter inner) : IGreeter
+    {
+        public string Greet() => $"{prefix.Value}{inner.Greet()}";
+    }
+
+    private sealed class ThreeArgumentGreeter(IPrefix prefix, IGreeter inner, string suffix = "?") : IGreeter
+    {
+        public string Greet() => $"{prefix.Value}{inner.Greet()}{suffix}";
+    }
+
+    private sealed class FourArgumentGreeter(IPrefix prefix, IGreeter inner, [ServiceKey] object? key, string suffix = "?") : IGreeter
+    {
+        public string Greet() => $"{prefix.Value}{key}:{inner.Greet()}{suffix}";
+    }
+
+    public sealed class FailingGreeter : IGreeter
+    {
+        public FailingGreeter(IGreeter inner) => throw new NotSupportedException(inner.Greet());
+
+        public string Greet() => string.Empty;
+    }
+
     private sealed class KeyAwareGreeter([ServiceKey] object key) : IGreeter
     {
         public string Greet() => key.ToString() ?? string.Empty;
@@ -219,6 +241,35 @@ public class ServiceCollectionDecorationExtensionsTests
 
         using ServiceProvider provider = services.BuildServiceProvider();
         provider.GetRequiredKeyedService<IGreeter>("k").Greet().Should().Be(">k:hello?+");
+    }
+
+    [Fact]
+    public void Decorate_Should_PassEveryArgument_When_DecoratorTakesTwoToFourParameters()
+    {
+        ServiceCollection services = new();
+        services.AddSingleton<IPrefix>(new Prefix(">"));
+        services.AddKeyedScoped<IGreeter, Greeter>("k");
+
+        services
+            .Decorate<IGreeter, TwoArgumentGreeter>("k")
+            .Decorate<IGreeter, ThreeArgumentGreeter>("k")
+            .Decorate<IGreeter, FourArgumentGreeter>("k");
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredKeyedService<IGreeter>("k").Greet().Should().Be(">k:>>hello??");
+    }
+
+    [Fact]
+    public void Decorate_Should_ThrowUnwrappedException_When_DecoratorConstructorThrows()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IGreeter, Greeter>();
+
+        services.Decorate<IGreeter, FailingGreeter>();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        Action act = () => provider.GetRequiredService<IGreeter>();
+        act.Should().Throw<NotSupportedException>().WithMessage("hello");
     }
 
     [Fact]
