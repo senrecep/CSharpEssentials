@@ -38,7 +38,7 @@ The first argument is the id of the security scheme in `components.securitySchem
 | `Swagger:License` | `API License` |
 | `Swagger:LicenseUrl` | `https://opensource.org/license/mit` |
 
-It also keeps the first action when several actions conflict (`ResolveConflictingActions`), calls `AddOptionalRouteParameters()`, maps `TimeSpan` and `TimeOnly` to `type: string` with the example `00:00:00`, and builds schema ids from the type name, with the generic arguments in front (`Box<Dto>` becomes `DtoBox`) and a numeric suffix when two types share a name. To change the documents, derive from the abstract `ConfigureSwaggerOptions` (constructor arguments `IServiceProvider`, `IHostEnvironment`, `IConfiguration`), override `Configure(SwaggerGenOptions)` and pass your class as the type argument of `AddSwagger<T>`.
+It also keeps the first action when several actions conflict (`ResolveConflictingActions`), calls `AddOptionalRouteParameters()`, maps `TimeSpan` and `TimeOnly` to `type: string` with the example `00:00:00`, and builds schema ids from the namespace-qualified type name, with the generic arguments in front (`NsB.Order`, `NsB.OrderSystem.Collections.Generic.List` for `List<NsB.Order>`), so the ids do not depend on the order in which types are first seen. For the 7.x short names, call `options.CustomSchemaIds(new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false }.GetSchemaId)` after `AddSwagger`: ids then use the type name (`Box<Dto>` becomes `DtoBox`) with a numeric suffix when two types share a name, and that suffix follows the order in which the types are first seen, so `NsB.Order` can be `Order` on one run and `Order1` on the next. To change the documents, derive from the abstract `ConfigureSwaggerOptions` (constructor arguments `IServiceProvider`, `IHostEnvironment`, `IConfiguration`), override `Configure(SwaggerGenOptions)` and pass your class as the type argument of `AddSwagger<T>`.
 
 ## Optional route parameters
 
@@ -101,13 +101,17 @@ using CSharpEssentials.AspNetCore; // AddEnumConventions for IServiceCollection 
 
 builder.Services.AddEnumConventions();
 builder.Services.AddSwaggerGen(o => o.AddEnumConventions()); // AddSwagger calls it
+// or, without AddSwagger, also leaving out undefined enum defaults:
+builder.Services.AddSwaggerEnumConventions();
 ```
 
 Enums handled by the enum conventions (`[StringEnum]` or generated metadata) are described the way they are written: one component per enum with the wire names in `enum`, `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` and a value table appended to your description (obsolete members `(deprecated)`, the `[EnumFallback]` member `Response only:`). `default` is the wire name, `[Flags]` enums are arrays with `uniqueItems: true`, and nullable is written where the enum is used (`allOf` + `nullable: true`, OpenAPI 3.0). Keep OpenAPI 3.0, the Swashbuckle default. The enum filters always write the 3.0 shape (a filter cannot see the version `UseSwagger` serializes), and with `UseSwagger(o => o.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1)` a nullable enum usage, and (with `OptionalRouteParameterMode.LegacyNonCompliant`) an optional route parameter whose schema is a `$ref`, is serialized as `{"type": "null", "allOf": [{"$ref": ...}]}`: no value matches both `type: "null"` and the referenced component, so the schema is unsatisfiable and validators and client generators reject `null` and every enum value.
 
+An undefined enum default, such as `[DefaultValue((OrderStatus)42)]` or a parameter default `(OrderStatus)42`, is left out of the document by `AddSwagger`. Swashbuckle serializes the default with the enum converter before any filter runs, so `AddSwagger` wraps the registered `ISerializerDataContractResolver`. Without `AddSwagger`, call `services.AddSwaggerEnumConventions()` after `AddSwaggerGen` and after registering your own resolver: it adds `AddEnumConventions()` and wraps the resolver the same way, and calling it twice or together with `AddSwagger` registers once. With only `AddSwaggerGen(o => o.AddEnumConventions())`, or with your own resolver registered by type (`AddSingleton<ISerializerDataContractResolver, MyResolver>()`), nothing is wrapped. CSharpEssentials.Json 8.0 writes an undefined value as its number instead of throwing, so the document is still served, but the default is not guaranteed to be left out. Use a defined value, call `AddSwagger` or `AddSwaggerEnumConventions`, or register your resolver as an instance or a factory.
+
 A document whose operations all write numbers describes the enums as `integer`; a document that mixes formats describes strings and marks each number operation with `x-enum-wire-format: number` and a note; it also logs one warning per enum used in both formats (once per document). Header selected operations get `x-enum-wire-format-header` and a note; a selector that throws for a request without the header is described with the global `WriteAs` format and logged once as a warning. Enums without `[StringEnum]` or metadata keep the Swashbuckle schema.
 
-The schemas match those of `CSharpEssentials.AspNetCore.OpenApi` (both are compared with the same golden files).
+The schemas match those of `CSharpEssentials.AspNetCore.OpenApi` (both are compared with the same golden files). Microsoft.AspNetCore.OpenApi uses short schema ids, so the `$ref` values match only with `QualifyWithNamespace = false`.
 
 ### From 5.x
 
@@ -126,3 +130,7 @@ See [docs/migration/v5-to-v6.md](../docs/migration/v5-to-v6.md) for the full lis
 ### From 4.x
 
 The Swagger code moved here from `CSharpEssentials.AspNetCore`; namespaces and the `AddSwagger` API are unchanged. `EnumSchemaFilter` now takes an `IServiceProvider` (Swashbuckle creates it); register it with `AddEnumConventions()` instead of `SchemaFilter<EnumSchemaFilter>()`.
+
+## Upgrading to 8.0
+
+- `SwashbuckleSchemaIdFactory.QualifyWithNamespace` is `true` by default, and `AddSwagger` uses that default. Schema ids are namespace-qualified (`MyApp.Contracts.Order` instead of `Order`), so they no longer depend on the order in which types are first seen. Every `$ref` and every client type name generated from the document changes. Regenerate your clients, or keep the 7.x ids with `options.CustomSchemaIds(new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false }.GetSchemaId)` after `AddSwagger`.

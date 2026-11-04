@@ -62,6 +62,8 @@ With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpConte
 
 `errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 
+Problem responses also serialize when reflection-based JSON is off (Native AOT, or a `TypeInfoResolverChain` that holds only your source-generated context). The package adds source-generated metadata for its problem types and the extension values it writes, after your resolvers. Your own extension values of other types (custom `ErrorMetadata` values, enricher output) still need to be in your `JsonSerializerContext`.
+
 #### Returning problems from your own code
 
 ```csharp

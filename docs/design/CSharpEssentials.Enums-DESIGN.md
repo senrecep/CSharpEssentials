@@ -515,6 +515,7 @@ Rules:
 - Aliases are not listed (they are accepted, not advertised). Obsolete members get `(deprecated)` in the table and stay in `enum`.
 - The fallback member stays in `enum` (it can appear in responses) and its table row and `x-enum-descriptions` entry start with `Response only:`. Separate request schemas were considered and rejected: they double the component count for a rule that input validation already enforces.
 - `default` is the wire name when the property or parameter has a default value.
+- A `[DefaultValue]` is given as the enum value (`[DefaultValue(OrderStatus.Pending)]`) or as `[DefaultValue(typeof(OrderStatus), "Pending")]`; a raw wire-name string such as `[DefaultValue("pending")]` is not used as a default.
 - Nullable is expressed where it is used, never on the shared component (a nullable component would make every use nullable). The transformer branches on the **document's** OpenAPI version, not on the package version (net10.0+ can still emit 3.0):
   - OpenAPI 3.0: `{ "allOf": [ { "$ref": "#/components/schemas/OrderStatus" } ], "nullable": true }`.
   - OpenAPI 3.1: `{ "oneOf": [ { "$ref": "#/components/schemas/OrderStatus" }, { "type": "null" } ] }`.

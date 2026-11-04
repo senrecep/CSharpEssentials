@@ -127,5 +127,16 @@ public class ProblemDetailsExtensionsTests
 
         action.Should().Throw<InvalidOperationException>();
     }
-}
 
+    [Fact]
+    public void ToProblemDetails_WithUndefinedErrorType_ShouldCreateUnknownErrorProblem()
+    {
+        Error error = Error.Exception("Custom.Code", new InvalidOperationException("Something happened"), (ErrorType)42);
+
+        EnhancedProblemDetails problemDetails = error.ToProblemDetails();
+
+        problemDetails.Status.Should().Be(500);
+        problemDetails.Title.Should().Be("Unknown Error");
+        problemDetails.Errors.Should().Contain(error);
+    }
+}

@@ -33,6 +33,7 @@ public static partial class Extensions
         services.TryAddSingleton<EnhancedProblemDetailsMarker>();
         services.TryAddSingleton<IErrorStatusCodeMapper>(DefaultErrorStatusCodeMapper.Instance);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProblemDetailsOptions>, EnhancedProblemDetailsPostConfigure>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>, EnhancedProblemDetailsJsonOptionsSetup>());
         return services;
     }
 
@@ -323,6 +324,6 @@ public static partial class Extensions
         ErrorType.Unexpected => "Unexpected Error",
         ErrorType.Failure => "Server Failure",
         ErrorType.Unknown => "Unknown Error",
-        _ => throw new NotImplementedException(),
+        _ => "Unknown Error",
     };
 }

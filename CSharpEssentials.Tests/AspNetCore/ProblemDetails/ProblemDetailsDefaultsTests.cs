@@ -166,6 +166,8 @@ public class ProblemDetailsDefaultsTests
     }
 
     [Theory]
+    [InlineData(402, "https://tools.ietf.org/html/rfc9110#section-15.5.3")]
+    [InlineData(407, "https://tools.ietf.org/html/rfc9110#section-15.5.8")]
     [InlineData(410, "https://tools.ietf.org/html/rfc9110#section-15.5.11")]
     [InlineData(411, "https://tools.ietf.org/html/rfc9110#section-15.5.12")]
     [InlineData(413, "https://tools.ietf.org/html/rfc9110#section-15.5.14")]
@@ -173,6 +175,7 @@ public class ProblemDetailsDefaultsTests
     [InlineData(415, "https://tools.ietf.org/html/rfc9110#section-15.5.16")]
     [InlineData(416, "https://tools.ietf.org/html/rfc9110#section-15.5.17")]
     [InlineData(417, "https://tools.ietf.org/html/rfc9110#section-15.5.18")]
+    [InlineData(421, "https://tools.ietf.org/html/rfc9110#section-15.5.20")]
     [InlineData(505, "https://tools.ietf.org/html/rfc9110#section-15.6.6")]
     public void Rfc9110_Should_ReturnSectionLink_When_StatusCodeIsDefined(int status, string expectedType)
     {

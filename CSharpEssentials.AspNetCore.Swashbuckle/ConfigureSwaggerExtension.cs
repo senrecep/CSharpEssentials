@@ -35,10 +35,10 @@ public static class ConfigureSwaggerExtension
             var factory = new SwashbuckleSchemaIdFactory();
             options.CustomSchemaIds(factory.GetSchemaId);
         });
+        services.AddSwaggerEnumConventions();
         services.AddSingleton<IConfigureOptions<SwaggerGenOptions>>(provider => new XmlCommentsConfigureOptions(provider, assembly));
         services.ConfigureOptions<TConfigureSwaggerOptions>();
-        // After every Configure (XML comments included), so the enum descriptions append to the XML summaries.
-        services.PostConfigure<SwaggerGenOptions>(static options => options.AddEnumConventions().AddIdempotencyConventions());
+        services.PostConfigure<SwaggerGenOptions>(static options => options.AddIdempotencyConventions());
         return services;
     }
 

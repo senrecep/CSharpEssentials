@@ -1,4 +1,6 @@
+using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -12,6 +14,7 @@ internal static class EnhancedProblemDetailsWriter
 {
     internal const string ContentType = "application/problem+json";
     private static readonly JsonSerializerOptions DefaultJsonOptions = new(JsonSerializerDefaults.Web);
+    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> WithProblemMetadata = [];
 
     /// <summary>
     /// Writes through <see cref="IProblemDetailsService"/> when <c>AddEnhancedProblemDetails</c> is registered.
@@ -66,8 +69,27 @@ internal static class EnhancedProblemDetailsWriter
         await httpContext.Response.WriteAsJsonAsync(
             context.ProblemDetails,
             context.ProblemDetails.GetType(),
-            jsonOptions,
+            AddProblemMetadata(jsonOptions),
             ContentType,
             httpContext.RequestAborted).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// The application's options with <see cref="EnhancedProblemDetailsJsonContext"/> appended to the resolvers, so
+    /// the application's metadata still wins and the problem types resolve without reflection (Native AOT).
+    /// Options that already resolve the problem types (no resolver or the reflection resolver while reflection is
+    /// enabled, or the context already in the chain) are returned unchanged.
+    /// </summary>
+    internal static JsonSerializerOptions AddProblemMetadata(JsonSerializerOptions options) =>
+        ResolvesProblemTypes(options)
+            ? options
+            : WithProblemMetadata.GetValue(options, static source => new JsonSerializerOptions(source)
+            {
+                TypeInfoResolver = JsonTypeInfoResolver.Combine(source.TypeInfoResolver, EnhancedProblemDetailsJsonContext.Default),
+            });
+
+    private static bool ResolvesProblemTypes(JsonSerializerOptions options) =>
+        options.TypeInfoResolverChain.Contains(EnhancedProblemDetailsJsonContext.Default)
+        || JsonSerializer.IsReflectionEnabledByDefault
+            && (options.TypeInfoResolver is null || options.TypeInfoResolverChain.Any(static resolver => resolver is DefaultJsonTypeInfoResolver));
 }
