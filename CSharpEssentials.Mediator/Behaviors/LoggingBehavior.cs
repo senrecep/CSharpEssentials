@@ -12,30 +12,30 @@ public sealed partial class LoggingBehavior<TRequest, TResponse>(
     : IPipelineBehavior<TRequest, TResponse>
     where TRequest : ILoggableRequest
 {
+    private static readonly string RequestName = typeof(TRequest).Name;
+    private static readonly string ResponseName = typeof(TResponse).Name;
+
     public async ValueTask<TResponse> Handle(
         TRequest message,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        string requestName = typeof(TRequest).Name;
-        string responseName = typeof(TResponse).Name;
-
 #if NET7_0_OR_GREATER
         long startTime = Stopwatch.GetTimestamp();
 #else
         var stopwatch = Stopwatch.StartNew();
 #endif
 
-        LogRequest(requestName, message);
+        LogRequest(RequestName, message);
         TResponse response = await next(message, cancellationToken).ConfigureAwait(false);
-        LogResponse(responseName, message, response);
+        LogResponse(ResponseName, message, response);
 
 #if NET7_0_OR_GREATER
         TimeSpan elapsedTime = Stopwatch.GetElapsedTime(startTime);
-        LogElapsedTime(logger, requestName, elapsedTime);
+        LogElapsedTime(logger, RequestName, elapsedTime);
 #else
         stopwatch.Stop();
-        LogElapsedTime(logger, requestName, stopwatch.Elapsed);
+        LogElapsedTime(logger, RequestName, stopwatch.Elapsed);
 #endif
 
         return response;
