@@ -434,11 +434,11 @@ public class JsonPolymorphismTests
         target.TypeInfoResolverChain.Insert(0, PolymorphismTestContext.Default);
 
         EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
-        IJsonTypeInfoResolver? first = target.TypeInfoResolver;
+        IJsonTypeInfoResolver first = target.TypeInfoResolverChain.Should().ContainSingle().Subject;
         EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(target);
         string json = JsonSerializer.Serialize<IFixtureEvent>(new FixtureOrderPlaced(Id, 1), target);
 
-        target.TypeInfoResolver.Should().BeSameAs(first);
+        target.TypeInfoResolverChain.Should().ContainSingle().Which.Should().BeSameAs(first);
         json.Should().Be($$"""{"$event":"order.placed.v1","id":"{{Id}}","total":1}""");
         JsonSerializer.Deserialize<IFixtureEvent>(json, target).Should().Be(new FixtureOrderPlaced(Id, 1));
     }
