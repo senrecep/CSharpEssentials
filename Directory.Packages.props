@@ -23,7 +23,7 @@
         <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="[8.1.0,)" />
         <PackageVersion Include="SSH.NET" Version="2026.0.0" />
         <!-- 10.2.3: the Swashbuckle 10 release chosen in #69 for the Microsoft.OpenApi 2.x move. -->
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="[10.2.3,11)" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="[10.2.3,11)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) And !$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks'))" />
     </ItemGroup>
 
     <!-- OpenApi: Microsoft.OpenApi 2.x for both OpenAPI packages on every target (Swashbuckle.AspNetCore 10 needs [2.7.5,)).
@@ -31,8 +31,13 @@
          No net11.0 target for CSharpEssentials.AspNetCore.OpenApi: Microsoft.AspNetCore.OpenApi 11.x needs Microsoft.OpenApi
          [3.10.0,4.0.0), which conflicts with this 2.x pin. -->
     <ItemGroup Label="OpenApi">
-        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.0,11)" />
-        <PackageVersion Include="Microsoft.OpenApi" Version="[2.7.5,3)" />
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="[10.0.0,11)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) And !$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks'))" />
+        <PackageVersion Include="Microsoft.OpenApi" Version="[2.7.5,3)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) And !$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks'))" />
+        <!-- The OpenApi and Swashbuckle benchmarks run the latest stable releases. The libraries still compile against the ranges above.
+             Microsoft.OpenApi stays on 2.x: 3.x is incompatible with both CSE packages and with Microsoft.AspNetCore.OpenApi 10.x. -->
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks'))" />
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.14" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks'))" />
+        <PackageVersion Include="Microsoft.OpenApi" Version="2.13.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks'))" />
     </ItemGroup>
 
     <!-- EntityFrameworkCore -->
@@ -190,11 +195,11 @@
         <!-- The container for the DI, mediator and Validation suites and their Native AOT samples, at the Microsoft.Extensions.DependencyInjection.Abstractions
              major Scrutor 7 and Microsoft.Extensions.Validation require. Scoped to those projects so transitive pinning does not move other projects' container. -->
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('di-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('mediator-aot')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Validation.Benchmarks'))" />
-        <!-- TestServer for the endpoints throughput and AspNetCore comparison suites, matched to each TFM's shared framework major.
+        <!-- TestServer for the endpoints throughput, AspNetCore comparison, OpenApi and Swashbuckle suites, matched to each TFM's shared framework major.
              Scoped to those suites so transitive pinning does not move the Idempotency suite off the TestHost that Mvc.Testing brings. -->
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.4" Condition="'$(TargetFramework)' == 'net9.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
-        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" Condition="('$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0') And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="8.0.30" Condition="'$(TargetFramework)' == 'net8.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks')))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="9.0.4" Condition="'$(TargetFramework)' == 'net9.0' And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks')))" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.11" Condition="('$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0') And ($(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.OpenApi.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks')))" />
     </ItemGroup>
 
     <!-- Analyzers -->
