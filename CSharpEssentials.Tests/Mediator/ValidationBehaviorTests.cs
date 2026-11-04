@@ -262,7 +262,7 @@ public class ValidationBehaviorTests
         Result same = await sameOrder.Handle(command, SuccessNext, default);
         Result mixed = await mixedOrder.Handle(command, SuccessNext, default);
 
-        same.Errors.Select(e => e.Code).Should().BeEquivalentTo("E_A", "E_B");
+        same.Errors.Select(e => e.Code).Should().Equal("E_A", "E_B");
         mixed.Errors.Select(e => e.Code).Should().Equal("E_EARLY", "E_LATE", "E_LATE_2");
     }
 
