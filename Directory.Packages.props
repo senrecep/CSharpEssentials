@@ -11,8 +11,9 @@
              fails the same way: Microsoft.Extensions.Http.Resilience 10.x needs Microsoft.Extensions.* 9.0.21 or later. The AspNetCore
              comparison suite fails with NU1109 too: Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0.
              The EntityFrameworkCore comparison suite runs EF Core 8, 9 and 10 side by side, which the central [9.0.4,10) EF pin would fight.
-             The Validation suite fails with NU1109 too: Microsoft.Extensions.Validation 10.0.14 needs Microsoft.Extensions.* 10.0.14. -->
-        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Validation.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
+             The Validation suite fails with NU1109 too: Microsoft.Extensions.Validation 10.0.14 needs Microsoft.Extensions.* 10.0.14.
+             The generators suite fails the same way: on net10.0 and later Immediate.Handlers 4.2.0 needs Microsoft.Extensions.DependencyInjection.Abstractions 10.0.12. -->
+        <CentralPackageTransitivePinningEnabled Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Endpoints.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.DependencyInjection.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Mediator.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Http.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.AspNetCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Validation.Benchmarks')) Or $(MSBuildProjectDirectory.Contains('CSharpEssentials.Generators.Benchmarks'))">false</CentralPackageTransitivePinningEnabled>
         <CentralPackageVersionOverrideEnabled>true</CentralPackageVersionOverrideEnabled>
     </PropertyGroup>
 
@@ -134,9 +135,14 @@
     <!-- Build -->
     <ItemGroup Label="Build">
         <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="[1.1.1,)" />
-        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="[4.13.0,)" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="[4.13.0,)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.Generators.Benchmarks'))" />
+        <!-- The generators suite hosts every generator on one Roslyn: Injectio 6.3.0 needs Roslyn 4.14 or later. 5.9.0 is the latest stable,
+             the release line of the compiler in SDK 10.0.400 and the build Immediate.Apis and Immediate.Handlers ship for it. -->
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Generators.Benchmarks'))" />
         <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="[4.13.0,)" />
-        <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="[3.11.0,)" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="[3.11.0,)" Condition="!$(MSBuildProjectDirectory.Contains('CSharpEssentials.Generators.Benchmarks'))" />
+        <!-- Microsoft.CodeAnalysis.CSharp 5.9.0 needs Microsoft.CodeAnalysis.Analyzers 5.9.0-1 or later. -->
+        <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" Condition="$(MSBuildProjectDirectory.Contains('CSharpEssentials.Generators.Benchmarks'))" />
     </ItemGroup>
 
     <!-- Benchmarks -->
@@ -160,6 +166,13 @@
         <PackageVersion Include="Enums.NET" Version="5.0.0" />
         <!-- No stable NetEscapades.EnumGenerators release exists; 1.0.0-beta21 is the latest prerelease. -->
         <PackageVersion Include="NetEscapades.EnumGenerators" Version="1.0.0-beta21" />
+        <!-- The generators suite loads the NetEscapades generator and runtime DLLs directly; no stable release exists, so 1.0.0-beta21 as above. -->
+        <PackageVersion Include="NetEscapades.EnumGenerators.Generators" Version="1.0.0-beta21" />
+        <PackageVersion Include="NetEscapades.EnumGenerators.RuntimeDependencies" Version="1.0.0-beta21" />
+        <!-- Competitor generators for the generators suite. Immediate.Apis needs Immediate.Handlers for its [Handler] types. -->
+        <PackageVersion Include="Immediate.Apis" Version="6.4.0" />
+        <PackageVersion Include="Immediate.Handlers" Version="4.2.0" />
+        <PackageVersion Include="Injectio" Version="6.3.0" />
         <PackageVersion Include="OneOf" Version="3.0.271" />
         <!-- OneOf ships no System.Text.Json converter; this third-party add-on (MIT) is the JSON column's only option. -->
         <PackageVersion Include="OneOf.Serialization.SystemTextJson" Version="1.1.1" />
