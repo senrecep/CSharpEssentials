@@ -1,4 +1,3 @@
-using CSharpEssentials.Core;
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
@@ -13,7 +12,6 @@ namespace CSharpEssentials.EntityFrameworkCore;
 public abstract partial class BaseDbContext<TContext> : DbContext
     where TContext : DbContext
 {
-    private readonly Guid _instanceId = Guider.NewGuid();
     private readonly IServiceScope _serviceScope;
     private List<(IDomainEventHolder Entity, IDomainEvent[] Events)>? _afterSaveCollected;
     protected readonly ILogger<TContext> Logger;
@@ -25,7 +23,8 @@ public abstract partial class BaseDbContext<TContext> : DbContext
         _serviceScope = serviceScopeFactory.CreateScope();
         ServiceProvider = _serviceScope.ServiceProvider;
         Logger = ServiceProvider.GetRequiredService<ILogger<TContext>>();
-        LogContextCreated(_instanceId);
+        if (Logger.IsEnabled(LogLevel.Information))
+            LogContextCreated(ContextId.InstanceId);
     }
 
     /// <summary>
@@ -216,12 +215,14 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
     ~BaseDbContext()
     {
-        LogContextDestructed(_instanceId);
+        if (Logger.IsEnabled(LogLevel.Information))
+            LogContextDestructed(ContextId.InstanceId);
     }
 
     public override void Dispose()
     {
-        LogContextDisposed(_instanceId);
+        if (Logger.IsEnabled(LogLevel.Information))
+            LogContextDisposed(ContextId.InstanceId);
         base.Dispose();
         _serviceScope.Dispose();
         GC.SuppressFinalize(this);
@@ -229,7 +230,8 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
     public override async ValueTask DisposeAsync()
     {
-        LogContextDisposed(_instanceId);
+        if (Logger.IsEnabled(LogLevel.Information))
+            LogContextDisposed(ContextId.InstanceId);
         await base.DisposeAsync().ConfigureAwait(false);
         if (_serviceScope is IAsyncDisposable asyncScope)
             await asyncScope.DisposeAsync().ConfigureAwait(false);
