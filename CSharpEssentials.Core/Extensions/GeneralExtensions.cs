@@ -74,6 +74,7 @@ public static class GeneralExtensions
         return new ValueTask(WithCancellationCore(valueTask.AsTask(), cancellationToken));
     }
 
+#if NETSTANDARD
     private static async Task WithCancellationCore(Task task, CancellationToken cancellationToken)
     {
         var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -103,6 +104,19 @@ public static class GeneralExtensions
 
         return await task.ConfigureAwait(false);
     }
+#else
+    private static Task WithCancellationCore(Task task, CancellationToken cancellationToken)
+    {
+        ObserveFault(task);
+        return task.WaitAsync(cancellationToken);
+    }
+
+    private static Task<T> WithCancellationCore<T>(Task<T> task, CancellationToken cancellationToken)
+    {
+        ObserveFault(task);
+        return task.WaitAsync(cancellationToken);
+    }
+#endif
 
     private static void ObserveFault(Task task) =>
         _ = task.ContinueWith(

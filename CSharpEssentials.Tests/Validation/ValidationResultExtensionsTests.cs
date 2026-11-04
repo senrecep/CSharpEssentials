@@ -236,7 +236,7 @@ public class ValidationResultExtensionsTests
 
         Func<Task> act = async () => await source.Task.ValidateWithAsync(validator, cts.Token);
 
-        await Assert.ThrowsAsync<OperationCanceledException>(act);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
     }
 
     [Fact]
@@ -286,7 +286,7 @@ public class ValidationResultExtensionsTests
             rules.For(() => model.Name).NotEmpty();
         }, cts.Token);
 
-        await Assert.ThrowsAsync<OperationCanceledException>(act);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
         delegateCalled.Should().BeFalse();
     }
 
@@ -401,7 +401,7 @@ public class ValidationResultExtensionsTests
             rules.For(() => model.Name).NotEmpty();
         }, cts.Token);
 
-        await Assert.ThrowsAsync<OperationCanceledException>(act);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(act);
         delegateCalled.Should().BeFalse();
     }
 

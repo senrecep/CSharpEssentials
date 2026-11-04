@@ -112,7 +112,7 @@ Task<string> task = value.AsTask();
 ValueTask<string> vt = value.AsValueTask();
 ```
 
-`WithCancellation` stops waiting and throws `OperationCanceledException` when the token is cancelled. It does not cancel the underlying task, and it returns the original task when the token cannot be cancelled.
+`WithCancellation` stops waiting and throws `OperationCanceledException` when the token is cancelled. On .NET 9 and later it is `Task.WaitAsync`, so the exception is the `TaskCanceledException` subclass and carries the token. It does not cancel the underlying task, and it returns the original task when the token cannot be cancelled.
 
 ### GUID Utilities
 
@@ -187,3 +187,4 @@ Here `handler.Handle` returns `ValueTask<Result>`; `Result` comes from [CSharpEs
 - `MsToDateTime` returns a `DateTime` with `Kind = Utc`. It returned `Kind = Unspecified` before, with the same ticks. `ToUniversalTime()` no longer shifts it by the local offset, System.Text.Json now writes a trailing `Z`, and Npgsql maps it to `timestamp with time zone`. If you stored or compared the old value, call `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour.
 - `ToSnakeCase`, `ToKebabCase` and the other case converters keep letters without case (CJK, Arabic, Hebrew, Thai), titlecase letters and combining marks. 7.x dropped them, so `"用户名".ToSnakeCase()` was `""` and `"user用户Name"` was `"user_name"`; they are now `"用户名"` and `"user用户_name"`. Output for names written only in Latin letters and digits does not change. If you stored converted values of non-Latin names, for example through EF Core `LegacySnakeCase` enum storage, rewrite them with the new output.
 - `ToStringFromGuid` and `ToGuidFromString` use the RFC 4648 base64url alphabet (`+` as `-`, `/` as `_`). 7.x used the reverse mapping, so a short ID stored by 7.x that contains `-` or `_` now decodes to a different GUID. Convert stored IDs once by swapping every `-` with `_` and every `_` with `-`, for example `id.Replace('-', '*').Replace('_', '-').Replace('*', '_')`.
+- `WithCancellation` on the .NET 9, 10 and 11 targets throws `TaskCanceledException`, a subclass of `OperationCanceledException`, when the token is cancelled. 7.x threw `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it, but an exact type check such as `ex.GetType() == typeof(OperationCanceledException)` or xUnit `Assert.ThrowsAsync<OperationCanceledException>` no longer matches. The `netstandard2.0` and `netstandard2.1` assets still throw `OperationCanceledException`.

@@ -231,3 +231,7 @@ Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 // Async
 Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
 ```
+
+## Upgrading to 8.0
+
+- Async operations that take a `CancellationToken` and wait on a task source (`Maybe.FromAsync`, `AsMaybeAsync`, `MapAsync`, `BindAsync`, `TapAsync`, `WhereAsync`, `OrAsync`, `ToResultAsync` and the rest) wait through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while they wait, they throw `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.

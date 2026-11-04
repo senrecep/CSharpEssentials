@@ -360,3 +360,7 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 // Works on Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
+
+## Upgrading to 8.0
+
+- Async operations that take a `CancellationToken` and wait on a task source (`MapAsync`, `BindAsync`, `TapAsync`, `MatchAsync`, `EnsureAsync`, `ThenAsync`, `TryAsync` and the rest) wait through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while they wait, they throw `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.

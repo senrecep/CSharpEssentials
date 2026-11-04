@@ -607,3 +607,7 @@ Result<Order> order = await GetOrderAsync(id)
 
 - `CSharpEssentials.Results` (brings `CSharpEssentials.Errors`, `CSharpEssentials.Json`, and through Errors `CSharpEssentials.Core` and `CSharpEssentials.Enums`)
 - `Microsoft.Extensions.DependencyInjection.Abstractions`
+
+## Upgrading to 8.0
+
+- `ValidateWithAsync` on `Task<Result<T>>` and `ValueTask<Result<T>>` waits on the task through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while it waits, it throws `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.
