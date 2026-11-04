@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 
@@ -14,6 +15,8 @@ public static class JsonPolymorphismExtensions
     internal const string ReflectionMessage =
         "AddPolymorphismWithReflection scans assemblies for derived types and reads attributes at runtime. Use AddPolymorphism with " +
         "[JsonTypeDiscriminator] and a JsonSerializerContext for trimmed or native AOT applications.";
+
+    private static readonly ConditionalWeakTable<IJsonTypeInfoResolver, StrongBox<PolymorphismScanner?>> Wrapped = [];
 
     /// <summary>
     /// Adds the derived types registered by generated code (<see cref="JsonTypeDiscriminatorAttribute"/>) and the per-property names
@@ -60,9 +63,29 @@ public static class JsonPolymorphismExtensions
         return options;
     }
 
+    /// <summary>
+    /// When <paramref name="source"/> has a resolver wrapped by this class and <paramref name="target"/> has its own resolver, wraps the
+    /// target's resolver the same way, so contexts the target already holds stay in use.
+    /// </summary>
+    internal static bool TryApplyTo(JsonSerializerOptions source, JsonSerializerOptions target)
+    {
+        if (source.TypeInfoResolver is not { } wrapped || !Wrapped.TryGetValue(wrapped, out StrongBox<PolymorphismScanner?>? scanner) ||
+            target.TypeInfoResolver is not { } inner)
+        {
+            return false;
+        }
+
+        if (!Wrapped.TryGetValue(inner, out _))
+            Apply(target, inner, new PolymorphismModifier(inner, scanner.Value));
+
+        return true;
+    }
+
     private static JsonSerializerOptions Apply(JsonSerializerOptions options, IJsonTypeInfoResolver inner, PolymorphismModifier modifier)
     {
-        options.TypeInfoResolver = inner.WithAddedModifier(modifier.Modify);
+        IJsonTypeInfoResolver resolver = inner.WithAddedModifier(modifier.Modify);
+        Wrapped.AddOrUpdate(resolver, new StrongBox<PolymorphismScanner?>(modifier.Scanner));
+        options.TypeInfoResolver = resolver;
         options.AllowOutOfOrderMetadataProperties = true;
         return options;
     }

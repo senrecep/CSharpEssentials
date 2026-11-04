@@ -116,7 +116,8 @@ public static class EnhancedJsonSerializerOptions
         target.ReadCommentHandling = source.ReadCommentHandling;
         target.ReferenceHandler = source.ReferenceHandler;
         // A null resolver would make the target unusable (ASP.NET Core requires one), so keep the target's own.
-        target.TypeInfoResolver = source.TypeInfoResolver ?? target.TypeInfoResolver;
+        if (!JsonPolymorphismExtensions.TryApplyTo(source, target))
+            target.TypeInfoResolver = source.TypeInfoResolver ?? target.TypeInfoResolver;
         target.UnknownTypeHandling = source.UnknownTypeHandling;
         target.UnmappedMemberHandling = source.UnmappedMemberHandling;
         target.WriteIndented = source.WriteIndented;

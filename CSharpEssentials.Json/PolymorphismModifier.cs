@@ -9,6 +9,8 @@ namespace CSharpEssentials.Json;
 /// </summary>
 internal sealed class PolymorphismModifier(IJsonTypeInfoResolver inner, PolymorphismScanner? scanner)
 {
+    public PolymorphismScanner? Scanner => scanner;
+
     public void Modify(JsonTypeInfo typeInfo)
     {
         if (typeInfo.Kind == JsonTypeInfoKind.None)
