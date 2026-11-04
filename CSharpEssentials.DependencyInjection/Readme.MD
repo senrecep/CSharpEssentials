@@ -9,6 +9,8 @@ Attribute-based service registration and decoration for `Microsoft.Extensions.De
 > 110.1 ns for a hand-written factory and 309.6 ns for Scrutor. The generated path publishes with Native AOT without
 > warnings; Scrutor and the reflection fallback crash under AOT (samples without `TrimmerRootAssembly`). Decoration,
 > including on the generated path, still reads constructor metadata by reflection (no AOT warnings); see BENCHMARKS.md.
+> Design-time cost of the bundled source generator (cold and incremental runs against Injectio) is described in
+> [the generator BENCHMARKS.md](../CSharpEssentials.DependencyInjection.Generators/BENCHMARKS.md). Results are pending the full run.
 
 ## Installation
 
