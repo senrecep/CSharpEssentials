@@ -1,4 +1,4 @@
-# CSharpEssentials — Claude Instructions
+# CSharpEssentials: Claude instructions
 
 > All project instructions are in [AGENTS.md](AGENTS.md). Claude Code reads both files; this file exists so tools that look for CLAUDE.md find their way to the canonical source.
 
