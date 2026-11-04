@@ -736,6 +736,7 @@ All methods accept an optional `CultureInfo` parameter.
 | `guid.ToStringFromGuid()` | 22-character short GUID string in RFC 4648 base64url without padding (`+` as `-`, `/` as `_`), so `System.Buffers.Text.Base64Url` decodes it too |
 | `str.ToGuidFromString()` | Reverse: decodes back to `Guid`; throws `FormatException` unless the input is exactly 22 URL-safe characters |
 | `Guider.NewGuid()` | RFC 9562 version 7 GUID on every target: `Guid.CreateVersion7()` on .NET 9+, the same layout built in the package on netstandard2.0/2.1 |
+| `Guider.NewMonotonicGuid()` | Version 7 GUID with a 12-bit counter after the timestamp; each call returns a value greater than the last one in the same process |
 | `Guider.ToStringFromGuid(guid)` / `Guider.ToGuidFromString(span)` | The static forms of the two conversions above |
 
 ### Other Types

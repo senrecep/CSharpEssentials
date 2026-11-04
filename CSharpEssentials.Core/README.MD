@@ -118,6 +118,7 @@ ValueTask<string> vt = value.AsValueTask();
 
 ```csharp
 Guid id = Guider.NewGuid();          // Version 7 on every target
+Guid ordered = Guider.NewMonotonicGuid(); // Version 7, strictly increasing in this process
 string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
 Guid parsed = shortId.ToGuidFromString();
 ```

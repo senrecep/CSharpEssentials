@@ -102,4 +102,15 @@ public static class Guider
         => GuidV7.NewGuid();
 #endif
 
+    /// <summary>
+    /// Creates a new RFC 9562 version 7 GUID that is strictly greater than every GUID this method returned before in the same process.
+    /// The 12 bits after the version hold a counter, so IDs created in the same millisecond also sort in creation order.
+    /// </summary>
+    /// <remarks>
+    /// When the clock stalls or moves backwards, or more than 4096 IDs are created in one millisecond,
+    /// the counter moves past the last value and the encoded timestamp can run ahead of the clock.
+    /// The order holds within one process only. Each ID carries 62 random bits instead of 74.
+    /// </remarks>
+    /// <returns>A version 7 GUID that is greater than the previous one when compared as big-endian bytes or with <see cref="Guid.CompareTo(Guid)"/>.</returns>
+    public static Guid NewMonotonicGuid() => GuidV7.NewMonotonicGuid();
 }

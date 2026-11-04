@@ -16,15 +16,36 @@ Guid newId = Guider.NewGuid();
 
 The `netstandard` builds read random bytes from a per-thread 4 KiB buffer that is refilled from `RandomNumberGenerator`. Reading the generator once per ID cost about 1 µs on the test machine. With the buffer it costs about 60 ns. The call does not allocate after the buffer exists.
 
+### 2. NewMonotonicGuid()
+
+Creates a version 7 GUID that is strictly greater than every GUID it returned before in the same process, compared as big-endian bytes, with `Guid.CompareTo` or as strings.
+
+```csharp
+Guid first = Guider.NewMonotonicGuid();
+Guid second = Guider.NewMonotonicGuid();
+// second.CompareTo(first) > 0, even inside the same millisecond
+```
+
+How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counter. The timestamp and the counter are packed into one number. A new ID starts from the current time, with the counter seeded from the time inside the millisecond. If that is not greater than the last packed value, because the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock.
+
+What it costs:
+
+- Each ID has 62 random bits instead of 74.
+- All threads update one shared value. Under contention from 6 threads it took about 48 ns per ID against about 13 ns for `NewGuid()` in a quick benchmark.
+- The order holds within one process. Two processes or machines can still produce IDs that interleave.
+- If the process creates more than 4096 IDs in one millisecond, or the clock goes backwards, the timestamp in the ID runs ahead of the clock until the clock catches up.
+
+Use `NewGuid()` when IDs only need to be unique and roughly time ordered. Use `NewMonotonicGuid()` when code relies on the creation order of IDs made by one process, for example a cursor or an append-only log.
+
 ### SQL Server ordering
 
-Version 7 GUIDs are ordered when compared byte by byte from the first byte, which is how `Guid.CompareTo`, PostgreSQL `uuid` and string sorting compare them. SQL Server's `uniqueidentifier` compares the last 6 bytes first ([Comparing GUID and uniqueidentifier values](https://learn.microsoft.com/sql/connect/ado-net/sql/compare-guid-uniqueidentifier-values)). Those bytes are random in a version 7 GUID, so `NewGuid()` does not give sequential index order in a SQL Server `uniqueidentifier` column.
+Version 7 GUIDs are ordered when compared byte by byte from the first byte, which is how `Guid.CompareTo`, PostgreSQL `uuid` and string sorting compare them. SQL Server's `uniqueidentifier` compares the last 6 bytes first ([Comparing GUID and uniqueidentifier values](https://learn.microsoft.com/sql/connect/ado-net/sql/compare-guid-uniqueidentifier-values)). Those bytes are random in a version 7 GUID, so neither `NewGuid()` nor `NewMonotonicGuid()` gives sequential index order in a SQL Server `uniqueidentifier` column.
 
 ### Upgrading to 8.0
 
 On `netstandard2.0` and `netstandard2.1`, and so on .NET 8 and .NET Framework, `NewGuid()` now returns version 7 GUIDs instead of random version 4 GUIDs. The first 6 bytes show when the ID was created. If an ID must not reveal its creation time, use `Guid.NewGuid()`.
 
-### 2. ToStringFromGuid(Guid)
+### 3. ToStringFromGuid(Guid)
 
 Converts a GUID to a URL-safe string format. The output is:
 
@@ -40,7 +61,7 @@ string urlSafeString = Guider.ToStringFromGuid(id);
 string sameString = id.ToStringFromGuid();
 ```
 
-### 3. ToGuidFromString(ReadOnlySpan<char>)
+### 4. ToGuidFromString(ReadOnlySpan<char>)
 
 Converts a URL-safe string back to a GUID. This method:
 
@@ -65,7 +86,7 @@ The input must be exactly 22 characters from `A-Z`, `a-z`, `0-9`, `-` and `_`. A
 
 ## Best Practices
 
-1. Use `NewGuid()` for time-ordered database keys on every target
+1. Use `NewGuid()` for time-ordered database keys on every target, and `NewMonotonicGuid()` when IDs from one process must be strictly increasing
 2. Use the string conversion methods when you need URL-safe GUID representations
 3. The methods are thread-safe and can be used in concurrent operations
 
