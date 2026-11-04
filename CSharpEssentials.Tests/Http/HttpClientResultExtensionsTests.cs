@@ -201,7 +201,8 @@ public class HttpClientResultExtensionsTests
     public async Task GetFromJsonAsResultAsync_Should_Dispose_Response()
     {
         var content = new TrackingContent("""{"id":1,"name":"Test"}""");
-        using var handler = new MockHandler(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+        using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+        using var handler = new MockHandler(response);
         using var client = new HttpClient(handler);
 
         Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
@@ -214,7 +215,8 @@ public class HttpClientResultExtensionsTests
     public async Task GetFromJsonAsResultAsync_WithFailureStatus_Should_Dispose_Response()
     {
         var content = new TrackingContent("""{"title":"missing"}""");
-        using var handler = new MockHandler(new HttpResponseMessage(HttpStatusCode.NotFound) { Content = content });
+        using var response = new HttpResponseMessage(HttpStatusCode.NotFound) { Content = content };
+        using var handler = new MockHandler(response);
         using var client = new HttpClient(handler);
 
         Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
@@ -227,7 +229,8 @@ public class HttpClientResultExtensionsTests
     public async Task DeleteAsResultAsync_Should_Dispose_Response()
     {
         var content = new TrackingContent(string.Empty);
-        using var handler = new MockHandler(new HttpResponseMessage(HttpStatusCode.NoContent) { Content = content });
+        using var response = new HttpResponseMessage(HttpStatusCode.NoContent) { Content = content };
+        using var handler = new MockHandler(response);
         using var client = new HttpClient(handler);
 
         Result result = await client.DeleteAsResultAsync(new Uri("https://test.com"));
