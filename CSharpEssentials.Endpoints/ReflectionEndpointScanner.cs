@@ -13,6 +13,16 @@ internal static class ReflectionEndpointScanner
 
     private static readonly MethodInfo MapEndpointMethod = typeof(EndpointMapper).GetMethod(nameof(EndpointMapper.MapEndpoint))!;
 
+    public static void ThrowIfDynamicCodeUnsupported(bool isDynamicCodeSupported)
+    {
+        if (!isDynamicCodeSupported)
+        {
+            throw new PlatformNotSupportedException(
+                "MapEndpointsFromAssemblies needs dynamic code, which this runtime does not support (Native AOT). " +
+                "Use the source-generated Map{Asm}Endpoints or MapAllEndpoints methods instead.");
+        }
+    }
+
     public static void Map(IEndpointRouteBuilder app, Assembly assembly, EndpointMappingOptions options, ILogger? logger)
     {
         if (assembly.IsDefined(typeof(ExcludeFromMappingAttribute), inherit: false))
