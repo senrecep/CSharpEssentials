@@ -6,7 +6,7 @@ Enhanced JSON serialization utilities on top of `System.Text.Json`.
 
 - **Enum Conventions**: `[StringEnum]` enums read and write their wire names (`AddEnumConventions`); other enums keep the host's behavior.
 - **Multi-Format DateTime**: Read `DateTime` and `DateTime?` from many date formats automatically.
-- **Polymorphic Serialization**: Serialize abstract types and interfaces with a `$type` discriminator.
+- **Polymorphism**: Derived types from any assembly join a `[JsonPolymorphic]` base through `[JsonTypeDiscriminator]`, with a source generator for native AOT; bases without attributes keep a `$type` discriminator.
 - **Pre-Configured Options**: CamelCase, ignore cycles, ignore nulls, relaxed escaping, plus a strict preset.
 - **JsonElement Helpers**: `ToClrObject` turns a `JsonElement` into plain CLR values.
 
@@ -33,14 +33,14 @@ string json = JsonSerializer.Serialize(myObject, options);
 | Member | Contents |
 |---|---|
 | `DefaultOptionsWithoutConverters` | Web defaults, camelCase, case-insensitive reads, nulls ignored on write, `ReferenceHandler.IgnoreCycles`, relaxed escaping |
-| `DefaultOptions` | The above plus enum conventions (Data mode), `MultiFormatDateTimeConverterFactory` and `PolymorphicJsonConverterFactory` |
+| `DefaultOptions` | The above plus enum conventions (Data mode), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `DefaultOptionsWithDateTimeConverter` | `DefaultOptionsWithoutConverters` plus `MultiFormatDateTimeConverterFactory` |
-| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members |
+| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members; `AddPolymorphismWithReflection()` |
 | `CreateOptionsWithConverters(params JsonConverter[])` | `DefaultOptionsWithoutConverters` plus the given converters |
 | `options.Create(configure)` | Copies the options and applies `configure` to the copy |
 | `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies settings and converters onto another instance; the target keeps its own `TypeInfoResolver` when the source has none |
 
-The preset instances are shared and become read-only after first use, so call `Create` to get a modifiable copy. `EnhancedJsonSerializerOptions` is annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` because `DefaultOptions` includes the reflection-based polymorphic converter.
+The preset instances are shared and become read-only after first use, so call `Create` to get a modifiable copy. `EnhancedJsonSerializerOptions` is annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` because its presets find polymorphic derived types with reflection.
 
 ```csharp
 JsonSerializerOptions indented = EnhancedJsonSerializerOptions.DefaultOptions.Create(o => o.WriteIndented = true);
@@ -137,7 +137,140 @@ StringEnumNaming.GetNames<Http>();                            // ["ok", "http_st
 StringEnumNaming.TryParse<Http>("HTTPStatus", out var value); // true (policy name, member name or number)
 ```
 
-### Polymorphic Serialization
+### Polymorphism
+
+There are two paths, and the base type picks one:
+
+- A base with System.Text.Json's `[JsonPolymorphic]` or `[JsonDerivedType]` uses System.Text.Json's own polymorphism. CSharpEssentials adds the derived types the base does not list, so they can live in any assembly.
+- A base with neither attribute keeps `PolymorphicJsonConverterFactory`: a `$type` property with the CLR full name, found by scanning the loaded assemblies. See [Bases without attributes](#bases-without-attributes).
+
+#### Events owned by each service
+
+A shared Core project defines only the base. Each service defines its own events, with stable versioned values, in its own assembly. Adding an event never touches Core.
+
+```csharp
+// Core
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$event")]
+public interface IEvent;
+
+// Orders service
+[JsonTypeDiscriminator("order.placed.v1")]
+public sealed record OrderPlaced(Guid Id, decimal Total) : IEvent;
+
+[JsonTypeDiscriminator("order.placed.v2")]
+public sealed record OrderPlacedV2(Guid Id, decimal Total, string Currency) : IEvent;
+
+// Users service
+[JsonTypeDiscriminator("user.created.v1")]
+public sealed record UserCreated(Guid Id, string Name) : IEvent;
+```
+
+```csharp
+var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() }
+    .AddPolymorphism();
+
+string json = JsonSerializer.Serialize<IEvent>(new UserCreated(id, "Ada"), options);
+// {"$event":"user.created.v1","id":"...","name":"Ada"}
+
+IEvent? back = JsonSerializer.Deserialize<IEvent>("""{"id":"...","name":"Ada","$event":"user.created.v1"}""", options);
+```
+
+The bundled source generator runs in every project that references `CSharpEssentials.Json`. Each assembly gets a registry that its module initializer runs: it registers the assembly's `[JsonTypeDiscriminator]` types, after the registries of the assemblies it references. The app's own registry therefore covers every service assembly it references, even one that is not loaded yet. Renaming or moving a class does not change its value. Integer values (`[JsonTypeDiscriminator(7)]`) work too.
+
+`AddPolymorphism` and `AddPolymorphismWithReflection` turn on `AllowOutOfOrderMetadataProperties`, so the discriminator does not have to be the first property on read.
+
+#### Resolution order
+
+For a base with `[JsonPolymorphic]` or `[JsonDerivedType]`, the derived types come from:
+
+1. `[JsonDerivedType(typeof(X), "x")]` on the base. System.Text.Json reads these; CSharpEssentials never changes them. When a listed type also has `[JsonTypeDiscriminator]`, the base value wins (CSE4002).
+2. Generated registrations from `[JsonTypeDiscriminator]` on derived types, in any assembly. No reflection.
+3. With `AddPolymorphismWithReflection` only, and only for a base with no `[JsonDerivedType]`: a scan of the given assemblies, or of every loaded assembly except .NET framework assemblies when none are given. A type with `[JsonTypeDiscriminator]` gets its value; a type without one gets its CLR full name (CSE4005 warns). Abstract types, open generic types, by-ref-like types, types with their own `[JsonConverter]` and types System.Text.Json cannot configure are skipped.
+
+```csharp
+options.AddPolymorphismWithReflection(typeof(OrderPlaced).Assembly, typeof(UserCreated).Assembly);
+```
+
+Two derived types with the same value under one base throw `InvalidOperationException` the first time the base is used. The message names both types and their assemblies. A base that ends up with no derived types throws too. An unknown value on read throws `JsonException`.
+
+#### Discriminator name per property
+
+`[JsonPolymorphicProperty]` renames the discriminator for the values of one property. The property type, or its element type for arrays, collections, dictionary values and `Nullable<T>`, must be a base with `[JsonPolymorphic]` or `[JsonDerivedType]`.
+
+```csharp
+[JsonPolymorphic]
+public interface IValue;
+
+[JsonTypeDiscriminator("text")]   public sealed class TextValue : IValue { public string Text { get; set; } = ""; }
+[JsonTypeDiscriminator("number")] public sealed class NumberValue : IValue { public decimal Number { get; set; } }
+
+public class Data
+{
+    [JsonPolymorphicProperty("values")]
+    public IValue? Value { get; set; }
+
+    [JsonPolymorphicProperty("values")]
+    public List<IValue> Items { get; set; } = [];
+
+    public IValue? Other { get; set; }
+}
+
+// {"value":{"values":"text","text":"a"},"items":[{"values":"number","number":2}],"other":{"$type":"number","number":1}}
+```
+
+The name applies to every value of that base inside the property, nested values included.
+
+#### Source-generated contexts and native AOT
+
+`AddPolymorphism` uses no reflection, so it is trim and native AOT safe. Copy the context's options so the `[JsonSourceGenerationOptions]` values stay, list every derived type with `[JsonSerializable]`, and call `AddPolymorphism` last:
+
+```csharp
+[JsonSerializable(typeof(IEvent))]
+[JsonSerializable(typeof(OrderPlaced))]
+[JsonSerializable(typeof(UserCreated))]
+[JsonSourceGenerationOptions(JsonSerializerDefaults.Web, AllowOutOfOrderMetadataProperties = true)]
+public partial class AppJsonContext : JsonSerializerContext;
+
+var options = new JsonSerializerOptions(AppJsonContext.Default.Options).AddPolymorphism();
+var events = (JsonTypeInfo<IEvent>)options.GetTypeInfo(typeof(IEvent));
+string json = JsonSerializer.Serialize(new OrderPlaced(id, 10m), events);
+```
+
+A derived type missing from the context is left out, so writing it throws `NotSupportedException`; CSE4006 reports it and its code fix adds the `[JsonSerializable]` line. A resolver inserted into `TypeInfoResolverChain` after `AddPolymorphism` bypasses it. `AddPolymorphismWithReflection`, `[JsonAcceptClrTypeNames]` and `PolymorphicJsonConverterFactory` use reflection and are not AOT safe. `benchmarks/json-aot` publishes a sample with native AOT and no warnings.
+
+#### Reading old CLR names
+
+Payloads written by `PolymorphicJsonConverterFactory` carry the CLR full name in `$type`. After the base moves to `[JsonPolymorphic]` and values, mark it `[JsonAcceptClrTypeNames]` to keep reading those payloads. Writes always use the new value. A payload with a CLR name is read through a `JsonObject` copy, so it is slower than a current one. It needs `AddPolymorphismWithReflection`, which `DefaultOptions` and `StrictOptions` include.
+
+```csharp
+[JsonPolymorphic]
+[JsonAcceptClrTypeNames]
+public interface IEvent;
+```
+
+#### Analyzers
+
+| Id | Severity | Reports |
+|---|---|---|
+| CSE4001 | Error | Two derived types of one base use the same value (from `[JsonTypeDiscriminator]`, `[JsonDerivedType]` or a CLR full name) |
+| CSE4002 | Warning | `[JsonTypeDiscriminator]` on a type the base already lists; the base value wins |
+| CSE4003 | Error | `[JsonTypeDiscriminator]` on an abstract type, an interface or a generic type |
+| CSE4004 | Warning | The discriminator name equals a member's JSON name (ignoring case) |
+| CSE4005 | Warning | A derived type of a base without `[JsonDerivedType]` has no `[JsonTypeDiscriminator]` |
+| CSE4006 | Warning | A `JsonSerializerContext` lists a base but not one of its `[JsonTypeDiscriminator]` types (code fix) |
+| CSE4007 | Warning | A derived type has its own `[JsonConverter]` and is left out |
+| CSE4008 | Warning | `[JsonTypeDiscriminator]` on a type whose bases have no System.Text.Json polymorphism attribute |
+| CSE4009 | Warning | `[JsonPolymorphicProperty]` on a member that holds no polymorphic base |
+| CSE4010 | Warning | A type generated code cannot reach (private, protected, file-local or generic) |
+| CSE4011 | Info | A derived type of a base with `[JsonDerivedType]` is neither listed nor valued, so writing it throws |
+
+#### Limits
+
+- System.Text.Json caches a base's contract per options instance. A derived type registered after the base was first used, for example from a plugin loaded later, is not added to that instance.
+- A value typed as `object` whose runtime type derives from two unrelated polymorphic bases gets no discriminator (System.Text.Json's ambiguity rule).
+- Generic bases are not registered by the generator; `AddPolymorphismWithReflection` still finds their derived types.
+
+#### Bases without attributes
 
 ```csharp
 namespace Zoo;
@@ -155,9 +288,9 @@ string json = dog.ConvertToJson(); // {"$type":"Zoo.Dog","breed":"Labrador","nam
 Animal? restored = json.ConvertFromJson<Animal>();
 ```
 
-`DefaultOptions` applies `PolymorphicJsonConverterFactory` to abstract classes and interfaces; collections and dictionaries keep the built-in array and object serialization. The `$type` value is the concrete type's full name (namespace included) and is written first. On read, `$type` is required and is matched against the non-abstract types of the loaded assemblies that derive from the declared type; a missing or unknown value throws `JsonException`. The scan runs once per declared type, on first use, so assemblies loaded later are not seen. Generic derived types are not discovered: a value such as `Cage<Dog>` is written with its full generic name in `$type`, but reading it back throws `JsonException`. When two loaded types share a full name, the first one found wins. Discovery uses reflection, so this is not trim or AOT safe: use `[JsonPolymorphic]` with source generation there.
+`DefaultOptions` applies `PolymorphicJsonConverterFactory` to abstract classes and interfaces; collections and dictionaries keep the built-in array and object serialization. The `$type` value is the concrete type's full name (namespace included) and is written first. On read, `$type` is required and is matched against the non-abstract types of the loaded assemblies that derive from the declared type; a missing or unknown value throws `JsonException`. The scan runs once per declared type, on first use, so assemblies loaded later are not seen. Generic derived types are not discovered: a value such as `Cage<Dog>` is written with its full generic name in `$type`, but reading it back throws `JsonException`. When two loaded types share a full name, the first one found wins. Discovery uses reflection, so this is not trim or AOT safe: use `[JsonPolymorphic]` with `AddPolymorphism` there. .NET framework types are never candidates.
 
-A type marked with `[JsonPolymorphic]` or `[JsonDerivedType]` is left to System.Text.Json, so its own discriminators are used. Async streams (any type that implements `IAsyncEnumerable<T>`) and `JsonNode` values keep their built-in serialization too.
+A type marked with `[JsonPolymorphic]` or `[JsonDerivedType]` is left to System.Text.Json and the path above. Async streams (any type that implements `IAsyncEnumerable<T>`) and `JsonNode` values keep their built-in serialization too.
 
 ### Multi-Format DateTime
 
@@ -180,7 +313,7 @@ Constructor arguments add formats to the built-in list. Every value is returned 
 ## Upgrading to 8.0
 
 - Members declared as `JsonNode` or `JsonValue` are written without a `$type` wrapper. A `JsonObject` stored by 7.x in such a member carries a `"$type"` key and now reads back with that key inside it; strip `$type` from those stored objects.
-- Abstract types and interfaces marked with `[JsonPolymorphic]` or `[JsonDerivedType]` are no longer handled by `PolymorphicJsonConverterFactory`. They are written with the discriminators from the attributes, and payloads stored with a full CLR name in `$type` no longer read. Rewrite stored `$type` values to the attribute discriminators, or remove the attributes to keep the old format.
+- Abstract types and interfaces marked with `[JsonPolymorphic]` or `[JsonDerivedType]` are no longer handled by `PolymorphicJsonConverterFactory`. They are written with the discriminators from the attributes, and payloads stored with a full CLR name in `$type` no longer read. Mark the base `[JsonAcceptClrTypeNames]` to keep reading them, rewrite stored `$type` values to the attribute discriminators, or remove the attributes to keep the old format.
 - Abstract and interface properties nested inside a polymorphic value now get their own `$type` and read back as the derived type. Before, they were written without `$type` and could not be read. Payloads written by 7.x that hold such nested members need a `$type` added to each nested object before they can be read.
 - `MultiFormatDateTimeConverter` throws `JsonException` for a Unix-seconds string outside the `DateTime` range. Before, it threw `ArgumentOutOfRangeException`. Catch `JsonException` instead.
 - `MultiFormatDateTimeConverter` writes a `DateTime` with `Kind` `Unspecified` as UTC (`+00:00`). Before, it used the host's local offset, so a round trip on a non-UTC host shifted the value. Set `Kind` to `Local` before serializing if the value is local time.
