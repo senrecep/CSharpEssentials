@@ -288,6 +288,34 @@ public class DbContextExtensionMethodsTests
     }
 
     [Fact]
+    public async Task MigrateDataAsync_Core_ShouldReuseCompiledKeySelectors_AcrossCalls()
+    {
+        var options = new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
+        {
+            Query = q => q,
+            EntityKeyProperty = e => e.Id,
+            DataKeyProperty = s => s.Key,
+            IsUpdatedFunc = (e, s) => e.Name != s.Name,
+            UpdateFunc = (e, s) =>
+            {
+                e.Name = s.Name;
+                return e;
+            },
+            Converter = s => new SimpleEntity { Id = s.Key, Name = s.Name }
+        };
+        Func<SimpleEntity, int> entityKey = options.EntityKeySelector;
+        Func<SimpleSeed, int> dataKey = options.DataKeySelector;
+
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        await context.MigrateDataAsync(new[] { new SimpleSeed { Key = 1, Name = "A" } }, options);
+        await context.MigrateDataAsync(new[] { new SimpleSeed { Key = 1, Name = "B" }, new SimpleSeed { Key = 2, Name = "C" } }, options);
+
+        options.EntityKeySelector.Should().BeSameAs(entityKey);
+        options.DataKeySelector.Should().BeSameAs(dataKey);
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Name).Should().Equal("B", "C");
+    }
+
+    [Fact]
     public async Task MigrateDataAsync_Core_ShouldUpdateExistingEntities()
     {
         using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());

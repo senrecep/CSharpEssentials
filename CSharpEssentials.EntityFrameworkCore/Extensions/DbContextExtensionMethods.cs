@@ -144,8 +144,8 @@ public static class DbContextExtensionMethods
         if (options.PreConditionFunc is not null && options.PreConditionFunc(dbSet, dataList))
             return;
 
-        Func<TEntity, TKey> entityKeySelector = options.EntityKeyProperty.Compile();
-        Func<TSeedData, TKey> dataKeySelector = options.DataKeyProperty.Compile();
+        Func<TEntity, TKey> entityKeySelector = options.EntityKeySelector;
+        Func<TSeedData, TKey> dataKeySelector = options.DataKeySelector;
         List<TEntity> entities = await
             options.Query(dbSet)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
