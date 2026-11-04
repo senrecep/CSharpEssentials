@@ -2,6 +2,8 @@
 
 Testable time abstraction built on .NET `TimeProvider`. Decouple your code from the system clock for reliable unit testing.
 
+> **Benchmarks:** clock reads (`UtcNow`, `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`) against `TimeProvider.System` and `DateTimeOffset.UtcNow`, and the DateOnly, TimeOnly, weekday and age helpers against the BCL and hand-written code, are described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
+
 ## Features
 
 - **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime` (always `DateTimeKind.Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone` and `TimeZoneUtc`.
