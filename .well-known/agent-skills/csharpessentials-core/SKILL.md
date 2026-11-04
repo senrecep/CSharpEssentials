@@ -44,7 +44,7 @@ Also available: `ToTitleCase`, `ToTrainCase`, `ToUnderscoreCamelCase`. Each take
 ## GUID Utilities
 
 ```csharp
-// Version 7 (time-sortable) GUID on .NET 9+, Guid.NewGuid() on older targets
+// Version 7 (time-sortable) GUID on every target
 Guid id = Guider.NewGuid();
 
 // Compact, URL-safe 22-character string and back

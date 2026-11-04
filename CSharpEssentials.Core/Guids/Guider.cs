@@ -1,5 +1,4 @@
 ﻿using System.Buffers.Text;
-using System.Runtime.CompilerServices;
 #if !NETSTANDARD
 using System.Runtime.InteropServices;
 #endif
@@ -93,14 +92,16 @@ public static class Guider
     /// Creates a new RFC 9562 version 7 GUID: a 48-bit Unix millisecond timestamp followed by random bits.
     /// IDs from different milliseconds sort by creation time while the system clock does not move backwards; IDs created in the same millisecond have no set order.
     /// </summary>
-    /// <returns>A version 7 GUID. On .NET 9 and later this is <c>Guid.CreateVersion7()</c>; other targets build the same layout.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Guid NewGuid()
-#if NET9_0_OR_GREATER
-        => Guid.CreateVersion7();
-#else
-        => GuidV7.NewGuid();
-#endif
+    /// <remarks>
+    /// The random bits come from a per-thread pool of bytes filled by <see cref="System.Security.Cryptography.RandomNumberGenerator"/>
+    /// and salted with one <see cref="Guid.NewGuid"/> per refill. The first ID after a pause of more than 1 ms on a thread takes fresh
+    /// bits from <see cref="Guid.NewGuid"/> instead, and that GUID becomes the new salt. A cloned virtual machine or a checkpointed and restored process can still repeat
+    /// an ID in a narrow case described in the Guids Readme. Set the
+    /// AppContext switch <c>CSharpEssentials.Guider.DisableRandomPool</c> to <see langword="true"/> before the first call to take the
+    /// random bits from <see cref="Guid.NewGuid"/> on every call.
+    /// </remarks>
+    /// <returns>A version 7 GUID with the layout of <c>Guid.CreateVersion7()</c>.</returns>
+    public static Guid NewGuid() => GuidV7.NewGuid();
 
     /// <summary>
     /// Creates a new RFC 9562 version 7 GUID that is strictly greater than every GUID this method returned before in the same process (per loaded copy of the assembly).

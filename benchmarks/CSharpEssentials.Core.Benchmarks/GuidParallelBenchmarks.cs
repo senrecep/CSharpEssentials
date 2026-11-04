@@ -15,6 +15,11 @@ public class GuidParallelBenchmarks
     [Benchmark(Baseline = true, OperationsPerInvoke = _total)]
     public int GuidNewGuid() => Run(Guid.NewGuid);
 
+#if NET9_0_OR_GREATER
+    [Benchmark(OperationsPerInvoke = _total)]
+    public int GuidCreateVersion7() => Run(Guid.CreateVersion7);
+#endif
+
     [Benchmark(OperationsPerInvoke = _total)]
     public int GuiderNewGuid() => Run(Guider.NewGuid);
 

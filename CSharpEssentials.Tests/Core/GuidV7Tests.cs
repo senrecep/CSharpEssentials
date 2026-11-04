@@ -81,6 +81,67 @@ public sealed class GuidV7Tests
         }
     }
 
+    private static bool TookFreshNewGuidBits(long utcTicks, bool usePool)
+    {
+        byte[] bytes = new byte[16];
+        GuidV7.FillRandom(bytes, utcTicks, usePool);
+        return bytes.AsSpan(0, 6).IndexOfAnyExcept((byte)0) >= 0;
+    }
+
+    private const int _poolSize = 1024;
+
+    private static byte[] Salt() => GuidV7.CurrentPool()!.AsSpan(_poolSize, 8).ToArray();
+
+    private static byte[] Xor(byte[] a, byte[] b) => a.Zip(b, (x, y) => (byte)(x ^ y)).ToArray();
+
+    private static (byte[] Taken, byte[] Leftover) TakeAndPeekLeftover(long utcTicks)
+    {
+        byte[] leftover = GuidV7.CurrentPool()!.AsSpan(GuidV7.CurrentPoolOffset(), 8).ToArray();
+        byte[] bytes = new byte[16];
+        GuidV7.FillRandom(bytes, utcTicks, usePool: true);
+        return (bytes.AsSpan(6, 8).ToArray(), leftover);
+    }
+
+    [Fact]
+    public void FillRandom_WhenCalledAgainWithinOneMillisecond_ShouldTakeTheNextPoolBytesUnderTheSameSalt()
+    {
+        long now = DateTime.UtcNow.Ticks;
+        GuidV7.FillRandom(new byte[16], now, usePool: true);
+        GuidV7.FillRandom(new byte[16], now, usePool: true);
+        byte[] salt = Salt();
+
+        (byte[] taken, byte[] leftover) = TakeAndPeekLeftover(now + _ticksPerMs);
+
+        Salt().Should().Equal(salt);
+        taken.Should().Equal(Xor(leftover, salt));
+        TookFreshNewGuidBits(now + _ticksPerMs, usePool: true).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(_ticksPerMs + 1)]
+    [InlineData(-1)]
+    public void FillRandom_AfterAPauseOrAClockStepBack_ShouldTakeAFreshGuidAndSaltTheLeftoverPoolWithIt(long step)
+    {
+        long now = DateTime.UtcNow.Ticks;
+        GuidV7.FillRandom(new byte[16], now, usePool: true);
+        GuidV7.FillRandom(new byte[16], now, usePool: true);
+        byte[] oldSalt = Salt();
+
+        TookFreshNewGuidBits(now + step, usePool: true).Should().BeTrue();
+        (byte[] taken, byte[] leftover) = TakeAndPeekLeftover(now + step);
+
+        Salt().Should().NotEqual(oldSalt);
+        taken.Should().Equal(Xor(leftover, Salt()));
+    }
+
+    [Fact]
+    public void FillRandom_WhenThePoolIsDisabled_ShouldAlwaysTakeFreshBitsFromGuidNewGuid()
+    {
+        long now = DateTime.UtcNow.Ticks;
+        for (int i = 0; i < 100; i++)
+            TookFreshNewGuidBits(now + i, usePool: false).Should().BeTrue();
+    }
+
     [Fact]
     public void Pack_ShouldEncodeTheClockAndSubMillisecondFractionWithACounterAtZero()
     {

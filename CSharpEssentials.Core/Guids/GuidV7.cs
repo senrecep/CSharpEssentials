@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 
 namespace CSharpEssentials.Core;
 
@@ -6,22 +7,43 @@ internal static class GuidV7
 {
     private const int _byteCount = 16, _fractionBits = 12, _counterBits = 6, _timestampShift = _fractionBits + _counterBits;
     private const long _fractionSlots = 1 << _fractionBits, _counterMask = (1 << _counterBits) - 1;
+    private const int _poolSize = 1024, _randomStart = 6, _randomLength = _byteCount - _randomStart;
     private const long _unixEpochTicks = 621_355_968_000_000_000;
+    internal const string DisableRandomPoolSwitch = "CSharpEssentials.Guider.DisableRandomPool";
+
+    private static readonly bool _usePool = !(AppContext.TryGetSwitch(DisableRandomPoolSwitch, out bool disabled) && disabled);
+#if NETSTANDARD2_0
+    private static readonly RandomNumberGenerator _random = RandomNumberGenerator.Create();
+#endif
+
+    [ThreadStatic]
+    private static byte[]? _pool;
+
+    [ThreadStatic]
+    private static int _poolOffset;
+
+    [ThreadStatic]
+    private static long _lastCallTicks;
 
     private static long _lastPacked;
+
+    internal static byte[]? CurrentPool() => _pool;
+
+    internal static int CurrentPoolOffset() => _poolOffset;
 
     internal static Guid NewGuid()
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
-        FillRandom(bytes);
-        return Compose((DateTime.UtcNow.Ticks - _unixEpochTicks) / TimeSpan.TicksPerMillisecond, bytes);
+        long utcTicks = DateTime.UtcNow.Ticks;
+        FillRandom(bytes, utcTicks, _usePool);
+        return Compose((utcTicks - _unixEpochTicks) / TimeSpan.TicksPerMillisecond, bytes);
     }
 
     internal static Guid NewMonotonicGuid()
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
-        FillRandom(bytes);
         long utcTicks = DateTime.UtcNow.Ticks;
+        FillRandom(bytes, utcTicks, _usePool);
         long last, packed;
         do
         {
@@ -66,15 +88,70 @@ internal static class GuidV7
             b[8], b[9], b[10], b[11], b[12], b[13], b[14], b[15]);
     }
 
-    private static void FillRandom(Span<byte> bytes)
+    internal static void FillRandom(Span<byte> bytes, long utcTicks, bool usePool)
+    {
+        long sinceLastCall = utcTicks - _lastCallTicks;
+        _lastCallTicks = utcTicks;
+        if (usePool && (ulong)sinceLastCall <= TimeSpan.TicksPerMillisecond)
+            TakeFromPool(bytes.Slice(_randomStart));
+        else
+        {
+            FillFromNewGuid(bytes);
+            if (usePool && _pool is { } pool)
+                bytes.CopyTo(pool.AsSpan(_poolSize));
+        }
+        long fraction = utcTicks % TimeSpan.TicksPerMillisecond;
+        bytes[14] ^= (byte)(fraction >> 8);
+        bytes[15] ^= (byte)fraction;
+    }
+
+    private static void TakeFromPool(Span<byte> destination)
+    {
+        byte[] pool = _pool ?? AllocatePool();
+        int offset = _poolOffset;
+        if (offset > _poolSize - _randomLength)
+        {
+            Refill(pool);
+            offset = 0;
+        }
+        ReadOnlySpan<byte> source = pool.AsSpan(offset, _randomLength);
+        ReadOnlySpan<byte> salt = pool.AsSpan(_poolSize, _randomLength);
+        for (int i = 0; i < _randomLength; i++)
+            destination[i] = (byte)(source[i] ^ salt[i]);
+        _poolOffset = offset + _randomLength;
+    }
+
+    private static void Refill(byte[] pool)
+    {
+#if NETSTANDARD2_0
+        _random.GetBytes(pool);
+#else
+        RandomNumberGenerator.Fill(pool);
+#endif
+        WriteNewGuid(pool.AsSpan(_poolSize));
+    }
+
+    private static byte[] AllocatePool()
+    {
+        _pool = new byte[_poolSize + _byteCount];
+        _poolOffset = _poolSize;
+        return _pool;
+    }
+
+    private static void FillFromNewGuid(Span<byte> bytes)
+    {
+        WriteNewGuid(bytes);
+        bytes[6] = bytes[0];
+        bytes[7] = bytes[1];
+    }
+
+    private static void WriteNewGuid(Span<byte> destination)
     {
         var random = Guid.NewGuid();
 #if NETSTANDARD
-        MemoryMarshal.Write(bytes, ref random);
+        MemoryMarshal.Write(destination, ref random);
 #else
-        MemoryMarshal.Write(bytes, in random);
+        MemoryMarshal.Write(destination, in random);
 #endif
-        bytes[6] = bytes[0];
-        bytes[7] = bytes[1];
     }
 }
