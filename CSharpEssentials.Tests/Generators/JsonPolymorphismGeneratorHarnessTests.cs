@@ -89,7 +89,52 @@ public class JsonPolymorphismGeneratorHarnessTests
         }
         """;
 
+    private const string PolyfillSource = """
+        namespace System
+        {
+            public class Object { }
+            public abstract class ValueType { }
+            public abstract class Enum : ValueType { }
+            public struct Void { }
+            public struct Int32 { }
+            public struct Boolean { }
+            public sealed class String { }
+            public abstract class Attribute { }
+        }
+
+        namespace System.Text.Json.Serialization
+        {
+            public sealed class JsonPolymorphicAttribute : System.Attribute { }
+        }
+
+        namespace CSharpEssentials.Json
+        {
+            public sealed class JsonTypeDiscriminatorAttribute : System.Attribute
+            {
+                public JsonTypeDiscriminatorAttribute(string value) { }
+            }
+
+            public static class JsonPolymorphism { }
+        }
+
+        namespace CSharpEssentials.Enums
+        {
+            public sealed class StringEnumAttribute : System.Attribute { }
+        }
+
+        namespace Both
+        {
+            [CSharpEssentials.Enums.StringEnum] public enum Status { Active }
+
+            [System.Text.Json.Serialization.JsonPolymorphic] public interface IEvent { }
+
+            [CSharpEssentials.Json.JsonTypeDiscriminator("a")] public sealed class A : IEvent { }
+        }
+        """;
+
     private static readonly Lazy<AnalyzerAssembly> JsonAssembly = new(static () => AnalyzerAssembly.Load("CSharpEssentials.Json.Generators.dll"));
+
+    private static readonly Lazy<AnalyzerAssembly> EnumsAssembly = new(static () => AnalyzerAssembly.Load("CSharpEssentials.Enums.Generators.dll"));
 
     [Fact]
     public Task JsonPolymorphismGenerator_Should_Match_Snapshot()
@@ -145,6 +190,23 @@ public class JsonPolymorphismGeneratorHarnessTests
         GeneratorRun run = GeneratorHarness.Run(CreateCompilation(Source), [.. JsonAssembly.Value.Generators]);
 
         run.Result.GeneratedTrees.Should().NotContain(static t => t.FilePath.EndsWith("ModuleInitializerAttribute.g.cs", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void JsonPolymorphismGenerator_Should_Share_The_Polyfill_With_The_Enums_Generator()
+    {
+        CSharpCompilation compilation = CSharpCompilation.Create(
+            "Both",
+            [CSharpSyntaxTree.ParseText(PolyfillSource, new CSharpParseOptions(LanguageVersion.Latest))],
+            [],
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        GeneratorRun run = GeneratorHarness.Run(compilation, [.. JsonAssembly.Value.Generators, .. EnumsAssembly.Value.Generators]);
+
+        run.Result.GeneratedTrees.Select(static t => Path.GetFileName(t.FilePath))
+            .Should().Contain(["JsonPolymorphismModuleInitializerAttribute.g.cs", "ModuleInitializerAttribute.g.cs"]);
+        run.OutputDiagnostics.Should().NotContain(static d => d.Location.SourceTree != null &&
+            d.Location.SourceTree.FilePath.EndsWith("ModuleInitializerAttribute.g.cs", StringComparison.Ordinal));
     }
 
     [Fact]

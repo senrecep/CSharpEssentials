@@ -75,9 +75,7 @@ internal static class PolymorphismSourceWriter
         w.AppendLine();
         w.AppendLine("namespace System.Runtime.CompilerServices");
         w.AppendLine("{");
-        w.AppendLine("    " + GeneratedCode);
-        w.AppendLine("    [global::System.AttributeUsage(global::System.AttributeTargets.Method, Inherited = false)]");
-        w.AppendLine("    internal sealed class ModuleInitializerAttribute : global::System.Attribute");
+        w.AppendLine("    internal sealed partial class ModuleInitializerAttribute : global::System.Attribute");
         w.AppendLine("    {");
         w.AppendLine("    }");
         w.AppendLine("}");
