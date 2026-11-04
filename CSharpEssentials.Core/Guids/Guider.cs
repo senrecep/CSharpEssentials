@@ -96,7 +96,7 @@ public static class Guider
     /// The random bits come from a per-thread pool of bytes filled by <see cref="System.Security.Cryptography.RandomNumberGenerator"/>
     /// and salted with one <see cref="Guid.NewGuid"/> per refill. The first ID after a pause of more than 1 ms on a thread takes fresh
     /// bits from <see cref="Guid.NewGuid"/> instead, and that GUID becomes the new salt. A cloned virtual machine or a checkpointed and restored process can still repeat
-    /// an ID in a narrow case described in the Guids Readme. Set the
+    /// an ID when it serves work before its restored clock is resynced; the Guids Readme describes the case. Set the
     /// AppContext switch <c>CSharpEssentials.Guider.DisableRandomPool</c> to <see langword="true"/> before the first call to take the
     /// random bits from <see cref="Guid.NewGuid"/> on every call.
     /// </remarks>
