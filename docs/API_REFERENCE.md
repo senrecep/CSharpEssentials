@@ -988,7 +988,7 @@ services.AddHttpClient("payments")
 
 | Type / Member | What It Does |
 |---------------|-------------|
-| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates one (UUIDv7 on every target). A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
+| `request.SetIdempotencyKey(string? key = null)` | Writes the `Idempotency-Key` header (replacing any) and returns the key. `null` generates a random UUIDv4, so the key does not reveal when the request was made. A key that is empty or has characters outside printable ASCII, or `"` / `\`, throws `ArgumentException` |
 | `HttpRequestBuilder.WithIdempotencyKey(string? key = null)` | Makes or validates the key at call time and stores it in the builder; every `Build()` of that builder sends the same key |
 | `IdempotencyKeyHandler` | Optional `DelegatingHandler`; adds a generated key to POST and PATCH requests without one, keeps an existing key |
 | `AddIdempotencyKeys(this IHttpClientBuilder)` (.NET 9+) | Adds `IdempotencyKeyHandler`. Register it before the resilience handler so it runs once per logical call |
