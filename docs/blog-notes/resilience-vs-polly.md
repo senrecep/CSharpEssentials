@@ -8,12 +8,12 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The library 
 
 - Working title: "What does a Result wrapper around Polly cost?"
 - CSE.Resilience is built on Polly.Core. Every CSE row and every Polly row in the suite runs the same Polly.Core 8.9.0, so this is not engine against engine. The post measures the wrapper: the `Result` conversion, the try/catch, the extra async layer, and the way CSE nests one pipeline per strategy.
-- CSE's case is behaviour, not speed: failed `Result` values count as transient without a hand-written predicate, caller cancellation is never retried, and nothing throws.
+- CSE's case rests on behaviour rather than speed: failed `Result` values count as transient without a hand-written predicate, caller cancellation is never retried, and nothing throws.
 
 ## What each library provides
 
-- **Polly.Core 8.9.0:** `ResiliencePipelineBuilder` with retry, circuit breaker, timeout, fallback, hedging and chaos strategies; `ResiliencePipeline<T>` for typed outcomes; a static-lambda state overload to avoid closures; `ExecuteOutcomeAsync` for a call that does not throw. Telemetry and DI come from Polly.Extensions, and the rate limiter from Polly.RateLimiting.
-- **CSE:** an immutable `ResiliencePolicy` and `ResiliencePolicy<T>` with `WithRetry`, `WithCircuitBreaker`, `WithTimeout` and (generic only) `WithFallback`; `Create(ResiliencePolicyOptions)`; `FromPipeline` and `ToPipeline` for raw Polly; `RetryIfFailed` on a `Func<CancellationToken, Task<Result<T>>>`, with a cached pipeline or a `shouldRetry` predicate.
+- Polly.Core 8.9.0: `ResiliencePipelineBuilder` with retry, circuit breaker, timeout, fallback, hedging and chaos strategies; `ResiliencePipeline<T>` for typed outcomes; a static-lambda state overload to avoid closures; `ExecuteOutcomeAsync` for a call that does not throw. Telemetry and DI come from Polly.Extensions, and the rate limiter from Polly.RateLimiting.
+- CSE: an immutable `ResiliencePolicy` and `ResiliencePolicy<T>` with `WithRetry`, `WithCircuitBreaker`, `WithTimeout` and (generic only) `WithFallback`; `Create(ResiliencePolicyOptions)`; `FromPipeline` and `ToPipeline` for raw Polly; `RetryIfFailed` on a `Func<CancellationToken, Task<Result<T>>>`, with a cached pipeline or a `shouldRetry` predicate.
 
 ## Feature matrix
 
@@ -50,11 +50,11 @@ Pending the full run. These are the rows to pull:
 
 These predictions come from reading the code. Nothing has been measured yet.
 
-- **The wrapper itself.** Every `ExecuteAsync` passes Polly a new capturing async lambda (`CSharpEssentials.Resilience/ResiliencePolicy.cs:71,87,103,121`; `ResiliencePolicyT.cs:46-52,70`), so each call allocates a closure and runs one more async state machine than the static-lambda Polly row.
-- **Nesting.** Each `With...` builds a separate pipeline and `Merge` wraps the two in a third (`ResiliencePolicy.cs:131-145`). Retry + circuit breaker + timeout is three nested pipelines, not one.
-- **The generic policy.** `ResiliencePolicy<T>.Create()` builds a new empty pipeline instead of using `Empty` (`ResiliencePolicyT.cs:16`), and the generic `Merge` has no empty fast path (`:80-89`), so even one strategy is nested.
-- **Boxing in the non-generic policy.** The retry and circuit-breaker predicates test `args.Outcome.Result is IResultBase` on an `Outcome<object>` (`Modules/ResiliencePolicy.Retry.cs:20-22`, `Modules/ResiliencePolicy.CircuitBreaker.cs:24`), so the `Result<T>` struct is boxed on every attempt.
-- **Predicate `RetryIfFailed`** builds a new pipeline on every call (`Extensions/ResilienceResultExtensions.cs:113`, built at `:163-179`). The code comment says this is deliberate.
+- The wrapper itself. Every `ExecuteAsync` passes Polly a new capturing async lambda (`CSharpEssentials.Resilience/ResiliencePolicy.cs:71,87,103,121`; `ResiliencePolicyT.cs:46-52,70`), so each call allocates a closure and runs one more async state machine than the static-lambda Polly row.
+- Nesting. Each `With...` builds a separate pipeline and `Merge` wraps the two in a third (`ResiliencePolicy.cs:131-145`). Retry + circuit breaker + timeout is three nested pipelines, not one.
+- The generic policy. `ResiliencePolicy<T>.Create()` builds a new empty pipeline instead of using `Empty` (`ResiliencePolicyT.cs:16`), and the generic `Merge` has no empty fast path (`:80-89`), so even one strategy is nested.
+- Boxing in the non-generic policy. The retry and circuit-breaker predicates test `args.Outcome.Result is IResultBase` on an `Outcome<object>` (`Modules/ResiliencePolicy.Retry.cs:20-22`, `Modules/ResiliencePolicy.CircuitBreaker.cs:24`), so the `Result<T>` struct is boxed on every attempt.
+- The predicate form of `RetryIfFailed` builds a new pipeline on every call (`Extensions/ResilienceResultExtensions.cs:113`, built at `:163-179`). The code comment says this is deliberate.
 
 ## Where CSE may win or tie
 
@@ -68,7 +68,7 @@ Features only CSE ships (not a speed claim):
 
 ## Caveats to keep in the post
 
-- These are overhead numbers on operations that complete at once. A real operation dwarfs them.
+- These are overhead numbers on operations that complete at once. A real operation takes far longer.
 - Only the success path and one retry are timed.
 - The suite pins Polly.Core 8.9.0; the CSE package accepts `[8.0.0,9.0.0)`.
 - The CSE column is the working tree, not the published package.

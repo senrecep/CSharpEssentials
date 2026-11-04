@@ -2,7 +2,7 @@
 
 **Status: draft.** The suite builds on net8.0 to net11.0, and its parity self-check passes on every TFM. No full default-job run has been done, so this page has no numbers yet. Short-job (`--quick`) numbers are not published.
 
-CSharpEssentials.Clone (CSE) is compared with hand-written loops and the BCL: `List<T>.ConvertAll`, `Array.ConvertAll` and LINQ `Select`. No competitor library. BCL and hand-written baselines only.
+CSharpEssentials.Clone (CSE) is compared with hand-written loops and the BCL: `List<T>.ConvertAll`, `Array.ConvertAll` and LINQ `Select`. There is no competitor library, only BCL and hand-written baselines.
 
 The suite lives in `benchmarks/CSharpEssentials.Baselines.Benchmarks/`. It shares that project with the Time benchmarks ([CSharpEssentials.Time/BENCHMARKS.md](../CSharpEssentials.Time/BENCHMARKS.md)).
 
@@ -44,7 +44,7 @@ Each row's result must match the source on all of these: the item count, the sum
 |---|---|---|
 | BenchmarkDotNet | `[0.14.0,)` from `Directory.Packages.props`, resolves 0.14.0 | MIT |
 
-No competitor library. BCL and hand-written baselines only.
+There is no competitor library to pin. The baselines are the BCL and hand-written loops.
 
 ## Feature matrix
 

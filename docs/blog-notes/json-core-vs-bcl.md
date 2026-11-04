@@ -8,22 +8,22 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 - Working title: "Is a helper library still worth it once the BCL caught up?"
 - Most of what CSE.Json and CSE.Core do now has a BCL answer: `JsonStringEnumConverter(policy)`, `[JsonPolymorphic]`, `JsonNamingPolicy.SnakeCaseLower`, `Base64Url`, `RandomNumberGenerator.Shuffle`, `Task.WaitAsync`. The benchmark puts each CSE helper next to that answer and next to the library people used before the BCL had one.
-- CSE's case is behaviour the BCL does not have (fallback members, strict number reads, many date formats, automatic polymorphism). The numbers should say what that behaviour costs.
+- CSE's case is behaviour the BCL does not have (fallback members, strict number reads, many date formats, automatic polymorphism). The numbers should show what that behaviour costs.
 
 ## What each library provides
 
-- **System.Text.Json and the BCL:**
+- System.Text.Json and the BCL:
   - String enums with a naming policy, `[JsonStringEnumMemberName]` on STJ 9+, and an AOT-friendly generic converter.
   - Polymorphism through a declared `[JsonDerivedType]` list.
   - ISO 8601-1:2019 dates only, plus a documented `DateTime.Parse` fallback converter.
   - Snake, kebab and camel naming policies; `Base64Url` on .NET 9+; `RandomNumberGenerator.Shuffle`, `Random.Shuffle` and `Random.GetItems`; `Task.WaitAsync`.
-- **Macross.Json.Extensions 3.0.0:**
+- Macross.Json.Extensions 3.0.0:
   - `JsonStringEnumMemberConverter` with `[EnumMember]` names and a fallback value for failed reads.
   - Microsoft `/Date()/` dates (not benchmarked).
   - No trim or AOT annotations; it uses `DynamicMethod`.
-- **Humanizer.Core 3.0.10:** `Underscore`, `Kebaberize` and `Camelize` over regex-based inflectors. Trimmable and annotated.
-- **CSharpVitamins.ShortGuid 2.0.0:** a `ShortGuid` struct with implicit casts, the RFC 4648 URL-safe alphabet and a strict decode.
-- **CSE:**
+- Humanizer.Core 3.0.10: `Underscore`, `Kebaberize` and `Camelize` over regex-based inflectors. Trimmable and annotated.
+- CSharpVitamins.ShortGuid 2.0.0: a `ShortGuid` struct with implicit casts, the RFC 4648 URL-safe alphabet and a strict decode.
+- CSE:
   - Json: `[StringEnum]` conventions with generated metadata, Data and Input read modes, `[EnumFallback]`, flags as a JSON array; `PolymorphicJsonConverterFactory` with no derived-type list; `MultiFormatDateTimeConverterFactory` over a fixed format list plus Unix seconds.
   - Core: `ToSnakeCase`/`ToKebabCase`/`ToCamelCase`, `Guider`, `GetRandomItems` on a cryptographic RNG, and `WithCancellation` for Task and ValueTask.
 
@@ -83,11 +83,11 @@ Pending the full run. These are the rows to pull:
 
 These predictions come from reading the code. Nothing has been measured yet.
 
-- **Polymorphism against `[JsonPolymorphic]`.** CSE reads into a `JsonDocument` and parses `GetRawText()` a second time (`CSharpEssentials.Json/PolymorphicJsonConverterFactory.cs:73,87`). It writes by serializing to a `JsonElement` and copying every property (`:102-105`). STJ reads and writes once.
-- **The late-list DateTime.** CSE calls `TryParseExact` once per format until one matches (`MultiFormatDateTimeConverter.cs:136-140`), and `dd-MMM-yyyy` is entry 30 (entry 27 after the pending format-list cleanup). It also allocates the string first (`:128`) and boxes the result (`:139`).
-- **WithCancellation allocations.** CSE allocates a `TaskCompletionSource`, a token registration, a `WhenAny` task and an async state machine for every pending task (`CSharpEssentials.Core/Extensions/GeneralExtensions.cs:77-105`). `WaitAsync` is built into the task.
-- **Cryptographic RNG against `Random.Shared`.** CSE calls `RandomNumberGenerator.GetInt32` once per draw (`RandomItemsExtensions.cs:40,82`), and its rejection loop draws more often as K approaches n (`:38-45`). The `Random.Shared` rows are expected to be faster, but they do not do the same job.
-- **Case conversion against the BCL on long inputs** is unknown. CSE makes two passes and calls `char.GetUnicodeCategory` per character in each (`StringExtensions.cs:133-159`, then `:65-81`).
+- Polymorphism against `[JsonPolymorphic]`. CSE reads into a `JsonDocument` and parses `GetRawText()` a second time (`CSharpEssentials.Json/PolymorphicJsonConverterFactory.cs:73,87`). It writes by serializing to a `JsonElement` and copying every property (`:102-105`). STJ reads and writes once.
+- The late-list DateTime. CSE calls `TryParseExact` once per format until one matches (`MultiFormatDateTimeConverter.cs:136-140`), and `dd-MMM-yyyy` is entry 30 (entry 27 after the pending format-list cleanup). It also allocates the string first (`:128`) and boxes the result (`:139`).
+- WithCancellation allocations. CSE allocates a `TaskCompletionSource`, a token registration, a `WhenAny` task and an async state machine for every pending task (`CSharpEssentials.Core/Extensions/GeneralExtensions.cs:77-105`). `WaitAsync` is built into the task.
+- Cryptographic RNG against `Random.Shared`. CSE calls `RandomNumberGenerator.GetInt32` once per draw (`RandomItemsExtensions.cs:40,82`), and its rejection loop draws more often as K approaches n (`:38-45`). The `Random.Shared` rows are expected to be faster, but they do not do the same job.
+- How case conversion compares with the BCL on long inputs is unknown. CSE makes two passes and calls `char.GetUnicodeCategory` per character in each (`StringExtensions.cs:133-159`, then `:65-81`).
 
 ## Where CSE may win or tie
 
@@ -104,7 +104,7 @@ Features only CSE ships (not a speed claim):
 
 ## Caveats to keep in the post
 
-- **The benchmark found a CSE bug.** `MultiFormatDateTimeConverter` has no 7-digit fraction format (`CSharpEssentials.Json/MultiFormatDateTimeConverter.cs:37-98`, `:136-149`), so the `O` form STJ writes for a `DateTime` throws on read. The Iso input uses a 3-digit fraction for that reason.
+- The benchmark found a CSE bug. `MultiFormatDateTimeConverter` has no 7-digit fraction format (`CSharpEssentials.Json/MultiFormatDateTimeConverter.cs:37-98`, `:136-149`), so the `O` form STJ writes for a `DateTime` throws on read. The Iso input uses a 3-digit fraction for that reason.
 - Flags rows write different payloads and do not do the same work.
 - The GUID texts differ until CSE moves to the RFC alphabet; parity is a round trip within each library.
 - On net8 every JSON row uses the STJ 9.0.4 package, so those are not STJ 8 numbers.

@@ -1,8 +1,8 @@
-# CSharpEssentials.Time: Performance benchmarks
+# CSharpEssentials.Time: performance benchmarks
 
 **Status: draft.** The suite builds on net8.0 to net11.0, and its parity self-check passes on every TFM. No full default-job run has been done, so this page has no numbers yet. Short-job (`--quick`) numbers are not published.
 
-CSharpEssentials.Time (CSE) is compared with the BCL: `TimeProvider`, `DateTimeOffset`, `DateTime`, `DateOnly` and `TimeOnly`. No competitor library. BCL and hand-written baselines only. The BCL has no weekday or age API, so those rows are hand-written code that does the same arithmetic.
+CSharpEssentials.Time (CSE) is compared with the BCL: `TimeProvider`, `DateTimeOffset`, `DateTime`, `DateOnly` and `TimeOnly`. There is no competitor library, only BCL and hand-written baselines. The BCL has no weekday or age API, so those rows are hand-written code that does the same arithmetic.
 
 The suite lives in `benchmarks/CSharpEssentials.Baselines.Benchmarks/`. It shares that project with the Clone benchmarks ([CSharpEssentials.Clone/BENCHMARKS.md](../CSharpEssentials.Clone/BENCHMARKS.md)).
 
@@ -51,7 +51,7 @@ The suite lives in `benchmarks/CSharpEssentials.Baselines.Benchmarks/`. It share
 | BenchmarkDotNet | `[0.14.0,)` from `Directory.Packages.props`, resolves 0.14.0 | MIT |
 | Microsoft.Bcl.TimeProvider | `[8.0.0,)`, resolves 8.0.0. Used only by the netstandard2.1 build. On net8 it forwards to the BCL `TimeProvider` | MIT |
 
-No competitor library. BCL and hand-written baselines only.
+There is no competitor library to pin. The baselines are the BCL and hand-written code.
 
 ## Feature matrix
 
@@ -86,7 +86,7 @@ Read from the source. Check it against the full run.
 
 ## Left out
 
-- `FakeDateTimeProvider` against `FakeTimeProvider`. `FakeTimeProvider` ships in a Microsoft package, not in the BCL, so it is outside "BCL baselines only".
+- `FakeDateTimeProvider` against `FakeTimeProvider`. `FakeTimeProvider` ships in a Microsoft package, not in the BCL, so it falls outside a suite limited to BCL and hand-written baselines.
 - `GetAge(IDateTimeProvider)`. It adds `TimeZoneInfo.ConvertTime` to the local zone, so its cost depends on the machine's time zone.
 
 ## Results

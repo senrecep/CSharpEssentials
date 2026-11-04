@@ -38,13 +38,13 @@ There is no cold and incremental output check, because analyzers keep no increme
 
 ## Methodology
 
-- **Host Roslyn.** `Microsoft.CodeAnalysis.CSharp` 5.9.0, the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). It is shared with the generator classes in the suite.
-- **Fresh state per call.** Each call builds a fresh compilation (Compilation rows) or a fresh edited compilation (Document rows) and a fresh `CompilationWithAnalyzers`. Results are cached per instance, so reusing either would measure a cache hit. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cost.
-- **Single-threaded.** `concurrentAnalysis: false` for lower noise. The IDE runs analyzers concurrently.
-- **No incremental API.** Analyzers have no incremental pipeline. The Document row is the closest IDE equivalent of a keystroke: the semantic diagnostics of one edited file.
-- **Project shape.** Assembly `Bench.App`, `OutputKind.ConsoleApplication`, nullable enabled, C# latest, the same filler files as the generator classes.
-- **References.** The same set as the generator classes: the host runtime's framework, the ASP.NET Core shared framework, the CSE runtime DLLs and the competitor attribute DLLs. No EF Core assembly.
-- **Cross-TFM rows** run on that TFM's shared framework, so the references differ by TFM. The host Roslyn 5.9.0 also runs its netstandard2.0 build on net8.0 and net9.0 and its net10.0 build on net10.0 and net11.0. Compare rows within one TFM.
+- Host Roslyn. `Microsoft.CodeAnalysis.CSharp` 5.9.0, the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). It is shared with the generator classes in the suite.
+- Fresh state per call. Each call builds a fresh compilation (Compilation rows) or a fresh edited compilation (Document rows) and a fresh `CompilationWithAnalyzers`. Results are cached per instance, so reusing either would measure a cache hit. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cost.
+- Single-threaded. `concurrentAnalysis: false` for lower noise. The IDE runs analyzers concurrently.
+- No incremental API. Analyzers have no incremental pipeline. The Document row is the closest IDE equivalent of a keystroke: the semantic diagnostics of one edited file.
+- Project shape. Assembly `Bench.App`, `OutputKind.ConsoleApplication`, nullable enabled, C# latest, the same filler files as the generator classes.
+- References. The same set as the generator classes: the host runtime's framework, the ASP.NET Core shared framework, the CSE runtime DLLs and the competitor attribute DLLs. No EF Core assembly.
+- Cross-TFM rows run on that TFM's shared framework, so the references differ by TFM. The host Roslyn 5.9.0 also runs its netstandard2.0 build on net8.0 and net9.0 and its net10.0 build on net10.0 and net11.0. Compare rows within one TFM.
 - BenchmarkDotNet default job, `[MemoryDiagnoser]`, rows grouped by category, CSE is the baseline in each category.
 
 ## Pinned versions

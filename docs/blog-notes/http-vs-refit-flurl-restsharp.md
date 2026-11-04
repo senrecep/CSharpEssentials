@@ -12,11 +12,11 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 ## What each library provides
 
-- **HttpClient + System.Net.Http.Json:** `GetFromJsonAsync`, `PostAsJsonAsync`, `ReadFromJsonAsync`, `JsonTypeInfo` overloads for source-generated JSON. Errors are exceptions or a manual status check.
-- **Refit 16.4.0:** typed interfaces with attributes, implemented by a source generator (`RestService.ForGenerated`). `IApiResponse<T>` for calls that must not throw; `ForGenerated(client, context)` for source-generated JSON. Assembly metadata says trimmable and AOT compatible.
-- **Flurl.Http 4.0.2:** a fluent URL and request builder (`Request().GetJsonAsync()`), `AllowHttpStatus` to opt out of exceptions, its own timeout handling (it sets the wrapped `HttpClient.Timeout` to infinite).
-- **RestSharp 114.1.0:** `RestClient` and `RestRequest` with URL segments and query parameters, pluggable serializers, `Execute*` methods that return a response instead of throwing.
-- **CSE:** `GetFromJsonAsResultAsync` and friends, a status-code-to-`ErrorType` table, `HttpRequestBuilder` (route values, query, headers, JSON body, idempotency key, redirects), query-string helpers, Polly resilience through CSharpEssentials.Resilience, an SSRF guard on net9+.
+- HttpClient + System.Net.Http.Json: `GetFromJsonAsync`, `PostAsJsonAsync`, `ReadFromJsonAsync`, `JsonTypeInfo` overloads for source-generated JSON. Errors are exceptions or a manual status check.
+- Refit 16.4.0: typed interfaces with attributes, implemented by a source generator (`RestService.ForGenerated`). `IApiResponse<T>` for calls that must not throw; `ForGenerated(client, context)` for source-generated JSON. Assembly metadata says trimmable and AOT compatible.
+- Flurl.Http 4.0.2: a fluent URL and request builder (`Request().GetJsonAsync()`), `AllowHttpStatus` to opt out of exceptions, its own timeout handling (it sets the wrapped `HttpClient.Timeout` to infinite).
+- RestSharp 114.1.0: `RestClient` and `RestRequest` with URL segments and query parameters, pluggable serializers, `Execute*` methods that return a response instead of throwing.
+- CSE: `GetFromJsonAsResultAsync` and friends, a status-code-to-`ErrorType` table, `HttpRequestBuilder` (route values, query, headers, JSON body, idempotency key, redirects), query-string helpers, Polly resilience through CSharpEssentials.Resilience, an SSRF guard on net9+.
 
 ## Feature matrix
 
@@ -56,10 +56,10 @@ Pending the full run. These are the rows to pull:
 
 These predictions come from reading the code. Nothing has been measured yet.
 
-- **GET against the BCL.** CSE wraps the call in `Result.TryAsync` with a capturing async lambda (`CSharpEssentials.Http/HttpClientResultExtensions.cs:16-23`), uses `GetAsync`, which buffers the whole body (`:19`), and then deserializes (`:155`). The BCL `GetFromJsonAsync` streams the body and has no extra layer.
-- **The undisposed response.** No CSE method disposes its `HttpResponseMessage` (`HttpClientResultExtensions.cs:19,36,51,66,81,97,111,123,137`). Against the stub that is only GC pressure; on a real connection it is the more serious problem.
-- **Request build.** `HttpRequestBuilder.Build()` parses the URI three times: the template (`HttpRequestBuilder.cs:30`), the route-substituted string (`:212`) and the `UriBuilder` round trip that appends the query (`QueryStringExtensions.cs:193-198`). It also boxes the int query value through the object overload.
-- **Policy-wrapped GET.** CSE adds a closure and an async layer per call on top of Polly (`CSharpEssentials.Resilience/ResiliencePolicy.cs:103`). The CSE row also wraps `GetFromJsonAsResultAsync` (buffered, `Result.TryAsync`) while the Polly row wraps the streamed BCL `GetFromJsonAsync`, so the delta includes the GET gap above, not only the wrapper.
+- GET against the BCL: CSE wraps the call in `Result.TryAsync` with a capturing async lambda (`CSharpEssentials.Http/HttpClientResultExtensions.cs:16-23`), uses `GetAsync`, which buffers the whole body (`:19`), and then deserializes (`:155`). The BCL `GetFromJsonAsync` streams the body and has no extra layer.
+- The undisposed response: No CSE method disposes its `HttpResponseMessage` (`HttpClientResultExtensions.cs:19,36,51,66,81,97,111,123,137`). Against the stub that is only GC pressure; on a real connection it is the more serious problem.
+- Request build: `HttpRequestBuilder.Build()` parses the URI three times: the template (`HttpRequestBuilder.cs:30`), the route-substituted string (`:212`) and the `UriBuilder` round trip that appends the query (`QueryStringExtensions.cs:193-198`). It also boxes the int query value through the object overload.
+- Policy-wrapped GET: CSE adds a closure and an async layer per call on top of Polly (`CSharpEssentials.Resilience/ResiliencePolicy.cs:103`). The CSE row also wraps `GetFromJsonAsResultAsync` (buffered, `Result.TryAsync`) while the Polly row wraps the streamed BCL `GetFromJsonAsync`, so the delta includes the GET gap above, not only the wrapper.
 
 ## Where CSE may win or tie
 

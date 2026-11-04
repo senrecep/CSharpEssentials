@@ -1,4 +1,4 @@
-# CSharpEssentials.Endpoints: Performance Benchmarks
+# CSharpEssentials.Endpoints: Performance benchmarks
 
 Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
 

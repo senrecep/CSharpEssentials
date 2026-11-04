@@ -1,4 +1,4 @@
-# CSharpEssentials.Idempotency: Performance benchmarks (draft)
+# CSharpEssentials.Idempotency: performance benchmarks (draft)
 
 This page compares the CSE idempotency stack with IdempotentAPI 2.6.0 (with IdempotentAPI.MinimalAPI 3.2.0 and IdempotentAPI.Cache.DistributedCache 2.2.0) for an HTTP replay, and measures the transport-independent executor, inbox, record stores and deterministic keys against hand-written baselines. The HTTP rows use the middleware and endpoint filter of CSharpEssentials.AspNetCore on top of this package. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
 

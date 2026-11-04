@@ -1,4 +1,4 @@
-# CSharpEssentials.These: Performance benchmarks (draft)
+# CSharpEssentials.These: performance benchmarks (draft)
 
 This page compares CSharpEssentials.These (CSE) `These<string, int>` with a hand-written `readonly record struct Outcome`. `Outcome` has the same four fields and the same JSON names, and it is handled with plain if/else and no delegates. No library competitor is included. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
 
