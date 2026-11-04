@@ -44,15 +44,20 @@ public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
         DateTimeOffset now = _timeProvider.GetUtcNow();
         SweepIfDue(now);
 
-        Entry reservation = new(Guid.NewGuid().ToString("N"), fingerprint, null, now + lease);
+        Entry? reservation = null;
         while (true)
         {
-            if (_entries.TryAdd(key, reservation))
-                return new(IdempotencyRecordReservation.Reserved(reservation.Token));
             if (!_entries.TryGetValue(key, out Entry? existing))
+            {
+                reservation ??= new(Guid.NewGuid().ToString("N"), fingerprint, null, now + lease);
+                if (_entries.TryAdd(key, reservation))
+                    return new(IdempotencyRecordReservation.Reserved(reservation.Token));
                 continue;
+            }
+
             if (existing.ExpiresAt <= now)
             {
+                reservation ??= new(Guid.NewGuid().ToString("N"), fingerprint, null, now + lease);
                 if (_entries.TryUpdate(key, reservation, existing))
                     return new(IdempotencyRecordReservation.Reserved(reservation.Token));
                 continue;
