@@ -489,6 +489,32 @@ public class EndpointsAnalyzerTests
         diagnostics.Should().HaveCount(3).And.OnlyContain(static d => d.Id == "CSE1006" && d.Severity == DiagnosticSeverity.Info);
     }
 
+    [Theory]
+    [InlineData("public sealed class Derived : BaseEndpoint;", true)]
+    [InlineData("public sealed class Derived : BaseEndpoint<int>;", true)]
+    [InlineData("public sealed partial class Derived : BaseEndpoint;", false)]
+    [InlineData("public sealed class Derived : BaseEndpoint { public static new void Map(IEndpointRouteBuilder app) => BaseEndpoint.Map(app); }", false)]
+    [InlineData("[ExcludeFromMapping] public sealed class Derived : BaseEndpoint;", false)]
+    public async Task Analyzer_Should_Report_CSE1012_When_Non_Partial_Endpoint_Only_Inherits_Map(string derivedDeclaration, bool reported)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync($$"""
+            public abstract class BaseEndpoint : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/base", () => TypedResults.Ok());
+            }
+
+            public abstract class BaseEndpoint<T> : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/generic", () => TypedResults.Ok());
+            }
+
+            {{derivedDeclaration}}
+            """);
+
+        diagnostics.Where(static d => d.Id == "CSE1012").Should().HaveCount(reported ? 1 : 0)
+            .And.OnlyContain(static d => d.Severity == DiagnosticSeverity.Warning && d.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("Sample.Api.Derived", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Analyzer_Should_Not_Report_CSE1006_When_Abstract_Type_Is_Excluded()
     {

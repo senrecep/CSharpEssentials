@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
@@ -84,8 +85,19 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
         });
     }
 
-    private static bool IsCandidate(SyntaxNode node) =>
-        node is TypeDeclarationSyntax { BaseList: not null } and not InterfaceDeclarationSyntax;
+    internal static bool IsCandidate(SyntaxNode node)
+    {
+        if (node is not TypeDeclarationSyntax type || type is InterfaceDeclarationSyntax)
+        {
+            return false;
+        }
+
+        bool declaresMap = type.Members.Any(static member =>
+            member is MethodDeclarationSyntax { Identifier.ValueText: "Map" } method && method.Modifiers.Any(SyntaxKind.StaticKeyword));
+        return type.Modifiers.Any(SyntaxKind.PartialKeyword)
+            ? type.BaseList is not null || declaresMap
+            : type.BaseList is not null && declaresMap;
+    }
 
     private static EndpointModel? CreateModel(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
