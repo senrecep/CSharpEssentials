@@ -240,7 +240,7 @@ A derived type missing from the context is left out, so writing it throws `NotSu
 
 #### Reading old CLR names
 
-Payloads written by `PolymorphicJsonConverterFactory` carry the CLR full name in `$type`. After the base moves to `[JsonPolymorphic]` and values, mark it `[JsonAcceptClrTypeNames]` to keep reading those payloads. Writes always use the new value. A payload with a CLR name is read through a `JsonObject` copy, so it is slower than a current one. It needs `AddPolymorphismWithReflection`, which `DefaultOptions` and `StrictOptions` include.
+Payloads written by `PolymorphicJsonConverterFactory` carry the CLR full name in `$type`. After the base moves to `[JsonPolymorphic]` and values, mark it `[JsonAcceptClrTypeNames]` to keep reading those payloads. A CLR name is read from the base's discriminator property and, when the base uses another name such as `$event`, from `$type` too. Old names nested inside a current payload read as well. Writes use the new value, except for values typed as `object`, which get no discriminator (see Limits). Every payload of such a base is read through a `JsonObject` copy, so it is slower than a base without the attribute. It needs `AddPolymorphismWithReflection`, which `DefaultOptions` and `StrictOptions` include.
 
 ```csharp
 [JsonPolymorphic]
@@ -270,6 +270,7 @@ public interface IEvent;
 - System.Text.Json caches a base's contract per options instance. A derived type registered after the base was first used, for example from a plugin loaded later, is not added to that instance.
 - A value typed as `object` whose runtime type derives from two unrelated polymorphic bases gets no discriminator (System.Text.Json's ambiguity rule).
 - Generic bases are not registered by the generator; `AddPolymorphismWithReflection` still finds their derived types.
+- A value typed as `object` whose runtime type derives from a `[JsonAcceptClrTypeNames]` base is written without a discriminator, so it cannot be read back as that base. Declare the member as the base type.
 - `[JsonPolymorphicProperty]` and `[JsonAcceptClrTypeNames]` serialize their values in a nested call. With `ReferenceHandler.Preserve` or a custom `ReferenceHandler` they throw `NotSupportedException`, because the nested call cannot share `$id` references. With `ReferenceHandler.IgnoreCycles` a cycle through such a value is cut one level later than usual.
 
 #### Bases without attributes

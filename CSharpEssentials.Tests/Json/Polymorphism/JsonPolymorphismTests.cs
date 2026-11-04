@@ -260,6 +260,50 @@ public class JsonPolymorphismTests
     }
 
     [Fact]
+    public void AcceptClrTypeNames_Should_Read_Full_Names_Nested_In_The_Same_Base()
+    {
+        const string Json = """{"$type":"legacy.wrapped","inner":{"name":"x","$type":"CSharpEssentials.Tests.Json.Polymorphism.LegacyCreated"}}""";
+
+        ILegacyEvent? scanned = JsonSerializer.Deserialize<ILegacyEvent>(Json, Scanned);
+        ILegacyEvent? strict = JsonSerializer.Deserialize<ILegacyEvent>(Json, EnhancedJsonSerializerOptions.StrictOptions);
+
+        scanned.Should().BeOfType<LegacyWrapped>().Which.Inner.Should().BeOfType<LegacyCreated>().Which.Name.Should().Be("x");
+        strict.Should().BeOfType<LegacyWrapped>().Which.Inner.Should().BeOfType<LegacyCreated>().Which.Name.Should().Be("x");
+    }
+
+    [Fact]
+    public void AcceptClrTypeNames_Should_Read_A_Type_Property_When_The_Base_Uses_Another_Name()
+    {
+        const string Json = """{"$type":"CSharpEssentials.Tests.Json.Polymorphism.LegacyNamedCreated","name":"b"}""";
+
+        ILegacyNamedEvent? web = JsonSerializer.Deserialize<ILegacyNamedEvent>(Json, EnhancedJsonSerializerOptions.DefaultOptions);
+        ILegacyNamedEvent? strict = JsonSerializer.Deserialize<ILegacyNamedEvent>(Json, EnhancedJsonSerializerOptions.StrictOptions);
+        string written = JsonSerializer.Serialize<ILegacyNamedEvent>(new LegacyNamedCreated { Name = "c" }, EnhancedJsonSerializerOptions.DefaultOptions);
+
+        web.Should().BeOfType<LegacyNamedCreated>().Which.Name.Should().Be("b");
+        strict.Should().BeOfType<LegacyNamedCreated>().Which.Name.Should().Be("b");
+        written.Should().Be("""{"$event":"named.created","name":"c"}""");
+    }
+
+    [Fact]
+    public void AcceptClrTypeNames_Should_Keep_Rejecting_Unknown_And_Repeated_Discriminators()
+    {
+        Action unknown = () => JsonSerializer.Deserialize<ILegacyEvent>("""{"$type":"System.String"}""", Scanned);
+        Action repeated = () => JsonSerializer.Deserialize<ILegacyEvent>("""{"$type":"legacy.created","$type":"legacy.created"}""", Scanned);
+
+        unknown.Should().Throw<JsonException>();
+        repeated.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void AcceptClrTypeNames_Should_Write_No_Discriminator_For_Values_Typed_As_Object()
+    {
+        string json = JsonSerializer.Serialize<object>(new LegacyCreated { Name = "x" }, EnhancedJsonSerializerOptions.DefaultOptions);
+
+        json.Should().Be("""{"name":"x"}""");
+    }
+
+    [Fact]
     public void Preserved_References_Should_Throw_For_Property_Names_And_Clr_Names()
     {
         JsonSerializerOptions generated = new JsonSerializerOptions(JsonSerializerDefaults.Web)

@@ -110,6 +110,22 @@ internal sealed class LegacyCreated : ILegacyEvent
     public string Name { get; set; } = string.Empty;
 }
 
+[JsonTypeDiscriminator("legacy.wrapped")]
+internal sealed class LegacyWrapped : ILegacyEvent
+{
+    public ILegacyEvent? Inner { get; set; }
+}
+
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$event")]
+[JsonAcceptClrTypeNames]
+internal interface ILegacyNamedEvent;
+
+[JsonTypeDiscriminator("named.created")]
+internal sealed class LegacyNamedCreated : ILegacyNamedEvent
+{
+    public string Name { get; set; } = string.Empty;
+}
+
 [JsonPolymorphic]
 internal interface IOrphan;
 
