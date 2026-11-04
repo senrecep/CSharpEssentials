@@ -8,6 +8,10 @@ High-performance, model-first validation library for C#. Zero-reflection, eager 
 dotnet add package CSharpEssentials.Validation
 ```
 
+## Upgrading to 8.0
+
+- A `!` or `?` before an indexer is left out of the property name and error code, as it already was before a `.`. `rules.For(() => model.Tags![0])` and `rules.For(() => model.Tags?[0])` now report `Tags[0]` instead of `Tags![0]` or `Tags?[0]`, and `model.Map!["k"].City` reports `Map["k"].City`. Update any check that matched the old codes.
+
 ## Namespaces
 
 | Namespace | Contents |

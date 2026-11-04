@@ -22,7 +22,10 @@ public abstract class Validator<T> : IValidator<T>
         RuleContext<T> ctx = new();
         ValueTask configTask = Configure(instance, ctx, ct);
         if (configTask.IsCompletedSuccessfully)
+        {
+            _ = configTask.AsTask();
             return new ValueTask<Result<T>>(Validator.BuildResult(instance, ctx));
+        }
         return FinishAsync(instance, ctx, configTask);
     }
 

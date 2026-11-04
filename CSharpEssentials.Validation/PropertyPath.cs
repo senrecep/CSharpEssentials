@@ -90,12 +90,27 @@ internal static class PropertyPath
 
     private static void AppendSegment(System.Text.StringBuilder builder, ReadOnlySpan<char> segment)
     {
-        segment = segment.Trim().TrimEnd('!').TrimEnd('?');
-        if (segment.IsEmpty)
-            return;
-        if (builder.Length > 0)
+        int start = builder.Length;
+        if (start > 0)
             builder.Append('.');
-        builder.Append(segment);
+
+        int depth = 0;
+        int written = 0;
+        foreach (char c in segment.Trim())
+        {
+            if (c is '(' or '[')
+                depth++;
+            else if (c is ')' or ']')
+                depth--;
+            else if (c is '!' or '?' && depth == 0)
+                continue;
+
+            builder.Append(c);
+            written++;
+        }
+
+        if (written == 0)
+            builder.Length = start;
     }
 
     /// <summary>
