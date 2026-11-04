@@ -6,19 +6,19 @@ The `Guider` class provides methods for working with GUIDs (Globally Unique Iden
 
 ### 1. NewGuid()
 
-Creates an [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#name-uuid-version-7) version 7 GUID on every target. The first 48 bits are the Unix time in milliseconds, big-endian, followed by the version nibble `7`, the variant bits `10` and 74 random bits. IDs from different milliseconds sort by creation time. IDs created in the same millisecond have no set order.
+Creates an [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562#name-uuid-version-7) version 7 GUID on every target. The first 48 bits are the Unix time in milliseconds, big-endian, followed by the version nibble `7`, the variant bits `10` and 74 random bits. IDs from different milliseconds sort by creation time, as long as the system clock does not move backwards. IDs created in the same millisecond have no set order.
 
-On .NET 9 and later it calls `Guid.CreateVersion7()`. On `netstandard2.0` and `netstandard2.1` the package builds the same bit layout itself, with the random bits from `RandomNumberGenerator`. A .NET 8 app uses the `netstandard2.1` build, so it gets version 7 too.
+On .NET 9 and later it calls `Guid.CreateVersion7()`. On `netstandard2.0` and `netstandard2.1` the package builds the same bit layout itself, with the random bits from `Guid.NewGuid()`, as `Guid.CreateVersion7()` does. A .NET 8 app uses the `netstandard2.1` build, so it gets version 7 too.
 
 ```csharp
 Guid newId = Guider.NewGuid();
 ```
 
-The `netstandard` builds read random bytes from a per-thread 4 KiB buffer that is refilled from `RandomNumberGenerator`. Reading the generator once per ID cost about 1 µs on the test machine. With the buffer it costs about 60 ns. The call does not allocate after the buffer exists.
+Every call reads fresh random bits from the operating system and keeps none in the process, so a process cloned from a snapshot (a VM clone, a restored container or a restored function instance) does not repeat the random bits of its siblings. A call costs about as much as `Guid.NewGuid()`, about 0.8 µs on the test machine, and does not allocate.
 
 ### 2. NewMonotonicGuid()
 
-Creates a version 7 GUID that is strictly greater than every GUID it returned before in the same process, compared as big-endian bytes, with `Guid.CompareTo` or as strings.
+Creates a version 7 GUID that is strictly greater than every GUID it returned before in the same process (per loaded copy of the assembly), compared as big-endian bytes, with `Guid.CompareTo` or as strings.
 
 ```csharp
 Guid first = Guider.NewMonotonicGuid();
@@ -26,14 +26,14 @@ Guid second = Guider.NewMonotonicGuid();
 // second.CompareTo(first) > 0, even inside the same millisecond
 ```
 
-How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counter. The timestamp and the counter are packed into one number. A new ID starts from the current time, with the counter seeded from the time inside the millisecond. If that is not greater than the last packed value, because the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock. Random bytes come from the same per-thread buffer as the `netstandard` build of `NewGuid()`, on every target, so the call does not allocate.
+How it works: the 12 bits after the version (`rand_a` in RFC 9562) hold a counter. The timestamp and the counter are packed into one number. A new ID starts from the current time, with the counter seeded from the time inside the millisecond. If that is not greater than the last packed value, because the clock stalled or went backwards, the ID takes the last value plus one. A counter overflow carries into the timestamp. The shared value is updated with `Interlocked.CompareExchange`, so there is no lock. Random bytes come from `Guid.NewGuid()` on every target, so the call does not allocate.
 
 What it costs:
 
 - Each ID has 62 random bits instead of 74.
-- All threads update one shared value. In a quick benchmark with 6 threads it took about 48 ns per ID, against about 13 ns for the same code without the shared value.
-- The order holds within one process. Two processes or machines can still produce IDs that interleave.
-- If the process creates more than 4096 IDs in one millisecond, or the clock goes backwards, the timestamp in the ID runs ahead of the clock until the clock catches up.
+- All threads update one shared value. In a quick benchmark with 6 threads the cost per ID stayed within the noise of `Guid.NewGuid()` and `NewGuid()`, because the random bits cost far more than the shared update.
+- The order holds within one process, and within one loaded copy of the assembly: two `AssemblyLoadContext`s or .NET Framework AppDomains each keep their own value. Two processes or machines can still produce IDs that interleave.
+- The counter allows 4096 IDs per millisecond, about 4 per microsecond across all threads. One thread stays below that (about 1.2 per microsecond on the test machine), but several threads at full speed can pass it. Above that rate the encoded timestamp runs ahead of the clock, by roughly (IDs / 4096) ms minus the elapsed time, and keeps drifting for as long as the rate holds. It catches up once the rate drops. A clock that goes backwards has the same effect until the clock passes the last timestamp.
 
 Use `NewGuid()` when IDs only need to be unique and roughly time ordered. Use `NewMonotonicGuid()` when code relies on the creation order of IDs made by one process, for example a cursor or an append-only log.
 
