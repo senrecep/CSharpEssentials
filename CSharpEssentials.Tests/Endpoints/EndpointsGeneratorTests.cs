@@ -1,7 +1,9 @@
+using System.Reflection;
 using FluentAssertions;
 using CSharpEssentials.Tests.Generators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CSharpEssentials.Tests.Endpoints;
 
@@ -406,6 +408,111 @@ public class EndpointsGeneratorTests
         IncrementalCaching.ShouldHaveCachedSteps(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames", "Host", "IsTestProject");
         IncrementalCaching.ShouldHaveCachedSourceOutputs(second);
         IncrementalCaching.ShouldNotCaptureCompilationObjects(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames", "Host", "IsTestProject");
+    }
+
+    [Fact]
+    public void Generator_Should_Pass_Only_Types_That_Can_Declare_An_Endpoint_To_The_Semantic_Check()
+    {
+        SyntaxTree tree = CSharpSyntaxTree.ParseText("""
+            public interface IFiller { int Compute(int x); }
+            public sealed class Filler : IFiller { public int Compute(int x) => x; }
+            public sealed class InstanceMapper : IFiller { public int Compute(int x) => x; public void Map() { } }
+            public static class Routes { public static void Map(object app) { } }
+            public sealed class Ping : IEndpoint { public static void Map(object app) { } }
+            public sealed class Explicit : IEndpoint { static void IEndpoint.Map(object app) { } }
+            public sealed partial class SplitBase : IEndpoint { }
+            public sealed partial class SplitMap { public static void Map(object app) { } }
+            public sealed partial class PartialPlain { }
+            """);
+        MethodInfo isCandidate = EndpointCompilations.Generators.Value.Generators.Single().GetGeneratorType()
+            .GetMethod("IsCandidate", BindingFlags.NonPublic | BindingFlags.Static)!;
+
+        string[] candidates = [.. tree.GetRoot().DescendantNodes()
+            .OfType<BaseTypeDeclarationSyntax>()
+            .Where(node => (bool)isCandidate.Invoke(null, [node])!)
+            .Select(static node => node.Identifier.ValueText)];
+
+        candidates.Should().Equal("Ping", "Explicit", "SplitBase", "SplitMap");
+    }
+
+    [Fact]
+    public void Generator_Should_Map_Endpoints_Through_Derived_Interfaces_Explicit_Map_And_Split_Partials()
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Api",
+            OutputKind.DynamicallyLinkedLibrary,
+            """
+            using CSharpEssentials.Endpoints;
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Routing;
+            using Ep = CSharpEssentials.Endpoints.IEndpoint;
+
+            namespace Sample.Api;
+
+            public interface IVersionedEndpoint : IEndpoint;
+
+            public sealed class Versioned : IVersionedEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/versioned", () => TypedResults.Ok());
+            }
+
+            public sealed class Explicit : IEndpoint
+            {
+                static void IEndpoint.Map(IEndpointRouteBuilder app) => app.MapGet("/explicit", () => TypedResults.Ok());
+            }
+
+            public sealed class Aliased : Ep
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/aliased", () => TypedResults.Ok());
+            }
+
+            public sealed partial class Split : IEndpoint;
+
+            public sealed partial class Split
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/split", () => TypedResults.Ok());
+            }
+            """));
+
+        ShouldCompile(run);
+        string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
+        registry.Should().Contain("global::Sample.Api.Versioned")
+            .And.Contain("global::Sample.Api.Explicit")
+            .And.Contain("global::Sample.Api.Aliased")
+            .And.Contain("global::Sample.Api.Split");
+    }
+
+    [Theory]
+    [InlineData("public class BaseEndpoint", "public sealed class Derived : BaseEndpoint;", false)]
+    [InlineData("public abstract class BaseEndpoint", "public sealed class Derived : BaseEndpoint;", false)]
+    [InlineData("public abstract class BaseEndpoint<T>", "public sealed class Derived : BaseEndpoint<int>;", false)]
+    [InlineData("public abstract class BaseEndpoint", "public sealed partial class Derived : BaseEndpoint;", true)]
+    public void Generator_Should_Map_Type_That_Inherits_Map_Only_When_Partial(string baseDeclaration, string derivedDeclaration, bool mapped)
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Api",
+            OutputKind.DynamicallyLinkedLibrary,
+            PingSource("Sample.Api"),
+            $$"""
+            using CSharpEssentials.Endpoints;
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Routing;
+
+            namespace Sample.Api;
+
+            {{baseDeclaration}} : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/base", () => TypedResults.Ok());
+            }
+
+            {{derivedDeclaration}}
+            """));
+
+        ShouldCompile(run);
+        string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
+        registry.Contains("global::Sample.Api.Derived", StringComparison.Ordinal).Should().Be(mapped);
     }
 
     private static string PingSource(string @namespace) => $$"""

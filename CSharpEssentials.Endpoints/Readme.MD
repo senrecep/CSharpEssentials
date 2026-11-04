@@ -31,6 +31,7 @@ public sealed class CreateApp : IEndpoint
 ```
 
 - `IEndpoint.Map` is static. Endpoint types are never instantiated; dependencies come from handler parameters.
+- The generator maps a non-partial type only when it declares `static Map` itself. A non-partial class that inherits `Map` from an endpoint base class, abstract or not, is not mapped, so declare `Map` on it. Partial types are checked either way.
 - `IEndpointGroup.Prefix` is passed to `MapGroup`. `Configure` applies group-wide conventions.
 - `[EndpointGroup(typeof(TGroup))]` or `[EndpointGroup<TGroup>]` places an endpoint or a group under a group. Groups can nest.
 - `[ExcludeFromMapping]` excludes an endpoint, a group (with everything under it) or an assembly.
@@ -223,3 +224,7 @@ public sealed class CreateApp : IEndpoint
 ```
 
 Then replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. Build: the analyzer reports module state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
+
+## Upgrading to 8.0
+
+- A non-partial class that implements `IEndpoint` only by inheriting `Map` from a base class, such as `sealed class Users : CrudEndpoint<User>;`, is no longer added to the generated registry, and no diagnostic reports it. The generator now looks only at types that declare `static Map` themselves or are partial, so editing an unrelated file no longer re-checks every class with a base list. When the base class is abstract or generic, the derived class was the only mapping of those routes in 7.x, so the routes are gone after the upgrade. When the base class is concrete, 7.x mapped both classes and registered the routes twice. To keep mapping the derived class, declare `public static void Map(IEndpointRouteBuilder app)` on it (it can call the base `Map`) or make it `partial`.
