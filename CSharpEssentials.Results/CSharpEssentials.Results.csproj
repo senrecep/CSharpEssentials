@@ -44,4 +44,8 @@
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="CSharpEssentials.AspNetCore" />
+  </ItemGroup>
+
 </Project>

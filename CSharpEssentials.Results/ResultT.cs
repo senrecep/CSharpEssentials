@@ -6,7 +6,7 @@ using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result<TValue> : IResult<TValue>
+public readonly partial record struct Result<TValue> : IResult<TValue>, IValueResult
 {
     private readonly Error[]? _errors = null;
     private readonly TValue? _value = default;
@@ -56,6 +56,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     [MemberNotNullWhen(true, nameof(_value))]
     public readonly bool IsSuccess => _errors is null;
     public readonly TValue Value => IsSuccess ? _value : default!;
+    readonly object? IValueResult.BoxedValue => Value;
     [JsonPropertyName("errors")]
     public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
     [JsonIgnore]
