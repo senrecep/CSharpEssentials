@@ -197,17 +197,59 @@ public class HttpClientResultExtensionsTests
         result.Value.Name.Should().Be("Sent");
     }
 
-    [Fact]
-    public async Task GetFromJsonAsResultAsync_Should_Dispose_Response()
+    public static TheoryData<string> DisposingMethods =>
+    [
+        "GetFromJson",
+        "PostAsJson",
+        "Post",
+        "PutAsJson",
+        "Put",
+        "PatchAsJson",
+        "Delete",
+        "Send",
+        "SendT",
+        "GetFromJsonTypeInfo",
+        "PostAsJsonTypeInfo",
+        "PutAsJsonTypeInfo",
+        "PatchAsJsonTypeInfo",
+        "SendTypeInfo",
+    ];
+
+    [Theory]
+    [MemberData(nameof(DisposingMethods))]
+    public async Task ResultMethod_Should_Dispose_Response(string method)
     {
         var content = new TrackingContent("""{"id":1,"name":"Test"}""");
         using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
         using var handler = new MockHandler(response);
         using var client = new HttpClient(handler);
+        using var body = new StringContent("body");
+        using var request = new HttpRequestMessage(HttpMethod.Get, new Uri("https://test.com"));
+        var uri = new Uri("https://test.com");
+        var dto = new TestDto(1, "Test");
+        var typeDto = new TypeInfoDto("Test", 1);
+        var info = TypeInfoJsonContext.Default.TypeInfoDto;
 
-        Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
+        bool success = method switch
+        {
+            "GetFromJson" => (await client.GetFromJsonAsResultAsync<TestDto>(uri)).IsSuccess,
+            "PostAsJson" => (await client.PostAsJsonAsResultAsync<TestDto>(uri, dto)).IsSuccess,
+            "Post" => (await client.PostAsResultAsync(uri, body)).IsSuccess,
+            "PutAsJson" => (await client.PutAsJsonAsResultAsync<TestDto>(uri, dto)).IsSuccess,
+            "Put" => (await client.PutAsResultAsync(uri, body)).IsSuccess,
+            "PatchAsJson" => (await client.PatchAsJsonAsResultAsync<TestDto>(uri, dto)).IsSuccess,
+            "Delete" => (await client.DeleteAsResultAsync(uri)).IsSuccess,
+            "Send" => (await client.SendAsResultAsync(request)).IsSuccess,
+            "SendT" => (await client.SendAsResultAsync<TestDto>(request)).IsSuccess,
+            "GetFromJsonTypeInfo" => (await client.GetFromJsonAsResultAsync(uri, info)).IsSuccess,
+            "PostAsJsonTypeInfo" => (await client.PostAsJsonAsResultAsync(uri, typeDto, info, info)).IsSuccess,
+            "PutAsJsonTypeInfo" => (await client.PutAsJsonAsResultAsync(uri, typeDto, info, info)).IsSuccess,
+            "PatchAsJsonTypeInfo" => (await client.PatchAsJsonAsResultAsync(uri, typeDto, info, info)).IsSuccess,
+            "SendTypeInfo" => (await client.SendAsResultAsync(request, info)).IsSuccess,
+            _ => throw new ArgumentOutOfRangeException(nameof(method), method, null),
+        };
 
-        result.IsSuccess.Should().BeTrue();
+        success.Should().BeTrue();
         content.Disposed.Should().BeTrue();
     }
 
@@ -222,20 +264,6 @@ public class HttpClientResultExtensionsTests
         Result<TestDto> result = await client.GetFromJsonAsResultAsync<TestDto>(new Uri("https://test.com"));
 
         result.IsFailure.Should().BeTrue();
-        content.Disposed.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task DeleteAsResultAsync_Should_Dispose_Response()
-    {
-        var content = new TrackingContent(string.Empty);
-        using var response = new HttpResponseMessage(HttpStatusCode.NoContent) { Content = content };
-        using var handler = new MockHandler(response);
-        using var client = new HttpClient(handler);
-
-        Result result = await client.DeleteAsResultAsync(new Uri("https://test.com"));
-
-        result.IsSuccess.Should().BeTrue();
         content.Disposed.Should().BeTrue();
     }
 
