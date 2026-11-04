@@ -66,7 +66,10 @@ public class EnumMetadataTests
         names.IsReadOnly.Should().BeTrue();
         names.Contains("done").Should().BeTrue();
         names.Contains("missing").Should().BeFalse();
-        info.WireNames.ToArray().Should().Equal(info.WireNames);
+        string[] copy = new string[names.Count + 1];
+        names.CopyTo(copy, 1);
+        copy[0].Should().BeNull();
+        copy[1..].Should().Equal(info.WireNames);
         new List<string>(info.WireNames).Should().Equal(info.WireNames);
         ((Action)(() => names.Add("x"))).Should().Throw<NotSupportedException>();
         ((Action)names.Clear).Should().Throw<NotSupportedException>();
