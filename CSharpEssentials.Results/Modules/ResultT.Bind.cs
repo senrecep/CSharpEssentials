@@ -125,10 +125,25 @@ public static partial class ResultExtensions
     /// <param name="func"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TOut>> BindAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Task<Result<TOut>>> func, CancellationToken cancellationToken = default)
+    public static Task<Result<TOut>> BindAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, Task<Result<TOut>>> func, CancellationToken cancellationToken = default) =>
+        cancellationToken.CanBeCanceled
+            ? BindAsyncCancellableCore(task.WithCancellation(cancellationToken), func, cancellationToken)
+            : BindAsyncCore(task.WithCancellation(CancellationToken.None), func);
+
+    private static async Task<Result<TOut>> BindAsyncCore<TValue, TOut>(Task<Result<TValue>> task, Func<TValue, Task<Result<TOut>>> func)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
-        return await result.BindAsync(func).WithCancellation(cancellationToken).ConfigureAwait(false);
+        Result<TValue> result = await task.ConfigureAwait(false);
+        if (result.IsFailure)
+            return Result<TOut>.Failure(result.Errors);
+        return await func(result.Value).WithCancellation().ConfigureAwait(false);
+    }
+
+    private static async Task<Result<TOut>> BindAsyncCancellableCore<TValue, TOut>(Task<Result<TValue>> task, Func<TValue, Task<Result<TOut>>> func, CancellationToken cancellationToken)
+    {
+        Result<TValue> result = await task.ConfigureAwait(false);
+        if (result.IsFailure)
+            return Result<TOut>.Failure(result.Errors);
+        return await func(result.Value).WithCancellation(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

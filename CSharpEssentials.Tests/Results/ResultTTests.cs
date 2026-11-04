@@ -214,4 +214,33 @@ public class ResultTTests
     }
 
     #endregion
+
+    [Fact]
+    public void GetHashCode_Should_NotThrow_When_SuccessValueIsNull()
+    {
+        Result<string> result = default;
+
+        Action act = () => result.GetHashCode();
+
+        act.Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("{\"IsSuccess\":false}")]
+    [InlineData("{\"IsSuccess\":false,\"errors\":null}")]
+    [InlineData("{\"IsSuccess\":false,\"errors\":[]}")]
+    public void JsonDeserialization_Should_Throw_When_FailureHasNoErrors(string json)
+    {
+        Action act = () => JsonSerializer.Deserialize<Result<int>>(json);
+
+        act.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void JsonSerialization_Success_Should_WriteIsSuccessFlag()
+    {
+        string json = JsonSerializer.Serialize(42.ToResult());
+
+        json.Should().Contain("\"IsSuccess\":true");
+    }
 }

@@ -185,9 +185,12 @@ public static partial class ResultExtensions
     /// <param name="action"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TValue>> TapAsync<TValue>(this Task<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default)
+    public static Task<Result<TValue>> TapAsync<TValue>(this Task<Result<TValue>> task, Action<TValue> action, CancellationToken cancellationToken = default) =>
+        TapAsyncCore(task.WithCancellation(cancellationToken), action);
+
+    private static async Task<Result<TValue>> TapAsyncCore<TValue>(Task<Result<TValue>> task, Action<TValue> action)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        Result<TValue> result = await task.ConfigureAwait(false);
         return result.Tap(action);
     }
 

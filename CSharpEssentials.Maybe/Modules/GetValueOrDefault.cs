@@ -204,7 +204,7 @@ public static partial class MaybeExtensions
 
     public static async ValueTask<T> GetValueOrDefaultAsync<T>(this ValueTask<Maybe<T>> maybeTask, Func<ValueTask<T>> defaultValue, CancellationToken cancellationToken = default)
     {
-        Maybe<T> maybe = await maybeTask.ConfigureAwait(false);
+        Maybe<T> maybe = await maybeTask.WithCancellation(cancellationToken).ConfigureAwait(false);
         return await maybe.GetValueOrDefaultAsync(defaultValue, cancellationToken).ConfigureAwait(false);
     }
 

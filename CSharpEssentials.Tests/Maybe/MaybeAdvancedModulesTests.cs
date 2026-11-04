@@ -87,8 +87,6 @@ public class MaybeAdvancedModulesTests
     [Fact]
     public void TryFirst_WithEmptyCollection_ShouldReturnDefault()
     {
-        // Note: TryFirst returns Maybe.From(default) for value types when collection is empty
-        // because FirstOrDefault returns 0 for int which matches pattern `is T result`
         List<string> source = [];
 
         Maybe<string> result = source.TryFirst();
@@ -383,4 +381,35 @@ public class MaybeAdvancedModulesTests
     }
 
     #endregion
+
+    [Fact]
+    public void TryFirst_WithEmptyValueTypeCollection_ShouldReturnNone()
+    {
+        List<int> source = [];
+
+        Maybe<int> result = source.TryFirst();
+
+        result.HasValue.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryFirst_WithValueTypePredicateNoMatch_ShouldReturnNone()
+    {
+        List<int> source = [1, 2];
+
+        Maybe<int> result = source.TryFirst(x => x > 5);
+
+        result.HasValue.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryFirst_WithLeadingDefaultValue_ShouldReturnIt()
+    {
+        List<int> source = [0, 1];
+
+        Maybe<int> result = source.TryFirst();
+
+        result.HasValue.Should().BeTrue();
+        result.Value.Should().Be(0);
+    }
 }

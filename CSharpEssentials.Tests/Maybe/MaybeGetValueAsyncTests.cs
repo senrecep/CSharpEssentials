@@ -157,4 +157,23 @@ public class MaybeGetValueAsyncTests
     }
 
     #endregion
+
+    #region Cancellation
+
+    [Fact]
+    public async Task GetValueOrDefaultAsync_ValueTaskMaybe_FuncValueTask_PendingSource_WithCancelledToken_ShouldThrow()
+    {
+        var pending = new TaskCompletionSource<Maybe<int>>();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => new ValueTask<Maybe<int>>(pending.Task)
+            .GetValueOrDefaultAsync(() => ValueTask.FromResult(0), cts.Token)
+            .AsTask()
+            .WaitAsync(TimeSpan.FromSeconds(5));
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    #endregion
 }

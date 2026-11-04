@@ -47,7 +47,7 @@ public sealed class ResultComparer<TValue> : IEqualityComparer<IResult<TValue>>
     public int GetHashCode([DisallowNull] IResult<TValue> obj)
     {
         if (obj.IsSuccess)
-            return obj.Value!.GetHashCode();
+            return obj.Value is null ? 0 : _comparer.GetHashCode(obj.Value);
         return ResultLogic.CreateErrorCodeHash(obj.ErrorsOrEmptyArray);
     }
 }

@@ -85,9 +85,12 @@ public static partial class ResultExtensions
     /// <param name="map"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public static async Task<Result<TOut>> MapAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, TOut> map, CancellationToken cancellationToken = default)
+    public static Task<Result<TOut>> MapAsync<TValue, TOut>(this Task<Result<TValue>> task, Func<TValue, TOut> map, CancellationToken cancellationToken = default) =>
+        MapAsyncCore(task.WithCancellation(cancellationToken), map);
+
+    private static async Task<Result<TOut>> MapAsyncCore<TValue, TOut>(Task<Result<TValue>> task, Func<TValue, TOut> map)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        Result<TValue> result = await task.ConfigureAwait(false);
         return result.Map(map);
     }
 

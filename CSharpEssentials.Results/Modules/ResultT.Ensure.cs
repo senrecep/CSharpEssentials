@@ -118,9 +118,12 @@ public static partial class ResultExtensions
     /// <param name="error">The error used when the predicate returns false.</param>
     /// <param name="cancellationToken">Observed while awaiting the source.</param>
     /// <returns>The original result, or a failure with <paramref name="error"/>.</returns>
-    public static async Task<Result<TValue>> EnsureAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, bool> predicate, Error error, CancellationToken cancellationToken = default)
+    public static Task<Result<TValue>> EnsureAsync<TValue>(this Task<Result<TValue>> task, Func<TValue, bool> predicate, Error error, CancellationToken cancellationToken = default) =>
+        EnsureAsyncCore(task.WithCancellation(cancellationToken), predicate, error);
+
+    private static async Task<Result<TValue>> EnsureAsyncCore<TValue>(Task<Result<TValue>> task, Func<TValue, bool> predicate, Error error)
     {
-        Result<TValue> result = await task.WithCancellation(cancellationToken).ConfigureAwait(false);
+        Result<TValue> result = await task.ConfigureAwait(false);
         return result.Ensure(predicate, error);
     }
 

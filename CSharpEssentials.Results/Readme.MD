@@ -91,6 +91,8 @@ var (isSuccess, value2, errors) = result;   // Result<T>; Result deconstructs to
 
 `Value` is `default` on a failure. `Errors`, `FirstError` and `LastError` on a success return the sentinel errors `Error.NoErrors`, `Error.NoFirstError` and `Error.NoLastError`; `ErrorsOrEmptyArray` returns an empty array instead. `TryGet(out value, out errors)` returns `true` for a success. `Result<T>.ToResult()` drops the value, and `Result<T>` values support `==`, `Equals`, LINQ query syntax (`from a in r1 from b in r2 select a + b`) and `r1 + r2` (a `Result<T[]>` that collects every value or every error).
 
+`ToString()` is for logs and debugging. A success prints `Success: ` plus the value's own `ToString()`, formatted with `CultureInfo.InvariantCulture` when the value is `IFormattable`, so a class without a `ToString` override prints its type name. Earlier versions printed the value as JSON. For JSON, call `result.Value.ConvertToJson()` from `CSharpEssentials.Json`.
+
 ### Chaining
 
 ```csharp
@@ -360,3 +362,11 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 // Works on Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
+
+## Upgrade notes
+
+### Deserializing a failure without errors
+
+A failed result must carry at least one error, and deserialization now enforces that. JSON with `"IsFailure": true` (for `Result`) or `"IsSuccess": false` (for `Result<T>`) and a missing, `null` or empty `errors` array throws `JsonException`. Earlier versions read `{"IsFailure":true}` as a success and `"errors":[]` as a failure whose `FirstError` and `ToString()` threw.
+
+Payloads written by this library already include the flag and the errors. Check hand-written or third-party payloads: a `Result<T>` success must include `"IsSuccess": true`, because a missing flag reads as `false`, and every failure needs at least one error.

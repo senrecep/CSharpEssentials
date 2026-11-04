@@ -1,12 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Errors;
-using CSharpEssentials.Json;
 using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result<TValue> : IResult<TValue>
+public readonly partial record struct Result<TValue> : IResult<TValue>, IFailureFactory<Result<TValue>>
 {
     private readonly Error[]? _errors = null;
     private readonly TValue? _value = default;
@@ -15,7 +15,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     private Result(bool isSuccess, TValue? value = default, Error[]? errorsOrEmptyArray = null)
     {
         _value = isSuccess ? value : default;
-        _errors = !isSuccess ? errorsOrEmptyArray : null;
+        _errors = !isSuccess ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : null;
     }
     private Result(TValue value)
     {
@@ -86,10 +86,18 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     public override string ToString()
     {
         if (IsSuccess)
-            return $"Success: {Value.ConvertToJson()}";
+            return _value is null ? "Success: null" : FormatSuccess(_value);
         if (Errors.Length == 1)
             return $"Failure: {Errors.Length} error, first error: {FirstError}";
         return $"Failure: {Errors.Length} errors, first error: {FirstError}, last error: {LastError}";
+    }
+
+    private static string FormatSuccess(TValue value)
+    {
+        string? text = value is IFormattable formattable
+            ? formattable.ToString(null, CultureInfo.InvariantCulture)
+            : value!.ToString();
+        return "Success: " + text;
     }
 
     public bool Equals(Result<TValue> other)
@@ -102,7 +110,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>
     public override int GetHashCode()
     {
         if (IsSuccess)
-            return _value.GetHashCode();
+            return _value is null ? 0 : EqualityComparer<TValue>.Default.GetHashCode(_value);
         return ResultLogic.CreateErrorCodeHash(ErrorsOrEmptyArray);
     }
 
