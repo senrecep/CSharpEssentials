@@ -4,7 +4,8 @@ namespace CSharpEssentials.Json.Generators;
 
 /// <summary>
 /// Reads the <c>[assembly: JsonPolymorphismModule(typeof(...))]</c> markers of referenced assemblies, so the generated registry can
-/// register them first. Registries whose names collide are dropped; the runtime still finds them through the marker once loaded.
+/// register them first. Names carry a hash of the exact assembly name, so they collide only for equal assembly names; such registries
+/// are dropped, and the runtime still finds them through the marker once loaded.
 /// </summary>
 internal static class ReferencedRegistryReader
 {

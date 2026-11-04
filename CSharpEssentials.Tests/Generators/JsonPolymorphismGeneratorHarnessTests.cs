@@ -164,6 +164,29 @@ public class JsonPolymorphismGeneratorHarnessTests
     }
 
     [Fact]
+    public void JsonPolymorphismGenerator_Should_Give_Assembly_Names_That_Differ_Only_In_Dots_Their_Own_Registries()
+    {
+        GeneratorRun events = GeneratorHarness.Run(CreateCompilation(Source).WithAssemblyName("My.App"), [.. JsonAssembly.Value.Generators]);
+        using MemoryStream image = new();
+        events.OutputCompilation.Emit(image).Success.Should().BeTrue();
+
+        Compilation app = CreateCompilation("""
+                using CSharpEssentials.Json;
+
+                namespace App;
+
+                [JsonTypeDiscriminator("app.started")]
+                public sealed class AppStarted : Core.IEvent { }
+                """)
+            .WithAssemblyName("MyApp")
+            .AddReferences(MetadataReference.CreateFromImage(image.ToArray()));
+        GeneratorRun run = GeneratorHarness.Run(app, [.. JsonAssembly.Value.Generators]);
+
+        run.OutputDiagnostics.Should().NotContain(static d => d.Id == "CS0436" || d.Severity == DiagnosticSeverity.Error);
+        run.Result.GeneratedTrees.Single().ToString().Should().Contain("global::CSharpEssentials.Json.Generated.JsonPolymorphismRegistry_MyApp_");
+    }
+
+    [Fact]
     public void JsonPolymorphismGenerator_Should_Emit_Nothing_Without_Entries_Or_Referenced_Registries()
     {
         GeneratorRun run = GeneratorHarness.Run(CreateCompilation(ServiceSource), [.. JsonAssembly.Value.Generators]);

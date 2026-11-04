@@ -8,7 +8,11 @@ internal static class RegistryNames
 
     public const string Prefix = "JsonPolymorphismRegistry_";
 
-    public static string ForAssembly(string? assemblyName) => Prefix + Sanitize(assemblyName ?? "Assembly");
+    public static string ForAssembly(string? assemblyName)
+    {
+        string name = assemblyName ?? "Assembly";
+        return Prefix + Sanitize(name) + "_" + Fnv1a(name).ToString("x8", System.Globalization.CultureInfo.InvariantCulture);
+    }
 
     public static string Sanitize(string name)
     {
@@ -27,6 +31,17 @@ internal static class RegistryNames
         }
 
         return builder.ToString();
+    }
+
+    private static uint Fnv1a(string value)
+    {
+        uint hash = 2166136261;
+        foreach (char c in value)
+        {
+            hash = (hash ^ c) * 16777619;
+        }
+
+        return hash;
     }
 
     private static bool IsIdentifierChar(char c) =>
