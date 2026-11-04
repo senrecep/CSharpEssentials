@@ -9,6 +9,7 @@ namespace CSharpEssentials.Core;
 public static class RandomItemsExtensions
 {
     private const int StackAllocThreshold = 256;
+    private const int PartialShuffleDivisor = 4;
 
     public static T GetRandomItem<T>(this Span<T> source)
     {
@@ -31,6 +32,9 @@ public static class RandomItemsExtensions
             Shuffle(result);
             return result;
         }
+
+        if (count >= sourceLength / PartialShuffleDivisor)
+            return GetRandomItemsByPartialShuffle(source, count);
 
         bool[]? rented = sourceLength <= StackAllocThreshold ? null : ArrayPool<bool>.Shared.Rent(sourceLength);
         Span<bool> selectedIndices = rented is null ? stackalloc bool[StackAllocThreshold] : rented.AsSpan(0, sourceLength);
@@ -56,6 +60,35 @@ public static class RandomItemsExtensions
         {
             if (rented is not null)
                 ArrayPool<bool>.Shared.Return(rented);
+        }
+    }
+
+    private static T[] GetRandomItemsByPartialShuffle<T>(ReadOnlySpan<T> source, int count)
+    {
+        int sourceLength = source.Length;
+        int[]? rented = sourceLength <= StackAllocThreshold ? null : ArrayPool<int>.Shared.Rent(sourceLength);
+        Span<int> indices = rented is null ? stackalloc int[sourceLength] : rented.AsSpan(0, sourceLength);
+
+        try
+        {
+            for (int i = 0; i < sourceLength; i++)
+                indices[i] = i;
+
+            var resultArray = new T[count];
+            for (int i = 0; i < count; i++)
+            {
+                int j = GetRandomInt32(i, sourceLength);
+                int picked = indices[j];
+                indices[j] = indices[i];
+                resultArray[i] = source[picked];
+            }
+
+            return resultArray;
+        }
+        finally
+        {
+            if (rented is not null)
+                ArrayPool<int>.Shared.Return(rented);
         }
     }
 

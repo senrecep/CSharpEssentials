@@ -129,4 +129,46 @@ public class RandomItemsExtensionsTests
 
         act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("count");
     }
+
+    [Theory]
+    [InlineData(10, 3)]
+    [InlineData(100, 50)]
+    [InlineData(256, 255)]
+    [InlineData(1000, 990)]
+    [InlineData(5000, 1250)]
+    public void GetRandomItems_WhenCountIsLargeRelativeToSource_ShouldReturnDistinctItemsFromSource(int sourceLength, int count)
+    {
+        int[] source = Enumerable.Range(0, sourceLength).ToArray();
+
+        int[] result = source.GetRandomItems(count);
+
+        result.Should().HaveCount(count);
+        result.Should().OnlyHaveUniqueItems();
+        result.Should().OnlyContain(x => x >= 0 && x < sourceLength);
+        source.Should().Equal(Enumerable.Range(0, sourceLength));
+    }
+
+    [Fact]
+    public void GetRandomItems_WhenCountIsLargeRelativeToSource_ShouldPickEveryItemAtEveryPositionEvenly()
+    {
+        const int sourceLength = 10;
+        const int count = 8;
+        const int trials = 20000;
+        int[] source = Enumerable.Range(0, sourceLength).ToArray();
+        int[][] hits = Enumerable.Range(0, count).Select(_ => new int[sourceLength]).ToArray();
+
+        for (int trial = 0; trial < trials; trial++)
+        {
+            int[] result = source.GetRandomItems(count);
+            for (int position = 0; position < count; position++)
+                hits[position][result[position]]++;
+        }
+
+        const double expected = (double)trials / sourceLength;
+        for (int position = 0; position < count; position++)
+        {
+            for (int item = 0; item < sourceLength; item++)
+                (hits[position][item] / expected).Should().BeApproximately(1.0, 0.15, "item {0} at position {1}", item, position);
+        }
+    }
 }
