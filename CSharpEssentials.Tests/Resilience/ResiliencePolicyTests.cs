@@ -31,6 +31,28 @@ public class ResiliencePolicyTests
     }
 
     [Fact]
+    public void Create_Generic_Policy_Should_Use_The_Empty_Pipeline()
+    {
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create();
+
+        policy.ToPipeline().Should().BeSameAs(ResiliencePipeline<Result<int>>.Empty);
+    }
+
+    [Fact]
+    public async Task Create_Generic_Policy_With_Retry_Should_Retry_Failed_Results()
+    {
+        int attempts = 0;
+        ResiliencePolicy<int> policy = ResiliencePolicy<int>.Create().WithRetry(maxAttempts: 2, delay: TimeSpan.Zero);
+
+        Result<int> result = await policy.ExecuteAsync(_ =>
+            Task.FromResult(++attempts < 3 ? Result<int>.Failure(Error.Failure()) : Result<int>.Success(7)));
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(7);
+        attempts.Should().Be(3);
+    }
+
+    [Fact]
     public async Task WithRetry_Should_Retry_On_Exception()
     {
         int attempts = 0;
