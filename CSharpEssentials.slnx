@@ -24,6 +24,8 @@
   <Project Path="CSharpEssentials.Idempotency/CSharpEssentials.Idempotency.csproj" />
   <Project Path="CSharpEssentials.Idempotency.Testing/CSharpEssentials.Idempotency.Testing.csproj" />
   <Project Path="CSharpEssentials.Json/CSharpEssentials.Json.csproj" />
+  <Project Path="CSharpEssentials.Json.CodeFixes/CSharpEssentials.Json.CodeFixes.csproj" />
+  <Project Path="CSharpEssentials.Json.Generators/CSharpEssentials.Json.Generators.csproj" />
 
   <Project Path="CSharpEssentials.Maybe/CSharpEssentials.Maybe.csproj" />
   <Project Path="CSharpEssentials.Mediator/CSharpEssentials.Mediator.csproj" />

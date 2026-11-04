@@ -11,7 +11,8 @@
     <Description>
       JSON utilities and custom converters for System.Text.Json in C#.
       Includes MultiFormatDateTimeConverter, PolymorphicJsonConverterFactory,
-      and JsonOptions.
+      JsonOptions, and polymorphism across assemblies ([JsonTypeDiscriminator], AddPolymorphism)
+      with a bundled source generator and analyzers (CSE4001-CSE4011).
       Essential for advanced JSON serialization scenarios.
     </Description>
     <PackageTags>
@@ -42,6 +43,8 @@
     <ProjectReference Include="..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj"
       Condition="'$(UseProjectReferences)' == 'true'" />
   </ItemGroup>
+
+  <Import Project="..\build\PackGenerator.targets" />
 
   <!-- System.Text.Json for .NET Standard 2.1 -->
   <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.1'">
