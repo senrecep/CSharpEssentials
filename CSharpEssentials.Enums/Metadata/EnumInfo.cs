@@ -15,7 +15,7 @@ namespace CSharpEssentials.Enums;
 /// Instances are created by generated code (<c>[StringEnum]</c>) and registered in <see cref="EnumMetadata"/>, or created by
 /// <see cref="EnumMetadata.GetOrCreateWithReflection"/>.
 /// </remarks>
-public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
+public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum : struct, Enum
 {
     private const int MaxErrorValueLength = 64;
 
@@ -28,8 +28,8 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
     private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _ignoreCaseAll;
     private readonly EnumNameLookup<EnumMemberInfo<TEnum>> _ignoreCaseNoMembers;
     private readonly EnumNameLookup<EnumMemberInfo<TEnum>>? _wireExact;
-    private readonly string[] _wireNames;
-    private readonly string[] _inputWireNames;
+    private readonly ReadOnlyArray<string> _wireNames;
+    private readonly ReadOnlyArray<string> _inputWireNames;
 
     /// <summary>
     /// Creates the metadata. Called by generated code and by <see cref="EnumMetadata.GetOrCreateWithReflection"/>.
@@ -69,7 +69,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         }
 
         DefinedMask = mask;
-        _wireNames = new string[_members.Length];
+        string[] wireNames = new string[_members.Length];
         List<string> inputWireNames = [];
         var wires = new KeyValuePair<string, EnumMemberInfo<TEnum>>[_members.Length];
         var names = new KeyValuePair<string, EnumMemberInfo<TEnum>>[_members.Length];
@@ -77,7 +77,7 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         for (int i = 0; i < _members.Length; i++)
         {
             EnumMemberInfo<TEnum> member = _members[i];
-            _wireNames[i] = member.WireName;
+            wireNames[i] = member.WireName;
             if (!member.IsFallback)
                 inputWireNames.Add(member.WireName);
             wires[i] = Pair(member.WireName, member);
@@ -88,13 +88,14 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
             }
         }
 
-        _inputWireNames = [.. inputWireNames];
+        _wireNames = new(wireNames);
+        _inputWireNames = new([.. inputWireNames]);
         _exactAll = new([.. wires, .. names, .. aliases], StringComparer.Ordinal);
         _exactNoMembers = new([.. wires, .. aliases], StringComparer.Ordinal);
         _ignoreCaseAll = new([.. wires, .. names, .. aliases], StringComparer.OrdinalIgnoreCase);
         _ignoreCaseNoMembers = new([.. wires, .. aliases], StringComparer.OrdinalIgnoreCase);
-        HashSet<string> ignoreCaseWireNames = [with(StringComparer.OrdinalIgnoreCase), .. _wireNames];
-        HashSet<string> exactWireNames = [with(StringComparer.Ordinal), .. _wireNames];
+        HashSet<string> ignoreCaseWireNames = [with(StringComparer.OrdinalIgnoreCase), .. wireNames];
+        HashSet<string> exactWireNames = [with(StringComparer.Ordinal), .. wireNames];
         if (ignoreCaseWireNames.Count != exactWireNames.Count)
             _wireExact = new(wires, StringComparer.Ordinal);
     }
@@ -292,6 +293,16 @@ public sealed class EnumInfo<TEnum> : IEnumInfo where TEnum : struct, Enum
         if (!IsDefinedRaw(raw))
             throw Undefined(raw);
         Decompose(raw, names);
+    }
+
+    string IBoxedEnumFormatter.FormatBoxed(object value, EnumWireFormat format) => Format((TEnum)value, format);
+
+    void IBoxedEnumFormatter.AddFormatted(object value, EnumWireFormat format, IList<string> values)
+    {
+        if (IsFlags && format == EnumWireFormat.String)
+            FormatFlags((TEnum)value, values);
+        else
+            values.Add(Format((TEnum)value, format));
     }
 
     /// <summary>

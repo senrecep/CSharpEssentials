@@ -224,6 +224,7 @@ CSE0011 is not used (folded into CSE0015). When CSE0002, CSE0003, CSE0004, CSE00
 - The reflection opt-ins are annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`: `EnumMetadata.GetOrCreateWithReflection`, `AddEnumConventionsWithReflection` (JSON and ASP.NET Core), `EnumConverterFactory.CreateWithReflectionFallback` and `ConfigureEnumConventionsWithReflection` (EF Core). The default path never calls them.
 - A `[StringEnum]` enum without metadata fails loudly (CSE0015 at build time, an exception when its converter is created). It never falls back to numbers silently.
 - In AOT apps serialize with a source-generated `JsonSerializerContext`; the `ConvertToJson`/`ConvertFromJson` helpers and `EnhancedJsonSerializerOptions` of `CSharpEssentials.Json` use reflection-based serialization.
+- `IEnumInfo.WireNames` and `EnumValueError.AllowedValues` are internal read-only lists, not `string[]`. A source-generated `JsonSerializerContext` cannot register that type, so an error handler that puts `AllowedValues` in an `object` slot (error metadata, for example) should copy it with `[.. error.AllowedValues]` first.
 
 ## Glossary
 

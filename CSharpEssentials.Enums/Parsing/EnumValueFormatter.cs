@@ -54,7 +54,10 @@ public static class EnumValueFormatter
             return false;
         }
 
-        text = info.Accept(new FormatVisitor(value, format ?? conventions.WriteAs));
+        EnumWireFormat wireFormat = format ?? conventions.WriteAs;
+        text = info is IBoxedEnumFormatter formatter
+            ? formatter.FormatBoxed(value, wireFormat)
+            : info.Accept(new FormatVisitor(value, wireFormat));
         return true;
     }
 
@@ -75,29 +78,61 @@ public static class EnumValueFormatter
 
         EnumWireFormat wireFormat = format ?? conventions.WriteAs;
         if (TryGetInfo(value, conventions, out IEnumInfo? info))
-            return info.Accept(new FormatManyVisitor(value, wireFormat, values));
+        {
+            AddFormatted(info, value, wireFormat, values);
+            return true;
+        }
 
         if (value is string || value is not IEnumerable items)
             return false;
 
-        List<string> formatted = [];
+        List<string>? staged = values.GetType() == typeof(List<string>) ? null : [];
+        IList<string> target = staged ?? values;
+        int start = target.Count;
         bool hasItems = false;
-        foreach (object? item in items)
+        try
         {
-            if (item is null)
-                continue;
-            if (!TryGetInfo(item, conventions, out IEnumInfo? itemInfo))
-                return false;
+            foreach (object? item in items)
+            {
+                if (item is null)
+                    continue;
+                if (!TryGetInfo(item, conventions, out IEnumInfo? itemInfo))
+                {
+                    RemoveFrom(target, start);
+                    return false;
+                }
 
-            hasItems = itemInfo.Accept(new FormatManyVisitor(item, wireFormat, formatted));
+                AddFormatted(itemInfo, item, wireFormat, target);
+                hasItems = true;
+            }
+        }
+        catch
+        {
+            RemoveFrom(target, start);
+            throw;
         }
 
-        if (!hasItems)
-            return false;
+        if (staged is not null)
+        {
+            foreach (string text in staged)
+                values.Add(text);
+        }
 
-        foreach (string text in formatted)
-            values.Add(text);
-        return true;
+        return hasItems;
+    }
+
+    private static void AddFormatted(IEnumInfo info, object value, EnumWireFormat format, IList<string> values)
+    {
+        if (info is IBoxedEnumFormatter formatter)
+            formatter.AddFormatted(value, format, values);
+        else
+            _ = info.Accept(new FormatManyVisitor(value, format, values));
+    }
+
+    private static void RemoveFrom(IList<string> values, int start)
+    {
+        for (int i = values.Count - 1; i >= start; i--)
+            values.RemoveAt(i);
     }
 
     private static bool TryGetInfo([NotNullWhen(true)] object? value, EnumConventions conventions, [NotNullWhen(true)] out IEnumInfo? info)
@@ -107,10 +142,21 @@ public static class EnumValueFormatter
             return false;
 
         Type type = value.GetType();
-        if (!conventions.CanHandle(type))
+        if (ReferenceEquals(conventions.CanHandle, EnumConventions.DefaultCanHandle))
+        {
+            if (EnumMetadata.TryGet(type, out info))
+                return true;
+            if (!EnumConventions.IsStringEnum(type))
+                return false;
+        }
+        else if (!conventions.CanHandle(type))
+        {
             return false;
-        if (EnumMetadata.TryGet(type, out info))
+        }
+        else if (EnumMetadata.TryGet(type, out info))
+        {
             return true;
+        }
 
         throw new InvalidOperationException(
             $"Enum '{type.FullName}' is handled by the enum conventions but has no generated metadata. Rebuild its project with the " +
