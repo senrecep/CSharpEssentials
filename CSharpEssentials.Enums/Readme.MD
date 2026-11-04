@@ -10,7 +10,9 @@ One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core
 > 17.8628 ns case-sensitive, 51.9075 vs 35.9320 ns ignore-case) and is the slowest column on net8 and net9. A rejected
 > input parses 2.99× to 4.14× slower than Enums.NET on net10 and allocates 88 B. `GetNames` allocates 184 B where Enums.NET
 > allocates nothing, the AOT binary is 1.9 MB against 1.2 MB for NetEscapades, and on net8 (the netstandard2.1 build)
-> parsing allocates on every call.
+> parsing allocates on every call. Design-time cost of the bundled source generator (cold and incremental runs against
+> NetEscapades.EnumGenerators) is described in [the generator BENCHMARKS.md](../CSharpEssentials.Enums.Generators/BENCHMARKS.md).
+> Results are pending the full run.
 
 ## Installation
 
