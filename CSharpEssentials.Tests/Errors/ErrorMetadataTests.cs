@@ -1,3 +1,4 @@
+using System.Globalization;
 using CSharpEssentials.Errors;
 using FluentAssertions;
 
@@ -37,7 +38,21 @@ public class ErrorMetadataTests
 
         var metadata = ErrorMetadata.CreateWithException(exception);
 
-        metadata.Should().ContainKey("exception");
+        ErrorMetadata nested = metadata["exception"].Should().BeOfType<ErrorMetadata>().Subject;
+        nested["exceptionType"].Should().Be("InvalidOperationException");
+        nested["exceptionMessage"].Should().Be("Test exception");
+    }
+
+    [Fact]
+    public void AddException_ShouldStoreNestedExceptionInfo()
+    {
+        Exception exception = new InvalidOperationException("Test exception");
+
+        var metadata = new ErrorMetadata().AddException(exception);
+
+        ErrorMetadata nested = metadata["exception"].Should().BeOfType<ErrorMetadata>().Subject;
+        nested["exceptionType"].Should().Be("InvalidOperationException");
+        nested["exceptionMessage"].Should().Be("Test exception");
     }
 
     [Fact]
@@ -50,6 +65,44 @@ public class ErrorMetadataTests
         metadata.Should().ContainKey("exceptionType");
         metadata.Should().ContainKey("exceptionMessage");
         metadata.Should().ContainKey("exceptionStackTrace");
+    }
+
+    [Fact]
+    public void CreateWithExceptionDetailed_WithUnthrownException_ShouldStoreNullStackTrace()
+    {
+        Exception exception = new InvalidOperationException("Never thrown");
+
+        var metadata = ErrorMetadata.CreateWithExceptionDetailed(exception);
+
+        metadata["exceptionStackTrace"].Should().BeNull();
+    }
+
+    [Fact]
+    public void AddExceptionDetailed_WithUnthrownException_ShouldStoreNullStackTrace()
+    {
+        Exception exception = new InvalidOperationException("Never thrown");
+
+        var metadata = new ErrorMetadata().AddExceptionDetailed(exception);
+
+        metadata["exceptionStackTrace"].Should().BeNull();
+    }
+
+    [Fact]
+    public void CreateWithExceptionDetailed_WithThrownException_ShouldStoreItsStackTrace()
+    {
+        Exception exception;
+        try
+        {
+            throw new InvalidOperationException("Thrown");
+        }
+        catch (InvalidOperationException ex)
+        {
+            exception = ex;
+        }
+
+        var metadata = ErrorMetadata.CreateWithExceptionDetailed(exception);
+
+        metadata["exceptionStackTrace"].Should().Be(exception.StackTrace).And.NotBeNull();
     }
 
     [Fact]
@@ -200,5 +253,39 @@ public class ErrorMetadataTests
     }
 
     #endregion
-}
 
+    #region Formatting
+
+    [Fact]
+    public void ToString_UnderTurkishCulture_ShouldFormatValuesInvariantly()
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("tr-TR");
+        try
+        {
+            var metadata = new ErrorMetadata { ["amount"] = 2.5 };
+
+            metadata.ToString().Should().Be("[{ amount: 2.5 }]");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void ToString_WithSeveralEntries_ShouldListEachInInsertionOrder()
+    {
+        var metadata = new ErrorMetadata { ["a"] = 1, ["b"] = "two", ["c"] = null };
+
+        metadata.ToString().Should().Be("[{ a: 1 }, { b: two }, { c:  }]");
+    }
+
+    [Fact]
+    public void ToString_WhenEmpty_ShouldReturnEmptyBrackets()
+    {
+        new ErrorMetadata().ToString().Should().Be("[]");
+    }
+
+    #endregion
+}

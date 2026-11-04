@@ -47,7 +47,7 @@ Error withMeta = Error.NotFound(
         .AddMetadata("RequestPath", "/api/users/123"));
 ```
 
-`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts.
+`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts. `exception` holds a nested `ErrorMetadata` with the `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException` keys, so the metadata stays serializable with System.Text.Json.
 
 ### Combining Errors
 
@@ -71,7 +71,7 @@ catch (Exception ex)
 }
 ```
 
-`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
+`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
 
 ```csharp
 Error custom = Error.Exception("Orders.SaveFailed", "The order could not be saved.", ex, ErrorType.Unexpected);
@@ -170,3 +170,17 @@ public Result PlaceOrder(Cart cart, decimal balance)
 ```
 
 This pattern provides discoverability (IDE autocomplete per domain), type-safe error codes, and centralised descriptions, all without inheritance.
+
+## Upgrading to 8.0
+
+`ErrorMetadata.CreateWithException` and `AddException` no longer store the `Exception` object under `exception`. They store a nested `ErrorMetadata` with `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException`, because System.Text.Json cannot serialize a thrown exception. Code that cast `metadata["exception"]` to `Exception` should read the nested keys instead, or keep the exception in its own variable.
+
+The nested entry keeps only the short type name (`GetType().Name`), the message, the stack trace and the inner exception chain. The full type name, `Data`, `HResult` and the exception object itself are dropped, so code that rethrew `metadata["exception"]` or tested it with `is SqlException` has no key to migrate to. Keep the exception in its own variable if you need its identity.
+
+`exceptionStackTrace` holds `exception.StackTrace` and nothing else. An exception that was never thrown has no stack trace, so the key is present with a `null` value. Earlier versions fell back to `Environment.StackTrace`, which recorded where the metadata was built rather than where the exception came from and cost a full stack walk on every call. Call `AddStackTrace()` if you want the current call stack. Because the key no longer depends on the call site, `Error.Exception` values built from the same unthrown exception now compare equal.
+
+`Error` equality and `GetHashCode` now compare nested `ErrorMetadata` values by content. Do not add a metadata instance to itself (directly or through a chain): hashing or comparing such a cycle overflows the stack.
+
+`Code` and `Description` reject `null` in `with` expressions too. `error with { Code = null! }` used to produce an `Error` with a null code; it now throws `ArgumentNullException`, as the factory methods already did.
+
+`ErrorMetadata.ToString()` formats values with the invariant culture on every target. The netstandard2.1 build, which net8.0 apps load, used the current culture, so `2.5` came out as `2,5` under `tr-TR`. Code that parsed that text with the current culture should parse it as invariant.

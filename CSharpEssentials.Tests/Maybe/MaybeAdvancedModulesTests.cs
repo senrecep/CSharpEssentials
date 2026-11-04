@@ -162,6 +162,66 @@ public class MaybeAdvancedModulesTests
         result.HasValue.Should().BeFalse();
     }
 
+    [Fact]
+    public void TryLast_WithReadOnlyList_ShouldIndexInsteadOfEnumerating()
+    {
+        var source = new IndexOnlyList<int>([10, 20, 30]);
+
+        source.TryLast().Value.Should().Be(30);
+        source.TryLast(x => x < 25).Value.Should().Be(20);
+        new IndexOnlyList<int>([]).TryLast().HasValue.Should().BeFalse();
+        source.TryLast(x => x > 100).HasValue.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryLast_WithPredicateOnList_ShouldStopAtLastMatch()
+    {
+        int[] source = [1, 2, 3, 4, 5];
+        var visited = new List<int>();
+
+        Maybe<int> result = source.TryLast(x =>
+        {
+            visited.Add(x);
+            return x < 4;
+        });
+
+        result.Value.Should().Be(3);
+        visited.Should().Equal(5, 4, 3);
+    }
+
+    [Fact]
+    public void TryLast_WhenLastElementIsNull_ShouldReturnNone()
+    {
+        string?[] array = ["a", null];
+
+        array.TryLast().HasValue.Should().BeFalse();
+        Sequence(array).TryLast().HasValue.Should().BeFalse();
+        array.TryLast(_ => true).HasValue.Should().BeFalse();
+        Sequence(array).TryLast(_ => true).HasValue.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TryLast_WithLazySequence_ShouldReturnLast()
+    {
+        Sequence(1, 2, 3).TryLast().Value.Should().Be(3);
+        Sequence(1, 2, 3).TryLast(x => x < 3).Value.Should().Be(2);
+        Sequence<int>().TryLast().HasValue.Should().BeFalse();
+    }
+
+    private static IEnumerable<T> Sequence<T>(params T[] items)
+    {
+        foreach (T item in items)
+            yield return item;
+    }
+
+    private sealed class IndexOnlyList<T>(T[] items) : IReadOnlyList<T>
+    {
+        public T this[int index] => items[index];
+        public int Count => items.Length;
+        public IEnumerator<T> GetEnumerator() => throw new InvalidOperationException("Enumerated");
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
     #endregion
 
     #region TryFind

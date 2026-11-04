@@ -158,7 +158,7 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 | `TryFirst()`, `TryFirst(predicate)`, `TryLast()`, `TryLast(predicate)` | `Maybe<T>` | First or last element, `None` when there is none |
 | `dictionary.TryFind(key)` | `Maybe<TValue>` | Lookup on an `IReadOnlyDictionary` |
 
-`TryFirst` and `TryLast` return `None` for an empty sequence or a predicate without a match, for value types too. A `null` element gives `None`.
+`TryFirst` and `TryLast` return `None` for an empty sequence or a predicate without a match, for value types too. A `null` element gives `None`. On an `IList<T>` or `IReadOnlyList<T>`, `TryLast` reads the last element by index, and `TryLast(predicate)` walks from the end and stops at the first match.
 
 ### Choosing between `T?`, `Maybe<T>` and `Result<T>`
 
@@ -232,8 +232,12 @@ Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
 ```
 
-## Upgrade notes
+## Upgrading to 8.0
 
 ### TryFirst on value-type sequences
 
 `TryFirst()` and `TryFirst(predicate)` used to return `Some(default)` for a value-type sequence such as `int[]` when the sequence was empty or nothing matched. They now return `None`, like `TryLast`. Code that read `Value` from that `Some(0)` should check `HasValue` or use `GetValueOrDefault`.
+
+### TryLast(predicate) on lists
+
+`TryLast(predicate)` on an `IList<T>` or `IReadOnlyList<T>` now calls the predicate from the last element backwards and stops at the first match, the way `Enumerable.LastOrDefault` does. The result is the same, but a predicate with side effects sees fewer calls in a different order. Other sequences are still enumerated from the start.

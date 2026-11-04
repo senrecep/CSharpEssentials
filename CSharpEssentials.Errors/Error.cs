@@ -17,12 +17,12 @@ public readonly record struct Error : IError
     /// <summary>
     /// Gets the unique error code.
     /// </summary>
-    public string Code { get; init; }
+    public string Code { get; init => field = value ?? throw new ArgumentNullException(nameof(Code)); }
 
     /// <summary>
     /// Gets the error description.
     /// </summary>
-    public string Description { get; init; }
+    public string Description { get; init => field = value ?? throw new ArgumentNullException(nameof(Description)); }
 
     /// <summary>
     /// Gets the error type.
@@ -226,18 +226,22 @@ public readonly record struct Error : IError
         hashCode.Add(Type);
         hashCode.Add(NumericType);
 
-        if (Metadata is null)
-            return hashCode.ToHashCode();
-
-        foreach (KeyValuePair<string, object?> keyValuePair in Metadata)
-        {
-            hashCode.Add(keyValuePair.Key);
-            hashCode.Add(keyValuePair.Value);
-        }
+        if (Metadata is not null)
+            hashCode.Add(GetMetadataHashCode(Metadata));
 
         return hashCode.ToHashCode();
     }
 
+    private static int GetMetadataHashCode(ErrorMetadata metadata)
+    {
+        int combined = 0;
+        foreach (KeyValuePair<string, object?> keyValuePair in metadata)
+            combined ^= HashCode.Combine(
+                keyValuePair.Key,
+                keyValuePair.Value is ErrorMetadata nested ? GetMetadataHashCode(nested) : keyValuePair.Value?.GetHashCode() ?? 0);
+
+        return HashCode.Combine(metadata.Count, combined);
+    }
 
     private static bool CompareMetadata(ErrorMetadata metadata, ErrorMetadata otherMetadata)
     {
@@ -249,9 +253,14 @@ public readonly record struct Error : IError
 
         foreach (KeyValuePair<string, object?> keyValuePair in metadata)
             if (!otherMetadata.TryGetValue(keyValuePair.Key, out object? otherValue) ||
-                !Equals(keyValuePair.Value, otherValue))
+                !MetadataValueEquals(keyValuePair.Value, otherValue))
                 return false;
 
         return true;
     }
+
+    private static bool MetadataValueEquals(object? value, object? otherValue) =>
+        value is ErrorMetadata nested && otherValue is ErrorMetadata otherNested
+            ? CompareMetadata(nested, otherNested)
+            : Equals(value, otherValue);
 }
