@@ -215,7 +215,7 @@ public abstract partial class BaseDbContext<TContext> : DbContext
 
     ~BaseDbContext()
     {
-        if (Logger.IsEnabled(LogLevel.Information))
+        if (Logger?.IsEnabled(LogLevel.Information) == true)
             LogContextDestructed(ContextId.InstanceId);
     }
 

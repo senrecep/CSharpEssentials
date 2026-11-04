@@ -65,4 +65,27 @@ public class BaseDbContextFinalizerTests
 
         CountLogs(logs, " destructed").Should().BeGreaterThan(0);
     }
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static void CreateContextsWithoutLogger(ServiceProvider provider, int count)
+    {
+        for (int i = 0; i < count; i++)
+        {
+            Action act = () => _ = new FinalizerDbContext(
+                new DbContextOptionsBuilder<FinalizerDbContext>().UseInMemoryDatabase(Guid.NewGuid().ToString()).Options,
+                provider.GetRequiredService<IServiceScopeFactory>());
+            act.Should().Throw<InvalidOperationException>();
+        }
+    }
+
+    [Fact]
+    public void ContextWhoseConstructorThrows_ShouldFinalizeWithoutThrowing()
+    {
+        using ServiceProvider provider = new ServiceCollection().BuildServiceProvider();
+
+        CreateContextsWithoutLogger(provider, 10);
+        Action act = CollectAll;
+
+        act.Should().NotThrow();
+    }
 }
