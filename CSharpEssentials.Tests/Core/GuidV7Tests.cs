@@ -5,7 +5,7 @@ using FluentAssertions;
 
 namespace CSharpEssentials.Tests.Core;
 
-public class GuidV7Tests
+public sealed class GuidV7Tests
 {
     private const int _rfcSampleSize = 30_000;
     private const long _ticksPerMs = TimeSpan.TicksPerMillisecond;

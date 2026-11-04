@@ -3,7 +3,7 @@ using FluentAssertions;
 
 namespace CSharpEssentials.Core.NetStandard.Tests;
 
-public class GuiderNetStandardTests
+public sealed class GuiderNetStandardTests
 {
     private static long UnixMs(byte[] b) =>
         ((long)b[0] << 40) | ((long)b[1] << 32) | ((long)b[2] << 24) | ((long)b[3] << 16) | ((long)b[4] << 8) | b[5];
