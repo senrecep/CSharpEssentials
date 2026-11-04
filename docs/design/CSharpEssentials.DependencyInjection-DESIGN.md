@@ -344,6 +344,18 @@ namespace Microsoft.Extensions.DependencyInjection
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
         public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 0 };
 
+        private static readonly global::CSharpEssentials.DependencyInjection.DecoratorRegistration[] Decorators0 = new global::CSharpEssentials.DependencyInjection.DecoratorRegistration[]
+        {
+            new global::CSharpEssentials.DependencyInjection.DecoratorRegistration(
+                typeof(global::Sample.Billing.IInvoiceService),
+                null,
+                (inner, sp) => new global::Sample.Billing.CachedInvoiceService(
+                    (global::Sample.Billing.IInvoiceService)inner,
+                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+                        .GetRequiredService<global::Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp)),
+                global::System.Array.Empty<global::System.Type>()),
+        };
+
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
         public static void ApplyDecorators(global::Microsoft.Extensions.DependencyInjection.IServiceCollection services)
         {
@@ -359,13 +371,7 @@ namespace Microsoft.Extensions.DependencyInjection
             switch (order)
             {
                 case 0:
-                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.Billing.IInvoiceService>(
-                        services,
-                        static (inner, sp) => new global::Sample.Billing.CachedInvoiceService(
-                            inner,
-                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                                .GetRequiredService<global::Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp)),
-                        serviceKey: null);
+                    global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(services, Decorators0);
                     break;
             }
         }
@@ -441,7 +447,10 @@ Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentia
 | CSE2007 also covers file-local types, types nested in a `private`/`protected` type, and types nested in a generic type | Generated code lives in another file and namespace and cannot name these types, so the generator would emit code that does not compile. Reporting them keeps the rule "the error comes from the analyzer, not from generated code" (§6.1). |
 | CSE2005 also reports a decorator with zero public constructors | The generated factory needs exactly one public constructor, and the runtime activator rejects zero as well. |
 | CSE2006 also reports a scoped service that depends on a transient one | The transient instance is held for the whole scope, which is the same capture problem one level down. Registrations made outside attributes (manual `services.Add*`, other assemblies) are not visible to the analyzer, so the rule stays best effort and `Info`. |
-| A generated decorator with nothing to decorate does not name the decorator type in its exception | Generated code uses the `Decorate<TService>(Func<TService, IServiceProvider, TService>, serviceKey)` overload so it needs no reflection; that overload has no decorator type to report. The service type and key are still named. |
+| A generated decorator with nothing to decorate does not name the decorator type in its exception | Generated code passes one `DecoratorRegistration` (service type, key, typed lambda, verified implementation types) per decorator to `ServiceRegistration.Decorate(services, decorators)`, so it needs no decorator activation by reflection; the entry has no decorator type to report. The service type and key are still named. |
+| The generated registry applies all decorators of one order in a single `ServiceRegistration.Decorate` call | One pass over the collection finds the registrations of every decorator of that order, instead of one full pass per decorator. The result equals consecutive decorate calls in declaration order: a later decorator of the same service wraps an earlier one, and the first failing decorator throws the same exception. Every decorator of the order is validated before any registration is replaced, so a failure leaves the collection unchanged instead of keeping the decorators applied before it. The entries are `static readonly` fields, built once per registry type. |
+| The `[ServiceKey]` check result is cached per implementation type | The constructor metadata of a type cannot change, so each type is read once per process. The cache is a `ConditionalWeakTable`, which does not keep collectible types alive. |
+| `AddServicesFromAssemblies` names trimming when a decorator has no public constructor | In a trimmed or Native AOT app the trimmer removes constructors it cannot see being used, and scanning finds decorators only by reflection. The scanner passes a hint to the activator, which appends it to its usual message only when it finds zero public constructors; the hint names trimming and the AOT-safe alternatives. Other callers get the usual message, because outside the scanner zero public constructors is a declaration error. |
 | The `[ServiceKey]` argument is emitted as `(T)(object)key`, or `default(T)!` for a non-keyed decorator | The key constant and the parameter type can differ (for example an `object` parameter or a boxed enum). The double cast compiles for every combination the runtime activator accepts. |
 | The analyzer reports nothing in an assembly marked `[ExcludeFromRegistration]` | The generator emits no registry for such an assembly, so its declarations cannot fail at registration. |
 | Fallback parity is tested on descriptor sets (service type, key, lifetime, implementation type), not on order | The fallback scans types in metadata order and the generator in ordinal name order. Registration order differs only between unrelated service types, which the container does not observe. |

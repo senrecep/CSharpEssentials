@@ -337,8 +337,103 @@ public class ServiceRegistrationGeneratorTests
 
         run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
         string registry = ServiceGeneration.GeneratedSources(run)["GeneratorTestsServiceRegistry.g.cs"];
-        registry.Should().Contain("new global::Sample.KeyedDecorator(\n                            inner,\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, \"loud\"),\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))")
-            .And.Contain("new global::Sample.PlainDecorator(\n                            inner,\n                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))");
+        registry.Should().Contain("new global::Sample.KeyedDecorator(\n                    (global::Sample.IGreeter)inner,\n                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, \"loud\"),\n                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))")
+            .And.Contain("new global::Sample.PlainDecorator(\n                    (global::Sample.IGreeter)inner,\n                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IAudit>(sp))");
+    }
+
+    [Fact]
+    public void Generator_Should_Verify_Only_Same_Compilation_NonPartial_Types_Without_ServiceKey_Constructors()
+    {
+        const string source = """
+            using CSharpEssentials.DependencyInjection;
+            using Microsoft.Extensions.DependencyInjection;
+            using Sample_LibLibrary;
+
+            namespace Sample
+            {
+                public interface IGreeter;
+
+                public interface IRepository<T>;
+
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed class PlainGreeter : IGreeter;
+
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed class KeyAwareGreeter([ServiceKey] string key) : IGreeter;
+
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed class TwoConstructorGreeter : IGreeter
+                {
+                    public TwoConstructorGreeter() { }
+
+                    public TwoConstructorGreeter(int retries) { }
+                }
+
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed class SecondConstructorKeyGreeter : IGreeter
+                {
+                    public SecondConstructorKeyGreeter() { }
+
+                    public SecondConstructorKeyGreeter([ServiceKey] object key) { }
+                }
+
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed class HiddenKeyGreeter : IGreeter
+                {
+                    public HiddenKeyGreeter() { }
+
+                    private HiddenKeyGreeter([ServiceKey] string key) { }
+                }
+
+                [RegisterScoped(typeof(IGreeter), Key = "k")]
+                public sealed partial class PartialGreeter : IGreeter;
+
+                [RegisterScoped(typeof(IGreeter), Key = "other")]
+                public sealed class OtherKeyGreeter : IGreeter;
+
+                [RegisterScoped(typeof(IRepository<>))]
+                public sealed class Repository<T> : IRepository<T>;
+
+                [Decorates(typeof(IGreeter), Key = "k")]
+                public sealed class KeyedDecorator(IGreeter inner) : IGreeter;
+
+                [Decorates(typeof(IGreeter), Key = "k", Order = 1)]
+                public sealed class SecondKeyedDecorator(IGreeter inner) : IGreeter;
+
+                [Decorates(typeof(IRepository<int>))]
+                public sealed class IntRepositoryDecorator(IRepository<int> inner) : IRepository<int>;
+
+                [Decorates(typeof(IWorker))]
+                public sealed class WorkerDecorator(IWorker inner) : IWorker;
+            }
+            """;
+
+        CSharpCompilation compilation = ServiceGeneration.CreateCompilation(
+            source,
+            references: ServiceGeneration.CreateLibraryReference("Sample.Lib"));
+        GeneratorRun run = ServiceGeneration.Run(compilation);
+
+        run.OutputDiagnostics.Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+        run.OutputCompilation.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error);
+        string registry = ServiceGeneration.GeneratedSources(run)["GeneratorTestsServiceRegistry.g.cs"];
+        registry.Should().Contain(
+                "private static readonly global::System.Type[] VerifiedImplementations0 = new global::System.Type[] { " +
+                "typeof(global::Sample.HiddenKeyGreeter), typeof(global::Sample.PlainGreeter), typeof(global::Sample.TwoConstructorGreeter) };")
+            .And.NotContain("VerifiedImplementations1")
+            .And.NotContain("typeof(global::Sample.PartialGreeter) }");
+        CountOccurrences(registry, "VerifiedImplementations0),").Should().Be(2);
+        CountOccurrences(registry, "global::System.Array.Empty<global::System.Type>()),").Should().Be(2);
+    }
+
+    private static int CountOccurrences(string text, string value)
+    {
+        int count = 0;
+        for (int index = text.IndexOf(value, StringComparison.Ordinal); index >= 0; index = text.IndexOf(value, index + value.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
     }
 
     [Fact]

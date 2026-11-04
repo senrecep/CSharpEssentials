@@ -107,6 +107,32 @@ namespace Microsoft.Extensions.DependencyInjection
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
         public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 1, 2 };
 
+        private static readonly global::System.Type[] VerifiedImplementations0 = new global::System.Type[] { typeof(global::Sample.EuGreeter) };
+
+        private static readonly global::CSharpEssentials.DependencyInjection.DecoratorRegistration[] Decorators0 = new global::CSharpEssentials.DependencyInjection.DecoratorRegistration[]
+        {
+            new global::CSharpEssentials.DependencyInjection.DecoratorRegistration(
+                typeof(global::Sample.IGreeter),
+                global::Sample.Region.Eu,
+                (inner, sp) => new global::Sample.EuDecorator(
+                    (global::Sample.IGreeter)inner,
+                    (global::Sample.Region)(object)global::Sample.Region.Eu),
+                VerifiedImplementations0),
+        };
+
+        private static readonly global::CSharpEssentials.DependencyInjection.DecoratorRegistration[] Decorators1 = new global::CSharpEssentials.DependencyInjection.DecoratorRegistration[]
+        {
+            new global::CSharpEssentials.DependencyInjection.DecoratorRegistration(
+                typeof(global::Sample.IGreeter),
+                null,
+                (inner, sp) => new global::Sample.LoudGreeter(
+                    (global::Sample.IGreeter)inner,
+                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IClock>(sp),
+                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, "shared"),
+                    (int)(sp.GetService(typeof(int)) ?? (object?)3)!),
+                global::System.Array.Empty<global::System.Type>()),
+        };
+
         /// <summary>Applies the decorators declared in this assembly.</summary>
         /// <param name="services">The service collection.</param>
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
@@ -127,22 +153,10 @@ namespace Microsoft.Extensions.DependencyInjection
             switch (order)
             {
                 case 1:
-                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
-                        services,
-                        (inner, sp) => new global::Sample.EuDecorator(
-                            inner,
-                            (global::Sample.Region)(object)global::Sample.Region.Eu),
-                        serviceKey: global::Sample.Region.Eu);
+                    global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(services, Decorators0);
                     break;
                 case 2:
-                    global::Microsoft.Extensions.DependencyInjection.ServiceCollectionDecorationExtensions.Decorate<global::Sample.IGreeter>(
-                        services,
-                        (inner, sp) => new global::Sample.LoudGreeter(
-                            inner,
-                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.IClock>(sp),
-                            global::Microsoft.Extensions.DependencyInjection.ServiceProviderKeyedServiceExtensions.GetRequiredKeyedService<global::Sample.IAudit>(sp, "shared"),
-                            (int)(sp.GetService(typeof(int)) ?? (object?)3)!),
-                        serviceKey: null);
+                    global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(services, Decorators1);
                     break;
             }
         }

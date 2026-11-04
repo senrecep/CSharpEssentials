@@ -103,6 +103,28 @@ public static class ServiceRegistration
         services.Add(ServiceDescriptor.Singleton(new RegisteredAssemblyMarker(assembly)));
     }
 
+    /// <summary>
+    /// Applies <paramref name="decorators"/> in order, as consecutive decorate calls would: each decorates every registration of its
+    /// service type and key, and a later decorator of the same service wraps an earlier one. Every decorator is validated before
+    /// any registration is replaced, so a failure leaves <paramref name="services"/> unchanged. Used by generated registries.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="decorators">The decorators to apply, in order.</param>
+    /// <exception cref="InvalidOperationException">
+    /// A decorator matches no registration, or an original implementation injects <see cref="ServiceKeyAttribute"/>.
+    /// </exception>
+    public static void Decorate(IServiceCollection services, DecoratorRegistration[] decorators)
+    {
+        Guard.NotNull(services);
+        Guard.NotNull(decorators);
+        foreach (DecoratorRegistration decorator in decorators)
+        {
+            Guard.NotNull(decorator);
+        }
+
+        ServiceDecoration.DecorateAll(services, decorators);
+    }
+
     private static void LogDuplicate(ILogger logger, ServiceDescriptor existing, ServiceDescriptor descriptor, RegistrationStrategy strategy)
     {
         if (!logger.IsEnabled(LogLevel.Debug))
@@ -118,8 +140,10 @@ public static class ServiceRegistration
 
     private static ServiceDescriptor? FindFirst(IServiceCollection services, ServiceDescriptor descriptor)
     {
-        foreach (ServiceDescriptor candidate in services)
+        int count = services.Count;
+        for (int index = 0; index < count; index++)
         {
+            ServiceDescriptor candidate = services[index];
             if (candidate.Matches(descriptor.ServiceType, descriptor.ServiceKey))
             {
                 return candidate;
@@ -132,8 +156,10 @@ public static class ServiceRegistration
     private static bool ContainsImplementation(IServiceCollection services, ServiceDescriptor descriptor)
     {
         object? identity = descriptor.GetImplementationIdentity();
-        foreach (ServiceDescriptor candidate in services)
+        int count = services.Count;
+        for (int index = 0; index < count; index++)
         {
+            ServiceDescriptor candidate = services[index];
             if (candidate.Matches(descriptor.ServiceType, descriptor.ServiceKey) && Equals(candidate.GetImplementationIdentity(), identity))
             {
                 return true;

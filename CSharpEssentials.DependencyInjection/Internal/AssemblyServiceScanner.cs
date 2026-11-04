@@ -14,6 +14,11 @@ internal static class AssemblyServiceScanner
 
     public const string DynamicCodeMessage = "Builds decorator factories and closes generic types at runtime.";
 
+    private const string TrimmedConstructorHint =
+        "If the application is trimmed or published with Native AOT, the trimmer may have removed it, because " +
+        "AddServicesFromAssemblies finds decorators only by reflection. Use the generated Add{Asm}Services method, " +
+        "or Decorate<TService, TDecorator>(), in trimmed and Native AOT apps.";
+
     private const string AttributeNamespace = "CSharpEssentials.DependencyInjection";
 
     private static readonly string[] ExcludedInterfaces =
@@ -208,13 +213,13 @@ internal static class AssemblyServiceScanner
         EnsureImplements(decoratorType, serviceType);
         if (decoratorType.IsGenericTypeDefinition)
         {
-            return (order, services => ServiceDecoration.DecorateOpenGeneric(services, serviceType, decoratorType, candidate => Equals(candidate, key)));
+            return (order, services => ServiceDecoration.DecorateOpenGeneric(services, serviceType, decoratorType, candidate => Equals(candidate, key), TrimmedConstructorHint));
         }
 
-        Func<object, IServiceProvider, object> factory = DecoratorActivator.Create(decoratorType, serviceType, key);
+        Func<object, IServiceProvider, object> factory = DecoratorActivator.Create(decoratorType, serviceType, key, TrimmedConstructorHint);
         void Apply(IServiceCollection services)
         {
-            if (!ServiceDecoration.TryDecorate(services, serviceType, key, factory))
+            if (!ServiceDecoration.TryDecorate(services, serviceType, key, factory, Type.EmptyTypes))
             {
                 throw ServiceDecoration.NothingToDecorate(serviceType, key, decoratorType);
             }

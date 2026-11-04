@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CSharpEssentials.DependencyInjection.Generators;
 
@@ -129,8 +131,33 @@ internal static class ServiceTypeInspector
             lifetime,
             ReadKey(attribute),
             strategy is { IsNull: false } value ? ConstantFormatter.Format(value) : DefaultStrategy,
+            !type.IsGenericType && !IsPartial(type) && !InjectsServiceKey(type),
             new EquatableArray<ServiceModel>(models));
         registrations.Add(new InspectedRegistration(model, attribute));
+    }
+
+    private static bool IsPartial(INamedTypeSymbol type) =>
+        type.DeclaringSyntaxReferences.Any(static reference =>
+            reference.GetSyntax() is TypeDeclarationSyntax declaration && declaration.Modifiers.Any(SyntaxKind.PartialKeyword));
+
+    private static bool InjectsServiceKey(INamedTypeSymbol type) =>
+        type.InstanceConstructors
+            .Where(static constructor => constructor.DeclaredAccessibility == Accessibility.Public)
+            .SelectMany(static constructor => constructor.Parameters)
+            .Any(static parameter => parameter.GetAttributes().Any(static attribute => IsServiceKeyAttribute(attribute.AttributeClass)));
+
+    private static bool IsServiceKeyAttribute(INamedTypeSymbol? attributeClass)
+    {
+        for (INamedTypeSymbol? current = attributeClass; current is not null; current = current.BaseType)
+        {
+            if (string.Equals(current.Name, "ServiceKeyAttribute", StringComparison.Ordinal) &&
+                string.Equals(current.ContainingNamespace?.ToDisplayString(), ContainerNamespace, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static void InspectDecorator(INamedTypeSymbol type, AttributeData attribute, List<InspectionIssue> issues, List<DecoratorModel> decorators)

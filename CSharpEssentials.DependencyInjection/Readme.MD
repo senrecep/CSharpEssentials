@@ -65,7 +65,7 @@ A decorator's other constructor parameters are resolved like the container does:
 
 ## Generated registry
 
-The package ships a source generator. Each assembly with marked classes gets an `Add{Assembly}Services` method (dots removed, so `Sample.Billing` becomes `AddSampleBillingServices`). It registers the assembly's services, then applies its decorators. It uses no reflection, so it is trim and Native AOT safe.
+The package ships a source generator. Each assembly with marked classes gets an `Add{Assembly}Services` method (dots removed, so `Sample.Billing` becomes `AddSampleBillingServices`). It registers the assembly's services, then applies its decorators. It does not scan assemblies and is trim and Native AOT safe, with no warnings. One reflection step is left: before decorating a registration, it reads the public constructors of the implementation type once per process to reject a type that injects `[ServiceKey]`. It skips that read when the generator already checked the type at compile time: a non-generic type registered by attribute in the decorator's own assembly, under the same service type and key. Manual registrations, generic types, partial types (another generator may add their constructors) and types from other assemblies still get the read. Microsoft.Extensions.DependencyInjection still constructs `typeof(...)` registrations itself, as it always does.
 
 ```csharp
 builder.Services.AddSampleBillingServices();
@@ -115,7 +115,7 @@ services.AddServicesFromAssemblies(typeof(Program).Assembly);
 services.AddServicesFromAssemblies(logger, typeof(Program).Assembly); // warns on unloadable types, logs duplicates at Debug
 ```
 
-The fallback uses reflection, so it is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Use the generated `Add{Assembly}Services()` method for trimmed and Native AOT applications.
+The fallback uses reflection, so it is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Use the generated `Add{Assembly}Services()` method for trimmed and Native AOT applications. Trimming can remove constructors that only the fallback uses; a decorator left without a public constructor then fails with an error that names trimming and these alternatives. `Decorate<TService, TDecorator>()` keeps the decorator constructor through its annotation, so it also works in trimmed apps.
 
 ## Testing for duplicate registrations
 
@@ -154,7 +154,7 @@ Pass service types that are meant to have several implementations (`TryAddEnumer
 
 ## Migrating from Scrutor
 
-Scrutor scans assemblies at runtime. This package replaces scanning with an attribute on each class and a generated, reflection-free registry.
+Scrutor scans assemblies at runtime. This package replaces scanning with an attribute on each class and a generated registry that needs no assembly scanning.
 
 | Scrutor | CSharpEssentials.DependencyInjection |
 |---|---|

@@ -5,4 +5,5 @@ internal sealed record RegistrationModel(
     string Lifetime,
     string? Key,
     string Strategy,
+    bool VerifiedForDecoration,
     EquatableArray<ServiceModel> Services);
