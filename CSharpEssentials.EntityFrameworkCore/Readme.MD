@@ -671,7 +671,7 @@ protected override void ConfigureConventions(ModelConfigurationBuilder configura
 modelBuilder.Entity<Order>().Property(x => x.Id).HasValueGeneratorFactory<Version7GuidValueGeneratorFactory>();
 ```
 
-The convention covers every non-nullable `Guid` primary key that EF Core generates on add. It skips foreign keys and keys with a value generator, a default value, default value SQL or computed SQL of their own, and anything configured explicitly wins over it. It sets the factory type, not a generator instance, so compiled models work.
+The convention covers every non-nullable `Guid` primary key that EF Core generates on add. It skips foreign keys and keys with a value generator, a default value, default value SQL or computed SQL of their own, and anything configured explicitly wins over it. It also skips keys with a value conversion, such as `HasConversion<string>()` or `HasConversion<byte[]>()`, because the stored form then no longer sorts like the provider's GUID column. It sets the factory type, not a generator instance, so compiled models work.
 
 | Layout | Values | Sorts by creation time in |
 |---|---|---|

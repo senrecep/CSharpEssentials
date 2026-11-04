@@ -3,6 +3,9 @@ using CSharpEssentials.Tests.EntityFrameworkCore.EnumColumns;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.ValueGeneration;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore.OrderedGuids;
 
@@ -15,6 +18,12 @@ public sealed class OrderedGuidKeyConventionTests(PostgresEnumFixture postgres) 
     {
         public Guid Id { get; set; }
         public List<Line> Lines { get; set; } = [];
+        public Profile? Profile { get; set; }
+    }
+
+    public sealed class Profile
+    {
+        public Guid Id { get; set; }
     }
 
     public sealed class Line
@@ -38,13 +47,14 @@ public sealed class OrderedGuidKeyConventionTests(PostgresEnumFixture postgres) 
         public Guid Id { get; set; }
     }
 
+    public sealed class Converted
+    {
+        public Guid Id { get; set; }
+    }
+
     private sealed class ShopContext(DbContextOptions options, bool ordered, OrderedGuidLayout? layout = null) : DbContext(options)
     {
         public DbSet<Order> Orders => Set<Order>();
-        public DbSet<Line> Lines => Set<Line>();
-        public DbSet<Pinned> Pinned => Set<Pinned>();
-        public DbSet<Defaulted> Defaulted => Set<Defaulted>();
-        public DbSet<Assigned> Assigned => Set<Assigned>();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
@@ -54,19 +64,31 @@ public sealed class OrderedGuidKeyConventionTests(PostgresEnumFixture postgres) 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Order>().HasOne(x => x.Profile).WithOne().HasForeignKey<Profile>(x => x.Id);
             modelBuilder.Entity<Pinned>().Property(x => x.Id).HasValueGeneratorFactory<SqlServerGuidValueGeneratorFactory>();
             modelBuilder.Entity<Assigned>().Property(x => x.Id).ValueGeneratedNever();
+            modelBuilder.Entity<Converted>().Property(x => x.Id).HasConversion<byte[]>();
+            modelBuilder.Entity<Defaulted>();
             if (Database.IsRelational())
                 modelBuilder.Entity<Defaulted>().Property(x => x.Id).HasDefaultValueSql($"'{_defaultId}'");
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
-            optionsBuilder.ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, PerInstanceModelCacheKeyFactory>();
+            optionsBuilder.ReplaceService<IModelCacheKeyFactory, PerInstanceModelCacheKeyFactory>();
     }
 
-    private sealed class PerInstanceModelCacheKeyFactory : Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory
+    private sealed class PerInstanceModelCacheKeyFactory : IModelCacheKeyFactory
     {
         public object Create(DbContext context, bool designTime) => (context.GetType(), Guid.NewGuid(), designTime);
+    }
+
+    private static readonly ValueGenerator _version7 = new Version7GuidValueGeneratorFactory().Create(null!, null!);
+
+    private static ValueGenerator? KeyGenerator<T>(DbContext context)
+    {
+        IEntityType entityType = context.Model.FindEntityType(typeof(T))!;
+        _ = context.GetService<IValueGeneratorSelector>().TrySelect(entityType.FindProperty("Id")!, entityType, out ValueGenerator? generator);
+        return generator;
     }
 
     private static async Task<(ShopContext Context, SqliteConnection Connection)> SqliteAsync(bool ordered, OrderedGuidLayout? layout = null)
@@ -120,15 +142,21 @@ public sealed class OrderedGuidKeyConventionTests(PostgresEnumFixture postgres) 
             Pinned pinned = new();
             Defaulted defaulted = new();
             Assigned assigned = new() { Id = _defaultId };
-            Order order = new() { Lines = [new Line()] };
-            context.AddRange(pinned, defaulted, assigned, order);
+            Converted converted = new();
+            Order order = new() { Lines = [new Line()], Profile = new Profile() };
+            context.AddRange(pinned, defaulted, assigned, converted, order);
             await context.SaveChangesAsync();
 
             pinned.Id.Version.Should().Be(8);
             defaulted.Id.Should().Be(_defaultId);
             assigned.Id.Should().Be(_defaultId);
+            KeyGenerator<Assigned>(context).Should().NotBeSameAs(_version7);
+            converted.Id.Version.Should().Be(4);
+            KeyGenerator<Converted>(context).Should().NotBeSameAs(_version7);
             order.Lines[0].Id.Version.Should().Be(7);
             order.Lines[0].OrderId.Should().Be(order.Id);
+            order.Profile.Id.Should().Be(order.Id);
+            KeyGenerator<Profile>(context).Should().NotBeSameAs(_version7);
         }
     }
 
@@ -181,6 +209,7 @@ public sealed class OrderedGuidKeyConventionTests(PostgresEnumFixture postgres) 
 
         List<Guid> ids = await InsertOneByOneAsync(context, 300);
 
+        KeyGenerator<Order>(context).Should().BeSameAs(_version7);
         ids.Should().OnlyContain(id => id.Version == 7);
         (await context.Database.SqlQueryRaw<Guid>("SELECT \"Id\" AS \"Value\" FROM \"Orders\" ORDER BY \"Id\"").ToListAsync())
             .Should().Equal(ids);
@@ -195,6 +224,7 @@ public sealed class OrderedGuidKeyConventionTests(PostgresEnumFixture postgres) 
 
         List<Guid> ids = await InsertOneByOneAsync(context, 5);
 
+        KeyGenerator<Order>(context).Should().NotBeSameAs(_version7);
         ids.Should().OnlyContain(id => id.Version == 7);
     }
 }

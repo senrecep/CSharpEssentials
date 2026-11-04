@@ -48,5 +48,7 @@ internal sealed class OrderedGuidKeyConvention(OrderedGuidLayout? layout, string
         && property.GetValueGeneratorFactoryConfigurationSource() is null
         && property.GetDefaultValueSql() is null
         && property.GetComputedColumnSql() is null
-        && property.GetDefaultValueConfigurationSource() is null;
+        && property.GetDefaultValueConfigurationSource() is null
+        && property.GetValueConverter() is null
+        && property.GetProviderClrType() is null;
 }

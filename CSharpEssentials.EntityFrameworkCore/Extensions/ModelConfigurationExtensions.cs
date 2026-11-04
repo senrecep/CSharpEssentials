@@ -118,8 +118,8 @@ public static class ModelConfigurationExtensions
     /// with <c>Char36</c>, <c>Char32</c> or <c>Binary16</c>.
     /// </para>
     /// <para>
-    /// Keys that are foreign keys, nullable, or have a value generator, a default value, default value SQL or computed SQL
-    /// configured are left alone, as are keys that EF Core does not generate. The values reveal their creation time; do not
+    /// Keys that are foreign keys, nullable, or have a value generator, a value conversion, a default value, default value SQL or
+    /// computed SQL configured are left alone, as are keys that EF Core does not generate. The values reveal their creation time; do not
     /// use them where the key must stay secret.
     /// </para>
     /// </remarks>
