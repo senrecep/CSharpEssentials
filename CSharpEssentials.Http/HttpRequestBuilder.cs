@@ -122,8 +122,8 @@ public sealed class HttpRequestBuilder
     /// <summary>
     /// Sends an <c>Idempotency-Key</c> header. The key is fixed now, not when the request is built: every
     /// <see cref="Build"/> of this builder, and so every retry that builds the request again, sends the same key.
-    /// When <paramref name="key"/> is <see langword="null"/> a new key is generated (a UUIDv7 on .NET 9 and later, a
-    /// random UUID on netstandard2.1); pass a deterministic key, for example from <c>IdempotencyKeys.For(...)</c>, when
+    /// When <paramref name="key"/> is <see langword="null"/> a new key is generated (a UUIDv7 on every target);
+    /// pass a deterministic key, for example from <c>IdempotencyKeys.For(...)</c>, when
     /// the operation can be started again from scratch. A new logical operation needs a new builder or a new key.
     /// </summary>
     /// <param name="key">The key to send, or <see langword="null"/> to generate one.</param>

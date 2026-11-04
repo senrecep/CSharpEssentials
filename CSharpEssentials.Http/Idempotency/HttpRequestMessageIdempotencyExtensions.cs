@@ -5,8 +5,8 @@ public static class HttpRequestMessageIdempotencyExtensions
 {
     /// <summary>
     /// Sets the <c>Idempotency-Key</c> header of <paramref name="request"/>, replacing any previous value, and returns
-    /// the key. When <paramref name="key"/> is <see langword="null"/> a new key is generated (a UUIDv7 on .NET 9 and
-    /// later, a random UUID on netstandard2.1). Pass a deterministic key, for example from
+    /// the key. When <paramref name="key"/> is <see langword="null"/> a new key is generated (a UUIDv7 on every target).
+    /// Pass a deterministic key, for example from
     /// <c>IdempotencyKeys.For(...)</c>, when the same logical operation can be started again.
     /// Retries that resend the same <see cref="HttpRequestMessage"/> keep the key.
     /// </summary>
