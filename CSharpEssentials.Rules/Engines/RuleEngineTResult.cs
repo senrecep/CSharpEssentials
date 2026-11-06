@@ -1,3 +1,4 @@
+using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Rules;
@@ -17,9 +18,14 @@ public static partial class RuleEngine
 
     private static Result<TResult> Evaluate<TContext, TResult>(IRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {
-        return Result.Try(
-            () => rule.Evaluate(context, cancellationToken),
-            ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.SimpleRule, ex));
+        try
+        {
+            return rule.Evaluate(context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return RuleErrors.RuleEngineEvaluateError(RuleTypes.SimpleRule, ex);
+        }
     }
     private static ValueTask<Result<TResult>> Evaluate<TContext, TResult>(IAsyncRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {
@@ -31,16 +37,18 @@ public static partial class RuleEngine
 
     private static Result<TResult> Evaluate<TContext, TResult>(ILinearRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {
-        return Result.Try(
-            () =>
-            {
-                Result<TResult> result = rule.Evaluate(context, cancellationToken);
-                IRuleBase<TContext, TResult>? next = LinearNext(result.IsFailure, rule.Next);
-                if (next is null)
-                    return result;
-                return InternalEvaluate(next, context, cancellationToken);
-            },
-            ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.LinearRule, ex));
+        try
+        {
+            Result<TResult> result = rule.Evaluate(context, cancellationToken);
+            IRuleBase<TContext, TResult>? next = LinearNext(result.IsFailure, rule.Next);
+            if (next is null)
+                return result;
+            return InternalEvaluate(next, context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return RuleErrors.RuleEngineEvaluateError(RuleTypes.LinearRule, ex);
+        }
     }
 
     private static ValueTask<Result<TResult>> Evaluate<TContext, TResult>(ILinearAsyncRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
@@ -60,16 +68,18 @@ public static partial class RuleEngine
 
     private static Result<TResult> Evaluate<TContext, TResult>(IConditionalRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {
-        return Result.Try(
-            () =>
-            {
-                Result<TResult> result = rule.Evaluate(context, cancellationToken);
-                IRuleBase<TContext, TResult>? branch = ConditionalBranch(result.IsFailure, rule.Success, rule.Failure);
-                if (branch is null)
-                    return result;
-                return InternalEvaluate(branch, context, cancellationToken);
-            },
-            ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.ConditionalRule, ex));
+        try
+        {
+            Result<TResult> result = rule.Evaluate(context, cancellationToken);
+            IRuleBase<TContext, TResult>? branch = ConditionalBranch(result.IsFailure, rule.Success, rule.Failure);
+            if (branch is null)
+                return result;
+            return InternalEvaluate(branch, context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return RuleErrors.RuleEngineEvaluateError(RuleTypes.ConditionalRule, ex);
+        }
     }
 
     private static ValueTask<Result<TResult>> Evaluate<TContext, TResult>(IConditionalAsyncRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
@@ -89,17 +99,18 @@ public static partial class RuleEngine
 
     private static Result<TResult> Evaluate<TContext, TResult>(IAndRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {
-        return Result.Try(
-            () =>
-            {
-                Result<TResult> result = rule.Evaluate(context, cancellationToken);
-                if (result.IsFailure)
-                    return result;
+        try
+        {
+            Result<TResult> result = rule.Evaluate(context, cancellationToken);
+            if (result.IsFailure)
+                return result;
 
-                Result<TResult[]> andResult = Result<TResult>.And(rule.Rules.Select(r => InternalEvaluate(r, context, cancellationToken)));
-                return FirstAndValue(andResult);
-            },
-            ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.AndRule, ex));
+            return AndAll(rule.Rules, context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return RuleErrors.RuleEngineEvaluateError(RuleTypes.AndRule, ex);
+        }
     }
 
     private static ValueTask<Result<TResult>> Evaluate<TContext, TResult>(IAndAsyncRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
@@ -111,8 +122,7 @@ public static partial class RuleEngine
                 if (result.IsFailure)
                     return result;
 
-                Result<TResult[]> andResult = Result<TResult>.And(rule.Rules.Select(r => InternalEvaluate(r, context, cancellationToken)));
-                return FirstAndValue(andResult);
+                return AndAll(rule.Rules, context, cancellationToken);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.AndAsyncRule, ex),
             cancellationToken));
@@ -120,16 +130,18 @@ public static partial class RuleEngine
 
     private static Result<TResult> Evaluate<TContext, TResult>(IOrRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
     {
-        return Result.Try(
-            () =>
-            {
-                Result<TResult> result = rule.Evaluate(context, cancellationToken);
-                if (result.IsFailure)
-                    return result;
+        try
+        {
+            Result<TResult> result = rule.Evaluate(context, cancellationToken);
+            if (result.IsFailure)
+                return result;
 
-                return Result<TResult>.Or(rule.Rules.Select(r => InternalEvaluate(r, context, cancellationToken)));
-            },
-            ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.OrRule, ex));
+            return OrAll(rule.Rules, context, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            return RuleErrors.RuleEngineEvaluateError(RuleTypes.OrRule, ex);
+        }
     }
 
     private static ValueTask<Result<TResult>> Evaluate<TContext, TResult>(IOrAsyncRule<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
@@ -141,10 +153,59 @@ public static partial class RuleEngine
                 if (result.IsFailure)
                     return result;
 
-                return Result<TResult>.Or(rule.Rules.Select(r => InternalEvaluate(r, context, cancellationToken)));
+                return OrAll(rule.Rules, context, cancellationToken);
             },
             ex => RuleErrors.RuleEngineEvaluateError(RuleTypes.OrAsyncRule, ex),
             cancellationToken));
+    }
+
+    private static Result<TResult> AndAll<TContext, TResult>(IRuleBase<TContext, TResult>[] rules, TContext context, CancellationToken cancellationToken)
+    {
+        if (rules.Length == 0)
+            return RuleErrors.EmptyRuleArrayError;
+
+        Error[][] failures = RentFailures(rules.Length);
+        int count = 0;
+        try
+        {
+            TResult first = default!;
+            for (int i = 0; i < rules.Length; i++)
+            {
+                Result<TResult> result = InternalEvaluate(rules[i], context, cancellationToken);
+                if (result.IsFailure)
+                    failures[count++] = result.ErrorsOrEmptyArray;
+                else if (i == 0)
+                    first = result.Value;
+            }
+            if (count > 0)
+                return FlattenFailures(failures, count);
+            return first;
+        }
+        finally
+        {
+            ReturnFailures(failures, count);
+        }
+    }
+
+    private static Result<TResult> OrAll<TContext, TResult>(IRuleBase<TContext, TResult>[] rules, TContext context, CancellationToken cancellationToken)
+    {
+        Error[][] failures = RentFailures(rules.Length);
+        int count = 0;
+        try
+        {
+            foreach (IRuleBase<TContext, TResult> rule in rules)
+            {
+                Result<TResult> result = InternalEvaluate(rule, context, cancellationToken);
+                if (result.IsSuccess)
+                    return result.Value;
+                failures[count++] = result.ErrorsOrEmptyArray;
+            }
+            return FlattenFailures(failures, count);
+        }
+        finally
+        {
+            ReturnFailures(failures, count);
+        }
     }
 
     private static Result<TResult> InternalEvaluate<TContext, TResult>(IRuleBase<TContext, TResult> rule, TContext context, CancellationToken cancellationToken = default)
