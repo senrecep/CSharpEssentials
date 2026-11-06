@@ -14,6 +14,7 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
     private readonly EnumConventions _conventions;
     private readonly Dictionary<TEnum, string>? _legacyNames;
     private readonly Dictionary<string, TEnum>? _legacyLookup;
+    private readonly Dictionary<string, TEnum>? _legacyExact;
 
     public EnumColumnCodec(EnumInfo<TEnum> info, EnumConventions conventions, EnumStoredAs? legacyFormat = null, string? column = null)
     {
@@ -31,6 +32,7 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
             _legacyLookup = new Dictionary<string, TEnum>(
                 names.DistinctBy(pair => pair.Value, StringComparer.OrdinalIgnoreCase).Select(pair => KeyValuePair.Create(pair.Value, pair.Key)),
                 StringComparer.OrdinalIgnoreCase);
+            _legacyExact = new Dictionary<string, TEnum>(_legacyLookup, StringComparer.Ordinal);
         }
     }
 
@@ -62,7 +64,9 @@ internal sealed class EnumColumnCodec<TEnum> where TEnum : struct, Enum
 
     public TEnum FromText(string text)
     {
-        if (_legacyLookup is not null && _legacyLookup.TryGetValue(text, out TEnum legacy))
+        if (_legacyExact is not null && _legacyExact.TryGetValue(text, out TEnum legacy))
+            return legacy;
+        if (_legacyLookup is not null && _legacyLookup.TryGetValue(text, out legacy))
             return legacy;
         if (Info.IsFlags && text.Contains(','))
             return FromNames(text.Split(',').Select(part => part.Trim()));
