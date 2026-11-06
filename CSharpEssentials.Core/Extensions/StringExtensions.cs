@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace CSharpEssentials.Core;
 
@@ -40,40 +41,12 @@ public static class StringExtensions
             return string.Empty;
 
         ReadOnlySpan<char> value = input.AsSpan();
-        bool isFirstCharacter = true;
-        bool insertSeparator = caseType is not CaseType.Camel and not CaseType.UnderscoreCamel;
-
         int bufferLength = NeedsSeparator(caseType) ? value.Length * 2 : value.Length + One;
         char[]? rented = bufferLength <= StackAllocThreshold ? null : ArrayPool<char>.Shared.Rent(bufferLength);
         Span<char> newString = rented is null ? stackalloc char[bufferLength] : rented;
         try
         {
-            int newIndex = caseType == CaseType.UnderscoreCamel ? One : Zero;
-
-            if (caseType == CaseType.UnderscoreCamel)
-            {
-                newString[Zero] = Underscore;
-            }
-
-            UnicodeCategory current = UnicodeCategory.OtherSymbol;
-
-            for (int i = Zero; i < value.Length; i++)
-            {
-                UnicodeCategory previous = current;
-                current = GetCategory(value[i]);
-                insertSeparator = insertSeparator.InsertSeparator(previous, current);
-
-                if (!IsSpecialCharacter(current))
-                {
-                    if (insertSeparator && !isFirstCharacter && NeedsSeparator(caseType))
-                        newString[newIndex++] = GetSeparator(caseType);
-
-                    newString[newIndex] = GetCharacterCase(value[i], caseType, insertSeparator, isFirstCharacter, culture);
-                    isFirstCharacter = false;
-                    insertSeparator = false;
-                    newIndex++;
-                }
-            }
+            int newIndex = WriteCase(value, newString, caseType, culture);
 
 #if NET8_0_OR_GREATER
             return new string(newString[..newIndex]);
@@ -90,22 +63,44 @@ public static class StringExtensions
         }
     }
 
-    private static char GetCharacterCase(char c, CaseType caseType, bool insertSeparator, bool isFirstCharacter, CultureInfo? culture)
+    private static int WriteCase(ReadOnlySpan<char> value, Span<char> newString, CaseType caseType, CultureInfo? culture)
     {
-        return caseType switch
+        bool needsSeparator = NeedsSeparator(caseType);
+        char separator = needsSeparator ? GetSeparator(caseType) : default;
+        bool upperAlways = caseType == CaseType.Macro;
+        bool upperAtWordStart = caseType is not CaseType.Kebab and not CaseType.Snake and not CaseType.Macro;
+        bool upperFirstCharacter = caseType is CaseType.Pascal or CaseType.Train or CaseType.Title;
+        bool isFirstCharacter = true;
+        bool insertSeparator = caseType is not CaseType.Camel and not CaseType.UnderscoreCamel;
+        int newIndex = Zero;
+
+        if (caseType == CaseType.UnderscoreCamel)
+            newString[newIndex++] = Underscore;
+
+        UnicodeCategory current = UnicodeCategory.OtherSymbol;
+
+        for (int i = Zero; i < value.Length; i++)
         {
-            CaseType.Macro => ToUpper(c, culture),
-            CaseType.Kebab or CaseType.Snake => ToLower(c, culture),
-            CaseType.Camel or CaseType.UnderscoreCamel => insertSeparator && !isFirstCharacter
-                ? ToUpper(c, culture)
-                : ToLower(c, culture),
-            CaseType.Pascal => insertSeparator ? ToUpper(c, culture) : ToLower(c, culture),
-            CaseType.Train => insertSeparator ? ToUpper(c, culture) : ToLower(c, culture),
-            CaseType.Title => insertSeparator ? ToUpper(c, culture) : ToLower(c, culture),
-            _ => throw new ArgumentOutOfRangeException(nameof(caseType), caseType, null)
-        };
+            UnicodeCategory previous = current;
+            current = GetCategory(value[i]);
+            insertSeparator = insertSeparator.InsertSeparator(previous, current);
+
+            if (IsSpecialCharacter(current))
+                continue;
+
+            if (insertSeparator && !isFirstCharacter && needsSeparator)
+                newString[newIndex++] = separator;
+
+            bool upper = upperAlways || insertSeparator && upperAtWordStart && (!isFirstCharacter || upperFirstCharacter);
+            newString[newIndex++] = upper ? ToUpper(value[i], culture) : ToLower(value[i], culture);
+            isFirstCharacter = false;
+            insertSeparator = false;
+        }
+
+        return newIndex;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static char ToUpper(char c, CultureInfo? culture)
     {
         if (culture is not null)
@@ -115,6 +110,7 @@ public static class StringExtensions
         return c is >= 'a' and <= 'z' ? (char)(c - 32) : c;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static char ToLower(char c, CultureInfo? culture)
     {
         if (culture is not null)
@@ -137,6 +133,7 @@ public static class StringExtensions
     };
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static UnicodeCategory GetCategory(char c)
     {
         if (c >= 128)
@@ -148,13 +145,16 @@ public static class StringExtensions
         return c is >= '0' and <= '9' ? UnicodeCategory.DecimalDigitNumber : UnicodeCategory.OtherSymbol;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool CheckCategory(UnicodeCategory previous, UnicodeCategory current) =>
         previous != current && (current is UnicodeCategory.UppercaseLetter or UnicodeCategory.TitlecaseLetter or UnicodeCategory.DecimalDigitNumber
             || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool InsertSeparator(this bool insertSeparator, UnicodeCategory previous, UnicodeCategory current) =>
         CheckCategory(previous, current) || insertSeparator;
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsSpecialCharacter(UnicodeCategory category) =>
     category is not UnicodeCategory.UppercaseLetter
              and not UnicodeCategory.LowercaseLetter

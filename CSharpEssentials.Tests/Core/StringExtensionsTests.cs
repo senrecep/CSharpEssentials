@@ -282,4 +282,20 @@ public class StringExtensionsTests
         "isim".ToMacroCase(CultureInfo.GetCultureInfo("tr-TR")).Should().Be("İSİM");
         "isim".ToMacroCase().Should().Be("ISIM");
     }
+
+    [Theory]
+    [InlineData("__userIDs2Name", "UserIds2Name", "userIds2Name", "_userIds2Name", "user-ids-2-name", "user_ids_2_name", "USER_IDS_2_NAME", "User-Ids-2-Name", "User Ids 2 Name")]
+    [InlineData("Über-straßeID", "ÜberStraßeId", "überStraßeId", "_überStraßeId", "über-straße-id", "über_straße_id", "ÜBER_STRAßE_ID", "Über-Straße-Id", "Über Straße Id")]
+    public void Every_Case_Applies_Its_Own_First_Character_Word_Start_And_Separator_Rules(
+        string input, string pascal, string camel, string underscoreCamel, string kebab, string snake, string macro, string train, string title)
+    {
+        input.ToPascalCase().Should().Be(pascal);
+        input.ToCamelCase().Should().Be(camel);
+        input.ToUnderscoreCamelCase().Should().Be(underscoreCamel);
+        input.ToKebabCase().Should().Be(kebab);
+        input.ToSnakeCase().Should().Be(snake);
+        input.ToMacroCase().Should().Be(macro);
+        input.ToTrainCase().Should().Be(train);
+        input.ToTitleCase().Should().Be(title);
+    }
 }
