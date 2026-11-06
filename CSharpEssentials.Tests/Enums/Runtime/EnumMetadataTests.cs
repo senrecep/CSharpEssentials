@@ -138,6 +138,36 @@ public class EnumMetadataTests
     }
 
     [Fact]
+    public void Reflection_Metadata_Should_Stay_The_Same_Instance_After_An_Unrelated_Registration()
+    {
+        IEnumInfo snake = EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+
+        EnumMetadata.RegisterRange([]);
+
+        EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus)).Should().BeSameAs(snake);
+        EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus)).Should().BeSameAs(snake);
+        EnumMetadata.IsRegistered(typeof(ParserStatus)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Members_Should_Be_Read_Only_Collections_That_Copy_In_Bulk()
+    {
+        var info = (EnumInfo<ParserStatus>)EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+
+        info.Members.Should().NotBeAssignableTo<Array>();
+        info.TypedMembers.Should().NotBeAssignableTo<Array>();
+        info.Members.Should().BeSameAs(info.Members);
+        info.TypedMembers.Should().BeSameAs(info.TypedMembers);
+        info.Members.Should().Equal(info.TypedMembers);
+        info.Members.Select(static member => member.WireName).Should().Equal(info.WireNames);
+        new List<IEnumMemberInfo>(info.Members).Should().Equal(info.Members);
+        info.TypedMembers.ToArray().Should().Equal(info.TypedMembers);
+        ((ICollection<IEnumMemberInfo>)info.Members).IsReadOnly.Should().BeTrue();
+        Func<IEnumMemberInfo> outOfRange = () => info.Members[info.Members.Count];
+        outOfRange.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public void RegisterRange_Should_Build_Metadata_Once_On_First_Lookup()
     {
         int calls = 0;

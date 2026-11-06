@@ -90,16 +90,23 @@ public static class EnumValueFormatter
         IList<string> target = staged ?? values;
         int start = target.Count;
         bool hasItems = false;
+        Type? itemType = null;
+        IEnumInfo? itemInfo = null;
         try
         {
             foreach (object? item in items)
             {
                 if (item is null)
                     continue;
-                if (!TryGetInfo(item, conventions, out IEnumInfo? itemInfo))
+                if (itemInfo is null || !ReferenceEquals(item.GetType(), itemType))
                 {
-                    RemoveFrom(target, start);
-                    return false;
+                    if (!TryGetInfo(item, conventions, out itemInfo))
+                    {
+                        RemoveFrom(target, start);
+                        return false;
+                    }
+
+                    itemType = item.GetType();
                 }
 
                 AddFormatted(itemInfo, item, wireFormat, target);
