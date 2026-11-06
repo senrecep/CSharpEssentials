@@ -384,7 +384,7 @@ internal sealed partial class IdempotencyMiddleware(
             recordKey,
             token,
             fingerprint,
-            IdempotencyEntrySerializer.Write(new IdempotentResponse(statusCode, headers, capture.ToArray())),
+            IdempotencyEntrySerializer.Write(new IdempotentResponse(statusCode, headers, capture.Captured)),
             statusCode >= StatusCodes.Status500InternalServerError ? settings.ServerErrorRetention : settings.RetentionPeriod,
             CancellationToken.None).ConfigureAwait(false);
         return Settled(stored, IdempotencyMetrics.Stored, settings.Mode, target);
