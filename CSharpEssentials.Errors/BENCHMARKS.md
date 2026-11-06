@@ -1,8 +1,8 @@
-# CSharpEssentials.Errors: performance benchmarks (draft)
+# CSharpEssentials.Errors: performance benchmarks
 
 This page compares the CSharpEssentials.Errors (CSE) `Error` type with ErrorOr 2.1.1 and FluentResults 4.0.0. CSharpFunctionalExtensions 3.7.0 appears only where it has a matching API. It covers creating an error, equality and hashing, building an error from an exception, metadata and record `ToString`, and System.Text.Json. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
 
-**Status: draft.** The suite builds, and its parity self-check passes on every TFM. No full default-job run has been done, so this page has no numbers yet (see [Results](#results)).
+The numbers come from full default-job runs on net8.0 to net11.0 (see [How these numbers were produced](#how-these-numbers-were-produced) and [Results](#results)).
 
 The competitors are pinned exactly in `Directory.Packages.props`. Each pin is the latest stable release on NuGet as of 2026-11-03:
 
@@ -14,7 +14,7 @@ The competitors are pinned exactly in `Directory.Packages.props`. Each pin is th
 
 net8.0 runs CSE's netstandard2.1 build, because Errors has no net8.0 target.
 
-Sequence, CombineAll, Try and TryAsync live in the same suite but measure Results APIs. They are described in [CSharpEssentials.Results/BENCHMARKS.md](../CSharpEssentials.Results/BENCHMARKS.md#pending-sequence-combineall-try-and-tryasync). The Maybe collection helpers are in [CSharpEssentials.Maybe/BENCHMARKS.md](../CSharpEssentials.Maybe/BENCHMARKS.md).
+Sequence, CombineAll, Try and TryAsync live in the same suite but measure Results APIs. They are described in [CSharpEssentials.Results/BENCHMARKS.md](../CSharpEssentials.Results/BENCHMARKS.md#sequence-combineall-try-and-tryasync). The Maybe collection helpers are in [CSharpEssentials.Maybe/BENCHMARKS.md](../CSharpEssentials.Maybe/BENCHMARKS.md).
 
 ---
 
@@ -22,7 +22,7 @@ Sequence, CombineAll, Try and TryAsync live in the same suite but measure Result
 
 The code is in `benchmarks/CSharpEssentials.Results.Comparison.Benchmarks/`, in six classes.
 - Every class has `[MemoryDiagnoser]`, and CSE is the baseline in each category.
-- Each class checks parity in `[GlobalSetup]`. `--self-check` runs the same check for every parameter value without BenchmarkDotNet, for these classes and the nine older ones. A mismatch fails the run.
+- Each class checks parity in `[GlobalSetup]`. `--self-check` runs the same check for every parameter value without BenchmarkDotNet, for these classes and the other classes in the suite. A mismatch fails the run.
 - Every row returns its result, so the JIT cannot drop the work. Inputs are read from instance fields and built in setup.
 - Each library row has a comment above it with its README or source URL. CSE links point at main, and competitor links point at the pinned tag. Hand-written rows have none.
 - Shared inputs: code `Order.Invalid`, message `Order is invalid`. Metadata has three entries, `OrderId = 42`, `Field = "Total"` and `Attempt = 3`, added in the same order for every library. The values are boxed once and shared.
@@ -55,10 +55,10 @@ CSharpFunctionalExtensions has no column in classes 1 to 4 and 6. Its default er
 
 - **FluentResults errors are classes with no code or type.** `new Error(message)` allocates the error, an empty metadata dictionary and an empty reasons list.
 - **No FluentResults equality column.** FluentResults `Error` uses reference equality, so `Equals` is false and a HashSet keeps all 100 items.
-- **`Error.Exception` does more work than the other rows.** It builds a three-entry metadata dictionary with the type name, the stack trace string and the message. When the exception was never thrown, `StackTrace` is null and CSE falls back to `Environment.StackTrace`, a stack walk whose cost depends on the depth of the calling stack. On a thrown exception, reading `StackTrace` formats the trace again on every call.
+- **`Error.Exception` does more work than the other rows.** It builds a three-entry metadata dictionary with the type name, the stack trace string and the message. When the exception was never thrown, `StackTrace` is null and the entry holds null. On a thrown exception, reading `StackTrace` formats the trace again on every call.
 - **ErrorOr has no exception bridge.** Its row maps the type name and message by hand, as the README's section on replacing exceptions suggests. The CSE `Error.Failure` row does the same, so it shows CSE without the exception metadata.
 - **FluentResults `ExceptionalError` keeps a reference** to the exception and copies nothing.
-- **`ToString` output differs.** CSE and ErrorOr `Error` are record structs, and without metadata both print `Error { Code = Order.Invalid, Description = Order is invalid, Type = Validation, NumericType = 2, Metadata =  }`. With metadata, CSE formats each entry, ErrorOr prints the dictionary type name, and FluentResults joins the entries with `; `. On a success result, CSE prints `Success: 42` through reflection-based JSON, and every other library prints its own text.
+- **`ToString` output differs.** CSE and ErrorOr `Error` are record structs, and without metadata both print `Error { Code = Order.Invalid, Description = Order is invalid, Type = Validation, NumericType = 2, Metadata =  }`. With metadata, CSE formats each entry, ErrorOr prints the dictionary type name, and FluentResults joins the entries with `; `. On a success result, CSE prints `Success: 42` (the value formatted through `IFormattable` with the invariant culture), and every other library prints its own text.
 - **Deserialize is CSE only.** System.Text.Json does not throw. It silently returns a `default` ErrorOr `Error` with a null code. FluentResults throws `NotSupportedException`, and its README says not to serialize its result objects. The serialize rows use no metadata, because a CSE round trip with metadata does not give back an equal error.
 
 ---
@@ -73,7 +73,7 @@ This table comes from reading each library's source and docs. None of it was mea
 | Typed categories | 8 `ErrorType` values | 7, plus `Custom(int)` | none | none |
 | Metadata | `ErrorMetadata : Dictionary<string, object?>` with fluent `AddMetadata`, which keeps the first value for a key | `Dictionary<string, object>` | `WithMetadata`, which throws on a duplicate key | none |
 | Value equality | yes, including metadata | yes, including metadata | no (reference) | string equality |
-| Hash with metadata | depends on insertion order | depends on insertion order | reference | n/a |
+| Hash with metadata | independent of insertion order | depends on insertion order | reference | n/a |
 | Exception bridge | `Error.Exception(ex)` copies type, stack trace and message | none | `ExceptionalError` keeps a reference | `ex.Message` |
 | `ToString` | record output with formatted metadata | record output with the dictionary type name | `Error with Message='...'` | the string |
 | System.Text.Json serialize | yes | yes, same text without metadata | yes, but the README advises against serializing result objects | n/a |
@@ -84,19 +84,115 @@ This table comes from reading each library's source and docs. None of it was mea
 
 ## Results
 
-**Pending the full default-job run on net8.0-net11.0.** The reports will be committed under `benchmarks/results/results-comparison/{tfm}/results/`. Short-job (`--quick`) numbers are not published here.
+All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio" is the report's Ratio column (library mean divided by CSE mean; above 1.00 = slower than CSE). A `-` in the report's Allocated column is written as `0 B`.
+
+### How these numbers were produced
+
+- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on an AMD Ryzen 5 5600 with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
+- 1-minute load average at the start and end of the comparison suite: 1.55 to 2.37, with a desktop session running. No row of the six Error classes stayed above 5% CV.
+- Reports: `benchmarks/results/results-comparison/{tfm}/results/`, for example [ErrorEqualityComparison net10](../benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.ErrorEqualityComparison-report-github.md).
+
+### 1. Error factory
+
+| Row | Plain (per error) | Plain ratio | WithMetadata | WithMetadata ratio |
+|---|---|---:|---|---:|
+| CSE `Error.Validation` | 5.771 ns / 0 B | 1.00 | 64.585 ns / 216 B | 1.00 |
+| ErrorOr `Error.Validation` | 5.280 ns / 0 B | 0.91 | 60.802 ns / 216 B | 0.94 |
+| FluentResults `new Error` (labelled) | 28.055 ns / 152 B | 4.86 | 68.929 ns / 288 B | 1.07 |
+
+CSE and ErrorOr build the same struct shape and allocate the same bytes. ErrorOr is faster on net10 by 0.491 ns plain and 3.783 ns with metadata. On the other TFMs: plain 10.269 vs 6.711 ns (net8, CSE loss), 5.307 vs 5.302 ns (net9, tie), 5.310 vs 5.576 ns (net11, CSE faster); with metadata 82.096 vs 81.072 ns (net8), 73.326 vs 80.612 ns (net9, CSE faster), 62.005 vs 59.101 ns (net11).
+
+### 2. Equality and hashing
+
+| Row | CSE | ErrorOr | Ratio |
+|---|---|---|---:|
+| `Equals`, no metadata | 6.064 ns / 0 B | 6.178 ns / 0 B | 1.02 |
+| `Equals`, metadata | 28.129 ns / 0 B | 29.905 ns / 0 B | 1.06 |
+| `GetHashCode`, no metadata | 37.817 ns / 0 B | 74.036 ns / 0 B | 1.96 |
+| `GetHashCode`, metadata | 88.526 ns / 0 B | 62.997 ns / 0 B | 0.71 |
+| `HashSet` of 100, no metadata | 10,173.842 ns / 5392 B | 5,407.757 ns / 5392 B | 0.53 |
+| `HashSet` of 100, metadata | 18,361.398 ns / 5392 B | 13,207.228 ns / 5392 B | 0.72 |
+
+| Row | Library | net8 | net9 | net10 | net11 |
+|---|---|---|---|---|---|
+| `GetHashCode`, no metadata | CSE | 41.338 ns | 41.822 ns | 37.817 ns | 32.201 ns |
+| | ErrorOr | 27.051 ns | 27.223 ns | 74.036 ns | 26.499 ns |
+| `GetHashCode`, metadata | CSE | 94.933 ns | 89.232 ns | 88.526 ns | 88.275 ns |
+| | ErrorOr | 87.090 ns | 87.717 ns | 62.997 ns | 64.548 ns |
+| `HashSet`, no metadata | CSE | 6,473.350 ns | 6,555.170 ns | 10,173.842 ns | 6,455.556 ns |
+| | ErrorOr | 5,762.013 ns | 6,154.638 ns | 5,407.757 ns | 5,217.701 ns |
+| `HashSet`, metadata | CSE | 16,611.856 ns | 16,171.247 ns | 18,361.398 ns | 14,871.272 ns |
+| | ErrorOr | 15,607.398 ns | 15,298.233 ns | 13,207.228 ns | 13,217.930 ns |
+
+- `Equals` is a tie or a CSE win on every TFM except net11 without metadata, where ErrorOr is 0.122 ns faster (5.935 vs 6.057 ns).
+- CSE `GetHashCode` is slower than ErrorOr on every TFM except net10 without metadata. That net10 row is an ErrorOr outlier: 74.036 ns against 26.499 to 27.223 ns on its other TFMs, so it is not a CSE win.
+- CSE builds the `HashSet` more slowly on every TFM, with the same 5392 B. The net10 CSE row without metadata (10,173.842 ns) is also an outlier against 6,455.556 to 6,555.170 ns on the other TFMs.
+- CSE hashes metadata independent of insertion order (an XOR over the entries). ErrorOr's hash depends on insertion order. The inputs here always use the same order, so this does not change the numbers.
+
+### 3. Error from an exception
+
+| Row | Never thrown | Thrown in setup | Ratio (thrown) |
+|---|---|---|---:|
+| CSE `Error.Exception(ex)` | 66.286 ns / 216 B | 2,719.927 ns / 4720 B | 1.000 |
+| CSE `Error.Failure(type name, message)` | 5.215 ns / 0 B | 5.215 ns / 0 B | 0.002 |
+| ErrorOr `Error.Failure(type name, message)` | 5.229 ns / 0 B | 5.215 ns / 0 B | 0.002 |
+| FluentResults `new ExceptionalError(ex)` | 26.358 ns / 160 B | 26.918 ns / 160 B | 0.010 |
+
+`Error.Exception` is the slowest row on every TFM, by design: it copies the type name, the stack trace text and the message into a metadata dictionary. On a thrown exception the stack trace text dominates (3,479.46 ns on net8, 3,131.51 ns on net9, 2,719.927 ns on net10, 2,603.245 ns on net11, 4720 B on all four). When only the code and message are needed, CSE `Error.Failure` costs about the same as ErrorOr on net9 to net11 (5.215 vs 5.229 ns on net10; on net9 thrown, 12.58 vs 16.18 ns). On net8 (netstandard2.1 build) it is slower than ErrorOr: 17.94 vs 13.32 ns never thrown, 18.55 vs 13.31 ns thrown.
+
+### 4. Metadata `ToString`
+
+| Entries | CSE | Hand-written `StringBuilder` loop | Ratio |
+|---:|---|---|---:|
+| 1 | 97.40 ns / 248 B | 42.31 ns / 152 B | 0.43 |
+| 8 | 525.02 ns / 1392 B | 258.59 ns / 776 B | 0.49 |
+| 32 | 1,723.50 ns / 4880 B | 736.66 ns / 2400 B | 0.43 |
+
+CSE loses to the hand-written loop at every size and TFM: the hand-written ratio is 0.38 to 0.49 on net9 to net11 and 0.19 to 0.30 on net8 (32 entries on net8: 3,786.76 ns / 7184 B vs 725.81 ns / 2400 B). Both grow about linearly with the entry count. CSE builds one formatted string per entry and copies the builder into a final interpolated string; the hand-written loop appends the pieces to one builder. The net8 column runs the netstandard2.1 build, which formats through `FormattableString.Invariant`.
+
+### 5. `ToString`
+
+| Row | CSE | ErrorOr | FluentResults | CFE |
+|---|---|---|---|---|
+| `Error`, no metadata | 175.50 ns / 816 B | 170.33 ns / 816 B (0.97) | 93.97 ns / 384 B (0.54, labelled) | - |
+| `Error`, metadata (labelled) | 498.34 ns / 2008 B | 222.33 ns / 1280 B (0.45) | 319.48 ns / 1256 B (0.64) | - |
+| `Result<int>` success (labelled) | 11.61 ns / 48 B | 507.70 ns / 3496 B (43.73) | 76.67 ns / 264 B (6.60) | 34.73 ns / 48 B (2.99) |
+
+- `Error` without metadata is the like-for-like row: same text, same 816 B. ErrorOr is 5.17 ns faster on net10, outside error; on net8, net9 and net11 the two are within 3.5 ns of each other.
+- With metadata CSE formats every entry and allocates the most; ErrorOr prints the dictionary type name and does less work. CSE is the slowest row on every TFM.
+- `Result<int>.ToString()` is the fastest row on every TFM. On net8 CSE allocates 72 B against CFE's 48 B (16.03 vs 51.51 ns).
+
+### 6. JSON
+
+| Row | net8 | net9 | net10 | net11 |
+|---|---|---|---|---|
+| CSE `Serialize` | 341.1 ns / 272 B | 289.8 ns / 272 B | 280.2 ns / 272 B | 243.8 ns / 272 B |
+| ErrorOr `Serialize` | 321.2 ns / 272 B | 333.1 ns / 272 B | 280.3 ns / 272 B | 249.4 ns / 272 B |
+| CSE `Deserialize` (CSE only) | 531.3 ns / 304 B | 537.9 ns / 304 B | 492.1 ns / 304 B | 442.8 ns / 256 B |
+
+Serialize writes the same text and allocates the same bytes. ErrorOr is faster on net8 (321.2 vs 341.1 ns); CSE is faster on net9 and net11, and net10 is a tie.
+
+### Where CSE loses
+
+- Factory: ErrorOr plain on net8 (6.711 vs 10.269 ns) and net10 (5.280 vs 5.771 ns, under 1 ns); ErrorOr with metadata on net8, net10 and net11 (net10 60.802 vs 64.585 ns).
+- `GetHashCode`: ErrorOr on every TFM with metadata and on net8, net9 and net11 without (net8 27.051 vs 41.338 ns).
+- `HashSet`: ErrorOr on every TFM, both inputs (net10 5,407.757 vs 10,173.842 ns without metadata).
+- `Equals`: ErrorOr without metadata on net11 by 0.122 ns (under 1 ns).
+- `Error.Exception`: every other row, by design (see section 3).
+- `Error.Failure`: ErrorOr on net8, both inputs (17.94 vs 13.32 ns never thrown, 18.55 vs 13.31 ns thrown).
+- Metadata `ToString`: the hand-written loop at every size and TFM, in time and bytes.
+- `ToString`: ErrorOr on `Error` without metadata on net10 (170.33 vs 175.50 ns); ErrorOr and FluentResults on `Error` with metadata on every TFM; FluentResults on `Error` without metadata (it prints less text). CFE allocates less on the `Result` row on net8 (48 B vs 72 B).
+- JSON: ErrorOr `Serialize` on net8 (321.2 vs 341.1 ns).
 
 ---
 
 ## Caveats
 
-- **Expected CSE costs and issues, from reading the code and from probes** (not yet measured):
-  - `CSharpEssentials.Errors/ErrorMetadata.cs:77-79`: `ToString` calls `ElementAtOrDefault(i)` on the dictionary inside a `for` loop. Each call walks from the start, so the method is O(n²) in the entry count. `ErrorMetadataToStringComparison` shows the curve at 1, 8 and 32 entries.
-  - `CSharpEssentials.Errors/Error.cs:232-236`: `GetHashCode` adds metadata entries in insertion order, while `Equals` compares them as a set. Two equal errors whose metadata was added in a different order get different hashes. ErrorOr 2.1.1 has the same behavior. The equality inputs always use the same order.
-  - `CSharpEssentials.Errors/ErrorMetadata.cs:25`: a never-thrown exception falls back to `Environment.StackTrace`.
-  - `CSharpEssentials.Errors/ErrorMetadata.cs:29` with `Error.cs:252`: for an exception with an inner exception, `Error.Exception(ex)` is not equal to itself, because the nested `ErrorMetadata` is compared by reference.
-  - `CSharpEssentials.Errors/ErrorMetadata.cs:19`: an error with `CreateWithException` metadata throws `NotSupportedException` when System.Text.Json serializes it.
+- **CSE behavior checked against the code in this tree**:
+  - `CSharpEssentials.Errors/Error.cs`: `GetHashCode` combines metadata entries with XOR, so two equal errors hash the same whatever the insertion order. Nested `ErrorMetadata` values are compared by value in `Equals`.
+  - `CSharpEssentials.Errors/ErrorMetadata.cs`: `ToString` enumerates the dictionary once. `CreateWithExceptionDetailed` reads `exception.StackTrace` and does not walk the stack for an exception that was never thrown. `CreateWithException` stores a nested `ErrorMetadata`, not the `Exception`, so System.Text.Json can serialize it.
   - A JSON round trip of an error with metadata is not equal to the original, because the values come back as `JsonElement`.
+- The `GetHashCode` net10 ErrorOr row and the `HashSet` net10 CSE row without metadata are single-TFM outliers. They were not rerun because their CV stayed under 5%.
 - The CSE column is the working tree, which may not match the version published on NuGet.
 
 ---
