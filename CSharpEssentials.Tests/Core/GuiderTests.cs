@@ -150,6 +150,21 @@ public class GuiderTests
     }
 
     [Fact]
+    public void ToGuidFromString_DecodesEveryLastCharacterAsItsCanonicalForm()
+    {
+        const string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+        const string prefix = "AAAAAAAAAAAAAAAAAAAA-";
+
+        for (int value = 0; value < alphabet.Length; value++)
+        {
+            Guid canonical = Guider.ToGuidFromString(prefix + "AQgw"[value >> 4]);
+
+            Guider.ToGuidFromString(prefix + alphabet[value]).Should().Be(canonical);
+            canonical.ToByteArray()[15].Should().Be((byte)(0xF8 | (value >> 4)));
+        }
+    }
+
+    [Fact]
     public void ToGuidFromString_DecodesUrlSafeCharactersInLastPosition()
     {
         Guid result = Guider.ToGuidFromString("AAAAAAAAAAAAAAAAAAAA-A");
