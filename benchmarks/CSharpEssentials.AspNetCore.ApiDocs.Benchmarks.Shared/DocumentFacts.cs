@@ -54,8 +54,9 @@ internal sealed record DocumentFacts(
         var defaults = new List<string>();
         foreach (JsonProperty schema in schemas.EnumerateObject())
         {
-            if (schema.Name.Length == 6 && schema.Name.StartsWith("Enum", StringComparison.Ordinal))
-                enums[schema.Name] = EnumSummary(schema.Value);
+            string shortName = ShortName(schema.Name);
+            if (shortName.Length == 6 && shortName.StartsWith("Enum", StringComparison.Ordinal))
+                enums[shortName] = EnumSummary(schema.Value);
             if (schema.Name.Length >= 10 && schema.Name.AsSpan(schema.Name.Length - 10).StartsWith("Resource", StringComparison.Ordinal))
             {
                 resources++;
@@ -163,11 +164,14 @@ internal sealed record DocumentFacts(
 
     private static string Enum01(JsonElement root, JsonElement schemas)
     {
-        string component = schemas.TryGetProperty("Enum01", out JsonElement schema) ? Compact(schema) : "none";
+        JsonProperty match = schemas.EnumerateObject().FirstOrDefault(static s => ShortName(s.Name) == "Enum01");
+        string component = match.Name is null ? "none" : Compact(match.Value);
         JsonElement list = root.GetProperty("paths").GetProperty("/resources01").GetProperty("get");
         JsonElement status = list.GetProperty("parameters").EnumerateArray().Select(p => Resolve(root, p)).First(static p => p.GetProperty("name").GetString() == "status");
         return $"component {component}; query status {Compact(status.GetProperty("schema"))}";
     }
+
+    private static string ShortName(string schemaId) => schemaId[(schemaId.LastIndexOf('.') + 1)..];
 
     private static string Stage(JsonElement schemas)
     {
