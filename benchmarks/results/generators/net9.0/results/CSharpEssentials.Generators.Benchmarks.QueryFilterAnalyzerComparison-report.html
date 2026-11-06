@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Generators.Benchmarks.QueryFilterAnalyzerComparison-20261106-083505</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                </th><th>Categories</th><th>Files</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>NoOpAnalyzer_Compilation</td><td>Compilation</td><td>200</td><td>107.353 ms</td><td>2.1328 ms</td><td>5.1509 ms</td><td>105.782 ms</td><td>0.78</td><td>0.07</td><td>2000.0000</td><td>1000.0000</td><td>-</td><td>37962.37 KB</td><td>0.89</td>
+</tr><tr><td>CSharpEssentials_Compilation</td><td>Compilation</td><td>200</td><td>138.569 ms</td><td>4.1924 ms</td><td>11.9612 ms</td><td>134.776 ms</td><td>1.01</td><td>0.12</td><td>2000.0000</td><td>1000.0000</td><td>-</td><td>42822.46 KB</td><td>1.00</td>
+</tr><tr><td>NoOpAnalyzer_Compilation</td><td>Compilation</td><td>1000</td><td>631.812 ms</td><td>12.3718 ms</td><td>22.6226 ms</td><td>633.792 ms</td><td>0.98</td><td>0.05</td><td>12000.0000</td><td>6000.0000</td><td>-</td><td>207850.09 KB</td><td>1.01</td>
+</tr><tr><td>CSharpEssentials_Compilation</td><td>Compilation</td><td>1000</td><td>642.773 ms</td><td>12.6634 ms</td><td>24.3981 ms</td><td>642.232 ms</td><td>1.00</td><td>0.05</td><td>13000.0000</td><td>8000.0000</td><td>1000.0000</td><td>206207.87 KB</td><td>1.00</td>
+</tr><tr><td>NoOpAnalyzer_Document</td><td>Document</td><td>200</td><td>2.715 ms</td><td>0.0358 ms</td><td>0.0317 ms</td><td>2.720 ms</td><td>0.80</td><td>0.01</td><td>46.8750</td><td>15.6250</td><td>-</td><td>771.93 KB</td><td>0.91</td>
+</tr><tr><td>CSharpEssentials_Document</td><td>Document</td><td>200</td><td>3.404 ms</td><td>0.0310 ms</td><td>0.0274 ms</td><td>3.411 ms</td><td>1.00</td><td>0.01</td><td>46.8750</td><td>15.6250</td><td>-</td><td>845.57 KB</td><td>1.00</td>
+</tr><tr><td>NoOpAnalyzer_Document</td><td>Document</td><td>1000</td><td>8.414 ms</td><td>0.1514 ms</td><td>0.1416 ms</td><td>8.381 ms</td><td>0.89</td><td>0.02</td><td>125.0000</td><td>93.7500</td><td>-</td><td>2656.42 KB</td><td>0.97</td>
+</tr><tr><td>CSharpEssentials_Document</td><td>Document</td><td>1000</td><td>9.405 ms</td><td>0.1778 ms</td><td>0.1663 ms</td><td>9.391 ms</td><td>1.00</td><td>0.02</td><td>156.2500</td><td>125.0000</td><td>-</td><td>2729.68 KB</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>

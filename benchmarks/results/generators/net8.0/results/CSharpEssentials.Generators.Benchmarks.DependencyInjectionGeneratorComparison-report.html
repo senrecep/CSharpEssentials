@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Generators.Benchmarks.DependencyInjectionGeneratorComparison-20261106-024759</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                </th><th>Categories</th><th>Files</th><th>Mean   </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>EmptyDriver_Cold</td><td>Cold</td><td>200</td><td>7.835 &mu;s</td><td>0.0152 &mu;s</td><td>0.0135 &mu;s</td><td>0.001</td><td>0.00</td><td>0.1373</td><td>-</td><td>2.26 KB</td><td>0.001</td>
+</tr><tr><td>CSharpEssentials_Cold</td><td>Cold</td><td>200</td><td>12,168.454 &mu;s</td><td>62.7582 &mu;s</td><td>55.6335 &mu;s</td><td>1.000</td><td>0.01</td><td>187.5000</td><td>109.3750</td><td>3158.67 KB</td><td>1.000</td>
+</tr><tr><td>Injectio_Cold</td><td>Cold</td><td>200</td><td>18,151.788 &mu;s</td><td>130.5626 &mu;s</td><td>122.1283 &mu;s</td><td>1.492</td><td>0.01</td><td>218.7500</td><td>93.7500</td><td>3844.37 KB</td><td>1.217</td>
+</tr><tr><td>EmptyDriver_Cold</td><td>Cold</td><td>1000</td><td>38.563 &mu;s</td><td>0.0619 &mu;s</td><td>0.0483 &mu;s</td><td>0.002</td><td>0.00</td><td>-</td><td>-</td><td>2.26 KB</td><td>0.000</td>
+</tr><tr><td>CSharpEssentials_Cold</td><td>Cold</td><td>1000</td><td>20,362.458 &mu;s</td><td>399.4756 &mu;s</td><td>354.1247 &mu;s</td><td>1.000</td><td>0.02</td><td>200.0000</td><td>-</td><td>4638.74 KB</td><td>1.000</td>
+</tr><tr><td>Injectio_Cold</td><td>Cold</td><td>1000</td><td>28,270.923 &mu;s</td><td>558.0949 &mu;s</td><td>573.1224 &mu;s</td><td>1.389</td><td>0.04</td><td>250.0000</td><td>-</td><td>5330.31 KB</td><td>1.149</td>
+</tr><tr><td>CSharpEssentials_Incremental</td><td>Incremental</td><td>200</td><td>8,204.791 &mu;s</td><td>42.0637 &mu;s</td><td>39.3464 &mu;s</td><td>1.00</td><td>0.01</td><td>109.3750</td><td>46.8750</td><td>1868.81 KB</td><td>1.00</td>
+</tr><tr><td>Injectio_Incremental</td><td>Incremental</td><td>200</td><td>10,716.329 &mu;s</td><td>87.2811 &mu;s</td><td>77.3724 &mu;s</td><td>1.31</td><td>0.01</td><td>109.3750</td><td>46.8750</td><td>2011.61 KB</td><td>1.08</td>
+</tr><tr><td>CSharpEssentials_Incremental</td><td>Incremental</td><td>1000</td><td>11,307.726 &mu;s</td><td>223.4215 &mu;s</td><td>198.0573 &mu;s</td><td>1.00</td><td>0.02</td><td>-</td><td>-</td><td>1979.03 KB</td><td>1.00</td>
+</tr><tr><td>Injectio_Incremental</td><td>Incremental</td><td>1000</td><td>19,651.258 &mu;s</td><td>295.3338 &mu;s</td><td>261.8057 &mu;s</td><td>1.74</td><td>0.04</td><td>200.0000</td><td>-</td><td>3487.26 KB</td><td>1.76</td>
+</tr></tbody></table>
+</body>
+</html>
