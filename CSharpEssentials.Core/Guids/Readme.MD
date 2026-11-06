@@ -1,6 +1,6 @@
-# Guider - Enhanced GUID Operations for .NET
+# Guider: enhanced GUID operations for .NET
 
-The `Guider` class provides methods for working with GUIDs (Globally Unique Identifiers) in .NET applications. It uses modern C# features like `Span<T>` and stack allocation to reduce allocations.
+The `Guider` class provides methods for working with GUIDs (Globally Unique Identifiers) in .NET applications. It uses `Span<T>` and stack allocation to reduce allocations.
 
 ## Features
 
@@ -93,10 +93,10 @@ On every target `NewGuid()` now builds the GUID from a per-thread pool of random
 
 Converts a GUID to a URL-safe string format. The output is:
 
-- Shorter than standard GUID string (22 characters vs 36)
+- Shorter than the standard GUID string (22 characters instead of 36)
 - URL-safe: RFC 4648 Base64url, so standard Base64 with '+' replaced by '-' and '/' replaced by '\_'. Any Base64url decoder, such as `System.Buffers.Text.Base64Url`, returns the same GUID
 - No padding characters
-- Memory efficient using stack allocation
+- Built with stack allocation
 
 ```csharp
 Guid id = Guider.NewGuid();
@@ -109,9 +109,8 @@ string sameString = id.ToStringFromGuid();
 
 Converts a URL-safe string back to a GUID. This method:
 
-- Handles the custom URL-safe format
-- Uses stack allocation for better performance
-- Efficiently processes the input without heap allocations
+- Reads the URL-safe format described above
+- Uses stack allocation and processes the input without heap allocations
 - Accepts a `string` or a `ReadOnlySpan<char>`; `string` and `Guid` also have the extension forms `ToGuidFromString()` and `ToStringFromGuid()`
 
 ```csharp
@@ -122,19 +121,17 @@ Guid sameId = urlSafeString.ToGuidFromString();
 
 The input must be exactly 22 characters from `A-Z`, `a-z`, `0-9`, `-` and `_`. Any other length or character throws `FormatException`; there is no `TryParse` form, so catch `FormatException` when the input is untrusted.
 
-## Performance Considerations
+## Performance considerations
 
-- Uses small fixed-size `stackalloc` buffers for efficient memory usage
-- Avoids heap allocations where possible
-- Utilizes `Span<T>` for high-performance memory operations
+The methods work on small fixed-size `stackalloc` buffers through `Span<T>` and avoid heap allocations where possible.
 
-## Best Practices
+## Best practices
 
 1. Use `NewGuid()` for time-ordered database keys on every target, and `NewMonotonicGuid()` when IDs from one process must be strictly increasing
 2. Use the string conversion methods when you need URL-safe GUID representations
-3. The methods are thread-safe and can be used in concurrent operations
+3. The methods are thread-safe, so concurrent code can call them
 
-## Example Use Cases
+## Example use cases
 
 ```csharp
 // Generate a new GUID

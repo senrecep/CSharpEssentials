@@ -51,16 +51,16 @@ The code is in `benchmarks/CSharpEssentials.Http.Comparison.Benchmarks/`, in fou
 
 ## Semantic differences
 
-- **CSE returns a `Result`; Polly returns the value or throws.** Every CSE row wraps the outcome in `Result<int>` inside a try/catch. The Empty category shows that cost on its own.
-- **Retry count.** CSE's `maxAttempts` is the number of retries, like Polly's `MaxRetryAttempts`: maxAttempts 3 means 4 runs. The always-failing parity case checks this for CSE and Polly alike.
-- **What counts as transient.** CSE retries exceptions (except caller cancellation) and failed `Result` values (except Unauthorized, Forbidden, NotFound and Validation). Polly's default retry handles every exception except `OperationCanceledException`, and nothing else. In the non-generic rows, which never fail, that difference is not exercised. The `Result<int>` Polly rows get a hand-written predicate that mirrors CSE's.
-- **Circuit breaker predicate.** CSE's non-generic circuit breaker also counts failed `Result` values; Polly's default counts exceptions only. No failure reaches the circuit breaker rows.
-- **Composition.** CSE builds one pipeline per `With...` call and nests them through `Merge` (`ResiliencePolicy.cs:131-145`, `ResiliencePolicyT.cs:80-89`). Polly builds one pipeline with all strategies. `CSharpEssentials_FromPipeline` runs that single Polly pipeline through CSE's wrapper, which separates the wrapper cost from the nesting cost.
-- **The generic `Create()`** builds a new empty pipeline (`ResiliencePolicyT.cs:16`), and the generic `Merge` has no empty fast path, so `ResiliencePolicy<int>.Create().WithRetry(...)` nests one more pipeline than the non-generic form.
-- **Per-call policies.** The CSE Readme's Quick Start builds the policy inline, inside the call. Polly's performance guide says to reuse pipelines. The RetryPerCall rows show what building per call costs in both.
-- **Wrapper closure.** Every CSE `ExecuteAsync` passes Polly a new capturing async lambda (`ResiliencePolicy.cs:71,87,103,121`; `ResiliencePolicyT.cs:47,70`): one closure and one more async state machine per call than the static-lambda Polly rows.
-- **Boxing in the non-generic policy.** The retry and circuit-breaker predicates test `Outcome<object>.Result is IResultBase` (`Modules/ResiliencePolicy.Retry.cs:20-22`, `Modules/ResiliencePolicy.CircuitBreaker.cs:24`), so `Result<T>` is boxed per attempt; ResultBoxingComparison isolates this.
-- **Predicate `RetryIfFailed`** builds a new pipeline on every call by design (`Extensions/ResilienceResultExtensions.cs:113,163-179`); a delegate cannot key the cache safely. The cached overload looks its pipeline up in a `ConcurrentDictionary`.
+- CSE returns a `Result`; Polly returns the value or throws. Every CSE row wraps the outcome in `Result<int>` inside a try/catch. The Empty category shows that cost on its own.
+- Retry count. CSE's `maxAttempts` is the number of retries, like Polly's `MaxRetryAttempts`: maxAttempts 3 means 4 runs. The always-failing parity case checks this for CSE and Polly alike.
+- What counts as transient: CSE retries exceptions (except caller cancellation) and failed `Result` values (except Unauthorized, Forbidden, NotFound and Validation). Polly's default retry handles every exception except `OperationCanceledException`, and nothing else. In the non-generic rows, which never fail, that difference is not exercised. The `Result<int>` Polly rows get a hand-written predicate that mirrors CSE's.
+- Circuit breaker predicate: CSE's non-generic circuit breaker also counts failed `Result` values; Polly's default counts exceptions only. No failure reaches the circuit breaker rows.
+- Composition: CSE builds one pipeline per `With...` call and nests them through `Merge` (`ResiliencePolicy.cs:131-145`, `ResiliencePolicyT.cs:80-89`). Polly builds one pipeline with all strategies. `CSharpEssentials_FromPipeline` runs that single Polly pipeline through CSE's wrapper, which separates the wrapper cost from the nesting cost.
+- The generic `Create()` builds a new empty pipeline (`ResiliencePolicyT.cs:16`), and the generic `Merge` has no empty fast path, so `ResiliencePolicy<int>.Create().WithRetry(...)` nests one more pipeline than the non-generic form.
+- Per-call policies: the CSE Readme's Quick Start builds the policy inline, inside the call. Polly's performance guide says to reuse pipelines. The RetryPerCall rows show what building per call costs in both.
+- Wrapper closure: every CSE `ExecuteAsync` passes Polly a new capturing async lambda (`ResiliencePolicy.cs:71,87,103,121`; `ResiliencePolicyT.cs:47,70`): one closure and one more async state machine per call than the static-lambda Polly rows.
+- Boxing in the non-generic policy: the retry and circuit-breaker predicates test `Outcome<object>.Result is IResultBase` (`Modules/ResiliencePolicy.Retry.cs:20-22`, `Modules/ResiliencePolicy.CircuitBreaker.cs:24`), so `Result<T>` is boxed per attempt; ResultBoxingComparison isolates this.
+- The predicate form of `RetryIfFailed` builds a new pipeline on every call by design (`Extensions/ResilienceResultExtensions.cs:113,163-179`); a delegate cannot key the cache safely. The cached overload looks its pipeline up in a `ConcurrentDictionary`.
 
 ---
 
@@ -92,7 +92,7 @@ This table comes from reading CSE source, the Polly 8.9.0 docs, nuspecs and asse
 
 ## Caveats
 
-- **These are overhead numbers.** The operations complete synchronously and never wait. With a real operation, a network call or a database query, the policy cost is a small part of the total.
+- These are overhead numbers. The operations complete synchronously and never wait. With a real operation, a network call or a database query, the policy cost is a small part of the total.
 - Only the success path and one retry are timed. Exhausted retries, open circuits and timeouts are not.
 - The suite pins Polly.Core 8.9.0, while the CSE package itself accepts `[8.0.0,9.0.0)`. An app that restores an older 8.x gets that version's numbers.
 - The CSE column is the working tree on branch `perf/bench-http`, which may not match the version published on NuGet.

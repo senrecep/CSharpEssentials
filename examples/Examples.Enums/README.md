@@ -1,15 +1,15 @@
-# CSharpEssentials.Enums Example
+# CSharpEssentials.Enums example
 
 This console application shows the helpers that the `CSharpEssentials.Enums` source generator writes for `[StringEnum]` enums. Full documentation: [CSharpEssentials.Enums Readme](../../CSharpEssentials.Enums/Readme.MD).
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|
-| **`[StringEnum]`** | Opts an enum into the generator and the enum conventions |
-| **Wire names** | `ToWireName()`, the `{Member}WireName` constants, `TryParseWire()` and `ParseWire()` |
-| **Other generated helpers** | `ToOptimizedString()`, `ToKebabCase()`, `ToLowerCase()`, `ToUpperCase()`, `IsDefined()`, `GetNames()`, `GetValues()` |
-| **Runtime API** | `EnumValueFormatter` and `EnumMetadata` for `DeliveryStatus` |
+| `[StringEnum]` | Opts an enum into the generator and the enum conventions |
+| Wire names | `ToWireName()`, the `{Member}WireName` constants, `TryParseWire()` and `ParseWire()` |
+| Other generated helpers | `ToOptimizedString()`, `ToKebabCase()`, `ToLowerCase()`, `ToUpperCase()`, `IsDefined()`, `GetNames()`, `GetValues()` |
+| Runtime API | `EnumValueFormatter` and `EnumMetadata` for `DeliveryStatus` |
 
 ## Package references
 

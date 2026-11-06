@@ -1,6 +1,6 @@
 # CSharpEssentials.Any
 
-Discriminated Unions (Sum Types) for .NET. A type-safe way to represent a value that can be one of several fixed types.
+Discriminated unions (sum types) for .NET: a type-safe way to represent a value that can be one of several fixed types.
 
 > Benchmarks against OneOf 3.0.271 and Dunet 1.16.2 (construct, match, try-pick, partition, JSON and ToString) are in
 > [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
@@ -8,10 +8,10 @@ Discriminated Unions (Sum Types) for .NET. A type-safe way to represent a value 
 ## Features
 
 - **Unions of 2 to 8 types**: `Any<T0, T1>` through `Any<T0, ..., T7>`.
-- **Implicit Conversions**: Assign values directly to the union type.
-- **Pattern Matching**: `Switch` and `Match` for exhaustive handling.
-- **Type Helpers**: `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
-- **JSON Support**: Built-in serialization.
+- **Implicit conversions**: Assign values directly to the union type.
+- **Pattern matching**: `Switch` and `Match` for exhaustive handling.
+- **Type helpers**: `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
+- **JSON**: Built-in serialization.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Json` and `CSharpEssentials.Core`. The types live in the `CSharpEssentials.Any` namespace.
 
@@ -23,7 +23,7 @@ dotnet add package CSharpEssentials.Any
 
 ## Usage
 
-### Creating Unions
+### Creating unions
 
 ```csharp
 using CSharpEssentials.Any;
@@ -41,7 +41,7 @@ Any<string, int> second = Any.Create<string, int>(5);      // or Any.Create with
 
 The union holds its active branch in `Index` (0 for the first type) and its value in `Value` (`object?`). Implicit conversion is ambiguous when two type arguments are the same type, for example `Any<int, int>`, and `default(Any<...>)` has `Index` 0 but a `null` `Value`, so `IsFirst` is `true` while `GetFirst()` returns `null` or `default`.
 
-### Pattern Matching
+### Pattern matching
 
 ```csharp
 Any<string, int> result = ParseInput("123");
@@ -59,7 +59,7 @@ AnyActionStatus status = result.Switch(
 
 Every handler is optional. When the active branch has no handler, `Switch` returns `AnyActionStatus.NotExecuted` and `Match` returns an `AnyActionResult` whose `Status` is `NotExecuted` and whose `Result` is `default`; otherwise the status is `Executed`. Calling `Match` or `Switch` on `default(Any<...>)`, or on a union that holds `null`, throws `InvalidOperationException`.
 
-### Type Checking
+### Type checking
 
 ```csharp
 if (result.IsSecond)
@@ -81,7 +81,7 @@ var (text, number) = result;
 
 A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. The value is read with the `JsonSerializerOptions` you pass to `JsonSerializer`, so a naming policy or converter applies to it too. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the value's own `ToString()`, or an empty string when the value is `null`. It does not use reflection, so it is safe under trimming and Native AOT.
 
-### Multiple Types
+### Multiple types
 
 ```csharp
 Any<string, int, Exception> response = GetData(5);
@@ -92,7 +92,7 @@ response.Switch(
     third: e => Console.WriteLine($"Error: {e.Message}"));
 ```
 
-### Collection Extensions
+### Collection extensions
 
 Scatter a sequence of unions into typed arrays in one pass:
 

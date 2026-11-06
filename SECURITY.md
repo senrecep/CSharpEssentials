@@ -1,13 +1,13 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
+## Supported versions
 
 | Version | Supported |
 | ------- | --------- |
 | 6.x     | Yes       |
 | < 6.0   | No        |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
 Please **do not** open a public GitHub issue for security vulnerabilities.
 
@@ -35,7 +35,7 @@ This policy covers all packages published under the `CSharpEssentials` NuGet nam
 - `CSharpEssentials.AspNetCore`
 - And all other packages in this repository
 
-## Out of Scope
+## Out of scope
 
 - Vulnerabilities in third-party dependencies (report to the respective maintainer)
 - Issues in unsupported versions (< 6.0)

@@ -1,8 +1,8 @@
-# CSharpEssentials.Entity Example
+# CSharpEssentials.Entity example
 
-This console application demonstrates entity base classes from `CSharpEssentials.Entity`.
+This console application shows the entity base classes from `CSharpEssentials.Entity`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

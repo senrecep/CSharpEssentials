@@ -1,14 +1,14 @@
 # CSharpEssentials.GcpSecretManager
 
-Integrates Google Cloud Secret Manager into the .NET Configuration system. Load secrets as standard `IConfiguration` values.
+Integrates Google Cloud Secret Manager with .NET configuration, so secrets load as standard `IConfiguration` values.
 
 ## Features
 
-- **Configuration Integration**: Secrets appear as standard config keys.
-- **Multi-Project**: Load from multiple GCP projects.
-- **AppSettings Support**: Configure via `appsettings.json` or fluent API.
-- **Batch Processing**: Efficient retrieval with configurable batch sizes.
-- **Transient Retry**: Listing and per-secret access are retried on transient gRPC failures (uses `CSharpEssentials.Resilience`).
+- **Configuration integration**: Secrets appear as standard config keys.
+- **Multiple projects**: Load from multiple GCP projects.
+- **AppSettings**: Configure through `appsettings.json` or the fluent API.
+- **Batching**: Secrets are read in parallel batches of configurable size.
+- **Transient retry**: Listing and per-secret access are retried on transient gRPC failures (uses `CSharpEssentials.Resilience`).
 
 ## Installation
 
@@ -20,7 +20,7 @@ This package is not Native AOT compatible: it builds on Google.Cloud.SecretManag
 
 ## Usage
 
-### Setup via Code
+### Setup via code
 
 ```csharp
 using CSharpEssentials.GcpSecretManager;            // ProjectSecretConfiguration
@@ -103,7 +103,7 @@ builder.Configuration.AddGcpSecretManager();
 
 `AddGcpSecretManager()` without a callback reads the projects from the `GoogleSecretManager` section; it throws `InvalidOperationException` when the section, its projects or a `ProjectId` is missing. With a callback the section is not read; set `options.LoadFromAppSettings = true` to read it too, and `options.ConfigurationSectionName` to use another section. The section is read from the sources added before it, so call `AddGcpSecretManager` after `appsettings.json` (the default `builder.Configuration` already has it). `Region`, `SecretIds`, `RawSecretIds` and `RawSecretPrefixes` can be set in the section too.
 
-### Key Mapping
+### Key mapping
 
 GCP secrets use underscores; .NET config uses colons:
 - GCP: `MyApp__ConnectionStrings__Default`
@@ -111,7 +111,7 @@ GCP secrets use underscores; .NET config uses colons:
 
 The secret id has every `__` replaced by `:`. To use another rule or another selection of secrets, implement `ISecretManagerConfigurationLoader` (`GetKey(Secret)`, `GetKey(string)`, `ShouldLoadSecret(Secret, ProjectSecretConfiguration)`, namespace `CSharpEssentials.GcpSecretManager.Configuration`) and assign it to `options.Loader`.
 
-### JSON Secrets
+### JSON secrets
 
 A secret whose value is JSON is also flattened into configuration keys. The key of the secret keeps the raw text, and every value below it gets a child key, with `:` between object names and array indexes:
 

@@ -1,8 +1,8 @@
-# CSharpEssentials.Validation Example
+# CSharpEssentials.Validation example
 
 This console application demonstrates model validation with `CSharpEssentials.Validation` and its `Result` integration.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

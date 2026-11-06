@@ -16,7 +16,7 @@ Targets net8.0, net9.0, net10.0 and net11.0 with `Swashbuckle.AspNetCore` 10.2.3
 
 This package is not Native AOT compatible, because Swashbuckle.AspNetCore.SwaggerGen builds its documents with reflection. Swashbuckle's own [v10 migration guide](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md) points apps that need native AoT support to Microsoft.AspNetCore.OpenApi, so use `CSharpEssentials.AspNetCore.OpenApi` in Native AOT apps.
 
-## Swagger with Versioning
+## Swagger with versioning
 
 ```csharp
 using CSharpEssentials.AspNetCore; // AddSwagger, DefaultConfigureSwaggerOptions, SecuritySchemes, UseVersionableSwagger

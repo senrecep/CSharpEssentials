@@ -1,4 +1,4 @@
-# Redis Idempotency Store Example
+# Redis idempotency store example
 
 Reference `IIdempotencyRecordStore` on Redis, the same code as the
 [External stores](../../CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme.

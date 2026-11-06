@@ -1,21 +1,21 @@
 # CSharpEssentials.Core
 
-Foundational utilities and extensions for everyday .NET development. Zero internal dependencies.
+Utilities and extensions for everyday .NET development, with no internal dependencies.
 
 > Benchmarks against the BCL, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0 (case conversion, GUID text, random items and WithCancellation) are in
 > [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
 
 ## Features
 
-- **String Conversions**: Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
-- **Collection Helpers**: Conditional add and filter, null filtering, random selection, set comparison, `AllTrue` / `AllFalse`.
-- **Range Checks**: `IsBetween` / `IsBetweenExclusive` for any `IComparable<T>`.
-- **Functional Extensions**: Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`), `IsNull` / `IsNotNull`, string `IsEmpty` / `IsNotEmpty`.
-- **Task Helpers**: `WithCancellation` (for `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`), `AsTask`, `AsValueTask`.
-- **GUID Utilities**: URL-safe Base64 encoding, version 7 and strictly increasing version 7 GUIDs on every target.
-- **Exception Helpers**: Flatten inner exceptions and messages.
-- **HTTP Constants**: Common status codes as `int` constants (`HttpCodes`).
-- **Transaction Abstraction**: `ITransactionRunner`, implemented by data-access packages.
+- String case conversions: Pascal, Camel, Snake, Kebab, Macro, Train, Title, UnderscoreCamel.
+- Collection helpers for conditional add and filter, null filtering, random selection, set comparison and `AllTrue` / `AllFalse`.
+- `IsBetween` / `IsBetweenExclusive` range checks for any `IComparable<T>`.
+- Null-safe execution (`IfNotNull`, `IfNull`, `IfTrue`, `IfFalse`), `IsNull` / `IsNotNull`, and string `IsEmpty` / `IsNotEmpty`.
+- `WithCancellation` (for `Task`, `Task<T>`, `ValueTask`, `ValueTask<T>`), `AsTask` and `AsValueTask`.
+- URL-safe Base64 encoding of GUIDs, and version 7 and strictly increasing version 7 GUIDs on every target.
+- Helpers that flatten inner exceptions and their messages.
+- Common HTTP status codes as `int` constants (`HttpCodes`).
+- `ITransactionRunner`, a transaction abstraction that data-access packages implement.
 
 ## Installation
 
@@ -27,7 +27,7 @@ Targets `net11.0`, `net10.0`, `net9.0`, `netstandard2.1` and `netstandard2.0`.
 
 ## Usage
 
-### String Case Conversions
+### String case conversions
 
 ```csharp
 using CSharpEssentials.Core;
@@ -46,7 +46,7 @@ text.ToUnderscoreCamelCase(); // "_helloWorld"
 
 The converters keep letters of every script, combining marks and decimal digits (Unicode categories `Lu`, `Ll`, `Lt`, `Lm`, `Lo`, `Mn`, `Mc` and `Nd`); any other character starts a new word and is dropped. A word starts at an uppercase or titlecase letter, at a digit, and after a dropped character. Letters without case, such as CJK, Arabic, Hebrew or Thai, are kept as they are and continue the current word, so `"用户名".ToSnakeCase()` is `"用户名"` and `"user用户Name".ToSnakeCase()` is `"user用户_name"`. Titlecase letters such as `ǅ` are lowercased like uppercase letters. Letters outside the Basic Multilingual Plane (surrogate pairs) are still dropped. EF Core `LegacySnakeCase` storage and the Enums generator's `SnakeCase` and `KebabCase` output use the same rule.
 
-### Collection Extensions
+### Collection extensions
 
 ```csharp
 var list = new List<string> { "a", "b" };
@@ -71,7 +71,7 @@ new[] { false, false }.AllFalse();                             // true
 
 `ForEach` on `IEnumerable<T>` is lazy: it runs the action for each item while the result is enumerated, so nothing happens until you iterate it (for example with `ToList()`). On a `List<T>` the built-in `List<T>.ForEach` is chosen instead. `GetRandomItem` and `GetRandomItems` use `RandomNumberGenerator`, pick unique items and work on `T[]`, `List<T>` and `Span<T>`.
 
-### Range Checks
+### Range checks
 
 ```csharp
 5.IsBetween(1, 10);            // true  (inclusive)
@@ -79,7 +79,7 @@ new[] { false, false }.AllFalse();                             // true
 orderDate.IsBetween(start, end);
 ```
 
-### Functional Extensions
+### Functional extensions
 
 ```csharp
 object? data = GetData();
@@ -105,7 +105,7 @@ true.IfTrue(() => Console.WriteLine("yes"));
 false.IfFalse(() => Console.WriteLine("no"));
 ```
 
-### Task Helpers
+### Task helpers
 
 ```csharp
 await SomeTask().WithCancellation(cts.Token);
@@ -117,7 +117,7 @@ ValueTask<string> vt = value.AsValueTask();
 
 `WithCancellation` stops waiting and throws `OperationCanceledException` when the token is cancelled. On .NET 9 and later it is `Task.WaitAsync`, so the exception is the `TaskCanceledException` subclass and carries the token. It does not cancel the underlying task, and it returns the original task when the token cannot be cancelled.
 
-### GUID Utilities
+### GUID utilities
 
 ```csharp
 Guid id = Guider.NewGuid();          // Version 7 on every target
@@ -131,7 +131,7 @@ The string is RFC 4648 base64url without padding: standard Base64 with `+` repla
 
 `Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms of the same two conversions. See [Guids](Guids/Readme.MD).
 
-### Exception Helpers
+### Exception helpers
 
 ```csharp
 try { /* ... */ }
@@ -144,7 +144,7 @@ catch (Exception ex)
 
 Both return lazy sequences that start with `ex` itself, followed by each inner exception.
 
-### HTTP Status Codes
+### HTTP status codes
 
 ```csharp
 int ok = HttpCodes.Ok;
@@ -152,7 +152,7 @@ int notFound = HttpCodes.NotFound;
 int badRequest = HttpCodes.BadRequest;
 ```
 
-### Other Helpers
+### Other helpers
 
 ```csharp
 object boxed = 42;
@@ -170,7 +170,7 @@ public enum HttpGroup { Success = 200, ClientError = 400 }
 
 On .NET 10 and later, `using CSharpEssentials;` also brings the C# 14 extension members `IEnumerable<T>.IsEmpty` (property, `!source.Any()`) and `string.IsPalindrome` (property).
 
-### Transaction Runner Abstraction
+### Transaction runner abstraction
 
 `ITransactionRunner` (namespace `CSharpEssentials.Transactions`) runs a unit of work in a transaction and commits only when `shouldCommit` returns `true`. It has no dependencies, so data-access packages implement it (`EfCoreTransactionRunner<TDbContext>` in `CSharpEssentials.EntityFrameworkCore`) and pipelines consume it (`TransactionBehavior` in `CSharpEssentials.Mediator`).
 

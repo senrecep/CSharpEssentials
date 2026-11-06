@@ -1,8 +1,8 @@
-# CSharpEssentials.Maybe Example
+# CSharpEssentials.Maybe example
 
 This console application demonstrates the Maybe monad from `CSharpEssentials.Maybe` for handling nullable values functionally.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

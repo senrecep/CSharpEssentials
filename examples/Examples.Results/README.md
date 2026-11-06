@@ -1,8 +1,8 @@
-# CSharpEssentials.Results Example
+# CSharpEssentials.Results example
 
 This console application demonstrates the functional Result pattern from `CSharpEssentials.Results`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

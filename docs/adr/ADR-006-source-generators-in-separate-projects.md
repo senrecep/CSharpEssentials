@@ -1,4 +1,4 @@
-# ADR-006: Source Generators Ship from Separate netstandard2.0 Projects Inside the Runtime Package
+# ADR-006: Source generators ship from separate netstandard2.0 projects inside the runtime package
 
 - **Status:** Accepted
 - **Date:** 2026-10-06
@@ -120,7 +120,7 @@ Users may change severities through `.editorconfig`. The defaults follow this po
 
 - Test harness: `CSharpEssentials.Tests/Generators/` (`GeneratorHarness`, `AnalyzerHarness`, `IncrementalCaching`, `AnalyzerAssembly`). Snapshots live in a `Snapshots/` folder next to the test file, `*.verified.*` files are committed and `*.received.*` files are ignored. Verify disables diff tools on build servers (it detects `GITHUB_ACTION`), so CI runs the snapshot tests without extra settings.
 
-## Alternatives Considered
+## Alternatives considered
 
 | Alternative | Rejected because |
 |---|---|

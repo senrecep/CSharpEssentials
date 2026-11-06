@@ -1,6 +1,6 @@
 # CSharpEssentials.Validation
 
-High-performance, model-first validation library for C#. Zero-reflection, eager evaluation: no expression trees, no deferred builds. Returns `Result<T>` natively.
+High-performance, model-first validation library for C#. It uses no reflection and evaluates rules eagerly, with no expression trees and no deferred builds. Validators return `Result<T>` directly.
 
 ## Installation
 
@@ -22,7 +22,7 @@ dotnet add package CSharpEssentials.Validation
 
 `Result<T>` lives in `CSharpEssentials.ResultPattern` and `Error` in `CSharpEssentials.Errors`.
 
-## Quick Start
+## Quick start
 
 Define a validator by extending `Validator<T>`:
 
@@ -60,7 +60,7 @@ if (result.IsFailure)
 
 > **Sync call site:** `validator.ValidateAsync(command).GetAwaiter().GetResult()` is safe when the validator has no actual async operations (returns a pre-completed `ValueTask`).
 
-### Inline (Static) Usage
+### Inline (static) usage
 
 For one-off validations without a dedicated class, use the static `Validator.ValidateAsync`:
 
@@ -84,7 +84,7 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 
 `Validator.ValidateAsync` and `Validator<T>` live in the same file (`Validator.cs`) as separate types: one static utility class and one abstract base class. They are independent; the static form does not use `Validator<T>` internally.
 
-## Built-in Validators
+## Built-in validators
 
 ### String
 
@@ -126,7 +126,7 @@ Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, a
 | `MaxCount(n)` | skip | At most n elements |
 | `CountBetween(min, max)` | skip | Element count in [min, max] |
 
-### Nullable Structs (`int?`, `DateTime?`, …)
+### Nullable structs (`int?`, `DateTime?`, …)
 
 `GreaterThan`, `GreaterThanOrEqualTo`, `LessThan`, `LessThanOrEqualTo`, `InclusiveBetween` and `ExclusiveBetween` are available for nullable value types; `null` is skipped. `NotNull()` fails on `null` and `Null()` fails on a value. `Equal` and `NotEqual` are not available for nullable value types.
 
@@ -167,7 +167,7 @@ rules.For(() => model.Password)
 
 Call `Cascade` before the rules it should affect. Once a rule on the chain has failed, `Cascade` is a no-op, so a `NotEmpty()` guard that fails stays the only error.
 
-## Custom Predicates
+## Custom predicates
 
 ```csharp
 // Sync
@@ -180,7 +180,7 @@ await rules.For(() => model.Email)
                       "Email.NotUnique", "Email is already taken.");
 ```
 
-## Nested Validation
+## Nested validation
 
 ```csharp
 await rules.For(() => model.Address!).SetValidatorAsync(new AddressValidator(), ct);
@@ -188,7 +188,7 @@ await rules.For(() => model.Address!).SetValidatorAsync(new AddressValidator(), 
 // Note: must be inside an async Configure to use await.
 ```
 
-## Collection Validation
+## Collection validation
 
 ```csharp
 rules.ForEach(() => model.Tags, (tag, tagRules) =>
@@ -212,11 +212,11 @@ await rules.ForEachAsync(() => model.Items, async (item, itemRules, c) =>
 
 A custom code passed to `Must`/`MustAsync` is used as given; only the built-in codes get the property path.
 
-## Native C# Control Flow
+## Native C# control flow
 
-`Configure` receives the fully-resolved model instance, so **any C# control flow** works inside it, with no DSL or special API.
+`Configure` receives the fully resolved model instance, so any C# control flow works inside it without a DSL or special API.
 
-### Conditional Rules
+### Conditional rules
 
 ```csharp
 public class OrderValidator : Validator<Order>
@@ -257,14 +257,14 @@ public class OrderValidator : Validator<Order>
 }
 ```
 
-### Null-Guard Before Nested Validation
+### Null-guard before nested validation
 
 ```csharp
 if (model.ShippingAddress is not null)
     await rules.For(() => model.ShippingAddress!).SetValidatorAsync(new AddressValidator(), ct);
 ```
 
-### Null-Tolerant Member Paths
+### Null-tolerant member paths
 
 A `null` intermediate segment in a member path is tolerated: `rules.For(() => model.Address.City)`
 with a `null` `Address` does not throw. The property is treated as `null`, so guards like
@@ -273,15 +273,15 @@ The same applies to `ForEach` / `ForEachAsync`: a null collection path produces 
 (Only paths whose target type can be null are tolerated; for non-nullable value types the
 `NullReferenceException` still propagates.)
 
-### ValueTask-Based Async Predicates
+### ValueTask-based async predicates
 
 `MustAsync` also accepts `ValueTask<bool>` predicates (extension overload in
-`CSharpEssentials.Validation`), avoiding the `Task` allocation for ValueTask-based sources.
+`CSharpEssentials.Validation`), which avoids the `Task` allocation for ValueTask-based sources.
 Async lambdas keep binding to the built-in `Task<bool>` overload, so call sites do not change.
 
-### CSharpEssentials.Core Integration
+### CSharpEssentials.Core integration
 
-`CSharpEssentials.Core` is transitively available (via `CSharpEssentials.Errors`) and ships a rich set of conditional helpers that compose naturally with validators.
+`CSharpEssentials.Core` is transitively available (via `CSharpEssentials.Errors`) and has conditional helpers that work inside validators.
 
 **`IfNotNull`: run rules only when a property has a value.**
 
@@ -332,7 +332,7 @@ model.IsInternational.IfTrue(() =>
 
 > Install `CSharpEssentials.Core` separately if you are not using the meta-package.
 
-## Multiple Validators for One Model
+## Multiple validators for one model
 
 Use `Include` to compose base validators, or inject several `IValidator<T>` implementations for the same model type.
 
@@ -362,9 +362,9 @@ public class PaidOrderValidator : Validator<Order>
 
 `Include` runs the included validator in-line and merges all errors into the same `Result<T>`.
 
-### Multiple DI Validators
+### Multiple DI validators
 
-When several `IValidator<Order>` implementations are registered, the `ValidationBehavior` in `CSharpEssentials.Mediator` aggregates results from **all** of them, deduplicating identical errors automatically.
+When several `IValidator<Order>` implementations are registered, the `ValidationBehavior` in `CSharpEssentials.Mediator` aggregates the results of all of them and removes identical errors.
 
 ```csharp
 services.AddValidator<Order, BaseOrderValidator>();
@@ -372,7 +372,7 @@ services.AddValidator<Order, PaidOrderValidator>();
 // Both validators run; errors are merged and deduplicated
 ```
 
-## Validator Ordering
+## Validator ordering
 
 Override `Order` on `Validator<T>` to control execution sequence when multiple validators are registered for the same model type.
 
@@ -400,13 +400,13 @@ public class BusinessRulesValidator(IReadOnlySet<string> blocklist) : Validator<
 }
 ```
 
-**Execution rules:**
-- Validators sharing the same `Order` run **concurrently** within their group.
-- Groups with lower `Order` run **sequentially before** groups with higher `Order`.
+Execution rules:
+- Validators with the same `Order` run concurrently within their group.
+- Groups with a lower `Order` run sequentially before groups with a higher `Order`.
 - All groups execute regardless of earlier failures. Errors from all groups are accumulated and deduplicated.
 - Default `Order` is `0`, so all validators without an override run concurrently in one group.
 
-## DI Registration
+## DI registration
 
 ```csharp
 using CSharpEssentials.Validation.Extensions;
@@ -432,9 +432,9 @@ Registration uses `TryAddEnumerable`, so registering the same validator twice (f
 
 Validators with no scoped dependencies may be registered as `Singleton`. Validators that inject scoped services (e.g. `DbContext`, `ICurrentUser`) must be `Scoped`.
 
-## Mediator Pipeline Integration
+## Mediator pipeline integration
 
-Use with `CSharpEssentials.Mediator` for automatic validation before handlers run:
+With `CSharpEssentials.Mediator`, requests are validated automatically before handlers run:
 
 ```csharp
 services.AddMediatorValidationBehavior();
@@ -446,7 +446,7 @@ services.AddMediatorBehaviors(); // registers all behaviors
 
 **Exception isolation:** If a validator throws a non-`OperationCanceledException` exception, `ValidationBehavior` catches it and converts it to a `Result.Failure` error (code `"Validator.Exception"`). `OperationCanceledException` always propagates; cancellation is never swallowed.
 
-## Custom Validators and Manual Failures
+## Custom validators and manual failures
 
 A custom rule is an extension method on `RuleChain<T, TProp>`. Check `HasFailed` first and report with `AddError`:
 
@@ -474,15 +474,15 @@ rules.AddFailure("Order.Total", "The total does not match the line items."); // 
 rules.For(model.Name, nameof(model.Name)).NotEmpty(); // no lambda, no path parsing: for hot paths
 ```
 
-## Railway Validation Bindings
+## Railway validation bindings
 
-Integrate model validation natively into your functional railway-oriented programming (ROP) pipelines using `ValidateWith` (synchronous) and `ValidateWithAsync` (asynchronous). 
+`ValidateWith` (synchronous) and `ValidateWithAsync` (asynchronous) add model validation to railway-oriented programming (ROP) pipelines.
 
-These extension methods are available on `Result<T>`, `Task<Result<T>>`, and `ValueTask<Result<T>>`. If the source result is a failure, they **short-circuit immediately** without executing the validator, passing the errors down the chain. If the source result is a success, validation is executed against the value.
+These extension methods are available on `Result<T>`, `Task<Result<T>>`, and `ValueTask<Result<T>>`. If the source result is a failure, they short-circuit without running the validator and pass the errors down the chain. If it is a success, the validator runs against the value.
 
-### 1. Purely Synchronous Pipeline (`ValidateWith`)
+### 1. Purely synchronous pipeline (`ValidateWith`)
 
-Use `ValidateWith` with a synchronous inline delegate to perform validations without introducing any asynchronous `ValueTask` or task context, maintaining a fully synchronous railway pipeline:
+`ValidateWith` with a synchronous inline delegate validates without an asynchronous `ValueTask` or task context, so the railway pipeline stays fully synchronous:
 
 ```csharp
 Result<User> result = GetUserCommand() // returns Result<CreateUserCommand>
@@ -494,7 +494,7 @@ Result<User> result = GetUserCommand() // returns Result<CreateUserCommand>
     .Map(cmd => new User(cmd)); // returns Result<User> synchronously
 ```
 
-### 2. Class-Based Validator (`ValidateWithAsync`)
+### 2. Class-based validator (`ValidateWithAsync`)
 
 Pass a concrete `IValidator<T>` instance to run validations as part of an asynchronous pipeline:
 
@@ -504,9 +504,9 @@ Result<User> result = await GetUserCommand() // returns Result<CreateUserCommand
     .BindAsync(async cmd => await _userService.CreateUserAsync(cmd)); // ValueTask chain: await the Task-returning call
 ```
 
-### 3. Inline Delegate Validation (`ValidateWithAsync`)
+### 3. Inline delegate validation (`ValidateWithAsync`)
 
-Perform one-off validations using synchronous or asynchronous inline delegates inside an asynchronous pipeline:
+For one-off validations inside an asynchronous pipeline, pass a synchronous or asynchronous inline delegate:
 
 ```csharp
 // Synchronous inline delegate
@@ -529,7 +529,7 @@ Result<User> asyncResult = await GetUserCommand()
     .BindAsync(async cmd => await _userService.CreateUserAsync(cmd)); // ValueTask chain: await the Task-returning call
 ```
 
-## FluentValidation Comparison
+## FluentValidation comparison
 
 > **Benchmarks:** the 23 FluentValidation scenarios (construction, invalid and valid paths, collections, async,
 > nested, cascade), plus baselines against FluentValidation, DataAnnotations and Microsoft.Extensions.Validation,
@@ -549,33 +549,33 @@ Result<User> asyncResult = await GetUserCommand()
 | **Error type** | Structured `Error` (code, description, type, metadata) | `ValidationFailure` (PropertyName, ErrorMessage, …) |
 | **DI lifetime** | Scoped by default; `Singleton`-safe | Typically `Singleton` (stateless by design) |
 
-### Why We Chose This Approach
+### Why we chose this approach
 
-FluentValidation's constructor-based design forces rule registration **without a model instance**. This means:
+FluentValidation's constructor-based design forces rules to be registered without a model instance. As a result:
 
 - You cannot write `if (model.X) { ... }` in the constructor, because the model doesn't exist yet.
-- The `When()` DSL exists solely to compensate for this limitation.
+- The `When()` DSL exists only to work around this limitation.
 - Every developer must learn an extra API layer that reimplements what C# `if` already provides.
 
-By passing `model` directly into `Configure`, CSharpEssentials.Validation eliminates the need for `When`/`Unless` entirely. Branching logic is written in idiomatic C#, readable by anyone, debuggable with standard tooling, and refactorable without ceremony.
+CSharpEssentials.Validation passes `model` directly into `Configure`, so it needs no `When`/`Unless` at all. Branching is plain C# that anyone can read, step through with standard tooling and refactor.
 
-The trade-off: a new `RuleContext<T>` is created per `ValidateAsync` call. This is intentional: the context is a small, short-lived object that keeps the design thread-safe and allocation-predictable. `Validator<T>` instances themselves are stateless and can be registered as `Singleton` when they have no scoped dependencies. Validators that inject scoped services (e.g. `DbContext`) should be registered as `Scoped`.
+The trade-off is a new `RuleContext<T>` per `ValidateAsync` call. That is intentional: the context is a small, short-lived object, and it keeps the design thread-safe and its allocations predictable. `Validator<T>` instances themselves are stateless and can be registered as `Singleton` when they have no scoped dependencies. Validators that inject scoped services (e.g. `DbContext`) should be registered as `Scoped`.
 
-### FluentValidation Advantages
+### FluentValidation advantages
 
 - Mature ecosystem, wide community adoption
 - Rich `.WithMessage`, `.WithName`, `.WithErrorCode` fluent API
 - Built-in rule sets (`RuleSet`) for named validation scenarios
 - `.Cascade(CascadeMode.StopOnFirstFailure)` configurable globally
 
-### FluentValidation Disadvantages
+### FluentValidation disadvantages
 
 - Cannot use plain `if` for conditional rules without DSL
 - `ValidationResult` is not railway-oriented and requires manual `Result<T>` mapping
 - Expression trees limit Native AOT compatibility
 - `When()` blocks create implicit coupling between rule registration and condition evaluation
 
-## Railway Integration
+## Railway integration
 
 `ValidateWith` / `ValidateWithAsync` plug validators directly into `Result<T>` pipelines. If the result is already a failure, the validator is skipped entirely.
 

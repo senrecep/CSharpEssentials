@@ -237,7 +237,7 @@ public sealed class CreateApp : IEndpoint
 }
 ```
 
-Then replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. Build: the analyzer reports module state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
+Then replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. On the next build the analyzer reports module state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
 
 ## Upgrading to 8.0
 

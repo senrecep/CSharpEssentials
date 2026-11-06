@@ -13,13 +13,13 @@ The suites run on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 ## What each library provides
 
-- **FluentValidation 12.2.0:** `AbstractValidator<T>` with `RuleFor` in the constructor, Continue cascade by default, `SetValidator`/`RuleForEach` for nesting, `IsInEnum` for enums, `Must` for anything custom, and a separate DI package for the assembly scan. Ships net8.0.
-- **DataAnnotations (BCL):** attributes plus `Validator.TryValidateObject`. `[Required]` short-circuits the property. No nesting, reflection through `TypeDescriptor`, `[RequiresUnreferencedCode]`.
-- **Microsoft.Extensions.Validation 10.0.14:** DataAnnotations attributes plus a source generator (`[ValidatableType]`), an async-only `ValidateAsync`, nesting, and errors as `Dictionary<string, string[]>`. net10.0 only; every entry point is `[Experimental("ASP0029")]`; no documented standalone idiom.
-- **CSE Validation:** `Validator<T>.Configure` over the live model, `Result<T>` output, Stop cascade by default, `IsDefinedEnum`/`HasOnlyDefinedFlags`/`IsOneOf`, `For(() => ...)` and `For(value, name)`, inline `Validator.ValidateAsync`, and a reflection-based assembly scan.
-- **CSE Rules:** `Func`, class or lambda rules returning `Result`, combined with `Linear`, `And`, `Or` and `If`, with `Evaluate` and `EvaluateAsync`.
-- **NRules 1.0.4 (reference):** forward chaining over facts with a Rete network, rule classes in a DSL, sessions.
-- **RulesEngine 6.0.1 (reference):** workflows of string expressions compiled with System.Linq.Dynamic.Core and FastExpressionCompiler, async-only.
+- FluentValidation 12.2.0: `AbstractValidator<T>` with `RuleFor` in the constructor, Continue cascade by default, `SetValidator`/`RuleForEach` for nesting, `IsInEnum` for enums, `Must` for anything custom, and a separate DI package for the assembly scan. Ships net8.0.
+- DataAnnotations (BCL): attributes plus `Validator.TryValidateObject`. `[Required]` short-circuits the property. No nesting, reflection through `TypeDescriptor`, `[RequiresUnreferencedCode]`.
+- Microsoft.Extensions.Validation 10.0.14: DataAnnotations attributes plus a source generator (`[ValidatableType]`), an async-only `ValidateAsync`, nesting, and errors as `Dictionary<string, string[]>`. net10.0 only; every entry point is `[Experimental("ASP0029")]`; no documented standalone idiom.
+- CSE Validation: `Validator<T>.Configure` over the live model, `Result<T>` output, Stop cascade by default, `IsDefinedEnum`/`HasOnlyDefinedFlags`/`IsOneOf`, `For(() => ...)` and `For(value, name)`, inline `Validator.ValidateAsync`, and a reflection-based assembly scan.
+- CSE Rules: `Func`, class or lambda rules returning `Result`, combined with `Linear`, `And`, `Or` and `If`, with `Evaluate` and `EvaluateAsync`.
+- NRules 1.0.4 (reference): forward chaining over facts with a Rete network, rule classes in a DSL, sessions.
+- RulesEngine 6.0.1 (reference): workflows of string expressions compiled with System.Linq.Dynamic.Core and FastExpressionCompiler, async-only.
 
 ## Feature matrix
 
@@ -70,13 +70,13 @@ Pending the full default-job run. These are the rows to pull:
 
 These are candidates from reading the code. Nothing has been measured yet.
 
-- **`For(() => ...)` parses the member expression on every call** and allocates a closure (`CSharpEssentials.Validation/RuleContext.cs:62-76`). FluentValidation resolves property names once, in the constructor. `ForOverloadComparison` shows how much `For(value, name)` saves.
-- **The plain-enum path boxes** through `Convert.ToInt64(object)` (`CSharpEssentials.Validation/Validators/EnumValidators.cs:201-204`), on every `HasOnlyDefinedFlags` call for a plain `[Flags]` enum.
-- **Per-call `Configure` against a prebuilt tree on valid input.** CSE rebuilds its rule chains each call; FluentValidation walks a tree it built once. Wide valid models are where this would show.
-- **Invalid-path message cost on enums:** CSE formats the allowed values into every enum error.
-- **Rules `EvaluateAsync` on sync trees** allocates a `List<Result>` per And and Or node (`CSharpEssentials.Rules/Engines/RuleEngineAsync.cs:116`, `:140`), against the Readme's "without allocating a task".
-- **Rules `RuleEngine.Linear(Func[], ctx)`** rebuilds the chain with LINQ per call (`CSharpEssentials.Rules/Engines/Linear.cs:25-64`), and `Result.And`/`Or` box through `Cast<IResultBase>()` (`CSharpEssentials.Results/ResultFactory.cs:47`, `:69`).
-- **The generic `Result<T>` And** evaluates every rule, so it loses to an early-return baseline by design.
+- `For(() => ...)` parses the member expression on every call and allocates a closure (`CSharpEssentials.Validation/RuleContext.cs:62-76`). FluentValidation resolves property names once, in the constructor. `ForOverloadComparison` shows how much `For(value, name)` saves.
+- The plain-enum path boxes through `Convert.ToInt64(object)` (`CSharpEssentials.Validation/Validators/EnumValidators.cs:201-204`), on every `HasOnlyDefinedFlags` call for a plain `[Flags]` enum.
+- Per-call `Configure` against a prebuilt tree on valid input. CSE rebuilds its rule chains each call; FluentValidation walks a tree it built once. Wide valid models are where this would show.
+- Invalid-path message cost on enums: CSE formats the allowed values into every enum error.
+- Rules `EvaluateAsync` on sync trees allocates a `List<Result>` per And and Or node (`CSharpEssentials.Rules/Engines/RuleEngineAsync.cs:116`, `:140`), against the Readme's "without allocating a task".
+- Rules `RuleEngine.Linear(Func[], ctx)` rebuilds the chain with LINQ per call (`CSharpEssentials.Rules/Engines/Linear.cs:25-64`), and `Result.And`/`Or` box through `Cast<IResultBase>()` (`CSharpEssentials.Results/ResultFactory.cs:47`, `:69`).
+- The generic `Result<T>` And evaluates every rule, so it loses to an early-return baseline by design.
 
 ## Where CSE may win or tie
 

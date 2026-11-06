@@ -1,4 +1,4 @@
-# CSharpEssentials.Results: Performance Benchmarks
+# CSharpEssentials.Results: Performance benchmarks
 
 Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
 

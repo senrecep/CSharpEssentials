@@ -1,6 +1,6 @@
 # CSharpEssentials.Resilience
 
-HTTP-agnostic resilience patterns (Retry, Timeout, Circuit Breaker, Fallback) with `Result<T>` integration. Composable `ResiliencePolicy` builder backed by Polly v8 (`Polly.Core`) for transient fault handling without exceptions.
+HTTP-agnostic resilience patterns (retry, timeout, circuit breaker, fallback) that work with `Result<T>`. A composable `ResiliencePolicy` builder, backed by Polly v8 (`Polly.Core`), handles transient faults without exceptions.
 
 > Benchmarks against Polly.Core (policy overhead, composed policies, `RetryIfFailed` and `Result` boxing) are in
 > [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
@@ -23,7 +23,7 @@ using CSharpEssentials.Errors;        // Error, ErrorType
 
 The samples below assume these usings.
 
-## Quick Start
+## Quick start
 
 ```csharp
 using CSharpEssentials.Resilience;
@@ -49,7 +49,7 @@ Result<Product> product = await ResiliencePolicy<Product>
     .ExecuteAsync(_ => _productService.GetProduct(id));
 ```
 
-## Policy Builder
+## Policy builder
 
 Both `ResiliencePolicy` and `ResiliencePolicy<T>` are immutable structs: every `With...` call returns a new policy.
 
@@ -64,7 +64,7 @@ Both `ResiliencePolicy` and `ResiliencePolicy<T>` are immutable structs: every `
 
 Strategies nest in the order you add them: the first one is the outermost. `WithRetry(3).WithTimeout(TimeSpan.FromSeconds(1))` applies the timeout to each attempt, while `WithTimeout(TimeSpan.FromSeconds(1)).WithRetry(3)` limits all attempts together. `WithFallback` always wraps the strategies of the policy it is called on.
 
-## Retrying Failed Results
+## Retrying failed results
 
 Both `ResiliencePolicy` and `ResiliencePolicy<T>` retry exceptions and failed `Result` / `Result<T>` values. The circuit breaker counts the same failures. The non-generic `ResiliencePolicy` checks any return value that implements `IResultBase`; other return values count only when the delegate throws.
 
@@ -77,7 +77,7 @@ Result<Order> order = await ResiliencePolicy
     .ExecuteAsync(ct => _orderService.TryGetOrder(id, ct)); // returns Result<Order>
 ```
 
-## Delegate Extensions
+## Delegate extensions
 
 ```csharp
 using CSharpEssentials.Resilience;
@@ -91,7 +91,7 @@ Func<CancellationToken, Task<User>> getUserWithToken = ct => _db.GetUser(id, ct)
 Result<User> userWithToken = await getUserWithToken.ExecuteAsync(cancellationToken);
 ```
 
-## Result Retry
+## Result retry
 
 ```csharp
 // Retry a failed Result directly
@@ -111,7 +111,7 @@ Result<User> result = await operation.RetryIfFailed(
 
 The predicate replaces the default classification. An exception thrown by the operation is converted to the error that would be returned for it (`ErrorType.Unexpected`) and passed to the predicate too, so an exception the predicate rejects is not retried. Caller cancellation works as without a predicate: it is never retried and throws `OperationCanceledException`.
 
-## Configuration Options
+## Configuration options
 
 ```csharp
 using CSharpEssentials.Resilience;
@@ -134,7 +134,7 @@ Result<User> user = await ResiliencePolicy
     .ExecuteAsync(_ => _db.GetUser(id));
 ```
 
-## Error Handling
+## Error handling
 
 Resilience-specific errors are returned as `Error` values:
 
@@ -149,7 +149,7 @@ Cancellation of the caller's token is not converted to an error. When the `Cance
 
 A `default(ResiliencePolicy)` or `default(ResiliencePolicy<T>)` behaves like `Create()`.
 
-## Pipeline Composition
+## Pipeline composition
 
 ```csharp
 // Stack multiple policies
@@ -161,9 +161,9 @@ Result<Data> result = await ResiliencePolicy
     .ExecuteAsync(_ => _api.GetData());
 ```
 
-## Polly Integration
+## Polly integration
 
-Under the hood, uses the Polly v8 `ResiliencePipeline` from the `Polly.Core` package. The package does not reference the full `Polly` package; add it yourself if you use the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …).
+Under the hood it uses the Polly v8 `ResiliencePipeline` from the `Polly.Core` package. The package does not reference the full `Polly` package; add it yourself if you use the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …).
 
 ```csharp
 // Advanced: Direct Polly configuration

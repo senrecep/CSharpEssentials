@@ -1,4 +1,4 @@
-# CSharpEssentials.DependencyInjection: Design Document
+# CSharpEssentials.DependencyInjection: design document
 
 > **Date:** 2026-10-06 | **Status:** Implemented in 4.1, kept current through 6.5
 > **Issues:** #48 (epic), #49 (docs), #50 (infra), #55 (attributes + runtime), #56 (generator + analyzer), #57 (docs/AOT example), #58 (P3)
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Goals and Non-Goals
+## 1. Goals and non-goals
 
 ### Goals
 - Replace Scrutor for attribute-based registration and decoration on top of `Microsoft.Extensions.DependencyInjection`.
@@ -14,7 +14,7 @@
 - Deterministic service-type resolution, key-aware strategies and keyed decoration.
 - Gradual migration: manual `services.Add*` calls and generated registrations coexist.
 
-### Non-Goals
+### Non-goals
 - No container replacement and no new lifetimes. The output is plain `ServiceDescriptor`s.
 - No convention-based "register everything" scanning.
 - No touching third-party registrations (source-generated Mediator, MassTransit consumers, and so on). Only marked types are registered.
@@ -30,7 +30,7 @@
 | 4 | Coexistence | The default strategy is `Add`. Generated code never removes or rewrites registrations it did not create, except under an explicit `Replace` strategy or decoration. |
 | 5 | Deterministic | The same source always yields the same registrations in the same order. |
 
-## 3. Packages, TFMs and Dependencies
+## 3. Packages, TFMs and dependencies
 
 | Project | TFMs | Dependencies | Packable |
 |---|---|---|---|
@@ -42,7 +42,7 @@
 - Generic attribute forms are compiled only for `NET7_0_OR_GREATER` TFMs. The `netstandard2.1` asset has the `typeof` forms only.
 - Namespace: `CSharpEssentials.DependencyInjection`. Generated registries live in `Microsoft.Extensions.DependencyInjection`, so `services.Add{Asm}Services()` is discoverable without a `using`.
 
-## 4. Public Contracts (#55)
+## 4. Public contracts (#55)
 
 ### 4.1 Registration attributes
 
@@ -221,7 +221,7 @@ Under `Add` (default), a generated registration and a manual `services.AddScoped
 
 `Add{Asm}Services(this IServiceCollection services, ILogger? logger = null)`: when `logger` is not null and `Debug` is enabled, every registration whose (service, key) already exists in the collection is logged at `Debug` (service, key, existing implementation, new implementation, strategy). The default strategy remains `Add`. Logging goes through a `LoggerMessage`-generated method in the runtime package (`ServiceRegistrationLog`), which is AOT-safe. When the logger is null or `Debug` is disabled, the duplicate scan does not run at all.
 
-## 6. Generated Code (#56)
+## 6. Generated code (#56)
 
 ### 6.1 Discovery
 
@@ -399,12 +399,12 @@ Reported by `DependencyInjectionAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssen
 
 Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.Unshipped.md`.
 
-## 8. P3 Follow-ups (#58, optional)
+## 8. P3 follow-ups (#58, optional)
 
 - Shipped: CSE2006 captive dependency (info, single-constructor types, §7).
 - Shipped: code fix for CSE2003 in `CSharpEssentials.DependencyInjection.CodeFixes` (netstandard2.0, `Microsoft.CodeAnalysis.CSharp.Workspaces` 4.8.0, packed into `analyzers/dotnet/cs`). One action per implemented service interface adds `typeof(IFoo)` (`typeof(IFoo<>)` for generic classes), and one adds `As = ServiceAs.Self`. The analyzer assembly does not reference Workspaces (RS1038).
 
-## 9. Explicitly Skipped Scrutor Features
+## 9. Explicitly skipped Scrutor features
 
 | Scrutor feature | Reason skipped |
 |---|---|
@@ -419,7 +419,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Decoration via `ActivatorUtilities` | Generated factories (`new`) on the generated path, which are AOT-safe. |
 | Decorating open-generic registrations | MS.DI cannot inject the hidden inner without a constant key. Only closed registrations are decorated (§4.7). |
 
-## 10. Testing Strategy
+## 10. Testing strategy
 
 | Layer | Tests |
 |---|---|
@@ -436,7 +436,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 
 Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentials.Tests/Generators/`. xUnit + FluentAssertions, `Method_Should_Behavior`.
 
-## 11. Implementation Deviations
+## 11. Implementation deviations
 
 | Deviation | Reason |
 |---|---|

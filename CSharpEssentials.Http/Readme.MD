@@ -1,6 +1,6 @@
 # CSharpEssentials.Http
 
-`HttpClient` extensions that return `Result<T>` instead of throwing exceptions. Built-in status-code-to-error mapping, fluent request builder, Polly resilience, and redirect handling.
+`HttpClient` extensions that return `Result<T>` instead of throwing exceptions. The package maps status codes to errors and includes a fluent request builder, Polly resilience and redirect handling.
 
 > Benchmarks against HttpClient with System.Net.Http.Json, Refit, Flurl.Http, RestSharp and Microsoft.Extensions.Http.Resilience
 > (JSON GET and POST, 404 without exceptions, request building, query strings, a retry policy) are in
@@ -8,13 +8,13 @@
 
 ## Features
 
-- **Result-based HTTP**: `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
-- **Automatic Error Mapping**: HTTP codes mapped to `ErrorType` (Validation, Unauthorized, NotFound, Conflict, etc.).
-- **Fluent Request Builder**: Chain headers, query params, JSON content, and redirects.
-- **Polly Integration**: Retry, timeout, and circuit breaker pipelines.
-- **Query String Helpers**: Build URIs from dictionaries or anonymous objects.
-- **Idempotency-Key client**: `SetIdempotencyKey`, `WithIdempotencyKey` and `AddIdempotencyKeys()` attach a key, and `RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries POST/PATCH only when it is safe.
-- **SSRF Guard** (.NET 9+, not available on netstandard2.1): `AddSsrfGuard()` blocks requests to private, loopback, link-local and metadata addresses, re-validated on every redirect hop.
+- Result-based HTTP calls: `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
+- HTTP status codes are mapped to `ErrorType` (Validation, Unauthorized, NotFound, Conflict, etc.).
+- A fluent request builder chains headers, query parameters, JSON content and redirects.
+- Polly pipelines for retry, timeout and circuit breaker.
+- Query string helpers build URIs from dictionaries or anonymous objects.
+- Idempotency-Key client: `SetIdempotencyKey`, `WithIdempotencyKey` and `AddIdempotencyKeys()` attach a key, and `RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries POST/PATCH only when it is safe.
+- SSRF guard (.NET 9+, not available on netstandard2.1): `AddSsrfGuard()` blocks requests to private, loopback, link-local and metadata addresses, and checks again on every redirect hop.
 
 ## Installation
 
@@ -136,7 +136,7 @@ Result<User> sent = await HttpRequestBuilder.Post("users")
 
 `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `SendAsResultAsync`, `SendWithRedirectsAsResultAsync` and `ReadFromJsonAsResultAsync` have the same `JsonTypeInfo<T>` overloads. Because of them, a call that passes a literal `null` or `default` as the options argument (`GetFromJsonAsResultAsync<T>(uri, null)`) is now ambiguous; drop the argument or pass `(JsonSerializerOptions?)null`.
 
-### Query String Builder
+### Query string builder
 
 ```csharp
 Uri uri = new Uri("https://api.example.com/search");
@@ -148,7 +148,7 @@ Result<string> query = new { Q = "csharp", Page = 2 }.ToQueryString();          
 
 `WithQueryString` returns a `Result<Uri>`. Null values are skipped, values are escaped, and enums follow the enum conventions like in the builder. The object overloads read public properties by reflection.
 
-### Polly Resilience
+### Polly resilience
 
 `HttpClientResilienceExtensions` builds Polly v8 pipelines on top of [`CSharpEssentials.Resilience`](../CSharpEssentials.Resilience/Readme.MD):
 
@@ -225,7 +225,7 @@ The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception)`
 - A timeout is an `OperationCanceledException` whose token was not cancelled by the caller. When the caller's token is cancelled, nothing is retried.
 - `SsrfBlockedException` is never retried.
 
-### Redirect Following
+### Redirect following
 
 ```csharp
 Result<User> result = await HttpRequestBuilder
@@ -236,7 +236,7 @@ Result<User> result = await HttpRequestBuilder
 
 Only 301, 302, 303, 307 and 308 are followed. Any other status, including 304, is returned as is. A 303, and a 301 or 302 after a POST, becomes a GET with no body. 307 and 308 keep the method and body. `Authorization`, `Proxy-Authorization` and `Cookie` are removed from the request when a redirect changes scheme, host or port. If `HttpClient.DefaultRequestHeaders` holds one of them, a redirect that changes scheme, host or port is not followed and returns `Http.CrossOriginRedirect` (`ErrorType.Forbidden`).
 
-### SSRF Guard
+### SSRF guard
 
 Use it when the URL comes from a user, a tenant or a third party: webhooks, link previews, image fetchers, import-by-URL. Without a guard, a caller can point your server at `http://169.254.169.254/` (cloud metadata), `http://localhost:6379/` or an internal admin panel. The response then leaks back to them, or the request alone does damage.
 

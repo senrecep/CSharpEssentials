@@ -1,4 +1,4 @@
-# Idempotency End-to-End Example
+# Idempotency end-to-end example
 
 One payments service with every idempotency layer wired together, run against PostgreSQL in a container:
 

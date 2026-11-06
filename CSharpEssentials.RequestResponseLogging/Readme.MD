@@ -8,11 +8,11 @@ Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 
 ## Features
 
-- **Detailed Logging**: Request/Response bodies, headers, path, method, timing, sizes.
-- **Configurable Fields**: Choose exactly what to log via `LoggingOptions`.
-- **Path Filtering**: Ignore specific paths (e.g., health checks).
-- **Attributes**: `[SkipRequestLogging]`, `[SkipResponseLogging]`, `[SkipRequestResponseLogging]` for fine-grained control.
-- **Custom Handler**: `UseHandler` hands every `RequestResponseContext` to your own code.
+- Logs request and response bodies, headers, path, method, timing and sizes.
+- `LoggingOptions` sets exactly which fields are logged.
+- Specific paths, such as health checks, can be ignored.
+- `[SkipRequestLogging]`, `[SkipResponseLogging]` and `[SkipRequestResponseLogging]` control logging per endpoint.
+- `UseHandler` hands every `RequestResponseContext` to your own code.
 
 ## Installation
 
@@ -73,7 +73,7 @@ The level, fields and format come from `LoggingOptions`:
 
 Bodies can contain personal data and secrets; log them only where that is acceptable, ignore sensitive paths and mark endpoints with the skip attributes.
 
-### Per-Endpoint Control
+### Per-endpoint control
 
 ```csharp
 using CSharpEssentials.RequestResponseLogging;
@@ -95,7 +95,7 @@ public sealed class AuthController : ControllerBase
 
 `[SkipRequestResponseLogging]` skips both. The attributes are read from endpoint metadata, so Minimal APIs use `.WithMetadata(new SkipRequestLoggingAttribute())`. A skipped body is logged as `Skipped logging request body` / `Skipped logging response body`.
 
-### Custom Fields
+### Custom fields
 
 ```csharp
 app.AddRequestResponseLogging(opt =>
@@ -106,7 +106,7 @@ app.AddRequestResponseLogging(opt =>
     }));
 ```
 
-### Custom Handler
+### Custom handler
 
 `UseHandler` receives the `RequestResponseContext` of every logged request after the rest of the pipeline has completed or thrown. It runs in addition to the logger when both are set. The context exposes `Url`, `RequestBody`, `ResponseBody`, `ResponseCreationTime` (a `TimeSpan`), `ResponseTime` (`mm:ss.fff` text), `RequestLength` and `ResponseLength`.
 

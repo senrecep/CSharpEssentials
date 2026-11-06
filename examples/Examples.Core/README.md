@@ -1,8 +1,8 @@
-# CSharpEssentials.Core Example
+# CSharpEssentials.Core example
 
-This console application demonstrates the core utility extensions provided by `CSharpEssentials.Core`.
+This console application shows the core utility extensions in `CSharpEssentials.Core`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

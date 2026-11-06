@@ -1,4 +1,4 @@
-# CSharpEssentials.Errors: Performance benchmarks (draft)
+# CSharpEssentials.Errors: performance benchmarks (draft)
 
 This page compares the CSharpEssentials.Errors (CSE) `Error` type with ErrorOr 2.1.1 and FluentResults 4.0.0. CSharpFunctionalExtensions 3.7.0 appears only where it has a matching API. It covers creating an error, equality and hashing, building an error from an exception, metadata and record `ToString`, and System.Text.Json. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
 

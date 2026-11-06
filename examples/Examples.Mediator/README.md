@@ -1,8 +1,8 @@
-# CSharpEssentials.Mediator Example
+# CSharpEssentials.Mediator example
 
 This console application demonstrates the pipeline behaviors from `CSharpEssentials.Mediator`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

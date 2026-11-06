@@ -1,8 +1,8 @@
-# CSharpEssentials.Http Example
+# CSharpEssentials.Http example
 
-Console application demonstrating `CSharpEssentials.Http` (Result-based `HttpClient` helpers) and a custom `IResultErrorMapper` from `CSharpEssentials.AspNetCore`.
+A console application that shows `CSharpEssentials.Http` (Result-based `HttpClient` helpers) and a custom `IResultErrorMapper` from `CSharpEssentials.AspNetCore`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

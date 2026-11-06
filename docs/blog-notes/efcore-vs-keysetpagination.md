@@ -13,11 +13,11 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, on in-memory
 
 ## What each library provides
 
-- **EF Core:** `SaveChanges`, interceptors, `EnumToStringConverter`, `Skip`/`Take` and `CountAsync`, context pooling. Keyset paging, audit fields and domain events are documented patterns you write yourself.
-- **MR.EntityFrameworkCore.KeysetPagination 1.6.0:** `KeysetPaginate` with a prebuilt (`KeysetQuery.Build`) or inline key definition, a reference object for the position, `EnsureCorrectOrder` for backward pages, and `HasNextAsync`/`HasPreviousAsync`, which each run a query. No cursor format; the caller serializes the reference.
-- **X.PagedList.EF 10.6.0:** `ToPagedListAsync(pageNumber, pageSize)`, which runs a count and a Skip/Take query and returns an `IPagedList<T>` with page metadata.
-- **EntityFrameworkCore.Exceptions.Sqlite 10.0.1:** `UseExceptionProcessor()` turns provider errors into typed exceptions (`UniqueConstraintException` and others). DbExceptionClassifier, shipped with it, classifies a `DbException` without EF Core.
-- **CSE:** `AuditInterceptor`, `DomainEventInterceptor` and `BaseDbContext` dispatch, `KeysetPaginateAsync` with validated opaque cursors, `PaginateAsync` with a page-size cap, wire-name enum converters, `MigrateDataAsync`, and `DbErrorTranslation` from SQLSTATE plus your own translators. CSE.Entity provides `EntityBase` with audit fields and a domain event list.
+- EF Core: `SaveChanges`, interceptors, `EnumToStringConverter`, `Skip`/`Take` and `CountAsync`, context pooling. Keyset paging, audit fields and domain events are documented patterns you write yourself.
+- MR.EntityFrameworkCore.KeysetPagination 1.6.0: `KeysetPaginate` with a prebuilt (`KeysetQuery.Build`) or inline key definition, a reference object for the position, `EnsureCorrectOrder` for backward pages, and `HasNextAsync`/`HasPreviousAsync`, which each run a query. No cursor format; the caller serializes the reference.
+- X.PagedList.EF 10.6.0: `ToPagedListAsync(pageNumber, pageSize)`, which runs a count and a Skip/Take query and returns an `IPagedList<T>` with page metadata.
+- EntityFrameworkCore.Exceptions.Sqlite 10.0.1: `UseExceptionProcessor()` turns provider errors into typed exceptions (`UniqueConstraintException` and others). DbExceptionClassifier, shipped with it, classifies a `DbException` without EF Core.
+- CSE: `AuditInterceptor`, `DomainEventInterceptor` and `BaseDbContext` dispatch, `KeysetPaginateAsync` with validated opaque cursors, `PaginateAsync` with a page-size cap, wire-name enum converters, `MigrateDataAsync`, and `DbErrorTranslation` from SQLSTATE plus your own translators. CSE.Entity provides `EntityBase` with audit fields and a domain event list.
 
 ## Feature matrix
 
@@ -63,13 +63,13 @@ Pending the full default-job run. These are the rows to pull:
 
 These predictions come from reading the code. Nothing has been measured yet.
 
-- **The `Func` ordering rebuilds the keys on every call** (`CSharpEssentials.EntityFrameworkCore/Pagination/KeysetPaginationExtensions.cs:41`), including the SHA-256 key fingerprint (`Pagination/Keyset/KeysetOrdering.cs:56-63`). The Readme shows this form. The cached-ordering row shows the cost, and MR's inline row is the fair pair for it.
-- **`DomainEvents` allocates on every read** (`CSharpEssentials.Entity/EntityBase.cs:33`), even when empty, and the collector copies it again per tracked entity (`Interceptors/DomainEvents/DomainEventCollector.cs:49`).
-- **`BaseDbContext` costs per instance:** a GUID, a DI scope, a log call and a finalizer with no `GC.SuppressFinalize` (`Abstractions/BaseDbContext.cs:16`, `:24-27`, `:172-182`). It also cannot be pooled.
-- **`MigrateDataAsync` at 10,000 rows** matches with nested loops (`Extensions/DbContextExtensionMethods.cs:153-155`, `:165-167`) and compiles both key selectors on every call (`:147-148`).
-- **SQLite errors need your own translator** in CSE; EntityFrameworkCore.Exceptions detects them out of the box.
-- **`AuditInterceptor` creates a DI scope on every save** and resolves `IAuditUserIdProvider`, even when nothing is auditable (`Interceptors/Audit/AuditInterceptor.cs:42`). The hand-written `SaveChangesAsync` override reads a user it captured, so it is expected to win on the SaveChangesAudit rows.
-- **On the keyset After row, CSE cached is expected to be slower** than the hand-written row and MR prebuilt with `limit + 1`. CSE validates the cursor (version, direction, key fingerprint), issues the previous cursor too, and builds the `Invalid` error even when the cursor decodes (`Pagination/Keyset/KeysetCursorCodec.cs:88`).
+- The `Func` ordering rebuilds the keys on every call (`CSharpEssentials.EntityFrameworkCore/Pagination/KeysetPaginationExtensions.cs:41`), including the SHA-256 key fingerprint (`Pagination/Keyset/KeysetOrdering.cs:56-63`). The Readme shows this form. The cached-ordering row shows the cost, and MR's inline row is the fair pair for it.
+- `DomainEvents` allocates on every read (`CSharpEssentials.Entity/EntityBase.cs:33`), even when empty, and the collector copies it again per tracked entity (`Interceptors/DomainEvents/DomainEventCollector.cs:49`).
+- `BaseDbContext` has a per-instance cost: a GUID, a DI scope, a log call and a finalizer with no `GC.SuppressFinalize` (`Abstractions/BaseDbContext.cs:16`, `:24-27`, `:172-182`). It also cannot be pooled.
+- `MigrateDataAsync` at 10,000 rows matches with nested loops (`Extensions/DbContextExtensionMethods.cs:153-155`, `:165-167`) and compiles both key selectors on every call (`:147-148`).
+- SQLite errors need your own translator in CSE; EntityFrameworkCore.Exceptions detects them out of the box.
+- `AuditInterceptor` creates a DI scope on every save and resolves `IAuditUserIdProvider`, even when nothing is auditable (`Interceptors/Audit/AuditInterceptor.cs:42`). The hand-written `SaveChangesAsync` override reads a user it captured, so it is expected to win on the SaveChangesAudit rows.
+- On the keyset After row, CSE cached is expected to be slower than the hand-written row and MR prebuilt with `limit + 1`. CSE validates the cursor (version, direction, key fingerprint), issues the previous cursor too, and builds the `Invalid` error even when the cursor decodes (`Pagination/Keyset/KeysetCursorCodec.cs:88`).
 
 ## Where CSE may win or tie
 
