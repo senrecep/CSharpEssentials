@@ -50,18 +50,36 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         IIdempotencyResultCodec<TResult> codec,
         CancellationToken cancellationToken = default)
     {
+        Guard.NotNull(operation);
+        return await ExecuteAsync(key, fingerprint, options, operation, static (run, token) => run(token), codec, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// <see cref="ExecuteAsync{TResult}(IdempotencyRecordKey, string, IdempotencyExecutionOptions?, Func{CancellationToken, ValueTask{TResult}}, IIdempotencyResultCodec{TResult}, CancellationToken)"/>
+    /// with the state of the operation passed in, so a caller on the hot path needs no closure per call.
+    /// </summary>
+    internal async ValueTask<IdempotencyExecution<TResult>> ExecuteAsync<TState, TResult>(
+        IdempotencyRecordKey key,
+        string fingerprint,
+        IdempotencyExecutionOptions? options,
+        TState state,
+        Func<TState, CancellationToken, ValueTask<TResult>> operation,
+        IIdempotencyResultCodec<TResult> codec,
+        CancellationToken cancellationToken = default)
+    {
         Guard.NotNull(key);
         Guard.NotNullOrEmpty(fingerprint);
         Guard.NotNull(operation);
         Guard.NotNull(codec);
 
-        var settings = IdempotencyExecutionSettings.Resolve(_options.CurrentValue, options, $"the idempotent operation in '{key.Namespace}'");
+        var settings = IdempotencyExecutionSettings.Resolve(_options.CurrentValue, options, "the idempotent operation", key.Namespace);
         if (settings.Mode == IdempotencyMode.Off)
-            return new(IdempotencyExecutionStatus.Executed, await operation(cancellationToken).ConfigureAwait(false));
+            return new(IdempotencyExecutionStatus.Executed, await operation(state, cancellationToken).ConfigureAwait(false));
 
         IIdempotencyRecordStore store = ResolveStore(settings.StoreKey);
         if (settings.Mode == IdempotencyMode.Observe)
-            return await ObserveAsync(store, key, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false);
+            return await ObserveAsync(store, key, fingerprint, settings, state, operation, codec, cancellationToken).ConfigureAwait(false);
 
         IdempotencyRecordReservation reservation =
             await store.TryReserveAsync(key, fingerprint, settings.Lease, cancellationToken).ConfigureAwait(false);
@@ -69,7 +87,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         return reservation.Status switch
         {
             IdempotencyReservationStatus.Reserved =>
-                await RunAsync(store, store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false),
+                await RunAsync(store, store, key, reservation.Token!, fingerprint, settings, state, operation, codec, cancellationToken).ConfigureAwait(false),
             IdempotencyReservationStatus.Completed => Replay(key, reservation.Payload.GetValueOrDefault(), codec),
             IdempotencyReservationStatus.InFlight => new(IdempotencyExecutionStatus.InFlight, default),
             IdempotencyReservationStatus.FingerprintMismatch => new(IdempotencyExecutionStatus.KeyReused, default),
@@ -91,12 +109,13 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
             IdempotencyMetrics.Record(decision, settings.Mode, settings.Source, key.Namespace);
     }
 
-    private async ValueTask<IdempotencyExecution<TResult>> ObserveAsync<TResult>(
+    private async ValueTask<IdempotencyExecution<TResult>> ObserveAsync<TState, TResult>(
         IIdempotencyRecordStore store,
         IdempotencyRecordKey key,
         string fingerprint,
         IdempotencyExecutionSettings settings,
-        Func<CancellationToken, ValueTask<TResult>> operation,
+        TState state,
+        Func<TState, CancellationToken, ValueTask<TResult>> operation,
         IIdempotencyResultCodec<TResult> codec,
         CancellationToken cancellationToken)
     {
@@ -117,7 +136,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         switch (reservation?.Status)
         {
             case IdempotencyReservationStatus.Reserved:
-                return await RunAsync(reservations, store, key, reservation.Token!, fingerprint, settings, operation, codec, cancellationToken).ConfigureAwait(false);
+                return await RunAsync(reservations, store, key, reservation.Token!, fingerprint, settings, state, operation, codec, cancellationToken).ConfigureAwait(false);
             case IdempotencyReservationStatus.Completed:
                 LogWouldReplay(_logger, key.Namespace, new IdempotencyKeyHash(key));
                 break;
@@ -131,17 +150,18 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
                 break;
         }
 
-        return new(IdempotencyExecutionStatus.Executed, await operation(cancellationToken).ConfigureAwait(false));
+        return new(IdempotencyExecutionStatus.Executed, await operation(state, cancellationToken).ConfigureAwait(false));
     }
 
-    private async ValueTask<IdempotencyExecution<TResult>> RunAsync<TResult>(
+    private async ValueTask<IdempotencyExecution<TResult>> RunAsync<TState, TResult>(
         IIdempotencyRecordStore store,
         IIdempotencyRecordStore results,
         IdempotencyRecordKey key,
         string token,
         string fingerprint,
         IdempotencyExecutionSettings settings,
-        Func<CancellationToken, ValueTask<TResult>> operation,
+        TState state,
+        Func<TState, CancellationToken, ValueTask<TResult>> operation,
         IIdempotencyResultCodec<TResult> codec,
         CancellationToken cancellationToken)
     {
@@ -154,7 +174,7 @@ public sealed partial class IdempotencyExecutor : IIdempotencyExecutor
         TResult result;
         try
         {
-            result = await operation(cancellationToken).ConfigureAwait(false);
+            result = await operation(state, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception)
         {

@@ -732,6 +732,40 @@ public sealed class IdempotencyBehaviorTests : IDisposable
         act.Should().Throw<ArgumentNullException>();
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_Should_Pass_The_Request_And_Token_To_The_Next_Step_With_Any_Executor(bool customExecutor)
+    {
+        IIdempotencyExecutor executor = new IdempotencyExecutor(_store, _monitor, logger: _loggerFactory.CreateLogger<IdempotencyExecutor>());
+        IdempotencyBehavior<IdemCommand, Result<int>> behavior = new(
+            customExecutor ? new ForwardingExecutor(executor) : executor,
+            _monitor,
+            _options,
+            _loggerFactory.CreateLogger<IdempotencyBehavior<IdemCommand, Result<int>>>(),
+            new PrincipalAccessor(() => _principal));
+        using CancellationTokenSource cancellation = new();
+        IdemCommand command = new("k1", 5);
+        IdemCommand? seen = null;
+        CancellationToken seenToken = default;
+
+        Result<int> first = await behavior.Handle(command, (message, token) =>
+        {
+            seen = message;
+            seenToken = token;
+            return Run(42);
+        }, cancellation.Token);
+        Result<int> retry = await behavior.Handle(new IdemCommand("k1", 5), (_, _) => Run(99), CancellationToken.None);
+        Result<int> failed = await behavior.Handle(new IdemCommand("k2", 5), (_, _) => Fail(Error.Unexpected("Db.Down")), CancellationToken.None);
+
+        seen.Should().BeSameAs(command);
+        seenToken.Should().Be(cancellation.Token);
+        first.Value.Should().Be(42);
+        retry.Value.Should().Be(42);
+        failed.FirstError.Code.Should().Be("Db.Down");
+        _runs.Should().Be(2);
+    }
+
     private static ClaimsPrincipal UserPrincipal(string userId) =>
         new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "test"));
 
@@ -766,6 +800,18 @@ public sealed class IdempotencyBehaviorTests : IDisposable
     {
         _runs++;
         return new ValueTask<int>(value);
+    }
+
+    private sealed class ForwardingExecutor(IIdempotencyExecutor inner) : IIdempotencyExecutor
+    {
+        public ValueTask<IdempotencyExecution<TResult>> ExecuteAsync<TResult>(
+            IdempotencyRecordKey key,
+            string fingerprint,
+            IdempotencyExecutionOptions? options,
+            Func<CancellationToken, ValueTask<TResult>> operation,
+            IIdempotencyResultCodec<TResult> codec,
+            CancellationToken cancellationToken = default) =>
+            inner.ExecuteAsync(key, fingerprint, options, operation, codec, cancellationToken);
     }
 
     private sealed class PrincipalAccessor(Func<ClaimsPrincipal?> principal) : IIdempotencyScopeAccessor

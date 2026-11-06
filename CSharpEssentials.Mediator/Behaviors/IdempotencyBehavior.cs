@@ -134,11 +134,12 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
 
         IdempotencyRecordKey recordKey = new(RequestType, scope, key);
         ResponseCodec codec = message is ITransactionalRequest || !_options.StoreFailures ? _releaseFailures : _storeFailures;
-        IdempotencyExecution<TResponse> execution = await _executor.ExecuteAsync(
+        IdempotencyExecution<TResponse> execution = await ExecuteAsync(
             recordKey,
             fingerprint,
             SettingsFor(message, mode),
-            token => next(message, token),
+            message,
+            next,
             codec,
             cancellationToken).ConfigureAwait(false);
 
@@ -194,6 +195,37 @@ public sealed partial class IdempotencyBehavior<TRequest, TResponse> : IPipeline
             Source = IdempotencyMetrics.MediatorSource,
         };
     }
+
+    /// <summary>
+    /// Runs <paramref name="next"/> through the executor. The built-in executor takes the request and the next step as
+    /// state, so a request allocates no closure; another executor gets the operation as a delegate.
+    /// </summary>
+    private ValueTask<IdempotencyExecution<TResponse>> ExecuteAsync(
+        IdempotencyRecordKey recordKey,
+        string fingerprint,
+        IdempotencyExecutionOptions settings,
+        TRequest message,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        ResponseCodec codec,
+        CancellationToken cancellationToken)
+    {
+        if (_executor is IdempotencyExecutor executor)
+        {
+            return executor.ExecuteAsync(
+                recordKey,
+                fingerprint,
+                settings,
+                (Message: message, Next: next),
+                static (state, token) => state.Next(state.Message, token),
+                codec,
+                cancellationToken);
+        }
+
+        return _executor.ExecuteAsync(recordKey, fingerprint, settings, Operation(message, next), codec, cancellationToken);
+    }
+
+    private static Func<CancellationToken, ValueTask<TResponse>> Operation(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next) =>
+        token => next(message, token);
 
     private static string Fingerprint(TRequest message, JsonSerializerOptions? serializerOptions)
     {
