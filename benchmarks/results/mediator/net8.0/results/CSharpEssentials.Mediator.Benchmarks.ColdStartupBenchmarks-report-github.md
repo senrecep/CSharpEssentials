@@ -12,5 +12,5 @@ RunStrategy=ColdStart  WarmupCount=0
 ```
 | Method   | Mean     | Error    | StdDev   | Ratio | Allocated | Alloc Ratio |
 |--------- |---------:|---------:|---------:|------:|----------:|------------:|
-| MediatR  | 29.51 ms | 0.333 ms | 0.311 ms |  1.00 | 442.76 KB |        1.00 |
-| Mediator | 32.31 ms | 0.255 ms | 0.239 ms |  1.10 | 363.36 KB |        0.82 |
+| MediatR  | 30.00 ms | 0.257 ms | 0.240 ms |  1.00 | 442.76 KB |        1.00 |
+| Mediator | 32.98 ms | 0.292 ms | 0.273 ms |  1.10 | 363.36 KB |        0.82 |

@@ -10,7 +10,7 @@ Job=cold  IterationCount=1  LaunchCount=15
 RunStrategy=ColdStart  WarmupCount=0  
 
 ```
-| Method   | Mean     | Error    | StdDev   | Ratio | Allocated | Alloc Ratio |
-|--------- |---------:|---------:|---------:|------:|----------:|------------:|
-| MediatR  | 32.41 ms | 0.316 ms | 0.296 ms |  1.00 | 429.68 KB |        1.00 |
-| Mediator | 35.55 ms | 0.353 ms | 0.330 ms |  1.10 | 364.01 KB |        0.85 |
+| Method   | Mean     | Error    | StdDev   | Ratio | RatioSD | Allocated | Alloc Ratio |
+|--------- |---------:|---------:|---------:|------:|--------:|----------:|------------:|
+| MediatR  | 33.06 ms | 0.366 ms | 0.342 ms |  1.00 |    0.01 |  429.4 KB |        1.00 |
+| Mediator | 36.56 ms | 0.510 ms | 0.477 ms |  1.11 |    0.02 | 388.76 KB |        0.91 |

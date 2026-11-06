@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Mediator.Benchmarks.LoggingBehaviorBenchmarks-20261105-141035</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method       </th><th>Logger</th><th>Payload  </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>MediatorHandWritten</td><td>Disabled</td><td>None</td><td>103.7 ns</td><td>0.08 ns</td><td>0.07 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Cse</td><td>Disabled</td><td>None</td><td>109.3 ns</td><td>0.62 ns</td><td>0.58 ns</td><td>1.05</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>MediatRHandWritten</td><td>Disabled</td><td>None</td><td>229.8 ns</td><td>1.39 ns</td><td>1.30 ns</td><td>2.22</td><td>0.01</td><td>0.0281</td><td>472 B</td><td>NA</td>
+</tr><tr><td>MediatorHandWritten</td><td>Disabled</td><td>RequestResponse</td><td>102.7 ns</td><td>0.05 ns</td><td>0.04 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Cse</td><td>Disabled</td><td>RequestResponse</td><td>102.5 ns</td><td>0.03 ns</td><td>0.02 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>MediatRHandWritten</td><td>Disabled</td><td>RequestResponse</td><td>226.5 ns</td><td>3.11 ns</td><td>2.90 ns</td><td>2.20</td><td>0.03</td><td>0.0281</td><td>472 B</td><td>NA</td>
+</tr><tr><td>MediatorHandWritten</td><td>Enabled</td><td>None</td><td>293.4 ns</td><td>0.66 ns</td><td>0.62 ns</td><td>1.00</td><td>0.00</td><td>0.0143</td><td>240 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Enabled</td><td>None</td><td>291.1 ns</td><td>0.51 ns</td><td>0.43 ns</td><td>0.99</td><td>0.00</td><td>0.0143</td><td>240 B</td><td>1.00</td>
+</tr><tr><td>MediatRHandWritten</td><td>Enabled</td><td>None</td><td>471.2 ns</td><td>1.61 ns</td><td>1.50 ns</td><td>1.61</td><td>0.01</td><td>0.0424</td><td>712 B</td><td>2.97</td>
+</tr><tr><td>MediatorHandWritten</td><td>Enabled</td><td>RequestResponse</td><td>1,039.8 ns</td><td>3.64 ns</td><td>3.23 ns</td><td>1.00</td><td>0.00</td><td>0.0725</td><td>1232 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Enabled</td><td>RequestResponse</td><td>1,042.5 ns</td><td>3.55 ns</td><td>3.32 ns</td><td>1.00</td><td>0.00</td><td>0.0725</td><td>1232 B</td><td>1.00</td>
+</tr><tr><td>MediatRHandWritten</td><td>Enabled</td><td>RequestResponse</td><td>1,308.2 ns</td><td>3.50 ns</td><td>2.92 ns</td><td>1.26</td><td>0.00</td><td>0.1011</td><td>1704 B</td><td>1.38</td>
+</tr></tbody></table>
+</body>
+</html>
