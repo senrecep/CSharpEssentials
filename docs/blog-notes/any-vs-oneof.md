@@ -1,6 +1,6 @@
-# Blog notes: CSharpEssentials.Any, OneOf and Dunet (draft)
+# Blog notes: CSharpEssentials.Any, OneOf and Dunet
 
-These are notes for a post, not the post. The numbers will come from `CSharpEssentials.Any/BENCHMARKS.md` once the full default-job run is committed under `benchmarks/results/any/{tfm}/results/`. There are no numbers yet.
+These are notes for a post, not the post. The numbers below are copied from the full default-job run in `benchmarks/results/any/{tfm}/results/`. [CSharpEssentials.Any/BENCHMARKS.md](../../CSharpEssentials.Any/BENCHMARKS.md#results) and [CSharpEssentials.These/BENCHMARKS.md](../../CSharpEssentials.These/BENCHMARKS.md#results) have the full tables for all four TFMs.
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The libraries compared are OneOf 3.0.271, the third-party OneOf.Serialization.SystemTextJson 1.1.1 add-on (for JSON only) and Dunet 1.16.2. These has no library competitor and is compared with a hand-written record (see `CSharpEssentials.These/BENCHMARKS.md`).
 
@@ -28,36 +28,54 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
   - `Any<T0..T7>` structs with an index and an `object` value. Implicit conversions, optional-handler `Match`/`Switch`, `IsX`/`GetX`, `TryAs<T>`, and `Partition`/`Traverse` over sequences.
   - Built-in JSON as `{"Index":0,"Value":42}`.
 
+## How these numbers were produced
+
+- BenchmarkDotNet v0.14.0 default job, full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on one Linux machine.
+- Main pass load average (1 minute) between 1.18 and 1.43. `ToStringComparison` was rerun on every TFM after the ToString parity fix, with a load average between 2.42 and 2.71.
+- Construct, TryPick and These Match use `OperationsPerInvoke = 1024`, so those means are per element of a 1024-element batch. The other rows time one call, or one partition of 1000 items.
+- Reports: `benchmarks/results/any/{tfm}/results/*-report-github.md`, for example [net10.0 Construct](../../benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ConstructComparison-report-github.md).
+
 ## The numbers that matter
 
-Pending the full run. These are the rows to pull:
+Headline rows on net10.0, `Mean / Ratio / Allocated` against the CSE row. The other TFMs are in the package docs.
 
-1. Construct, int case: allocated bytes and time for all three. This shows the cost of boxing against the cost of allocating a class.
-2. Construct, text case: the control, where CSE does not box.
-3. Match/Switch, int case: the cost of unboxing in CSE against a typed read in OneOf and a virtual call in Dunet.
-4. Partition over 1000 items: CSE `Partition` against the same loop written by hand over CSE. This isolates the per-item delegate cost.
-5. JSON Deserialize: CSE's double parse against the add-on's reflection invoke against STJ polymorphism.
+| Row | CSE | OneOf | Dunet |
+|---|---|---|---|
+| 1. Construct, int (per element) | 7.2450 ns / 1.00 / 24 B | 0.4401 ns / 0.06 / - | 9.5177 ns / 1.31 / 24 B |
+| 2. Construct, text (per element) | 2.3129 ns / 1.00 / - | 2.0255 ns / 0.88 / - | 11.2354 ns / 4.86 / 24 B |
+| 3. Match `ToInt`, int | 1.551 ns / 1.00 / - | 1.124 ns / 0.72 / - | 5.093 ns / 3.28 / - |
+| 3. `Switch`, int | 1.708 ns / 1.00 / - | 1.521 ns / 0.89 / - | 1.406 ns / 0.82 / - |
+| 4. Partition, 1000 items | 6.281 μs / 1.00 / 18.33 KB | 3.387 μs / 0.54 / 18.3 KB (hand loop) | 9.107 μs / 1.45 / 18.3 KB (stateful `Match`) |
+| 5. JSON Deserialize, int | 463.5 ns / 1.00 / 344 B | 308.2 ns / 0.67 / 152 B (add-on) | 292.1 ns / 0.63 / 168 B |
+| 5. JSON Serialize, int | 215.4 ns / 1.00 / 104 B | 159.4 ns / 0.74 / 88 B (add-on) | 225.8 ns / 1.05 / 392 B |
 
-## Where CSE is expected to lose (state it, do not soften it)
+- Row 4 reference: the hand loop over CSE values takes 3.309 μs (ratio 0.53, 18.3 KB) on net10.0, so most of the `Partition()` gap is the per-item delegate call through `Switch`.
+- ToString (net10.0, not a ranking): CSE 1.9939 ns and 0 B for 42, OneOf 13.2647 ns and 56 B, Dunet 60.3165 ns and 272 B. The outputs differ (`42`, `System.Int32: 42`, `Number { Value = 42 }`).
+- These against hand-written code (net10.0): Match Right 1.9989 ns against 0.5826 ns (ratio 0.29) per fold, Map/FlatMap/Match pipeline Right 22.3331 ns against 1.3662 ns (ratio 0.06), JSON Deserialize Right 325.0 ns and 120 B against 240.1 ns and 32 B (ratio 0.74).
 
-These predictions come from reading the code. Nothing has been measured yet.
+## Where CSE loses (measured)
 
-- **Boxing.** `Any<T0, T1>` stores `object? Value` (`CSharpEssentials.Any/AnyT2.cs:20-21`), so every int case allocates 24 B when built and is unboxed on every read. OneOf does not allocate.
-- **JSON deserialize.** The value is read as a `JsonElement` and parsed a second time from `GetRawText()` (`CSharpEssentials.Any/Any.cs:72`). That second parse uses `EnhancedJsonSerializerOptions.DefaultOptions`, not the caller's options. A naming policy on the outer call is therefore not applied to the inner value. That is a correctness bug as well as a speed cost.
-- **Partition.** `item.Switch(first: first.Add, second: second.Add)` (`CSharpEssentials.Any/AnyCollectionExtensions.cs:39`) allocates two delegates per item. The hand-written CSE loop is the reference that shows this cost.
-- **No exhaustiveness.** Handlers are optional and an unmatched case returns `NotExecuted`. Nothing enforces this at compile time, so callers have to check for it. OneOf and Dunet both refuse to compile a match that misses a case.
-- **ToString** serializes the value through reflection-based STJ (`CSharpEssentials.Any/AnyT2.cs:70`). The outputs differ from the competitors', so this is not ranked, but it is not AOT-friendly.
-- **These Partition** allocates three capturing delegates per item (plus one closure per call) (`CSharpEssentials.These/TheseCollectionExtensions.cs:14-17`).
+- **Boxing.** `Any<T0, T1>` stores `object? Value` (`CSharpEssentials.Any/AnyT2.cs:20-21`), so every int case allocates 24 B. Construct int is 7.2450 to 8.6522 ns for CSE against 0.4394 to 0.5900 ns for OneOf across the four TFMs (ratio 0.06 to 0.07), and OneOf allocates nothing.
+- **Reads.** OneOf is ahead of CSE on Match `ToInt` in both cases on every TFM (ratio 0.37 to 0.95), and Dunet and OneOf are ahead on `Switch` almost everywhere (the exception is OneOf on net10.0 Text, ratio 1.19). OneOf `TryPickT0` on an int is ahead on every TFM (ratio 0.47 to 0.75). These are one to five nanosecond operations.
+- **JSON deserialize.** CSE is the slowest row and allocates the most on every TFM: 444.6 to 535.3 ns and 344 to 408 B, against 291.6 to 406.8 ns and 152 to 240 B. `AnyValueJsonConverter` parses the value into a `JsonElement` first, and the constructor then deserializes that element against the case type with the caller's options (`CSharpEssentials.Any/Any.cs:66`).
+- **JSON serialize on net10.0 and net11.0.** The OneOf add-on is ahead (ratio 0.68 to 0.75) and allocates less (88 B against 104 B for Int, 112 B against 120 B for Text). Dunet is also ahead on net11.0 Int (ratio 0.96). On net8.0 and net9.0 the three are within a ratio of 0.92 to 1.14 (OneOf ahead on net8.0 Int at 0.97 and on net9.0 Text at 0.92, Dunet on net9.0 Text at 0.96), and CSE allocates the least.
+- **Partition.** `item.Switch(first: addFirst, second: addSecond)` (`CSharpEssentials.Any/AnyCollectionExtensions.cs:42`) makes one delegate call per item. The two delegates are bound once per call. CSE `Partition()` is behind the OneOf hand loop and the hand loop over CSE on every TFM (ratio 0.50 to 0.64).
+- **No exhaustiveness.** Handlers are optional and an unmatched case returns `NotExecuted`. Nothing enforces this at compile time, so callers have to check for it. OneOf and Dunet both refuse to compile a match that misses a case. This is a design point, not a measurement.
+- **These against hand-written code.** CSE `Match` is behind on every state and TFM (ratio 0.27 to 0.49), the pipeline too (ratio 0.05 to 0.56), and JSON deserialize too (ratio 0.68 to 0.77, with 120 to 184 B against 32 or 64 B). The CSE pipeline Left and Right rows are slower than the Both row on net9.0 to net11.0 even though Both does more work, which has not been explained.
 
-## Where CSE may win or tie
+## Where CSE wins or ties
 
-To be confirmed by the run:
-- Text-case construct and match, where no boxing happens.
-- Possibly JSON serialize.
+Measured:
+- Construct against Dunet in both cases on every TFM (Dunet ratio 1.21 to 5.30). Construct text against OneOf is a tie on net9.0 and net11.0 (ratio 1.00).
+- Match `ToInt` against Dunet on every TFM (Dunet ratio 1.32 to 3.78).
+- TryPick by case on text against OneOf on every TFM (OneOf ratio 1.51 to 2.63).
+- Partition against the Dunet stateful `Match` on every TFM (Dunet ratio 1.06 to 1.75).
+- JSON serialize allocations: 104 B and 120 B for CSE against 392 B and 408 B for Dunet on every TFM.
+- ToString (not a ranking): CSE returns the value's own `ToString()` and allocated nothing for 42 or "forty-two" on any TFM. OneOf allocated 56 to 72 B and Dunet 272 to 288 B.
 
 Features only CSE ships (not a speed claim):
 - Partition and Traverse, which neither competitor ships.
-- Built-in JSON, where OneOf needs a third-party package. The deserialize path is still expected to lose (see above).
+- Built-in JSON, where OneOf needs a third-party package. Deserialize is still the slowest row (see above).
 
 ## Caveats to keep in the post
 
@@ -65,7 +83,7 @@ Features only CSE ships (not a speed claim):
 - Dunet allocating on every construct is by design: it is a class hierarchy. Don't present that as overhead.
 - The OneOf and Dunet partition rows are hand-written, because neither library has a partition.
 - The wire formats differ, so the JSON payload sizes differ.
-- ToString outputs differ and are not a ranking.
+- ToString outputs differ and are not a ranking. The net8.0 Dunet Int row has a CV above 5%.
 - On net8 CSE runs its netstandard2.1 build, and System.Text.Json is the 9.0.4 package for every column.
 - The These pipeline baseline copies CSE's lossy FlatMap-on-Both rule so parity holds: errors are never combined, so either the mapper's left (on Right or Both) or the original left (on Left) is dropped.
 
@@ -74,4 +92,4 @@ Features only CSE ships (not a speed claim):
 - "Boxing is the whole story": compare the int and text cases side by side.
 - "A struct is not automatically free": a struct union that holds `object` still allocates.
 - "Batteries included against a minimal core": CSE ships Partition and JSON, OneOf keeps a small core and leaves JSON to add-ons, and Dunet hands JSON to STJ.
-- "The bug the benchmark found": the deserializer ignores the caller's options (`Any.cs:72`).
+- "What the review found": the code review behind this suite found that deserialize ignored the caller's options and that ToString went through reflection-based JSON. Both are fixed in the code measured here, and deserialize is still the slowest JSON row.
