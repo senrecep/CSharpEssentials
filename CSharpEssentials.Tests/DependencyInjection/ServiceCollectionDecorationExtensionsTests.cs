@@ -140,6 +140,45 @@ public class ServiceCollectionDecorationExtensionsTests
         public void Dispose() => Disposed.Add(inner is null ? "inner" : "decorator");
     }
 
+    private sealed class LoggedGreeter : IGreeter, IDisposable
+    {
+        private readonly List<string> _log;
+
+        public LoggedGreeter(List<string> log)
+        {
+            _log = log;
+            log.Add("new inner");
+        }
+
+        public string Greet() => "logged";
+
+        public void Dispose() => _log.Add("dispose inner");
+    }
+
+    private sealed class LoggedDecorator : IGreeter, IDisposable
+    {
+        private readonly string _name;
+        private readonly List<string> _log;
+        private readonly IGreeter _inner;
+
+        public LoggedDecorator(string name, List<string> log, IGreeter inner)
+        {
+            _name = name;
+            _log = log;
+            _inner = inner;
+            log.Add("new " + name);
+        }
+
+        public string Greet() => _name + "(" + _inner.Greet() + ")";
+
+        public void Dispose() => _log.Add("dispose " + _name);
+    }
+
+    private sealed class PrefixedGreeter(IPrefix prefix) : IGreeter
+    {
+        public string Greet() => prefix.Value;
+    }
+
     private sealed class Repository<T> : IRepository<T>
     {
         public string Describe(T sample) => $"{typeof(T).Name}:{sample}";
@@ -332,6 +371,121 @@ public class ServiceCollectionDecorationExtensionsTests
         provider.Dispose();
 
         TrackingGreeter.Disposed.Should().BeEquivalentTo("inner", "decorator");
+    }
+
+    [Theory]
+    [InlineData("type")]
+    [InlineData("factory")]
+    [InlineData("keyed factory")]
+    public void Decorate_Should_CreateAndDisposeOneInnerPerScope_When_ScopedRegistrationIsDecoratedTwice(string shape)
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        object? key = shape == "factory" ? null : "k";
+        _ = shape switch
+        {
+            "type" => services.AddKeyedScoped<IGreeter, LoggedGreeter>(key),
+            "factory" => services.AddScoped<IGreeter>(sp => new LoggedGreeter(sp.GetRequiredService<List<string>>())),
+            _ => services.AddKeyedScoped<IGreeter>(key, (sp, _) => new LoggedGreeter(sp.GetRequiredService<List<string>>())),
+        };
+        services
+            .Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner), key)
+            .Decorate<IGreeter>((inner, _) => new LoggedDecorator("second", log, inner), key);
+        using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        IServiceScope scope = provider.CreateScope();
+        IGreeter greeter = scope.ServiceProvider.GetRequiredKeyedService<IGreeter>(key);
+        scope.ServiceProvider.GetRequiredKeyedService<IGreeter>(key).Should().BeSameAs(greeter);
+        using (IServiceScope other = provider.CreateScope())
+        {
+            other.ServiceProvider.GetRequiredKeyedService<IGreeter>(key).Should().NotBeSameAs(greeter);
+        }
+
+        greeter.Greet().Should().Be("second(first(logged))");
+        log.Should().Equal("new inner", "new first", "new second", "new inner", "new first", "new second", "dispose second", "dispose first", "dispose inner");
+        log.Clear();
+        scope.Dispose();
+
+        log.Should().Equal("dispose second", "dispose first", "dispose inner");
+    }
+
+    [Fact]
+    public void Decorate_Should_CreateOneInnerPerRequestedKey_When_AnyKeyScopedRegistrationIsDecorated()
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        services.AddKeyedScoped<IGreeter, LoggedGreeter>(KeyedService.AnyKey);
+        services.Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner), KeyedService.AnyKey);
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        IServiceScope scope = provider.CreateScope();
+        IGreeter a = scope.ServiceProvider.GetRequiredKeyedService<IGreeter>("a");
+        IGreeter b = scope.ServiceProvider.GetRequiredKeyedService<IGreeter>("b");
+
+        a.Should().NotBeSameAs(b);
+        scope.ServiceProvider.GetRequiredKeyedService<IGreeter>("a").Should().BeSameAs(a);
+        log.Should().Equal("new inner", "new first", "new inner", "new first");
+        log.Clear();
+        scope.Dispose();
+
+        log.Should().Equal("dispose first", "dispose inner", "dispose first", "dispose inner");
+    }
+
+    [Fact]
+    public void Decorate_Should_ShareOneInnerPerScope_When_ScopedServiceIsResolvedAloneAndAsEnumerable()
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        services.AddScoped<IGreeter, Greeter>();
+        services.AddScoped<IGreeter, LoggedGreeter>();
+        services.Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner));
+        using ServiceProvider provider = services.BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+
+        IGreeter single = scope.ServiceProvider.GetRequiredService<IGreeter>();
+        IGreeter[] all = [.. scope.ServiceProvider.GetServices<IGreeter>()];
+
+        all.Should().HaveCount(2);
+        all[1].Should().BeSameAs(single);
+        all[0].Greet().Should().Be("first(hello)");
+        log.Should().Equal("new inner", "new first", "new first");
+    }
+
+    [Fact]
+    public void Decorate_Should_CreateOneInnerAndDisposeItWithRoot_When_SingletonRegistrationIsDecorated()
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        services.AddSingleton<IGreeter, LoggedGreeter>();
+        services.Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner));
+        ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        using (IServiceScope scope = provider.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<IGreeter>().Should().BeSameAs(provider.GetRequiredService<IGreeter>());
+        }
+
+        log.Should().Equal("new inner", "new first");
+        provider.Dispose();
+
+        log.Should().Equal("new inner", "new first", "dispose first", "dispose inner");
+    }
+
+    [Fact]
+    public void Decorate_Should_ReportCaptiveDependencyOnBuild_When_SingletonInnerDependsOnScopedService()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IPrefix>(_ => new Prefix(">"));
+        services.AddSingleton<IGreeter, PrefixedGreeter>();
+        services.Decorate<IGreeter, LoudGreeter>();
+
+        Action act = () => services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        act.Should().Throw<AggregateException>();
     }
 
     [Fact]
