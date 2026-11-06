@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Results.Comparison.Benchmarks.CreateComparison-20261105-090421</title>
+<title>CSharpEssentials.Results.Comparison.Benchmarks.CreateComparison-20261106-224633</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,24 +14,24 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method              </th><th>Succeed</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method              </th><th>Succeed</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>27.9547 ns</td><td>0.0776 ns</td><td>0.0648 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>0.3016 ns</td><td>0.0032 ns</td><td>0.0030 ns</td><td>0.01</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>ErrorOr</td><td>False</td><td>19.5903 ns</td><td>0.2539 ns</td><td>0.2375 ns</td><td>0.70</td><td>0.01</td><td>0.0052</td><td>88 B</td><td>1.57</td>
-</tr><tr><td>FluentResults</td><td>False</td><td>93.4794 ns</td><td>0.7133 ns</td><td>0.6672 ns</td><td>3.34</td><td>0.02</td><td>0.0205</td><td>344 B</td><td>6.14</td>
-</tr><tr><td>CSharpEssentials</td><td>True</td><td>0.2711 ns</td><td>0.0013 ns</td><td>0.0011 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>0.2907 ns</td><td>0.0004 ns</td><td>0.0004 ns</td><td>1.07</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr</td><td>True</td><td>0.2708 ns</td><td>0.0004 ns</td><td>0.0004 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>FluentResults</td><td>True</td><td>23.8158 ns</td><td>0.1914 ns</td><td>0.1790 ns</td><td>87.84</td><td>0.72</td><td>0.0067</td><td>112 B</td><td>NA</td>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>13.6011 ns</td><td>0.2286 ns</td><td>0.1909 ns</td><td>13.5641 ns</td><td>1.000</td><td>0.02</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>0.0002 ns</td><td>0.0005 ns</td><td>0.0004 ns</td><td>0.0000 ns</td><td>0.000</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>ErrorOr</td><td>False</td><td>20.4178 ns</td><td>0.2100 ns</td><td>0.1964 ns</td><td>20.4417 ns</td><td>1.501</td><td>0.02</td><td>0.0052</td><td>88 B</td><td>1.57</td>
+</tr><tr><td>FluentResults</td><td>False</td><td>105.5643 ns</td><td>0.7081 ns</td><td>0.5913 ns</td><td>105.7620 ns</td><td>7.763</td><td>0.11</td><td>0.0205</td><td>344 B</td><td>6.14</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>0.1588 ns</td><td>0.0117 ns</td><td>0.0104 ns</td><td>0.1579 ns</td><td>1.00</td><td>0.09</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>0.0233 ns</td><td>0.0276 ns</td><td>0.0258 ns</td><td>0.0222 ns</td><td>0.15</td><td>0.16</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr</td><td>True</td><td>0.1551 ns</td><td>0.0067 ns</td><td>0.0059 ns</td><td>0.1546 ns</td><td>0.98</td><td>0.07</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults</td><td>True</td><td>25.5255 ns</td><td>0.5575 ns</td><td>0.5214 ns</td><td>25.5527 ns</td><td>161.38</td><td>10.75</td><td>0.0067</td><td>112 B</td><td>NA</td>
 </tr></tbody></table>
 </body>
 </html>

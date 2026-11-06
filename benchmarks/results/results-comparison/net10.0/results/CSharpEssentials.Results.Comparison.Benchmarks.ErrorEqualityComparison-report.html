@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Results.Comparison.Benchmarks.ErrorEqualityComparison-20261105-091430</title>
+<title>CSharpEssentials.Results.Comparison.Benchmarks.ErrorEqualityComparison-20261106-222310</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,28 +14,28 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method                </th><th>Categories</th><th>WithMetadata</th><th>Mean   </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method                </th><th>Categories</th><th>WithMetadata</th><th>Mean   </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Equals</td><td>Equals</td><td>False</td><td>6.064 ns</td><td>0.0310 ns</td><td>0.0290 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr_Equals</td><td>Equals</td><td>False</td><td>6.178 ns</td><td>0.0330 ns</td><td>0.0309 ns</td><td>1.02</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_Equals</td><td>Equals</td><td>True</td><td>28.129 ns</td><td>0.0476 ns</td><td>0.0422 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr_Equals</td><td>Equals</td><td>True</td><td>29.905 ns</td><td>0.0366 ns</td><td>0.0342 ns</td><td>1.06</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_GetHashCode</td><td>GetHashCode</td><td>False</td><td>37.817 ns</td><td>0.1065 ns</td><td>0.0944 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr_GetHashCode</td><td>GetHashCode</td><td>False</td><td>74.036 ns</td><td>0.0310 ns</td><td>0.0290 ns</td><td>1.96</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_GetHashCode</td><td>GetHashCode</td><td>True</td><td>88.526 ns</td><td>0.1848 ns</td><td>0.1638 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ErrorOr_GetHashCode</td><td>GetHashCode</td><td>True</td><td>62.997 ns</td><td>0.0391 ns</td><td>0.0366 ns</td><td>0.71</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_HashSet</td><td>HashSet</td><td>False</td><td>10,173.842 ns</td><td>8.4954 ns</td><td>7.5310 ns</td><td>1.00</td><td>0.3204</td><td>5392 B</td><td>1.00</td>
-</tr><tr><td>ErrorOr_HashSet</td><td>HashSet</td><td>False</td><td>5,407.757 ns</td><td>9.4193 ns</td><td>7.8656 ns</td><td>0.53</td><td>0.3204</td><td>5392 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_HashSet</td><td>HashSet</td><td>True</td><td>18,361.398 ns</td><td>16.3797 ns</td><td>14.5201 ns</td><td>1.00</td><td>0.3052</td><td>5392 B</td><td>1.00</td>
-</tr><tr><td>ErrorOr_HashSet</td><td>HashSet</td><td>True</td><td>13,207.228 ns</td><td>12.2285 ns</td><td>10.8402 ns</td><td>0.72</td><td>0.3204</td><td>5392 B</td><td>1.00</td>
+</thead><tbody><tr><td>CSharpEssentials_Equals</td><td>Equals</td><td>False</td><td>6.371 ns</td><td>0.1016 ns</td><td>0.0950 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_Equals</td><td>Equals</td><td>False</td><td>6.350 ns</td><td>0.1559 ns</td><td>0.1458 ns</td><td>1.00</td><td>0.03</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Equals</td><td>Equals</td><td>True</td><td>28.973 ns</td><td>0.2144 ns</td><td>0.1790 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_Equals</td><td>Equals</td><td>True</td><td>30.756 ns</td><td>0.1690 ns</td><td>0.1581 ns</td><td>1.06</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_GetHashCode</td><td>GetHashCode</td><td>False</td><td>32.282 ns</td><td>0.4957 ns</td><td>0.4637 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_GetHashCode</td><td>GetHashCode</td><td>False</td><td>75.549 ns</td><td>0.7478 ns</td><td>0.6995 ns</td><td>2.34</td><td>0.04</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_GetHashCode</td><td>GetHashCode</td><td>True</td><td>82.964 ns</td><td>0.4557 ns</td><td>0.4040 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_GetHashCode</td><td>GetHashCode</td><td>True</td><td>66.331 ns</td><td>0.4449 ns</td><td>0.3715 ns</td><td>0.80</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_HashSet</td><td>HashSet</td><td>False</td><td>10,342.030 ns</td><td>112.4725 ns</td><td>105.2069 ns</td><td>1.00</td><td>0.01</td><td>0.3204</td><td>5392 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr_HashSet</td><td>HashSet</td><td>False</td><td>7,111.568 ns</td><td>52.3152 ns</td><td>48.9357 ns</td><td>0.69</td><td>0.01</td><td>0.3204</td><td>5392 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_HashSet</td><td>HashSet</td><td>True</td><td>17,862.602 ns</td><td>127.5556 ns</td><td>106.5147 ns</td><td>1.00</td><td>0.01</td><td>0.3052</td><td>5392 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr_HashSet</td><td>HashSet</td><td>True</td><td>13,643.837 ns</td><td>109.3880 ns</td><td>102.3216 ns</td><td>0.76</td><td>0.01</td><td>0.3204</td><td>5392 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>

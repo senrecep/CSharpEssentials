@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Results.Comparison.Benchmarks.MaybeCollectionComparison-20261105-080721</title>
+<title>CSharpEssentials.Results.Comparison.Benchmarks.MaybeCollectionComparison-20261106-215839</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,66 +14,66 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                            </th><th>Categories</th><th>Source</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Choose</td><td>Choose</td><td>List</td><td>4,992.979 ns</td><td>25.2913 ns</td><td>22.4200 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>88 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_Choose</td><td>Choose</td><td>List</td><td>6,036.722 ns</td><td>2.1977 ns</td><td>1.8351 ns</td><td>1.21</td><td>0.01</td><td>-</td><td>88 B</td><td>1.00</td>
-</tr><tr><td>HandWritten_Choose</td><td>Choose</td><td>List</td><td>458.721 ns</td><td>1.1466 ns</td><td>1.0726 ns</td><td>0.09</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_Choose</td><td>Choose</td><td>Sequence</td><td>5,379.125 ns</td><td>106.2611 ns</td><td>118.1089 ns</td><td>1.00</td><td>0.03</td><td>-</td><td>88 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_Choose</td><td>Choose</td><td>Sequence</td><td>6,170.203 ns</td><td>7.7129 ns</td><td>7.2146 ns</td><td>1.15</td><td>0.02</td><td>-</td><td>88 B</td><td>1.00</td>
-</tr><tr><td>HandWritten_Choose</td><td>Choose</td><td>Sequence</td><td>457.189 ns</td><td>1.9011 ns</td><td>1.7783 ns</td><td>0.09</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_TryFindHit</td><td>TryFindHit</td><td>List</td><td>37.516 ns</td><td>0.2226 ns</td><td>0.2082 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFindHit</td><td>TryFindHit</td><td>List</td><td>36.937 ns</td><td>0.0777 ns</td><td>0.0689 ns</td><td>0.98</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_TryFindHit</td><td>TryFindHit</td><td>List</td><td>16.970 ns</td><td>0.0671 ns</td><td>0.0628 ns</td><td>0.45</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryFindHit</td><td>TryFindHit</td><td>Sequence</td><td>38.149 ns</td><td>0.3019 ns</td><td>0.2676 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFindHit</td><td>TryFindHit</td><td>Sequence</td><td>37.409 ns</td><td>0.0680 ns</td><td>0.0568 ns</td><td>0.98</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_TryFindHit</td><td>TryFindHit</td><td>Sequence</td><td>16.832 ns</td><td>0.0346 ns</td><td>0.0289 ns</td><td>0.44</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryFindMiss</td><td>TryFindMiss</td><td>List</td><td>11.657 ns</td><td>0.0583 ns</td><td>0.0545 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFindMiss</td><td>TryFindMiss</td><td>List</td><td>11.670 ns</td><td>0.0427 ns</td><td>0.0378 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_TryFindMiss</td><td>TryFindMiss</td><td>List</td><td>9.701 ns</td><td>0.0110 ns</td><td>0.0092 ns</td><td>0.83</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryFindMiss</td><td>TryFindMiss</td><td>Sequence</td><td>11.844 ns</td><td>0.0630 ns</td><td>0.0589 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFindMiss</td><td>TryFindMiss</td><td>Sequence</td><td>11.735 ns</td><td>0.0213 ns</td><td>0.0199 ns</td><td>0.99</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_TryFindMiss</td><td>TryFindMiss</td><td>Sequence</td><td>9.833 ns</td><td>0.0828 ns</td><td>0.0774 ns</td><td>0.83</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryFirst</td><td>TryFirst</td><td>List</td><td>15.320 ns</td><td>0.0901 ns</td><td>0.0843 ns</td><td>1.00</td><td>0.01</td><td>0.0024</td><td>40 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFirst</td><td>TryFirst</td><td>List</td><td>14.726 ns</td><td>0.0040 ns</td><td>0.0031 ns</td><td>0.96</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_TryFirst</td><td>TryFirst</td><td>Sequence</td><td>16.287 ns</td><td>0.1166 ns</td><td>0.1091 ns</td><td>1.00</td><td>0.01</td><td>0.0029</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFirst</td><td>TryFirst</td><td>Sequence</td><td>8,581.240 ns</td><td>47.3369 ns</td><td>44.2790 ns</td><td>526.90</td><td>4.31</td><td>0.9918</td><td>16648 B</td><td>346.83</td>
-</tr><tr><td>CSharpEssentials_TryFirstMiss</td><td>TryFirstMiss</td><td>List</td><td>6,075.384 ns</td><td>45.9151 ns</td><td>42.9490 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>40 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFirstMiss</td><td>TryFirstMiss</td><td>List</td><td>3,546.207 ns</td><td>23.1385 ns</td><td>20.5117 ns</td><td>0.58</td><td>0.01</td><td>0.0076</td><td>160 B</td><td>4.00</td>
-</tr><tr><td>HandWritten_TryFirstMiss</td><td>TryFirstMiss</td><td>List</td><td>1,456.776 ns</td><td>0.3349 ns</td><td>0.2797 ns</td><td>0.24</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_TryFirstMiss</td><td>TryFirstMiss</td><td>Sequence</td><td>5,229.714 ns</td><td>9.2935 ns</td><td>7.2557 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFirstMiss</td><td>TryFirstMiss</td><td>Sequence</td><td>5,836.557 ns</td><td>40.0125 ns</td><td>37.4277 ns</td><td>1.12</td><td>0.01</td><td>0.0076</td><td>192 B</td><td>4.00</td>
-</tr><tr><td>HandWritten_TryFirstMiss</td><td>TryFirstMiss</td><td>Sequence</td><td>3,832.063 ns</td><td>18.3835 ns</td><td>17.1959 ns</td><td>0.73</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_TryFirstWhere</td><td>TryFirstWhere</td><td>List</td><td>3,552.999 ns</td><td>12.5202 ns</td><td>11.0988 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>40 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFirstWhere</td><td>TryFirstWhere</td><td>List</td><td>2,456.392 ns</td><td>12.1026 ns</td><td>11.3208 ns</td><td>0.69</td><td>0.00</td><td>0.0114</td><td>192 B</td><td>4.80</td>
-</tr><tr><td>HandWritten_TryFirstWhere</td><td>TryFirstWhere</td><td>List</td><td>1,622.883 ns</td><td>4.1573 ns</td><td>3.8888 ns</td><td>0.46</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_TryFirstWhere</td><td>TryFirstWhere</td><td>Sequence</td><td>3,114.837 ns</td><td>13.4467 ns</td><td>12.5781 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryFirstWhere</td><td>TryFirstWhere</td><td>Sequence</td><td>3,442.192 ns</td><td>54.0563 ns</td><td>50.5643 ns</td><td>1.11</td><td>0.02</td><td>0.0114</td><td>224 B</td><td>4.67</td>
-</tr><tr><td>HandWritten_TryFirstWhere</td><td>TryFirstWhere</td><td>Sequence</td><td>2,642.237 ns</td><td>8.7475 ns</td><td>8.1824 ns</td><td>0.85</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_TryLast</td><td>TryLast</td><td>List</td><td>11.153 ns</td><td>0.0078 ns</td><td>0.0069 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryLast</td><td>TryLast</td><td>List</td><td>14.706 ns</td><td>0.0079 ns</td><td>0.0061 ns</td><td>1.32</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryLast</td><td>TryLast</td><td>Sequence</td><td>4,951.827 ns</td><td>5.7764 ns</td><td>5.1206 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryLast</td><td>TryLast</td><td>Sequence</td><td>8,690.226 ns</td><td>79.6444 ns</td><td>74.4995 ns</td><td>1.75</td><td>0.01</td><td>0.9918</td><td>16648 B</td><td>346.83</td>
-</tr><tr><td>CSharpEssentials_TryLastMiss</td><td>TryLastMiss</td><td>List</td><td>2,897.326 ns</td><td>0.5296 ns</td><td>0.4695 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryLastMiss</td><td>TryLastMiss</td><td>List</td><td>3,223.150 ns</td><td>11.6517 ns</td><td>9.7297 ns</td><td>1.11</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_TryLastMiss</td><td>TryLastMiss</td><td>List</td><td>1,475.216 ns</td><td>8.7744 ns</td><td>8.2076 ns</td><td>0.51</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryLastMiss</td><td>TryLastMiss</td><td>Sequence</td><td>5,237.182 ns</td><td>5.1368 ns</td><td>4.2894 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryLastMiss</td><td>TryLastMiss</td><td>Sequence</td><td>5,533.070 ns</td><td>8.1965 ns</td><td>6.3993 ns</td><td>1.06</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>HandWritten_TryLastMiss</td><td>TryLastMiss</td><td>Sequence</td><td>3,502.743 ns</td><td>3.2830 ns</td><td>2.5632 ns</td><td>0.67</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_TryLastWhere</td><td>TryLastWhere</td><td>List</td><td>2,329.476 ns</td><td>0.6911 ns</td><td>0.6126 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryLastWhere</td><td>TryLastWhere</td><td>List</td><td>2,331.367 ns</td><td>1.3799 ns</td><td>1.2233 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_TryLastWhere</td><td>TryLastWhere</td><td>List</td><td>1,604.034 ns</td><td>0.2713 ns</td><td>0.2266 ns</td><td>0.69</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_TryLastWhere</td><td>TryLastWhere</td><td>Sequence</td><td>6,711.837 ns</td><td>6.2134 ns</td><td>5.8120 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>CSharpFunctionalExtensions_TryLastWhere</td><td>TryLastWhere</td><td>Sequence</td><td>6,571.505 ns</td><td>25.6168 ns</td><td>22.7087 ns</td><td>0.98</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>HandWritten_TryLastWhere</td><td>TryLastWhere</td><td>Sequence</td><td>5,253.496 ns</td><td>2.8166 ns</td><td>2.4968 ns</td><td>0.78</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
+</thead><tbody><tr><td>CSharpEssentials_Choose</td><td>Choose</td><td>List</td><td>5,108.465 ns</td><td>59.4907 ns</td><td>55.6477 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_Choose</td><td>Choose</td><td>List</td><td>6,122.335 ns</td><td>22.3967 ns</td><td>19.8541 ns</td><td>1.20</td><td>0.01</td><td>-</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_Choose</td><td>Choose</td><td>List</td><td>487.383 ns</td><td>4.5162 ns</td><td>4.2245 ns</td><td>0.10</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_Choose</td><td>Choose</td><td>Sequence</td><td>5,482.921 ns</td><td>100.5271 ns</td><td>98.7311 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_Choose</td><td>Choose</td><td>Sequence</td><td>6,230.033 ns</td><td>27.0726 ns</td><td>23.9992 ns</td><td>1.14</td><td>0.02</td><td>-</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_Choose</td><td>Choose</td><td>Sequence</td><td>473.814 ns</td><td>4.6214 ns</td><td>4.3228 ns</td><td>0.09</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_TryFindHit</td><td>TryFindHit</td><td>List</td><td>37.223 ns</td><td>0.0954 ns</td><td>0.0846 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFindHit</td><td>TryFindHit</td><td>List</td><td>37.519 ns</td><td>0.1286 ns</td><td>0.1140 ns</td><td>1.01</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_TryFindHit</td><td>TryFindHit</td><td>List</td><td>17.454 ns</td><td>0.0840 ns</td><td>0.0786 ns</td><td>0.47</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFindHit</td><td>TryFindHit</td><td>Sequence</td><td>39.956 ns</td><td>0.1422 ns</td><td>0.1330 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFindHit</td><td>TryFindHit</td><td>Sequence</td><td>37.156 ns</td><td>0.3822 ns</td><td>0.3575 ns</td><td>0.93</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_TryFindHit</td><td>TryFindHit</td><td>Sequence</td><td>17.154 ns</td><td>0.0536 ns</td><td>0.0502 ns</td><td>0.43</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFindMiss</td><td>TryFindMiss</td><td>List</td><td>11.718 ns</td><td>0.0264 ns</td><td>0.0247 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFindMiss</td><td>TryFindMiss</td><td>List</td><td>11.652 ns</td><td>0.0141 ns</td><td>0.0110 ns</td><td>0.99</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_TryFindMiss</td><td>TryFindMiss</td><td>List</td><td>10.145 ns</td><td>0.0629 ns</td><td>0.0558 ns</td><td>0.87</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFindMiss</td><td>TryFindMiss</td><td>Sequence</td><td>11.758 ns</td><td>0.0626 ns</td><td>0.0586 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFindMiss</td><td>TryFindMiss</td><td>Sequence</td><td>11.826 ns</td><td>0.1257 ns</td><td>0.1115 ns</td><td>1.01</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_TryFindMiss</td><td>TryFindMiss</td><td>Sequence</td><td>9.862 ns</td><td>0.0498 ns</td><td>0.0465 ns</td><td>0.84</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFirst</td><td>TryFirst</td><td>List</td><td>11.054 ns</td><td>0.0391 ns</td><td>0.0347 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFirst</td><td>TryFirst</td><td>List</td><td>15.528 ns</td><td>0.2441 ns</td><td>0.2283 ns</td><td>1.40</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFirst</td><td>TryFirst</td><td>Sequence</td><td>22.896 ns</td><td>0.1545 ns</td><td>0.1445 ns</td><td>1.00</td><td>0.01</td><td>0.0029</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFirst</td><td>TryFirst</td><td>Sequence</td><td>8,411.376 ns</td><td>49.8214 ns</td><td>44.1654 ns</td><td>367.38</td><td>2.92</td><td>0.9918</td><td>16648 B</td><td>346.83</td>
+</tr><tr><td>CSharpEssentials_TryFirstMiss</td><td>TryFirstMiss</td><td>List</td><td>1,465.363 ns</td><td>2.7445 ns</td><td>2.2918 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFirstMiss</td><td>TryFirstMiss</td><td>List</td><td>3,821.654 ns</td><td>22.6769 ns</td><td>20.1025 ns</td><td>2.61</td><td>0.01</td><td>0.0076</td><td>160 B</td><td>NA</td>
+</tr><tr><td>HandWritten_TryFirstMiss</td><td>TryFirstMiss</td><td>List</td><td>1,473.769 ns</td><td>18.6021 ns</td><td>15.5336 ns</td><td>1.01</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFirstMiss</td><td>TryFirstMiss</td><td>Sequence</td><td>5,528.776 ns</td><td>4.9746 ns</td><td>4.1540 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFirstMiss</td><td>TryFirstMiss</td><td>Sequence</td><td>5,745.564 ns</td><td>65.3003 ns</td><td>61.0819 ns</td><td>1.04</td><td>0.01</td><td>0.0076</td><td>192 B</td><td>4.00</td>
+</tr><tr><td>HandWritten_TryFirstMiss</td><td>TryFirstMiss</td><td>Sequence</td><td>4,097.459 ns</td><td>24.4650 ns</td><td>21.6876 ns</td><td>0.74</td><td>0.00</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_TryFirstWhere</td><td>TryFirstWhere</td><td>List</td><td>1,778.366 ns</td><td>12.6274 ns</td><td>11.1938 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFirstWhere</td><td>TryFirstWhere</td><td>List</td><td>2,428.312 ns</td><td>3.6431 ns</td><td>3.0421 ns</td><td>1.37</td><td>0.01</td><td>0.0114</td><td>192 B</td><td>NA</td>
+</tr><tr><td>HandWritten_TryFirstWhere</td><td>TryFirstWhere</td><td>List</td><td>1,606.592 ns</td><td>0.3455 ns</td><td>0.2885 ns</td><td>0.90</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryFirstWhere</td><td>TryFirstWhere</td><td>Sequence</td><td>3,288.580 ns</td><td>59.4201 ns</td><td>55.5816 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryFirstWhere</td><td>TryFirstWhere</td><td>Sequence</td><td>3,415.353 ns</td><td>40.5290 ns</td><td>35.9279 ns</td><td>1.04</td><td>0.02</td><td>0.0114</td><td>224 B</td><td>4.67</td>
+</tr><tr><td>HandWritten_TryFirstWhere</td><td>TryFirstWhere</td><td>Sequence</td><td>2,656.436 ns</td><td>21.5150 ns</td><td>19.0725 ns</td><td>0.81</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_TryLast</td><td>TryLast</td><td>List</td><td>11.371 ns</td><td>0.0765 ns</td><td>0.0715 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryLast</td><td>TryLast</td><td>List</td><td>15.350 ns</td><td>0.2710 ns</td><td>0.2263 ns</td><td>1.35</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryLast</td><td>TryLast</td><td>Sequence</td><td>4,588.100 ns</td><td>80.3348 ns</td><td>67.0832 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryLast</td><td>TryLast</td><td>Sequence</td><td>8,948.013 ns</td><td>70.6968 ns</td><td>59.0350 ns</td><td>1.95</td><td>0.03</td><td>0.9918</td><td>16648 B</td><td>346.83</td>
+</tr><tr><td>CSharpEssentials_TryLastMiss</td><td>TryLastMiss</td><td>List</td><td>3,000.827 ns</td><td>33.8467 ns</td><td>31.6602 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryLastMiss</td><td>TryLastMiss</td><td>List</td><td>2,964.086 ns</td><td>10.6989 ns</td><td>9.4843 ns</td><td>0.99</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_TryLastMiss</td><td>TryLastMiss</td><td>List</td><td>1,503.495 ns</td><td>17.6326 ns</td><td>16.4936 ns</td><td>0.50</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryLastMiss</td><td>TryLastMiss</td><td>Sequence</td><td>5,986.563 ns</td><td>58.7911 ns</td><td>54.9932 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryLastMiss</td><td>TryLastMiss</td><td>Sequence</td><td>5,675.622 ns</td><td>51.3150 ns</td><td>45.4894 ns</td><td>0.95</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_TryLastMiss</td><td>TryLastMiss</td><td>Sequence</td><td>4,150.107 ns</td><td>59.4321 ns</td><td>52.6850 ns</td><td>0.69</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_TryLastWhere</td><td>TryLastWhere</td><td>List</td><td>2,423.949 ns</td><td>41.6487 ns</td><td>38.9582 ns</td><td>1.00</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryLastWhere</td><td>TryLastWhere</td><td>List</td><td>2,410.142 ns</td><td>41.0486 ns</td><td>36.3885 ns</td><td>0.99</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_TryLastWhere</td><td>TryLastWhere</td><td>List</td><td>1,690.248 ns</td><td>11.5384 ns</td><td>10.7930 ns</td><td>0.70</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_TryLastWhere</td><td>TryLastWhere</td><td>Sequence</td><td>6,947.844 ns</td><td>57.9320 ns</td><td>54.1897 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_TryLastWhere</td><td>TryLastWhere</td><td>Sequence</td><td>6,581.671 ns</td><td>59.2226 ns</td><td>52.4993 ns</td><td>0.95</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_TryLastWhere</td><td>TryLastWhere</td><td>Sequence</td><td>5,774.985 ns</td><td>73.0184 ns</td><td>68.3014 ns</td><td>0.83</td><td>0.01</td><td>-</td><td>48 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>
