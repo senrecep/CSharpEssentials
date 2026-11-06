@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Benchmarks.EnsureBenchmarks-20261104-231735</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                        </th><th>Succeed</th><th>Yield</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>HandWritten_TaskSource_TaskPredicate</td><td>False</td><td>False</td><td>20.13 ns</td><td>0.129 ns</td><td>0.120 ns</td><td>1.00</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_SyncPredicate</td><td>False</td><td>False</td><td>22.68 ns</td><td>0.105 ns</td><td>0.098 ns</td><td>1.13</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_TaskPredicate</td><td>False</td><td>False</td><td>42.85 ns</td><td>0.241 ns</td><td>0.225 ns</td><td>2.13</td><td>0.02</td><td>0.0095</td><td>160 B</td><td>2.00</td>
+</tr><tr><td>Instance_TaskPredicate</td><td>False</td><td>False</td><td>71.00 ns</td><td>0.139 ns</td><td>0.130 ns</td><td>3.53</td><td>0.02</td><td>0.0081</td><td>136 B</td><td>1.70</td>
+</tr><tr><td>HandWritten_TaskSource_TaskPredicate</td><td>False</td><td>True</td><td>860.07 ns</td><td>5.005 ns</td><td>4.682 ns</td><td>1.00</td><td>0.01</td><td>0.0181</td><td>312 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_SyncPredicate</td><td>False</td><td>True</td><td>859.15 ns</td><td>5.458 ns</td><td>5.106 ns</td><td>1.00</td><td>0.01</td><td>0.0191</td><td>319 B</td><td>1.02</td>
+</tr><tr><td>TaskSource_TaskPredicate</td><td>False</td><td>True</td><td>891.34 ns</td><td>5.510 ns</td><td>5.154 ns</td><td>1.04</td><td>0.01</td><td>0.0238</td><td>407 B</td><td>1.30</td>
+</tr><tr><td>Instance_TaskPredicate</td><td>False</td><td>True</td><td>33.90 ns</td><td>0.195 ns</td><td>0.163 ns</td><td>0.04</td><td>0.00</td><td>0.0081</td><td>136 B</td><td>0.44</td>
+</tr><tr><td>HandWritten_TaskSource_TaskPredicate</td><td>True</td><td>False</td><td>23.95 ns</td><td>0.162 ns</td><td>0.143 ns</td><td>1.00</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_SyncPredicate</td><td>True</td><td>False</td><td>22.33 ns</td><td>0.125 ns</td><td>0.117 ns</td><td>0.93</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_TaskPredicate</td><td>True</td><td>False</td><td>44.45 ns</td><td>0.324 ns</td><td>0.287 ns</td><td>1.86</td><td>0.02</td><td>0.0095</td><td>160 B</td><td>2.00</td>
+</tr><tr><td>Instance_TaskPredicate</td><td>True</td><td>False</td><td>22.62 ns</td><td>0.123 ns</td><td>0.109 ns</td><td>0.94</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_TaskSource_TaskPredicate</td><td>True</td><td>True</td><td>1,426.73 ns</td><td>6.221 ns</td><td>5.515 ns</td><td>1.00</td><td>0.01</td><td>0.0210</td><td>352 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_SyncPredicate</td><td>True</td><td>True</td><td>854.44 ns</td><td>5.347 ns</td><td>5.002 ns</td><td>0.60</td><td>0.00</td><td>0.0153</td><td>262 B</td><td>0.74</td>
+</tr><tr><td>TaskSource_TaskPredicate</td><td>True</td><td>True</td><td>1,657.55 ns</td><td>10.816 ns</td><td>10.118 ns</td><td>1.16</td><td>0.01</td><td>0.0305</td><td>541 B</td><td>1.54</td>
+</tr><tr><td>Instance_TaskPredicate</td><td>True</td><td>True</td><td>868.18 ns</td><td>15.792 ns</td><td>14.772 ns</td><td>0.61</td><td>0.01</td><td>0.0153</td><td>271 B</td><td>0.77</td>
+</tr></tbody></table>
+</body>
+</html>
