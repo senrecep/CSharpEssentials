@@ -11,10 +11,11 @@ internal static class BenchmarkSources
 {
     public static readonly Error Failure = Error.Failure("BENCH", "Benchmark failure");
 
+    private static readonly Result<int> FailureResult = Failure;
     private static readonly Task<Result<int>> CompletedSuccess = Task.FromResult<Result<int>>(42);
-    private static readonly Task<Result<int>> CompletedFailure = Task.FromResult<Result<int>>(Failure);
+    private static readonly Task<Result<int>> CompletedFailure = Task.FromResult(FailureResult);
 
-    public static Result<int> Plain(bool succeed) => succeed ? 42 : Failure;
+    public static Result<int> Plain(bool succeed) => succeed ? 42 : FailureResult;
 
     public static Task<Result<int>> TaskOf(bool succeed, bool yield)
     {
