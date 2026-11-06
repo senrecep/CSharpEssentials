@@ -6,7 +6,7 @@
     <Title>CSharpEssentials.These</Title>
     <Product>CSharpEssentials.These</Product>
     <Description>
-      These&lt;E, A&gt; — a third result type that can carry Left (error), Right (value), or Both.
+      These&lt;E, A&gt; is a third result type that can carry Left (error), Right (value), or Both.
       Ideal for partial success scenarios, batch validation, and warning systems.
     </Description>
     <PackageTags>These,Result,Either,Functional,FunctionalProgramming,CSharpEssentials</PackageTags>

@@ -19,7 +19,7 @@ public sealed class ProductService : IProductService
 
     public Result<Product> GetById(Guid id)
     {
-        // Result.Failure with a domain error — NOT an exception.
+        // Result.Failure with a domain error, not an exception.
         // Exceptions are for exceptional cases; "not found" is expected.
         var product = _products.FirstOrDefault(p => p.Id == id);
         if (product is null)
@@ -108,7 +108,7 @@ public sealed class ProductService : IProductService
 
     public Result<IReadOnlyList<Product>> Search(string? name)
     {
-        // Empty search returns all products — still a success.
+        // Empty search returns all products, which is still a success.
         if (string.IsNullOrWhiteSpace(name))
             return _products;
 

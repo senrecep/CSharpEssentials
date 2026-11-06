@@ -163,8 +163,8 @@ using (var scope = provider.CreateScope())
     db.SaveChanges();
 
     db.Entry(product).Reload();
-    Console.WriteLine($"After update — Last modified: {product.UpdatedAt:O}");
-    Console.WriteLine($"After update — Last modified by: {product.UpdatedBy}");
+    Console.WriteLine($"After update, last modified: {product.UpdatedAt:O}");
+    Console.WriteLine($"After update, last modified by: {product.UpdatedBy}");
     Console.WriteLine();
 }
 

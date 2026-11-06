@@ -65,7 +65,7 @@ Declare rules as `Func<TContext, Result>` fields or variables. They can be store
 Func<UserContext, Result> regionRule = ctx =>
     ctx.IsAllowedRegion ? Result.Success() : Error.Forbidden("Region.Blocked", "Not available in your region.");
 
-// Named method — method group works too
+// Named method: method group works too
 static Result CheckEmail(UserContext ctx) =>
     ctx.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email address.");
 ```
@@ -92,15 +92,15 @@ var ctx = new UserContext { Age = 20, HasLicense = true, IsAllowedRegion = true 
 // Class instance
 Result r1 = RuleEngine.Evaluate(new AgeRule(), ctx);
 
-// Func variable — no .ToRule() needed
+// Func variable: no .ToRule() needed
 Result r2 = RuleEngine.Evaluate(regionRule, ctx);
 
-// Inline lambda — no .ToRule() needed
+// Inline lambda: no .ToRule() needed
 Result r3 = RuleEngine.Evaluate(
     (UserContext c) => c.HasLicense ? Result.Success() : Error.Validation("License.Missing", "License required."),
     ctx);
 
-// Named method group — works directly
+// Named method group: works directly
 Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
 ```
 
@@ -120,7 +120,7 @@ Result andResult = RuleEngine.Evaluate(
     new IRuleBase<UserContext>[] { new AgeRule(), new LicenseRule(repo) }.And(),
     ctx);
 
-// Using Func array — no .ToRule() needed at all
+// Using Func array: no .ToRule() needed at all
 Result andResult2 = RuleEngine.Evaluate(
     new Func<UserContext, Result>[] { regionRule, CheckEmail }.And(),
     ctx);
@@ -139,7 +139,7 @@ Result andResult3 = RuleEngine.Evaluate(
 ### Or: at least one must pass
 
 ```csharp
-// Func array — direct, no conversion
+// Func array: direct, no conversion
 Result orResult = RuleEngine.Evaluate(
     new Func<UserContext, Result>[] { regionRule, CheckEmail }.Or(),
     ctx);
@@ -190,7 +190,7 @@ Result conditional = RuleEngine.If(
     failure: new DenyAccessRule(),
     ctx);
 
-// Func lambdas — all three branches inline
+// Func lambdas: all three branches inline
 Result conditional2 = RuleEngine.If(
     (UserContext c) => c.Age >= 18 ? Result.Success() : Error.Validation("Age.Underage", "Must be at least 18."),
     success: c => Result.Success(),
@@ -223,7 +223,7 @@ public sealed class GradeRule : IRule<int, string>
     }
 }
 
-// Func form — no .ToRule() at call site
+// Func form: no .ToRule() at call site
 Result<string> grade = RuleEngine.Evaluate(
     (int score) => score >= 90 ? Result<string>.Success("A") : Error.Validation("Grade.Failed", "Score too low."),
     85);
@@ -255,7 +255,7 @@ public sealed class AgeRule : IRule<ApplicantContext>
         ctx.Age >= 18 ? Result.Success() : RegistrationErrors.Underage;
 }
 
-// Func-based rule — same domain errors, no class needed
+// Func-based rule: same domain errors, no class needed
 Func<ApplicantContext, Result> regionRule =
     ctx => ctx.IsAllowedRegion ? Result.Success() : RegistrationErrors.RegionBlocked;
 
@@ -286,12 +286,12 @@ Rules return `Result` / `Result<T>`, the same type used throughout CSharpEssenti
 ### FromPredicate / FromPredicateAsync: inline rules without classes
 
 ```csharp
-// Static error — reuse the same error for any failing context
+// Static error: reuse the same error for any failing context
 IRule<int> positiveRule = RuleEngine.FromPredicate<int>(
     x => x > 0,
     Error.Validation("Value.Negative", "Must be positive"));
 
-// Error factory — error message can reference the failing value
+// Error factory: error message can reference the failing value
 IRule<int> rangeRule = RuleEngine.FromPredicate<int>(
     x => x is >= 1 and <= 100,
     x => Error.Validation("Value.OutOfRange", $"Value {x} must be between 1 and 100"));

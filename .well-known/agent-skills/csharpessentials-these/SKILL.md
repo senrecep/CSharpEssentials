@@ -60,7 +60,7 @@ These<string, int> doubled = these.Map(x => x * 2);
 // MapLeft transforms the error; Right passes through unchanged
 These<string, int> upper = these.MapLeft(e => e.ToUpper());
 
-// FlatMap chains — Both keeps its original error when the mapper returns Right or Both
+// FlatMap chains: Both keeps its original error when the mapper returns Right or Both
 These<string, string> chained = these.FlatMap(x => These<string, string>.Right(x.ToString()));
 ```
 

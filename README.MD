@@ -85,7 +85,7 @@ public Result<User> GetUser(Guid id)
     return user;
 }
 
-// Chain operations — stops at first failure, no try/catch needed
+// Chain operations: stops at first failure, no try/catch needed
 Result<UserDto> result = GetUser(id)
     .Bind(user => ValidateAge(user))
     .Bind(user => CheckPermissions(user))
@@ -132,10 +132,10 @@ Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() :
 Func<User, Result> validEmail = u => u.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email");
 Func<User, Result> verified   = u => u.IsVerified          ? Result.Success() : Error.Validation("Account.NotVerified", "Account not verified");
 
-// AND — all rules must pass; stops at the first failure and returns its errors
+// AND: all rules must pass; stops at the first failure and returns its errors
 Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And(), user);
 
-// OR — at least one rule must pass
+// OR: at least one rule must pass
 Result adminOrMod = RuleEngine.Evaluate(new[] { isAdmin, isModerator }.Or(), user);
 ```
 
@@ -147,7 +147,7 @@ Map `Result<T>` to the matching HTTP status codes without writing the error mapp
 // Program.cs
 builder.Services.AddEnhancedProblemDetails(); // registers ProblemDetails (see "Migrating from 3.x to 4.0")
 
-// Controller — business logic returns Result<T>, HTTP mapping is automatic
+// Controller: business logic returns Result<T>, HTTP mapping is automatic
 public class ProductsController(IProductService productService) : ControllerBase
 {
     [HttpGet("{id:guid}")]
@@ -158,7 +158,7 @@ public class ProductsController(IProductService productService) : ControllerBase
         );
 }
 
-// Service — chain multiple steps, first failure short-circuits
+// Service: chain multiple steps, first failure short-circuits
 public Result<Order> PlaceOrder(Guid productId, int quantity)
     => _productService.GetProduct(productId)
         .Then(p => ValidateStock(p, quantity))

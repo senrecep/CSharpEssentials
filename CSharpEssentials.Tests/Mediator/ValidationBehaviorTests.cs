@@ -211,7 +211,7 @@ public class ValidationBehaviorTests
     [Fact]
     public async Task Handle_Should_AccumulateErrors_InGroupOrder_WhenValidatorsHaveDifferentOrders()
     {
-        // Validators are registered with Order=1 first, Order=0 second —
+        // Validators are registered with Order=1 first, Order=0 second,
         // but errors must appear in ascending Order (0 before 1).
         ValidationBehavior<TestValidationCommand, Result> behavior = new([
             new OrderedStubValidator(1, "E_ORDER_1", "Error from order 1"),

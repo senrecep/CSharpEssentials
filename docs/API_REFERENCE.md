@@ -253,13 +253,13 @@ Per-error async mappers run sequentially, in order. On success no mapper is call
 `Result<T>` and `Result` also deconstruct: `var (isSuccess, value, errors) = result;` and `var (isSuccess, errors) = result;`. The members `IsSuccess`, `IsFailure`, `Errors`, `ErrorsOrEmptyArray`, `FirstError`, `LastError` and, on `Result<T>`, `Value` are available on both. On a success `FirstError`, `LastError` and `Errors` return the sentinels `Error.NoFirstError`, `Error.NoLastError` and `Error.NoErrors` (see section 1), while `ErrorsOrEmptyArray` is empty.
 
 ```csharp
-// Exhaustive matching — compiler ensures both paths are handled
+// Exhaustive matching: compiler ensures both paths are handled
 string message = result.Match(
     onSuccess: order => $"Order {order.Id} placed successfully",
     onError: errors => $"Failed: {errors.First().Description}"
 );
 
-// Finally — always runs (logging, cleanup)
+// Finally: always runs (logging, cleanup)
 result.Finally(r => _metrics.Record(r.IsSuccess ? "success" : "failure"));
 ```
 
@@ -379,7 +379,7 @@ Batch operations on sequences of results, without manually looping.
 | `SequenceAsync<T>(IEnumerable<ValueTask<Result<T>>>, ct = default)` | Await all, collect all | Each `ValueTask` is awaited exactly once, in order |
 
 ```csharp
-// Validate a batch — collect ALL errors
+// Validate a batch: collect ALL errors
 Result validation = validationResults.CombineAll();
 
 // Map each item and collect all successes, or all errors
@@ -390,7 +390,7 @@ Result<OrderDto[]> orders = orderIds
 var (succeeded, failed) = results.Partition();
 Console.WriteLine($"{succeeded.Length} succeeded, {failed.Length} errors");
 
-// Stop at first failure — useful for sequential pipeline steps
+// Stop at first failure, useful for sequential pipeline steps
 Result pipeline = steps.FirstFailureOrSuccesses();
 ```
 
@@ -509,7 +509,7 @@ string name = GetUser(id)
 | `ToList()` | Single-element or empty list | Manual conditional list |
 
 ```csharp
-// Safe dictionary lookup — no KeyNotFoundException
+// Safe dictionary lookup: no KeyNotFoundException
 Maybe<User> user = _cache.TryFind(userId);
 
 // Filter a collection of Maybes to only present values
@@ -1084,7 +1084,7 @@ The generic variant automatically filters retryable errors: `Unauthorized`, `For
 ### Delegate extensions
 
 ```csharp
-// Direct execution — wraps any Func<Task<T>> in a Result
+// Direct execution: wraps any Func<Task<T>> in a Result
 Func<Task<User>> load = () => _db.GetUser(id);
 Result<User> user = await load.ExecuteAsync();
 
@@ -1648,7 +1648,7 @@ Singleton behavior that sits between `LoggingBehavior` and `CachingBehavior`. It
 // Registration
 builder.Services.AddMediatorExceptionHandlingBehavior(); // singleton
 
-// Handler — no try/catch needed; exceptions become Result.Failure
+// Handler: no try/catch needed; exceptions become Result.Failure
 public record ProcessPaymentCommand(Guid OrderId, decimal Amount)
     : ICommand<Result>;
 
@@ -1668,7 +1668,7 @@ public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Resu
     }
 }
 
-// Caller — stays on the Result railway; no try/catch required
+// Caller: stays on the Result railway; no try/catch required
 Result result = await mediator.Send(new ProcessPaymentCommand(orderId, 99.99m));
 if (result.IsFailure)
 {
@@ -1911,7 +1911,7 @@ Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, ru
     rules.For(() => m.Name).NotEmpty().MaxLength(100);
 });
 
-// Async delegate — when MustAsync or SetValidatorAsync is needed
+// Async delegate: when MustAsync or SetValidatorAsync is needed
 Result<CreateUserCommand> checkedAsync = await Validator.ValidateAsync(command, async (m, rules, ct) =>
 {
     rules.For(() => m.Name).NotEmpty();
@@ -2020,7 +2020,7 @@ await rules.For(() => model.Email)
 // Non-nullable property
 await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct);
 
-// Nullable reference type — Address? works directly, no ! needed
+// Nullable reference type: Address? works directly, no ! needed
 await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidator(), ct);
 
 // Error codes are prefixed: "Address.City.NotEmpty", "Address.ZipCode.Matches"
@@ -2029,7 +2029,7 @@ await rules.For(() => model.BillingAddress).SetValidatorAsync(new AddressValidat
 ### Collection item validation
 
 ```csharp
-// Sync — error codes: "Tags[0].NotEmpty", "Tags[1].MaxLength"
+// Sync, error codes: "Tags[0].NotEmpty", "Tags[1].MaxLength"
 rules.ForEach(() => model.Tags, (tag, tagRules) =>
     tagRules.For(() => tag).NotEmpty().MaxLength(50));
 
@@ -2117,11 +2117,11 @@ Validation runs before the handler. On failure the handler is never invoked. `Re
 | `valueTaskResult.ValidateWithAsync(validator \| configure \| asyncConfigure, ct)` | `ValueTask<Result<T>>` | `ValueTask<Result<T>>` | ValueTask pipeline |
 
 ```csharp
-// Named validator — plugs straight into a Result<T> chain
+// Named validator: plugs straight into a Result<T> chain
 Result<CreateUserCommand> result = await ParseCommand(input)
     .ValidateWithAsync(new CreateUserCommandValidator(), ct);
 
-// Inline validation — no dedicated class needed
+// Inline validation: no dedicated class needed
 Result<CreateUserCommand> inline = ParseCommand(input)
     .ValidateWith((m, rules) =>
     {
@@ -2129,7 +2129,7 @@ Result<CreateUserCommand> inline = ParseCommand(input)
         rules.For(() => m.Name).NotEmpty().MaxLength(100);
     });
 
-// Works on Task<Result<T>> — no intermediate await
+// Works on Task<Result<T>>, no intermediate await
 Result<Checkout> checkout = await GetCheckoutAsync(id)  // Task<Result<Checkout>>
     .ValidateWithAsync(new CheckoutValidator(), ct);     // skips if already failed
 ```

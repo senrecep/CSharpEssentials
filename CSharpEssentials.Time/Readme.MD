@@ -63,7 +63,7 @@ var svc = new OrderService(fake);
 Order order = svc.CreateOrder();
 order.CreatedAt.Should().Be(fixedTime);
 
-// Advance the clock — no Thread.Sleep needed
+// Advance the clock (no Thread.Sleep needed)
 fake.Advance(TimeSpan.FromHours(2));
 fake.UtcNow.Should().Be(fixedTime.AddHours(2));
 

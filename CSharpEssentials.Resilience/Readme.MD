@@ -82,7 +82,7 @@ Result<Order> order = await ResiliencePolicy
 ```csharp
 using CSharpEssentials.Resilience;
 
-// Direct execution — wraps any Func<Task<T>> in a Result
+// Direct execution: wraps any Func<Task<T>> in a Result
 Func<Task<User>> getUser = () => _db.GetUser(id);
 Result<User> user = await getUser.ExecuteAsync();
 
