@@ -140,4 +140,60 @@ public class GuiderTests
         new Guid(System.Buffers.Text.Base64Url.DecodeFromChars(encoded)).Should().Be(guid);
         Guider.ToGuidFromString(System.Buffers.Text.Base64Url.EncodeToString(guid.ToByteArray())).Should().Be(guid);
     }
+
+    [Theory]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAB")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAP")]
+    public void ToGuidFromString_IgnoresUnusedTrailingBits(string input)
+    {
+        Guider.ToGuidFromString(input).Should().Be(Guid.Empty);
+    }
+
+    [Fact]
+    public void ToGuidFromString_DecodesUrlSafeCharactersInLastPosition()
+    {
+        Guid result = Guider.ToGuidFromString("AAAAAAAAAAAAAAAAAAAA-A");
+
+        result.ToByteArray()[15].Should().Be(0xF8);
+        Guider.ToGuidFromString("AAAAAAAAAAAAAAAAAAAA_A").ToByteArray()[15].Should().Be(0xFC);
+    }
+
+    [Theory]
+    [InlineData("AAAAAAAAAAAAAAAAAAAA==")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAA  ")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAA A")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAA+A")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAA/A")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAA\nA")]
+    public void ToGuidFromString_RejectsCharactersOutsideTheUrlSafeAlphabetWithItsMessage(string input)
+    {
+        Action act = () => Guider.ToGuidFromString(input);
+
+        act.Should().ThrowExactly<FormatException>()
+            .WithMessage("The value contains a character that is not part of the URL-safe alphabet.");
+    }
+
+    [Theory]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAA")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAA==")]
+    public void ToGuidFromString_RejectsWrongLengthWithItsMessage(string input)
+    {
+        Action act = () => Guider.ToGuidFromString(input);
+
+        act.Should().ThrowExactly<FormatException>()
+            .WithMessage("The value must be exactly 22 characters long.");
+    }
+
+    [Fact]
+    public void ToStringFromGuid_MatchesBase64UrlForManyGuids()
+    {
+        for (int i = 0; i < 256; i++)
+        {
+            var guid = Guid.NewGuid();
+            string encoded = guid.ToStringFromGuid();
+
+            encoded.Should().Be(System.Buffers.Text.Base64Url.EncodeToString(guid.ToByteArray()));
+            encoded.ToGuidFromString().Should().Be(guid);
+        }
+    }
 }
