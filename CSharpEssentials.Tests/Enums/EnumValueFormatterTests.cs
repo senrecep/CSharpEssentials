@@ -309,6 +309,31 @@ public class EnumValueFormatterTests
     }
 
     [Fact]
+    public void TryFormatMany_Should_Format_Each_Item_With_Its_Own_Enum_Type()
+    {
+        List<string> values = [];
+
+        bool formatted = EnumValueFormatter.TryFormatMany(
+            new object[] { FormatterInt.SecondValue, FormatterInt.MinValue, FormatterByte.MaxValue, FormatterInt.SecondValue }, Conventions, values);
+
+        formatted.Should().BeTrue();
+        values.Should().Equal("second_value", "min_value", "max_value", "second_value");
+    }
+
+    [Fact]
+    public void TryFormatMany_Should_Ask_Custom_Conventions_About_Every_New_Item_Type()
+    {
+        List<string> values = ["existing"];
+        EnumConventions conventions = Conventions with { CanHandle = static type => type != typeof(FormatterByte) };
+
+        bool formatted = EnumValueFormatter.TryFormatMany(
+            new object[] { FormatterInt.SecondValue, FormatterInt.MinValue, FormatterByte.MaxValue }, conventions, values);
+
+        formatted.Should().BeFalse();
+        values.Should().Equal("existing");
+    }
+
+    [Fact]
     public void TryFormatMany_Should_Throw_For_An_Undefined_Item()
     {
         List<string> values = [];

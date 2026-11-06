@@ -20,6 +20,8 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
     private const int MaxErrorValueLength = 64;
 
     private readonly EnumMemberInfo<TEnum>[] _members;
+    private readonly ReadOnlyArray<EnumMemberInfo<TEnum>> _typedMembers;
+    private readonly ReadOnlyArray<IEnumMemberInfo> _untypedMembers;
     private readonly Func<TEnum, ulong> _toRaw;
     private readonly Func<ulong, TEnum> _fromRaw;
     private readonly Dictionary<ulong, EnumMemberInfo<TEnum>> _byRaw;
@@ -48,6 +50,8 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
     {
         _ = members ?? throw new ArgumentNullException(nameof(members));
         _members = [.. members];
+        _typedMembers = new(_members);
+        _untypedMembers = new([.. _members]);
         _toRaw = toRaw ?? throw new ArgumentNullException(nameof(toRaw));
         _fromRaw = fromRaw ?? throw new ArgumentNullException(nameof(fromRaw));
         IsFlags = isFlags;
@@ -116,10 +120,10 @@ public sealed class EnumInfo<TEnum> : IEnumInfo, IBoxedEnumFormatter where TEnum
     public EnumStorage Storage { get; }
 
     /// <summary>The typed members in declaration order.</summary>
-    public IReadOnlyList<EnumMemberInfo<TEnum>> TypedMembers => _members;
+    public IReadOnlyList<EnumMemberInfo<TEnum>> TypedMembers => _typedMembers;
 
     /// <inheritdoc />
-    public IReadOnlyList<IEnumMemberInfo> Members => _members;
+    public IReadOnlyList<IEnumMemberInfo> Members => _untypedMembers;
 
     /// <summary>The typed <see cref="EnumFallbackAttribute"/> member, if any.</summary>
     public EnumMemberInfo<TEnum>? Fallback { get; }

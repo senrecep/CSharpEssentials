@@ -17,9 +17,10 @@ public static class EnumMetadata
 #else
     private static readonly object Gate = new();
 #endif
-    private static readonly ConcurrentDictionary<(Type Type, EnumNaming Naming), IEnumInfo> ReflectionCache = new();
+    private static readonly ConcurrentDictionary<(Type Type, EnumNaming Naming), (IEnumInfo Info, int Registrations)> ReflectionCache = new();
     private static readonly Dictionary<Type, Lazy<IEnumInfo>> Registered = [];
     private static Dictionary<Type, Lazy<IEnumInfo>>? _snapshot;
+    private static int _registrations;
 
     /// <summary>Gets the generated metadata of <typeparamref name="TEnum"/>.</summary>
     /// <exception cref="InvalidOperationException">The enum is not marked <see cref="StringEnumAttribute"/> (or its project uses C# 8 or older).</exception>
@@ -68,12 +69,20 @@ public static class EnumMetadata
         if (!enumType.IsEnum)
             throw new ArgumentException($"'{enumType.FullName}' is not an enum type.", nameof(enumType));
 
-        if (ReflectionCache.TryGetValue((enumType, naming), out IEnumInfo? cached))
-            return Lookup(enumType, out IEnumInfo? registered) ? registered : cached;
+        (Type, EnumNaming) key = (enumType, naming);
+        bool found = ReflectionCache.TryGetValue(key, out (IEnumInfo Info, int Registrations) cached);
+        int registrations = Volatile.Read(ref _registrations);
+        if (found && cached.Registrations == registrations)
+            return cached.Info;
 
-        return TryGet(enumType, out IEnumInfo? info)
-            ? info
-            : ReflectionCache.GetOrAdd((enumType, naming), static key => ReflectionEnumInfoBuilder.Build(key.Type, key.Naming));
+        if (TryGet(enumType, out IEnumInfo? info))
+            return info;
+
+        IEnumInfo reflected = found
+            ? cached.Info
+            : ReflectionCache.GetOrAdd(key, static key => (ReflectionEnumInfoBuilder.Build(key.Type, key.Naming), -1)).Info;
+        ReflectionCache[key] = (reflected, registrations);
+        return reflected;
     }
 
     /// <summary>Registers metadata built in code.</summary>
@@ -86,6 +95,7 @@ public static class EnumMetadata
             Registered[typeof(TEnum)] = new Lazy<IEnumInfo>(() => info);
             _snapshot = null;
             EnumInfoCache<TEnum>.Set(info);
+            Volatile.Write(ref _registrations, _registrations + 1);
         }
     }
 
@@ -112,6 +122,7 @@ public static class EnumMetadata
             }
 
             _snapshot = null;
+            Volatile.Write(ref _registrations, _registrations + 1);
         }
     }
 
