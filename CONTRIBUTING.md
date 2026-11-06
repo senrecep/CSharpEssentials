@@ -158,6 +158,7 @@ A useful bug report has:
 - Include XML documentation comments (`///`) for public APIs
 - Update README.MD if needed (package table, badges)
 - Update the package `Readme.MD` and the matching `.well-known/agent-skills/<package>/SKILL.md` when a public API changes
+  (the same file ships inside the package at `skills/<name>/SKILL.md`, so agents read the version that matches the installed package)
 - Do not bump the version or edit `CHANGELOG.md` in a feature pull request; release-please generates both
 - Add examples for new features
 
