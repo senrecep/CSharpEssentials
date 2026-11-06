@@ -8,24 +8,24 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                              | Categories | Succeed | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------------------ |----------- |-------- |----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| **CSharpEssentials_ToInt**              | **ToInt**      | **False**   |  **2.241 ns** | **0.0010 ns** | **0.0009 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CSharpFunctionalExtensions_ToInt    | ToInt      | False   |  2.328 ns | 0.0049 ns | 0.0046 ns |  1.04 |    0.00 |      - |         - |          NA |
-| ErrorOr_ToInt                       | ToInt      | False   |  1.151 ns | 0.0028 ns | 0.0026 ns |  0.51 |    0.00 |      - |         - |          NA |
-| FluentResults_ToInt                 | ToInt      | False   | 20.944 ns | 0.1867 ns | 0.1747 ns |  9.34 |    0.08 | 0.0052 |      88 B |          NA |
-|                                     |            |         |           |           |           |       |         |        |           |             |
-| **CSharpEssentials_ToInt**              | **ToInt**      | **True**    |  **1.119 ns** | **0.0071 ns** | **0.0067 ns** |  **1.00** |    **0.01** |      **-** |         **-** |          **NA** |
-| CSharpFunctionalExtensions_ToInt    | ToInt      | True    |  2.325 ns | 0.0043 ns | 0.0039 ns |  2.08 |    0.01 |      - |         - |          NA |
-| ErrorOr_ToInt                       | ToInt      | True    |  1.122 ns | 0.0131 ns | 0.0123 ns |  1.00 |    0.01 |      - |         - |          NA |
-| FluentResults_ToInt                 | ToInt      | True    | 20.782 ns | 0.1619 ns | 0.1515 ns | 18.58 |    0.17 | 0.0057 |      96 B |          NA |
-|                                     |            |         |           |           |           |       |         |        |           |             |
-| **CSharpEssentials_ToString**           | **ToString**   | **False**   |  **1.989 ns** | **0.0009 ns** | **0.0007 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CSharpFunctionalExtensions_ToString | ToString   | False   |  1.588 ns | 0.0023 ns | 0.0019 ns |  0.80 |    0.00 |      - |         - |          NA |
-| ErrorOr_ToString                    | ToString   | False   |  1.010 ns | 0.0014 ns | 0.0012 ns |  0.51 |    0.00 |      - |         - |          NA |
-| FluentResults_ToString              | ToString   | False   | 76.271 ns | 0.4356 ns | 0.3862 ns | 38.34 |    0.19 | 0.0143 |     240 B |          NA |
-|                                     |            |         |           |           |           |       |         |        |           |             |
-| **CSharpEssentials_ToString**           | **ToString**   | **True**    |  **2.030 ns** | **0.0072 ns** | **0.0067 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CSharpFunctionalExtensions_ToString | ToString   | True    |  2.748 ns | 0.0008 ns | 0.0006 ns |  1.35 |    0.00 |      - |         - |          NA |
-| ErrorOr_ToString                    | ToString   | True    |  2.604 ns | 0.0081 ns | 0.0075 ns |  1.28 |    0.01 |      - |         - |          NA |
-| FluentResults_ToString              | ToString   | True    | 22.401 ns | 0.1883 ns | 0.1762 ns | 11.03 |    0.09 | 0.0057 |      96 B |          NA |
+| Method                              | Categories | Succeed | Mean       | Error     | StdDev    | Ratio  | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------------------------ |----------- |-------- |-----------:|----------:|----------:|-------:|--------:|-------:|----------:|------------:|
+| **CSharpEssentials_ToInt**              | **ToInt**      | **False**   |  **1.0570 ns** | **0.0018 ns** | **0.0017 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions_ToInt    | ToInt      | False   |  2.3593 ns | 0.0048 ns | 0.0045 ns |   2.23 |    0.01 |      - |         - |          NA |
+| ErrorOr_ToInt                       | ToInt      | False   |  1.0181 ns | 0.0040 ns | 0.0038 ns |   0.96 |    0.00 |      - |         - |          NA |
+| FluentResults_ToInt                 | ToInt      | False   | 21.7977 ns | 0.1225 ns | 0.1146 ns |  20.62 |    0.11 | 0.0052 |      88 B |          NA |
+|                                     |            |         |            |           |           |        |         |        |           |             |
+| **CSharpEssentials_ToInt**              | **ToInt**      | **True**    |  **1.2063 ns** | **0.0027 ns** | **0.0023 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions_ToInt    | ToInt      | True    |  2.3368 ns | 0.0038 ns | 0.0034 ns |   1.94 |    0.00 |      - |         - |          NA |
+| ErrorOr_ToInt                       | ToInt      | True    |  1.1083 ns | 0.0049 ns | 0.0043 ns |   0.92 |    0.00 |      - |         - |          NA |
+| FluentResults_ToInt                 | ToInt      | True    | 24.6687 ns | 0.1335 ns | 0.1248 ns |  20.45 |    0.11 | 0.0057 |      96 B |          NA |
+|                                     |            |         |            |           |           |        |         |        |           |             |
+| **CSharpEssentials_ToString**           | **ToString**   | **False**   |  **0.7223 ns** | **0.0012 ns** | **0.0011 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions_ToString | ToString   | False   |  1.5866 ns | 0.0011 ns | 0.0009 ns |   2.20 |    0.00 |      - |         - |          NA |
+| ErrorOr_ToString                    | ToString   | False   |  1.0124 ns | 0.0015 ns | 0.0013 ns |   1.40 |    0.00 |      - |         - |          NA |
+| FluentResults_ToString              | ToString   | False   | 75.4939 ns | 0.3767 ns | 0.3340 ns | 104.51 |    0.47 | 0.0143 |     240 B |          NA |
+|                                     |            |         |            |           |           |        |         |        |           |             |
+| **CSharpEssentials_ToString**           | **ToString**   | **True**    |  **2.6708 ns** | **0.0016 ns** | **0.0013 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions_ToString | ToString   | True    |  2.8218 ns | 0.0019 ns | 0.0017 ns |   1.06 |    0.00 |      - |         - |          NA |
+| ErrorOr_ToString                    | ToString   | True    |  2.6557 ns | 0.0019 ns | 0.0016 ns |   0.99 |    0.00 |      - |         - |          NA |
+| FluentResults_ToString              | ToString   | True    | 23.2173 ns | 0.1605 ns | 0.1501 ns |   8.69 |    0.05 | 0.0057 |      96 B |          NA |

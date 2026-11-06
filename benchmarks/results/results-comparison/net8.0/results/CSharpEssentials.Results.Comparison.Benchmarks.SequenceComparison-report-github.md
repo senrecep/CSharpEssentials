@@ -1,0 +1,51 @@
+```
+
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+
+
+```
+| Method                                | Categories | N   | Succeed | Mean         | Error      | StdDev     | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|-------------------------------------- |----------- |---- |-------- |-------------:|-----------:|-----------:|------:|--------:|-------:|----------:|------------:|
+| **CSharpEssentials_CombineAll**           | **CombineAll** | **10**  | **False**   |    **34.253 ns** |  **0.1869 ns** |  **0.1749 ns** |  **1.00** |    **0.01** | **0.0033** |      **56 B** |        **1.00** |
+| CSharpFunctionalExtensions_CombineAll | CombineAll | 10  | False   |   247.669 ns |  1.1901 ns |  0.9938 ns |  7.23 |    0.05 | 0.0348 |     584 B |       10.43 |
+| ErrorOr_CombineAll                    | CombineAll | 10  | False   |    41.036 ns |  0.4169 ns |  0.3696 ns |  1.20 |    0.01 | 0.0110 |     184 B |        3.29 |
+| FluentResults_CombineAll              | CombineAll | 10  | False   |   245.636 ns |  1.1148 ns |  0.9882 ns |  7.17 |    0.04 | 0.0148 |     248 B |        4.43 |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_CombineAll**           | **CombineAll** | **10**  | **True**    |     **8.464 ns** |  **0.0035 ns** |  **0.0031 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions_CombineAll | CombineAll | 10  | True    |    35.758 ns |  0.1736 ns |  0.1624 ns |  4.22 |    0.02 | 0.0052 |      88 B |          NA |
+| ErrorOr_CombineAll                    | CombineAll | 10  | True    |     9.176 ns |  0.1396 ns |  0.1306 ns |  1.08 |    0.01 | 0.0019 |      32 B |          NA |
+| FluentResults_CombineAll              | CombineAll | 10  | True    |   202.129 ns |  0.9332 ns |  0.8729 ns | 23.88 |    0.10 | 0.0091 |     152 B |          NA |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_CombineAll**           | **CombineAll** | **100** | **False**   |   **142.323 ns** |  **0.9187 ns** |  **0.8593 ns** |  **1.00** |    **0.01** | **0.0033** |      **56 B** |        **1.00** |
+| CSharpFunctionalExtensions_CombineAll | CombineAll | 100 | False   |   401.231 ns |  0.9994 ns |  0.9348 ns |  2.82 |    0.02 | 0.0348 |     584 B |       10.43 |
+| ErrorOr_CombineAll                    | CombineAll | 100 | False   |    74.432 ns |  1.0640 ns |  0.9953 ns |  0.52 |    0.01 | 0.0110 |     184 B |        3.29 |
+| FluentResults_CombineAll              | CombineAll | 100 | False   | 1,509.813 ns |  0.9785 ns |  0.8674 ns | 10.61 |    0.06 | 0.0134 |     248 B |        4.43 |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_CombineAll**           | **CombineAll** | **100** | **True**    |    **68.233 ns** |  **0.0838 ns** |  **0.0784 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions_CombineAll | CombineAll | 100 | True    |   171.027 ns |  0.3579 ns |  0.3348 ns |  2.51 |    0.01 | 0.0052 |      88 B |          NA |
+| ErrorOr_CombineAll                    | CombineAll | 100 | True    |    42.242 ns |  0.0788 ns |  0.0737 ns |  0.62 |    0.00 | 0.0019 |      32 B |          NA |
+| FluentResults_CombineAll              | CombineAll | 100 | True    | 1,401.819 ns |  1.2896 ns |  1.0068 ns | 20.54 |    0.03 | 0.0076 |     152 B |          NA |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_Sequence**             | **Sequence**   | **10**  | **False**   |   **133.668 ns** |  **0.9977 ns** |  **0.9333 ns** |  **1.00** |    **0.01** | **0.0291** |     **488 B** |        **1.00** |
+| CSharpFunctionalExtensions_Sequence   | Sequence   | 10  | False   |   415.900 ns |  1.4784 ns |  1.3106 ns |  3.11 |    0.02 | 0.0534 |     896 B |        1.84 |
+| ErrorOr_Sequence                      | Sequence   | 10  | False   |    98.401 ns |  0.7154 ns |  0.6342 ns |  0.74 |    0.01 | 0.0238 |     400 B |        0.82 |
+| FluentResults_Sequence                | Sequence   | 10  | False   |   475.512 ns |  1.5200 ns |  1.4218 ns |  3.56 |    0.03 | 0.0343 |     584 B |        1.20 |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_Sequence**             | **Sequence**   | **10**  | **True**    |   **104.285 ns** |  **0.3621 ns** |  **0.3210 ns** |  **1.00** |    **0.00** | **0.0205** |     **344 B** |        **1.00** |
+| CSharpFunctionalExtensions_Sequence   | Sequence   | 10  | True    |   244.872 ns |  2.4630 ns |  2.3039 ns |  2.35 |    0.02 | 0.0324 |     544 B |        1.58 |
+| ErrorOr_Sequence                      | Sequence   | 10  | True    |    67.317 ns |  0.2986 ns |  0.2493 ns |  0.65 |    0.00 | 0.0148 |     248 B |        0.72 |
+| FluentResults_Sequence                | Sequence   | 10  | True    |   788.290 ns |  3.8600 ns |  3.6106 ns |  7.56 |    0.04 | 0.0734 |    1232 B |        3.58 |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_Sequence**             | **Sequence**   | **100** | **False**   |   **498.915 ns** |  **1.6865 ns** |  **1.4950 ns** |  **1.00** |    **0.00** | **0.0868** |    **1456 B** |        **1.00** |
+| CSharpFunctionalExtensions_Sequence   | Sequence   | 100 | False   | 1,098.679 ns |  4.9343 ns |  4.6155 ns |  2.20 |    0.01 | 0.1392 |    2336 B |        1.60 |
+| ErrorOr_Sequence                      | Sequence   | 100 | False   |   369.575 ns |  3.4087 ns |  3.1885 ns |  0.74 |    0.01 | 0.0815 |    1368 B |        0.94 |
+| FluentResults_Sequence                | Sequence   | 100 | False   | 2,380.595 ns |  2.7850 ns |  2.4688 ns |  4.77 |    0.01 | 0.0763 |    1304 B |        0.90 |
+|                                       |            |     |         |              |            |            |       |         |        |           |             |
+| **CSharpEssentials_Sequence**             | **Sequence**   | **100** | **True**    |   **465.941 ns** |  **5.6197 ns** |  **5.2567 ns** |  **1.00** |    **0.02** | **0.0997** |    **1672 B** |        **1.00** |
+| CSharpFunctionalExtensions_Sequence   | Sequence   | 100 | True    | 1,242.290 ns |  4.8585 ns |  4.5447 ns |  2.67 |    0.03 | 0.1392 |    2344 B |        1.40 |
+| ErrorOr_Sequence                      | Sequence   | 100 | True    |   252.045 ns |  2.7054 ns |  2.5306 ns |  0.54 |    0.01 | 0.0725 |    1216 B |        0.73 |
+| FluentResults_Sequence                | Sequence   | 100 | True    | 5,155.298 ns | 19.7004 ns | 18.4278 ns | 11.07 |    0.13 | 0.4349 |    7352 B |        4.40 |

@@ -10,10 +10,10 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method                     | Succeed | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |--------------------------- |-------- |----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| **CSharpEssentials**           | **False**   | **24.542 ns** | **0.4338 ns** | **0.4057 ns** |  **1.00** |    **0.02** | **0.0062** |     **104 B** |        **1.00** |
-| CSharpFunctionalExtensions | False   |  8.448 ns | 0.0074 ns | 0.0065 ns |  0.34 |    0.01 |      - |         - |        0.00 |
-| ErrorOr                    | False   | 20.001 ns | 0.4260 ns | 0.4375 ns |  0.82 |    0.02 | 0.0052 |      88 B |        0.85 |
+| **CSharpEssentials**           | **False**   | **14.817 ns** | **0.3139 ns** | **0.3969 ns** |  **1.00** |    **0.04** | **0.0033** |      **56 B** |        **1.00** |
+| CSharpFunctionalExtensions | False   |  8.411 ns | 0.0035 ns | 0.0033 ns |  0.57 |    0.02 |      - |         - |        0.00 |
+| ErrorOr                    | False   | 19.726 ns | 0.0750 ns | 0.0702 ns |  1.33 |    0.04 | 0.0052 |      88 B |        1.57 |
 |                            |         |           |           |           |       |         |        |           |             |
-| **CSharpEssentials**           | **True**    |  **1.514 ns** | **0.0162 ns** | **0.0144 ns** |  **1.00** |    **0.01** |      **-** |         **-** |          **NA** |
-| CSharpFunctionalExtensions | True    |  8.961 ns | 0.0048 ns | 0.0040 ns |  5.92 |    0.05 |      - |         - |          NA |
-| ErrorOr                    | True    |  1.447 ns | 0.0007 ns | 0.0006 ns |  0.96 |    0.01 |      - |         - |          NA |
+| **CSharpEssentials**           | **True**    |  **1.209 ns** | **0.0095 ns** | **0.0089 ns** |  **1.00** |    **0.01** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions | True    |  8.987 ns | 0.0026 ns | 0.0022 ns |  7.43 |    0.05 |      - |         - |          NA |
+| ErrorOr                    | True    |  1.393 ns | 0.0009 ns | 0.0007 ns |  1.15 |    0.01 |      - |         - |          NA |

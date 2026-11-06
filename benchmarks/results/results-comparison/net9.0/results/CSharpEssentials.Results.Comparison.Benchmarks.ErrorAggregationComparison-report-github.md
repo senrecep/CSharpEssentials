@@ -10,12 +10,12 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method                     | Succeed | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |--------------------------- |-------- |----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
-| **CSharpEssentials**           | **False**   | **423.18 ns** | **2.573 ns** | **2.407 ns** |  **1.00** |    **0.01** | **0.0415** |     **696 B** |        **1.00** |
-| CSharpFunctionalExtensions | False   | 451.52 ns | 0.980 ns | 0.917 ns |  1.07 |    0.01 | 0.0467 |     784 B |        1.13 |
-| ErrorOr                    | False   |  46.07 ns | 0.939 ns | 1.187 ns |  0.11 |    0.00 | 0.0110 |     184 B |        0.26 |
-| FluentResults              | False   | 274.78 ns | 2.569 ns | 2.403 ns |  0.65 |    0.01 | 0.0424 |     712 B |        1.02 |
+| **CSharpEssentials**           | **False**   | **108.90 ns** | **1.413 ns** | **1.322 ns** |  **1.00** |    **0.02** | **0.0200** |     **336 B** |        **1.00** |
+| CSharpFunctionalExtensions | False   | 464.36 ns | 0.945 ns | 0.884 ns |  4.26 |    0.05 | 0.0467 |     784 B |        2.33 |
+| ErrorOr                    | False   |  46.15 ns | 0.577 ns | 0.540 ns |  0.42 |    0.01 | 0.0110 |     184 B |        0.55 |
+| FluentResults              | False   | 257.75 ns | 1.576 ns | 1.474 ns |  2.37 |    0.03 | 0.0424 |     712 B |        2.12 |
 |                            |         |           |          |          |       |         |        |           |             |
-| **CSharpEssentials**           | **True**    |  **32.88 ns** | **0.224 ns** | **0.209 ns** |  **1.00** |    **0.01** | **0.0067** |     **112 B** |        **1.00** |
-| CSharpFunctionalExtensions | True    |  53.81 ns | 0.188 ns | 0.176 ns |  1.64 |    0.01 | 0.0095 |     160 B |        1.43 |
-| ErrorOr                    | True    |  11.53 ns | 0.060 ns | 0.056 ns |  0.35 |    0.00 | 0.0019 |      32 B |        0.29 |
-| FluentResults              | True    | 141.57 ns | 0.881 ns | 0.781 ns |  4.31 |    0.04 | 0.0219 |     368 B |        3.29 |
+| **CSharpEssentials**           | **True**    |  **16.71 ns** | **0.072 ns** | **0.068 ns** |  **1.00** |    **0.01** | **0.0029** |      **48 B** |        **1.00** |
+| CSharpFunctionalExtensions | True    |  53.38 ns | 0.342 ns | 0.303 ns |  3.20 |    0.02 | 0.0095 |     160 B |        3.33 |
+| ErrorOr                    | True    |  11.81 ns | 0.049 ns | 0.044 ns |  0.71 |    0.00 | 0.0019 |      32 B |        0.67 |
+| FluentResults              | True    | 140.42 ns | 0.537 ns | 0.502 ns |  8.41 |    0.04 | 0.0219 |     368 B |        7.67 |

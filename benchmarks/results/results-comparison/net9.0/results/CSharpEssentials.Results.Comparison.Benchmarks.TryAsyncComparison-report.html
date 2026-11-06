@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Comparison.Benchmarks.TryAsyncComparison-20261105-084812</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method              </th><th>Succeed</th><th>Yield</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>False</td><td>8,535.95 ns</td><td>27.348 ns</td><td>24.244 ns</td><td>1.00</td><td>0.00</td><td>0.0763</td><td>1512 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>False</td><td>8,389.92 ns</td><td>13.918 ns</td><td>12.338 ns</td><td>0.98</td><td>0.00</td><td>0.0763</td><td>1456 B</td><td>0.96</td>
+</tr><tr><td>ErrorOr</td><td>False</td><td>False</td><td>8,369.64 ns</td><td>18.905 ns</td><td>16.759 ns</td><td>0.98</td><td>0.00</td><td>0.0916</td><td>1544 B</td><td>1.02</td>
+</tr><tr><td>FluentResults</td><td>False</td><td>False</td><td>8,653.26 ns</td><td>16.285 ns</td><td>15.233 ns</td><td>1.01</td><td>0.00</td><td>0.1068</td><td>1816 B</td><td>1.20</td>
+</tr><tr><td>CSharpEssentials</td><td>False</td><td>True</td><td>10,083.47 ns</td><td>107.582 ns</td><td>100.632 ns</td><td>1.00</td><td>0.01</td><td>0.0916</td><td>1601 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>False</td><td>True</td><td>10,325.99 ns</td><td>141.472 ns</td><td>132.333 ns</td><td>1.02</td><td>0.02</td><td>0.0916</td><td>1537 B</td><td>0.96</td>
+</tr><tr><td>ErrorOr</td><td>False</td><td>True</td><td>10,399.64 ns</td><td>96.167 ns</td><td>89.955 ns</td><td>1.03</td><td>0.01</td><td>0.0916</td><td>1610 B</td><td>1.01</td>
+</tr><tr><td>FluentResults</td><td>False</td><td>True</td><td>10,729.65 ns</td><td>113.617 ns</td><td>106.278 ns</td><td>1.06</td><td>0.01</td><td>0.1068</td><td>1890 B</td><td>1.18</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>False</td><td>38.84 ns</td><td>0.154 ns</td><td>0.128 ns</td><td>1.00</td><td>0.00</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>False</td><td>40.61 ns</td><td>0.201 ns</td><td>0.179 ns</td><td>1.05</td><td>0.01</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr</td><td>True</td><td>False</td><td>36.09 ns</td><td>0.250 ns</td><td>0.233 ns</td><td>0.93</td><td>0.01</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>FluentResults</td><td>True</td><td>False</td><td>73.02 ns</td><td>0.522 ns</td><td>0.488 ns</td><td>1.88</td><td>0.01</td><td>0.0153</td><td>256 B</td><td>1.68</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>True</td><td>837.54 ns</td><td>4.616 ns</td><td>4.318 ns</td><td>1.00</td><td>0.01</td><td>0.0143</td><td>239 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions</td><td>True</td><td>True</td><td>845.71 ns</td><td>5.319 ns</td><td>4.975 ns</td><td>1.01</td><td>0.01</td><td>0.0134</td><td>232 B</td><td>0.97</td>
+</tr><tr><td>ErrorOr</td><td>True</td><td>True</td><td>837.39 ns</td><td>3.699 ns</td><td>3.460 ns</td><td>1.00</td><td>0.01</td><td>0.0124</td><td>216 B</td><td>0.90</td>
+</tr><tr><td>FluentResults</td><td>True</td><td>True</td><td>875.22 ns</td><td>5.312 ns</td><td>4.969 ns</td><td>1.05</td><td>0.01</td><td>0.0191</td><td>328 B</td><td>1.37</td>
+</tr></tbody></table>
+</body>
+</html>

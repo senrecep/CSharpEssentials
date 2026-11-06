@@ -10,10 +10,10 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method                     | Succeed | Mean      | Error     | StdDev    | Ratio | RatioSD | Allocated | Alloc Ratio |
 |--------------------------- |-------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
-| **CSharpEssentials**           | **False**   | **0.5289 ns** | **0.0110 ns** | **0.0103 ns** |  **1.00** |    **0.03** |         **-** |          **NA** |
-| CSharpFunctionalExtensions | False   | 1.1427 ns | 0.0164 ns | 0.0154 ns |  2.16 |    0.05 |         - |          NA |
-| ErrorOr                    | False   | 1.7525 ns | 0.0007 ns | 0.0006 ns |  3.31 |    0.06 |         - |          NA |
+| **CSharpEssentials**           | **False**   | **0.4930 ns** | **0.0036 ns** | **0.0032 ns** |  **1.00** |    **0.01** |         **-** |          **NA** |
+| CSharpFunctionalExtensions | False   | 1.0072 ns | 0.0179 ns | 0.0167 ns |  2.04 |    0.04 |         - |          NA |
+| ErrorOr                    | False   | 2.0245 ns | 0.0017 ns | 0.0015 ns |  4.11 |    0.03 |         - |          NA |
 |                            |         |           |           |           |       |         |           |             |
-| **CSharpEssentials**           | **True**    | **1.6047 ns** | **0.0102 ns** | **0.0096 ns** |  **1.00** |    **0.01** |         **-** |          **NA** |
-| CSharpFunctionalExtensions | True    | 1.7455 ns | 0.0187 ns | 0.0166 ns |  1.09 |    0.01 |         - |          NA |
-| ErrorOr                    | True    | 1.7868 ns | 0.0188 ns | 0.0176 ns |  1.11 |    0.01 |         - |          NA |
+| **CSharpEssentials**           | **True**    | **1.5426 ns** | **0.0062 ns** | **0.0058 ns** |  **1.00** |    **0.01** |         **-** |          **NA** |
+| CSharpFunctionalExtensions | True    | 1.7568 ns | 0.0144 ns | 0.0135 ns |  1.14 |    0.01 |         - |          NA |
+| ErrorOr                    | True    | 1.8978 ns | 0.0184 ns | 0.0172 ns |  1.23 |    0.01 |         - |          NA |

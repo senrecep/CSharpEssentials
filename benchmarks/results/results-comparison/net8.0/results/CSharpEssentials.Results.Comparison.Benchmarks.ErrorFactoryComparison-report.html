@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Comparison.Benchmarks.ErrorFactoryComparison-20261105-061904</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                 </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Plain</td><td>Plain</td><td>10.269 ns</td><td>0.0039 ns</td><td>0.0035 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ErrorOr_Plain</td><td>Plain</td><td>6.711 ns</td><td>0.0009 ns</td><td>0.0007 ns</td><td>0.65</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>FluentResults_Plain</td><td>Plain</td><td>36.880 ns</td><td>0.2033 ns</td><td>0.1802 ns</td><td>3.59</td><td>0.02</td><td>0.0091</td><td>0.0001</td><td>152 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_WithMetadata</td><td>WithMetadata</td><td>82.096 ns</td><td>0.2487 ns</td><td>0.2205 ns</td><td>1.00</td><td>0.00</td><td>0.0129</td><td>-</td><td>216 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr_WithMetadata</td><td>WithMetadata</td><td>81.072 ns</td><td>0.3503 ns</td><td>0.3277 ns</td><td>0.99</td><td>0.00</td><td>0.0129</td><td>-</td><td>216 B</td><td>1.00</td>
+</tr><tr><td>FluentResults_WithMetadata</td><td>WithMetadata</td><td>89.657 ns</td><td>0.3643 ns</td><td>0.3229 ns</td><td>1.09</td><td>0.00</td><td>0.0172</td><td>-</td><td>288 B</td><td>1.33</td>
+</tr></tbody></table>
+</body>
+</html>
