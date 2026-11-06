@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.ValidationFilterComparison-20261106-075902</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Categories=Validate  
+</code></pre>
+
+<table>
+<thead><tr><th>Method                   </th><th>Rules</th><th>Outcome</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Bcl_Inline</td><td>1</td><td>Invalid</td><td>16.99 &mu;s</td><td>0.338 &mu;s</td><td>0.644 &mu;s</td><td>1.00</td><td>0.05</td><td>0.4883</td><td>11.14 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_WithValidation</td><td>1</td><td>Invalid</td><td>31.60 &mu;s</td><td>0.632 &mu;s</td><td>0.591 &mu;s</td><td>1.86</td><td>0.08</td><td>0.7324</td><td>14.22 KB</td><td>1.28</td>
+</tr><tr><td>SharpGrip_AutoValidation</td><td>1</td><td>Invalid</td><td>40.51 &mu;s</td><td>0.515 &mu;s</td><td>0.457 &mu;s</td><td>2.39</td><td>0.09</td><td>0.9766</td><td>17.38 KB</td><td>1.56</td>
+</tr><tr><td>Bcl_Inline</td><td>1</td><td>Valid</td><td>14.18 &mu;s</td><td>0.275 &mu;s</td><td>0.394 &mu;s</td><td>1.00</td><td>0.04</td><td>0.6104</td><td>10.18 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_WithValidation</td><td>1</td><td>Valid</td><td>16.81 &mu;s</td><td>0.336 &mu;s</td><td>0.737 &mu;s</td><td>1.19</td><td>0.06</td><td>0.4883</td><td>11.13 KB</td><td>1.09</td>
+</tr><tr><td>SharpGrip_AutoValidation</td><td>1</td><td>Valid</td><td>32.76 &mu;s</td><td>0.630 &mu;s</td><td>0.700 &mu;s</td><td>2.31</td><td>0.08</td><td>0.7324</td><td>15.52 KB</td><td>1.52</td>
+</tr><tr><td>Bcl_Inline</td><td>3</td><td>Invalid</td><td>16.83 &mu;s</td><td>0.328 &mu;s</td><td>0.575 &mu;s</td><td>1.00</td><td>0.05</td><td>0.4883</td><td>11.2 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_WithValidation</td><td>3</td><td>Invalid</td><td>34.09 &mu;s</td><td>0.670 &mu;s</td><td>0.871 &mu;s</td><td>2.03</td><td>0.09</td><td>0.7324</td><td>15.36 KB</td><td>1.37</td>
+</tr><tr><td>SharpGrip_AutoValidation</td><td>3</td><td>Invalid</td><td>50.83 &mu;s</td><td>0.494 &mu;s</td><td>0.462 &mu;s</td><td>3.02</td><td>0.11</td><td>1.4648</td><td>24.88 KB</td><td>2.22</td>
+</tr><tr><td>Bcl_Inline</td><td>3</td><td>Valid</td><td>14.12 &mu;s</td><td>0.229 &mu;s</td><td>0.225 &mu;s</td><td>1.00</td><td>0.02</td><td>0.6104</td><td>10.18 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_WithValidation</td><td>3</td><td>Valid</td><td>18.14 &mu;s</td><td>0.360 &mu;s</td><td>0.727 &mu;s</td><td>1.28</td><td>0.05</td><td>0.4883</td><td>11.41 KB</td><td>1.12</td>
+</tr><tr><td>SharpGrip_AutoValidation</td><td>3</td><td>Valid</td><td>38.05 &mu;s</td><td>0.309 &mu;s</td><td>0.289 &mu;s</td><td>2.69</td><td>0.05</td><td>0.9766</td><td>19.49 KB</td><td>1.91</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.ResultFilterComparison-20261105-225515</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Categories=Result  
+</code></pre>
+
+<table>
+<thead><tr><th>Method                 </th><th>Outcome</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Bcl_TypedResults</td><td>Failure</td><td>11.021 &mu;s</td><td>0.2151 &mu;s</td><td>0.3085 &mu;s</td><td>1.00</td><td>0.04</td><td>0.6104</td><td>10.19 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_ResultFilter</td><td>Failure</td><td>13.547 &mu;s</td><td>0.2668 &mu;s</td><td>0.3176 &mu;s</td><td>1.23</td><td>0.04</td><td>0.6104</td><td>11.35 KB</td><td>1.11</td>
+</tr><tr><td>CSharpEssentials_ManualMatch</td><td>Failure</td><td>12.940 &mu;s</td><td>0.2586 &mu;s</td><td>0.3540 &mu;s</td><td>1.18</td><td>0.04</td><td>0.6104</td><td>11.29 KB</td><td>1.11</td>
+</tr><tr><td>Bcl_TypedResults</td><td>Success</td><td>9.475 &mu;s</td><td>0.1687 &mu;s</td><td>0.2472 &mu;s</td><td>1.00</td><td>0.04</td><td>0.4883</td><td>8.67 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_ResultFilter</td><td>Success</td><td>11.231 &mu;s</td><td>0.2180 &mu;s</td><td>0.2039 &mu;s</td><td>1.19</td><td>0.04</td><td>0.4883</td><td>8.74 KB</td><td>1.01</td>
+</tr><tr><td>CSharpEssentials_ManualMatch</td><td>Success</td><td>9.395 &mu;s</td><td>0.1828 &mu;s</td><td>0.2176 &mu;s</td><td>0.99</td><td>0.03</td><td>0.4883</td><td>8.65 KB</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>
