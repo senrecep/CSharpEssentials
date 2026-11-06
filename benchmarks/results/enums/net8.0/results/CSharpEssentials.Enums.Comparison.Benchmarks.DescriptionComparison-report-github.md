@@ -10,6 +10,6 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method           | Mean      | Error     | StdDev    | Ratio | Allocated | Alloc Ratio |
 |----------------- |----------:|----------:|----------:|------:|----------:|------------:|
-| CSharpEssentials | 4.5478 ns | 0.0026 ns | 0.0022 ns |  1.00 |         - |          NA |
-| EnumsNet         | 4.3340 ns | 0.0098 ns | 0.0092 ns |  0.95 |         - |          NA |
-| NetEscapades     | 0.9012 ns | 0.0046 ns | 0.0043 ns |  0.20 |         - |          NA |
+| CSharpEssentials | 4.4773 ns | 0.0032 ns | 0.0029 ns |  1.00 |         - |          NA |
+| EnumsNet         | 4.2669 ns | 0.0040 ns | 0.0036 ns |  0.95 |         - |          NA |
+| NetEscapades     | 0.5411 ns | 0.0006 ns | 0.0005 ns |  0.12 |         - |          NA |

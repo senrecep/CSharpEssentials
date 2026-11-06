@@ -8,14 +8,14 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method           | Defined | Mean      | Error     | StdDev    | Ratio | Allocated | Alloc Ratio |
-|----------------- |-------- |----------:|----------:|----------:|------:|----------:|------------:|
-| **CSharpEssentials** | **False**   | **2.9813 ns** | **0.0084 ns** | **0.0070 ns** |  **1.00** |         **-** |          **NA** |
-| Bcl              | False   | 3.6894 ns | 0.0052 ns | 0.0046 ns |  1.24 |         - |          NA |
-| EnumsNet         | False   | 1.2766 ns | 0.0039 ns | 0.0036 ns |  0.43 |         - |          NA |
-| NetEscapades     | False   | 0.7192 ns | 0.0018 ns | 0.0016 ns |  0.24 |         - |          NA |
-|                  |         |           |           |           |       |           |             |
-| **CSharpEssentials** | **True**    | **3.3945 ns** | **0.0038 ns** | **0.0032 ns** |  **1.00** |         **-** |          **NA** |
-| Bcl              | True    | 3.8336 ns | 0.0180 ns | 0.0169 ns |  1.13 |         - |          NA |
-| EnumsNet         | True    | 0.6909 ns | 0.0077 ns | 0.0072 ns |  0.20 |         - |          NA |
-| NetEscapades     | True    | 0.3851 ns | 0.0259 ns | 0.0216 ns |  0.11 |         - |          NA |
+| Method           | Defined | Mean      | Error     | StdDev    | Ratio | RatioSD | Allocated | Alloc Ratio |
+|----------------- |-------- |----------:|----------:|----------:|------:|--------:|----------:|------------:|
+| **CSharpEssentials** | **False**   | **0.4298 ns** | **0.0013 ns** | **0.0012 ns** |  **1.00** |    **0.00** |         **-** |          **NA** |
+| Bcl              | False   | 3.5341 ns | 0.0022 ns | 0.0017 ns |  8.22 |    0.02 |         - |          NA |
+| EnumsNet         | False   | 1.2765 ns | 0.0089 ns | 0.0083 ns |  2.97 |    0.02 |         - |          NA |
+| NetEscapades     | False   | 1.0132 ns | 0.0166 ns | 0.0155 ns |  2.36 |    0.04 |         - |          NA |
+|                  |         |           |           |           |       |         |           |             |
+| **CSharpEssentials** | **True**    | **0.3781 ns** | **0.0128 ns** | **0.0120 ns** |  **1.00** |    **0.04** |         **-** |          **NA** |
+| Bcl              | True    | 3.8279 ns | 0.0022 ns | 0.0018 ns | 10.13 |    0.31 |         - |          NA |
+| EnumsNet         | True    | 0.6885 ns | 0.0118 ns | 0.0110 ns |  1.82 |    0.06 |         - |          NA |
+| NetEscapades     | True    | 0.4266 ns | 0.0028 ns | 0.0024 ns |  1.13 |    0.04 |         - |          NA |

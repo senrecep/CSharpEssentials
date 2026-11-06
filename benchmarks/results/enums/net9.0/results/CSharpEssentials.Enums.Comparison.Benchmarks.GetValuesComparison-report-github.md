@@ -10,12 +10,12 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method                  | Categories | Mean     | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |------------------------ |----------- |---------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
-| CSharpEssentials_Names  | GetNames   | 19.22 ns | 0.084 ns | 0.079 ns |  1.00 |    0.01 | 0.0110 |     184 B |        1.00 |
-| Bcl_Names               | GetNames   | 31.09 ns | 0.373 ns | 0.331 ns |  1.62 |    0.02 | 0.0110 |     184 B |        1.00 |
-| EnumsNet_Names          | GetNames   | 17.41 ns | 0.131 ns | 0.122 ns |  0.91 |    0.01 |      - |         - |        0.00 |
-| NetEscapades_Names      | GetNames   | 19.30 ns | 0.222 ns | 0.207 ns |  1.00 |    0.01 | 0.0110 |     184 B |        1.00 |
+| CSharpEssentials_Names  | GetNames   | 20.36 ns | 0.261 ns | 0.244 ns |  1.00 |    0.02 | 0.0110 |     184 B |        1.00 |
+| Bcl_Names               | GetNames   | 32.50 ns | 0.508 ns | 0.475 ns |  1.60 |    0.03 | 0.0110 |     184 B |        1.00 |
+| EnumsNet_Names          | GetNames   | 17.26 ns | 0.196 ns | 0.174 ns |  0.85 |    0.01 |      - |         - |        0.00 |
+| NetEscapades_Names      | GetNames   | 20.34 ns | 0.371 ns | 0.347 ns |  1.00 |    0.02 | 0.0110 |     184 B |        1.00 |
 |                         |            |          |          |          |       |         |        |           |             |
-| CSharpEssentials_Values | GetValues  | 15.84 ns | 0.241 ns | 0.225 ns |  1.00 |    0.02 | 0.0062 |     104 B |        1.00 |
-| Bcl_Values              | GetValues  | 34.94 ns | 0.318 ns | 0.298 ns |  2.21 |    0.04 | 0.0062 |     104 B |        1.00 |
-| EnumsNet_Values         | GetValues  | 15.61 ns | 0.180 ns | 0.169 ns |  0.99 |    0.02 |      - |         - |        0.00 |
-| NetEscapades_Values     | GetValues  | 15.61 ns | 0.124 ns | 0.110 ns |  0.99 |    0.02 | 0.0062 |     104 B |        1.00 |
+| CSharpEssentials_Values | GetValues  | 16.46 ns | 0.198 ns | 0.185 ns |  1.00 |    0.02 | 0.0062 |     104 B |        1.00 |
+| Bcl_Values              | GetValues  | 36.46 ns | 0.198 ns | 0.175 ns |  2.22 |    0.03 | 0.0062 |     104 B |        1.00 |
+| EnumsNet_Values         | GetValues  | 15.55 ns | 0.131 ns | 0.122 ns |  0.94 |    0.01 |      - |         - |        0.00 |
+| NetEscapades_Values     | GetValues  | 15.77 ns | 0.246 ns | 0.206 ns |  0.96 |    0.02 | 0.0062 |     104 B |        1.00 |

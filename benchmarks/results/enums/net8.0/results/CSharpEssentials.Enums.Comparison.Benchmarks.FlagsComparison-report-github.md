@@ -10,13 +10,13 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method                      | Categories | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |---------------------------- |----------- |-----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| CSharpEssentials_Format     | Format     | 48.2274 ns | 0.2259 ns | 0.2002 ns |  1.00 |    0.01 | 0.0057 |      96 B |        1.00 |
-| Bcl_Format                  | Format     | 44.2197 ns | 0.9428 ns | 0.9682 ns |  0.92 |    0.02 | 0.0057 |      96 B |        1.00 |
-| EnumsNet_Format             | Format     | 89.9792 ns | 1.2396 ns | 1.1595 ns |  1.87 |    0.02 | 0.0167 |     280 B |        2.92 |
-| NetEscapades_Format         | Format     | 37.9471 ns | 0.1976 ns | 0.1849 ns |  0.79 |    0.00 | 0.0057 |      96 B |        1.00 |
+| CSharpEssentials_Format     | Format     | 22.6283 ns | 0.4573 ns | 0.4277 ns |  1.00 |    0.03 | 0.0043 |      72 B |        1.00 |
+| Bcl_Format                  | Format     | 37.5867 ns | 0.2219 ns | 0.2076 ns |  1.66 |    0.03 | 0.0057 |      96 B |        1.33 |
+| EnumsNet_Format             | Format     | 91.2175 ns | 0.3180 ns | 0.2975 ns |  4.03 |    0.07 | 0.0167 |     280 B |        3.89 |
+| NetEscapades_Format         | Format     | 39.4803 ns | 0.2059 ns | 0.1926 ns |  1.75 |    0.03 | 0.0057 |      96 B |        1.33 |
 |                             |            |            |           |           |       |         |        |           |             |
-| Bcl_HasFlag                 | HasFlag    |  0.1632 ns | 0.0023 ns | 0.0020 ns |  1.00 |    0.02 |      - |         - |          NA |
-| EnumsNet_HasFlag            | HasFlag    |  0.7586 ns | 0.0050 ns | 0.0044 ns |  4.65 |    0.06 |      - |         - |          NA |
-| NetEscapades_HasFlag        | HasFlag    |  0.2353 ns | 0.0044 ns | 0.0037 ns |  1.44 |    0.03 |      - |         - |          NA |
+| Bcl_HasFlag                 | HasFlag    |  0.1757 ns | 0.0225 ns | 0.0210 ns |  1.01 |    0.16 |      - |         - |          NA |
+| EnumsNet_HasFlag            | HasFlag    |  0.8052 ns | 0.0124 ns | 0.0110 ns |  4.64 |    0.51 |      - |         - |          NA |
+| NetEscapades_HasFlag        | HasFlag    |  0.2472 ns | 0.0311 ns | 0.0291 ns |  1.43 |    0.23 |      - |         - |          NA |
 |                             |            |            |           |           |       |         |        |           |             |
-| CSharpEssentials_ToWireName | WireName   | 74.1504 ns | 0.2738 ns | 0.2561 ns |     ? |       ? | 0.0091 |     152 B |           ? |
+| CSharpEssentials_ToWireName | WireName   | 74.9783 ns | 0.4645 ns | 0.4345 ns |     ? |       ? | 0.0091 |     152 B |           ? |

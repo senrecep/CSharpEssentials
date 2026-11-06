@@ -8,26 +8,26 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                         | Categories    | Valid | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------------- |-------------- |------ |----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| **CSharpEssentials_CaseSensitive** | **CaseSensitive** | **False** | **55.568 ns** | **0.1819 ns** | **0.1701 ns** |  **1.00** |    **0.00** | **0.0052** |      **88 B** |        **1.00** |
-| CSharpEssentials_IsDefinedName | CaseSensitive | False |  1.187 ns | 0.0016 ns | 0.0013 ns |  0.02 |    0.00 |      - |         - |        0.00 |
-| Bcl_CaseSensitive              | CaseSensitive | False | 35.976 ns | 0.0079 ns | 0.0062 ns |  0.65 |    0.00 |      - |         - |        0.00 |
-| EnumsNet_CaseSensitive         | CaseSensitive | False | 18.007 ns | 0.0551 ns | 0.0516 ns |  0.32 |    0.00 |      - |         - |        0.00 |
-| NetEscapades_CaseSensitive     | CaseSensitive | False | 57.942 ns | 0.0435 ns | 0.0407 ns |  1.04 |    0.00 |      - |         - |        0.00 |
-|                                |               |       |           |           |           |       |         |        |           |             |
-| **CSharpEssentials_CaseSensitive** | **CaseSensitive** | **True**  | **35.099 ns** | **0.0200 ns** | **0.0177 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CSharpEssentials_IsDefinedName | CaseSensitive | True  |  1.518 ns | 0.0038 ns | 0.0035 ns |  0.04 |    0.00 |      - |         - |          NA |
-| Bcl_CaseSensitive              | CaseSensitive | True  | 27.178 ns | 0.0187 ns | 0.0175 ns |  0.77 |    0.00 |      - |         - |          NA |
-| EnumsNet_CaseSensitive         | CaseSensitive | True  | 20.505 ns | 0.0268 ns | 0.0251 ns |  0.58 |    0.00 |      - |         - |          NA |
-| NetEscapades_CaseSensitive     | CaseSensitive | True  | 29.360 ns | 0.0184 ns | 0.0144 ns |  0.84 |    0.00 |      - |         - |          NA |
-|                                |               |       |           |           |           |       |         |        |           |             |
-| **CSharpEssentials_IgnoreCase**    | **IgnoreCase**    | **False** | **73.439 ns** | **1.0936 ns** | **1.0229 ns** |  **1.00** |    **0.02** | **0.0052** |      **88 B** |        **1.00** |
-| Bcl_IgnoreCase                 | IgnoreCase    | False | 42.050 ns | 0.0376 ns | 0.0351 ns |  0.57 |    0.01 |      - |         - |        0.00 |
-| EnumsNet_IgnoreCase            | IgnoreCase    | False | 17.530 ns | 0.0215 ns | 0.0201 ns |  0.24 |    0.00 |      - |         - |        0.00 |
-| NetEscapades_IgnoreCase        | IgnoreCase    | False | 58.490 ns | 0.0065 ns | 0.0054 ns |  0.80 |    0.01 |      - |         - |        0.00 |
-|                                |               |       |           |           |           |       |         |        |           |             |
-| **CSharpEssentials_IgnoreCase**    | **IgnoreCase**    | **True**  | **46.664 ns** | **0.0453 ns** | **0.0401 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| Bcl_IgnoreCase                 | IgnoreCase    | True  | 28.519 ns | 0.0234 ns | 0.0208 ns |  0.61 |    0.00 |      - |         - |          NA |
-| EnumsNet_IgnoreCase            | IgnoreCase    | True  | 39.212 ns | 0.2968 ns | 0.2777 ns |  0.84 |    0.01 |      - |         - |          NA |
-| NetEscapades_IgnoreCase        | IgnoreCase    | True  | 33.996 ns | 0.0127 ns | 0.0106 ns |  0.73 |    0.00 |      - |         - |          NA |
+| Method                         | Categories    | Valid | Mean      | Error     | StdDev    | Ratio | Gen0   | Allocated | Alloc Ratio |
+|------------------------------- |-------------- |------ |----------:|----------:|----------:|------:|-------:|----------:|------------:|
+| **CSharpEssentials_CaseSensitive** | **CaseSensitive** | **False** | **25.743 ns** | **0.1476 ns** | **0.1380 ns** |  **1.00** | **0.0052** |      **88 B** |        **1.00** |
+| CSharpEssentials_IsDefinedName | CaseSensitive | False |  1.199 ns | 0.0021 ns | 0.0016 ns |  0.05 |      - |         - |        0.00 |
+| Bcl_CaseSensitive              | CaseSensitive | False | 36.244 ns | 0.0072 ns | 0.0056 ns |  1.41 |      - |         - |        0.00 |
+| EnumsNet_CaseSensitive         | CaseSensitive | False | 16.057 ns | 0.0194 ns | 0.0172 ns |  0.62 |      - |         - |        0.00 |
+| NetEscapades_CaseSensitive     | CaseSensitive | False | 57.316 ns | 0.0083 ns | 0.0069 ns |  2.23 |      - |         - |        0.00 |
+|                                |               |       |           |           |           |       |        |           |             |
+| **CSharpEssentials_CaseSensitive** | **CaseSensitive** | **True**  | **11.447 ns** | **0.0071 ns** | **0.0060 ns** |  **1.00** |      **-** |         **-** |          **NA** |
+| CSharpEssentials_IsDefinedName | CaseSensitive | True  |  1.505 ns | 0.0010 ns | 0.0009 ns |  0.13 |      - |         - |          NA |
+| Bcl_CaseSensitive              | CaseSensitive | True  | 26.225 ns | 0.0235 ns | 0.0219 ns |  2.29 |      - |         - |          NA |
+| EnumsNet_CaseSensitive         | CaseSensitive | True  | 22.231 ns | 0.0455 ns | 0.0380 ns |  1.94 |      - |         - |          NA |
+| NetEscapades_CaseSensitive     | CaseSensitive | True  | 29.354 ns | 0.0078 ns | 0.0069 ns |  2.56 |      - |         - |          NA |
+|                                |               |       |           |           |           |       |        |           |             |
+| **CSharpEssentials_IgnoreCase**    | **IgnoreCase**    | **False** | **10.964 ns** | **0.0195 ns** | **0.0183 ns** |  **1.00** |      **-** |         **-** |          **NA** |
+| Bcl_IgnoreCase                 | IgnoreCase    | False | 32.491 ns | 0.1147 ns | 0.1017 ns |  2.96 |      - |         - |          NA |
+| EnumsNet_IgnoreCase            | IgnoreCase    | False | 17.505 ns | 0.0034 ns | 0.0029 ns |  1.60 |      - |         - |          NA |
+| NetEscapades_IgnoreCase        | IgnoreCase    | False | 58.500 ns | 0.0183 ns | 0.0171 ns |  5.34 |      - |         - |          NA |
+|                                |               |       |           |           |           |       |        |           |             |
+| **CSharpEssentials_IgnoreCase**    | **IgnoreCase**    | **True**  | **15.772 ns** | **0.0276 ns** | **0.0258 ns** |  **1.00** |      **-** |         **-** |          **NA** |
+| Bcl_IgnoreCase                 | IgnoreCase    | True  | 28.506 ns | 0.0107 ns | 0.0095 ns |  1.81 |      - |         - |          NA |
+| EnumsNet_IgnoreCase            | IgnoreCase    | True  | 27.324 ns | 0.0649 ns | 0.0607 ns |  1.73 |      - |         - |          NA |
+| NetEscapades_IgnoreCase        | IgnoreCase    | True  | 34.295 ns | 0.0129 ns | 0.0115 ns |  2.17 |      - |         - |          NA |

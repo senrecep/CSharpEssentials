@@ -8,16 +8,16 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                      | Categories | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|---------------------------- |----------- |----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| CSharpEssentials_Defined    | Defined    | 0.8345 ns | 0.0049 ns | 0.0043 ns |  1.00 |    0.01 |      - |         - |          NA |
-| Bcl_Defined                 | Defined    | 9.9005 ns | 0.0927 ns | 0.0867 ns | 11.86 |    0.12 | 0.0014 |      24 B |          NA |
-| EnumsNet_Defined            | Defined    | 1.2649 ns | 0.0035 ns | 0.0031 ns |  1.52 |    0.01 |      - |         - |          NA |
-| NetEscapades_Defined        | Defined    | 0.5599 ns | 0.0045 ns | 0.0042 ns |  0.67 |    0.01 |      - |         - |          NA |
-|                             |            |           |           |           |       |         |        |           |             |
-| CSharpEssentials_Undefined  | Undefined  | 9.8920 ns | 0.0179 ns | 0.0149 ns |  1.00 |    0.00 | 0.0014 |      24 B |        1.00 |
-| Bcl_Undefined               | Undefined  | 9.6459 ns | 0.0305 ns | 0.0271 ns |  0.98 |    0.00 | 0.0014 |      24 B |        1.00 |
-| EnumsNet_Undefined          | Undefined  | 1.5561 ns | 0.0043 ns | 0.0040 ns |  0.16 |    0.00 |      - |         - |        0.00 |
-| NetEscapades_Undefined      | Undefined  | 1.5464 ns | 0.0030 ns | 0.0028 ns |  0.16 |    0.00 |      - |         - |        0.00 |
-|                             |            |           |           |           |       |         |        |           |             |
-| CSharpEssentials_ToWireName | WireName   | 0.8373 ns | 0.0015 ns | 0.0013 ns |     ? |       ? |      - |         - |           ? |
+| Method                      | Categories | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|---------------------------- |----------- |-----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+| CSharpEssentials_Defined    | Defined    |  0.6133 ns | 0.0004 ns | 0.0003 ns |  1.00 |    0.00 |      - |         - |          NA |
+| Bcl_Defined                 | Defined    | 10.1011 ns | 0.0396 ns | 0.0351 ns | 16.47 |    0.06 | 0.0014 |      24 B |          NA |
+| EnumsNet_Defined            | Defined    |  1.1906 ns | 0.0003 ns | 0.0003 ns |  1.94 |    0.00 |      - |         - |          NA |
+| NetEscapades_Defined        | Defined    |  0.6135 ns | 0.0008 ns | 0.0007 ns |  1.00 |    0.00 |      - |         - |          NA |
+|                             |            |            |           |           |       |         |        |           |             |
+| CSharpEssentials_Undefined  | Undefined  |  1.4798 ns | 0.0009 ns | 0.0008 ns |  1.00 |    0.00 |      - |         - |          NA |
+| Bcl_Undefined               | Undefined  |  9.8266 ns | 0.0451 ns | 0.0421 ns |  6.64 |    0.03 | 0.0014 |      24 B |          NA |
+| EnumsNet_Undefined          | Undefined  |  1.1915 ns | 0.0014 ns | 0.0011 ns |  0.81 |    0.00 |      - |         - |          NA |
+| NetEscapades_Undefined      | Undefined  |  1.6093 ns | 0.0225 ns | 0.0210 ns |  1.09 |    0.01 |      - |         - |          NA |
+|                             |            |            |           |           |       |         |        |           |             |
+| CSharpEssentials_ToWireName | WireName   |  0.6143 ns | 0.0013 ns | 0.0012 ns |     ? |       ? |      - |         - |           ? |
