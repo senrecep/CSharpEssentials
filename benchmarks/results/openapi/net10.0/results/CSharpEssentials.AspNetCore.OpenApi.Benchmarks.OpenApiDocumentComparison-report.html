@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.OpenApi.Benchmarks.OpenApiDocumentComparison-20261106-023723</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                            </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Plain_AddOpenApi</td><td>5.176 ms</td><td>0.0828 ms</td><td>0.0775 ms</td><td>1.00</td><td>0.02</td><td>187.5000</td><td>62.5000</td><td>3.11 MB</td><td>1.00</td>
+</tr><tr><td>Plain_AddOpenApi_StringEnums</td><td>5.768 ms</td><td>0.0697 ms</td><td>0.0652 ms</td><td>1.11</td><td>0.02</td><td>218.7500</td><td>62.5000</td><td>3.76 MB</td><td>1.21</td>
+</tr><tr><td>CSharpEssentials_EnumConventions</td><td>6.341 ms</td><td>0.0685 ms</td><td>0.0607 ms</td><td>1.23</td><td>0.02</td><td>218.7500</td><td>62.5000</td><td>3.99 MB</td><td>1.28</td>
+</tr><tr><td>CSharpEssentials_IdempotencyConventions</td><td>5.621 ms</td><td>0.0522 ms</td><td>0.0488 ms</td><td>1.09</td><td>0.02</td><td>187.5000</td><td>62.5000</td><td>3.52 MB</td><td>1.13</td>
+</tr><tr><td>CSharpEssentials_OptionalRouteParameters</td><td>5.391 ms</td><td>0.0968 ms</td><td>0.0906 ms</td><td>1.04</td><td>0.02</td><td>187.5000</td><td>62.5000</td><td>3.43 MB</td><td>1.10</td>
+</tr><tr><td>CSharpEssentials_AllConventions</td><td>7.715 ms</td><td>0.1529 ms</td><td>0.3053 ms</td><td>1.49</td><td>0.06</td><td>250.0000</td><td>125.0000</td><td>4.72 MB</td><td>1.52</td>
+</tr></tbody></table>
+</body>
+</html>
