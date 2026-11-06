@@ -1,6 +1,6 @@
-# Blog notes: CSharpEssentials.Validation and Rules against FluentValidation, DataAnnotations, Microsoft.Extensions.Validation, NRules and RulesEngine (draft)
+# Blog notes: CSharpEssentials.Validation and Rules against FluentValidation, DataAnnotations, Microsoft.Extensions.Validation, NRules and RulesEngine
 
-These are notes for a post, not the post; numbers pending `benchmarks/results/validation/{tfm}` and `benchmarks/results/rules/{tfm}`. They will come from `CSharpEssentials.Validation/BENCHMARKS.md` and `CSharpEssentials.Rules/BENCHMARKS.md` once the full default-job run is committed. There are no numbers yet.
+These are notes for a post, not the post. The numbers come from the full default-job runs under `benchmarks/results/validation/{tfm}` and `benchmarks/results/rules/{tfm}`, and the full tables are in `CSharpEssentials.Validation/BENCHMARKS.md` and `CSharpEssentials.Rules/BENCHMARKS.md`.
 
 The suites run on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The libraries compared are FluentValidation 12.2.0 with FluentValidation.DependencyInjectionExtensions 12.2.0 (Apache-2.0), the DataAnnotations validator in the BCL, Microsoft.Extensions.Validation 10.0.14 (MIT, net10.0 only, experimental), and, as reference columns for the rule engine, NRules 1.0.4 (MIT) and RulesEngine 6.0.1 (MIT).
 
@@ -52,39 +52,51 @@ The suites run on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 - Every competitor row follows its documented usage and carries a link to that documentation. Rows that do different work are labelled, not presented as like-for-like.
 - Microsoft.Extensions.Validation rows exist on net10.0 and net11.0 only. net8.0 runs CSE's netstandard2.1 builds.
 
+## How these numbers were produced
+
+- BenchmarkDotNet v0.14.0 default job, full runs, serially on one Linux machine (CPU in each report header). SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. `AssemblyScanColdComparison` uses its own `cold` job (ColdStart, 15 launches).
+- 1-minute load average: 1.54 to 1.61 for the Validation run (2.18 to 4.87 during the reruns of `ValidatorConstructionBenchmarks` net8.0 and net10.0 and `AssemblyScanColdComparison` net8.0), 1.41 to 1.54 for the Rules run.
+- Noisy rows (CV above 5% after two reruns): `ValidatorConstructionBenchmarks` CSE on net8.0 (14.32 ns) and net10.0 (9.444 ns).
+- Results: `benchmarks/results/validation/{tfm}/results/` and `benchmarks/results/rules/{tfm}/results/`. Full tables are in `CSharpEssentials.Validation/BENCHMARKS.md` and `CSharpEssentials.Rules/BENCHMARKS.md`.
+
 ## The numbers that matter
 
-Pending the full default-job run. These are the rows to pull:
+Mean and allocated, copied from the reports. net10.0 unless a TFM is named.
 
-1. BaselineSimple and BaselineWide, valid and invalid: all four libraries on the same model.
-2. ValidatorConstruction against the valid-path rows: when FluentValidation's prebuilt tree pays off.
-3. ForOverload: `For(() => ...)` against `For(value, name)` on twelve properties.
-4. EnumDefined Plain against Generated, and EnumFlags: the metadata path against the plain-enum path.
-5. AssemblyScan warm and cold.
-6. Rules SyncTree: `EvaluateAsync` against `Evaluate` on a tree of sync rules, with the Allocated column.
-7. Rules LinearBuild: prebuilt against rebuilt per call.
-8. Rules ShortCircuit: the generic And against the early-return baseline.
-9. Rules ReferenceEngine: CSE and hand-written against NRules and RulesEngine, labelled reference only.
+1. **BaselineSimple** (four properties). Valid: CSE 311.0 ns, 560 B; FluentValidation 364.9 ns, 704 B; DataAnnotations 1,346.7 ns, 2288 B; Microsoft.Extensions.Validation 858.6 ns, 744 B. Invalid: CSE 553.6 ns, 1472 B; FluentValidation 3,638.9 ns, 7136 B; DataAnnotations 2,374.5 ns, 3272 B; Microsoft.Extensions.Validation 1,767.3 ns, 2056 B.
+2. **BaselineWide** (twelve strings). Valid: CSE 655.6 ns, 1784 B; FluentValidation 812.3 ns, 984 B; DataAnnotations 3,439.9 ns, 5760 B; Microsoft.Extensions.Validation 2,132.5 ns, 1312 B. Invalid: CSE 1,318.2 ns, 4632 B; FluentValidation 7,942.1 ns, 13952 B; DataAnnotations 5,973.8 ns, 8008 B; Microsoft.Extensions.Validation 3,902.2 ns, 3480 B.
+3. **ValidatorConstruction against the valid path.** CSE `new` 9.444 ns, 24 B (noisy, CV above 5%); FluentValidation `new` 3,828.194 ns, 8968 B. Per call on valid input FluentValidation is 364.9 ns (Simple) and 812.3 ns (Wide) against CSE's 311.0 ns and 655.6 ns, so the prebuilt tree does not win back time per call in these models; it does win on allocation in the wide model.
+4. **ForOverload**, valid: `For(() => m.Fn)` 664.1 ns, 1784 B; `For(m.Fn, nameof(m.Fn))` 203.6 ns, 608 B; inline `Validator.ValidateAsync` 694.3 ns, 1784 B.
+5. **EnumDefined**, valid: Plain 72.593 ns, 136 B against Generated 50.615 ns, 136 B (FluentValidation 912.618 ns and 973.457 ns). **EnumFlags** valid: CSE 116.0 ns, 216 B; FluentValidation 1,407.2 ns, 1064 B; DataAnnotations 988.1 ns, 1040 B.
+6. **AssemblyScan.** Warm: CSE 9.243 μs, 8.52 KB; FluentValidation 19.603 μs, 31.88 KB. Cold: CSE 5.346 ms, 67.38 KB; FluentValidation 5.695 ms, 68.13 KB.
+7. **Rules SyncTree**, `EvaluateAsync` against `Evaluate` on sync trees: Linear5 Pass 365.362 ns against 94.004 ns, both no allocation; And5 Pass 479.170 ns, 304 B against 269.142 ns, no allocation; Or5 Pass 624.226 ns, 712 B against 316.453 ns, 408 B. Hand-written: 5.244 ns, 5.188 ns and 5.641 ns.
+8. **Rules LinearBuild**, Count=5: prebuilt 111.082 ns, no allocation; `Linear(Func[], ctx)` 239.537 ns, 360 B; `IRule[].Linear()` 134.668 ns, 128 B; hand-written 4.970 ns.
+9. **Rules ShortCircuit**: `Linear()` 16.269 ns against the early return's 14.355 ns, both 56 B. The generic And 956.349 ns, 2160 B against a hand-written all-rules method at 120.999 ns, 144 B.
+10. **Rules ReferenceEngine** (reference only), FailLast: CSE `Linear()` 103.876 ns, 56 B; hand-written 16.490 ns, 56 B; NRules 5,003.017 ns, 13864 B; RulesEngine 1,727.368 ns, 4360 B.
 
-## Where CSE is expected to lose (state it, do not soften it)
+## Where CSE loses (state it, do not soften it)
 
-These are candidates from reading the code. Nothing has been measured yet.
+- **Wide valid allocation.** `BaselineWideComparison` valid: CSE 1784 B against FluentValidation 984 B on net8.0 to net10.0, 1688 B against 984 B on net11.0. `WideModelBenchmarks` valid: 1816 B against 984 B (net8.0 to net10.0), 1720 B against 984 B (net11.0). The cause is `For(() => ...)` (`CSharpEssentials.Validation/RuleContext.cs:62-76`); `For(value, name)` brings the same model to 608 B.
+- **Microsoft.Extensions.Validation allocates less on the wide model.** net10.0: 1312 B against CSE 1784 B (valid), 3480 B against 4632 B (invalid). net11.0: 1304 B against 1688 B, 3472 B against 4536 B. CSE is faster on time.
+- **`ConditionalValidationBenchmarks` business order on net10.0**: CSE 273.4 ns, FluentValidation 255.4 ns. CSE is faster on the other three TFMs.
+- **Cold assembly scan allocation on net11.0**: CSE 67.32 KB, FluentValidation 66.87 KB.
+- **The inline sync delegate.** The Readme calls it allocation-free; it measures 1784 B on valid input (net8.0 to net10.0), the same as `For(() => ...)`.
+- **Rules `Or()`**, net10.0: Or5 Pass 316.453 ns, 408 B against hand-written 5.641 ns; ten-rule Or with all failing 739.778 ns, 1904 B against 6.887 ns.
+- **Rules generic `Result<T>` `And()`**, net10.0: 956.349 ns, 2160 B against 120.999 ns, 144 B for a hand-written method doing the same ten checks (net8.0: 1,192.10 ns against 52.03 ns).
+- **Rules `EvaluateAsync` on sync trees** allocates a `List<Result>` per And and Or node (`CSharpEssentials.Rules/Engines/RuleEngineAsync.cs:116`, `:140`): 304 B on And5 Pass and 1232 B on Or5 FailLast on net9.0 to net11.0 (312 B and 1240 B on net8.0). The Readme says "without allocating a task", which holds for the task; the list is still allocated.
+- **Rules `Linear(Func[], ctx)` rebuilt per call**, Count=5 on net10.0, is 239.537 ns and 360 B against 111.082 ns prebuilt (`CSharpEssentials.Rules/Engines/Linear.cs:25-64`).
+- **Rules against hand-written code**: every CSE rules row is slower than the hand-written equivalent. In the classes with a hand-written baseline the Ratio runs from 1.04 (sync-over-async `Evaluate` on the mixed async tree, net11.0, where `Task.Yield` dominates) to 209.40 (`EvaluateAsync` Or5 FailLast, net11.0).
 
-- `For(() => ...)` parses the member expression on every call and allocates a closure (`CSharpEssentials.Validation/RuleContext.cs:62-76`). FluentValidation resolves property names once, in the constructor. `ForOverloadComparison` shows how much `For(value, name)` saves.
-- The plain-enum path boxes through `Convert.ToInt64(object)` (`CSharpEssentials.Validation/Validators/EnumValidators.cs:201-204`), on every `HasOnlyDefinedFlags` call for a plain `[Flags]` enum.
-- Per-call `Configure` against a prebuilt tree on valid input. CSE rebuilds its rule chains each call; FluentValidation walks a tree it built once. Wide valid models are where this would show.
-- Invalid-path message cost on enums: CSE formats the allowed values into every enum error.
-- Rules `EvaluateAsync` on sync trees allocates a `List<Result>` per And and Or node (`CSharpEssentials.Rules/Engines/RuleEngineAsync.cs:116`, `:140`), against the Readme's "without allocating a task".
-- Rules `RuleEngine.Linear(Func[], ctx)` rebuilds the chain with LINQ per call (`CSharpEssentials.Rules/Engines/Linear.cs:25-64`), and `Result.And`/`Or` box through `Cast<IResultBase>()` (`CSharpEssentials.Results/ResultFactory.cs:47`, `:69`).
-- The generic `Result<T>` And evaluates every rule, so it loses to an early-return baseline by design.
+Two expected losses did not show up. The plain-enum boxing in `HasOnlyDefinedFlags` (`CSharpEssentials.Validation/Validators/EnumValidators.cs:201-204`) still leaves CSE below both competitors, and the invalid-path enum message cost leaves CSE below them too (EnumDefined Plain invalid, net10.0: 330.136 ns against FluentValidation 1,869.646 ns and DataAnnotations 877.089 ns).
 
-## Where CSE may win or tie
+## Where CSE wins or ties
 
-Candidates only, to be confirmed by the run:
-- Construction, since CSE builds nothing up front.
-- Invalid paths with the Stop cascade, where FluentValidation runs extra validators per property.
-- DataAnnotations rows, which go through reflection.
-- The rules baselines against NRules and RulesEngine, which do far more per call (reference only).
+- Construction, net10.0: 9.444 ns and 24 B (noisy, CV above 5%) against FluentValidation's 3,828.194 ns and 8968 B.
+- Invalid paths: BaselineSimple invalid has FluentValidation at Ratio 5.91 to 6.76 across the four TFMs; `ComplexValidationBenchmarks` invalid on net10.0 is 2.538 μs against 13.495 μs (FluentValidation runs one more check there).
+- Valid paths: CSE is faster than FluentValidation on every valid row except `ConditionalValidationBenchmarks` business on net10.0, but by little on simple models (BaselineSimple Ratio 1.12 to 1.18).
+- DataAnnotations: slower than CSE on every row, Ratio 3.80 to 7.69 on the baseline classes.
+
+Reference only, not a ranking: in `ReferenceEngineComparison`, with CSE `Linear()` as the baseline (1.00), NRules has Ratio 25.72 to 50.10 and RulesEngine 13.89 to 18.46 across the four TFMs.
 
 ## Caveats to keep in the post
 
@@ -95,7 +107,6 @@ Candidates only, to be confirmed by the run:
 - Enums: CSE's error text lists the allowed values; FluentValidation has no `IsOneOf`; the CSE Generated row uses `[StringEnum]` metadata.
 - Assembly scan: FluentValidation registers each validator twice (interface and concrete type).
 - Rules: the generic And aggregates; NRules mutates a collector; RulesEngine always runs every rule.
-- The earlier 23 classes were last run on FluentValidation 11.11.0 on a different machine; those numbers are superseded and not quoted.
 - The CSE column is a working tree, not a NuGet release.
 
 ## Possible angles
