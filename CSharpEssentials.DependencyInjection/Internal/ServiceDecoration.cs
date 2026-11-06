@@ -276,13 +276,17 @@ internal static class ServiceDecoration
     /// <c>GetKeyedServices&lt;object&gt;(KeyedService.AnyKey)</c> and <c>GetKeyedServices&lt;TService&gt;(KeyedService.AnyKey)</c>
     /// do not return it. Microsoft.Extensions.DependencyInjection requires the implementation or instance to be assignable to the
     /// service type, so those originals are keyed under their own concrete type; factories are keyed under <see cref="DecoratedService"/>.
+    /// A scoped original gets a transient inner: the decorating factory runs once per scope and resolves the inner from that scope,
+    /// so the scope still creates and disposes one inner for each decorator it caches, without caching the inner a second time.
+    /// An original keyed with <see cref="KeyedService.AnyKey"/> gets one cached decorator, and so one inner, for each requested key.
     /// </remarks>
     private static ServiceDescriptor CreateInner(ServiceDescriptor original, DecoratedServiceKey innerKey)
     {
+        ServiceLifetime lifetime = original.Lifetime == ServiceLifetime.Scoped ? ServiceLifetime.Transient : original.Lifetime;
         Type? implementationType = original.IsKeyedService ? original.KeyedImplementationType : original.ImplementationType;
         if (implementationType is not null)
         {
-            return new ServiceDescriptor(implementationType, innerKey, implementationType, original.Lifetime);
+            return new ServiceDescriptor(implementationType, innerKey, implementationType, lifetime);
         }
 
         object? instance = original.IsKeyedService ? original.KeyedImplementationInstance : original.ImplementationInstance;
@@ -295,11 +299,11 @@ internal static class ServiceDecoration
         {
             Func<IServiceProvider, object?, object> keyedFactory = original.KeyedImplementationFactory!;
             object? originalKey = original.ServiceKey;
-            return new ServiceDescriptor(typeof(DecoratedService), innerKey, (provider, _) => keyedFactory(provider, originalKey), original.Lifetime);
+            return new ServiceDescriptor(typeof(DecoratedService), innerKey, (provider, _) => keyedFactory(provider, originalKey), lifetime);
         }
 
         Func<IServiceProvider, object> factory = original.ImplementationFactory!;
-        return new ServiceDescriptor(typeof(DecoratedService), innerKey, (provider, _) => factory(provider), original.Lifetime);
+        return new ServiceDescriptor(typeof(DecoratedService), innerKey, (provider, _) => factory(provider), lifetime);
     }
 
     private sealed class DecoratedService;
