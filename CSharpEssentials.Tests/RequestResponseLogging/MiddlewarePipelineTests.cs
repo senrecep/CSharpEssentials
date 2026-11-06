@@ -674,6 +674,56 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         capturedContext!.RequestBody.Should().Be(expected);
     }
 
+    public static TheoryData<byte[]> BodiesDecodedLikeStreamReader()
+    {
+        byte[] spanningBlocks = new byte[(128 * 1024) + 2];
+        spanningBlocks.AsSpan().Fill((byte)'a');
+        "\u20AC"u8.CopyTo(spanningBlocks.AsSpan((128 * 1024) - 1));
+
+        return new TheoryData<byte[]>
+        {
+            "{\"name\":\"caf\u00E9 \u20AC \uD83D\uDE00\"}"u8.ToArray(),
+            new byte[] { 0x61, 0xC3, 0x28, 0x62, 0xFF, 0x63 },
+            new byte[] { 0x61, 0x62, 0xE2, 0x82 },
+            new byte[] { 0xFF, 0xFE, 0x7B, 0x00, 0x7D, 0x00 },
+            new byte[] { 0xFE, 0xFF, 0x00, 0x7B, 0x00, 0x7D },
+            new byte[] { 0xFF, 0xFE, 0x00, 0x00, 0x41, 0x00, 0x00, 0x00 },
+            new byte[] { 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x41 },
+            new byte[] { 0xEF, 0xBB, 0x41 },
+            new byte[] { 0x00, 0x41 },
+            new byte[] { 0xFE },
+            spanningBlocks,
+        };
+    }
+
+    [Theory]
+    [MemberData(nameof(BodiesDecodedLikeStreamReader))]
+    public async Task InvokeAsync_Should_DecodeBodiesLikeStreamReader_When_BytesAreUtf8OrCarryBom(byte[] body)
+    {
+        using var expectedReader = new StreamReader(new MemoryStream(body), System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        string expected = await expectedReader.ReadToEndAsync();
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            ctx => ctx.Response.Body.WriteAsync(body).AsTask(),
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new NonSeekableStream(body);
+        httpContext.Request.ContentLength = body.Length;
+        httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(httpContext);
+
+        capturedContext!.RequestBody.Should().Be(expected);
+        capturedContext.ResponseBody.Should().Be(expected);
+    }
+
     private sealed class ThrowingWriteStream : MemoryStream
     {
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
