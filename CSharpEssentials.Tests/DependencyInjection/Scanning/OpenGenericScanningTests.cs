@@ -57,6 +57,29 @@ public class OpenGenericScanningTests
     }
 
     [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterOpenGenericAsItself_When_NoConventionalInterfaceExists()
+    {
+        ServiceCollection services = new();
+        string name = "GenericSelfRegistrations" + Guid.NewGuid().ToString("N");
+        AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.RunAndCollect);
+        TypeBuilder type = assembly.DefineDynamicModule(name).DefineType("Generic`1", TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed);
+        type.DefineGenericParameters("T");
+        type.AddInterfaceImplementation(typeof(IScanMarker));
+        type.DefineDefaultConstructor(MethodAttributes.Public);
+        type.SetCustomAttribute(new CustomAttributeBuilder(typeof(RegisterScopedAttribute).GetConstructor(Type.EmptyTypes)!, []));
+        Type generic = type.CreateType();
+
+        services.AddServicesFromAssemblies(assembly);
+
+        services.Should().ContainSingle(descriptor => descriptor.ImplementationType == generic).Which.ServiceType.Should().Be(generic);
+        services.Should().NotContain(descriptor => descriptor.ServiceType == typeof(IScanMarker));
+        using ServiceProvider provider = services.BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+        Type closed = generic.MakeGenericType(typeof(int));
+        scope.ServiceProvider.GetRequiredService(closed).Should().BeOfType(closed);
+    }
+
+    [Fact]
     public void AddServicesFromAssemblies_Should_ThrowWithoutMutation_When_OpenGenericDoesNotMapServiceType()
     {
         ServiceCollection services = new();

@@ -27,7 +27,7 @@ using CSharpEssentials.Errors;
 Result ok          = Result.Success();                              // non-generic: keep the factory
 Result<User> found = user;                                          // T → Result<T>
 
-// Failure — Error, Error[], List<Error>, HashSet<Error> convert implicitly
+// Failure: Error, Error[], List<Error>, HashSet<Error> convert implicitly
 Result fail          = Error.Validation("Input.Invalid", "Input was invalid.");
 Result<User> missing = Error.NotFound("User.NotFound", "Not found.");
 Result<int> multi    = new[]
@@ -36,7 +36,7 @@ Result<int> multi    = new[]
     Error.Validation("Email.Invalid", "Email is invalid.")
 };
 
-// Explicit factories — only where the target type cannot be inferred (var, inferred lambdas, generic arguments)
+// Explicit factories: only where the target type cannot be inferred (var, inferred lambdas, generic arguments)
 var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "Duplicate."));
 Task<Result<int>> pending = Task.FromResult(Result.Success(42));
 ```
@@ -69,7 +69,7 @@ Result<OrderConfirmation> placed = await GetUserAsync(id)
     .ThenAsync(user => ValidateOrderAsync(user, order))
     .ThenAsync(order => ChargePaymentAsync(order));
 
-// Ensure: guard condition — adds error if predicate fails
+// Ensure: guard condition, adds error if predicate fails
 Result<int> ensured = Result.Success(50)
     .Ensure(v => v > 0,   Error.Validation("Range", "Must be positive."))
     .Ensure(v => v < 100, Error.Validation("Range", "Must be less than 100."));
@@ -94,7 +94,7 @@ Result<User> collapsed = GetUser(id)
 `MapError(Func<Error, Error>)` maps every error. Older versions mapped only `FirstError` and dropped the rest.
 
 ```csharp
-// MapErrorAsync — instance: Task or ValueTask mappers, per error or per array
+// MapErrorAsync (instance): Task or ValueTask mappers, per error or per array
 Result<User> localized = await result.MapErrorAsync(e => LocalizeAsync(e, ct), ct);
 
 // Task<Result<T>> source: sync or Task mappers; ValueTask<Result<T>> source: sync or ValueTask mappers
@@ -120,11 +120,11 @@ bool sent = await result.MatchAsync(
 ## Combining Results
 
 ```csharp
-// And — all must pass (short-circuits on first failure)
+// And: all must pass (short-circuits on first failure)
 Result combined = Result.And(r1, r2, r3);
 Result<int[]> values = Result<int>.And(v1, v2); // generic form collects the values
 
-// Or — first success wins
+// Or: first success wins
 Result any = Result.Or(r1, r2, r3);
 ```
 
@@ -184,14 +184,14 @@ Result<Data> data = await Result.TryAsync(() => _db.GetAsync(id), ex => Error.Ex
 ## Conditional Side Effects
 
 ```csharp
-// TapIf — predicate-gated tap, only fires when Success AND predicate is true
+// TapIf: predicate-gated tap, only fires when Success AND predicate is true
 result.TapIf(v => v > 0, v => Audit(v));
 
-// Async — instance methods (the bool overload exists only on TapIfAsync)
+// Async: instance methods (the bool overload exists only on TapIfAsync)
 await result.TapIfAsync(v => v > 0, async v => await AuditAsync(v));
 await result.TapIfAsync(isEnabled,   async v => await TrackAsync(v));
 
-// Extension variants — Task<Result<T>> and ValueTask<Result<T>>
+// Extension variants: Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 await GetValueTaskResultAsync().TapIfAsync(true, async v => await LogAsync(v));
 ```

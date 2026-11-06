@@ -54,10 +54,10 @@ Extension methods call `Clone()` on every element:
 ```csharp
 List<Product> products = [new() { Id = 1, Name = "Pen" }];
 
-// IEnumerable<T> where T : ICloneable<T> — lazily clones each element
+// IEnumerable<T> where T : ICloneable<T>: lazily clones each element
 IEnumerable<Product> copies = products.Clone();
 
-// IQueryable<T> where T : ICloneable<T> — clones in memory, not translated to SQL
+// IQueryable<T> where T : ICloneable<T>: clones in memory, not translated to SQL
 IQueryable<Product> projected = products.AsQueryable().Clone();
 ```
 
@@ -72,7 +72,7 @@ List<Product> snapshot = await db.Products
     .Where(p => p.Name.StartsWith("P"))
     .ToListAsync();
 
-List<Product> working = snapshot.Clone().ToList();  // independent deep copies — mutations don't affect EF tracking
+List<Product> working = snapshot.Clone().ToList();  // independent deep copies; mutations don't affect EF tracking
 ```
 
 ---

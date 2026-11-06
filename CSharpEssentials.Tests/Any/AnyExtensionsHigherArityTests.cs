@@ -609,6 +609,27 @@ public class AnyExtensionsHigherArityTests
     }
 
     [Fact]
+    public void Deconstruct_SecondPosition_ShouldReturnOnlySecond_ForEveryHigherArity()
+    {
+        Any<int, string, bool, double> four = "second";
+        Any<int, string, bool, double, long> five = "second";
+        Any<int, string, bool, double, long, decimal> six = "second";
+        Any<int, string, bool, double, long, decimal, Guid> seven = "second";
+        Any<int, string, bool, double, long, decimal, Guid, char> eight = "second";
+        (int a4, string? b4, bool c4, double d4) = four;
+        (int a5, string? b5, bool c5, double d5, long e5) = five;
+        (int a6, string? b6, bool c6, double d6, long e6, decimal f6) = six;
+        (int a7, string? b7, bool c7, double d7, long e7, decimal f7, Guid g7) = seven;
+        (int a8, string? b8, bool c8, double d8, long e8, decimal f8, Guid g8, char h8) = eight;
+
+        (a4, b4, c4, d4).Should().Be((0, "second", false, 0d));
+        (a5, b5, c5, d5, e5).Should().Be((0, "second", false, 0d, 0L));
+        (a6, b6, c6, d6, e6, f6).Should().Be((0, "second", false, 0d, 0L, 0m));
+        (a7, b7, c7, d7, e7, f7, g7).Should().Be((0, "second", false, 0d, 0L, 0m, Guid.Empty));
+        (a8, b8, c8, d8, e8, f8, g8, h8).Should().Be((0, "second", false, 0d, 0L, 0m, Guid.Empty, '\0'));
+    }
+
+    [Fact]
     public void ToTuple_AnyT4_MiddlePositions_ShouldReturnOnlyThatPosition()
     {
         Any<int, string, bool, double> third = true;

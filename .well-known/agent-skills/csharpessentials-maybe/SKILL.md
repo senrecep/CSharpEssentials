@@ -80,7 +80,7 @@ string display = Maybe.From(user?.Email)
     .Map(e => e.ToLowerInvariant())
     .GetValueOrDefault("no email");
 
-// Bind: flatMap — when the transform itself returns Maybe<T>
+// Bind (flatMap): when the transform itself returns Maybe<T>
 Maybe<Address> address = Maybe.From(user)
     .Bind(u => Maybe.From(u.Address));
 
@@ -91,17 +91,17 @@ Maybe<int> points = customer.LoyaltyPoints.Flatten(); // Maybe<int>? from an EF 
 ## None-side Effects
 
 ```csharp
-// TapNone — runs only when None; returns the same Maybe unchanged
+// TapNone: runs only when None; returns the same Maybe unchanged
 maybe.TapNone(() => logger.LogWarning("Value was absent"));
 
-// Async — instance and extension variants
+// Async: instance and extension variants
 await maybe.TapNoneAsync(async () => await NotifyAsync());
 await GetMaybeAsync().TapNoneAsync(() => fallback());
 
-// GetValueOrElse — lazy factory, only called when None
+// GetValueOrElse: lazy factory, only called when None
 int v = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
 
-// OrElse — lazy Maybe chain, alias for Or(Func<Maybe<T>>)
+// OrElse: lazy Maybe chain, alias for Or(Func<Maybe<T>>)
 Maybe<Config> cfg = GetCached().OrElse(() => LoadFromDisk());
 await GetCached().OrElseAsync(() => Task.FromResult(LoadFromDisk()));
 ```

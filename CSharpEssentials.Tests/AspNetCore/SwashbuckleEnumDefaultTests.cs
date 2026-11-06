@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
 using CSharpEssentials.AspNetCore.Swagger.Filters;
+using CSharpEssentials.Enums;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
@@ -14,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace CSharpEssentials.Tests.AspNetCore;
@@ -133,6 +135,58 @@ public class SwashbuckleEnumDefaultTests
         GeneratorConfiguratorCount(services).Should().Be(configurators);
     }
 
+    [Fact]
+    public void Resolver_Should_WriteNull_When_TheConverterRejectsAnInstanceRegisteredValue()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISerializerDataContractResolver>(new RejectingEnumResolver());
+        services.AddSwaggerEnumConventions();
+
+        Func<object, string> converter = EnumContract(services).JsonConverter;
+
+        converter((SampleStatus)42).Should().Be("null");
+        converter(SampleStatus.PendingApproval).Should().Be("\"defined\"");
+    }
+
+    [Fact]
+    public void Resolver_Should_WriteNull_When_TheConverterRejectsAFactoryRegisteredValue()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISerializerDataContractResolver>(static _ => new RejectingEnumResolver());
+        services.AddSwaggerEnumConventions();
+
+        EnumContract(services).JsonConverter((SampleStatus)42).Should().Be("null");
+    }
+
+    [Fact]
+    public void AddSwaggerEnumConventions_Should_KeepAResolverRegisteredByType()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISerializerDataContractResolver, RejectingEnumResolver>();
+        services.AddSwaggerEnumConventions();
+
+        ResolverDescriptor(services).ImplementationType.Should().Be<RejectingEnumResolver>();
+        Func<string> convert = () => EnumContract(services).JsonConverter((SampleStatus)42);
+        convert.Should().Throw<EnumValueException>();
+    }
+
+    [Fact]
+    public void AddSwaggerEnumConventions_Should_RegisterNoResolver_When_ASwaggerProviderIsRegisteredWithoutOne()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISwaggerProvider, SwaggerGenerator>();
+
+        services.AddSwaggerEnumConventions();
+
+        services.Should().NotContain(static descriptor => descriptor.ServiceType == typeof(ISerializerDataContractResolver));
+    }
+
+    private static DataContract EnumContract(ServiceCollection services)
+    {
+        using ServiceProvider provider = services.BuildServiceProvider();
+        return provider.GetRequiredService<ISerializerDataContractResolver>().GetDataContractForType(typeof(SampleStatus));
+    }
+
     private static int GeneratorConfiguratorCount(ServiceCollection services) =>
         services.Count(static descriptor => descriptor.ServiceType == typeof(IConfigureOptions<SwaggerGeneratorOptions>));
 
@@ -189,6 +243,14 @@ public class SwashbuckleEnumDefaultTests
 
         [DefaultValue(SampleStatus.PendingApproval)]
         public SampleStatus DefinedStatus { get; init; }
+    }
+
+    private sealed class RejectingEnumResolver : ISerializerDataContractResolver
+    {
+        public DataContract GetDataContractForType(Type type) =>
+            DataContract.ForPrimitive(type, DataType.String, null, static value => Enum.IsDefined(value.GetType(), value)
+                ? "\"defined\""
+                : throw new EnumValueException(new EnumValueError(value.GetType(), value.ToString(), [], null)));
     }
 
     private sealed class ObjectEnumResolver : ISerializerDataContractResolver

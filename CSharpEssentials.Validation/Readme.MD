@@ -72,7 +72,7 @@ Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, ru
     rules.For(() => m.Name).NotEmpty().MaxLength(100);
 });
 
-// Async delegate — for MustAsync or SetValidatorAsync inside
+// Async delegate: for MustAsync or SetValidatorAsync inside
 Result<CreateUserCommand> asyncResult = await Validator.ValidateAsync(command, async (m, rules, ct) =>
 {
     rules.For(() => m.Name).NotEmpty();
@@ -249,7 +249,7 @@ public class OrderValidator : Validator<Order>
                 break;
         }
 
-        // Early return — remaining rules skipped when Terms not accepted
+        // Early return: remaining rules skipped when Terms not accepted
         if (!model.AcceptsTerms) return ValueTask.CompletedTask;
         rules.For(() => model.Signature).NotEmpty();
         return ValueTask.CompletedTask;
@@ -379,7 +379,7 @@ Override `Order` on `Validator<T>` to control execution sequence when multiple v
 ```csharp
 public class FormatValidator : Validator<CreateUserCommand>
 {
-    public override int Order => 0;  // default — runs first
+    public override int Order => 0;  // default, runs first
 
     protected override ValueTask Configure(CreateUserCommand model, RuleContext<CreateUserCommand> rules, CancellationToken ct = default)
     {
@@ -584,7 +584,7 @@ The trade-off is a new `RuleContext<T>` per `ValidateAsync` call. That is intent
 Result<CreateUserCommand> result = await ParseCommand(input)
     .ValidateWithAsync(new CreateUserCommandValidator(), ct);
 
-// Inline validation — no dedicated class
+// Inline validation: no dedicated class
 Result<CreateUserCommand> inlineResult = await ParseCommand(input)
     .ValidateWithAsync((m, rules) =>
     {

@@ -81,10 +81,10 @@ Every `IValidationFailureObserver` in DI is called on a failure in `Enforce` and
 Interface hierarchy:
 
 ```csharp
-// ILoggableRequest        — base marker
-// IRequestLoggable        — logs request body only
-// IResponseLoggable       — logs response body only
-// IRequestResponseLoggable — logs both
+// ILoggableRequest: base marker
+// IRequestLoggable: logs request body only
+// IResponseLoggable: logs response body only
+// IRequestResponseLoggable: logs both
 ```
 
 ```csharp
@@ -92,7 +92,7 @@ public record GetUserQuery(Guid UserId)
     : IQuery<Result<UserDto>>, IRequestResponseLoggable;
 
 public record SendEmailCommand(string To, string Body)
-    : ICommand<Result>, IRequestLoggable;  // response has no PII — log request only
+    : ICommand<Result>, IRequestLoggable;  // response has no PII, so log request only
 ```
 
 ---
@@ -121,7 +121,7 @@ No marker interface is needed: once the behavior is registered it applies to any
 - `Description`: exception message
 
 ```csharp
-// No interface needed — applied to all handlers returning Result or Result<T> once the behavior is registered
+// No interface needed. Applies to all handlers returning Result or Result<T> once the behavior is registered
 public record ProcessPaymentCommand(Guid OrderId, decimal Amount)
     : ICommand<Result>;
 
@@ -141,7 +141,7 @@ public class ProcessPaymentHandler : ICommandHandler<ProcessPaymentCommand, Resu
     }
 }
 
-// Caller always receives a Result — no try/catch needed
+// Caller always receives a Result, so no try/catch is needed
 Result result = await mediator.Send(new ProcessPaymentCommand(orderId, 99.99m));
 if (result.IsFailure)
 {

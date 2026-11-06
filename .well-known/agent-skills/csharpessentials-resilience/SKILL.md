@@ -84,11 +84,11 @@ Strategies nest in the order you add them, the first being the outermost: `WithR
 ## Delegate Extensions
 
 ```csharp
-// Direct execution — wraps any Func<Task<T>> in a Result (exceptions become failures)
+// Direct execution: wraps any Func<Task<T>> in a Result (exceptions become failures)
 Func<Task<User>> getUser = () => users.GetAsync(id, CancellationToken.None);
 Result<User> user = await getUser.ExecuteAsync();
 
-// RetryIfFailed — retries retryable Result failures and exceptions
+// RetryIfFailed: retries retryable Result failures and exceptions
 Func<CancellationToken, Task<Result<User>>> operation = ct => users.TryGetAsync(id, ct);
 Result<User> retried = await operation.RetryIfFailed(maxAttempts: 3);
 

@@ -42,11 +42,11 @@ public class Order : EntityBase<Guid>
 
 // Provided members:
 // TId? Id
-// DateTimeOffset CreatedAt          — set by AuditInterceptor (or SetCreatedInfo)
-// string? CreatedBy                 — set by AuditInterceptor (or SetCreatedInfo)
-// DateTimeOffset? UpdatedAt         — NOT ModifiedAt
-// string? UpdatedBy                 — NOT ModifiedBy
-// IReadOnlyList<IDomainEvent> DomainEvents  — property, NOT a method
+// DateTimeOffset CreatedAt: set by AuditInterceptor (or SetCreatedInfo)
+// string? CreatedBy: set by AuditInterceptor (or SetCreatedInfo)
+// DateTimeOffset? UpdatedAt: NOT ModifiedAt
+// string? UpdatedBy: NOT ModifiedBy
+// IReadOnlyList<IDomainEvent> DomainEvents: property, NOT a method
 // void Raise(IDomainEvent)
 // void ClearDomainEvents()
 ```

@@ -64,7 +64,7 @@ public sealed class CseCollectionValidator : Validator<User>
     }
 }
 
-// 5. Nested validator (SetValidatorAsync — one level)
+// 5. Nested validator (SetValidatorAsync, one level)
 public sealed class CseAddressValidator : Validator<Address>
 {
     protected override ValueTask Configure(Address model, RuleContext<Address> rules, CancellationToken ct = default)
@@ -124,7 +124,7 @@ public sealed class CseConditionalValidator : Validator<Order>
     }
 }
 
-// 8. Custom predicate (Must — sync)
+// 8. Custom predicate (Must, sync)
 public sealed class CseCustomPredicateValidator : Validator<User>
 {
     protected override ValueTask Configure(User model, RuleContext<User> rules, CancellationToken ct = default)
@@ -204,7 +204,7 @@ public sealed class CseStringLengthRangeValidator : Validator<User>
     }
 }
 
-// 13. String content (Contains / StartsWith / EndsWith — CSE built-ins vs FV Must lambdas)
+// 13. String content (Contains / StartsWith / EndsWith: CSE built-ins vs FV Must lambdas)
 public sealed class CseStringContentValidator : Validator<User>
 {
     protected override ValueTask Configure(User model, RuleContext<User> rules, CancellationToken ct = default)
@@ -330,7 +330,7 @@ public sealed class CseCascadeStopValidator : Validator<User>
 }
 
 // 21. Validator construction cost (ctor overhead)
-// CseUserValidator / FvUserValidator are reused from above — benchmarked via new() directly.
+// CseUserValidator / FvUserValidator are reused from above and benchmarked via new() directly.
 
 // 22. Multiple regex (4 Matches rules, Continue mode)
 public sealed class CseMultipleRegexValidator : Validator<User>
@@ -416,7 +416,7 @@ public sealed class FvComparableValidator : AbstractValidator<User>
     }
 }
 
-// 4. Collection validators (Must lambdas — FV has no MinCount/MaxCount built-in)
+// 4. Collection validators (Must lambdas; FV has no MinCount/MaxCount built-in)
 public sealed class FvCollectionValidator : AbstractValidator<User>
 {
     public FvCollectionValidator()
@@ -556,7 +556,7 @@ public sealed class FvStringLengthRangeValidator : AbstractValidator<User>
     }
 }
 
-// 13. String content (FV has no Contains/StartsWith/EndsWith — Must lambdas used)
+// 13. String content (FV has no Contains/StartsWith/EndsWith, so Must lambdas are used)
 public sealed class FvStringContentValidator : AbstractValidator<User>
 {
     public FvStringContentValidator()

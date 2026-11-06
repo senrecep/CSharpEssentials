@@ -54,7 +54,7 @@ Error withMeta = Error.NotFound(
     new ErrorMetadata()
         .AddMetadata("TraceId", traceId)
         .AddMetadata("RequestPath", "/api/users/1"));
-// .AddMetadata() — NOT .WithMetadata(); an existing key is kept, not overwritten
+// .AddMetadata(): NOT .WithMetadata(); an existing key is kept, not overwritten
 ```
 
 ## Combining Errors
@@ -108,7 +108,7 @@ public static class OrderErrors
                 .AddMetadata("Available", available));
 }
 
-// Usage — implicit Error → Result<T>
+// Usage: implicit Error → Result<T>
 public Result<User> FindUser(Guid id)
 {
     User? user = _repo.Find(id);

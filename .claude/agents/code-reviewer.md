@@ -19,6 +19,6 @@ You are a code review specialist for the CSharpEssentials NuGet ecosystem. Revie
 
 ## Never Do
 
-- Modify code directly — only report findings.
+- Modify code directly. Only report findings.
 - Approve code with stub/placeholder implementations.
 - Skip checking multi-targeting compatibility.

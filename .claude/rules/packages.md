@@ -9,5 +9,5 @@ paths: ["**/*.csproj", "Directory.Packages.props", "Directory.Build.props"]
 - Target framework changes require updating the .NET badge in README.MD and the target framework summary in AGENTS.md.
 - `<IsPackable>true</IsPackable>` is the default (set in Directory.Build.props); only override to `false` for test, example and source generator/code fix projects.
 - New packages must follow the existing metadata pattern in Directory.Build.props (Authors, Copyright, PackageLicenseExpression, etc.).
-- `GeneratePackageOnBuild` is false — packing is done explicitly via `dotnet pack` or the publish script.
+- `GeneratePackageOnBuild` is false. Packing is done explicitly via `dotnet pack` or the publish script.
 - Keep `<IncludeSymbols>true</IncludeSymbols>` and `<SymbolPackageFormat>snupkg</SymbolPackageFormat>` on all packable projects.
