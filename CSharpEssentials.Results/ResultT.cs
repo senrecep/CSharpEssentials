@@ -57,6 +57,7 @@ public readonly partial record struct Result<TValue> : IResult<TValue>, IValueRe
     public readonly bool IsSuccess => _errors is null;
     public readonly TValue Value => IsSuccess ? _value : default!;
     readonly object? IValueResult.BoxedValue => Value;
+    readonly object? IValueResult.Accept(IValueResultVisitor visitor) => visitor.Visit(Value);
     [JsonPropertyName("errors")]
     public readonly Error[] ErrorsOrEmptyArray => IsFailure ? _errors : [];
     [JsonIgnore]

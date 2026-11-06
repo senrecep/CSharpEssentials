@@ -18,8 +18,7 @@ public class ResultEndpointFilterTests
 
         object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(42.ToResult())))!;
 
-        var okResult = (Ok<object>)result;
-        okResult.Value!.Should().Be(42);
+        result.Should().BeOfType<Ok<int>>().Which.Value.Should().Be(42);
     }
 
     [Fact]
@@ -31,7 +30,7 @@ public class ResultEndpointFilterTests
 
         object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result<int[]>.Success(value))))!;
 
-        ((Ok<object>)result).Value.Should().BeSameAs(value);
+        result.Should().BeOfType<Ok<int[]>>().Which.Value.Should().BeSameAs(value);
     }
 
     [Fact]

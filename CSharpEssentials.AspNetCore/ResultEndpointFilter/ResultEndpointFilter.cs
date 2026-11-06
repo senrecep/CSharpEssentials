@@ -18,7 +18,7 @@ public sealed class ResultEndpointFilter : IEndpointFilter
         if (result is IValueResult valueResult)
         {
             return valueResult.IsSuccess
-                ? TypedResults.Ok(valueResult.BoxedValue)
+                ? valueResult.Accept(OkResultVisitor.Instance)
                 : GetMapper(context)?.Map(valueResult.Errors) ?? valueResult.Errors.ToProblemResult();
         }
 
