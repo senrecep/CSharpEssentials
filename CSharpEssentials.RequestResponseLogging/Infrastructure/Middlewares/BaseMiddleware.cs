@@ -163,27 +163,22 @@ internal abstract class BaseMiddleware
 
         context.Request.EnableBuffering((int)Math.Clamp(context.Request.ContentLength ?? 0, DefaultBufferThreshold, MaxPooledBufferThreshold));
         Stream body = context.Request.Body;
-        char[]? buffer = null;
+        RecyclableMemoryStream text = _recyclableMemoryStreamManager.GetStream();
+        await using ConfiguredAsyncDisposable textScope = text.ConfigureAwait(false);
 
         try
         {
-            long start = body.Position;
-            using var reader = new StreamReader(body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: _bufferSize, leaveOpen: true);
-            buffer = ArrayPool<char>.Shared.Rent(_bufferSize);
-            var text = new StringBuilder();
-
-            int charsRead;
-            while ((charsRead = await reader.ReadAsync(buffer.AsMemory(0, _bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
+            int bytesRead;
+            while ((bytesRead = await body.ReadAsync(text.GetMemory(_bufferSize), CancellationToken.None).ConfigureAwait(false)) > 0)
             {
-                if (body.Position - start > MaxRequestBodySize)
+                text.Advance(bytesRead);
+                if (text.Length > MaxRequestBodySize)
                 {
                     return $"Request body too large: over {MaxRequestBodySize} bytes";
                 }
-
-                text.Append(buffer, 0, charsRead);
             }
 
-            return body.Position == start ? "Empty request body" : text.ToString();
+            return text.Length == 0 ? "Empty request body" : DecodeText(text);
         }
         catch (Exception ex)
         {
@@ -191,11 +186,6 @@ internal abstract class BaseMiddleware
         }
         finally
         {
-            if (buffer is not null)
-            {
-                ArrayPool<char>.Shared.Return(buffer);
-            }
-
             RewindRequestBody(context.Request.Body);
         }
     }
@@ -233,7 +223,7 @@ internal abstract class BaseMiddleware
         httpContext.Response.Body = new ResponseCaptureStream(originalBodyStream, responseBody);
 
         TimeSpan elapsedTime = await ExecuteWithTiming(next, httpContext).ConfigureAwait(false);
-        return (elapsedTime, await CaptureResponseBody(responseBody).ConfigureAwait(false));
+        return (elapsedTime, CaptureResponseBody(responseBody));
     }
 
     private static async Task<TimeSpan> ExecuteWithTiming(RequestDelegate next, HttpContext httpContext)
@@ -249,24 +239,34 @@ internal abstract class BaseMiddleware
 #endif
     }
 
-    private static async Task<string> CaptureResponseBody(MemoryStream responseBody)
+    private static string CaptureResponseBody(RecyclableMemoryStream responseBody)
     {
         if (responseBody.Length == 0)
         {
             return "Empty response body";
         }
 
-        responseBody.Seek(0, SeekOrigin.Begin);
-
         try
         {
-            using var reader = new StreamReader(responseBody, leaveOpen: true);
-            return await reader.ReadToEndAsync(CancellationToken.None).ConfigureAwait(false);
+            return DecodeText(responseBody);
         }
         catch (Exception ex)
         {
             return $"Error capturing response body: {ex.Message}";
         }
+    }
+
+    private static string DecodeText(RecyclableMemoryStream stream)
+    {
+        ReadOnlySequence<byte> bytes = stream.GetReadOnlySequence();
+        if (bytes.FirstSpan[0] is not (0xEF or 0xFE or 0xFF or 0x00))
+        {
+            return Encoding.UTF8.GetString(bytes);
+        }
+
+        stream.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: -1, leaveOpen: true);
+        return reader.ReadToEnd();
     }
 
     private async Task<RequestResponseContext> CreateAndLogContext(
