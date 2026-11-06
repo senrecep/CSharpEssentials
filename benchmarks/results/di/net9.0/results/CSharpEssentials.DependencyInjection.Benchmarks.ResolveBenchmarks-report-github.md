@@ -10,11 +10,11 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method                | Categories | Mean     | Error   | StdDev  | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |---------------------- |----------- |---------:|--------:|--------:|------:|--------:|-------:|----------:|------------:|
-| DecoratedManual       | Decorated  | 123.5 ns | 1.08 ns | 1.01 ns |  1.00 |    0.01 | 0.0215 |     360 B |        1.00 |
-| DecoratedCseGenerated | Decorated  | 178.5 ns | 0.93 ns | 0.87 ns |  1.45 |    0.01 | 0.0215 |     360 B |        1.00 |
-| DecoratedCseRuntime   | Decorated  | 213.7 ns | 1.68 ns | 1.57 ns |  1.73 |    0.02 | 0.0234 |     392 B |        1.09 |
-| DecoratedScrutor      | Decorated  | 329.0 ns | 1.34 ns | 1.25 ns |  2.67 |    0.02 | 0.0234 |     392 B |        1.09 |
+| DecoratedManual       | Decorated  | 127.1 ns | 0.94 ns | 0.88 ns |  1.00 |    0.01 | 0.0215 |     360 B |        1.00 |
+| DecoratedCseGenerated | Decorated  | 193.4 ns | 1.95 ns | 1.82 ns |  1.52 |    0.02 | 0.0215 |     360 B |        1.00 |
+| DecoratedCseRuntime   | Decorated  | 196.4 ns | 1.00 ns | 0.94 ns |  1.55 |    0.01 | 0.0215 |     360 B |        1.00 |
+| DecoratedScrutor      | Decorated  | 337.5 ns | 1.97 ns | 1.84 ns |  2.66 |    0.02 | 0.0234 |     392 B |        1.09 |
 |                       |            |          |         |         |       |         |        |           |             |
-| PlainManual           | Plain      | 147.7 ns | 0.58 ns | 0.52 ns |  1.00 |    0.00 | 0.0215 |     360 B |        1.00 |
-| PlainCseGenerated     | Plain      | 156.5 ns | 0.96 ns | 0.89 ns |  1.06 |    0.01 | 0.0215 |     360 B |        1.00 |
-| PlainScrutor          | Plain      | 146.7 ns | 1.15 ns | 1.08 ns |  0.99 |    0.01 | 0.0215 |     360 B |        1.00 |
+| PlainManual           | Plain      | 158.2 ns | 1.10 ns | 1.03 ns |  1.00 |    0.01 | 0.0215 |     360 B |        1.00 |
+| PlainCseGenerated     | Plain      | 153.7 ns | 0.57 ns | 0.47 ns |  0.97 |    0.01 | 0.0215 |     360 B |        1.00 |
+| PlainScrutor          | Plain      | 155.8 ns | 0.52 ns | 0.48 ns |  0.98 |    0.01 | 0.0215 |     360 B |        1.00 |
