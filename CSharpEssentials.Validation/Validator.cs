@@ -5,7 +5,8 @@ namespace CSharpEssentials.Validation;
 /// <summary>
 /// Base class for model validators. Override <see cref="Configure"/> to define validation rules.
 /// Rules can be synchronous or asynchronous. The method returns <see cref="ValueTask"/>,
-/// so validators with only synchronous rules make zero heap allocations.
+/// so validators with only synchronous rules do not allocate a <see cref="Task"/>.
+/// The rules themselves still allocate.
 /// </summary>
 /// <typeparam name="T">The model type to validate.</typeparam>
 public abstract class Validator<T> : IValidator<T>

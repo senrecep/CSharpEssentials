@@ -4,7 +4,8 @@ namespace CSharpEssentials.Validation;
 
 /// <summary>
 /// Validates an instance of <typeparamref name="T"/> and returns a <see cref="Result{T}"/>.
-/// Returns a completed <see cref="ValueTask"/> when all rules are synchronous, with zero heap allocation.
+/// Returns a completed <see cref="ValueTask"/> when all rules are synchronous, so no <see cref="Task"/> is allocated.
+/// The rules themselves still allocate.
 /// </summary>
 public interface IValidator<T>
 {
