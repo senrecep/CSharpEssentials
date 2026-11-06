@@ -109,6 +109,6 @@ public class DecoratorActivationTests
         services[1].IsKeyedService.Should().BeTrue();
         services[1].ServiceType.Should().Be<Greeter>();
         services[1].KeyedImplementationType.Should().Be<Greeter>();
-        services[1].Lifetime.Should().Be(ServiceLifetime.Scoped);
+        services[1].Lifetime.Should().Be(ServiceLifetime.Transient);
     }
 }
