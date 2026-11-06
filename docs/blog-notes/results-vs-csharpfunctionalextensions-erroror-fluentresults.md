@@ -1,6 +1,6 @@
 # Blog notes: CSharpEssentials.Results vs CSharpFunctionalExtensions vs ErrorOr vs FluentResults
 
-Raw material for a post. These notes are not the post. Every number comes from `CSharpEssentials.Results/BENCHMARKS.md`, `CSharpEssentials.Errors/BENCHMARKS.md` and `CSharpEssentials.Maybe/BENCHMARKS.md`, which read `benchmarks/results/results-comparison/{tfm}/results/` (and `results-pattern` for the async overload suite). Full BenchmarkDotNet default-job runs on an AMD Ryzen 5 5600 running a desktop session. The 1-minute load average was 1.41 to 2.65 at the start and end of the main runs and peaked at 4.72 during a rerun. The SDK was 11.0.100-rc.1, with BenchmarkDotNet 0.14.0. Primary runtime is .NET 10.0.11. Competitors: CSharpFunctionalExtensions 3.7.0 (CFE), ErrorOr 2.1.1, FluentResults 4.0.0.
+Raw material for a post. These notes are not the post. Every number comes from `CSharpEssentials.Results/BENCHMARKS.md`, `CSharpEssentials.Errors/BENCHMARKS.md` and `CSharpEssentials.Maybe/BENCHMARKS.md`, which read `benchmarks/results/results-comparison/{tfm}/results/` (and `results-pattern` for the async overload suite). Full BenchmarkDotNet default-job runs on a 6-core, 12-thread x64 desktop CPU running a desktop session. The 1-minute load average was 1.41 to 2.65 at the start and end of the main runs and peaked at 4.72 during a rerun. The SDK was 11.0.100-rc.1, with BenchmarkDotNet 0.14.0. Primary runtime is .NET 10.0.11. Competitors: CSharpFunctionalExtensions 3.7.0 (CFE), ErrorOr 2.1.1, FluentResults 4.0.0.
 
 ## The problem
 

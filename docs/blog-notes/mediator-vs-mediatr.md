@@ -5,7 +5,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 ## How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (ColdStart job with 15 launches for cold startup), full runs of all twelve classes on 2026-11-05.
-- AMD Ryzen 5 5600, CachyOS, SDK 11.0.100-rc.1. TFMs net8.0, net9.0, net10.0 and net11.0, run in that order, one after another. Primary runtime is .NET 10.0.11.
+- 6-core, 12-thread x64 desktop CPU, CachyOS, SDK 11.0.100-rc.1. TFMs net8.0, net9.0, net10.0 and net11.0, run in that order, one after another. Primary runtime is .NET 10.0.11.
 - Desktop session in the background; 1-minute load average 1.90 at the start of the suite and 1.63 at the end.
 - Rows above 5% CV were rerun up to two times; no row of this suite stayed above 5%.
 - The Native AOT report is a separate script run from 2026-11-06, after the CSE changes described below.

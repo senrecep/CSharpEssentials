@@ -1,6 +1,6 @@
 # CSharpEssentials.DependencyInjection: Performance benchmarks
 
-Compared with Scrutor 7.0.0 and manual Microsoft.Extensions.DependencyInjection registration, measured with BenchmarkDotNet v0.14.0 on an AMD Ryzen 5 5600 under .NET 8, 9, 10 and 11.
+Compared with Scrutor 7.0.0 and manual Microsoft.Extensions.DependencyInjection registration, measured with BenchmarkDotNet v0.14.0 on a 6-core, 12-thread x64 desktop CPU under .NET 8, 9, 10 and 11.
 
 ---
 
@@ -46,7 +46,7 @@ Environment:
 
 | Property | Value |
 |---|---|
-| Machine | AMD Ryzen 5 5600, 6 cores / 12 threads (x64, RyuJIT AVX2) |
+| Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
 | OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
 | Machine load | Desktop session in the background; 1-minute load average 1.55 at the suite start, 1.90 at the end |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser]; default job for warm classes, ColdStart job (15 launches) for the cold class |

@@ -1,6 +1,6 @@
 # CSharpEssentials.Endpoints: performance benchmarks
 
-Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
+Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · 6-core, 12-thread x64 desktop CPU · .NET 8 / 9 / 10 / 11
 
 Every BenchmarkDotNet number on this page comes from one full run of the suite on 2026-11-05 (the net9.0 throughput class was rerun on 2026-11-06). That run includes three newer classes: operation naming, name reads and the empty-prefix group. Their results are in [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group). The Native AOT table comes from a separate script run on 2026-11-06. Every CSE loss is collected in [Where CSE loses](#where-cse-loses).
 
@@ -34,7 +34,7 @@ Environment:
 
 | Property | Value |
 |---|---|
-| Machine | AMD Ryzen 5 5600, 6 cores / 12 threads (x64, RyuJIT AVX2) |
+| Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
 | OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
 | Machine load | Desktop session and other work in the background; 1-minute load average 2.18 to 4.72 (see below) |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser], [ExceptionDiagnoser] on throughput |

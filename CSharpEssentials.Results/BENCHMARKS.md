@@ -1,6 +1,6 @@
 # CSharpEssentials.Results: Performance benchmarks
 
-Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
+Compared with CSharpFunctionalExtensions 3.7.0, ErrorOr 2.1.1 and FluentResults 4.0.0 · BenchmarkDotNet v0.14.0 · 6-core, 12-thread x64 desktop CPU · .NET 8 / 9 / 10 / 11
 
 This page has two suites. The comparison suite (`results-comparison`) measures CSE against the three libraries; its Result and Maybe classes are below, the `Error` classes are in [CSharpEssentials.Errors/BENCHMARKS.md](../CSharpEssentials.Errors/BENCHMARKS.md), and the Maybe collection helpers are in [CSharpEssentials.Maybe/BENCHMARKS.md](../CSharpEssentials.Maybe/BENCHMARKS.md). The async overload suite (`results-pattern`) measures CSE's own async overloads against hand-written code, in [Async overload matrix](#async-overload-matrix-results-pattern-suite).
 
@@ -28,7 +28,7 @@ Every competitor method carries a comment with the README or source URL at the p
 
 | Property | Value |
 |---|---|
-| Machine | AMD Ryzen 5 5600, 6 cores / 12 threads (x64, RyuJIT AVX2) |
+| Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
 | OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
 | Machine load | Desktop session in the background. 1-minute load average: see [How these numbers were produced](#how-these-numbers-were-produced) |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser], default job |

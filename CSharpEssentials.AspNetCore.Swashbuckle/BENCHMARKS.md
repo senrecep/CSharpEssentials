@@ -173,7 +173,7 @@ Swashbuckle does not cache the document, so these costs repeat on every `GET /sw
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one TFM at a time on one machine: AMD Ryzen 5 5600 (6 cores, 12 threads), CachyOS Linux, .NET SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
+- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one TFM at a time on one machine: a 6-core, 12-thread x64 desktop CPU, CachyOS Linux, .NET SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
 - `SwashbuckleDocumentComparison` uses the default job. `SwashbuckleFirstDocumentComparison` uses a `cold` job: `RunStrategy=ColdStart`, `LaunchCount=15`, `IterationCount=1`, `WarmupCount=0`.
 - The suite was rerun after the 8.0 schema id change, so `CSharpEssentials_AddSwagger` measures the namespace-qualified ids. The 1-minute load average was 2.47 at the start of that run and 2.05 at its end.
 - No row has a CV (StdDev / Mean) above 5%. The highest in the reports is `Plain_AddSwaggerGen_StringEnums` on net11.0 (0.1289 ms on 3.304 ms). The automated noise scan could not read statistics for the warm rows from the JSON exports, so this check comes from the github reports.

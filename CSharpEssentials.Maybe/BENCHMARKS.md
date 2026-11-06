@@ -76,7 +76,7 @@ All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio"
 
 ### How these numbers were produced
 
-- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on an AMD Ryzen 5 5600 with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
+- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
 - 1-minute load average at the start and end of the comparison suite: 1.55 to 2.37, with a desktop session running. No `MaybeCollectionComparison` row stayed above 5% CV.
 - Reports: `benchmarks/results/results-comparison/{tfm}/results/`, for example [MaybeCollectionComparison net10](../benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.MaybeCollectionComparison-report-github.md).
 

@@ -2,7 +2,7 @@
 
 Raw material for a post, not the post itself. Every number comes from `CSharpEssentials.Endpoints/BENCHMARKS.md`, which reads `benchmarks/results/endpoints/{tfm}/results/*-report-github.md` and `benchmarks/results/endpoints/aot/aot-report.md`.
 
-How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoints suite (default job, plus a cold-start job for `ColdStartupBenchmarks`) on net8.0, net9.0, net10.0 and net11.0, run on 2026-11-05 with the net9.0 throughput class rerun on 2026-11-06. AMD Ryzen 5 5600 with a desktop session in the background; 1-minute load average 2.18 to 4.72 over the suite. SDK 11.0.100-rc.1. Primary runtime is .NET 10.0.11. No row of this suite stayed above 5% CV after reruns. The Native AOT numbers come from a separate script run on 2026-11-06 (load average 3.72).
+How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoints suite (default job, plus a cold-start job for `ColdStartupBenchmarks`) on net8.0, net9.0, net10.0 and net11.0, run on 2026-11-05 with the net9.0 throughput class rerun on 2026-11-06. A 6-core, 12-thread x64 desktop CPU with a desktop session in the background; 1-minute load average 2.18 to 4.72 over the suite. SDK 11.0.100-rc.1. Primary runtime is .NET 10.0.11. No row of this suite stayed above 5% CV after reruns. The Native AOT numbers come from a separate script run on 2026-11-06 (load average 3.72).
 
 ## The problem
 
