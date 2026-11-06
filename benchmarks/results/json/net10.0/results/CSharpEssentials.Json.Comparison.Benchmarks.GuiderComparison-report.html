@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Json.Comparison.Benchmarks.GuiderComparison-20261105-193527</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method           </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Decode</td><td>Decode</td><td>80.81 ns</td><td>0.673 ns</td><td>0.596 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ShortGuid_Decode</td><td>Decode</td><td>253.70 ns</td><td>5.029 ns</td><td>5.589 ns</td><td>3.14</td><td>0.07</td><td>0.0415</td><td>696 B</td><td>NA</td>
+</tr><tr><td>Bcl_Decode</td><td>Decode</td><td>22.12 ns</td><td>0.027 ns</td><td>0.025 ns</td><td>0.27</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Encode</td><td>Encode</td><td>46.85 ns</td><td>0.260 ns</td><td>0.243 ns</td><td>1.00</td><td>0.01</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>ShortGuid_Encode</td><td>Encode</td><td>68.64 ns</td><td>0.362 ns</td><td>0.339 ns</td><td>1.47</td><td>0.01</td><td>0.0153</td><td>256 B</td><td>3.56</td>
+</tr><tr><td>Bcl_Encode</td><td>Encode</td><td>22.26 ns</td><td>0.125 ns</td><td>0.117 ns</td><td>0.48</td><td>0.00</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>
