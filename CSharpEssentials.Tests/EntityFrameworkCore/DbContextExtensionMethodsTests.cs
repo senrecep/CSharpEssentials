@@ -389,6 +389,69 @@ public class DbContextExtensionMethodsTests
         _ = new SoftMigrateSeed { Key = 1 };
     }
 
+    private static MigrateDataOptions<SimpleEntity, SimpleSeed, string> NameKeyOptions(
+        List<string> updated, Func<int> nextId) =>
+        new()
+        {
+            Query = q => q.OrderBy(e => e.Id),
+            EntityKeyProperty = e => e.Name == "" ? null! : e.Name,
+            DataKeyProperty = s => s.Name == "" ? null! : s.Name,
+            IsUpdatedFunc = (e, s) => { updated.Add(e.Id + ":" + s.Key); return true; },
+            UpdateFunc = (e, s) => e,
+            Converter = s => new SimpleEntity { Id = nextId(), Name = s.Name }
+        };
+
+    [Fact]
+    public async Task MigrateDataAsync_Core_DuplicateKeys_ShouldMatchCaseSensitivelyAndKeepSourceOrder()
+    {
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        context.SimpleEntities.AddRange(
+            new SimpleEntity { Id = 1, Name = "a" },
+            new SimpleEntity { Id = 2, Name = "B" },
+            new SimpleEntity { Id = 3, Name = "x" },
+            new SimpleEntity { Id = 4, Name = "x" });
+        await context.SaveChangesAsync();
+
+        int id = 10;
+        List<string> updated = [];
+        SimpleSeed[] seeds =
+        [
+            new SimpleSeed { Key = 1, Name = "c" },
+            new SimpleSeed { Key = 2, Name = "b" },
+            new SimpleSeed { Key = 3, Name = "x" },
+            new SimpleSeed { Key = 4, Name = "c" },
+            new SimpleSeed { Key = 5, Name = "a" },
+        ];
+        await context.MigrateDataAsync(seeds, NameKeyOptions(updated, () => id++));
+
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Id + e.Name)
+            .Should().Equal("1a", "3x", "4x", "10c", "11b", "12c");
+        updated.Should().Equal("1:5", "3:3", "4:3");
+    }
+
+    [Fact]
+    public async Task MigrateDataAsync_Core_NullKeys_ShouldNeverMatch()
+    {
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        context.SimpleEntities.AddRange(
+            new SimpleEntity { Id = 1, Name = "" },
+            new SimpleEntity { Id = 2, Name = "k" });
+        await context.SaveChangesAsync();
+
+        int id = 10;
+        List<string> updated = [];
+        SimpleSeed[] seeds =
+        [
+            new SimpleSeed { Key = 1, Name = "" },
+            new SimpleSeed { Key = 2, Name = "k" },
+        ];
+        await context.MigrateDataAsync(seeds, NameKeyOptions(updated, () => id++));
+
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Id + e.Name)
+            .Should().Equal("2k", "10");
+        updated.Should().Equal("2:2");
+    }
+
     [Fact]
     public async Task SaveChangesAsResultAsync_CallerCancelled_ShouldPropagate()
     {
