@@ -84,9 +84,8 @@ internal sealed class EnumNameLookup<TValue> where TValue : class
         int hash = Hash(key);
         for (int i = _buckets[Bucket(hash)] - 1; i >= 0; i = _next[i])
         {
-            if (_hashes[i] == hash && (_ignoreCase
-                    ? key.Equals(_keys[i].AsSpan(), StringComparison.OrdinalIgnoreCase)
-                    : key.SequenceEqual(_keys[i].AsSpan())))
+            if (_hashes[i] == hash && (key.SequenceEqual(_keys[i].AsSpan()) ||
+                    _ignoreCase && key.Equals(_keys[i].AsSpan(), StringComparison.OrdinalIgnoreCase)))
                 return _values[i];
         }
 

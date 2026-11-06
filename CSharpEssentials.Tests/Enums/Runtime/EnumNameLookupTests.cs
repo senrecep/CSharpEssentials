@@ -72,6 +72,21 @@ public class EnumNameLookupTests
         }
     }
 
+    [Theory]
+    [InlineData("in_transit")]
+    [InlineData("In_Transit")]
+    [InlineData("IN_TRANSIT")]
+    [InlineData("level2_check")]
+    [InlineData("LEVEL2_CHECK")]
+    public void IgnoreCase_Lookup_Should_Return_The_First_Added_Entry_For_Exact_And_Case_Variant_Input(string probe)
+    {
+        EnumNameLookup<string> lookup = Lookup(StringComparer.OrdinalIgnoreCase, "In_Transit", "in_transit", "level2_check", "Level2_Check");
+
+        lookup.Find(probe.AsSpan()).Should().Be(probe.StartsWith("in", StringComparison.OrdinalIgnoreCase) ? "In_Transit#0" : "level2_check#2");
+        Lookup(StringComparer.Ordinal, "In_Transit", "level2_check").Find(probe.AsSpan())
+            .Should().Be(probe is "In_Transit" ? "In_Transit#0" : probe is "level2_check" ? "level2_check#1" : null);
+    }
+
     [Fact]
     public void Lookups_Should_Find_Every_Key_Of_A_Large_Table_Of_Similar_Names()
     {
