@@ -181,6 +181,37 @@ public class ErrorTests
     }
 
     [Fact]
+    public void Equality_WithNestedMetadataAndNullValuesInDifferentOrder_ShouldHaveSameHashCode()
+    {
+        var first = Error.Validation("C", "D", new ErrorMetadata
+        {
+            { "a", null },
+            { "nested", new ErrorMetadata { { "x", "1" }, { "y", 2 } } },
+        });
+        var second = Error.Validation("C", "D", new ErrorMetadata
+        {
+            { "nested", new ErrorMetadata { { "y", 2 }, { "x", "1" } } },
+            { "a", null },
+        });
+
+        first.Should().Be(second);
+        first.GetHashCode().Should().Be(second.GetHashCode());
+    }
+
+    [Fact]
+    public void Equality_SameCodeAndDescriptionWithDifferentTypeOrMetadata_ShouldStayDistinct()
+    {
+        var validation = Error.Validation("C", "D");
+        var conflict = Error.Conflict("C", "D");
+        var withMetadata = Error.Validation("C", "D", new ErrorMetadata("a", 1));
+        var withOtherValue = Error.Validation("C", "D", new ErrorMetadata("a", 2));
+        var withEmptyMetadata = Error.Validation("C", "D", []);
+
+        new HashSet<Error> { validation, conflict, withMetadata, withOtherValue, withEmptyMetadata, Error.Validation("C", "D") }
+            .Should().HaveCount(5);
+    }
+
+    [Fact]
     public void Equality_ExceptionWithInnerException_ShouldBeEqualAndHaveSameHashCode()
     {
         Exception exception;

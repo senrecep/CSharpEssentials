@@ -226,7 +226,6 @@ public readonly record struct Error : IError
 
         hashCode.Add(Code);
         hashCode.Add(Description);
-        hashCode.Add(Type);
         hashCode.Add(NumericType);
 
         if (Metadata is not null)
@@ -237,13 +236,13 @@ public readonly record struct Error : IError
 
     private static int GetMetadataHashCode(ErrorMetadata metadata)
     {
-        int combined = 0;
+        int combined = metadata.Count;
         foreach (KeyValuePair<string, object?> keyValuePair in metadata)
-            combined ^= HashCode.Combine(
+            combined += HashCode.Combine(
                 keyValuePair.Key,
                 keyValuePair.Value is ErrorMetadata nested ? GetMetadataHashCode(nested) : keyValuePair.Value?.GetHashCode() ?? 0);
 
-        return HashCode.Combine(metadata.Count, combined);
+        return combined;
     }
 
     private static bool CompareMetadata(ErrorMetadata metadata, ErrorMetadata otherMetadata)
