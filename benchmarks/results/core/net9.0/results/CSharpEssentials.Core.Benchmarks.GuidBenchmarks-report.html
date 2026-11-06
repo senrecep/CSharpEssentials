@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Core.Benchmarks.GuidBenchmarks-20261106-035717</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method          </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>GuidNewGuid</td><td>759.69 ns</td><td>6.266 ns</td><td>5.862 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>GuidCreateVersion7</td><td>805.80 ns</td><td>7.290 ns</td><td>6.819 ns</td><td>1.06</td><td>-</td><td>NA</td>
+</tr><tr><td>GuiderNewGuid</td><td>71.90 ns</td><td>0.019 ns</td><td>0.017 ns</td><td>0.09</td><td>-</td><td>NA</td>
+</tr><tr><td>GuiderNewMonotonicGuid</td><td>83.61 ns</td><td>0.168 ns</td><td>0.157 ns</td><td>0.11</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>
