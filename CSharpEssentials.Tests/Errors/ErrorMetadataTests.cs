@@ -282,6 +282,43 @@ public class ErrorMetadataTests
     }
 
     [Fact]
+    public void ToString_UnderGermanCulture_ShouldFormatDatesAndDecimalsInvariantly()
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        try
+        {
+            var metadata = new ErrorMetadata
+            {
+                ["at"] = new DateTime(2024, 3, 5, 14, 7, 9, DateTimeKind.Unspecified),
+                ["price"] = 1234.5m,
+            };
+
+            metadata.ToString().Should().Be("[{ at: 03/05/2024 14:07:09 }, { price: 1234.5 }]");
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void ToString_WithBracesAndEmptyKey_ShouldEmitThemVerbatim()
+    {
+        var metadata = new ErrorMetadata { [""] = "{0}", ["{x}"] = "}{" };
+
+        metadata.ToString().Should().Be("[{ : {0} }, { {x}: }{ }]");
+    }
+
+    [Fact]
+    public void ToString_WithNestedMetadata_ShouldEmbedNestedToString()
+    {
+        var metadata = new ErrorMetadata { ["outer"] = new ErrorMetadata("inner", 7) };
+
+        metadata.ToString().Should().Be("[{ outer: [{ inner: 7 }] }]");
+    }
+
+    [Fact]
     public void ToString_WhenEmpty_ShouldReturnEmptyBrackets()
     {
         new ErrorMetadata().ToString().Should().Be("[]");
