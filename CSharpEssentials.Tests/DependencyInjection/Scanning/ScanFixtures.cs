@@ -154,3 +154,47 @@ internal interface IScanRecordService;
 
 [RegisterScoped]
 internal sealed record ScanRecordService : IScanRecordService;
+
+internal interface IScanZeta;
+
+internal interface IScanAlpha;
+
+[RegisterSingleton(As = ServiceAs.ImplementedInterfaces)]
+internal sealed class OrderedService : IScanZeta, IScanAlpha;
+
+[RegisterSingleton(As = ServiceAs.SelfWithInterfaces)]
+internal sealed class OrderedSelfService : IScanZeta, IScanAlpha;
+
+internal interface IDedupService;
+
+internal interface IDedupExtra;
+
+[RegisterScoped(typeof(IDedupService), As = ServiceAs.ImplementedInterfaces)]
+internal sealed class DedupService : IDedupExtra, IDedupService;
+
+internal interface IConventionalRepository<T>
+{
+    T? Find();
+}
+
+[RegisterScoped]
+internal sealed class ConventionalRepository<T> : IOtherMarker, IConventionalRepository<T>
+{
+    public T? Find() => default;
+}
+
+internal interface IArityService<T>
+{
+    T Value();
+}
+
+[RegisterScoped]
+internal sealed class ArityService : IArityService<int>
+{
+    public int Value() => 0;
+}
+
+internal interface IScanWidgets;
+
+[RegisterScoped]
+internal sealed class ScanWidget : IScanWidgets;
