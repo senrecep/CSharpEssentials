@@ -1,8 +1,8 @@
-# CSharpEssentials.Endpoints: Performance benchmarks
+# CSharpEssentials.Endpoints: performance benchmarks
 
 Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · AMD Ryzen 5 5600 · .NET 8 / 9 / 10 / 11
 
-The same suite has three newer classes that have not had a full run yet: operation naming, name reads and the empty-prefix group. They are described in [Pending: operation naming and the empty-prefix group](#pending-operation-naming-and-the-empty-prefix-group).
+Every BenchmarkDotNet number on this page comes from one full run of the suite on 2026-11-05 (the net9.0 throughput class was rerun on 2026-11-06). That run includes three newer classes: operation naming, name reads and the empty-prefix group. Their results are in [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group). The Native AOT table comes from an earlier script run on 2026-11-01. Every CSE loss is collected in [Where CSE loses](#where-cse-loses).
 
 ---
 
@@ -36,7 +36,7 @@ Environment:
 |---|---|
 | Machine | AMD Ryzen 5 5600, 6 cores / 12 threads (x64, RyuJIT AVX2) |
 | OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
-| Machine load | Desktop session in the background; 1-minute load average 2.84-3.90 at the six sampled points (3.16 at the net10 start, 3.90 net9, 3.45 net8, 3.25 net11, 2.84 at the AOT start, 3.57 at the end) |
+| Machine load | Desktop session and other work in the background; 1-minute load average 2.18 to 4.72 (see below) |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser], [ExceptionDiagnoser] on throughput |
 | .NET SDK | 11.0.100-rc.1.26425.128 |
 | Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 |
@@ -45,25 +45,49 @@ Environment:
 | FastEndpoints | 8.3.0, FastEndpoints.Generator 8.3.0 |
 | CSharpEssentials.Endpoints | The repository source, referenced as a project |
 
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, full runs (`./run-benchmarks.sh --project endpoints`, not `--quick`), one suite at a time on one machine. `StartupBenchmarks`, `ThroughputBenchmarks` and the three naming/group classes use the default job. `ColdStartupBenchmarks` uses its own cold job (15 launches, 1 iteration, no warmup).
+- TFMs: net8.0, net9.0, net10.0 and net11.0. Carter rows and POST rows exist on net10.0 and net11.0 only.
+- Machine load (1-minute load average): 2.46 at the start of the suite and 2.37 at its end. The net9.0 `ThroughputBenchmarks` class was rerun for noise (2.18 at its start, 4.72 at its end), and the committed net9.0 throughput report is that rerun. Range over these points: 2.18 to 4.72.
+- Noise: no row of this suite is on the final noisy list (CV above 5% after two reruns). No row is near 0 ns, so timer resolution does not affect any comparison here.
+- Results: `benchmarks/results/endpoints/{tfm}/results/*-report-github.md` (also `.csv`). Native AOT: `benchmarks/results/endpoints/aot/aot-report.md`, generated 2026-11-01 at a load average of 2.84 and not rerun with this suite.
+
 ---
 
 ## Executive summary
 
-Primary runtime: net10. "CSE" means CseGenerated unless the row says otherwise. Ties are differences within the sum of the two BenchmarkDotNet error margins.
+Primary runtime: net10. "CSE" means CseGenerated unless the row says otherwise. Ties are differences within the sum of the two BenchmarkDotNet error margins. "Ratio" is the report's ratio against the Plain (or Baseline) row.
 
 | Finding | Details |
 |---|---|
-| Cold startup, N=10: CSE takes 22% less time than FastEndpoints | 169.6 ms vs 218.7 ms (FastEndpoints is 1.29× the CSE time). Same direction on every TFM (1.26-1.29×) |
-| Cold startup, N≥100: FastEndpoints is faster (CSE loss) | N=100: 313.9 ms vs 353.8 ms (CSE takes 1.13× as long). N=500: 678.9 ms vs 1,120.5 ms (CSE takes 1.65× as long). CSE loses at N=100 and N=500 on every TFM (N=500: 1.36× on net8, 1.75× on net11). Plain Minimal APIs lose too, by a smaller margin (N=500: 1.59× on net10, 1.26× on net8, vs CSE 1.65× and 1.36×). This points to RequestDelegateFactory building each handler, which CSE inherits; not profiled. RDG was off in these runs; its effect on this gap was not measured |
-| Cold startup, CSE vs Plain: tie on net10, 3-7% overhead at N≥100 elsewhere (CSE loss) | net10: +1.5% (N=10), +3.1% (N=100), +3.7% (N=500), all within error. N=500 on other TFMs, outside error: +7.5% (net8, 887.1 vs 825.1 ms), +7.0% (net9), +7.3% (net11). N=100 on other TFMs, outside error: +5.7% (net8, 299.1 vs 282.9 ms), +3.3% (net9), +5.5% (net11). N=10 is a tie on every TFM |
-| Cold startup, CSE vs Carter: tie | net10: 169.6 vs 171.4 ms (N=10), 353.8 vs 348.3 ms (N=100), 1,120.5 vs 1,099.8 ms (N=500), all within error. net11 N=500: 1,167.6 vs 1,167.5 ms |
-| Generated registry vs reflection scanning: no measurable startup gain on net10 | Cold net10: 169.6 vs 175.2 ms (N=10), 353.8 vs 360.2 ms (N=100), 1,120.5 vs 1,110.5 ms (N=500), all ties. Outside error only at N=10 on net8/net9/net11 (generated 2-4% faster) and N=100 on net9 (2%). The generator's measured value is Native AOT, where the reflection scanner's app answers 404/405 |
-| Warm startup: FastEndpoints 2.8-3.8× lower on net10 (up to 4.75× on net11), not like-for-like | net10 N=500: 191.0 ms vs 710.8 ms. FastEndpoints moves per-endpoint setup to the first request, so this row omits work the others include. CSE vs Plain vs Carter: within 2.2% at every N |
-| Cold allocation: FastEndpoints 1.6× more at N=500 | 36,798 KB vs 22,749 KB (net10). CSE allocates 4% more than Plain and 0.6% less than Carter. At N=10 CSE allocates 17% more than Plain (1,119 vs 959 KB), and FastEndpoints only 7% more than CSE (1,199 KB) (CSE loss vs Plain; on net8 CSE allocates 9% less than Plain at N=10, 996 vs 1,093 KB). Measured in a separate run (see Caveats) |
-| Throughput, GET/DELETE: CSE = Plain except net9 DELETE (Plain 2% faster, CSE loss), FastEndpoints 1.22-1.29× slower | net10 GET: 8.227 µs CSE, 8.297 µs Plain (tie), 9.023 µs Carter (1.10×), 10.126 µs FastEndpoints (1.23×). DELETE: CSE, Plain and Carter tie; FastEndpoints 1.25×. On net11 the GET gap to FastEndpoints is 3% (12.164 vs 12.541 µs, at the edge of error), and FastEndpointsSourceGen ties. net11 GET: Carter 11.848 vs CSE 12.164 µs, tie |
-| Throughput, POST valid: Carter 4% faster than CSE (CSE loss) | net10: 14.141 µs vs 14.729 µs. net11: 16.250 vs 16.946 µs. FastEndpoints is 1.37× the CSE time (net10). Validation engines differ (DataAnnotations vs FluentValidation) |
-| Throughput, POST invalid: Plain 10% faster than CSE (CSE loss) | net10: 19.757 µs vs 22.027 µs; net11: 24.749 vs 27.745 µs, where CseReflection (24.654 µs) is also faster. Both use the same validation engine. Carter is 1.37× the CSE time on net10 but ties on net11 (28.183 vs 27.745 µs); FastEndpoints is 2.10× the CSE time on net10; FastEndpoints throws 2 exceptions per invalid request |
-| Native AOT: CseGenerated publishes with 0 IL warnings | 10.4 MB binary and 72 ms to first 200, against 10.3 MB / 71 ms for Plain and 15.2 MB / 81 ms for FastEndpointsSourceGen. CseReflection publishes with 4 warnings and its routes return 404/405. Carter and FastEndpoints (reflection discovery) crash at startup with this setup |
+| Cold startup, N=10: CSE takes 23% less time than FastEndpoints | net10: 164.9 ms vs 213.5 ms (FastEndpoints takes 1.29× the CSE time). Same direction on every TFM, from 1.26× (net9) to 1.31× (net8) |
+| Cold startup, N≥100: FastEndpoints is faster (CSE loss) | net10 N=100: 339.6 ms vs 296.7 ms (CSE takes 1.14× as long). N=500: 1,116.3 ms vs 688.4 ms (1.62×). CSE loses at N=100 and N=500 on every TFM; at N=500 from 1.39× (net8) to 1.73× (net11). The closest case is net8 N=100: 301.2 vs 297.7 ms. Plain Minimal APIs lose too, by a smaller margin (N=500: 1.51× on net10, 1.29× on net8). This points to RequestDelegateFactory building each handler, which CSE inherits; not profiled. RDG was off in these runs; its effect on this gap was not measured |
+| Cold startup, CSE vs Plain: tie at N=10, 2-8% overhead at N≥100 (CSE loss) | Ratio at N=100: 1.02 (net8), 1.03 (net9), 1.05 (net10), 1.04 (net11). At N=500: 1.08, 1.07, 1.07, 1.06. All outside error; net10 N=500 is 1,116.3 vs 1,041.8 ms. N=10 is a tie on every TFM except net9 (167.9 vs 164.1 ms, ratio 1.02) |
+| Cold startup, CSE vs Carter: tie | net10: 164.9 vs 167.6 ms (N=10), 339.6 vs 338.0 ms (N=100), 1,116.3 vs 1,108.0 ms (N=500), all within error. net11 is a tie at every N too (N=500: 1,186.6 vs 1,185.1 ms) |
+| Generated registry vs reflection scanning: no measurable cold-start gain on net10 | net10: 164.9 vs 169.5 ms (N=10), 339.6 vs 340.9 ms (N=100), 1,116.3 vs 1,123.2 ms (N=500), all ties. Outside error only on net9 N=10, net9 N=100 and net8 N=100 (generated 1.7-2.6% faster). The generator's measured value is Native AOT, where the reflection scanner's app answers 404/405 |
+| Warm startup: FastEndpoints 2.8-3.8× lower on net10, not like-for-like | net10 N=500: 189.344 ms vs 721.454 ms. FastEndpoints moves per-endpoint setup to the first request, so this row omits work the others include. CSE vs Plain at N=500: tie on net9, net10 and net11, 1.7% slower on net8 (509.850 vs 501.513 ms, CSE loss). Carter is 1.6% faster than CSE at N=500 on net10 (710.012 vs 721.454 ms, CSE loss) |
+| Cold allocation: FastEndpoints 1.6× more at N=500 | net10: 35.97 MB vs 22.4 MB. CSE allocates more than Plain at N=500 on every TFM (alloc ratio 1.03-1.05; net10 22.4 vs 21.26 MB) and about the same as Carter (22.37 MB). At N=10 on net8 CSE allocates 1175.2 KB vs 978.4 KB for Plain (alloc ratio 1.20, CSE loss); on net9 to net11 the N=10 alloc ratio is 0.99-1.01. Measured in a separate run (see Caveats) |
+| Throughput, GET and DELETE: CSE ties Plain and Carter on every TFM; FastEndpoints takes 1.23-1.32× as long on net8 to net10 | net10 GET: 8.855 μs CSE, 8.723 μs Plain, 8.907 μs Carter (all ties), 11.165 μs FastEndpoints (1.26×). net10 DELETE: 6.728 μs CSE, 6.727 μs Plain, 8.530 μs FastEndpoints (1.27×). On net11 the GET gap to FastEndpoints is 1.07× (12.82 vs 13.70 μs); DELETE stays at 1.28× (10.37 vs 13.23 μs) |
+| Throughput, POST valid: Carter takes 10% less time than CSE on net10 (CSE loss) | net10: 15.620 μs vs 17.325 μs (CSE takes 1.11× as long); net11: 18.82 vs 20.02 μs (1.06×). Carter also allocates less (11.38 vs 11.67 KB on net10). CSE vs Plain is a tie. FastEndpoints takes 1.24× the CSE time on net10. Validation engines differ (DataAnnotations vs FluentValidation) |
+| Throughput, POST invalid: CSE ties Plain; Carter and FastEndpoints take longer | net10: 24.369 μs CSE, 23.880 μs Plain (tie), 32.138 μs Carter (1.32×), 50.133 μs FastEndpoints (2.06×, 2 exceptions per request). net11: 25.97 μs CSE, 26.07 μs Plain (tie), 33.01 μs Carter (1.27×), 44.15 μs FastEndpoints (1.70×) |
+| Name reads: an `OperationNaming.TypeName` name takes 1.92× as long to read as a hand-written `WithName` name (CSE loss) | net10, 500 reads: 12.280 μs vs 6.381 μs; `Custom` names 7.396 μs. Every TypeName read takes a lock. See [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group) |
+| Native AOT (2026-11-01 run): CseGenerated publishes with 0 IL warnings | 10.4 MB binary and 72 ms to first 200, against 10.3 MB / 71 ms for Plain and 15.2 MB / 81 ms for FastEndpointsSourceGen. CseReflection publishes with 4 warnings and its routes return 404/405. Carter and FastEndpoints (reflection discovery) crash at startup with this setup |
+
+### Where CSE loses
+
+Every row where CSE (CseGenerated) takes longer or allocates more than another variant, outside error:
+
+- Cold startup vs FastEndpoints at N=100 and N=500, every TFM. net10: 339.6 vs 296.7 ms (N=100), 1,116.3 vs 688.4 ms (N=500).
+- Cold startup vs Plain at N=100 and N=500, every TFM (ratio 1.02-1.08), and at N=10 on net9 (167.9 vs 164.1 ms).
+- Cold allocation vs Plain: N=10 on net8 (1175.2 KB vs 978.4 KB), net9 and net10 (1.11 vs 1.1 MB, alloc ratio 1.01); N=100 on every TFM (alloc ratio 1.03 net8, 1.06 net9, 1.06 net10, 1.05 net11); N=500 on every TFM (alloc ratio 1.04 net8, 1.04 net9, 1.05 net10, 1.03 net11).
+- Cold allocation vs Carter: net10 at every N (1.11 vs 1.09 MB, 4.95 vs 4.93 MB, 22.4 vs 22.37 MB) and net11 at N=100 (5.11 vs 5.01 MB) and N=500 (22.98 vs 22.69 MB).
+- Warm startup at N=500: vs Plain on net8 (509.850 vs 501.513 ms), vs Carter on net10 (721.454 vs 710.012 ms). Warm allocation at N=500 is 4.3-4.9% above Plain on every TFM (net10: 16233.1 KB vs 15539.98 KB). Warm allocation is also above Plain at N=10 and N=100 on every TFM (net10: 699.62 vs 683.84 KB, 3553.08 vs 3409.3 KB), above Carter on net10 at N=100 and N=500 (3553.08 vs 3544.92 KB, 16233.1 vs 16211.28 KB) and on net11 at N=10 (662.65 vs 662.17 KB). FastEndpoints is lower in time at every N, and in allocation at N=100 and N=500 on every TFM (net10 N=500: 15994.83 vs 16233.1 KB), but that row is not like-for-like.
+- Throughput, POST valid vs Carter: net10 17.325 vs 15.620 μs, net11 20.02 vs 18.82 μs. Carter also allocates less there (net10 11.38 vs 11.67 KB, net11 12.71 vs 13.52 KB).
+- Throughput allocation, 0.01 KB per request: vs Plain on POST valid on net10 (11.67 vs 11.66 KB) and net11 (13.52 vs 13.51 KB), and on DELETE on net11 (9.32 vs 9.31 KB); vs Carter on DELETE on net11 (9.32 vs 9.31 KB).
+- Name reads: TypeName takes 1.67-1.92× and Custom 1.16-1.22× as long as hand-written `WithName` names (net10: 12.280 and 7.396 vs 6.381 μs).
+- Operation naming at build: TypeName takes longer than None on net8, net10 and net11 (net10: 714.4 vs 703.9 ms) and allocates 1.07-1.08× as much (net10: 16.83 vs 15.62 MB).
+- The per-type `MapGroup("")` allocates 3-4% more than direct mapping (net10: 15.6 vs 15.1 MB). Its time is within error on every TFM.
 
 ---
 
@@ -73,31 +97,31 @@ Primary runtime: net10. "CSE" means CseGenerated unless the row says otherwise. 
 
 > This is the fair startup comparison, because every library's lazy work falls inside the timing.
 
-Net10, mean of 15 launches. "vs CSE" divides the variant's mean by the CseGenerated mean (above 1.00 = slower than CSE).
+Net10, mean of 15 launches. "Ratio" is the report's ratio against Plain. Allocation is copied in the report's unit.
 
-| Variant | N=10 | vs CSE | N=100 | vs CSE | N=500 | vs CSE | Alloc N=10 | Alloc N=500 |
+| Variant | N=10 | Ratio | N=100 | Ratio | N=500 | Ratio | Alloc N=10 | Alloc N=500 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Plain | 167.1 ms | 0.99 | 343.1 ms | 0.97 | 1,080.3 ms | 0.96 | 959.3 KB | 21,781 KB |
-| CseGenerated | 169.6 ms | 1.00 | 353.8 ms | 1.00 | 1,120.5 ms | 1.00 | 1,119.2 KB | 22,749 KB |
-| CseReflection | 175.2 ms | 1.03 | 360.2 ms | 1.02 | 1,110.5 ms | 0.99 | 1,253.2 KB | 24,174 KB |
-| Carter | 171.4 ms | 1.01 | 348.3 ms | 0.98 | 1,099.8 ms | 0.98 | 1,255.9 KB | 22,891 KB |
-| FastEndpoints | 218.7 ms | 1.29 | 313.9 ms | 0.89 | 678.9 ms | 0.61 | 1,199.3 KB | 36,798 KB |
-| FastEndpointsSourceGen | 216.1 ms | 1.27 | 312.7 ms | 0.88 | 677.9 ms | 0.60 | 1,165.9 KB | 36,699 KB |
+| Plain | 160.4 ms | 1.00 | 323.2 ms | 1.00 | 1,041.8 ms | 1.00 | 1.1 MB | 21.26 MB |
+| CseGenerated | 164.9 ms | 1.03 | 339.6 ms | 1.05 | 1,116.3 ms | 1.07 | 1.11 MB | 22.4 MB |
+| CseReflection | 169.5 ms | 1.06 | 340.9 ms | 1.05 | 1,123.2 ms | 1.08 | 1.05 MB | 23.62 MB |
+| Carter | 167.6 ms | 1.05 | 338.0 ms | 1.05 | 1,108.0 ms | 1.06 | 1.09 MB | 22.37 MB |
+| FastEndpoints | 213.5 ms | 1.33 | 296.7 ms | 0.92 | 688.4 ms | 0.66 | 1.18 MB | 35.97 MB |
+| FastEndpointsSourceGen | 205.5 ms | 1.28 | 301.2 ms | 0.93 | 690.4 ms | 0.66 | 1.15 MB | 35.87 MB |
 
-Errors (99.9% CI) are 2.5-6.6 ms at N=10/100 and 2.4-26.3 ms at N=500 (CseGenerated has the widest, 26.34 ms). Every CSE vs Plain, CSE vs Carter and CseGenerated vs CseReflection difference on net10 falls within error.
+Errors (99.9% CI) on net10 are 1.58-5.33 ms at N=10, 1.39-7.81 ms at N=100 and 3.20-6.15 ms at N=500. On net10, CSE vs Carter and CseGenerated vs CseReflection fall within error at every N. CSE vs Plain falls within error at N=10 only.
 
 Cross-TFM, mean (ms):
 
 | Variant | N=10 net8 | net9 | net10 | net11 | N=100 net8 | net9 | net10 | net11 | N=500 net8 | net9 | net10 | net11 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Plain | 162.7 | 163.3 | 167.1 | 158.7 | 282.9 | 308.3 | 343.1 | 329.0 | 825.1 | 944.1 | 1,080.3 | 1,087.9 |
-| CseGenerated | 166.1 | 165.3 | 169.6 | 159.7 | 299.1 | 318.5 | 353.8 | 347.2 | 887.1 | 1,010.1 | 1,120.5 | 1,167.6 |
-| CseReflection | 170.5 | 169.1 | 175.2 | 165.6 | 302.6 | 323.6 | 360.2 | 354.7 | 896.3 | 1,016.2 | 1,110.5 | 1,175.1 |
-| Carter | - | - | 171.4 | 163.7 | - | - | 348.3 | 351.3 | - | - | 1,099.8 | 1,167.5 |
-| FastEndpoints | 214.4 | 208.6 | 218.7 | 205.7 | 291.3 | 283.8 | 313.9 | 289.9 | 653.5 | 641.7 | 678.9 | 665.8 |
-| FastEndpointsSourceGen | 212.3 | 206.3 | 216.1 | 202.5 | 289.3 | 281.7 | 312.7 | 287.5 | 644.1 | 641.9 | 677.9 | 667.6 |
+| Plain | 172.5 | 164.1 | 160.4 | 162.6 | 294.0 | 313.4 | 323.2 | 345.4 | 840.4 | 946.8 | 1,041.8 | 1,116.1 |
+| CseGenerated | 171.9 | 167.9 | 164.9 | 167.4 | 301.2 | 321.2 | 339.6 | 359.2 | 905.0 | 1,013.5 | 1,116.3 | 1,186.6 |
+| CseReflection | 180.7 | 172.3 | 169.5 | 174.2 | 307.7 | 326.7 | 340.9 | 357.2 | 915.8 | 1,022.1 | 1,123.2 | 1,207.9 |
+| Carter | - | - | 167.6 | 171.7 | - | - | 338.0 | 355.1 | - | - | 1,108.0 | 1,185.1 |
+| FastEndpoints | 225.6 | 211.1 | 213.5 | 215.3 | 297.7 | 288.4 | 296.7 | 299.8 | 653.2 | 643.4 | 688.4 | 687.2 |
+| FastEndpointsSourceGen | 225.7 | 210.1 | 205.5 | 212.2 | 296.3 | 287.5 | 301.2 | 299.3 | 652.0 | 636.4 | 690.4 | 689.1 |
 
-In small apps (N=10), CSE is 1.26-1.29× faster than FastEndpoints on every TFM and within 2.5% of Plain. In large apps (N≥100), FastEndpoints is faster on every TFM. At N=500 CSE takes 1.36× (net8) to 1.75× (net11) as long. Plain takes nearly as long as CSE, which points to how Minimal APIs build handlers rather than the CSE registry (not profiled).
+In small apps (N=10), FastEndpoints takes 1.26-1.31× the CSE time on every TFM, and CSE is within error of Plain except on net9 (ratio 1.02). In large apps (N≥100), FastEndpoints is faster on every TFM. At N=500 CSE takes 1.39× (net8) to 1.73× (net11) as long. Plain takes 1.29× (net8) to 1.62× (net11) as long as FastEndpoints at N=500, which points to how Minimal APIs build handlers rather than the CSE registry (not profiled). The CSE overhead over Plain at N=500 (ratio 1.06-1.08) is the part that belongs to CSE.
 
 ---
 
@@ -109,26 +133,26 @@ Net10. "vs CSE" divides the variant's mean by the CseGenerated mean.
 
 | Variant | N=10 | N=100 | N=500 | vs CSE (N=500) | Alloc N=10 | Alloc N=500 |
 |---|---:|---:|---:|---:|---:|---:|
-| Baseline (0 endpoints) | 1.140 ms | 1.141 ms | 1.152 ms | - | 345 KB | 345 KB |
-| Plain | 15.564 ms | 142.378 ms | 705.146 ms | 0.99 | 671 KB | 15,466 KB |
-| CseGenerated | 15.508 ms | 142.829 ms | 710.825 ms | 1.00 | 685 KB | 16,219 KB |
-| CseReflection | 15.685 ms | 143.276 ms | 721.714 ms | 1.02 | 693 KB | 16,700 KB |
-| Carter | 15.690 ms | 145.292 ms | 710.534 ms | 1.00 | 693 KB | 16,201 KB |
-| FastEndpoints | 5.525 ms | 37.956 ms | 191.008 ms | 0.27 | 719 KB | 16,036 KB |
-| FastEndpointsSourceGen | 5.523 ms | 37.929 ms | 189.848 ms | 0.27 | 716 KB | 15,948 KB |
+| Baseline (0 endpoints) | 1.058 ms | 1.094 ms | 1.088 ms | - | 357.93 KB | 357.99 KB |
+| Plain | 15.733 ms | 146.530 ms | 716.527 ms | 0.99 | 683.84 KB | 15539.98 KB |
+| CseGenerated | 15.763 ms | 142.971 ms | 721.454 ms | 1.00 | 699.62 KB | 16233.1 KB |
+| CseReflection | 15.812 ms | 144.852 ms | 734.894 ms | 1.02 | 705.52 KB | 16772.25 KB |
+| Carter | 15.961 ms | 145.248 ms | 710.012 ms | 0.98 | 706.84 KB | 16211.28 KB |
+| FastEndpoints | 5.644 ms | 38.955 ms | 189.344 ms | 0.26 | 735.2 KB | 15994.83 KB |
+| FastEndpointsSourceGen | 5.623 ms | 38.437 ms | 189.224 ms | 0.26 | 729.19 KB | 15960.03 KB |
 
-Cross-TFM, N=500 mean (ms):
+Cross-TFM, N=500 mean, in the report's unit (net11 reports μs):
 
 | Variant | net8 | net9 | net10 | net11 |
 |---|---:|---:|---:|---:|
-| Plain | 502.9 | 677.3 | 705.1 | 751.2 |
-| CseGenerated | 505.4 | 654.7 | 710.8 | 760.0 |
-| CseReflection | 520.2 | 664.9 | 721.7 | 761.6 |
-| Carter | - | - | 710.5 | 756.3 |
-| FastEndpoints | 146.8 | 140.0 | 191.0 | 160.0 |
-| FastEndpointsSourceGen | 146.2 | 139.6 | 189.8 | 159.7 |
+| Plain | 501.513 ms | 652.934 ms | 716.527 ms | 751,787.5 μs |
+| CseGenerated | 509.850 ms | 657.357 ms | 721.454 ms | 753,043.9 μs |
+| CseReflection | 518.342 ms | 667.401 ms | 734.894 ms | 769,184.3 μs |
+| Carter | - | - | 710.012 ms | 757,271.2 μs |
+| FastEndpoints | 149.248 ms | 141.929 ms | 189.344 ms | 160,955.4 μs |
+| FastEndpointsSourceGen | 147.731 ms | 140.985 ms | 189.224 ms | 160,167.7 μs |
 
-CSE adds 0.5-1.2% over Plain at N=500 on net8, net10 and net11; on net9 it is 3.3% lower than Plain. CSE allocates 4.6-5.0% more than Plain at N=500 (the per-type `MapGroup("")` wrapper).
+At N=500, CSE vs Plain is a tie on net9, net10 and net11, and CSE takes 1.7% longer on net8 (outside error). At N=100 on net10, CSE is faster than Plain (142.971 vs 146.530 ms) and Carter (145.248 ms), outside error. CSE allocates 4.3-4.9% more than Plain at N=500 on every TFM (the per-type `MapGroup("")` wrapper; see the empty-prefix group results).
 
 ---
 
@@ -140,38 +164,40 @@ Net10. "vs CSE" divides the variant's mean by the CseGenerated mean. "tie" = wit
 
 | Route | Plain | CseGenerated | CseReflection | Carter | FastEndpoints | FastEndpointsSourceGen |
 |---|---:|---:|---:|---:|---:|---:|
-| GET mean | 8.297 µs | 8.227 µs | 7.962 µs | 9.023 µs | 10.126 µs | 10.455 µs |
-| GET vs CSE | 1.01 (tie) | 1.00 | 0.97 | 1.10 | 1.23 | 1.27 |
-| GET alloc | 8.69 KB | 8.69 KB | 8.69 KB | 8.69 KB | 10.06 KB | 10.06 KB |
-| POST valid mean | 15.091 µs | 14.729 µs | 14.449 µs | 14.141 µs | 20.148 µs | 20.838 µs |
-| POST valid vs CSE | 1.02 (tie) | 1.00 | 0.98 (tie) | 0.96 | 1.37 | 1.41 |
-| POST valid alloc | 11.66 KB | 11.66 KB | 11.66 KB | 11.38 KB | 12.67 KB | 12.67 KB |
-| POST invalid mean | 19.757 µs | 22.027 µs | 21.412 µs | 30.252 µs | 46.300 µs | 46.420 µs |
-| POST invalid vs CSE | 0.90 | 1.00 | 0.97 (tie) | 1.37 | 2.10 | 2.11 |
-| POST invalid alloc | 13.28 KB | 13.30 KB | 13.30 KB | 21.33 KB | 23.18 KB | 23.18 KB |
+| GET mean | 8.723 μs | 8.855 μs | 9.187 μs | 8.907 μs | 11.165 μs | 11.559 μs |
+| GET vs CSE | 0.99 (tie) | 1.00 | 1.04 | 1.01 (tie) | 1.26 | 1.31 |
+| GET alloc | 8.69 KB | 8.69 KB | 8.69 KB | 8.69 KB | 10.07 KB | 10.07 KB |
+| POST valid mean | 16.744 μs | 17.325 μs | 17.052 μs | 15.620 μs | 21.474 μs | 22.755 μs |
+| POST valid vs CSE | 0.97 (tie) | 1.00 | 0.98 (tie) | 0.90 | 1.24 | 1.31 |
+| POST valid alloc | 11.66 KB | 11.67 KB | 11.67 KB | 11.38 KB | 12.67 KB | 12.68 KB |
+| POST invalid mean | 23.880 μs | 24.369 μs | 24.331 μs | 32.138 μs | 50.133 μs | 50.464 μs |
+| POST invalid vs CSE | 0.98 (tie) | 1.00 | 1.00 (tie) | 1.32 | 2.06 | 2.07 |
+| POST invalid alloc | 13.31 KB | 13.31 KB | 13.3 KB | 21.33 KB | 23.18 KB | 23.18 KB |
 | POST invalid exceptions/op | 0 | 0 | 0 | 0 | 2 | 2 |
-| DELETE mean | 6.321 µs | 6.276 µs | 6.640 µs | 6.370 µs | 7.869 µs | 7.633 µs |
-| DELETE vs CSE | 1.01 (tie) | 1.00 | 1.06 | 1.01 (tie) | 1.25 | 1.22 |
+| DELETE mean | 6.727 μs | 6.728 μs | 6.856 μs | 6.801 μs | 8.530 μs | 8.612 μs |
+| DELETE vs CSE | 1.00 (tie) | 1.00 | 1.02 (tie) | 1.01 (tie) | 1.27 | 1.28 |
 | DELETE alloc | 7.82 KB | 7.82 KB | 7.82 KB | 7.82 KB | 9.08 KB | 9.05 KB |
 
-Cross-TFM, mean (µs), CseGenerated / Plain / Carter / FastEndpoints / FastEndpointsSourceGen:
+Cross-TFM, mean (μs), CseGenerated / Plain / Carter / FastEndpoints / FastEndpointsSourceGen:
 
 | Route | net8 | net9 | net10 | net11 |
 |---|---|---|---|---|
-| GET | 9.482 / 9.532 / - / 12.195 / 12.029 | 8.877 / 8.917 / - / 11.337 / 11.174 | 8.227 / 8.297 / 9.023 / 10.126 / 10.455 | 12.164 / 12.136 / 11.848 / 12.541 / 12.126 |
-| POST valid | - | - | 14.729 / 15.091 / 14.141 / 20.148 / 20.838 | 16.946 / 17.740 / 16.250 / 20.872 / 20.356 |
-| POST invalid | - | - | 22.027 / 19.757 / 30.252 / 46.300 / 46.420 | 27.745 / 24.749 / 28.183 / 43.274 / 44.565 |
-| DELETE | 7.381 / 7.584 / - / 9.085 / 9.119 | 6.936 / 6.803 / - / 8.536 / 8.594 | 6.276 / 6.321 / 6.370 / 7.869 / 7.633 | 9.544 / 9.688 / 10.296 / 12.176 / 11.765 |
+| GET | 10.710 / 10.880 / - / 13.470 / 13.390 | 10.320 / 10.075 / - / 12.726 / 13.231 | 8.855 / 8.723 / 8.907 / 11.165 / 11.559 | 12.82 / 12.86 / 12.75 / 13.70 / 13.92 |
+| POST valid | - | - | 17.325 / 16.744 / 15.620 / 21.474 / 22.755 | 20.02 / 19.88 / 18.82 / 24.09 / 21.11 |
+| POST invalid | - | - | 24.369 / 23.880 / 32.138 / 50.133 / 50.464 | 25.97 / 26.07 / 33.01 / 44.15 / 45.16 |
+| DELETE | 7.882 / 8.105 / - / 10.438 / 9.982 | 7.828 / 7.603 / - / 9.822 / 9.830 | 6.728 / 6.727 / 6.801 / 8.530 / 8.612 | 10.37 / 10.77 / 10.66 / 13.23 / 13.35 |
 
-On GET and DELETE, CSE and Plain run the same Minimal API pipeline and tie on every TFM except net9 DELETE, where Plain is 2% faster. FastEndpoints is 1.22-1.29× slower on net8-net10 and allocates 1.25-1.38 KB more per request. On net11 the GET gap shrinks to 3%, and FastEndpointsSourceGen ties with CSE.
+The net9 row comes from the rerun on 2026-11-06.
 
-On a valid POST, Carter is 4% faster than CSE on net10 and net11. On an invalid POST, Plain is 10-11% faster than CSE with the same validation engine. Carter ties CSE on net11 (28.183 vs 27.745 µs) after taking 1.37× as long on net10. FastEndpoints takes 2.1× (net10) and 1.6× (net11) as long and throws two exceptions per invalid request.
+On every route and every TFM, CSE and Plain run the same Minimal API pipeline and tie. Carter ties CSE on GET and DELETE. FastEndpoints takes 1.23-1.32× as long on GET and DELETE on net8 to net10 and allocates 1.19-1.38 KB more per request on every TFM. On net11 the GET gap to FastEndpoints shrinks to 1.07×, while DELETE stays at 1.28×.
+
+On a valid POST, Carter is faster than CSE on net10 (15.620 vs 17.325 μs) and net11 (18.82 vs 20.02 μs). On an invalid POST, CSE ties Plain on net10 and net11; Carter takes 1.32× (net10) and 1.27× (net11) as long, and FastEndpoints 2.06× (net10) and 1.70× (net11), with two exceptions per invalid request.
 
 ---
 
 ### 4. Native AOT (net10, linux-x64, three routes)
 
-> Script-driven, not BenchmarkDotNet. Startup = ms from process start to the first 200 on `GET /users/1`, median of 5 runs after one discarded warm-up run. JIT = framework-dependent publish without `PublishAot`. Run at a load average of 2.84; startup numbers are sensitive to machine noise.
+> Script-driven, not BenchmarkDotNet, and not rerun with the 2026-11-05 suite: the report was generated on 2026-11-01. Startup = ms from process start to the first 200 on `GET /users/1`, median of 5 runs after one discarded warm-up run. JIT = framework-dependent publish without `PublishAot`. Run at a load average of 2.84; startup numbers are sensitive to machine noise.
 
 | Variant | AOT publish | IL warnings (distinct) | Native binary | JIT startup | AOT startup | All routes answer under AOT |
 |---|---|---:|---:|---:|---:|---|
@@ -215,21 +241,58 @@ CSE cells come from this repository (csproj, Readme, `ReflectionEndpointScanner.
 
 ## Caveats
 
-- The runs shared the machine with a desktop session (load average 2.8-3.9). CseGenerated and CseReflection run the same request pipeline, yet their throughput differs by 3-11% with non-overlapping error bars. Treat any throughput gap below about 10% as weak evidence, even when it falls outside error.
+- The runs shared the machine with a desktop session and other work (1-minute load average 2.18 to 4.72). CseGenerated and CseReflection run the same request pipeline, yet their throughput differs by up to 8.6% with non-overlapping error bars (net11 POST valid: 20.02 vs 18.44 μs). Treat any throughput gap below about 10% as weak evidence, even when it falls outside error.
 - Warm startup is not like-for-like. FastEndpoints maps each endpoint to a parameterless delegate and builds its binder, validator, object factory and setters on the first request. That work is outside the warm unit and inside the cold one.
 - BenchmarkDotNet's MemoryDiagnoser measures allocation in a separate run, not in the timed cold launch. The cold allocation column is managed allocation for one invocation of the unit.
 - The JIT benchmarks do not enable the Request Delegate Generator, so Plain, CSE and Carter pay RequestDelegateFactory at startup. The large-N cold gap to FastEndpoints may change with RDG on; this was not measured.
 - Validation engines differ. Plain and CSE use DataAnnotations + `AddValidation()`; Carter and FastEndpoints use FluentValidation. The POST rows compare complete stacks, not routing alone. They exist on net10 and net11 only.
 - A difference within the sum of the two error margins is reported as a tie.
-- The net11 warm Baseline is 0.52 ms against about 1.14 ms on the other TFMs, so vs-Baseline ratios are not comparable across TFMs. None are quoted here.
+- The net11 warm Baseline is 551.7-570.4 μs against 1.058-1.100 ms on the other TFMs, so vs-Baseline ratios are not comparable across TFMs. None are quoted here.
+- Per-request time on net11 is higher for every variant (GET 12.64-13.92 μs against 8.723-11.559 μs on net10). This is a runtime-level difference, not a library one.
 - Carter runs with one module per endpoint, matching CSE's one type per endpoint. Carter apps that group many routes per module would build fewer modules.
-- AOT startup is the median of 5 runs with three routes on a loaded machine. Rerun it on a quiet machine before quoting the startup column.
+- AOT startup is the median of 5 runs with three routes on a loaded machine, from the 2026-11-01 script run. Rerun it on a quiet machine before quoting the startup column.
 
 ---
 
-## Pending: operation naming and the empty-prefix group
+## Operation naming and the empty-prefix group
 
-**Status: draft.** These three classes build on net8.0 to net11.0, and their self-check passes on every TFM. No full default-job run has been done, so this section has no numbers yet. The reports will be committed under `benchmarks/results/endpoints/{tfm}/results/` next to the ones above. Short-job (`--quick`) numbers are not published. The full run (`./run-benchmarks.sh --project endpoints`) includes them, and the `--quick` patterns select them too.
+These three classes ran in the same full run as the sections above, on net8.0 to net11.0. Short-job (`--quick`) numbers are not published.
+
+### Results
+
+`OperationNamingBenchmarks`, mean (report ratio inside its category). Compare rows inside a category only.
+
+| Row | Category | net8 | net9 | net10 | net11 | Allocated net10 |
+|---|---|---:|---:|---:|---:|---:|
+| `OperationNaming.None` (baseline) | Cse | 504.6 ms (1.00) | 641.3 ms (1.00) | 703.9 ms (1.00) | 749.4 ms (1.00) | 15.62 MB |
+| `OperationNaming.TypeName` | Cse | 523.0 ms (1.04) | 648.8 ms (1.01) | 714.4 ms (1.01) | 761.0 ms (1.02) | 16.83 MB |
+| `OperationNaming.Custom(type.Name)` | Cse | 507.6 ms (1.01) | 645.3 ms (1.01) | 711.4 ms (1.01) | 761.8 ms (1.02) | 15.94 MB |
+| `MapGet` (baseline) | HandWritten | 532.7 ms (1.00) | 676.7 ms (1.00) | 747.7 ms (1.00) | 798.5 ms (1.00) | 15.01 MB |
+| `MapGet(...).WithName(...)` | HandWritten | 543.4 ms (1.02) | 682.1 ms (1.01) | 753.5 ms (1.01) | 799.2 ms (1.00) | 15.23 MB |
+
+Alloc ratio against the category baseline, every TFM: TypeName 1.07-1.08, Custom 1.01-1.02, `WithName` 1.01-1.03.
+
+`OperationNameReadBenchmarks`, mean for reading all 500 names (report ratio against TypeName). No row allocates.
+
+| Row | net8 | net9 | net10 | net11 |
+|---|---:|---:|---:|---:|
+| TypeName app (baseline) | 14.531 μs (1.00) | 13.464 μs (1.00) | 12.280 μs (1.00) | 10.515 μs (1.00) |
+| Custom app | 10.247 μs (0.71) | 9.804 μs (0.73) | 7.396 μs (0.60) | 6.879 μs (0.65) |
+| Hand-written `WithName` app | 8.723 μs (0.60) | 8.006 μs (0.59) | 6.381 μs (0.52) | 5.782 μs (0.55) |
+
+`EmptyPrefixGroupBenchmarks`, mean and allocation (report ratios against direct mapping):
+
+| Row | net8 | net9 | net10 | net11 |
+|---|---:|---:|---:|---:|
+| `MapGet` on the app (baseline) | 541.1 ms, 15.01 MB | 687.5 ms, 15.12 MB | 757.0 ms, 15.1 MB | 801.4 ms, 15.05 MB |
+| `MapGroup("").MapGet` per endpoint | 546.9 ms (1.01), 15.55 MB (1.04) | 688.0 ms (1.00), 15.68 MB (1.04) | 759.5 ms (1.00), 15.6 MB (1.03) | 804.7 ms (1.00), 15.54 MB (1.03) |
+
+What the numbers say:
+- Name reads. A TypeName read takes 1.37-1.66× as long as a Custom read and 1.67-1.92× as long as a hand-written read, on every TFM. On net10 that is 12.280 μs against 6.381 μs for 500 reads. Custom reads are also slower than hand-written reads (1.16-1.22×). This is a CSE loss.
+- Naming at build. TypeName takes longer than None on net8 (1.04), net10 (1.01) and net11 (1.02), outside error; net9 is a tie. TypeName vs Custom is outside error only on net8 (523.0 vs 507.6 ms) and a tie elsewhere. TypeName allocates 1.21 MB more than None on net10 (16.83 vs 15.62 MB); a hand-written `WithName` adds 0.22 MB over plain `MapGet` (15.23 vs 15.01 MB).
+- The empty-prefix group. The time difference is within error on every TFM. The group allocates 0.49-0.56 MB more at 500 endpoints (alloc ratio 1.03-1.04). This covers part of the 4.3-4.9% warm-startup allocation gap between CSE and Plain.
+
+### Setup
 
 Every class has `[MemoryDiagnoser]`. A doc URL sits above every row. `[GlobalSetup]` runs the self-check, and `--self-check` runs it without BenchmarkDotNet.
 
@@ -265,10 +328,10 @@ Feature matrix for these classes, from reading each library's source and docs (n
 | When names are fixed | At map time | TypeName: on the first read, and again after any later mapping call | At map time | At map time (`WithName`) |
 | Route group per endpoint | None | One `MapGroup("")` per endpoint type, always (`EndpointMapper.cs:93`) | `ICarterModule`: none. `CarterModule` base class: one `MapGroup(basePath)` per module, `""` by default ([CarterExtensions.cs#L35](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/CarterExtensions.cs#L35), [ICarterModule.cs#L50](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/ICarterModule.cs#L50)) | None: `MapMethods` on the app |
 
-Expected losses, read from the source (not fixed in this work; check them against the full run):
-- Every read of a TypeName name takes the registry lock, even after the names are resolved (`OperationNameMetadata.cs:7` calls `OperationNameRegistry.cs:120-132`). Expect the TypeName read row to be slower than the two plain field reads.
-- TypeName does more work per endpoint while mapping and building. At map time: a `ConditionalWeakTable` lookup and a lock (`EndpointMapper.cs:113-115`, `OperationNameRegistry.cs:39` and `:42-67`). At build: a `string.Create` key, LINQ `OfType().LastOrDefault()` twice and another lock (`OperationNameRegistry.cs:69-104`). Expect TypeName above None and above Custom.
-- CSE wraps each endpoint type in its own `MapGroup(string.Empty)` (`EndpointMapper.cs:93`), which adds a group data source per type: 500 against 1 here. Expect the grouped row to be slower and to allocate more than direct mapping.
+Expected losses, read from the source before the run (not fixed in this work), checked against the numbers:
+- Every read of a TypeName name takes the registry lock, even after the names are resolved (`OperationNameMetadata.cs:7` calls `OperationNameRegistry.cs:120-132`). Confirmed: the TypeName read row is the slowest on every TFM (net10: 12.280 μs against 7.396 μs Custom and 6.381 μs hand-written).
+- TypeName does more work per endpoint while mapping and building. At map time: a `ConditionalWeakTable` lookup and a lock (`EndpointMapper.cs:113-115`, `OperationNameRegistry.cs:39` and `:42-67`). At build: a `string.Create` key, LINQ `OfType().LastOrDefault()` twice and another lock (`OperationNameRegistry.cs:69-104`). Partly confirmed: TypeName is above None on net8, net10 and net11 and allocates the most, but it is above Custom only on net8.
+- CSE wraps each endpoint type in its own `MapGroup(string.Empty)` (`EndpointMapper.cs:93`), which adds a group data source per type: 500 against 1 here. Confirmed for allocation (0.49-0.56 MB more). The time difference is within error on every TFM.
 
 A TypeName name can also change after it was read: a later mapping call resets the resolved state (`OperationNameRegistry.cs:62`, `:80`, `:99`, `:114`). This is a correctness note, not a cost.
 
