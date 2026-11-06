@@ -172,15 +172,23 @@ public static partial class RuleEngine
 
     private static Result OrAll<TContext>(IRuleBase<TContext>[] rules, TContext context, CancellationToken cancellationToken)
     {
-        var errors = new List<Error>();
-        foreach (IRuleBase<TContext> rule in rules)
+        Error[][] failures = RentFailures(rules.Length);
+        int count = 0;
+        try
         {
-            Result result = InternalEvaluate(rule, context, cancellationToken);
-            if (result.IsSuccess)
-                return Result.Success();
-            errors.AddRange(result.ErrorsOrEmptyArray);
+            foreach (IRuleBase<TContext> rule in rules)
+            {
+                Result result = InternalEvaluate(rule, context, cancellationToken);
+                if (result.IsSuccess)
+                    return Result.Success();
+                failures[count++] = result.ErrorsOrEmptyArray;
+            }
+            return FlattenFailures(failures, count);
         }
-        return errors;
+        finally
+        {
+            ReturnFailures(failures, count);
+        }
     }
 
     private static Result InternalEvaluate<TContext>(IRuleBase<TContext> rule, TContext context, CancellationToken cancellationToken = default)

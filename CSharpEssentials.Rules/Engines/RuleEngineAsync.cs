@@ -1,3 +1,4 @@
+using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 
 namespace CSharpEssentials.Rules;
@@ -113,15 +114,13 @@ public static partial class RuleEngine
             if (result.IsFailure)
                 return result;
 
-            var results = new List<Result>(rules.Length);
             foreach (IRuleBase<TContext> child in rules)
             {
                 Result childResult = await DispatchAsync(child, context, cancellationToken).ConfigureAwait(false);
-                results.Add(childResult);
                 if (childResult.IsFailure)
-                    break;
+                    return childResult;
             }
-            return Result.And(results);
+            return Result.Success();
         }
         catch (Exception ex) when (!IsCallerCancellation(ex, cancellationToken))
         {
@@ -137,15 +136,23 @@ public static partial class RuleEngine
             if (result.IsFailure)
                 return result;
 
-            var results = new List<Result>(rules.Length);
-            foreach (IRuleBase<TContext> child in rules)
+            Error[][] failures = RentFailures(rules.Length);
+            int count = 0;
+            try
             {
-                Result childResult = await DispatchAsync(child, context, cancellationToken).ConfigureAwait(false);
-                results.Add(childResult);
-                if (childResult.IsSuccess)
-                    break;
+                foreach (IRuleBase<TContext> child in rules)
+                {
+                    Result childResult = await DispatchAsync(child, context, cancellationToken).ConfigureAwait(false);
+                    if (childResult.IsSuccess)
+                        return childResult;
+                    failures[count++] = childResult.ErrorsOrEmptyArray;
+                }
+                return FlattenFailures(failures, count);
             }
-            return Result.Or(results);
+            finally
+            {
+                ReturnFailures(failures, count);
+            }
         }
         catch (Exception ex) when (!IsCallerCancellation(ex, cancellationToken))
         {
