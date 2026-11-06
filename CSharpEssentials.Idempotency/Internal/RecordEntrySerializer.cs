@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text;
 
 namespace CSharpEssentials.Idempotency;
@@ -19,17 +20,20 @@ internal static class RecordEntrySerializer
             writer.Write(token);
             writer.Write(fingerprint);
             writer.Write(completed);
-            if (completed)
-            {
-                writer.Write(payload.Length);
-                writer.Write(payload);
-            }
         }
 
-        return stream.ToArray();
+        if (!completed)
+            return stream.ToArray();
+
+        int head = (int)stream.Length;
+        byte[] entry = new byte[head + sizeof(int) + payload.Length];
+        stream.GetBuffer().AsSpan(0, head).CopyTo(entry);
+        BinaryPrimitives.WriteInt32LittleEndian(entry.AsSpan(head), payload.Length);
+        payload.CopyTo(entry.AsSpan(head + sizeof(int)));
+        return entry;
     }
 
-    public static bool TryRead(byte[] data, out string token, out string fingerprint, out byte[]? payload)
+    public static bool TryRead(byte[] data, out string token, out string fingerprint, out ReadOnlyMemory<byte>? payload)
     {
         try
         {
@@ -38,7 +42,7 @@ internal static class RecordEntrySerializer
             {
                 token = reader.ReadString();
                 fingerprint = reader.ReadString();
-                payload = reader.ReadBoolean() ? ReadPayload(reader) : null;
+                payload = reader.ReadBoolean() ? ReadPayload(reader, data) : default(ReadOnlyMemory<byte>?);
                 return true;
             }
         }
@@ -58,12 +62,12 @@ internal static class RecordEntrySerializer
     }
 
     /// <summary>The length can never exceed the bytes left, so a corrupt length never causes a huge allocation.</summary>
-    private static byte[] ReadPayload(BinaryReader reader)
+    private static ReadOnlyMemory<byte> ReadPayload(BinaryReader reader, byte[] data)
     {
         int length = reader.ReadInt32();
         Stream stream = reader.BaseStream;
         if (length < 0 || length != stream.Length - stream.Position)
             throw new InvalidDataException("Invalid idempotency entry.");
-        return reader.ReadBytes(length);
+        return data.AsMemory((int)stream.Position, length);
     }
 }

@@ -1,4 +1,6 @@
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace CSharpEssentials.AspNetCore;
@@ -27,12 +29,14 @@ internal static class IdempotencyEntrySerializer
                 foreach (string value in header.Value)
                     writer.Write(value);
             }
-
-            writer.Write(response.Body.Length);
-            writer.Write(response.Body.Span);
         }
 
-        return stream.ToArray();
+        int head = (int)stream.Length;
+        byte[] entry = new byte[head + sizeof(int) + response.Body.Length];
+        stream.GetBuffer().AsSpan(0, head).CopyTo(entry);
+        BinaryPrimitives.WriteInt32LittleEndian(entry.AsSpan(head), response.Body.Length);
+        response.Body.Span.CopyTo(entry.AsSpan(head + sizeof(int)));
+        return entry;
     }
 
     public static bool TryRead(ReadOnlyMemory<byte> payload, [NotNullWhen(true)] out IdempotentResponse? response)
@@ -40,7 +44,10 @@ internal static class IdempotencyEntrySerializer
         response = null;
         try
         {
-            using BinaryReader reader = new(new MemoryStream(payload.ToArray(), writable: false), Encoding.UTF8);
+            MemoryStream stream = MemoryMarshal.TryGetArray(payload, out ArraySegment<byte> segment)
+                ? new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false)
+                : new MemoryStream(payload.ToArray(), writable: false);
+            using BinaryReader reader = new(stream, Encoding.UTF8);
             if (reader.ReadByte() != Version)
                 return false;
 
@@ -60,7 +67,7 @@ internal static class IdempotencyEntrySerializer
             if (bodyLength != reader.BaseStream.Length - reader.BaseStream.Position)
                 return false;
 
-            response = new IdempotentResponse(statusCode, headers, reader.ReadBytes(bodyLength));
+            response = new IdempotentResponse(statusCode, headers, payload[(int)stream.Position..]);
             return true;
         }
         catch (Exception exception) when (exception is InvalidDataException or EndOfStreamException or FormatException
