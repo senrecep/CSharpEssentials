@@ -1,4 +1,7 @@
 ﻿using System.Buffers.Text;
+#if NET9_0_OR_GREATER
+using System.Buffers;
+#endif
 #if !NETSTANDARD
 using System.Runtime.InteropServices;
 #endif
@@ -8,7 +11,9 @@ namespace CSharpEssentials.Core;
 public static class Guider
 {
     private const char _equal = '=', _hyphen = '-', _plus = '+', _slash = '/', _underscore = '_';
+#if !NET9_0_OR_GREATER
     private const byte _slashByte = (byte)_slash, _plusByte = (byte)_plus;
+#endif
     private const short _byteCount = 16, _encodedLength = 22, _inputLength = 24;
 
     /// <summary>
@@ -19,13 +24,16 @@ public static class Guider
     public static string ToStringFromGuid(Guid id)
     {
         Span<byte> bytes = stackalloc byte[_byteCount];
-        Span<byte> span = stackalloc byte[_inputLength];
 #if NETSTANDARD
         byte[] guidBytes = id.ToByteArray();
         guidBytes.CopyTo(bytes);
 #else
         MemoryMarshal.TryWrite(bytes, in id);
 #endif
+#if NET9_0_OR_GREATER
+        return Base64Url.EncodeToString(bytes);
+#else
+        Span<byte> span = stackalloc byte[_inputLength];
         Base64.EncodeToUtf8(bytes, span, out _, out _);
         Span<char> chars = stackalloc char[_encodedLength];
         for (int i = default; i < _encodedLength; i++)
@@ -40,6 +48,7 @@ public static class Guider
 #else
         return new string(chars);
 #endif
+#endif
     }
 
     /// <summary>
@@ -52,6 +61,13 @@ public static class Guider
     {
         if (id.Length != _encodedLength)
             throw new FormatException($"The value must be exactly {_encodedLength} characters long.");
+#if !NETSTANDARD2_0
+        Span<byte> bytes = stackalloc byte[_byteCount];
+#endif
+#if NET9_0_OR_GREATER
+        if (Base64Url.DecodeFromChars(id, bytes, out _, out int decoded) == OperationStatus.Done && decoded == _byteCount)
+            return new Guid(bytes);
+#endif
 
         Span<char> span = stackalloc char[_inputLength];
         for (int i = default; i < _encodedLength; i++)
@@ -78,7 +94,6 @@ public static class Guider
         }
         return new Guid(decoded);
 #else
-        Span<byte> bytes = stackalloc byte[_byteCount];
         if (!Convert.TryFromBase64Chars(span, bytes, out int written) || written != _byteCount)
             throw new FormatException("The value is not a valid URL-safe encoded GUID.");
         return new Guid(bytes);
