@@ -81,6 +81,7 @@ public static class Guider
                 _ => throw new FormatException("The value contains a character that is not part of the URL-safe alphabet.")
             };
         }
+        span[_encodedLength - 1] = ClearUnusedBits(span[_encodedLength - 1]);
         span[_encodedLength] = span[_encodedLength + 1] = _equal;
 #if NETSTANDARD2_0
         byte[] decoded;
@@ -99,6 +100,22 @@ public static class Guider
         return new Guid(bytes);
 #endif
     }
+
+    private static char ClearUnusedBits(char last) =>
+        (last switch
+        {
+            >= 'A' and <= 'Z' => last - 'A',
+            >= 'a' and <= 'z' => last - 'a' + 26,
+            >= '0' and <= '9' => last - '0' + 52,
+            _plus => 62,
+            _ => 63,
+        } >> 4) switch
+        {
+            0 => 'A',
+            1 => 'Q',
+            2 => 'g',
+            _ => 'w',
+        };
 
     private static bool IsBase64Alphanumeric(char c) =>
         c is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9';
