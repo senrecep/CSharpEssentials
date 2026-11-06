@@ -1,6 +1,4 @@
-#if NET6_0_OR_GREATER
 using System.Globalization;
-#endif
 using System.Text;
 
 namespace CSharpEssentials.Errors;
@@ -73,17 +71,17 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
     public override string ToString()
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder("[");
         foreach ((string key, object? value) in this)
         {
-            if (sb.Length > 0)
+            if (sb.Length > 1)
                 sb.Append(", ");
 #if NET6_0_OR_GREATER
-            sb.Append(string.Create(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}"));
+            sb.Append(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}");
 #else
-            sb.Append(FormattableString.Invariant($"{{ {key}: {value} }}"));
+            sb.AppendFormat(CultureInfo.InvariantCulture, "{{ {0}: {1} }}", key, value);
 #endif
         }
-        return $"[{sb}]";
+        return sb.Append(']').ToString();
     }
 }
