@@ -148,6 +148,29 @@ public class HttpRequestBuilderCoverageTests
         result.FirstError.Code.Should().Be("HttpRequestBuilder.ClientRequired");
     }
 
+    [Fact]
+    public async Task AsResultAsync_TypeInfo_With_Null_Client_Should_Return_Validation_Error()
+    {
+        Result<TypeInfoDto> result = await HttpRequestBuilder.Get(Target).AsResultAsync(null, TypeInfoJsonContext.Default.TypeInfoDto);
+
+        result.FirstError.Type.Should().Be(ErrorType.Validation);
+        result.FirstError.Code.Should().Be("HttpRequestBuilder.ClientRequired");
+    }
+
+    [Fact]
+    public async Task AsResultAsync_TypeInfo_With_Build_Failure_Should_Return_Error_Without_Sending()
+    {
+        using var handler = new CountingHandler();
+        using var client = new HttpClient(handler);
+
+        Result<TypeInfoDto> result = await HttpRequestBuilder.Get("https://test.com/{id}")
+            .WithRoute("id", null)
+            .AsResultAsync(client, TypeInfoJsonContext.Default.TypeInfoDto);
+
+        result.FirstError.Code.Should().Be("HttpRequestBuilder.RouteValueRequired");
+        handler.Count.Should().Be(0);
+    }
+
     private sealed class CountingHandler : HttpMessageHandler
     {
         public int Count { get; private set; }

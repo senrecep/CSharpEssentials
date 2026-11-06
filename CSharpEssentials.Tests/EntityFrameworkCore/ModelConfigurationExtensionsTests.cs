@@ -149,6 +149,26 @@ public class ModelConfigurationExtensionsTests
         entity.Color.Should().Be(PlainColor.Green);
     }
 
+    [Fact]
+    public void Registrations_Should_ThrowArgumentNullException_When_BuilderIsNull()
+    {
+        ModelConfigurationBuilder builder = null!;
+
+        ((Action)(() => builder.ConfigureEnumConventions(conventions: null))).Should().Throw<ArgumentNullException>().WithParameterName("configurationBuilder");
+        ((Action)(() => builder.ConfigureNullableMaybeConventions())).Should().Throw<ArgumentNullException>().WithParameterName("configurationBuilder");
+        ((Action)(() => builder.UseOrderedGuidKeys())).Should().Throw<ArgumentNullException>().WithParameterName("configurationBuilder");
+    }
+
+    [Fact]
+    public void ConfigureEnumConventions_Should_ThrowArgumentNullException_When_ConfigureIsNull()
+    {
+        ModelConfigurationBuilder builder = null!;
+
+        Action act = () => builder.ConfigureEnumConventions((Action<EnumConventionOptions>)null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("configure");
+    }
+
     private static DbContextOptions<TContext> CreateOptions<TContext>() where TContext : DbContext =>
         new DbContextOptionsBuilder<TContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())

@@ -3,6 +3,7 @@ using CSharpEssentials.EntityFrameworkCore.Interceptors;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
@@ -59,6 +60,23 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         public int Id { get; set; }
     }
 
+    private sealed class Note
+    {
+        public int Id { get; set; }
+        public int? ReviewedOrderId { get; set; }
+    }
+
+    private sealed class Shelf : SoftDeletableEntityBase
+    {
+        public int Id { get; set; }
+        public List<ShelfItem> Items { get; set; } = [];
+    }
+
+    private sealed class ShelfItem
+    {
+        public int Id { get; set; }
+    }
+
     private sealed class OrderContext(SqliteConnection connection, AuditInterceptor interceptor) : DbContext
     {
         public DbSet<Order> Orders => Set<Order>();
@@ -68,6 +86,9 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         public DbSet<Warehouse> Warehouses => Set<Warehouse>();
         public DbSet<Allocation> Allocations => Set<Allocation>();
         public DbSet<FolderItem> FolderItems => Set<FolderItem>();
+        public DbSet<Note> Notes => Set<Note>();
+        public DbSet<Shelf> Shelves => Set<Shelf>();
+        public DbSet<ShelfItem> ShelfItems => Set<ShelfItem>();
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
             optionsBuilder.UseSqlite(connection).AddInterceptors(interceptor);
@@ -81,6 +102,8 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
                 order.HasMany(x => x.Lines).WithOne().HasForeignKey("OrderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
                 order.HasMany(x => x.Allocations).WithOne().HasForeignKey("OrderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
                 order.HasMany(x => x.Shipments).WithOne().HasForeignKey("OrderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
+                order.HasMany<Note>().WithOne().HasForeignKey("OrderId").OnDelete(DeleteBehavior.Cascade);
+                order.HasMany<Note>().WithOne().HasForeignKey(x => x.ReviewedOrderId).OnDelete(DeleteBehavior.SetNull);
             });
             modelBuilder.Entity<Shipment>().Ignore(x => x.DomainEvents);
             modelBuilder.Entity<Warehouse>()
@@ -89,6 +112,12 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
             {
                 folder.Ignore(x => x.DomainEvents);
                 folder.HasMany(x => x.Items).WithOne().HasForeignKey("FolderId").IsRequired().OnDelete(DeleteBehavior.Cascade);
+            });
+            modelBuilder.Entity<Shelf>(shelf =>
+            {
+                shelf.Ignore(x => x.DomainEvents);
+                shelf.Property(x => x.Id).Metadata.SetValueComparer(new ValueComparer<int>(static (x, y) => x == y, static _ => 0));
+                shelf.HasMany(x => x.Items).WithOne().HasForeignKey("ShelfId").IsRequired().OnDelete(DeleteBehavior.Cascade);
             });
         }
     }
@@ -117,6 +146,8 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
             Shipments = [new Shipment { Id = 20, Carrier = "Post" }]
         });
         context.Folders.Add(new Folder { Id = [1, 2, 3], Items = [new FolderItem { Id = 30 }] });
+        context.Notes.AddRange(new Note { Id = 80 }, new Note { Id = 81, ReviewedOrderId = 1 });
+        context.Shelves.AddRange(new Shelf { Id = 60, Items = [new ShelfItem { Id = 70 }] }, new Shelf { Id = 61, Items = [new ShelfItem { Id = 71 }] });
         context.SaveChanges();
     }
 
@@ -290,5 +321,53 @@ public sealed class AuditInterceptorSqliteTests : IDisposable
         }
 
         AssertOrderKept();
+    }
+
+    [Fact]
+    public void SoftDelete_WithDependentWithoutPrincipalRemovedInSameSave_ShouldDeleteDependent()
+    {
+        using (OrderContext context = CreateContext())
+        {
+            context.Orders.Remove(context.Orders.Single());
+            context.Notes.Remove(context.Notes.Single(n => n.Id == 80));
+            context.SaveChanges();
+        }
+
+        AssertOrderKept();
+        using OrderContext verify = CreateContext();
+        verify.Notes.AsNoTracking().Select(n => n.Id).Should().Equal(81);
+    }
+
+    [Fact]
+    public void SoftDelete_WithNonCascadingDependentRemovedInSameSave_ShouldDeleteDependent()
+    {
+        using (OrderContext context = CreateContext())
+        {
+            context.Orders.Remove(context.Orders.Single());
+            context.Notes.Remove(context.Notes.Single(n => n.Id == 81));
+            context.SaveChanges();
+        }
+
+        AssertOrderKept();
+        using OrderContext verify = CreateContext();
+        verify.Notes.AsNoTracking().Select(n => n.Id).Should().Equal(80);
+    }
+
+    [Fact]
+    public void SoftDelete_WithPrincipalKeysOfEqualHash_ShouldKeepOnlyDependentsOfTheSoftDeletedPrincipal()
+    {
+        using (OrderContext context = CreateContext())
+        {
+            List<Shelf> shelves = [.. context.Shelves.Include(x => x.Items).OrderBy(x => x.Id)];
+            shelves[1].MarkAsHardDeleted();
+            context.Shelves.RemoveRange(shelves);
+            context.SaveChanges();
+        }
+
+        using OrderContext verify = CreateContext();
+        Shelf shelf = verify.Shelves.AsNoTracking().IgnoreQueryFilters().Single();
+        shelf.Id.Should().Be(60);
+        shelf.IsDeleted.Should().BeTrue();
+        verify.ShelfItems.AsNoTracking().Select(i => i.Id).Should().Equal(70);
     }
 }

@@ -323,6 +323,21 @@ public class ServiceCollectionRegistrationExtensionsTests
     }
 
     [Fact]
+    public void AddServicesFromAssemblies_Should_ThrowWithoutMutation_When_ClosedTypeTargetsOpenGenericService()
+    {
+        ServiceCollection services = new();
+        Assembly assembly = CreateAssembly(
+            TypeAttributes.Sealed,
+            typeof(RegisterScopedAttribute).GetConstructor([typeof(Type)])!,
+            typeof(IScanRepository<>));
+
+        Action act = () => services.AddServicesFromAssemblies(TestAssembly, assembly);
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Invalid*cannot be registered as*IScanRepository`1*does not implement the service type.");
+        services.Should().BeEmpty();
+    }
+
+    [Fact]
     public void AddServicesFromAssemblies_Should_ThrowWithoutMutation_When_TypeIsAbstract()
     {
         ServiceCollection services = new();

@@ -196,4 +196,15 @@ public class GuiderTests
             encoded.ToGuidFromString().Should().Be(guid);
         }
     }
+
+    [Theory]
+    [InlineData("-AAAAAAAAAAAAAAAAAAAAB", "-AAAAAAAAAAAAAAAAAAAAA")]
+    [InlineData("_AAAAAAAAAAAAAAAAAAAAB", "_AAAAAAAAAAAAAAAAAAAAA")]
+    public void ToGuidFromString_DecodesUrlSafeCharactersWhenTrailingBitsAreNotCanonical(string input, string canonical)
+    {
+        Guid result = Guider.ToGuidFromString(input);
+
+        result.Should().Be(Guider.ToGuidFromString(canonical));
+        result.ToByteArray()[0].Should().Be(input[0] == '-' ? (byte)0xF8 : (byte)0xFC);
+    }
 }
