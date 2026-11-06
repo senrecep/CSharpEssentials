@@ -61,7 +61,7 @@ if (result.IsFailure)
 For one-off validations without a dedicated class, use the static `Validator.ValidateAsync`:
 
 ```csharp
-// Sync delegate — zero heap allocation
+// Sync delegate: returns a completed ValueTask, no Task allocation
 Result<CreateUserCommand> result = await Validator.ValidateAsync(command, (m, rules) =>
 {
     rules.For(() => m.Email).NotEmpty().EmailAddress();
