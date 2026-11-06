@@ -19,6 +19,9 @@ public class ServiceCollectionRegistrationExtensionsTests
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
 
+    private static IEnumerable<Type> ServiceTypesOf(IServiceCollection services, Type implementation) =>
+        services.Where(d => d.ImplementationType == implementation).Select(d => d.ServiceType);
+
     private static AssemblyBuilder CreateAssembly(TypeAttributes attributes, ConstructorInfo attributeConstructor, params object[] arguments)
     {
         string name = "DynamicRegistrations" + Guid.NewGuid().ToString("N");
@@ -102,6 +105,67 @@ public class ServiceCollectionRegistrationExtensionsTests
 
         services.Where(d => d.ImplementationType == typeof(SplitService)).Select(d => d.ServiceType)
             .Should().BeEquivalentTo([typeof(ISecondSplit), typeof(ISplitService)]);
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterInterfacesInOrdinalNameOrder_When_ImplementedInterfaces()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(OrderedService)).Should().Equal(typeof(IScanAlpha), typeof(IScanZeta));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterSelfThenInterfacesInOrdinalNameOrder_When_SelfWithInterfaces()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        services.SkipWhile(d => d.ImplementationType != typeof(OrderedSelfService)).Take(3).Select(d => d.ServiceType)
+            .Should().Equal(typeof(OrderedSelfService), typeof(IScanAlpha), typeof(IScanZeta));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterExplicitServiceOnce_When_ItIsAlsoAnImplementedInterface()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(DedupService)).Should().Equal(typeof(IDedupService), typeof(IDedupExtra));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterOpenConventionalInterface_When_ClassIsGeneric()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(ConventionalRepository<>)).Should().Equal(typeof(IConventionalRepository<>));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterSelf_When_ConventionalInterfaceArityDiffers()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(ArityService)).Should().Equal(typeof(ArityService));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterSelf_When_InterfaceNameOnlyResemblesConvention()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(ScanWidget)).Should().Equal(typeof(ScanWidget));
     }
 
     [Fact]

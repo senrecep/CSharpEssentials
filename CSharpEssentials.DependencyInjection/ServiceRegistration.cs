@@ -140,11 +140,13 @@ public static class ServiceRegistration
 
     private static ServiceDescriptor? FindFirst(IServiceCollection services, ServiceDescriptor descriptor)
     {
+        Type serviceType = descriptor.ServiceType;
+        object? serviceKey = descriptor.ServiceKey;
         int count = services.Count;
         for (int index = 0; index < count; index++)
         {
             ServiceDescriptor candidate = services[index];
-            if (candidate.Matches(descriptor.ServiceType, descriptor.ServiceKey))
+            if (candidate.ServiceType == serviceType && Equals(candidate.ServiceKey, serviceKey))
             {
                 return candidate;
             }
