@@ -41,7 +41,7 @@ public readonly record struct Error : IError
 
     public static Error[] CreateMany(params IEnumerable<Error> errors) => [.. errors];
     /// <summary>
-    /// Creates an <see cref="Error"/> from a code and description.
+    /// Flattens several <see cref="Error"/> sequences into one array.
     /// </summary>
     /// <param name="errors"></param>
     /// <returns></returns>
@@ -134,7 +134,8 @@ public readonly record struct Error : IError
         new(code, description, ErrorType.Forbidden, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and description.
+    /// Creates an <see cref="Error"/> from an exception. The code is the exception type name, the description is its message,
+    /// and the type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
     /// <param name="exception"></param>
     /// <param name="type"></param>
@@ -146,7 +147,8 @@ public readonly record struct Error : IError
         ErrorMetadata? metadata = null) =>
         new(exception.GetType().Name, exception.Message, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and description.
+    /// Creates an <see cref="Error"/> from a code and an exception. The description is the exception message,
+    /// and the type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
     /// <param name="code"></param>
     /// <param name="exception"></param>
@@ -161,7 +163,8 @@ public readonly record struct Error : IError
             new(code, exception.Message, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and description.
+    /// Creates an <see cref="Error"/> from a code, a description and an exception.
+    /// The type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
     /// <param name="code"></param>
     /// <param name="description"></param>

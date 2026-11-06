@@ -15,8 +15,8 @@ public static class ValidatorServiceCollectionExtensions
 
     /// <summary>
     /// Registers a single validator explicitly.
-    /// Registering the same implementation type more than once is a no-op —
-    /// multiple <b>different</b> implementations for the same <typeparamref name="T"/> are all kept.
+    /// Registering the same implementation type more than once is a no-op.
+    /// Several <b>different</b> implementations for the same <typeparamref name="T"/> are all kept.
     /// </summary>
     /// <example>
     /// <code>

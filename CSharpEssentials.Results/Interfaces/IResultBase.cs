@@ -23,7 +23,7 @@ public interface IResultBase
     /// </summary>
     Error LastError { get; }
     /// <summary>
-    /// The errors in the result or an no errors.
+    /// The errors in the result, or an array holding <see cref="Error.NoErrors"/> on success.
     /// </summary>
     Error[] Errors { get; }
     /// <summary>

@@ -39,7 +39,7 @@ public static class EnumValueFormatter
 
     /// <summary>
     /// Formats a boxed enum value like <see cref="Format{TEnum}(TEnum, EnumWireFormat)"/>. Returns <see langword="false"/> when
-    /// <paramref name="value"/> is null, not an enum, rejected by <see cref="EnumConventions.CanHandle"/>, so the caller can
+    /// <paramref name="value"/> is null, not an enum, or rejected by <see cref="EnumConventions.CanHandle"/>, so the caller can
     /// fall back to its own formatting.
     /// </summary>
     /// <exception cref="EnumValueException"><paramref name="value"/> is a handled enum but not a defined value.</exception>

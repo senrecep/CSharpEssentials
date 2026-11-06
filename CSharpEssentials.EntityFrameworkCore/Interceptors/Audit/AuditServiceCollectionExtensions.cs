@@ -80,8 +80,8 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers <see cref="AuditInterceptor"/> and <see cref="TimeProvider.System"/>, each only if not
-    /// already registered, as a ready-to-use audit pipeline.
+    /// Registers <see cref="IAuditUserIdProvider"/> from the user ID factory, plus <see cref="AuditInterceptor"/> and
+    /// <see cref="TimeProvider.System"/>, each of those two only if not already registered.
     /// </summary>
     /// <example>
     /// <code>

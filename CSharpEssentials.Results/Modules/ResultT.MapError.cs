@@ -141,7 +141,7 @@ public static partial class ResultExtensions
     }
 
     /// <summary>
-    /// Awaits the Task result and maps every error, in order, with a async mapper. On success the mapper is never called.
+    /// Awaits the Task result and maps every error, in order, with an async mapper. On success the mapper is never called.
     /// </summary>
     /// <param name="task">The pending result.</param>
     /// <param name="errorMapper">The error mapper.</param>
@@ -154,7 +154,7 @@ public static partial class ResultExtensions
     }
 
     /// <summary>
-    /// Awaits the Task result and maps the error array with a async mapper. On success the mapper is never called.
+    /// Awaits the Task result and maps the error array with an async mapper. On success the mapper is never called.
     /// </summary>
     /// <param name="task">The pending result.</param>
     /// <param name="errorMapper">The error mapper.</param>
@@ -193,7 +193,7 @@ public static partial class ResultExtensions
     }
 
     /// <summary>
-    /// Awaits the ValueTask result and maps every error, in order, with a async mapper. On success the mapper is never called.
+    /// Awaits the ValueTask result and maps every error, in order, with an async mapper. On success the mapper is never called.
     /// </summary>
     /// <param name="task">The pending result.</param>
     /// <param name="errorMapper">The error mapper.</param>
@@ -206,7 +206,7 @@ public static partial class ResultExtensions
     }
 
     /// <summary>
-    /// Awaits the ValueTask result and maps the error array with a async mapper. On success the mapper is never called.
+    /// Awaits the ValueTask result and maps the error array with an async mapper. On success the mapper is never called.
     /// </summary>
     /// <param name="task">The pending result.</param>
     /// <param name="errorMapper">The error mapper.</param>

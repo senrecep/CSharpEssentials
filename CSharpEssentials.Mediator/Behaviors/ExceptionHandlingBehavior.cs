@@ -6,13 +6,13 @@ using CSharpEssentials.ResultPattern;
 namespace CSharpEssentials.Mediator;
 
 /// <summary>
-/// Pipeline behavior that catches unhandled handler exceptions and converts them
-/// to <see cref="Result"/> / <see cref="Result{T}"/> failures.
+/// Pipeline behavior that catches unhandled handler exceptions and turns them
+/// into <see cref="Result"/> or <see cref="Result{T}"/> failures.
 /// <para>
-/// When <typeparamref name="TResponse"/> cannot carry error information (e.g. a plain DTO),
-/// the exception propagates unchanged: this behavior adds zero overhead in that case.
-/// <see cref="OperationCanceledException"/> always propagates regardless of
-/// <typeparamref name="TResponse"/>.
+/// When <typeparamref name="TResponse"/> cannot carry errors (a plain DTO, for example),
+/// the behavior only calls the next step, so the exception propagates unchanged and nothing extra runs.
+/// <see cref="OperationCanceledException"/> always propagates, whatever
+/// <typeparamref name="TResponse"/> is.
 /// </para>
 /// </summary>
 public sealed class ExceptionHandlingBehavior<TRequest, TResponse>

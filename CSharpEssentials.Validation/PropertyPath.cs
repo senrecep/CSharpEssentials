@@ -17,8 +17,8 @@ internal static class PropertyPath
     internal static string Extract(string memberExpr) => ExtractWithMeta(memberExpr).PropertyName;
 
     /// <summary>
-    /// Like <see cref="Extract"/> but also indicates whether the expression targets
-    /// the captured variable itself (no property access) vs. a nested property.
+    /// Like <see cref="Extract"/>, but also reports whether the expression targets
+    /// the captured variable itself (no property access) or a nested property.
     /// Used by <see cref="RuleContext{T}"/> when building prefixed names inside
     /// <c>ForEach</c> to distinguish <c>"() => item"</c> from <c>"() => item.Name"</c>.
     /// </summary>
@@ -115,11 +115,11 @@ internal static class PropertyPath
 
     /// <summary>
     /// Returns the index of the first <c>.</c> not inside parentheses.
-    /// Handles cast expressions such as <c>((IFoo)model.Child).Name</c> —
-    /// the dot inside the cast is at depth 1 and is skipped; the outer dot is returned.
-    /// Null-conditional (<c>?.</c>) and null-forgiving (<c>!.</c>) prefixes are handled
-    /// naturally: <c>?</c> and <c>!</c> are neither <c>(</c> nor <c>)</c> so depth stays
-    /// unchanged; the following <c>.</c> is found at the correct depth.
+    /// Handles cast expressions such as <c>((IFoo)model.Child).Name</c>:
+    /// the dot inside the cast is at depth 1 and is skipped, and the outer dot is returned.
+    /// Null-conditional (<c>?.</c>) and null-forgiving (<c>!.</c>) prefixes need no special case:
+    /// <c>?</c> and <c>!</c> are neither <c>(</c> nor <c>)</c>, so the depth stays
+    /// unchanged and the following <c>.</c> is found at the correct depth.
     /// </summary>
     private static int FindFirstOuterDot(ReadOnlySpan<char> expr)
     {

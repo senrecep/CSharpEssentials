@@ -86,7 +86,7 @@ public sealed class RuleChain<T, TProp>
     {
         // In Stop mode (HasFailed = _hasError): only the first call records an error.
         // In Continue mode (HasFailed = false always): every call records its error,
-        // enabling full accumulation across independent constraint validators.
+        // so independent constraint validators all add their errors.
         if (!HasFailed)
         {
             _ctx.Append(error);

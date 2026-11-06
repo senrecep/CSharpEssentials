@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace CSharpEssentials.Endpoints.Generators;
 
 /// <summary>
-/// Reports endpoint and group types that the endpoints generator cannot map, duplicate routes and explicit endpoint names that cannot be reserved or repeat (CSE1001–CSE1012).
+/// Reports endpoint and group types that the endpoints generator cannot map, duplicate routes and explicit endpoint names that cannot be reserved or repeat (CSE1001 to CSE1012).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class EndpointsAnalyzer : DiagnosticAnalyzer

@@ -50,7 +50,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     public readonly T Value => HasValue ? _value : throw new InvalidOperationException("Maybe has no value.");
 
     /// <summary>
-    /// Gets the value of the Maybe.
+    /// Gets the value of the Maybe, or the default value of the type if there is no value.
     /// </summary>
     [JsonPropertyName("value"), JsonInclude]
     internal readonly T Data => GetValueOrDefault();
@@ -159,7 +159,7 @@ public readonly partial struct Maybe<T> : IMaybe<T>, IEquatable<Maybe<T>>, IEqua
     }
 
     /// <summary>
-    /// Creates a Maybe from the specified factory function, catching any exceptions.
+    /// Creates a Maybe from the specified factory function. Returns <see cref="Maybe{T}.None"/> if the factory throws, except for <see cref="OperationCanceledException"/>, which propagates.
     /// </summary>
     /// <param name="factory"></param>
     /// <returns></returns>
@@ -287,7 +287,7 @@ public readonly partial record struct Maybe : IMaybe
     public static Task<Maybe<T>> FromAsync<T>(Func<Task<T?>> valueTaskFunc, CancellationToken cancellationToken = default) => Maybe<T>.FromAsync(valueTaskFunc, cancellationToken);
 
     /// <summary>
-    /// Creates a Maybe from the specified factory function, catching any exceptions.
+    /// Creates a Maybe from the specified factory function. Returns <see cref="Maybe{T}.None"/> if the factory throws, except for <see cref="OperationCanceledException"/>, which propagates.
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="factory"></param>

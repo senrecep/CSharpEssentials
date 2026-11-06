@@ -149,10 +149,10 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     /// </summary>
     private async ValueTask<Error[]?> ValidateAsync(TRequest message, CancellationToken cancellationToken)
     {
-        // Groups are pre-sorted by Order (ascending) in the constructor.
-        // Within each group validators run concurrently; groups run sequentially.
-        // Errors accumulate in group order so lower-Order errors appear first.
-        // allErrors is null-initialized, no heap allocation on the happy path.
+        // The constructor sorts groups by Order, ascending.
+        // Validators in a group run concurrently; groups run one after another.
+        // Errors are collected in group order, so lower-Order errors come first.
+        // allErrors stays null until the first failure, so a valid request allocates no list.
         List<Error>? allErrors = null;
 
         foreach (IValidator<TRequest>[] group in _orderedGroups)
@@ -199,8 +199,8 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     }
 
     /// <summary>
-    /// Runs all validators in <paramref name="validators"/> concurrently using the ValueTask fan-out pattern.
-    /// Sync-complete validators are consumed inline (zero allocation); truly async ones are awaited in order.
+    /// Starts every validator in <paramref name="validators"/> before awaiting any of them.
+    /// Results of validators that complete synchronously are read inline with no task allocation; the others are awaited in order.
     /// </summary>
     private static async Task<Result<TRequest>[]> RunGroupAsync(
         IValidator<TRequest>[] validators,
@@ -236,9 +236,9 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
     }
 
     /// <summary>
-    /// Runs a single validator, converting any non-<see cref="OperationCanceledException"/> exception
-    /// into a <see cref="Result{T}"/> failure so the pipeline never throws for validator bugs.
-    /// <see cref="OperationCanceledException"/> always propagates so cancellation is respected.
+    /// Runs one validator and turns any exception other than <see cref="OperationCanceledException"/>
+    /// into a <see cref="Result{T}"/> failure, so a faulty validator does not throw out of the pipeline.
+    /// <see cref="OperationCanceledException"/> always propagates, so cancellation still works.
     /// </summary>
     private static ValueTask<Result<TRequest>> RunSafeAsync(
         IValidator<TRequest> validator,

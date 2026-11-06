@@ -45,7 +45,7 @@ public static class NestedValidators
     /// appends any validation errors to the parent <see cref="RuleContext{T}"/>.
     /// <para>
     /// Use this overload when the property is declared as a nullable reference type (<c>Address?</c>).
-    /// The validator is typed against the non-null form, no null-forgiving operator is required.
+    /// The validator is typed against the non-null form, so no null-forgiving operator is needed.
     /// </para>
     /// <para>
     /// If the chain has already failed, or the value is <see langword="null"/>, the validator
@@ -91,7 +91,7 @@ public static class NestedValidators
         chain.MarkFailed();
     }
 
-    // A nested error code looks like "City.NotEmpty", the part before the rule suffix is the
+    // A nested error code looks like "City.NotEmpty". The part before the rule suffix is the
     // property name the nested validator quoted in its description ("'City' must not be empty.").
     // Prefix exactly that quoted occurrence so the message matches the new fully-qualified code.
     // Messages that do not quote the property name (custom messages) are left untouched.

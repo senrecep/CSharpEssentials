@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 
 /// <summary>
-/// Intercepts SaveChanges to automatically populate audit fields and handle soft deletes.
+/// Fills audit fields and turns deletes into soft deletes during SaveChanges.
 /// <list type="bullet">
 ///   <item><see cref="EntityState.Added"/>: sets <see cref="ICreationAudit.SetCreatedInfo"/>.</item>
 ///   <item><see cref="EntityState.Modified"/>: sets <see cref="IModificationAudit.SetUpdatedInfo"/>.</item>

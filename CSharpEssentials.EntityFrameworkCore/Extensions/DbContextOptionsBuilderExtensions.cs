@@ -26,7 +26,7 @@ public static class DbContextOptionsBuilderExtensions
     }
 
     /// <summary>
-    /// Configures the DbContext as a read-only context with no change tracking and no tracking for identity resolution.
+    /// Configures the DbContext as a read-only context with no change tracking; queries still perform identity resolution.
     /// </summary>
     public static DbContextOptionsBuilder UseAsReadContextWithIdentityResolution(this DbContextOptionsBuilder options)
     {
