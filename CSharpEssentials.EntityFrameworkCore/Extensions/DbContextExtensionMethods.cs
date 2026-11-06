@@ -150,9 +150,11 @@ public static class DbContextExtensionMethods
             options.Query(dbSet)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
+        HashSet<TKey> dataKeys = [.. dataList.Select(dataKeySelector)];
+        HashSet<TKey> entityKeys = [.. entities.Select(entityKeySelector)];
+
         TEntity[] theyWillBeDeleted = [.. entities
-            .Where(entity => dataList
-                .All(item => !dataKeySelector(item).Equals(entityKeySelector(entity))))];
+            .Where(entity => entityKeySelector(entity) is not { } key || !dataKeys.Contains(key))];
 
         if (options.HardDeleteMode && theyWillBeDeleted.Length != 0)
             theyWillBeDeleted.OfType<ISoftDeletable>().HardDelete();
@@ -163,8 +165,7 @@ public static class DbContextExtensionMethods
             .Select(obj => options.UpdateFunc(obj.entity, obj.item))];
 
         TEntity[] theyWillBeAdded = [.. dataList
-            .Where(item => entities
-                .All(entity => !entityKeySelector(entity).Equals(dataKeySelector(item))))
+            .Where(item => dataKeySelector(item) is not { } key || !entityKeys.Contains(key))
             .Select(options.Converter)];
 
         if (theyWillBeDeleted.Length != 0)
