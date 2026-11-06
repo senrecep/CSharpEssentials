@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.BaselineWideComparison-20261104-200458</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method    </th><th>Valid</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>1,426.7 ns</td><td>9.48 ns</td><td>8.87 ns</td><td>1.00</td><td>0.01</td><td>0.2766</td><td>0.0019</td><td>4632 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>False</td><td>8,808.2 ns</td><td>64.03 ns</td><td>53.46 ns</td><td>6.17</td><td>0.05</td><td>0.8698</td><td>0.0153</td><td>14720 B</td><td>3.18</td>
+</tr><tr><td>DataAnnotations</td><td>False</td><td>6,221.8 ns</td><td>14.17 ns</td><td>12.56 ns</td><td>4.36</td><td>0.03</td><td>0.4807</td><td>0.0076</td><td>8112 B</td><td>1.75</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>728.0 ns</td><td>5.89 ns</td><td>5.51 ns</td><td>1.00</td><td>0.01</td><td>0.1059</td><td>-</td><td>1784 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>True</td><td>984.9 ns</td><td>8.75 ns</td><td>8.19 ns</td><td>1.35</td><td>0.01</td><td>0.0572</td><td>-</td><td>984 B</td><td>0.55</td>
+</tr><tr><td>DataAnnotations</td><td>True</td><td>3,842.8 ns</td><td>16.66 ns</td><td>15.58 ns</td><td>5.28</td><td>0.04</td><td>0.3433</td><td>-</td><td>5864 B</td><td>3.29</td>
+</tr></tbody></table>
+</body>
+</html>

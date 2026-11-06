@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.CustomPredicateBenchmarks-20261104-193508</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method    </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Gen0</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>CSE-Must-Valid</td><td>83.25 ns</td><td>0.708 ns</td><td>0.553 ns</td><td>0.0138</td><td>232 B</td>
+</tr><tr><td>FV-Must-Valid</td><td>147.22 ns</td><td>0.598 ns</td><td>0.500 ns</td><td>0.0358</td><td>600 B</td>
+</tr><tr><td>CSE-Must-Invalid</td><td>229.53 ns</td><td>0.821 ns</td><td>0.768 ns</td><td>0.0281</td><td>472 B</td>
+</tr><tr><td>FV-Must-Invalid</td><td>340.36 ns</td><td>2.397 ns</td><td>2.243 ns</td><td>0.0601</td><td>1008 B</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.AssemblyScanColdComparison-20261104-211754</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host] : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  cold   : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Job=cold  IterationCount=1  LaunchCount=15  
+RunStrategy=ColdStart  WarmupCount=0  
+</code></pre>
+
+<table>
+<thead><tr><th>Method    </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>4.781 ms</td><td>0.2066 ms</td><td>0.1933 ms</td><td>1.00</td><td>0.05</td><td>67.32 KB</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>4.957 ms</td><td>0.1047 ms</td><td>0.0980 ms</td><td>1.04</td><td>0.04</td><td>66.87 KB</td><td>0.99</td>
+</tr></tbody></table>
+</body>
+</html>

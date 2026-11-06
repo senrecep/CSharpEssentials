@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.EnumOneOfComparison-20261104-194443</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method    </th><th>Valid</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>522.30 ns</td><td>1.328 ns</td><td>1.177 ns</td><td>1.00</td><td>0.0572</td><td>968 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>False</td><td>885.59 ns</td><td>5.267 ns</td><td>4.927 ns</td><td>1.70</td><td>0.1135</td><td>1904 B</td><td>1.97</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>79.34 ns</td><td>0.360 ns</td><td>0.336 ns</td><td>1.00</td><td>0.0119</td><td>200 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>True</td><td>151.31 ns</td><td>0.932 ns</td><td>0.826 ns</td><td>1.91</td><td>0.0358</td><td>600 B</td><td>3.00</td>
+</tr></tbody></table>
+</body>
+</html>
