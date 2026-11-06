@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
 
@@ -9,6 +10,8 @@ internal static class EndpointNameReader
     private const string WithName = "WithName";
 
     private const string WithMetadata = "WithMetadata";
+
+    private const string NameParameter = "endpointName";
 
     private const string ConventionExtensions = "Microsoft.AspNetCore.Builder.RoutingEndpointConventionBuilderExtensions";
 
@@ -25,6 +28,26 @@ internal static class EndpointNameReader
 
     public static bool IsCandidate(SyntaxNode node) =>
         node is InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax { Name.Identifier.ValueText: WithName or WithMetadata } };
+
+    public static bool TryReadLiteralName(SyntaxNode node, out string name)
+    {
+        name = string.Empty;
+        if (node is not InvocationExpressionSyntax { Expression: MemberAccessExpressionSyntax { Name.Identifier.ValueText: WithName }, ArgumentList.Arguments: { Count: 1 } arguments })
+        {
+            return false;
+        }
+
+        ArgumentSyntax argument = arguments[0];
+        if (argument.NameColon is { Name.Identifier.ValueText: not NameParameter }
+            || argument.Expression is not LiteralExpressionSyntax literal
+            || !literal.IsKind(SyntaxKind.StringLiteralExpression))
+        {
+            return false;
+        }
+
+        name = literal.Token.ValueText;
+        return true;
+    }
 
     public static IReadOnlyList<EndpointNameUse> Read(IInvocationOperation invocation)
     {

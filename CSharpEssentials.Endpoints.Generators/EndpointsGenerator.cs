@@ -120,6 +120,11 @@ public sealed class EndpointsGenerator : IIncrementalGenerator
 
     private static EquatableArray<string> ReadNames(GeneratorSyntaxContext context, CancellationToken cancellationToken)
     {
+        if (EndpointNameReader.TryReadLiteralName(context.Node, out string literal))
+        {
+            return new EquatableArray<string>([literal]);
+        }
+
         if (context.SemanticModel.GetOperation(context.Node, cancellationToken) is not IInvocationOperation invocation)
         {
             return default;

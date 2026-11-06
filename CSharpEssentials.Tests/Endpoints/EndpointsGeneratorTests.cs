@@ -411,6 +411,81 @@ public class EndpointsGeneratorTests
     }
 
     [Fact]
+    public void Generator_Should_Reserve_Literal_With_Name()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithName("Literal");""");
+
+        aggregate.Should().Contain("new string[] { \"Literal\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Const_Field_With_Name()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithName(ConstName);""");
+
+        aggregate.Should().Contain("new string[] { \"FromConst\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Named_Argument_With_Name()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithName(endpointName: "Named");""");
+
+        aggregate.Should().Contain("new string[] { \"Named\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Static_Call_With_Name()
+    {
+        string aggregate = HostAggregate("""RoutingEndpointConventionBuilderExtensions.WithName(app.MapGet("/a", () => "a"), "Static");""");
+
+        aggregate.Should().Contain("new string[] { \"Static\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Endpoint_Name_Metadata()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithMetadata(new EndpointNameMetadata("FromMetadata"));""");
+
+        aggregate.Should().Contain("new string[] { \"FromMetadata\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Literal_Passed_To_Unrelated_With_Name()
+    {
+        string aggregate = HostAggregate("""new Other().WithName("Foreign");""");
+
+        aggregate.Should().Contain("new string[] { \"Foreign\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Merge_Literal_And_Semantic_Names_Sorted_And_Distinct()
+    {
+        string aggregate = HostAggregate("""
+            app.MapGet("/a", () => "a").WithName("Zeta");
+            app.MapGet("/b", () => "b").WithName(ConstName);
+            app.MapGet("/c", () => "c").WithName("Zeta");
+            app.MapGet("/d", () => "d").WithName("Alpha");
+            """);
+
+        aggregate.Should().Contain("new string[] { \"Alpha\", \"FromConst\", \"Zeta\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Cache_Reserved_Names_When_Unrelated_Source_Is_Added()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create("Sample.Named", OutputKind.ConsoleApplication, NamedSource);
+
+        GeneratorDriverRunResult second = IncrementalCaching.RunTwice(
+            compilation,
+            static c => GeneratorHarness.AddSource(c, "namespace Sample.Other; public sealed class Unrelated { }"),
+            [.. EndpointCompilations.Generators.Value.Generators]);
+
+        IncrementalCaching.ShouldHaveCachedSteps(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames");
+        IncrementalCaching.ShouldHaveCachedSourceOutputs(second);
+    }
+
+    [Fact]
     public void Generator_Should_Pass_Only_Types_That_Can_Declare_An_Endpoint_To_The_Semantic_Check()
     {
         SyntaxTree tree = CSharpSyntaxTree.ParseText("""
@@ -516,6 +591,41 @@ public class EndpointsGeneratorTests
         run.OutputDiagnostics.Should().NotContain(static d => d.Id == "CS0108");
         string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
         registry.Contains("global::Sample.Api.Derived", StringComparison.Ordinal).Should().Be(mapped);
+    }
+
+    private static string HostAggregate(string body)
+    {
+        CSharpCompilation api = Compile("Sample.Api", OutputKind.DynamicallyLinkedLibrary, LibrarySource);
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [api.ToMetadataReference()],
+            $$"""
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Routing;
+
+            namespace Sample.Host;
+
+            public sealed class Other
+            {
+                public void WithName(string name) { }
+            }
+
+            public static class Routes
+            {
+                private const string ConstName = "FromConst";
+
+                public static void MapRoutes(IEndpointRouteBuilder app)
+                {
+                    {{body}}
+                }
+            }
+            """));
+
+        ShouldCompile(run);
+        return EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs");
     }
 
     private static string PingSource(string @namespace) => $$"""
