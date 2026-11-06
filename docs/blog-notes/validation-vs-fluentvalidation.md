@@ -27,7 +27,7 @@ The suites run on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 |---|---|---|---|---|
 | Definition style | code in `Configure` | constructor | attributes | attributes plus generator |
 | Reflection on the validate path | No | expression trees at construction | Yes | No (generated) |
-| NativeAOT-safe validate path | Yes (scan excluded; `AddValidator` IL2087 open) | Not annotated | No | Designed for it, experimental |
+| NativeAOT-safe validate path | Yes (scan excluded) | Not annotated | No | Designed for it, experimental |
 | Result type | `Result<T>` | `ValidationResult` | `List<ValidationResult>` | `Dictionary<string, string[]>` |
 | Sync API | Yes | Yes | Yes | No |
 | Async rules | Yes | Yes | No | No (sync attributes and `IValidatableObject`; only the `ValidateAsync` entry point is async) |

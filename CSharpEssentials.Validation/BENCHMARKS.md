@@ -112,7 +112,7 @@ This table comes from reading CSE source and the competitors' source and docs. N
 |---|---|---|---|---|
 | Definition style | code in `Configure` | `AbstractValidator` constructor | attributes | attributes plus the `[ValidatableType]` generator |
 | Reflection on the validate path | No | Expression trees compiled at construction | Yes | No (generated) |
-| NativeAOT-safe validate path | Yes (the assembly scan excluded; `AddValidator` IL2087 open) | Not annotated | No (`[RequiresUnreferencedCode]`) | Designed for it, experimental |
+| NativeAOT-safe validate path | Yes (the assembly scan excluded) | Not annotated | No (`[RequiresUnreferencedCode]`) | Designed for it, experimental |
 | Result type | `Result<T>` | `ValidationResult` | `List<ValidationResult>` | `Dictionary<string, string[]>` |
 | Sync API | Yes (sync-completing `ValueTask`) | Yes | Yes | No |
 | Async rules | Yes | Yes | No | No (sync attributes and `IValidatableObject`; only the `ValidateAsync` entry point is async) |
@@ -290,7 +290,7 @@ The 23 earlier classes have no baseline column, so their reports have no Ratio. 
 ## Caveats
 
 - **Microsoft.Extensions.Validation is experimental** and documents no standalone idiom; its rows follow the API reference and may need changes when the API settles.
-- **Both assembly scans use reflection.** CSE's Readme says to register validators with `AddValidator<T, TValidator>` under trimming or Native AOT. That method has an open IL2087 trim warning (`CSharpEssentials.Validation/Extensions/ValidatorServiceCollectionExtensions.cs:34-37`), so the matrix does not call the registration path AOT-clean yet.
+- **Both assembly scans use reflection.** CSE's Readme says to register validators with `AddValidator<T, TValidator>` under trimming or Native AOT. `TValidator` on that method carries `[DynamicallyAccessedMembers(PublicConstructors)]` (`CSharpEssentials.Validation/Extensions/ValidatorServiceCollectionExtensions.cs:26`), and the 2026-11-06 mediator Native AOT sample registers a validator with it and publishes with no IL warnings.
 - **No Native AOT sample.** FluentValidation compiles expression trees and DataAnnotations is `[RequiresUnreferencedCode]`, so only the CSE and Microsoft.Extensions.Validation rows could run under AOT.
 - **Known CSE costs, with the rows that measure them:**
   - `CSharpEssentials.Validation/RuleContext.cs:62-76`: `For(() => ...)` parses the member expression text with `PropertyPath.Extract` on every call and allocates a closure. `ForOverloadComparison` valid on net10.0: 664.1 ns and 1784 B with the lambda, 203.6 ns and 608 B with `For(value, name)`.
