@@ -1,6 +1,6 @@
 # CSharpEssentials.Enums.Generators: design-time benchmarks
 
-Draft. This page describes how the `[StringEnum]` source generator is measured against NetEscapades.EnumGenerators 1.0.0-beta21. Results are pending the full run.
+This page describes how the `[StringEnum]` source generator is measured against NetEscapades.EnumGenerators 1.0.0-beta21. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is faster on a cold run. After an edit, NetEscapades is level or slightly faster; see [Where CSE loses](#where-cse-loses).
 
 The generator runs inside the compiler and the IDE, not in the shipped app. The cost measured here is build time and the work the IDE does after a keystroke. Runtime cost of the generated code is covered in [the package BENCHMARKS.md](../CSharpEssentials.Enums/BENCHMARKS.md).
 
@@ -97,11 +97,54 @@ Every source output stays cached after the unrelated edit. The self-check fails 
 
 ## Results
 
-Pending the full default-job run. No numbers from quick runs are published.
+### How these numbers were produced
 
-## Known CSE costs to watch in the full run
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
+- The 1-minute load average stayed between 2.63 and 3.35 during the generators suite. No row of this class has a CV above 5%.
+- Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.EnumsGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
 
-From reading the source. Not fixed here.
+How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)` for that TFM. The ratio is against the CSE row of the same category, `Files` value and TFM. `EmptyDriver_Cold` is driver overhead only and is not a floor for generator work.
+
+### Time
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 7.993 μs (0.001) | 6.783 μs (0.001) | 6.251 μs (0.001) | 6.577 μs (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 5,866.451 μs (1.000) | 5,355.610 μs (1.000) | 4,942.143 μs (1.000) | 4,763.679 μs (1.000) |
+| Cold | 200 | `NetEscapades_Cold` | 8,563.291 μs (1.460) | 8,268.789 μs (1.544) | 7,621.981 μs (1.542) | 7,637.331 μs (1.603) |
+| Cold | 1000 | `EmptyDriver_Cold` | 41.541 μs (0.003) | 34.112 μs (0.003) | 33.721 μs (0.003) | 34.909 μs (0.003) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 12,500.349 μs (1.000) | 12,155.357 μs (1.001) | 11,034.104 μs (1.001) | 10,611.914 μs (1.001) |
+| Cold | 1000 | `NetEscapades_Cold` | 16,581.287 μs (1.327) | 16,420.758 μs (1.352) | 14,317.496 μs (1.298) | 14,740.240 μs (1.391) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 2,579.371 μs (1.00) | 2,168.588 μs (1.00) | 1,954.112 μs (1.00) | 1,896.507 μs (1.00) |
+| Incremental | 200 | `NetEscapades_Incremental` | 2,458.410 μs (0.95) | 2,105.485 μs (0.97) | 1,817.222 μs (0.93) | 1,810.005 μs (0.95) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 3,855.055 μs (1.00) | 3,352.278 μs (1.00) | 3,081.037 μs (1.00) | 2,917.586 μs (1.00) |
+| Incremental | 1000 | `NetEscapades_Incremental` | 3,729.231 μs (0.97) | 3,353.753 μs (1.00) | 2,921.062 μs (0.95) | 2,828.807 μs (0.97) |
+
+### Allocation
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 2.26 KB (0.000) | 2.25 KB (0.000) | 2.19 KB (0.000) | 2.17 KB (0.000) |
+| Cold | 200 | `CSharpEssentials_Cold` | 5681.91 KB (1.000) | 5680.99 KB (1.000) | 5675.32 KB (1.000) | 5683.49 KB (1.000) |
+| Cold | 200 | `NetEscapades_Cold` | 12484.55 KB (2.197) | 12479.08 KB (2.197) | 12480.07 KB (2.199) | 12480.68 KB (2.196) |
+| Cold | 1000 | `EmptyDriver_Cold` | 2.26 KB (0.000) | 2.25 KB (0.000) | 2.19 KB (0.000) | 2.17 KB (0.000) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 7163.76 KB (1.000) | 7155.15 KB (1.000) | 7155.66 KB (1.000) | 7150.38 KB (1.000) |
+| Cold | 1000 | `NetEscapades_Cold` | 13964.1 KB (1.949) | 13951.82 KB (1.950) | 13949.65 KB (1.949) | 13944.24 KB (1.950) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 612.41 KB (1.00) | 611.65 KB (1.00) | 607.75 KB (1.00) | 612.82 KB (1.00) |
+| Incremental | 200 | `NetEscapades_Incremental` | 562.26 KB (0.92) | 559.57 KB (0.91) | 563.94 KB (0.93) | 564.3 KB (0.92) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 725.62 KB (1.00) | 717.22 KB (1.00) | 714.52 KB (1.00) | 714.42 KB (1.00) |
+| Incremental | 1000 | `NetEscapades_Incremental` | 673.59 KB (0.93) | 670.35 KB (0.93) | 666.42 KB (0.93) | 663.16 KB (0.93) |
+
+### Where CSE loses
+
+- Incremental, every TFM and both `Files` values: NetEscapades takes 0.93 to 1.00 of the CSE time and allocates 0.91 to 0.93 of the CSE bytes. On net10.0 at `Files=200` that is 1,817.222 μs and 563.94 KB against 1,954.112 μs and 607.75 KB for CSE. On net9.0 at `Files=1000` the two are level (3,352.278 μs for CSE, 3,353.753 μs for NetEscapades).
+
+Cold, CSE is faster on every row (NetEscapades ratio 1.298 to 1.603) and allocates less (NetEscapades alloc ratio 1.949 to 2.199). The rows do not emit the same output: 31 files and 560,196 characters for CSE, 30 files and 1,799,820 characters for NetEscapades (see [Semantic differences](#semantic-differences)). Part of the cold gap is emit work CSE does not do. After an unrelated edit both libraries keep every output cached, so the incremental rows compare the per-edit pipeline work, and there CSE is slightly behind.
+
+## Known CSE costs
+
+From reading the source. Not fixed here. NetEscapades also reads the compilation on every edit, so this step alone does not explain the small incremental gap in [Where CSE loses](#where-cse-loses). That gap has not been profiled.
 
 - `CSharpEssentials.Enums.Generators/StringEnumGenerator.cs:69-71`: the ModuleInitializer step is a `CompilationProvider.Select` that runs on every edit. Its output is a bool, so later steps stay cached.
 

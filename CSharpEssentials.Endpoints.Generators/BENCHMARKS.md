@@ -1,6 +1,6 @@
 # CSharpEssentials.Endpoints.Generators: design-time benchmarks
 
-Draft. This page describes how the endpoints source generator is measured against Immediate.Apis 6.4.0. Results are pending the full run.
+This page describes how the endpoints source generator is measured against Immediate.Apis 6.4.0. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is ahead at `Files=200` and well behind Immediate.Apis at `Files=1000`, cold and after an edit; see [Where CSE loses](#where-cse-loses).
 
 The generator runs inside the compiler and the IDE, not in the shipped app. The cost measured here is build time and the work the IDE does after a keystroke. It has no effect on request handling.
 
@@ -85,7 +85,7 @@ Parity is checked in `[GlobalSetup]` and with `--self-check`. A failed check sto
 | | CSE | Immediate.Apis 6.4.0 |
 |---|---|---|
 | How an endpoint is found | Implements `IEndpoint` (a base list) | `[Handler]` plus `[MapGet]` and the other verb attributes |
-| Syntax provider | `CreateSyntaxProvider` on every non-interface type with a base list | `ForAttributeWithMetadataName` |
+| Syntax provider | `CreateSyntaxProvider` on non-interface types with a base list and a static `Map` (either one for a `partial` type), plus one on every `WithName` and `WithMetadata` call | `ForAttributeWithMetadataName` |
 | Extra per-invocation provider | Yes: `WithName` and `WithMetadata` calls | No |
 | Compilation-wide step on each edit | Yes: the Host step walks the references | Yes: reads the compilation for the assembly name; the result is equal after the edit, so later steps stay cached |
 | Generated per endpoint | One registry entry that calls `TEndpoint.Map`; route calls stay in user code | A generated mapping method plus handler glue; the handler class comes from Immediate.Handlers |
@@ -117,24 +117,83 @@ From `--self-check` on net10.0 with `Files=200`, after the filler edit. The coun
 
 Every source output stays cached after the unrelated edit. The self-check fails if a CSE output does not.
 
-The report cannot show one CSE cost. `EndpointTypes` comes from `CreateSyntaxProvider`. Roslyn caches the predicate per tree, but when the compilation changes it runs the transform again for every node the predicate accepted, in every tree. The predicate accepts every non-interface type with a base list, so each edit runs `GetDeclaredSymbol` again for every base-list type in the project, not only for the edited file. Most of those types are not endpoints, so they are filtered out before the tracked step and do not appear in the table. The incremental timing rows include that work. Immediate's `ForAttributeWithMetadataName` providers also run again for every node they matched (the `Unchanged` counts in the self-check), but they match only the 50 attributed types, so their work does not grow with `Files`.
+The report cannot show one CSE cost. `EndpointTypes` and `ReservedNames` come from `CreateSyntaxProvider`. Roslyn caches the predicate per tree, but when the compilation changes it runs the transform again for every node the predicate accepted, in every tree. For `EndpointTypes` that is the 50 endpoint classes. For `ReservedNames` it is every `WithName` and `WithMetadata` call in the project, and each one runs `GetOperation` again. The tracked `ReservedNames` step sits after `Collect`, so the table shows one cached value, not the per-call work. The incremental timing rows include that work. Immediate's `ForAttributeWithMetadataName` providers also run again for every node they matched (the `Unchanged` counts in the self-check), but they match only the 50 attributed types, so their work does not grow with `Files`.
 
 ## Results
 
-Pending the full default-job run. No numbers from quick runs are published.
+### How these numbers were produced
 
-## Known CSE costs to watch in the full run
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
+- The 1-minute load average stayed between 1.77 and 3.37 during the generators suite and the two reruns of this class on net10.0 and net11.0. Five rows still have a CV above 5% after the reruns and are marked `noisy` in the tables: `CSharpEssentials_Cold` and `ImmediateApisWithHandlers_Cold` at `Files=1000` on net10.0 and net11.0, and `ImmediateApisWithHandlers_Incremental` at `Files=200` on net11.0.
+- Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.EndpointsGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
 
-These come from reading the generator source. They are not fixed here.
+How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)` for that TFM. The ratio is against the CSE row of the same category, `Files` value and TFM. `EmptyDriver_Cold` is driver overhead only and is not a floor for generator work.
 
-- `CSharpEssentials.Endpoints.Generators/EndpointsGenerator.cs:35-36,87-92`: the predicate accepts any class, struct or record declaration with a `BaseList` (interfaces excluded), and the transform calls `GetDeclaredSymbol` for each. Cold cost grows with the number of base-list types in the project, which is why `Files=1000` exists. Because the provider is `CreateSyntaxProvider`, every edit, even a method-body edit in an unrelated file, runs the transform again for every base-list type in the project. Expect the CSE incremental row to grow with `Files` while the Immediate.Apis incremental row stays nearly flat.
-- `EndpointsGenerator.cs:46-48`: the Host step is a `CompilationProvider.Select` that runs on every edit. Its output is equatable, so later steps stay cached.
-- `EndpointsGenerator.cs:50-51` with `EndpointNameReader.cs:26-27`: `GetOperation` on every `WithName` and `WithMetadata` invocation. This is also a `CreateSyntaxProvider`, so every edit runs it again for every such invocation in the project. The filler routes exercise this (one per 10 filler files).
+### Time
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 9.936 μs (0.001) | 6.608 μs (0.000) | 6.114 μs (0.000) | 6.510 μs (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 13,848.043 μs (1.000) | 13,788.855 μs (1.000) | 12,695.217 μs (1.001) | 11,866.179 μs (1.000) |
+| Cold | 200 | `ImmediateApis_Cold` | 15,118.818 μs (1.092) | 14,067.330 μs (1.020) | 12,914.831 μs (1.019) | 12,471.030 μs (1.051) |
+| Cold | 200 | `ImmediateApisWithHandlers_Cold` | 82,068.168 μs (5.927) | 73,283.429 μs (5.316) | 70,971.282 μs (5.597) | 69,349.376 μs (5.845) |
+| Cold | 1000 | `EmptyDriver_Cold` | 41.166 μs (0.000) | 35.806 μs (0.000) | 34.376 μs (0.000) | 38.567 μs (0.001) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 83,341.794 μs (1.000) | 75,983.530 μs (1.000) | 75,440.372 μs (1.008), noisy | 74,564.793 μs (1.007), noisy |
+| Cold | 1000 | `ImmediateApis_Cold` | 23,040.080 μs (0.276) | 21,108.214 μs (0.278) | 22,309.011 μs (0.298) | 20,969.176 μs (0.283) |
+| Cold | 1000 | `ImmediateApisWithHandlers_Cold` | 91,716.335 μs (1.101) | 86,726.597 μs (1.141) | 92,315.378 μs (1.233), noisy | 90,616.516 μs (1.224), noisy |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 6,220.036 μs (1.00) | 5,819.315 μs (1.00) | 5,092.662 μs (1.00) | 5,050.929 μs (1.00) |
+| Incremental | 200 | `ImmediateApis_Incremental` | 9,602.102 μs (1.54) | 8,851.833 μs (1.52) | 8,187.010 μs (1.61) | 7,497.199 μs (1.48) |
+| Incremental | 200 | `ImmediateApisWithHandlers_Incremental` | 66,048.606 μs (10.62) | 63,156.468 μs (10.85) | 57,725.563 μs (11.34) | 61,495.625 μs (12.18), noisy |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 34,521.508 μs (1.00) | 31,745.005 μs (1.00) | 29,256.639 μs (1.00) | 27,597.948 μs (1.00) |
+| Incremental | 1000 | `ImmediateApis_Incremental` | 11,652.656 μs (0.34) | 10,571.983 μs (0.33) | 9,415.331 μs (0.32) | 9,097.143 μs (0.33) |
+| Incremental | 1000 | `ImmediateApisWithHandlers_Incremental` | 72,400.476 μs (2.10) | 66,667.645 μs (2.10) | 65,265.458 μs (2.23) | 65,820.755 μs (2.39) |
+
+### Allocation
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 2.26 KB (0.001) | 2.25 KB (0.001) | 2.19 KB (0.001) | 2.17 KB (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 2175.99 KB (1.000) | 2179.98 KB (1.000) | 2156.59 KB (1.000) | 2159.94 KB (1.000) |
+| Cold | 200 | `ImmediateApis_Cold` | 5283.15 KB (2.428) | 5279.14 KB (2.422) | 5277.31 KB (2.447) | 5256.86 KB (2.434) |
+| Cold | 200 | `ImmediateApisWithHandlers_Cold` | 32435.38 KB (14.906) | 32437.16 KB (14.880) | 32427.56 KB (15.037) | 32413.01 KB (15.006) |
+| Cold | 1000 | `EmptyDriver_Cold` | 2.26 KB (0.000) | 2.25 KB (0.000) | 2.19 KB (0.000) | 2.17 KB (0.000) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 10191.61 KB (1.000) | 10178.54 KB (1.000) | 10651.53 KB (1.000) | 10634.73 KB (1.000) |
+| Cold | 1000 | `ImmediateApis_Cold` | 6746.25 KB (0.662) | 6747.85 KB (0.663) | 6759.02 KB (0.635) | 6772.62 KB (0.637) |
+| Cold | 1000 | `ImmediateApisWithHandlers_Cold` | 33885.85 KB (3.325) | 33892.29 KB (3.330) | 33939.11 KB (3.186) | 33931.88 KB (3.191) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 1324.55 KB (1.00) | 1314.29 KB (1.00) | 1294.32 KB (1.00) | 1294.63 KB (1.00) |
+| Incremental | 200 | `ImmediateApis_Incremental` | 1485.12 KB (1.12) | 1480.82 KB (1.13) | 1476.03 KB (1.14) | 1466.31 KB (1.13) |
+| Incremental | 200 | `ImmediateApisWithHandlers_Incremental` | 24759.68 KB (18.69) | 24753.41 KB (18.83) | 24746.43 KB (19.12) | 24737.63 KB (19.11) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 5927.76 KB (1.00) | 5903.1 KB (1.00) | 5803.64 KB (1.00) | 5794.04 KB (1.00) |
+| Incremental | 1000 | `ImmediateApis_Incremental` | 1587.35 KB (0.27) | 1587.05 KB (0.27) | 1579.01 KB (0.27) | 1590.57 KB (0.27) |
+| Incremental | 1000 | `ImmediateApisWithHandlers_Incremental` | 24862.11 KB (4.19) | 24859.13 KB (4.21) | 24849.48 KB (4.28) | 24858.12 KB (4.29) |
+
+### Where CSE loses
+
+At `Files=1000` CSE is slower than Immediate.Apis and allocates more, cold and incremental, on every TFM. At `Files=200` CSE is ahead on every row.
+
+- Cold, `Files=1000`: Immediate.Apis takes 0.276 to 0.298 of the CSE time. On net8.0 that is 23,040.080 μs against 83,341.794 μs, on net9.0 21,108.214 μs against 75,983.530 μs. The net10.0 and net11.0 CSE rows are noisy (CV above 5%) but show the same gap. Immediate.Apis allocates 0.635 to 0.663 of the CSE bytes (6759.02 KB against 10651.53 KB on net10.0).
+- Incremental, `Files=1000`: Immediate.Apis takes 0.32 to 0.34 of the CSE time and allocates 0.27 of the CSE bytes on every TFM. On net10.0 that is 9,415.331 μs and 1579.01 KB against 29,256.639 μs and 5803.64 KB.
+- Scaling with project size: on net10.0 the CSE incremental row grows from 5,092.662 μs at `Files=200` to 29,256.639 μs at `Files=1000`. The Immediate.Apis row grows from 8,187.010 μs to 9,415.331 μs. The cold rows show the same pattern: CSE grows from 12,695.217 μs to 75,440.372 μs (noisy), Immediate.Apis from 12,914.831 μs to 22,309.011 μs.
+
+At `Files=200`, Immediate.Apis takes 1.019 to 1.092 of the CSE time cold and 1.48 to 1.61 incremental, and allocates 2.422 to 2.447 (cold) and 1.12 to 1.14 (incremental) of the CSE bytes.
+
+The documented Immediate setup with Immediate.Handlers (`ImmediateApisWithHandlers_*`) is slower than CSE on every row, but the gap shrinks with size: 5.316 to 5.927 cold at `Files=200`, 1.101 to 1.233 cold at `Files=1000` (the net10.0 and net11.0 rows there are noisy).
+
+Likely cause, from reading the source and the input (not profiled): the provider that grows with `Files` is the `WithName` and `WithMetadata` reader (see [Known CSE costs](#known-cse-costs)). It is a `CreateSyntaxProvider`, so after any edit Roslyn runs its transform again for every matching invocation in the project, and each run calls `GetOperation`, which binds the containing route call. The filler has one such call per 10 filler files, 15 at `Files=200` and 95 at `Files=1000`. Immediate.Apis uses `ForAttributeWithMetadataName` and matches only the 50 attributed endpoints.
+
+## Known CSE costs
+
+These come from reading the generator source. They are not fixed here. The run in [Where CSE loses](#where-cse-loses) shows the CSE rows growing with `Files` much faster than the Immediate.Apis rows.
+
+- `CSharpEssentials.Endpoints.Generators/EndpointsGenerator.cs:36-40,88-100`: the `EndpointTypes` predicate accepts a non-interface type declaration that has a base list and declares a static `Map` method. A `partial` type needs only one of the two. The transform calls `GetDeclaredSymbol` for each match. In this input only the 50 endpoint classes match: the filler classes have a base list but no `Map`, and the filler route classes have a `Map` but no base list. This provider is a `CreateSyntaxProvider`, so every edit runs the transform again for the 50 matches.
+- `EndpointsGenerator.cs:47-49`: the Host step is a `CompilationProvider.Select` that runs on every edit. Its output is equatable, so later steps stay cached.
+- `EndpointsGenerator.cs:51-56,121-123` with `EndpointNameReader.cs:26-27`: `GetOperation` on every `WithName` and `WithMetadata` invocation in the project. This is also a `CreateSyntaxProvider`, so every edit runs it again for every such invocation, not only for the edited file. The filler routes exercise this: one call per 10 filler files, 15 at `Files=200` and 95 at `Files=1000`. It is the CSE provider whose work grows with `Files` in this input, and the likely cause of the `Files=1000` losses (not profiled).
 
 ## Caveats
 
 - Design time only. Nothing here affects the shipped app.
-- Part of CSE's cold `GetDeclaredSymbol` cost is declaration binding that the compiler does anyway in a full build. The generator moves that cost earlier; not all of it is extra.
+- Part of CSE's cold cost is binding that the compiler does anyway in a full build: the endpoint declarations and the route calls around each `WithName`. The generator moves that cost earlier; not all of it is extra.
 - Code fixes and analyzers in the packages are not measured.
 - The input is generated, not a real app. Real projects have larger files and more references.
 

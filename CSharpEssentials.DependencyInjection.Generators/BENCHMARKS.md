@@ -1,6 +1,6 @@
 # CSharpEssentials.DependencyInjection.Generators: design-time benchmarks
 
-Draft. This page describes how the service registration generator is measured against Injectio 6.3.0. Results are pending the full run.
+This page describes how the service registration generator is measured against Injectio 6.3.0. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is faster and allocates less than Injectio on every row.
 
 The generator runs inside the compiler and the IDE, not in the shipped app. The cost measured here is build time and the work the IDE does after a keystroke. Runtime registration and resolve cost are covered in [the package BENCHMARKS.md](../CSharpEssentials.DependencyInjection/BENCHMARKS.md).
 
@@ -107,11 +107,54 @@ Every source output stays cached after the unrelated edit. The self-check fails 
 
 ## Results
 
-Pending the full default-job run. No numbers from quick runs are published.
+### How these numbers were produced
 
-## Known CSE costs to watch in the full run
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
+- The 1-minute load average stayed between 2.63 and 3.35 during the generators suite. No row of this class has a CV above 5%.
+- Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.DependencyInjectionGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
 
-From reading the source. Not fixed here.
+How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)` for that TFM. The ratio is against the CSE row of the same category, `Files` value and TFM. `EmptyDriver_Cold` is driver overhead only and is not a floor for generator work.
+
+### Time
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 7.835 μs (0.001) | 6.779 μs (0.001) | 6.657 μs (0.001) | 6.488 μs (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 12,168.454 μs (1.000) | 10,572.158 μs (1.000) | 9,350.901 μs (1.000) | 8,951.632 μs (1.000) |
+| Cold | 200 | `Injectio_Cold` | 18,151.788 μs (1.492) | 15,985.288 μs (1.512) | 14,515.509 μs (1.552) | 14,042.819 μs (1.569) |
+| Cold | 1000 | `EmptyDriver_Cold` | 38.563 μs (0.002) | 33.822 μs (0.002) | 34.792 μs (0.002) | 35.201 μs (0.002) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 20,362.458 μs (1.000) | 18,912.745 μs (1.000) | 17,620.822 μs (1.001) | 16,570.269 μs (1.001) |
+| Cold | 1000 | `Injectio_Cold` | 28,270.923 μs (1.389) | 25,317.112 μs (1.339) | 24,386.443 μs (1.385) | 22,906.082 μs (1.384) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 8,204.791 μs (1.00) | 7,500.754 μs (1.00) | 6,118.388 μs (1.00) | 5,969.088 μs (1.00) |
+| Incremental | 200 | `Injectio_Incremental` | 10,716.329 μs (1.31) | 9,287.802 μs (1.24) | 7,999.570 μs (1.31) | 7,389.224 μs (1.24) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 11,307.726 μs (1.00) | 10,069.658 μs (1.00) | 8,711.273 μs (1.00) | 8,592.375 μs (1.00) |
+| Incremental | 1000 | `Injectio_Incremental` | 19,651.258 μs (1.74) | 18,805.389 μs (1.87) | 17,253.836 μs (1.98) | 17,002.511 μs (1.98) |
+
+### Allocation
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 2.26 KB (0.001) | 2.25 KB (0.001) | 2.19 KB (0.001) | 2.17 KB (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 3158.67 KB (1.000) | 3156.55 KB (1.000) | 3142.73 KB (1.000) | 3145.14 KB (1.000) |
+| Cold | 200 | `Injectio_Cold` | 3844.37 KB (1.217) | 3842.81 KB (1.217) | 3833.5 KB (1.220) | 3841.63 KB (1.221) |
+| Cold | 1000 | `EmptyDriver_Cold` | 2.26 KB (0.000) | 2.25 KB (0.000) | 2.19 KB (0.000) | 2.17 KB (0.000) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 4638.74 KB (1.000) | 4610.48 KB (1.000) | 4601.04 KB (1.000) | 4617.64 KB (1.000) |
+| Cold | 1000 | `Injectio_Cold` | 5330.31 KB (1.149) | 5299.8 KB (1.150) | 5311.41 KB (1.154) | 5313.82 KB (1.151) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 1868.81 KB (1.00) | 1867.18 KB (1.00) | 1841.8 KB (1.00) | 1850.1 KB (1.00) |
+| Incremental | 200 | `Injectio_Incremental` | 2011.61 KB (1.08) | 2010.95 KB (1.08) | 1994.31 KB (1.08) | 1993.83 KB (1.08) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 1979.03 KB (1.00) | 1952.15 KB (1.00) | 1933.71 KB (1.00) | 1956.77 KB (1.00) |
+| Incremental | 1000 | `Injectio_Incremental` | 3487.26 KB (1.76) | 3457.91 KB (1.77) | 3460.67 KB (1.79) | 3459.14 KB (1.77) |
+
+### Where CSE loses
+
+No row. CSE is faster and allocates less than Injectio in every category, at both `Files` values, on every TFM. Injectio's cold ratio is 1.339 to 1.569 and its incremental ratio is 1.24 to 1.98. Its allocation ratio is 1.149 to 1.221 cold and 1.08 to 1.79 incremental.
+
+The two rows do not emit the same text (2 files and 46,476 characters for CSE, 4 files and 83,228 characters for Injectio, see [Semantic differences](#semantic-differences)), so part of the gap is emit work CSE does not do. The largest gap is incremental at `Files=1000`, for example 8,711.273 μs against 17,253.836 μs on net10.0.
+
+## Known CSE costs
+
+From reading the source. Not fixed here. Neither cost made CSE slower than Injectio in the full run.
 
 - `CSharpEssentials.DependencyInjection.Generators/ServiceRegistrationGenerator.cs:66-68`: the Host step is a `CompilationProvider.Select` that runs on every edit and walks the references. Its output is equatable, so later steps stay cached.
 - `ServiceRegistrationGenerator.cs:44-60`: one `ForAttributeWithMetadataName` provider per attribute name (eight), combined pairwise into one collection.

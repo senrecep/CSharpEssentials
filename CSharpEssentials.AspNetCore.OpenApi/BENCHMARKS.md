@@ -1,6 +1,6 @@
-# CSharpEssentials.AspNetCore.OpenApi: Performance benchmarks
+# CSharpEssentials.AspNetCore.OpenApi: performance benchmarks
 
-**Status: draft.** The suite builds on net10.0, and its parity self-check passes there. No full default-job run has been done, so this page has no numbers yet. Short-job (`--quick`) numbers are not published.
+Full results for net10.0 are in [Results](#results). The parity self-check passes there. Short version: with all three conventions, the warm document takes 1.49 times the plain time and 1.52 times the plain allocation, and the first document in a fresh process takes 1.09 times the plain time. Every CSE row costs more than the plain row, because every CSE row writes more output; see [Where CSE costs more](#where-cse-costs-more).
 
 CSharpEssentials.AspNetCore.OpenApi (CSE) is compared with plain Microsoft.AspNetCore.OpenApi 10.0.14 on Microsoft.OpenApi 2.13.0. There is no competitor library. The baseline is the framework's documented setup: `AddOpenApi()` and `MapOpenApi()`.
 
@@ -105,7 +105,42 @@ The asserted plain shapes, as written by Microsoft.AspNetCore.OpenApi 10.0.14:
 
 ## Results
 
-Pending the full default-job run (`./run-benchmarks.sh --project openapi`). The reports will be committed under `benchmarks/results/openapi/net10.0/results/`.
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- TFM: net10.0 only (.NET 10.0.11), the only target of the package.
+- `OpenApiDocumentComparison` ran on the default job. `OpenApiFirstDocumentComparison` ran on its own `cold` job: `RunStrategy=ColdStart`, `LaunchCount=15`, `IterationCount=1`, `WarmupCount=0`, so each of the 15 samples is one fresh process.
+- The 1-minute load average stayed between 1.55 and 1.96 during the suite. No row has a CV above 5%.
+- Reports: [`benchmarks/results/openapi/net10.0/results/`](../benchmarks/results/openapi/net10.0/results/), one `*-report-github.md` and one `.csv` per class. Every number below is copied from the `-report-github.md` files.
+
+Ratios are against `Plain_AddOpenApi`. Every CSE row writes a larger document than the baseline, so each ratio is the price of the extra description, not a like-for-like loss.
+
+### Warm document, one `GET /openapi/v1.json` (net10.0, default job)
+
+| Method | Mean | Ratio | Allocated | Alloc Ratio |
+|---|---:|---:|---:|---:|
+| `Plain_AddOpenApi` (baseline) | 5.176 ms | 1.00 | 3.11 MB | 1.00 |
+| `Plain_AddOpenApi_StringEnums` | 5.768 ms | 1.11 | 3.76 MB | 1.21 |
+| `CSharpEssentials_EnumConventions` | 6.341 ms | 1.23 | 3.99 MB | 1.28 |
+| `CSharpEssentials_IdempotencyConventions` | 5.621 ms | 1.09 | 3.52 MB | 1.13 |
+| `CSharpEssentials_OptionalRouteParameters` | 5.391 ms | 1.04 | 3.43 MB | 1.10 |
+| `CSharpEssentials_AllConventions` | 7.715 ms | 1.49 | 4.72 MB | 1.52 |
+
+### First document in a fresh process (net10.0, `cold` job, 15 launches)
+
+| Method | Mean | Ratio | Allocated | Alloc Ratio |
+|---|---:|---:|---:|---:|
+| `Plain_AddOpenApi` (baseline) | 762.4 ms | 1.00 | 8.72 MB | 1.00 |
+| `CSharpEssentials_AllConventions` | 828.4 ms | 1.09 | 10.89 MB | 1.25 |
+
+### Where CSE costs more
+
+All numbers are net10.0. Every CSE row is slower and allocates more than the plain baseline. None of them is a like-for-like loss, because each writes more output, but the cost is real for an app that serves the document:
+
+- The Readme setup, `CSharpEssentials_AllConventions`, takes 7.715 ms against 5.176 ms per warm request (1.49) and allocates 4.72 MB against 3.11 MB (1.52). Microsoft.AspNetCore.OpenApi regenerates the document on every request, so an app pays this on every `GET /openapi/v1.json` unless it caches the response.
+- In a fresh process the same setup takes 828.4 ms to the first document against 762.4 ms (1.09), with 10.89 MB against 8.72 MB allocated (1.25).
+- `CSharpEssentials_EnumConventions` (1.23, 3.99 MB) costs more than the framework's own string enum setup, `Plain_AddOpenApi_StringEnums` (1.11, 3.76 MB). The CSE row writes wire names, `type: string` and three `x-enum-*` extensions per enum, which the StringEnums row does not.
+- `CSharpEssentials_IdempotencyConventions` costs 1.09 in time and 1.13 in allocation. `CSharpEssentials_OptionalRouteParameters` costs 1.04 and 1.10 while it describes 70 operations instead of 50.
 
 ## How to reproduce
 

@@ -1,6 +1,6 @@
 # CSharpEssentials.EntityFrameworkCore.Generators: design-time benchmarks
 
-Draft. This page describes how the CSE3001 analyzer is measured. Results are pending the full run.
+This page describes how the CSE3001 analyzer is measured. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). On the cleanest pair, one edited file in a 1,000-file project, the no-op analyzer takes 0.89 to 0.91 of the CSE3001 time on every TFM; see [What the rule costs over the floor](#what-the-rule-costs-over-the-floor).
 
 Despite the project name, `CSharpEssentials.EntityFrameworkCore.Generators` holds no source generator. It holds one diagnostic analyzer, `IgnoreQueryFiltersAnalyzer` (CSE3001), which reports the parameterless EF Core `IgnoreQueryFilters()` when the named overload exists. It cannot run under `CSharpGeneratorDriver`, so it is measured with `CompilationWithAnalyzers` instead. The quality audit had left this package out as design-time only. The suite measures it anyway, so its IDE cost is known.
 
@@ -67,7 +67,51 @@ There is no cold and incremental output check, because analyzers keep no increme
 
 ## Results
 
-Pending the full default-job run. No numbers from quick runs are published.
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
+- The 1-minute load average stayed between 1.77 and 6.52 during the generators suite and the two reruns of this class on every TFM. Nine rows still have a CV above 5% after the reruns and are marked `noisy` in the tables. Every TFM has at least one noisy row at `Compilation`, `Files=200`.
+- Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.QueryFilterAnalyzerComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
+
+How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)` for that TFM. The ratio is against the CSE row of the same category, `Files` value and TFM. The no-op analyzer is the floor, so the CSE cost is the gap between the two rows, not a loss to a competitor.
+
+### Time
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Compilation | 200 | `NoOpAnalyzer_Compilation` | 116.303 ms (0.84), noisy | 107.353 ms (0.78) | 103.280 ms (0.74) | 123.566 ms (0.90), noisy |
+| Compilation | 200 | `CSharpEssentials_Compilation` | 138.675 ms (1.00), noisy | 138.569 ms (1.01), noisy | 142.563 ms (1.02), noisy | 140.999 ms (1.02), noisy |
+| Compilation | 1000 | `NoOpAnalyzer_Compilation` | 647.059 ms (0.89) | 631.812 ms (0.98) | 613.849 ms (1.00) | 599.239 ms (0.97) |
+| Compilation | 1000 | `CSharpEssentials_Compilation` | 725.921 ms (1.00) | 642.773 ms (1.00) | 616.659 ms (1.00) | 616.412 ms (1.00), noisy |
+| Document | 200 | `NoOpAnalyzer_Document` | 2.990 ms (0.83) | 2.715 ms (0.80) | 2.623 ms (0.76) | 2.531 ms (0.78) |
+| Document | 200 | `CSharpEssentials_Document` | 3.616 ms (1.00) | 3.404 ms (1.00) | 3.506 ms (1.02), noisy | 3.298 ms (1.02), noisy |
+| Document | 1000 | `NoOpAnalyzer_Document` | 8.994 ms (0.91) | 8.414 ms (0.89) | 8.350 ms (0.91) | 8.331 ms (0.90) |
+| Document | 1000 | `CSharpEssentials_Document` | 9.881 ms (1.00) | 9.405 ms (1.00) | 9.176 ms (1.00) | 9.218 ms (1.00) |
+
+### Allocation
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Compilation | 200 | `NoOpAnalyzer_Compilation` | 38450.1 KB (0.92) | 37962.37 KB (0.89) | 38523.54 KB (0.92) | 38262.87 KB (0.91) |
+| Compilation | 200 | `CSharpEssentials_Compilation` | 41962.03 KB (1.00) | 42822.46 KB (1.00) | 41877.07 KB (1.00) | 41951.53 KB (1.00) |
+| Compilation | 1000 | `NoOpAnalyzer_Compilation` | 204254.09 KB (0.96) | 207850.09 KB (1.01) | 200841.48 KB (0.95) | 200074.02 KB (0.96) |
+| Compilation | 1000 | `CSharpEssentials_Compilation` | 213201.74 KB (1.00) | 206207.87 KB (1.00) | 210655.31 KB (1.00) | 209297.73 KB (1.00) |
+| Document | 200 | `NoOpAnalyzer_Document` | 772.95 KB (0.91) | 771.93 KB (0.91) | 769.05 KB (0.91) | 765.01 KB (0.91) |
+| Document | 200 | `CSharpEssentials_Document` | 846.4 KB (1.00) | 845.57 KB (1.00) | 844.17 KB (1.00) | 839.28 KB (1.00) |
+| Document | 1000 | `NoOpAnalyzer_Document` | 2663.82 KB (0.97) | 2656.42 KB (0.97) | 2653.01 KB (0.97) | 2654.48 KB (0.97) |
+| Document | 1000 | `CSharpEssentials_Document` | 2738 KB (1.00) | 2729.68 KB (1.00) | 2727.68 KB (1.00) | 2727.06 KB (1.00) |
+
+### What the rule costs over the floor
+
+There is no competitor, so there is no "Where CSE loses" list. In time every CSE row is at or above the no-op floor. In allocation every CSE row is above it except Compilation at `Files=1000` on net9.0, where the no-op row allocates 207850.09 KB (1.01) against 206207.87 KB for CSE.
+
+- Document, `Files=1000`, the closest equivalent of a keystroke. No row is noisy. CSE takes 9.881 ms against 8.994 ms on net8.0, 9.405 ms against 8.414 ms on net9.0, 9.176 ms against 8.350 ms on net10.0 and 9.218 ms against 8.331 ms on net11.0 (no-op ratio 0.89 to 0.91). It allocates 2738 KB, 2729.68 KB, 2727.68 KB and 2727.06 KB against 2663.82 KB, 2656.42 KB, 2653.01 KB and 2654.48 KB (ratio 0.97).
+- Document, `Files=200`: the no-op row takes 0.76 to 0.83 of the CSE time. The clean pairs are 3.616 ms against 2.990 ms on net8.0 and 3.404 ms against 2.715 ms on net9.0. The net10.0 and net11.0 CSE rows are noisy.
+- Compilation, `Files=1000`: the no-op row takes 0.89 of the CSE time on net8.0 (725.921 ms against 647.059 ms) and 0.97 to 1.00 on the other TFMs. The net11.0 CSE row is noisy.
+- Compilation, `Files=200`: every TFM has a noisy row in this pair, so the gap cannot be read from this run.
+
+On the clean Document rows the gap does not shrink as `Files` grows: compare 3.616 ms against 2.990 ms at `Files=200` with 9.881 ms against 8.994 ms at `Files=1000` on net8.0. From reading `IgnoreQueryFiltersAnalyzer.cs` (not profiled): the compilation start action looks up two types with `GetTypeByMetadataName` and reads the `IgnoreQueryFilters` overloads before it registers the operation action. The no-op analyzer does no lookup. The IDE runs that start action once per compilation, so after every edit.
 
 ## Caveats
 
