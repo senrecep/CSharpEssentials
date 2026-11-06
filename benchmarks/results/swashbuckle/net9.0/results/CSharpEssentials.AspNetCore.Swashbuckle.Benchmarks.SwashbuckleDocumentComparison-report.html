@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks.SwashbuckleDocumentComparison-20261106-085831</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                            </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Plain_AddSwaggerGen</td><td>3.790 ms</td><td>0.0630 ms</td><td>0.0526 ms</td><td>1.00</td><td>0.02</td><td>156.2500</td><td>62.5000</td><td>-</td><td>2.66 MB</td><td>1.00</td>
+</tr><tr><td>Plain_AddSwaggerGen_StringEnums</td><td>3.771 ms</td><td>0.0249 ms</td><td>0.0221 ms</td><td>1.00</td><td>0.01</td><td>156.2500</td><td>62.5000</td><td>-</td><td>2.66 MB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_EnumConventions</td><td>4.836 ms</td><td>0.0430 ms</td><td>0.0381 ms</td><td>1.28</td><td>0.02</td><td>203.1250</td><td>78.1250</td><td>15.6250</td><td>3.19 MB</td><td>1.20</td>
+</tr><tr><td>CSharpEssentials_IdempotencyConventions</td><td>4.508 ms</td><td>0.0721 ms</td><td>0.0639 ms</td><td>1.19</td><td>0.02</td><td>203.1250</td><td>93.7500</td><td>31.2500</td><td>3.19 MB</td><td>1.20</td>
+</tr><tr><td>CSharpEssentials_OptionalRouteParameters</td><td>4.535 ms</td><td>0.0876 ms</td><td>0.0820 ms</td><td>1.20</td><td>0.03</td><td>187.5000</td><td>62.5000</td><td>-</td><td>3.15 MB</td><td>1.18</td>
+</tr><tr><td>CSharpEssentials_AllConventions</td><td>6.375 ms</td><td>0.1224 ms</td><td>0.1755 ms</td><td>1.68</td><td>0.05</td><td>281.2500</td><td>125.0000</td><td>62.5000</td><td>4.45 MB</td><td>1.67</td>
+</tr><tr><td>CSharpEssentials_AddSwagger</td><td>8.073 ms</td><td>0.1097 ms</td><td>0.0916 ms</td><td>2.13</td><td>0.04</td><td>531.2500</td><td>250.0000</td><td>62.5000</td><td>8.57 MB</td><td>3.22</td>
+</tr></tbody></table>
+</body>
+</html>
