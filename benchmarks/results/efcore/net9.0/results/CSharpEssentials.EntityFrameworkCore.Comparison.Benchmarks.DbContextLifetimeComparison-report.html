@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.DbContextLifetimeComparison-20261105-235940</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                                     </th><th>Categories  </th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Ef_New</td><td>CreateDispose</td><td>53,390.0 ns</td><td>697.45 ns</td><td>652.39 ns</td><td>1.000</td><td>0.02</td><td>2.5635</td><td>0.1831</td><td>43249 B</td><td>1.000</td>
+</tr><tr><td>Ef_AddDbContext_Scope</td><td>CreateDispose</td><td>71,164.4 ns</td><td>140.52 ns</td><td>117.34 ns</td><td>1.333</td><td>0.02</td><td>3.6621</td><td>0.2441</td><td>62164 B</td><td>1.437</td>
+</tr><tr><td>Ef_PooledDbContextFactory</td><td>CreateDispose</td><td>245.7 ns</td><td>3.76 ns</td><td>3.52 ns</td><td>0.005</td><td>0.00</td><td>0.0067</td><td>-</td><td>112 B</td><td>0.003</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext</td><td>CreateDispose</td><td>74,459.5 ns</td><td>770.53 ns</td><td>720.75 ns</td><td>1.395</td><td>0.02</td><td>3.6621</td><td>0.2441</td><td>62331 B</td><td>1.441</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Interceptors</td><td>CreateDispose</td><td>82,290.8 ns</td><td>1,018.06 ns</td><td>952.29 ns</td><td>1.542</td><td>0.03</td><td>4.1504</td><td>0.2441</td><td>69711 B</td><td>1.612</td>
+</tr><tr><td>Ef_New_Query</td><td>CreateQueryDispose</td><td>104,089.2 ns</td><td>1,390.70 ns</td><td>1,300.86 ns</td><td>1.00</td><td>0.02</td><td>2.6855</td><td>-</td><td>48274 B</td><td>1.00</td>
+</tr><tr><td>Ef_AddDbContext_Scope_Query</td><td>CreateQueryDispose</td><td>125,849.5 ns</td><td>1,779.62 ns</td><td>1,664.66 ns</td><td>1.21</td><td>0.02</td><td>3.9063</td><td>0.2441</td><td>67191 B</td><td>1.39</td>
+</tr><tr><td>Ef_PooledDbContextFactory_Query</td><td>CreateQueryDispose</td><td>17,132.5 ns</td><td>41.85 ns</td><td>39.15 ns</td><td>0.16</td><td>0.00</td><td>0.2441</td><td>-</td><td>4544 B</td><td>0.09</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Query</td><td>CreateQueryDispose</td><td>122,202.2 ns</td><td>248.15 ns</td><td>219.97 ns</td><td>1.17</td><td>0.01</td><td>3.9063</td><td>0.2441</td><td>67359 B</td><td>1.40</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Interceptors_Query</td><td>CreateQueryDispose</td><td>131,359.0 ns</td><td>431.46 ns</td><td>403.59 ns</td><td>1.26</td><td>0.02</td><td>4.3945</td><td>0.2441</td><td>75807 B</td><td>1.57</td>
+</tr></tbody></table>
+</body>
+</html>

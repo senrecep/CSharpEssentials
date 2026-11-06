@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.DomainEventsReadComparison-20261106-000440</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                            </th><th>Categories</th><th>Events</th><th>Mean    </th><th>Error  </th><th>StdDev </th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>HandWritten_Collect</td><td>Collect1k</td><td>0</td><td>9,879.891 ns</td><td>7.7267 ns</td><td>6.4521 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>32 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Collect</td><td>Collect1k</td><td>0</td><td>7,243.147 ns</td><td>2.3229 ns</td><td>1.9397 ns</td><td>0.73</td><td>0.00</td><td>-</td><td>-</td><td>32 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_Collect</td><td>Collect1k</td><td>1</td><td>45,567.657 ns</td><td>73.8868 ns</td><td>65.4987 ns</td><td>1.00</td><td>0.00</td><td>2.8687</td><td>0.0610</td><td>48600 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Collect</td><td>Collect1k</td><td>1</td><td>54,012.410 ns</td><td>1,014.7967 ns</td><td>847.4012 ns</td><td>1.19</td><td>0.02</td><td>2.8687</td><td>0.0610</td><td>48600 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_Collect</td><td>Collect1k</td><td>10</td><td>121,972.929 ns</td><td>2,079.1098 ns</td><td>1,944.8006 ns</td><td>1.00</td><td>0.02</td><td>15.8691</td><td>3.9063</td><td>268056 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Collect</td><td>Collect1k</td><td>10</td><td>125,176.648 ns</td><td>559.9120 ns</td><td>523.7420 ns</td><td>1.03</td><td>0.02</td><td>15.8691</td><td>3.9063</td><td>268056 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_List</td><td>RaiseClear</td><td>0</td><td>2.299 ns</td><td>0.0238 ns</td><td>0.0211 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EntityBase_RaiseClear</td><td>RaiseClear</td><td>0</td><td>2.040 ns</td><td>0.0147 ns</td><td>0.0130 ns</td><td>0.89</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_List</td><td>RaiseClear</td><td>1</td><td>11.612 ns</td><td>0.0231 ns</td><td>0.0216 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EntityBase_RaiseClear</td><td>RaiseClear</td><td>1</td><td>12.355 ns</td><td>0.0758 ns</td><td>0.0672 ns</td><td>1.06</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_List</td><td>RaiseClear</td><td>10</td><td>67.319 ns</td><td>0.0421 ns</td><td>0.0351 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EntityBase_RaiseClear</td><td>RaiseClear</td><td>10</td><td>67.266 ns</td><td>0.0367 ns</td><td>0.0307 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_ListToArray</td><td>Read</td><td>0</td><td>3.375 ns</td><td>0.0016 ns</td><td>0.0014 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_AsReadOnlyView</td><td>Read</td><td>0</td><td>2.310 ns</td><td>0.0009 ns</td><td>0.0008 ns</td><td>0.68</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EntityBase_DomainEvents</td><td>Read</td><td>0</td><td>2.889 ns</td><td>0.0081 ns</td><td>0.0072 ns</td><td>0.86</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_ListToArray</td><td>Read</td><td>1</td><td>24.048 ns</td><td>0.1033 ns</td><td>0.0966 ns</td><td>1.00</td><td>0.01</td><td>0.0019</td><td>-</td><td>32 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_AsReadOnlyView</td><td>Read</td><td>1</td><td>6.927 ns</td><td>0.0465 ns</td><td>0.0412 ns</td><td>0.29</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_EntityBase_DomainEvents</td><td>Read</td><td>1</td><td>7.073 ns</td><td>0.0546 ns</td><td>0.0456 ns</td><td>0.29</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>HandWritten_ListToArray</td><td>Read</td><td>10</td><td>79.716 ns</td><td>0.7383 ns</td><td>0.6906 ns</td><td>1.00</td><td>0.01</td><td>0.0062</td><td>-</td><td>104 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_AsReadOnlyView</td><td>Read</td><td>10</td><td>40.591 ns</td><td>0.4454 ns</td><td>0.4166 ns</td><td>0.51</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_EntityBase_DomainEvents</td><td>Read</td><td>10</td><td>41.033 ns</td><td>0.3311 ns</td><td>0.3097 ns</td><td>0.51</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</tr></tbody></table>
+</body>
+</html>
