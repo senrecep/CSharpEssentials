@@ -8,7 +8,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - AMD Ryzen 5 5600, CachyOS, SDK 11.0.100-rc.1. TFMs net8.0, net9.0, net10.0 and net11.0, run in that order, one after another. Primary runtime is .NET 10.0.11.
 - Desktop session in the background; 1-minute load average 1.90 at the start of the suite and 1.63 at the end.
 - Rows above 5% CV were rerun up to two times; no row of this suite stayed above 5%.
-- The Native AOT report is older (2026-11-02) and predates the CSE changes described below.
+- The Native AOT report is a separate script run from 2026-11-06, after the CSE changes described below.
 
 ## Framing
 
@@ -43,7 +43,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 8. Lock contention, 8 workers, per operation. One shared key: AsyncKeyedLock 772.06 ns, CSE 779.29 ns (a tie). One key per worker: 409.75 vs 340.94 ns. A new key per operation: 391.88 vs 338.65 ns. CSE allocates more in every row.
 9. Caching. Hit: hand-written Mediator 490.1 ns, CSE 502.0 ns, hand-written MediatR 636.0 ns. Miss: 572.5, 583.1 and 863.3 ns.
 10. Logging. With a disabled logger and no payload: 103.7 ns hand-written Mediator, 109.3 ns CSE, 229.8 ns hand-written MediatR. With an enabled logger and JSON payloads: 1,039.8, 1,042.5 and 1,308.2 ns.
-11. Native AOT (net10, linux-x64, report from 2026-11-02). Mediator: 0 IL warnings, 2.2 MB, runs. MediatR: 23 IL warnings, crashes with "A suitable constructor for type 'MediatR.Mediator' could not be located". CSE: both samples crashed with the code of that date. The two causes have since changed in the source; the samples were not run again.
+11. Native AOT (net10, linux-x64, report from 2026-11-06). Mediator: 0 IL warnings, 2.2 MB, runs. MediatR: 23 IL warnings, crashes with "A suitable constructor for type 'MediatR.Mediator' could not be located". CSE: both samples publish with 0 IL warnings, 2.5 MB, and run. In the earlier 2026-11-02 report both crashed; the two causes are the first two items under "What changed in CSE".
 
 ## Where CSE loses (state it, do not soften it)
 
@@ -70,7 +70,7 @@ This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediat
 - With one validator, Enforce mode and no listening observer, a failure returns without an async state machine.
 - `CachingBehavior` reads `CacheKey` once per send, and `LoggingBehavior` keeps the type names in static fields.
 - The default idempotency fingerprint hashes the JSON as a stream on net9 and later, so its allocation no longer grows with the request (1184 B for both the normal and the 4096-character request on net10).
-- The earlier AOT crashes came from the first two items. Do not claim CSE runs under Native AOT until the AOT samples run again.
+- The earlier AOT crashes (2026-11-02 report) came from the first two items. In the 2026-11-06 rerun both CSE samples run with 0 IL warnings. The samples cover validation and exception handling only; caching, logging and idempotency still serialize with reflection-based `System.Text.Json`.
 
 ## Caveats to keep in the post
 
@@ -79,7 +79,7 @@ This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediat
 - The cold-start allocation column comes from BenchmarkDotNet's second in-process invocation, not from the timed first call.
 - Send and Publish use pass-through behaviors and trivial handlers: dispatch overhead only.
 - The idempotency hand-written stores and the hand-written contention row are reference points, not feature matches. The contention row never removes a semaphore.
-- AOT warning counts use `TrimmerSingleWarn=false`. No sample roots assemblies; whether that rescues MediatR was not tested. The 2 ms AOT wall time was taken at load 2.50 and is not a result.
+- AOT warning counts use `TrimmerSingleWarn=false`. No sample roots assemblies; whether that rescues MediatR was not tested. The 2 and 3 ms AOT wall times were taken at load 4.70 and are not a result.
 - Outliers not investigated: `IMediator` with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; CSE idempotency on net11 (763.5 ns against 1,627.9 ns on net10); every one-key contention row on net11 is about half its other TFM values.
 - The net8 column runs the netstandard2.1 build of every CSE package. Logging, locking and the default fingerprint take different code there.
 - The MediatR wiki tracks the current release; the feature comparison cites it only where the 12.5.0 source agrees.

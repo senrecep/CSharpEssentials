@@ -2,7 +2,7 @@
 
 Raw material for a post, not the post itself. Every number comes from `CSharpEssentials.Endpoints/BENCHMARKS.md`, which reads `benchmarks/results/endpoints/{tfm}/results/*-report-github.md` and `benchmarks/results/endpoints/aot/aot-report.md`.
 
-How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoints suite (default job, plus a cold-start job for `ColdStartupBenchmarks`) on net8.0, net9.0, net10.0 and net11.0, run on 2026-11-05 with the net9.0 throughput class rerun on 2026-11-06. AMD Ryzen 5 5600 with a desktop session in the background; 1-minute load average 2.18 to 4.72 over the suite. SDK 11.0.100-rc.1. Primary runtime is .NET 10.0.11. No row of this suite stayed above 5% CV after reruns. The Native AOT numbers come from an earlier script run on 2026-11-01 (load average 2.84).
+How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoints suite (default job, plus a cold-start job for `ColdStartupBenchmarks`) on net8.0, net9.0, net10.0 and net11.0, run on 2026-11-05 with the net9.0 throughput class rerun on 2026-11-06. AMD Ryzen 5 5600 with a desktop session in the background; 1-minute load average 2.18 to 4.72 over the suite. SDK 11.0.100-rc.1. Primary runtime is .NET 10.0.11. No row of this suite stayed above 5% CV after reruns. The Native AOT numbers come from a separate script run on 2026-11-06 (load average 3.72).
 
 ## The problem
 
@@ -51,12 +51,12 @@ Cold startup is the fair startup figure: a fresh process, timed until every endp
 2. Cold start, 500 endpoints: 1,116.3 ms for CSE vs 688.4 ms for FastEndpoints. CSE takes 1.62× as long. This is a CSE loss, and it holds at N=100 too (339.6 vs 296.7 ms) on every TFM. Plain Minimal APIs take 1,041.8 ms (1.51× FastEndpoints). This points to RequestDelegateFactory building each handler at startup, which CSE inherits; not profiled. RDG was off in these JIT runs, and its effect was not measured. CSE itself adds a ratio of 1.07 over Plain at N=500 (1.06-1.08 across TFMs).
 3. Per request, GET: 8.855 μs for CSE, 8.723 μs Plain, 8.907 μs Carter (all ties), 11.165 μs FastEndpoints. FastEndpoints takes 1.26× as long and allocates 10.07 KB vs 8.69 KB.
 4. Invalid POST: 24.369 μs for CSE vs 50.133 μs for FastEndpoints, which takes 2.06× as long and throws 2 exceptions per request. Plain Minimal APIs answer the same invalid POST in 23.880 μs, a tie with CSE. Carter takes 32.138 μs. On a valid POST, Carter takes 10% less time than CSE (15.620 vs 17.325 μs) and allocates less (11.38 vs 11.67 KB).
-5. Native AOT (net10, linux-x64, 2026-11-01 run):
-   - CseGenerated publishes with 0 IL warnings, a 10.4 MB binary and 72 ms to the first 200.
-   - Plain: 10.3 MB, 71 ms.
-   - FastEndpoints + Generator: 0 warnings, 15.2 MB, 81 ms.
+5. Native AOT (net10, linux-x64, 2026-11-06 run):
+   - CseGenerated publishes with 0 IL warnings, a 10.4 MB binary and 92 ms to the first 200.
+   - Plain: 10.3 MB, 95 ms.
+   - FastEndpoints + Generator: 0 warnings, 15.2 MB, 100 ms.
    - Carter (8 warnings) and FastEndpoints with reflection discovery (4 warnings) crash at startup with this setup.
-   - CSE's own reflection scanner publishes with 4 warnings, and its routes return 404/405.
+   - CSE's own reflection scanner publishes with 4 warnings and stops at startup with `PlatformNotSupportedException` ("MapEndpointsFromAssemblies needs dynamic code"). In the earlier 2026-11-01 run it started and its routes returned 404/405.
 6. Operation names, 500 endpoints: reading every `OperationNaming.TypeName` name takes 12.280 μs against 6.381 μs for hand-written `WithName` names (1.92×) and 7.396 μs for `Custom` names. A CSE loss: every TypeName read takes a lock.
 
 ## Where CSE loses (keep this list in the post)
@@ -78,7 +78,7 @@ Cold startup is the fair startup figure: a fresh process, timed until every endp
 - Validation engines differ: DataAnnotations + `AddValidation()` for Plain and CSE, FluentValidation for Carter and FastEndpoints. The POST rows compare whole stacks, and they exist only on net10 and net11.
 - Machine load was 2.18 to 4.72. CseGenerated and CseReflection run the same request pipeline, yet differ by up to 8.6% in throughput (net11 POST valid), so per-request gaps under about 10% are weak evidence. Differences within error are reported as ties.
 - Cold-startup allocation comes from BenchmarkDotNet's separate MemoryDiagnoser run, not from the timed launch. At N=500 FastEndpoints allocates 1.6× more (35.97 MB vs 22.4 MB).
-- The AOT startup times are a median of 5 on a loaded machine, with three routes, from the 2026-11-01 run. The Carter and FastEndpoints reflection crashes are what happened with these samples. Carter documents no AOT approach, and FastEndpoints documents AOT only with its Generator.
+- The AOT startup times are a median of 5 on a loaded machine, with three routes, from the 2026-11-06 run. The Carter and FastEndpoints reflection crashes are what happened with these samples. Carter documents no AOT approach, and FastEndpoints documents AOT only with its Generator.
 - Carter was benchmarked with one module per endpoint, to match CSE's one type per endpoint. Real Carter apps often put several routes in one module.
 - FastEndpoints brings features CSE does not try to cover (its own binder, messaging, job queues). This comparison covers organization, startup, per-request cost and AOT, not feature breadth.
 
@@ -86,7 +86,7 @@ Cold startup is the fair startup figure: a fresh process, timed until every endp
 
 - "Organization without a framework": a thin layer over Minimal APIs. For: ties Plain on every throughput route and TFM, ties Carter in cold startup on net10 and net11, 0 IL warnings under AOT, 10.4 vs 10.3 MB. Against: 2-8% cold startup over Plain at N≥100, 4.3-4.9% more warm allocation at N=500, and Carter is faster on a valid POST.
 - "Where FastEndpoints wins": large-N cold start, and why (it does not use RequestDelegateFactory per handler; Plain Minimal APIs show the same large-N cost, 1,041.8 ms at N=500 on net10; not profiled, and RDG was off).
-- "What the source generator is for": AOT and trimming, shown by the CseReflection 404s, not startup time.
+- "What the source generator is for": AOT and trimming, shown by the CseReflection sample, which stops at startup under Native AOT, not startup time.
 - "What naming and the per-type group cost at 500 endpoints" (next section).
 
 ## Operation naming and the empty-prefix group (500 endpoints)

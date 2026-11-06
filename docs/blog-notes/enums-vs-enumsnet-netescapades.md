@@ -8,7 +8,7 @@ This is raw material for a post, not the post itself. Every number comes from `C
 - Machine: 6 cores / 12 threads (x64, RyuJIT AVX2), Linux, with a desktop session running. The 1-minute load average was between 1.18 and 1.83 at the start and end of the suite and of each rerun.
 - Rows with a CV above 5% were rerun up to twice. net8 and net11 flags and net9 IsDefined come from those reruns. Two rows stayed noisy: net8 BCL `HasFlag` (CV 12.0%) and net8 NetEscapades `HasFlagFast` (CV 11.8%).
 - CSE is the 7.0.0 working tree on branch `integ/all`. net8 runs its netstandard2.1 build.
-- Results: `benchmarks/results/enums/{tfm}/results/`. The Native AOT report predates the CSE code measured here and was not rerun.
+- Results: `benchmarks/results/enums/{tfm}/results/`. The Native AOT report is a separate script run from 2026-11-06, after the CSE changes measured here.
 
 ## Framing
 
@@ -30,7 +30,7 @@ This is raw material for a post, not the post itself. Every number comes from `C
 - CSE 7.0.0:
   - `[StringEnum]` generates `ToOptimizedString`, `ToWireName`, `TryParseWire`, `IsDefined`, `ToDescription`, `GetValues`, `GetNames`, cached `Names` and `Values`, and the enum's metadata, registered by a module initializer.
   - Wire names, aliases, a fallback member, Input and Data read modes, and integrations for JSON, ASP.NET Core binding, OpenAPI and EF Core.
-  - Native AOT (older build): 0 warnings, 1.9 MB, runs.
+  - Native AOT: 0 warnings, 1.3 MB, runs.
 
 ## The numbers that matter (net10 unless stated)
 
@@ -44,7 +44,7 @@ This is raw material for a post, not the post itself. Every number comes from `C
 8. GetNames. CSE 20.57 ns / 184 B, Enums.NET 16.13 ns / 0 B, NetEscapades 19.74 ns / 184 B.
 9. Boxed format. CSE 15.084 ns, BCL 5.552 ns, Enums.NET 5.168 ns, all 0 B. The typed CSE call is 3.344 ns.
 10. Reflection-built names from a `Type`. CSE 38.36 ns / 0 B, BCL 32.81 ns / 184 B, Enums.NET 21.55 ns / 0 B.
-11. Native AOT (older CSE build). CSE, NetEscapades and the BCL sample: 0 IL warnings. Enums.NET: 4. All four run.
+11. Native AOT. CSE, NetEscapades and the BCL sample: 0 IL warnings. Enums.NET: 4. All four run.
 
 ## Where CSE loses, and why (state it, do not soften it)
 
@@ -66,7 +66,7 @@ The code paths below were read, not profiled.
   - GetNames, every TFM: Enums.NET is faster and allocates 0 B (net10 16.13 ns against 20.57 ns / 184 B). NetEscapades is faster on net10 and net11 and ties on net9 (20.34 vs 20.36 ns). `GetNames()` returns a new array per call (`StringEnumSourceWriter.cs:410`). The cached `Names` list is not measured.
   - GetValues: NetEscapades on net10 (11.42 vs 11.95 ns) and net9 (15.77 vs 16.46 ns); Enums.NET on net8 (15.62 vs 16.69 ns) and net9 (15.55 ns), where CSE allocates 104 B and Enums.NET 0 B.
   - IsDefined of an undefined value: NetEscapades on net10 (0.7258 vs 0.7609 ns) and net8 (0.3707 vs 0.4484 ns). Sub-nanosecond.
-  - Native AOT binary (older build): 1.9 MB against 1.2 MB for NetEscapades.
+  - Native AOT binary: 1.3 MB against 1.2 MB for NetEscapades (1.9 MB in the earlier 2026-11-02 report).
 
 ## Where CSE wins or ties
 
@@ -76,7 +76,7 @@ The code paths below were read, not profiled.
 - ToString of a defined value: ties NetEscapades on net10 and net11, faster on net8 and net9; 2.06× faster than Enums.NET and 16.66× faster than the BCL on net10 (BenchmarkDotNet Ratio). Sub-nanosecond.
 - GetValues and GetNames against the BCL on every TFM.
 - Reflection-built values against the BCL on every TFM (net10 32.70 ns / 0 B against 206.56 ns / 584 B).
-- Native AOT (older build): 0 IL warnings and runs, like NetEscapades.
+- Native AOT: 0 IL warnings and runs, like NetEscapades.
 
 ## Where the competitors lose
 
@@ -91,7 +91,7 @@ The code paths below were read, not profiled.
 - The net10 BCL parse rows (45.5131 to 79.3068 ns) are far above the other TFMs, in two runs with different TFM orders. The cause was not investigated, so the net10 ratios against the BCL overstate CSE's lead.
 - GetValues allocation drops to 0 B on net10 and net11 for both generators with the same generated code. That is a runtime effect, and it was not investigated.
 - The net8 column runs CSE's netstandard2.1 build.
-- The Native AOT numbers come from a CSE build older than the one benchmarked.
+- The Native AOT numbers come from a separate script run on 2026-11-06.
 - Semantics differ outside the parity inputs: CSE accepts aliases and defined numbers, rejects undefined numbers and whitespace, and the error-reporting overload returns a reasoned error. `ToWireName` rows are different work and are not compared.
 - The "why" notes come from reading the code, not from a profiler.
 
@@ -100,7 +100,7 @@ The code paths below were read, not profiled.
 - "Generated code is not automatically fast": generated `switch` helpers and the generated flags formatter lead or tie, while the runtime paths that take an `object` or a `Type` trail Enums.NET's cache. Show a generated method next to the boxed formatter.
 - "The cost of a good error message": 88 B per rejected input on the error-reporting overload, 0 B on the overload without it.
 - "Formatting when you only have an object": the typed CSE call (3.344 ns) next to the boxed one (15.084 ns) and the BCL (5.552 ns).
-- "Where CSE loses": boxed formatting, boxed list formatting, reflection-built names and values, description lookup, invalid case-sensitive parse allocation, undefined ToString on net10, GetNames allocation and the older AOT binary size. Name the losses first.
+- "Where CSE loses": boxed formatting, boxed list formatting, reflection-built names and values, description lookup, invalid case-sensitive parse allocation, undefined ToString on net10, GetNames allocation and the AOT binary size. Name the losses first.
 
 ## Boxed formatting and reflection-built metadata
 

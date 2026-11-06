@@ -38,7 +38,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 5. Plain resolve, net10: Manual 137.9 ns, CseGenerated 147.6 ns (1.07), Scrutor 145.8 ns (1.06), 360 B each, both outside error. All three tie on net8. Decorated resolve: Manual factory 115.2 ns, CseGenerated 162.5 ns (1.41), CseRuntime 178.8 ns (1.55), Scrutor 323.0 ns (2.80); CSE 360 B, Scrutor 392 B. On net11 CseRuntime (184.1 ns) beats CseGenerated (193.8 ns).
 6. Transient decorator resolve (root provider, no scope), net10: Manual 24.73 ns, CseGenerated 38.39 ns (1.55), CseRuntime 55.34 ns (2.24), Scrutor 163.95 ns (6.63). CSE 48 B like Manual, Scrutor 80 B.
 7. TryAdd registration, net10, ManualTryAdd / CseGenerated / Scrutor / CseReflection: N=50 2,507.5 / 3,471.6 / 54,055.4 / 204,885.2 ns; N=2000 3,200,071.1 / 4,635,207.2 / 6,624,435.2 / 16,089,884.4 ns. Plain `AddScoped` takes 679.0 ns and 30,856.2 ns, so the TryAdd scan is quadratic for everyone. CseGenerated is 1.10-1.58× ManualTryAdd across TFMs.
-8. Native AOT (net10, linux-x64, separate 2026-11-02 run). Manual and CseGenerated: 0 IL warnings, 2.2 MB, run and resolve all 50 services. Scrutor: 12 IL warnings, crashes with "Could not find any registered services for type 'IService0'". CseReflection: 4 IL warnings, crashes with "must have exactly one public constructor, but has 0" (documented as not AOT-safe). No sample roots the input assemblies.
+8. Native AOT (net10, linux-x64, separate 2026-11-06 run). Manual and CseGenerated: 0 IL warnings, 2.2 MB, run and resolve all 50 services. Scrutor: 12 IL warnings, crashes with "Could not find any registered services for type 'IService0'". CseReflection: 4 IL warnings, crashes with "must have exactly one public constructor, but has 0" (documented as not AOT-safe). No sample roots the input assemblies.
 
 ## Where CSE loses (lead with these)
 
@@ -63,7 +63,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - Plain and Decorated resolve rows measure different services; do not compare across the two.
 - The shared input classes carry `[RegisterScoped]` and the input assembly holds the CSE registry, so the Scrutor process also loads the CSE assembly. Small, and borne by Scrutor.
 - Scrutor's attribute mode was not measured: it would need different attributes on the shared inputs. Scrutor uses `AsMatchingInterface()` ([IServiceTypeSelector.cs L55-L58](https://github.com/khellang/Scrutor/blob/v7.0.0/src/Scrutor/IServiceTypeSelector.cs#L55-L58)).
-- AOT warning counts use `TrimmerSingleWarn=false` (higher than a default publish). Rooting the inputs with `TrimmerRootAssembly` was not tested. The 3 ms AOT wall times were taken at load 1.72 and are not a result.
+- AOT warning counts use `TrimmerSingleWarn=false` (higher than a default publish). Rooting the inputs with `TrimmerRootAssembly` was not tested. The 3 ms AOT wall times were taken at load 2.85 and are not a result.
 - Outliers not investigated: net8 CseReflection 2.0-3.3× its other TFMs in warm registration and TryAdd; net11 Scrutor decoration about 3× faster than elsewhere; on net11 CseRuntime decorated resolve is faster than CseGenerated.
 - Only two load readings exist (1.55 at the start, 1.90 at the end). Few-percent gaps, such as plain resolve on net10, are weak evidence.
 - Scrutor's keyed-decoration limits come from reading its source at v7.0.0, not from running it.

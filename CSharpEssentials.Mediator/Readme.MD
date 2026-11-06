@@ -8,9 +8,8 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 > behaviors), but Mediator is 1.10× slower from a cold process (35.6 vs 32.4 ms). The validation and exception handling
 > behaviors cost more than hand-written ones on Mediator: 236.2 vs 183.5 ns for valid input, 439.8 vs 262.9 ns and 1,032
 > vs 712 B for invalid input, which is also slower than hand-written MediatR behaviors (428.7 ns). Under Native AOT
-> (samples without `TrimmerRootAssembly`) Mediator runs and MediatR crashes; both CSE samples crash too: `AddValidator`
-> from CSharpEssentials.Validation loses the validator constructor to trimming, and the `Result<T>` failure factory in
-> these behaviors uses reflection. See BENCHMARKS.md.
+> (samples without `TrimmerRootAssembly`) Mediator runs and MediatR crashes. Both CSE samples (validation and exception
+> handling behaviors, with and without `AddValidator`) publish with 0 IL warnings and run, at 2.5 MB. See BENCHMARKS.md.
 
 > **Note:** `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` are provided by the `Mediator` package itself. This package adds marker interfaces and pipeline behaviors that integrate with `Result<T>`.
 

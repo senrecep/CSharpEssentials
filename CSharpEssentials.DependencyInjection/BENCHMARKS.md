@@ -40,7 +40,7 @@ Scrutor's attribute mode (`[ServiceDescriptor]` + `.UsingAttributes()`) has no c
 - Full BenchmarkDotNet runs (no `--quick`), one TFM after another on one machine, in the order net8.0, net9.0, net10.0, net11.0. Warm classes use the BenchmarkDotNet default job. `ColdRegistrationBenchmarks` uses its own ColdStart job (15 launches, 1 iteration, no warmup).
 - 1-minute load average 1.55 at the start of the suite and 1.90 at the end (only those two readings exist). No row in this suite had a coefficient of variation above 5% after the run, so no row is marked noisy.
 - Reports: `benchmarks/results/di/{tfm}/results/*-report-github.md` (also `.csv`, `.html` and JSON), for example [net10.0 ColdRegistrationBenchmarks](../benchmarks/results/di/net10.0/results/CSharpEssentials.DependencyInjection.Benchmarks.ColdRegistrationBenchmarks-report-github.md).
-- The Native AOT table (section 5) is not part of this run. It comes from `benchmarks/results/di/aot/aot-report.md`, a separate script run on 2026-11-02 at a 1-minute load average of 1.72.
+- The Native AOT table (section 5) is not part of this run. It comes from `benchmarks/results/di/aot/aot-report.md`, a separate script run on 2026-11-06 at a 1-minute load average of 2.85.
 
 Environment:
 
@@ -76,7 +76,7 @@ Primary runtime: net10. A tie is a difference within the sum of the two Benchmar
 | CSE loss: transient decorator resolve is slower than the manual factory | net10: Manual 24.73 ns, CseGenerated 38.39 ns (1.55), CseRuntime 55.34 ns (2.24), Scrutor 163.95 ns (6.63). CSE allocates 48 B like Manual; Scrutor 80 B. CseGenerated is 1.45-1.72× Manual across TFMs |
 | CSE loss: TryAdd registration, CseGenerated is slower than hand-written `TryAddScoped` on every TFM and N | net10: 1.38× (N=50), 1.43× (N=500), 1.448× (N=2000); range 1.10-1.58× across TFMs. Allocation 1.00-1.03×. CseGenerated is faster than Scrutor `Skip` (0.06× at N=50, 0.70× at N=2000 on net10) |
 | CSE loss: TryAdd, CseReflection is the slowest row on every TFM and N | net10: 204,885.2 vs Scrutor 54,055.4 ns at N=50 (3.79×), 16,089,884.4 vs 6,624,435.2 ns at N=2000 (2.43×). net8 N=50: 622,921.4 vs 62,597.2 ns (9.95×), 357.84 vs 50.18 KB |
-| Native AOT (separate 2026-11-02 run): CseGenerated and Manual publish with 0 IL warnings and run; Scrutor and CseReflection crash | Scrutor: 12 IL warnings, `DecorationException` at startup. CseReflection: 4 IL warnings, `InvalidOperationException` at startup; it is documented as not AOT-safe (`[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`). No sample roots the input assemblies |
+| Native AOT (separate 2026-11-06 run): CseGenerated and Manual publish with 0 IL warnings and run; Scrutor and CseReflection crash | Scrutor: 12 IL warnings, `DecorationException` at startup. CseReflection: 4 IL warnings, `InvalidOperationException` at startup; it is documented as not AOT-safe (`[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`). No sample roots the input assemblies |
 | Generated decoration still reads constructor metadata, once per type | Generated `[Decorates]` code calls `ServiceRegistration.Decorate(services, DecoratorRegistration[])`, which runs `ServiceDecoration.DecorateAll` (one pass over the collection for all decorators). `EnsureDecoratable` (`Internal/ServiceDecoration.cs:196-215`) reads the implementation's constructors to reject `[ServiceKey]` injection, caches the answer per type for the process, and skips types the generator already checked. In this suite the decorated services are registered by hand in S50, so the read happens once per type. The Readme describes this read |
 
 ---
@@ -148,7 +148,7 @@ net10. Plain and Decorated resolve different services (IService15 with one depen
 
 ### 5. Native AOT (net10, linux-x64, N=50 + 10 decorators)
 
-> Script-driven, not BenchmarkDotNet, and not part of the run above: `benchmarks/results/di/aot/aot-report.md` was generated on 2026-11-02 at a 1-minute load average of 1.72. `dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=false -p:TrimmerSingleWarn=false` from a clean obj. `TrimmerSingleWarn=false` lists each warning per member, so the counts are higher than a default publish shows. No sample has a `TrimmerRootAssembly`, so reflection-based variants see only what the trimmer kept.
+> Script-driven, not BenchmarkDotNet, and not part of the run above: `benchmarks/results/di/aot/aot-report.md` was generated on 2026-11-06 at a 1-minute load average of 2.85. `dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=false -p:TrimmerSingleWarn=false` from a clean obj. `TrimmerSingleWarn=false` lists each warning per member, so the counts are higher than a default publish shows. No sample has a `TrimmerRootAssembly`, so reflection-based variants see only what the trimmer kept.
 
 | Variant | AOT publish | IL warnings (distinct) | Native binary | Exit code | All 50 services resolved with the right values |
 |---|---|---:|---:|---:|---|
@@ -161,7 +161,7 @@ net10. Plain and Decorated resolve different services (IService15 with one depen
 
 - CseReflection: `InvalidOperationException: Decorator '...Service0Decorator' must have exactly one public constructor, but has 0.` The trimmer removed the constructor that the reflection fallback looks up. The warnings point at the `AddServicesFromAssemblies` call site, which is annotated `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`; the Readme says to use the generated method for AOT.
 - Scrutor: `Scrutor.DecorationException: Could not find any registered services for type '...IService0'.` The scan found no classes after trimming. The warnings come from inside Scrutor (`GetTypes`, `GetInterfaces`, `MakeGenericType`, `ActivatorUtilities.CreateInstance`). Whether rooting the input assembly makes it run was not tested.
-- Wall time was 3 ms for both working variants (median of 5). The run started at load 1.72 (5-minute average 4.10), so this is not a startup result.
+- Wall time was 3 ms for both working variants (median of 5). The run started at load 2.85 (5-minute average 3.01), so this is not a startup result.
 
 ### 6. TryAdd registration (N scoped services with TryAdd semantics, warm)
 
@@ -295,7 +295,7 @@ CSE cells come from this repository (csproj, `Readme.MD`, `ServiceSourceWriter.c
 - The manual decoration baseline does less work. `ManualDecorationS50` builds the inner service with `new Service{i}()` inside the factory; CSE and Scrutor resolve the inner service from a hidden keyed registration. Part of the decorated-resolve and transient-resolve gap is that extra container resolve. It is still the gap a user sees when moving from a hand-written factory to a decoration library.
 - Plain and Decorated resolve rows measure different services (IService15 with a dependency, IService0 without). Compare rows only within a category.
 - Decoration reads constructor metadata. `EnsureDecoratable` (`Internal/ServiceDecoration.cs:196-215`) runs `GetConstructors()`/`GetParameters()`/`GetCustomAttribute<ServiceKeyAttribute>()` once per implementation type per process, also on the generated path, unless the generator already checked that type. This is metadata reflection only: no dynamic code, 0 AOT warnings, and the AOT sample runs. The Readme describes it.
-- AOT warning counts use `TrimmerSingleWarn=false` and are higher than a default publish shows. No sample uses `TrimmerRootAssembly`; rooting the input assemblies might change the Scrutor and CseReflection outcome and was not tested. The AOT report predates this run (2026-11-02, load 1.72), and its wall times (3 ms) are not a result.
+- AOT warning counts use `TrimmerSingleWarn=false` and are higher than a default publish shows. No sample uses `TrimmerRootAssembly`; rooting the input assemblies might change the Scrutor and CseReflection outcome and was not tested. The AOT report is a separate run (2026-11-06, load 2.85), and its wall times (3 ms) are not a result.
 - Cold allocation is not first-call allocation. In each launch BenchmarkDotNet 0.14 runs the unit a second time in the same process, after the timed invocation, to collect GC stats (`// GC:` line after `// AfterActualRun` in the run log). The allocation column therefore excludes JIT, type loading and first-call reflection-cache allocations; it is the managed allocation of one register + build + resolve-all in an already-warm process.
 - Only two load readings exist for the run (1.55 at the start, 1.90 at the end), with a desktop session in the background. Gaps of a few percent, such as plain resolve on net9 and net10, are weak evidence even when outside error.
 - These outliers were not investigated: net8 CseReflection is 2.0-3.3× its other TFMs in warm registration and TryAdd; net11 Scrutor decoration is about 3× faster than on the other TFMs; net8 decorated-resolve Manual is above its other TFMs; on net11 CseRuntime decorated resolve is faster than CseGenerated.

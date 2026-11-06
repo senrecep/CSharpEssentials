@@ -35,7 +35,7 @@ The numbers come from the reports under `benchmarks/results/enums/{tfm}/results/
 - BenchmarkDotNet v0.14.0, default job (no `--quick`), `[MemoryDiagnoser]`. Full runs of all eight classes on net8.0, net9.0, net10.0 and net11.0, one TFM after another, in the order net8, net9, net10, net11, on the `integ/all` branch (every open pull request merged locally).
 - Rows whose coefficient of variation stayed above 5% were rerun up to twice. net8 and net11 `FlagsComparison` and net9 `IsDefinedComparison` come from those reruns, made the next morning, so the cross-TFM table mixes two sessions. Two rows stayed above 5% after both reruns: net8 `Bcl_HasFlag` (CV 12.0%) and net8 `NetEscapades_HasFlag` (CV 11.8%). They are marked "noisy" wherever they appear.
 - The 1-minute load average was between 1.18 and 1.83 at the start and end of the suite and of every rerun. The machine was not idle: a desktop session ran in the background.
-- Results: `benchmarks/results/enums/{tfm}/results/*-report-github.md` (also CSV, JSON and HTML). The Native AOT report is older than this run; see section 9.
+- Results: `benchmarks/results/enums/{tfm}/results/*-report-github.md` (also CSV, JSON and HTML). The Native AOT report comes from a separate script run on 2026-11-06; see section 9.
 
 Environment:
 
@@ -70,13 +70,13 @@ CSE losses come first. Every row below that names a loss is outside error on the
 | GetNames: Enums.NET is faster and allocates nothing on every TFM (CSE loss) | net10: 20.57 ns / 184 B against 16.13 ns / 0 B (Ratio 0.78). NetEscapades is also faster on net10 (19.74 ns) and net11 (18.306 vs 18.877 ns) and ties on net9 (20.34 vs 20.36 ns). `GetNames()` builds a new array per call; the generated cached `Names` list is not measured |
 | GetValues: NetEscapades is faster on net10, and Enums.NET on net8 and net9 (CSE loss) | net10: 11.95 vs 11.42 ns, both 0 B. net8: Enums.NET 15.62 ns / 0 B against CSE 16.69 ns / 104 B. net9: Enums.NET 15.55 ns and NetEscapades 15.77 ns against CSE 16.46 ns / 104 B. net11 ties NetEscapades (9.408 ns each) |
 | IsDefined of an undefined value: NetEscapades is faster on net10 and net8 (CSE loss, sub-nanosecond) | net10: 0.7609 vs 0.7258 ns; net8: 0.4484 vs 0.3707 ns. Both rows are below 1 ns, close to the timer |
-| Native AOT: CSE's binary was the second largest (CSE loss, older build) | 1.9 MB against 1.2 MB for NetEscapades and the BCL sample; Enums.NET 2.0 MB. The AOT report predates the CSE changes measured above and was not rerun |
+| Native AOT: CSE's binary is the second largest (CSE loss) | 1.3 MB against 1.2 MB for NetEscapades and the BCL sample; Enums.NET 2.0 MB. The earlier 2026-11-02 report, from an older CSE build, had 1.9 MB |
 | Parse: CSE is the fastest column in three of the four parse categories on every TFM | net10: valid case-sensitive 8.6618 ns (Enums.NET 18.3746, NetEscapades 28.8248, BCL 45.5131 ns); valid ignore-case 27.5424 ns (Enums.NET 39.2357, NetEscapades 45.0380, BCL 53.4897 ns); invalid ignore-case 8.1523 ns (Enums.NET 15.1186 ns). All 0 B |
 | Flags format: CSE is the fastest column and allocates the least on every TFM | net10: 25.0906 ns / 72 B against NetEscapades 37.0195 ns / 96 B, BCL 39.2608 ns / 96 B and Enums.NET 82.6982 ns / 280 B |
 | IsDefined: CSE beats the BCL and Enums.NET on every TFM | net10 defined: 0.4480 ns against Enums.NET 0.7049 ns and BCL 4.1192 ns; it ties NetEscapades (0.4532 ns), as on net8 (0.4483 vs 0.4454 ns, NetEscapades lower by mean). Sub-nanosecond rows; see Caveats |
 | ToString of a defined value: CSE ties or beats every column | net10: 0.5418 ns, tied with NetEscapades (0.5414 ns), against Enums.NET 1.1186 ns and BCL 9.0266 ns / 24 B. Sub-nanosecond rows |
 | GetValues and GetNames: CSE beats the BCL on every TFM | net10: 11.95 vs 32.15 ns and 20.57 vs 35.34 ns |
-| Native AOT (older build): CSE, NetEscapades and the BCL publish with 0 IL warnings and run; Enums.NET publishes with 4 and runs | Enums.NET 5.0.0: IL2071, IL2075, IL2080, IL3050 from its reflection-based cache, all ILC. Every sample prints `parsed 20 checksum 971 ok` |
+| Native AOT: CSE, NetEscapades and the BCL publish with 0 IL warnings and run; Enums.NET publishes with 4 and runs | Enums.NET 5.0.0: IL2071, IL2075, IL2080, IL3050 from its reflection-based cache, all ILC. Every sample prints `parsed 20 checksum 971 ok` |
 
 ---
 
@@ -231,17 +231,17 @@ All tables are net10 unless stated. "vs CSE" is BenchmarkDotNet's Ratio column: 
 
 > This section is script-driven, not BenchmarkDotNet. `dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=false -p:TrimmerSingleWarn=false` from a clean obj. `TrimmerSingleWarn=false` lists each warning per member, so the counts are higher than a default publish shows. Each sample formats, parses and enumerates the same 20-member `Status` enum and prints a checksum.
 >
-> The report was generated on 2026-11-02 at 09:36 UTC, before the CSE changes measured in sections 1 to 8 (generated `IsDefined` switch, span name tables, generated flags formatter and others). It was not rerun with this suite, so the CSE size below describes the older build.
+> The report was generated on 2026-11-06 at 06:12 UTC on the `integ/all` branch, after the CSE changes measured in sections 1 to 8 (generated `IsDefined` switch, span name tables, generated flags formatter and others). The earlier 2026-11-02 report, from the older build, had a 1.9 MB CSE binary.
 
 | Variant | AOT publish | IL warnings (distinct) | Native binary | Exit code | Output |
 |---|---|---:|---:|---:|---|
 | BclAot | yes | 0 | 1.2 MB | 0 | `parsed 20 checksum 971 ok` |
-| CseAot | yes | 0 | 1.9 MB | 0 | `parsed 20 checksum 971 ok` |
+| CseAot | yes | 0 | 1.3 MB | 0 | `parsed 20 checksum 971 ok` |
 | EnumsNetAot | yes | 4 (IL2071 ×1, IL2075 ×1, IL2080 ×1, IL3050 ×1; all ILC) | 2.0 MB | 0 | `parsed 20 checksum 971 ok` |
 | NetEscapadesAot | yes | 0 | 1.2 MB | 0 | `parsed 20 checksum 971 ok` |
 
 - Enums.NET's warnings come from `Enums.GetEnumValidatorAttribute(Type)` (`MakeGenericType`, `GetInterfaces`) and `Cacher.CreateCache` (`GetFields`). The sample still runs. It uses the net7.0 build of Enums.NET, which has no package dependencies.
-- CSE's binary was 0.7 MB larger than NetEscapades'. It carries the runtime library (metadata, parser, formatter). The size was not broken down.
+- CSE's binary is 0.1 MB larger than NetEscapades'. It carries the runtime library (metadata, parser, formatter). The size was not broken down.
 - Wall time was 2 ms for every sample (median of 5). That is not a startup result.
 
 ---
@@ -347,7 +347,7 @@ Enums.NET links point at tag [`5.0.0`](https://github.com/TylerBrinkley/Enums.NE
 |---|---|---|---|
 | Runtime reflection | Yes: `GetFields` and attribute reads when the per-enum cache is built, and `MakeGenericType` for the non-generic API ([Enums.cs#L100](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L100), [Enums.cs#L4352](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L4352)) | None in the generated helpers, which are `switch` expressions over constants ([SourceGenerationHelper.cs#L149](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/src/NetEscapades.EnumGenerators.Generators/SourceGenerationHelper.cs#L149)) | None on the `[StringEnum]` path. Reflection is opt-in only (`EnumMetadata.GetOrCreateWithReflection`, annotated `[RequiresUnreferencedCode]` / `[RequiresDynamicCode]`) |
 | Source generator | No; a cached generic `EnumCache` per enum type ([EnumCache.cs](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/EnumCache.cs)) | Yes: an `{Enum}Extensions` class per `[EnumExtensions]` enum ([docs/README.md](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md#adding-netescapadesenumgenerators-to-your-project)) | Yes: an `{Enum}Extensions` class and the enum's metadata per `[StringEnum]` enum, bundled in the main package |
-| Native AOT publish without warnings, and runs (measured, older CSE build) | No warnings-free publish: 4 IL warnings (all ILC). It runs | Yes: 0 warnings, runs | Yes: 0 warnings, runs |
+| Native AOT publish without warnings, and runs (measured) | No warnings-free publish: 4 IL warnings (all ILC). It runs | Yes: 0 warnings, runs | Yes: 0 warnings, runs |
 | `IsAotCompatible` / trim annotations | Neither ([Enums.NET.csproj](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.NET.csproj)) | Not declared in any project file ([RuntimeDependencies.csproj](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/src/NetEscapades.EnumGenerators.RuntimeDependencies/NetEscapades.EnumGenerators.RuntimeDependencies.csproj)) | `IsAotCompatible=true` on the net9.0, net10.0 and net11.0 builds, not on the netstandard builds that net8 consumers get (`CSharpEssentials.Enums/CSharpEssentials.Enums.csproj:29`) |
 | Extra runtime dependencies | net7.0 and netcoreapp3.0: none (the AOT sample uses the net7.0 build). netstandard2.0/2.1: `System.ComponentModel.Annotations` 5.0.0 and `System.Runtime.CompilerServices.Unsafe` 6.0.0; net461: `Unsafe` 6.0.0 ([nuspec](https://api.nuget.org/v3-flatcontainer/enums.net/5.0.0/enums.net.nuspec)) | `NetEscapades.EnumGenerators.RuntimeDependencies` 1.0.0-beta21 (holds `EnumParseOptions`, `SerializationOptions`), plus the attributes assembly from the Generators package ([nuspec](https://api.nuget.org/v3-flatcontainer/netescapades.enumgenerators/1.0.0-beta21/netescapades.enumgenerators.nuspec), [avoiding runtime dependencies](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md#avoiding-runtime-dependencies)) | None: the csproj has no `PackageReference` or `ProjectReference` (checked in `CSharpEssentials.Enums/CSharpEssentials.Enums.csproj`; the packed nuspec was not checked) |
 | Attribute required on the enum | No; works on any enum ([README](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/README.md#enumsnet-demo)) | Yes, `[EnumExtensions]`, or `[EnumExtensions<T>]` for an enum you do not own ([docs/README.md#L346](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md?plain=1#L346)) | Yes, `[StringEnum]` |
@@ -412,7 +412,7 @@ Not measured here: reflection-built infos convert the value to a raw number on e
 - The net8 column runs CSE's netstandard2.1 build; the other columns run the matching TFM build.
 - The net10 BCL parse rows are far above the other TFMs in two runs with different TFM orders. The cause was not investigated.
 - GetValues allocation drops to 0 B on net10 and net11 for both generated libraries without any code change. The cause was not investigated.
-- The Native AOT report predates the CSE changes measured in sections 1 to 8 and was not rerun.
+- The Native AOT report is a separate script run from 2026-11-06, not part of the BenchmarkDotNet suite.
 - The "why" notes on CSE losses come from reading the source. They were not profiled.
 - AOT warning counts use `TrimmerSingleWarn=false`. The 2 ms AOT wall time is not a result.
 - The feature matrix comes from reading source and docs, except the measured AOT row.
