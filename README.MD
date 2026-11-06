@@ -311,3 +311,5 @@ npx skills add senrecep/CSharpEssentials
 ```
 
 Each package has a dedicated skill with accurate API examples, correct namespaces, and common pitfalls.
+
+The same skill also ships inside each NuGet package, at `skills/<name>/SKILL.md`. After `dotnet restore`, agent tools that read package skills find the version that matches the package you installed, with nothing else to set up. For example, `dotnet-package-skills install` copies them into your repo.

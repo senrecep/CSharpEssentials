@@ -57,6 +57,20 @@ jobs:
           dotnet build CSharpEssentials.slnx --no-restore --configuration Release -p:Version=0.0.0-ci.${{ github.run_id }}
           dotnet pack CSharpEssentials.slnx --no-build --configuration Release -o artifacts/feed -p:Version=0.0.0-ci.${{ github.run_id }}
 
+      # Every skill in .well-known/agent-skills ships inside at least one package at skills/<name>/SKILL.md.
+      - name: Check package skills
+        run: |
+          missing=0
+          for dir in .well-known/agent-skills/*/; do
+            name=$(basename "$dir")
+            found=0
+            for package in artifacts/feed/*.nupkg; do
+              if unzip -p "$package" "skills/$name/SKILL.md" 2>/dev/null | cmp -s - "$dir/SKILL.md"; then found=1; break; fi
+            done
+            if [ "$found" -eq 0 ]; then echo "::error::skill $name is not packed into any package"; missing=1; fi
+          done
+          exit $missing
+
       - name: Run package consumers
         run: |
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Json -p:CseVersion=0.0.0-ci.${{ github.run_id }}

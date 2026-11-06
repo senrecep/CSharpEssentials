@@ -13,4 +13,21 @@
 			<PrivateAssets Condition="'%(PrivateAssets)' == '' and '%(ReferenceOutputAssembly)' != 'false' and $([System.String]::Copy('%(Filename)').StartsWith('CSharpEssentials'))">contentfiles;build</PrivateAssets>
 		</ProjectReference>
 	</ItemGroup>
+
+	<!-- Each package carries its agent skill at skills/<name>/SKILL.md, the layout agent tools read from restored packages
+	     (https://devblogs.microsoft.com/dotnet/delivering-skills-in-nuget-packages/). The source stays in .well-known/agent-skills.
+	     The skill name defaults to csharpessentials-<project suffix in lower case>; a project can set PackageSkillName itself. -->
+	<PropertyGroup Condition="'$(IsPackable)' == 'true' and '$(PackageSkillName)' == ''">
+		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials'">csharpessentials-meta</PackageSkillName>
+		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.EntityFrameworkCore'">csharpessentials-efcore</PackageSkillName>
+		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.RequestResponseLogging'">csharpessentials-logging</PackageSkillName>
+		<PackageSkillName Condition="'$(MSBuildProjectName)' == 'CSharpEssentials.AspNetCore.OpenApi' or '$(MSBuildProjectName)' == 'CSharpEssentials.AspNetCore.Swashbuckle'">csharpessentials-aspnetcore</PackageSkillName>
+		<PackageSkillName Condition="'$(PackageSkillName)' == '' and $(MSBuildProjectName.StartsWith('CSharpEssentials.'))">csharpessentials-$(MSBuildProjectName.Substring(17).ToLowerInvariant())</PackageSkillName>
+	</PropertyGroup>
+	<PropertyGroup Condition="'$(PackageSkillName)' != ''">
+		<PackageSkillFile>$(MSBuildThisFileDirectory).well-known/agent-skills/$(PackageSkillName)/SKILL.md</PackageSkillFile>
+	</PropertyGroup>
+	<ItemGroup Condition="'$(IsPackable)' == 'true' and '$(PackageSkillFile)' != '' and Exists('$(PackageSkillFile)')">
+		<None Include="$(PackageSkillFile)" Pack="true" PackagePath="skills/$(PackageSkillName)/" Visible="false" />
+	</ItemGroup>
 </Project>
