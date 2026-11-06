@@ -7,8 +7,7 @@ namespace CSharpEssentials.Any.Comparison.Benchmarks;
 /// <summary>
 /// Each library's default <c>ToString()</c> of a two-case union holding 42 or "forty-two". The outputs differ, so this is
 /// not a ranking: every row sits in its own category with no baseline and is checked only against its own literal.
-/// CSE returns the JSON of the value (<c>42</c>, <c>"forty-two"</c> with quotes) through reflection-based
-/// System.Text.Json; OneOf returns <c>System.Int32: 42</c> / <c>System.String: forty-two</c>; Dunet returns the record
+/// CSE returns the value's own <c>ToString()</c> (<c>42</c>, <c>forty-two</c>); OneOf returns <c>System.Int32: 42</c> / <c>System.String: forty-two</c>; Dunet returns the record
 /// <c>ToString</c>, <c>Number { Value = 42 }</c> / <c>Text { Value = forty-two }</c>.
 /// </summary>
 [MemoryDiagnoser]
@@ -44,7 +43,7 @@ public class ToStringComparison
             _dunet = Inputs.TextValue;
         }
 
-        Parity.Same(Cse, ("expected", isInt ? "42" : "\"forty-two\""), (nameof(CSharpEssentials_ToString), CSharpEssentials_ToString()));
+        Parity.Same(Cse, ("expected", isInt ? "42" : "forty-two"), (nameof(CSharpEssentials_ToString), CSharpEssentials_ToString()));
         Parity.Same(OneOfCategory, ("expected", isInt ? "System.Int32: 42" : "System.String: forty-two"), (nameof(OneOf_ToString), OneOf_ToString()));
         Parity.Same(Dunet, ("expected", isInt ? "Number { Value = 42 }" : "Text { Value = forty-two }"), (nameof(Dunet_ToString), Dunet_ToString()));
     }
