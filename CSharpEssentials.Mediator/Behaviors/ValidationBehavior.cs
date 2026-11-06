@@ -83,7 +83,7 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
             return next(message, cancellationToken);
 
         if (_orderedGroups is not [[IValidator<TRequest> validator]])
-            return ValidateGroupsAsync(message, mode, next, cancellationToken);
+            return ValidateGroups(message, mode, next, cancellationToken);
 
         ValueTask<Result<TRequest>> validation = RunSafeAsync(validator, message, cancellationToken);
         if (!validation.IsCompletedSuccessfully)
@@ -114,17 +114,114 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         return await CompleteFailureAsync(message, result.Errors, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
     }
 
-    private async ValueTask<TResponse> ValidateGroupsAsync(
+    private ValueTask<TResponse> ValidateGroups(
         TRequest message,
         ValidationMode mode,
         MessageHandlerDelegate<TRequest, TResponse> next,
         CancellationToken cancellationToken)
     {
-        Error[]? errors = await ValidateAsync(message, cancellationToken).ConfigureAwait(false);
-        if (errors is null)
+        List<Error>? errors = null;
+        for (int groupIndex = 0; groupIndex < _orderedGroups.Length; groupIndex++)
+        {
+            IValidator<TRequest>[] group = _orderedGroups[groupIndex];
+            for (int index = 0; index < group.Length; index++)
+            {
+                ValueTask<Result<TRequest>> validation = RunSafeAsync(group[index], message, cancellationToken);
+                if (!validation.IsCompletedSuccessfully)
+                    return ValidateGroupsAsync(message, mode, next, groupIndex, index, validation, errors, cancellationToken);
+
+                errors = Collect(validation.GetAwaiter().GetResult(), errors);
+            }
+        }
+
+        Error[]? distinct = Deduplicate(errors);
+        if (distinct is null)
+            return next(message, cancellationToken);
+
+        bool notify = AnyObserverListening(mode);
+        if (mode == ValidationMode.Enforce && FailureResponse<TResponse>.Factory is { } factory && !notify)
+            return new ValueTask<TResponse>(factory.CreateFailure(distinct));
+
+        return CompleteFailureAsync(message, distinct, mode, notify, next, cancellationToken);
+    }
+
+    /// <summary>
+    /// Continues <see cref="ValidateGroups"/> from the first validator that did not complete synchronously.
+    /// The rest of that validator's group is started before anything is awaited, so validators of one group still run
+    /// concurrently; groups still run one after another and errors keep validator order.
+    /// </summary>
+    private async ValueTask<TResponse> ValidateGroupsAsync(
+        TRequest message,
+        ValidationMode mode,
+        MessageHandlerDelegate<TRequest, TResponse> next,
+        int groupIndex,
+        int validatorIndex,
+        ValueTask<Result<TRequest>> pending,
+        List<Error>? errors,
+        CancellationToken cancellationToken)
+    {
+        for (int g = groupIndex; g < _orderedGroups.Length; g++)
+        {
+            IValidator<TRequest>[] group = _orderedGroups[g];
+            int first = g == groupIndex ? validatorIndex : 0;
+            int count = group.Length - first;
+            var results = new Result<TRequest>[count];
+            var tasks = new Task<Result<TRequest>>?[count];
+            for (int i = 0; i < count; i++)
+            {
+                ValueTask<Result<TRequest>> validation = g == groupIndex && i == 0
+                    ? pending
+                    : RunSafeAsync(group[first + i], message, cancellationToken);
+                if (validation.IsCompletedSuccessfully)
+                    results[i] = validation.GetAwaiter().GetResult();
+                else
+                    tasks[i] = validation.AsTask();
+            }
+
+            for (int i = 0; i < count; i++)
+                errors = Collect(tasks[i] is { } task ? await task.ConfigureAwait(false) : results[i], errors);
+        }
+
+        Error[]? distinct = Deduplicate(errors);
+        if (distinct is null)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
-        return await CompleteFailureAsync(message, errors, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
+        return await CompleteFailureAsync(message, distinct, mode, AnyObserverListening(mode), next, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static List<Error>? Collect(Result<TRequest> result, List<Error>? errors)
+    {
+        if (result.IsFailure)
+        {
+            errors ??= [];
+            errors.AddRange(result.Errors);
+        }
+
+        return errors;
+    }
+
+    /// <summary>
+    /// Returns the errors without duplicates in first-seen order, or <see langword="null"/> when there are none.
+    /// Small lists are checked pairwise so the common no-duplicate case copies the list once and allocates no set.
+    /// </summary>
+    private static Error[]? Deduplicate(List<Error>? errors)
+    {
+        if (errors is null || errors.Count == 0)
+            return null;
+
+        if (errors.Count > 16)
+            return [.. errors.Distinct()];
+
+        for (int i = 1; i < errors.Count; i++)
+        {
+            for (int j = 0; j < i; j++)
+            {
+                if (errors[i].Equals(errors[j]))
+                    return [.. errors.Distinct()];
+            }
+        }
+
+        return [.. errors];
     }
 
     private async ValueTask<TResponse> CompleteFailureAsync(
@@ -142,38 +239,6 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
             return await next(message, cancellationToken).ConfigureAwait(false);
 
         return BuildFailureResponse(errors);
-    }
-
-    /// <summary>
-    /// Runs the validator groups and returns the errors, or <see langword="null"/> when the request is valid.
-    /// </summary>
-    private async ValueTask<Error[]?> ValidateAsync(TRequest message, CancellationToken cancellationToken)
-    {
-        // The constructor sorts groups by Order, ascending.
-        // Validators in a group run concurrently; groups run one after another.
-        // Errors are collected in group order, so lower-Order errors come first.
-        // allErrors stays null until the first failure, so a valid request allocates no list.
-        List<Error>? allErrors = null;
-
-        foreach (IValidator<TRequest>[] group in _orderedGroups)
-        {
-            Result<TRequest>[] groupResults = await RunGroupAsync(group, message, cancellationToken).ConfigureAwait(false);
-
-            foreach (Result<TRequest> r in groupResults)
-            {
-                if (r.IsFailure)
-                {
-                    allErrors ??= [];
-                    allErrors.AddRange(r.Errors);
-                }
-            }
-        }
-
-        if (allErrors is null)
-            return null;
-
-        Error[] errors = [.. allErrors.Distinct()];
-        return errors.Length == 0 ? null : errors;
     }
 
     private bool AnyObserverListening(ValidationMode mode)
@@ -196,43 +261,6 @@ public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         ValidationFailureContext failure = new(typeof(TRequest), message, Array.AsReadOnly(errors), mode);
         foreach (IValidationFailureObserver observer in _observers)
             await observer.OnValidationFailedAsync(failure, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Starts every validator in <paramref name="validators"/> before awaiting any of them.
-    /// Results of validators that complete synchronously are read inline with no task allocation; the others are awaited in order.
-    /// </summary>
-    private static async Task<Result<TRequest>[]> RunGroupAsync(
-        IValidator<TRequest>[] validators,
-        TRequest message,
-        CancellationToken ct)
-    {
-        int count = validators.Length;
-        var results = new Result<TRequest>[count];
-        Task<Result<TRequest>>[]? pendingTasks = null;
-        int[]? pendingIndices = null;
-        int pendingCount = 0;
-
-        for (int i = 0; i < count; i++)
-        {
-            ValueTask<Result<TRequest>> vt = RunSafeAsync(validators[i], message, ct);
-            if (vt.IsCompletedSuccessfully)
-            {
-                results[i] = vt.GetAwaiter().GetResult();
-            }
-            else
-            {
-                pendingTasks ??= new Task<Result<TRequest>>[count];
-                pendingIndices ??= new int[count];
-                pendingIndices[pendingCount] = i;
-                pendingTasks[pendingCount++] = vt.AsTask();
-            }
-        }
-
-        for (int p = 0; p < pendingCount; p++)
-            results[pendingIndices![p]] = await pendingTasks![p].ConfigureAwait(false);
-
-        return results;
     }
 
     /// <summary>

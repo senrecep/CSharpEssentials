@@ -410,6 +410,81 @@ public class ValidationBehaviorTests
 
         result.Value.Should().Be(42);
     }
+
+    [Fact]
+    public async Task Handle_Should_Complete_Synchronously_With_Errors_In_Validator_Order_When_Several_Sync_Validators_Fail()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([
+            new OrderedStubValidator(1, "E_LATE", "Error late"),
+            new StubValidator("E1", "Error 1"),
+            new StubValidator("E2", "Error 2")
+        ]);
+
+        ValueTask<Result<int>> pending = behavior.Handle(new TestValidationCommand(""), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        pending.IsCompletedSuccessfully.Should().BeTrue();
+        Result<int> result = await pending;
+        result.Errors.Select(e => e.Code).Should().Equal("E1", "E2", "E_LATE");
+    }
+
+    [Fact]
+    public async Task Handle_Should_Keep_Validator_Order_When_An_Async_Validator_Sits_Between_Sync_Ones()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([
+            new OrderedStubValidator(0, "E_A", "Error A"),
+            new OrderedYieldingValidator(0, [Error.Validation("E_B", "Error B")]),
+            new OrderedStubValidator(0, "E_C", "Error C"),
+            new OrderedYieldingValidator(1, [Error.Validation("E_D", "Error D")]),
+            new OrderedStubValidator(1, "E_E", "Error E"),
+            new OrderedStubValidator(2, "E_F", "Error F")
+        ]);
+
+        Result result = await behavior.Handle(new TestValidationCommand(""), SuccessNext, default);
+
+        result.Errors.Select(e => e.Code).Should().Equal("E_A", "E_B", "E_C", "E_D", "E_E", "E_F");
+    }
+
+    [Fact]
+    public async Task Handle_Should_Call_Next_When_Async_And_Sync_Validators_In_Several_Groups_Pass()
+    {
+        ValidationBehavior<TestValidationCommand, Result<int>> behavior = new([
+            new StubValidator(),
+            new OrderedYieldingValidator(0, null),
+            new OrderedYieldingValidator(1, null),
+            new OrderedYieldingValidator(2, null)
+        ]);
+
+        Result<int> result = await behavior.Handle(new TestValidationCommand("ok"), (_, _) => new ValueTask<Result<int>>(42), default);
+
+        result.Value.Should().Be(42);
+    }
+
+    [Fact]
+    public async Task Handle_Should_Keep_First_Seen_Order_When_Removing_Duplicate_Errors()
+    {
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([
+            new FixedResultValidator([Error.Validation("A", "a"), Error.Validation("B", "b")]),
+            new FixedResultValidator([Error.Validation("C", "c"), Error.Validation("B", "b"), Error.Validation("A", "a")])
+        ]);
+
+        Result result = await behavior.Handle(new TestValidationCommand(""), SuccessNext, default);
+
+        result.Errors.Select(e => e.Code).Should().Equal("A", "B", "C");
+    }
+
+    [Fact]
+    public async Task Handle_Should_Remove_Duplicate_Errors_When_There_Are_Many_Errors()
+    {
+        Error[] many = [.. Enumerable.Range(0, 20).Select(i => Error.Validation($"E{i}", $"Error {i}"))];
+        ValidationBehavior<TestValidationCommand, Result> behavior = new([
+            new FixedResultValidator(many),
+            new FixedResultValidator([many[19], Error.Validation("Extra", "extra"), many[0]])
+        ]);
+
+        Result result = await behavior.Handle(new TestValidationCommand(""), SuccessNext, default);
+
+        result.Errors.Select(e => e.Code).Should().Equal([.. many.Select(e => e.Code), "Extra"]);
+    }
 }
 
 internal sealed class FixedResultValidator(Error[] errors) : IValidator<TestValidationCommand>
@@ -431,4 +506,15 @@ internal sealed class SyncCancellingValidator : IValidator<TestValidationCommand
 {
     public ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default) =>
         throw new OperationCanceledException();
+}
+
+internal sealed class OrderedYieldingValidator(int order, Error[]? errors) : IValidator<TestValidationCommand>
+{
+    public int Order => order;
+
+    public async ValueTask<Result<TestValidationCommand>> ValidateAsync(TestValidationCommand instance, CancellationToken ct = default)
+    {
+        await Task.Yield();
+        return errors is null ? instance : Result<TestValidationCommand>.Failure(errors);
+    }
 }
