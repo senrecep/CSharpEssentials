@@ -189,7 +189,7 @@ public static class TestData
 }
 
 // =========================================================================
-// 1. Simple Validation (User model — NotEmpty / EmailAddress / GreaterThan / collection)
+// 1. Simple Validation (User model: NotEmpty / EmailAddress / GreaterThan / collection)
 // =========================================================================
 
 [MemoryDiagnoser]
@@ -309,7 +309,7 @@ public class CollectionValidationBenchmarks
 }
 
 // =========================================================================
-// 5. Nested Object Validation (SetValidatorAsync — one level)
+// 5. Nested Object Validation (SetValidatorAsync, one level)
 // =========================================================================
 
 [MemoryDiagnoser]
@@ -401,7 +401,7 @@ public class ConditionalValidationBenchmarks
 }
 
 // =========================================================================
-// 8. Custom Predicate (Must — sync)
+// 8. Custom Predicate (Must, sync)
 // =========================================================================
 
 [MemoryDiagnoser]
@@ -694,7 +694,7 @@ public class StringEqualityBenchmarks
 }
 
 // =========================================================================
-// 17. Large Collection (ForEach / RuleForEach — 50 items)
+// 17. Large Collection (ForEach / RuleForEach, 50 items)
 // =========================================================================
 
 [MemoryDiagnoser]
@@ -816,8 +816,8 @@ public class CascadeStopBenchmarks
 
 // =========================================================================
 // 21. Validator Construction Cost (ctor allocation overhead)
-//     CSE: lazy — Configure() runs at validate time
-//     FV:  eager — rule tree built in constructor
+//     CSE: lazy, Configure() runs at validate time
+//     FV:  eager, rule tree built in constructor
 // =========================================================================
 
 [MemoryDiagnoser]

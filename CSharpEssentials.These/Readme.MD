@@ -29,13 +29,13 @@ dotnet add package CSharpEssentials.These
 ```csharp
 using CSharpEssentials.These;
 
-// Error only — no value produced
+// Error only: no value produced
 These<string, int> left  = These<string, int>.Left("something went wrong");
 
-// Value only — clean success
+// Value only: clean success
 These<string, int> right = These<string, int>.Right(42);
 
-// Both — value produced but a warning accompanies it
+// Both: value produced but a warning accompanies it
 These<string, int> both  = These<string, int>.Both("partial failure", 42);
 ```
 
@@ -120,10 +120,10 @@ using CSharpEssentials.These;
 Result<int> result = GetSomeResult();
 These<Error, int> these = TheseExtensions.FromResult(result);
 
-// To Result<T> — strict: Both is treated as failure (Left wins)
+// To Result<T> (strict): Both is treated as failure (Left wins)
 Result<int> strict = these.ToResult();
 
-// To Result<T> — lenient: Both is treated as success (value wins)
+// To Result<T> (lenient): Both is treated as success (value wins)
 Result<int> lenient = these.ToResultLenient();
 ```
 

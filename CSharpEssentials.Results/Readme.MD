@@ -315,7 +315,7 @@ Batch operations on sequences of results:
 Result validation = new[] { ValidateName(input), ValidateEmail(input), ValidateAge(input) }
     .CombineAll();
 
-// Map each item and collect — success array or all errors
+// Map each item and collect: success array or all errors
 Result<OrderDto[]> orders = orderIds.Traverse(id => GetOrder(id));
 
 // Split into successes and errors without short-circuiting
@@ -361,7 +361,7 @@ Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync()
 ```csharp
 Result<int> result = 42;
 
-// Predicate-based tap — action fires only when Success AND predicate is true
+// Predicate-based tap: action fires only when Success AND predicate is true
 result.TapIf(v => v > 10, v => logger.LogInformation("Large value: {Value}", v));
 
 // Async variants

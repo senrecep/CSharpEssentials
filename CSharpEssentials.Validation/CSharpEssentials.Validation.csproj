@@ -11,7 +11,7 @@
     <Description>
       High-performance, model-first validation library for C#.
       Provides eager, zero-reflection validation with a fluent API that integrates natively
-      with CSharpEssentials.Results. No expression trees, no deferred builds — just pure C#.
+      with CSharpEssentials.Results. No expression trees, no deferred builds, just pure C#.
     </Description>
     <PackageTags>
       Validation,FluentValidation,Result,ResultPattern,CSharpEssentials

@@ -142,7 +142,7 @@ Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereA
 ### Collection extensions
 
 ```csharp
-// Require ALL lookups to succeed — None if any is missing
+// Require ALL lookups to succeed; None if any is missing
 Maybe<User[]> allUsers = userIds.Traverse(id => FindUser(id));
 
 // Collect present values and count absences
@@ -228,7 +228,7 @@ Maybe<int> points = stored.Flatten();   // None
 ### OrElse: lazy Maybe chain
 
 ```csharp
-// Alias for Or(Func<Maybe<T>>) — returns self if Some, calls factory if None
+// Alias for Or(Func<Maybe<T>>): returns self if Some, calls factory if None
 Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 
 // Async

@@ -70,7 +70,7 @@ Result r = RuleEngine.Evaluate(
 ## Evaluating a Single Rule
 
 ```csharp
-// Any style passes directly — no .ToRule() needed
+// Any style passes directly, no .ToRule() needed
 Result r1 = RuleEngine.Evaluate(new AgeRule(), ctx);
 Result r2 = RuleEngine.Evaluate(regionRule, ctx);   // Func variable
 Result r3 = RuleEngine.Evaluate(CheckEmail, ctx);   // method group
@@ -95,7 +95,7 @@ Result andResult = RuleEngine.Evaluate(
     new IRuleBase<UserContext>[] { new AgeRule(), new LicenseRule(repo) }.And(),
     ctx);
 
-// Func array — no .ToRule() needed
+// Func array: no .ToRule() needed
 Result andResult2 = RuleEngine.Evaluate(
     new Func<UserContext, Result>[] { regionRule, CheckEmail }.And(),
     ctx);
@@ -194,7 +194,7 @@ public sealed class GradeRule : IRule<int, string>
     }
 }
 
-// Inline form — no class needed
+// Inline form: no class needed
 Result<string> grade = RuleEngine.Evaluate(
     (int score) => score >= 90 ? Result<string>.Success("A") : Error.Validation("Grade.Failed", "Score too low."),
     85);
@@ -250,7 +250,7 @@ IRule<int> positive = RuleEngine.FromPredicate<int>(
     x => x > 0,
     Error.Validation("Value.Negative", "Must be positive"));
 
-// Error factory — error message references the failing context
+// Error factory: error message references the failing context
 IRule<string> minLength = RuleEngine.FromPredicate<string>(
     s => s.Length >= 3,
     s => Error.Validation("String.TooShort", $"'{s}' must be at least 3 characters"));

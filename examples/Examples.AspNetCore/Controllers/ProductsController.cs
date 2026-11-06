@@ -7,7 +7,7 @@ namespace Examples.AspNetCore.Controllers;
 
 /// <summary>
 /// Products API demonstrating Result pattern integration with ASP.NET Core.
-/// No try/catch blocks needed — failures are expressed as Results and
+/// No try/catch blocks are needed. Failures are expressed as Results and
 /// automatically converted to RFC 7807 ProblemDetails responses.
 /// </summary>
 [ApiController]

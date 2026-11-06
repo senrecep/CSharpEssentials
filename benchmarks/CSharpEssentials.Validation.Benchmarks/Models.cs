@@ -36,7 +36,7 @@ public sealed class Order
 }
 
 // =========================================================================
-// Wide model — 12 string fields, used in WideModel benchmarks
+// Wide model: 12 string fields, used in WideModel benchmarks
 // =========================================================================
 
 public sealed class WideModel
@@ -56,7 +56,7 @@ public sealed class WideModel
 }
 
 // =========================================================================
-// Deep nested model — 3 levels: DeepOrder → DeepAddress → Street
+// Deep nested model, 3 levels: DeepOrder → DeepAddress → Street
 // =========================================================================
 
 public sealed class Street
@@ -78,7 +78,7 @@ public sealed class DeepOrder
 }
 
 // =========================================================================
-// Product — used in nullable and equality benchmarks
+// Product, used in nullable and equality benchmarks
 // =========================================================================
 
 public sealed class Product
