@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-20261105-212430</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                      </th><th>Categories</th><th>Count</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_GetDefaultOptions</td><td>Defaults</td><td>1</td><td>1.869 &mu;s</td><td>0.0092 &mu;s</td><td>0.0077 &mu;s</td><td>1.00</td><td>0.01</td><td>0.1526</td><td>-</td><td>2.55 KB</td><td>1.00</td>
+</tr><tr><td>Flurl_GetDefaultOptions</td><td>Defaults</td><td>1</td><td>3.617 &mu;s</td><td>0.0222 &mu;s</td><td>0.0174 &mu;s</td><td>1.94</td><td>0.01</td><td>0.3052</td><td>-</td><td>5.14 KB</td><td>2.02</td>
+</tr><tr><td>CSharpEssentials_GetDefaultOptions</td><td>Defaults</td><td>50</td><td>19.743 &mu;s</td><td>0.0309 &mu;s</td><td>0.0274 &mu;s</td><td>1.00</td><td>0.00</td><td>0.9766</td><td>-</td><td>18.36 KB</td><td>1.00</td>
+</tr><tr><td>Flurl_GetDefaultOptions</td><td>Defaults</td><td>50</td><td>22.282 &mu;s</td><td>0.1354 &mu;s</td><td>0.1200 &mu;s</td><td>1.13</td><td>0.01</td><td>1.2207</td><td>-</td><td>20.95 KB</td><td>1.14</td>
+</tr><tr><td>CSharpEssentials_Get</td><td>Get</td><td>1</td><td>1.817 &mu;s</td><td>0.0088 &mu;s</td><td>0.0073 &mu;s</td><td>1.00</td><td>0.01</td><td>0.1526</td><td>-</td><td>2.55 KB</td><td>1.00</td>
+</tr><tr><td>Bcl_Get</td><td>Get</td><td>1</td><td>1.581 &mu;s</td><td>0.0085 &mu;s</td><td>0.0076 &mu;s</td><td>0.87</td><td>0.01</td><td>0.1221</td><td>-</td><td>2.2 KB</td><td>0.87</td>
+</tr><tr><td>Refit_Get</td><td>Get</td><td>1</td><td>2.322 &mu;s</td><td>0.0079 &mu;s</td><td>0.0066 &mu;s</td><td>1.28</td><td>0.01</td><td>0.1526</td><td>-</td><td>2.84 KB</td><td>1.11</td>
+</tr><tr><td>Flurl_Get</td><td>Get</td><td>1</td><td>3.482 &mu;s</td><td>0.0093 &mu;s</td><td>0.0078 &mu;s</td><td>1.92</td><td>0.01</td><td>0.3052</td><td>-</td><td>5.14 KB</td><td>2.02</td>
+</tr><tr><td>RestSharp_Get</td><td>Get</td><td>1</td><td>9.439 &mu;s</td><td>0.0632 &mu;s</td><td>0.0493 &mu;s</td><td>5.20</td><td>0.03</td><td>1.8311</td><td>-</td><td>30.61 KB</td><td>12.02</td>
+</tr><tr><td>CSharpEssentials_Get</td><td>Get</td><td>50</td><td>19.970 &mu;s</td><td>0.0947 &mu;s</td><td>0.0791 &mu;s</td><td>1.00</td><td>0.01</td><td>0.9766</td><td>-</td><td>18.36 KB</td><td>1.00</td>
+</tr><tr><td>Bcl_Get</td><td>Get</td><td>50</td><td>20.131 &mu;s</td><td>0.0391 &mu;s</td><td>0.0347 &mu;s</td><td>1.01</td><td>0.00</td><td>0.7324</td><td>-</td><td>14.98 KB</td><td>0.82</td>
+</tr><tr><td>Refit_Get</td><td>Get</td><td>50</td><td>20.538 &mu;s</td><td>0.0624 &mu;s</td><td>0.0553 &mu;s</td><td>1.03</td><td>0.00</td><td>0.9766</td><td>-</td><td>18.65 KB</td><td>1.02</td>
+</tr><tr><td>Flurl_Get</td><td>Get</td><td>50</td><td>22.258 &mu;s</td><td>0.0582 &mu;s</td><td>0.0516 &mu;s</td><td>1.11</td><td>0.00</td><td>1.2207</td><td>-</td><td>20.95 KB</td><td>1.14</td>
+</tr><tr><td>RestSharp_Get</td><td>Get</td><td>50</td><td>30.833 &mu;s</td><td>0.1844 &mu;s</td><td>0.1635 &mu;s</td><td>1.54</td><td>0.01</td><td>3.9063</td><td>0.2441</td><td>66.44 KB</td><td>3.62</td>
+</tr><tr><td>Bcl_GetSourceGen</td><td>SourceGen</td><td>1</td><td>1.625 &mu;s</td><td>0.0121 &mu;s</td><td>0.0113 &mu;s</td><td>1.00</td><td>0.01</td><td>0.1221</td><td>-</td><td>2.21 KB</td><td>1.00</td>
+</tr><tr><td>Refit_GetSourceGen</td><td>SourceGen</td><td>1</td><td>2.404 &mu;s</td><td>0.0140 &mu;s</td><td>0.0131 &mu;s</td><td>1.48</td><td>0.01</td><td>0.1678</td><td>-</td><td>2.84 KB</td><td>1.29</td>
+</tr><tr><td>Bcl_GetSourceGen</td><td>SourceGen</td><td>50</td><td>21.548 &mu;s</td><td>0.0601 &mu;s</td><td>0.0562 &mu;s</td><td>1.00</td><td>0.00</td><td>0.8545</td><td>-</td><td>15.37 KB</td><td>1.00</td>
+</tr><tr><td>Refit_GetSourceGen</td><td>SourceGen</td><td>50</td><td>21.918 &mu;s</td><td>0.0659 &mu;s</td><td>0.0584 &mu;s</td><td>1.02</td><td>0.00</td><td>0.9766</td><td>-</td><td>19.04 KB</td><td>1.24</td>
+</tr></tbody></table>
+</body>
+</html>
