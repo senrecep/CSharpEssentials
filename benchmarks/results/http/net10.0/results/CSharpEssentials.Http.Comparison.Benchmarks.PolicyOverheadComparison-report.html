@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Http.Comparison.Benchmarks.PolicyOverheadComparison-20261105-211040</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                 </th><th>Categories</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Direct_Await</td><td>Empty</td><td>13.94 ns</td><td>0.158 ns</td><td>0.148 ns</td><td>0.17</td><td>0.00</td><td>0.0043</td><td>72 B</td><td>0.90</td>
+</tr><tr><td>Polly_Empty</td><td>Empty</td><td>58.40 ns</td><td>0.068 ns</td><td>0.060 ns</td><td>0.69</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_Empty</td><td>Empty</td><td>84.48 ns</td><td>0.202 ns</td><td>0.169 ns</td><td>1.00</td><td>0.00</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Retry</td><td>Retry</td><td>275.96 ns</td><td>0.336 ns</td><td>0.314 ns</td><td>1.00</td><td>0.00</td><td>0.0062</td><td>104 B</td><td>1.00</td>
+</tr><tr><td>Polly_Retry</td><td>Retry</td><td>260.21 ns</td><td>0.156 ns</td><td>0.130 ns</td><td>0.94</td><td>0.00</td><td>0.0014</td><td>24 B</td><td>0.23</td>
+</tr><tr><td>CSharpEssentials_RetryPerCall</td><td>Retry</td><td>3,466.70 ns</td><td>25.956 ns</td><td>24.280 ns</td><td>12.56</td><td>0.09</td><td>0.4158</td><td>6984 B</td><td>67.15</td>
+</tr><tr><td>Polly_RetryPerCall</td><td>Retry</td><td>3,398.24 ns</td><td>13.949 ns</td><td>13.048 ns</td><td>12.31</td><td>0.05</td><td>0.4120</td><td>6904 B</td><td>66.38</td>
+</tr></tbody></table>
+</body>
+</html>

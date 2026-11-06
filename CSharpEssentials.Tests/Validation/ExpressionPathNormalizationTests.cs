@@ -11,6 +11,7 @@ public class ExpressionPathNormalizationTests
     private sealed record Address(string? City);
     private sealed record Line(string? Sku, bool IsActive);
     private sealed record Model(IEnumerable<string?>? Tags, Address? Addr, IEnumerable<Line>? Lines);
+    private sealed record IndexedModel(IReadOnlyList<string>? Tags, IReadOnlyDictionary<string, Address>? Map);
 
     [Fact]
     public async Task ForEach_WithoutNulls_ShouldUseCollectionNameAndFilteredIndex()
@@ -70,5 +71,38 @@ public class ExpressionPathNormalizationTests
                 lineRules.For(() => line.Sku).NotEmpty()));
 
         result.FirstError.Code.Should().Be("Lines[0].Sku.NotEmpty");
+    }
+
+    [Fact]
+    public async Task For_NullForgivingIndexerPath_ShouldOmitBang()
+    {
+        IndexedModel model = new([""], null);
+
+        Result<IndexedModel> result = await Validator.ValidateAsync(model, (m, rules) =>
+            rules.For(() => m.Tags![0]).NotEmpty());
+
+        result.FirstError.Code.Should().Be("Tags[0].NotEmpty");
+    }
+
+    [Fact]
+    public async Task For_NullConditionalIndexerPath_ShouldOmitQuestionMark()
+    {
+        IndexedModel model = new([""], null);
+
+        Result<IndexedModel> result = await Validator.ValidateAsync(model, (m, rules) =>
+            rules.For(() => m.Tags?[0]).NotEmpty());
+
+        result.FirstError.Code.Should().Be("Tags[0].NotEmpty");
+    }
+
+    [Fact]
+    public async Task For_NullForgivingIndexerThenMemberPath_ShouldOmitBang()
+    {
+        IndexedModel model = new(null, new Dictionary<string, Address> { ["k"] = new Address("") });
+
+        Result<IndexedModel> result = await Validator.ValidateAsync(model, (m, rules) =>
+            rules.For(() => m.Map!["k"].City).NotEmpty());
+
+        result.FirstError.Code.Should().Be("Map[\"k\"].City.NotEmpty");
     }
 }

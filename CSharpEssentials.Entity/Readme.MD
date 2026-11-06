@@ -2,12 +2,15 @@
 
 DDD foundation for .NET entities with auditing, soft deletion, and domain events.
 
+> Benchmarks of the `EntityBase` domain event list against a hand-written list (read, raise and clear, collect)
+> are in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
 - **`EntityBase<TId>`**: Typed IDs with creation and modification audit fields. `EntityBase` is the same without an ID.
 - **`SoftDeletableEntityBase<TId>`**: Soft delete with `MarkAsDeleted`, `Restore`, and `MarkAsHardDeleted`. `SoftDeletableEntityBase` is the same without an ID.
-- **Domain Events**: Raise and clear events for outbox or dispatcher patterns.
-- **Event Timing**: Control when events publish with `[DomainEventTiming]`.
+- **Domain events**: Raise and clear events for outbox or dispatcher patterns.
+- **Event timing**: Control when events publish with `[DomainEventTiming]`.
 - **Interfaces**: `IEntityBase`, `IEntityBase<TId>`, `ISoftDeletable`, `ICreationAudit`, `IModificationAudit` and `IDomainEventHolder` (namespace `CSharpEssentials.Entity.Interfaces`) for code that works with any entity.
 
 ## Installation
@@ -18,7 +21,7 @@ dotnet add package CSharpEssentials.Entity
 
 ## Usage
 
-### Basic Entity
+### Basic entity
 
 ```csharp
 using CSharpEssentials.Entity;
@@ -35,7 +38,7 @@ product.SetCreatedInfo(DateTimeOffset.UtcNow, "system");
 product.SetUpdatedInfo(DateTimeOffset.UtcNow, "admin");
 ```
 
-### Soft Deletable Entity
+### Soft-deletable entity
 
 ```csharp
 public class User : SoftDeletableEntityBase<Guid>
@@ -50,7 +53,7 @@ user.Restore();                                     // clears IsDeleted, Deleted
 
 `MarkAsHardDeleted()` sets `IsHardDeleted`, which tells the EF Core `AuditInterceptor` to remove the row instead of converting the delete into a soft delete. The `HardDelete()` extension (on `IEnumerable<T>` where `T : ISoftDeletable`) marks every item. The audit properties (`CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`, `DeletedAt`, `DeletedBy`) have private setters; set them with `SetCreatedInfo`, `SetUpdatedInfo` and `MarkAsDeleted`. `SetCreatedInfo` throws `ArgumentOutOfRangeException` for `DateTimeOffset.MinValue`.
 
-### Domain Events
+### Domain events
 
 ```csharp
 public record OrderCreated(Guid OrderId) : IDomainEvent;
@@ -75,9 +78,9 @@ foreach (var evt in order.DomainEvents)
 order.ClearDomainEvents();
 ```
 
-`DomainEvents` returns a snapshot, so raising or clearing events while you loop over it is safe. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
+`DomainEvents` is a read-only live view of the entity's events, so reading it does not copy the list. Raising or clearing events while you loop over it throws `InvalidOperationException`; copy it first with `[.. order.DomainEvents]`, and keep a copy if you clear the events before you dispatch them. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
 
-### Event Timing
+### Event timing
 
 ```csharp
 // AfterSave (default): published after the save
@@ -89,3 +92,7 @@ public record OrderValidationEvent(Guid OrderId) : IDomainEvent;
 ```
 
 The attribute only labels the event; `CSharpEssentials.EntityFrameworkCore` reads it. `BaseDbContext` with `DispatchDomainEventsOnSaveChanges` publishes `AfterSave` events once the save has succeeded. `DomainEventInterceptor` dispatches them inside `SavingChanges`, still before the database write, so that an outbox can store them in the same save.
+
+## Upgrading to 8.0
+
+- `EntityBase.DomainEvents` returns a read-only live view instead of a new copy on every read. 7.x copied the list each time, so a reference kept before `ClearDomainEvents()` still held the old events, and raising or clearing inside a `foreach` over it was safe. Now a kept reference shows later `Raise` and `ClearDomainEvents` calls, and changing the events during a `foreach` throws `InvalidOperationException`. If you read the events and then clear them, copy them first: `IDomainEvent[] events = [.. entity.DomainEvents];`.

@@ -53,6 +53,41 @@ public sealed class InMemoryIdempotencyRecordStoreTests : IdempotencyRecordStore
     }
 
     [Fact]
+    public async Task Tokens_Should_Differ_Between_Stores()
+    {
+        InMemoryIdempotencyRecordStore other = new(Clock);
+
+        string first = await ReserveAsync(Key("k1"));
+        IdempotencyRecordReservation second = await other.TryReserveAsync(Key("k1"), "fp", Lease);
+
+        second.Token.Should().NotBe(first);
+        (await other.CompleteAsync(Key("k1"), first, "fp", Payload(), Retention)).Should().BeFalse();
+        (await other.ReleaseAsync(Key("k1"), first)).Should().BeFalse();
+        (await other.TryReserveAsync(Key("k1"), "fp", Lease)).Status.Should().Be(IdempotencyReservationStatus.InFlight);
+    }
+
+    [Fact]
+    public async Task Every_Replay_Should_Return_The_Stored_Payload_And_Keep_The_Entry()
+    {
+        string token = await ReserveAsync(Key("k1"));
+        await Store.CompleteAsync(Key("k1"), token, "fp", Payload("seven"), Retention);
+
+        IdempotencyRecordReservation first = await Store.TryReserveAsync(Key("k1"), "fp", Lease);
+        IdempotencyRecordReservation second = await Store.TryReserveAsync(Key("k1"), "fp", Lease);
+        bool released = await Store.ReleaseAsync(Key("k1"), token);
+        IdempotencyRecordReservation mismatch = await Store.TryReserveAsync(Key("k1"), "other", Lease);
+        IdempotencyRecordReservation third = await Store.TryReserveAsync(Key("k1"), "fp", Lease);
+
+        first.Status.Should().Be(IdempotencyReservationStatus.Completed);
+        first.Payload!.Value.ToArray().Should().Equal(Payload("seven"));
+        second.Payload!.Value.ToArray().Should().Equal(Payload("seven"));
+        released.Should().BeFalse();
+        mismatch.Status.Should().Be(IdempotencyReservationStatus.FingerprintMismatch);
+        third.Status.Should().Be(IdempotencyReservationStatus.Completed);
+        third.Payload!.Value.ToArray().Should().Equal(Payload("seven"));
+    }
+
+    [Fact]
     public void Constructor_Should_Reject_A_Null_TimeProvider()
     {
         Action act = () => _ = new InMemoryIdempotencyRecordStore(null!);

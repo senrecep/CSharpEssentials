@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Text.Encodings.Web;
 
 namespace CSharpEssentials.RequestResponseLogging.Infrastructure.MessageCreators;
 
@@ -29,7 +30,7 @@ internal abstract class BaseLogMessageCreator
 
         IEnumerable<string> filteredHeaders = requestResponseContext.Context.Request.Headers
             .Where(header => headerKeys.Contains(header.Key))
-            .Select(header => $"{{\"{header.Key}\":\"{header.Value}\"}}");
+            .Select(header => $"{{\"{JavaScriptEncoder.UnsafeRelaxedJsonEscaping.Encode(header.Key)}\":\"{JavaScriptEncoder.UnsafeRelaxedJsonEscaping.Encode(header.Value.ToString())}\"}}");
 
         return $"[{string.Join(",", filteredHeaders)}]";
     }

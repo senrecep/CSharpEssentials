@@ -1,17 +1,21 @@
 # CSharpEssentials.AspNetCore
 
-Production-ready ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, enum conventions, and Result endpoint filters.
+ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, enum conventions, and Result endpoint filters.
+
+> Benchmarks against plain ASP.NET Core, Hellang.Middleware.ProblemDetails, Marvin.Cache.Headers and SharpGrip.FluentValidation.AutoValidation
+> (Result endpoint filter, enum binding, conditional GET, problem details, validation filter) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
 
 ## Features
 
-- **Enhanced Problem Details**: One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
-- **Global Exception Handler**: Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
-- **Result Endpoint Filter**: Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
-- **Validation Endpoint Filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
+- **Enhanced problem details**: One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
+- **Global exception handler**: Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
+- **Result endpoint filter**: Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
+- **Validation endpoint filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
 - **Idempotency**: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response instead of running the handler again. Records live in an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`; in-memory and `IDistributedCache` stores are included.
-- **Enum Binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
-- **Conditional Requests**: `ETag`/`Last-Modified` with `304 Not Modified` on reads (`WithConditionalGet()`, `[ConditionalGet]`), and `If-Match` optimistic concurrency with 412/428 on writes (`WithIfMatch()`, `[IfMatch]`).
-- **API Versioning**: Pre-configured URL segment and header-based versioning.
+- **Enum binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
+- **Conditional requests**: `ETag`/`Last-Modified` with `304 Not Modified` on reads (`WithConditionalGet()`, `[ConditionalGet]`), and `If-Match` optimistic concurrency with 412/428 on writes (`WithIfMatch()`, `[IfMatch]`).
+- **API versioning**: Pre-configured URL segment and header-based versioning.
 - **OpenAPI**: Not part of this package. Add `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swagger), one per host.
 
 ## Installation
@@ -24,7 +28,7 @@ Depends on `CSharpEssentials.Errors`, `CSharpEssentials.Json`, `CSharpEssentials
 
 ## Usage
 
-### Problem Details
+### Problem details
 
 ```csharp
 builder.Services.AddEnhancedProblemDetails(o =>
@@ -62,6 +66,8 @@ With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpConte
 
 `errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 
+Problem responses also serialize when reflection-based JSON is off (Native AOT, or a `TypeInfoResolverChain` that holds only your source-generated context). The package adds source-generated metadata for its problem types and the extension values it writes, after your resolvers. Your own extension values of other types (custom `ErrorMetadata` values, enricher output) still need to be in your `JsonSerializerContext`.
+
 #### Returning problems from your own code
 
 ```csharp
@@ -91,7 +97,7 @@ All of them take an optional `ErrorMetadata extensions` (extra fields on the pro
 
 `services.ConfigureSystemTextJson()` applies the `CSharpEssentials.Json` serializer options (or the `JsonSerializerOptions` you pass, then an optional `configureOptions` callback) to both the MVC and the Minimal API JSON options; it also calls `AddControllers()`.
 
-### API Versioning
+### API versioning
 
 ```csharp
 builder.Services.AddAndConfigureApiVersioning(); // optional: configureOptions (ApiVersioningOptions), configureExplorer (ApiExplorerOptions)
@@ -111,11 +117,11 @@ v2.MapGet("/ping", () => "pong");             // GET /v2/ping
 v2.MapAppsEndpoints();                        // CSharpEssentials.Endpoints registry under /v2
 ```
 
-### OpenAPI Documents
+### OpenAPI documents
 
 `AddSwagger`, `UseVersionableSwagger` and the Swagger filters moved to `CSharpEssentials.AspNetCore.Swashbuckle` in 5.0 (same namespaces). For `Microsoft.AspNetCore.OpenApi` use `CSharpEssentials.AspNetCore.OpenApi`. A host references one of them, never both.
 
-### Result Endpoint Filter
+### Result endpoint filter
 
 ```csharp
 builder.Services.AddScoped<IResultErrorMapper, DomainErrorMapper>(); // optional, any lifetime
@@ -127,7 +133,7 @@ app.MapGet("/users/{id}", (int id) => GetUser(id))
 // or a ProblemDetails response when no mapper is registered
 ```
 
-### Validation Endpoint Filter
+### Validation endpoint filter
 
 ```csharp
 using CSharpEssentials.Validation.Extensions; // AddValidator
@@ -229,7 +235,7 @@ o.ServerErrorRetention = o.RetentionPeriod;          // strictest: a stored 5xx 
 #### Scopes and machine callers
 
 - Keys are scoped by `ScopeResolver`, which reads `HttpContext.User`. The default `IdempotencyScopes.User` uses the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Other resolvers: `IdempotencyScopes.Tenant(claimType)`, `UserAndTenant(claimType)`, `Client` (`client_id`, then `azp`), `Custom(kind, principal => ...)` (the kinds `user`, `tenant`, `client` and `global` are reserved) and `Global`. A resolver returns an `IdempotencyScope?` built with the `IdempotencyScope` factories (`User(id)`, `Tenant(id)`, `Client(id)`, `UserAndTenant(userId, tenantId)`, `Custom(kind, value)`, `Global`), which prefix the owner id with its kind. Requests whose scope cannot be resolved (for example anonymous ones) follow `UnscopedKeyBehavior` (see above); the raw key is never logged. Use `Client` for callers that authenticate with client credentials. Global keys never match a scoped entry.
-- `UnscopedKeyBehavior` defaults to `Skip` here, a request without a scope runs without idempotency and logs a warning, so a machine caller that authenticates with client credentials is not protected until you set `ScopeResolver = IdempotencyScopes.Client` (or `Reject`, to make the gap visible as 400 `Idempotency.ScopeRequired`). The Mediator behavior defaults to `Reject`; see [HTTP and Mediator scope defaults](#http-and-mediator-scope-defaults).
+- `UnscopedKeyBehavior` defaults to `Skip` here: a request without a scope runs without idempotency and logs a warning, so a machine caller that authenticates with client credentials is not protected until you set `ScopeResolver = IdempotencyScopes.Client` (or `Reject`, to make the gap visible as 400 `Idempotency.ScopeRequired`). The Mediator behavior defaults to `Reject`; see [HTTP and Mediator scope defaults](#http-and-mediator-scope-defaults).
 - Records are written in the `Namespace` (default `http`), so HTTP keys never meet the keys of message consumers or jobs that share the store.
 - `AddIdempotency` also registers an `IIdempotencyScopeAccessor` that reads `HttpContext.User` (unless one is registered), so the idempotency behavior of `CSharpEssentials.Mediator` scopes keys to the same caller as the middleware. A failed `Result` whose errors include an idempotency code, returned with `ToProblemResult()` or `ToActionResult()`, gets the middleware's status and the top-level `code` member, whatever its `ErrorType`: `Idempotency.InFlight` → 409 with `Retry-After` from `RetryAfter` (1 second without `AddIdempotency`), `Idempotency.KeyReused` → 422, `Idempotency.KeyMissing`, `KeyInvalid` and `ScopeRequired` → 400. Other errors get neither, so clients retry only a key in flight.
 #### HTTP and Mediator scope defaults
@@ -313,7 +319,7 @@ app.MapPost("/payments/{orderId:guid}/capture", async (
 
 A failed `Result` of the command carrying `Idempotency.InFlight`, `KeyReused` or `ScopeRequired` gets the same status and `code` as the middleware's own answers, so a client handles both layers alike. Provider webhooks have no `Idempotency-Key`; dedupe them by event id as in [Webhook dedupe](../CSharpEssentials.Idempotency/Readme.MD#webhook-dedupe).
 
-### Enum Conventions: JSON, Binding and Wire Format
+### Enum conventions: JSON, binding and wire format
 
 ```csharp
 builder.Services.AddEnumConventions(); // JSON options, binding rules, body errors, output filters
@@ -412,7 +418,7 @@ Validators: a registered `IETagSource<T>` (exact runtime type, then base classes
 
 `Preconditions` (`HttpContext.GetPreconditions()`): `HasIfMatch`, `IsWildcard`, `IfMatch`, `Matches(IVersioned?)`, `Matches(ResourceValidators?)`, `Matches(EntityTagHeaderValue?)` (strong comparison, weak tags never match), and `TryGetIfMatchVersion(out string version)`, the value of a single strong tag. That value equals `IVersioned.Version` only when the version is a valid entity tag (numbers such as `uint xmin` or a `long` revision are); hashed versions must be compared with `Matches(IVersioned?)`. Pass it as the original concurrency token of the update (for example EF Core `OriginalValue`) for an atomic check. `WithIfMatch<TBuilder, T>(loadCurrent)` loads the current resource and returns 412 before the handler; that check is not atomic. A weak ETag (the body hash fallback) never matches there, so only `If-Match: *` passes. With `UseIdempotency()`, a retry with the same `Idempotency-Key` replays the stored response without evaluating `If-Match` again; the fingerprint covers method, path, query and body, not headers.
 
-### Structured Error Response
+### Structured error response
 
 ```json
 {

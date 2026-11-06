@@ -1,9 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
-#if NET9_0_OR_GREATER
-using System.Collections.Frozen;
-#endif
 
 namespace CSharpEssentials.Enums;
 
@@ -20,13 +17,10 @@ public static class EnumMetadata
 #else
     private static readonly object Gate = new();
 #endif
-    private static readonly ConcurrentDictionary<(Type Type, EnumNaming Naming), IEnumInfo> ReflectionCache = new();
+    private static readonly ConcurrentDictionary<(Type Type, EnumNaming Naming), (IEnumInfo Info, int Registrations)> ReflectionCache = new();
     private static readonly Dictionary<Type, Lazy<IEnumInfo>> Registered = [];
-#if NET9_0_OR_GREATER
-    private static FrozenDictionary<Type, Lazy<IEnumInfo>>? _snapshot;
-#else
     private static Dictionary<Type, Lazy<IEnumInfo>>? _snapshot;
-#endif
+    private static int _registrations;
 
     /// <summary>Gets the generated metadata of <typeparamref name="TEnum"/>.</summary>
     /// <exception cref="InvalidOperationException">The enum is not marked <see cref="StringEnumAttribute"/> (or its project uses C# 8 or older).</exception>
@@ -75,9 +69,20 @@ public static class EnumMetadata
         if (!enumType.IsEnum)
             throw new ArgumentException($"'{enumType.FullName}' is not an enum type.", nameof(enumType));
 
-        return TryGet(enumType, out IEnumInfo? info)
-            ? info
-            : ReflectionCache.GetOrAdd((enumType, naming), static key => ReflectionEnumInfoBuilder.Build(key.Type, key.Naming));
+        (Type, EnumNaming) key = (enumType, naming);
+        bool found = ReflectionCache.TryGetValue(key, out (IEnumInfo Info, int Registrations) cached);
+        int registrations = Volatile.Read(ref _registrations);
+        if (found && cached.Registrations == registrations)
+            return cached.Info;
+
+        if (TryGet(enumType, out IEnumInfo? info))
+            return info;
+
+        IEnumInfo reflected = found
+            ? cached.Info
+            : ReflectionCache.GetOrAdd(key, static key => (ReflectionEnumInfoBuilder.Build(key.Type, key.Naming), -1)).Info;
+        ReflectionCache[key] = (reflected, registrations);
+        return reflected;
     }
 
     /// <summary>Registers metadata built in code.</summary>
@@ -90,6 +95,7 @@ public static class EnumMetadata
             Registered[typeof(TEnum)] = new Lazy<IEnumInfo>(() => info);
             _snapshot = null;
             EnumInfoCache<TEnum>.Set(info);
+            Volatile.Write(ref _registrations, _registrations + 1);
         }
     }
 
@@ -116,25 +122,18 @@ public static class EnumMetadata
             }
 
             _snapshot = null;
+            Volatile.Write(ref _registrations, _registrations + 1);
         }
     }
 
     private static bool Lookup(Type enumType, [NotNullWhen(true)] out IEnumInfo? info)
     {
-#if NET9_0_OR_GREATER
-        FrozenDictionary<Type, Lazy<IEnumInfo>>? snapshot = Volatile.Read(ref _snapshot);
-#else
         Dictionary<Type, Lazy<IEnumInfo>>? snapshot = Volatile.Read(ref _snapshot);
-#endif
         if (snapshot is null)
         {
             lock (Gate)
             {
-#if NET9_0_OR_GREATER
-                snapshot = _snapshot ??= Registered.ToFrozenDictionary();
-#else
-                snapshot = _snapshot ??= Registered.ToDictionary(static entry => entry.Key, static entry => entry.Value);
-#endif
+                snapshot = _snapshot ??= [with(Registered)];
             }
         }
 

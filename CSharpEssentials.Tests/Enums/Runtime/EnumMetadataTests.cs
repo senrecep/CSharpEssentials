@@ -43,6 +43,41 @@ public class EnumMetadataTests
     }
 
     [Fact]
+    public void WireNames_And_Allowed_Values_Should_Not_Expose_The_Cached_Arrays()
+    {
+        IEnumInfo info = EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+        var typed = (EnumInfo<ParserStatus>)info;
+
+        info.WireNames.Should().NotBeAssignableTo<string[]>();
+        info.WireNames.Should().BeSameAs(info.WireNames);
+        typed.CreateError("x", EnumReadMode.Data).AllowedValues.Should().NotBeAssignableTo<string[]>();
+        typed.CreateError("x", EnumReadMode.Input).AllowedValues.Should().NotBeAssignableTo<string[]>();
+        typed.CreateError("x", EnumReadMode.Data).Should().Be(typed.CreateError("x", EnumReadMode.Data));
+        Func<string> outOfRange = () => info.WireNames[info.WireNames.Count];
+        outOfRange.Should().Throw<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public void WireNames_Should_Be_A_Read_Only_Collection_That_Copies_In_Bulk()
+    {
+        IEnumInfo info = EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+        ICollection<string> names = info.WireNames.Should().BeAssignableTo<ICollection<string>>().Subject;
+
+        names.IsReadOnly.Should().BeTrue();
+        names.Contains("done").Should().BeTrue();
+        names.Contains("missing").Should().BeFalse();
+        string[] copy = new string[names.Count + 1];
+        names.CopyTo(copy, 1);
+        copy[0].Should().BeNull();
+        copy[1..].Should().Equal(info.WireNames);
+        new List<string>(info.WireNames).Should().Equal(info.WireNames);
+        ((Action)(() => names.Add("x"))).Should().Throw<NotSupportedException>();
+        ((Action)names.Clear).Should().Throw<NotSupportedException>();
+        ((Action)(() => names.Remove("done"))).Should().Throw<NotSupportedException>();
+        info.WireNames.Should().HaveCount(7);
+    }
+
+    [Fact]
     public void Reflection_Metadata_Should_Reject_Non_Enum_Types()
     {
         Action act = () => EnumMetadata.GetOrCreateWithReflection(typeof(int));
@@ -83,6 +118,53 @@ public class EnumMetadataTests
         List<string> names = [];
         EnumValueFormatter.FormatFlags(ManuallyRegistered.First, names);
         names.Should().Equal("first");
+    }
+
+    [Fact]
+    public void Registered_Metadata_Should_Replace_Cached_Reflection_Metadata()
+    {
+        IEnumInfo reflected = EnumMetadata.GetOrCreateWithReflection(typeof(RegisteredAfterReflection));
+        EnumMetadata.GetOrCreateWithReflection(typeof(RegisteredAfterReflection)).Should().BeSameAs(reflected);
+        EnumInfo<RegisteredAfterReflection> info = new(
+            [new EnumMemberInfo<RegisteredAfterReflection>(RegisteredAfterReflection.Only, 0, "Only", "the-only")],
+            static v => unchecked((ulong)(long)v),
+            static r => unchecked((RegisteredAfterReflection)(long)r),
+            isFlags: false,
+            EnumStorage.Integer);
+
+        EnumMetadata.Register(info);
+
+        EnumMetadata.GetOrCreateWithReflection(typeof(RegisteredAfterReflection)).Should().BeSameAs(info);
+    }
+
+    [Fact]
+    public void Reflection_Metadata_Should_Stay_The_Same_Instance_After_An_Unrelated_Registration()
+    {
+        IEnumInfo snake = EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+
+        EnumMetadata.RegisterRange([]);
+
+        EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus)).Should().BeSameAs(snake);
+        EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus)).Should().BeSameAs(snake);
+        EnumMetadata.IsRegistered(typeof(ParserStatus)).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Members_Should_Be_Read_Only_Collections_That_Copy_In_Bulk()
+    {
+        var info = (EnumInfo<ParserStatus>)EnumMetadata.GetOrCreateWithReflection(typeof(ParserStatus));
+
+        info.Members.Should().NotBeAssignableTo<Array>();
+        info.TypedMembers.Should().NotBeAssignableTo<Array>();
+        info.Members.Should().BeSameAs(info.Members);
+        info.TypedMembers.Should().BeSameAs(info.TypedMembers);
+        info.Members.Should().Equal(info.TypedMembers);
+        info.Members.Select(static member => member.WireName).Should().Equal(info.WireNames);
+        new List<IEnumMemberInfo>(info.Members).Should().Equal(info.Members);
+        info.TypedMembers.ToArray().Should().Equal(info.TypedMembers);
+        ((ICollection<IEnumMemberInfo>)info.Members).IsReadOnly.Should().BeTrue();
+        Func<IEnumMemberInfo> outOfRange = () => info.Members[info.Members.Count];
+        outOfRange.Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]

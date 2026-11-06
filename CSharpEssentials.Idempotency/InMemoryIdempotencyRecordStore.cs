@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 
 namespace CSharpEssentials.Idempotency;
 
@@ -10,6 +11,7 @@ namespace CSharpEssentials.Idempotency;
 public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
 {
     private static readonly TimeSpan SweepInterval = TimeSpan.FromMinutes(1);
+    private static long s_lastToken;
 
     private readonly ConcurrentDictionary<IdempotencyRecordKey, Entry> _entries = new();
     private readonly TimeProvider _timeProvider;
@@ -44,15 +46,20 @@ public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
         DateTimeOffset now = _timeProvider.GetUtcNow();
         SweepIfDue(now);
 
-        Entry reservation = new(Guid.NewGuid().ToString("N"), fingerprint, null, now + lease);
+        Entry? reservation = null;
         while (true)
         {
-            if (_entries.TryAdd(key, reservation))
-                return new(IdempotencyRecordReservation.Reserved(reservation.Token));
             if (!_entries.TryGetValue(key, out Entry? existing))
+            {
+                reservation ??= new(NextToken(), fingerprint, null, now + lease);
+                if (_entries.TryAdd(key, reservation))
+                    return new(IdempotencyRecordReservation.Reserved(reservation.Token));
                 continue;
+            }
+
             if (existing.ExpiresAt <= now)
             {
+                reservation ??= new(NextToken(), fingerprint, null, now + lease);
                 if (_entries.TryUpdate(key, reservation, existing))
                     return new(IdempotencyRecordReservation.Reserved(reservation.Token));
                 continue;
@@ -60,9 +67,7 @@ public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
 
             if (!string.Equals(existing.Fingerprint, fingerprint, StringComparison.Ordinal))
                 return new(IdempotencyRecordReservation.FingerprintMismatch);
-            return new(existing.Payload is null
-                ? IdempotencyRecordReservation.InFlight
-                : IdempotencyRecordReservation.Completed(existing.Payload));
+            return new(existing.Completed ?? IdempotencyRecordReservation.InFlight);
         }
     }
 
@@ -79,12 +84,12 @@ public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
         Guard.NotNullOrEmpty(fingerprint);
         Guard.Positive(retention);
 
-        Entry completed = new(token, fingerprint, payload.ToArray(), _timeProvider.GetUtcNow() + retention);
+        Entry completed = new(token, fingerprint, IdempotencyRecordReservation.Completed(payload.ToArray()), _timeProvider.GetUtcNow() + retention);
         while (true)
         {
             if (_entries.TryGetValue(key, out Entry? existing))
             {
-                if (existing.Payload is not null || !string.Equals(existing.Token, token, StringComparison.Ordinal))
+                if (existing.Completed is not null || !string.Equals(existing.Token, token, StringComparison.Ordinal))
                     return new(false);
                 if (_entries.TryUpdate(key, completed, existing))
                     return new(true);
@@ -102,10 +107,17 @@ public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
         Guard.NotNullOrEmpty(token);
 
         return new(_entries.TryGetValue(key, out Entry? existing)
-            && existing.Payload is null
+            && existing.Completed is null
             && string.Equals(existing.Token, token, StringComparison.Ordinal)
             && TryRemove(new KeyValuePair<IdempotencyRecordKey, Entry>(key, existing)));
     }
+
+    /// <summary>
+    /// A token unique to one reservation among every in-memory store of the process. Tokens never leave the process, so
+    /// a counter fences a stale reservation as well as a random value and costs no call into the system random source.
+    /// </summary>
+    private static string NextToken() =>
+        Interlocked.Increment(ref s_lastToken).ToString(CultureInfo.InvariantCulture);
 
     private void SweepIfDue(DateTimeOffset now)
     {
@@ -129,13 +141,14 @@ public sealed class InMemoryIdempotencyRecordStore : IIdempotencyRecordStore
         ((ICollection<KeyValuePair<IdempotencyRecordKey, Entry>>)_entries).Remove(pair);
 
     /// <summary>A class, not a record: <c>TryUpdate</c> and the compare-and-remove compare entries by reference.</summary>
-    private sealed class Entry(string token, string fingerprint, byte[]? payload, DateTimeOffset expiresAt)
+    private sealed class Entry(string token, string fingerprint, IdempotencyRecordReservation? completed, DateTimeOffset expiresAt)
     {
         public string Token { get; } = token;
 
         public string Fingerprint { get; } = fingerprint;
 
-        public byte[]? Payload { get; } = payload;
+        /// <summary>The reservation every replay of a completed entry returns; <see langword="null"/> while in flight.</summary>
+        public IdempotencyRecordReservation? Completed { get; } = completed;
 
         public DateTimeOffset ExpiresAt { get; } = expiresAt;
     }

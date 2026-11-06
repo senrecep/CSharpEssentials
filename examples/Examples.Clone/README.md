@@ -1,8 +1,8 @@
-# CSharpEssentials.Clone Example
+# CSharpEssentials.Clone example
 
 This console application demonstrates deep cloning with `CSharpEssentials.Clone`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

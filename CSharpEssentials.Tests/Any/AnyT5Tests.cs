@@ -274,6 +274,13 @@ public class AnyT5Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string, bool, double, long> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string, bool, double, long> original = 42;
@@ -361,5 +368,17 @@ public class AnyT5Tests
         var any = Any<int, string, bool, double, long>.Fifth(99L);
         any.Index.Should().Be(4);
         any.GetFifth().Should().Be(99L);
+    }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool _, out double _, out long _);
+        first.Should().Be(0);
+        second.Should().BeNull();
     }
 }

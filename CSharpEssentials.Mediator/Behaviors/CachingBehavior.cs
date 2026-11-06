@@ -1,4 +1,5 @@
 using Mediator;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 
 using CSharpEssentials.ResultPattern.Interfaces;
@@ -22,15 +23,23 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         if (message.BypassCache)
             return await next(message, cancellationToken).ConfigureAwait(false);
 
-        byte[]? cachedBytes = await cache.GetAsync(message.CacheKey, cancellationToken).ConfigureAwait(false);
+        string cacheKey = message.CacheKey;
+        byte[]? cachedBytes = await cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         if (cachedBytes is not null && cachedBytes.Length > 0)
         {
-            LogCacheHit(logger, message.CacheKey);
-            TResponse? deserialized = JsonSerializer.Deserialize<TResponse>(cachedBytes);
-            return deserialized ?? throw new InvalidOperationException($"Failed to deserialize cached value for key {message.CacheKey}");
-        }
+            if (TryDeserialize(cachedBytes, out TResponse? cached))
+            {
+                LogCacheHit(logger, cacheKey);
+                return cached;
+            }
 
-        LogCacheMiss(logger, message.CacheKey);
+            LogCacheEntryUnreadable(logger, cacheKey);
+            await cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            LogCacheMiss(logger, cacheKey);
+        }
 
         TResponse result = await next(message, cancellationToken).ConfigureAwait(false);
 
@@ -42,11 +51,28 @@ public sealed partial class CachingBehavior<TRequest, TResponse>(
         if (message.Expiration > TimeSpan.Zero)
             options.AbsoluteExpirationRelativeToNow = message.Expiration;
 
-        await cache.SetAsync(message.CacheKey, serialized, options, cancellationToken).ConfigureAwait(false);
-        LogCacheSet(logger, message.CacheKey);
+        await cache.SetAsync(cacheKey, serialized, options, cancellationToken).ConfigureAwait(false);
+        LogCacheSet(logger, cacheKey);
 
         return result;
     }
+
+    private static bool TryDeserialize(byte[] bytes, [NotNullWhen(true)] out TResponse? value)
+    {
+        try
+        {
+            value = JsonSerializer.Deserialize<TResponse>(bytes);
+            return value is not null;
+        }
+        catch (JsonException)
+        {
+            value = default;
+            return false;
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Cached value for key {CacheKey} could not be deserialized; removing it and calling the handler")]
+    private static partial void LogCacheEntryUnreadable(ILogger logger, string cacheKey);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Cache hit for key {CacheKey}")]
     private static partial void LogCacheHit(ILogger logger, string cacheKey);

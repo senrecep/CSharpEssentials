@@ -1,17 +1,20 @@
 # CSharpEssentials.Maybe
 
-Maybe (Option) monad for null-safe, expressive code. Avoid `NullReferenceException` by making missing values explicit.
+Maybe (Option) monad for null-safe code. Missing values are explicit, which avoids `NullReferenceException`.
 
 ## Features
 
 - **Maybe<T>**: Explicit presence/absence of a value with implicit conversions.
 - **Functional API**: `Map`, `Bind`, `Where`, `Match`, `Or`, `Tap`.
-- **LINQ Support**: Query syntax with `Select`, `SelectMany`, `Where`.
-- **Async Support**: `MapAsync`, `BindAsync`, and awaitable extensions.
-- **Result Bridge**: Convert `Maybe<T>` to `Result<T>` and back.
-- **Sequence Helpers**: `TryFirst`, `TryLast`, `TryFind`, `Choose`, `Sequence`, `Traverse`, `Partition`.
+- **LINQ**: Query syntax with `Select`, `SelectMany`, `Where`.
+- **Async**: `MapAsync`, `BindAsync`, and awaitable extensions.
+- **Result bridge**: Convert `Maybe<T>` to `Result<T>` and back.
+- **Sequence helpers**: `TryFirst`, `TryLast`, `TryFind`, `Choose`, `Sequence`, `Traverse`, `Partition`.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Errors`. `Maybe<T>` and the non-generic `Maybe` (for `Maybe.None`, `Maybe.From`, `Maybe.FromAsync` and `Maybe.FromTry`) live in the `CSharpEssentials.Maybe` namespace.
+
+> **Benchmarks:** `TryFirst`, `TryLast`, `TryFind` and `Choose` against CSharpFunctionalExtensions and hand-written loops are
+> documented in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
 
 ## Installation
 
@@ -43,7 +46,7 @@ Maybe<string> lazy = Maybe.From(() => Environment.GetEnvironmentVariable("HOME")
 
 `From` gives `None` for `null`. `Maybe<T>` serializes with `System.Text.Json` as `{"HasValue":true,"value":5}` and deserializes back from that shape.
 
-### Functional Chaining
+### Functional chaining
 
 ```csharp
 string city = FindUser(1)
@@ -53,7 +56,7 @@ string city = FindUser(1)
     .GetValueOrDefault("Unknown");
 ```
 
-### LINQ Queries
+### LINQ queries
 
 ```csharp
 Maybe<string> tracking =
@@ -78,7 +81,7 @@ string loaded = await FindUser(1).MatchAsync(
     cancellationToken: token);
 ```
 
-### Reading the Value
+### Reading the value
 
 ```csharp
 Maybe<int> maybe = 5;
@@ -95,7 +98,7 @@ int? e = maybe.AsNullable();                           // T? for reference types
 List<int> list = maybe.ToList();                       // one element, or empty
 ```
 
-### Filtering, Fallbacks and Side Effects
+### Filtering, fallbacks and side effects
 
 ```csharp
 Maybe<int> big = maybe.Where(v => v > 3);               // None when the predicate fails
@@ -136,7 +139,7 @@ Maybe<Order> order = await user
 
 Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `WhereAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`. The instance `MapAsync` has a `Task` and a `ValueTask` twin without that priority, so `maybe.MapAsync(async v => ...)` is ambiguous (CS0121) on every language version; pass a lambda that returns a `Task` instead (`maybe.MapAsync(v => LoadAsync(v))`) or type the delegate.
 
-### Collection Extensions
+### Collection extensions
 
 ```csharp
 // Require ALL lookups to succeed — None if any is missing
@@ -158,7 +161,7 @@ Maybe<Config[]> configs = configMaybes.Sequence();
 | `TryFirst()`, `TryFirst(predicate)`, `TryLast()`, `TryLast(predicate)` | `Maybe<T>` | First or last element, `None` when there is none |
 | `dictionary.TryFind(key)` | `Maybe<TValue>` | Lookup on an `IReadOnlyDictionary` |
 
-`TryFirst` is built on `FirstOrDefault`: for a sequence of value types such as `int[]`, an empty sequence or a predicate without a match gives `Some(default)` instead of `None`. `TryLast` and the other helpers do not have this limitation.
+`TryFirst` and `TryLast` return `None` for an empty sequence or a predicate without a match, for value types too. A `null` element gives `None`. On an `IList<T>` or `IReadOnlyList<T>`, `TryLast` reads the last element by index, and `TryLast(predicate)` walks from the end and stops at the first match.
 
 ### Choosing between `T?`, `Maybe<T>` and `Result<T>`
 
@@ -182,7 +185,7 @@ Result<User> found = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFo
 
 `Maybe<T>.None` never equals a non-null plain `T`: `Maybe<int>.None == 0` is `false`, while `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence: `Maybe<string>.None == null` is `true` and `Maybe<string>.From("a") == null` is `false`, in either operand order. A typed `null` means absence, but `Equals(object?)` and `maybe == (object?)null` follow the BCL rule that `x.Equals(null)` is `false`: `Maybe<string>.None.Equals((object?)null)` and `Maybe<string>.None == (object?)null` are both `false`. The static type of the operand picks the rule, so cast to `T?` or use `HasNoValue` to test for absence. Prefer `HasNoValue` over `== null` or `== default` for clarity. For a value type `T`, `maybe == default` means `default(T)` (so `Maybe<int>.None == default` is `false`), and `Maybe<int> == null` does not compile cleanly (CS9342, a known overload ambiguity), so use `HasNoValue`. `ToString()` returns `Some(value)` or `None`; `IFormattable` values are formatted with the invariant culture.
 
-### Exception-safe Creation
+### Exception-safe creation
 
 ```csharp
 using System.Text.Json;
@@ -192,7 +195,7 @@ Maybe<int> result = Maybe<int>.FromTry(() => int.Parse(userInput));
 Maybe<User> user  = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(json));
 ```
 
-### TapNone: Side Effect on Absence
+### TapNone: side effect on absence
 
 ```csharp
 Maybe<int> maybe = Maybe.None;
@@ -206,7 +209,7 @@ await maybe.TapNoneAsync(async () => await NotifyAsync("Missing"));
 await GetMaybeAsync().TapNoneAsync(() => logger.LogWarning("Value missing"));
 ```
 
-### GetValueOrElse: Lazy Fallback
+### GetValueOrElse: lazy fallback
 
 ```csharp
 // Factory only called when None (unlike GetValueOrDefault which always evaluates)
@@ -222,7 +225,7 @@ Maybe<int>? stored = null;              // e.g. a Maybe<int>? property mapped to
 Maybe<int> points = stored.Flatten();   // None
 ```
 
-### OrElse: Lazy Maybe Chain
+### OrElse: lazy Maybe chain
 
 ```csharp
 // Alias for Or(Func<Maybe<T>>) — returns self if Some, calls factory if None
@@ -231,3 +234,17 @@ Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 // Async
 Maybe<Config> loaded = await GetFromCache().OrElseAsync(() => Task.FromResult(GetFromDatabase()));
 ```
+
+## Upgrading to 8.0
+
+### TryFirst on value-type sequences
+
+`TryFirst()` and `TryFirst(predicate)` used to return `Some(default)` for a value-type sequence such as `int[]` when the sequence was empty or nothing matched. They now return `None`, like `TryLast`. Code that read `Value` from that `Some(0)` should check `HasValue` or use `GetValueOrDefault`.
+
+### TryLast(predicate) on lists
+
+`TryLast(predicate)` on an `IList<T>` or `IReadOnlyList<T>` now calls the predicate from the last element backwards and stops at the first match, the way `Enumerable.LastOrDefault` does. The result is the same, but a predicate with side effects sees fewer calls in a different order. Other sequences are still enumerated from the start.
+
+### Cancellation in async operations
+
+Async operations that take a `CancellationToken` and wait on a task source (`Maybe.FromAsync`, `AsMaybeAsync`, `MapAsync`, `BindAsync`, `TapAsync`, `WhereAsync`, `OrAsync`, `ToResultAsync` and the rest) wait through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while they wait, they throw `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.

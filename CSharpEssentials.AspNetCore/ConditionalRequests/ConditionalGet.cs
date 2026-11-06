@@ -1,7 +1,3 @@
-using System.Collections.Concurrent;
-using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using CSharpEssentials.ResultPattern;
 using CSharpEssentials.ResultPattern.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Headers;
@@ -16,8 +12,6 @@ namespace CSharpEssentials.AspNetCore;
 /// </summary>
 internal static class ConditionalGet
 {
-    private static readonly ConcurrentDictionary<Type, PropertyInfo?> ValueAccessors = new();
-
     public static bool IsGetOrHead(string method) => HttpMethods.IsGet(method) || HttpMethods.IsHead(method);
 
     /// <summary>
@@ -31,16 +25,10 @@ internal static class ConditionalGet
         {
             if (!result.IsSuccess)
                 return null;
-            resource = ValueAccessors.GetOrAdd(value.GetType(), GetValueProperty) is { } property ? property.GetValue(value) : null;
+            resource = (result as IValueResult)?.BoxedValue;
         }
         return resource is string or ProblemDetails ? null : resource;
     }
-
-    [DynamicDependency(DynamicallyAccessedMemberTypes.PublicProperties, typeof(Result<>))]
-    private static PropertyInfo? GetValueProperty(Type type) =>
-        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Result<>)
-            ? type.GetProperty(nameof(Result<>.Value))
-            : null;
 
     /// <summary>
     /// Sets <c>ETag</c> and <c>Last-Modified</c> from the validators of <paramref name="resource"/> and evaluates

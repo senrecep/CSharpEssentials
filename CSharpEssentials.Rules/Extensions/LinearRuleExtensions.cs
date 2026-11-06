@@ -7,6 +7,8 @@ public static partial class Extensions
     #region Build Chain
     public static IRuleBase<TContext> Linear<TContext>(this IRule<TContext>[] rules)
     {
+        if (rules.Length == 0)
+            return EmptyLinearRule<TContext>();
         IRuleBase<TContext> chain = rules[^1];
         for (int i = rules.Length - 2; i >= 0; i--)
             chain = rules[i].Next(chain);
@@ -14,6 +16,8 @@ public static partial class Extensions
     }
     public static IRuleBase<TContext> Linear<TContext>(this IAsyncRule<TContext>[] rules)
     {
+        if (rules.Length == 0)
+            return EmptyLinearRule<TContext>();
         IRuleBase<TContext> chain = rules[^1];
         for (int i = rules.Length - 2; i >= 0; i--)
             chain = rules[i].Next(chain);
@@ -22,6 +26,8 @@ public static partial class Extensions
 
     public static IRuleBase<TContext, TResult> Linear<TContext, TResult>(this IRule<TContext, TResult>[] rules)
     {
+        if (rules.Length == 0)
+            return EmptyLinearRule<TContext, TResult>();
         IRuleBase<TContext, TResult> chain = rules[^1];
         for (int i = rules.Length - 2; i >= 0; i--)
             chain = rules[i].Next(chain);
@@ -30,10 +36,24 @@ public static partial class Extensions
 
     public static IRuleBase<TContext, TResult> Linear<TContext, TResult>(this IAsyncRule<TContext, TResult>[] rules)
     {
+        if (rules.Length == 0)
+            return EmptyLinearRule<TContext, TResult>();
         IRuleBase<TContext, TResult> chain = rules[^1];
         for (int i = rules.Length - 2; i >= 0; i--)
             chain = rules[i].Next(chain);
         return chain;
+    }
+
+    private static IRuleBase<TContext> EmptyLinearRule<TContext>()
+    {
+        Func<TContext, Result> rule = _ => RuleErrors.EmptyRuleArrayError;
+        return rule.ToRule();
+    }
+
+    private static IRuleBase<TContext, TResult> EmptyLinearRule<TContext, TResult>()
+    {
+        Func<TContext, Result<TResult>> rule = _ => RuleErrors.EmptyRuleArrayError;
+        return rule.ToRule();
     }
     #endregion
 

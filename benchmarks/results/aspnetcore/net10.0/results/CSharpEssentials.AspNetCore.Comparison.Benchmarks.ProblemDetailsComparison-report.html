@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.ProblemDetailsComparison-20261105-225117</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                           </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Bcl_TypedResultsProblem</td><td>ErrorResult</td><td>10.99 &mu;s</td><td>0.193 &mu;s</td><td>0.161 &mu;s</td><td>1.00</td><td>0.02</td><td>0.6104</td><td>10.31 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_ToProblemResult</td><td>ErrorResult</td><td>12.65 &mu;s</td><td>0.249 &mu;s</td><td>0.332 &mu;s</td><td>1.15</td><td>0.03</td><td>0.6104</td><td>11.38 KB</td><td>1.10</td>
+</tr><tr><td>Bcl_AddProblemDetails</td><td>Exception</td><td>28.31 &mu;s</td><td>0.504 &mu;s</td><td>0.471 &mu;s</td><td>1.00</td><td>0.02</td><td>0.7324</td><td>12.32 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_GlobalExceptionHandler</td><td>Exception</td><td>29.68 &mu;s</td><td>0.559 &mu;s</td><td>0.665 &mu;s</td><td>1.05</td><td>0.03</td><td>0.7324</td><td>12.39 KB</td><td>1.01</td>
+</tr><tr><td>Hellang_UseProblemDetails</td><td>Exception</td><td>28.05 &mu;s</td><td>0.375 &mu;s</td><td>0.313 &mu;s</td><td>0.99</td><td>0.02</td><td>0.7324</td><td>12.98 KB</td><td>1.05</td>
+</tr><tr><td>Bcl_StatusCode</td><td>StatusCode</td><td>11.16 &mu;s</td><td>0.220 &mu;s</td><td>0.278 &mu;s</td><td>1.00</td><td>0.03</td><td>0.6104</td><td>10.3 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_StatusCode</td><td>StatusCode</td><td>11.29 &mu;s</td><td>0.101 &mu;s</td><td>0.095 &mu;s</td><td>1.01</td><td>0.03</td><td>0.6104</td><td>10.35 KB</td><td>1.00</td>
+</tr><tr><td>Hellang_StatusCode</td><td>StatusCode</td><td>15.38 &mu;s</td><td>0.306 &mu;s</td><td>0.658 &mu;s</td><td>1.38</td><td>0.07</td><td>0.7324</td><td>12.3 KB</td><td>1.19</td>
+</tr></tbody></table>
+</body>
+</html>

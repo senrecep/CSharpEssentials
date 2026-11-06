@@ -14,6 +14,11 @@ internal static class AssemblyServiceScanner
 
     public const string DynamicCodeMessage = "Builds decorator factories and closes generic types at runtime.";
 
+    private const string TrimmedConstructorHint =
+        "If the application is trimmed or published with Native AOT, the trimmer may have removed it, because " +
+        "AddServicesFromAssemblies finds decorators only by reflection. Use the generated Add{Asm}Services method, " +
+        "or Decorate<TService, TDecorator>(), in trimmed and Native AOT apps.";
+
     private const string AttributeNamespace = "CSharpEssentials.DependencyInjection";
 
     private static readonly string[] ExcludedInterfaces =
@@ -24,6 +29,9 @@ internal static class AssemblyServiceScanner
         "System.IComparable`1",
         "System.Collections.IEnumerable",
     ];
+
+    private static readonly Comparer<Type> ByName =
+        Comparer<Type>.Create(static (left, right) => string.CompareOrdinal(left.FullName ?? left.Name, right.FullName ?? right.Name));
 
     public static void Scan(IServiceCollection services, ILogger? logger, IEnumerable<Assembly> assemblies)
     {
@@ -52,7 +60,7 @@ internal static class AssemblyServiceScanner
                 {
                     if (TryGetLifetime(attribute.AttributeType, out ServiceLifetime lifetime))
                     {
-                        registrations.AddRange(CreateRegistrations(type, attribute, lifetime));
+                        AddRegistrations(registrations, type, attribute, lifetime);
                     }
                     else if (IsAttribute(attribute.AttributeType, "DecoratesAttribute"))
                     {
@@ -138,7 +146,8 @@ internal static class AssemblyServiceScanner
         return IsAttribute(attributeType, "RegisterTransientAttribute");
     }
 
-    private static List<(ServiceDescriptor Descriptor, RegistrationStrategy Strategy)> CreateRegistrations(
+    private static void AddRegistrations(
+        List<(ServiceDescriptor Descriptor, RegistrationStrategy Strategy)> registrations,
         Type implementation,
         CustomAttributeData attribute,
         ServiceLifetime lifetime)
@@ -149,8 +158,10 @@ internal static class AssemblyServiceScanner
         object? key = null;
         ServiceAs? serviceAs = null;
         RegistrationStrategy strategy = RegistrationStrategy.Add;
-        foreach (CustomAttributeNamedArgument argument in attribute.NamedArguments)
+        IList<CustomAttributeNamedArgument> arguments = attribute.NamedArguments;
+        for (int index = 0; index < arguments.Count; index++)
         {
+            CustomAttributeNamedArgument argument = arguments[index];
             object? value = ReadValue(argument.TypedValue);
             switch (argument.MemberName)
             {
@@ -175,11 +186,13 @@ internal static class AssemblyServiceScanner
         }
 
         bool forward = serviceAs == ServiceAs.SelfWithInterfaces && !implementation.IsGenericTypeDefinition;
-        return [.. serviceTypes.Select(serviceType => (
-            forward && serviceType != implementation
+        foreach (Type serviceType in serviceTypes)
+        {
+            ServiceDescriptor descriptor = forward && serviceType != implementation
                 ? CreateForwarding(serviceType, implementation, key, lifetime)
-                : new ServiceDescriptor(serviceType, key, implementation, lifetime),
-            strategy))];
+                : new ServiceDescriptor(serviceType, key, implementation, lifetime);
+            registrations.Add((descriptor, strategy));
+        }
     }
 
     private static (int Order, Action<IServiceCollection> Apply) CreateDecorator(Type decoratorType, CustomAttributeData attribute)
@@ -208,13 +221,13 @@ internal static class AssemblyServiceScanner
         EnsureImplements(decoratorType, serviceType);
         if (decoratorType.IsGenericTypeDefinition)
         {
-            return (order, services => ServiceDecoration.DecorateOpenGeneric(services, serviceType, decoratorType, candidate => Equals(candidate, key)));
+            return (order, services => ServiceDecoration.DecorateOpenGeneric(services, serviceType, decoratorType, candidate => Equals(candidate, key), TrimmedConstructorHint));
         }
 
-        Func<object, IServiceProvider, object> factory = DecoratorActivator.Create(decoratorType, serviceType, key);
+        Func<object, IServiceProvider, object> factory = DecoratorActivator.Create(decoratorType, serviceType, key, TrimmedConstructorHint);
         void Apply(IServiceCollection services)
         {
-            if (!ServiceDecoration.TryDecorate(services, serviceType, key, factory))
+            if (!ServiceDecoration.TryDecorate(services, serviceType, key, factory, Type.EmptyTypes))
             {
                 throw ServiceDecoration.NothingToDecorate(serviceType, key, decoratorType);
             }
@@ -250,41 +263,64 @@ internal static class AssemblyServiceScanner
         {
             if (selection != ServiceAs.ImplementedInterfaces)
             {
-                serviceTypes.Add(implementation);
+                AddDistinct(serviceTypes, implementation);
             }
 
             if (selection != ServiceAs.Self)
             {
-                serviceTypes.AddRange(GetServiceInterfaces(implementation));
+                AddServiceInterfaces(serviceTypes, implementation, conventionalOnly: false);
             }
         }
         else if (explicitService is null)
         {
-            string conventionalName = "I" + StripArity(implementation.Name);
-            List<Type> conventional = [.. GetServiceInterfaces(implementation)
-                .Where(@interface =>
-                    string.Equals(StripArity(@interface.Name), conventionalName, StringComparison.Ordinal) &&
-                    @interface.GetGenericArguments().Length == implementation.GetGenericArguments().Length)];
-            if (conventional.Count > 0)
-            {
-                serviceTypes.AddRange(conventional);
-            }
-            else
+            AddServiceInterfaces(serviceTypes, implementation, conventionalOnly: true);
+            if (serviceTypes.Count == 0)
             {
                 serviceTypes.Add(implementation);
             }
         }
 
-        return [.. serviceTypes.Distinct()];
+        return serviceTypes;
     }
 
-    private static IEnumerable<Type> GetServiceInterfaces(Type implementation) =>
-        implementation.GetInterfaces()
-            .Where(static @interface => !ExcludedInterfaces.Contains(GetDefinition(@interface).FullName ?? @interface.Name, StringComparer.Ordinal))
-            .Select(@interface => MapToService(implementation, @interface))
-            .OfType<Type>()
-            .Distinct()
-            .OrderBy(static @interface => @interface.FullName ?? @interface.Name, StringComparer.Ordinal);
+    private static void AddServiceInterfaces(List<Type> serviceTypes, Type implementation, bool conventionalOnly)
+    {
+        int start = serviceTypes.Count;
+        foreach (Type @interface in implementation.GetInterfaces())
+        {
+            if (Array.IndexOf(ExcludedInterfaces, GetDefinition(@interface).FullName ?? @interface.Name) >= 0 ||
+                MapToService(implementation, @interface) is not { } service ||
+                conventionalOnly && !IsConventional(implementation, service))
+            {
+                continue;
+            }
+
+            AddDistinct(serviceTypes, service);
+        }
+
+        if (serviceTypes.Count - start > 1)
+        {
+            serviceTypes.Sort(start, serviceTypes.Count - start, ByName);
+        }
+    }
+
+    private static bool IsConventional(Type implementation, Type service)
+    {
+        ReadOnlySpan<char> name = StripArity(service.Name);
+        ReadOnlySpan<char> implementationName = StripArity(implementation.Name);
+        return name.Length == implementationName.Length + 1 &&
+               name[0] == 'I' &&
+               name[1..].SequenceEqual(implementationName) &&
+               service.GetGenericArguments().Length == implementation.GetGenericArguments().Length;
+    }
+
+    private static void AddDistinct(List<Type> types, Type type)
+    {
+        if (!types.Contains(type))
+        {
+            types.Add(type);
+        }
+    }
 
     private static Type? MapToService(Type implementation, Type @interface)
     {
@@ -300,10 +336,10 @@ internal static class AssemblyServiceScanner
 
     private static Type GetDefinition(Type type) => type.IsGenericType ? type.GetGenericTypeDefinition() : type;
 
-    private static string StripArity(string name)
+    private static ReadOnlySpan<char> StripArity(string name)
     {
         int index = name.IndexOf('`');
-        return index < 0 ? name : name[..index];
+        return index < 0 ? name.AsSpan() : name.AsSpan(0, index);
     }
 
     private static void EnsureConstructible(Type type, CustomAttributeData attribute)

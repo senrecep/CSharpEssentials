@@ -17,7 +17,7 @@ public readonly partial record struct Result<TValue>
     /// </summary>
     /// <param name="error"></param>
     /// <returns></returns>
-    public static Result<TValue> Failure(Error error) => From(error);
+    public static Result<TValue> Failure(Error error) => new(false, default, [error]);
 
     /// <summary>
     /// Creates a new failure result.
@@ -32,6 +32,8 @@ public readonly partial record struct Result<TValue>
     /// <param name="errors"></param>
     /// <returns></returns>
     public static Result<TValue> Failure(Error[] errors) => new(false, default, ResultLogic.ValidateErrorsArray(errors));
+
+    Result<TValue> IFailureFactory<Result<TValue>>.CreateFailure(Error[] errors) => Failure(errors);
 
     /// <summary>
     /// Converts a collection of errors to a result.
@@ -98,11 +100,7 @@ public readonly partial record struct Result<TValue>
     }
 
 
-#if NET8_0_OR_GREATER
-    public static implicit operator Result<TValue>(Error error) => new([error]);
-#else
-    public static implicit operator Result<TValue>(Error error) => new([error]);
-#endif
+    public static implicit operator Result<TValue>(Error error) => new(false, default, [error]);
     public static implicit operator Result<TValue>(Error[] errors) => Failure(errors);
     public static implicit operator Result<TValue>(List<Error> errors) => new(errors);
     public static implicit operator Result<TValue>(HashSet<Error> errors) => new(errors);

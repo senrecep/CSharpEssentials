@@ -1,13 +1,15 @@
 # CSharpEssentials.Time
 
-Testable time abstraction built on .NET `TimeProvider`. Decouple your code from the system clock for reliable unit testing.
+A testable time abstraction built on .NET `TimeProvider`. Code that reads the time through it does not depend on the system clock, so unit tests can control the time.
+
+> Benchmarks of the clock reads (`UtcNow`, `UtcNowDateTime`, `UtcNowDate`, `UtcNowTime`) against `TimeProvider.System` and `DateTimeOffset.UtcNow`, and the DateOnly, TimeOnly, weekday and age helpers against the BCL and hand-written code, are described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
 
 ## Features
 
-- **IDateTimeProvider**: Injectable interface for `UtcNow`, `UtcNowDateTime` (always `DateTimeKind.Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone` and `TimeZoneUtc`.
-- **TimeProvider Integration**: `DateTimeProvider` wraps .NET's `TimeProvider`, so `TimeProvider.System` or a test `TimeProvider` such as `FakeTimeProvider` both work.
-- **FakeDateTimeProvider**: Built-in controllable clock with `Advance` and `SetTime` for tests.
-- **DateTime Extensions**: Convert `DateTime` to `DateOnly` and `TimeOnly`, next/previous weekday, age calculation.
+- `IDateTimeProvider`, an injectable interface for `UtcNow`, `UtcNowDateTime` (always `DateTimeKind.Utc`), `UtcNowDate`, `UtcNowTime`, `TimeZone` and `TimeZoneUtc`.
+- `DateTimeProvider`, which wraps .NET's `TimeProvider`, so `TimeProvider.System` or a test `TimeProvider` such as `FakeTimeProvider` both work.
+- `FakeDateTimeProvider`, a built-in clock for tests that you move with `Advance` and `SetTime`.
+- `DateTime` extensions: conversion to `DateOnly` and `TimeOnly`, the next or previous weekday, and age calculation.
 
 ## Installation
 
@@ -39,7 +41,7 @@ public class OrderService(IDateTimeProvider time)
 
 `DateTimeProvider.UtcNow` reads `TimeProvider.GetUtcNow()`. `UtcNowDate` and `UtcNowTime` are the UTC date and time of day. `TimeZone` is `TimeZoneInfo.Local` and `TimeZoneUtc` is `TimeZoneInfo.Utc`.
 
-### Dependency Injection
+### Dependency injection
 
 ```csharp
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);

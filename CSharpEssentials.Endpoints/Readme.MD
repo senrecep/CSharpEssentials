@@ -10,6 +10,18 @@ dotnet add package CSharpEssentials.Endpoints
 
 Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzer and code fix are bundled in the package.
 
+> Benchmarks: cold and warm startup (10/100/500 endpoints), request throughput and Native AOT against plain Minimal APIs,
+> Carter and FastEndpoints are documented in [BENCHMARKS.md](./BENCHMARKS.md).
+> On net10, cold startup is within error of plain Minimal APIs and Carter. Per-request time is within
+> 10% of both on GET, DELETE and valid POST (Carter is 4% faster on a valid POST). On an invalid POST, plain Minimal
+> APIs takes 10% less time than CSE with the same validation engine, and Carter takes 1.37× as long. Against
+> FastEndpoints, cold startup takes 22% less time at 10 endpoints but 1.65× as long at 500 endpoints; FastEndpoints
+> takes 1.23-2.10× as long per request. The POST rows compare a DataAnnotations stack (Plain, CSE) with FluentValidation stacks (Carter
+> and FastEndpoints). FastEndpoints defers per-endpoint setup to the first request, so only the cold startup figures
+> are like-for-like. The generated path publishes as Native AOT with 0 IL warnings.
+> Design-time cost of the bundled source generator (cold and incremental runs against Immediate.Apis) is described in
+> [the generator BENCHMARKS.md](../CSharpEssentials.Endpoints.Generators/BENCHMARKS.md). Results are pending the full run.
+
 ## Endpoints and groups
 
 ```csharp
@@ -31,6 +43,7 @@ public sealed class CreateApp : IEndpoint
 ```
 
 - `IEndpoint.Map` is static. Endpoint types are never instantiated; dependencies come from handler parameters.
+- The generator maps a non-partial type only when it declares `static Map` itself. A non-partial class that inherits `Map` from an endpoint base class, abstract or not, is not mapped (CSE1012), so make it `partial` or declare `Map` on it. Partial types are checked either way.
 - `IEndpointGroup.Prefix` is passed to `MapGroup`. `Configure` applies group-wide conventions.
 - `[EndpointGroup(typeof(TGroup))]` or `[EndpointGroup<TGroup>]` places an endpoint or a group under a group. Groups can nest.
 - `[ExcludeFromMapping]` excludes an endpoint, a group (with everything under it) or an assembly.
@@ -65,6 +78,7 @@ app.MapEndpointsFromAssemblies(options => options.LogDiscovered = true, pluginAs
 - Uses the same discovery rules, ordering, conventions and options as the generated registries.
 - Types the analyzer would report as errors (CSE1001, CSE1002, CSE1003, CSE1007, CSE1008) are skipped and logged at `Warning`, category `CSharpEssentials.Endpoints`. If some types of an assembly cannot be loaded, the loadable types are mapped and each loader exception is logged at `Warning`.
 - Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. Prefer the generated methods in trimmed and Native AOT apps.
+- When dynamic code is not supported (Native AOT), `MapEndpointsFromAssemblies` throws `PlatformNotSupportedException` instead of mapping a partial, trimmed set of routes. Use `Map{Asm}Endpoints` or `MapAllEndpoints` there.
 
 ## API versioning
 
@@ -162,6 +176,7 @@ The bundled analyzer reports types the generator cannot map and explicit endpoin
 | CSE1009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiEndpointRegistry`. `MapAllEndpoints` skips both registries so the project still compiles. The project's own registry counts too: when it has the same name as a referenced one, only the own registry is mapped. Give one of them a distinct name with `[assembly: EndpointRegistryName("...")]`. Reported only in projects that generate the aggregate. |
 | CSE1010 | Warning | The same constant endpoint name is set at two call sites with `WithName(...)` or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` in `WithMetadata(...)`. Duplicate names produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately, so `WithMetadata(new EndpointNameMetadata("X"))` and `WithMetadata(new RouteNameMetadata("X"))` on one endpoint are not reported. Reported on each call site. |
 | CSE1011 | Info | An explicit endpoint name outside an `IEndpoint` or `IEndpointGroup` type is not a compile-time constant, so the generated registry cannot reserve it and `OperationNaming.TypeName` can generate the same name. Use a constant. Names set inside endpoint and group types are seen at runtime and are not reported. |
+| CSE1012 | Warning | A non-partial endpoint class inherits `Map` from a base class and does not declare it, so the generator leaves it out of the registry and `MapAllEndpoints` does not map it. Make the class `partial`, or declare `public static new void Map(IEndpointRouteBuilder app) => Base.Map(app);` on it. |
 
 The bundled code fix for CSE1004 ("Remove instance state from '{Type}'") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
 
@@ -222,4 +237,8 @@ public sealed class CreateApp : IEndpoint
 }
 ```
 
-Then replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. Build: the analyzer reports module state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
+Then replace `AddCarter()` and `MapCarter()` with `app.MapAllEndpoints()` and remove the Carter package. On the next build the analyzer reports module state left on endpoint types (CSE1004) and duplicate routes in a group (CSE1005).
+
+## Upgrading to 8.0
+
+- A non-partial class that implements `IEndpoint` only by inheriting `Map` from a base class, such as `sealed class Users : CrudEndpoint<User>;`, is no longer added to the generated registry. The analyzer reports it as CSE1012. The generator now looks only at types that declare `static Map` themselves or are partial, so editing an unrelated file no longer re-checks every class with a base list. When the base class is abstract or generic, the derived class was the only mapping of those routes in 7.x, so the routes are gone after the upgrade. When the base class is concrete, 7.x mapped both classes and registered the routes twice. To keep mapping the derived class, make it `partial`, or declare `public static new void Map(IEndpointRouteBuilder app) => CrudEndpoint<User>.Map(app);` on it. `new` is needed because the declaration hides the base `Map` (CS0108). The registry calls `Map` through `IEndpoint`, which still resolves to the base implementation unless the derived class lists `IEndpoint` in its own base list, so keep the body a call to the base.

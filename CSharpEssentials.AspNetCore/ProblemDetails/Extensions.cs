@@ -33,6 +33,7 @@ public static partial class Extensions
         services.TryAddSingleton<EnhancedProblemDetailsMarker>();
         services.TryAddSingleton<IErrorStatusCodeMapper>(DefaultErrorStatusCodeMapper.Instance);
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProblemDetailsOptions>, EnhancedProblemDetailsPostConfigure>());
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>, EnhancedProblemDetailsJsonOptionsSetup>());
         return services;
     }
 
@@ -147,7 +148,7 @@ public static partial class Extensions
             description: string.IsNullOrEmpty(error.ErrorMessage) ? InvalidModelStateDescription : error.ErrorMessage);
 
     /// <summary>
-    /// Converts a successful result to a <see cref="ProblemDetails"/> object.
+    /// Converts a failed result to a problem response. Throws for a successful result.
     /// </summary>
     /// <param name="result"></param>
     /// <param name="extensions"></param>
@@ -162,7 +163,7 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Converts an <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
+    /// Converts an <see cref="Error"/> to a problem response.
     /// </summary>
     /// <param name="error"></param>
     /// <param name="extensions"></param>
@@ -171,7 +172,7 @@ public static partial class Extensions
     public static IResult ToProblemResult(this Error error, ErrorMetadata? extensions = null, int? statusCode = null) => ToProblemResult([error], extensions, statusCode);
 
     /// <summary>
-    /// Converts an array of <see cref="Error"/> to a <see cref="ProblemDetails"/> object.
+    /// Converts an array of <see cref="Error"/> to a problem response.
     /// </summary>
     /// <param name="errors"></param>
     /// <param name="extensions"></param>
@@ -181,7 +182,7 @@ public static partial class Extensions
         new EnhancedProblemHttpResult(errors, extensions, statusCode);
 
     /// <summary>
-    /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
+    /// Converts a failed result to an <see cref="IActionResult"/>. Throws for a successful result.
     /// </summary>
     /// <param name="result"></param>
     /// <param name="httpContext"></param>
@@ -219,7 +220,7 @@ public static partial class Extensions
         new EnhancedProblemObjectResult(errors, extensions, statusCode, httpContext);
 
     /// <summary>
-    /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
+    /// Converts a failed result to an <see cref="IActionResult"/>. Throws for a successful result.
     /// </summary>
     /// <param name="controller"></param>
     /// <param name="result"></param>
@@ -250,7 +251,7 @@ public static partial class Extensions
         errors.ToActionResult(controller.HttpContext, extensions, statusCode);
 
     /// <summary>
-    /// Converts a <see cref="ProblemDetails"/> object to an <see cref="IActionResult"/>.
+    /// Converts a failed result to a <see cref="ProblemDetails"/> object. Throws for a successful result.
     /// </summary>
     /// <param name="result"></param>
     /// <param name="extensions"></param>
@@ -288,7 +289,7 @@ public static partial class Extensions
         EnhancedProblemDetailsFactory.Create(errors, extensions, statusCode, services: null);
 
     /// <summary>
-    /// Produces a <see cref="ProblemDetails"/> object.
+    /// Declares that the endpoint can return an <see cref="EnhancedProblemDetails"/> response with <paramref name="statusCode"/> as <c>application/problem+json</c>.
     /// </summary>
     /// <param name="builder"></param>
     /// <param name="statusCode"></param>
@@ -296,7 +297,7 @@ public static partial class Extensions
     public static RouteHandlerBuilder ProducesProblem(this RouteHandlerBuilder builder, int statusCode = HttpCodes.BadRequest) =>
         builder.ProducesProblem<EnhancedProblemDetails>(statusCode);
     /// <summary>
-    /// Produces a <see cref="ProblemDetails"/> object.
+    /// Declares that the endpoint can return a <typeparamref name="TProblemDetails"/> response with <paramref name="statusCode"/> as <c>application/problem+json</c>.
     /// </summary>
     /// <typeparam name="TProblemDetails"></typeparam>
     /// <param name="builder"></param>
@@ -323,6 +324,6 @@ public static partial class Extensions
         ErrorType.Unexpected => "Unexpected Error",
         ErrorType.Failure => "Server Failure",
         ErrorType.Unknown => "Unknown Error",
-        _ => throw new NotImplementedException(),
+        _ => "Unknown Error",
     };
 }

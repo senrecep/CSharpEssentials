@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Endpoints.Benchmarks.StartupBenchmarks-20261105-054431</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method          </th><th>N</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Baseline</td><td>10</td><td>551.7 &mu;s</td><td>10.80 &mu;s</td><td>12.00 &mu;s</td><td>1.00</td><td>0.03</td><td>19.5313</td><td>5.8594</td><td>325.27 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>10</td><td>15,813.1 &mu;s</td><td>216.38 &mu;s</td><td>273.65 &mu;s</td><td>28.67</td><td>0.77</td><td>31.2500</td><td>-</td><td>648.47 KB</td><td>1.99</td>
+</tr><tr><td>CseGenerated</td><td>10</td><td>15,901.7 &mu;s</td><td>265.68 &mu;s</td><td>326.28 &mu;s</td><td>28.83</td><td>0.84</td><td>31.2500</td><td>-</td><td>662.65 KB</td><td>2.04</td>
+</tr><tr><td>CseReflection</td><td>10</td><td>16,128.1 &mu;s</td><td>317.75 &mu;s</td><td>390.23 &mu;s</td><td>29.24</td><td>0.93</td><td>31.2500</td><td>-</td><td>670.09 KB</td><td>2.06</td>
+</tr><tr><td>Carter</td><td>10</td><td>16,100.6 &mu;s</td><td>294.59 &mu;s</td><td>339.25 &mu;s</td><td>29.19</td><td>0.86</td><td>31.2500</td><td>-</td><td>662.17 KB</td><td>2.04</td>
+</tr><tr><td>FastEndpoints</td><td>10</td><td>4,454.0 &mu;s</td><td>38.90 &mu;s</td><td>36.38 &mu;s</td><td>8.08</td><td>0.18</td><td>39.0625</td><td>15.6250</td><td>697.1 KB</td><td>2.14</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>10</td><td>4,402.6 &mu;s</td><td>37.69 &mu;s</td><td>33.41 &mu;s</td><td>7.98</td><td>0.18</td><td>39.0625</td><td>15.6250</td><td>695.56 KB</td><td>2.14</td>
+</tr><tr><td>Baseline</td><td>100</td><td>552.4 &mu;s</td><td>10.95 &mu;s</td><td>10.24 &mu;s</td><td>1.00</td><td>0.03</td><td>19.5313</td><td>7.8125</td><td>325.26 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>100</td><td>150,662.7 &mu;s</td><td>418.89 &mu;s</td><td>391.83 &mu;s</td><td>272.84</td><td>4.90</td><td>-</td><td>-</td><td>3351.56 KB</td><td>10.30</td>
+</tr><tr><td>CseGenerated</td><td>100</td><td>152,433.9 &mu;s</td><td>2,022.77 &mu;s</td><td>2,558.15 &mu;s</td><td>276.05</td><td>6.68</td><td>-</td><td>-</td><td>3492.7 KB</td><td>10.74</td>
+</tr><tr><td>CseReflection</td><td>100</td><td>153,146.7 &mu;s</td><td>3,049.70 &mu;s</td><td>4,174.46 &mu;s</td><td>277.34</td><td>8.91</td><td>-</td><td>-</td><td>3568.2 KB</td><td>10.97</td>
+</tr><tr><td>Carter</td><td>100</td><td>155,463.1 &mu;s</td><td>1,739.06 &mu;s</td><td>1,626.72 &mu;s</td><td>281.54</td><td>5.76</td><td>-</td><td>-</td><td>3499.02 KB</td><td>10.76</td>
+</tr><tr><td>FastEndpoints</td><td>100</td><td>32,491.1 &mu;s</td><td>157.14 &mu;s</td><td>146.99 &mu;s</td><td>58.84</td><td>1.08</td><td>181.8182</td><td>-</td><td>3484.22 KB</td><td>10.71</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>100</td><td>32,711.1 &mu;s</td><td>650.19 &mu;s</td><td>722.68 &mu;s</td><td>59.24</td><td>1.65</td><td>181.8182</td><td>-</td><td>3473.86 KB</td><td>10.68</td>
+</tr><tr><td>Baseline</td><td>500</td><td>570.4 &mu;s</td><td>8.68 &mu;s</td><td>8.12 &mu;s</td><td>1.00</td><td>0.02</td><td>20.5078</td><td>7.8125</td><td>325.32 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>500</td><td>751,787.5 &mu;s</td><td>3,775.62 &mu;s</td><td>3,152.81 &mu;s</td><td>1,318.16</td><td>18.81</td><td>-</td><td>-</td><td>15356.34 KB</td><td>47.20</td>
+</tr><tr><td>CseGenerated</td><td>500</td><td>753,043.9 &mu;s</td><td>2,189.80 &mu;s</td><td>2,048.34 &mu;s</td><td>1,320.36</td><td>18.40</td><td>-</td><td>-</td><td>16020.34 KB</td><td>49.24</td>
+</tr><tr><td>CseReflection</td><td>500</td><td>769,184.3 &mu;s</td><td>5,367.90 &mu;s</td><td>5,021.14 &mu;s</td><td>1,348.66</td><td>20.33</td><td>1000.0000</td><td>-</td><td>16516.17 KB</td><td>50.77</td>
+</tr><tr><td>Carter</td><td>500</td><td>757,271.2 &mu;s</td><td>3,475.80 &mu;s</td><td>2,902.45 &mu;s</td><td>1,327.77</td><td>18.82</td><td>-</td><td>-</td><td>16024.47 KB</td><td>49.26</td>
+</tr><tr><td>FastEndpoints</td><td>500</td><td>160,955.4 &mu;s</td><td>1,893.01 &mu;s</td><td>1,678.11 &mu;s</td><td>282.21</td><td>4.80</td><td>666.6667</td><td>-</td><td>15831.65 KB</td><td>48.66</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>500</td><td>160,167.7 &mu;s</td><td>1,122.66 &mu;s</td><td>995.21 &mu;s</td><td>280.83</td><td>4.20</td><td>666.6667</td><td>-</td><td>15736.88 KB</td><td>48.37</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -2,17 +2,26 @@
 
 Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator) source-generator library, with built-in support for `Result<T>`, validation, caching, logging, exception handling, transactions, resource locks, and idempotency. Request dispatch is generated at compile time by the Mediator source generator; see [Native AOT](#registration) for how the behaviors are registered in a Native AOT app.
 
+> Benchmarks of Mediator 3.0.2 against MediatR 12.5.0, and of these behaviors against hand-written ones (send, publish,
+> startup, behavior cost and Native AOT), are in [BENCHMARKS.md](./BENCHMARKS.md). This package is not a dispatcher, so
+> its dispatch cost is Mediator's: on net10 a send takes 7.8 ns through Mediator and 67.4 ns through MediatR (0
+> behaviors), but Mediator is 1.10× slower from a cold process (35.6 vs 32.4 ms). The validation and exception handling
+> behaviors cost more than hand-written ones on Mediator: 236.2 vs 183.5 ns for valid input, 439.8 vs 262.9 ns and 1,032
+> vs 712 B for invalid input, which is also slower than hand-written MediatR behaviors (428.7 ns). Under Native AOT
+> (samples without `TrimmerRootAssembly`) Mediator runs and MediatR crashes. Both CSE samples (validation and exception
+> handling behaviors, with and without `AddValidator`) publish with 0 IL warnings and run, at 2.5 MB. See BENCHMARKS.md.
+
 > **Note:** `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` are provided by the `Mediator` package itself. This package adds marker interfaces and pipeline behaviors that integrate with `Result<T>`.
 
 ## Features
 
-- **Validation Behavior**: CSharpEssentials.Validation integration; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type. `Enforce`, `LogOnly` and `Off` modes, globally or per request, with pluggable failure observers.
-- **Logging Behavior**: Opt-in request/response payload logging with elapsed-time tracking.
-- **Exception Handling Behavior**: Converts an exception thrown by a `Result` / `Result<T>` handler into a failed result. `OperationCanceledException` always propagates.
-- **Caching Behavior**: `IDistributedCache` integration with bypass and failure-cache control.
-- **Transaction Behavior**: Wraps handlers in `TransactionScope` with async flow enabled, or runs them through a pluggable `ITransactionRunner` (EF Core implementation in `CSharpEssentials.EntityFrameworkCore`). Commits only when the `Result` succeeds.
-- **Lock Behavior**: Serializes requests that share a resource key through a pluggable `IResourceLock`, placed outside or inside the transaction. Ships an in-process default.
-- **Idempotency Behavior**: Runs an `IIdempotentRequest` at most once per key and caller through the `IIdempotencyExecutor` of `CSharpEssentials.Idempotency`, and replays the stored `Result` to a retry.
+- **Validation behavior**: runs CSharpEssentials.Validation validators; failures return `Result.Failure` for `Result`/`Result<T>` handlers, or throw `EnhancedValidationException` for any other return type. `Enforce`, `LogOnly` and `Off` modes, globally or per request, with pluggable failure observers.
+- **Logging behavior**: opt-in request/response payload logging with elapsed time.
+- **Exception handling behavior**: converts an exception thrown by a `Result` / `Result<T>` handler into a failed result. `OperationCanceledException` always propagates.
+- **Caching behavior**: caches responses in `IDistributedCache`, with bypass and failure-cache control.
+- **Transaction behavior**: wraps handlers in `TransactionScope` with async flow enabled, or runs them through a pluggable `ITransactionRunner` (EF Core implementation in `CSharpEssentials.EntityFrameworkCore`). Commits only when the `Result` succeeds.
+- **Lock behavior**: serializes requests that share a resource key through a pluggable `IResourceLock`, placed outside or inside the transaction. Ships an in-process default.
+- **Idempotency behavior**: runs an `IIdempotentRequest` at most once per key and caller through the `IIdempotencyExecutor` of `CSharpEssentials.Idempotency`, and replays the stored `Result` to a retry.
 
 ## Installation
 
@@ -42,7 +51,7 @@ services.AddMediatorTransactionBehavior();
 
 **Native AOT**
 
-When targeting Native AOT, pass behaviors via `AddMediator` options instead of relying on open-generic DI registration. `DefaultPipelineBehaviors` provides the pre-ordered array (`ValidationBehavior<,>`, `LoggingBehavior<,>`, `ExceptionHandlingBehavior<,>`, `CachingBehavior<,>`, `TransactionScopeBehavior<,>`):
+For Native AOT, pass the behaviors through the `AddMediator` options instead of open-generic DI registration. `DefaultPipelineBehaviors` is the pre-ordered array (`ValidationBehavior<,>`, `LoggingBehavior<,>`, `ExceptionHandlingBehavior<,>`, `CachingBehavior<,>`, `TransactionScopeBehavior<,>`):
 
 ```csharp
 services.AddMediator(options =>
@@ -53,13 +62,13 @@ services.AddMediator(options =>
 
 Pipeline order: **Validation → Logging → Exception handling → Caching → Transaction**
 
-This package is not marked `IsAotCompatible`. The behaviors themselves are not reflection-free: `ValidationBehavior` and `ExceptionHandlingBehavior` build `Result<T>` failure responses with reflection and a compiled expression, and `CachingBehavior` and `LoggingBehavior` serialize requests and responses with reflection-based `System.Text.Json`. Publish with trimming or Native AOT only after testing the behaviors you use.
+This package is not marked `IsAotCompatible`. `ValidationBehavior`, `ExceptionHandlingBehavior` and `IdempotencyBehavior` build `Result` and `Result<T>` failure responses without reflection. `CachingBehavior`, `LoggingBehavior` and `IdempotencyBehavior` still serialize requests and responses with reflection-based `System.Text.Json`. Publish with trimming or Native AOT only after testing the behaviors you use.
 
 > See [Mediator §4.4: Use pipeline behaviors](https://github.com/martinothamar/Mediator#44-use-pipeline-behaviors) for the full Native AOT pipeline behavior documentation.
 
-### Commands & Queries
+### Commands & queries
 
-Use `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` directly from the `Mediator` package. Return `Result<T>` from handlers naturally.
+Use `ICommand`, `IQuery`, `ICommandHandler`, and `IQueryHandler` directly from the `Mediator` package. Handlers return `Result<T>`.
 
 ```csharp
 using Mediator;
@@ -106,7 +115,7 @@ public class GetUserQueryHandler(IUserRepository repo) : IQueryHandler<GetUserQu
 }
 ```
 
-### Validation Behavior
+### Validation behavior
 
 Add `CSharpEssentials.Validation` validators to DI. The behavior intercepts requests before the handler runs.
 
@@ -129,7 +138,7 @@ public class CreateUserCommandValidator : Validator<CreateUserCommand>
 }
 ```
 
-On validation failure the handler is never invoked. Errors are surfaced based on the handler return type:
+When validation fails the handler does not run. How the errors come back depends on the handler's return type:
 
 | `TResponse` | Failure result |
 |-------------|---------------|
@@ -137,7 +146,7 @@ On validation failure the handler is never invoked. Errors are surfaced based on
 | `Result<T>` | `Result<T>.Failure(errors)` returned directly |
 | Any other type | `EnhancedValidationException` thrown and caught by `GlobalExceptionHandler` |
 
-Error codes use the property path (e.g. `"Email.NotEmpty"`). Multiple validators are aggregated and deduplicated.
+Error codes use the property path (e.g. `"Email.NotEmpty"`). Errors from several validators are combined and duplicates removed.
 
 #### Validation modes
 
@@ -179,7 +188,7 @@ Observers are resolved together with the behavior, so their lifetime must not be
 
 An exception thrown by an observer fails the request, in `LogOnly` mode too, so keep observers cheap and catch your own transport errors.
 
-### Caching Behavior
+### Caching behavior
 
 Implement `ICacheable` on any request.
 
@@ -200,9 +209,11 @@ public record GetUserQuery(Guid Id) : IQuery<Result<User>>, ICacheable
 | `BypassCache` | When `true`, the request skips the cache entirely: no lookup and no store |
 | `CacheFailures` | When `true`, caches failed results too |
 
-Requires `IDistributedCache` registered in DI. The response is stored and read as JSON (`System.Text.Json`), so it must round-trip through it.
+`IDistributedCache` must be registered in DI. The response is stored and read as JSON (`System.Text.Json`), so it must round-trip through it.
 
-### Transaction Scope Behavior
+If a cached entry can no longer be read as `TResponse` (for example after an incompatible change to the response type), the behavior logs a warning, removes the entry and calls the handler. Earlier versions threw on every request until the entry expired. Errors from the cache backend itself are not caught and still fail the request.
+
+### Transaction scope behavior
 
 Implement `ITransactionalRequest` on any command.
 
@@ -239,7 +250,7 @@ With Native AOT, replace `TransactionScopeBehavior<,>` with `TransactionBehavior
 
 The replacement only matches behaviors registered by type through these methods; a transaction behavior you registered with a factory is left alone.
 
-### Lock Behavior
+### Lock behavior
 
 Implement `ILockedRequest` to run only one handler at a time per key, for example one payment capture per order:
 
@@ -293,7 +304,7 @@ Call `AddMediatorLockBehavior` after the other behaviors are registered. With no
 
 With Native AOT, `DefaultPipelineBehaviors` does not include `LockBehavior<,>`. Insert it into your own array right before (outside) or right after (inside) the transaction behavior, and register the `IResourceLock` yourself.
 
-### Idempotency Behavior
+### Idempotency behavior
 
 Implement `IIdempotentRequest` to run a command at most once per key and caller. A retry with the same key gets the stored response instead of running the handler again:
 
@@ -377,7 +388,7 @@ Call `AddMediatorIdempotencyBehavior` after `AddMediatorBehaviors`, so validatio
 
 The mode is read per request from `IOptionsMonitor<IdempotencyExecutorOptions>`, so binding the options to a reloadable configuration section switches it without a restart. It is separate from the `Idempotency-Key` middleware's `IdempotencyOptions.Mode`. `Observe` measures duplicates; it does not prevent them, so keep it short for commands that move money. Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`) with `source` `mediator` and the request type as `target`; see the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#telemetry).
 
-### Logging Behavior
+### Logging behavior
 
 Implement marker interfaces to opt into payload logging.
 
@@ -393,13 +404,13 @@ public record GetUserQuery(Guid Id) : IQuery<Result<User>>, IRequestResponseLogg
 
 `LoggingBehavior` only runs for requests that implement one of these interfaces (it is constrained to `ILoggableRequest`). Such a request always logs the handling and handled messages and the elapsed time at `Information` level; the interfaces add the JSON payloads.
 
-### Exception Handling Behavior
+### Exception handling behavior
 
 When a handler that returns `Result` or `Result<T>` throws, `ExceptionHandlingBehavior` returns `Result.Failure(Error.Exception(ex))` (`ErrorType.Failure`, the exception type name as code, the message as description) instead of letting the exception escape. No marker interface is needed, but the behavior has to be registered: `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()`. `OperationCanceledException` always propagates. Handlers with any other response type pass through untouched.
 
 Behaviors placed after it in the pipeline (caching, transaction, lock) run inside it, so their exceptions are converted too. Validation and logging run outside it.
 
-## Marker Interfaces
+## Marker interfaces
 
 | Interface | Extends | Purpose |
 |-----------|---------|---------|
@@ -412,7 +423,7 @@ Behaviors placed after it in the pipeline (caching, transaction, lock) run insid
 | `IResponseLoggable` | `ILoggableRequest` | Log response payload |
 | `IRequestResponseLoggable` | `IRequestLoggable`, `IResponseLoggable` | Log both |
 
-## Pipeline Behaviors
+## Pipeline behaviors
 
 | Behavior | Registered by | Applies to |
 |----------|---------------|------------|
@@ -425,7 +436,7 @@ Behaviors placed after it in the pipeline (caching, transaction, lock) run insid
 | `LockBehavior<TRequest,TResponse>` | `AddMediatorLockBehavior()` | `TRequest : ILockedRequest, IMessage` |
 | `IdempotencyBehavior<TRequest,TResponse>` | `AddMediatorIdempotencyBehavior()` | `TRequest : IIdempotentRequest, IMessage`; replays and rejections are `Result` failures for `Result` / `Result<T>` responses |
 
-> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior`, `LockBehavior` and `IdempotencyBehavior` are scoped as well, because `ITransactionRunner` and database-backed `IResourceLock` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source-generator automatically includes them in the pipeline for matching request types.
+> `ValidationBehavior` is registered as **scoped** (to avoid captive dependency with scoped validators). `TransactionBehavior`, `LockBehavior` and `IdempotencyBehavior` are scoped as well, because `ITransactionRunner` and database-backed `IResourceLock` implementations usually depend on a scoped `DbContext`. All other behaviors are singletons. The Mediator source generator adds them to the pipeline of every matching request type.
 
 ## Dependencies
 

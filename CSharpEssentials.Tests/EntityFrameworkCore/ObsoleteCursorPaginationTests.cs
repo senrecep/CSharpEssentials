@@ -23,6 +23,30 @@ public sealed class ObsoleteCursorPaginationTests
     private sealed class PaginationDbContext(DbContextOptions<PaginationDbContext> options) : DbContext(options)
     {
         public DbSet<PaginatedEntity> PaginatedEntities => Set<PaginatedEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+            modelBuilder.Entity<PaginatedEntity>().Property(e => e.Id).ValueGeneratedNever();
+    }
+
+    private sealed class GuidEntity
+    {
+        public Guid Id { get; set; }
+    }
+
+    private sealed class GuidPaginationDbContext(DbContextOptions<GuidPaginationDbContext> options) : DbContext(options)
+    {
+        public DbSet<GuidEntity> Rows => Set<GuidEntity>();
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+            modelBuilder.Entity<GuidEntity>().Property(e => e.Id).ValueGeneratedNever();
+    }
+
+    private static async Task<PaginationDbContext> CreateContextWithIdsAsync(params int[] ids)
+    {
+        PaginationDbContext context = CreateContext();
+        context.PaginatedEntities.AddRange(ids.Select(id => new PaginatedEntity { Id = id, Name = $"Item{id}" }));
+        await context.SaveChangesAsync();
+        return context;
     }
 
     private static PaginationDbContext CreateContext() =>
@@ -41,6 +65,26 @@ public sealed class ObsoleteCursorPaginationTests
         }));
         await context.SaveChangesAsync();
         return context;
+    }
+
+    [Fact]
+    public async Task PaginateAsync_Cursor_RepeatedCalls_ShouldNotGrowStaticState()
+    {
+        using PaginationDbContext context = await CreateSeededContextAsync();
+
+        for (int i = 0; i < 100; i++)
+        {
+            CursorPaginationResponse<PaginatedEntity, int> page = await context.PaginatedEntities
+                .PaginateAsync<PaginatedEntity, int>(new CursorPaginationRequest<int> { Limit = 2 }, e => e.Id);
+            page.Next.Should().Be(2);
+        }
+
+        IEnumerable<int> staticCollectionSizes = typeof(Extensions)
+            .GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)
+            .Select(f => f.GetValue(null))
+            .OfType<System.Collections.ICollection>()
+            .Select(c => c.Count);
+        staticCollectionSizes.Should().OnlyContain(count => count <= 1);
     }
 
     [Fact]
@@ -86,11 +130,55 @@ public sealed class ObsoleteCursorPaginationTests
     }
 
     [Fact]
+    public async Task PaginateAsync_Cursor_Should_Honour_A_Cursor_Equal_To_Default()
+    {
+        using PaginationDbContext context = await CreateContextWithIdsAsync(-1, 0, 1, 2);
+
+        var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 2 };
+        CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
+            .PaginateAsync<PaginatedEntity, int>(request, e => e.Id);
+
+        result.Items.Select(e => e.Id).Should().Equal(1, 2);
+        result.HasMore.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task PaginateAsync_Cursor_Should_Continue_After_A_Page_That_Ends_On_Default()
+    {
+        using PaginationDbContext context = await CreateContextWithIdsAsync(-1, 0, 1, 2);
+
+        CursorPaginationResponse<PaginatedEntity, int> first = await context.PaginatedEntities
+            .PaginateAsync<PaginatedEntity, int>(new CursorPaginationRequest<int> { Limit = 2 }, e => e.Id);
+        CursorPaginationResponse<PaginatedEntity, int> second = await context.PaginatedEntities
+            .PaginateAsync<PaginatedEntity, int>(new CursorPaginationRequest<int> { Cursor = first.Next, Limit = 2 }, e => e.Id);
+
+        first.Items.Select(e => e.Id).Should().Equal(-1, 0);
+        first.Next.Should().Be(0);
+        second.Items.Select(e => e.Id).Should().Equal(1, 2);
+    }
+
+    [Fact]
+    public async Task PaginateAsync_Cursor_Should_Honour_Guid_Empty_As_A_Cursor()
+    {
+        using GuidPaginationDbContext context = new(new DbContextOptionsBuilder<GuidPaginationDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options);
+        Guid last = Guid.Parse("00000000-0000-0000-0000-000000000001");
+        context.Rows.AddRange(new GuidEntity { Id = Guid.Empty }, new GuidEntity { Id = last });
+        await context.SaveChangesAsync();
+
+        CursorPaginationResponse<GuidEntity, Guid> result = await context.Rows
+            .PaginateAsync<GuidEntity, Guid>(new CursorPaginationRequest<Guid> { Cursor = Guid.Empty, Limit = 5 }, e => e.Id);
+
+        result.Items.Select(e => e.Id).Should().Equal(last);
+    }
+
+    [Fact]
     public async Task PaginateAsync_Cursor_WithSearch_ShouldFilter()
     {
         using PaginationDbContext context = await CreateSeededContextAsync();
 
-        var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 10, Search = "Item09" };
+        var request = new CursorPaginationRequest<int> { Limit = 10, Search = "Item09" };
         CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(
                 request,
@@ -107,7 +195,7 @@ public sealed class ObsoleteCursorPaginationTests
     {
         using PaginationDbContext context = await CreateSeededContextAsync(count: 5, name: "Same");
 
-        var request = new CursorPaginationRequest<int> { Cursor = 0, Limit = 3 };
+        var request = new CursorPaginationRequest<int> { Limit = 3 };
         CursorPaginationResponse<PaginatedEntity, int> result = await context.PaginatedEntities
             .PaginateAsync<PaginatedEntity, int>(
                 request,

@@ -1,4 +1,3 @@
-using CSharpEssentials.Errors;
 using CSharpEssentials.ResultPattern;
 using Polly;
 using Polly.Fallback;
@@ -32,7 +31,7 @@ public readonly partial struct ResiliencePolicy<T>
                     }
                     catch (Exception ex) when (!ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken))
                     {
-                        return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
+                        return Outcome.FromResult(Result<T>.Failure(ResilienceClassifier.ToError(ex)));
                     }
                 }
             })
@@ -71,7 +70,7 @@ public readonly partial struct ResiliencePolicy<T>
                     }
                     catch (Exception ex) when (!ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken))
                     {
-                        return Outcome.FromResult(Result<T>.Failure(Error.Exception(ex)));
+                        return Outcome.FromResult(Result<T>.Failure(ResilienceClassifier.ToError(ex)));
                     }
                 }
             })

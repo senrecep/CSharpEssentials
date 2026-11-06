@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Enums.Comparison.Benchmarks.ParseComparison-20261105-150326</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                  </th><th>Categories</th><th>Valid</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>26.283 ns</td><td>0.0618 ns</td><td>0.0548 ns</td><td>1.00</td><td>0.0052</td><td>88 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_IsDefinedName</td><td>CaseSensitive</td><td>False</td><td>1.248 ns</td><td>0.0111 ns</td><td>0.0104 ns</td><td>0.05</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Bcl_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>42.218 ns</td><td>0.0208 ns</td><td>0.0174 ns</td><td>1.61</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>EnumsNet_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>19.544 ns</td><td>0.0048 ns</td><td>0.0040 ns</td><td>0.74</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>NetEscapades_CaseSensitive</td><td>CaseSensitive</td><td>False</td><td>58.813 ns</td><td>0.0083 ns</td><td>0.0069 ns</td><td>2.24</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>11.235 ns</td><td>0.0205 ns</td><td>0.0182 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_IsDefinedName</td><td>CaseSensitive</td><td>True</td><td>1.576 ns</td><td>0.0153 ns</td><td>0.0143 ns</td><td>0.14</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>28.457 ns</td><td>0.0190 ns</td><td>0.0178 ns</td><td>2.53</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>EnumsNet_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>20.967 ns</td><td>0.0385 ns</td><td>0.0360 ns</td><td>1.87</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>NetEscapades_CaseSensitive</td><td>CaseSensitive</td><td>True</td><td>28.512 ns</td><td>0.0115 ns</td><td>0.0096 ns</td><td>2.54</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>11.264 ns</td><td>0.0109 ns</td><td>0.0096 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>38.001 ns</td><td>0.0104 ns</td><td>0.0087 ns</td><td>3.37</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>EnumsNet_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>20.696 ns</td><td>0.0049 ns</td><td>0.0043 ns</td><td>1.84</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>NetEscapades_IgnoreCase</td><td>IgnoreCase</td><td>False</td><td>59.474 ns</td><td>0.0154 ns</td><td>0.0136 ns</td><td>5.28</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>17.280 ns</td><td>0.0110 ns</td><td>0.0092 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>32.534 ns</td><td>0.0193 ns</td><td>0.0161 ns</td><td>1.88</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>EnumsNet_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>31.352 ns</td><td>0.0739 ns</td><td>0.0691 ns</td><td>1.81</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>NetEscapades_IgnoreCase</td><td>IgnoreCase</td><td>True</td><td>36.311 ns</td><td>0.0089 ns</td><td>0.0069 ns</td><td>2.10</td><td>-</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

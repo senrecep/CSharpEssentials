@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Any.Comparison.Benchmarks.TheseMatchComparison-20261105-181557</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Categories=Match  
+</code></pre>
+
+<table>
+<thead><tr><th>Method          </th><th>State</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Match</td><td>Left</td><td>1.9444 ns</td><td>0.0083 ns</td><td>0.0074 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_Match</td><td>Left</td><td>0.5983 ns</td><td>0.0077 ns</td><td>0.0072 ns</td><td>0.31</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Match</td><td>Right</td><td>1.7477 ns</td><td>0.0056 ns</td><td>0.0049 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_Match</td><td>Right</td><td>0.5911 ns</td><td>0.0081 ns</td><td>0.0076 ns</td><td>0.34</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Match</td><td>Both</td><td>1.5164 ns</td><td>0.0122 ns</td><td>0.0115 ns</td><td>1.00</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_Match</td><td>Both</td><td>0.6013 ns</td><td>0.0075 ns</td><td>0.0070 ns</td><td>0.40</td><td>-</td><td>NA</td>
+</tr></tbody></table>
+</body>
+</html>

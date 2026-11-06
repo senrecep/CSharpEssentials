@@ -43,8 +43,10 @@ internal static class ReferencedRegistryReader
             .Where(static group => group.Count() > 1);
 
     private static bool IsFrameworkAssembly(string name) =>
-        name.StartsWith("System", StringComparison.Ordinal) ||
-        name.StartsWith("Microsoft", StringComparison.Ordinal) ||
+        string.Equals(name, "System", StringComparison.Ordinal) ||
+        name.StartsWith("System.", StringComparison.Ordinal) ||
+        string.Equals(name, "Microsoft", StringComparison.Ordinal) ||
+        name.StartsWith("Microsoft.", StringComparison.Ordinal) ||
         string.Equals(name, "mscorlib", StringComparison.Ordinal) ||
         string.Equals(name, "netstandard", StringComparison.Ordinal);
 

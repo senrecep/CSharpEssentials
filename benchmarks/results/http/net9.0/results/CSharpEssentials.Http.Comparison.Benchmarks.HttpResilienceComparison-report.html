@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-20261105-204503</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Policy</td><td>3.413 &mu;s</td><td>0.0533 &mu;s</td><td>0.0498 &mu;s</td><td>1.00</td><td>0.02</td><td>0.1640</td><td>2.73 KB</td><td>1.00</td>
+</tr><tr><td>Polly_Pipeline</td><td>2.861 &mu;s</td><td>0.0083 &mu;s</td><td>0.0074 &mu;s</td><td>0.84</td><td>0.01</td><td>0.1373</td><td>2.26 KB</td><td>0.83</td>
+</tr><tr><td>MicrosoftResilience_Handler</td><td>3.880 &mu;s</td><td>0.0339 &mu;s</td><td>0.0317 &mu;s</td><td>1.14</td><td>0.02</td><td>0.1755</td><td>2.9 KB</td><td>1.06</td>
+</tr><tr><td>MicrosoftResilience_Standard</td><td>4.778 &mu;s</td><td>0.0206 &mu;s</td><td>0.0172 &mu;s</td><td>1.40</td><td>0.02</td><td>0.1221</td><td>2.94 KB</td><td>1.08</td>
+</tr><tr><td>Factory_NoResilience</td><td>2.408 &mu;s</td><td>0.0157 &mu;s</td><td>0.0147 &mu;s</td><td>0.71</td><td>0.01</td><td>0.1526</td><td>2.52 KB</td><td>0.93</td>
+</tr></tbody></table>
+</body>
+</html>

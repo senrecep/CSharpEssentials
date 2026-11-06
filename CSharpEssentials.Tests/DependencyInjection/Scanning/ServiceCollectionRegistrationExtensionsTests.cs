@@ -19,6 +19,9 @@ public class ServiceCollectionRegistrationExtensionsTests
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
 
+    private static IEnumerable<Type> ServiceTypesOf(IServiceCollection services, Type implementation) =>
+        services.Where(d => d.ImplementationType == implementation).Select(d => d.ServiceType);
+
     private static AssemblyBuilder CreateAssembly(TypeAttributes attributes, ConstructorInfo attributeConstructor, params object[] arguments)
     {
         string name = "DynamicRegistrations" + Guid.NewGuid().ToString("N");
@@ -102,6 +105,67 @@ public class ServiceCollectionRegistrationExtensionsTests
 
         services.Where(d => d.ImplementationType == typeof(SplitService)).Select(d => d.ServiceType)
             .Should().BeEquivalentTo([typeof(ISecondSplit), typeof(ISplitService)]);
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterInterfacesInOrdinalNameOrder_When_ImplementedInterfaces()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(OrderedService)).Should().Equal(typeof(IScanAlpha), typeof(IScanZeta));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterSelfThenInterfacesInOrdinalNameOrder_When_SelfWithInterfaces()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        services.SkipWhile(d => d.ImplementationType != typeof(OrderedSelfService)).Take(3).Select(d => d.ServiceType)
+            .Should().Equal(typeof(OrderedSelfService), typeof(IScanAlpha), typeof(IScanZeta));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterExplicitServiceOnce_When_ItIsAlsoAnImplementedInterface()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(DedupService)).Should().Equal(typeof(IDedupService), typeof(IDedupExtra));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterOpenConventionalInterface_When_ClassIsGeneric()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(ConventionalRepository<>)).Should().Equal(typeof(IConventionalRepository<>));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterSelf_When_ConventionalInterfaceArityDiffers()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(ArityService)).Should().Equal(typeof(ArityService));
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_RegisterSelf_When_InterfaceNameOnlyResemblesConvention()
+    {
+        ServiceCollection services = new();
+
+        services.AddServicesFromAssemblies(TestAssembly);
+
+        ServiceTypesOf(services, typeof(ScanWidget)).Should().Equal(typeof(ScanWidget));
     }
 
     [Fact]
@@ -283,6 +347,58 @@ public class ServiceCollectionRegistrationExtensionsTests
 
         act.Should().Throw<InvalidOperationException>().WithMessage("*Invalid*does not implement*");
         services.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_ThrowNamingTrimming_When_DecoratorHasNoPublicConstructor()
+    {
+        ServiceCollection services = new();
+        string name = "DynamicDecorators" + Guid.NewGuid().ToString("N");
+        AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.RunAndCollect);
+        ModuleBuilder module = assembly.DefineDynamicModule(name);
+        TypeBuilder decorator = module.DefineType("MarkerDecorator", TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed, typeof(object), [typeof(IDisposable)]);
+        decorator.DefineDefaultConstructor(MethodAttributes.Private);
+        MethodBuilder dispose = decorator.DefineMethod(
+            nameof(IDisposable.Dispose),
+            MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig | MethodAttributes.NewSlot);
+        dispose.GetILGenerator().Emit(OpCodes.Ret);
+        decorator.DefineMethodOverride(dispose, typeof(IDisposable).GetMethod(nameof(IDisposable.Dispose))!);
+        decorator.SetCustomAttribute(new CustomAttributeBuilder(typeof(DecoratesAttribute).GetConstructor([typeof(Type)])!, [typeof(IDisposable)]));
+        decorator.CreateType();
+
+        Action act = () => services.AddServicesFromAssemblies(TestAssembly, assembly);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("Decorator 'MarkerDecorator' must have exactly one public constructor, but has 0. *Native AOT*Add{Asm}Services*Decorate<TService, TDecorator>()*");
+        services.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AddServicesFromAssemblies_Should_ThrowNamingTrimming_When_OpenGenericDecoratorHasNoPublicConstructor()
+    {
+        ServiceCollection services = new();
+        string name = "DynamicDecorators" + Guid.NewGuid().ToString("N");
+        AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName(name), AssemblyBuilderAccess.RunAndCollect);
+        ModuleBuilder module = assembly.DefineDynamicModule(name);
+        TypeBuilder decorator = module.DefineType("GenericDecorator", TypeAttributes.Public | TypeAttributes.Class | TypeAttributes.Sealed);
+        GenericTypeParameterBuilder[] parameters = decorator.DefineGenericParameters("T");
+        decorator.AddInterfaceImplementation(typeof(IProgress<>).MakeGenericType(parameters));
+        decorator.DefineDefaultConstructor(MethodAttributes.Private);
+        MethodBuilder report = decorator.DefineMethod(
+            nameof(IProgress<int>.Report),
+            MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.HideBySig | MethodAttributes.NewSlot,
+            typeof(void),
+            [parameters[0]]);
+        report.GetILGenerator().Emit(OpCodes.Ret);
+        decorator.SetCustomAttribute(new CustomAttributeBuilder(typeof(DecoratesAttribute).GetConstructor([typeof(Type)])!, [typeof(IProgress<>)]));
+        decorator.CreateType();
+        Type closedService = typeof(IProgress<int>);
+        services.AddSingleton(closedService, _ => new object());
+
+        Action act = () => services.AddServicesFromAssemblies(TestAssembly, assembly);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*must have exactly one public constructor, but has 0. *Native AOT*Add{Asm}Services*Decorate<TService, TDecorator>()*");
     }
 
     [Fact]

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Generators.Benchmarks.EndpointsGeneratorComparison-20261106-025104</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                         </th><th>Categories</th><th>Files</th><th>Mean   </th><th>Error  </th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>EmptyDriver_Cold</td><td>Cold</td><td>200</td><td>9.936 &mu;s</td><td>0.1138 &mu;s</td><td>0.1064 &mu;s</td><td>0.001</td><td>0.00</td><td>0.1221</td><td>-</td><td>2.26 KB</td><td>0.001</td>
+</tr><tr><td>CSharpEssentials_Cold</td><td>Cold</td><td>200</td><td>13,848.043 &mu;s</td><td>190.7248 &mu;s</td><td>159.2639 &mu;s</td><td>1.000</td><td>0.02</td><td>-</td><td>-</td><td>2175.99 KB</td><td>1.000</td>
+</tr><tr><td>ImmediateApis_Cold</td><td>Cold</td><td>200</td><td>15,118.818 &mu;s</td><td>117.7101 &mu;s</td><td>110.1061 &mu;s</td><td>1.092</td><td>0.01</td><td>250.0000</td><td>125.0000</td><td>5283.15 KB</td><td>2.428</td>
+</tr><tr><td>ImmediateApisWithHandlers_Cold</td><td>Cold</td><td>200</td><td>82,068.168 &mu;s</td><td>733.8284 &mu;s</td><td>686.4236 &mu;s</td><td>5.927</td><td>0.08</td><td>1750.0000</td><td>750.0000</td><td>32435.38 KB</td><td>14.906</td>
+</tr><tr><td>EmptyDriver_Cold</td><td>Cold</td><td>1000</td><td>41.166 &mu;s</td><td>0.1189 &mu;s</td><td>0.0929 &mu;s</td><td>0.000</td><td>0.00</td><td>-</td><td>-</td><td>2.26 KB</td><td>0.000</td>
+</tr><tr><td>CSharpEssentials_Cold</td><td>Cold</td><td>1000</td><td>83,341.794 &mu;s</td><td>709.3476 &mu;s</td><td>628.8182 &mu;s</td><td>1.000</td><td>0.01</td><td>500.0000</td><td>250.0000</td><td>10191.61 KB</td><td>1.000</td>
+</tr><tr><td>ImmediateApis_Cold</td><td>Cold</td><td>1000</td><td>23,040.080 &mu;s</td><td>205.4291 &mu;s</td><td>192.1585 &mu;s</td><td>0.276</td><td>0.00</td><td>406.2500</td><td>312.5000</td><td>6746.25 KB</td><td>0.662</td>
+</tr><tr><td>ImmediateApisWithHandlers_Cold</td><td>Cold</td><td>1000</td><td>91,716.335 &mu;s</td><td>1,092.6294 &mu;s</td><td>968.5875 &mu;s</td><td>1.101</td><td>0.01</td><td>2000.0000</td><td>333.3333</td><td>33885.85 KB</td><td>3.325</td>
+</tr><tr><td>CSharpEssentials_Incremental</td><td>Incremental</td><td>200</td><td>6,220.036 &mu;s</td><td>20.3748 &mu;s</td><td>18.0617 &mu;s</td><td>1.00</td><td>0.00</td><td>62.5000</td><td>31.2500</td><td>1324.55 KB</td><td>1.00</td>
+</tr><tr><td>ImmediateApis_Incremental</td><td>Incremental</td><td>200</td><td>9,602.102 &mu;s</td><td>53.1902 &mu;s</td><td>49.7541 &mu;s</td><td>1.54</td><td>0.01</td><td>78.1250</td><td>31.2500</td><td>1485.12 KB</td><td>1.12</td>
+</tr><tr><td>ImmediateApisWithHandlers_Incremental</td><td>Incremental</td><td>200</td><td>66,048.606 &mu;s</td><td>145.3327 &mu;s</td><td>128.8336 &mu;s</td><td>10.62</td><td>0.04</td><td>1400.0000</td><td>600.0000</td><td>24759.68 KB</td><td>18.69</td>
+</tr><tr><td>CSharpEssentials_Incremental</td><td>Incremental</td><td>1000</td><td>34,521.508 &mu;s</td><td>297.2357 &mu;s</td><td>278.0345 &mu;s</td><td>1.00</td><td>0.01</td><td>333.3333</td><td>133.3333</td><td>5927.76 KB</td><td>1.00</td>
+</tr><tr><td>ImmediateApis_Incremental</td><td>Incremental</td><td>1000</td><td>11,652.656 &mu;s</td><td>54.9249 &mu;s</td><td>51.3768 &mu;s</td><td>0.34</td><td>0.00</td><td>93.7500</td><td>31.2500</td><td>1587.35 KB</td><td>0.27</td>
+</tr><tr><td>ImmediateApisWithHandlers_Incremental</td><td>Incremental</td><td>1000</td><td>72,400.476 &mu;s</td><td>268.9453 &mu;s</td><td>251.5716 &mu;s</td><td>2.10</td><td>0.02</td><td>1500.0000</td><td>750.0000</td><td>24862.11 KB</td><td>4.19</td>
+</tr></tbody></table>
+</body>
+</html>

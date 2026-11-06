@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.BaselineWideComparison-20261104-212129</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                 </th><th>Valid</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>1,298.4 ns</td><td>13.39 ns</td><td>11.87 ns</td><td>1.00</td><td>0.01</td><td>0.2708</td><td>0.0019</td><td>4536 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>False</td><td>8,061.0 ns</td><td>46.87 ns</td><td>43.84 ns</td><td>6.21</td><td>0.06</td><td>0.8240</td><td>0.0153</td><td>13856 B</td><td>3.05</td>
+</tr><tr><td>DataAnnotations</td><td>False</td><td>5,678.6 ns</td><td>22.86 ns</td><td>21.38 ns</td><td>4.37</td><td>0.04</td><td>0.4654</td><td>0.0076</td><td>7912 B</td><td>1.74</td>
+</tr><tr><td>MicrosoftExtensionsValidation</td><td>False</td><td>3,439.1 ns</td><td>12.99 ns</td><td>12.15 ns</td><td>2.65</td><td>0.03</td><td>0.2060</td><td>-</td><td>3472 B</td><td>0.77</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>656.7 ns</td><td>2.76 ns</td><td>2.58 ns</td><td>1.00</td><td>0.01</td><td>0.1001</td><td>-</td><td>1688 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>True</td><td>780.1 ns</td><td>1.97 ns</td><td>1.84 ns</td><td>1.19</td><td>0.01</td><td>0.0582</td><td>-</td><td>984 B</td><td>0.58</td>
+</tr><tr><td>DataAnnotations</td><td>True</td><td>3,346.6 ns</td><td>17.08 ns</td><td>15.98 ns</td><td>5.10</td><td>0.03</td><td>0.3357</td><td>-</td><td>5664 B</td><td>3.36</td>
+</tr><tr><td>MicrosoftExtensionsValidation</td><td>True</td><td>1,810.9 ns</td><td>4.30 ns</td><td>3.81 ns</td><td>2.76</td><td>0.01</td><td>0.0763</td><td>-</td><td>1304 B</td><td>0.77</td>
+</tr></tbody></table>
+</body>
+</html>

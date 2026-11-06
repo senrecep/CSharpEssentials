@@ -1,0 +1,115 @@
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+
+namespace CSharpEssentials.Json;
+
+/// <summary>
+/// Fills System.Text.Json's polymorphism for bases marked with <see cref="System.Text.Json.Serialization.JsonPolymorphicAttribute"/> or
+/// <see cref="System.Text.Json.Serialization.JsonDerivedTypeAttribute"/> with derived types from any assembly.
+/// </summary>
+public static class JsonPolymorphismExtensions
+{
+    internal const string ReflectionMessage =
+        "AddPolymorphismWithReflection scans assemblies for derived types and reads attributes at runtime. Use AddPolymorphism with " +
+        "[JsonTypeDiscriminator] and a JsonSerializerContext for trimmed or native AOT applications.";
+
+    private static readonly ConditionalWeakTable<IJsonTypeInfoResolver, StrongBox<PolymorphismScanner?>> Wrapped = [];
+
+    /// <summary>
+    /// Adds the derived types registered by generated code (<see cref="JsonTypeDiscriminatorAttribute"/>) and the per-property names
+    /// (<see cref="JsonPolymorphicPropertyAttribute"/>). No reflection, so it is trim and native AOT safe. Wraps
+    /// <see cref="JsonSerializerOptions.TypeInfoResolver"/>, which must be set, and sets <c>AllowOutOfOrderMetadataProperties</c>.
+    /// </summary>
+    /// <remarks>
+    /// Call it after the resolver is complete: a resolver inserted into <see cref="JsonSerializerOptions.TypeInfoResolverChain"/>
+    /// later bypasses it. With a source-generated context, copy its options (<c>new JsonSerializerOptions(AppJsonContext.Default.Options)</c>)
+    /// and list every derived type with <c>[JsonSerializable]</c>; a derived type missing from the context is left out.
+    /// </remarks>
+    /// <param name="options">The options to change; they must not be in use yet.</param>
+    /// <returns><paramref name="options"/>.</returns>
+    /// <exception cref="InvalidOperationException"><see cref="JsonSerializerOptions.TypeInfoResolver"/> is not set.</exception>
+    public static JsonSerializerOptions AddPolymorphism(this JsonSerializerOptions options)
+    {
+        _ = options ?? throw new ArgumentNullException(nameof(options));
+        IJsonTypeInfoResolver inner = Detach(options.TypeInfoResolver) ?? throw new InvalidOperationException(
+            "Set TypeInfoResolver (for example to a JsonSerializerContext) before AddPolymorphism, or use AddPolymorphismWithReflection.");
+        return Apply(options, inner, new PolymorphismModifier(inner, null));
+    }
+
+    /// <summary>
+    /// Like <see cref="AddPolymorphism"/>, and for bases without <see cref="System.Text.Json.Serialization.JsonDerivedTypeAttribute"/> also
+    /// scans for derived types by reflection. A derived type without <see cref="JsonTypeDiscriminatorAttribute"/> gets its full CLR name.
+    /// Also enables <see cref="JsonAcceptClrTypeNamesAttribute"/>. Uses a <see cref="DefaultJsonTypeInfoResolver"/> when no resolver is set.
+    /// </summary>
+    /// <param name="options">The options to change; they must not be in use yet.</param>
+    /// <param name="trustedAssemblies">
+    /// The assemblies to scan. Empty scans every loaded assembly except .NET framework assemblies.
+    /// </param>
+    /// <returns><paramref name="options"/>.</returns>
+    [RequiresUnreferencedCode(ReflectionMessage)]
+    [RequiresDynamicCode(ReflectionMessage)]
+    public static JsonSerializerOptions AddPolymorphismWithReflection(this JsonSerializerOptions options, params Assembly[] trustedAssemblies)
+    {
+        _ = options ?? throw new ArgumentNullException(nameof(options));
+        _ = trustedAssemblies ?? throw new ArgumentNullException(nameof(trustedAssemblies));
+        IJsonTypeInfoResolver inner = Detach(options.TypeInfoResolver) ?? new DefaultJsonTypeInfoResolver();
+        Apply(options, inner, new PolymorphismModifier(inner, new PolymorphismScanner([.. trustedAssemblies])));
+        if (!options.Converters.Any(static converter => converter is ClrTypeNameConverterFactory))
+            options.Converters.Add(new ClrTypeNameConverterFactory());
+
+        return options;
+    }
+
+    /// <summary>
+    /// When <paramref name="source"/> has a resolver wrapped by this class and <paramref name="target"/> has its own resolver, wraps the
+    /// target's resolver the same way, so contexts the target already holds stay in use.
+    /// </summary>
+    internal static bool TryApplyTo(JsonSerializerOptions source, JsonSerializerOptions target)
+    {
+        if (source.TypeInfoResolver is not { } wrapped || !Wrapped.TryGetValue(wrapped, out StrongBox<PolymorphismScanner?>? scanner) ||
+            Detach(target.TypeInfoResolver) is not { } inner)
+        {
+            return false;
+        }
+
+        if (!Wrapped.TryGetValue(inner, out _))
+            Apply(target, inner, new PolymorphismModifier(inner, scanner.Value));
+
+        return true;
+    }
+
+    /// <summary>
+    /// Throws when <paramref name="options"/> preserve references. The converters of <see cref="JsonPolymorphicPropertyAttribute"/> and
+    /// <see cref="JsonAcceptClrTypeNamesAttribute"/> serialize their value in a nested call, which cannot share the outer reference map.
+    /// </summary>
+    internal static void ThrowIfReferencesArePreserved(JsonSerializerOptions options)
+    {
+        if (options.ReferenceHandler is { } handler && !ReferenceEquals(handler, ReferenceHandler.IgnoreCycles))
+        {
+            throw new NotSupportedException(
+                "[JsonPolymorphicProperty] and [JsonAcceptClrTypeNames] do not support ReferenceHandler.Preserve or a custom ReferenceHandler: " +
+                "their values are serialized in a nested call that cannot share references. Use ReferenceHandler.IgnoreCycles or none.");
+        }
+    }
+
+    /// <summary>
+    /// Copies the options' own <see cref="JsonSerializerOptions.TypeInfoResolverChain"/> into a new resolver. System.Text.Json 9 refills
+    /// that chain with the value given to <see cref="JsonSerializerOptions.TypeInfoResolver"/>, so a wrapper around the chain itself
+    /// would end up inside it and recurse until the stack overflows. Any other resolver is returned as is.
+    /// </summary>
+    private static IJsonTypeInfoResolver? Detach(IJsonTypeInfoResolver? resolver) =>
+        resolver is null ? null : JsonTypeInfoResolver.Combine(resolver);
+
+    private static JsonSerializerOptions Apply(JsonSerializerOptions options, IJsonTypeInfoResolver inner, PolymorphismModifier modifier)
+    {
+        IJsonTypeInfoResolver resolver = inner.WithAddedModifier(modifier.Modify);
+        Wrapped.AddOrUpdate(resolver, new StrongBox<PolymorphismScanner?>(modifier.Scanner));
+        options.TypeInfoResolver = resolver;
+        options.AllowOutOfOrderMetadataProperties = true;
+        return options;
+    }
+}

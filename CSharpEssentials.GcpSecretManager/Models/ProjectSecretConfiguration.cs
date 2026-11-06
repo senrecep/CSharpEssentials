@@ -20,14 +20,14 @@ public sealed record ProjectSecretConfiguration
     public string? Region { get; init; }
 
     /// <summary>
-    /// Gets the list of prefix filters for secret IDs.
-    /// Only secrets with IDs starting with these prefixes will be loaded.
+    /// Gets the list of prefix filters for secret IDs. When this list or <see cref="SecretIds"/> is set, a secret
+    /// loads only if its ID starts with one of these prefixes or is listed in <see cref="SecretIds"/>.
     /// </summary>
     public IReadOnlyList<string> PrefixFilters { get; init; } = [];
 
     /// <summary>
-    /// Gets the list of specific secret IDs to load.
-    /// Only these secrets will be loaded if specified.
+    /// Gets the list of specific secret IDs to load. When this list or <see cref="PrefixFilters"/> is set, only
+    /// these secrets and those matching <see cref="PrefixFilters"/> are loaded.
     /// </summary>
     public IReadOnlyList<string> SecretIds { get; init; } = [];
 
@@ -38,7 +38,7 @@ public sealed record ProjectSecretConfiguration
 
     /// <summary>
     /// Gets the list of prefixes for secrets that should be treated as raw strings (not parsed as JSON).
-    /// Any secret with an ID starting with these prefixes will be treated as raw.
+    /// Any secret whose ID starts with one of these prefixes is treated as raw.
     /// </summary>
     public IReadOnlyList<string> RawSecretPrefixes { get; init; } = [];
 

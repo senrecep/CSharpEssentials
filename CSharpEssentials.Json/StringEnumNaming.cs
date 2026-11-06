@@ -39,6 +39,9 @@ public static class StringEnumNaming
     /// <summary>
     /// Gets the wire name of an enum value or of a number of the underlying type.
     /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="value"/> is <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentException"><paramref name="enumType"/> is not an enum, or <paramref name="value"/> is neither that enum nor an integral number.</exception>
+    /// <exception cref="InvalidOperationException"><paramref name="enumType"/> has no generated metadata.</exception>
     /// <exception cref="NotSupportedException"><paramref name="namingPolicy"/> is not <see langword="null"/> or <see cref="DefaultPolicy"/>.</exception>
     public static string GetName(Type enumType, object value, JsonNamingPolicy? namingPolicy = null)
     {
@@ -136,7 +139,7 @@ public static class StringEnumNaming
         public string Visit<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum =>
             FormatName(info, value is TEnum typed ? typed : info.FromRawValue(ToRaw(value)));
 
-        private static ulong ToRaw(object number) => number switch
+        private static ulong ToRaw(object value) => value switch
         {
             sbyte v => unchecked((ulong)v),
             short v => unchecked((ulong)v),
@@ -146,7 +149,7 @@ public static class StringEnumNaming
             ushort v => v,
             uint v => v,
             ulong v => v,
-            _ => throw new ArgumentException($"Unsupported enum value type '{number.GetType()}'.", nameof(number)),
+            _ => throw new ArgumentException($"Unsupported enum value type '{value.GetType()}'.", nameof(value)),
         };
     }
 
@@ -159,7 +162,7 @@ public static class StringEnumNaming
             {
                 string token = part.Trim();
                 if (token.Length == 0 || !allowIntegerValues && IsNumber(token) ||
-                    !info.TryParse(token, EnumReadMode.Data, ReadConventions, out TEnum parsed, out _))
+                    !info.TryParse(token, EnumReadMode.Data, ReadConventions, out TEnum parsed))
                     return null;
                 raw |= info.ToRawValue(parsed);
             }

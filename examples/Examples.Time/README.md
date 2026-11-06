@@ -1,8 +1,8 @@
-# CSharpEssentials.Time Example
+# CSharpEssentials.Time example
 
 This console application demonstrates date/time utilities from `CSharpEssentials.Time`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

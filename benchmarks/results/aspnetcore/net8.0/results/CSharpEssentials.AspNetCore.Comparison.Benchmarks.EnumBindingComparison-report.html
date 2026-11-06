@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.EnumBindingComparison-20261105-214150</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                          </th><th>Categories</th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Bcl_NoMiddleware</td><td>Bind</td><td>Canonical</td><td>11.127 &mu;s</td><td>0.2207 &mu;s</td><td>0.1957 &mu;s</td><td>1.00</td><td>0.02</td><td>0.4883</td><td>9.55 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_UseEnumBinding</td><td>Bind</td><td>Canonical</td><td>12.335 &mu;s</td><td>0.2467 &mu;s</td><td>0.5415 &mu;s</td><td>1.11</td><td>0.05</td><td>0.6104</td><td>10.65 KB</td><td>1.12</td>
+</tr><tr><td>Bcl_NoMiddleware</td><td>Bind</td><td>Invalid</td><td>8.704 &mu;s</td><td>0.1113 &mu;s</td><td>0.0929 &mu;s</td><td>1.00</td><td>0.01</td><td>0.4883</td><td>8.31 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_UseEnumBinding</td><td>Bind</td><td>Invalid</td><td>18.802 &mu;s</td><td>0.3736 &mu;s</td><td>0.7374 &mu;s</td><td>2.16</td><td>0.09</td><td>0.7324</td><td>13.26 KB</td><td>1.60</td>
+</tr><tr><td>Bcl_NoMiddleware</td><td>Bind</td><td>Normalized</td><td>8.591 &mu;s</td><td>0.1375 &mu;s</td><td>0.1219 &mu;s</td><td>1.00</td><td>0.02</td><td>0.4883</td><td>8.45 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_UseEnumBinding</td><td>Bind</td><td>Normalized</td><td>12.769 &mu;s</td><td>0.2497 &mu;s</td><td>0.2973 &mu;s</td><td>1.49</td><td>0.04</td><td>0.6104</td><td>11.36 KB</td><td>1.34</td>
+</tr><tr><td>Bcl_NoMiddleware_NoEnum</td><td>PassThrough</td><td>Canonical</td><td>9.826 &mu;s</td><td>0.1845 &mu;s</td><td>0.1895 &mu;s</td><td>1.00</td><td>0.03</td><td>0.4883</td><td>8.92 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_UseEnumBinding_NoEnum</td><td>PassThrough</td><td>Canonical</td><td>10.205 &mu;s</td><td>0.1978 &mu;s</td><td>0.2773 &mu;s</td><td>1.04</td><td>0.03</td><td>0.4883</td><td>8.98 KB</td><td>1.01</td>
+</tr><tr><td>Bcl_NoMiddleware_NoEnum</td><td>PassThrough</td><td>Invalid</td><td>10.155 &mu;s</td><td>0.2018 &mu;s</td><td>0.3372 &mu;s</td><td>1.00</td><td>0.05</td><td>0.4883</td><td>8.92 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_UseEnumBinding_NoEnum</td><td>PassThrough</td><td>Invalid</td><td>10.124 &mu;s</td><td>0.1910 &mu;s</td><td>0.1694 &mu;s</td><td>1.00</td><td>0.04</td><td>0.4883</td><td>8.98 KB</td><td>1.01</td>
+</tr><tr><td>Bcl_NoMiddleware_NoEnum</td><td>PassThrough</td><td>Normalized</td><td>9.978 &mu;s</td><td>0.1940 &mu;s</td><td>0.2782 &mu;s</td><td>1.00</td><td>0.04</td><td>0.4883</td><td>8.92 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_UseEnumBinding_NoEnum</td><td>PassThrough</td><td>Normalized</td><td>9.994 &mu;s</td><td>0.1852 &mu;s</td><td>0.2714 &mu;s</td><td>1.00</td><td>0.04</td><td>0.4883</td><td>8.98 KB</td><td>1.01</td>
+</tr></tbody></table>
+</body>
+</html>

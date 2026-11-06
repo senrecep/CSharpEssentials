@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 using CSharpEssentials.Enums;
@@ -136,6 +138,20 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void Names_And_Values_Should_Match_The_Array_Methods_And_Be_Cached()
+    {
+        ColorExtensions.Names.Should().Equal(ColorExtensions.GetNames());
+        ColorExtensions.Values.Should().Equal(ColorExtensions.GetValues());
+        GeneratedPermissionsExtensions.Names.Should().Equal(GeneratedPermissionsExtensions.GetNames());
+        GeneratedPermissionsExtensions.Values.Should().Equal(GeneratedPermissionsExtensions.GetValues());
+        ColorExtensions.Names.Should().BeSameAs(ColorExtensions.Names);
+        ColorExtensions.Values.Should().BeSameAs(ColorExtensions.Values);
+        ColorExtensions.GetNames().Should().NotBeSameAs(ColorExtensions.GetNames());
+        ColorExtensions.Names.Should().NotBeAssignableTo<string[]>();
+        ColorExtensions.Values.Should().NotBeAssignableTo<Color[]>();
+    }
+
+    [Fact]
     public void AsUnderlyingType_Should_Return_Numeric_Value()
     {
         Color c = Color.Blue;
@@ -178,6 +194,24 @@ public class StringEnumGeneratorTests
         var unknown = (HttpStatus)999;
         unknown.ToSnakeCase().Should().Be("999");
         unknown.ToKebabCase().Should().Be("999");
+    }
+
+    [Fact]
+    public void Constants_Should_Keep_Letters_Without_Case_And_Marks()
+    {
+        ScriptStatus.用户Name.ToString().Should().Be("用户Name");
+        ScriptStatusExtensions.用户NameSnakeCase.Should().Be("用户_name");
+        ScriptStatusExtensions.用户NameKebabCase.Should().Be("用户-name");
+        ScriptStatusExtensions.Cafe\u0301SnakeCase.Should().Be("cafe\u0301");
+        ScriptStatusExtensions.用户NameSnakeCase.Should().Be(CSharpEssentials.Core.StringExtensions.ToSnakeCase(nameof(ScriptStatus.用户Name)));
+    }
+
+    [Fact]
+    [Obsolete("Pins the generated fallback of an obsolete generated helper.")]
+    public void Fallback_Should_Keep_Letters_Without_Case()
+    {
+        (ScriptParts.用户 | ScriptParts.名).ToSnakeCase().Should().Be("用户_名");
+        (ScriptParts.用户 | ScriptParts.名).ToKebabCase().Should().Be("用户-名");
     }
 
     [Fact]
@@ -264,12 +298,192 @@ public class StringEnumGeneratorTests
     }
 
     [Fact]
+    public void ParseWire_Should_Report_The_Same_Error_As_The_Data_Mode_Parser()
+    {
+        string longText = new('x', 80);
+        EnumConventions reject = EnumConventions.Default with { UnknownValue = UnknownEnumValueHandling.Reject };
+        EnumMetadata.Get<Status>().TryParse(longText, EnumReadMode.Data, reject, out _, out EnumValueError? expected).Should().BeFalse();
+
+        Action parse = () => StatusExtensions.ParseWire(longText);
+
+        EnumValueError error = parse.Should().Throw<EnumValueException>().Which.Error;
+        error.Value.Should().Be(expected!.Value).And.Be(new string('x', 64) + "…");
+        error.AllowedValues.Should().Equal(expected.AllowedValues);
+        error.EnumType.Should().Be(expected.EnumType);
+    }
+
+    [Fact]
     public void IsDefined_Extension_Should_Be_Flags_Aware()
     {
         Color.Blue.IsDefined().Should().BeTrue();
         ((Color)42).IsDefined().Should().BeFalse();
         (GeneratedPermissions.Read | GeneratedPermissions.Delete).IsDefined().Should().BeTrue();
         ((GeneratedPermissions)8).IsDefined().Should().BeFalse();
+    }
+
+    [Fact]
+    public void Generated_IsDefined_And_ToDescription_Should_Match_The_Runtime_Metadata()
+    {
+        AssertMatchesMetadata(Range(-2, 5).Select(static r => (Color)(int)r), static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-2, 260).Select(static r => (GeneratedPermissions)(byte)r).Distinct(), static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-2, 102).Select(static r => (GeneratedAttributes)(int)r), static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-7, 9).Concat([long.MinValue, long.MinValue + 1, long.MaxValue]).Select(static r => (GeneratedSigned)r),
+            static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(new ulong[] { 0, 1, 2, ulong.MaxValue, ulong.MaxValue - 1 }.Select(static r => (GeneratedHuge)r),
+            static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-5, 1002).Concat([int.MinValue, int.MaxValue]).Select(static r => (GeneratedSparse)(int)r),
+            static v => v.IsDefined(), static v => v.ToDescription());
+        AssertMatchesMetadata(Range(-2, 20).Select(static r => (GeneratedSignBit)(int)r).Concat([(GeneratedSignBit)int.MinValue]),
+            static v => v.IsDefined(), static v => v.ToDescription());
+    }
+
+    [Fact]
+    public void Flags_ToOptimizedString_Should_Match_Enum_ToString()
+    {
+        AssertFlagsText(Range(0, 255).Select(static r => (GeneratedPermissions)(byte)r), static v => v.ToOptimizedString(),
+            static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(0, 1023).Select(static r => (GeneratedWidePermissions)(int)r).Concat([(GeneratedWidePermissions)(-1), (GeneratedWidePermissions)int.MinValue]),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(0, 40).Select(static r => (GeneratedFlagsNoZero)(uint)r).Concat([(GeneratedFlagsNoZero)uint.MaxValue]),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(new ulong[] { 0, 1, 2, 3, 4, 1UL << 63, (1UL << 63) | 1, (1UL << 63) | 2, ulong.MaxValue }.Select(static r => (GeneratedHugeBits)r),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(0, 16).Select(static r => (GeneratedFlagsDuplicate)(int)r).Where(static v => !Enum.IsDefined(v)), static v => v.ToOptimizedString(),
+            static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        AssertFlagsText(Range(-2, 20).Select(static r => (GeneratedSignBit)(int)r).Concat([(GeneratedSignBit)int.MinValue, (GeneratedSignBit)(int.MinValue | 5)]),
+            static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+    }
+
+    [Fact]
+    public void Flags_ToOptimizedString_Should_Use_Composite_Members_Like_Enum_ToString()
+    {
+        (GeneratedPermissions.Read | GeneratedPermissions.Write | GeneratedPermissions.Delete).ToOptimizedString().Should().Be("ReadWrite, Delete");
+        (GeneratedPermissions.Write | GeneratedPermissions.Delete).ToOptimizedString().Should().Be("Write, Delete");
+        ((GeneratedPermissions)8).ToOptimizedString().Should().Be("8");
+        ((GeneratedPermissions)9).ToOptimizedString().Should().Be("9");
+        ((GeneratedFlagsNoZero)0).ToOptimizedString().Should().Be("0");
+    }
+
+    [Fact]
+    public void ToDescription_Should_Return_The_Description_Of_The_First_Member_With_The_Value()
+    {
+        GeneratedAttributes.Pending.ToDescription().Should().Be("Waiting for work");
+        GeneratedAttributes.Completed.ToDescription().Should().BeNull();
+        ((GeneratedAttributes)42).ToDescription().Should().BeNull();
+        GeneratedSparse.Low.ToDescription().Should().Be("Low end");
+        GeneratedSparse.Shared.ToDescription().Should().BeNull();
+        GeneratedSparse.SharedAlias.ToDescription().Should().BeNull();
+        Color.Red.ToDescription().Should().BeNull();
+    }
+
+    [Fact]
+    public void IsDefined_Should_Cover_Sparse_Negative_And_Extreme_Values()
+    {
+        ((GeneratedSparse)(-3)).IsDefined().Should().BeTrue();
+        ((GeneratedSparse)(-2)).IsDefined().Should().BeFalse();
+        ((GeneratedSparse)1000).IsDefined().Should().BeTrue();
+        GeneratedSigned.Min.IsDefined().Should().BeTrue();
+        ((GeneratedSigned)long.MaxValue).IsDefined().Should().BeFalse();
+        GeneratedHuge.Max.IsDefined().Should().BeTrue();
+        ((GeneratedHuge)1).IsDefined().Should().BeFalse();
+        ((GeneratedPermissions)(1 | 2 | 4)).IsDefined().Should().BeTrue();
+        ((GeneratedPermissions)255).IsDefined().Should().BeFalse();
+        ((GeneratedSignBit)int.MinValue).IsDefined().Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("en-US")]
+    [InlineData("sv-SE")]
+    [InlineData("tilde")]
+    public void Undefined_Values_Should_Format_Like_The_Bcl_Under_Any_Culture(string cultureName)
+    {
+        CultureInfo previous = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo culture;
+            if (cultureName == "tilde")
+            {
+                culture = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+                culture.NumberFormat.NegativeSign = "~";
+            }
+            else
+            {
+                culture = CultureInfo.GetCultureInfo(cultureName);
+            }
+
+            CultureInfo.CurrentCulture = culture;
+
+            AssertBclText((Color)99, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((Color)(-1), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((Color)int.MinValue, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSigned)(-1), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSigned)long.MaxValue, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedHuge)(ulong.MaxValue - 1), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSparse)0, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSparse)(-4), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((NoZeroMember)0, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedPermissions)8, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText(GeneratedPermissions.Read | GeneratedPermissions.Delete, static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedPermissions)(1 | 8), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+            AssertBclText((GeneratedSignBit)(-3), static v => v.ToOptimizedString(), static v => v.ToLowerCase(), static v => v.ToUpperCase());
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
+    }
+
+    [Fact]
+    public void Undefined_Non_Flags_Values_Should_Format_Without_Allocating_For_Small_Numbers()
+    {
+        Color undefined = (Color)99;
+        _ = undefined.ToOptimizedString();
+
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        for (int i = 0; i < 1000; i++)
+            _ = undefined.ToOptimizedString();
+
+        (GC.GetAllocatedBytesForCurrentThread() - before).Should().Be(0);
+    }
+
+    private static void AssertBclText<T>(T value, Func<T, string> optimized, Func<T, string> lower, Func<T, string> upper)
+        where T : struct, Enum
+    {
+        string expected = value.ToString();
+        optimized(value).Should().Be(expected);
+        lower(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToLower(expected));
+        upper(value).Should().Be(CultureInfo.InvariantCulture.TextInfo.ToUpper(expected));
+    }
+
+    [SuppressMessage("Globalization", "CA1308", Justification = "ToLowerCase is the lower invariant form of the Enum.ToString() text.")]
+    private static void AssertFlagsText<T>(IEnumerable<T> values, Func<T, string> optimized, Func<T, string> lower, Func<T, string> upper)
+        where T : struct, Enum
+    {
+        foreach (T value in values)
+        {
+            string expected = value.ToString();
+            optimized(value).Should().Be(expected, "{0}", expected);
+            lower(value).Should().Be(expected.ToLowerInvariant(), "{0}", expected);
+            upper(value).Should().Be(expected.ToUpperInvariant(), "{0}", expected);
+        }
+    }
+
+    private static IEnumerable<long> Range(long from, long to)
+    {
+        for (long r = from; r <= to; r++)
+            yield return r;
+    }
+
+    private static void AssertMatchesMetadata<T>(IEnumerable<T> values, Func<T, bool> isDefined, Func<T, string?> description)
+        where T : struct, Enum
+    {
+        EnumInfo<T> info = EnumMetadata.Get<T>();
+        foreach (T value in values)
+        {
+            isDefined(value).Should().Be(info.IsDefined(value), "IsDefined({0})", value);
+            description(value).Should().Be(info.TryGetMember(value, out EnumMemberInfo<T>? member) ? member.Description : null, "ToDescription({0})", value);
+        }
     }
 
     [Fact]
@@ -340,6 +554,21 @@ internal enum HttpStatus
     OK,
     NotFound,
     HTTPResponse
+}
+
+[StringEnum]
+internal enum ScriptStatus
+{
+    用户Name,
+    Cafe\u0301,
+}
+
+[StringEnum, Flags]
+internal enum ScriptParts
+{
+    None = 0,
+    用户 = 1,
+    名 = 2,
 }
 
 internal static class NestedEnumContainer
@@ -425,4 +654,88 @@ internal enum GeneratedKeywords
 {
     @class,
     @event,
+}
+
+[StringEnum]
+internal enum GeneratedSparse
+{
+    [Description("Low end")]
+    Low = -3,
+
+    Zero = 0,
+
+    Shared = 7,
+
+    [Description("Second name of seven")]
+    [EnumAlias("shared_alias_value")]
+    SharedAlias = Shared,
+
+    [Description("High end")]
+    High = 1000,
+}
+
+[StringEnum, Flags]
+[SuppressMessage("Usage", "CSE0007", Justification = "Fixture for a flag in the sign bit, which sign-extends to 64 bits.")]
+internal enum GeneratedSignBit
+{
+    None = 0,
+    One = 1,
+    Four = 4,
+    Sign = int.MinValue,
+}
+
+[StringEnum, Flags]
+[SuppressMessage("Usage", "CSE0007", Justification = "Fixture for composites over bits without a single flag member.")]
+[SuppressMessage("Major Code Smell", "S4070", Justification = "Fixture for composites over bits without a single flag member.")]
+internal enum GeneratedWidePermissions
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Execute = 4,
+    Delete = 8,
+    Share = 16,
+    Archive = 32,
+    Audit = 64,
+    Admin = 128,
+    ReadWrite = Read | Write,
+    Owner = 256 | 512,
+    Everything = Admin | Audit | Archive | Share | Delete | Execute | ReadWrite,
+}
+
+[StringEnum, Flags]
+[SuppressMessage("Usage", "CSE0006", Justification = "Fixture for formatting zero without a zero member.")]
+internal enum GeneratedFlagsNoZero : uint
+{
+    One = 1,
+    Two = 2,
+    Eight = 8,
+    Top = 0x80000000,
+}
+
+[StringEnum, Flags]
+internal enum GeneratedHugeBits : ulong
+{
+    None = 0,
+    Low = 1,
+    Next = 2,
+    Top = 1UL << 63,
+}
+
+[StringEnum, Flags]
+[SuppressMessage("Design", "CA1069", Justification = "Fixture for two flag members sharing a value.")]
+internal enum GeneratedFlagsDuplicate
+{
+    None = 0,
+    Read = 1,
+    Write = 2,
+    Modify = 2,
+    Delete = 4,
+}
+
+[StringEnum]
+internal enum NoZeroMember
+{
+    One = 1,
+    Two = 2,
 }

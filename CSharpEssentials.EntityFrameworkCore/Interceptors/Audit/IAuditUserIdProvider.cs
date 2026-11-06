@@ -2,7 +2,7 @@ namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 
 /// <summary>
 /// Provides the current user identity for audit fields.
-/// The interceptor resolves this interface to populate CreatedBy / UpdatedBy / DeletedBy.
+/// The interceptor resolves this interface to fill CreatedBy, UpdatedBy and DeletedBy.
 /// </summary>
 public interface IAuditUserIdProvider
 {
@@ -10,10 +10,10 @@ public interface IAuditUserIdProvider
 }
 
 /// <summary>
-/// Generic variant for type-safe user ID resolution.
+/// Typed variant of <see cref="IAuditUserIdProvider"/>.
 /// <para>
-/// The <see cref="IAuditUserIdProvider.GetCurrentUserId"/> is auto-implemented
-/// via <c>ToString()</c>: implementors only need the typed overload.
+/// <see cref="IAuditUserIdProvider.GetCurrentUserId"/> has a default implementation that calls
+/// <c>ToString()</c> on the typed ID, so implementations only write the typed overload.
 /// </para>
 /// </summary>
 /// <example>

@@ -119,12 +119,21 @@ internal sealed class OperationNameRegistry
 
     public string Resolve(OperationNameSlot slot)
     {
+        if (Volatile.Read(ref _resolved))
+        {
+            string name = slot.Name;
+            if (name.Length != 0)
+            {
+                return name;
+            }
+        }
+
         lock (_gate)
         {
             if (!_resolved)
             {
                 ResolveAll();
-                _resolved = true;
+                Volatile.Write(ref _resolved, true);
             }
 
             return slot.Name;

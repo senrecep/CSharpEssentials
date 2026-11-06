@@ -169,6 +169,75 @@ public class ErrorTests
         error1.Should().NotBe(error2);
     }
 
+    [Fact]
+    public void Equality_WithMetadataInDifferentOrder_ShouldHaveSameHashCode()
+    {
+        var first = Error.Validation("C", "D", new ErrorMetadata { { "a", 1 }, { "b", 2 } });
+        var second = Error.Validation("C", "D", new ErrorMetadata { { "b", 2 }, { "a", 1 } });
+
+        first.Should().Be(second);
+        first.GetHashCode().Should().Be(second.GetHashCode());
+        new HashSet<Error> { first, second }.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void Equality_WithNestedMetadataAndNullValuesInDifferentOrder_ShouldHaveSameHashCode()
+    {
+        var first = Error.Validation("C", "D", new ErrorMetadata
+        {
+            { "a", null },
+            { "nested", new ErrorMetadata { { "x", "1" }, { "y", 2 } } },
+        });
+        var second = Error.Validation("C", "D", new ErrorMetadata
+        {
+            { "nested", new ErrorMetadata { { "y", 2 }, { "x", "1" } } },
+            { "a", null },
+        });
+
+        first.Should().Be(second);
+        first.GetHashCode().Should().Be(second.GetHashCode());
+    }
+
+    [Fact]
+    public void Equality_SameCodeAndDescriptionWithDifferentTypeOrMetadata_ShouldStayDistinct()
+    {
+        var validation = Error.Validation("C", "D");
+        var conflict = Error.Conflict("C", "D");
+        var withMetadata = Error.Validation("C", "D", new ErrorMetadata("a", 1));
+        var withOtherValue = Error.Validation("C", "D", new ErrorMetadata("a", 2));
+        var withEmptyMetadata = Error.Validation("C", "D", []);
+
+        new HashSet<Error> { validation, conflict, withMetadata, withOtherValue, withEmptyMetadata, Error.Validation("C", "D") }
+            .Should().HaveCount(5);
+    }
+
+    [Fact]
+    public void Equality_ExceptionWithInnerException_ShouldBeEqualAndHaveSameHashCode()
+    {
+        Exception exception;
+        try
+        {
+            try
+            {
+                throw new ArgumentException("Inner");
+            }
+            catch (ArgumentException inner)
+            {
+                throw new InvalidOperationException("Outer", inner);
+            }
+        }
+        catch (InvalidOperationException caught)
+        {
+            exception = caught;
+        }
+
+        var first = Error.Exception(exception);
+        var second = Error.Exception(exception);
+
+        first.Should().Be(second);
+        first.GetHashCode().Should().Be(second.GetHashCode());
+    }
+
     #endregion
 
     #region Serialization
@@ -185,6 +254,67 @@ public class ErrorTests
         deserialized.Type.Should().Be(error.Type);
     }
 
+    [Fact]
+    public void JsonSerialization_WithThrownExceptionMetadata_ShouldWriteExceptionDetails()
+    {
+        Exception exception;
+        try
+        {
+            throw new InvalidOperationException("Boom");
+        }
+        catch (InvalidOperationException caught)
+        {
+            exception = caught;
+        }
+
+        var error = Error.Failure("C", "D", ErrorMetadata.CreateWithException(exception));
+        var added = Error.Failure("C", "D", new ErrorMetadata().AddException(exception));
+
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(error));
+        JsonElement written = json.RootElement.GetProperty("Metadata").GetProperty("exception");
+        written.GetProperty("exceptionType").GetString().Should().Be("InvalidOperationException");
+        written.GetProperty("exceptionMessage").GetString().Should().Be("Boom");
+        using var addedJson = JsonDocument.Parse(JsonSerializer.Serialize(added));
+        JsonElement addedWritten = addedJson.RootElement.GetProperty("Metadata").GetProperty("exception");
+        addedWritten.GetProperty("exceptionType").GetString().Should().Be("InvalidOperationException");
+        addedWritten.GetProperty("exceptionMessage").GetString().Should().Be("Boom");
+    }
+
+    #endregion
+
+    #region Init Validation
+
+    [Fact]
+    public void With_NullCode_ShouldThrowArgumentNullException()
+    {
+        Error error = Error.Failure("Code", "Description");
+
+        Action act = () => _ = error with { Code = null! };
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName(nameof(Error.Code));
+    }
+
+    [Fact]
+    public void With_NullDescription_ShouldThrowArgumentNullException()
+    {
+        Error error = Error.Failure("Code", "Description");
+
+        Action act = () => _ = error with { Description = null! };
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName(nameof(Error.Description));
+    }
+
+    [Fact]
+    public void With_NewCodeAndDescription_ShouldKeepOtherValues()
+    {
+        Error error = Error.NotFound("Code", "Description");
+
+        Error changed = error with { Code = "Other", Description = "Changed" };
+
+        changed.Code.Should().Be("Other");
+        changed.Description.Should().Be("Changed");
+        changed.Type.Should().Be(ErrorType.NotFound);
+    }
+
     #endregion
 }
-

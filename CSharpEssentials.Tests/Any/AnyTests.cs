@@ -6,6 +6,9 @@ namespace CSharpEssentials.Tests.Any;
 
 public class AnyTests
 {
+    private static readonly JsonSerializerOptions SnakeCaseOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower };
+    private static readonly JsonSerializerOptions CaseSensitiveOptions = new() { PropertyNameCaseInsensitive = false };
+
     [Fact]
     public void Create_WithFirstType_ShouldCreateAny()
     {
@@ -170,12 +173,20 @@ public class AnyTests
     }
 
     [Fact]
-    public void ToString_ShouldReturnJson()
+    public void ToString_ShouldReturnTheValueToString()
     {
         Any<int, string> any = 42;
         string str = any.ToString();
 
-        str.Should().NotBeNullOrEmpty();
+        str.Should().Be("42");
+    }
+
+    [Fact]
+    public void ToString_WithNullValue_ShouldReturnEmptyString()
+    {
+        Any<int, string> any = default;
+
+        any.ToString().Should().BeEmpty();
     }
 
     [Fact]
@@ -195,5 +206,73 @@ public class AnyTests
 
         any1.Should().NotBe(any2);
     }
-}
 
+    [Fact]
+    public void JsonRoundTrip_WithNullReferenceBranch_ShouldKeepIndexAndNullValue()
+    {
+        Any<int, string> any = Any<int, string>.Second(null!);
+
+        string json = JsonSerializer.Serialize(any);
+        Any<int, string> deserialized = JsonSerializer.Deserialize<Any<int, string>>(json);
+
+        deserialized.Index.Should().Be(1);
+        deserialized.Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void JsonRoundTrip_WithNullNullableBranch_ShouldKeepIndexAndNullValue()
+    {
+        Any<int?, string> any = Any<int?, string>.First(null);
+
+        string json = JsonSerializer.Serialize(any);
+        Any<int?, string> deserialized = JsonSerializer.Deserialize<Any<int?, string>>(json);
+
+        deserialized.Index.Should().Be(0);
+        deserialized.GetFirst().Should().BeNull();
+        deserialized.Value.Should().BeNull();
+    }
+
+    [Fact]
+    public void JsonDeserialize_WithNullValueTypeBranch_ShouldThrow()
+    {
+        Action act = () => JsonSerializer.Deserialize<Any<int, string>>("""{"Index":0,"Value":null}""");
+
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void JsonRoundTrip_WithSnakeCaseOptions_ShouldKeepInnerProperties()
+    {
+        Any<int, SnakeCasePerson> any = new SnakeCasePerson { FirstName = "Ada" };
+
+        string json = JsonSerializer.Serialize(any, SnakeCaseOptions);
+        Any<int, SnakeCasePerson> deserialized = JsonSerializer.Deserialize<Any<int, SnakeCasePerson>>(json, SnakeCaseOptions);
+
+        json.Should().Contain("first_name");
+        deserialized.GetSecond().FirstName.Should().Be("Ada");
+    }
+
+    [Fact]
+    public void JsonDeserialize_ShouldUseCallerOptionsForInnerValue()
+    {
+        Any<int, SnakeCasePerson> deserialized = JsonSerializer.Deserialize<Any<int, SnakeCasePerson>>(
+            """{"Index":1,"Value":{"firstName":"Ada"}}""", CaseSensitiveOptions);
+
+        deserialized.GetSecond().FirstName.Should().BeNull();
+    }
+
+    [Fact]
+    public void Constructor_WithJsonElementValue_ShouldDeserializeWithDefaultOptions()
+    {
+        using JsonDocument document = JsonDocument.Parse("""{"firstName":"Ada"}""");
+
+        var any = new Any<int, SnakeCasePerson>(1, document.RootElement);
+
+        any.GetSecond().FirstName.Should().Be("Ada");
+    }
+
+    public sealed class SnakeCasePerson
+    {
+        public string? FirstName { get; set; }
+    }
+}

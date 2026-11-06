@@ -44,6 +44,10 @@ internal sealed class IdempotencyOverridesController(IdempotencyProbe probe) : C
     [Idempotent(Profile = "p", StoreKey = "endpoint-store")]
     public Task Store(string outcome) => RunAsync(outcome);
 
+    [HttpPost("mode-off")]
+    [Idempotent(Mode = IdempotencyMode.Off)]
+    public Task ModeOff(string outcome) => RunAsync(outcome);
+
     [HttpPost("unknown-profile")]
     [Idempotent(Profile = "missing")]
     public Task UnknownProfile(string outcome) => RunAsync(outcome);

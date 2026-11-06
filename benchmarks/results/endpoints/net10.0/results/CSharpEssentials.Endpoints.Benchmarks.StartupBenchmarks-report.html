@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Endpoints.Benchmarks.StartupBenchmarks-20261105-052353</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method          </th><th>N</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Baseline</td><td>10</td><td>1.058 ms</td><td>0.0031 ms</td><td>0.0026 ms</td><td>1.00</td><td>0.00</td><td>21.4844</td><td>3.9063</td><td>357.93 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>10</td><td>15.733 ms</td><td>0.2895 ms</td><td>0.2973 ms</td><td>14.87</td><td>0.28</td><td>31.2500</td><td>-</td><td>683.84 KB</td><td>1.91</td>
+</tr><tr><td>CseGenerated</td><td>10</td><td>15.763 ms</td><td>0.2601 ms</td><td>0.2671 ms</td><td>14.90</td><td>0.25</td><td>31.2500</td><td>-</td><td>699.62 KB</td><td>1.95</td>
+</tr><tr><td>CseReflection</td><td>10</td><td>15.812 ms</td><td>0.2216 ms</td><td>0.1964 ms</td><td>14.95</td><td>0.18</td><td>31.2500</td><td>-</td><td>705.52 KB</td><td>1.97</td>
+</tr><tr><td>Carter</td><td>10</td><td>15.961 ms</td><td>0.2326 ms</td><td>0.1942 ms</td><td>15.09</td><td>0.18</td><td>31.2500</td><td>-</td><td>706.84 KB</td><td>1.97</td>
+</tr><tr><td>FastEndpoints</td><td>10</td><td>5.644 ms</td><td>0.0692 ms</td><td>0.0680 ms</td><td>5.34</td><td>0.06</td><td>31.2500</td><td>15.6250</td><td>735.2 KB</td><td>2.05</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>10</td><td>5.623 ms</td><td>0.0667 ms</td><td>0.0867 ms</td><td>5.32</td><td>0.08</td><td>31.2500</td><td>15.6250</td><td>729.19 KB</td><td>2.04</td>
+</tr><tr><td>Baseline</td><td>100</td><td>1.094 ms</td><td>0.0109 ms</td><td>0.0102 ms</td><td>1.00</td><td>0.01</td><td>21.4844</td><td>3.9063</td><td>357.97 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>100</td><td>146.530 ms</td><td>2.2216 ms</td><td>1.9694 ms</td><td>133.90</td><td>2.12</td><td>-</td><td>-</td><td>3409.3 KB</td><td>9.52</td>
+</tr><tr><td>CseGenerated</td><td>100</td><td>142.971 ms</td><td>0.4855 ms</td><td>0.4054 ms</td><td>130.65</td><td>1.24</td><td>-</td><td>-</td><td>3553.08 KB</td><td>9.93</td>
+</tr><tr><td>CseReflection</td><td>100</td><td>144.852 ms</td><td>1.1835 ms</td><td>1.0491 ms</td><td>132.37</td><td>1.52</td><td>-</td><td>-</td><td>3622.12 KB</td><td>10.12</td>
+</tr><tr><td>Carter</td><td>100</td><td>145.248 ms</td><td>0.8920 ms</td><td>0.8344 ms</td><td>132.73</td><td>1.41</td><td>-</td><td>-</td><td>3544.92 KB</td><td>9.90</td>
+</tr><tr><td>FastEndpoints</td><td>100</td><td>38.955 ms</td><td>0.7515 ms</td><td>0.7717 ms</td><td>35.60</td><td>0.76</td><td>200.0000</td><td>-</td><td>3545.12 KB</td><td>9.90</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>100</td><td>38.437 ms</td><td>0.3719 ms</td><td>0.3478 ms</td><td>35.12</td><td>0.44</td><td>200.0000</td><td>-</td><td>3547.85 KB</td><td>9.91</td>
+</tr><tr><td>Baseline</td><td>500</td><td>1.088 ms</td><td>0.0114 ms</td><td>0.0107 ms</td><td>1.00</td><td>0.01</td><td>21.4844</td><td>3.9063</td><td>357.99 KB</td><td>1.00</td>
+</tr><tr><td>Plain</td><td>500</td><td>716.527 ms</td><td>2.0522 ms</td><td>1.7137 ms</td><td>658.70</td><td>6.44</td><td>-</td><td>-</td><td>15539.98 KB</td><td>43.41</td>
+</tr><tr><td>CseGenerated</td><td>500</td><td>721.454 ms</td><td>3.7246 ms</td><td>3.3017 ms</td><td>663.23</td><td>6.95</td><td>-</td><td>-</td><td>16233.1 KB</td><td>45.34</td>
+</tr><tr><td>CseReflection</td><td>500</td><td>734.894 ms</td><td>8.4955 ms</td><td>7.9467 ms</td><td>675.58</td><td>9.55</td><td>1000.0000</td><td>-</td><td>16772.25 KB</td><td>46.85</td>
+</tr><tr><td>Carter</td><td>500</td><td>710.012 ms</td><td>1.4528 ms</td><td>1.2878 ms</td><td>652.71</td><td>6.31</td><td>-</td><td>-</td><td>16211.28 KB</td><td>45.28</td>
+</tr><tr><td>FastEndpoints</td><td>500</td><td>189.344 ms</td><td>0.5900 ms</td><td>0.4927 ms</td><td>174.06</td><td>1.71</td><td>666.6667</td><td>-</td><td>15994.83 KB</td><td>44.68</td>
+</tr><tr><td>FastEndpointsSourceGen</td><td>500</td><td>189.224 ms</td><td>1.1832 ms</td><td>0.9880 ms</td><td>173.95</td><td>1.87</td><td>666.6667</td><td>-</td><td>15960.03 KB</td><td>44.58</td>
+</tr></tbody></table>
+</body>
+</html>

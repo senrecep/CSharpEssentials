@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Any.Comparison.Benchmarks.ToStringComparison-20261106-084057</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method             </th><th>Categories</th><th>Branch</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Median</th><th>Gen0</th><th>Allocated</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_ToString</td><td>Cse</td><td>Int</td><td>2.8552 ns</td><td>0.0066 ns</td><td>0.0058 ns</td><td>2.8525 ns</td><td>-</td><td>-</td>
+</tr><tr><td>CSharpEssentials_ToString</td><td>Cse</td><td>Text</td><td>0.6192 ns</td><td>0.0075 ns</td><td>0.0066 ns</td><td>0.6170 ns</td><td>-</td><td>-</td>
+</tr><tr><td>Dunet_ToString</td><td>Dunet</td><td>Int</td><td>65.5996 ns</td><td>1.2981 ns</td><td>3.3969 ns</td><td>64.3853 ns</td><td>0.0162</td><td>272 B</td>
+</tr><tr><td>Dunet_ToString</td><td>Dunet</td><td>Text</td><td>66.0724 ns</td><td>1.2948 ns</td><td>1.0812 ns</td><td>65.6242 ns</td><td>0.0172</td><td>288 B</td>
+</tr><tr><td>OneOf_ToString</td><td>OneOf</td><td>Int</td><td>43.1015 ns</td><td>0.7784 ns</td><td>0.7281 ns</td><td>42.8884 ns</td><td>0.0033</td><td>56 B</td>
+</tr><tr><td>OneOf_ToString</td><td>OneOf</td><td>Text</td><td>42.7468 ns</td><td>0.3699 ns</td><td>0.3089 ns</td><td>42.6997 ns</td><td>0.0043</td><td>72 B</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -1,24 +1,31 @@
 # CSharpEssentials.EntityFrameworkCore
 
-Extensions, interceptors, and utilities for Entity Framework Core. Audit trails, domain events, pagination, and CQRS support.
+Extensions, interceptors and utilities for Entity Framework Core, covering audit trails, domain events, pagination and CQRS.
+
+> Benchmarks against plain EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions
+> (SaveChanges with audit and domain events, keyset and offset paging, enum converters, MigrateDataAsync, context lifetime,
+> database error translation) are in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+> Design-time cost of the bundled CSE3001 analyzer (against a no-op analyzer) is described in
+> [the analyzer BENCHMARKS.md](../CSharpEssentials.EntityFrameworkCore.Generators/BENCHMARKS.md). Results are pending the full run.
 
 ## Features
 
-- **Audit Interceptor**: Auto-populates `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
-- **Domain Event Interceptor**: Dispatches domain events with before/after save timing and outbox support.
-- **Slow Query Logging**: Logs queries exceeding a configurable threshold.
+- **Audit interceptor**: Fills in `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
+- **Domain event interceptor**: Dispatches domain events with before/after save timing and outbox support.
+- **Slow query logging**: Logs queries that run longer than a configurable threshold.
 - **Pagination**: Offset-based pagination on `IQueryable` and composite keyset (cursor) pagination with opaque, versioned cursors and `Result` errors for bad cursors.
-- **Batch Soft Delete**: Soft-delete many rows with a single `UPDATE` statement.
-- **Named Query Filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
+- **Batch soft delete**: Soft-delete many rows with a single `UPDATE` statement.
+- **Named query filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
 - **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
-- **Maybe Columns**: Store `Maybe<T>?` properties in nullable columns, per property or by convention.
-- **CQRS Support**: Register separate write and read DbContexts, plus pooled and factory registrations with shared options.
-- **Entity Mapping**: `EntityBaseMap`, `SoftDeletableEntityBaseMap`, `OptimisticConcurrencyVersionMap` and a JSON column conversion.
-- **Result Helpers**: `FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync` and `SaveChangesAsResultAsync` return `Result<T>` instead of `null` or an exception.
-- **Hard Delete and Data Seeding**: `HardDelete` on a context or set, and `MigrateDataAsync` to sync seed data.
-- **SQL Connection Factories**: Abstractions for raw SQL/Dapper scenarios.
-- **Idempotency Records**: `EfCoreIdempotencyRecordStore<TContext>` keeps idempotency records in your `DbContext` and its transaction, so a rolled-back request leaves no record.
-- **Database Error Translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
+- **Maybe columns**: Store `Maybe<T>?` properties in nullable columns, per property or by convention.
+- **CQRS support**: Register separate write and read DbContexts, plus pooled and factory registrations with shared options.
+- **Entity mapping**: `EntityBaseMap`, `SoftDeletableEntityBaseMap`, `OptimisticConcurrencyVersionMap` and a JSON column conversion.
+- **Result helpers**: `FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync` and `SaveChangesAsResultAsync` return `Result<T>` instead of `null` or an exception.
+- **Hard delete and data seeding**: `HardDelete` on a context or set, and `MigrateDataAsync` to sync seed data.
+- **SQL connection factories**: Abstractions for raw SQL/Dapper scenarios.
+- **Idempotency records**: `EfCoreIdempotencyRecordStore<TContext>` keeps idempotency records in your `DbContext` and its transaction, so a rolled-back request leaves no record.
+- **Ordered GUID keys**: Opt-in, provider-aware time-ordered values for generated `Guid` keys, with a SQL Server layout.
+- **Database error translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
 
 ## Installation
 
@@ -28,9 +35,18 @@ dotnet add package CSharpEssentials.EntityFrameworkCore
 
 Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
 
+This package is not Native AOT compatible, because EF Core's Native AOT support is experimental, needs precompiled queries and is not available on net8.0 ([EF Core NativeAOT and precompiled queries](https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries)).
+
+## Upgrade notes
+
+Changes in the next major version that need action:
+
+- **Slow query logging hides parameter values by default.** `SlowQueryInterceptor` now follows EF Core's sensitive data setting: values appear in the log and in `SlowQueryContext.Parameters` only when `EnableSensitiveDataLogging()` is on (or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`). Without it, parameters read `@name=?`. Turn sensitive data logging on if you relied on the values.
+- **Soft delete keeps cascaded rows.** When `AuditInterceptor` turns a delete into a soft delete, it now also keeps the tracked entries EF cascade-deleted with it: owned types stay in place, `ISoftDeletable` dependents are soft-deleted, and other dependents of a `Cascade`/`ClientCascade` relationship are left unchanged. Before, tracked required dependents were physically deleted and owned columns were nulled (or the save failed on a `NOT NULL` column). If you relied on the old behaviour, delete the children in a separate save, or mark the root with `MarkAsHardDeleted()`.
+
 ## Usage
 
-### Audit Interceptor
+### Audit interceptor
 
 ```csharp
 using CSharpEssentials.EntityFrameworkCore.Interceptors;
@@ -42,7 +58,9 @@ services.AddDbContext<MyDbContext>((sp, options) =>
            .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
 ```
 
-On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons.
+On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons, each only when that service is not registered yet, so a `TimeProvider` you registered before is kept and calling it twice adds no second interceptor.
+
+EF Core deletes tracked owned types and `Cascade`/`ClientCascade` dependents as soon as you call `Remove` (the default `CascadeDeleteTiming.Immediate`). When the root becomes a soft delete, the interceptor keeps those entries too: owned types stay, `ISoftDeletable` dependents are soft-deleted, and other dependents go back to `Unchanged`. Pending edits on them are still saved with the default snapshot change tracking; with a notification-based `ChangeTrackingStrategy` they can be lost, so save those edits before removing the root. A dependent marked with `MarkAsHardDeleted()` is still deleted. A dependent that is also cascade-deleted from another principal deleted in the same save is deleted with it. A dependent you removed yourself in the same save looks the same as a cascaded one and is kept, so remove it in its own `SaveChanges`. Optional dependents with `SetNull`/`ClientSetNull` still get their foreign key set to null by EF.
 
 `AddAuditInterceptor` takes a `Func<string>`, a `Func<IServiceProvider, string>`, or the typed `Func<TUserId>` / `Func<IServiceProvider, TUserId>` forms (the user id is stored with `ToString()`). To resolve the user from the request, use the `IServiceProvider` form:
 
@@ -51,9 +69,9 @@ services.AddAuditInterceptor(sp =>
     sp.GetRequiredService<IHttpContextAccessor>().HttpContext?.User.FindFirst("sub")?.Value ?? "anonymous");
 ```
 
-`AddAuditUserIdProvider` (same overloads) registers only the scoped `IAuditUserIdProvider`, not the interceptor. Use it, or your own `IAuditUserIdProvider` / `IAuditUserIdProvider<TUserId>` class, when you register the interceptor yourself: `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();` (`AddAuditInterceptor` registers `TimeProvider.System` unconditionally, so it replaces a `TimeProvider` registered before it; register yours after it).
+`AddAuditUserIdProvider` (same overloads) registers only the scoped `IAuditUserIdProvider`, not the interceptor. Use it, or your own `IAuditUserIdProvider` / `IAuditUserIdProvider<TUserId>` class, when you register the interceptor yourself: `services.AddSingleton(TimeProvider.System); services.AddSingleton<AuditInterceptor>();`.
 
-### Domain Event Interceptor
+### Domain event interceptor
 
 ```csharp
 services.AddSingleton<IDomainEventPublisher, MyPublisher>();
@@ -84,7 +102,7 @@ public sealed class MyPublisher : IDomainEventPublisher
 }
 ```
 
-`DomainEventInterceptor` takes the events of every tracked `IDomainEventHolder` in `SavingChanges`, clears them from the entities, publishes the `BeforeSave` events through `IDomainEventPublisher` and then handles the `AfterSave` events (see the comparison table under BaseDbContext). `IDomainEventOutbox.StoreAsync` receives the `AfterSave` events instead of the publisher when an outbox is registered.
+`DomainEventInterceptor` takes the events of every tracked `IDomainEventHolder` in `SavingChanges`, clears them from the entities, publishes the `BeforeSave` events through `IDomainEventPublisher` and then handles the `AfterSave` events (see the comparison table under BaseDbContext). `IDomainEventOutbox.StoreAsync` receives the `AfterSave` events instead of the publisher when an outbox is registered. When publishing a `BeforeSave` event throws, or `StoreAsync` throws, the `AfterSave` events are put back on their entities, as with `DispatchDomainEventsOnSaveChanges`; `BeforeSave` events are not put back. When the publisher throws while publishing the `AfterSave` events, they stay cleared, since the ones published before the failure would be published again on a retry.
 
 ### Pagination
 
@@ -115,11 +133,11 @@ await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToke
 await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
 ```
 
-`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own.
+`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own. The obsolete `PaginateAsync` returns the first page when `HasCursor` is `false`. `CursorPaginationRequest<TCursor>` sets `HasCursor` whenever `Cursor` is assigned a non-null value, so a cursor of `0` or `Guid.Empty` is a real position and a page that ends on such a row continues with the next rows.
 
 `PaginationRequest.Search` is trimmed by `Normalize` and, when it is not empty and you pass a `search` delegate (`Func<string, Expression<Func<T, bool>>>`), `PaginateAsync` and `Paginate` apply that filter before counting. `PaginationResponse<T>` carries `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`; with `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
 
-### Keyset Pagination
+### Keyset pagination
 
 `KeysetPaginateAsync` pages through a query by a composite key, such as "newest first, then by id". It returns opaque cursors for the next and previous page, sends one query that reads `limit + 1` rows, and never runs a `COUNT`. Unlike offset paging, its cost does not grow with the page number, and rows inserted or deleted between requests do not shift the pages.
 
@@ -215,7 +233,7 @@ Result<KeysetPaginationResponse<Log>> page = await db.Logs.KeysetPaginateAsync(
 
 Cursors from `PaginateAsync` (raw values) are not accepted by `KeysetPaginateAsync`; clients restart from the first page once.
 
-### Batch Soft Delete
+### Batch soft delete
 
 ```csharp
 // UPDATE ... SET IsDeleted = 1, DeletedAt = @now, DeletedBy = @user WHERE ... AND NOT IsDeleted
@@ -226,7 +244,7 @@ int affected = await dbContext.Orders
 
 Works for any entity implementing `ISoftDeletable` (e.g. `SoftDeletableEntityBase`). Rows already soft-deleted keep their original `DeletedAt`/`DeletedBy`. Like all `ExecuteUpdate` calls, it bypasses the change tracker and `SaveChanges` interceptors and needs a relational provider.
 
-### Named Query Filters (EF Core 10)
+### Named query filters (EF Core 10)
 
 EF Core 10 can name query filters, so a query can switch off one filter and keep the others. On `net10.0` the package registers the soft-delete filter (`!IsDeleted`) under `QueryFilterNames.SoftDelete`:
 
@@ -292,11 +310,11 @@ The two domain event paths differ in when `AfterSave` events are handled:
 |---|---|---|
 | `AfterSave` events | after the save completes | in `SavingChanges`, before the database write |
 | Outbox write | not atomic with the save: the save is already committed when `StoreAsync` runs; inside an explicit transaction it runs before that transaction commits | before the save, in the same `SaveChanges` call |
-| Save fails | `AfterSave` events are put back on their entities, so a retry dispatches them | events are already dispatched |
+| `SaveChanges` throws | `AfterSave` events are put back on their entities, so a retry dispatches them. They are also put back when `StoreAsync` throws after the save, and a later `SaveChanges` stores them again; they stay cleared when `IDomainEventPublisher` throws while publishing them. An outbox that adds rows to the context and then throws should remove them first, or the retry saves them and stores the events twice. After a rolled-back explicit transaction, a retry stores the put-back events for a row that is not in the database | `AfterSave` events are put back when a `BeforeSave` publish throws or when `StoreAsync` throws. They are not put back when `IDomainEventPublisher` throws while dispatching them, because some may already be published and a retry would publish them twice, or when the database write fails |
 
 Use one of them, not both. When `DispatchDomainEventsOnSaveChanges` is `true`, `DbContextInterceptors.DomainEvents` in `InterceptorsFromServices` is ignored and the `DomainEventInterceptor` is not attached. The context's service scope (`ServiceProvider`) is disposed with the context.
 
-### Maybe Columns
+### Maybe columns
 
 `Maybe<T>` is a struct, and EF Core cannot make a non-nullable struct property optional, so a plain `Maybe<T>` property always maps to a `NOT NULL` column. Declare the property as `Maybe<T>?` to store absence as `NULL`:
 
@@ -327,7 +345,7 @@ Maybe<int> points = customer.LoyaltyPoints.Flatten(); // null becomes None
 - `Maybe<T?>?` (for example `Maybe<int?>?`) is not supported: EF Core fails the model build. Ignore the property or configure your own converter.
 - `HasNullableMaybeConversion` needs a concrete `T`: from unconstrained generic code (or for `Maybe<int?>?`) the compiler reports CS0452 against the `class` overload. Use the convention there, or `HasConversion(new NullableMaybeConverter<T>())` / `new NullableMaybeReferenceConverter<T>()` (namespace `CSharpEssentials.EntityFrameworkCore.Converters`).
 - Mutable reference values (`Maybe<byte[]>?`): change tracking compares `Maybe<T>` values, so changing the array in place is not saved. Assign a new value instead.
-- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API. This applies to `Maybe<T>?` columns only: properties configured by `ConfigureEnumConventions` cannot be compiled (see Enum Storage).
+- NativeAOT: the convention closes the converter types with `MakeGenericType` while the model is built (`[RequiresDynamicCode]`). Under NativeAOT use a compiled model (`dotnet ef dbcontext optimize`), or the per-property API. This applies to `Maybe<T>?` columns only: properties configured by `ConfigureEnumConventions` cannot be compiled (see Enum storage).
 - Query rules:
   - absence: `c.Nickname == null` or `!c.Nickname.HasValue` (the `Nullable<T>.HasValue`);
   - presence: `c.Nickname != null`;
@@ -360,7 +378,7 @@ modelBuilder.Entity<Customer>(b =>
 // Query through the field: db.Customers.Where(c => EF.Property<string?>(c, "_nickname") == null)
 ```
 
-### Enum Storage
+### Enum storage
 
 `ConfigureEnumConventions` stores `[StringEnum]` enums by their wire name (the same spelling as JSON and binding) and adds a check constraint per column:
 
@@ -478,7 +496,7 @@ public sealed class EnumAuditRow
 
 An empty result means every row converts and passes the new constraint. Pass `schema:` for a table outside the default schema.
 
-### CQRS Write/Read
+### CQRS write/read
 
 ```csharp
 using CSharpEssentials.EntityFrameworkCore.Extensions;
@@ -503,7 +521,7 @@ services.AddWriteDbContext<WriteDbContext>(
 
 `DbContextRegistrationOptions` applies `EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, and `EnableAuditInterceptor`, `EnableDomainEventInterceptor` and `EnableSlowQueryInterceptor`, which add the interceptor only when it is registered in DI. The properties `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` exist on the class but are not applied by this version; set them in the provider callback instead (`UseNpgsql(connectionString, npgsql => npgsql.MigrationsAssembly("MyApp.Migrations").EnableRetryOnFailure().UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))`).
 
-### Entity Mapping
+### Entity mapping
 
 `EntityBaseExtensions` configures the audit columns of the `CSharpEssentials.Entity` base classes in `IEntityTypeConfiguration<T>` or `OnModelCreating`:
 
@@ -524,9 +542,9 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>   /
 }
 ```
 
-`EntityBaseGuidIdMap()` does the same for an `EntityBase<Guid>` entity without the soft delete columns. The audit columns are `CreatedAt`/`CreatedBy` (required) and `UpdatedAt`/`UpdatedBy` (optional), with the user columns limited to 40 characters unless you pass `userIdMaxLength`. `EntityBaseMap<TEntity>()` and `SoftDeletableEntityBaseMap<TEntity>()` map the audit columns without a key. `ApplySoftDeleteQueryFilter()` adds `!IsDeleted` as an anonymous filter to every root entity type that implements `ISoftDeletableBase`, and `AddQueryFilter<T>(expression)` combines your filter with the existing anonymous one with `AND` (on net10.0 use the named helpers below when you need to ignore filters by name). `HasJsonConversion(columnType: "jsonb")` stores a property as JSON with the CSharpEssentials JSON options.
+`EntityBaseGuidIdMap()` does the same for an `EntityBase<Guid>` entity without the soft delete columns. The audit columns are `CreatedAt`/`CreatedBy` (required) and `UpdatedAt`/`UpdatedBy` (optional), with the user columns limited to 40 characters unless you pass `userIdMaxLength`. `EntityBaseMap<TEntity>()` and `SoftDeletableEntityBaseMap<TEntity>()` map the audit columns without a key. `ApplySoftDeleteQueryFilter()` adds `!IsDeleted` as an anonymous filter to every root entity type that implements `ISoftDeletableBase`, and `AddQueryFilter<T>(expression)` combines your filter with the existing anonymous one with `AND` (on net10.0 use the named helpers below when you need to ignore filters by name). `HasJsonConversion(columnType: "jsonb")` stores a property as JSON with the CSharpEssentials JSON options. An undefined enum value inside it is saved as its number; on load it becomes the `[EnumFallback]` member, or the read throws when the enum has none.
 
-### Result Helpers, Hard Delete and Seeding
+### Result helpers, hard delete and seeding
 
 ```csharp
 Result<Order> order = await db.Orders.Where(o => o.Id == id).FirstOrDefaultAsResultAsync(Error.NotFound("Order.NotFound", "Order not found"), ct);
@@ -562,11 +580,11 @@ await db.MigrateDataAsync(seed, new MigrateDataOptions<Country, CountrySeed, str
 }, ct);
 ```
 
-### SQL Connection Factories
+### SQL connection factories
 
 `ISqlConnectionFactory` (`IDbConnection Create()`) and `ISqlReadOnlyConnectionFactory` are interfaces only. Implement and register them yourself for Dapper or raw ADO.NET code that should not go through the `DbContext`.
 
-### Transaction Runner
+### Transaction runner
 
 `EfCoreTransactionRunner<TDbContext>` implements `ITransactionRunner` (from `CSharpEssentials.Core`) for the Mediator `TransactionBehavior` or any code of your own.
 
@@ -589,7 +607,7 @@ The work delegate returns a `ValueTask<T>` and `shouldCommit` decides whether th
 - It needs a relational provider: the InMemory provider throws on `BeginTransactionAsync` unless `TransactionIgnoredWarning` is ignored. Retrying strategies also refuse to run inside an ambient `TransactionScope`, so don't combine it with `TransactionScopeBehavior`.
 - If the commit itself fails with a transient error after the database applied it, the retry runs the work again. Make the work idempotent when you use a retrying strategy.
 
-### Idempotency Records
+### Idempotency records
 
 `EfCoreIdempotencyRecordStore<TContext>` (namespace `CSharpEssentials.EntityFrameworkCore.Idempotency`) is an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency` that keeps its records in your own `DbContext` and writes them inside the context's current transaction. The record commits and rolls back with the business rows of the same unit of work: a request whose transaction rolls back leaves no record, and its retry runs again.
 
@@ -636,7 +654,7 @@ public sealed class IdempotencyPurgeService(IServiceScopeFactory scopeFactory) :
 services.AddHostedService<IdempotencyPurgeService>();
 ```
 
-### Slow Query Logging
+### Slow query logging
 
 ```csharp
 services.AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500));            // or: options => options.Threshold = ...; the default is 1 second
@@ -653,9 +671,51 @@ public sealed class MetricsSlowQueryHandler : ISlowQueryHandler
 }
 ```
 
-Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameter values, and passed to the `ISlowQueryHandler` when one is registered. Parameter values can be sensitive; keep that in mind before shipping the logs.
+Every command (reader, scalar or non-query) that runs for at least the threshold is logged as a warning with its command text and parameters, and passed to the `ISlowQueryHandler` when one is registered. Parameter values are included only when the context has `EnableSensitiveDataLogging()` turned on; otherwise each parameter is written as `@name=?`. If the handler throws, the exception is logged as a warning and the command still succeeds.
 
-### Database Error Translation
+### Ordered GUID keys
+
+EF Core and the provider choose how `Guid` keys are generated, and this package leaves that alone unless you opt in:
+
+```csharp
+protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+{
+    configurationBuilder.UseOrderedGuidKeys();                                  // layout picked from the provider
+    // configurationBuilder.UseOrderedGuidKeys(OrderedGuidLayout.SqlServer);    // or the same layout on every provider
+}
+
+// one property, without the convention; compiled models support both factories
+modelBuilder.Entity<Order>().Property(x => x.Id).HasValueGeneratorFactory<Version7GuidValueGeneratorFactory>();
+```
+
+The convention covers every non-nullable `Guid` primary key that EF Core generates on add. It skips foreign keys and keys with a value generator, a default value, default value SQL or computed SQL of their own, and anything configured explicitly wins over it. It also skips keys with a value conversion, such as `HasConversion<string>()` or `HasConversion<byte[]>()`, because the stored form then no longer sorts like the provider's GUID column. It sets the factory type, not a generator instance, so compiled models work.
+
+| Layout | Values | Sorts by creation time in |
+|---|---|---|
+| `Version7` | `Guider.NewMonotonicGuid()`: RFC 9562 version 7, strictly increasing within the process | big-endian bytes, the string form and `Guid.CompareTo` |
+| `SqlServer` | `Guider.NewSqlServerGuid()`: RFC 9562 version 8, milliseconds in the last 6 bytes, strictly increasing within the process | SQL Server `uniqueidentifier` order (`SqlGuid`) only |
+
+What each provider stores and what `UseOrderedGuidKeys()` picks:
+
+| Provider | Column and comparison | Default generator without this package | Picked layout |
+|---|---|---|---|
+| SQL Server | `uniqueidentifier`; compares bytes 10 to 15 first, then 8 to 9, 6 to 7, 4 to 5 and 0 to 3 | `SequentialGuidValueGenerator`: ordered within one generator instance | `SqlServer` |
+| PostgreSQL (Npgsql) | `uuid`; compares the 16 bytes in RFC order | version 4 on Npgsql 8; version 7 on Npgsql 9 and later | `Version7` |
+| SQLite | `TEXT`, uppercase with hyphens; compares ordinally | version 4 | `Version7` |
+| Pomelo MySQL | `GuidFormat` `Char36` (the default), `Char32` or `Binary16` keep RFC order; `TimeSwapBinary16` and `LittleEndianBinary16` reorder the bytes | ticks first, laid out per `GuidFormat`; sorts in every format except `TimeSwapBinary16` | none, unless you pass a layout |
+| Any other provider (MySql.EntityFrameworkCore, in-memory, Cosmos, Oracle, MongoDB) | not checked by this package | the provider's | none, unless you pass a layout |
+
+Notes:
+
+- On SQL Server the default generator is already sequential inside one app instance. It seeds a counter from the clock when the generator is created, so several instances, or one restarted instance, write into separate ranges of the index. `SqlServer` values follow the clock in every instance, so concurrent instances all append near the end of the index. In a single test run against SQL Server 2022 in a container (20,000 single-row inserts into a clustered key, `char(200)` rows), one process left 0.5% fragmentation with either generator. Four processes started 1 second apart left 96.9% fragmentation with the default generator and 11.2% with `SqlServer`, with pages 96% and 92% full. Version 4 and `NewMonotonicGuid()` left 99% fragmentation and pages 67% full with one and with four processes, and `NewGuid()` the same with one process.
+- Npgsql 9 and later already generate version 7 values. Opting in there only makes values from one process strictly increasing inside a millisecond.
+- On Pomelo, pass `Version7` only for `Char36`, `Char32` or `Binary16`, and only if you want this package's generator. Version 7 values do not sort under `TimeSwapBinary16` or `LittleEndianBinary16`. This package cannot see the `GuidFormat` of the connection.
+- A `Version7` value sorts randomly in SQL Server, and a `SqlServer` value sorts randomly everywhere else. Pass a layout only when the default pick is wrong for your columns.
+- The order holds within one process. Values from different processes interleave by their millisecond.
+
+**Security.** Both layouts show the time a row was created, to the millisecond, to anyone who sees the key, and carry 56 random bits instead of the 122 of `Guid.NewGuid()`. Do not use them for keys that must stay secret or hard to guess, such as tokens, invitation links or password reset ids.
+
+### Database error translation
 
 `DbErrorTranslation` (namespace `CSharpEssentials.EntityFrameworkCore.DbErrors`) turns persistence exceptions into `Error` values, which the AspNetCore package renders as ProblemDetails. The built-in `SqlStateErrorTranslator` reads `DbException.SqlState` from the exception or any inner exception, so it needs no provider reference:
 
@@ -714,3 +774,10 @@ public sealed class PostgresConstraintTranslator : IDbErrorTranslator
 ```
 
 The default ProblemDetails fields (`Codes | ValidationErrors`) do not include error metadata. With `ProblemErrorFields.AllErrors`, the client also sees `sqlState`, `entities` and anything your translators add, such as constraint names.
+
+## Upgrading to 8.0
+
+- `ICursorPaginationRequest<TCursor>` has a new `HasCursor` property, and the obsolete cursor `PaginateAsync` uses it to decide whether to start at the first page. 7.x treated a cursor equal to `default(TCursor)` (`0`, `Guid.Empty`) as "no cursor", so a page ending on such a row started over at page one. `CursorPaginationRequest<TCursor>` sets `HasCursor` when `Cursor` is assigned a non-null value, including `0`. If you set `Cursor = 0` or `Cursor = Guid.Empty` to mean "first page", leave `Cursor` unset instead. A custom `ICursorPaginationRequest<TCursor>` must implement `HasCursor`; return `false` for a request that has no cursor. The serialized request also gains a read-only `hasCursor` field.
+- `AddAuditInterceptor` registers `TimeProvider.System` and `AuditInterceptor` only when they are not registered yet. 7.x added both every time, so a `TimeProvider` registered before the call was replaced by `TimeProvider.System` and repeated calls added more `AuditInterceptor` registrations. If you registered your `TimeProvider` after `AddAuditInterceptor` to work around this, either order now works; if you relied on `TimeProvider.System` replacing an earlier registration, remove that registration.
+- `EnumStoredAs.LegacySnakeCase`, `UseLegacySnakeCase` and `LegacySnakeCaseEnumConverter` write the 8.0 Core `ToSnakeCase` output, which keeps letters without case and combining marks. A member named `用户Name` was stored as `name`, which could not be read back, and is now stored as `用户_name`. Members named only with Latin letters and digits store the same text. Rewrite stored rows of non-Latin members with the new value.
+- The package no longer depends on `EFCore.NamingConventions`. It never used it, but 7.x brought it in, so `UseSnakeCaseNamingConvention()` and the other naming convention methods compiled without a direct reference. If you call them, add `EFCore.NamingConventions` to your project with the major that matches your EF Core version. `Microsoft.EntityFrameworkCore.Relational` is now a direct dependency instead of a transitive one, so nothing changes there.

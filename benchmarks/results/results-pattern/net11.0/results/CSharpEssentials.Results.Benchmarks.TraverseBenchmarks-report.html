@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Benchmarks.TraverseBenchmarks-20261105-042547</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                   </th><th>Count</th><th>Succeed</th><th>Yield</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>HandWritten_SequentialLoop</td><td>16</td><td>False</td><td>False</td><td>179.4 ns</td><td>2.27 ns</td><td>2.13 ns</td><td>1.00</td><td>0.02</td><td>0.0563</td><td>-</td><td>944 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>16</td><td>False</td><td>False</td><td>319.4 ns</td><td>4.87 ns</td><td>4.55 ns</td><td>1.78</td><td>0.03</td><td>0.1078</td><td>-</td><td>1808 B</td><td>1.92</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>16</td><td>False</td><td>False</td><td>260.3 ns</td><td>2.30 ns</td><td>2.15 ns</td><td>1.45</td><td>0.02</td><td>0.0267</td><td>-</td><td>448 B</td><td>0.47</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>16</td><td>False</td><td>False</td><td>364.4 ns</td><td>3.39 ns</td><td>3.17 ns</td><td>2.03</td><td>0.03</td><td>0.1168</td><td>0.0005</td><td>1960 B</td><td>2.08</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>16</td><td>False</td><td>True</td><td>4,151.4 ns</td><td>81.88 ns</td><td>120.02 ns</td><td>1.00</td><td>0.04</td><td>0.0610</td><td>-</td><td>1184 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>16</td><td>False</td><td>True</td><td>6,862.3 ns</td><td>134.66 ns</td><td>242.83 ns</td><td>1.65</td><td>0.07</td><td>0.1221</td><td>-</td><td>2249 B</td><td>1.90</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>16</td><td>False</td><td>True</td><td>6,880.9 ns</td><td>107.99 ns</td><td>90.18 ns</td><td>1.66</td><td>0.05</td><td>0.1450</td><td>-</td><td>2440 B</td><td>2.06</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>16</td><td>False</td><td>True</td><td>5,724.5 ns</td><td>89.03 ns</td><td>83.28 ns</td><td>1.38</td><td>0.04</td><td>0.1373</td><td>-</td><td>2396 B</td><td>2.02</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>16</td><td>True</td><td>False</td><td>278.9 ns</td><td>3.69 ns</td><td>3.45 ns</td><td>1.00</td><td>0.02</td><td>0.0863</td><td>-</td><td>1448 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>16</td><td>True</td><td>False</td><td>261.0 ns</td><td>2.49 ns</td><td>2.21 ns</td><td>0.94</td><td>0.01</td><td>0.0954</td><td>-</td><td>1600 B</td><td>1.10</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>16</td><td>True</td><td>False</td><td>196.6 ns</td><td>1.22 ns</td><td>1.14 ns</td><td>0.70</td><td>0.01</td><td>0.0143</td><td>-</td><td>240 B</td><td>0.17</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>16</td><td>True</td><td>False</td><td>311.4 ns</td><td>2.69 ns</td><td>2.52 ns</td><td>1.12</td><td>0.02</td><td>0.1044</td><td>0.0005</td><td>1752 B</td><td>1.21</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>16</td><td>True</td><td>True</td><td>6,229.0 ns</td><td>120.97 ns</td><td>118.80 ns</td><td>1.00</td><td>0.03</td><td>0.0610</td><td>-</td><td>1880 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>16</td><td>True</td><td>True</td><td>6,511.7 ns</td><td>125.47 ns</td><td>117.36 ns</td><td>1.05</td><td>0.03</td><td>0.1221</td><td>-</td><td>2065 B</td><td>1.10</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>16</td><td>True</td><td>True</td><td>6,688.3 ns</td><td>125.06 ns</td><td>116.98 ns</td><td>1.07</td><td>0.03</td><td>0.1373</td><td>-</td><td>2352 B</td><td>1.25</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>16</td><td>True</td><td>True</td><td>5,419.0 ns</td><td>47.30 ns</td><td>39.50 ns</td><td>0.87</td><td>0.02</td><td>0.1297</td><td>-</td><td>2212 B</td><td>1.18</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>256</td><td>False</td><td>False</td><td>2,175.3 ns</td><td>20.80 ns</td><td>19.45 ns</td><td>1.00</td><td>0.01</td><td>0.6866</td><td>-</td><td>11504 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>256</td><td>False</td><td>False</td><td>3,503.4 ns</td><td>68.64 ns</td><td>86.81 ns</td><td>1.61</td><td>0.04</td><td>1.3123</td><td>0.0038</td><td>21968 B</td><td>1.91</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>256</td><td>False</td><td>False</td><td>2,572.2 ns</td><td>2.28 ns</td><td>1.91 ns</td><td>1.18</td><td>0.01</td><td>0.0839</td><td>-</td><td>1408 B</td><td>0.12</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>256</td><td>False</td><td>False</td><td>4,340.8 ns</td><td>82.76 ns</td><td>81.28 ns</td><td>2.00</td><td>0.04</td><td>1.4343</td><td>0.1144</td><td>24040 B</td><td>2.09</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>256</td><td>False</td><td>True</td><td>29,768.6 ns</td><td>511.40 ns</td><td>453.35 ns</td><td>1.00</td><td>0.02</td><td>0.7324</td><td>-</td><td>14751 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>256</td><td>False</td><td>True</td><td>52,157.4 ns</td><td>463.81 ns</td><td>433.85 ns</td><td>1.75</td><td>0.03</td><td>1.6479</td><td>-</td><td>28296 B</td><td>1.92</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>256</td><td>False</td><td>True</td><td>57,205.2 ns</td><td>448.12 ns</td><td>419.18 ns</td><td>1.92</td><td>0.03</td><td>1.8921</td><td>-</td><td>32200 B</td><td>2.18</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>256</td><td>False</td><td>True</td><td>30,532.7 ns</td><td>471.52 ns</td><td>441.06 ns</td><td>1.03</td><td>0.02</td><td>1.7090</td><td>-</td><td>30199 B</td><td>2.05</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>256</td><td>True</td><td>False</td><td>4,267.4 ns</td><td>49.67 ns</td><td>46.46 ns</td><td>1.00</td><td>0.02</td><td>1.2894</td><td>-</td><td>21608 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>256</td><td>True</td><td>False</td><td>3,479.4 ns</td><td>46.61 ns</td><td>41.32 ns</td><td>0.82</td><td>0.01</td><td>1.3580</td><td>0.0038</td><td>22720 B</td><td>1.05</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>256</td><td>True</td><td>False</td><td>2,544.5 ns</td><td>4.09 ns</td><td>3.83 ns</td><td>0.60</td><td>0.01</td><td>0.1259</td><td>-</td><td>2160 B</td><td>0.10</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>256</td><td>True</td><td>False</td><td>4,315.3 ns</td><td>65.99 ns</td><td>58.49 ns</td><td>1.01</td><td>0.02</td><td>1.4801</td><td>0.1144</td><td>24792 B</td><td>1.15</td>
+</tr><tr><td>HandWritten_SequentialLoop</td><td>256</td><td>True</td><td>True</td><td>50,046.9 ns</td><td>606.48 ns</td><td>537.63 ns</td><td>1.00</td><td>0.01</td><td>1.4648</td><td>-</td><td>27928 B</td><td>1.00</td>
+</tr><tr><td>TraverseAsync_TaskSelector</td><td>256</td><td>True</td><td>True</td><td>52,940.7 ns</td><td>537.24 ns</td><td>502.53 ns</td><td>1.06</td><td>0.01</td><td>1.7090</td><td>-</td><td>29072 B</td><td>1.04</td>
+</tr><tr><td>TraverseAsync_ValueTaskSelector</td><td>256</td><td>True</td><td>True</td><td>55,831.2 ns</td><td>1,111.28 ns</td><td>1,557.87 ns</td><td>1.12</td><td>0.03</td><td>1.9531</td><td>-</td><td>33073 B</td><td>1.18</td>
+</tr><tr><td>SequenceAsync_Tasks</td><td>256</td><td>True</td><td>True</td><td>30,245.6 ns</td><td>407.91 ns</td><td>361.60 ns</td><td>0.60</td><td>0.01</td><td>1.8311</td><td>0.1221</td><td>30984 B</td><td>1.11</td>
+</tr></tbody></table>
+</body>
+</html>

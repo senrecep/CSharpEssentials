@@ -5,8 +5,6 @@ namespace CSharpEssentials.Http;
 
 internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundRequestPolicy requestPolicy) : DelegatingHandler
 {
-    private const string CookieHeader = "Cookie";
-
     private volatile bool _primaryHandlerVerified;
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -117,8 +115,7 @@ internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundReques
 
     private static Uri? GetRedirectLocation(HttpResponseMessage response, Uri requestUri)
     {
-        if (response.StatusCode is not (HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther
-            or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect))
+        if (!HttpRedirectRules.IsRedirect(response.StatusCode))
             return null;
 
         Uri? location = response.Headers.Location;
@@ -130,29 +127,12 @@ internal sealed class SsrfGuardHandler(SsrfGuardOptions options, IOutboundReques
 
     private static void PrepareRedirect(HttpRequestMessage request, HttpStatusCode statusCode, Uri previousUri, Uri location)
     {
-        bool switchToGet = statusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found
-            ? request.Method == HttpMethod.Post
-            : statusCode == HttpStatusCode.SeeOther && request.Method != HttpMethod.Get && request.Method != HttpMethod.Head;
+        HttpRedirectRules.TrySwitchToGet(request, statusCode);
 
-        if (switchToGet)
-        {
-            request.Method = HttpMethod.Get;
-            request.Content = null;
-            request.Headers.TransferEncodingChunked = false;
-        }
-
-        if (!IsSameOrigin(previousUri, location))
-        {
-            request.Headers.Authorization = null;
-            request.Headers.ProxyAuthorization = null;
-            request.Headers.Remove(CookieHeader);
-        }
+        HttpRedirectRules.StripCredentialsIfCrossOrigin(request, previousUri, location);
 
         request.RequestUri = location;
     }
-
-    private static bool IsSameOrigin(Uri first, Uri second) =>
-        Uri.Compare(first, second, UriComponents.SchemeAndServer, UriFormat.UriEscaped, StringComparison.OrdinalIgnoreCase) == 0;
 
     private HttpResponseMessage Guard(HttpResponseMessage response, Uri? requestUri, ref CancellationTokenSource? timeout)
     {

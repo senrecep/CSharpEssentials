@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace CSharpEssentials.Json;
@@ -12,11 +12,19 @@ public sealed class PolymorphicJsonConverterFactory : JsonConverterFactory
 {
     /// <summary>
     /// Abstract classes and interfaces, except collections and dictionaries (<see cref="System.Collections.IEnumerable"/>),
-    /// which keep the built-in array/object serialization.
+    /// async streams (types implementing <see cref="IAsyncEnumerable{T}"/>), <see cref="JsonNode"/> and types marked with
+    /// <see cref="JsonPolymorphicAttribute"/> or <see cref="JsonDerivedTypeAttribute"/>, which keep the built-in serialization.
     /// </summary>
     public override bool CanConvert(Type typeToConvert) =>
         (typeToConvert.IsAbstract || typeToConvert.IsInterface) &&
-        !typeof(System.Collections.IEnumerable).IsAssignableFrom(typeToConvert);
+        !typeof(System.Collections.IEnumerable).IsAssignableFrom(typeToConvert) &&
+        !typeof(JsonNode).IsAssignableFrom(typeToConvert) &&
+        !typeToConvert.GetInterfaces().Append(typeToConvert).Any(IsAsyncEnumerable) &&
+        !typeToConvert.IsDefined(typeof(JsonPolymorphicAttribute), false) &&
+        !typeToConvert.IsDefined(typeof(JsonDerivedTypeAttribute), false);
+
+    private static bool IsAsyncEnumerable(Type type) =>
+        type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>);
 
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
@@ -33,58 +41,63 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
     private static readonly Lazy<Dictionary<string, Type>> TypeCache = new(() =>
     {
         Type baseType = typeof(T);
-        return AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(GetLoadableTypes)
-            .Where(t => baseType.IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract)
-            .ToDictionary(t => t.FullName ?? t.Name);
-    });
-
-    // A partially loadable assembly (e.g. a proxy assembly still emitting types) must not break discovery
-    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
-    {
-        try
+        Dictionary<string, Type> types = [];
+        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException ex)
-        {
-            return ex.Types.OfType<Type>();
-        }
-    }
+            if (PolymorphicTypeScan.IsFrameworkAssembly(assembly))
+                continue;
 
-    private static readonly ConditionalWeakTable<JsonSerializerOptions, JsonSerializerOptions> InnerOptionsCache = [];
-
-    private static JsonSerializerOptions GetInnerOptions(JsonSerializerOptions options)
-    {
-        return InnerOptionsCache.GetValue(options, static opts =>
-        {
-            var inner = new JsonSerializerOptions(opts);
-            for (int i = inner.Converters.Count - 1; i >= 0; i--)
+            foreach (Type type in PolymorphicTypeScan.GetLoadableTypes(assembly))
             {
-                if (inner.Converters[i] is PolymorphicJsonConverterFactory)
-                    inner.Converters.RemoveAt(i);
+                if (baseType.IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract && !type.ContainsGenericParameters)
+                    types.TryAdd(type.FullName ?? type.Name, type);
             }
-            return inner;
-        });
-    }
+        }
+        return types;
+    });
 
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        using var doc = JsonDocument.ParseValue(ref reader);
-        JsonElement root = doc.RootElement;
-
-        if (!root.TryGetProperty(TypePropertyName, out JsonElement typeProperty))
+        if (!TryReadTypeName(reader, out string? typeName))
         {
             throw new JsonException($"Missing required property '{TypePropertyName}' for polymorphic deserialization.");
         }
 
-        string? typeName = typeProperty.GetString();
         if (typeName == null || !TypeCache.Value.TryGetValue(typeName, out Type? derivedType))
         {
             throw new JsonException($"Unknown type discriminator '{typeName}'.");
         }
 
-        return (T?)JsonSerializer.Deserialize(root.GetRawText(), derivedType, GetInnerOptions(options));
+        PolymorphicJson.EnterNested(options);
+        try
+        {
+            return (T?)JsonSerializer.Deserialize(ref reader, derivedType, options);
+        }
+        finally
+        {
+            PolymorphicJson.ExitNested();
+        }
+    }
+
+    private static bool TryReadTypeName(Utf8JsonReader probe, out string? typeName)
+    {
+        typeName = null;
+        bool found = false;
+        if (probe.TokenType != JsonTokenType.StartObject)
+            return false;
+
+        int depth = probe.CurrentDepth;
+        while (probe.Read() && probe.CurrentDepth > depth)
+        {
+            if (probe.TokenType != JsonTokenType.PropertyName || probe.CurrentDepth != depth + 1 || !probe.ValueTextEquals(TypePropertyName))
+                continue;
+
+            probe.Read();
+            typeName = probe.GetString();
+            found = true;
+        }
+
+        return found;
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
@@ -96,10 +109,21 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
         }
 
         Type valueType = value.GetType();
+        JsonElement element;
+        PolymorphicJson.EnterNested(options);
+        try
+        {
+            element = JsonSerializer.SerializeToElement(value, valueType, options);
+        }
+        finally
+        {
+            PolymorphicJson.ExitNested();
+        }
+
         writer.WriteStartObject();
         writer.WriteString(TypePropertyName, valueType.FullName);
 
-        foreach (JsonProperty property in JsonSerializer.SerializeToElement(value, valueType, GetInnerOptions(options)).EnumerateObject())
+        foreach (JsonProperty property in element.EnumerateObject())
         {
             property.WriteTo(writer);
         }

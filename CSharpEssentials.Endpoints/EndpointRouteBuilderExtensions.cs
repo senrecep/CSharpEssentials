@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -23,6 +24,7 @@ public static class EndpointRouteBuilderExtensions
     /// <param name="app">The route builder.</param>
     /// <param name="assemblies">The assemblies to scan, mapped in the given order.</param>
     /// <returns>The same route builder.</returns>
+    /// <exception cref="PlatformNotSupportedException">Dynamic code is not supported (Native AOT); use the generated <c>Map{Asm}Endpoints</c> or <c>MapAllEndpoints</c>.</exception>
     [RequiresUnreferencedCode(UnreferencedCodeMessage)]
     [RequiresDynamicCode(DynamicCodeMessage)]
     public static IEndpointRouteBuilder MapEndpointsFromAssemblies(this IEndpointRouteBuilder app, params Assembly[] assemblies) =>
@@ -36,6 +38,7 @@ public static class EndpointRouteBuilderExtensions
     /// <param name="configure">Optional mapping options.</param>
     /// <param name="assemblies">The assemblies to scan, mapped in the given order.</param>
     /// <returns>The same route builder.</returns>
+    /// <exception cref="PlatformNotSupportedException">Dynamic code is not supported (Native AOT); use the generated <c>Map{Asm}Endpoints</c> or <c>MapAllEndpoints</c>.</exception>
     [RequiresUnreferencedCode(UnreferencedCodeMessage)]
     [RequiresDynamicCode(DynamicCodeMessage)]
     public static IEndpointRouteBuilder MapEndpointsFromAssemblies(
@@ -45,6 +48,7 @@ public static class EndpointRouteBuilderExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
         ArgumentNullException.ThrowIfNull(assemblies);
+        ReflectionEndpointScanner.ThrowIfDynamicCodeUnsupported(RuntimeFeature.IsDynamicCodeSupported);
 
         EndpointMappingOptions options = EndpointMapper.CreateOptions(configure);
         ILogger? logger = app.ServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(EndpointLog.Category);

@@ -35,8 +35,11 @@ public static partial class AnyExtensions
         List<T0> first = [];
         List<T1> second = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+
         foreach (Any<T0, T1> item in source)
-            item.Switch(first: first.Add, second: second.Add);
+            item.Switch(first: addFirst, second: addSecond);
 
         return (first.ToArray(), second.ToArray());
     }
@@ -51,8 +54,12 @@ public static partial class AnyExtensions
         List<T1> second = [];
         List<T2> third = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+        Action<T2> addThird = third.Add;
+
         foreach (Any<T0, T1, T2> item in source)
-            item.Switch(first: first.Add, second: second.Add, third: third.Add);
+            item.Switch(first: addFirst, second: addSecond, third: addThird);
 
         return (first.ToArray(), second.ToArray(), third.ToArray());
     }
@@ -68,8 +75,13 @@ public static partial class AnyExtensions
         List<T2> third = [];
         List<T3> fourth = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+        Action<T2> addThird = third.Add;
+        Action<T3> addFourth = fourth.Add;
+
         foreach (Any<T0, T1, T2, T3> item in source)
-            item.Switch(first: first.Add, second: second.Add, third: third.Add, fourth: fourth.Add);
+            item.Switch(first: addFirst, second: addSecond, third: addThird, fourth: addFourth);
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray());
     }
@@ -86,8 +98,14 @@ public static partial class AnyExtensions
         List<T3> fourth = [];
         List<T4> fifth = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+        Action<T2> addThird = third.Add;
+        Action<T3> addFourth = fourth.Add;
+        Action<T4> addFifth = fifth.Add;
+
         foreach (Any<T0, T1, T2, T3, T4> item in source)
-            item.Switch(first: first.Add, second: second.Add, third: third.Add, fourth: fourth.Add, fifth: fifth.Add);
+            item.Switch(first: addFirst, second: addSecond, third: addThird, fourth: addFourth, fifth: addFifth);
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray());
     }
@@ -105,8 +123,15 @@ public static partial class AnyExtensions
         List<T4> fifth = [];
         List<T5> sixth = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+        Action<T2> addThird = third.Add;
+        Action<T3> addFourth = fourth.Add;
+        Action<T4> addFifth = fifth.Add;
+        Action<T5> addSixth = sixth.Add;
+
         foreach (Any<T0, T1, T2, T3, T4, T5> item in source)
-            item.Switch(first: first.Add, second: second.Add, third: third.Add, fourth: fourth.Add, fifth: fifth.Add, sixth: sixth.Add);
+            item.Switch(first: addFirst, second: addSecond, third: addThird, fourth: addFourth, fifth: addFifth, sixth: addSixth);
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray(), sixth.ToArray());
     }
@@ -125,8 +150,16 @@ public static partial class AnyExtensions
         List<T5> sixth = [];
         List<T6> seventh = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+        Action<T2> addThird = third.Add;
+        Action<T3> addFourth = fourth.Add;
+        Action<T4> addFifth = fifth.Add;
+        Action<T5> addSixth = sixth.Add;
+        Action<T6> addSeventh = seventh.Add;
+
         foreach (Any<T0, T1, T2, T3, T4, T5, T6> item in source)
-            item.Switch(first: first.Add, second: second.Add, third: third.Add, fourth: fourth.Add, fifth: fifth.Add, sixth: sixth.Add, seventh: seventh.Add);
+            item.Switch(first: addFirst, second: addSecond, third: addThird, fourth: addFourth, fifth: addFifth, sixth: addSixth, seventh: addSeventh);
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray(), sixth.ToArray(), seventh.ToArray());
     }
@@ -146,8 +179,17 @@ public static partial class AnyExtensions
         List<T6> seventh = [];
         List<T7> eighth = [];
 
+        Action<T0> addFirst = first.Add;
+        Action<T1> addSecond = second.Add;
+        Action<T2> addThird = third.Add;
+        Action<T3> addFourth = fourth.Add;
+        Action<T4> addFifth = fifth.Add;
+        Action<T5> addSixth = sixth.Add;
+        Action<T6> addSeventh = seventh.Add;
+        Action<T7> addEighth = eighth.Add;
+
         foreach (Any<T0, T1, T2, T3, T4, T5, T6, T7> item in source)
-            item.Switch(first: first.Add, second: second.Add, third: third.Add, fourth: fourth.Add, fifth: fifth.Add, sixth: sixth.Add, seventh: seventh.Add, eighth: eighth.Add);
+            item.Switch(first: addFirst, second: addSecond, third: addThird, fourth: addFourth, fifth: addFifth, sixth: addSixth, seventh: addSeventh, eighth: addEighth);
 
         return (first.ToArray(), second.ToArray(), third.ToArray(), fourth.ToArray(), fifth.ToArray(), sixth.ToArray(), seventh.ToArray(), eighth.ToArray());
     }

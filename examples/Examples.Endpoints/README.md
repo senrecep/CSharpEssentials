@@ -1,4 +1,4 @@
-# CSharpEssentials.Endpoints + DependencyInjection Native AOT Example
+# CSharpEssentials.Endpoints + DependencyInjection Native AOT example
 
 A minimal Native AOT web app that uses the source-generated registries of `CSharpEssentials.Endpoints` and `CSharpEssentials.DependencyInjection`. CI publishes it with `PublishAot=true` and fails on any trim or AOT warning.
 

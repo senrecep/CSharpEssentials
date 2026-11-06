@@ -49,8 +49,8 @@ public class SwashbuckleDocumentTests
     {
         JsonNode document = await GetDocumentAsync(static app => app.MapPost("/review", static (SwReviewItem item) => item));
 
-        JsonNode properties = document["components"]!["schemas"]![nameof(SwReviewItem)]!["properties"]!;
-        string reference = $"#/components/schemas/{nameof(SwReviewState)}";
+        JsonNode properties = document["components"]!["schemas"]![typeof(SwReviewItem).FullName!]!["properties"]!;
+        string reference = $"#/components/schemas/{typeof(SwReviewState).FullName}";
 
         properties["state"]!["description"]!.GetValue<string>().Should().Be("The current state.");
         properties["state"]!["allOf"]![0]!["$ref"]!.GetValue<string>().Should().Be(reference);
@@ -61,7 +61,7 @@ public class SwashbuckleDocumentTests
         properties["next"]!["description"].Should().BeNull();
         properties["next"]!.ToJsonString().Should().Contain(reference).And.NotContain("The state of a review item.");
 
-        document["components"]!["schemas"]![nameof(SwReviewState)]!["description"]!.GetValue<string>()
+        document["components"]!["schemas"]![typeof(SwReviewState).FullName!]!["description"]!.GetValue<string>()
             .Should().StartWith("The state of a review item.");
     }
 
@@ -70,7 +70,7 @@ public class SwashbuckleDocumentTests
     {
         JsonNode document = await GetDocumentAsync(static app => app.MapPost("/timed", static (SwTimedItem item) => item));
 
-        JsonNode properties = document["components"]!["schemas"]![nameof(SwTimedItem)]!["properties"]!;
+        JsonNode properties = document["components"]!["schemas"]![typeof(SwTimedItem).FullName!]!["properties"]!;
 
         foreach (string name in (string[])["duration", "start"])
         {

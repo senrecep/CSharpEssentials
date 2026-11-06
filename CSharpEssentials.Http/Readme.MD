@@ -1,22 +1,34 @@
 # CSharpEssentials.Http
 
-`HttpClient` extensions that return `Result<T>` instead of throwing exceptions. Built-in status-code-to-error mapping, fluent request builder, Polly resilience, and redirect handling.
+`HttpClient` extensions that return `Result<T>` instead of throwing exceptions. The package maps status codes to errors and includes a fluent request builder, Polly resilience and redirect handling.
+
+> Benchmarks against HttpClient with System.Net.Http.Json, Refit, Flurl.Http, RestSharp and Microsoft.Extensions.Http.Resilience
+> (JSON GET and POST, 404 without exceptions, request building, query strings, a retry policy) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
 
 ## Features
 
-- **Result-based HTTP**: `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
-- **Automatic Error Mapping**: HTTP codes mapped to `ErrorType` (Validation, Unauthorized, NotFound, Conflict, etc.).
-- **Fluent Request Builder**: Chain headers, query params, JSON content, and redirects.
-- **Polly Integration**: Retry, timeout, and circuit breaker pipelines.
-- **Query String Helpers**: Build URIs from dictionaries or anonymous objects.
-- **Idempotency-Key client**: `SetIdempotencyKey`, `WithIdempotencyKey` and `AddIdempotencyKeys()` attach a key, and `RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries POST/PATCH only when it is safe.
-- **SSRF Guard** (.NET 9+, not available on netstandard2.1): `AddSsrfGuard()` blocks requests to private, loopback, link-local and metadata addresses, re-validated on every redirect hop.
+- Result-based HTTP calls: `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `DeleteAsResultAsync`.
+- HTTP status codes are mapped to `ErrorType` (Validation, Unauthorized, NotFound, Conflict, etc.).
+- A fluent request builder chains headers, query parameters, JSON content and redirects.
+- Polly pipelines for retry, timeout and circuit breaker.
+- Query string helpers build URIs from dictionaries or anonymous objects.
+- Idempotency-Key client: `SetIdempotencyKey`, `WithIdempotencyKey` and `AddIdempotencyKeys()` attach a key, and `RetryUnsafeMethodsOnlyWithIdempotencyKey()` retries POST/PATCH only when it is safe.
+- SSRF guard (.NET 9+, not available on netstandard2.1): `AddSsrfGuard()` blocks requests to private, loopback, link-local and metadata addresses, and checks again on every redirect hop.
 
 ## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Http
 ```
+
+## Upgrading to 8.0
+
+- `SendWithRedirectsAsResultAsync` and `FollowRedirects()` follow only 301, 302, 303, 307 and 308. A 300, 304 or 305 is now returned as its own status error (for example `Http.304`) instead of being followed or failing with `Http.MissingRedirectLocation`. Check for `Http.304` if you sent conditional requests.
+- A 303, and a 301 or 302 after a POST, is now followed with a GET and no body, as RFC 9110 and the SSRF guard do. 307 and 308 still repeat the method and body. Answer with 307 or 308 if a server needs the POST repeated.
+- A redirect that changes scheme, host or port no longer carries `Authorization`, `Proxy-Authorization` or `Cookie` to the new origin. Headers set on `HttpClient.DefaultRequestHeaders` cannot be removed per hop, so when they hold one of these headers a cross-origin redirect is not followed and fails with `Http.CrossOriginRedirect` (`ErrorType.Forbidden`). If a trusted sibling host needs the credentials, send a new request to it with the headers set.
+- `HttpRequestBuilder.AsResultAsync` no longer disposes the content passed to `WithContent`, so the builder can send it again. Dispose it yourself (`using var content = ...`) once the builder is done, for example to release a file opened for a `StreamContent`.
+- An empty or malformed JSON body read by `GetFromJsonAsResultAsync<T>`, `PostAsJsonAsResultAsync<T>`, `PutAsJsonAsResultAsync<T>`, `PatchAsJsonAsResultAsync<T>`, `SendAsResultAsync<T>`, `SendWithRedirectsAsResultAsync<T>` or `HttpRequestBuilder.AsResultAsync<T>` now fails with `ErrorType.Validation` instead of `ErrorType.Unexpected`, the same as `ReadFromJsonAsResultAsync<T>`. Resilience retries no longer repeat such a call. The same applies to a `JsonException` thrown while the request value is serialized, for example an object cycle passed to `PostAsJsonAsResultAsync`. Update any check or retry predicate that matched `Unexpected` for a bad body or an unserializable request value.
 
 ## Usage
 
@@ -39,7 +51,7 @@ Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Re
 
 `PutAsJsonAsResultAsync<T>` and `PatchAsJsonAsResultAsync<T>` follow the same shape. `PostAsResultAsync` and `PutAsResultAsync` send a ready-made `HttpContent` and return a plain `Result`, and `SendAsResultAsync` / `SendAsResultAsync<T>` send an `HttpRequestMessage`. JSON uses `EnhancedJsonSerializerOptions.DefaultOptions` unless you pass `options`.
 
-A 2xx response whose body is empty or cannot be deserialized to `T` returns a `NotFound` error. A response read from an `HttpContent` you already hold goes through `ReadAsStringAsResultAsync` and `ReadFromJsonAsResultAsync<T>`; a `JsonException` there becomes an `ErrorType.Validation` error.
+A 2xx response whose body deserializes to `null` (the JSON literal `null`) returns a `NotFound` error. A body that is empty or is not valid JSON for `T` throws a `JsonException`, which every helper here, including `SendWithRedirectsAsResultAsync<T>`, `HttpRequestBuilder.AsResultAsync<T>` and `ReadFromJsonAsResultAsync<T>` on an `HttpContent` you already hold, returns as an `ErrorType.Validation` error.
 
 ### Status code mapping
 
@@ -84,11 +96,11 @@ Result created = await HttpRequestBuilder
 
 Query values (`WithQuery`, `Uri.WithQueryString`) work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs are resolved against `HttpClient.BaseAddress`.
 
-Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithIdempotencyKey`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`.
+Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithIdempotencyKey`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`. A content header passed to `WithHeader`, such as `Content-Type` or `Content-Language`, is set on the body and replaces the value the content already has. Calling `WithHeader` again with the same content header adds another value.
 
 ### Enums in route, query and body
 
-Enums with `[StringEnum]` are written as wire names; `WithEnumConventions(conventions, EnumWireFormat.Number)` writes numbers for servers that accept only integers. Flags and enum collections become repeated query keys, and an undefined value is never sent.
+Enums with `[StringEnum]` are written as wire names; `WithEnumConventions(conventions, EnumWireFormat.Number)` writes numbers for servers that accept only integers. Flags and enum collections become repeated query keys, and an undefined value is never sent in a route or query string. In a JSON body it is sent as its number.
 
 ```csharp
 using CSharpEssentials.Enums;
@@ -106,7 +118,25 @@ Build `options` once with `new JsonSerializerOptions(JsonSerializerDefaults.Web)
 
 Roll out consumers before producers: a server moves its output from `Number` to `String` only after every client reads names.
 
-### Query String Builder
+### Native AOT and source-generated JSON
+
+The overloads that take `JsonSerializerOptions` are marked `RequiresUnreferencedCode` and `RequiresDynamicCode`. In trimmed or Native AOT apps, pass a `JsonTypeInfo<T>` from a `JsonSerializerContext` instead:
+
+```csharp
+[JsonSerializable(typeof(User))]
+internal sealed partial class AppJsonContext : JsonSerializerContext;
+
+Result<User> user = await client.GetFromJsonAsResultAsync(uri, AppJsonContext.Default.User);
+Result<User> created = await client.PostAsJsonAsResultAsync(uri, newUser, AppJsonContext.Default.User, AppJsonContext.Default.User);
+
+Result<User> sent = await HttpRequestBuilder.Post("users")
+    .WithJsonTypeInfoContent(newUser, AppJsonContext.Default.User)
+    .AsResultAsync(client, AppJsonContext.Default.User);
+```
+
+`PutAsJsonAsResultAsync`, `PatchAsJsonAsResultAsync`, `SendAsResultAsync`, `SendWithRedirectsAsResultAsync` and `ReadFromJsonAsResultAsync` have the same `JsonTypeInfo<T>` overloads. Because of them, a call that passes a literal `null` or `default` as the options argument (`GetFromJsonAsResultAsync<T>(uri, null)`) is now ambiguous; drop the argument or pass `(JsonSerializerOptions?)null`.
+
+### Query string builder
 
 ```csharp
 Uri uri = new Uri("https://api.example.com/search");
@@ -118,7 +148,7 @@ Result<string> query = new { Q = "csharp", Page = 2 }.ToQueryString();          
 
 `WithQueryString` returns a `Result<Uri>`. Null values are skipped, values are escaped, and enums follow the enum conventions like in the builder. The object overloads read public properties by reflection.
 
-### Polly Resilience
+### Polly resilience
 
 `HttpClientResilienceExtensions` builds Polly v8 pipelines on top of [`CSharpEssentials.Resilience`](../CSharpEssentials.Resilience/Readme.MD):
 
@@ -150,9 +180,11 @@ Attach the key to the request:
 
 ```csharp
 using var request = new HttpRequestMessage(HttpMethod.Post, "/payments") { Content = JsonContent.Create(payment) };
-string key = request.SetIdempotencyKey();                                   // UUIDv7 on .NET 9+, v4 on netstandard2.1
+string key = request.SetIdempotencyKey();                                   // random UUIDv4
 request.SetIdempotencyKey(IdempotencyKeys.For("capture", orderId));         // or a deterministic key
 ```
+
+A generated key is a random UUIDv4 from `Guid.NewGuid()`. A version 7 key would show when the request was made, and the server only needs the key to be unique, not ordered.
 
 `IdempotencyKeys` is in `CSharpEssentials.Idempotency`; any key of printable ASCII other than `"` and `\` is accepted, and an invalid key throws `ArgumentException`.
 
@@ -193,7 +225,7 @@ The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception)`
 - A timeout is an `OperationCanceledException` whose token was not cancelled by the caller. When the caller's token is cancelled, nothing is retried.
 - `SsrfBlockedException` is never retried.
 
-### Redirect Following
+### Redirect following
 
 ```csharp
 Result<User> result = await HttpRequestBuilder
@@ -202,7 +234,9 @@ Result<User> result = await HttpRequestBuilder
     .AsResultAsync<User>(client);
 ```
 
-### SSRF Guard
+Only 301, 302, 303, 307 and 308 are followed. Any other status, including 304, is returned as is. A 303, and a 301 or 302 after a POST, becomes a GET with no body. 307 and 308 keep the method and body. `Authorization`, `Proxy-Authorization` and `Cookie` are removed from the request when a redirect changes scheme, host or port. If `HttpClient.DefaultRequestHeaders` holds one of them, a redirect that changes scheme, host or port is not followed and returns `Http.CrossOriginRedirect` (`ErrorType.Forbidden`).
+
+### SSRF guard
 
 Use it when the URL comes from a user, a tenant or a third party: webhooks, link previews, image fetchers, import-by-URL. Without a guard, a caller can point your server at `http://169.254.169.254/` (cloud metadata), `http://localhost:6379/` or an internal admin panel. The response then leaks back to them, or the request alone does damage.
 

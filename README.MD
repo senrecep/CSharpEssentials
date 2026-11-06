@@ -13,7 +13,7 @@
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
 [![Packages](https://img.shields.io/badge/packages-27-blue)](https://www.nuget.org/profiles/senrecep)
 
-Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
+CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented and functional programming in C#.
 
 ## Packages
 
@@ -49,7 +49,7 @@ Modular .NET NuGet ecosystem that bridges OOP and Functional Programming in C#.
 
 ## Documentation
 
-**[API Reference](docs/API_REFERENCE.md)**: guide to every package, method, and pattern in the ecosystem. It covers 24 of the 27 packages with method tables, philosophy, code examples, and cross-cutting FP patterns; `CSharpEssentials.AspNetCore.OpenApi`, `CSharpEssentials.AspNetCore.Swashbuckle` and `CSharpEssentials.Idempotency.Testing` are documented in their own Readme files.
+The [API Reference](docs/API_REFERENCE.md) is a guide to every package, method and pattern in the ecosystem. It covers 24 of the 27 packages with method tables, philosophy, code examples, and cross-cutting FP patterns; `CSharpEssentials.AspNetCore.OpenApi`, `CSharpEssentials.AspNetCore.Swashbuckle` and `CSharpEssentials.Idempotency.Testing` are documented in their own Readme files.
 
 ## Installation
 
@@ -62,11 +62,11 @@ dotnet add package CSharpEssentials.Rules
 dotnet add package CSharpEssentials.Mediator
 ```
 
-## Core Concepts
+## Core concepts
 
-### Result\<T\>: Railway-Oriented Error Handling
+### Result\<T\>: railway-oriented error handling
 
-Stop throwing exceptions for expected failures. Chain operations that short-circuit on the first error.
+Return expected failures as values instead of throwing exceptions, and chain operations that short-circuit on the first error.
 
 ```csharp
 // ❌ Traditional: exceptions as control flow
@@ -92,7 +92,7 @@ Result<UserDto> result = GetUser(id)
     .Map(user => new UserDto(user));
 ```
 
-### Maybe\<T\>: Explicit Optionals
+### Maybe\<T\>: explicit optionals
 
 Model the absence of a value without null references.
 
@@ -108,7 +108,7 @@ string displayName = Maybe.From(user)
     .GetValueOrDefault("ANONYMOUS");
 ```
 
-### Any\<T1,T2,...\>: Discriminated Unions
+### Any\<T1,T2,...\>: discriminated unions
 
 A value that is exactly one of several types, exhaustively matched at compile time.
 
@@ -123,9 +123,9 @@ AnyActionResult<double> area = shape.Match(
 );
 ```
 
-### Rules: Composable Validation
+### Rules: composable validation
 
-Build complex validation logic from simple, reusable rules that return `Result`.
+Compose validation logic from small, reusable rules that return `Result`.
 
 ```csharp
 Func<User, Result> minAge     = u => u.Age >= 18            ? Result.Success() : Error.Validation("Age.MinAge", "Must be 18+");
@@ -139,9 +139,9 @@ Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And()
 Result adminOrMod = RuleEngine.Evaluate(new[] { isAdmin, isModerator }.Or(), user);
 ```
 
-### AspNetCore: Result → HTTP, Automatically
+### AspNetCore: Result → HTTP, automatically
 
-Map `Result<T>` to correct HTTP status codes without writing any error-mapping boilerplate.
+Map `Result<T>` to the matching HTTP status codes without writing the error mapping yourself.
 
 ```csharp
 // Program.cs
@@ -166,7 +166,7 @@ public Result<Order> PlaceOrder(Guid productId, int quantity)
         .Then(p => CreateOrder(p, quantity));
 ```
 
-### Endpoints: Source-Generated Minimal APIs
+### Endpoints: source-generated Minimal APIs
 
 Each endpoint is a type with a static `Map` method. A source generator collects them into one registry per assembly, so mapping uses no reflection and works with Native AOT.
 
@@ -190,7 +190,7 @@ public sealed class GetProduct : IEndpoint
 app.MapAllEndpoints(); // every generated registry of the app and its referenced assemblies
 ```
 
-### DependencyInjection: Attribute-Based Registration
+### DependencyInjection: attribute-based registration
 
 Mark a class with its lifetime. A source generator writes the registrations, and decorators are applied in order.
 
@@ -295,6 +295,7 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 ## Upgrading
 
 - [CHANGELOG.md](CHANGELOG.md) lists the changes in every release.
+- Coming from 7.x and using `CSharpEssentials.Core`? Read [Upgrading to 8.0](CSharpEssentials.Core/README.MD#upgrading-to-80). `GetRandomItems` throws `ArgumentOutOfRangeException` for a negative `count`, `MsToDateTime` returns a `DateTime` with `Kind = Utc`, `ToSnakeCase` and the other case converters keep letters without case such as CJK, and `ToStringFromGuid` uses the RFC 4648 base64url alphabet, so short IDs stored by 7.x need a one-time `-`/`_` swap. `Guider.NewGuid` returns version 7 GUIDs on every target, including .NET 8 and .NET Framework.
 - Coming from 6.x with the `Idempotency-Key` middleware or a custom idempotency store? Read [Migrating idempotency from 6.x to 7.0](docs/migration/v6-to-v7-idempotency.md). 7.0 moves the store into `CSharpEssentials.Idempotency` and replaces `KeyScope` with `ScopeResolver`.
 - From 6.4.0, the task-returning members of `Result` and `Maybe` have `Async` names, and the unsuffixed names are obsolete. Read [Async naming and the async overload matrix](docs/migration/v6-async-naming.md).
 - Coming from 5.x? Read [Migrating from 5.x to 6.0](docs/migration/v5-to-v6.md). 6.0 moves the Swashbuckle support to Swashbuckle 10 and Microsoft.OpenApi 2.x on every target, makes the single-column cursor `PaginateAsync` obsolete in favor of `KeysetPaginateAsync` and caps the offset page size at 100 by default.
@@ -302,7 +303,7 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 - Coming from 4.x? Read [Migrating from 4.x to 5.0](docs/migration/v4-to-v5.md). 5.0 applies one set of enum conventions to JSON, binding, OpenAPI and EF Core, and moves the Swashbuckle support into its own package.
 - Coming from 3.x? Read [Migrating from 3.x to 4.0](docs/migration/v3-to-v4.md). 4.0 changed ProblemDetails defaults, enum naming and some package dependencies.
 
-## AI Skills
+## AI skills
 
 Install skills for Claude Code, Cursor, Codex, and 50+ other AI agents:
 
@@ -310,4 +311,6 @@ Install skills for Claude Code, Cursor, Codex, and 50+ other AI agents:
 npx skills add senrecep/CSharpEssentials
 ```
 
-Each package has a dedicated skill with accurate API examples, correct namespaces, and common pitfalls.
+Each package has its own skill with API examples, the namespaces to import and common pitfalls.
+
+The same skill also ships inside each NuGet package, at `skills/<name>/SKILL.md`. After `dotnet restore`, agent tools that read package skills find the version that matches the package you installed, with nothing else to set up. For example, `dotnet-package-skills install` copies them into your repo.

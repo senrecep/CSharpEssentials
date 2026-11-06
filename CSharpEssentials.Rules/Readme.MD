@@ -2,15 +2,17 @@
 
 Composable, functional rule engine for .NET. Define business logic as small, reusable rules and combine them with a fluent API.
 
+> **Benchmarks:** sync and async trees, prebuilt vs rebuilt chains, short-circuit vs hand-written if/else, NRules and RulesEngine as reference columns: [BENCHMARKS.md](./BENCHMARKS.md).
+
 ## Features
 
-- **Three definition styles**: Class, `Func` field, or inline lambda. All are first-class.
-- **No boilerplate conversions**: Pass functions directly to `RuleEngine`; no explicit `.ToRule()` required at call sites.
-- **Linear Sequences**: Run rules in order, stop on first failure.
-- **Conditional Rules**: If/Then/Else branching.
-- **And / Or Logic**: All must pass, or at least one must pass.
-- **Async Support**: `IAsyncRule` rules evaluated without blocking via `await RuleEngine.EvaluateAsync(...)`.
-- **Result Integration**: Built on `CSharpEssentials.Results`.
+- Three definition styles (a class, a `Func` field or an inline lambda), all first-class.
+- Functions go straight to `RuleEngine`; call sites need no explicit `.ToRule()`.
+- Linear sequences run rules in order and stop on the first failure.
+- Conditional rules branch with if/then/else.
+- And/Or logic: all rules must pass, or at least one must.
+- `IAsyncRule` rules are evaluated without blocking via `await RuleEngine.EvaluateAsync(...)`.
+- Built on `CSharpEssentials.Results`.
 
 ## Installation
 
@@ -28,7 +30,7 @@ using CSharpEssentials.Errors;        // Error
 
 The samples below assume these usings.
 
-## Rule Definition Styles
+## Rule definition styles
 
 There are three ways to define a rule. All styles are interchangeable and can be mixed freely when composing.
 
@@ -70,7 +72,7 @@ static Result CheckEmail(UserContext ctx) =>
 
 ### 3. Inline lambda (best for one-off or ad-hoc composition)
 
-Write the rule directly at the call site. No variable, no class: maximum density for simple checks.
+Write the rule directly at the call site, without a variable or a class. It is the most compact form for simple checks.
 
 ```csharp
 Result result = RuleEngine.Evaluate(
@@ -80,7 +82,7 @@ Result result = RuleEngine.Evaluate(
 
 ---
 
-## Passing Rules Without Explicit Conversion
+## Passing rules without explicit conversion
 
 `RuleEngine.Evaluate`, `.And()`, `.Or()`, and `.Next()` all accept raw `Func` delegates. You never need to wrap them manually.
 
@@ -104,13 +106,13 @@ Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
 
 ---
 
-## Combining Rules
+## Combining rules
 
 All three styles compose freely. Mix class instances, `Func` variables, and lambdas in the same call.
 
 ### And: all must pass
 
-And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
+`Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
 
 ```csharp
 // Using class instances
@@ -164,7 +166,7 @@ Result longer = RuleEngine.Evaluate(
     ctx);
 ```
 
-`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, so it behaves the same as `a.Next(b.Next(c))` and `new[] { a, b, c }.Linear()`: a failing `b` stops the chain and `c` is not evaluated.
+`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, so it behaves the same as `a.Next(b.Next(c))` and `new[] { a, b, c }.Linear()`: a failing `b` stops the chain and `c` is not evaluated. An empty array gives a rule that fails with `EMPTY_RULE_ARRAY`, the same error `And` and `Or` return for no rules.
 
 ### Static shortcuts
 
@@ -205,7 +207,7 @@ Result conditional3 = RuleEngine.If(
 
 ---
 
-## Rules with Values (`Result<T>`)
+## Rules with values (`Result<T>`)
 
 Rules can produce a typed result alongside success/failure.
 
@@ -229,9 +231,9 @@ Result<string> grade = RuleEngine.Evaluate(
 
 ---
 
-## Integration with Domain Error Hierarchies
+## Integration with domain error hierarchies
 
-Rules integrate naturally with domain-specific `Error` factory classes, keeping validation logic close to domain language:
+Rules work with domain-specific `Error` factory classes, so validation logic stays close to the domain language:
 
 ```csharp
 public static class RegistrationErrors
@@ -281,7 +283,7 @@ result.Switch(
 
 Rules return `Result` / `Result<T>`, the same type used throughout CSharpEssentials, so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
 
-### FromPredicate / FromPredicateAsync: Inline Rules Without Classes
+### FromPredicate / FromPredicateAsync: inline rules without classes
 
 ```csharp
 // Static error — reuse the same error for any failing context
@@ -309,7 +311,7 @@ Result composed = RuleEngine.Evaluate(
 Result unique = await RuleEngine.EvaluateAsync(uniqueRule, name, ct);
 ```
 
-## Async Rules: `EvaluateAsync`
+## Async rules: `EvaluateAsync`
 
 An async rule implements `IAsyncRule<TContext>` (or `IAsyncRule<TContext, TResult>`), or comes from `FromPredicateAsync` above, or from a `Func<TContext, CancellationToken, ValueTask<Result>>` converted with `.ToRule()`:
 
@@ -347,3 +349,8 @@ Result result = await RuleEngine.EvaluateAsync(
 - Rules must observe `ct`. The token is checked before each rule runs, but a rule that is already running is awaited until it returns; `EvaluateAsync` never abandons it.
 
 `Evaluate` still works with async rules, but it blocks the calling thread until they finish. That can deadlock under a `SynchronizationContext` and wastes thread-pool threads. Use `EvaluateAsync` when the tree contains async rules.
+
+## Upgrading
+
+- `Linear()` and `RuleEngine.Linear` on an empty array no longer throw `IndexOutOfRangeException`. They return a failed `Result` with the `EMPTY_RULE_ARRAY` validation error, like `And` and `Or`. Replace a `try`/`catch` around an empty `Linear` call with a check of `result.IsFailure`.
+- A custom `IAndRule<TContext, TResult>` or `IAndAsyncRule<TContext, TResult>` whose `Rules` is empty now fails with the `EMPTY_RULE_ARRAY` validation error. Earlier versions failed with a `RuleEngine.Evaluate.*` exception error wrapping an `IndexOutOfRangeException`. Update any code that matches on the old error code.

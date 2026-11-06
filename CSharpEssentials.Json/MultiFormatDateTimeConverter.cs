@@ -16,7 +16,7 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
 
 
     public MultiFormatDateTimeConverterFactory(params string[] formats) =>
-        _formats = [.. _defaultFormats, .. formats];
+        _formats = [.. DefaultFormats, .. formats];
 
 
     public override bool CanConvert(Type typeToConvert) => typeToConvert == _dateTimeType || typeToConvert == _nullableDateTimeType;
@@ -34,7 +34,7 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
             : new MultiFormatDateTimeConverter<DateTime>(false, _formats);
     }
 
-    private static readonly string[] _defaultFormats = [
+    internal static readonly string[] DefaultFormats = [
         // ISO 8601 and Web Formats
         "yyyy-MM-ddTHH:mm:ss.ffffffzzz",    // 2024-03-14T15:30:45.123456+03:00
         "yyyy-MM-ddTHH:mm:ss.fffZ",         // 2024-03-14T15:30:45.123Z
@@ -59,7 +59,6 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         // Compact Formats
         "yyyyMMdd",                         // 20240314
         "yyyy-MM",                          // 2024-03
-        "yyyy'W'ww",                        // 2024W11 (Week 11)
         
         // Detailed ISO Formats
         "yyyy-MM-ddTHH:mm:ss.ffffff",       // 2024-03-14T15:30:45.123456
@@ -68,10 +67,8 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         // RFC and Email Formats
         "ddd, dd MMM yyyy HH:mm:ss 'GMT'",  // Thu, 14 Mar 2024 15:30:45 GMT
         "ddd, dd-MMM-yy HH:mm:ss 'GMT'",    // Thu, 14-Mar-24 15:30:45 GMT
-        "yyyy-MM-dd'T'HH:mm:ssXXX",         // 2024-03-14T15:30:45+03:00
         "yyyy-MM-dd HH:mm:ss zzz",          // 2024-03-14 15:30:45 +03:00
         "dd MMM yyyy HH:mm:ss",             // 14 Mar 2024 15:30:45
-        "yyyy.MM.dd G 'at' HH:mm:ss z",     // 2024.03.14 AD at 15:30:45 GMT
         
         // Compact Timestamp Formats
         "yyyyMMddHHmmss",                   // 20240314153045
@@ -85,10 +82,6 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
         "yyyy-MM-dd HH.mm",                 // 2024-03-14 15.30
         "dd/MM/yyyy HH:mm:ss",              // 14/03/2024 15:30:45
         "MM/dd/yyyy HH:mm:ss",              // 03/14/2024 15:30:45 (US format with time)
-        
-        // Week-Based Formats
-        "yyyy'W'ww",                        // 2024W11
-        "yyyy-'W'ww-d",                     // 2024-W11-4 (4th day of week 11)
         
         // Timezone-aware Formats
         "yyyy-MM-ddTHH:mm:sszzz",           // 2024-03-14T15:30:45+03:00
@@ -105,14 +98,18 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
 public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
 {
     private const string _defaultFormat = "yyyy-MM-ddTHH:mm:ss.ffffffzzz";
+    private const long _minUnixSeconds = -62135596800;
+    private const long _maxUnixSeconds = 253402300799;
     private readonly string[] _formats;
     private readonly string _supportedFormats;
     private readonly bool _isNullable;
+    private readonly bool _readsIso;
 
     public MultiFormatDateTimeConverter(bool isNullable, string[] formats)
     {
         _isNullable = isNullable;
         _formats = formats;
+        _readsIso = formats.AsSpan().StartsWith(MultiFormatDateTimeConverterFactory.DefaultFormats);
         _supportedFormats = string.Join(", ", _formats);
     }
 
@@ -124,6 +121,9 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
                 return default!;
             throw new JsonException("Null value is not allowed for non-nullable DateTime.");
         }
+
+        if (_readsIso && TryReadIso(ref reader, out DateTime iso))
+            return (T)(object)iso;
 
         string? dateString = reader.GetString();
         if (string.IsNullOrEmpty(dateString))
@@ -140,7 +140,8 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         }
 
         // Try Unix timestamp as fallback (pure numeric string)
-        if (long.TryParse(dateString, out long unixSeconds))
+        if (long.TryParse(dateString, NumberStyles.Integer, CultureInfo.InvariantCulture, out long unixSeconds) &&
+            unixSeconds >= _minUnixSeconds && unixSeconds <= _maxUnixSeconds)
         {
             DateTime unixDate = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
             return (T)(object)unixDate;
@@ -149,12 +150,79 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         throw new JsonException($"Unable to convert \"{dateString}\" to DateTime. Supported formats: {_supportedFormats}.");
     }
 
+    /// <summary>
+    /// Reads the ISO 8601 shapes of the leading default formats without allocating. Only text in exactly those shapes is taken,
+    /// so the result is the one the format list gives; anything else, or text the reader rejects, goes through the list.
+    /// </summary>
+    private static bool TryReadIso(ref Utf8JsonReader reader, out DateTime value)
+    {
+        value = default;
+        if (reader.TokenType != JsonTokenType.String || reader.HasValueSequence || reader.ValueIsEscaped)
+            return false;
+
+        ReadOnlySpan<byte> text = reader.ValueSpan;
+        if (!IsIsoShape(text))
+            return false;
+
+        if (text[^1] == (byte)'Z' || text.Length is 25 or 32)
+        {
+            if (!reader.TryGetDateTimeOffset(out DateTimeOffset withOffset))
+                return false;
+            value = withOffset.UtcDateTime;
+            return true;
+        }
+
+        if (!reader.TryGetDateTime(out DateTime unspecified))
+            return false;
+        value = DateTime.SpecifyKind(unspecified, DateTimeKind.Utc);
+        return true;
+    }
+
+    private static bool IsIsoShape(ReadOnlySpan<byte> s)
+    {
+        if (s.Length < 10 || s[4] != (byte)'-' || s[7] != (byte)'-')
+            return false;
+        if (s.Length == 10)
+            return true;
+        if (s.Length < 19 || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':')
+            return false;
+
+        return s.Length switch
+        {
+            19 => IsDigit(s[18]),
+            20 => s[19] == (byte)'Z',
+            23 or 26 => s[19] == (byte)'.' && AllDigits(s[20..]),
+            24 => s[19] == (byte)'.' && s[23] == (byte)'Z',
+            25 => IsSign(s[19]) && s[22] == (byte)':',
+            32 => s[19] == (byte)'.' && IsSign(s[26]) && s[29] == (byte)':',
+            _ => false,
+        };
+    }
+
+    private static bool IsDigit(byte value) => value is >= (byte)'0' and <= (byte)'9';
+
+    private static bool AllDigits(ReadOnlySpan<byte> s)
+    {
+        foreach (byte value in s)
+        {
+            if (!IsDigit(value))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static bool IsSign(byte value) => value is (byte)'+' or (byte)'-';
+
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
         var dateTime = value as DateTime?;
         if (dateTime.HasValue)
         {
-            writer.WriteStringValue(dateTime.Value.ToString(_defaultFormat, CultureInfo.InvariantCulture));
+            DateTime toWrite = dateTime.Value.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(dateTime.Value, DateTimeKind.Utc)
+                : dateTime.Value;
+            writer.WriteStringValue(toWrite.ToString(_defaultFormat, CultureInfo.InvariantCulture));
         }
         else if (_isNullable)
         {

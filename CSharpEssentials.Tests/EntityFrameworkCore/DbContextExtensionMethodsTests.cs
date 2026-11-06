@@ -1,6 +1,7 @@
 using CSharpEssentials.Entity;
 using CSharpEssentials.Entity.Interfaces;
 using CSharpEssentials.EntityFrameworkCore;
+using CSharpEssentials.ResultPattern;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -287,6 +288,34 @@ public class DbContextExtensionMethodsTests
     }
 
     [Fact]
+    public async Task MigrateDataAsync_Core_ShouldReuseCompiledKeySelectors_AcrossCalls()
+    {
+        var options = new MigrateDataOptions<SimpleEntity, SimpleSeed, int>
+        {
+            Query = q => q,
+            EntityKeyProperty = e => e.Id,
+            DataKeyProperty = s => s.Key,
+            IsUpdatedFunc = (e, s) => e.Name != s.Name,
+            UpdateFunc = (e, s) =>
+            {
+                e.Name = s.Name;
+                return e;
+            },
+            Converter = s => new SimpleEntity { Id = s.Key, Name = s.Name }
+        };
+        Func<SimpleEntity, int> entityKey = options.EntityKeySelector;
+        Func<SimpleSeed, int> dataKey = options.DataKeySelector;
+
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        await context.MigrateDataAsync(new[] { new SimpleSeed { Key = 1, Name = "A" } }, options);
+        await context.MigrateDataAsync(new[] { new SimpleSeed { Key = 1, Name = "B" }, new SimpleSeed { Key = 2, Name = "C" } }, options);
+
+        options.EntityKeySelector.Should().BeSameAs(entityKey);
+        options.DataKeySelector.Should().BeSameAs(dataKey);
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Name).Should().Equal("B", "C");
+    }
+
+    [Fact]
     public async Task MigrateDataAsync_Core_ShouldUpdateExistingEntities()
     {
         using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
@@ -360,6 +389,69 @@ public class DbContextExtensionMethodsTests
         _ = new SoftMigrateSeed { Key = 1 };
     }
 
+    private static MigrateDataOptions<SimpleEntity, SimpleSeed, string> NameKeyOptions(
+        List<string> updated, Func<int> nextId) =>
+        new()
+        {
+            Query = q => q.OrderBy(e => e.Id),
+            EntityKeyProperty = e => e.Name == "" ? null! : e.Name,
+            DataKeyProperty = s => s.Name == "" ? null! : s.Name,
+            IsUpdatedFunc = (e, s) => { updated.Add(e.Id + ":" + s.Key); return true; },
+            UpdateFunc = (e, s) => e,
+            Converter = s => new SimpleEntity { Id = nextId(), Name = s.Name }
+        };
+
+    [Fact]
+    public async Task MigrateDataAsync_Core_DuplicateKeys_ShouldMatchCaseSensitivelyAndKeepSourceOrder()
+    {
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        context.SimpleEntities.AddRange(
+            new SimpleEntity { Id = 1, Name = "a" },
+            new SimpleEntity { Id = 2, Name = "B" },
+            new SimpleEntity { Id = 3, Name = "x" },
+            new SimpleEntity { Id = 4, Name = "x" });
+        await context.SaveChangesAsync();
+
+        int id = 10;
+        List<string> updated = [];
+        SimpleSeed[] seeds =
+        [
+            new SimpleSeed { Key = 1, Name = "c" },
+            new SimpleSeed { Key = 2, Name = "b" },
+            new SimpleSeed { Key = 3, Name = "x" },
+            new SimpleSeed { Key = 4, Name = "c" },
+            new SimpleSeed { Key = 5, Name = "a" },
+        ];
+        await context.MigrateDataAsync(seeds, NameKeyOptions(updated, () => id++));
+
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Id + e.Name)
+            .Should().Equal("1a", "3x", "4x", "10c", "11b", "12c");
+        updated.Should().Equal("1:5", "3:3", "4:3");
+    }
+
+    [Fact]
+    public async Task MigrateDataAsync_Core_NullKeys_ShouldNeverMatch()
+    {
+        using var context = new MigrateDbContext(CreateOptions<MigrateDbContext>());
+        context.SimpleEntities.AddRange(
+            new SimpleEntity { Id = 1, Name = "" },
+            new SimpleEntity { Id = 2, Name = "k" });
+        await context.SaveChangesAsync();
+
+        int id = 10;
+        List<string> updated = [];
+        SimpleSeed[] seeds =
+        [
+            new SimpleSeed { Key = 1, Name = "" },
+            new SimpleSeed { Key = 2, Name = "k" },
+        ];
+        await context.MigrateDataAsync(seeds, NameKeyOptions(updated, () => id++));
+
+        context.SimpleEntities.OrderBy(e => e.Id).Select(e => e.Id + e.Name)
+            .Should().Equal("2k", "10");
+        updated.Should().Equal("2:2");
+    }
+
     [Fact]
     public async Task SaveChangesAsResultAsync_CallerCancelled_ShouldPropagate()
     {
@@ -383,6 +475,68 @@ public class DbContextExtensionMethodsTests
 
         Func<Task> act = async () => await context.SaveChangesAsResultAsync(true, cts.Token);
 
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    private sealed class BlockingSaveInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override async ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            Started.TrySetResult();
+            await Release.Task.ConfigureAwait(false);
+            return result;
+        }
+    }
+
+    [Fact]
+    public async Task SaveChangesAsResultAsync_CancelledMidSave_ShouldWaitForEfBeforeCompleting()
+    {
+        var interceptor = new BlockingSaveInterceptor();
+        var options = new DbContextOptionsBuilder<ChangeTrackerDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(interceptor)
+            .Options;
+        using var context = new ChangeTrackerDbContext(options);
+        context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
+        using var cts = new CancellationTokenSource();
+
+        Task<Result> save = context.SaveChangesAsResultAsync(cts.Token);
+        await interceptor.Started.Task;
+        await cts.CancelAsync();
+        await Task.Delay(100);
+
+        save.IsCompleted.Should().BeFalse();
+        interceptor.Release.SetResult();
+        Func<Task> act = async () => await save;
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsResultAsync_WithAcceptAll_CancelledMidSave_ShouldWaitForEfBeforeCompleting()
+    {
+        var interceptor = new BlockingSaveInterceptor();
+        var options = new DbContextOptionsBuilder<ChangeTrackerDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(interceptor)
+            .Options;
+        using var context = new ChangeTrackerDbContext(options);
+        context.SoftMigrates.Add(new SoftMigrateEntity { Id = 1, Name = "A" });
+        using var cts = new CancellationTokenSource();
+
+        Task<Result<int>> save = context.SaveChangesAsResultAsync(true, cts.Token);
+        await interceptor.Started.Task;
+        await cts.CancelAsync();
+        await Task.Delay(100);
+
+        save.IsCompleted.Should().BeFalse();
+        interceptor.Release.SetResult();
+        Func<Task> act = async () => await save;
         await act.Should().ThrowAsync<OperationCanceledException>();
     }
 

@@ -1,18 +1,18 @@
-# CSharpEssentials — Agent Instructions
+# CSharpEssentials agent instructions
 
 ## What
 
-CSharpEssentials is a modular .NET NuGet ecosystem (27 packages) that bridges OOP and Functional Programming in C#. Core patterns: Result/Maybe monads, Discriminated Unions (Any<T1,T2,...>), composable Rules engine, DDD base classes (EntityBase), EF Core interceptors/pagination, ASP.NET Core utilities, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection). Multi-targets: .NET 11/10/9 (some packages also net8.0), netstandard2.1 (a few also netstandard2.0). CSharpEssentials.EntityFrameworkCore targets net10.0/net9.0/net8.0 only (no net11.0), each pinned to its EF Core major. CSharpEssentials.AspNetCore.OpenApi targets net10.0 only.
+CSharpEssentials is a modular .NET NuGet ecosystem (27 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors/pagination, ASP.NET Core utilities, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection). Multi-targets: .NET 11/10/9 (some packages also net8.0), netstandard2.1 (a few also netstandard2.0). CSharpEssentials.EntityFrameworkCore targets net10.0/net9.0/net8.0 only (no net11.0), each pinned to its EF Core major. CSharpEssentials.AspNetCore.OpenApi targets net10.0 only.
 
 Current version: 7.0.0 <!-- x-release-please-version -->
 
 ## Why
 
-- **Nullable + TreatWarningsAsErrors**: Prevents null reference bugs at compile time; every package must be null-safe by design.
-- **Modular packages**: Users take only what they need; CSharpEssentials meta-package bundles core functional modules.
-- **SonarAnalyzer.CSharp**: Static analysis in every build via Directory.Build.props — consistent quality across all packages without per-project config.
-- **Central Package Management (Directory.Packages.props)**: Single version source-of-truth; prevents version drift across packages.
-- **No abstract layers for the sake of it**: Every abstraction (IDateTimeProvider, IDomainEventPublisher) exists to enable testability or infrastructure-swapping, not ceremony.
+- Nullable and TreatWarningsAsErrors catch null reference bugs at compile time, so every package must be null-safe.
+- Packages are modular, so users take only what they need. The CSharpEssentials meta-package bundles the core functional modules.
+- SonarAnalyzer.CSharp runs static analysis in every build through Directory.Build.props, so every package gets the same checks without per-project config.
+- Central Package Management (Directory.Packages.props) is the single source of truth for versions, so versions do not drift between packages.
+- No abstraction exists for its own sake. Each one (IDateTimeProvider, IDomainEventPublisher) is there for testability or to swap infrastructure.
 
 ## How
 
@@ -24,7 +24,7 @@ Current version: 7.0.0 <!-- x-release-please-version -->
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: One public type per file, filename matches type name
 - Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`
-- Endpoints, DependencyInjection, EntityFrameworkCore and Enums keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
+- Endpoints, DependencyInjection, EntityFrameworkCore, Enums and Json keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
 
 ## Releasing
 
@@ -38,13 +38,21 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 `<Version>` in `Directory.Build.props` is the only version source. Internal package pins (`[$(Version)]`), `AssemblyVersion` and `FileVersion` derive from it.
 
+## Third-party dependencies
+
+- Don't reference a package the code does not use. Remove it instead of hiding it.
+- If a dependency is used only inside the package and none of its types appear in the public API, set `PrivateAssets="compile;contentfiles;analyzers;build"` on the `PackageReference`. Consumers still get it at runtime but cannot compile against it. Check that the packed nuspec lists it with `exclude="Compile,Build,Analyzers"`.
+- If its types appear in the public API, keep it visible and treat its major version as part of our API.
+- Keep version ranges as wide as the code allows. Add an upper bound only where the next major is known to break us, such as the EF Core major per target framework, and say why in a comment.
+- Hiding compile assets does not change version resolution. NuGet still picks one version of the package for the whole app.
+
 ## Don't
 
-- Don't use `dynamic` type — defeats the purpose of the type-safe libraries.
-- Don't suppress warnings with `#pragma warning disable` — fix the root cause.
-- Don't add `// TODO` to committed code — either implement it or track it as an issue.
+- Don't use the `dynamic` type. It defeats the purpose of the type-safe libraries.
+- Don't suppress warnings with `#pragma warning disable`. Fix the root cause.
+- Don't add `// TODO` to committed code. Implement it or track it as an issue.
 - Don't add new packages to `Directory.Packages.props` without checking existing entries.
-- Don't break multi-targeting — test against all declared target frameworks.
+- Don't break multi-targeting. Test against all declared target frameworks.
 - Don't add inline code comments (`//`, `/* */`) that explain code unless explicitly asked. XML documentation comments (`///`) on public APIs are expected.
 - Don't create placeholder/stub implementations.
 

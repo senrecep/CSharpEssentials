@@ -1,8 +1,8 @@
-# CSharpEssentials.Any Example
+# CSharpEssentials.Any example
 
 This console application demonstrates the typed discriminated unions from `CSharpEssentials.Any`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

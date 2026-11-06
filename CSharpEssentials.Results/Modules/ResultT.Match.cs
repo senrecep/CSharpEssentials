@@ -16,8 +16,8 @@ public readonly partial record struct Result<TValue>
     public T Match<T>(Func<TValue, T> onSuccess, Func<Error[], T> onError)
     {
         if (IsFailure)
-            return onError(Errors);
-        return onSuccess(Value);
+            return onError(_errors);
+        return onSuccess(_value);
     }
 
     /// <summary>

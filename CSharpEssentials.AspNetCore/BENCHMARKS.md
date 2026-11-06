@@ -1,0 +1,254 @@
+# CSharpEssentials.AspNetCore: performance benchmarks
+
+This page compares CSharpEssentials.AspNetCore (CSE) with plain ASP.NET Core minimal APIs (BCL), Hellang.Middleware.ProblemDetails 6.5.1, Marvin.Cache.Headers 7.2.0 and SharpGrip.FluentValidation.AutoValidation.Endpoints 2.0.0 (with FluentValidation 12.2.0). It covers the `Result<T>` endpoint filter, enum binding, conditional GET (ETag and 304), problem+json for exceptions, empty error statuses and errors returned from code, and the validation endpoint filter. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
+
+The same project, `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/` (suite key `aspnetcore`), also holds the idempotency classes, documented in [CSharpEssentials.Idempotency/BENCHMARKS.md](../CSharpEssentials.Idempotency/BENCHMARKS.md), and the request logging classes, documented in [CSharpEssentials.RequestResponseLogging/BENCHMARKS.md](../CSharpEssentials.RequestResponseLogging/BENCHMARKS.md).
+
+The parity self-check passes on every TFM, and full default-job results for net8.0 to net11.0 are in [Results](#results).
+
+The competitors are pinned exactly in `Directory.Packages.props`. Each pin is the latest stable release on NuGet as of 2026-11-03:
+
+| Package | Version | Published | License (nuspec expression) | Asset the suite loads |
+|---|---|---|---|---|
+| Hellang.Middleware.ProblemDetails | 6.5.1 | 2022-08-09 | MIT | `lib/net6.0` on every TFM (the latest release; master has unreleased net8.0 work) |
+| Marvin.Cache.Headers | 7.2.0 | 2024-09-25 | MIT | `lib/net8.0` on every TFM |
+| SharpGrip.FluentValidation.AutoValidation.Endpoints | 2.0.0 | 2026-02-05 | MIT | `lib/net8.0` to `lib/net10.0` (net11 loads `lib/net10.0`) |
+| FluentValidation | 12.2.0 | latest stable | Apache-2.0 | `lib/net8.0` |
+
+The repo's own FluentValidation range `[11.11.0,)` resolves to 11.11.0, which the Validation suite runs. For this suite only, `Directory.Packages.props` pins 12.2.0, because competitors run their latest stable release. Transitive pinning is off for this project, as it is for the DI, mediator, endpoints and Http suites: with it on, restore fails with NU1109, because Serilog.AspNetCore 10 (a logging competitor in the same project) needs Microsoft.Extensions.* and System.Text.Json 10.0.0, above the repo's `[9.0.4,)` pins. `Microsoft.AspNetCore.TestHost` is pinned per TFM (8.0.30, 9.0.4, 10.0.11) to match each shared framework major.
+
+What each TFM runs (`--self-check` prints this as its first line):
+
+| TFM | ASP.NET Core | CSE.AspNetCore build | CSE.Results, Errors, Validation build |
+|---|---|---|---|
+| net8.0 | 8.0.30 | net8.0 | netstandard2.1 |
+| net9.0 | 9.0.19 | net9.0 | net9.0 |
+| net10.0 | 10.0.11 | net10.0 | net10.0 |
+| net11.0 | 11.0.0-rc.1.26425.128 | net11.0 | net11.0 |
+
+The SharpGrip assembly reports `AssemblyInformationalVersion` 1.0.0 although the package is 2.0.0; the restore assets file confirms 2.0.0 on every TFM.
+
+---
+
+## What was measured
+
+The code is in `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/`, in five classes for this package.
+- Every class has `[MemoryDiagnoser]`.
+- These are overhead measurements, so the plain framework row is the baseline in every category, and the ratio reads as "the cost of adding X".
+- Each variant runs on its own Production host over `TestServer` (`WebApplication.CreateSlimBuilder` + `UseTestServer`). Production matters: the framework and Hellang add exception details in Development. Logging providers are cleared.
+- Every request reads the whole response body. Every handler increments a `HandlerCounter`, so parity can tell an executed request from a short-circuited one.
+- Each class checks parity in `[GlobalSetup]`, and `--self-check` runs the same check for every parameter value. A mismatch fails the run.
+- Each competitor and BCL row has a comment above it that links to the documentation it follows; each CSE row links to its Readme section.
+
+| # | Class | Measured unit | Rows | Parity |
+|---|---|---|---|---|
+| 1 | `ResultFilterComparison` | GET /orders/{id}, `Outcome` = Success (200 `OrderDto`) or Failure (404) | BCL `Results<Ok<OrderDto>, ProblemHttpResult>` (baseline), CSE `ResultEndpointFilter` over `Result<OrderDto>`, CSE hand-written match with `ToProblemResult()` (labelled) | Success: status, body bytes, handler calls. Failure: status 404, `application/problem+json`, JSON `status` 404, handler calls |
+| 2 | `EnumBindingComparison` | GET /orders?status=…, `Input` = `PendingApproval`, `pending_approval`, `bogus`; PassThrough GET /ping | BCL binding (baseline), CSE `AddEnumConventions` + `UseEnumBinding` | Canonical: both 200 `"PendingApproval"`. Normalized: CSE 200, the framework's outcome recorded. Invalid: both 400 with handler calls 0, CSE problem+json |
+| 3 | `ConditionalGetComparison` | GET /articles/7, JSON of exactly `Size` = 1 KB or 64 KB | BodyHash200/304: plain (baseline), CSE `UseBodyHashFallback` + `WithConditionalGet`, Marvin defaults. Versioned200/304: hand-written `ETag: "17"` (baseline), CSE `IVersioned` | 200: body bytes, ETag presence. 304: empty body; handler calls Marvin 0, the others 1 |
+| 4 | `ProblemDetailsComparison` | Exception (handler throws), StatusCode (empty 404), ErrorResult (404 from code) | BCL `AddProblemDetails` + `UseExceptionHandler` + `UseStatusCodePages` (baseline), CSE `AddEnhancedProblemDetails` + `GlobalExceptionHandler`, Hellang `UseProblemDetails`; ErrorResult: BCL `TypedResults.Problem` (baseline) and CSE `ToProblemResult()` | Status, `application/problem+json`, JSON `status`, handler calls 1 |
+| 5 | `ValidationFilterComparison` | POST /users, `Rules` = 1 or 3, `Outcome` = Valid or Invalid | BCL hand-written checks + `TypedResults.ValidationProblem` (baseline), CSE `WithValidation<CreateUser>`, SharpGrip `AddFluentValidationAutoValidation` | Valid: 200 `"ada"`, handler calls 1. Invalid: 400, N errors in the body, handler calls 0 |
+
+### Inputs
+
+- `OrderDto("order-42", "pending", 3)`, `CreateUser(Name, Email, Age)`, `ArticleDto(Id, Title, Body)` and `VersionedArticleDto` (same JSON, `[JsonIgnore] Version => "17"`). Strings are ASCII `[a-z0-9-]`, with no decimals or dates.
+- `ArticleDto.Body` is pseudo-random `[a-z0-9]` text from a fixed `Random` seed, sized so the System.Text.Json output is exactly `Size` bytes. It is built once per parameter value.
+- Valid body `{"name":"ada","email":"ada-bench-local","age":36}`, invalid body `{"name":"","email":"","age":0}`. Rules=1 is Name not empty; Rules=3 adds Email not empty and Age greater than 0. There is no email-format rule, because the regexes differ.
+- Each library gets one validator type holding N rules (`CreateUserValidator{N}` for CSE, `CreateUserFluentValidator{N}` for FluentValidation).
+- Each 304 row sends the ETag its own host returned in setup.
+
+---
+
+## Semantic differences
+
+These were seen in the self-check output on all four TFMs and are not timed.
+
+- **Result filter failure body.** The framework writes `{"type":…,"title":"Order not found","status":404}` (plus a `traceId` on net9 and later). CSE writes title `Not Found`, `detail`, `instance`, `errorCodes: ["order.notFound"]` and a trace id. The ManualMatch row uses the same CSE types without the filter, so ManualMatch minus ResultFilter is the filter's own cost.
+- **Enum spelling.** On every TFM the framework rejects `pending_approval` with an empty 400 and does not run the handler; CSE binds it to `PendingApproval`. On `bogus` both answer 400, but only CSE writes a problem+json body listing the allowed values. The Normalized and Invalid rows are not like-for-like.
+- **ETag from the body.** CSE writes a weak `W/"<base64url SHA-256 of the JSON>"` from a second serialization and no other cache header. Marvin writes a strong MD5 ETag over its store key and the body, buffers the whole response in a `MemoryStream`, adds `Cache-Control`, `Expires`, `Last-Modified` and `Vary`, and stores the validator in its in-memory store.
+- **Who decides the 304.** Marvin answers a matching `If-None-Match` from its validator store before the endpoint runs (handler calls 0). CSE runs the handler, hashes the value and then answers 304 (handler calls 1). The BodyHash304 rows therefore measure different work; the Versioned304 rows (hand-written against CSE `IVersioned`) both run the handler. Marvin has no `IVersioned` equivalent by default (only a custom `IETagInjector`), so it has no Versioned row.
+- **Problem bodies.** Titles differ: for an exception the framework says `An error occurred while processing your request.` on net8-net10 and `Internal Server Error` on net11, CSE `An unexpected error occurred.`, Hellang `Internal Server Error`. Type URIs differ (Hellang uses `https://httpstatuses.io/{status}`). CSE adds `instance`, `traceId` and, for errors from code, `errorCodes`; Hellang adds `traceId` on every TFM and the framework on net9 and later. With no `Activity` running, every trace id here is `HttpContext.TraceIdentifier`. Parity compares status, media type and the `status` member only.
+- **Hellang needs MVC.** Its middleware writes through the MVC `ObjectResult` executor, so its host registers `AddControllers()`, because 6.5.1's `AddProblemDetails` registers MVC's `ObjectResultExecutor`. The upstream minimal-API sample added that call after the 6.5.1 release (2a04612); the sample at the 6.5.1 commit 2c41d08 omits it. Its `AddProblemDetails` overload is ambiguous with the framework's parameterless one when both namespaces are imported; the suite calls the framework one by its static class.
+- **Hellang has no ErrorResult row.** It has no error-value API; its minimal-API sample returns a ProblemDetails subclass through the framework's `Results.BadRequest(problem)`.
+- **Validation bodies.** The framework and SharpGrip write `"errors": {"Name": ["'Name' must not be empty."], …}`. CSE writes `"errors": [{"code": "Name.NotEmpty", "description": …}]`, `errorCodes`, a `detail` with the first message, `instance` and a trace id. All three use `application/problem+json`. SharpGrip runs a different validator engine (FluentValidation 12.2.0).
+- **No DataAnnotations row.** The framework's net10+ `AddValidation()` has no net8/net9 support and no N-rule validator class to match, so it is not included.
+
+---
+
+## Feature matrix
+
+This table comes from reading CSE source, the competitors' source and docs at their release commits, and the self-check output. None of it was measured.
+
+| Feature | CSE | BCL (minimal API + AddProblemDetails) | Hellang 6.5.1 | Marvin 7.2.0 | SharpGrip 2.0.0 |
+|---|---|---|---|---|---|
+| Unhandled exception to problem+json | Yes | Yes | Yes | n/a | n/a |
+| Empty error status to problem+json | Yes | Yes (`UseStatusCodePages`) | Yes | n/a | n/a |
+| Exception type to status mapping | `IExceptionProblemMapper` | Custom `IExceptionHandler`; net9+ `ExceptionHandlerOptions.StatusCodeSelector` | `Map` / `MapToStatusCode` | n/a | n/a |
+| Domain error value to status | `Error`/`ErrorType` + `IErrorStatusCodeMapper` | No | No | n/a | n/a |
+| Error codes list in body | `errorCodes` / `errors` | No (`ValidationProblem` dictionary only) | No | n/a | n/a |
+| `Result<T>` to HTTP result filter | `ResultEndpointFilter` | No | No | n/a | n/a |
+| Validation endpoint filter | `WithValidation<T>` (CSE validators) | net10+ `AddValidation` (DataAnnotations) | n/a | n/a | Yes (FluentValidation) |
+| Query/route string-enum spelling normalization | Yes | No | n/a | n/a | n/a |
+| ETag from a version property | `IVersioned` / `IETagSource` | By hand | n/a | Custom `IETagInjector` | n/a |
+| ETag from the body | Weak SHA-256 (opt-in) | No | n/a | Strong MD5 (default) | n/a |
+| 304 decided | After the handler | By hand | n/a | From the validator store, before the handler | n/a |
+| If-Match 412/428 | Yes | By hand | n/a | 412 only, no 428 (`HttpCacheHeadersMiddleware.cs:565`) | n/a |
+| Cache-Control/Expires generation | No | No | No | Yes | n/a |
+| Needs MVC services | No (minimal API paths) | No | Yes | No (only its attribute types use MVC namespaces) | No |
+| Latest release | Working tree | Framework | 2022-08-09 | 2024-09-25 | 2026-02-05 |
+| AOT/trim flagged | No (reflection sites listed under Caveats) | Yes with source-generated JSON | No | No | No (FluentValidation expressions) |
+| License | MIT | MIT | MIT | MIT | MIT (FluentValidation Apache-2.0) |
+
+---
+
+## Results
+
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- One Linux x64 machine, 6 physical cores and 12 threads (the exact CPU is in each report header). The suites ran one after another, never in parallel.
+- The 1-minute load average was 1.60 when the `aspnetcore` suite started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. On this page the reports for `ValidationFilterComparison` on net8.0, net10.0 and net11.0 and for `ConditionalGetComparison` on net9.0 come from those reruns, which ran at a 1-minute load of 1.41 to 3.94. After the reruns, three rows on this page are still above 5% CV: the net11.0 `Bcl_Inline` baselines of the validation filter for Rules=1 Valid (CV 6.4%), Rules=3 Invalid (CV 8.5%) and Rules=3 Valid (CV 5.9%). They are marked noisy in the table, and the net11.0 CSE and SharpGrip ratios against them are less certain than the means.
+- Reports: `benchmarks/results/aspnetcore/{tfm}/results/*-report-github.md` (also `.csv` and `.html`), for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/).
+
+Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TFM. The ratio is against the baseline row of the same category and parameter.
+
+### Result filter
+
+| Method | Outcome | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|
+| `Bcl_TypedResults` | Failure | 11.58 μs (1.00), 9.61 KB | 11.46 μs (1.00), 10.44 KB | 11.021 μs (1.00), 10.19 KB | 12.72 μs (1.00), 11.61 KB |
+| `CSharpEssentials_ResultFilter` | Failure | 14.95 μs (1.29), 11.64 KB | 14.32 μs (1.25), 11.53 KB | 13.547 μs (1.23), 11.35 KB | 14.88 μs (1.17), 12.77 KB |
+| `CSharpEssentials_ManualMatch` | Failure | 14.42 μs (1.25), 11.57 KB | 14.03 μs (1.22), 11.46 KB | 12.940 μs (1.18), 11.29 KB | 14.68 μs (1.16), 12.71 KB |
+| `Bcl_TypedResults` | Success | 11.00 μs (1.00), 9.11 KB | 10.23 μs (1.00), 9 KB | 9.475 μs (1.00), 8.67 KB | 13.27 μs (1.00), 10.09 KB |
+| `CSharpEssentials_ResultFilter` | Success | 11.26 μs (1.02), 9.18 KB | 10.43 μs (1.02), 9.07 KB | 11.231 μs (1.19), 8.74 KB | 13.09 μs (0.99), 10.17 KB |
+| `CSharpEssentials_ManualMatch` | Success | 10.84 μs (0.99), 9.09 KB | 10.17 μs (0.99), 8.98 KB | 9.395 μs (0.99), 8.65 KB | 13.09 μs (0.99), 10.07 KB |
+
+- On Success, the filter costs about the same as `TypedResults` on net8.0, net9.0 and net11.0 (ratio 0.99 to 1.02). On net10.0 it is 11.231 μs against 9.475 μs (1.19), while the hand-written match is 9.395 μs (0.99). The row is not noisy (StdDev 0.2039 μs), so this is a net10.0-specific cost, not explained yet.
+- On Failure, ManualMatch is within 0.20 to 0.607 μs of the filter on every TFM. Most of the 1.17 to 1.29 ratio is the larger CSE problem body (title, `detail`, `instance`, `errorCodes`, trace id), not the filter.
+
+### Enum binding
+
+| Method | Input | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|
+| `Bcl_NoMiddleware` | Canonical | 11.127 μs (1.00), 9.55 KB | 10.262 μs (1.00), 9.44 KB | 9.428 μs (1.00), 9.09 KB | 13.22 μs (1.00), 10.51 KB |
+| `CSharpEssentials_UseEnumBinding` | Canonical | 12.335 μs (1.11), 10.65 KB | 11.604 μs (1.13), 10.55 KB | 10.604 μs (1.13), 10.14 KB | 13.25 μs (1.00), 11.56 KB |
+| `Bcl_NoMiddleware` | Invalid | 8.704 μs (1.00), 8.31 KB | 8.263 μs (1.00), 8.29 KB | 7.304 μs (1.00), 8.16 KB | 11.74 μs (1.00), 9.69 KB |
+| `CSharpEssentials_UseEnumBinding` | Invalid | 18.802 μs (2.16), 13.26 KB | 17.283 μs (2.09), 13.08 KB | 14.532 μs (1.99), 12.8 KB | 18.24 μs (1.55), 14.22 KB |
+| `Bcl_NoMiddleware` | Normalized | 8.591 μs (1.00), 8.45 KB | 8.058 μs (1.00), 8.38 KB | 7.313 μs (1.00), 8.26 KB | 11.85 μs (1.00), 9.73 KB |
+| `CSharpEssentials_UseEnumBinding` | Normalized | 12.769 μs (1.49), 11.36 KB | 12.380 μs (1.54), 11.21 KB | 11.048 μs (1.51), 10.79 KB | 13.51 μs (1.14), 12.21 KB |
+| `Bcl_NoMiddleware_NoEnum` | Canonical | 9.826 μs (1.00), 8.92 KB | 9.420 μs (1.00), 8.81 KB | 8.485 μs (1.00), 8.44 KB | 12.73 μs (1.00), 9.87 KB |
+| `CSharpEssentials_UseEnumBinding_NoEnum` | Canonical | 10.205 μs (1.04), 8.98 KB | 9.442 μs (1.00), 8.87 KB | 8.636 μs (1.02), 8.44 KB | 12.53 μs (0.98), 9.86 KB |
+| `Bcl_NoMiddleware_NoEnum` | Invalid | 10.155 μs (1.00), 8.92 KB | 9.851 μs (1.00), 8.81 KB | 8.411 μs (1.00), 8.44 KB | 12.71 μs (1.00), 9.86 KB |
+| `CSharpEssentials_UseEnumBinding_NoEnum` | Invalid | 10.124 μs (1.00), 8.98 KB | 9.623 μs (0.98), 8.87 KB | 8.535 μs (1.02), 8.44 KB | 12.86 μs (1.01), 9.86 KB |
+| `Bcl_NoMiddleware_NoEnum` | Normalized | 9.978 μs (1.00), 8.92 KB | 9.420 μs (1.00), 8.81 KB | 8.362 μs (1.00), 8.44 KB | 12.78 μs (1.00), 9.87 KB |
+| `CSharpEssentials_UseEnumBinding_NoEnum` | Normalized | 9.994 μs (1.00), 8.98 KB | 9.542 μs (1.01), 8.87 KB | 8.608 μs (1.03), 8.44 KB | 12.91 μs (1.01), 9.86 KB |
+
+- PassThrough (an endpoint with no enum parameter) costs 0.98 to 1.04 of the plain request. It allocates 0.06 KB more on net8.0 and net9.0, the same on net10.0, and the same or 0.01 KB less on net11.0.
+- Canonical (a value that needs no change) costs 1.11 to 1.13 on net8.0 to net10.0 and 1.00 on net11.0, with 1.05 to 1.11 KB more allocated.
+- The Normalized and Invalid rows do different work: the framework answers an empty 400 without running the handler, while CSE binds `pending_approval` and writes a problem+json body for `bogus`. Their ratios are not overhead for the same result.
+
+### Conditional GET
+
+| Method | Size | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|
+| `Bcl_NoETag` | 1024 | 10.363 μs (1.00), 9.71 KB | 10.333 μs (1.00), 9.6 KB | 8.922 μs (1.00), 9.48 KB | 12.87 μs (1.00), 10.9 KB |
+| `CSharpEssentials_BodyHash` | 1024 | 15.409 μs (1.49), 10.54 KB | 14.751 μs (1.43), 10.39 KB | 13.079 μs (1.47), 10.26 KB | 15.23 μs (1.18), 11.68 KB |
+| `Marvin_Default` | 1024 | 34.826 μs (3.36), 32.62 KB | 33.879 μs (3.28), 32.76 KB | 31.622 μs (3.54), 32.59 KB | 30.38 μs (2.36), 34.09 KB |
+| `Bcl_NoETag` | 65536 | 36.550 μs (1.00), 75.77 KB | 27.597 μs (1.00), 73.82 KB | 29.195 μs (1.00), 73.75 KB | 38.01 μs (1.00), 76.27 KB |
+| `CSharpEssentials_BodyHash` | 65536 | 96.587 μs (2.64), 76.61 KB | 85.934 μs (3.11), 74.57 KB | 87.999 μs (3.02), 74.93 KB | 89.19 μs (2.35), 76.99 KB |
+| `Marvin_Default` | 65536 | 302.562 μs (8.28), 948.4 KB | 296.206 μs (10.74), 949.02 KB | 294.214 μs (10.08), 949.18 KB | 289.12 μs (7.61), 950.74 KB |
+| `Bcl_NoETag_IfNoneMatch` | 1024 | 11.592 μs (1.00), 10.2 KB | 10.670 μs (1.00), 10.09 KB | 9.841 μs (1.00), 9.97 KB | 13.18 μs (1.00), 11.39 KB |
+| `CSharpEssentials_BodyHash_NotModified` | 1024 | 13.768 μs (1.19), 9.7 KB | 12.971 μs (1.22), 9.62 KB | 11.359 μs (1.15), 9.52 KB | 16.86 μs (1.28), 10.95 KB |
+| `Marvin_NotModified` | 1024 | 15.024 μs (1.30), 13.02 KB | 13.615 μs (1.28), 12.74 KB | 11.784 μs (1.20), 12.51 KB | 16.05 μs (1.22), 13.89 KB |
+| `Bcl_NoETag_IfNoneMatch` | 65536 | 38.252 μs (1.00), 76.26 KB | 29.700 μs (1.00), 74.32 KB | 30.608 μs (1.00), 74.25 KB | 38.58 μs (1.00), 76.76 KB |
+| `CSharpEssentials_BodyHash_NotModified` | 65536 | 67.197 μs (1.76), 9.76 KB | 64.654 μs (2.18), 9.68 KB | 63.311 μs (2.07), 9.58 KB | 64.84 μs (1.68), 11.06 KB |
+| `Marvin_NotModified` | 65536 | 14.929 μs (0.39), 13.02 KB | 13.411 μs (0.45), 12.74 KB | 11.743 μs (0.38), 12.51 KB | 16.08 μs (0.42), 13.89 KB |
+| `Bcl_HandWrittenETag` | 1024 | 11.282 μs (1.00), 9.93 KB | 10.382 μs (1.00), 9.74 KB | 9.455 μs (1.00), 9.61 KB | 12.62 μs (1.00), 11.03 KB |
+| `CSharpEssentials_Versioned` | 1024 | 12.086 μs (1.07), 10.01 KB | 10.697 μs (1.03), 9.86 KB | 10.381 μs (1.10), 9.74 KB | 12.73 μs (1.01), 11.15 KB |
+| `Bcl_HandWrittenETag` | 65536 | 37.159 μs (1.00), 76.02 KB | 28.970 μs (1.00), 73.96 KB | 30.168 μs (1.00), 73.91 KB | 38.91 μs (1.00), 76.41 KB |
+| `CSharpEssentials_Versioned` | 65536 | 38.376 μs (1.03), 75.96 KB | 29.375 μs (1.01), 74.01 KB | 30.575 μs (1.01), 73.9 KB | 38.74 μs (1.00), 76.47 KB |
+| `Bcl_HandWrittenETag_NotModified` | 1024 | 9.233 μs (1.00), 8.82 KB | 8.378 μs (1.00), 8.66 KB | 7.545 μs (1.00), 8.55 KB | 12.08 μs (1.00), 10.01 KB |
+| `CSharpEssentials_Versioned_NotModified` | 1024 | 9.590 μs (1.04), 8.95 KB | 8.686 μs (1.04), 8.87 KB | 8.089 μs (1.07), 8.77 KB | 13.54 μs (1.12), 10.2 KB |
+| `Bcl_HandWrittenETag_NotModified` | 65536 | 8.992 μs (1.00), 8.82 KB | 8.270 μs (1.00), 8.66 KB | 7.676 μs (1.00), 8.55 KB | 12.33 μs (1.00), 10.03 KB |
+| `CSharpEssentials_Versioned_NotModified` | 65536 | 9.451 μs (1.05), 8.95 KB | 8.816 μs (1.07), 8.87 KB | 8.100 μs (1.06), 8.77 KB | 12.95 μs (1.05), 10.2 KB |
+
+- BodyHash200: CSE is faster than Marvin and allocates far less on every TFM. At 64 KB on net10.0, CSE is 87.999 μs and 74.93 KB, Marvin is 294.214 μs and 949.18 KB. CSE allocates within 1.2 KB of the plain response because it hashes while it serializes, but the second serialization and the SHA-256 cost time: 2.35 to 3.11 times the plain request at 64 KB.
+- BodyHash304 at 64 KB: Marvin answers from its validator store before the handler runs (14.929 μs on net8.0); CSE runs the handler, serializes and hashes 64 KB, then answers 304 (67.197 μs on net8.0). This is a design difference, but it means a CSE body-hash 304 at 64 KB takes longer than sending the full 200 without any ETag (38.252 μs on net8.0); it only saves bytes on the wire (9.76 KB allocated against 76.26 KB).
+- Versioned200 and Versioned304 (`IVersioned`) cost 1.00 to 1.12 of the hand-written ETag.
+
+### Problem details
+
+| Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|
+| `Bcl_TypedResultsProblem` | 11.85 μs (1.00), 9.46 KB | 11.28 μs (1.00), 10.28 KB | 10.99 μs (1.00), 10.31 KB | 13.16 μs (1.00), 11.73 KB |
+| `CSharpEssentials_ToProblemResult` | 14.92 μs (1.26), 11.41 KB | 13.50 μs (1.20), 11.3 KB | 12.65 μs (1.15), 11.38 KB | 14.52 μs (1.10), 12.8 KB |
+| `Bcl_AddProblemDetails` | 53.93 μs (1.00), 13.44 KB | 35.79 μs (1.00), 12.54 KB | 28.31 μs (1.00), 12.32 KB | 26.67 μs (1.00), 13.76 KB |
+| `CSharpEssentials_GlobalExceptionHandler` | 58.12 μs (1.08), 13.77 KB | 38.95 μs (1.09), 12.62 KB | 29.68 μs (1.05), 12.39 KB | 28.18 μs (1.06), 13.86 KB |
+| `Hellang_UseProblemDetails` | 50.37 μs (0.93), 13.84 KB | 36.17 μs (1.01), 13.24 KB | 28.05 μs (0.99), 12.98 KB | 26.97 μs (1.01), 14.42 KB |
+| `Bcl_StatusCode` | 11.17 μs (1.00), 9.47 KB | 11.26 μs (1.00), 10.3 KB | 11.16 μs (1.00), 10.3 KB | 13.19 μs (1.00), 11.72 KB |
+| `CSharpEssentials_StatusCode` | 13.11 μs (1.17), 10.43 KB | 12.19 μs (1.08), 10.32 KB | 11.29 μs (1.01), 10.35 KB | 14.14 μs (1.07), 11.78 KB |
+| `Hellang_StatusCode` | 20.29 μs (1.82), 12.87 KB | 17.55 μs (1.56), 12.58 KB | 15.38 μs (1.38), 12.3 KB | 16.63 μs (1.26), 13.69 KB |
+
+- Exception: CSE costs 1.05 to 1.09 of the framework. Hellang is 0.93 to 1.01 and is faster than CSE on every TFM (see below).
+- StatusCode (an empty 404): CSE costs 1.01 to 1.17, Hellang 1.26 to 1.82. CSE is faster and allocates less than Hellang on every TFM.
+- ErrorResult: `ToProblemResult()` costs 1.10 to 1.26 of `TypedResults.Problem`; its body carries `errorCodes`, `instance` and a trace id.
+- The Exception rows on net8.0 are the slowest for every library (50.37 to 58.12 μs); the same rows take 26.67 to 28.18 μs on net11.0.
+
+### Validation filter
+
+| Method | Rules | Outcome | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| `Bcl_Inline` | 1 | Invalid | 16.99 μs (1.00), 11.14 KB | 15.22 μs (1.00), 11.03 KB | 16.44 μs (1.00), 11.5 KB | 17.24 μs (1.00), 12.83 KB |
+| `CSharpEssentials_WithValidation` | 1 | Invalid | 31.60 μs (1.86), 14.22 KB | 28.26 μs (1.86), 13.81 KB | 28.76 μs (1.75), 15.17 KB | 26.12 μs (1.52), 16.53 KB |
+| `SharpGrip_AutoValidation` | 1 | Invalid | 40.51 μs (2.39), 17.38 KB | 36.86 μs (2.42), 17.25 KB | 34.11 μs (2.08), 17.62 KB | 33.95 μs (1.97), 19 KB |
+| `Bcl_Inline` | 1 | Valid | 14.18 μs (1.00), 10.18 KB | 13.27 μs (1.00), 10.07 KB | 14.38 μs (1.00), 10.46 KB | 16.34 μs (1.00), 11.79 KB, noisy (CV 6.4%) |
+| `CSharpEssentials_WithValidation` | 1 | Valid | 16.81 μs (1.19), 11.13 KB | 14.68 μs (1.11), 10.78 KB | 15.80 μs (1.10), 11.17 KB | 18.06 μs (1.11), 12.49 KB |
+| `SharpGrip_AutoValidation` | 1 | Valid | 32.76 μs (2.31), 15.52 KB | 27.88 μs (2.10), 15.41 KB | 29.39 μs (2.05), 15.75 KB | 29.42 μs (1.81), 17.14 KB |
+| `Bcl_Inline` | 3 | Invalid | 16.83 μs (1.00), 11.2 KB | 15.74 μs (1.00), 11.09 KB | 17.03 μs (1.00), 11.64 KB | 19.25 μs (1.01), 12.97 KB, noisy (CV 8.5%) |
+| `CSharpEssentials_WithValidation` | 3 | Invalid | 34.09 μs (2.03), 15.36 KB | 30.97 μs (1.97), 14.94 KB | 30.39 μs (1.79), 16 KB | 28.42 μs (1.49), 17.63 KB |
+| `SharpGrip_AutoValidation` | 3 | Invalid | 50.83 μs (3.02), 24.88 KB | 47.14 μs (3.00), 24.75 KB | 43.86 μs (2.58), 25 KB | 41.23 μs (2.16), 26.38 KB |
+| `Bcl_Inline` | 3 | Valid | 14.12 μs (1.00), 10.18 KB | 13.42 μs (1.00), 10.07 KB | 14.27 μs (1.00), 10.46 KB | 16.50 μs (1.00), 11.79 KB, noisy (CV 5.9%) |
+| `CSharpEssentials_WithValidation` | 3 | Valid | 18.14 μs (1.28), 11.41 KB | 14.88 μs (1.11), 11.05 KB | 16.33 μs (1.14), 11.25 KB | 17.39 μs (1.06), 12.75 KB |
+| `SharpGrip_AutoValidation` | 3 | Valid | 38.05 μs (2.69), 19.49 KB | 36.38 μs (2.72), 19.38 KB | 34.14 μs (2.39), 19.65 KB | 34.94 μs (2.12), 21.05 KB |
+
+- CSE is faster than SharpGrip and allocates less in every row on every TFM. With 3 rules on net10.0: Valid 16.33 μs against 34.14 μs, Invalid 30.39 μs against 43.86 μs.
+- Against the hand-written check, CSE costs 1.06 to 1.28 when the body is valid and 1.49 to 2.03 when it is invalid. The invalid CSE body is larger (`errors` list, `errorCodes`, `detail`, `instance`, trace id).
+- On net11.0 three of the four `Bcl_Inline` baselines are noisy (CV 5.9% to 8.5%), so the net11.0 ratios in this table (for example the 1.49 for CSE with 3 rules, Invalid) rest on a noisy baseline.
+- SharpGrip runs FluentValidation 12.2.0, a different validator engine, so these rows compare whole stacks, not only the filter.
+
+### Where CSE loses
+
+Every CSE row adds cost over the plain framework request; the ratios above give it per row. Rows where a competitor is faster or allocates less, or where CSE costs more than the work suggests:
+
+- **ProblemDetails Exception, all TFMs: Hellang is faster.** Hellang against CSE: 50.37 against 58.12 μs (net8.0), 36.17 against 38.95 μs (net9.0), 28.05 against 29.68 μs (net10.0), 26.97 against 28.18 μs (net11.0). Hellang allocates more (for example 12.98 KB against 12.39 KB on net10.0).
+- **ConditionalGet BodyHash304 at 64 KB, all TFMs: Marvin is 4.0 to 5.4 times faster.** 14.929 against 67.197 μs (net8.0), 13.411 against 64.654 μs (net9.0), 11.743 against 63.311 μs (net10.0), 16.08 against 64.84 μs (net11.0). Marvin skips the handler; CSE runs it and hashes the body. CSE allocates less (9.58 KB against 12.51 KB on net10.0).
+- **ConditionalGet BodyHash304 at 1 KB, net11.0: Marvin is faster.** 16.05 against 16.86 μs. On net8.0 to net10.0 CSE is faster at 1 KB.
+- **ResultFilter Success, net10.0 only: 1.19 of `TypedResults`** (11.231 against 9.475 μs), where the other TFMs show 0.99 to 1.02.
+- **EnumBinding Invalid: 1.55 to 2.16 of the framework**, which answers an empty 400; CSE writes a problem+json body with the allowed values.
+
+---
+
+## Caveats
+
+- **TestServer, not Kestrel.** Sockets, TLS and HTTP parsing are not measured. Each number is the middleware and endpoint pipeline plus the in-memory transport, which every row pays the same way.
+- **CSE code notes**, from the worktree source, with what the run shows:
+  - `ResultEndpointFilter/ResultEndpointFilter.cs:15-36` uses no reflection: it reads `IValueResult.BoxedValue`, wraps it in `TypedResults.Ok`, and resolves `IResultErrorMapper` from `RequestServices` only on failure. The cost of the filter itself is the ResultFilter minus ManualMatch gap above.
+  - `EnumBinding/EnumBindingMiddleware.cs:27`: the `GetValue` lambda captures `this`, so a delegate is allocated per request even on a cache hit (PassThrough: 0.06 KB on net8.0 and net9.0); `:122,147` allocate a `List<string>` and an array per value even when nothing changes (Canonical); `:71` copies the whole query into a dictionary on the first change (Normalized).
+  - `ConditionalRequests/DefaultETagGenerator.cs:30-31` serializes the value a second time into `Sha256Stream`, which hashes as it goes and keeps no copy. The allocation stays near the plain response; the time does not (BodyHash200 and BodyHash304 above).
+  - `Validation/ValidationEndpointFilter.cs:29,34-35,53`: every request runs `OfType()` into an array and `OrderBy` over `GetServices`, and `Distinct` on failure.
+  - `ProblemDetails/EnhancedProblemDetailsWriter.cs:69` uses the `WriteAsJsonAsync(object, Type, options)` overload, with `EnhancedProblemDetailsJsonContext` appended to the resolvers so the problem types resolve without reflection.
+- Hellang 6.5.1 is a 2022 release built for net6.0; every TFM runs that build.
+- The CSE column is the working tree on branch `integ/all` (all open pull requests merged locally), which may not match the version published on NuGet.
+
+---
+
+## How to reproduce
+
+```bash
+cd benchmarks
+./run-benchmarks.sh --project aspnetcore                       # all TFMs (net8-net11), default job
+./run-benchmarks.sh --project aspnetcore --tfm net10.0         # one TFM
+./run-benchmarks.sh --project aspnetcore --quick --tfm net10.0 # one TFM, Short job, one filter per class
+dotnet run -c Release -f net10.0 --project CSharpEssentials.AspNetCore.Comparison.Benchmarks -- --self-check
+```
+
+Without `--tfm`, `--quick` runs on net9.0, the script default. Short-job numbers cannot be compared with default-job numbers. Results are stored per framework under `benchmarks/results/aspnetcore/{tfm}/results/`.

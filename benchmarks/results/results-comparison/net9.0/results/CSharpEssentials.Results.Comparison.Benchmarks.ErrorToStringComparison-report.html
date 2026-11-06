@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Comparison.Benchmarks.ErrorToStringComparison-20261105-075428</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                      </th><th>Categories </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Error</td><td>Error</td><td>167.11 ns</td><td>1.209 ns</td><td>1.130 ns</td><td>1.00</td><td>0.01</td><td>0.0486</td><td>-</td><td>816 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr_Error</td><td>Error</td><td>165.79 ns</td><td>1.988 ns</td><td>1.859 ns</td><td>0.99</td><td>0.01</td><td>0.0486</td><td>-</td><td>816 B</td><td>1.00</td>
+</tr><tr><td>FluentResults_Error</td><td>Error</td><td>114.18 ns</td><td>1.413 ns</td><td>1.322 ns</td><td>0.68</td><td>0.01</td><td>0.0229</td><td>-</td><td>384 B</td><td>0.47</td>
+</tr><tr><td>CSharpEssentials_ErrorWithMetadata</td><td>ErrorWithMetadata</td><td>487.95 ns</td><td>4.544 ns</td><td>4.028 ns</td><td>1.00</td><td>0.01</td><td>0.1192</td><td>-</td><td>2008 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr_ErrorWithMetadata</td><td>ErrorWithMetadata</td><td>210.34 ns</td><td>1.857 ns</td><td>1.646 ns</td><td>0.43</td><td>0.00</td><td>0.0763</td><td>0.0002</td><td>1280 B</td><td>0.64</td>
+</tr><tr><td>FluentResults_ErrorWithMetadata</td><td>ErrorWithMetadata</td><td>362.69 ns</td><td>0.995 ns</td><td>0.882 ns</td><td>0.74</td><td>0.01</td><td>0.0749</td><td>-</td><td>1256 B</td><td>0.63</td>
+</tr><tr><td>CSharpEssentials_Result</td><td>Result</td><td>11.33 ns</td><td>0.127 ns</td><td>0.106 ns</td><td>1.00</td><td>0.01</td><td>0.0029</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>CSharpFunctionalExtensions_Result</td><td>Result</td><td>34.17 ns</td><td>0.097 ns</td><td>0.086 ns</td><td>3.02</td><td>0.03</td><td>0.0029</td><td>-</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>ErrorOr_Result</td><td>Result</td><td>506.15 ns</td><td>6.480 ns</td><td>6.061 ns</td><td>44.66</td><td>0.66</td><td>0.2089</td><td>0.0010</td><td>3496 B</td><td>72.83</td>
+</tr><tr><td>FluentResults_Result</td><td>Result</td><td>99.13 ns</td><td>1.269 ns</td><td>1.187 ns</td><td>8.75</td><td>0.13</td><td>0.0172</td><td>-</td><td>288 B</td><td>6.00</td>
+</tr></tbody></table>
+</body>
+</html>

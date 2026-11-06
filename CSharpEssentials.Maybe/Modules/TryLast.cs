@@ -10,6 +10,11 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static Maybe<T> TryLast<T>(this IEnumerable<T> source)
     {
+        if (source is IList<T> list)
+            return list.Count == 0 ? Maybe<T>.None : list[list.Count - 1];
+        if (source is IReadOnlyList<T> readOnlyList)
+            return readOnlyList.Count == 0 ? Maybe<T>.None : readOnlyList[readOnlyList.Count - 1];
+
         Maybe<T> last = Maybe.None;
         foreach (T? item in source)
             last = item;
@@ -26,6 +31,21 @@ public static partial class MaybeExtensions
     /// <returns></returns>
     public static Maybe<T> TryLast<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
+        if (source is IList<T> list)
+        {
+            for (int i = list.Count - 1; i >= 0; i--)
+                if (predicate(list[i]))
+                    return list[i];
+            return Maybe<T>.None;
+        }
+        if (source is IReadOnlyList<T> readOnlyList)
+        {
+            for (int i = readOnlyList.Count - 1; i >= 0; i--)
+                if (predicate(readOnlyList[i]))
+                    return readOnlyList[i];
+            return Maybe<T>.None;
+        }
+
         Maybe<T> last = Maybe.None;
         foreach (T? item in source)
             if (predicate(item))

@@ -215,6 +215,45 @@ public class OperationNamingTests
         Names(app).Should().Equal(("/naming/echo", "NamingEndpoints_Echo_2"));
     }
 
+    [Fact]
+    public void TypeName_Should_Rename_When_Name_Is_Reserved_After_Names_Were_Read()
+    {
+        using WebApplication app = EndpointTestApp.Create();
+        Map<NamingEndpoints.Echo>(app);
+        Names(app).Should().Equal(("/naming/echo", "NamingEndpoints_Echo"));
+
+        EndpointMapper.ReserveEndpointNames(app, new EndpointMappingOptions { OperationNaming = OperationNaming.TypeName }, ["NamingEndpoints_Echo"]);
+
+        Names(app).Should().Equal(("/naming/echo", "NamingEndpoints_Echo_2"));
+    }
+
+    [Fact]
+    public void TypeName_Should_Rename_When_Endpoint_Is_Mapped_After_Names_Were_Read()
+    {
+        using WebApplication app = EndpointTestApp.Create();
+        Map<NamingEndpoints.Echo>(app);
+        Names(app).Should().Equal(("/naming/echo", "NamingEndpoints_Echo"));
+
+        Map<NamingEndpoints.EchoClash>(app);
+
+        Names(app).Should().Equal(
+            ("/naming/echo", "NamingEndpoints_Echo_2"),
+            ("/naming/echo-clash", "NamingEndpoints_Echo"));
+    }
+
+    [Fact]
+    public void TypeName_Should_Return_Same_Names_When_Read_Concurrently()
+    {
+        using WebApplication app = EndpointTestApp.Create();
+        MapAll(app);
+        IEndpointNameMetadata[] metadata = [.. EndpointTestApp.Endpoints(app).Select(static endpoint => endpoint.Metadata.GetMetadata<IEndpointNameMetadata>()!)];
+
+        string[][] results = new string[8][];
+        Parallel.For(0, results.Length, index => results[index] = [.. metadata.Select(static item => item.EndpointName)]);
+
+        results.Should().AllSatisfy(names => names.Should().Equal(results[0]).And.OnlyHaveUniqueItems().And.NotContain(string.Empty));
+    }
+
     private static void Map<TEndpoint>(IEndpointRouteBuilder app)
         where TEndpoint : IEndpoint =>
         EndpointMapper.MapEndpoint<TEndpoint>(app, null, new EndpointMappingOptions { OperationNaming = OperationNaming.TypeName });

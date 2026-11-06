@@ -27,8 +27,23 @@ public class SlowQueryInterceptorBehaviorTests
         public override int ExecuteNonQuery() => 0;
         public override object? ExecuteScalar() => null;
         public override void Prepare() { }
-        protected override DbParameter CreateDbParameter() => throw new NotSupportedException();
+        protected override DbParameter CreateDbParameter() => new FakeDbParameter();
         protected override DbDataReader ExecuteDbDataReader(CommandBehavior behavior) => throw new NotSupportedException();
+    }
+
+    private sealed class FakeDbParameter : DbParameter
+    {
+        public override DbType DbType { get; set; }
+        public override ParameterDirection Direction { get; set; }
+        public override bool IsNullable { get; set; }
+        [AllowNull]
+        public override string ParameterName { get; set; } = string.Empty;
+        public override int Size { get; set; }
+        [AllowNull]
+        public override string SourceColumn { get; set; } = string.Empty;
+        public override bool SourceColumnNullMapping { get; set; }
+        public override object? Value { get; set; }
+        public override void ResetDbType() { }
     }
 
     private sealed class FakeDbParameterCollection : DbParameterCollection
@@ -59,7 +74,7 @@ public class SlowQueryInterceptorBehaviorTests
         typeof(CommandExecutedEventData)
             .GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)[0];
 
-    private static CommandExecutedEventData CreateEventData(TimeSpan duration)
+    private static CommandExecutedEventData CreateEventData(TimeSpan duration, bool logParameterValues = false)
     {
         var ps = CommandExecutedEventDataCtor.GetParameters();
         var ctorArgs = new object?[ps.Length];
@@ -72,7 +87,7 @@ public class SlowQueryInterceptorBehaviorTests
                 "commandId" => Guid.NewGuid(),
                 "connectionId" => Guid.NewGuid(),
                 "async" => false,
-                "logParameterValues" => false,
+                "logParameterValues" => logParameterValues,
                 _ => null
             };
         }
@@ -342,5 +357,87 @@ public class SlowQueryInterceptorBehaviorTests
         ctx.Database.Should().Be("mydb");
         ctx.HasTransaction.Should().BeTrue();
         ctx.MethodName.Should().Be("ReaderExecuted");
+    }
+
+    private static FakeDbCommand CreateCommandWithSecret()
+    {
+        FakeDbCommand command = CreateFakeCommand("SELECT * FROM Users WHERE Password = @pwd");
+        DbParameter parameter = command.CreateParameter();
+        parameter.ParameterName = "@pwd";
+        parameter.Value = "secret";
+        command.Parameters.Add(parameter);
+        return command;
+    }
+
+    [Fact]
+    public void ReaderExecuted_Should_NotExposeParameterValues_When_SensitiveDataLoggingIsOff()
+    {
+        var loggerMock = new Mock<ILogger<SlowQueryInterceptor>>();
+        loggerMock.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        SlowQueryContext? capturedContext = null;
+        var handlerMock = new Mock<ISlowQueryHandler>();
+        handlerMock.Setup(h => h.OnSlowQuery(It.IsAny<SlowQueryContext>()))
+            .Callback<SlowQueryContext>(ctx => capturedContext = ctx);
+        var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(10) };
+        var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
+
+        using FakeDbCommand command = CreateCommandWithSecret();
+        interceptor.ReaderExecuted(command, CreateEventData(TimeSpan.FromMilliseconds(500), logParameterValues: false), CreateFakeReader().Object);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext.Parameters.Should().Contain("@pwd").And.NotContain("secret");
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains("secret")),
+                It.IsAny<Exception?>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public void ReaderExecuted_Should_IncludeParameterValues_When_SensitiveDataLoggingIsOn()
+    {
+        var loggerMock = new Mock<ILogger<SlowQueryInterceptor>>();
+        loggerMock.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        SlowQueryContext? capturedContext = null;
+        var handlerMock = new Mock<ISlowQueryHandler>();
+        handlerMock.Setup(h => h.OnSlowQuery(It.IsAny<SlowQueryContext>()))
+            .Callback<SlowQueryContext>(ctx => capturedContext = ctx);
+        var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(10) };
+        var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
+
+        using FakeDbCommand command = CreateCommandWithSecret();
+        interceptor.ReaderExecuted(command, CreateEventData(TimeSpan.FromMilliseconds(500), logParameterValues: true), CreateFakeReader().Object);
+
+        capturedContext.Should().NotBeNull();
+        capturedContext.Parameters.Should().Contain("@pwd=secret");
+    }
+
+    [Fact]
+    public void ReaderExecuted_Should_NotThrow_When_HandlerThrows()
+    {
+        var loggerMock = new Mock<ILogger<SlowQueryInterceptor>>();
+        loggerMock.Setup(x => x.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        var handlerMock = new Mock<ISlowQueryHandler>();
+        handlerMock.Setup(h => h.OnSlowQuery(It.IsAny<SlowQueryContext>())).Throws(new InvalidOperationException("boom"));
+        var options = new SlowQueryOptions { Threshold = TimeSpan.FromMilliseconds(10) };
+        var interceptor = new SlowQueryInterceptor(loggerMock.Object, options, handlerMock.Object);
+
+        using var command = CreateFakeCommand();
+        DbDataReader reader = CreateFakeReader().Object;
+
+        Func<DbDataReader> act = () => interceptor.ReaderExecuted(command, CreateEventData(TimeSpan.FromMilliseconds(500)), reader);
+
+        act.Should().NotThrow().Which.Should().BeSameAs(reader);
+        loggerMock.Verify(
+            x => x.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.Is<Exception?>(e => e is InvalidOperationException),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 }

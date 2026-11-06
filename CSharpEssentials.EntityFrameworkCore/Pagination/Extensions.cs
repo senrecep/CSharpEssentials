@@ -1,7 +1,5 @@
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using CSharpEssentials.Core;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Keyset;
 using CSharpEssentials.EntityFrameworkCore.Pagination.Requests;
@@ -137,23 +135,6 @@ public static class Extensions
             includeTotalCount,
             maxPageSize);
 
-    private static readonly ConcurrentDictionary<LambdaExpression, Delegate> _cursorSelectorCache = new(
-        Environment.ProcessorCount * 2,
-        31
-    );
-
-    private static TCursor GetCursor<T, TCursor>(
-        this T data,
-        Expression<Func<T, TCursor>> cursorSelector)
-    {
-        return Unsafe.As<Func<T, TCursor>>(
-            _cursorSelectorCache.GetOrAdd(
-                cursorSelector,
-                static key => key.Compile(preferInterpretation: false)
-            )
-        )(data);
-    }
-
     /// <summary>
     /// Single-column cursor pagination: returns the rows whose <paramref name="cursorSelector"/> value is after
     /// <see cref="ICursorPaginationRequest{TCursor}.Cursor"/>. The cursor value is sent as a SQL parameter.
@@ -164,6 +145,11 @@ public static class Extensions
     /// call <see cref="ICursorPaginationRequest{TCursor}.Normalize(int)"/> first to cap it. Prefer
     /// <see cref="KeysetPaginationExtensions.KeysetPaginateAsync{T}(IQueryable{T}, IKeysetPaginationRequest, Func{Keyset.KeysetOrdering{T}, Keyset.KeysetOrdering{T}}, CancellationToken)"/>,
     /// which supports composite keys, opaque cursors, backward paging and a maximum limit.
+    /// </para>
+    /// <para>
+    /// The first page is returned when <see cref="ICursorPaginationRequest{TCursor}.HasCursor"/> is <see langword="false"/>.
+    /// A cursor equal to <c>default(TCursor)</c> (<c>0</c>, <see cref="Guid.Empty"/>) is a real position, so a page that
+    /// ends on such a row continues with the next rows.
     /// </para>
     /// </summary>
     [Obsolete("Single-column cursor pagination skips rows when the cursor column is not unique and does not cap the limit by default. Use KeysetPaginateAsync with a unique key (for example .Descending(x => x.CreatedAt).Ascending(x => x.Id)) instead.")]
@@ -180,8 +166,7 @@ public static class Extensions
         request.Normalize();
         IQueryable<T> q = query;
 
-        if (request.Cursor.IsNotNull() &&
-            !EqualityComparer<TCursor>.Default.Equals(request.Cursor, default))
+        if (request.HasCursor && request.Cursor.IsNotNull())
         {
             ParameterExpression parameter = cursorSelector.Parameters[0];
             Expression cursorParameter = Expression.Property(
@@ -212,7 +197,7 @@ public static class Extensions
             return new CursorPaginationResponse<T, TCursor>(items, default, hasMore);
         }
 
-        TCursor? nextCursor = items[^1].GetCursor(cursorSelector);
+        TCursor? nextCursor = cursorSelector.Compile(preferInterpretation: true)(items[^1]);
 
         return new CursorPaginationResponse<T, TCursor>(items, nextCursor, hasMore);
     }

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Benchmarks.TapErrorBenchmarks-20261104-235146</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                      </th><th>Succeed</th><th>Yield</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>HandWritten_TaskSource_TaskHandler</td><td>False</td><td>False</td><td>23.80 ns</td><td>0.143 ns</td><td>0.133 ns</td><td>1.00</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_TaskHandler</td><td>False</td><td>False</td><td>44.38 ns</td><td>0.244 ns</td><td>0.228 ns</td><td>1.86</td><td>0.01</td><td>0.0095</td><td>160 B</td><td>2.00</td>
+</tr><tr><td>ValueTaskSource_TaskHandler</td><td>False</td><td>False</td><td>67.12 ns</td><td>0.220 ns</td><td>0.206 ns</td><td>2.82</td><td>0.02</td><td>0.0081</td><td>136 B</td><td>1.70</td>
+</tr><tr><td>Instance_TaskHandler</td><td>False</td><td>False</td><td>36.32 ns</td><td>0.245 ns</td><td>0.229 ns</td><td>1.53</td><td>0.01</td><td>0.0081</td><td>136 B</td><td>1.70</td>
+</tr><tr><td>HandWritten_TaskSource_TaskHandler</td><td>False</td><td>True</td><td>1,425.01 ns</td><td>4.640 ns</td><td>4.341 ns</td><td>1.00</td><td>0.00</td><td>0.0229</td><td>408 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_TaskHandler</td><td>False</td><td>True</td><td>1,652.66 ns</td><td>12.888 ns</td><td>11.425 ns</td><td>1.16</td><td>0.01</td><td>0.0305</td><td>534 B</td><td>1.31</td>
+</tr><tr><td>ValueTaskSource_TaskHandler</td><td>False</td><td>True</td><td>1,716.88 ns</td><td>10.947 ns</td><td>10.240 ns</td><td>1.20</td><td>0.01</td><td>0.0362</td><td>623 B</td><td>1.53</td>
+</tr><tr><td>Instance_TaskHandler</td><td>False</td><td>True</td><td>855.23 ns</td><td>4.427 ns</td><td>4.141 ns</td><td>0.60</td><td>0.00</td><td>0.0172</td><td>296 B</td><td>0.73</td>
+</tr><tr><td>HandWritten_TaskSource_TaskHandler</td><td>True</td><td>False</td><td>20.25 ns</td><td>0.116 ns</td><td>0.103 ns</td><td>1.00</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_TaskHandler</td><td>True</td><td>False</td><td>39.92 ns</td><td>0.192 ns</td><td>0.170 ns</td><td>1.97</td><td>0.01</td><td>0.0095</td><td>160 B</td><td>2.00</td>
+</tr><tr><td>ValueTaskSource_TaskHandler</td><td>True</td><td>False</td><td>48.59 ns</td><td>0.131 ns</td><td>0.123 ns</td><td>2.40</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>Instance_TaskHandler</td><td>True</td><td>False</td><td>21.89 ns</td><td>0.126 ns</td><td>0.112 ns</td><td>1.08</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_TaskSource_TaskHandler</td><td>True</td><td>True</td><td>850.43 ns</td><td>1.995 ns</td><td>1.557 ns</td><td>1.00</td><td>0.00</td><td>0.0143</td><td>255 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_TaskHandler</td><td>True</td><td>True</td><td>882.11 ns</td><td>4.818 ns</td><td>3.762 ns</td><td>1.04</td><td>0.00</td><td>0.0191</td><td>319 B</td><td>1.25</td>
+</tr><tr><td>ValueTaskSource_TaskHandler</td><td>True</td><td>True</td><td>913.65 ns</td><td>5.058 ns</td><td>4.731 ns</td><td>1.07</td><td>0.01</td><td>0.0229</td><td>406 B</td><td>1.59</td>
+</tr><tr><td>Instance_TaskHandler</td><td>True</td><td>True</td><td>18.76 ns</td><td>0.187 ns</td><td>0.175 ns</td><td>0.02</td><td>0.00</td><td>0.0048</td><td>80 B</td><td>0.31</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -1,8 +1,8 @@
-# CSharpEssentials.Rules Example
+# CSharpEssentials.Rules example
 
 This console application demonstrates the rule engine from `CSharpEssentials.Rules`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

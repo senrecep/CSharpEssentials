@@ -1,8 +1,8 @@
-# CSharpEssentials.Json Example
+# CSharpEssentials.Json example
 
 This console application demonstrates JSON utilities from `CSharpEssentials.Json`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

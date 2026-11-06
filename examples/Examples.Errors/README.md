@@ -1,8 +1,8 @@
-# CSharpEssentials.Errors Example
+# CSharpEssentials.Errors example
 
 This console application demonstrates the error handling system from `CSharpEssentials.Errors`.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|

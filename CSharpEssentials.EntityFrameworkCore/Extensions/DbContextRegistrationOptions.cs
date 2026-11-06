@@ -61,17 +61,21 @@ public sealed class DbContextRegistrationOptions
     public bool EnableSlowQueryInterceptor { get; set; }
 
     /// <summary>
-    /// The assembly name containing migrations. Applied via the provider's migrations assembly option.
+    /// The assembly name containing migrations. Not applied by the registration; it is kept for compatibility.
+    /// Set it in the provider callback instead, for example <c>npgsql =&gt; npgsql.MigrationsAssembly("MyApp.Migrations")</c>.
     /// </summary>
     public string? MigrationsAssembly { get; set; }
 
     /// <summary>
-    /// Retry policy options. When <c>null</c>, no retry is configured.
+    /// Retry policy options. Not applied by the registration; it is kept for compatibility.
+    /// Configure retries in the provider callback instead, for example <c>npgsql =&gt; npgsql.EnableRetryOnFailure()</c>.
     /// </summary>
     public DbContextRetryOptions? RetryOptions { get; set; }
 
     /// <summary>
-    /// The query splitting behavior. When <c>null</c>, the provider default is used.
+    /// The query splitting behavior. Not applied by the registration; it is kept for compatibility.
+    /// Set it in the provider callback instead, for example
+    /// <c>npgsql =&gt; npgsql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery)</c>.
     /// </summary>
     public QuerySplittingBehavior? QuerySplittingBehavior { get; set; }
 

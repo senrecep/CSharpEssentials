@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Json.Comparison.Benchmarks.EnumComparison-20261105-192905</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                    </th><th>Categories</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_InvalidFallback</td><td>InvalidFallback</td><td>80.49 ns</td><td>0.028 ns</td><td>0.022 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Macross_InvalidFallback</td><td>InvalidFallback</td><td>88.53 ns</td><td>0.165 ns</td><td>0.154 ns</td><td>1.10</td><td>0.0019</td><td>32 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_InvalidThrow</td><td>InvalidThrow</td><td>5,348.06 ns</td><td>9.399 ns</td><td>8.332 ns</td><td>1.00</td><td>0.0687</td><td>1208 B</td><td>1.00</td>
+</tr><tr><td>Bcl_InvalidThrow</td><td>InvalidThrow</td><td>5,668.48 ns</td><td>6.160 ns</td><td>5.762 ns</td><td>1.06</td><td>0.0916</td><td>1648 B</td><td>1.36</td>
+</tr><tr><td>Macross_InvalidThrow</td><td>InvalidThrow</td><td>5,267.60 ns</td><td>4.571 ns</td><td>3.569 ns</td><td>0.98</td><td>0.0839</td><td>1432 B</td><td>1.19</td>
+</tr><tr><td>CSharpEssentials_Read</td><td>Read</td><td>1,143.03 ns</td><td>2.446 ns</td><td>2.168 ns</td><td>1.00</td><td>0.0172</td><td>304 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Read</td><td>Read</td><td>1,112.77 ns</td><td>2.659 ns</td><td>2.487 ns</td><td>0.97</td><td>0.0172</td><td>304 B</td><td>1.00</td>
+</tr><tr><td>Macross_Read</td><td>Read</td><td>910.53 ns</td><td>1.527 ns</td><td>1.354 ns</td><td>0.80</td><td>0.0572</td><td>968 B</td><td>3.18</td>
+</tr><tr><td>CSharpEssentials_ReadNumber</td><td>ReadNumber</td><td>60.20 ns</td><td>0.043 ns</td><td>0.038 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl_ReadNumber</td><td>ReadNumber</td><td>51.49 ns</td><td>0.048 ns</td><td>0.045 ns</td><td>0.86</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Macross_ReadNumber</td><td>ReadNumber</td><td>64.33 ns</td><td>0.065 ns</td><td>0.054 ns</td><td>1.07</td><td>0.0014</td><td>24 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Write</td><td>Write</td><td>394.33 ns</td><td>0.756 ns</td><td>0.707 ns</td><td>1.00</td><td>0.0229</td><td>384 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Write</td><td>Write</td><td>322.93 ns</td><td>1.254 ns</td><td>1.173 ns</td><td>0.82</td><td>0.0229</td><td>384 B</td><td>1.00</td>
+</tr><tr><td>Macross_Write</td><td>Write</td><td>572.93 ns</td><td>0.797 ns</td><td>0.746 ns</td><td>1.45</td><td>0.0229</td><td>384 B</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>

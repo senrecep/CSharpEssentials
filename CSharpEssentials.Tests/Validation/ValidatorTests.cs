@@ -194,4 +194,38 @@ public class ValidatorTests
 
         result.IsFailure.Should().BeTrue();
     }
+
+    private sealed class CountingValueTaskSource : System.Threading.Tasks.Sources.IValueTaskSource
+    {
+        public int GetResultCalls { get; private set; }
+
+        public void GetResult(short token) => GetResultCalls++;
+
+        public System.Threading.Tasks.Sources.ValueTaskSourceStatus GetStatus(short token) =>
+            System.Threading.Tasks.Sources.ValueTaskSourceStatus.Succeeded;
+
+        public void OnCompleted(Action<object?> continuation, object? state, short token, System.Threading.Tasks.Sources.ValueTaskSourceOnCompletedFlags flags) =>
+            continuation(state);
+    }
+
+    private sealed class SourceBackedValidator(CountingValueTaskSource source) : Validator<UserRequest>
+    {
+        protected override ValueTask Configure(UserRequest model, RuleContext<UserRequest> rules, CancellationToken ct = default)
+        {
+            rules.For(() => model.Name).NotEmpty();
+            return new ValueTask(source, 0);
+        }
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ShouldConsumeCompletedConfigureValueTask_OnFastPath()
+    {
+        CountingValueTaskSource source = new();
+        SourceBackedValidator validator = new(source);
+
+        Result<UserRequest> result = await validator.ValidateAsync(new UserRequest("Alice", null, 1));
+
+        result.IsSuccess.Should().BeTrue();
+        source.GetResultCalls.Should().Be(1);
+    }
 }

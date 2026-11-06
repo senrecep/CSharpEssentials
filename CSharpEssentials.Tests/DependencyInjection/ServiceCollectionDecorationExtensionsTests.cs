@@ -55,9 +55,58 @@ public class ServiceCollectionDecorationExtensionsTests
         public string Greet() => $"{prefix.Value}{key}:{inner.Greet()}{suffix}{(optional is null ? "-" : "+")}";
     }
 
+    private sealed class TwoArgumentGreeter(IPrefix prefix, IGreeter inner) : IGreeter
+    {
+        public string Greet() => $"{prefix.Value}{inner.Greet()}";
+    }
+
+    private sealed class ThreeArgumentGreeter(IPrefix prefix, IGreeter inner, string suffix = "?") : IGreeter
+    {
+        public string Greet() => $"{prefix.Value}{inner.Greet()}{suffix}";
+    }
+
+    private sealed class FourArgumentGreeter(IPrefix prefix, IGreeter inner, [ServiceKey] object? key, string suffix = "?") : IGreeter
+    {
+        public string Greet() => $"{prefix.Value}{key}:{inner.Greet()}{suffix}";
+    }
+
+    public sealed class FailingGreeter : IGreeter
+    {
+        public FailingGreeter(IGreeter inner) => throw new NotSupportedException(inner.Greet());
+
+        public string Greet() => string.Empty;
+    }
+
     private sealed class KeyAwareGreeter([ServiceKey] object key) : IGreeter
     {
         public string Greet() => key.ToString() ?? string.Empty;
+    }
+
+    private sealed class StringKeyAwareGreeter([ServiceKey] string key) : IGreeter
+    {
+        public string Greet() => key;
+    }
+
+    public sealed class SecondConstructorKeyAwareGreeter : IGreeter
+    {
+        public SecondConstructorKeyAwareGreeter() => Name = "plain";
+
+        public SecondConstructorKeyAwareGreeter([ServiceKey] string key) => Name = key;
+
+        public string Name { get; }
+
+        public string Greet() => Name;
+    }
+
+    public sealed class HiddenKeyAwareGreeter : IGreeter
+    {
+        public HiddenKeyAwareGreeter() => Name = "plain";
+
+        private HiddenKeyAwareGreeter([ServiceKey] string key) => Name = key;
+
+        public string Name { get; }
+
+        public string Greet() => Name;
     }
 
     public sealed class TwoConstructorGreeter : IGreeter
@@ -89,6 +138,45 @@ public class ServiceCollectionDecorationExtensionsTests
         public string Greet() => inner?.Greet() ?? "tracked";
 
         public void Dispose() => Disposed.Add(inner is null ? "inner" : "decorator");
+    }
+
+    private sealed class LoggedGreeter : IGreeter, IDisposable
+    {
+        private readonly List<string> _log;
+
+        public LoggedGreeter(List<string> log)
+        {
+            _log = log;
+            log.Add("new inner");
+        }
+
+        public string Greet() => "logged";
+
+        public void Dispose() => _log.Add("dispose inner");
+    }
+
+    private sealed class LoggedDecorator : IGreeter, IDisposable
+    {
+        private readonly string _name;
+        private readonly List<string> _log;
+        private readonly IGreeter _inner;
+
+        public LoggedDecorator(string name, List<string> log, IGreeter inner)
+        {
+            _name = name;
+            _log = log;
+            _inner = inner;
+            log.Add("new " + name);
+        }
+
+        public string Greet() => _name + "(" + _inner.Greet() + ")";
+
+        public void Dispose() => _log.Add("dispose " + _name);
+    }
+
+    private sealed class PrefixedGreeter(IPrefix prefix) : IGreeter
+    {
+        public string Greet() => prefix.Value;
     }
 
     private sealed class Repository<T> : IRepository<T>
@@ -195,6 +283,35 @@ public class ServiceCollectionDecorationExtensionsTests
     }
 
     [Fact]
+    public void Decorate_Should_PassEveryArgument_When_DecoratorTakesTwoToFourParameters()
+    {
+        ServiceCollection services = new();
+        services.AddSingleton<IPrefix>(new Prefix(">"));
+        services.AddKeyedScoped<IGreeter, Greeter>("k");
+
+        services
+            .Decorate<IGreeter, TwoArgumentGreeter>("k")
+            .Decorate<IGreeter, ThreeArgumentGreeter>("k")
+            .Decorate<IGreeter, FourArgumentGreeter>("k");
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredKeyedService<IGreeter>("k").Greet().Should().Be(">k:>>hello??");
+    }
+
+    [Fact]
+    public void Decorate_Should_ThrowUnwrappedException_When_DecoratorConstructorThrows()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IGreeter, Greeter>();
+
+        services.Decorate<IGreeter, FailingGreeter>();
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        Action act = () => provider.GetRequiredService<IGreeter>();
+        act.Should().Throw<NotSupportedException>().WithMessage("hello");
+    }
+
+    [Fact]
     public void Decorate_Should_UseFactory_When_FuncOverloadUsed()
     {
         ServiceCollection services = new();
@@ -254,6 +371,121 @@ public class ServiceCollectionDecorationExtensionsTests
         provider.Dispose();
 
         TrackingGreeter.Disposed.Should().BeEquivalentTo("inner", "decorator");
+    }
+
+    [Theory]
+    [InlineData("type")]
+    [InlineData("factory")]
+    [InlineData("keyed factory")]
+    public void Decorate_Should_CreateAndDisposeOneInnerPerScope_When_ScopedRegistrationIsDecoratedTwice(string shape)
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        object? key = shape == "factory" ? null : "k";
+        _ = shape switch
+        {
+            "type" => services.AddKeyedScoped<IGreeter, LoggedGreeter>(key),
+            "factory" => services.AddScoped<IGreeter>(sp => new LoggedGreeter(sp.GetRequiredService<List<string>>())),
+            _ => services.AddKeyedScoped<IGreeter>(key, (sp, _) => new LoggedGreeter(sp.GetRequiredService<List<string>>())),
+        };
+        services
+            .Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner), key)
+            .Decorate<IGreeter>((inner, _) => new LoggedDecorator("second", log, inner), key);
+        using ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        IServiceScope scope = provider.CreateScope();
+        IGreeter greeter = scope.ServiceProvider.GetRequiredKeyedService<IGreeter>(key);
+        scope.ServiceProvider.GetRequiredKeyedService<IGreeter>(key).Should().BeSameAs(greeter);
+        using (IServiceScope other = provider.CreateScope())
+        {
+            other.ServiceProvider.GetRequiredKeyedService<IGreeter>(key).Should().NotBeSameAs(greeter);
+        }
+
+        greeter.Greet().Should().Be("second(first(logged))");
+        log.Should().Equal("new inner", "new first", "new second", "new inner", "new first", "new second", "dispose second", "dispose first", "dispose inner");
+        log.Clear();
+        scope.Dispose();
+
+        log.Should().Equal("dispose second", "dispose first", "dispose inner");
+    }
+
+    [Fact]
+    public void Decorate_Should_CreateOneInnerPerRequestedKey_When_AnyKeyScopedRegistrationIsDecorated()
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        services.AddKeyedScoped<IGreeter, LoggedGreeter>(KeyedService.AnyKey);
+        services.Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner), KeyedService.AnyKey);
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        IServiceScope scope = provider.CreateScope();
+        IGreeter a = scope.ServiceProvider.GetRequiredKeyedService<IGreeter>("a");
+        IGreeter b = scope.ServiceProvider.GetRequiredKeyedService<IGreeter>("b");
+
+        a.Should().NotBeSameAs(b);
+        scope.ServiceProvider.GetRequiredKeyedService<IGreeter>("a").Should().BeSameAs(a);
+        log.Should().Equal("new inner", "new first", "new inner", "new first");
+        log.Clear();
+        scope.Dispose();
+
+        log.Should().Equal("dispose first", "dispose inner", "dispose first", "dispose inner");
+    }
+
+    [Fact]
+    public void Decorate_Should_ShareOneInnerPerScope_When_ScopedServiceIsResolvedAloneAndAsEnumerable()
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        services.AddScoped<IGreeter, Greeter>();
+        services.AddScoped<IGreeter, LoggedGreeter>();
+        services.Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner));
+        using ServiceProvider provider = services.BuildServiceProvider();
+        using IServiceScope scope = provider.CreateScope();
+
+        IGreeter single = scope.ServiceProvider.GetRequiredService<IGreeter>();
+        IGreeter[] all = [.. scope.ServiceProvider.GetServices<IGreeter>()];
+
+        all.Should().HaveCount(2);
+        all[1].Should().BeSameAs(single);
+        all[0].Greet().Should().Be("first(hello)");
+        log.Should().Equal("new inner", "new first", "new first");
+    }
+
+    [Fact]
+    public void Decorate_Should_CreateOneInnerAndDisposeItWithRoot_When_SingletonRegistrationIsDecorated()
+    {
+        List<string> log = [];
+        ServiceCollection services = new();
+        services.AddSingleton(log);
+        services.AddSingleton<IGreeter, LoggedGreeter>();
+        services.Decorate<IGreeter>((inner, _) => new LoggedDecorator("first", log, inner));
+        ServiceProvider provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        using (IServiceScope scope = provider.CreateScope())
+        {
+            scope.ServiceProvider.GetRequiredService<IGreeter>().Should().BeSameAs(provider.GetRequiredService<IGreeter>());
+        }
+
+        log.Should().Equal("new inner", "new first");
+        provider.Dispose();
+
+        log.Should().Equal("new inner", "new first", "dispose first", "dispose inner");
+    }
+
+    [Fact]
+    public void Decorate_Should_ReportCaptiveDependencyOnBuild_When_SingletonInnerDependsOnScopedService()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IPrefix>(_ => new Prefix(">"));
+        services.AddSingleton<IGreeter, PrefixedGreeter>();
+        services.Decorate<IGreeter, LoudGreeter>();
+
+        Action act = () => services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
+
+        act.Should().Throw<AggregateException>();
     }
 
     [Fact]
@@ -344,6 +576,72 @@ public class ServiceCollectionDecorationExtensionsTests
 
         act.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(KeyAwareGreeter).FullName}*[ServiceKey]*");
         services.Should().Equal(before);
+    }
+
+    [Fact]
+    public void Decorate_Should_Throw_When_OriginalInjectsTypedServiceKey()
+    {
+        ServiceCollection services = new();
+        services.AddKeyedScoped<IGreeter, StringKeyAwareGreeter>("a");
+        ServiceDescriptor[] before = [.. services];
+
+        Action act = () => services.Decorate<IGreeter, LoudGreeter>("a");
+
+        act.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(StringKeyAwareGreeter).FullName}*[ServiceKey]*");
+        services.Should().Equal(before);
+    }
+
+    [Fact]
+    public void Decorate_Should_Throw_When_OnlySecondPublicConstructorInjectsServiceKey()
+    {
+        ServiceCollection services = new();
+        services.AddKeyedScoped<IGreeter, SecondConstructorKeyAwareGreeter>("a");
+
+        Action act = () => services.Decorate<IGreeter, LoudGreeter>("a");
+
+        act.Should().Throw<InvalidOperationException>().WithMessage($"*{typeof(SecondConstructorKeyAwareGreeter).FullName}*[ServiceKey]*");
+    }
+
+    [Fact]
+    public void Decorate_Should_Wrap_When_OnlyNonPublicConstructorInjectsServiceKey()
+    {
+        ServiceCollection services = new();
+        services.AddKeyedScoped<IGreeter, HiddenKeyAwareGreeter>("a");
+
+        services.Decorate<IGreeter, LoudGreeter>("a");
+
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetRequiredKeyedService<IGreeter>("a").Greet().Should().Be("PLAIN");
+    }
+
+    [Fact]
+    public void Decorate_Should_ThrowAndLeaveServicesUnchanged_When_LaterOriginalInjectsServiceKey()
+    {
+        ServiceCollection services = new();
+        services.AddKeyedScoped<IGreeter, Greeter>("a");
+        services.AddKeyedScoped<IGreeter, Greeter>("a");
+        services.AddKeyedScoped<IGreeter, KeyAwareGreeter>("a");
+        ServiceDescriptor[] before = [.. services];
+
+        Action act = () => services.Decorate<IGreeter>((inner, _) => new LoudGreeter(inner), "a");
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*[ServiceKey]*");
+        services.Should().Equal(before);
+    }
+
+    [Fact]
+    public void Decorate_Should_WrapEveryMatch_When_SeveralRegistrationsMatch()
+    {
+        ServiceCollection services = new();
+        services.AddScoped<IGreeter, Greeter>();
+        services.AddScoped<IGreeter>(_ => new NamedGreeter("named"));
+        services.AddSingleton<IGreeter>(new NamedGreeter("instance"));
+
+        services.Decorate<IGreeter, LoudGreeter>();
+
+        services.Count(descriptor => descriptor.ServiceType == typeof(IGreeter)).Should().Be(3);
+        using ServiceProvider provider = services.BuildServiceProvider();
+        provider.GetServices<IGreeter>().Select(greeter => greeter.Greet()).Should().Equal("HELLO", "NAMED", "INSTANCE");
     }
 
     [Fact]

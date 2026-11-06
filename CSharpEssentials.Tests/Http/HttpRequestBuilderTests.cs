@@ -110,7 +110,83 @@ public class HttpRequestBuilderTests
         result.IsFailure.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task AsResultAsync_WithContent_Should_Send_Content_Again_On_Reuse()
+    {
+        using var handler = new BodyRecordingHandler();
+        using var client = new HttpClient(handler);
+        using var content = new StringContent("a");
+        HttpRequestBuilder builder = HttpRequestBuilder.Post("https://test.com/api").WithContent(content);
+
+        Result first = await builder.AsResultAsync(client);
+        Result second = await builder.AsResultAsync(client);
+        Result<TestDto> third = await builder.AsResultAsync<TestDto>(client);
+        Result<TestDto> fourth = await builder.AsResultAsync<TestDto>(client);
+
+        first.IsSuccess.Should().BeTrue();
+        second.IsSuccess.Should().BeTrue();
+        third.IsSuccess.Should().BeTrue();
+        fourth.IsSuccess.Should().BeTrue();
+        handler.Bodies.Should().Equal("a", "a", "a", "a");
+    }
+
+    [Fact]
+    public void Build_WithContentTypeHeader_Should_Set_Content_Header()
+    {
+        using var content = new StringContent("<a/>");
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Post("https://test.com/api")
+            .WithContent(content)
+            .WithHeader("Content-Type", "application/xml")
+            .WithHeader("Content-Language", "de")
+            .Build();
+
+        result.IsSuccess.Should().BeTrue();
+        using HttpRequestMessage request = result.Value;
+        request.Content!.Headers.ContentType!.MediaType.Should().Be("application/xml");
+        request.Content.Headers.ContentLanguage.Should().Equal("de");
+    }
+
+    [Fact]
+    public void Build_WithJsonContent_And_ContentLanguage_Should_Set_Content_Header()
+    {
+        Result<HttpRequestMessage> result = HttpRequestBuilder.Post("https://test.com/api")
+            .WithHeader("Content-Language", "de")
+            .WithJsonContent(new { Name = "Alice" })
+            .Build();
+
+        result.IsSuccess.Should().BeTrue();
+        using HttpRequestMessage request = result.Value;
+        request.Content!.Headers.ContentLanguage.Should().Equal("de");
+    }
+
+    [Fact]
+    public void Build_WithRepeatedContentHeader_Should_Keep_All_Values_Across_Builds()
+    {
+        using var content = new StringContent("a");
+        HttpRequestBuilder builder = HttpRequestBuilder.Post("https://test.com/api")
+            .WithContent(content)
+            .WithHeader("Content-Language", "en")
+            .WithHeader("Content-Language", "de");
+
+        using (HttpRequestMessage first = builder.Build().Value)
+            first.Content!.Headers.ContentLanguage.Should().Equal("en", "de");
+
+        using HttpRequestMessage second = builder.Build().Value;
+        second.Content!.Headers.ContentLanguage.Should().Equal("en", "de");
+    }
+
     private sealed record TestDto(int Id, string Name);
+
+    private sealed class BodyRecordingHandler : HttpMessageHandler
+    {
+        public List<string?> Bodies { get; } = [];
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Bodies.Add(request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken));
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"id":1,"name":"Test"}""") };
+        }
+    }
 
     private sealed class MockHandler(HttpResponseMessage response) : HttpMessageHandler
     {

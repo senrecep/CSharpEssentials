@@ -1,8 +1,8 @@
-# CSharpEssentials.EntityFrameworkCore Example
+# CSharpEssentials.EntityFrameworkCore example
 
 This console application demonstrates `CSharpEssentials.EntityFrameworkCore` on SQLite: soft delete, the audit, domain event and slow query interceptors, offset and keyset pagination, and enum storage.
 
-## Features Demonstrated
+## Features demonstrated
 
 | Feature | File | Description |
 |---------|------|-------------|
@@ -16,25 +16,25 @@ This console application demonstrates `CSharpEssentials.EntityFrameworkCore` on 
 
 The interceptors are registered in DI and attached to the context in `Program.cs`. `ShopDbContext` does not override `InterceptorsFromServices` or `DispatchDomainEventsOnSaveChanges`, so `BaseDbContext` does not attach them itself. The example does not use a naming convention: the `Product` table is named `products` explicitly and the columns keep their property names.
 
-## Running the Project
+## Running the project
 
 ```bash
 cd examples/Examples.EntityFrameworkCore
 dotnet run
 ```
 
-The demo performs the following steps automatically:
+The demo runs these steps:
 
-1. **Database Creation**: Deletes and creates a local SQLite database (`shop.db`).
-2. **Seeding**: Inserts 3 initial products.
-3. **Soft Delete Demo**: Soft-deletes the "Wireless Mouse" product, then shows:
+1. Deletes and creates a local SQLite database (`shop.db`).
+2. Seeds 3 initial products.
+3. Soft delete: soft-deletes the "Wireless Mouse" product, then shows:
    - Visible products (filtered): 2
    - Total products (with deleted): 3
-4. **Offset Pagination Demo**: Adds 25 more products and prints pages 1 and 2 of 5 items.
-5. **Cursor Pagination Demo**: Reads two pages of 3 products with `KeysetPaginateAsync` and `KeysetPaginationRequest`.
-6. **Audit Interceptor Demo**: Modifies a product and shows `UpdatedAt` and `UpdatedBy` being set automatically.
-7. **Domain Event Interceptor Demo**: Saves products that raise events; the console publisher prints `[BeforeSave]` and `[AfterSave]` lines. The `AfterSave` events are handled inside `SavingChanges`, before the database write.
-8. **Enum Demo**: Reads a product by its `ProductCategory`; the column holds the wire name (see below).
+4. Offset pagination: adds 25 more products and prints pages 1 and 2 of 5 items.
+5. Cursor pagination: reads two pages of 3 products with `KeysetPaginateAsync` and `KeysetPaginationRequest`.
+6. Audit interceptor: modifies a product and shows that `UpdatedAt` and `UpdatedBy` are set automatically.
+7. Domain event interceptor: saves products that raise events; the console publisher prints `[BeforeSave]` and `[AfterSave]` lines. The `AfterSave` events are handled inside `SavingChanges`, before the database write.
+8. Enums: reads a product by its `ProductCategory`; the column holds the wire name (see below).
 
 ## BaseDbContext
 
@@ -55,7 +55,7 @@ public class ShopDbContext : BaseDbContext<ShopDbContext>
 }
 ```
 
-## Soft Delete Entity
+## Soft delete entity
 
 ```csharp
 public class Product : SoftDeletableEntityBase<Guid>
@@ -101,7 +101,7 @@ var page = await _dbContext.Products
 
 ### Keyset (cursor) pagination
 
-Ideal for infinite scroll or very large datasets. The key must be unique, so add the id as a tie-breaker.
+Use it for infinite scroll or very large datasets. The key must be unique, so add the id as a tie-breaker.
 
 ```csharp
 var page = await _dbContext.Products.KeysetPaginateAsync(
@@ -113,7 +113,7 @@ var page = await _dbContext.Products.KeysetPaginateAsync(
 // page.Value.HasNext    -> bool
 ```
 
-## Enum String Conversion
+## Enum string conversion
 
 `ConfigureEnumConventions` stores `[StringEnum]` values by their wire name through `EnumWireNameConverter<TEnum>`:
 

@@ -24,6 +24,35 @@ public class CursorPaginationRequestTests
     }
 
     [Fact]
+    public void HasCursor_ShouldBeFalse_When_CursorIsNotSet()
+    {
+        new CursorPaginationRequest<int>().HasCursor.Should().BeFalse();
+        new CursorPaginationRequest<string>().HasCursor.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasCursor_ShouldBeTrue_When_CursorIsSetToDefault()
+    {
+        new CursorPaginationRequest<int> { Cursor = 0 }.HasCursor.Should().BeTrue();
+        new CursorPaginationRequest<Guid> { Cursor = Guid.Empty }.HasCursor.Should().BeTrue();
+    }
+
+    [Fact]
+    public void HasCursor_ShouldBeFalse_When_ReferenceCursorIsSetToNull()
+    {
+        var request = new CursorPaginationRequest<string> { Cursor = "a" };
+        request.Cursor = null;
+        request.HasCursor.Should().BeFalse();
+    }
+
+    [Fact]
+    public void HasCursor_ShouldFollowJson()
+    {
+        System.Text.Json.JsonSerializer.Deserialize<CursorPaginationRequest<int>>("""{"Cursor":0}""")!.HasCursor.Should().BeTrue();
+        System.Text.Json.JsonSerializer.Deserialize<CursorPaginationRequest<int>>("""{"Limit":5}""")!.HasCursor.Should().BeFalse();
+    }
+
+    [Fact]
     public void DefaultLimit_ShouldBeTen()
     {
         var request = new CursorPaginationRequest<Guid>();

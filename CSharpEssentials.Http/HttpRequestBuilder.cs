@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using CSharpEssentials.Enums;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Json;
@@ -19,8 +21,7 @@ public sealed class HttpRequestBuilder
     private EnumConventions? _enumConventions;
     private EnumWireFormat? _enumWriteAs;
     private HttpContent? _content;
-    private object? _jsonValue;
-    private JsonSerializerOptions? _jsonOptions;
+    private Func<HttpContent>? _jsonContent;
     private bool _followRedirects;
     private int _maxRedirects = 5;
     private string? _idempotencyKey;
@@ -104,17 +105,40 @@ public sealed class HttpRequestBuilder
         return this;
     }
 
+    /// <summary>
+    /// Sends <paramref name="content"/> as the request body. The builder keeps ownership: <see cref="AsResultAsync(HttpClient?, CancellationToken)"/>
+    /// does not dispose it, so the same builder can send it again, for example on a retry. Content that can be read only once,
+    /// such as a <see cref="StreamContent"/> over a forward-only stream, cannot be sent a second time. Dispose the content when
+    /// the builder is no longer used.
+    /// </summary>
+    /// <param name="content">The request body.</param>
+    /// <returns>This builder.</returns>
     public HttpRequestBuilder WithContent(HttpContent content)
     {
         _content = content;
-        _jsonValue = null;
+        _jsonContent = null;
         return this;
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public HttpRequestBuilder WithJsonContent(object value, JsonSerializerOptions? options = null)
     {
-        _jsonValue = value;
-        _jsonOptions = options;
+        _jsonContent = value is null ? null : () => JsonContent.Create(value, options: options ?? ResolveJsonOptions());
+        _content = null;
+        return this;
+    }
+
+    // A distinct name, not a WithJsonContent overload: WithJsonContent(dto, null) would bind to it and throw.
+    public HttpRequestBuilder WithJsonTypeInfoContent<T>(T value, JsonTypeInfo<T> typeInfo)
+    {
+#if NET6_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(typeInfo);
+#else
+        if (typeInfo is null)
+            throw new ArgumentNullException(nameof(typeInfo));
+#endif
+        _jsonContent = value is null ? null : () => JsonContent.Create(value, typeInfo);
         _content = null;
         return this;
     }
@@ -122,8 +146,9 @@ public sealed class HttpRequestBuilder
     /// <summary>
     /// Sends an <c>Idempotency-Key</c> header. The key is fixed now, not when the request is built: every
     /// <see cref="Build"/> of this builder, and so every retry that builds the request again, sends the same key.
-    /// When <paramref name="key"/> is <see langword="null"/> a new key is generated (a UUIDv7 on .NET 9 and later, a
-    /// random UUID on netstandard2.1); pass a deterministic key, for example from <c>IdempotencyKeys.For(...)</c>, when
+    /// When <paramref name="key"/> is <see langword="null"/> a new key is generated: a random UUIDv4,
+    /// which reveals nothing about when the request was made (keys need no ordering);
+    /// pass a deterministic key, for example from <c>IdempotencyKeys.For(...)</c>, when
     /// the operation can be started again from scratch. A new logical operation needs a new builder or a new key.
     /// </summary>
     /// <param name="key">The key to send, or <see langword="null"/> to generate one.</param>
@@ -153,15 +178,7 @@ public sealed class HttpRequestBuilder
         Result<Uri> uriResult;
         try
         {
-            uriResult = ApplyRouteValues(_uri, conventions);
-            if (uriResult.IsSuccess && _queryParameters.Count > 0)
-            {
-                List<KeyValuePair<string, string?>> pairs = [];
-                foreach ((string key, object? value) in _queryParameters)
-                    QueryStringExtensions.AddValues(pairs, key, value, conventions, _enumWriteAs);
-
-                uriResult = uriResult.Value.AppendQuery(QueryStringExtensions.BuildQuery(pairs));
-            }
+            uriResult = ResolveUri(_uri, conventions);
         }
         catch (EnumValueException exception)
         {
@@ -173,28 +190,58 @@ public sealed class HttpRequestBuilder
 
         var request = new HttpRequestMessage(_method, uriResult.Value);
 
+        if (_jsonContent is not null)
+            request.Content = _jsonContent();
+        else if (_content is not null)
+            request.Content = _content;
+
+        var replacedContentHeaders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach ((string key, string value) in _headers)
-            request.Headers.TryAddWithoutValidation(key, value);
+        {
+            if (!request.Headers.TryAddWithoutValidation(key, value) && request.Content is not null)
+            {
+                if (replacedContentHeaders.Add(key))
+                    request.Content.Headers.Remove(key);
+
+                request.Content.Headers.TryAddWithoutValidation(key, value);
+            }
+        }
 
         if (_idempotencyKey is not null)
             request.SetIdempotencyKey(_idempotencyKey);
-
-        if (_jsonValue is not null)
-            request.Content = JsonContent.Create(_jsonValue, options: _jsonOptions ?? ResolveJsonOptions());
-        else if (_content is not null)
-            request.Content = _content;
 
         return request;
     }
 
     private static readonly ConditionalWeakTable<EnumConventions, ConcurrentDictionary<EnumWireFormat, JsonSerializerOptions>> JsonOptionsCache = [];
 
-    private Result<Uri> ApplyRouteValues(Uri uri, EnumConventions conventions)
+    private Result<Uri> ResolveUri(Uri uri, EnumConventions conventions)
     {
-        if (_routeValues.Count == 0)
-            return uri;
+        string? template = null;
+        if (_routeValues.Count > 0)
+        {
+            Result<string> routed = ApplyRouteValues(uri.OriginalString, conventions);
+            if (routed.IsFailure)
+                return routed.Errors;
+            template = routed.Value;
+        }
 
-        string template = uri.OriginalString;
+        if (_queryParameters.Count == 0)
+            return template is null ? uri : new Uri(template, UriKind.RelativeOrAbsolute);
+
+        List<KeyValuePair<string, string?>> pairs = [];
+        foreach ((string key, object? value) in _queryParameters)
+            QueryStringExtensions.AddValues(pairs, key, value, conventions, _enumWriteAs);
+
+        Result<string> query = QueryStringExtensions.BuildQuery(pairs);
+        if (template is null || query.IsFailure)
+            return uri.AppendQuery(query);
+
+        return QueryStringExtensions.AppendQuery(template, query.Value, uri.IsAbsoluteUri ? UriKind.Absolute : UriKind.Relative);
+    }
+
+    private Result<string> ApplyRouteValues(string template, EnumConventions conventions)
+    {
         foreach ((string name, object? value) in _routeValues)
         {
             string placeholder = "{" + name + "}";
@@ -209,9 +256,11 @@ public sealed class HttpRequestBuilder
             template = template.Replace(placeholder, Uri.EscapeDataString(text), StringComparison.Ordinal);
         }
 
-        return new Uri(template, UriKind.RelativeOrAbsolute);
+        return template;
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     private JsonSerializerOptions ResolveJsonOptions()
     {
         if (_enumConventions is null)
@@ -224,6 +273,7 @@ public sealed class HttpRequestBuilder
                 options.AddEnumConventions(conventions, EnumReadMode.Data, writeAs);
                 options.Converters.Add(new MultiFormatDateTimeConverterFactory());
                 options.Converters.Add(new PolymorphicJsonConverterFactory());
+                options.AddPolymorphismWithReflection();
             }));
     }
 
@@ -236,13 +286,22 @@ public sealed class HttpRequestBuilder
         if (buildResult.IsFailure)
             return buildResult.Errors;
 
-        using HttpRequestMessage request = buildResult.Value;
-        if (_followRedirects)
-            return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken).ConfigureAwait(false);
+        HttpRequestMessage request = buildResult.Value;
+        try
+        {
+            if (_followRedirects)
+                return await client.SendWithRedirectsAsResultAsync(request, _maxRedirects, cancellationToken).ConfigureAwait(false);
 
-        return await client.SendAsResultAsync(request, cancellationToken).ConfigureAwait(false);
+            return await client.SendAsResultAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release(request);
+        }
     }
 
+    [RequiresUnreferencedCode(HttpJson.SerializationMessage)]
+    [RequiresDynamicCode(HttpJson.SerializationMessage)]
     public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonSerializerOptions? options = null, CancellationToken cancellationToken = default)
     {
         if (client is null)
@@ -252,10 +311,48 @@ public sealed class HttpRequestBuilder
         if (buildResult.IsFailure)
             return buildResult.Errors;
 
-        using HttpRequestMessage request = buildResult.Value;
-        if (_followRedirects)
-            return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken).ConfigureAwait(false);
+        HttpRequestMessage request = buildResult.Value;
+        try
+        {
+            if (_followRedirects)
+                return await client.SendWithRedirectsAsResultAsync<T>(request, options, _maxRedirects, cancellationToken).ConfigureAwait(false);
 
-        return await client.SendAsResultAsync<T>(request, options, cancellationToken).ConfigureAwait(false);
+            return await client.SendAsResultAsync<T>(request, options, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release(request);
+        }
+    }
+
+    private void Release(HttpRequestMessage request)
+    {
+        if (ReferenceEquals(request.Content, _content))
+            request.Content = null;
+
+        request.Dispose();
+    }
+
+    public async Task<Result<T>> AsResultAsync<T>(HttpClient? client, JsonTypeInfo<T> typeInfo, CancellationToken cancellationToken = default)
+    {
+        if (client is null)
+            return Error.Validation("HttpRequestBuilder.ClientRequired", "HttpClient cannot be null.");
+
+        Result<HttpRequestMessage> buildResult = Build();
+        if (buildResult.IsFailure)
+            return buildResult.Errors;
+
+        HttpRequestMessage request = buildResult.Value;
+        try
+        {
+            if (_followRedirects)
+                return await client.SendWithRedirectsAsResultAsync(request, typeInfo, _maxRedirects, cancellationToken).ConfigureAwait(false);
+
+            return await client.SendAsResultAsync(request, typeInfo, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            Release(request);
+        }
     }
 }

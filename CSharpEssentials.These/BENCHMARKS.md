@@ -1,0 +1,160 @@
+# CSharpEssentials.These: performance benchmarks
+
+This page compares CSharpEssentials.These (CSE) `These<string, int>` with a hand-written `readonly record struct Outcome`. `Outcome` has the same four fields and the same JSON names, and it is handled with plain if/else and no delegates. No library competitor is included. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
+
+Full default-job results for all four TFMs are in [Results](#results), with a list of the rows where CSE loses.
+
+What the comparison answers: how much CSE's delegate-based API costs compared with writing the three-state logic by hand.
+
+---
+
+## What was measured
+
+The four These classes are in `benchmarks/CSharpEssentials.Any.Comparison.Benchmarks/`, next to the Any classes ([CSharpEssentials.Any/BENCHMARKS.md](../CSharpEssentials.Any/BENCHMARKS.md)).
+- Every class has `[MemoryDiagnoser]`, and CSE is the baseline.
+- `TheseMatchComparison` folds a 1024-element array and reports the time per fold (`OperationsPerInvoke = 1024`). In a single-call version the hand-written row was too short for BenchmarkDotNet to tell apart from an empty method.
+- Each class checks parity in `[GlobalSetup]`, and `--self-check` runs the same check. The CSE row and the hand-written row must give the same result, or the run fails.
+
+| # | Class | Measured unit | Expected |
+|---|---|---|---|
+| 1 | `TheseMatchComparison` | Fold to an int: Left gives the error length, Right gives the value, Both gives value + error length. CSE `Match` takes three delegates; the hand-written row is if/else in the same branch order | 4 / 42 / 46 |
+| 2 | `ThesePipelineComparison` | `Map(v * 2)`, then `FlatMap(v > 50 ? Right(v + 1) : Left("small"))`, then the same fold | 4 / 85 / 89 |
+| 3 | `ThesePartitionComparison` | Split 1000 values (334 Left, 333 Right, 333 Both) into three lists | Counts, sums and text lengths |
+| 4 | `TheseJsonComparison` | System.Text.Json `Serialize` and `Deserialize` | Identical JSON text and decoded state |
+
+Inputs: Left(`"warn"`), Right(`42`) and Both(`"warn"`, `42`), picked with `[Params(Left, Right, Both)]`. In the partition input, `i % 3 == 0` gives Left(`"t" + i`), `1` gives Right(`i`) and `2` gives Both(`"t" + i`, `i`). Both sources are typed as `IEnumerable<T>` over arrays built in setup.
+
+On net8.0, CSE runs its netstandard2.1 build, because the package has no net8 target.
+
+---
+
+## Semantic differences
+
+- **FlatMap on Both.** CSE never combines errors here. If the mapper returns Right or Both, the original left is kept and the mapper's left is dropped. If it returns Left, the mapper's left is returned and the original left is dropped (`CSharpEssentials.These/These.cs:72-75`). The hand-written pipeline copies this rule on purpose so that parity holds. Copying it does not mean the rule is recommended, because one of the two errors never reaches the caller.
+- **JSON.** Both rows write `{"isLeft":...,"isRight":...,"left":...,"right":...}`, and parity checks that the two JSON strings are equal. CSE binds through a private `[JsonConstructor]`; `Outcome` binds through its public record constructor.
+- **Why a value tuple was not used.** The baseline is a record and not a value tuple, because STJ skips tuple fields unless `IncludeFields` is set and would silently write `{}`.
+- **Partition.** CSE's `Partition` returns `IReadOnlyList`s (unlike Any's arrays), and so does the hand-written row.
+
+---
+
+## Feature matrix
+
+| Feature | CSE These | Hand-written `Outcome` |
+|---|---|---|
+| States | Left, Right, Both (+ an invalid `default`) | Whatever the caller codes |
+| Map / MapLeft / FlatMap / Tap / Match | Yes | Hand-written if/else |
+| Maybe and Result bridges | `GetRight`/`GetLeft`, `ToResult`, `ToResultLenient`, `FromResult` | None |
+| Partition | Yes (lists) | Hand-written |
+| JSON | `{"isLeft","isRight","left","right"}` | The same, through `[JsonPropertyName]` |
+| Combining errors in FlatMap on Both | None. One of the two lefts is always dropped (the mapper's on Right or Both, the original on Left) | The caller decides |
+| Native AOT | `IsAotCompatible` is set for the net9.0 and later builds (`CSharpEssentials.These.csproj:18`). JSON binds through a private `[JsonConstructor]` (`These.cs:9-11`) | Public record constructor |
+
+No library competitor is included. These is a small type, and the useful question is what it costs compared with the equivalent hand-written code.
+
+---
+
+## Results
+
+Each cell is `Mean / Ratio / Allocated`, copied from the BenchmarkDotNet github reports. Ratio is against the CSE row of the same state and TFM. `-` in the Allocated column means 0 bytes.
+
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on one Linux machine. The CPU and runtime versions are in the header of each report.
+- The These classes ran in the same pass as the Any classes, with a 1-minute load average between 1.18 and 1.43. The runner exited with a non-zero code for that pass (`any end rc=1` in the load log) because of the Any ToString parity check; every These report has a value in every row. The noise pass flagged no These row.
+- `TheseMatchComparison` uses `OperationsPerInvoke = 1024`, so its means are per fold over a 1024-element batch. `ThesePipelineComparison` and `TheseJsonComparison` time one call, and `ThesePartitionComparison` one partition of 1000 values.
+- Results path: `benchmarks/results/any/{tfm}/results/` (the These reports are the `These*` files).
+
+### Match (per fold, batched)
+
+Reports: [net8.0](../benchmarks/results/any/net8.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseMatchComparison-report-github.md), [net9.0](../benchmarks/results/any/net9.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseMatchComparison-report-github.md), [net10.0](../benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseMatchComparison-report-github.md), [net11.0](../benchmarks/results/any/net11.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseMatchComparison-report-github.md)
+
+No row allocates.
+
+| Row | State | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|
+| CSE `Match` | Left | 2.3879 ns / 1.00 | 1.7596 ns / 1.00 | 2.1713 ns / 1.00 | 1.9444 ns / 1.00 |
+| Hand-written | Left | 0.8710 ns / 0.36 | 0.8706 ns / 0.49 | 0.5869 ns / 0.27 | 0.5983 ns / 0.31 |
+| CSE `Match` | Right | 2.3364 ns / 1.00 | 1.5718 ns / 1.00 | 1.9989 ns / 1.00 | 1.7477 ns / 1.00 |
+| Hand-written | Right | 0.8702 ns / 0.37 | 0.5822 ns / 0.37 | 0.5826 ns / 0.29 | 0.5911 ns / 0.34 |
+| CSE `Match` | Both | 2.6370 ns / 1.00 | 1.9242 ns / 1.00 | 1.9973 ns / 1.00 | 1.5164 ns / 1.00 |
+| Hand-written | Both | 0.7757 ns / 0.29 | 0.6577 ns / 0.34 | 0.8701 ns / 0.44 | 0.6013 ns / 0.40 |
+
+### Pipeline: Map, FlatMap, Match (one call)
+
+Reports: [net8.0](../benchmarks/results/any/net8.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePipelineComparison-report-github.md), [net9.0](../benchmarks/results/any/net9.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePipelineComparison-report-github.md), [net10.0](../benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePipelineComparison-report-github.md), [net11.0](../benchmarks/results/any/net11.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePipelineComparison-report-github.md)
+
+No row allocates.
+
+| Row | State | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|
+| CSE pipeline | Left | 12.7056 ns / 1.00 | 15.408 ns / 1.00 | 12.8644 ns / 1.00 | 15.043 ns / 1.00 |
+| Hand-written | Left | 1.0679 ns / 0.08 | 1.720 ns / 0.11 | 1.7627 ns / 0.14 | 1.715 ns / 0.11 |
+| CSE pipeline | Right | 25.6079 ns / 1.00 | 25.494 ns / 1.00 | 22.3331 ns / 1.00 | 25.157 ns / 1.00 |
+| Hand-written | Right | 1.6429 ns / 0.06 | 1.526 ns / 0.06 | 1.3662 ns / 0.06 | 1.353 ns / 0.05 |
+| CSE pipeline | Both | 15.1796 ns / 1.00 | 3.957 ns / 1.00 | 3.9609 ns / 1.00 | 3.957 ns / 1.00 |
+| Hand-written | Both | 0.7583 ns / 0.05 | 2.202 ns / 0.56 | 0.4886 ns / 0.12 | 2.202 ns / 0.56 |
+
+These rows do not follow the amount of work. Both runs both mappers and the `onBoth` handler, yet on net9.0 to net11.0 the CSE Both row (3.957 to 3.9609 ns) is several times faster than CSE Right (22.3331 to 25.494 ns) and CSE Left (12.8644 to 15.408 ns), and Left calls no mapper at all. The cause has not been investigated, so read the Left and Right rows as unexplained rather than as the cost of the API.
+
+### Partition (1000 values)
+
+Reports: [net8.0](../benchmarks/results/any/net8.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePartitionComparison-report-github.md), [net9.0](../benchmarks/results/any/net9.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePartitionComparison-report-github.md), [net10.0](../benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePartitionComparison-report-github.md), [net11.0](../benchmarks/results/any/net11.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ThesePartitionComparison-report-github.md)
+
+| Row | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|
+| CSE `Partition()` | 9.977 μs / 1.00 / 28.58 KB | 8.086 μs / 1.00 / 28.58 KB | 5.322 μs / 1.00 / 28.58 KB | 5.000 μs / 1.00 / 28.58 KB |
+| Hand-written | 5.695 μs / 0.57 / 28.58 KB | 5.008 μs / 0.62 / 28.58 KB | 5.077 μs / 0.95 / 28.55 KB | 4.969 μs / 0.99 / 28.55 KB |
+
+`Partition()` is now a plain if/else loop with no delegates (`CSharpEssentials.These/TheseCollectionExtensions.cs:15-27`), the same shape as the hand-written row. net11.0 is a tie (ratio 0.99). The gap on net8.0 and net9.0 is not explained by the code.
+
+### JSON (one call)
+
+Reports: [net8.0](../benchmarks/results/any/net8.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseJsonComparison-report-github.md), [net9.0](../benchmarks/results/any/net9.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseJsonComparison-report-github.md), [net10.0](../benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseJsonComparison-report-github.md), [net11.0](../benchmarks/results/any/net11.0/results/CSharpEssentials.Any.Comparison.Benchmarks.TheseJsonComparison-report-github.md)
+
+| Row | State | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|
+| CSE Serialize | Left | 237.6 ns / 1.00 / 168 B | 230.0 ns / 1.00 / 168 B | 231.4 ns / 1.00 / 168 B | 222.0 ns / 1.00 / 168 B |
+| Hand-written Serialize | Left | 235.8 ns / 0.99 / 168 B | 226.8 ns / 0.99 / 168 B | 221.1 ns / 0.96 / 168 B | 207.0 ns / 0.93 / 168 B |
+| CSE Serialize | Right | 219.0 ns / 1.00 / 168 B | 210.3 ns / 1.00 / 168 B | 206.5 ns / 1.00 / 168 B | 203.6 ns / 1.00 / 168 B |
+| Hand-written Serialize | Right | 241.9 ns / 1.10 / 168 B | 193.7 ns / 0.92 / 168 B | 183.1 ns / 0.89 / 168 B | 183.9 ns / 0.90 / 168 B |
+| CSE Serialize | Both | 254.3 ns / 1.00 / 168 B | 228.7 ns / 1.00 / 168 B | 223.9 ns / 1.00 / 168 B | 224.8 ns / 1.00 / 168 B |
+| Hand-written Serialize | Both | 247.5 ns / 0.97 / 168 B | 221.8 ns / 0.97 / 168 B | 223.5 ns / 1.00 / 168 B | 201.0 ns / 0.89 / 168 B |
+| CSE Deserialize | Left | 379.2 ns / 1.00 / 184 B | 381.2 ns / 1.00 / 152 B | 342.3 ns / 1.00 / 152 B | 342.6 ns / 1.00 / 152 B |
+| Hand-written Deserialize | Left | 287.4 ns / 0.76 / 64 B | 281.5 ns / 0.74 / 64 B | 259.8 ns / 0.76 / 64 B | 239.3 ns / 0.70 / 64 B |
+| CSE Deserialize | Right | 343.6 ns / 1.00 / 152 B | 343.0 ns / 1.00 / 120 B | 325.0 ns / 1.00 / 120 B | 318.1 ns / 1.00 / 120 B |
+| Hand-written Deserialize | Right | 257.6 ns / 0.75 / 32 B | 260.8 ns / 0.76 / 32 B | 240.1 ns / 0.74 / 32 B | 216.8 ns / 0.68 / 32 B |
+| CSE Deserialize | Both | 380.8 ns / 1.00 / 184 B | 379.4 ns / 1.00 / 152 B | 340.8 ns / 1.00 / 152 B | 340.1 ns / 1.00 / 152 B |
+| Hand-written Deserialize | Both | 279.6 ns / 0.73 / 64 B | 282.7 ns / 0.75 / 64 B | 258.8 ns / 0.76 / 64 B | 261.6 ns / 0.77 / 64 B |
+
+Both types write the same JSON text and allocate the same 168 B when serializing. On deserialize, CSE allocates 88 B more than the hand-written record on net9.0 to net11.0 (152 B against 64 B, 120 B against 32 B) and 120 B more on net8.0, even though both bind the same four properties through a constructor. One visible difference is that CSE binds through a private `[JsonConstructor]` and `Outcome` through a public one; the extra bytes have not been traced to it.
+
+### Where CSE loses
+
+The baseline is hand-written code with no API surface, so CSE is expected to cost something. These are the rows where it does:
+
+- **Match.** The hand-written fold is ahead in every state on every TFM (ratio 0.27 to 0.49): 1.5164 to 2.6370 ns per fold for CSE against 0.5822 to 0.8710 ns. CSE calls one delegate per fold.
+- **Pipeline.** The hand-written pipeline is ahead in every state on every TFM (ratio 0.05 to 0.56). See the note under the pipeline table: the CSE Left and Right rows are slower than CSE Both on net9.0 to net11.0.
+- **Partition.** The hand-written loop is ahead on net8.0 (ratio 0.57), net9.0 (ratio 0.62) and net10.0 (ratio 0.95). net11.0 is a tie (ratio 0.99). CSE allocates 28.58 KB against 28.55 KB on net10.0 and net11.0.
+- **JSON deserialize.** The hand-written record is ahead in every state on every TFM (ratio 0.68 to 0.77) and allocates less (32 or 64 B against 120 to 184 B).
+- **JSON serialize.** The hand-written record is ahead on net8.0 Both (ratio 0.97), net9.0 Right and Both (0.92, 0.97), net10.0 Left and Right (0.96, 0.89) and every state on net11.0 (0.89 to 0.93). net8.0 Left, net9.0 Left (0.99) and net10.0 Both (1.00) are ties. CSE leads on net8.0 Right (hand-written ratio 1.10). Allocations are equal.
+
+---
+
+## Caveats
+
+- The baseline is hand-written code, not another library. It has none of CSE's API surface, such as the bridges or `Tap`.
+- The pipeline baseline copies CSE's lossy FlatMap rule on Both.
+- On net8.0 CSE runs its netstandard2.1 build, and System.Text.Json resolves to the 9.0.4 package for both rows. On net9.0 and later the framework's copy wins.
+- The CSE column is the 7.0.0 working tree on the `integ/all` integration branch (all open pull requests merged locally).
+
+---
+
+## How to reproduce
+
+```bash
+cd benchmarks
+./run-benchmarks.sh --project any # all TFMs, Any and These classes
+dotnet run -c Release -f net10.0 --project CSharpEssentials.Any.Comparison.Benchmarks -- --filter "*.These*" # These classes only
+```
+
+Results are stored per framework under `benchmarks/results/any/{tfm}/results/`.

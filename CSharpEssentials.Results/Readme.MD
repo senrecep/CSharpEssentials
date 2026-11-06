@@ -1,17 +1,26 @@
 # CSharpEssentials.Results
 
-Functional Result pattern for explicit success/failure handling in .NET. No exceptions for control flow.
+Functional Result pattern for explicit success/failure handling in .NET, without exceptions for control flow.
 
 ## Features
 
 - **Result & Result<T>**: Value-type results with implicit conversions from values and errors.
-- **Railway Oriented Programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
-- **Error Aggregation**: Collect multiple validation errors in one result.
-- **Async Support**: Full async/await across all extension methods.
-- **Safe Execution**: `Result.Try`, `Result.TryAsync` and `TryCatch` wrap exceptions into results.
-- **Recovery and Inspection**: `Else`, `Compensate`, `Recover`, `TapError`, `Match`, `Switch`, `Unwrap`.
+- **Railway-oriented programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
+- **Error aggregation**: Collect multiple validation errors in one result.
+- **Async**: async/await across all extension methods.
+- **Safe execution**: `Result.Try`, `Result.TryAsync` and `TryCatch` wrap exceptions into results.
+- **Recovery and inspection**: `Else`, `Compensate`, `Recover`, `TapError`, `Match`, `Switch`, `Unwrap`.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
+
+> **Benchmarks:** Create, Map, Bind, Ensure, Match, Tap, a 5-step async pipeline, error aggregation and Maybe against
+> CSharpFunctionalExtensions, ErrorOr and FluentResults are documented in [BENCHMARKS.md](./BENCHMARKS.md).
+> Results on net10: Map, Bind, Tap and Match allocate 0 B, like CSharpFunctionalExtensions and ErrorOr
+> (FluentResults 88-344 B). A failure allocates 104 B (ErrorOr 88 B; CSharpFunctionalExtensions 0 B with its string
+> error), and the async pipeline's failure path allocates 584 B vs 480 B for CSharpFunctionalExtensions. Error
+> aggregation takes 237.9 ns / 696 B vs 41.9 ns / 184 B for ErrorOr's manual-list idiom. The package sets
+> `IsAotCompatible` for net8.0 and later, `Result<T>.ToString()` formats the value without JSON, and it brings CSharpEssentials.Errors, Json,
+> Core and Enums (CSharpFunctionalExtensions has no dependencies).
 
 ## Installation
 
@@ -21,7 +30,7 @@ dotnet add package CSharpEssentials.Results
 
 ## Usage
 
-### Creating Results
+### Creating results
 
 ```csharp
 using CSharpEssentials.ResultPattern;
@@ -44,7 +53,7 @@ public Result DeleteUser(int id)
 }
 ```
 
-### Returning Failures
+### Returning failures
 
 Return the `Error` itself. `Error`, `Error[]`, `List<Error>` and `HashSet<Error>` convert implicitly to `Result` and `Result<T>`, and a `T` value converts to `Result<T>`:
 
@@ -70,7 +79,7 @@ var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "User alr
 Task<Result<int>> pending = Task.FromResult(Result.Success(42));
 ```
 
-### Inspecting a Result
+### Inspecting a result
 
 ```csharp
 Result<int> result = GetUser(10);
@@ -90,6 +99,8 @@ var (isSuccess, value2, errors) = result;   // Result<T>; Result deconstructs to
 ```
 
 `Value` is `default` on a failure. `Errors`, `FirstError` and `LastError` on a success return the sentinel errors `Error.NoErrors`, `Error.NoFirstError` and `Error.NoLastError`; `ErrorsOrEmptyArray` returns an empty array instead. `TryGet(out value, out errors)` returns `true` for a success. `Result<T>.ToResult()` drops the value, and `Result<T>` values support `==`, `Equals`, LINQ query syntax (`from a in r1 from b in r2 select a + b`) and `r1 + r2` (a `Result<T[]>` that collects every value or every error).
+
+`ToString()` is for logs and debugging. A success prints `Success: ` plus the value's own `ToString()`, formatted with `CultureInfo.InvariantCulture` when the value is `IFormattable`, so a class without a `ToString` override prints its type name. Earlier versions printed the value as JSON. For JSON, call `result.Value.ConvertToJson()` from `CSharpEssentials.Json`.
 
 ### Chaining
 
@@ -130,7 +141,7 @@ GetUser(10).Switch(
 
 `MatchFirst` and `MatchLast` (and `SwitchFirst`, `SwitchLast`) hand the handler a single `Error` instead of the array. On a non-generic `Result` the handlers take no value and the failure handler parameter is named `onFailure`.
 
-### Combining Results
+### Combining results
 
 ```csharp
 var r1 = Result.Success();
@@ -141,7 +152,7 @@ Result combined = Result.And(r1, r2, r3); // Failure: returns r3's errors; Resul
 Result all = new[] { r1, r2, r3 }.CombineAll(); // Failure: collects the errors of every failing result
 ```
 
-### Safe Execution
+### Safe execution
 
 ```csharp
 Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exception(ex));
@@ -149,7 +160,7 @@ Result<int> result = Result.Try(() => int.Parse("not a number"), ex => Error.Exc
 
 `Result.TryAsync` converts exceptions to errors the same way, but when the `CancellationToken` you pass is cancelled it lets the `OperationCanceledException` propagate instead of turning it into an `Error`. An `OperationCanceledException` that did not come from your token (for example an `HttpClient` timeout) is still passed to the error handler.
 
-### Mapping Errors
+### Mapping errors
 
 ```csharp
 // Per-error mapper: runs once for every error, in order. Never called on success.
@@ -179,7 +190,7 @@ Result<User> fromCache = await GetCachedUserAsync(id)
     .MapErrorAsync(errors => CollapseAsync(errors));
 ```
 
-### Operations Reference
+### Operations reference
 
 Every operation returns a new `Result`; handlers run only on the side named in the table. The `Async` counterparts are listed under [Async](#async).
 
@@ -295,7 +306,7 @@ Unchanged:
 
 Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before, and since 6.5.0 on `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` (`ValueTask` sources) and `Result.TryAsync`. Use C# 13 or later, or type the handler.
 
-### Collection Extensions
+### Collection extensions
 
 Batch operations on sequences of results:
 
@@ -345,7 +356,7 @@ Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync()
 - On .NET 9+ with `LangVersion` 12, untyped `async` lambdas can be ambiguous between the `Task` and `ValueTask` overloads (CS0121), the same as `MapErrorAsync`. Use `LangVersion` 13+ or a typed delegate.
 - Overloads: `Func<T, Task<Result<U>>>` and `Func<T, CancellationToken, Task<Result<U>>>` on all targets; the `ValueTask` selector twins are available on .NET 9+. `SequenceAsync` accepts `IEnumerable<Task<Result<T>>>` and `IEnumerable<ValueTask<Result<T>>>`.
 
-### TapIf: Conditional Side Effects
+### TapIf: conditional side effects
 
 ```csharp
 Result<int> result = 42;
@@ -360,3 +371,15 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 // Works on Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
+
+## Upgrading to 8.0
+
+### Deserializing a failure without errors
+
+A failed result must carry at least one error, and deserialization now enforces that. JSON with `"IsFailure": true` (for `Result`) or `"IsSuccess": false` (for `Result<T>`) and a missing, `null` or empty `errors` array throws `JsonException`. Earlier versions read `{"IsFailure":true}` as a success and `"errors":[]` as a failure whose `FirstError` and `ToString()` threw.
+
+Payloads written by this library already include the flag and the errors. Check hand-written or third-party payloads: a `Result<T>` success must include `"IsSuccess": true`, because a missing flag reads as `false`, and every failure needs at least one error.
+
+### Cancellation in async operations
+
+Async operations that take a `CancellationToken` and wait on a task source (`MapAsync`, `BindAsync`, `TapAsync`, `MatchAsync`, `EnsureAsync`, `ThenAsync`, `TryAsync` and the rest) wait through Core `WithCancellation`, which is `Task.WaitAsync` on the .NET 9, 10 and 11 targets. When the token is cancelled while they wait, they throw `TaskCanceledException`, a subclass of `OperationCanceledException`, instead of `OperationCanceledException` itself. A `catch (OperationCanceledException)` still catches it; an exact type check no longer matches. The `netstandard2.1` asset is unchanged.

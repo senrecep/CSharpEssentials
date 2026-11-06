@@ -69,4 +69,35 @@ public class BaseDbContextTests
         Action act = () => context.Dispose();
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void CreatedAndDisposedLogs_ShouldCarryTheSameInstanceId()
+    {
+        (ConcreteDbContext context, List<string> logs) = CreateContext();
+        context.Dispose();
+
+        string created = logs.Single(s => s.EndsWith(" created", StringComparison.Ordinal));
+        string disposed = logs.Single(s => s.EndsWith(" disposed", StringComparison.Ordinal));
+        string id = created["Context ".Length..^" created".Length];
+        Guid.TryParse(id, out Guid parsed).Should().BeTrue();
+        parsed.Should().NotBe(Guid.Empty);
+        disposed.Should().Be($"Context {id} disposed");
+    }
+
+    [Fact]
+    public void Dispose_ShouldLogNothing_WhenInformationIsDisabled()
+    {
+        using var loggerProvider = new ListLoggerProvider();
+        using ServiceProvider provider = new ServiceCollection()
+            .AddSingleton<ILoggerProvider>(loggerProvider)
+            .AddLogging(builder => builder.SetMinimumLevel(LogLevel.Warning))
+            .BuildServiceProvider();
+        DbContextOptions<ConcreteDbContext> options = new DbContextOptionsBuilder<ConcreteDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        new ConcreteDbContext(options, provider.GetRequiredService<IServiceScopeFactory>()).Dispose();
+
+        loggerProvider.Logs.Should().BeEmpty();
+    }
 }

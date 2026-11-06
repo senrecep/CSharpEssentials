@@ -70,4 +70,15 @@ public class FakeDateTimeProviderTests
         provider.UtcNowTime.Should().Be(TimeOnly.FromDateTime(FixedTime.UtcDateTime));
     }
 #endif
+
+    [Fact]
+    public void Advance_Should_NotLoseUpdates_When_CalledConcurrently()
+    {
+        const int Iterations = 1_000_000;
+        var provider = new FakeDateTimeProvider(FixedTime);
+
+        Parallel.For(0, Iterations, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, _ => provider.Advance(TimeSpan.FromTicks(1)));
+
+        provider.UtcNow.Should().Be(FixedTime.AddTicks(Iterations));
+    }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CSharpEssentials.RequestResponseLogging;
 using CSharpEssentials.RequestResponseLogging.Infrastructure.MessageCreators;
 using FluentAssertions;
@@ -41,7 +42,7 @@ public sealed class LogMessageCreatorTests
         var creator = new LogMessageCreator(options);
         var context = CreateContext();
 
-        (string logString, List<string?>? values) = creator.Create(context);
+        (string logString, object?[]? values) = creator.Create(context);
 
         logString.Should().NotBeNullOrEmpty();
         values.Should().BeNull();
@@ -212,6 +213,29 @@ public sealed class LogMessageCreatorTests
     }
 
     [Fact]
+    public void Create_Should_WriteValidJsonHeaders_When_HeaderValueHasQuotesAndBackslashes()
+    {
+        const string headerValue = "\"Not A;Brand\";v=\"1\", C:\\path";
+        var options = new LoggingOptions
+        {
+            UseSeparateContext = false,
+            LoggingFields = [LogFields.Headers],
+            HeaderKeys = ["sec-ch-ua"]
+        };
+        var creator = new LogMessageCreator(options);
+
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Headers["sec-ch-ua"] = headerValue;
+        var context = new RequestResponseContext(httpContext);
+
+        (string logString, _) = creator.Create(context);
+
+        string headersJson = logString["Headers: ".Length..].Trim();
+        using JsonDocument document = JsonDocument.Parse(headersJson);
+        document.RootElement[0].GetProperty("sec-ch-ua").GetString().Should().Be(headerValue);
+    }
+
+    [Fact]
     public void Create_Should_ReturnEmptyString_When_NoFieldsConfigured()
     {
         var options = new LoggingOptions
@@ -222,7 +246,7 @@ public sealed class LogMessageCreatorTests
         var creator = new LogMessageCreator(options);
         var context = CreateContext();
 
-        (string logString, List<string?>? values) = creator.Create(context);
+        (string logString, object?[]? values) = creator.Create(context);
 
         logString.Should().BeEmpty();
         values.Should().BeNull();
@@ -242,5 +266,46 @@ public sealed class LogMessageCreatorTests
         logString.Should().Contain("resp");
         logString.Should().Contain("/all");
         logString.Should().Contain("PUT");
+    }
+
+    [Fact]
+    public void Create_Should_ReuseTemplateAndMatchValues_When_UsingSeparateContext()
+    {
+        var options = new LoggingOptions { LoggingFields = [LogFields.Method, LogFields.Path] };
+        var creator = new LogMessageWithContextCreator(options);
+
+        (string first, object?[]? firstValues) = creator.Create(CreateContext(path: "/a", method: "GET"));
+        (string second, object?[]? secondValues) = creator.Create(CreateContext(path: "/b", method: "POST"));
+
+        string nl = Environment.NewLine;
+        first.Should().Be($"Method: {{Method}}{nl}Path: {{Path}}{nl}");
+        second.Should().BeSameAs(first);
+        firstValues.Should().Equal("GET", "/a");
+        secondValues.Should().Equal("POST", "/b");
+    }
+
+    [Fact]
+    public void Create_Should_KeepTemplateAndValuesAligned_When_FieldsChangeAfterCreation()
+    {
+        var options = new LoggingOptions { LoggingFields = [LogFields.Path] };
+        var creator = new LogMessageWithContextCreator(options);
+        options.LoggingFields.Add(LogFields.Method);
+
+        (string logString, object?[]? values) = creator.Create(CreateContext(path: "/a"));
+
+        logString.Should().Be($"Path: {{Path}}{Environment.NewLine}");
+        values.Should().Equal("/a");
+    }
+
+    [Fact]
+    public void Create_Should_IgnoreFieldsAddedAfterCreation_When_NotUsingSeparateContext()
+    {
+        var options = new LoggingOptions { UseSeparateContext = false, LoggingFields = [LogFields.Path] };
+        var creator = new LogMessageCreator(options);
+        options.LoggingFields.Add(LogFields.Method);
+
+        (string logString, _) = creator.Create(CreateContext(path: "/a"));
+
+        logString.Should().Be($"Path: /a{Environment.NewLine}");
     }
 }

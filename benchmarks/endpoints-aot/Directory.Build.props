@@ -1,0 +1,12 @@
+<!-- Native AOT samples: not part of CSharpEssentials.slnx (non-AOT-safe libraries would fail repo-wide warnings-as-errors by design). Built only by run-aot.sh. -->
+<Project>
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <!-- Same analyzer relaxation as examples/Examples.Endpoints: these are samples, not packages. -->
+  <PropertyGroup>
+    <AnalysisMode>None</AnalysisMode>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <NoWarn>$(NoWarn);S3903;S3220;S3878</NoWarn>
+  </PropertyGroup>
+</Project>

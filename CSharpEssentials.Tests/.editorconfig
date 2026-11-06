@@ -16,7 +16,7 @@ dotnet_diagnostic.S1133.severity = none
 dotnet_diagnostic.CS0618.severity = none
 
 # These tests cover the obsolete 4.x StringEnumNaming facade on purpose.
-[Json/StringEnumNamingTests.cs]
+[Json/{StringEnumNamingTests,StringEnumNamingRawValueTests}.cs]
 dotnet_diagnostic.CS0618.severity = none
 
 # These tests cover the obsolete 4.x ConfigureEnumConventions forwarders on purpose.

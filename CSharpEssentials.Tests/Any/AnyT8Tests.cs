@@ -438,6 +438,13 @@ public class AnyT8Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string, bool, double, long, decimal, Guid, char> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string, bool, double, long, decimal, Guid, char> original = 42;
@@ -579,5 +586,17 @@ public class AnyT8Tests
         var any = Any<int, string, bool, double, long, decimal, Guid, char>.Eighth('x');
         any.Index.Should().Be(7);
         any.GetEighth().Should().Be('x');
+    }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long, char, byte, short> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool _, out double _, out long _, out char _, out byte _, out short _);
+        first.Should().Be(0);
+        second.Should().BeNull();
     }
 }

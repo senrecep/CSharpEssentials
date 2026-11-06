@@ -1,6 +1,4 @@
-#if NET6_0_OR_GREATER
 using System.Globalization;
-#endif
 using System.Text;
 
 namespace CSharpEssentials.Errors;
@@ -16,13 +14,13 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
     public static ErrorMetadata CreateEmpty() => [];
     public static ErrorMetadata CreateWithStackTrace() => new("stackTrace", Environment.StackTrace);
-    public static ErrorMetadata CreateWithException(Exception ex) => new("exception", ex);
+    public static ErrorMetadata CreateWithException(Exception ex) => new("exception", CreateWithExceptionDetailed(ex));
     public static ErrorMetadata CreateWithExceptionDetailed(Exception exception)
     {
         var metadata = new ErrorMetadata()
         {
                 { "exceptionType", exception.GetType().Name},
-                { "exceptionStackTrace", exception.StackTrace ?? Environment.StackTrace},
+                { "exceptionStackTrace", exception.StackTrace },
                 { "exceptionMessage", exception.Message },
         };
         if (exception.InnerException is not null)
@@ -46,14 +44,14 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
     public ErrorMetadata AddException(Exception ex)
     {
-        TryAdd("exception", ex);
+        TryAdd("exception", CreateWithExceptionDetailed(ex));
         return this;
     }
 
     public ErrorMetadata AddExceptionDetailed(Exception exception)
     {
         TryAdd("exceptionType", exception.GetType().Name);
-        TryAdd("exceptionStackTrace", exception.StackTrace ?? Environment.StackTrace);
+        TryAdd("exceptionStackTrace", exception.StackTrace);
         TryAdd("exceptionMessage", exception.Message);
 
         if (exception.InnerException is not null)
@@ -73,18 +71,17 @@ public sealed class ErrorMetadata : Dictionary<string, object?>
 
     public override string ToString()
     {
-        var sb = new StringBuilder();
-        for (int i = 0; i < Count; i++)
+        var sb = new StringBuilder("[");
+        foreach ((string key, object? value) in this)
         {
-            (string? key, object? value) = this.ElementAtOrDefault(i);
-#if NET6_0_OR_GREATER
-            sb.Append(string.Create(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}"));
-#else
-            sb.Append($"{{ {key}: {value} }}");
-#endif
-            if (i < Count - 1)
+            if (sb.Length > 1)
                 sb.Append(", ");
+#if NET6_0_OR_GREATER
+            sb.Append(CultureInfo.InvariantCulture, $"{{ {key}: {value} }}");
+#else
+            sb.AppendFormat(CultureInfo.InvariantCulture, "{{ {0}: {1} }}", key, value);
+#endif
         }
-        return $"[{sb}]";
+        return sb.Append(']').ToString();
     }
 }

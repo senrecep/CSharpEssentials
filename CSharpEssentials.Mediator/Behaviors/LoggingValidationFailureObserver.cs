@@ -28,6 +28,11 @@ public sealed partial class LoggingValidationFailureObserver(ILogger<LoggingVali
 
     public ValueTask OnValidationFailedAsync(ValidationFailureContext failure, CancellationToken cancellationToken)
     {
+        LogLevel level = LevelFor(failure.Mode);
+        bool logEnabled = _logger.IsEnabled(level);
+        if (!logEnabled && !FailureCounter.Enabled)
+            return default;
+
         string requestName = failure.RequestType.Name;
         string mode = ToTagValue(failure.Mode);
 
@@ -38,8 +43,7 @@ public sealed partial class LoggingValidationFailureObserver(ILogger<LoggingVali
         };
         FailureCounter.Add(1, tags);
 
-        LogLevel level = failure.Mode == ValidationMode.LogOnly ? LogLevel.Warning : LogLevel.Debug;
-        if (_logger.IsEnabled(level))
+        if (logEnabled)
         {
             string errorCodes = string.Join(", ", failure.Errors.Select(error => error.Code));
             LogValidationFailed(_logger, level, requestName, mode, failure.Errors.Count, errorCodes);
@@ -47,6 +51,10 @@ public sealed partial class LoggingValidationFailureObserver(ILogger<LoggingVali
 
         return default;
     }
+
+    internal bool IsListening(ValidationMode mode) => FailureCounter.Enabled || _logger.IsEnabled(LevelFor(mode));
+
+    private static LogLevel LevelFor(ValidationMode mode) => mode == ValidationMode.LogOnly ? LogLevel.Warning : LogLevel.Debug;
 
     private static string ToTagValue(ValidationMode mode) => mode switch
     {

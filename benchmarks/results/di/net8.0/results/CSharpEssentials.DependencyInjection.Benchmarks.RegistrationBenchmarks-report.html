@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.DependencyInjection.Benchmarks.RegistrationBenchmarks-20261105-120755</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method </th><th>N</th><th>Mean     </th><th>Error  </th><th>StdDev </th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Baseline</td><td>50</td><td>13.99 ns</td><td>0.095 ns</td><td>0.089 ns</td><td>1.00</td><td>0.01</td><td>0.0038</td><td>-</td><td>64 B</td><td>1.00</td>
+</tr><tr><td>Manual</td><td>50</td><td>1,009.74 ns</td><td>8.329 ns</td><td>7.384 ns</td><td>72.16</td><td>0.68</td><td>0.2613</td><td>0.0038</td><td>4376 B</td><td>68.38</td>
+</tr><tr><td>CseGenerated</td><td>50</td><td>822.18 ns</td><td>13.000 ns</td><td>12.160 ns</td><td>58.76</td><td>0.92</td><td>0.2689</td><td>0.0038</td><td>4504 B</td><td>70.38</td>
+</tr><tr><td>CseReflection</td><td>50</td><td>294,961.48 ns</td><td>4,536.658 ns</td><td>4,243.593 ns</td><td>21,079.81</td><td>321.20</td><td>14.6484</td><td>-</td><td>248424 B</td><td>3,881.62</td>
+</tr><tr><td>Scrutor</td><td>50</td><td>60,646.33 ns</td><td>568.235 ns</td><td>531.528 ns</td><td>4,334.17</td><td>45.49</td><td>2.9297</td><td>-</td><td>51381 B</td><td>802.83</td>
+</tr><tr><td>Baseline</td><td>500</td><td>14.18 ns</td><td>0.100 ns</td><td>0.089 ns</td><td>1.00</td><td>0.01</td><td>0.0038</td><td>-</td><td>64 B</td><td>1.00</td>
+</tr><tr><td>Manual</td><td>500</td><td>8,005.99 ns</td><td>106.158 ns</td><td>99.300 ns</td><td>564.46</td><td>7.59</td><td>2.4109</td><td>0.2899</td><td>40416 B</td><td>631.50</td>
+</tr><tr><td>CseGenerated</td><td>500</td><td>7,410.30 ns</td><td>58.312 ns</td><td>54.545 ns</td><td>522.46</td><td>4.88</td><td>2.4185</td><td>0.2975</td><td>40544 B</td><td>633.50</td>
+</tr><tr><td>CseReflection</td><td>500</td><td>3,024,397.58 ns</td><td>14,326.480 ns</td><td>12,700.052 ns</td><td>213,233.34</td><td>1,552.82</td><td>148.4375</td><td>23.4375</td><td>2507721 B</td><td>39,183.14</td>
+</tr><tr><td>Scrutor</td><td>500</td><td>607,868.88 ns</td><td>1,543.745 ns</td><td>1,444.020 ns</td><td>42,857.43</td><td>277.26</td><td>29.2969</td><td>9.7656</td><td>509913 B</td><td>7,967.39</td>
+</tr></tbody></table>
+</body>
+</html>

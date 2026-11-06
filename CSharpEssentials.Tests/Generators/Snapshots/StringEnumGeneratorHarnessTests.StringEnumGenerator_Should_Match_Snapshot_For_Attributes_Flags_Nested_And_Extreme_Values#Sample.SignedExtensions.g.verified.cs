@@ -18,8 +18,6 @@ namespace Sample
         public const string AliasKebabCase = "alias";
         public const string AliasWireName = "alias";
 
-        private static readonly global::CSharpEssentials.Enums.EnumConventions __WireReadConventions = global::CSharpEssentials.Enums.EnumConventions.Default with { UnknownValue = global::CSharpEssentials.Enums.UnknownEnumValueHandling.Reject };
-
         /// <summary>The canonical wire name. Throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> for undefined values.</summary>
         public static string ToWireName(this global::Sample.Signed value)
         {
@@ -43,7 +41,7 @@ namespace Sample
                 return false;
             }
 
-            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>().TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out value, out _);
+            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>().TryParseWire(text, out value);
         }
 
         /// <summary>Parses like <see cref="TryParseWire"/> and throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> on failure.</summary>
@@ -52,13 +50,26 @@ namespace Sample
             global::CSharpEssentials.Enums.EnumInfo<global::Sample.Signed> info = global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>();
             if (text is null)
                 throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(null, global::CSharpEssentials.Enums.EnumReadMode.Data));
-            if (info.TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out global::Sample.Signed value, out global::CSharpEssentials.Enums.EnumValueError? error))
+            if (info.TryParseWire(text, out global::Sample.Signed value))
                 return value;
-            throw new global::CSharpEssentials.Enums.EnumValueException(error);
+            throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(text, global::CSharpEssentials.Enums.EnumReadMode.Data));
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>
-        public static bool IsDefined(this global::Sample.Signed value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Signed>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.Signed value)
+        {
+            switch (value)
+            {
+                case global::Sample.Signed.Negative:
+                case (global::Sample.Signed)(-9223372036854775807L - 1L):
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.Signed value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.Signed> __CreateEnumInfo()
         {
@@ -84,7 +95,7 @@ namespace Sample
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
                     return "Min";
                 default:
-                    return value.ToString();
+                    return ((long)value).ToString();
             }
         }
 
@@ -120,11 +131,11 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Signed.Negative:
-                    return "Negative".ToLowerInvariant();
+                    return "negative";
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
-                    return "Min".ToLowerInvariant();
+                    return "min";
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((long)value).ToString();
             }
         }
 
@@ -133,11 +144,11 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Signed.Negative:
-                    return "Negative".ToUpperInvariant();
+                    return "NEGATIVE";
                 case (global::Sample.Signed)(-9223372036854775807L - 1L):
-                    return "Min".ToUpperInvariant();
+                    return "MIN";
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((long)value).ToString();
             }
         }
 
@@ -203,6 +214,15 @@ namespace Sample
             return new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias };
         }
 
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Negative", "Min", "Alias" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Signed> __values = global::System.Array.AsReadOnly(new global::Sample.Signed[] { global::Sample.Signed.Negative, (global::Sample.Signed)(-9223372036854775807L - 1L), global::Sample.Signed.Alias });
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Signed> Values => __values;
+
         public static long AsUnderlyingType(this global::Sample.Signed value)
         {
             return (long)value;
@@ -256,13 +276,18 @@ namespace Sample
 
         private static bool CheckCategory(global::System.Globalization.UnicodeCategory previous, global::System.Globalization.UnicodeCategory current)
         {
-            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
+            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.TitlecaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
         }
 
         private static bool IsSpecialCharacter(global::System.Globalization.UnicodeCategory category)
         {
             return category != global::System.Globalization.UnicodeCategory.UppercaseLetter
                 && category != global::System.Globalization.UnicodeCategory.LowercaseLetter
+                && category != global::System.Globalization.UnicodeCategory.TitlecaseLetter
+                && category != global::System.Globalization.UnicodeCategory.ModifierLetter
+                && category != global::System.Globalization.UnicodeCategory.OtherLetter
+                && category != global::System.Globalization.UnicodeCategory.NonSpacingMark
+                && category != global::System.Globalization.UnicodeCategory.SpacingCombiningMark
                 && category != global::System.Globalization.UnicodeCategory.DecimalDigitNumber;
         }
     }

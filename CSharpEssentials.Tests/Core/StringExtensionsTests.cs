@@ -207,4 +207,95 @@ public class StringExtensionsTests
     {
         ChildProcessScenario.Run(OversizedInputScenarios.ToSnakeCase);
     }
+
+    [Theory]
+    [InlineData("用户名", "用户名")]
+    [InlineData("user用户Name", "user用户_name")]
+    [InlineData("cafe\u0301", "cafe\u0301")]
+    [InlineData("foo\u01C5emal", "foo_\u01C6emal")]
+    [InlineData("עברית שלום", "עברית_שלום")]
+    [InlineData("สวัสดีWorld", "สวัสดี_world")]
+    public void ToSnakeCase_KeepsLettersWithoutCaseTitlecaseLettersAndMarks(string input, string expected)
+    {
+        input.ToSnakeCase().Should().Be(expected);
+    }
+
+    [Fact]
+    public void ToKebabCase_KeepsArabicLetters()
+    {
+        "مرحبا بالعالم".ToKebabCase().Should().Be("مرحبا-بالعالم");
+    }
+
+    [Fact]
+    public void ToPascalCase_KeepsLettersWithoutCase()
+    {
+        "user_用户_name".ToPascalCase().Should().Be("User用户Name");
+    }
+
+    [Fact]
+    public void ToSnakeCase_KeepsLettersWithoutCase_When_Input_Uses_The_Pooled_Buffer()
+    {
+        string input = string.Concat(Enumerable.Repeat("用户Name", 64));
+
+        input.ToSnakeCase().Should().Be(string.Concat(Enumerable.Repeat("用户_name", 64)));
+    }
+
+    [Theory]
+    [InlineData(127)]
+    [InlineData(128)]
+    [InlineData(129)]
+    [InlineData(256)]
+    [InlineData(257)]
+    [InlineData(600)]
+    public void ToSnakeCase_Fits_When_Every_Character_Needs_A_Separator(int pairs)
+    {
+        string input = string.Concat(Enumerable.Repeat("A1", pairs));
+
+        input.ToSnakeCase().Should().Be(string.Join("_", Enumerable.Repeat("a_1", pairs)));
+        input.ToTitleCase().Should().Be(string.Join(" ", Enumerable.Repeat("A 1", pairs)));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(511)]
+    [InlineData(512)]
+    [InlineData(600)]
+    public void ToUnderscoreCamelCase_Fits_When_Input_Has_No_Separators(int length)
+    {
+        string input = new('a', length);
+
+        input.ToUnderscoreCamelCase().Should().Be("_" + input);
+        input.ToCamelCase().Should().Be(input);
+        input.ToPascalCase().Should().Be("A" + input[1..]);
+    }
+
+    [Fact]
+    public void ToSnakeCase_Handles_Mixed_Ascii_And_Non_Ascii_Characters()
+    {
+        "Über_straßeName用户ID9".ToSnakeCase().Should().Be("über_straße_name用户_id_9");
+        "Über_straßeName用户ID9".ToMacroCase().Should().Be("ÜBER_STRAßE_NAME用户_ID_9");
+    }
+
+    [Fact]
+    public void ToMacroCase_WithTurkishCulture_Uses_The_Culture_For_Ascii_Letters()
+    {
+        "isim".ToMacroCase(CultureInfo.GetCultureInfo("tr-TR")).Should().Be("İSİM");
+        "isim".ToMacroCase().Should().Be("ISIM");
+    }
+
+    [Theory]
+    [InlineData("__userIDs2Name", "UserIds2Name", "userIds2Name", "_userIds2Name", "user-ids-2-name", "user_ids_2_name", "USER_IDS_2_NAME", "User-Ids-2-Name", "User Ids 2 Name")]
+    [InlineData("Über-straßeID", "ÜberStraßeId", "überStraßeId", "_überStraßeId", "über-straße-id", "über_straße_id", "ÜBER_STRAßE_ID", "Über-Straße-Id", "Über Straße Id")]
+    public void Every_Case_Applies_Its_Own_First_Character_Word_Start_And_Separator_Rules(
+        string input, string pascal, string camel, string underscoreCamel, string kebab, string snake, string macro, string train, string title)
+    {
+        input.ToPascalCase().Should().Be(pascal);
+        input.ToCamelCase().Should().Be(camel);
+        input.ToUnderscoreCamelCase().Should().Be(underscoreCamel);
+        input.ToKebabCase().Should().Be(kebab);
+        input.ToSnakeCase().Should().Be(snake);
+        input.ToMacroCase().Should().Be(macro);
+        input.ToTrainCase().Should().Be(train);
+        input.ToTitleCase().Should().Be(title);
+    }
 }

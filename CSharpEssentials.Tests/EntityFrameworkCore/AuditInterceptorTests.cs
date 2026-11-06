@@ -3,6 +3,7 @@ using CSharpEssentials.EntityFrameworkCore.Interceptors;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 
 namespace CSharpEssentials.Tests.EntityFrameworkCore;
 
@@ -173,5 +174,108 @@ public class AuditInterceptorTests
         provider.GetService<AuditInterceptor>().Should().NotBeNull();
 
         provider.Dispose();
+    }
+
+    [Fact]
+    public void AddAuditInterceptor_ShouldKeepTimeProviderRegisteredBefore()
+    {
+        FakeTimeProvider clock = new();
+        ServiceCollection services = new();
+        services.AddSingleton<TimeProvider>(clock);
+        services.AddAuditInterceptor(() => "user");
+        using ServiceProvider provider = services.BuildServiceProvider();
+
+        provider.GetRequiredService<TimeProvider>().Should().BeSameAs(clock);
+    }
+
+    [Fact]
+    public void AddAuditInterceptor_CalledTwice_ShouldRegisterOneInterceptorAndOneTimeProvider()
+    {
+        ServiceCollection services = new();
+        services.AddAuditInterceptor(() => "first");
+        services.AddAuditInterceptor(() => "second");
+
+        services.Should().ContainSingle(d => d.ServiceType == typeof(AuditInterceptor));
+        services.Should().ContainSingle(d => d.ServiceType == typeof(TimeProvider));
+    }
+
+    private sealed class PlainRow
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class MixedDbContext(DbContextOptions<MixedDbContext> options) : DbContext(options)
+    {
+        public DbSet<PlainRow> Rows => Set<PlainRow>();
+        public DbSet<AuditEntity> Entities => Set<AuditEntity>();
+    }
+
+    private static (MixedDbContext Db, ServiceProvider Provider) CreateMixedContext(Func<string> userId)
+    {
+        ServiceCollection services = new();
+        services.AddAuditInterceptor(userId);
+        ServiceProvider provider = services.BuildServiceProvider();
+        DbContextOptions<MixedDbContext> options = new DbContextOptionsBuilder<MixedDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(provider.GetRequiredService<AuditInterceptor>())
+            .Options;
+        return (new MixedDbContext(options), provider);
+    }
+
+    [Fact]
+    public void SavingChanges_WithNoAuditableEntries_ShouldNotResolveUserIdProvider()
+    {
+        int resolved = 0;
+        (MixedDbContext db, ServiceProvider provider) = CreateMixedContext(() =>
+        {
+            resolved++;
+            return "user";
+        });
+        using (db)
+        using (provider)
+        {
+            db.Rows.Add(new PlainRow { Id = 1, Name = "row" });
+            db.SaveChanges();
+
+            resolved.Should().Be(0);
+        }
+    }
+
+    [Fact]
+    public async Task SavingChanges_WithNoAuditableEntries_ShouldSucceed_WhenUserIdProviderThrows()
+    {
+        (MixedDbContext db, ServiceProvider provider) = CreateMixedContext(
+            () => throw new InvalidOperationException("no user"));
+        await using (db.ConfigureAwait(false))
+        await using (provider.ConfigureAwait(false))
+        {
+            db.Rows.Add(new PlainRow { Id = 1, Name = "row" });
+
+            Func<Task> act = () => db.SaveChangesAsync();
+
+            await act.Should().NotThrowAsync();
+        }
+    }
+
+    [Fact]
+    public void SavingChanges_WithManyAuditableEntries_ShouldResolveUserIdProviderOnce()
+    {
+        int resolved = 0;
+        (MixedDbContext db, ServiceProvider provider) = CreateMixedContext(() => $"user-{++resolved}");
+        using (db)
+        using (provider)
+        {
+            AuditEntity first = new() { Name = "a" };
+            AuditEntity second = new() { Name = "b" };
+            db.Entities.AddRange(first, second);
+            db.Rows.Add(new PlainRow { Id = 1, Name = "row" });
+            db.SaveChanges();
+
+            resolved.Should().Be(1);
+            first.CreatedBy.Should().Be("user-1");
+            second.CreatedBy.Should().Be("user-1");
+            second.CreatedAt.Should().Be(first.CreatedAt);
+        }
     }
 }

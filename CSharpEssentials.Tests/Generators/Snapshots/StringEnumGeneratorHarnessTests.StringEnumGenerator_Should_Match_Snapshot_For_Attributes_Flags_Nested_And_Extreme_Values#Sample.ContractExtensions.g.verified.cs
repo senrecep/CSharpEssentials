@@ -24,8 +24,6 @@ namespace Sample
         public const string UnknownKebabCase = "unknown";
         public const string UnknownWireName = "unknown";
 
-        private static readonly global::CSharpEssentials.Enums.EnumConventions __WireReadConventions = global::CSharpEssentials.Enums.EnumConventions.Default with { UnknownValue = global::CSharpEssentials.Enums.UnknownEnumValueHandling.Reject };
-
         /// <summary>The canonical wire name. Throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> for undefined values.</summary>
         public static string ToWireName(this global::Sample.Contract value)
         {
@@ -55,7 +53,7 @@ namespace Sample
                 return false;
             }
 
-            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Contract>().TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out value, out _);
+            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Contract>().TryParseWire(text, out value);
         }
 
         /// <summary>Parses like <see cref="TryParseWire"/> and throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> on failure.</summary>
@@ -64,13 +62,40 @@ namespace Sample
             global::CSharpEssentials.Enums.EnumInfo<global::Sample.Contract> info = global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Contract>();
             if (text is null)
                 throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(null, global::CSharpEssentials.Enums.EnumReadMode.Data));
-            if (info.TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out global::Sample.Contract value, out global::CSharpEssentials.Enums.EnumValueError? error))
+            if (info.TryParseWire(text, out global::Sample.Contract value))
                 return value;
-            throw new global::CSharpEssentials.Enums.EnumValueException(error);
+            throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(text, global::CSharpEssentials.Enums.EnumReadMode.Data));
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>
-        public static bool IsDefined(this global::Sample.Contract value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.Contract>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.Contract value)
+        {
+            switch (value)
+            {
+                case global::Sample.Contract.PendingApproval:
+                case global::Sample.Contract.HTTPShipped:
+                case global::Sample.Contract.OnHold:
+                case (global::Sample.Contract)3:
+                case global::Sample.Contract.Unknown:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.Contract value)
+        {
+            switch (value)
+            {
+                case global::Sample.Contract.PendingApproval:
+                    return "Waiting for approval.";
+                case global::Sample.Contract.HTTPShipped:
+                    return "Shipped to the customer";
+                default:
+                    return null;
+            }
+        }
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.Contract> __CreateEnumInfo()
         {
@@ -104,7 +129,7 @@ namespace Sample
                 case global::Sample.Contract.Unknown:
                     return "Unknown";
                 default:
-                    return value.ToString();
+                    return ((int)value).ToString();
             }
         }
 
@@ -152,17 +177,17 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Contract.PendingApproval:
-                    return "PendingApproval".ToLowerInvariant();
+                    return "pendingapproval";
                 case global::Sample.Contract.HTTPShipped:
-                    return "HTTPShipped".ToLowerInvariant();
+                    return "httpshipped";
                 case global::Sample.Contract.OnHold:
-                    return "OnHold".ToLowerInvariant();
+                    return "onhold";
                 case (global::Sample.Contract)3:
-                    return "Paused".ToLowerInvariant();
+                    return "paused";
                 case global::Sample.Contract.Unknown:
-                    return "Unknown".ToLowerInvariant();
+                    return "unknown";
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -171,17 +196,17 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.Contract.PendingApproval:
-                    return "PendingApproval".ToUpperInvariant();
+                    return "PENDINGAPPROVAL";
                 case global::Sample.Contract.HTTPShipped:
-                    return "HTTPShipped".ToUpperInvariant();
+                    return "HTTPSHIPPED";
                 case global::Sample.Contract.OnHold:
-                    return "OnHold".ToUpperInvariant();
+                    return "ONHOLD";
                 case (global::Sample.Contract)3:
-                    return "Paused".ToUpperInvariant();
+                    return "PAUSED";
                 case global::Sample.Contract.Unknown:
-                    return "Unknown".ToUpperInvariant();
+                    return "UNKNOWN";
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -255,6 +280,15 @@ namespace Sample
             return new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown };
         }
 
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "PendingApproval", "HTTPShipped", "OnHold", "Paused", "Unknown" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.Contract> __values = global::System.Array.AsReadOnly(new global::Sample.Contract[] { global::Sample.Contract.PendingApproval, global::Sample.Contract.HTTPShipped, global::Sample.Contract.OnHold, (global::Sample.Contract)3, global::Sample.Contract.Unknown });
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.Contract> Values => __values;
+
         public static int AsUnderlyingType(this global::Sample.Contract value)
         {
             return (int)value;
@@ -308,13 +342,18 @@ namespace Sample
 
         private static bool CheckCategory(global::System.Globalization.UnicodeCategory previous, global::System.Globalization.UnicodeCategory current)
         {
-            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
+            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.TitlecaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
         }
 
         private static bool IsSpecialCharacter(global::System.Globalization.UnicodeCategory category)
         {
             return category != global::System.Globalization.UnicodeCategory.UppercaseLetter
                 && category != global::System.Globalization.UnicodeCategory.LowercaseLetter
+                && category != global::System.Globalization.UnicodeCategory.TitlecaseLetter
+                && category != global::System.Globalization.UnicodeCategory.ModifierLetter
+                && category != global::System.Globalization.UnicodeCategory.OtherLetter
+                && category != global::System.Globalization.UnicodeCategory.NonSpacingMark
+                && category != global::System.Globalization.UnicodeCategory.SpacingCombiningMark
                 && category != global::System.Globalization.UnicodeCategory.DecimalDigitNumber;
         }
     }

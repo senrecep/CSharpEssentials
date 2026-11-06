@@ -17,12 +17,12 @@ public readonly record struct Error : IError
     /// <summary>
     /// Gets the unique error code.
     /// </summary>
-    public string Code { get; init; }
+    public string Code { get; init => field = value ?? throw new ArgumentNullException(nameof(Code)); }
 
     /// <summary>
     /// Gets the error description.
     /// </summary>
-    public string Description { get; init; }
+    public string Description { get; init => field = value ?? throw new ArgumentNullException(nameof(Description)); }
 
     /// <summary>
     /// Gets the error type.
@@ -41,7 +41,7 @@ public readonly record struct Error : IError
 
     public static Error[] CreateMany(params IEnumerable<Error> errors) => [.. errors];
     /// <summary>
-    /// Creates an <see cref="Error"/> from a code and description.
+    /// Flattens several <see cref="Error"/> sequences into one array.
     /// </summary>
     /// <param name="errors"></param>
     /// <returns></returns>
@@ -134,7 +134,8 @@ public readonly record struct Error : IError
         new(code, description, ErrorType.Forbidden, metadata);
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and description.
+    /// Creates an <see cref="Error"/> from an exception. The code is the exception type name, the description is its message,
+    /// and the type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
     /// <param name="exception"></param>
     /// <param name="type"></param>
@@ -146,7 +147,8 @@ public readonly record struct Error : IError
         ErrorMetadata? metadata = null) =>
         new(exception.GetType().Name, exception.Message, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and description.
+    /// Creates an <see cref="Error"/> from a code and an exception. The description is the exception message,
+    /// and the type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
     /// <param name="code"></param>
     /// <param name="exception"></param>
@@ -161,7 +163,8 @@ public readonly record struct Error : IError
             new(code, exception.Message, type, ErrorMetadata.CreateWithExceptionDetailed(exception).Combine(metadata));
 
     /// <summary>
-    /// Creates an <see cref="Error"/> of type <see cref="ErrorType.Failure"/> from a code and description.
+    /// Creates an <see cref="Error"/> from a code, a description and an exception.
+    /// The type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
     /// <param name="code"></param>
     /// <param name="description"></param>
@@ -223,21 +226,24 @@ public readonly record struct Error : IError
 
         hashCode.Add(Code);
         hashCode.Add(Description);
-        hashCode.Add(Type);
         hashCode.Add(NumericType);
 
-        if (Metadata is null)
-            return hashCode.ToHashCode();
-
-        foreach (KeyValuePair<string, object?> keyValuePair in Metadata)
-        {
-            hashCode.Add(keyValuePair.Key);
-            hashCode.Add(keyValuePair.Value);
-        }
+        if (Metadata is not null)
+            hashCode.Add(GetMetadataHashCode(Metadata));
 
         return hashCode.ToHashCode();
     }
 
+    private static int GetMetadataHashCode(ErrorMetadata metadata)
+    {
+        int combined = metadata.Count;
+        foreach (KeyValuePair<string, object?> keyValuePair in metadata)
+            combined += HashCode.Combine(
+                keyValuePair.Key,
+                keyValuePair.Value is ErrorMetadata nested ? GetMetadataHashCode(nested) : keyValuePair.Value?.GetHashCode() ?? 0);
+
+        return combined;
+    }
 
     private static bool CompareMetadata(ErrorMetadata metadata, ErrorMetadata otherMetadata)
     {
@@ -249,9 +255,14 @@ public readonly record struct Error : IError
 
         foreach (KeyValuePair<string, object?> keyValuePair in metadata)
             if (!otherMetadata.TryGetValue(keyValuePair.Key, out object? otherValue) ||
-                !Equals(keyValuePair.Value, otherValue))
+                !MetadataValueEquals(keyValuePair.Value, otherValue))
                 return false;
 
         return true;
     }
+
+    private static bool MetadataValueEquals(object? value, object? otherValue) =>
+        value is ErrorMetadata nested && otherValue is ErrorMetadata otherNested
+            ? CompareMetadata(nested, otherNested)
+            : Equals(value, otherValue);
 }

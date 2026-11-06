@@ -5,13 +5,13 @@ using CSharpEssentials.ResultPattern.Interfaces;
 
 namespace CSharpEssentials.ResultPattern;
 
-public readonly partial record struct Result : IResult
+public readonly partial record struct Result : IResult, IFailureFactory<Result>
 {
     private readonly Error[]? _errors = null;
 
     [JsonConstructor]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0051:Remove unused private members", Justification = "Used by System.Text.Json")]
-    private Result(bool isFailure, Error[]? errorsOrEmptyArray = null) => _errors = isFailure ? errorsOrEmptyArray : null;
+    private Result(bool isFailure, Error[]? errorsOrEmptyArray = null) => _errors = isFailure ? ResultLogic.ValidateDeserializedFailureErrors(errorsOrEmptyArray) : null;
 
     private Result(IEnumerable<Error> errors)
     {

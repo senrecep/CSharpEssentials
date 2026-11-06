@@ -6,7 +6,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace CSharpEssentials.DependencyInjection.Generators;
 
 /// <summary>
-/// Reports invalid service registrations and decorators and captive dependencies (CSE2001–CSE2009).
+/// Reports invalid service registrations and decorators and captive dependencies (CSE2001 to CSE2009).
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class DependencyInjectionAnalyzer : DiagnosticAnalyzer

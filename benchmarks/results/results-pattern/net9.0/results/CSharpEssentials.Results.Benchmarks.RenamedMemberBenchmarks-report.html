@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Results.Benchmarks.RenamedMemberBenchmarks-20261105-005852</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method             </th><th>Succeed</th><th>Yield</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>TaskSource_MatchAsync</td><td>False</td><td>False</td><td>13.045 ns</td><td>0.0272 ns</td><td>0.0254 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>TaskSource_Match_Obsolete</td><td>False</td><td>False</td><td>13.610 ns</td><td>0.0156 ns</td><td>0.0130 ns</td><td>1.04</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Instance_BindAsync</td><td>False</td><td>False</td><td>28.535 ns</td><td>0.5521 ns</td><td>0.5164 ns</td><td>2.19</td><td>0.04</td><td>0.0081</td><td>136 B</td><td>NA</td>
+</tr><tr><td>Instance_Bind_Obsolete</td><td>False</td><td>False</td><td>32.540 ns</td><td>0.2271 ns</td><td>0.2013 ns</td><td>2.49</td><td>0.02</td><td>0.0081</td><td>136 B</td><td>NA</td>
+</tr><tr><td>TaskSource_MatchAsync</td><td>False</td><td>True</td><td>859.768 ns</td><td>6.0023 ns</td><td>5.6145 ns</td><td>1.00</td><td>0.01</td><td>0.0172</td><td>295 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_Match_Obsolete</td><td>False</td><td>True</td><td>861.187 ns</td><td>3.9398 ns</td><td>3.6853 ns</td><td>1.00</td><td>0.01</td><td>0.0172</td><td>295 B</td><td>1.00</td>
+</tr><tr><td>Instance_BindAsync</td><td>False</td><td>True</td><td>28.440 ns</td><td>0.5183 ns</td><td>0.4848 ns</td><td>0.03</td><td>0.00</td><td>0.0081</td><td>136 B</td><td>0.46</td>
+</tr><tr><td>Instance_Bind_Obsolete</td><td>False</td><td>True</td><td>28.689 ns</td><td>0.5937 ns</td><td>0.5831 ns</td><td>0.03</td><td>0.00</td><td>0.0081</td><td>136 B</td><td>0.46</td>
+</tr><tr><td>TaskSource_MatchAsync</td><td>True</td><td>False</td><td>18.931 ns</td><td>0.1150 ns</td><td>0.1076 ns</td><td>1.00</td><td>0.01</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_Match_Obsolete</td><td>True</td><td>False</td><td>18.713 ns</td><td>0.1140 ns</td><td>0.1011 ns</td><td>0.99</td><td>0.01</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>Instance_BindAsync</td><td>True</td><td>False</td><td>10.043 ns</td><td>0.2235 ns</td><td>0.2091 ns</td><td>0.53</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.11</td>
+</tr><tr><td>Instance_Bind_Obsolete</td><td>True</td><td>False</td><td>9.769 ns</td><td>0.0904 ns</td><td>0.0845 ns</td><td>0.52</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.11</td>
+</tr><tr><td>TaskSource_MatchAsync</td><td>True</td><td>True</td><td>850.553 ns</td><td>4.8607 ns</td><td>4.5467 ns</td><td>1.00</td><td>0.01</td><td>0.0134</td><td>239 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_Match_Obsolete</td><td>True</td><td>True</td><td>851.154 ns</td><td>3.7310 ns</td><td>3.4900 ns</td><td>1.00</td><td>0.01</td><td>0.0134</td><td>239 B</td><td>1.00</td>
+</tr><tr><td>Instance_BindAsync</td><td>True</td><td>True</td><td>787.872 ns</td><td>2.5859 ns</td><td>2.4189 ns</td><td>0.93</td><td>0.01</td><td>0.0057</td><td>104 B</td><td>0.44</td>
+</tr><tr><td>Instance_Bind_Obsolete</td><td>True</td><td>True</td><td>784.242 ns</td><td>4.8221 ns</td><td>4.5106 ns</td><td>0.92</td><td>0.01</td><td>0.0057</td><td>104 B</td><td>0.44</td>
+</tr></tbody></table>
+</body>
+</html>

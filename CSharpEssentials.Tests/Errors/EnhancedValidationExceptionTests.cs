@@ -41,4 +41,12 @@ public class EnhancedValidationExceptionTests
 
         exception.Should().BeAssignableTo<Exception>();
     }
+
+    [Fact]
+    public void Constructor_WithNullErrors_ShouldThrowArgumentNullException()
+    {
+        Action act = () => _ = new EnhancedValidationException(null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("errors");
+    }
 }

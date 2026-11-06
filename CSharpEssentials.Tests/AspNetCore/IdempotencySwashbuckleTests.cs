@@ -1,7 +1,9 @@
 using System.Text.Json.Nodes;
 using CSharpEssentials.AspNetCore;
+using CSharpEssentials.AspNetCore.Swagger.Filters;
 using CSharpEssentials.Tests.Fixtures.OpenApiSample;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 
 namespace CSharpEssentials.Tests.AspNetCore;
@@ -19,6 +21,20 @@ public class IdempotencySwashbuckleTests
         string golden = await File.ReadAllTextAsync(OpenApiIdempotencyGolden.PathOf());
 
         OpenApiIdempotencyGolden.Extract(json).Should().Be(golden.Replace("\r\n", "\n", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Document_Should_ResolveEveryReference_When_SchemaIdsAreNamespaceQualified()
+    {
+        string json = await IdempotencySwashbuckleHost.GetJsonAsync(
+            OpenApiSpecVersion.OpenApi3_0, static options => options.CustomSchemaIds(new SwashbuckleSchemaIdFactory().GetSchemaId));
+        JsonNode document = JsonNode.Parse(json)!;
+        JsonObject schemas = document["components"]!["schemas"]!.AsObject();
+
+        string[] references = [.. System.Text.RegularExpressions.Regex.Matches(json, "\"#/components/schemas/([^\"]+)\"").Select(static match => match.Groups[1].Value).Distinct()];
+
+        references.Should().NotBeEmpty().And.Contain("CSharpEssentials.AspNetCore.EnhancedProblemDetails");
+        references.Should().OnlyContain(reference => schemas.ContainsKey(reference));
     }
 
     [Fact]

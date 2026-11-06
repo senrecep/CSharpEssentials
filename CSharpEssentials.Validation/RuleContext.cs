@@ -6,8 +6,8 @@ namespace CSharpEssentials.Validation;
 
 /// <summary>
 /// Collects validation errors and acts as the factory for <see cref="RuleChain{T,TProp}"/> instances.
-/// An instance is created per <see cref="Validator{T}.ValidateAsync"/> call, it is not thread-safe
-/// and should never be stored beyond the validation lifecycle.
+/// Each <see cref="Validator{T}.ValidateAsync"/> call creates its own instance. It is not thread-safe
+/// and must not be stored beyond the validation call.
 /// </summary>
 /// <typeparam name="T">The model type being validated.</typeparam>
 public sealed class RuleContext<T>
@@ -94,9 +94,8 @@ public sealed class RuleContext<T>
 
     /// <summary>
     /// Creates a validation chain from a pre-evaluated value and an explicit property name.
-    /// Use this overload in performance-critical validators to eliminate both the lambda delegate
-    /// allocation and the <see cref="PropertyPath"/> parsing overhead incurred by the
-    /// <c>For(() => ...)</c> overload.
+    /// Use this overload in hot validators to skip the lambda delegate allocation and the
+    /// <see cref="PropertyPath"/> parsing that the <c>For(() => ...)</c> overload pays for.
     /// </summary>
     /// <example>
     /// <code>
@@ -177,8 +176,8 @@ public sealed class RuleContext<T>
     /// </summary>
     /// <remarks>
     /// Cancellation is checked between iterations via <see cref="CancellationToken.ThrowIfCancellationRequested"/>.
-    /// Errors from iterations completed before cancellation are preserved, callers should treat a cancelled
-    /// <see cref="ForEachAsync{TElement}"/> as producing partial results.
+    /// Errors from iterations completed before cancellation are kept, so treat the results of a cancelled
+    /// <see cref="ForEachAsync{TElement}"/> as partial.
     /// </remarks>
     public async ValueTask ForEachAsync<TElement>(
         Func<IEnumerable<TElement>?> collectionExpr,

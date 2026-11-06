@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.IO.Pipelines;
 using System.Text.Json;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
@@ -26,8 +27,9 @@ internal sealed class DefaultETagGenerator(ConditionalRequestOptions options, IO
             return null;
 
         JsonSerializerOptions serializerOptions = jsonOptions.Value.SerializerOptions;
-        byte[] json = JsonSerializer.SerializeToUtf8Bytes(value, serializerOptions.GetTypeInfo(value.GetType()));
-        return new ResourceValidators(new EntityTagHeaderValue($"\"{EntityTags.Hash(json)}\"", isWeak: true), null);
+        using Sha256Stream json = new();
+        JsonSerializer.Serialize(json, value, serializerOptions.GetTypeInfo(value.GetType()));
+        return new ResourceValidators(new EntityTagHeaderValue($"\"{WebEncoders.Base64UrlEncode(json.GetHash())}\"", isWeak: true), null);
     }
 
     private static bool IsBuffered(object value) =>

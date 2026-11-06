@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace CSharpEssentials.EntityFrameworkCore.Interceptors;
 
@@ -44,7 +45,7 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a typed <see cref="IAuditUserIdProvider{TUserId}"/> with a factory delegate.
+    /// Registers <see cref="IAuditUserIdProvider"/> from a typed user ID factory delegate; the ID is stored with <c>ToString()</c>.
     /// </summary>
     /// <example>
     /// <code>
@@ -62,7 +63,7 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers a typed <see cref="IAuditUserIdProvider{TUserId}"/> with a simple value factory.
+    /// Registers <see cref="IAuditUserIdProvider"/> from a typed user ID value factory; the ID is stored with <c>ToString()</c>.
     /// </summary>
     /// <example>
     /// <code>
@@ -79,8 +80,8 @@ public static class AuditServiceCollectionExtensions
     }
 
     /// <summary>
-    /// Registers <see cref="AuditInterceptor"/> along with <see cref="TimeProvider"/>
-    /// (if not already registered) as a ready-to-use audit pipeline.
+    /// Registers <see cref="IAuditUserIdProvider"/> from the user ID factory, plus <see cref="AuditInterceptor"/> and
+    /// <see cref="TimeProvider.System"/>, each of those two only if not already registered.
     /// </summary>
     /// <example>
     /// <code>
@@ -135,8 +136,8 @@ public static class AuditServiceCollectionExtensions
 
     private static void TryAddAuditInterceptorCore(this IServiceCollection services)
     {
-        services.AddSingleton(TimeProvider.System);
-        services.AddSingleton<AuditInterceptor>();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<AuditInterceptor>();
     }
 
     // ── Internal implementations ────────────────────────────────────────

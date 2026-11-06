@@ -2,14 +2,17 @@
 
 `These<TError, TValue>` is a three-state discriminated union: `Left` (error only), `Right` (value only), or `Both` (error and value together). Unlike `Result<T>`, it does not treat the presence of an error as an automatic failure. Use it when partial success carries a meaningful value alongside a warning or non-fatal error.
 
+> Benchmarks against a hand-written record (match, a Map/FlatMap/Match pipeline, partition and JSON) are in
+> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+
 ## Features
 
-- **Three-state union**: `Left`, `Right`, `Both` with explicit state flags.
-- **Functional API**: `Map`, `MapLeft`, `FlatMap`, `Tap`, `TapLeft`, `Match`.
-- **Maybe bridges**: `GetRight()` and `GetLeft()` return `Maybe<T>` without throwing.
-- **Result bridges**: Convert to/from `Result<T>` in strict or lenient mode.
-- **Collection extensions**: Partition a sequence into its three states.
-- **JSON round trip**: Serializes as `{"isLeft":true,"isRight":true,"left":...,"right":...}`.
+- A three-state union (`Left`, `Right`, `Both`) with explicit state flags.
+- `Map`, `MapLeft`, `FlatMap`, `Tap`, `TapLeft` and `Match`.
+- `GetRight()` and `GetLeft()`, which return `Maybe<T>` without throwing.
+- Conversion to and from `Result<T>`, in strict or lenient mode.
+- `Partition`, which splits a sequence into its three states.
+- A JSON round trip; the wire form is `{"isLeft":true,"isRight":true,"left":...,"right":...}`.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results`, `CSharpEssentials.Maybe` and `CSharpEssentials.Errors`. `These<TError, TValue>` is a `readonly record struct` in the `CSharpEssentials.These` namespace.
 
@@ -36,7 +39,7 @@ These<string, int> right = These<string, int>.Right(42);
 These<string, int> both  = These<string, int>.Both("partial failure", 42);
 ```
 
-### State Flags
+### State flags
 
 ```csharp
 bool isLeft  = these.IsLeft;  // true when Left only
@@ -46,7 +49,7 @@ bool isBoth  = these.IsBoth;  // true when Both
 
 `HasLeft` is `true` for `Left` and `Both`, `HasRight` is `true` for `Right` and `Both`, and `LeftOrDefault` and `RightOrDefault` give the raw payloads (`default` when that side is absent). `default(These<TError, TValue>)` is none of the three states, and `Match` routes it to `onBoth` with default values, so create instances through `Left`, `Right` or `Both`.
 
-### Map: Transform the Value
+### Map: transform the value
 
 `Map` applies a function to the value. Left passes through unchanged; Both transforms the value while keeping the error.
 
@@ -58,14 +61,14 @@ These<string, int> both = These<string, int>.Both("warn", 10)
     .Map(n => n * 2);   // Both("warn", 20)
 ```
 
-### MapLeft: Transform the Error
+### MapLeft: transform the error
 
 ```csharp
 These<int, string> result = These<string, string>.Left("err")
     .MapLeft(e => e.Length);  // Left(3)
 ```
 
-### FlatMap: Chain These
+### FlatMap: chain These
 
 `FlatMap` sequences operations that return `These`. When chaining from `Both`, the original error is kept: a mapper result of `Right` or `Both` yields `Both(originalError, newValue)` (the mapper's own error in a `Both` is dropped because `TError` has no combine operator), and a mapper result of `Left` yields that `Left`.
 
@@ -76,7 +79,7 @@ These<string, int> result = These<string, int>.Right(5)
         : These<string, int>.Left("non-positive"));
 ```
 
-### Tap / TapLeft: Side Effects
+### Tap / TapLeft: side effects
 
 ```csharp
 these
@@ -84,7 +87,7 @@ these
     .TapLeft(e => logger.LogWarning("Error: {E}", e));      // fires on Left or Both
 ```
 
-### Match: Exhaustive Pattern Match
+### Match: exhaustive pattern match
 
 ```csharp
 string message = these.Match(
@@ -106,7 +109,7 @@ Maybe<string> error = these.GetLeft();   // Some("msg") or None
 
 `GetRight()` is `Some` for `Right` and `Both`, `GetLeft()` is `Some` for `Left` and `Both`. A `null` payload gives `None`.
 
-## Result Bridge
+## Result bridge
 
 ```csharp
 using CSharpEssentials.Errors;
@@ -131,7 +134,7 @@ Result<int> lenient = these.ToResultLenient();
 
 `FromResult` never produces `Both`, and it keeps only the first error of a failed result. Both `ToResult` methods are defined only for `These<Error, TValue>`.
 
-## Collection Extensions
+## Collection extensions
 
 Partition a sequence into its three buckets in one pass.
 
@@ -151,7 +154,7 @@ foreach ((string warning, int value) in boths)
     Console.WriteLine($"Value {value} with warning: {warning}");
 ```
 
-## When to Use These vs Result
+## When to use These vs Result
 
 | Scenario | Use |
 |----------|-----|

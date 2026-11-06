@@ -1,0 +1,74 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1822;CA1050;CA1812;S101;S3903;S1118;CA1515;S2068;IDE0008;IDE0021;IDE0005;IDE0078</NoWarn>
+    <!-- The compiler picks Immediate's roslyn5.9 build, which targets net10.0. A net8.0 or net9.0 host cannot load it, so those
+         TFMs load the netstandard2.0 roslyn4.8 build of the same package version. -->
+    <ImmediateRoslynFolder>roslyn5.9</ImmediateRoslynFolder>
+    <ImmediateRoslynFolder Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net10.0'))">roslyn4.8</ImmediateRoslynFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
+    <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" ExcludeAssets="all" />
+    <PackageReference Include="Immediate.Apis" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="Immediate.Handlers" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="Injectio" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="NetEscapades.EnumGenerators.Generators" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="NetEscapades.EnumGenerators.RuntimeDependencies" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.Endpoints\CSharpEssentials.Endpoints.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.DependencyInjection\CSharpEssentials.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Endpoints.Generators\CSharpEssentials.Endpoints.Generators.csproj"
+                      OutputItemType="CseGeneratorAssembly"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\CSharpEssentials.DependencyInjection.Generators\CSharpEssentials.DependencyInjection.Generators.csproj"
+                      OutputItemType="CseGeneratorAssembly"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="CseGeneratorAssembly"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\..\CSharpEssentials.EntityFrameworkCore.Generators\CSharpEssentials.EntityFrameworkCore.Generators.csproj"
+                      OutputItemType="CseGeneratorAssembly"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- ExcludeAssets="all" keeps the lib assets out, but the SDK still passes these packages' analyzers to the compiler. No
+       competitor generator and no Roslyn SDK rule may run on the bench project itself, so they are removed here. -->
+  <Target Name="RemoveBenchPackageAnalyzers" AfterTargets="ResolveLockFileAnalyzers">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Analyzer.NuGetPackageId)' == 'Immediate.Apis' Or '%(Analyzer.NuGetPackageId)' == 'Immediate.Handlers' Or '%(Analyzer.NuGetPackageId)' == 'Injectio' Or '%(Analyzer.NuGetPackageId)' == 'NetEscapades.EnumGenerators.Generators' Or '%(Analyzer.NuGetPackageId)' == 'Microsoft.CodeAnalysis.Analyzers'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Copies each generator into its own Analyzers/<name>/ folder (so two Scriban.dll copies never meet) and the competitor
+       attribute and runtime DLLs into References/. Runs after the references resolve and before AssignTargetPaths. -->
+  <Target Name="CopyGeneratorsForBenchmarks" BeforeTargets="AssignTargetPaths" DependsOnTargets="ResolveProjectReferences">
+    <ItemGroup>
+      <_ImmediateApisDll Include="$(PkgImmediate_Apis)\analyzers\dotnet\$(ImmediateRoslynFolder)\cs\*.dll" />
+      <_ImmediateHandlersDll Include="$(PkgImmediate_Handlers)\analyzers\dotnet\$(ImmediateRoslynFolder)\cs\*.dll" />
+      <_InjectioDll Include="$(PkgInjectio)\analyzers\dotnet\cs\*.dll" />
+      <_NetEscapadesDll Include="$(PkgNetEscapades_EnumGenerators_Generators)\analyzers\dotnet\cs\*.dll" />
+      <_BenchReferenceDll Include="$(PkgImmediate_Apis)\lib\net8.0\Immediate.Apis.Shared.dll" />
+      <_BenchReferenceDll Include="$(PkgImmediate_Handlers)\lib\net8.0\Immediate.Handlers.Shared.dll" />
+      <_BenchReferenceDll Include="$(PkgNetEscapades_EnumGenerators_Generators)\lib\netstandard2.0\NetEscapades.EnumGenerators.Attributes.dll" />
+      <_BenchReferenceDll Include="$(PkgNetEscapades_EnumGenerators_RuntimeDependencies)\lib\netstandard2.0\NetEscapades.EnumGenerators.RuntimeDependencies.dll" />
+    </ItemGroup>
+    <ItemGroup>
+      <None Include="@(CseGeneratorAssembly)" Link="Analyzers\%(CseGeneratorAssembly.Filename)\%(CseGeneratorAssembly.Filename)%(CseGeneratorAssembly.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      <None Include="@(_ImmediateApisDll)" Link="Analyzers\Immediate.Apis\%(_ImmediateApisDll.Filename)%(_ImmediateApisDll.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      <None Include="@(_ImmediateHandlersDll)" Link="Analyzers\Immediate.Handlers\%(_ImmediateHandlersDll.Filename)%(_ImmediateHandlersDll.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      <None Include="@(_InjectioDll)" Link="Analyzers\Injectio\%(_InjectioDll.Filename)%(_InjectioDll.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      <None Include="@(_NetEscapadesDll)" Link="Analyzers\NetEscapades\%(_NetEscapadesDll.Filename)%(_NetEscapadesDll.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+      <None Include="@(_BenchReferenceDll)" Link="References\%(_BenchReferenceDll.Filename)%(_BenchReferenceDll.Extension)" CopyToOutputDirectory="PreserveNewest" Visible="false" />
+    </ItemGroup>
+  </Target>
+
+</Project>

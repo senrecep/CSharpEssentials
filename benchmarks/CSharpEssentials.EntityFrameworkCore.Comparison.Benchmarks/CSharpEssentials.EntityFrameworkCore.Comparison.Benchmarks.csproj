@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net8.0;net9.0;net10.0;net11.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1822;CA1050;CA1812;S101;S3903;S1118;CA1515;S2068;IDE0008;IDE0021;IDE0005;IDE0078</NoWarn>
+  </PropertyGroup>
+
+  <Import Project="..\..\CSharpEssentials.Enums\build\CSharpEssentials.Enums.props" />
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" />
+  </ItemGroup>
+
+  <!-- Each TFM runs the EF Core major CSE compiles that TFM against, at its latest patch; net11.0 runs CSE's net10.0 build on EF Core 10. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[8.0.33]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="[8.0.33]" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[9.0.22]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="[9.0.22]" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0' Or '$(TargetFramework)' == 'net11.0'">
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="[10.0.14]" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" VersionOverride="[10.0.14]" />
+  </ItemGroup>
+
+  <!-- X.PagedList.EF's net8.0 asset needs EF Core 9.0.18 or later, so it has no net8.0 row. -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <PackageReference Include="X.PagedList.EF" />
+  </ItemGroup>
+
+  <!-- MR.EntityFrameworkCore.KeysetPagination 1.6.0 and EntityFrameworkCore.Exceptions.Sqlite 10.0.1 ship net10.0 only. -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0' And '$(TargetFramework)' != 'net9.0'">
+    <PackageReference Include="MR.EntityFrameworkCore.KeysetPagination" />
+    <PackageReference Include="EntityFrameworkCore.Exceptions.Sqlite" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CSharpEssentials.EntityFrameworkCore\CSharpEssentials.EntityFrameworkCore.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Entity\CSharpEssentials.Entity.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums\CSharpEssentials.Enums.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Errors\CSharpEssentials.Errors.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Results\CSharpEssentials.Results.csproj" />
+    <ProjectReference Include="..\..\CSharpEssentials.Enums.Generators\CSharpEssentials.Enums.Generators.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+</Project>

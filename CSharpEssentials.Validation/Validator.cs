@@ -4,8 +4,9 @@ namespace CSharpEssentials.Validation;
 
 /// <summary>
 /// Base class for model validators. Override <see cref="Configure"/> to define validation rules.
-/// Both synchronous and asynchronous rules are supported, the method returns <see cref="ValueTask"/>
-/// so validators with only synchronous rules incur zero heap allocation.
+/// Rules can be synchronous or asynchronous. The method returns <see cref="ValueTask"/>,
+/// so validators with only synchronous rules do not allocate a <see cref="Task"/>.
+/// The rules themselves still allocate.
 /// </summary>
 /// <typeparam name="T">The model type to validate.</typeparam>
 public abstract class Validator<T> : IValidator<T>
@@ -22,7 +23,10 @@ public abstract class Validator<T> : IValidator<T>
         RuleContext<T> ctx = new();
         ValueTask configTask = Configure(instance, ctx, ct);
         if (configTask.IsCompletedSuccessfully)
+        {
+            _ = configTask.AsTask();
             return new ValueTask<Result<T>>(Validator.BuildResult(instance, ctx));
+        }
         return FinishAsync(instance, ctx, configTask);
     }
 
@@ -36,7 +40,7 @@ public abstract class Validator<T> : IValidator<T>
     public virtual int Order => 0;
 
     /// <summary>
-    /// Define validation rules here. The <paramref name="model"/> instance is available directly —
+    /// Define validation rules here. The <paramref name="model"/> instance is available directly:
     /// no expression trees, no lambdas over <c>x =></c>. Return <c>default</c>
     /// when all rules are synchronous.
     /// </summary>

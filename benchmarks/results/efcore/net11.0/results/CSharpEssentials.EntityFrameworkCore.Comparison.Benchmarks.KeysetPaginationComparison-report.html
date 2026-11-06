@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.KeysetPaginationComparison-20261106-012815</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                                       </th><th>Page</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>HandWritten_WhereOrderTake</td><td>After</td><td>113.27 &mu;s</td><td>0.259 &mu;s</td><td>0.230 &mu;s</td><td>1.00</td><td>0.9766</td><td>-</td><td>23.1 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_CachedOrdering</td><td>After</td><td>112.84 &mu;s</td><td>0.223 &mu;s</td><td>0.198 &mu;s</td><td>1.00</td><td>1.4648</td><td>-</td><td>25.13 KB</td><td>1.09</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_Func</td><td>After</td><td>128.46 &mu;s</td><td>0.266 &mu;s</td><td>0.236 &mu;s</td><td>1.13</td><td>1.4648</td><td>-</td><td>29.13 KB</td><td>1.26</td>
+</tr><tr><td>MR_KeysetPaginate_Prebuilt_TakePlusOne</td><td>After</td><td>134.76 &mu;s</td><td>0.272 &mu;s</td><td>0.227 &mu;s</td><td>1.19</td><td>1.4648</td><td>-</td><td>30.54 KB</td><td>1.32</td>
+</tr><tr><td>MR_KeysetPaginate_Inline_TakePlusOne</td><td>After</td><td>413.32 &mu;s</td><td>0.634 &mu;s</td><td>0.529 &mu;s</td><td>3.65</td><td>1.9531</td><td>0.9766</td><td>42.52 KB</td><td>1.84</td>
+</tr><tr><td>MR_KeysetPaginate_Prebuilt_HasNextAsync</td><td>After</td><td>217.47 &mu;s</td><td>0.853 &mu;s</td><td>0.798 &mu;s</td><td>1.92</td><td>2.9297</td><td>-</td><td>47.98 KB</td><td>2.08</td>
+</tr><tr><td>HandWritten_WhereOrderTake</td><td>First</td><td>70.23 &mu;s</td><td>0.135 &mu;s</td><td>0.120 &mu;s</td><td>1.00</td><td>0.9766</td><td>-</td><td>18.08 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_CachedOrdering</td><td>First</td><td>68.13 &mu;s</td><td>0.200 &mu;s</td><td>0.178 &mu;s</td><td>0.97</td><td>0.9766</td><td>-</td><td>17.81 KB</td><td>0.99</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_Func</td><td>First</td><td>82.95 &mu;s</td><td>0.186 &mu;s</td><td>0.165 &mu;s</td><td>1.18</td><td>0.9766</td><td>-</td><td>21.74 KB</td><td>1.20</td>
+</tr><tr><td>MR_KeysetPaginate_Prebuilt_TakePlusOne</td><td>First</td><td>69.67 &mu;s</td><td>0.164 &mu;s</td><td>0.145 &mu;s</td><td>0.99</td><td>0.9766</td><td>-</td><td>17.81 KB</td><td>0.99</td>
+</tr><tr><td>MR_KeysetPaginate_Inline_TakePlusOne</td><td>First</td><td>71.51 &mu;s</td><td>0.144 &mu;s</td><td>0.128 &mu;s</td><td>1.02</td><td>1.2207</td><td>-</td><td>20.89 KB</td><td>1.16</td>
+</tr><tr><td>MR_KeysetPaginate_Prebuilt_HasNextAsync</td><td>First</td><td>156.74 &mu;s</td><td>0.248 &mu;s</td><td>0.220 &mu;s</td><td>2.23</td><td>1.9531</td><td>-</td><td>35.7 KB</td><td>1.97</td>
+</tr></tbody></table>
+</body>
+</html>

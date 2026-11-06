@@ -11,6 +11,8 @@ public static class ResilienceResultExtensions
 {
     private static readonly TimeSpan DefaultDelay = TimeSpan.FromSeconds(1);
 
+    private static readonly ResiliencePropertyKey<Func<Error, bool>> ShouldRetryKey = new("CSharpEssentials.Resilience.ShouldRetry");
+
     /// <summary>
     /// Retries <paramref name="operation"/> while it returns a retryable failure or throws. Failures of type
     /// <see cref="ErrorType.Unauthorized"/>, <see cref="ErrorType.Forbidden"/>, <see cref="ErrorType.NotFound"/> and
@@ -31,7 +33,7 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff = true,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff);
+        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: false);
 
         Result<T> result;
         try
@@ -57,7 +59,7 @@ public static class ResilienceResultExtensions
         bool exponentialBackoff = true,
         CancellationToken cancellationToken = default)
     {
-        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff);
+        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: false);
 
         Result result;
         try
@@ -110,18 +112,25 @@ public static class ResilienceResultExtensions
             throw new ArgumentNullException(nameof(shouldRetry));
 #endif
 
-        ResiliencePipeline<Result<T>> pipeline = BuildPipeline<Result<T>>(maxAttempts, delay, exponentialBackoff, shouldRetry);
+        ResiliencePipeline<Result<T>> pipeline = RetryPipelineCache<Result<T>>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: true);
+        ResilienceContext context = ResilienceContextPool.Shared.Get(cancellationToken);
+        context.Properties.Set(ShouldRetryKey, shouldRetry);
 
         Result<T> result;
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token => await operation(token).ConfigureAwait(false),
-                cancellationToken).ConfigureAwait(false);
+                static async (ctx, op) => await op(ctx.CancellationToken).ConfigureAwait(false),
+                context,
+                operation).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             return ResilienceClassifier.HandleException(ex, cancellationToken);
+        }
+        finally
+        {
+            ResilienceContextPool.Shared.Return(context);
         }
 
         return ResilienceClassifier.ThrowIfCallerCancelled(result, shouldRetry, cancellationToken);
@@ -143,40 +152,29 @@ public static class ResilienceResultExtensions
             throw new ArgumentNullException(nameof(shouldRetry));
 #endif
 
-        ResiliencePipeline<Result> pipeline = BuildPipeline<Result>(maxAttempts, delay, exponentialBackoff, shouldRetry);
+        ResiliencePipeline<Result> pipeline = RetryPipelineCache<Result>.Get(maxAttempts, delay, exponentialBackoff, usesPredicate: true);
+        ResilienceContext context = ResilienceContextPool.Shared.Get(cancellationToken);
+        context.Properties.Set(ShouldRetryKey, shouldRetry);
 
         Result result;
         try
         {
             result = await pipeline.ExecuteAsync(
-                async token => await operation(token).ConfigureAwait(false),
-                cancellationToken).ConfigureAwait(false);
+                static async (ctx, op) => await op(ctx.CancellationToken).ConfigureAwait(false),
+                context,
+                operation).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
             return ResilienceClassifier.HandleException(ex, cancellationToken);
         }
+        finally
+        {
+            ResilienceContextPool.Shared.Return(context);
+        }
 
         return ResilienceClassifier.ThrowIfCallerCancelled(result, shouldRetry, cancellationToken);
     }
-
-    // Predicate pipelines are not cached: a delegate cannot key the cache safely (lambdas that capture state are new
-    // instances on every call, so the cache would fill with entries that are never hit). Building a retry pipeline is
-    // a few allocations, negligible next to an operation that is worth retrying.
-    private static ResiliencePipeline<TResult> BuildPipeline<TResult>(
-        int maxAttempts,
-        TimeSpan? delay,
-        bool exponentialBackoff,
-        Func<Error, bool> shouldRetry)
-        where TResult : IResultBase =>
-        BuildRetryPipeline<TResult>(
-            maxAttempts,
-            delay ?? DefaultDelay,
-            exponentialBackoff,
-            args => new ValueTask<bool>(args.Outcome.Exception is { } ex
-                ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                    && shouldRetry(ResilienceClassifier.ToError(ex))
-                : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result, shouldRetry)));
 
     private static ResiliencePipeline<TResult> BuildRetryPipeline<TResult>(
         int maxAttempts,
@@ -200,11 +198,11 @@ public static class ResilienceResultExtensions
         // so concurrent callers can overshoot it slightly, which is acceptable for a cache bound.
         private const int MaxEntries = 64;
 
-        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff), ResiliencePipeline<TResult>> Pipelines = new();
+        private static readonly ConcurrentDictionary<(int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff, bool UsesPredicate), ResiliencePipeline<TResult>> Pipelines = new();
 
-        internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff)
+        internal static ResiliencePipeline<TResult> Get(int maxAttempts, TimeSpan? delay, bool exponentialBackoff, bool usesPredicate)
         {
-            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff) key = (maxAttempts, delay ?? DefaultDelay, exponentialBackoff);
+            (int MaxAttempts, TimeSpan Delay, bool ExponentialBackoff, bool UsesPredicate) key = (maxAttempts, delay ?? DefaultDelay, exponentialBackoff, usesPredicate);
             if (Pipelines.TryGetValue(key, out ResiliencePipeline<TResult>? cached))
             {
                 return cached;
@@ -214,11 +212,30 @@ public static class ResilienceResultExtensions
                 key.MaxAttempts,
                 key.Delay,
                 key.ExponentialBackoff,
-                static args => new ValueTask<bool>(args.Outcome.Exception is { } ex
-                    ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
-                    : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result)));
+                key.UsesPredicate
+                    ? static args => new ValueTask<bool>(ShouldHandleWithPredicate(args))
+                    : static args => new ValueTask<bool>(ShouldHandle(args)));
 
             return Pipelines.Count < MaxEntries ? Pipelines.GetOrAdd(key, pipeline) : pipeline;
+        }
+
+        private static bool ShouldHandle(RetryPredicateArguments<TResult> args) =>
+            args.Outcome.Exception is { } ex
+                ? !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                : args.Outcome.Result is { } result && ResilienceClassifier.IsRetryable(result);
+
+        private static bool ShouldHandleWithPredicate(RetryPredicateArguments<TResult> args)
+        {
+            args.Context.Properties.TryGetValue(ShouldRetryKey, out Func<Error, bool>? shouldRetry);
+            if (args.Outcome.Exception is { } ex)
+            {
+                return !ResilienceClassifier.IsCallerCancellation(ex, args.Context.CancellationToken)
+                    && (shouldRetry is null || shouldRetry(ResilienceClassifier.ToError(ex)));
+            }
+
+            return args.Outcome.Result is { } result && (shouldRetry is null
+                ? ResilienceClassifier.IsRetryable(result)
+                : ResilienceClassifier.IsRetryable(result, shouldRetry));
         }
     }
 }

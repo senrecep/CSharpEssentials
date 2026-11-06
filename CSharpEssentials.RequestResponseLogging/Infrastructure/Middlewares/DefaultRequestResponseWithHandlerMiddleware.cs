@@ -22,8 +22,6 @@ internal sealed class DefaultRequestResponseWithHandlerMiddleware : BaseMiddlewa
             return;
         }
 
-        RequestResponseContext reqResContext = await InvokeMiddleware(_next, httpContext).ConfigureAwait(false);
-
-        await _reqResHandler.Invoke(reqResContext).ConfigureAwait(false);
+        await InvokeMiddleware(_next, httpContext, _reqResHandler).ConfigureAwait(false);
     }
 }

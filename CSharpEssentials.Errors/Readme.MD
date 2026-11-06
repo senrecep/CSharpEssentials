@@ -1,16 +1,19 @@
 # CSharpEssentials.Errors
 
-Structured, type-safe error handling for .NET. Errors are data, not exceptions.
+Structured, type-safe error handling for .NET that represents errors as data instead of exceptions.
 
 ## Features
 
-- **Error Struct**: Value-type error with code, description, type, and metadata.
-- **Standard Error Types**: Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected. `ErrorType` also has an `Unknown` member, which has no factory method.
-- **ErrorMetadata**: Attach contextual data to errors fluently.
-- **Exception Bridge**: Convert exceptions to `Error` or throw `DomainException` / `EnhancedValidationException`.
-- **HTTP Mapping**: Built-in conversion between `ErrorType` and HTTP status codes.
+- `Error`, a value-type error with a code, description, type and metadata.
+- Standard error types: Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected. `ErrorType` also has an `Unknown` member, which has no factory method.
+- `ErrorMetadata` for attaching contextual data to errors fluently.
+- Conversion from exceptions to `Error`, and `DomainException` / `EnhancedValidationException` to throw.
+- Built-in conversion between `ErrorType` and HTTP status codes.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Core` and `CSharpEssentials.Enums`.
+
+> **Benchmarks:** creating errors, equality and hashing, errors from exceptions, metadata and record `ToString`, and JSON against
+> ErrorOr and FluentResults are documented in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
 
 ## Installation
 
@@ -20,7 +23,7 @@ dotnet add package CSharpEssentials.Errors
 
 ## Usage
 
-### Creating Errors
+### Creating errors
 
 ```csharp
 using CSharpEssentials.Errors;
@@ -36,7 +39,7 @@ Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 
 Every factory takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal.
 
-### Error Metadata
+### Error metadata
 
 ```csharp
 Error withMeta = Error.NotFound(
@@ -47,9 +50,9 @@ Error withMeta = Error.NotFound(
         .AddMetadata("RequestPath", "/api/users/123"));
 ```
 
-`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts.
+`ErrorMetadata` is a `Dictionary<string, object?>`. `AddMetadata` keeps the existing value when the key is already present. `AddStackTrace`, `AddException` and `AddExceptionDetailed` add well-known keys (`stackTrace`, `exception`, `exceptionType`, `exceptionStackTrace`, `exceptionMessage`, `innerException`), `Combine` merges another instance without overwriting, and `CreateEmpty`, `CreateWithStackTrace`, `CreateWithException` and `CreateWithExceptionDetailed` are the static counterparts. `exception` holds a nested `ErrorMetadata` with the `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException` keys, so the metadata stays serializable with System.Text.Json.
 
-### Combining Errors
+### Combining errors
 
 ```csharp
 Error a = Error.Validation("Name.Empty", "Name is required.");
@@ -61,7 +64,7 @@ Error[] many = Error.CreateMany(a, b);                          // params of Err
 Error[] single = a;                                             // implicit Error -> Error[]
 ```
 
-### Converting from Exceptions
+### Converting from exceptions
 
 ```csharp
 try { /* ... */ }
@@ -71,13 +74,13 @@ catch (Exception ex)
 }
 ```
 
-`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
+`Error.Exception(ex)` uses the exception type name as the code, the exception message as the description and `ErrorType.Failure`. The metadata carries `exceptionType`, `exceptionStackTrace` (`null` when the exception was never thrown), `exceptionMessage` and, when there is one, a nested `innerException`. Overloads take an explicit `code`, an explicit `code` and `description`, an `ErrorType` and extra `ErrorMetadata`:
 
 ```csharp
 Error custom = Error.Exception("Orders.SaveFailed", "The order could not be saved.", ex, ErrorType.Unexpected);
 ```
 
-### Domain Exceptions
+### Domain exceptions
 
 ```csharp
 using CSharpEssentials.Errors;
@@ -89,7 +92,7 @@ throw new DomainException(error);
 
 `DomainException` and `EnhancedValidationException` live in the `CSharpEssentials.Exceptions` namespace of this package; see the [exception types](https://github.com/senrecep/CSharpEssentials/blob/main/CSharpEssentials.Errors/Exceptions/Readme.MD).
 
-### HTTP Status Mapping
+### HTTP status mapping
 
 ```csharp
 int status = ErrorType.NotFound.ToHttpStatusCode();     // 404
@@ -107,7 +110,7 @@ ErrorType type = 401.ToErrorType();                      // Unauthorized
 
 `ToErrorType` is the reverse for 400, 401, 403, 404, 409 and 500 (`Failure`); every other status code gives `Unexpected`.
 
-### Domain-Specific Error Hierarchies
+### Domain-specific error hierarchies
 
 `Error` is a value type (`readonly record struct`) and cannot be subclassed. The idiomatic way to build domain-specific, typed error hierarchies is to group static factory methods in a dedicated class per aggregate or bounded context:
 
@@ -169,4 +172,18 @@ public Result PlaceOrder(Cart cart, decimal balance)
 }
 ```
 
-This pattern provides discoverability (IDE autocomplete per domain), type-safe error codes, and centralised descriptions, all without inheritance.
+Each domain's errors show up in IDE autocomplete, the error codes are type-safe and the descriptions live in one place. None of it needs inheritance.
+
+## Upgrading to 8.0
+
+`ErrorMetadata.CreateWithException` and `AddException` no longer store the `Exception` object under `exception`. They store a nested `ErrorMetadata` with `exceptionType`, `exceptionStackTrace`, `exceptionMessage` and `innerException`, because System.Text.Json cannot serialize a thrown exception. Code that cast `metadata["exception"]` to `Exception` should read the nested keys instead, or keep the exception in its own variable.
+
+The nested entry keeps only the short type name (`GetType().Name`), the message, the stack trace and the inner exception chain. The full type name, `Data`, `HResult` and the exception object itself are dropped, so code that rethrew `metadata["exception"]` or tested it with `is SqlException` has no key to migrate to. Keep the exception in its own variable if you need its identity.
+
+`exceptionStackTrace` holds `exception.StackTrace` and nothing else. An exception that was never thrown has no stack trace, so the key is present with a `null` value. Earlier versions fell back to `Environment.StackTrace`, which recorded where the metadata was built rather than where the exception came from and cost a full stack walk on every call. Call `AddStackTrace()` if you want the current call stack. Because the key no longer depends on the call site, `Error.Exception` values built from the same unthrown exception now compare equal.
+
+`Error` equality and `GetHashCode` now compare nested `ErrorMetadata` values by content. Do not add a metadata instance to itself (directly or through a chain): hashing or comparing such a cycle overflows the stack.
+
+`Code` and `Description` reject `null` in `with` expressions too. `error with { Code = null! }` used to produce an `Error` with a null code; it now throws `ArgumentNullException`, as the factory methods already did.
+
+`ErrorMetadata.ToString()` formats values with the invariant culture on every target. The netstandard2.1 build, which net8.0 apps load, used the current culture, so `2.5` came out as `2,5` under `tr-TR`. Code that parsed that text with the current culture should parse it as invariant.

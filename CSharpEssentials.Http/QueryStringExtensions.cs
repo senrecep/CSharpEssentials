@@ -187,19 +187,19 @@ public static class QueryStringExtensions
         if (string.IsNullOrEmpty(query))
             return uri;
 
-        if (!uri.IsAbsoluteUri)
-            return AppendQueryToRelative(uri.OriginalString, query);
-
-        var builder = new UriBuilder(uri);
-        builder.Query = string.IsNullOrEmpty(builder.Query)
-            ? query
-            : builder.Query.TrimStart('?') + "&" + query;
-
-        return builder.Uri;
+        return uri.IsAbsoluteUri
+            ? AppendQuery(uri.AbsoluteUri, query, UriKind.Absolute)
+            : AppendQuery(uri.OriginalString, query, UriKind.Relative);
     }
 
-    private static Uri AppendQueryToRelative(string original, string query)
+    internal static Uri AppendQuery(string original, string query, UriKind kind)
     {
+        if (string.IsNullOrEmpty(query))
+            return new Uri(original, UriKind.RelativeOrAbsolute);
+
+        if (kind == UriKind.Absolute)
+            original = original.Trim(' ', '\t', '\r', '\n');
+
         string fragment = string.Empty;
         int fragmentIndex = original.IndexOf('#');
         if (fragmentIndex >= 0)
@@ -212,9 +212,9 @@ public static class QueryStringExtensions
         if (original.Contains('?'))
         {
             char last = original[original.Length - 1];
-            separator = last is '?' or '&' ? string.Empty : "&";
+            separator = kind == UriKind.Relative && last is '?' or '&' ? string.Empty : "&";
         }
 
-        return new Uri(original + separator + query + fragment, UriKind.Relative);
+        return new Uri(original + separator + query + fragment, kind);
     }
 }

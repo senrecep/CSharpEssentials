@@ -1,7 +1,9 @@
+using System.Reflection;
 using FluentAssertions;
 using CSharpEssentials.Tests.Generators;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace CSharpEssentials.Tests.Endpoints;
 
@@ -342,6 +344,23 @@ public class EndpointsGeneratorTests
         EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs").Should().NotContain("SampleHostEndpointRegistry");
     }
 
+    [Theory]
+    [InlineData("SystemMonitor.Api", "SystemMonitorApiEndpointRegistry")]
+    [InlineData("MicrosoftGraphClient", "MicrosoftGraphClientEndpointRegistry")]
+    public void Generator_Should_Map_Referenced_Registry_When_Assembly_Name_Starts_With_Framework_Prefix(string assemblyName, string registry)
+    {
+        CSharpCompilation api = Compile(assemblyName, OutputKind.DynamicallyLinkedLibrary, LibrarySource);
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [api.ToMetadataReference()],
+            HostSource));
+
+        ShouldCompile(run);
+        EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs").Should().Contain($"{registry}.MapEndpoints(app, options);");
+    }
+
     [Fact]
     public void Generator_Should_Ignore_Referenced_Assemblies_Without_Endpoints_Reference()
     {
@@ -406,6 +425,224 @@ public class EndpointsGeneratorTests
         IncrementalCaching.ShouldHaveCachedSteps(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames", "Host", "IsTestProject");
         IncrementalCaching.ShouldHaveCachedSourceOutputs(second);
         IncrementalCaching.ShouldNotCaptureCompilationObjects(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames", "Host", "IsTestProject");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Literal_With_Name()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithName("Literal");""");
+
+        aggregate.Should().Contain("new string[] { \"Literal\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Const_Field_With_Name()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithName(ConstName);""");
+
+        aggregate.Should().Contain("new string[] { \"FromConst\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Named_Argument_With_Name()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithName(endpointName: "Named");""");
+
+        aggregate.Should().Contain("new string[] { \"Named\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Static_Call_With_Name()
+    {
+        string aggregate = HostAggregate("""RoutingEndpointConventionBuilderExtensions.WithName(app.MapGet("/a", () => "a"), "Static");""");
+
+        aggregate.Should().Contain("new string[] { \"Static\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Endpoint_Name_Metadata()
+    {
+        string aggregate = HostAggregate("""app.MapGet("/a", () => "a").WithMetadata(new EndpointNameMetadata("FromMetadata"));""");
+
+        aggregate.Should().Contain("new string[] { \"FromMetadata\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Reserve_Literal_Passed_To_Unrelated_With_Name()
+    {
+        string aggregate = HostAggregate("""new Other().WithName("Foreign");""");
+
+        aggregate.Should().Contain("new string[] { \"Foreign\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Merge_Literal_And_Semantic_Names_Sorted_And_Distinct()
+    {
+        string aggregate = HostAggregate("""
+            app.MapGet("/a", () => "a").WithName("Zeta");
+            app.MapGet("/b", () => "b").WithName(ConstName);
+            app.MapGet("/c", () => "c").WithName("Zeta");
+            app.MapGet("/d", () => "d").WithName("Alpha");
+            """);
+
+        aggregate.Should().Contain("new string[] { \"Alpha\", \"FromConst\", \"Zeta\" }");
+    }
+
+    [Fact]
+    public void Generator_Should_Cache_Reserved_Names_When_Unrelated_Source_Is_Added()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create("Sample.Named", OutputKind.ConsoleApplication, NamedSource);
+
+        GeneratorDriverRunResult second = IncrementalCaching.RunTwice(
+            compilation,
+            static c => GeneratorHarness.AddSource(c, "namespace Sample.Other; public sealed class Unrelated { }"),
+            [.. EndpointCompilations.Generators.Value.Generators]);
+
+        IncrementalCaching.ShouldHaveCachedSteps(second, GeneratorTrackingEndpoints, "CollectedEndpoints", "ReservedNames");
+        IncrementalCaching.ShouldHaveCachedSourceOutputs(second);
+    }
+
+    [Fact]
+    public void Generator_Should_Pass_Only_Types_That_Can_Declare_An_Endpoint_To_The_Semantic_Check()
+    {
+        SyntaxTree tree = CSharpSyntaxTree.ParseText("""
+            public interface IFiller { int Compute(int x); }
+            public sealed class Filler : IFiller { public int Compute(int x) => x; }
+            public sealed class InstanceMapper : IFiller { public int Compute(int x) => x; public void Map() { } }
+            public static class Routes { public static void Map(object app) { } }
+            public sealed class Ping : IEndpoint { public static void Map(object app) { } }
+            public sealed class Explicit : IEndpoint { static void IEndpoint.Map(object app) { } }
+            public sealed partial class SplitBase : IEndpoint { }
+            public sealed partial class SplitMap { public static void Map(object app) { } }
+            public sealed partial class PartialPlain { }
+            """);
+        MethodInfo isCandidate = EndpointCompilations.Generators.Value.Generators.Single().GetGeneratorType()
+            .GetMethod("IsCandidate", BindingFlags.NonPublic | BindingFlags.Static)!;
+        isCandidate.Should().NotBeNull();
+
+        string[] candidates = [.. tree.GetRoot().DescendantNodes()
+            .OfType<BaseTypeDeclarationSyntax>()
+            .Where(node => (bool)isCandidate.Invoke(null, [node])!)
+            .Select(static node => node.Identifier.ValueText)];
+
+        candidates.Should().Equal("Ping", "Explicit", "SplitBase", "SplitMap");
+    }
+
+    [Fact]
+    public void Generator_Should_Map_Endpoints_Through_Derived_Interfaces_Explicit_Map_And_Split_Partials()
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Api",
+            OutputKind.DynamicallyLinkedLibrary,
+            """
+            using CSharpEssentials.Endpoints;
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Routing;
+            using Ep = CSharpEssentials.Endpoints.IEndpoint;
+
+            namespace Sample.Api;
+
+            public interface IVersionedEndpoint : IEndpoint;
+
+            public sealed class Versioned : IVersionedEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/versioned", () => TypedResults.Ok());
+            }
+
+            public sealed class Explicit : IEndpoint
+            {
+                static void IEndpoint.Map(IEndpointRouteBuilder app) => app.MapGet("/explicit", () => TypedResults.Ok());
+            }
+
+            public sealed class Aliased : Ep
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/aliased", () => TypedResults.Ok());
+            }
+
+            public sealed partial class Split : IEndpoint;
+
+            public sealed partial class Split
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/split", () => TypedResults.Ok());
+            }
+            """));
+
+        ShouldCompile(run);
+        string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
+        registry.Should().Contain("global::Sample.Api.Versioned")
+            .And.Contain("global::Sample.Api.Explicit")
+            .And.Contain("global::Sample.Api.Aliased")
+            .And.Contain("global::Sample.Api.Split");
+    }
+
+    [Theory]
+    [InlineData("public class BaseEndpoint", "public sealed class Derived : BaseEndpoint;", false)]
+    [InlineData("public abstract class BaseEndpoint", "public sealed class Derived : BaseEndpoint;", false)]
+    [InlineData("public abstract class BaseEndpoint<T>", "public sealed class Derived : BaseEndpoint<int>;", false)]
+    [InlineData("public abstract class BaseEndpoint", "public sealed partial class Derived : BaseEndpoint;", true)]
+    [InlineData("public abstract class BaseEndpoint", "public sealed class Derived : BaseEndpoint { public static new void Map(IEndpointRouteBuilder app) => BaseEndpoint.Map(app); }", true)]
+    public void Generator_Should_Map_Type_That_Inherits_Map_Only_When_Partial(string baseDeclaration, string derivedDeclaration, bool mapped)
+    {
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Api",
+            OutputKind.DynamicallyLinkedLibrary,
+            PingSource("Sample.Api"),
+            $$"""
+            using CSharpEssentials.Endpoints;
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Routing;
+
+            namespace Sample.Api;
+
+            {{baseDeclaration}} : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/base", () => TypedResults.Ok());
+            }
+
+            {{derivedDeclaration}}
+            """));
+
+        ShouldCompile(run);
+        run.OutputDiagnostics.Should().NotContain(static d => d.Id == "CS0108");
+        string registry = EndpointCompilations.GeneratedText(run, "SampleApiEndpointRegistry.g.cs");
+        registry.Contains("global::Sample.Api.Derived", StringComparison.Ordinal).Should().Be(mapped);
+    }
+
+    private static string HostAggregate(string body)
+    {
+        CSharpCompilation api = Compile("Sample.Api", OutputKind.DynamicallyLinkedLibrary, LibrarySource);
+
+        GeneratorRun run = EndpointCompilations.Run(EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [api.ToMetadataReference()],
+            $$"""
+            using Microsoft.AspNetCore.Builder;
+            using Microsoft.AspNetCore.Http;
+            using Microsoft.AspNetCore.Routing;
+
+            namespace Sample.Host;
+
+            public sealed class Other
+            {
+                public void WithName(string name) { }
+            }
+
+            public static class Routes
+            {
+                private const string ConstName = "FromConst";
+
+                public static void MapRoutes(IEndpointRouteBuilder app)
+                {
+                    {{body}}
+                }
+            }
+            """));
+
+        ShouldCompile(run);
+        return EndpointCompilations.GeneratedText(run, "SampleHostEndpointAggregate.g.cs");
     }
 
     private static string PingSource(string @namespace) => $$"""

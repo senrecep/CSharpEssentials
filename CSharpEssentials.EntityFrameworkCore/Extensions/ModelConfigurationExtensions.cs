@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace CSharpEssentials.EntityFrameworkCore;
 
 /// <summary>
-/// Registers the enum storage convention (design section 11) and the <c>Maybe&lt;T&gt;?</c> column convention of CSharpEssentials.
+/// Registers the enum storage convention (design section 11), the <c>Maybe&lt;T&gt;?</c> column convention and the ordered GUID key convention of CSharpEssentials.
 /// </summary>
 public static class ModelConfigurationExtensions
 {
@@ -103,6 +103,36 @@ public static class ModelConfigurationExtensions
     {
         _ = configurationBuilder ?? throw new ArgumentNullException(nameof(configurationBuilder));
         configurationBuilder.Conventions.Add(static _ => new NullableMaybeConvention());
+        return configurationBuilder;
+    }
+
+    /// <summary>
+    /// Generates time-ordered values for every <see cref="Guid"/> primary key that EF Core generates on add, with the layout
+    /// that sorts in the column type of the active provider. Without this call key generation is left to EF Core and the provider.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Without <paramref name="layout"/>: <see cref="OrderedGuidLayout.SqlServer"/> on SQL Server, <see cref="OrderedGuidLayout.Version7"/>
+    /// on PostgreSQL (Npgsql) and SQLite, and no change on any other provider. Pomelo MySQL is left alone because its own generator
+    /// already sorts in every <c>GuidFormat</c> except <c>TimeSwapBinary16</c>; pass <see cref="OrderedGuidLayout.Version7"/> there only
+    /// with <c>Char36</c>, <c>Char32</c> or <c>Binary16</c>.
+    /// </para>
+    /// <para>
+    /// Keys that are foreign keys, nullable, or have a value generator, a value conversion, a default value, default value SQL or
+    /// computed SQL configured are left alone, as are keys that EF Core does not generate. The values reveal their creation time; do not
+    /// use them where the key must stay secret.
+    /// </para>
+    /// </remarks>
+    /// <param name="configurationBuilder">The model configuration builder.</param>
+    /// <param name="layout">The layout on every provider, or <see langword="null"/> to pick it from the provider.</param>
+    /// <returns>The same builder.</returns>
+    public static ModelConfigurationBuilder UseOrderedGuidKeys(
+        this ModelConfigurationBuilder configurationBuilder,
+        OrderedGuidLayout? layout = null)
+    {
+        _ = configurationBuilder ?? throw new ArgumentNullException(nameof(configurationBuilder));
+        configurationBuilder.Conventions.Add(services =>
+            new OrderedGuidKeyConvention(layout, services.GetService<IDatabaseProvider>()?.Name));
         return configurationBuilder;
     }
 

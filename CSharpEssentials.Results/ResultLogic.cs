@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CSharpEssentials.Errors;
 
 namespace CSharpEssentials.ResultPattern;
@@ -16,6 +17,13 @@ internal static class ResultLogic
         if (errors.Length == 0)
             throw CreateEmptyErrorArrayException();
 
+        return errors;
+    }
+
+    internal static Error[] ValidateDeserializedFailureErrors(Error[]? errors)
+    {
+        if (errors is null || errors.Length == 0)
+            throw new JsonException("A failed result must carry at least one error.");
         return errors;
     }
 

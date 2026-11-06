@@ -1,0 +1,173 @@
+# CSharpEssentials.DependencyInjection.Generators: design-time benchmarks
+
+This page describes how the service registration generator is measured against Injectio 6.3.0. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is faster and allocates less than Injectio on every row.
+
+The generator runs inside the compiler and the IDE, not in the shipped app. The cost measured here is build time and the work the IDE does after a keystroke. Runtime registration and resolve cost are covered in [the package BENCHMARKS.md](../CSharpEssentials.DependencyInjection/BENCHMARKS.md).
+
+---
+
+## What was measured
+
+Class `DependencyInjectionGeneratorComparison` in `benchmarks/CSharpEssentials.Generators.Benchmarks/`. The project is an in-memory web app with 100 services, `Service001` to `Service100`, each with its own `IServiceNNN` interface. The lifetime follows `n % 3`: Scoped, Singleton, Transient. It is the same in both libraries.
+
+Both libraries use the generic explicit-service attribute form. Only the `using` line differs:
+
+```csharp
+using CSharpEssentials.DependencyInjection;   // or: using Injectio.Attributes;
+
+[RegisterScoped<IService003>]
+public sealed class Service003 : IService003
+{
+    public int Get() => 3;
+}
+```
+
+Both READMEs document this form. It gives the same registrations: one descriptor per service, `IServiceNNN` to `ServiceNNN`, with the same lifetime. That makes it the like-for-like form.
+
+| Method | Category | Generators | Like for like? |
+|---|---|---|---|
+| `EmptyDriver_Cold` | Cold | none | No. Compilation and driver object overhead. A driver with no generators binds nothing, so this is not a floor for generator work |
+| `CSharpEssentials_Cold` / `_Incremental` (baseline) | Cold / Incremental | `CSharpEssentials.DependencyInjection.Generators` | Yes |
+| `Injectio_Cold` / `_Incremental` | Cold / Incremental | `Injectio.Generators` | Yes |
+
+Parity is checked in `[GlobalSetup]` and with `--self-check`. A failed check stops the run.
+
+- Every row must name exactly the 100 service types in its generated text.
+- Every row must register each `IServiceNNN` with the expected lifetime, read from the generated `ServiceDescriptor.{Lifetime}` calls. All 100 pairs must match and no extra pair may appear.
+- No generator may throw or report an error, and the output must compile with no errors.
+- Cold output on the original project must equal incremental output after the edit, file by file.
+
+## Methodology
+
+- **Host Roslyn.** Every row runs on `Microsoft.CodeAnalysis.CSharp` 5.9.0, the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). Injectio needs Roslyn 4.14 or later, so the repository's 4.13 pin cannot load it.
+- **Loading.** Each generator loads from its own folder into its own load context. Analyzers and code fixes in the packages are not run.
+- **Cold.** Each call creates a fresh `CSharpCompilation` from pre-parsed trees and a fresh `CSharpGeneratorDriver`, then runs it. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cold cost.
+- **Incremental.** Each row warms a driver once on the original compilation. Each call runs that driver on the original compilation with one tree replaced (`ReplaceSyntaxTree`), which is what the IDE does on a keystroke.
+- **The edit.** File `Src/Filler0051.cs`: `return x + 51;` becomes `return x + 52;`. It is a method-body change in a file with no attributes, with base-list classes and with no `WithName` call.
+- **Step tracking** is off in every measured call.
+- **Project shape.** Assembly `Bench.App`, `OutputKind.ConsoleApplication`, nullable enabled, C# latest. CSE also emits `AddAllServices` because the project is an executable. `Files` is 200 or 1000 source files: the 100 feature files, `GlobalUsings.cs` with the Web SDK implicit usings, `Program.cs` and filler files for the rest.
+- **References.** One set for every row: the host runtime's framework, the ASP.NET Core shared framework, the CSE runtime DLLs and the competitor attribute DLLs. On net8.0 the CSE runtime DLLs need Microsoft.Extensions.DependencyInjection.Abstractions and Microsoft.Extensions.Logging.Abstractions 9.0.4 from NuGet. Those copies from the output folder replace the older shared framework copies for every row, as SDK conflict resolution does in a CSE app. On the other TFMs the shared framework copies are used.
+- **Preprocessor symbols.** The parse options define the symbols the SDK defines for the host TFM in Release. Injectio emits its generic attributes under `#if NET7_0_OR_GREATER`, so without them the generic form does not compile.
+- **Options.** One `AnalyzerConfigOptionsProvider` for every row with `build_property.IsTestProject=false` and `build_property.RootNamespace=Bench.App` (set by the SDK for every project). `InjectioName` and `InjectioInternal` stay unset, which is the package default.
+- **Cross-TFM rows** run on that TFM's shared framework, so the references differ by TFM. The host Roslyn 5.9.0 also runs its netstandard2.0 build on net8.0 and net9.0 and its net10.0 build on net10.0 and net11.0. Compare rows within one TFM.
+- BenchmarkDotNet default job, `[MemoryDiagnoser]`, rows grouped by category, CSE is the baseline in each category.
+
+## Pinned versions
+
+| Package | Version | License |
+|---|---|---|
+| Microsoft.CodeAnalysis.CSharp (host) | 5.9.0 | MIT |
+| Injectio | 6.3.0 (latest stable) | MIT |
+| CSharpEssentials.DependencyInjection.Generators | 7.0.0 (project reference) | MIT |
+
+## Semantic differences
+
+Read from the generated text in the self-check:
+
+- CSE registers each service through `ServiceRegistration.Apply(..., RegistrationStrategy.Add)`, which adds the descriptor and logs a duplicate at Debug when a logger is passed. Injectio uses `TryAdd`, so a duplicate is skipped (its default `Duplicate` strategy, `Skip`).
+- CSE emits a per-assembly registry with an idempotent `AddBenchAppServices` method, an assembly-level `ServiceModule` marker and, in an executable, an `AddAllServices` aggregate. Self-check: 2 generated files, 46,476 characters.
+- Injectio emits its attributes as post-initialization sources, decoration helpers, an idempotent `AddBenchApp(params string[]? tags)` method and, because the shared framework includes `Microsoft.Extensions.Hosting.Abstractions`, an `IHostApplicationBuilder` overload. Self-check: 4 generated files, 83,228 characters.
+- CSE's default rule without a type argument registers `I{TypeName}`. Injectio's default without a service type is `SelfWithProxyFactory`: the class and all its implemented interfaces. Neither default is used here, because both rows name the service type.
+
+## Feature matrix
+
+| | CSE | Injectio 6.3.0 |
+|---|---|---|
+| Attribute form used here | Generic, explicit service type | Generic, explicit service type |
+| Default service type | `I{TypeName}`, otherwise the class itself; `As` = `Self`, `SelfWithInterfaces` or `ImplementedInterfaces` | `SelfWithProxyFactory` (the class and all its interfaces, with the interfaces resolving one shared instance; `SelfWithInterfaces` for open generics); also `Self`, `ImplementedInterfaces`, `SelfWithInterfaces` |
+| Duplicate handling default | `Add` (logged at Debug); also `TryAdd`, `TryAddEnumerable`, `Replace`, `Throw` | `Skip` (`TryAdd`); also `Replace`, `Append` |
+| Keyed services | Yes (`Key`) | Yes (`ServiceKey`) |
+| Decorators | Yes (`[Decorates]`) | Yes (`[RegisterDecorator]`) |
+| Open generics | Yes (`typeof(IRepository<>)`); open-generic decorators only at runtime | Yes |
+| Factories | No factory attribute | Yes (`Factory`) |
+| Registration tags | No | Yes |
+| Aggregate across assemblies | `AddAllServices` in an executable | No |
+| Attributes | In the runtime DLL | Post-initialization embedded sources |
+| Minimum Roslyn | 4.8 | 4.14 |
+| License | MIT | MIT |
+
+## Incremental cache behaviour
+
+From `--self-check` on net10.0 with `Files=200`, after the filler edit. Lower-level `ForAttributeWithMetadataName` steps, the Roslyn input steps (`AnalyzerConfigOptions`, `CompilationOptions`, `ParseOptions`) and single-value steps that stay Cached are left out. The `Files=1000` counts are the same.
+
+| Row | Step | Reasons |
+|---|---|---|
+| CSE | `Compilation` | Modified 7 |
+| CSE | `Host` | Unchanged 1 |
+| CSE | `ServiceTypes` | Cached 100 |
+| CSE | `CollectedServices`, `IsTestProject` | Cached 1 each |
+| CSE | source outputs | Cached 2 |
+| Injectio | `Compilation` | Modified 8 |
+| Injectio | `AssemblyName`, `HasHostApplicationBuilder` | Unchanged 1 each |
+| Injectio | `ScopedRegistrationsT1`, `SingletonRegistrationsT1`, `TransientRegistrationsT1` | Unchanged 33, 34, 33 |
+| Injectio | `AllServiceRegistrations`, `AllDecoratorRegistrations`, `Generation` | Cached 1 each |
+| Injectio | source outputs | Cached 1 |
+
+Every source output stays cached after the unrelated edit. The self-check fails if a CSE output does not.
+
+## Results
+
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
+- The 1-minute load average stayed between 2.63 and 3.35 during the generators suite. No row of this class has a CV above 5%.
+- Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.DependencyInjectionGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
+
+How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)` for that TFM. The ratio is against the CSE row of the same category, `Files` value and TFM. `EmptyDriver_Cold` is driver overhead only and is not a floor for generator work.
+
+### Time
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 7.835 μs (0.001) | 6.779 μs (0.001) | 6.657 μs (0.001) | 6.488 μs (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 12,168.454 μs (1.000) | 10,572.158 μs (1.000) | 9,350.901 μs (1.000) | 8,951.632 μs (1.000) |
+| Cold | 200 | `Injectio_Cold` | 18,151.788 μs (1.492) | 15,985.288 μs (1.512) | 14,515.509 μs (1.552) | 14,042.819 μs (1.569) |
+| Cold | 1000 | `EmptyDriver_Cold` | 38.563 μs (0.002) | 33.822 μs (0.002) | 34.792 μs (0.002) | 35.201 μs (0.002) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 20,362.458 μs (1.000) | 18,912.745 μs (1.000) | 17,620.822 μs (1.001) | 16,570.269 μs (1.001) |
+| Cold | 1000 | `Injectio_Cold` | 28,270.923 μs (1.389) | 25,317.112 μs (1.339) | 24,386.443 μs (1.385) | 22,906.082 μs (1.384) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 8,204.791 μs (1.00) | 7,500.754 μs (1.00) | 6,118.388 μs (1.00) | 5,969.088 μs (1.00) |
+| Incremental | 200 | `Injectio_Incremental` | 10,716.329 μs (1.31) | 9,287.802 μs (1.24) | 7,999.570 μs (1.31) | 7,389.224 μs (1.24) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 11,307.726 μs (1.00) | 10,069.658 μs (1.00) | 8,711.273 μs (1.00) | 8,592.375 μs (1.00) |
+| Incremental | 1000 | `Injectio_Incremental` | 19,651.258 μs (1.74) | 18,805.389 μs (1.87) | 17,253.836 μs (1.98) | 17,002.511 μs (1.98) |
+
+### Allocation
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 2.26 KB (0.001) | 2.25 KB (0.001) | 2.19 KB (0.001) | 2.17 KB (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 3158.67 KB (1.000) | 3156.55 KB (1.000) | 3142.73 KB (1.000) | 3145.14 KB (1.000) |
+| Cold | 200 | `Injectio_Cold` | 3844.37 KB (1.217) | 3842.81 KB (1.217) | 3833.5 KB (1.220) | 3841.63 KB (1.221) |
+| Cold | 1000 | `EmptyDriver_Cold` | 2.26 KB (0.000) | 2.25 KB (0.000) | 2.19 KB (0.000) | 2.17 KB (0.000) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 4638.74 KB (1.000) | 4610.48 KB (1.000) | 4601.04 KB (1.000) | 4617.64 KB (1.000) |
+| Cold | 1000 | `Injectio_Cold` | 5330.31 KB (1.149) | 5299.8 KB (1.150) | 5311.41 KB (1.154) | 5313.82 KB (1.151) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 1868.81 KB (1.00) | 1867.18 KB (1.00) | 1841.8 KB (1.00) | 1850.1 KB (1.00) |
+| Incremental | 200 | `Injectio_Incremental` | 2011.61 KB (1.08) | 2010.95 KB (1.08) | 1994.31 KB (1.08) | 1993.83 KB (1.08) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 1979.03 KB (1.00) | 1952.15 KB (1.00) | 1933.71 KB (1.00) | 1956.77 KB (1.00) |
+| Incremental | 1000 | `Injectio_Incremental` | 3487.26 KB (1.76) | 3457.91 KB (1.77) | 3460.67 KB (1.79) | 3459.14 KB (1.77) |
+
+### Where CSE loses
+
+No row. CSE is faster and allocates less than Injectio in every category, at both `Files` values, on every TFM. Injectio's cold ratio is 1.339 to 1.569 and its incremental ratio is 1.24 to 1.98. Its allocation ratio is 1.149 to 1.221 cold and 1.08 to 1.79 incremental.
+
+The two rows do not emit the same text (2 files and 46,476 characters for CSE, 4 files and 83,228 characters for Injectio, see [Semantic differences](#semantic-differences)), so part of the gap is emit work CSE does not do. The largest gap is incremental at `Files=1000`, for example 8,711.273 μs against 17,253.836 μs on net10.0.
+
+## Known CSE costs
+
+From reading the source. Not fixed here. Neither cost made CSE slower than Injectio in the full run.
+
+- `CSharpEssentials.DependencyInjection.Generators/ServiceRegistrationGenerator.cs:66-68`: the Host step is a `CompilationProvider.Select` that runs on every edit and walks the references. Its output is equatable, so later steps stay cached.
+- `ServiceRegistrationGenerator.cs:44-60`: one `ForAttributeWithMetadataName` provider per attribute name (eight), combined pairwise into one collection.
+
+## Caveats
+
+- Design time only. Nothing here affects the shipped app.
+- Code fixes and analyzers in the packages are not measured.
+- The input is generated, not a real app.
+
+## How to reproduce
+
+```bash
+./benchmarks/run-benchmarks.sh --project generators
+dotnet run -c Release --project benchmarks/CSharpEssentials.Generators.Benchmarks -f net10.0 -- --self-check
+```

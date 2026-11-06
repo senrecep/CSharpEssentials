@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Mediator.Benchmarks.LockContentionBenchmarks-20261105-140742</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method  </th><th>Keys</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>AsyncKeyedLock</td><td>OneKey</td><td>772.06 ns</td><td>4.217 ns</td><td>3.738 ns</td><td>1.00</td><td>0.0134</td><td>226 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>OneKey</td><td>779.29 ns</td><td>3.475 ns</td><td>3.250 ns</td><td>1.01</td><td>0.0172</td><td>305 B</td><td>1.35</td>
+</tr><tr><td>HandWritten</td><td>OneKey</td><td>576.49 ns</td><td>2.065 ns</td><td>1.932 ns</td><td>0.75</td><td>0.0048</td><td>89 B</td><td>0.39</td>
+</tr><tr><td>AsyncKeyedLock</td><td>PerWorker</td><td>409.75 ns</td><td>2.975 ns</td><td>2.782 ns</td><td>1.00</td><td>0.0029</td><td>50 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>PerWorker</td><td>340.94 ns</td><td>1.614 ns</td><td>1.510 ns</td><td>0.83</td><td>0.0100</td><td>170 B</td><td>3.40</td>
+</tr><tr><td>HandWritten</td><td>PerWorker</td><td>14.26 ns</td><td>0.256 ns</td><td>0.239 ns</td><td>0.03</td><td>0.0001</td><td>2 B</td><td>0.04</td>
+</tr><tr><td>AsyncKeyedLock</td><td>Unique</td><td>391.88 ns</td><td>2.563 ns</td><td>2.140 ns</td><td>1.00</td><td>0.0029</td><td>50 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Unique</td><td>338.65 ns</td><td>4.566 ns</td><td>3.565 ns</td><td>0.86</td><td>0.0100</td><td>170 B</td><td>3.40</td>
+</tr><tr><td>HandWritten</td><td>Unique</td><td>16.41 ns</td><td>0.314 ns</td><td>0.294 ns</td><td>0.04</td><td>0.0001</td><td>2 B</td><td>0.04</td>
+</tr></tbody></table>
+</body>
+</html>

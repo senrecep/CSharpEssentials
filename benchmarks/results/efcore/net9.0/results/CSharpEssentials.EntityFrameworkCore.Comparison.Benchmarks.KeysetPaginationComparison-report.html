@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.KeysetPaginationComparison-20261106-001644</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                                       </th><th>Page</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>HandWritten_WhereOrderTake</td><td>After</td><td>127.62 &mu;s</td><td>1.064 &mu;s</td><td>0.995 &mu;s</td><td>1.00</td><td>0.01</td><td>0.9766</td><td>22.54 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_CachedOrdering</td><td>After</td><td>131.77 &mu;s</td><td>1.068 &mu;s</td><td>0.999 &mu;s</td><td>1.03</td><td>0.01</td><td>1.4648</td><td>24.18 KB</td><td>1.07</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_Func</td><td>After</td><td>146.95 &mu;s</td><td>0.264 &mu;s</td><td>0.221 &mu;s</td><td>1.15</td><td>0.01</td><td>1.4648</td><td>28.11 KB</td><td>1.25</td>
+</tr><tr><td>HandWritten_WhereOrderTake</td><td>First</td><td>81.99 &mu;s</td><td>0.941 &mu;s</td><td>0.880 &mu;s</td><td>1.00</td><td>0.01</td><td>0.9766</td><td>18.1 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_CachedOrdering</td><td>First</td><td>79.02 &mu;s</td><td>0.853 &mu;s</td><td>0.798 &mu;s</td><td>0.96</td><td>0.01</td><td>0.9766</td><td>17.83 KB</td><td>0.98</td>
+</tr><tr><td>CSharpEssentials_KeysetPaginateAsync_Func</td><td>First</td><td>99.56 &mu;s</td><td>0.751 &mu;s</td><td>0.702 &mu;s</td><td>1.21</td><td>0.02</td><td>1.2207</td><td>21.77 KB</td><td>1.20</td>
+</tr></tbody></table>
+</body>
+</html>

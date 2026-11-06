@@ -11,7 +11,7 @@
     <Description>
       One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and HTTP.
       Mark enums with [StringEnum]; the bundled source generator writes AOT-safe metadata and
-      helpers (ToWireName, TryParseWire, ParseWire, IsDefined, GetNames, GetValues).
+      helpers (ToWireName, TryParseWire, ParseWire, IsDefined, ToDescription, GetNames, GetValues).
       Includes EnumConventions, [EnumAlias], [EnumFallback], EnumValueParser, EnumValueFormatter,
       EnumMetadata, and analyzers with code fixes (CSE0002-CSE0016).
       Any CSharpEssentials package brings the generator and analyzers.
@@ -40,6 +40,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CSharpEssentials.Tests" />
+    <InternalsVisibleTo Include="CSharpEssentials.Enums.Net8.Tests" />
   </ItemGroup>
 
   <Import Project="..\build\PackGenerator.targets" />

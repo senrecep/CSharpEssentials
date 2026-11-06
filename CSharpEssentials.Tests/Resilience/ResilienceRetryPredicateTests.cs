@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CSharpEssentials.Errors;
 using CSharpEssentials.Resilience;
 using CSharpEssentials.ResultPattern;
@@ -238,5 +239,68 @@ public sealed class ResilienceRetryPredicateTests
         Func<Task> act = async () => await operation.RetryIfFailed(shouldRetry: null!);
 
         await act.Should().ThrowAsync<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Use_Each_Calls_Own_Predicate_When_Options_Match()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result<int>>> operation = _ =>
+        {
+            attempts++;
+            return Task.FromResult(Result<int>.Failure(Error.Failure("Transient")));
+        };
+
+        foreach (string retryableCode in new[] { "Transient", "Other", "Transient" })
+        {
+            attempts = 0;
+            Result<int> result = await operation.RetryIfFailed(
+                shouldRetry: error => error.Code == retryableCode,
+                maxAttempts: 2,
+                delay: ShortDelay);
+
+            result.IsFailure.Should().BeTrue();
+            attempts.Should().Be(retryableCode == "Transient" ? 3 : 1);
+        }
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_Default_Classification_Should_Not_Inherit_Predicate_From_Earlier_Call()
+    {
+        int attempts = 0;
+        Func<CancellationToken, Task<Result>> operation = _ =>
+        {
+            attempts++;
+            return Task.FromResult(Result.Failure(Error.Validation("Invalid")));
+        };
+
+        await operation.RetryIfFailed(shouldRetry: _ => true, maxAttempts: 2, delay: ShortDelay);
+        attempts.Should().Be(3);
+
+        attempts = 0;
+        Result result = await operation.RetryIfFailed(maxAttempts: 2, delay: ShortDelay);
+
+        result.IsFailure.Should().BeTrue();
+        attempts.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task RetryIfFailed_Should_Keep_Predicates_Apart_When_Calls_Run_Concurrently()
+    {
+        static Func<CancellationToken, Task<Result<int>>> Operation(StrongBox<int> attempts) => async token =>
+        {
+            Interlocked.Increment(ref attempts.Value);
+            await Task.Yield();
+            return Result<int>.Failure(Error.Failure("Transient"));
+        };
+
+        StrongBox<int>[] counters = Enumerable.Range(0, 16).Select(_ => new StrongBox<int>()).ToArray();
+        await Task.WhenAll(counters.Select((counter, index) => Operation(counter).RetryIfFailed(
+            shouldRetry: _ => index % 2 == 0,
+            maxAttempts: 2,
+            delay: ShortDelay).AsTask()));
+
+        for (int index = 0; index < counters.Length; index++)
+            counters[index].Value.Should().Be(index % 2 == 0 ? 3 : 1);
     }
 }

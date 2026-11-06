@@ -14,6 +14,7 @@ public class HttpCancellationTests
     public static TheoryData<string> ClientMethods =>
     [
         "GetFromJson",
+        "GetFromJsonTypeInfo",
         "PostAsJson",
         "Post",
         "PutAsJson",
@@ -146,6 +147,7 @@ public class HttpCancellationTests
         return method switch
         {
             "GetFromJson" => await client.GetFromJsonAsResultAsync<TestDto>(RequestUri, cancellationToken: cancellationToken),
+            "GetFromJsonTypeInfo" => await client.GetFromJsonAsResultAsync(RequestUri, TypeInfoJsonContext.Default.TypeInfoDto, cancellationToken),
             "PostAsJson" => await client.PostAsJsonAsResultAsync<TestDto>(RequestUri, dto, cancellationToken: cancellationToken),
             "Post" => await client.PostAsResultAsync(RequestUri, content, cancellationToken),
             "PutAsJson" => await client.PutAsJsonAsResultAsync<TestDto>(RequestUri, dto, cancellationToken: cancellationToken),

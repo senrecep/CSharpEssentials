@@ -1,18 +1,21 @@
+using System.Buffers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
 namespace CSharpEssentials.AspNetCore;
 
 /// <summary>
-/// Write-only stream that forwards every write to the response and keeps a copy of up to <c>limit</c> bytes.
+/// Write-only stream that forwards every write to the response and keeps a copy of up to <c>limit</c> bytes in a pooled
+/// buffer; <see cref="Captured"/> is valid until the stream is disposed.
 /// </summary>
 internal sealed class ResponseCaptureStream(Stream inner, long limit, IHeaderDictionary headers) : Stream
 {
-    private MemoryStream? _buffer = new();
+    private byte[] _buffer = [];
+    private int _length;
     private bool _used;
     private bool _encodedAtFirstUse;
 
-    public bool Overflowed => _buffer is null;
+    public bool Overflowed { get; private set; }
 
     /// <summary>
     /// Whether the handler encoded the body itself. <c>Content-Encoding</c> is read before the first write or flush
@@ -35,7 +38,7 @@ internal sealed class ResponseCaptureStream(Stream inner, long limit, IHeaderDic
         set => throw new NotSupportedException();
     }
 
-    public byte[] ToArray() => _buffer?.ToArray() ?? [];
+    public ReadOnlyMemory<byte> Captured => _buffer.AsMemory(0, _length);
 
     public override void Write(byte[] buffer, int offset, int count) => Write(buffer.AsSpan(offset, count));
 
@@ -78,8 +81,8 @@ internal sealed class ResponseCaptureStream(Stream inner, long limit, IHeaderDic
     {
         if (disposing)
         {
-            _buffer?.Dispose();
-            _buffer = null;
+            Overflowed = true;
+            ReturnBuffer();
         }
 
         base.Dispose(disposing);
@@ -111,15 +114,35 @@ internal sealed class ResponseCaptureStream(Stream inner, long limit, IHeaderDic
 
     private void Capture(ReadOnlySpan<byte> buffer)
     {
-        if (_buffer is null)
+        if (Overflowed || buffer.IsEmpty)
             return;
-        if (_buffer.Length + buffer.Length > limit)
+        long required = (long)_length + buffer.Length;
+        if (required > limit)
         {
-            _buffer.Dispose();
-            _buffer = null;
+            Overflowed = true;
+            ReturnBuffer();
             return;
         }
 
-        _buffer.Write(buffer);
+        if (required > _buffer.Length)
+        {
+            byte[] previous = _buffer;
+            _buffer = ArrayPool<byte>.Shared.Rent((int)Math.Min(Math.Max(required, Math.Max(256L, previous.Length * 2L)), Math.Min(limit, Array.MaxLength)));
+            previous.AsSpan(0, _length).CopyTo(_buffer);
+            if (previous.Length > 0)
+                ArrayPool<byte>.Shared.Return(previous);
+        }
+
+        buffer.CopyTo(_buffer.AsSpan(_length));
+        _length += buffer.Length;
+    }
+
+    private void ReturnBuffer()
+    {
+        byte[] buffer = _buffer;
+        _buffer = [];
+        _length = 0;
+        if (buffer.Length > 0)
+            ArrayPool<byte>.Shared.Return(buffer);
     }
 }

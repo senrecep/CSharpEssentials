@@ -1,8 +1,8 @@
 # CSharpEssentials
 
-Meta-package that bundles the core functional modules of the ecosystem. Install this to get the most commonly used packages in one reference.
+Meta-package that bundles the core functional modules. Install it to get the most commonly used packages through one reference.
 
-## Included Packages
+## Included packages
 
 - `CSharpEssentials.Core`
 - `CSharpEssentials.Errors`
@@ -58,3 +58,7 @@ Maybe<DateTime> date = timestamp.MsToDateTime();                                
 ```
 
 `TryGetProperty` and `TryGetNestedProperty` return a failed `Result` (`PropertyNotFound` as the error code when no name matches, `NoPropertyNames` when you pass none, `DocumentIsNull` for a null document) instead of throwing.
+
+## Upgrading to 8.0
+
+- `MsToDateTime` returns a `DateTime` with `Kind = Utc` (it was `Unspecified`, with the same ticks). Wrap the value in `DateTime.SpecifyKind(value, DateTimeKind.Unspecified)` to keep the old behaviour. The other 8.0 changes are in the [CSharpEssentials.Core upgrade notes](../CSharpEssentials.Core/README.MD#upgrading-to-80).

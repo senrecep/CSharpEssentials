@@ -1,0 +1,23 @@
+```
+
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+
+
+```
+| Method                                            | Categories         | Mean         | Error       | StdDev      | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------------------------------- |------------------- |-------------:|------------:|------------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Ef_New                                            | CreateDispose      |  53,390.0 ns |   697.45 ns |   652.39 ns | 1.000 |    0.02 | 2.5635 | 0.1831 |   43249 B |       1.000 |
+| Ef_AddDbContext_Scope                             | CreateDispose      |  71,164.4 ns |   140.52 ns |   117.34 ns | 1.333 |    0.02 | 3.6621 | 0.2441 |   62164 B |       1.437 |
+| Ef_PooledDbContextFactory                         | CreateDispose      |     245.7 ns |     3.76 ns |     3.52 ns | 0.005 |    0.00 | 0.0067 |      - |     112 B |       0.003 |
+| CSharpEssentials_BaseDbContext                    | CreateDispose      |  74,459.5 ns |   770.53 ns |   720.75 ns | 1.395 |    0.02 | 3.6621 | 0.2441 |   62331 B |       1.441 |
+| CSharpEssentials_BaseDbContext_Interceptors       | CreateDispose      |  82,290.8 ns | 1,018.06 ns |   952.29 ns | 1.542 |    0.03 | 4.1504 | 0.2441 |   69711 B |       1.612 |
+|                                                   |                    |              |             |             |       |         |        |        |           |             |
+| Ef_New_Query                                      | CreateQueryDispose | 104,089.2 ns | 1,390.70 ns | 1,300.86 ns |  1.00 |    0.02 | 2.6855 |      - |   48274 B |        1.00 |
+| Ef_AddDbContext_Scope_Query                       | CreateQueryDispose | 125,849.5 ns | 1,779.62 ns | 1,664.66 ns |  1.21 |    0.02 | 3.9063 | 0.2441 |   67191 B |        1.39 |
+| Ef_PooledDbContextFactory_Query                   | CreateQueryDispose |  17,132.5 ns |    41.85 ns |    39.15 ns |  0.16 |    0.00 | 0.2441 |      - |    4544 B |        0.09 |
+| CSharpEssentials_BaseDbContext_Query              | CreateQueryDispose | 122,202.2 ns |   248.15 ns |   219.97 ns |  1.17 |    0.01 | 3.9063 | 0.2441 |   67359 B |        1.40 |
+| CSharpEssentials_BaseDbContext_Interceptors_Query | CreateQueryDispose | 131,359.0 ns |   431.46 ns |   403.59 ns |  1.26 |    0.02 | 4.3945 | 0.2441 |   75807 B |        1.57 |

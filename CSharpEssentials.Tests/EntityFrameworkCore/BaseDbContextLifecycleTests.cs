@@ -83,6 +83,55 @@ public class BaseDbContextLifecycleTests
         }
     }
 
+    private sealed class FailOnceOutbox : IDomainEventOutbox
+    {
+        private bool _failed;
+
+        public List<IDomainEvent> Stored { get; } = [];
+
+        public Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        {
+            if (!_failed)
+            {
+                _failed = true;
+                throw new InvalidOperationException("outbox failed");
+            }
+
+            Stored.AddRange(domainEvents);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ThrowingPublisher : IDomainEventPublisher
+    {
+        public Task PublishAsync(IDomainEvent domainEvent, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("publisher failed");
+    }
+
+    private sealed class NestedSaveOutbox : IDomainEventOutbox
+    {
+        private int _calls;
+
+        public LifecycleDbContext? Context { get; set; }
+
+        public List<IDomainEvent> Stored { get; } = [];
+
+        public async Task StoreAsync(IReadOnlyList<IDomainEvent> domainEvents, CancellationToken cancellationToken = default)
+        {
+            if (++_calls > 1)
+            {
+                Stored.AddRange(domainEvents);
+                return;
+            }
+
+            var inner = new EventEntity();
+            inner.Raise(new AfterEvent("inner"));
+            Context!.Entities.Add(inner);
+            await Context.SaveChangesAsync(cancellationToken);
+            throw new InvalidOperationException("outbox failed");
+        }
+    }
+
     private sealed class ScopedDisposable : IDisposable
     {
         public bool Disposed { get; private set; }
@@ -483,6 +532,94 @@ public class BaseDbContextLifecycleTests
 
         act.Should().Throw<DbUpdateException>();
         calls.Should().BeEmpty();
+        entity.DomainEvents.Should().Equal(after);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_RestoreAfterSaveEvents_When_OutboxStoreFails()
+    {
+        FailOnceOutbox outbox = new();
+        using ServiceProvider provider = BuildProvider(services =>
+        {
+            services.AddSingleton<IDomainEventPublisher>(new TrackingPublisher());
+            services.AddSingleton<IDomainEventOutbox>(outbox);
+        });
+        using LifecycleDbContext context = CreateContext(provider, dispatchDomainEvents: true);
+        var entity = new EventEntity();
+        var after = new AfterEvent("after");
+        entity.Raise(new BeforeEvent("before"));
+        entity.Raise(after);
+        context.Entities.Add(entity);
+
+        Func<Task> act = () => context.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("outbox failed");
+        (await context.Entities.CountAsync()).Should().Be(1);
+        entity.DomainEvents.Should().Equal(after);
+
+        await context.SaveChangesAsync();
+
+        outbox.Stored.Should().Equal(after);
+        entity.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void SaveChanges_Should_RestoreAfterSaveEvents_When_OutboxStoreFails()
+    {
+        FailOnceOutbox outbox = new();
+        using ServiceProvider provider = BuildProvider(services =>
+        {
+            services.AddSingleton<IDomainEventPublisher>(new TrackingPublisher());
+            services.AddSingleton<IDomainEventOutbox>(outbox);
+        });
+        using LifecycleDbContext context = CreateContext(provider, dispatchDomainEvents: true);
+        var entity = new EventEntity();
+        var after = new AfterEvent("after");
+        entity.Raise(after);
+        context.Entities.Add(entity);
+
+        Action act = () => context.SaveChanges();
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("outbox failed");
+        context.Entities.Count().Should().Be(1);
+        entity.DomainEvents.Should().Equal(after);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_KeepAfterSaveEventsCleared_When_PublisherFails()
+    {
+        using ServiceProvider provider = BuildProvider(services =>
+            services.AddSingleton<IDomainEventPublisher>(new ThrowingPublisher()));
+        using LifecycleDbContext context = CreateContext(provider, dispatchDomainEvents: true);
+        var entity = new EventEntity();
+        entity.Raise(new AfterEvent("after"));
+        context.Entities.Add(entity);
+
+        Func<Task> act = () => context.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("publisher failed");
+        (await context.Entities.CountAsync()).Should().Be(1);
+        entity.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_Should_RestoreAfterSaveEvents_When_OutboxSavesSameContextAndThenFails()
+    {
+        NestedSaveOutbox outbox = new();
+        using ServiceProvider provider = BuildProvider(services =>
+            services.AddSingleton<IDomainEventOutbox>(outbox));
+        using LifecycleDbContext context = CreateContext(provider, dispatchDomainEvents: true);
+        outbox.Context = context;
+        var entity = new EventEntity();
+        var after = new AfterEvent("after");
+        entity.Raise(after);
+        context.Entities.Add(entity);
+
+        Func<Task> act = () => context.SaveChangesAsync();
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("outbox failed");
+        outbox.Stored.Should().ContainSingle().Which.Should().BeOfType<AfterEvent>()
+            .Which.Name.Should().Be("inner");
         entity.DomainEvents.Should().Equal(after);
     }
 

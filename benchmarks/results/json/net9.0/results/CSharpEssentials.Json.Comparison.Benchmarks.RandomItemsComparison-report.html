@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Json.Comparison.Benchmarks.RandomItemsComparison-20261105-191138</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method           </th><th>Categories</th><th>Percent</th><th>Mean     </th><th>Error  </th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Unique</td><td>Unique</td><td>1</td><td>10,039.69 ns</td><td>31.470 ns</td><td>27.897 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>64 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Unique</td><td>Unique</td><td>1</td><td>1,314,428.67 ns</td><td>5,501.963 ns</td><td>4,877.347 ns</td><td>130.92</td><td>0.59</td><td>-</td><td>-</td><td>4089 B</td><td>63.89</td>
+</tr><tr><td>BclShared_Unique</td><td>Unique</td><td>1</td><td>5,655.01 ns</td><td>33.832 ns</td><td>31.646 ns</td><td>0.56</td><td>0.00</td><td>0.2441</td><td>-</td><td>4088 B</td><td>63.88</td>
+</tr><tr><td>HandWritten_Unique</td><td>Unique</td><td>1</td><td>287.93 ns</td><td>5.642 ns</td><td>7.531 ns</td><td>0.03</td><td>0.00</td><td>0.2441</td><td>0.0033</td><td>4088 B</td><td>63.88</td>
+</tr><tr><td>CSharpEssentials_Unique</td><td>Unique</td><td>50</td><td>638,426.83 ns</td><td>3,471.228 ns</td><td>3,246.988 ns</td><td>1.000</td><td>0.01</td><td>-</td><td>-</td><td>2025 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Unique</td><td>Unique</td><td>50</td><td>1,310,431.14 ns</td><td>10,611.219 ns</td><td>9,925.740 ns</td><td>2.053</td><td>0.02</td><td>-</td><td>-</td><td>6049 B</td><td>2.99</td>
+</tr><tr><td>BclShared_Unique</td><td>Unique</td><td>50</td><td>5,755.97 ns</td><td>28.125 ns</td><td>23.486 ns</td><td>0.009</td><td>0.00</td><td>0.3586</td><td>-</td><td>6048 B</td><td>2.99</td>
+</tr><tr><td>HandWritten_Unique</td><td>Unique</td><td>50</td><td>3,306.28 ns</td><td>12.159 ns</td><td>11.373 ns</td><td>0.005</td><td>0.00</td><td>0.3586</td><td>0.0038</td><td>6048 B</td><td>2.99</td>
+</tr><tr><td>CSharpEssentials_Unique</td><td>Unique</td><td>99</td><td>1,282,108.09 ns</td><td>1,700.364 ns</td><td>1,507.328 ns</td><td>1.000</td><td>0.00</td><td>-</td><td>-</td><td>3986 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Unique</td><td>Unique</td><td>99</td><td>1,295,998.06 ns</td><td>4,906.870 ns</td><td>4,589.889 ns</td><td>1.011</td><td>0.00</td><td>-</td><td>-</td><td>8009 B</td><td>2.01</td>
+</tr><tr><td>BclShared_Unique</td><td>Unique</td><td>99</td><td>5,901.59 ns</td><td>41.955 ns</td><td>39.245 ns</td><td>0.005</td><td>0.00</td><td>0.4730</td><td>-</td><td>8008 B</td><td>2.01</td>
+</tr><tr><td>HandWritten_Unique</td><td>Unique</td><td>99</td><td>6,297.38 ns</td><td>18.393 ns</td><td>17.205 ns</td><td>0.005</td><td>0.00</td><td>0.4730</td><td>-</td><td>8008 B</td><td>2.01</td>
+</tr><tr><td>Bcl_WithReplacement</td><td>WithReplacement</td><td>1</td><td>69.57 ns</td><td>0.254 ns</td><td>0.225 ns</td><td>?</td><td>?</td><td>0.0038</td><td>-</td><td>64 B</td><td>?</td>
+</tr><tr><td>Bcl_WithReplacement</td><td>WithReplacement</td><td>50</td><td>3,024.74 ns</td><td>5.508 ns</td><td>4.600 ns</td><td>?</td><td>?</td><td>0.1183</td><td>-</td><td>2024 B</td><td>?</td>
+</tr><tr><td>Bcl_WithReplacement</td><td>WithReplacement</td><td>99</td><td>5,981.63 ns</td><td>9.729 ns</td><td>9.100 ns</td><td>?</td><td>?</td><td>0.2365</td><td>-</td><td>3984 B</td><td>?</td>
+</tr></tbody></table>
+</body>
+</html>

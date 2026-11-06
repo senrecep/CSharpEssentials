@@ -143,6 +143,23 @@ public class StringEnumGeneratorHarnessTests
     }
 
     [Theory]
+    [InlineData("NETCOREAPP2_1_OR_GREATER")]
+    [InlineData("NETSTANDARD2_1_OR_GREATER")]
+    public void StringEnumGenerator_Should_Compile_The_Flags_Formatter_Where_String_Create_Exists(string symbol)
+    {
+        CSharpParseOptions parseOptions = new(LanguageVersion.Latest, DocumentationMode.Parse, preprocessorSymbols: [symbol]);
+        CSharpCompilation compilation = GeneratorHarness.CreateCompilation([], [typeof(StringEnumAttribute).Assembly])
+            .AddSyntaxTrees(CSharpSyntaxTree.ParseText(RichSource, parseOptions, path: "Rich.cs"));
+
+        GeneratorDriver driver = CSharpGeneratorDriver.Create([.. EnumsAssembly.Value.Generators], parseOptions: parseOptions)
+            .RunGeneratorsAndUpdateCompilation(compilation, out Compilation output, out ImmutableArray<Diagnostic> generatorDiagnostics);
+
+        driver.GetRunResult().GeneratedTrees.Should().Contain(static t => t.ToString().Contains("string.Create(length, found,", StringComparison.Ordinal));
+        generatorDiagnostics.Should().BeEmpty();
+        output.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning);
+    }
+
+    [Theory]
     [InlineData(LanguageVersion.CSharp7_3, NullableContextOptions.Disable)]
     [InlineData(LanguageVersion.CSharp8, NullableContextOptions.Enable)]
     public void StringEnumGenerator_Should_Emit_Code_Compatible_With_Older_Language_Versions(
@@ -177,6 +194,16 @@ public class StringEnumGeneratorHarnessTests
         result.GeneratedTrees[0].ToString().Should().NotContain("ToWireName").And.NotContain("Obsolete").And.NotContain("ModuleInitializer");
         generatorDiagnostics.Should().BeEmpty();
         output.GetDiagnostics().Should().NotContain(static d => d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning);
+    }
+
+    [Fact]
+    public void StringEnumGenerator_Should_Emit_Precomputed_Case_Literals()
+    {
+        GeneratorRun run = GeneratorHarness.Run(CreateCompilation(), [.. EnumsAssembly.Value.Generators]);
+
+        string generated = run.Result.GeneratedTrees.Single(static t => t.FilePath.EndsWith("OrderStatusExtensions.g.cs", StringComparison.Ordinal)).ToString();
+        generated.Should().Contain("return \"inprogress\";").And.Contain("return \"INPROGRESS\";")
+            .And.NotContain("\"InProgress\".ToLowerInvariant()").And.NotContain("\"InProgress\".ToUpperInvariant()");
     }
 
     [Fact]

@@ -18,6 +18,8 @@ internal sealed class LoggerFactoryLogWriter : ILogWriter
         MessageCreator = options.UseSeparateContext
                             ? new LogMessageWithContextCreator(options)
                             : new LogMessageCreator(options);
+        NeedsRequestBody = options.LoggingFields.Contains(LogFields.Request) || options.LoggingFields.Contains(LogFields.RequestLength);
+        NeedsResponseBody = options.LoggingFields.Contains(LogFields.Response) || options.LoggingFields.Contains(LogFields.ResponseLength);
     }
 #endif
 
@@ -25,25 +27,31 @@ internal sealed class LoggerFactoryLogWriter : ILogWriter
     public IMessageCreator MessageCreator { get; } = options.UseSeparateContext
                             ? new LogMessageWithContextCreator(options)
                             : new LogMessageCreator(options);
+
+    public bool NeedsRequestBody { get; } = options.LoggingFields.Contains(LogFields.Request) || options.LoggingFields.Contains(LogFields.RequestLength);
+
+    public bool NeedsResponseBody { get; } = options.LoggingFields.Contains(LogFields.Response) || options.LoggingFields.Contains(LogFields.ResponseLength);
 #else
     public IMessageCreator MessageCreator { get; }
+
+    public bool NeedsRequestBody { get; }
+
+    public bool NeedsResponseBody { get; }
 #endif
 
     public Task Write(RequestResponseContext requestResponseContext)
     {
-        (string logString, List<string?> values) = MessageCreator.Create(requestResponseContext);
-        object?[]? parameters = null;
-
-        if (values is not null)
-            parameters = [.. values];
-#pragma warning disable CA2254
 #if NET8_0_OR_GREATER
-        if (_logger.IsEnabled(options.LoggingLevel))
-            _logger.Log(options.LoggingLevel, logString, parameters ?? []);
+        LogLevel level = options.LoggingLevel;
 #else
-        if (_logger.IsEnabled(_loggingLevel))
-            _logger.Log(_loggingLevel, logString, parameters ?? []);
+        LogLevel level = _loggingLevel;
 #endif
+        if (!_logger.IsEnabled(level))
+            return Task.CompletedTask;
+
+        (string logString, object?[]? values) = MessageCreator.Create(requestResponseContext);
+#pragma warning disable CA2254
+        _logger.Log(level, logString, values ?? []);
 #pragma warning restore CA2254
 
         return Task.CompletedTask;

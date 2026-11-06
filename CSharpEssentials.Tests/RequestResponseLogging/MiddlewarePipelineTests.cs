@@ -1,10 +1,15 @@
+using System.IO.Pipelines;
 using CSharpEssentials.RequestResponseLogging;
+using CSharpEssentials.RequestResponseLogging.Infrastructure.Interfaces;
+using CSharpEssentials.RequestResponseLogging.Infrastructure.Middlewares;
+using CSharpEssentials.RequestResponseLogging.LogWriters;
 using FluentAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -176,6 +181,50 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task InvokeAsync_Should_IgnoreOnlyRootPath_When_RootIsIgnored()
+    {
+        var loggedPaths = new List<string>();
+
+        _host = await CreateHostBuilder(opts =>
+        {
+            opts.IgnorePaths("/");
+            opts.UseHandler(ctx =>
+            {
+                loggedPaths.Add(ctx.Context.Request.Path.Value!);
+                return Task.CompletedTask;
+            });
+        }).StartAsync();
+
+        var client = _host.GetTestClient();
+        await client.GetAsync("/");
+        await client.GetAsync("/api/test");
+
+        loggedPaths.Should().Equal("/api/test");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_SkipNullAndEmptyEntries_When_IgnoredPathsContainThem()
+    {
+        var loggedPaths = new List<string>();
+
+        _host = await CreateHostBuilder(opts =>
+        {
+            opts.IgnorePaths(null!, "", "/health");
+            opts.UseHandler(ctx =>
+            {
+                loggedPaths.Add(ctx.Context.Request.Path.Value!);
+                return Task.CompletedTask;
+            });
+        }).StartAsync();
+
+        var client = _host.GetTestClient();
+        await client.GetAsync("/health");
+        await client.GetAsync("/api/test");
+
+        loggedPaths.Should().Equal("/api/test");
+    }
+
+    [Fact]
     public async Task InvokeAsync_Should_SkipRequestLogging_When_SkipRequestResponseLoggingAttributePresent()
     {
         RequestResponseContext? capturedContext = null;
@@ -257,5 +306,486 @@ public sealed class MiddlewarePipelineTests : IAsyncLifetime
         Func<Task> act = () => client.GetAsync("/test");
 
         await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_RewindRequestBody_When_BodyReadThrowsPartway()
+    {
+        long? positionSeenByEndpoint = null;
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            ctx =>
+            {
+                positionSeenByEndpoint = ctx.Request.Body.Position;
+                return Task.CompletedTask;
+            },
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new ThrowOnceStream(new byte[10_000], throwAtPosition: 4096);
+
+        await middleware.InvokeAsync(httpContext);
+
+        capturedContext!.RequestBody.Should().StartWith("Error capturing request body");
+        positionSeenByEndpoint.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_ReportCaptureError_When_RewindAfterFailedReadThrows()
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => Task.CompletedTask,
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new DisposedOnFailureStream(new byte[100]);
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().NotThrowAsync();
+        capturedContext!.RequestBody.Should().StartWith("Error capturing request body");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_StopCapturing_When_ChunkedBodyExceedsLimit()
+    {
+        const int bodySize = 11 * 1024 * 1024;
+        long bytesSeenByEndpoint = 0;
+        RequestResponseContext? capturedContext = null;
+
+        _host = await CreateHostBuilder(
+            opts => opts.UseHandler(ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            }),
+            async ctx =>
+            {
+                byte[] chunk = new byte[81920];
+                int read;
+                while ((read = await ctx.Request.Body.ReadAsync(chunk)) > 0)
+                {
+                    bytesSeenByEndpoint += read;
+                }
+            }).StartAsync();
+        var client = _host.GetTestClient();
+
+        var pipe = new Pipe();
+        Task writer = Task.Run(async () =>
+        {
+            byte[] chunk = new byte[1024 * 1024];
+            Array.Fill(chunk, (byte)'a');
+            for (int i = 0; i < bodySize / chunk.Length; i++)
+            {
+                await pipe.Writer.WriteAsync(chunk);
+            }
+
+            await pipe.Writer.CompleteAsync();
+        });
+        using var content = new StreamContent(pipe.Reader.AsStream());
+
+        await client.PostAsync("/upload", content);
+        await writer;
+
+        content.Headers.ContentLength.Should().BeNull();
+        capturedContext!.RequestBody.Should().StartWith("Request body too large");
+        bytesSeenByEndpoint.Should().Be(bodySize);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_ReportWriteError_When_LogWriterFailsAsynchronously()
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => Task.CompletedTask,
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new AsyncThrowingLogWriter(),
+            []);
+
+        await middleware.InvokeAsync(new DefaultHttpContext());
+
+        capturedContext!.ResponseBody.Should().Be("Error writing log: writer failed");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_InvokeHandlerWithRequestBody_When_PipelineThrows()
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => throw new InvalidOperationException("endpoint failed"),
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("endpoint failed");
+        capturedContext.Should().NotBeNull();
+        capturedContext!.RequestBody.Should().Be("payload");
+        capturedContext.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: endpoint failed");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_WriteLogWithRequestBody_When_PipelineThrows()
+    {
+        var writer = new CapturingLogWriter();
+        var middleware = new DefaultRequestResponseMiddleware(
+            _ => throw new InvalidOperationException("endpoint failed"),
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        RequestResponseContext logged = writer.Contexts.Should().ContainSingle().Subject;
+        logged.RequestBody.Should().Be("payload");
+        logged.ResponseBody.Should().Be("Exception: InvalidOperationException, Message: endpoint failed");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_LogHandlerFailureAndRethrowOriginal_When_PipelineAndHandlerThrow()
+    {
+        var writer = new CapturingLogWriter();
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => throw new InvalidOperationException("endpoint failed"),
+            _ => throw new ArgumentException("handler failed"),
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("endpoint failed");
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal(
+            "Exception: InvalidOperationException, Message: endpoint failed",
+            "Error writing log: handler failed");
+        writer.Contexts[1].RequestBody.Should().Be("payload");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_LogErrorAndRethrow_When_WriteToClientFails()
+    {
+        var writer = new CapturingLogWriter();
+        var handled = new List<string?>();
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            ctx => ctx.Response.WriteAsync("hello"),
+            ctx =>
+            {
+                handled.Add(ctx.ResponseBody);
+                return Task.CompletedTask;
+            },
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new ThrowingWriteStream();
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<IOException>().WithMessage("client gone");
+        string[] expected = ["Exception: IOException, Message: client gone"];
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal(expected);
+        handled.Should().Equal(expected);
+        httpContext.Response.Body.Should().BeOfType<ThrowingWriteStream>();
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_LogErrorAndRethrow_When_WriteToClientFailsWithoutHandler()
+    {
+        var writer = new CapturingLogWriter();
+        var middleware = new DefaultRequestResponseMiddleware(
+            ctx => ctx.Response.WriteAsync("hello"),
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new ThrowingWriteStream();
+
+        Func<Task> act = () => middleware.InvokeAsync(httpContext);
+
+        await act.Should().ThrowAsync<IOException>().WithMessage("client gone");
+        writer.Contexts.Select(c => c.ResponseBody).Should().Equal("Exception: IOException, Message: client gone");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_SendResponseBytesBeforeEndpointCompletes_When_ResponseIsCaptured()
+    {
+        var clientBody = new MemoryStream();
+        long? bytesSentBeforeEndpointReturned = null;
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            async ctx =>
+            {
+                await ctx.Response.WriteAsync("first,");
+                await ctx.Response.Body.FlushAsync();
+                bytesSentBeforeEndpointReturned = clientBody.Length;
+                await ctx.Response.WriteAsync("second");
+            },
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = clientBody;
+
+        await middleware.InvokeAsync(httpContext);
+
+        bytesSentBeforeEndpointReturned.Should().Be("first,".Length);
+        System.Text.Encoding.UTF8.GetString(clientBody.ToArray()).Should().Be("first,second");
+        capturedContext!.ResponseBody.Should().Be("first,second");
+        httpContext.Response.Body.Should().BeSameAs(clientBody);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_LeaveBodiesUntouched_When_NoBodyFieldIsLogged()
+    {
+        var logger = new RecordingLogger(enabled: true);
+        var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), new LoggingOptions { LoggingFields = [LogFields.Path] });
+        var requestBody = new NonSeekableStream("payload"u8.ToArray());
+        var responseBody = new MemoryStream();
+        Stream? requestSeen = null;
+        Stream? responseSeen = null;
+        var middleware = new DefaultRequestResponseMiddleware(
+            ctx =>
+            {
+                requestSeen = ctx.Request.Body;
+                responseSeen = ctx.Response.Body;
+                return Task.CompletedTask;
+            },
+            writer,
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Path = "/orders";
+        httpContext.Request.Body = requestBody;
+        httpContext.Response.Body = responseBody;
+
+        await middleware.InvokeAsync(httpContext);
+
+        requestSeen.Should().BeSameAs(requestBody);
+        requestBody.Position.Should().Be(0);
+        responseSeen.Should().BeSameAs(responseBody);
+        logger.Entries.Should().ContainSingle().Which.Message.Should().Be($"Path: /orders{Environment.NewLine}");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_CaptureBodies_When_OnlyLengthFieldsAreLogged()
+    {
+        var logger = new RecordingLogger(enabled: true);
+        var writer = new LoggerFactoryLogWriter(logger.CreateFactory(), new LoggingOptions { LoggingFields = [LogFields.RequestLength, LogFields.ResponseLength] });
+        var middleware = new DefaultRequestResponseMiddleware(ctx => ctx.Response.WriteAsync("hello"), writer, []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new MemoryStream("payload"u8.ToArray());
+        httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(httpContext);
+
+        string nl = Environment.NewLine;
+        logger.Entries.Should().ContainSingle().Which.Message.Should().Be($"RequestLength: 7{nl}ResponseLength: 5{nl}");
+    }
+
+    [Fact]
+    public async Task InvokeAsync_Should_KeepRequestBodyInMemory_When_ContentLengthIsLargerThanDefaultBufferThreshold()
+    {
+        string payload = new('a', 64 * 1024);
+        bool? bufferedInMemory = null;
+        string? bodySeenByEndpoint = null;
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            async ctx =>
+            {
+                bufferedInMemory = ((FileBufferingReadStream)ctx.Request.Body).InMemory;
+                using var reader = new StreamReader(ctx.Request.Body);
+                bodySeenByEndpoint = await reader.ReadToEndAsync();
+            },
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new NonSeekableStream(System.Text.Encoding.UTF8.GetBytes(payload));
+        httpContext.Request.ContentLength = payload.Length;
+
+        await middleware.InvokeAsync(httpContext);
+
+        bufferedInMemory.Should().BeTrue();
+        bodySeenByEndpoint.Should().Be(payload);
+        capturedContext!.RequestBody.Should().Be(payload);
+    }
+
+    [Theory]
+    [InlineData(new byte[0], "Empty request body")]
+    [InlineData(new byte[] { 0xEF, 0xBB, 0xBF, 0x7B, 0x7D }, "{}")]
+    [InlineData(new byte[] { 0xEF, 0xBB, 0xBF }, "")]
+    public async Task InvokeAsync_Should_DecodeRequestBody_When_BodyIsEmptyOrStartsWithBom(byte[] body, string expected)
+    {
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            _ => Task.CompletedTask,
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new NonSeekableStream(body);
+        httpContext.Request.ContentLength = body.Length;
+
+        await middleware.InvokeAsync(httpContext);
+
+        capturedContext!.RequestBody.Should().Be(expected);
+    }
+
+    public static TheoryData<byte[]> BodiesDecodedLikeStreamReader()
+    {
+        byte[] spanningBlocks = new byte[(128 * 1024) + 2];
+        spanningBlocks.AsSpan().Fill((byte)'a');
+        "\u20AC"u8.CopyTo(spanningBlocks.AsSpan((128 * 1024) - 1));
+
+        return new TheoryData<byte[]>
+        {
+            "{\"name\":\"caf\u00E9 \u20AC \uD83D\uDE00\"}"u8.ToArray(),
+            new byte[] { 0x61, 0xC3, 0x28, 0x62, 0xFF, 0x63 },
+            new byte[] { 0x61, 0x62, 0xE2, 0x82 },
+            new byte[] { 0xFF, 0xFE, 0x7B, 0x00, 0x7D, 0x00 },
+            new byte[] { 0xFE, 0xFF, 0x00, 0x7B, 0x00, 0x7D },
+            new byte[] { 0xFF, 0xFE, 0x00, 0x00, 0x41, 0x00, 0x00, 0x00 },
+            new byte[] { 0x00, 0x00, 0xFE, 0xFF, 0x00, 0x00, 0x00, 0x41 },
+            new byte[] { 0xEF, 0xBB, 0x41 },
+            new byte[] { 0x00, 0x41 },
+            new byte[] { 0xFE },
+            spanningBlocks,
+        };
+    }
+
+    [Theory]
+    [MemberData(nameof(BodiesDecodedLikeStreamReader))]
+    public async Task InvokeAsync_Should_DecodeBodiesLikeStreamReader_When_BytesAreUtf8OrCarryBom(byte[] body)
+    {
+        using var expectedReader = new StreamReader(new MemoryStream(body), System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
+        string expected = await expectedReader.ReadToEndAsync();
+        RequestResponseContext? capturedContext = null;
+        var middleware = new DefaultRequestResponseWithHandlerMiddleware(
+            ctx => ctx.Response.Body.WriteAsync(body).AsTask(),
+            ctx =>
+            {
+                capturedContext = ctx;
+                return Task.CompletedTask;
+            },
+            new NullLogWriter(),
+            []);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Method = "POST";
+        httpContext.Request.Body = new NonSeekableStream(body);
+        httpContext.Request.ContentLength = body.Length;
+        httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(httpContext);
+
+        capturedContext!.RequestBody.Should().Be(expected);
+        capturedContext.ResponseBody.Should().Be(expected);
+    }
+
+    private sealed class ThrowingWriteStream : MemoryStream
+    {
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default) =>
+            throw new IOException("client gone");
+    }
+
+    private sealed class CapturingLogWriter : ILogWriter
+    {
+        public IMessageCreator? MessageCreator => null;
+
+        public List<RequestResponseContext> Contexts { get; } = [];
+
+        public Task Write(RequestResponseContext requestResponseContext)
+        {
+            Contexts.Add(requestResponseContext);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class AsyncThrowingLogWriter : ILogWriter
+    {
+        public IMessageCreator? MessageCreator => null;
+
+        public async Task Write(RequestResponseContext requestResponseContext)
+        {
+            await Task.Yield();
+            throw new InvalidOperationException("writer failed");
+        }
+    }
+
+    private sealed class NonSeekableStream(byte[] content) : MemoryStream(content)
+    {
+        public override bool CanSeek => false;
+    }
+
+    private sealed class ThrowOnceStream(byte[] content, long throwAtPosition) : MemoryStream(content)
+    {
+        private bool _thrown;
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_thrown && Position >= throwAtPosition)
+            {
+                _thrown = true;
+                throw new IOException("connection reset");
+            }
+
+            return base.ReadAsync(buffer, cancellationToken);
+        }
+    }
+
+    private sealed class DisposedOnFailureStream(byte[] content) : MemoryStream(content)
+    {
+        private bool _failed;
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            _failed = true;
+            throw new IOException("connection reset");
+        }
+
+        public override long Seek(long offset, SeekOrigin loc) =>
+            _failed ? throw new ObjectDisposedException(nameof(DisposedOnFailureStream)) : base.Seek(offset, loc);
     }
 }

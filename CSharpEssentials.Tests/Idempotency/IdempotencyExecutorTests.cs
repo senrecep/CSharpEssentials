@@ -425,6 +425,24 @@ public sealed class IdempotencyExecutorTests : IDisposable
         _runs.Should().Be(0);
     }
 
+    [Fact]
+    public async Task ExecuteAsync_Should_Name_The_Record_Namespace_When_The_Profile_Is_Unknown()
+    {
+        Func<Task> act = () => RunAsync("a", new IdempotencyExecutionOptions { Profile = "missing" });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("the idempotent operation in 'orders' uses the idempotency profile 'missing', which is not registered.*");
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_Should_Name_The_Record_Namespace_When_The_Settings_Are_Invalid()
+    {
+        Func<Task> act = () => RunAsync("a", new IdempotencyExecutionOptions { Retention = TimeSpan.FromMinutes(1), Lease = TimeSpan.FromMinutes(2) });
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("The idempotency settings of the idempotent operation in 'orders' are invalid: Lease (*");
+    }
+
     [Theory]
     [InlineData(0, 1, 1, "Retention")]
     [InlineData(60, 0, 1, "Lease")]

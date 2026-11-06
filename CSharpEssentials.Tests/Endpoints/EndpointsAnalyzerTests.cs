@@ -489,6 +489,32 @@ public class EndpointsAnalyzerTests
         diagnostics.Should().HaveCount(3).And.OnlyContain(static d => d.Id == "CSE1006" && d.Severity == DiagnosticSeverity.Info);
     }
 
+    [Theory]
+    [InlineData("public sealed class Derived : BaseEndpoint;", true)]
+    [InlineData("public sealed class Derived : BaseEndpoint<int>;", true)]
+    [InlineData("public sealed partial class Derived : BaseEndpoint;", false)]
+    [InlineData("public sealed class Derived : BaseEndpoint { public static new void Map(IEndpointRouteBuilder app) => BaseEndpoint.Map(app); }", false)]
+    [InlineData("[ExcludeFromMapping] public sealed class Derived : BaseEndpoint;", false)]
+    public async Task Analyzer_Should_Report_CSE1012_When_Non_Partial_Endpoint_Only_Inherits_Map(string derivedDeclaration, bool reported)
+    {
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzeAsync($$"""
+            public abstract class BaseEndpoint : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/base", () => TypedResults.Ok());
+            }
+
+            public abstract class BaseEndpoint<T> : IEndpoint
+            {
+                public static void Map(IEndpointRouteBuilder app) => app.MapGet("/generic", () => TypedResults.Ok());
+            }
+
+            {{derivedDeclaration}}
+            """);
+
+        diagnostics.Where(static d => d.Id == "CSE1012").Should().HaveCount(reported ? 1 : 0)
+            .And.OnlyContain(static d => d.Severity == DiagnosticSeverity.Warning && d.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Contains("Sample.Api.Derived", StringComparison.Ordinal));
+    }
+
     [Fact]
     public async Task Analyzer_Should_Not_Report_CSE1006_When_Abstract_Type_Is_Excluded()
     {
@@ -613,6 +639,22 @@ public class EndpointsAnalyzerTests
         diagnostic.Severity.Should().Be(DiagnosticSeverity.Warning);
         diagnostic.GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().Be(
             "Assemblies 'Foo.Api', 'FooApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.FooApiEndpointRegistry', so MapAllEndpoints leaves out the referenced ones; give each assembly a distinct name with [assembly: EndpointRegistryName(\"...\")]");
+    }
+
+    [Fact]
+    public async Task Analyzer_Should_Report_CSE1009_When_Colliding_Referenced_Assembly_Names_Start_With_Framework_Prefix()
+    {
+        CSharpCompilation compilation = EndpointCompilations.Create(
+            "Sample.Host",
+            OutputKind.ConsoleApplication,
+            [RegistryReference("SystemMonitor.Api"), RegistryReference("SystemMonitorApi")],
+            "namespace Sample.Host; public sealed class Marker;");
+
+        ImmutableArray<Diagnostic> diagnostics = await AnalyzerHarness.GetAnalyzerDiagnosticsAsync(compilation, EndpointCompilations.Generators.Value.Analyzers);
+
+        diagnostics.Should().ContainSingle(static d => d.Id == "CSE1009").Which
+            .GetMessage(System.Globalization.CultureInfo.InvariantCulture).Should().StartWith(
+                "Assemblies 'SystemMonitor.Api', 'SystemMonitorApi' all generate the endpoint registry 'Microsoft.AspNetCore.Builder.SystemMonitorApiEndpointRegistry'");
     }
 
     [Fact]

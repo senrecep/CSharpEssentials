@@ -18,8 +18,6 @@ namespace Sample
         public const string ShippedKebabCase = "shipped";
         public const string ShippedWireName = "shipped";
 
-        private static readonly global::CSharpEssentials.Enums.EnumConventions __WireReadConventions = global::CSharpEssentials.Enums.EnumConventions.Default with { UnknownValue = global::CSharpEssentials.Enums.UnknownEnumValueHandling.Reject };
-
         /// <summary>The canonical wire name. Throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> for undefined values.</summary>
         public static string ToWireName(this global::Sample.OrderStatus value)
         {
@@ -45,7 +43,7 @@ namespace Sample
                 return false;
             }
 
-            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.OrderStatus>().TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out value, out _);
+            return global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.OrderStatus>().TryParseWire(text, out value);
         }
 
         /// <summary>Parses like <see cref="TryParseWire"/> and throws <see cref="global::CSharpEssentials.Enums.EnumValueException"/> on failure.</summary>
@@ -54,13 +52,27 @@ namespace Sample
             global::CSharpEssentials.Enums.EnumInfo<global::Sample.OrderStatus> info = global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.OrderStatus>();
             if (text is null)
                 throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(null, global::CSharpEssentials.Enums.EnumReadMode.Data));
-            if (info.TryParse(text, global::CSharpEssentials.Enums.EnumReadMode.Data, __WireReadConventions, out global::Sample.OrderStatus value, out global::CSharpEssentials.Enums.EnumValueError? error))
+            if (info.TryParseWire(text, out global::Sample.OrderStatus value))
                 return value;
-            throw new global::CSharpEssentials.Enums.EnumValueException(error);
+            throw new global::CSharpEssentials.Enums.EnumValueException(info.CreateError(text, global::CSharpEssentials.Enums.EnumReadMode.Data));
         }
 
         /// <summary>Whether <paramref name="value"/> is a defined member.</summary>
-        public static bool IsDefined(this global::Sample.OrderStatus value) => global::CSharpEssentials.Enums.EnumMetadata.Get<global::Sample.OrderStatus>().IsDefined(value);
+        public static bool IsDefined(this global::Sample.OrderStatus value)
+        {
+            switch (value)
+            {
+                case global::Sample.OrderStatus.Pending:
+                case global::Sample.OrderStatus.InProgress:
+                case global::Sample.OrderStatus.Shipped:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>The <c>[Description]</c> text of the member declared with <paramref name="value"/>, or <see langword="null"/>.</summary>
+        public static string? ToDescription(this global::Sample.OrderStatus value) => null;
 
         internal static global::CSharpEssentials.Enums.EnumInfo<global::Sample.OrderStatus> __CreateEnumInfo()
         {
@@ -88,7 +100,7 @@ namespace Sample
                 case global::Sample.OrderStatus.Shipped:
                     return "Shipped";
                 default:
-                    return value.ToString();
+                    return ((int)value).ToString();
             }
         }
 
@@ -128,13 +140,13 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.OrderStatus.Pending:
-                    return "Pending".ToLowerInvariant();
+                    return "pending";
                 case global::Sample.OrderStatus.InProgress:
-                    return "InProgress".ToLowerInvariant();
+                    return "inprogress";
                 case global::Sample.OrderStatus.Shipped:
-                    return "Shipped".ToLowerInvariant();
+                    return "shipped";
                 default:
-                    return value.ToString().ToLowerInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -143,13 +155,13 @@ namespace Sample
             switch (value)
             {
                 case global::Sample.OrderStatus.Pending:
-                    return "Pending".ToUpperInvariant();
+                    return "PENDING";
                 case global::Sample.OrderStatus.InProgress:
-                    return "InProgress".ToUpperInvariant();
+                    return "INPROGRESS";
                 case global::Sample.OrderStatus.Shipped:
-                    return "Shipped".ToUpperInvariant();
+                    return "SHIPPED";
                 default:
-                    return value.ToString().ToUpperInvariant();
+                    return ((int)value).ToString();
             }
         }
 
@@ -215,6 +227,15 @@ namespace Sample
             return new global::Sample.OrderStatus[] { global::Sample.OrderStatus.Pending, global::Sample.OrderStatus.InProgress, global::Sample.OrderStatus.Shipped };
         }
 
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<string> __names = global::System.Array.AsReadOnly(new string[] { "Pending", "InProgress", "Shipped" });
+        private static readonly global::System.Collections.ObjectModel.ReadOnlyCollection<global::Sample.OrderStatus> __values = global::System.Array.AsReadOnly(new global::Sample.OrderStatus[] { global::Sample.OrderStatus.Pending, global::Sample.OrderStatus.InProgress, global::Sample.OrderStatus.Shipped });
+
+        /// <summary>The member names in declaration order. Cached: unlike <see cref="GetNames"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<string> Names => __names;
+
+        /// <summary>The member values in declaration order. Cached: unlike <see cref="GetValues"/>, reading it allocates nothing.</summary>
+        public static global::System.Collections.Generic.IReadOnlyList<global::Sample.OrderStatus> Values => __values;
+
         public static int AsUnderlyingType(this global::Sample.OrderStatus value)
         {
             return (int)value;
@@ -268,13 +289,18 @@ namespace Sample
 
         private static bool CheckCategory(global::System.Globalization.UnicodeCategory previous, global::System.Globalization.UnicodeCategory current)
         {
-            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
+            return previous != current && (current == global::System.Globalization.UnicodeCategory.UppercaseLetter || current == global::System.Globalization.UnicodeCategory.TitlecaseLetter || current == global::System.Globalization.UnicodeCategory.DecimalDigitNumber || IsSpecialCharacter(previous) && !IsSpecialCharacter(current));
         }
 
         private static bool IsSpecialCharacter(global::System.Globalization.UnicodeCategory category)
         {
             return category != global::System.Globalization.UnicodeCategory.UppercaseLetter
                 && category != global::System.Globalization.UnicodeCategory.LowercaseLetter
+                && category != global::System.Globalization.UnicodeCategory.TitlecaseLetter
+                && category != global::System.Globalization.UnicodeCategory.ModifierLetter
+                && category != global::System.Globalization.UnicodeCategory.OtherLetter
+                && category != global::System.Globalization.UnicodeCategory.NonSpacingMark
+                && category != global::System.Globalization.UnicodeCategory.SpacingCombiningMark
                 && category != global::System.Globalization.UnicodeCategory.DecimalDigitNumber;
         }
     }

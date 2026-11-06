@@ -51,11 +51,11 @@ public sealed class DistributedCacheIdempotencyRecordStore : IIdempotencyRecordS
 
         string cacheKey = key.ToStorageKey(KeyPrefix);
         byte[]? data = await _cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
-        if (data is not null && RecordEntrySerializer.TryRead(data, out _, out string storedFingerprint, out byte[]? payload))
+        if (data is not null && RecordEntrySerializer.TryRead(data, out _, out string storedFingerprint, out ReadOnlyMemory<byte>? payload))
         {
             if (!string.Equals(storedFingerprint, fingerprint, StringComparison.Ordinal))
                 return IdempotencyRecordReservation.FingerprintMismatch;
-            return payload is null ? IdempotencyRecordReservation.InFlight : IdempotencyRecordReservation.Completed(payload);
+            return payload is null ? IdempotencyRecordReservation.InFlight : IdempotencyRecordReservation.Completed(payload.Value);
         }
 
         string token = Guid.NewGuid().ToString("N");
@@ -83,7 +83,7 @@ public sealed class DistributedCacheIdempotencyRecordStore : IIdempotencyRecordS
         string cacheKey = key.ToStorageKey(KeyPrefix);
         byte[]? data = await _cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         if (data is not null
-            && RecordEntrySerializer.TryRead(data, out string storedToken, out _, out byte[]? stored)
+            && RecordEntrySerializer.TryRead(data, out string storedToken, out _, out ReadOnlyMemory<byte>? stored)
             && (stored is not null || !string.Equals(storedToken, token, StringComparison.Ordinal)))
             return false;
 
@@ -103,7 +103,7 @@ public sealed class DistributedCacheIdempotencyRecordStore : IIdempotencyRecordS
         string cacheKey = key.ToStorageKey(KeyPrefix);
         byte[]? data = await _cache.GetAsync(cacheKey, cancellationToken).ConfigureAwait(false);
         if (data is null
-            || !RecordEntrySerializer.TryRead(data, out string storedToken, out _, out byte[]? stored)
+            || !RecordEntrySerializer.TryRead(data, out string storedToken, out _, out ReadOnlyMemory<byte>? stored)
             || stored is not null
             || !string.Equals(storedToken, token, StringComparison.Ordinal))
             return false;

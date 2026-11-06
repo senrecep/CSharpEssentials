@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Validation.Benchmarks.BaselineSimpleComparison-20261104-200301</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method    </th><th>Valid</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials</td><td>False</td><td>674.2 ns</td><td>2.42 ns</td><td>2.15 ns</td><td>1.00</td><td>0.00</td><td>0.0916</td><td>1536 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>False</td><td>3,982.8 ns</td><td>19.87 ns</td><td>18.59 ns</td><td>5.91</td><td>0.03</td><td>0.4349</td><td>7392 B</td><td>4.81</td>
+</tr><tr><td>DataAnnotations</td><td>False</td><td>2,560.4 ns</td><td>6.73 ns</td><td>6.29 ns</td><td>3.80</td><td>0.01</td><td>0.1945</td><td>3312 B</td><td>2.16</td>
+</tr><tr><td>CSharpEssentials</td><td>True</td><td>368.3 ns</td><td>1.08 ns</td><td>1.01 ns</td><td>1.00</td><td>0.00</td><td>0.0372</td><td>624 B</td><td>1.00</td>
+</tr><tr><td>FluentValidation</td><td>True</td><td>410.8 ns</td><td>1.26 ns</td><td>1.18 ns</td><td>1.12</td><td>0.00</td><td>0.0420</td><td>704 B</td><td>1.13</td>
+</tr><tr><td>DataAnnotations</td><td>True</td><td>1,447.9 ns</td><td>2.73 ns</td><td>2.56 ns</td><td>3.93</td><td>0.01</td><td>0.1373</td><td>2328 B</td><td>3.73</td>
+</tr></tbody></table>
+</body>
+</html>

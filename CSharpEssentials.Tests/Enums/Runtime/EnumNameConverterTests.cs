@@ -45,6 +45,16 @@ public class EnumNameConverterTests
     public void LegacySnakeCase_Should_Keep_The_4x_Output(string name, string expected) =>
         EnumNameConverter.ToLegacySnakeCase(name).Should().Be(expected);
 
+    public static readonly TheoryData<string> LegacyCorpus =
+    [
+        "HTTPResponse", "InProgress", "Value1", "用户名", "用户Name", "user用户Name", "Cafe\u0301", "Foo\u01C5emal", "مرحبا", "ÇağrıMerkezi",
+    ];
+
+    [Theory]
+    [MemberData(nameof(LegacyCorpus))]
+    public void LegacySnakeCase_Should_Match_Core_ToSnakeCase(string name) =>
+        EnumNameConverter.ToLegacySnakeCase(name).Should().Be(CSharpEssentials.Core.StringExtensions.ToSnakeCase(name));
+
     // Member names never hold spaces, but the converters are ports of JsonNamingPolicy and must stay in step with it.
     public static readonly TheoryData<string> SpacedNames =
     [

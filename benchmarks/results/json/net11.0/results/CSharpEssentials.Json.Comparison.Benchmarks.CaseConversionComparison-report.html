@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Json.Comparison.Benchmarks.CaseConversionComparison-20261105-194516</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method          </th><th>Categories</th><th>Length</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Long</td><td>2,447.31 ns</td><td>2.865 ns</td><td>2.680 ns</td><td>1.00</td><td>0.00</td><td>0.0343</td><td>584 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Long</td><td>35.44 ns</td><td>0.690 ns</td><td>0.612 ns</td><td>0.01</td><td>0.00</td><td>0.0349</td><td>584 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Long</td><td>3,507.09 ns</td><td>4.661 ns</td><td>4.360 ns</td><td>1.43</td><td>0.00</td><td>0.0916</td><td>1576 B</td><td>2.70</td>
+</tr><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Medium</td><td>565.12 ns</td><td>0.381 ns</td><td>0.318 ns</td><td>1.00</td><td>0.00</td><td>0.0086</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Medium</td><td>16.20 ns</td><td>0.218 ns</td><td>0.204 ns</td><td>0.03</td><td>0.00</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Medium</td><td>1,014.30 ns</td><td>2.329 ns</td><td>2.178 ns</td><td>1.79</td><td>0.00</td><td>0.0420</td><td>712 B</td><td>4.68</td>
+</tr><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Short</td><td>111.71 ns</td><td>0.203 ns</td><td>0.190 ns</td><td>1.00</td><td>0.00</td><td>0.0029</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Short</td><td>11.28 ns</td><td>0.104 ns</td><td>0.093 ns</td><td>0.10</td><td>0.00</td><td>0.0029</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Short</td><td>398.58 ns</td><td>5.113 ns</td><td>4.783 ns</td><td>3.57</td><td>0.04</td><td>0.0300</td><td>504 B</td><td>10.50</td>
+</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Long</td><td>2,503.77 ns</td><td>7.767 ns</td><td>6.486 ns</td><td>1.00</td><td>0.00</td><td>0.0381</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Long</td><td>833.69 ns</td><td>1.478 ns</td><td>1.383 ns</td><td>0.33</td><td>0.00</td><td>0.0401</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Long</td><td>6,090.09 ns</td><td>7.114 ns</td><td>6.306 ns</td><td>2.43</td><td>0.01</td><td>0.1144</td><td>2016 B</td><td>3.00</td>
+</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Medium</td><td>592.65 ns</td><td>0.783 ns</td><td>0.654 ns</td><td>1.00</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Medium</td><td>196.97 ns</td><td>0.381 ns</td><td>0.356 ns</td><td>0.33</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Medium</td><td>1,564.54 ns</td><td>2.120 ns</td><td>1.983 ns</td><td>2.64</td><td>0.00</td><td>0.0305</td><td>528 B</td><td>3.00</td>
+</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Short</td><td>113.40 ns</td><td>0.280 ns</td><td>0.262 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Short</td><td>47.22 ns</td><td>0.197 ns</td><td>0.184 ns</td><td>0.42</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Short</td><td>492.32 ns</td><td>0.618 ns</td><td>0.548 ns</td><td>4.34</td><td>0.01</td><td>0.0095</td><td>168 B</td><td>3.00</td>
+</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Long</td><td>2,500.28 ns</td><td>2.147 ns</td><td>1.904 ns</td><td>1.00</td><td>0.00</td><td>0.0381</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Long</td><td>836.97 ns</td><td>1.205 ns</td><td>1.068 ns</td><td>0.33</td><td>0.00</td><td>0.0401</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Long</td><td>6,057.94 ns</td><td>13.551 ns</td><td>12.675 ns</td><td>2.42</td><td>0.01</td><td>0.0763</td><td>1344 B</td><td>2.00</td>
+</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Medium</td><td>592.39 ns</td><td>0.590 ns</td><td>0.552 ns</td><td>1.00</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Medium</td><td>193.58 ns</td><td>0.270 ns</td><td>0.240 ns</td><td>0.33</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Medium</td><td>1,537.28 ns</td><td>3.907 ns</td><td>3.655 ns</td><td>2.60</td><td>0.01</td><td>0.0210</td><td>352 B</td><td>2.00</td>
+</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Short</td><td>113.12 ns</td><td>0.141 ns</td><td>0.125 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Short</td><td>47.90 ns</td><td>0.127 ns</td><td>0.119 ns</td><td>0.42</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Short</td><td>457.72 ns</td><td>1.824 ns</td><td>1.706 ns</td><td>4.05</td><td>0.02</td><td>0.0067</td><td>112 B</td><td>2.00</td>
+</tr></tbody></table>
+</body>
+</html>

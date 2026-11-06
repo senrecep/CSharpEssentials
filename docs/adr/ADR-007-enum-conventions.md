@@ -1,4 +1,4 @@
-# ADR-007: One Enum Contract for Every Layer, Built at Compile Time
+# ADR-007: One enum contract for every layer, built at compile time
 
 - **Status:** Accepted (implemented in 5.0.0)
 - **Date:** 2026-10-06
@@ -123,7 +123,7 @@ The defaults change (undefined values rejected, flags as arrays, no max length o
 **Neutral**
 - Newtonsoft.Json is not supported. Newtonsoft producers that write integers are read correctly by STJ consumers through tolerant reads; the migration guide covers the transition.
 
-## Alternatives Considered
+## Alternatives considered
 
 | Alternative | Rejected because |
 |---|---|

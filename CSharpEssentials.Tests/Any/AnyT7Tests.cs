@@ -382,6 +382,13 @@ public class AnyT7Tests
     }
 
     [Fact]
+    public void ToString_WithStringValue_ShouldReturnTheValueWithoutJsonQuotes()
+    {
+        Any<int, string, bool, double, long, decimal, Guid> any = "text";
+        any.ToString().Should().Be("text");
+    }
+
+    [Fact]
     public void JsonSerialization_First_ShouldRoundTrip()
     {
         Any<int, string, bool, double, long, decimal, Guid> original = 42;
@@ -505,5 +512,17 @@ public class AnyT7Tests
         var any = Any<int, string, bool, double, long, decimal, Guid>.Seventh(TestGuid);
         any.Index.Should().Be(6);
         any.GetSeventh().Should().Be(TestGuid);
+    }
+
+    [Fact]
+    public void Default_ShouldReturnDefaultForValueTypeFirstBranch()
+    {
+        Any<int, string, bool, double, long, char, byte> any = default;
+
+        any.GetFirst().Should().Be(0);
+        any.ToTuple().First.Should().Be(0);
+        any.Deconstruct(out int first, out string? second, out bool _, out double _, out long _, out char _, out byte _);
+        first.Should().Be(0);
+        second.Should().BeNull();
     }
 }

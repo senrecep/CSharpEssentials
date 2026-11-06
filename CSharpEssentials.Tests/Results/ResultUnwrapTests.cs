@@ -47,4 +47,12 @@ public class ResultUnwrapTests
 
         value.Should().Be(99);
     }
+
+    [Fact]
+    public void ResultUnwrapException_Should_ThrowArgumentNullException_When_ErrorsIsNull()
+    {
+        Action act = () => _ = new ResultUnwrapException((Error[])null!);
+
+        act.Should().Throw<ArgumentNullException>().WithParameterName("errors");
+    }
 }

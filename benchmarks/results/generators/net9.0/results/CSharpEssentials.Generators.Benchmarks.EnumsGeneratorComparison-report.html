@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Generators.Benchmarks.EnumsGeneratorComparison-20261106-031227</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                </th><th>Categories</th><th>Files</th><th>Mean   </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>EmptyDriver_Cold</td><td>Cold</td><td>200</td><td>6.783 &mu;s</td><td>0.0302 &mu;s</td><td>0.0253 &mu;s</td><td>0.001</td><td>0.00</td><td>0.1221</td><td>-</td><td>-</td><td>2.25 KB</td><td>0.000</td>
+</tr><tr><td>CSharpEssentials_Cold</td><td>Cold</td><td>200</td><td>5,355.610 &mu;s</td><td>63.3670 &mu;s</td><td>56.1732 &mu;s</td><td>1.000</td><td>0.01</td><td>343.7500</td><td>218.7500</td><td>-</td><td>5680.99 KB</td><td>1.000</td>
+</tr><tr><td>NetEscapades_Cold</td><td>Cold</td><td>200</td><td>8,268.789 &mu;s</td><td>118.0827 &mu;s</td><td>110.4546 &mu;s</td><td>1.544</td><td>0.03</td><td>562.5000</td><td>406.2500</td><td>250.0000</td><td>12479.08 KB</td><td>2.197</td>
+</tr><tr><td>EmptyDriver_Cold</td><td>Cold</td><td>1000</td><td>34.112 &mu;s</td><td>0.1388 &mu;s</td><td>0.1084 &mu;s</td><td>0.003</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>2.25 KB</td><td>0.000</td>
+</tr><tr><td>CSharpEssentials_Cold</td><td>Cold</td><td>1000</td><td>12,155.357 &mu;s</td><td>236.4747 &mu;s</td><td>375.0740 &mu;s</td><td>1.001</td><td>0.04</td><td>428.5714</td><td>285.7143</td><td>-</td><td>7155.15 KB</td><td>1.000</td>
+</tr><tr><td>NetEscapades_Cold</td><td>Cold</td><td>1000</td><td>16,420.758 &mu;s</td><td>207.3542 &mu;s</td><td>173.1502 &mu;s</td><td>1.352</td><td>0.04</td><td>500.0000</td><td>375.0000</td><td>125.0000</td><td>13951.82 KB</td><td>1.950</td>
+</tr><tr><td>CSharpEssentials_Incremental</td><td>Incremental</td><td>200</td><td>2,168.588 &mu;s</td><td>6.2837 &mu;s</td><td>5.2472 &mu;s</td><td>1.00</td><td>0.00</td><td>31.2500</td><td>7.8125</td><td>-</td><td>611.65 KB</td><td>1.00</td>
+</tr><tr><td>NetEscapades_Incremental</td><td>Incremental</td><td>200</td><td>2,105.485 &mu;s</td><td>9.5573 &mu;s</td><td>7.4617 &mu;s</td><td>0.97</td><td>0.00</td><td>31.2500</td><td>-</td><td>-</td><td>559.57 KB</td><td>0.91</td>
+</tr><tr><td>CSharpEssentials_Incremental</td><td>Incremental</td><td>1000</td><td>3,352.278 &mu;s</td><td>14.4398 &mu;s</td><td>12.8005 &mu;s</td><td>1.00</td><td>0.01</td><td>31.2500</td><td>-</td><td>-</td><td>717.22 KB</td><td>1.00</td>
+</tr><tr><td>NetEscapades_Incremental</td><td>Incremental</td><td>1000</td><td>3,353.753 &mu;s</td><td>27.2440 &mu;s</td><td>24.1511 &mu;s</td><td>1.00</td><td>0.01</td><td>31.2500</td><td>-</td><td>-</td><td>670.35 KB</td><td>0.93</td>
+</tr></tbody></table>
+</body>
+</html>

@@ -15,4 +15,8 @@ public sealed class MigrateDataOptions<TEntity, TSeedData, TKey>
     public required Func<TSeedData, TEntity> Converter { get; init; }
     public bool HardDeleteMode { get; init; }
     public Func<IQueryable<TEntity>, IEnumerable<TSeedData>, bool>? PreConditionFunc { get; init; }
+
+    internal Func<TEntity, TKey> EntityKeySelector => field ??= EntityKeyProperty.Compile();
+
+    internal Func<TSeedData, TKey> DataKeySelector => field ??= DataKeyProperty.Compile();
 }

@@ -23,6 +23,18 @@ public class ResultEndpointFilterTests
     }
 
     [Fact]
+    public async Task InvokeAsync_WithSuccessResultTOfReferenceType_Should_Return_OkWithSameInstance()
+    {
+        var filter = new ResultEndpointFilter();
+        var context = new DefaultEndpointFilterInvocationContext(new DefaultHttpContext());
+        int[] value = [1, 2];
+
+        object result = (await filter.InvokeAsync(context, _ => new ValueTask<object?>(Result<int[]>.Success(value))))!;
+
+        ((Ok<object>)result).Value.Should().BeSameAs(value);
+    }
+
+    [Fact]
     public async Task InvokeAsync_WithFailureResultT_Should_Return_ProblemResult()
     {
         var filter = new ResultEndpointFilter();

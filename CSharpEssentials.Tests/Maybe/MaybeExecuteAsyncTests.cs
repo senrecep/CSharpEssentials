@@ -212,4 +212,21 @@ public class MaybeExecuteAsyncTests
     }
 
     #endregion
+
+    #region Cancellation
+
+    [Fact]
+    public async Task Execute_ValueTaskMaybe_FuncValueTask_PendingAction_WithCancelledToken_ShouldThrow()
+    {
+        ValueTask<Maybe<int>> maybeTask = ValueTask.FromResult(Maybe<int>.From(1));
+        var pending = new TaskCompletionSource();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+
+        Func<Task> act = () => maybeTask.ExecuteAsync(_ => new ValueTask(pending.Task), cts.Token).WaitAsync(TimeSpan.FromSeconds(5));
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    #endregion
 }

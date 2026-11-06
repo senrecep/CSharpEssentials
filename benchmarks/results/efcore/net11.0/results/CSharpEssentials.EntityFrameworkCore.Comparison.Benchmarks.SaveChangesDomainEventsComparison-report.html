@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.SaveChangesDomainEventsComparison-20261106-013559</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                           </th><th>Count</th><th>EventsPerEntity</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Median</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Ef_SaveChanges</td><td>1</td><td>0</td><td>61.11 &mu;s</td><td>0.743 &mu;s</td><td>0.658 &mu;s</td><td>60.92 &mu;s</td><td>1.00</td><td>0.01</td><td>0.4883</td><td>-</td><td>15.91 KB</td><td>1.00</td>
+</tr><tr><td>HandWritten_DispatchAfterSave</td><td>1</td><td>0</td><td>64.15 &mu;s</td><td>0.318 &mu;s</td><td>0.282 &mu;s</td><td>64.10 &mu;s</td><td>1.05</td><td>0.01</td><td>0.9766</td><td>-</td><td>16.69 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Dispatch</td><td>1</td><td>0</td><td>64.14 &mu;s</td><td>0.547 &mu;s</td><td>0.485 &mu;s</td><td>64.07 &mu;s</td><td>1.05</td><td>0.01</td><td>0.9766</td><td>-</td><td>16.86 KB</td><td>1.06</td>
+</tr><tr><td>CSharpEssentials_DomainEventInterceptor</td><td>1</td><td>0</td><td>65.07 &mu;s</td><td>0.260 &mu;s</td><td>0.217 &mu;s</td><td>65.02 &mu;s</td><td>1.06</td><td>0.01</td><td>0.9766</td><td>-</td><td>16.92 KB</td><td>1.06</td>
+</tr><tr><td>Ef_SaveChanges</td><td>1</td><td>1</td><td>61.33 &mu;s</td><td>0.211 &mu;s</td><td>0.176 &mu;s</td><td>61.26 &mu;s</td><td>1.00</td><td>0.00</td><td>0.9766</td><td>-</td><td>15.98 KB</td><td>1.00</td>
+</tr><tr><td>HandWritten_DispatchAfterSave</td><td>1</td><td>1</td><td>64.34 &mu;s</td><td>0.344 &mu;s</td><td>0.287 &mu;s</td><td>64.32 &mu;s</td><td>1.05</td><td>0.01</td><td>0.9766</td><td>-</td><td>16.78 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Dispatch</td><td>1</td><td>1</td><td>66.67 &mu;s</td><td>0.226 &mu;s</td><td>0.201 &mu;s</td><td>66.63 &mu;s</td><td>1.09</td><td>0.00</td><td>0.9766</td><td>-</td><td>17.45 KB</td><td>1.09</td>
+</tr><tr><td>CSharpEssentials_DomainEventInterceptor</td><td>1</td><td>1</td><td>65.96 &mu;s</td><td>0.170 &mu;s</td><td>0.142 &mu;s</td><td>65.97 &mu;s</td><td>1.08</td><td>0.00</td><td>0.9766</td><td>-</td><td>17.63 KB</td><td>1.10</td>
+</tr><tr><td>Ef_SaveChanges</td><td>100</td><td>0</td><td>2,482.38 &mu;s</td><td>22.814 &mu;s</td><td>19.051 &mu;s</td><td>2,476.99 &mu;s</td><td>1.00</td><td>0.01</td><td>62.5000</td><td>-</td><td>1090.89 KB</td><td>1.00</td>
+</tr><tr><td>HandWritten_DispatchAfterSave</td><td>100</td><td>0</td><td>2,558.17 &mu;s</td><td>23.088 &mu;s</td><td>19.280 &mu;s</td><td>2,550.45 &mu;s</td><td>1.03</td><td>0.01</td><td>62.5000</td><td>-</td><td>1141.24 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Dispatch</td><td>100</td><td>0</td><td>2,467.11 &mu;s</td><td>8.981 &mu;s</td><td>7.012 &mu;s</td><td>2,468.82 &mu;s</td><td>0.99</td><td>0.01</td><td>62.5000</td><td>-</td><td>1141.42 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_DomainEventInterceptor</td><td>100</td><td>0</td><td>2,543.70 &mu;s</td><td>9.986 &mu;s</td><td>8.852 &mu;s</td><td>2,539.89 &mu;s</td><td>1.02</td><td>0.01</td><td>62.5000</td><td>-</td><td>1141.45 KB</td><td>1.05</td>
+</tr><tr><td>Ef_SaveChanges</td><td>100</td><td>1</td><td>2,469.67 &mu;s</td><td>12.530 &mu;s</td><td>11.108 &mu;s</td><td>2,467.07 &mu;s</td><td>1.00</td><td>0.01</td><td>62.5000</td><td>-</td><td>1098.77 KB</td><td>1.00</td>
+</tr><tr><td>HandWritten_DispatchAfterSave</td><td>100</td><td>1</td><td>2,548.84 &mu;s</td><td>9.772 &mu;s</td><td>8.663 &mu;s</td><td>2,548.83 &mu;s</td><td>1.03</td><td>0.01</td><td>62.5000</td><td>-</td><td>1151.18 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Dispatch</td><td>100</td><td>1</td><td>2,558.80 &mu;s</td><td>15.133 &mu;s</td><td>13.415 &mu;s</td><td>2,553.16 &mu;s</td><td>1.04</td><td>0.01</td><td>62.5000</td><td>-</td><td>1160.56 KB</td><td>1.06</td>
+</tr><tr><td>CSharpEssentials_DomainEventInterceptor</td><td>100</td><td>1</td><td>2,606.44 &mu;s</td><td>14.647 &mu;s</td><td>12.231 &mu;s</td><td>2,602.71 &mu;s</td><td>1.06</td><td>0.01</td><td>62.5000</td><td>-</td><td>1160.68 KB</td><td>1.06</td>
+</tr><tr><td>Ef_SaveChanges</td><td>1000</td><td>0</td><td>24,563.32 &mu;s</td><td>437.316 &mu;s</td><td>613.056 &mu;s</td><td>24,262.12 &mu;s</td><td>1.00</td><td>0.03</td><td>500.0000</td><td>250.0000</td><td>10848.17 KB</td><td>1.00</td>
+</tr><tr><td>HandWritten_DispatchAfterSave</td><td>1000</td><td>0</td><td>26,951.60 &mu;s</td><td>536.851 &mu;s</td><td>639.082 &mu;s</td><td>26,683.24 &mu;s</td><td>1.10</td><td>0.04</td><td>666.6667</td><td>333.3333</td><td>11348.49 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Dispatch</td><td>1000</td><td>0</td><td>26,062.53 &mu;s</td><td>511.280 &mu;s</td><td>608.643 &mu;s</td><td>25,916.89 &mu;s</td><td>1.06</td><td>0.03</td><td>500.0000</td><td>250.0000</td><td>11348.78 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_DomainEventInterceptor</td><td>1000</td><td>0</td><td>26,263.05 &mu;s</td><td>504.689 &mu;s</td><td>540.011 &mu;s</td><td>26,332.44 &mu;s</td><td>1.07</td><td>0.03</td><td>500.0000</td><td>250.0000</td><td>11348.73 KB</td><td>1.05</td>
+</tr><tr><td>Ef_SaveChanges</td><td>1000</td><td>1</td><td>25,250.46 &mu;s</td><td>488.021 &mu;s</td><td>542.434 &mu;s</td><td>24,952.34 &mu;s</td><td>1.00</td><td>0.03</td><td>500.0000</td><td>250.0000</td><td>10926.46 KB</td><td>1.00</td>
+</tr><tr><td>HandWritten_DispatchAfterSave</td><td>1000</td><td>1</td><td>26,612.96 &mu;s</td><td>523.985 &mu;s</td><td>623.766 &mu;s</td><td>26,221.33 &mu;s</td><td>1.05</td><td>0.03</td><td>500.0000</td><td>250.0000</td><td>11442.95 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_BaseDbContext_Dispatch</td><td>1000</td><td>1</td><td>26,811.85 &mu;s</td><td>530.019 &mu;s</td><td>776.895 &mu;s</td><td>26,383.02 &mu;s</td><td>1.06</td><td>0.04</td><td>666.6667</td><td>333.3333</td><td>11522.66 KB</td><td>1.05</td>
+</tr><tr><td>CSharpEssentials_DomainEventInterceptor</td><td>1000</td><td>1</td><td>26,982.25 &mu;s</td><td>516.074 &mu;s</td><td>671.042 &mu;s</td><td>26,666.37 &mu;s</td><td>1.07</td><td>0.03</td><td>666.6667</td><td>333.3333</td><td>11522.77 KB</td><td>1.05</td>
+</tr></tbody></table>
+</body>
+</html>

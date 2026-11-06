@@ -4,8 +4,8 @@ using CSharpEssentials.ResultPattern;
 namespace CSharpEssentials.Validation;
 
 /// <summary>
-/// Provides extension methods for validating <see cref="Result{T}"/> instances
-/// within functional railway-oriented programming pipelines.
+/// Extension methods that validate <see cref="Result{T}"/> values
+/// inside railway-oriented pipelines.
 /// </summary>
 public static class ValidationResultExtensions
 {
@@ -15,7 +15,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> using the specified validator.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static ValueTask<Result<T>> ValidateWithAsync<T>(
         this Result<T> result,
@@ -39,8 +39,8 @@ public static class ValidationResultExtensions
 
 
     /// <summary>
-    /// Validates the value of a successful <see cref="Result{T}"/> inline synchronously using a synchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// Validates the value of a successful <see cref="Result{T}"/> inline using a synchronous configuration delegate.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static Result<T> ValidateWith<T>(
         this Result<T> result,
@@ -65,7 +65,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inline using a synchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static ValueTask<Result<T>> ValidateWithAsync<T>(
         this Result<T> result,
@@ -88,7 +88,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inline using an asynchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static ValueTask<Result<T>> ValidateWithAsync<T>(
         this Result<T> result,
@@ -116,7 +116,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inside a <see cref="Task{T}"/> using the specified validator.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this Task<Result<T>> resultTask,
@@ -144,7 +144,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inside a <see cref="Task{T}"/> inline using a synchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this Task<Result<T>> resultTask,
@@ -172,7 +172,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inside a <see cref="Task{T}"/> inline using an asynchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this Task<Result<T>> resultTask,
@@ -204,7 +204,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inside a <see cref="ValueTask{T}"/> using the specified validator.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this ValueTask<Result<T>> resultTask,
@@ -229,7 +229,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inside a <see cref="ValueTask{T}"/> inline using a synchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this ValueTask<Result<T>> resultTask,
@@ -254,7 +254,7 @@ public static class ValidationResultExtensions
 
     /// <summary>
     /// Validates the value of a successful <see cref="Result{T}"/> inside a <see cref="ValueTask{T}"/> inline using an asynchronous configuration delegate.
-    /// If the result is already a failure, it is returned directly, short-circuiting the pipeline.
+    /// If the result is already a failure, it is returned as is and the pipeline short-circuits.
     /// </summary>
     public static async ValueTask<Result<T>> ValidateWithAsync<T>(
         this ValueTask<Result<T>> resultTask,

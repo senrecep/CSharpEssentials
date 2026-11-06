@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.DependencyInjection.Benchmarks.TryAddBenchmarks-20261105-125517</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method </th><th>N</th><th>Mean     </th><th>Error  </th><th>StdDev </th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>ManualTryAdd</td><td>50</td><td>2,441.6 ns</td><td>30.66 ns</td><td>28.68 ns</td><td>1.00</td><td>0.02</td><td>0.2594</td><td>0.0038</td><td>-</td><td>4.27 KB</td><td>1.00</td>
+</tr><tr><td>CseGenerated</td><td>50</td><td>3,274.4 ns</td><td>13.23 ns</td><td>12.37 ns</td><td>1.34</td><td>0.02</td><td>0.2632</td><td>0.0038</td><td>-</td><td>4.36 KB</td><td>1.02</td>
+</tr><tr><td>CseReflection</td><td>50</td><td>189,398.0 ns</td><td>921.68 ns</td><td>862.14 ns</td><td>77.58</td><td>0.94</td><td>14.6484</td><td>-</td><td>-</td><td>244.32 KB</td><td>57.17</td>
+</tr><tr><td>Scrutor</td><td>50</td><td>52,748.3 ns</td><td>637.32 ns</td><td>532.19 ns</td><td>21.61</td><td>0.32</td><td>2.4414</td><td>-</td><td>-</td><td>47.8 KB</td><td>11.18</td>
+</tr><tr><td>ManualAdd</td><td>50</td><td>599.4 ns</td><td>11.84 ns</td><td>13.16 ns</td><td>0.25</td><td>0.01</td><td>0.2613</td><td>0.0038</td><td>-</td><td>4.27 KB</td><td>1.00</td>
+</tr><tr><td>ManualTryAdd</td><td>500</td><td>196,269.0 ns</td><td>187.66 ns</td><td>166.36 ns</td><td>1.00</td><td>0.00</td><td>2.1973</td><td>0.2441</td><td>-</td><td>39.47 KB</td><td>1.00</td>
+</tr><tr><td>CseGenerated</td><td>500</td><td>280,377.8 ns</td><td>211.10 ns</td><td>176.28 ns</td><td>1.43</td><td>0.00</td><td>1.9531</td><td>-</td><td>-</td><td>39.55 KB</td><td>1.00</td>
+</tr><tr><td>CseReflection</td><td>500</td><td>2,247,534.3 ns</td><td>13,753.12 ns</td><td>12,864.68 ns</td><td>11.45</td><td>0.06</td><td>140.6250</td><td>15.6250</td><td>-</td><td>2470.01 KB</td><td>62.58</td>
+</tr><tr><td>Scrutor</td><td>500</td><td>716,211.2 ns</td><td>1,587.79 ns</td><td>1,407.53 ns</td><td>3.65</td><td>0.01</td><td>27.3438</td><td>7.8125</td><td>-</td><td>474.74 KB</td><td>12.03</td>
+</tr><tr><td>ManualAdd</td><td>500</td><td>6,516.8 ns</td><td>66.23 ns</td><td>61.96 ns</td><td>0.03</td><td>0.00</td><td>2.4109</td><td>0.2975</td><td>-</td><td>39.47 KB</td><td>1.00</td>
+</tr><tr><td>ManualTryAdd</td><td>2000</td><td>3,220,705.8 ns</td><td>3,341.65 ns</td><td>2,962.28 ns</td><td>1.000</td><td>0.00</td><td>7.8125</td><td>-</td><td>-</td><td>157.27 KB</td><td>1.00</td>
+</tr><tr><td>CseGenerated</td><td>2000</td><td>4,585,995.7 ns</td><td>3,985.75 ns</td><td>3,533.27 ns</td><td>1.424</td><td>0.00</td><td>7.8125</td><td>-</td><td>-</td><td>157.36 KB</td><td>1.00</td>
+</tr><tr><td>CseReflection</td><td>2000</td><td>15,441,648.8 ns</td><td>140,999.21 ns</td><td>131,890.75 ns</td><td>4.794</td><td>0.04</td><td>500.0000</td><td>166.6667</td><td>-</td><td>10773.38 KB</td><td>68.50</td>
+</tr><tr><td>Scrutor</td><td>2000</td><td>6,021,110.7 ns</td><td>28,996.65 ns</td><td>25,704.78 ns</td><td>1.870</td><td>0.01</td><td>109.3750</td><td>93.7500</td><td>46.8750</td><td>1921.84 KB</td><td>12.22</td>
+</tr><tr><td>ManualAdd</td><td>2000</td><td>28,416.2 ns</td><td>421.54 ns</td><td>394.31 ns</td><td>0.009</td><td>0.00</td><td>9.6130</td><td>3.3875</td><td>-</td><td>157.27 KB</td><td>1.00</td>
+</tr></tbody></table>
+</body>
+</html>

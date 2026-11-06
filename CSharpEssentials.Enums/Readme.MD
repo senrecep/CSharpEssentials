@@ -1,6 +1,18 @@
 # CSharpEssentials.Enums
 
-One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]` and a bundled source generator writes its metadata and helpers at compile time: no reflection, trim and NativeAOT safe.
+One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]` and a bundled source generator writes its metadata and helpers at compile time. The generated code uses no reflection and is trim and NativeAOT safe.
+
+> Benchmarks against Enums.NET 5.0.0, NetEscapades.EnumGenerators 1.0.0-beta21 (a prerelease; no stable version
+> exists) and the BCL are in [BENCHMARKS.md](./BENCHMARKS.md). `ToOptimizedString` ties the fastest column on net10
+> (0.5439 ns) and net8; NetEscapades is faster on net9 and net11. All three libraries publish under Native AOT, and CSE
+> and NetEscapades do so with 0 IL warnings. CSE loses elsewhere: `IsDefined` takes 3.9082 ns against 0.4209 ns, and descriptions
+> and `ToString` of an undefined value are slower. Parsing a valid name is slower than Enums.NET on net10 (22.1890 vs
+> 17.8628 ns case-sensitive, 51.9075 vs 35.9320 ns ignore-case) and is the slowest column on net8 and net9. A rejected
+> input parses 2.99× to 4.14× slower than Enums.NET on net10 and allocates 88 B. `GetNames` allocates 184 B where Enums.NET
+> allocates nothing, the AOT binary is 1.3 MB against 1.2 MB for NetEscapades, and on net8 (the netstandard2.1 build)
+> parsing allocates on every call. Design-time cost of the bundled source generator (cold and incremental runs against
+> NetEscapades.EnumGenerators) is described in [the generator BENCHMARKS.md](../CSharpEssentials.Enums.Generators/BENCHMARKS.md).
+> Results are pending the full run.
 
 ## Installation
 
@@ -75,6 +87,7 @@ OrderStatus status = OrderStatus.PendingApproval;
 status.ToWireName();                                // "pending_approval"
 OrderStatusExtensions.PendingApprovalWireName;      // "pending_approval" (const)
 status.IsDefined();                                 // true (flags: a combination of defined flags)
+status.ToDescription();                             // the [Description] text, or null
 
 OrderStatusExtensions.TryParseWire("Approval", out OrderStatus parsed); // true, PendingApproval
 OrderStatusExtensions.ParseWire("pending_approval");                     // PendingApproval
@@ -86,13 +99,16 @@ status.ToLowerCase();                               // "pendingapproval"
 status.ToUpperCase();                               // "PENDINGAPPROVAL"
 status.AsUnderlyingType();                          // 1
 OrderStatusExtensions.IsDefined("PendingApproval"); // true (member names)
-OrderStatusExtensions.GetNames();                   // member names
-OrderStatusExtensions.GetValues();                  // all members
+OrderStatusExtensions.GetNames();                   // member names (a new array per call)
+OrderStatusExtensions.GetValues();                  // all members (a new array per call)
+OrderStatusExtensions.Names;                        // member names, cached IReadOnlyList<string>
+OrderStatusExtensions.Values;                       // all members, cached IReadOnlyList<OrderStatus>
 ```
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are formatted as comma separated wire names of single flags.
 - `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member). They never map an unknown value to the fallback member: `ParseWire("gone")` throws, while `ParseWire("unknown")` returns `Unknown` because that is the member's own wire name.
-- `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values.
+- `ToDescription()` is a new generated member. It returns the member's `[Description]` text, and `null` (not the member name) for a member without one, an undefined value or a `[Flags]` combination. Because it lives in the enum's namespace, it takes precedence over a generic `ToDescription(this Enum)` helper at call sites there, and a `ToDescription(this YourEnum)` extension in the same namespace becomes an ambiguous call (CS0121). Rename or remove your own extension when you upgrade.
+- `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values, except for member names with letters without case or combining marks (see [Upgrading to 8.0](#upgrading-to-80)).
 - `ToSnakeCase()`, `TryParse` and `Parse` are obsolete; use `ToWireName()`, `TryParseWire` and `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`), while `ToWireName()` returns `http_status`. That old spelling is read as an extra alias, so stored values still load.
 
 ## Conventions and runtime API
@@ -220,6 +236,7 @@ CSE0011 is not used (folded into CSE0015). When CSE0002, CSE0003, CSE0004, CSE00
 - The reflection opt-ins are annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`: `EnumMetadata.GetOrCreateWithReflection`, `AddEnumConventionsWithReflection` (JSON and ASP.NET Core), `EnumConverterFactory.CreateWithReflectionFallback` and `ConfigureEnumConventionsWithReflection` (EF Core). The default path never calls them.
 - A `[StringEnum]` enum without metadata fails loudly (CSE0015 at build time, an exception when its converter is created). It never falls back to numbers silently.
 - In AOT apps serialize with a source-generated `JsonSerializerContext`; the `ConvertToJson`/`ConvertFromJson` helpers and `EnhancedJsonSerializerOptions` of `CSharpEssentials.Json` use reflection-based serialization.
+- `IEnumInfo.WireNames` and `EnumValueError.AllowedValues` are internal read-only lists, not `string[]`. A source-generated `JsonSerializerContext` cannot register that type, so an error handler that puts `AllowedValues` in an `object` slot (error metadata, for example) should copy it with `[.. error.AllowedValues]` first.
 
 ## Glossary
 
@@ -238,3 +255,7 @@ Full vocabulary and the normative matrix: [enum conventions design](../docs/desi
 ## Migrating from 4.x
 
 See [Migrating from 4.x to 5.0](../docs/migration/v4-to-v5.md#naming-and-generated-helpers-csharpessentialsenums): obsolete helpers, the `ToSnakeCase()` vs `ToWireName()` difference and the database rollout.
+
+## Upgrading to 8.0
+
+- The legacy spelling (`{Member}SnakeCase`, `{Member}KebabCase`, the obsolete `ToSnakeCase()` and `ToKebabCase()`, and the legacy alias read by `TryParseWire`) follows the 8.0 Core `ToSnakeCase` rule and keeps letters without case, titlecase letters and combining marks. A member named `用户Name` was `name` and is now `用户_name`. Members named only with Latin letters and digits keep their values. If you stored the old spelling of such a member, rewrite the stored values with the new spelling.

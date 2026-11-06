@@ -1,0 +1,35 @@
+```
+
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+
+
+```
+| Method                             | Succeed | Yield | Mean        | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|----------------------------------- |-------- |------ |------------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
+| **HandWritten_TaskSource_TaskHandler** | **False**   | **False** |    **19.13 ns** | **0.098 ns** | **0.091 ns** |  **1.00** |    **0.01** | **0.0048** |      **80 B** |        **1.00** |
+| TaskSource_SyncHandler             | False   | False |    21.53 ns | 0.108 ns | 0.101 ns |  1.13 |    0.01 | 0.0048 |      80 B |        1.00 |
+| TaskSource_TaskHandler             | False   | False |    24.29 ns | 0.092 ns | 0.086 ns |  1.27 |    0.01 | 0.0048 |      80 B |        1.00 |
+| ValueTaskSource_ValueTaskHandler   | False   | False |    59.65 ns | 0.243 ns | 0.227 ns |  3.12 |    0.02 | 0.0033 |      56 B |        0.70 |
+| Instance_TaskHandler               | False   | False |    29.06 ns | 0.288 ns | 0.255 ns |  1.52 |    0.01 | 0.0081 |     136 B |        1.70 |
+|                                    |         |       |             |          |          |       |         |        |           |             |
+| **HandWritten_TaskSource_TaskHandler** | **False**   | **True**  |   **872.55 ns** | **4.815 ns** | **4.021 ns** |  **1.00** |    **0.01** | **0.0162** |     **280 B** |        **1.00** |
+| TaskSource_SyncHandler             | False   | True  |   869.14 ns | 5.794 ns | 5.420 ns |  1.00 |    0.01 | 0.0172 |     296 B |        1.06 |
+| TaskSource_TaskHandler             | False   | True  |   858.74 ns | 6.214 ns | 5.813 ns |  0.98 |    0.01 | 0.0172 |     304 B |        1.09 |
+| ValueTaskSource_ValueTaskHandler   | False   | True  |   907.13 ns | 5.869 ns | 5.490 ns |  1.04 |    0.01 | 0.0238 |     399 B |        1.43 |
+| Instance_TaskHandler               | False   | True  |    29.48 ns | 0.543 ns | 0.508 ns |  0.03 |    0.00 | 0.0081 |     136 B |        0.49 |
+|                                    |         |       |             |          |          |       |         |        |           |             |
+| **HandWritten_TaskSource_TaskHandler** | **True**    | **False** |    **26.00 ns** | **0.295 ns** | **0.246 ns** |  **1.00** |    **0.01** | **0.0095** |     **160 B** |        **1.00** |
+| TaskSource_SyncHandler             | True    | False |    19.50 ns | 0.196 ns | 0.174 ns |  0.75 |    0.01 | 0.0048 |      80 B |        0.50 |
+| TaskSource_TaskHandler             | True    | False |    30.59 ns | 0.292 ns | 0.273 ns |  1.18 |    0.01 | 0.0095 |     160 B |        1.00 |
+| ValueTaskSource_ValueTaskHandler   | True    | False |    44.00 ns | 0.125 ns | 0.117 ns |  1.69 |    0.02 |      - |         - |        0.00 |
+| Instance_TaskHandler               | True    | False |    10.27 ns | 0.100 ns | 0.094 ns |  0.40 |    0.01 | 0.0048 |      80 B |        0.50 |
+|                                    |         |       |             |          |          |       |         |        |           |             |
+| **HandWritten_TaskSource_TaskHandler** | **True**    | **True**  | **1,411.41 ns** | **8.393 ns** | **7.851 ns** |  **1.00** |    **0.01** | **0.0191** |     **328 B** |        **1.00** |
+| TaskSource_SyncHandler             | True    | True  |   844.62 ns | 5.249 ns | 4.910 ns |  0.60 |    0.00 | 0.0134 |     239 B |        0.73 |
+| TaskSource_TaskHandler             | True    | True  | 1,412.19 ns | 7.053 ns | 6.252 ns |  1.00 |    0.01 | 0.0210 |     352 B |        1.07 |
+| ValueTaskSource_ValueTaskHandler   | True    | True  | 1,542.62 ns | 8.373 ns | 7.832 ns |  1.09 |    0.01 | 0.0267 |     464 B |        1.41 |
+| Instance_TaskHandler               | True    | True  |   790.59 ns | 4.047 ns | 3.786 ns |  0.56 |    0.00 | 0.0057 |     104 B |        0.32 |

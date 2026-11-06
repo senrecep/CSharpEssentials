@@ -7,16 +7,19 @@ public static class ProblemTypeUris
 {
     /// <summary>
     /// RFC 9110 section links, matching the ones ASP.NET Core writes for framework responses.
-    /// Returns <see langword="null"/> for status codes RFC 9110 does not define.
+    /// Returns <see langword="null"/> for status codes without an RFC 9110 client or server error section,
+    /// including 418, which RFC 9110 marks as unused.
     /// </summary>
     public static string? Rfc9110(int statusCode) => statusCode switch
     {
         400 => "https://tools.ietf.org/html/rfc9110#section-15.5.1",
         401 => "https://tools.ietf.org/html/rfc9110#section-15.5.2",
+        402 => "https://tools.ietf.org/html/rfc9110#section-15.5.3",
         403 => "https://tools.ietf.org/html/rfc9110#section-15.5.4",
         404 => "https://tools.ietf.org/html/rfc9110#section-15.5.5",
         405 => "https://tools.ietf.org/html/rfc9110#section-15.5.6",
         406 => "https://tools.ietf.org/html/rfc9110#section-15.5.7",
+        407 => "https://tools.ietf.org/html/rfc9110#section-15.5.8",
         408 => "https://tools.ietf.org/html/rfc9110#section-15.5.9",
         409 => "https://tools.ietf.org/html/rfc9110#section-15.5.10",
         410 => "https://tools.ietf.org/html/rfc9110#section-15.5.11",
@@ -27,6 +30,7 @@ public static class ProblemTypeUris
         415 => "https://tools.ietf.org/html/rfc9110#section-15.5.16",
         416 => "https://tools.ietf.org/html/rfc9110#section-15.5.17",
         417 => "https://tools.ietf.org/html/rfc9110#section-15.5.18",
+        421 => "https://tools.ietf.org/html/rfc9110#section-15.5.20",
         422 => "https://tools.ietf.org/html/rfc9110#section-15.5.21",
         426 => "https://tools.ietf.org/html/rfc9110#section-15.5.22",
         500 => "https://tools.ietf.org/html/rfc9110#section-15.6.1",

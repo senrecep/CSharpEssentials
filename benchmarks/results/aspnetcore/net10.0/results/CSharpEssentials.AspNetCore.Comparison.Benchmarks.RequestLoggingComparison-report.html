@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.RequestLoggingComparison-20261105-225216</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+</code></pre>
+<pre><code>Categories=Bodies  
+</code></pre>
+
+<table>
+<thead><tr><th>Method              </th><th>BodySize</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>Plain_NoLogging</td><td>1024</td><td>10.47 &mu;s</td><td>0.197 &mu;s</td><td>0.185 &mu;s</td><td>1.00</td><td>0.02</td><td>0.6104</td><td>-</td><td>-</td><td>10.42 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_AllFields</td><td>1024</td><td>21.02 &mu;s</td><td>0.392 &mu;s</td><td>0.644 &mu;s</td><td>2.01</td><td>0.07</td><td>2.4414</td><td>-</td><td>-</td><td>40.71 KB</td><td>3.91</td>
+</tr><tr><td>HttpLogging_Bodies</td><td>1024</td><td>15.90 &mu;s</td><td>0.289 &mu;s</td><td>0.297 &mu;s</td><td>1.52</td><td>0.04</td><td>1.4648</td><td>-</td><td>-</td><td>24.91 KB</td><td>2.39</td>
+</tr><tr><td>HttpLogging_Defaults</td><td>1024</td><td>16.40 &mu;s</td><td>0.312 &mu;s</td><td>0.346 &mu;s</td><td>1.57</td><td>0.04</td><td>1.4648</td><td>-</td><td>-</td><td>25.26 KB</td><td>2.43</td>
+</tr><tr><td>Plain_NoLogging</td><td>65536</td><td>40.64 &mu;s</td><td>0.778 &mu;s</td><td>0.728 &mu;s</td><td>1.00</td><td>0.02</td><td>4.8828</td><td>0.4883</td><td>-</td><td>78.21 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_AllFields</td><td>65536</td><td>218.85 &mu;s</td><td>4.166 &mu;s</td><td>3.897 &mu;s</td><td>5.39</td><td>0.13</td><td>112.3047</td><td>96.1914</td><td>88.8672</td><td>893.38 KB</td><td>11.42</td>
+</tr><tr><td>HttpLogging_Bodies</td><td>65536</td><td>202.13 &mu;s</td><td>3.029 &mu;s</td><td>2.833 &mu;s</td><td>4.98</td><td>0.11</td><td>138.6719</td><td>120.6055</td><td>118.6523</td><td>1093.47 KB</td><td>13.98</td>
+</tr><tr><td>HttpLogging_Defaults</td><td>65536</td><td>127.65 &mu;s</td><td>1.658 &mu;s</td><td>1.551 &mu;s</td><td>3.14</td><td>0.07</td><td>56.6406</td><td>38.0859</td><td>28.8086</td><td>579.17 KB</td><td>7.41</td>
+</tr><tr><td>Plain_NoLogging</td><td>1048576</td><td>501.71 &mu;s</td><td>8.740 &mu;s</td><td>7.747 &mu;s</td><td>1.00</td><td>0.02</td><td>32.2266</td><td>28.3203</td><td>28.3203</td><td>1092.22 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_AllFields</td><td>1048576</td><td>3,517.92 &mu;s</td><td>66.784 &mu;s</td><td>68.582 &mu;s</td><td>7.01</td><td>0.17</td><td>375.0000</td><td>273.4375</td><td>117.1875</td><td>13447.32 KB</td><td>12.31</td>
+</tr><tr><td>HttpLogging_Bodies</td><td>1048576</td><td>4,680.96 &mu;s</td><td>87.655 &mu;s</td><td>93.789 &mu;s</td><td>9.33</td><td>0.23</td><td>250.0000</td><td>242.1875</td><td>140.6250</td><td>19045.95 KB</td><td>17.44</td>
+</tr><tr><td>HttpLogging_Defaults</td><td>1048576</td><td>770.80 &mu;s</td><td>15.371 &mu;s</td><td>14.378 &mu;s</td><td>1.54</td><td>0.04</td><td>46.8750</td><td>31.2500</td><td>21.4844</td><td>1592.46 KB</td><td>1.46</td>
+</tr></tbody></table>
+</body>
+</html>

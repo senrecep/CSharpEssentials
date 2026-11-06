@@ -1,4 +1,4 @@
-# CSharpEssentials.Endpoints: Design Document
+# CSharpEssentials.Endpoints: design document
 
 > **Date:** 2026-10-06 | **Status:** Implemented in 4.1, kept current through 6.5
 > **Issues:** #48 (epic), #49 (docs), #50 (infra), #51 (contracts), #52 (generator), #53 (analyzer), #54 (fallback + versioned group), #57 (docs/AOT example), #58 (P3)
@@ -6,7 +6,7 @@
 
 ---
 
-## 1. Goals and Non-Goals
+## 1. Goals and non-goals
 
 ### Goals
 - Replace Carter for Minimal API endpoint organization: one type per endpoint (or a small set of related routes), discovered at compile time, mapped with one call.
@@ -14,7 +14,7 @@
 - Trim/AOT clean on the generated path, with no startup reflection.
 - Per-assembly registries plus an opt-in cross-assembly aggregate for the host.
 
-### Non-Goals
+### Non-goals
 - No custom request pipeline. Binding, validation, filters, `IResult`, ProblemDetails, rate limiting, output cache, authorization and OpenAPI stay ASP.NET Core's.
 - No route DSL. The generator never emits `MapGet`/`MapPost`/`MapMethods`.
 - No endpoint instances, constructor injection or endpoint base classes.
@@ -30,7 +30,7 @@
 | 4 | Coexistence | MVC controllers, manual `app.MapGet(...)` calls and other libraries' endpoints work alongside generated mapping in the same host. |
 | 5 | Static and stateless | Endpoints and groups are static members on types. Dependencies come from handler parameters (DI injection into delegates), not constructors. |
 
-## 3. Packages, TFMs and Dependencies
+## 3. Packages, TFMs and dependencies
 
 | Project | TFMs | Dependencies | Packable |
 |---|---|---|---|
@@ -42,7 +42,7 @@ Packing: `build/PackGenerator.targets` (imported by the runtime csproj) adds a `
 
 Namespace: `CSharpEssentials.Endpoints`. Generated registries live in `Microsoft.AspNetCore.Builder`, so `app.Map{Asm}Endpoints()` is discoverable without a `using`.
 
-## 4. Public Contracts (#51)
+## 4. Public contracts (#51)
 
 All public types are `sealed` unless they are interfaces or static classes, carry XML docs, and follow one type per file.
 
@@ -162,7 +162,7 @@ This is the only place that implements wrapping, ordering, naming, tagging, filt
 
 `ShouldMapAny` (added during implementation of #51) returns `true` when at least one of the given endpoint types passes `options.Filter`. Generated code and the fallback wrap each group in it (passing every endpoint type under that group, directly or through nested groups), so a group whose endpoints are all filtered out is never created and its `Configure` never runs. Filter results are memoized per type inside the options instance, so each filter predicate runs once per type and a filtered type is logged once, even though both `ShouldMapAny` and `MapEndpoint` consult the filter.
 
-## 5. Generated Code (#52)
+## 5. Generated code (#52)
 
 ### 5.1 Discovery
 
@@ -346,7 +346,7 @@ The generated registry carries `<summary>`/`<param>` XML docs on its public memb
 
 The runtime `EndpointMapper.MapEndpoint<T>` performs the §5.4 wrapping and the §5.5 ordering. Snapshot tests pin the exact text, and the listing above shows the shape.
 
-## 6. Reflection Fallback and Versioned Group (#54)
+## 6. Reflection fallback and versioned group (#54)
 
 ### 6.1 `MapEndpointsFromAssemblies`
 
@@ -364,6 +364,7 @@ public static class EndpointRouteBuilderExtensions
 }
 ```
 
+- When `RuntimeFeature.IsDynamicCodeSupported` is false (Native AOT), the method throws `PlatformNotSupportedException` before scanning, even with no assemblies; use the generated `Map{Asm}Endpoints` / `MapAllEndpoints`.
 - Discovery uses the same rules as the generator (§5.1): it skips abstract, open-generic, inaccessible (the CSE1001 set), cyclic, conflicting and excluded types, and skips assemblies with `[ExcludeFromMapping]`. It uses the same ordering and the same `EndpointMapper`.
 - On `ReflectionTypeLoadException`, it maps the loadable types and **logs** every loader exception (with the type name when available) at `Warning`, category `CSharpEssentials.Endpoints`. Nothing is silently swallowed.
 - Invalid types that the analyzer would report as errors are skipped and logged at `Warning`, because there is no compile-time check on this path.
@@ -402,7 +403,7 @@ CSE1007 is added by this design. The `typeof` form cannot carry the `IEndpointGr
 
 Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.Unshipped.md`.
 
-## 8. P3 Follow-ups (#58, optional)
+## 8. P3 follow-ups (#58, optional)
 
 - Shipped: CSE1005 duplicate HTTP method + route literal (warning, §7).
 - Shipped: typed route helper `app.RouteOf<CreateApp>(new { id })` and `app.RouteOf<CreateApp>(nameOrMethod, values)` in `EndpointRouteLookupExtensions`. It selects `RouteEndpoint`s by `EndpointTypeMetadata` (optionally by `WithName` or HTTP method), binds values with `TemplateBinderFactory` and checks route constraints. No route, an ambiguous route or a missing/invalid value throws `InvalidOperationException`. It is `[RequiresUnreferencedCode]` because `RouteValueDictionary(object)` reads properties by reflection.
@@ -410,7 +411,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 - Shipped: security shortcuts `RequireRoles`, `RequirePolicies` and `RequireAuthSchemes` (`params string[]`, any `IEndpointConventionBuilder`) in `EndpointAuthorizationExtensions`. Roles and schemes are joined into one `AuthorizeAttribute` (any of them), policies add one `AuthorizeAttribute` each (all of them). The names do not collide with ASP.NET Core 8 to 11, which only ship `RequireAuthorization` and `AllowAnonymous`.
 - Shipped: code fix for CSE1004 in `CSharpEssentials.Endpoints.CodeFixes` (netstandard2.0, `Microsoft.CodeAnalysis.CSharp.Workspaces` 4.8.0, packed into `analyzers/dotnet/cs` by `build/PackGenerator.targets`). It removes instance fields, auto-properties, constructors and an unused primary constructor across partial declarations, and is offered only when `SymbolFinder` finds no reference outside the removed code. Making the type `static` is not possible because static classes cannot implement `IEndpoint`; records are not fixed. The analyzer assembly does not reference Workspaces (RS1038).
 
-## 9. Explicitly Skipped Features
+## 9. Explicitly skipped features
 
 ### Carter
 | Feature | Reason skipped |
@@ -441,7 +442,7 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Generated validation (Immediate.Validations) | Endpoint filter on `CSharpEssentials.Validation` in `CSharpEssentials.AspNetCore` (§8). |
 | `CustomizeEndpoint` static hook | `Map` already holds the endpoint's conventions. |
 
-## 10. Testing Strategy
+## 10. Testing strategy
 
 | Layer | Tests |
 |---|---|

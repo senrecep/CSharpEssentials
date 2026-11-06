@@ -82,3 +82,16 @@ public enum LazilyRegistered
 {
     Only,
 }
+
+public enum RegisteredAfterReflection
+{
+    Only,
+}
+
+public enum LookupProbe
+{
+    X,
+    Y,
+    Z,
+    W,
+}

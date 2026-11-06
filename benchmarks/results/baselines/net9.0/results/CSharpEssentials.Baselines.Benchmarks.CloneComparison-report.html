@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8' />
+<title>CSharpEssentials.Baselines.Benchmarks.CloneComparison-20261106-015406</title>
+
+<style type="text/css">
+	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
+	td, th { padding: 6px 13px; border: 1px solid #ddd; text-align: right; }
+	tr { background-color: #fff; border-top: 1px solid #ccc; }
+	tr:nth-child(even) { background: #f8f8f8; }
+</style>
+</head>
+<body>
+<pre><code>
+BenchmarkDotNet v0.14.0, CachyOS
+x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.1.26425.128
+  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+</code></pre>
+<pre><code></code></pre>
+
+<table>
+<thead><tr><th>Method                         </th><th>Categories</th><th>Count</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+</tr>
+</thead><tbody><tr><td>CSharpEssentials_CloneToArray</td><td>Array</td><td>10</td><td>162.07 ns</td><td>0.758 ns</td><td>0.709 ns</td><td>1.00</td><td>0.01</td><td>0.0281</td><td>-</td><td>472 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_ArrayLoop</td><td>Array</td><td>10</td><td>98.47 ns</td><td>0.391 ns</td><td>0.347 ns</td><td>0.61</td><td>0.00</td><td>0.0253</td><td>-</td><td>424 B</td><td>0.90</td>
+</tr><tr><td>Bcl_ArrayConvertAll</td><td>Array</td><td>10</td><td>110.31 ns</td><td>0.707 ns</td><td>0.590 ns</td><td>0.68</td><td>0.00</td><td>0.0253</td><td>-</td><td>424 B</td><td>0.90</td>
+</tr><tr><td>CSharpEssentials_CloneToArray</td><td>Array</td><td>1000</td><td>13,597.92 ns</td><td>59.157 ns</td><td>55.335 ns</td><td>1.00</td><td>0.01</td><td>2.3804</td><td>0.2899</td><td>40072 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_ArrayLoop</td><td>Array</td><td>1000</td><td>9,389.75 ns</td><td>62.763 ns</td><td>58.709 ns</td><td>0.69</td><td>0.00</td><td>2.3804</td><td>0.3052</td><td>40024 B</td><td>1.00</td>
+</tr><tr><td>Bcl_ArrayConvertAll</td><td>Array</td><td>1000</td><td>10,436.58 ns</td><td>54.324 ns</td><td>50.815 ns</td><td>0.77</td><td>0.00</td><td>2.3804</td><td>0.3052</td><td>40024 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_LazyCloneToList</td><td>LazySource</td><td>10</td><td>273.85 ns</td><td>1.206 ns</td><td>1.007 ns</td><td>1.00</td><td>0.01</td><td>0.0305</td><td>-</td><td>512 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_LazyForeach</td><td>LazySource</td><td>10</td><td>215.38 ns</td><td>1.273 ns</td><td>1.191 ns</td><td>0.79</td><td>0.01</td><td>0.0386</td><td>-</td><td>648 B</td><td>1.27</td>
+</tr><tr><td>CSharpEssentials_LazyCloneToList</td><td>LazySource</td><td>1000</td><td>19,229.59 ns</td><td>111.782 ns</td><td>104.561 ns</td><td>1.00</td><td>0.01</td><td>2.3804</td><td>-</td><td>40112 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_LazyForeach</td><td>LazySource</td><td>1000</td><td>13,705.07 ns</td><td>97.122 ns</td><td>86.096 ns</td><td>0.71</td><td>0.01</td><td>2.8992</td><td>0.4120</td><td>48600 B</td><td>1.21</td>
+</tr><tr><td>CSharpEssentials_CloneToList</td><td>List</td><td>10</td><td>180.34 ns</td><td>1.194 ns</td><td>1.117 ns</td><td>1.00</td><td>0.01</td><td>0.0315</td><td>-</td><td>528 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_ForLoop</td><td>List</td><td>10</td><td>107.85 ns</td><td>0.313 ns</td><td>0.293 ns</td><td>0.60</td><td>0.00</td><td>0.0272</td><td>-</td><td>456 B</td><td>0.86</td>
+</tr><tr><td>Bcl_ConvertAll</td><td>List</td><td>10</td><td>118.16 ns</td><td>1.206 ns</td><td>1.069 ns</td><td>0.66</td><td>0.01</td><td>0.0272</td><td>-</td><td>456 B</td><td>0.86</td>
+</tr><tr><td>Bcl_LinqSelectToList</td><td>List</td><td>10</td><td>155.58 ns</td><td>1.127 ns</td><td>1.054 ns</td><td>0.86</td><td>0.01</td><td>0.0315</td><td>-</td><td>528 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_CloneToList</td><td>List</td><td>1000</td><td>13,696.53 ns</td><td>114.645 ns</td><td>107.239 ns</td><td>1.00</td><td>0.01</td><td>2.3956</td><td>0.2899</td><td>40128 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_ForLoop</td><td>List</td><td>1000</td><td>9,732.65 ns</td><td>78.265 ns</td><td>69.380 ns</td><td>0.71</td><td>0.01</td><td>2.3804</td><td>0.3052</td><td>40056 B</td><td>1.00</td>
+</tr><tr><td>Bcl_ConvertAll</td><td>List</td><td>1000</td><td>10,739.28 ns</td><td>105.679 ns</td><td>98.853 ns</td><td>0.78</td><td>0.01</td><td>2.3804</td><td>0.3052</td><td>40056 B</td><td>1.00</td>
+</tr><tr><td>Bcl_LinqSelectToList</td><td>List</td><td>1000</td><td>11,865.62 ns</td><td>78.819 ns</td><td>73.727 ns</td><td>0.87</td><td>0.01</td><td>2.3956</td><td>0.2899</td><td>40128 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_QueryableCloneToList</td><td>Queryable</td><td>10</td><td>352.68 ns</td><td>5.120 ns</td><td>4.789 ns</td><td>1.00</td><td>0.02</td><td>0.0477</td><td>-</td><td>800 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_ForLoopFromList</td><td>Queryable</td><td>10</td><td>108.68 ns</td><td>0.577 ns</td><td>0.540 ns</td><td>0.31</td><td>0.00</td><td>0.0272</td><td>-</td><td>456 B</td><td>0.57</td>
+</tr><tr><td>CSharpEssentials_QueryableCloneToList</td><td>Queryable</td><td>1000</td><td>20,970.64 ns</td><td>142.506 ns</td><td>133.300 ns</td><td>1.00</td><td>0.01</td><td>2.8992</td><td>0.3967</td><td>48752 B</td><td>1.00</td>
+</tr><tr><td>HandWritten_ForLoopFromList</td><td>Queryable</td><td>1000</td><td>9,716.74 ns</td><td>128.924 ns</td><td>120.596 ns</td><td>0.46</td><td>0.01</td><td>2.3804</td><td>0.3052</td><td>40056 B</td><td>0.82</td>
+</tr></tbody></table>
+</body>
+</html>
