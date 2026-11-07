@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Rules.Comparison.Benchmarks.SyncTreeComparison-20261104-220401</title>
+<title>CSharpEssentials.Rules.Comparison.Benchmarks.SyncTreeComparison-20261107-141632</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,34 +14,34 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method    </th><th>Shape</th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>HandWritten</td><td>Linear5</td><td>Pass</td><td>5.474 ns</td><td>0.0037 ns</td><td>0.0035 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseEvaluate</td><td>Linear5</td><td>Pass</td><td>139.916 ns</td><td>1.0025 ns</td><td>0.9378 ns</td><td>25.56</td><td>0.17</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseEvaluateAsync</td><td>Linear5</td><td>Pass</td><td>405.882 ns</td><td>1.1740 ns</td><td>1.0982 ns</td><td>74.14</td><td>0.20</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>Linear5</td><td>FailLast</td><td>18.153 ns</td><td>0.1376 ns</td><td>0.1287 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CseEvaluate</td><td>Linear5</td><td>FailLast</td><td>152.224 ns</td><td>1.3300 ns</td><td>1.2440 ns</td><td>8.39</td><td>0.09</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CseEvaluateAsync</td><td>Linear5</td><td>FailLast</td><td>423.177 ns</td><td>0.7683 ns</td><td>0.7187 ns</td><td>23.31</td><td>0.16</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>HandWritten</td><td>And5</td><td>Pass</td><td>5.095 ns</td><td>0.0254 ns</td><td>0.0238 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseEvaluate</td><td>And5</td><td>Pass</td><td>235.795 ns</td><td>0.1297 ns</td><td>0.1150 ns</td><td>46.28</td><td>0.21</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseEvaluateAsync</td><td>And5</td><td>Pass</td><td>603.761 ns</td><td>3.3482 ns</td><td>3.1319 ns</td><td>118.49</td><td>0.80</td><td>0.0181</td><td>312 B</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>And5</td><td>FailLast</td><td>17.996 ns</td><td>0.2736 ns</td><td>0.2560 ns</td><td>1.00</td><td>0.02</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CseEvaluate</td><td>And5</td><td>FailLast</td><td>230.833 ns</td><td>0.7220 ns</td><td>0.6400 ns</td><td>12.83</td><td>0.18</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CseEvaluateAsync</td><td>And5</td><td>FailLast</td><td>632.876 ns</td><td>1.0002 ns</td><td>0.8867 ns</td><td>35.17</td><td>0.49</td><td>0.0219</td><td>368 B</td><td>6.57</td>
-</tr><tr><td>HandWritten</td><td>Or5</td><td>Pass</td><td>5.398 ns</td><td>0.0076 ns</td><td>0.0067 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseEvaluate</td><td>Or5</td><td>Pass</td><td>404.980 ns</td><td>0.9992 ns</td><td>0.9346 ns</td><td>75.02</td><td>0.19</td><td>0.0243</td><td>408 B</td><td>NA</td>
-</tr><tr><td>CseEvaluateAsync</td><td>Or5</td><td>Pass</td><td>789.588 ns</td><td>3.1082 ns</td><td>2.7553 ns</td><td>146.26</td><td>0.52</td><td>0.0429</td><td>720 B</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>Or5</td><td>FailLast</td><td>6.064 ns</td><td>0.0034 ns</td><td>0.0028 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseEvaluate</td><td>Or5</td><td>FailLast</td><td>510.809 ns</td><td>3.2971 ns</td><td>3.0842 ns</td><td>84.24</td><td>0.49</td><td>0.0553</td><td>928 B</td><td>NA</td>
-</tr><tr><td>CseEvaluateAsync</td><td>Or5</td><td>FailLast</td><td>940.984 ns</td><td>6.4354 ns</td><td>6.0196 ns</td><td>155.18</td><td>0.96</td><td>0.0725</td><td>1240 B</td><td>NA</td>
+</thead><tbody><tr><td>HandWritten</td><td>Linear5</td><td>Pass</td><td>5.471 ns</td><td>0.0034 ns</td><td>0.0029 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseEvaluate</td><td>Linear5</td><td>Pass</td><td>145.052 ns</td><td>0.5257 ns</td><td>0.4660 ns</td><td>26.51</td><td>0.08</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseEvaluateAsync</td><td>Linear5</td><td>Pass</td><td>381.092 ns</td><td>0.1366 ns</td><td>0.1141 ns</td><td>69.66</td><td>0.04</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>Linear5</td><td>FailLast</td><td>19.160 ns</td><td>0.0782 ns</td><td>0.0693 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CseEvaluate</td><td>Linear5</td><td>FailLast</td><td>150.586 ns</td><td>0.3567 ns</td><td>0.3336 ns</td><td>7.86</td><td>0.03</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CseEvaluateAsync</td><td>Linear5</td><td>FailLast</td><td>407.059 ns</td><td>0.4903 ns</td><td>0.4586 ns</td><td>21.25</td><td>0.08</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>HandWritten</td><td>And5</td><td>Pass</td><td>5.002 ns</td><td>0.0017 ns</td><td>0.0015 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseEvaluate</td><td>And5</td><td>Pass</td><td>226.700 ns</td><td>0.0999 ns</td><td>0.0834 ns</td><td>45.32</td><td>0.02</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseEvaluateAsync</td><td>And5</td><td>Pass</td><td>465.844 ns</td><td>1.7939 ns</td><td>1.6780 ns</td><td>93.13</td><td>0.33</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>And5</td><td>FailLast</td><td>19.541 ns</td><td>0.1054 ns</td><td>0.0934 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CseEvaluate</td><td>And5</td><td>FailLast</td><td>263.369 ns</td><td>0.4264 ns</td><td>0.3989 ns</td><td>13.48</td><td>0.07</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CseEvaluateAsync</td><td>And5</td><td>FailLast</td><td>477.577 ns</td><td>2.6793 ns</td><td>2.5062 ns</td><td>24.44</td><td>0.17</td><td>0.0029</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>HandWritten</td><td>Or5</td><td>Pass</td><td>5.225 ns</td><td>0.0083 ns</td><td>0.0078 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseEvaluate</td><td>Or5</td><td>Pass</td><td>341.918 ns</td><td>1.1260 ns</td><td>1.0532 ns</td><td>65.44</td><td>0.22</td><td>0.0134</td><td>224 B</td><td>NA</td>
+</tr><tr><td>CseEvaluateAsync</td><td>Or5</td><td>Pass</td><td>575.956 ns</td><td>1.6134 ns</td><td>1.5091 ns</td><td>110.23</td><td>0.32</td><td>0.0134</td><td>224 B</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>Or5</td><td>FailLast</td><td>6.096 ns</td><td>0.0030 ns</td><td>0.0028 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseEvaluate</td><td>Or5</td><td>FailLast</td><td>461.251 ns</td><td>2.3882 ns</td><td>2.1171 ns</td><td>75.66</td><td>0.34</td><td>0.0277</td><td>464 B</td><td>NA</td>
+</tr><tr><td>CseEvaluateAsync</td><td>Or5</td><td>FailLast</td><td>679.960 ns</td><td>4.8732 ns</td><td>4.5584 ns</td><td>111.54</td><td>0.73</td><td>0.0277</td><td>464 B</td><td>NA</td>
 </tr></tbody></table>
 </body>
 </html>

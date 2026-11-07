@@ -1,19 +1,19 @@
 ```
 
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 
 
 ```
 | Method           | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |----------------- |-----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| HandWritten      |  11.945 ns | 0.1331 ns | 0.1245 ns |  1.00 |    0.01 | 0.0033 |      56 B |        1.00 |
-| CseLinear        |  14.404 ns | 0.1518 ns | 0.1420 ns |  1.21 |    0.02 | 0.0033 |      56 B |        1.00 |
-| CseAnd           |  60.193 ns | 1.1857 ns | 1.1091 ns |  5.04 |    0.10 | 0.0033 |      56 B |        1.00 |
-| HandWrittenAll   | 112.882 ns | 0.5548 ns | 0.4918 ns |  9.45 |    0.10 | 0.0086 |     144 B |        2.57 |
-| CseAndGeneric    | 952.463 ns | 5.6199 ns | 5.2568 ns | 79.75 |    0.91 | 0.1221 |    2064 B |       36.86 |
-| HandWrittenOrAll |   5.482 ns | 0.0259 ns | 0.0230 ns |  0.46 |    0.01 |      - |         - |        0.00 |
-| CseOrAllFail     | 729.580 ns | 4.6936 ns | 4.3904 ns | 61.09 |    0.71 | 0.1135 |    1904 B |       34.00 |
+| HandWritten      |  11.110 ns | 0.0735 ns | 0.0651 ns |  1.00 |    0.01 | 0.0033 |      56 B |        1.00 |
+| CseLinear        |  13.731 ns | 0.0583 ns | 0.0517 ns |  1.24 |    0.01 | 0.0033 |      56 B |        1.00 |
+| CseAnd           |  43.329 ns | 0.5828 ns | 0.5166 ns |  3.90 |    0.05 | 0.0033 |      56 B |        1.00 |
+| HandWrittenAll   | 109.613 ns | 0.2916 ns | 0.2727 ns |  9.87 |    0.06 | 0.0086 |     144 B |        2.57 |
+| CseAndGeneric    | 418.706 ns | 2.6350 ns | 2.4647 ns | 37.69 |    0.30 | 0.0033 |      56 B |        1.00 |
+| HandWrittenOrAll |   5.417 ns | 0.0034 ns | 0.0032 ns |  0.49 |    0.00 |      - |         - |        0.00 |
+| CseOrAllFail     | 757.887 ns | 4.2949 ns | 4.0174 ns | 68.22 |    0.52 | 0.0534 |     904 B |       16.14 |
