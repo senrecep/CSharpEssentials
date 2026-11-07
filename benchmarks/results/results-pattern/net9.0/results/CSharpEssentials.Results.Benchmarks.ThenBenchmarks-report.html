@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Results.Benchmarks.ThenBenchmarks-20261105-012332</title>
+<title>CSharpEssentials.Results.Benchmarks.ThenBenchmarks-20261107-202411</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,40 +14,40 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                       </th><th>Succeed</th><th>Yield</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>TaskSource_BindAsync</td><td>False</td><td>False</td><td>22.38 ns</td><td>0.156 ns</td><td>0.138 ns</td><td>1.00</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
-</tr><tr><td>TaskSource_ThenAsync</td><td>False</td><td>False</td><td>37.77 ns</td><td>0.219 ns</td><td>0.205 ns</td><td>1.69</td><td>0.01</td><td>0.0095</td><td>160 B</td><td>2.00</td>
-</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>False</td><td>False</td><td>32.17 ns</td><td>0.283 ns</td><td>0.265 ns</td><td>1.44</td><td>0.01</td><td>0.0081</td><td>136 B</td><td>1.70</td>
-</tr><tr><td>ValueTaskSource_BindAsync</td><td>False</td><td>False</td><td>57.20 ns</td><td>0.119 ns</td><td>0.111 ns</td><td>2.56</td><td>0.02</td><td>0.0033</td><td>56 B</td><td>0.70</td>
-</tr><tr><td>ValueTaskSource_ThenAsync</td><td>False</td><td>False</td><td>58.50 ns</td><td>0.103 ns</td><td>0.092 ns</td><td>2.61</td><td>0.02</td><td>0.0033</td><td>56 B</td><td>0.70</td>
-</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>False</td><td>False</td><td>39.56 ns</td><td>0.117 ns</td><td>0.110 ns</td><td>1.77</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>0.70</td>
-</tr><tr><td>TaskSource_BindAsync</td><td>False</td><td>True</td><td>858.96 ns</td><td>4.403 ns</td><td>4.119 ns</td><td>1.00</td><td>0.01</td><td>0.0181</td><td>303 B</td><td>1.00</td>
-</tr><tr><td>TaskSource_ThenAsync</td><td>False</td><td>True</td><td>878.97 ns</td><td>4.059 ns</td><td>3.797 ns</td><td>1.02</td><td>0.01</td><td>0.0229</td><td>391 B</td><td>1.29</td>
-</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>False</td><td>True</td><td>31.90 ns</td><td>0.225 ns</td><td>0.188 ns</td><td>0.04</td><td>0.00</td><td>0.0081</td><td>136 B</td><td>0.45</td>
-</tr><tr><td>ValueTaskSource_BindAsync</td><td>False</td><td>True</td><td>888.74 ns</td><td>6.099 ns</td><td>5.705 ns</td><td>1.03</td><td>0.01</td><td>0.0238</td><td>398 B</td><td>1.31</td>
-</tr><tr><td>ValueTaskSource_ThenAsync</td><td>False</td><td>True</td><td>889.46 ns</td><td>7.750 ns</td><td>7.249 ns</td><td>1.04</td><td>0.01</td><td>0.0238</td><td>399 B</td><td>1.32</td>
-</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>False</td><td>True</td><td>39.78 ns</td><td>0.079 ns</td><td>0.066 ns</td><td>0.05</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>0.18</td>
-</tr><tr><td>TaskSource_BindAsync</td><td>True</td><td>False</td><td>29.15 ns</td><td>0.447 ns</td><td>0.419 ns</td><td>1.00</td><td>0.02</td><td>0.0095</td><td>160 B</td><td>1.00</td>
-</tr><tr><td>TaskSource_ThenAsync</td><td>True</td><td>False</td><td>48.70 ns</td><td>0.703 ns</td><td>0.657 ns</td><td>1.67</td><td>0.03</td><td>0.0143</td><td>240 B</td><td>1.50</td>
-</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>True</td><td>False</td><td>27.34 ns</td><td>0.330 ns</td><td>0.308 ns</td><td>0.94</td><td>0.02</td><td>0.0095</td><td>160 B</td><td>1.00</td>
-</tr><tr><td>ValueTaskSource_BindAsync</td><td>True</td><td>False</td><td>46.24 ns</td><td>0.377 ns</td><td>0.353 ns</td><td>1.59</td><td>0.02</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>ValueTaskSource_ThenAsync</td><td>True</td><td>False</td><td>50.59 ns</td><td>0.043 ns</td><td>0.040 ns</td><td>1.74</td><td>0.02</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>True</td><td>False</td><td>37.17 ns</td><td>0.032 ns</td><td>0.028 ns</td><td>1.28</td><td>0.02</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>TaskSource_BindAsync</td><td>True</td><td>True</td><td>1,364.40 ns</td><td>4.327 ns</td><td>4.047 ns</td><td>1.00</td><td>0.00</td><td>0.0210</td><td>352 B</td><td>1.00</td>
-</tr><tr><td>TaskSource_ThenAsync</td><td>True</td><td>True</td><td>1,608.89 ns</td><td>6.809 ns</td><td>6.036 ns</td><td>1.18</td><td>0.01</td><td>0.0286</td><td>502 B</td><td>1.43</td>
-</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>True</td><td>True</td><td>849.89 ns</td><td>4.601 ns</td><td>4.303 ns</td><td>0.62</td><td>0.00</td><td>0.0143</td><td>247 B</td><td>0.70</td>
-</tr><tr><td>ValueTaskSource_BindAsync</td><td>True</td><td>True</td><td>1,519.60 ns</td><td>6.161 ns</td><td>5.763 ns</td><td>1.11</td><td>0.01</td><td>0.0267</td><td>464 B</td><td>1.32</td>
-</tr><tr><td>ValueTaskSource_ThenAsync</td><td>True</td><td>True</td><td>1,722.59 ns</td><td>14.278 ns</td><td>13.356 ns</td><td>1.26</td><td>0.01</td><td>0.0381</td><td>635 B</td><td>1.80</td>
-</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>True</td><td>True</td><td>854.18 ns</td><td>5.800 ns</td><td>5.425 ns</td><td>0.63</td><td>0.00</td><td>0.0172</td><td>295 B</td><td>0.84</td>
+</thead><tbody><tr><td>TaskSource_BindAsync</td><td>False</td><td>False</td><td>22.88 ns</td><td>0.183 ns</td><td>0.143 ns</td><td>1.00</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_ThenAsync</td><td>False</td><td>False</td><td>36.22 ns</td><td>0.296 ns</td><td>0.277 ns</td><td>1.58</td><td>0.02</td><td>0.0095</td><td>160 B</td><td>2.00</td>
+</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>False</td><td>False</td><td>18.33 ns</td><td>0.107 ns</td><td>0.100 ns</td><td>0.80</td><td>0.01</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>ValueTaskSource_BindAsync</td><td>False</td><td>False</td><td>42.49 ns</td><td>0.091 ns</td><td>0.085 ns</td><td>1.86</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>ValueTaskSource_ThenAsync</td><td>False</td><td>False</td><td>49.04 ns</td><td>0.040 ns</td><td>0.037 ns</td><td>2.14</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>False</td><td>False</td><td>26.35 ns</td><td>0.028 ns</td><td>0.025 ns</td><td>1.15</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>TaskSource_BindAsync</td><td>False</td><td>True</td><td>835.98 ns</td><td>4.625 ns</td><td>4.326 ns</td><td>1.00</td><td>0.01</td><td>0.0143</td><td>247 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_ThenAsync</td><td>False</td><td>True</td><td>862.21 ns</td><td>3.511 ns</td><td>3.284 ns</td><td>1.03</td><td>0.01</td><td>0.0200</td><td>335 B</td><td>1.36</td>
+</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>False</td><td>True</td><td>18.33 ns</td><td>0.119 ns</td><td>0.111 ns</td><td>0.02</td><td>0.00</td><td>0.0048</td><td>80 B</td><td>0.32</td>
+</tr><tr><td>ValueTaskSource_BindAsync</td><td>False</td><td>True</td><td>861.11 ns</td><td>3.854 ns</td><td>3.605 ns</td><td>1.03</td><td>0.01</td><td>0.0200</td><td>341 B</td><td>1.38</td>
+</tr><tr><td>ValueTaskSource_ThenAsync</td><td>False</td><td>True</td><td>864.41 ns</td><td>8.615 ns</td><td>7.194 ns</td><td>1.03</td><td>0.01</td><td>0.0200</td><td>342 B</td><td>1.38</td>
+</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>False</td><td>True</td><td>26.97 ns</td><td>0.023 ns</td><td>0.021 ns</td><td>0.03</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>TaskSource_BindAsync</td><td>True</td><td>False</td><td>27.88 ns</td><td>0.167 ns</td><td>0.156 ns</td><td>1.00</td><td>0.01</td><td>0.0095</td><td>160 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_ThenAsync</td><td>True</td><td>False</td><td>45.11 ns</td><td>0.174 ns</td><td>0.136 ns</td><td>1.62</td><td>0.01</td><td>0.0143</td><td>240 B</td><td>1.50</td>
+</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>True</td><td>False</td><td>25.12 ns</td><td>0.193 ns</td><td>0.180 ns</td><td>0.90</td><td>0.01</td><td>0.0095</td><td>160 B</td><td>1.00</td>
+</tr><tr><td>ValueTaskSource_BindAsync</td><td>True</td><td>False</td><td>49.87 ns</td><td>0.030 ns</td><td>0.028 ns</td><td>1.79</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>ValueTaskSource_ThenAsync</td><td>True</td><td>False</td><td>51.01 ns</td><td>0.099 ns</td><td>0.092 ns</td><td>1.83</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>True</td><td>False</td><td>30.09 ns</td><td>0.031 ns</td><td>0.029 ns</td><td>1.08</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>TaskSource_BindAsync</td><td>True</td><td>True</td><td>1,362.37 ns</td><td>5.442 ns</td><td>5.090 ns</td><td>1.00</td><td>0.01</td><td>0.0210</td><td>352 B</td><td>1.00</td>
+</tr><tr><td>TaskSource_ThenAsync</td><td>True</td><td>True</td><td>1,607.90 ns</td><td>11.307 ns</td><td>10.577 ns</td><td>1.18</td><td>0.01</td><td>0.0286</td><td>502 B</td><td>1.43</td>
+</tr><tr><td>Instance_ThenAsync_TaskHandler</td><td>True</td><td>True</td><td>837.05 ns</td><td>5.751 ns</td><td>5.379 ns</td><td>0.61</td><td>0.00</td><td>0.0143</td><td>247 B</td><td>0.70</td>
+</tr><tr><td>ValueTaskSource_BindAsync</td><td>True</td><td>True</td><td>1,447.27 ns</td><td>12.129 ns</td><td>10.752 ns</td><td>1.06</td><td>0.01</td><td>0.0267</td><td>464 B</td><td>1.32</td>
+</tr><tr><td>ValueTaskSource_ThenAsync</td><td>True</td><td>True</td><td>1,660.77 ns</td><td>10.715 ns</td><td>10.023 ns</td><td>1.22</td><td>0.01</td><td>0.0381</td><td>635 B</td><td>1.80</td>
+</tr><tr><td>Instance_ThenAsync_ValueTaskHandler</td><td>True</td><td>True</td><td>850.51 ns</td><td>5.898 ns</td><td>5.517 ns</td><td>0.62</td><td>0.00</td><td>0.0172</td><td>295 B</td><td>0.84</td>
 </tr></tbody></table>
 </body>
 </html>
