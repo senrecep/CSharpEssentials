@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-20261105-210821</title>
+<title>CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-20261107-164332</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,21 +14,21 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Policy</td><td>2.882 &mu;s</td><td>0.0104 &mu;s</td><td>0.0092 &mu;s</td><td>1.00</td><td>0.1526</td><td>2.73 KB</td><td>1.00</td>
-</tr><tr><td>Polly_Pipeline</td><td>2.452 &mu;s</td><td>0.0186 &mu;s</td><td>0.0174 &mu;s</td><td>0.85</td><td>0.1373</td><td>2.27 KB</td><td>0.83</td>
-</tr><tr><td>MicrosoftResilience_Handler</td><td>3.420 &mu;s</td><td>0.0066 &mu;s</td><td>0.0061 &mu;s</td><td>1.19</td><td>0.1755</td><td>2.91 KB</td><td>1.07</td>
-</tr><tr><td>MicrosoftResilience_Standard</td><td>4.220 &mu;s</td><td>0.0226 &mu;s</td><td>0.0200 &mu;s</td><td>1.46</td><td>0.1221</td><td>2.95 KB</td><td>1.08</td>
-</tr><tr><td>Factory_NoResilience</td><td>2.122 &mu;s</td><td>0.0052 &mu;s</td><td>0.0048 &mu;s</td><td>0.74</td><td>0.1526</td><td>2.54 KB</td><td>0.93</td>
+</thead><tbody><tr><td>CSharpEssentials_Policy</td><td>2.914 &mu;s</td><td>0.0216 &mu;s</td><td>0.0192 &mu;s</td><td>1.00</td><td>0.1526</td><td>2.73 KB</td><td>1.00</td>
+</tr><tr><td>Polly_Pipeline</td><td>2.451 &mu;s</td><td>0.0116 &mu;s</td><td>0.0108 &mu;s</td><td>0.84</td><td>0.1373</td><td>2.27 KB</td><td>0.83</td>
+</tr><tr><td>MicrosoftResilience_Handler</td><td>3.246 &mu;s</td><td>0.0101 &mu;s</td><td>0.0094 &mu;s</td><td>1.11</td><td>0.1755</td><td>2.91 KB</td><td>1.07</td>
+</tr><tr><td>MicrosoftResilience_Standard</td><td>4.052 &mu;s</td><td>0.0204 &mu;s</td><td>0.0191 &mu;s</td><td>1.39</td><td>0.1755</td><td>2.95 KB</td><td>1.08</td>
+</tr><tr><td>Factory_NoResilience</td><td>2.050 &mu;s</td><td>0.0070 &mu;s</td><td>0.0062 &mu;s</td><td>0.70</td><td>0.1526</td><td>2.54 KB</td><td>0.93</td>
 </tr></tbody></table>
 </body>
 </html>
