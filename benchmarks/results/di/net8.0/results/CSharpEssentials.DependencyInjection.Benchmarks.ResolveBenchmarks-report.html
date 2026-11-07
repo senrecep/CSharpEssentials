@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.DependencyInjection.Benchmarks.ResolveBenchmarks-20261105-121023</title>
+<title>CSharpEssentials.DependencyInjection.Benchmarks.ResolveBenchmarks-20261107-133022</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,23 +14,23 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method         </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method         </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>DecoratedManual</td><td>Decorated</td><td>150.1 ns</td><td>0.75 ns</td><td>0.70 ns</td><td>1.00</td><td>0.0215</td><td>360 B</td><td>1.00</td>
-</tr><tr><td>DecoratedCseGenerated</td><td>Decorated</td><td>191.7 ns</td><td>0.89 ns</td><td>0.83 ns</td><td>1.28</td><td>0.0215</td><td>360 B</td><td>1.00</td>
-</tr><tr><td>DecoratedCseRuntime</td><td>Decorated</td><td>217.1 ns</td><td>2.26 ns</td><td>1.89 ns</td><td>1.45</td><td>0.0215</td><td>360 B</td><td>1.00</td>
-</tr><tr><td>DecoratedScrutor</td><td>Decorated</td><td>349.5 ns</td><td>1.47 ns</td><td>1.30 ns</td><td>2.33</td><td>0.0234</td><td>392 B</td><td>1.09</td>
-</tr><tr><td>PlainManual</td><td>Plain</td><td>153.5 ns</td><td>0.54 ns</td><td>0.48 ns</td><td>1.00</td><td>0.0215</td><td>360 B</td><td>1.00</td>
-</tr><tr><td>PlainCseGenerated</td><td>Plain</td><td>154.0 ns</td><td>0.71 ns</td><td>0.67 ns</td><td>1.00</td><td>0.0215</td><td>360 B</td><td>1.00</td>
-</tr><tr><td>PlainScrutor</td><td>Plain</td><td>154.2 ns</td><td>0.45 ns</td><td>0.35 ns</td><td>1.00</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</thead><tbody><tr><td>DecoratedManual</td><td>Decorated</td><td>125.4 ns</td><td>0.68 ns</td><td>0.63 ns</td><td>1.00</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>DecoratedCseGenerated</td><td>Decorated</td><td>146.4 ns</td><td>0.77 ns</td><td>0.72 ns</td><td>1.17</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>DecoratedCseRuntime</td><td>Decorated</td><td>165.4 ns</td><td>0.50 ns</td><td>0.47 ns</td><td>1.32</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>DecoratedScrutor</td><td>Decorated</td><td>354.6 ns</td><td>2.72 ns</td><td>2.54 ns</td><td>2.83</td><td>0.02</td><td>0.0234</td><td>392 B</td><td>1.09</td>
+</tr><tr><td>PlainManual</td><td>Plain</td><td>151.4 ns</td><td>0.78 ns</td><td>0.69 ns</td><td>1.00</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>PlainCseGenerated</td><td>Plain</td><td>152.4 ns</td><td>0.89 ns</td><td>0.83 ns</td><td>1.01</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
+</tr><tr><td>PlainScrutor</td><td>Plain</td><td>153.0 ns</td><td>0.94 ns</td><td>0.88 ns</td><td>1.01</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>
