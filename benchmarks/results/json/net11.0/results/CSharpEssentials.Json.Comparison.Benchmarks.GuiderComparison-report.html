@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Json.Comparison.Benchmarks.GuiderComparison-20261105-200247</title>
+<title>CSharpEssentials.Json.Comparison.Benchmarks.GuiderComparison-20261107-163044</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,22 +14,22 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method           </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Decode</td><td>Decode</td><td>56.49 ns</td><td>0.449 ns</td><td>0.375 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>ShortGuid_Decode</td><td>Decode</td><td>197.32 ns</td><td>1.164 ns</td><td>0.972 ns</td><td>3.49</td><td>0.03</td><td>0.0415</td><td>696 B</td><td>NA</td>
-</tr><tr><td>Bcl_Decode</td><td>Decode</td><td>20.26 ns</td><td>0.039 ns</td><td>0.037 ns</td><td>0.36</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_Encode</td><td>Encode</td><td>47.72 ns</td><td>0.132 ns</td><td>0.123 ns</td><td>1.00</td><td>0.00</td><td>0.0043</td><td>72 B</td><td>1.00</td>
-</tr><tr><td>ShortGuid_Encode</td><td>Encode</td><td>57.23 ns</td><td>0.776 ns</td><td>0.726 ns</td><td>1.20</td><td>0.02</td><td>0.0153</td><td>256 B</td><td>3.56</td>
-</tr><tr><td>Bcl_Encode</td><td>Encode</td><td>15.03 ns</td><td>0.114 ns</td><td>0.106 ns</td><td>0.32</td><td>0.00</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</thead><tbody><tr><td>CSharpEssentials_Decode</td><td>Decode</td><td>21.76 ns</td><td>0.017 ns</td><td>0.016 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>ShortGuid_Decode</td><td>Decode</td><td>188.53 ns</td><td>0.897 ns</td><td>0.839 ns</td><td>8.66</td><td>0.04</td><td>0.0415</td><td>696 B</td><td>NA</td>
+</tr><tr><td>Bcl_Decode</td><td>Decode</td><td>20.23 ns</td><td>0.035 ns</td><td>0.033 ns</td><td>0.93</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Encode</td><td>Encode</td><td>14.33 ns</td><td>0.101 ns</td><td>0.094 ns</td><td>1.00</td><td>0.01</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>ShortGuid_Encode</td><td>Encode</td><td>53.79 ns</td><td>0.231 ns</td><td>0.216 ns</td><td>3.75</td><td>0.03</td><td>0.0153</td><td>256 B</td><td>3.56</td>
+</tr><tr><td>Bcl_Encode</td><td>Encode</td><td>13.94 ns</td><td>0.082 ns</td><td>0.068 ns</td><td>0.97</td><td>0.01</td><td>0.0043</td><td>72 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>

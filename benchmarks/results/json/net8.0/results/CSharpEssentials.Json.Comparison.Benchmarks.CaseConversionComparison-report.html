@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Json.Comparison.Benchmarks.CaseConversionComparison-20261105-182504</title>
+<title>CSharpEssentials.Json.Comparison.Benchmarks.CaseConversionComparison-20261107-154555</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,43 +14,43 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method          </th><th>Categories</th><th>Length</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Long</td><td>2,484.74 ns</td><td>23.745 ns</td><td>22.211 ns</td><td>1.00</td><td>0.01</td><td>0.0343</td><td>584 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Long</td><td>39.21 ns</td><td>0.851 ns</td><td>0.980 ns</td><td>0.02</td><td>0.00</td><td>0.0349</td><td>584 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Long</td><td>3,595.10 ns</td><td>5.199 ns</td><td>4.864 ns</td><td>1.45</td><td>0.01</td><td>0.0916</td><td>1576 B</td><td>2.70</td>
-</tr><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Medium</td><td>600.89 ns</td><td>8.298 ns</td><td>7.762 ns</td><td>1.00</td><td>0.02</td><td>0.0086</td><td>152 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Medium</td><td>19.01 ns</td><td>0.285 ns</td><td>0.266 ns</td><td>0.03</td><td>0.00</td><td>0.0091</td><td>152 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Medium</td><td>1,133.04 ns</td><td>4.267 ns</td><td>3.991 ns</td><td>1.89</td><td>0.02</td><td>0.0420</td><td>712 B</td><td>4.68</td>
-</tr><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Short</td><td>118.80 ns</td><td>0.198 ns</td><td>0.175 ns</td><td>1.00</td><td>0.00</td><td>0.0029</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Short</td><td>14.22 ns</td><td>0.097 ns</td><td>0.090 ns</td><td>0.12</td><td>0.00</td><td>0.0029</td><td>48 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Short</td><td>502.78 ns</td><td>3.948 ns</td><td>3.693 ns</td><td>4.23</td><td>0.03</td><td>0.0296</td><td>504 B</td><td>10.50</td>
-</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Long</td><td>2,468.21 ns</td><td>23.783 ns</td><td>22.247 ns</td><td>1.00</td><td>0.01</td><td>0.0381</td><td>672 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Long</td><td>925.45 ns</td><td>2.354 ns</td><td>1.965 ns</td><td>0.37</td><td>0.00</td><td>0.0401</td><td>672 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Long</td><td>7,051.23 ns</td><td>10.328 ns</td><td>8.624 ns</td><td>2.86</td><td>0.03</td><td>0.1144</td><td>2016 B</td><td>3.00</td>
-</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Medium</td><td>617.26 ns</td><td>0.882 ns</td><td>0.737 ns</td><td>1.00</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Medium</td><td>217.43 ns</td><td>1.858 ns</td><td>1.551 ns</td><td>0.35</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Medium</td><td>1,751.26 ns</td><td>0.975 ns</td><td>0.761 ns</td><td>2.84</td><td>0.00</td><td>0.0305</td><td>528 B</td><td>3.00</td>
-</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Short</td><td>123.10 ns</td><td>0.846 ns</td><td>0.706 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Short</td><td>55.60 ns</td><td>0.096 ns</td><td>0.080 ns</td><td>0.45</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Short</td><td>553.61 ns</td><td>0.433 ns</td><td>0.362 ns</td><td>4.50</td><td>0.03</td><td>0.0095</td><td>168 B</td><td>3.00</td>
-</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Long</td><td>2,640.85 ns</td><td>51.649 ns</td><td>50.726 ns</td><td>1.00</td><td>0.03</td><td>0.0381</td><td>672 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Long</td><td>927.29 ns</td><td>3.570 ns</td><td>2.788 ns</td><td>0.35</td><td>0.01</td><td>0.0401</td><td>672 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Long</td><td>6,860.30 ns</td><td>39.920 ns</td><td>37.341 ns</td><td>2.60</td><td>0.05</td><td>0.0763</td><td>1344 B</td><td>2.00</td>
-</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Medium</td><td>635.57 ns</td><td>0.512 ns</td><td>0.399 ns</td><td>1.00</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Medium</td><td>216.74 ns</td><td>1.507 ns</td><td>1.336 ns</td><td>0.34</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Medium</td><td>1,780.52 ns</td><td>10.377 ns</td><td>9.707 ns</td><td>2.80</td><td>0.01</td><td>0.0210</td><td>352 B</td><td>2.00</td>
-</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Short</td><td>131.27 ns</td><td>0.418 ns</td><td>0.391 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Short</td><td>55.30 ns</td><td>0.159 ns</td><td>0.141 ns</td><td>0.42</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Short</td><td>541.08 ns</td><td>0.871 ns</td><td>0.727 ns</td><td>4.12</td><td>0.01</td><td>0.0067</td><td>112 B</td><td>2.00</td>
+</thead><tbody><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Long</td><td>893.53 ns</td><td>2.353 ns</td><td>2.201 ns</td><td>1.00</td><td>0.00</td><td>0.0343</td><td>584 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Long</td><td>34.55 ns</td><td>0.314 ns</td><td>0.279 ns</td><td>0.04</td><td>0.00</td><td>0.0349</td><td>584 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Long</td><td>3,605.42 ns</td><td>8.072 ns</td><td>7.156 ns</td><td>4.04</td><td>0.01</td><td>0.0916</td><td>1576 B</td><td>2.70</td>
+</tr><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Medium</td><td>216.55 ns</td><td>0.475 ns</td><td>0.421 ns</td><td>1.00</td><td>0.00</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Medium</td><td>18.02 ns</td><td>0.262 ns</td><td>0.233 ns</td><td>0.08</td><td>0.00</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Medium</td><td>1,095.70 ns</td><td>2.807 ns</td><td>2.344 ns</td><td>5.06</td><td>0.01</td><td>0.0420</td><td>712 B</td><td>4.68</td>
+</tr><tr><td>CSharpEssentials_Camel</td><td>Camel</td><td>Short</td><td>51.96 ns</td><td>0.137 ns</td><td>0.122 ns</td><td>1.00</td><td>0.00</td><td>0.0029</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Camel</td><td>Camel</td><td>Short</td><td>13.95 ns</td><td>0.186 ns</td><td>0.174 ns</td><td>0.27</td><td>0.00</td><td>0.0029</td><td>48 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Camel</td><td>Camel</td><td>Short</td><td>447.87 ns</td><td>1.390 ns</td><td>1.300 ns</td><td>8.62</td><td>0.03</td><td>0.0300</td><td>504 B</td><td>10.50</td>
+</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Long</td><td>1,015.86 ns</td><td>1.885 ns</td><td>1.471 ns</td><td>1.00</td><td>0.00</td><td>0.0401</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Long</td><td>919.25 ns</td><td>2.842 ns</td><td>2.519 ns</td><td>0.90</td><td>0.00</td><td>0.0401</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Long</td><td>6,902.96 ns</td><td>30.960 ns</td><td>27.445 ns</td><td>6.80</td><td>0.03</td><td>0.1144</td><td>2016 B</td><td>3.00</td>
+</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Medium</td><td>251.49 ns</td><td>0.866 ns</td><td>0.810 ns</td><td>1.00</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Medium</td><td>214.36 ns</td><td>0.496 ns</td><td>0.387 ns</td><td>0.85</td><td>0.00</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Medium</td><td>1,790.83 ns</td><td>5.312 ns</td><td>4.969 ns</td><td>7.12</td><td>0.03</td><td>0.0305</td><td>528 B</td><td>3.00</td>
+</tr><tr><td>CSharpEssentials_Kebab</td><td>Kebab</td><td>Short</td><td>58.65 ns</td><td>0.243 ns</td><td>0.227 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Kebab</td><td>Kebab</td><td>Short</td><td>54.90 ns</td><td>0.165 ns</td><td>0.146 ns</td><td>0.94</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Kebab</td><td>Kebab</td><td>Short</td><td>562.44 ns</td><td>2.668 ns</td><td>2.496 ns</td><td>9.59</td><td>0.05</td><td>0.0095</td><td>168 B</td><td>3.00</td>
+</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Long</td><td>1,014.75 ns</td><td>4.930 ns</td><td>4.612 ns</td><td>1.00</td><td>0.01</td><td>0.0401</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Long</td><td>929.06 ns</td><td>16.061 ns</td><td>15.023 ns</td><td>0.92</td><td>0.01</td><td>0.0401</td><td>672 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Long</td><td>6,892.06 ns</td><td>26.156 ns</td><td>23.187 ns</td><td>6.79</td><td>0.04</td><td>0.0763</td><td>1344 B</td><td>2.00</td>
+</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Medium</td><td>241.94 ns</td><td>2.342 ns</td><td>2.191 ns</td><td>1.00</td><td>0.01</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Medium</td><td>219.96 ns</td><td>4.322 ns</td><td>4.043 ns</td><td>0.91</td><td>0.02</td><td>0.0105</td><td>176 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Medium</td><td>1,767.53 ns</td><td>3.915 ns</td><td>3.662 ns</td><td>7.31</td><td>0.07</td><td>0.0210</td><td>352 B</td><td>2.00</td>
+</tr><tr><td>CSharpEssentials_Snake</td><td>Snake</td><td>Short</td><td>60.09 ns</td><td>0.290 ns</td><td>0.271 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Snake</td><td>Snake</td><td>Short</td><td>54.70 ns</td><td>0.300 ns</td><td>0.280 ns</td><td>0.91</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>Humanizer_Snake</td><td>Snake</td><td>Short</td><td>553.68 ns</td><td>1.463 ns</td><td>1.368 ns</td><td>9.21</td><td>0.05</td><td>0.0067</td><td>112 B</td><td>2.00</td>
 </tr></tbody></table>
 </body>
 </html>
