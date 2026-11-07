@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Mediator.Benchmarks.ValidationFanOutBenchmarks-20261105-144540</title>
+<title>CSharpEssentials.Mediator.Benchmarks.ValidationFanOutBenchmarks-20261107-153455</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,28 +14,28 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method       </th><th>Groups</th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method       </th><th>Groups</th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>MediatorHandWritten</td><td>One</td><td>Valid</td><td>235.2 ns</td><td>4.57 ns</td><td>4.69 ns</td><td>1.00</td><td>0.03</td><td>0.0272</td><td>456 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>One</td><td>Valid</td><td>384.9 ns</td><td>1.18 ns</td><td>1.11 ns</td><td>1.64</td><td>0.03</td><td>0.0358</td><td>600 B</td><td>1.32</td>
-</tr><tr><td>MediatRHandWritten</td><td>One</td><td>Valid</td><td>437.2 ns</td><td>2.28 ns</td><td>2.02 ns</td><td>1.86</td><td>0.04</td><td>0.0544</td><td>912 B</td><td>2.00</td>
-</tr><tr><td>MediatorHandWritten</td><td>One</td><td>Invalid</td><td>622.3 ns</td><td>3.10 ns</td><td>2.90 ns</td><td>1.00</td><td>0.01</td><td>0.1106</td><td>1864 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>One</td><td>Invalid</td><td>1,103.7 ns</td><td>6.67 ns</td><td>6.24 ns</td><td>1.77</td><td>0.01</td><td>0.1392</td><td>2360 B</td><td>1.27</td>
-</tr><tr><td>MediatRHandWritten</td><td>One</td><td>Invalid</td><td>809.3 ns</td><td>15.43 ns</td><td>14.43 ns</td><td>1.30</td><td>0.02</td><td>0.1354</td><td>2272 B</td><td>1.22</td>
-</tr><tr><td>MediatorHandWritten</td><td>Two</td><td>Valid</td><td>234.7 ns</td><td>1.00 ns</td><td>0.83 ns</td><td>1.00</td><td>0.00</td><td>0.0272</td><td>456 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>Two</td><td>Valid</td><td>401.3 ns</td><td>1.35 ns</td><td>1.20 ns</td><td>1.71</td><td>0.01</td><td>0.0448</td><td>752 B</td><td>1.65</td>
-</tr><tr><td>MediatRHandWritten</td><td>Two</td><td>Valid</td><td>401.5 ns</td><td>3.23 ns</td><td>3.03 ns</td><td>1.71</td><td>0.01</td><td>0.0544</td><td>912 B</td><td>2.00</td>
-</tr><tr><td>MediatorHandWritten</td><td>Two</td><td>Invalid</td><td>635.2 ns</td><td>2.59 ns</td><td>2.02 ns</td><td>1.00</td><td>0.00</td><td>0.1144</td><td>1920 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>Two</td><td>Invalid</td><td>1,081.0 ns</td><td>5.21 ns</td><td>4.62 ns</td><td>1.70</td><td>0.01</td><td>0.1450</td><td>2456 B</td><td>1.28</td>
-</tr><tr><td>MediatRHandWritten</td><td>Two</td><td>Invalid</td><td>678.0 ns</td><td>4.31 ns</td><td>4.03 ns</td><td>1.07</td><td>0.01</td><td>0.1316</td><td>2216 B</td><td>1.15</td>
+</thead><tbody><tr><td>MediatorHandWritten</td><td>One</td><td>Valid</td><td>239.9 ns</td><td>1.54 ns</td><td>1.44 ns</td><td>1.00</td><td>0.0272</td><td>456 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>One</td><td>Valid</td><td>294.8 ns</td><td>1.49 ns</td><td>1.32 ns</td><td>1.23</td><td>0.0305</td><td>512 B</td><td>1.12</td>
+</tr><tr><td>MediatRHandWritten</td><td>One</td><td>Valid</td><td>408.0 ns</td><td>1.07 ns</td><td>1.01 ns</td><td>1.70</td><td>0.0577</td><td>968 B</td><td>2.12</td>
+</tr><tr><td>MediatorHandWritten</td><td>One</td><td>Invalid</td><td>599.8 ns</td><td>4.00 ns</td><td>3.74 ns</td><td>1.00</td><td>0.1116</td><td>1872 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>One</td><td>Invalid</td><td>674.8 ns</td><td>3.26 ns</td><td>2.89 ns</td><td>1.13</td><td>0.1078</td><td>1816 B</td><td>0.97</td>
+</tr><tr><td>MediatRHandWritten</td><td>One</td><td>Invalid</td><td>776.7 ns</td><td>6.63 ns</td><td>6.20 ns</td><td>1.29</td><td>0.1354</td><td>2272 B</td><td>1.21</td>
+</tr><tr><td>MediatorHandWritten</td><td>Two</td><td>Valid</td><td>244.7 ns</td><td>1.24 ns</td><td>1.16 ns</td><td>1.00</td><td>0.0305</td><td>512 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Two</td><td>Valid</td><td>283.3 ns</td><td>3.15 ns</td><td>2.79 ns</td><td>1.16</td><td>0.0272</td><td>456 B</td><td>0.89</td>
+</tr><tr><td>MediatRHandWritten</td><td>Two</td><td>Valid</td><td>418.6 ns</td><td>1.60 ns</td><td>1.50 ns</td><td>1.71</td><td>0.0544</td><td>912 B</td><td>1.78</td>
+</tr><tr><td>MediatorHandWritten</td><td>Two</td><td>Invalid</td><td>506.2 ns</td><td>1.59 ns</td><td>1.33 ns</td><td>1.00</td><td>0.1078</td><td>1816 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Two</td><td>Invalid</td><td>578.8 ns</td><td>3.01 ns</td><td>2.82 ns</td><td>1.14</td><td>0.1049</td><td>1760 B</td><td>0.97</td>
+</tr><tr><td>MediatRHandWritten</td><td>Two</td><td>Invalid</td><td>670.8 ns</td><td>4.17 ns</td><td>3.90 ns</td><td>1.33</td><td>0.1354</td><td>2272 B</td><td>1.25</td>
 </tr></tbody></table>
 </body>
 </html>
