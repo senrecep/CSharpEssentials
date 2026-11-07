@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Enums.Comparison.Benchmarks.GetValuesComparison-20261105-152353</title>
+<title>CSharpEssentials.Enums.Comparison.Benchmarks.GetValuesComparison-20261107-165730</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,24 +14,24 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method           </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Names</td><td>GetNames</td><td>20.36 ns</td><td>0.261 ns</td><td>0.244 ns</td><td>1.00</td><td>0.02</td><td>0.0110</td><td>184 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Names</td><td>GetNames</td><td>32.50 ns</td><td>0.508 ns</td><td>0.475 ns</td><td>1.60</td><td>0.03</td><td>0.0110</td><td>184 B</td><td>1.00</td>
-</tr><tr><td>EnumsNet_Names</td><td>GetNames</td><td>17.26 ns</td><td>0.196 ns</td><td>0.174 ns</td><td>0.85</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>NetEscapades_Names</td><td>GetNames</td><td>20.34 ns</td><td>0.371 ns</td><td>0.347 ns</td><td>1.00</td><td>0.02</td><td>0.0110</td><td>184 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Values</td><td>GetValues</td><td>16.46 ns</td><td>0.198 ns</td><td>0.185 ns</td><td>1.00</td><td>0.02</td><td>0.0062</td><td>104 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Values</td><td>GetValues</td><td>36.46 ns</td><td>0.198 ns</td><td>0.175 ns</td><td>2.22</td><td>0.03</td><td>0.0062</td><td>104 B</td><td>1.00</td>
-</tr><tr><td>EnumsNet_Values</td><td>GetValues</td><td>15.55 ns</td><td>0.131 ns</td><td>0.122 ns</td><td>0.94</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>NetEscapades_Values</td><td>GetValues</td><td>15.77 ns</td><td>0.246 ns</td><td>0.206 ns</td><td>0.96</td><td>0.02</td><td>0.0062</td><td>104 B</td><td>1.00</td>
+</thead><tbody><tr><td>CSharpEssentials_Names</td><td>GetNames</td><td>19.42 ns</td><td>0.189 ns</td><td>0.168 ns</td><td>1.00</td><td>0.01</td><td>0.0110</td><td>184 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Names</td><td>GetNames</td><td>30.92 ns</td><td>0.291 ns</td><td>0.272 ns</td><td>1.59</td><td>0.02</td><td>0.0110</td><td>184 B</td><td>1.00</td>
+</tr><tr><td>EnumsNet_Names</td><td>GetNames</td><td>17.18 ns</td><td>0.179 ns</td><td>0.167 ns</td><td>0.88</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>NetEscapades_Names</td><td>GetNames</td><td>19.58 ns</td><td>0.201 ns</td><td>0.188 ns</td><td>1.01</td><td>0.01</td><td>0.0110</td><td>184 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Values</td><td>GetValues</td><td>15.22 ns</td><td>0.148 ns</td><td>0.138 ns</td><td>1.00</td><td>0.01</td><td>0.0062</td><td>104 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Values</td><td>GetValues</td><td>35.03 ns</td><td>0.193 ns</td><td>0.180 ns</td><td>2.30</td><td>0.02</td><td>0.0062</td><td>104 B</td><td>1.00</td>
+</tr><tr><td>EnumsNet_Values</td><td>GetValues</td><td>15.91 ns</td><td>0.139 ns</td><td>0.130 ns</td><td>1.05</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>NetEscapades_Values</td><td>GetValues</td><td>15.26 ns</td><td>0.127 ns</td><td>0.113 ns</td><td>1.00</td><td>0.01</td><td>0.0062</td><td>104 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>
