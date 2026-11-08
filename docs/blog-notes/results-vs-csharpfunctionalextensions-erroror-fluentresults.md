@@ -39,7 +39,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 1. Chaining is free for the three struct libraries. Map, Bind, Tap and Match allocate 0 B for CSE, CFE and ErrorOr, under 2.9 ns each. FluentResults allocates 88-344 B per step (Map success 256 B / 58.5485 ns).
 2. A failure costs CSE 56 B. Create failure: 13.6011 ns / 56 B for CSE, 20.4178 ns / 88 B for ErrorOr, 0.0002 ns / 0 B for CFE (string error kept inline; at timer resolution), 105.5643 ns / 344 B for FluentResults. CSE is faster than ErrorOr on every TFM (net11 9.2621 vs 15.1515 ns). Ensure failure: 12.903 ns / 56 B for CSE, 23.776 ns / 88 B for ErrorOr, 1.807 ns / 0 B for CFE. CSE loses to CFE on both, on every TFM.
-3. Async 5-step pipeline. Success with completed tasks: CSE 89.92 ns / 480 B, CFE 101.11 ns / 480 B, ErrorOr 107.73 ns / 560 B; CSE is fastest on every TFM. Failure at step 1: CSE 106.24 ns / 536 B against CFE 103.39 ns / 480 B (CSE loss on net8 to net10; on net11 CSE is faster, 101.35 vs 103.56 ns). Yielding: CSE allocates 904 B (success) and 960 B (failure) against 880 B for CFE.
+3. Async 5-step pipeline. Success with completed tasks: CSE 84.00 ns / 480 B, CFE 95.84 ns / 480 B, ErrorOr 103.95 ns / 560 B; CSE is fastest on every TFM. Failure at step 1: CSE 103.31 ns / 536 B against CFE 98.65 ns / 480 B (CSE loss on net8 to net10; on net11 CSE is faster, 96.42 vs 98.24 ns). Yielding: CSE allocates 904 B (success) and 960 B (failure) against 880 B and 879-880 B for CFE; CFE is faster on yielding failure on net8 to net10 (net10 1,558.09 vs 1,586.32 ns).
 4. Error aggregation, three failing checks. CSE 99.09 ns / 336 B, ErrorOr 42.79 ns / 184 B (ratio 0.43), FluentResults 212.03 ns / 712 B (2.14), CFE 368.58 ns / 784 B (3.72). ErrorOr's idiom builds no per-check results, so it does less work. CSE beats CFE and FluentResults on both paths, on every TFM.
 5. Maybe. CSE and CFE tie: 0 B everywhere, every net10 operation at most 1.1824 ns, gaps under 0.1 ns. On net9 CSE's Bind on None is 1.27 ns faster (5.5385 vs 6.8108 ns). Most Create rows and three GetValueOrDefault rows (None on net9 and net10, Some on net11) are at timer resolution; several of them, and CFE's net10 Create on Some (0.4084 ns), are noisy (CV above 5%).
 6. Sequence of 100 typed results, all success: CSE 268.480 ns / 1640 B, ErrorOr's hand-written loop 229.394 ns / 1216 B, CFE 854.432 ns / 2344 B, FluentResults 2,311.158 ns / 6528 B. ErrorOr wins every `Sequence` row on every TFM.
@@ -76,9 +76,9 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - Aggregation idioms differ. Compare the ErrorOr row as "what its README tells you to write", not as the same work. CSE's typed `Result<T>.Combine(r1, r2, r3)` was not measured.
 - FluentResults has no column for Ensure, Tap, the async pipeline and Maybe, because it has no matching API.
 - Most single-step rows are under 2 ns. Differences under 1 ns are noise, and rows below about 0.1 ns are at timer resolution.
-- Runtime effects not investigated: CFE takes 7-9 ns per step on net8/net9 and about 2 ns on net10/net11; the yielding pipeline is 1.90-1.94× slower on net11 for CSE and CFE and 1.66-1.68× for ErrorOr, which puts all three within error there.
+- Runtime effects not investigated: CFE takes 7-9 ns per step on net8/net9 and about 2 ns on net10/net11; the yielding pipeline takes 0.74-0.75× its net10 time on net11 for CSE and CFE and 0.72-0.73× for ErrorOr; CSE and CFE stay within error there and ErrorOr stays the slowest.
 - CSE has no net8.0 target, so the net8 column runs its netstandard2.1 build against competitor assets built for net8.
-- Load average 1.41 to 2.65 with a desktop session, 4.72 at one rerun start. Async gaps of a few percent are weak evidence.
+- Load average 1.41 to 2.65 with a desktop session, 4.72 at one rerun start, not recorded for the async pipeline rerun after #230-#256. Async gaps of a few percent are weak evidence.
 
 ## Possible angles
 

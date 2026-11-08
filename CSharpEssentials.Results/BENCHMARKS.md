@@ -43,7 +43,7 @@ Every competitor method carries a comment with the README or source URL at the p
 
 - Full BenchmarkDotNet default-job runs (no `--quick`), on net8.0, net9.0, net10.0 and net11.0, one suite at a time on one machine.
 - Comparison suite reports: `benchmarks/results/results-comparison/{tfm}/results/`. Async overload suite reports: `benchmarks/results/results-pattern/{tfm}/results/`.
-- 1-minute load average, sampled at the start and end of each suite: 1.55 to 2.37 for the comparison suite and 1.41 to 2.65 for the async overload suite. `MaybeComparison` (all four TFMs) and `CreateComparison` and `SequenceComparison` on net11.0 were rerun because their coefficient of variation (CV) stayed high. The reruns saw 1.43 to 4.72; the 4.72 peak was at the start of the net10.0 `MaybeComparison` rerun.
+- 1-minute load average, sampled at the start and end of each suite: 1.55 to 2.37 for the comparison suite and 1.41 to 2.65 for the async overload suite. `MaybeComparison` (all four TFMs) and `CreateComparison` and `SequenceComparison` on net11.0 were rerun because their coefficient of variation (CV) stayed high. The reruns saw 1.43 to 4.72; the 4.72 peak was at the start of the net10.0 `MaybeComparison` rerun. `AsyncPipelineComparison` was rerun after #230-#256 on SDK 11.0.100-rc.3 with .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the load average was not recorded for that rerun.
 - Rows whose CV stayed above 5% after two reruns are marked "noisy (CV above 5%)". In this suite they are `MaybeComparison` rows and some `CreateComparison` success rows, all near 0 ns.
 - Every number is copied from the `*-report-github.md` files. A `-` in the report's Allocated column is written as `0 B` here.
 
@@ -60,9 +60,9 @@ Primary runtime: net10. A tie is a difference within the sum of the two Benchmar
 | Ensure failure: CSE beats ErrorOr, loses to CFE | net10: 12.903 ns / 56 B for CSE, 23.776 ns / 88 B for ErrorOr (1.84), 1.807 ns / 0 B for CFE (0.14). Same order on every TFM |
 | Map, Bind, Ensure (pass): CSE and ErrorOr within 1 ns; CFE 0.78-1.41 ns slower on net10 | Map success 0.5791 / 0.6358 / 1.8174 ns (CSE / ErrorOr / CFE). On net8 and net9 CFE takes 8.9011 to 9.2949 ns for Map, Bind and Ensure pass, and 5.5893 to 7.6524 ns for Create success, against 0.1647 to 2.0426 ns for CSE on the same rows. On net10 and net11 CFE drops to about 2 ns for Map, Bind and Ensure. This looks like a runtime/JIT effect; not investigated |
 | Match: no gap above 1 ns between CSE and ErrorOr; CFE's Match to int about 1.2 ns slower | net10 Match to int: 1.2063 / 1.0570 ns (CSE success / failure), 1.1083 / 1.0181 ns (ErrorOr), 2.3368 / 2.3593 ns (CFE). CFE's Match to int takes 2.3065-2.3593 ns on every TFM. ErrorOr is ahead of CSE on Match to string on failure on net8 and net9 (0.5514 vs 1.0937 ns, 0.6149 vs 0.9161 ns), under 1 ns |
-| Async pipeline, success, completed tasks: CSE fastest on every TFM, same allocation as CFE | net10: 89.92 ns / 480 B for CSE, 101.11 ns / 480 B for CFE (1.12), 107.73 ns / 560 B for ErrorOr (1.20) |
-| Async pipeline, failure at step 1: CFE allocates 56 B less; CFE faster on net8 to net10 (CSE loss) | Completed, net10: 106.24 ns / 536 B for CSE, 103.39 ns / 480 B for CFE (0.97), 129.79 ns / 648 B for ErrorOr. CFE is faster on net8 (115.5 vs 126.4 ns), net9 (112.7 vs 118.2 ns) and net10; on net11 CSE is faster (101.35 vs 103.56 ns). Yielding failure, net10: 1,614.62 ns / 960 B for CSE vs 1,588.20 ns / 880 B for CFE (CSE loss, outside error); a tie on the other TFMs |
-| Async pipeline, yielding success: CSE allocates 24 B more than CFE (CSE loss) | net10: 1,607.53 ns / 904 B for CSE, 1,636.71 ns / 880 B for CFE (CSE faster, outside error), 1,872.45 ns / 1037 B for ErrorOr. Time is a tie on net8, net9 and net11 |
+| Async pipeline, success, completed tasks: CSE fastest on every TFM, same allocation as CFE | net10: 84.00 ns / 480 B for CSE, 95.84 ns / 480 B for CFE (1.14), 103.95 ns / 560 B for ErrorOr (1.24) |
+| Async pipeline, failure at step 1: CFE allocates 56 B less; CFE faster on net8 to net10 (CSE loss) | Completed, net10: 103.31 ns / 536 B for CSE, 98.65 ns / 480 B for CFE (0.95), 123.15 ns / 648 B for ErrorOr. CFE is faster on net8 (113.7 vs 123.6 ns), net9 (109.1 vs 113.8 ns) and net10; on net11 CSE is faster (96.42 vs 98.24 ns). Yielding failure, net10: 1,586.32 ns / 960 B for CSE vs 1,558.09 ns / 879 B for CFE (CSE loss, outside error); CFE is also faster on net8 and net9, a tie on net11 |
+| Async pipeline, yielding success: CSE allocates 24 B more than CFE (CSE loss) | net10: 1,580.19 ns / 904 B for CSE, 1,594.53 ns / 880 B for CFE (within error), 1,836.72 ns / 1037 B for ErrorOr. CSE is faster on net8 (1,628.6 vs 1,656.9 ns) and net9 (1,572.1 vs 1,611.5 ns); time is a tie on net10 and net11 |
 | Error aggregation: ErrorOr faster and smaller on both paths (CSE loss); CSE beats CFE and FluentResults | All-fail, net10: 99.09 ns / 336 B for CSE, 42.79 ns / 184 B for ErrorOr (0.43), 212.03 ns / 712 B for FluentResults (2.14), 368.58 ns / 784 B for CFE (3.72). All-pass: 14.51 ns / 48 B for CSE, 11.63 ns / 32 B for ErrorOr (0.80). Same order on every TFM. ErrorOr's idiom does less work (see section 8) |
 | Maybe: tie with CFE | Both allocate 0 B in every operation. Every net10 mean is at most 1.1824 ns and every measurable CSE vs CFE gap on net10 is under 0.1 ns. On net9, CSE Bind on None is 1.27 ns faster (5.5385 vs 6.8108 ns). Create and GetValueOrDefault on None are at timer resolution and partly noisy |
 | Sequence and CombineAll: ErrorOr's hand-written loop is faster (CSE loss); CSE beats CFE and FluentResults | net10, N = 100, all success: `Sequence` 268.480 ns / 1640 B for CSE, 229.394 ns / 1216 B for ErrorOr (0.85), 854.432 ns / 2344 B for CFE, 2,311.158 ns / 6528 B for FluentResults. `CombineAll` allocates the least of the four on every row (0 B on success, 56 B on failure) |
@@ -75,7 +75,7 @@ Every row where a competitor's mean is lower than CSE's by more than the two err
 
 - **Create failure**: CFE on every TFM (net10: 0.0002 ns / 0 B vs 13.6011 ns / 56 B; on net10 and net11 CFE is at timer resolution).
 - **Ensure failure**: CFE on every TFM (net10: 1.807 ns / 0 B vs 12.903 ns / 56 B).
-- **Async pipeline**: CFE allocates less on every failure and yielding row: 480 B vs 536 B (failure, completed), 880 B vs 960 B (failure, yielding), 880 B vs 904 B (success, yielding), all TFMs. CFE is faster on completed failure on net8 (115.5 vs 126.4 ns), net9 (112.7 vs 118.2 ns) and net10 (103.39 vs 106.24 ns), and on yielding failure on net10 (1,588.20 vs 1,614.62 ns).
+- **Async pipeline**: CFE allocates less on every failure and yielding row: 480 B vs 536 B (failure, completed), 879-880 B vs 960 B (failure, yielding), 880 B vs 904 B (success, yielding), all TFMs. CFE is faster on completed failure on net8 (113.7 vs 123.6 ns), net9 (109.1 vs 113.8 ns) and net10 (98.65 vs 103.31 ns), and on yielding failure on net8 to net10 (net10 1,558.09 vs 1,586.32 ns).
 - **Error aggregation**: ErrorOr on both paths, every TFM (net10 all-fail 42.79 ns / 184 B vs 99.09 ns / 336 B; all-pass 11.63 ns / 32 B vs 14.51 ns / 48 B).
 - **Sequence**: ErrorOr on every row and TFM, in time and bytes (net10 N = 10 failure 82.588 ns / 400 B vs 118.384 ns / 488 B). FluentResults allocates less on N = 100 failure (net10 1288 B vs 1456 B) while taking 945.368 vs 484.463 ns.
 - **CombineAll**: ErrorOr on time at N = 100 on every TFM (net10 failure 69.222 vs 137.997 ns, success 37.141 vs 67.625 ns) and at N = 10 failure on net11 (26.990 vs 38.115 ns); CFE on N = 100 success on net10 (62.774 vs 67.625 ns) and net11 (64.439 vs 68.541 ns). CSE allocates the least on all of these rows.
@@ -157,14 +157,14 @@ All differences under 1 ns: noise. On net8 ErrorOr's Tap on failure takes 2.0245
 
 | Path | CSE | CFE | ErrorOr | CFE ratio (time) |
 |---|---|---|---|---|
-| Success, completed | 89.92 ns / 480 B | 101.11 ns / 480 B | 107.73 ns / 560 B | 1.12 |
-| Success, yielding | 1,607.53 ns / 904 B | 1,636.71 ns / 880 B | 1,872.45 ns / 1037 B | 1.02 |
-| Failure at step 1, completed | 106.24 ns / 536 B | 103.39 ns / 480 B | 129.79 ns / 648 B | 0.97 |
-| Failure at step 1, yielding | 1,614.62 ns / 960 B | 1,588.20 ns / 880 B | 1,869.76 ns / 1127 B | 0.98 |
+| Success, completed | 84.00 ns / 480 B | 95.84 ns / 480 B | 103.95 ns / 560 B | 1.14 |
+| Success, yielding | 1,580.19 ns / 904 B | 1,594.53 ns / 880 B | 1,836.72 ns / 1037 B | 1.01 |
+| Failure at step 1, completed | 103.31 ns / 536 B | 98.65 ns / 480 B | 123.15 ns / 648 B | 0.95 |
+| Failure at step 1, yielding | 1,586.32 ns / 960 B | 1,558.09 ns / 879 B | 1,848.80 ns / 1127 B | 0.98 |
 
 - CSE is fastest on the success path with completed tasks, on every TFM.
-- CFE allocates less than CSE on the failure path (56 B and 80 B less) and on yielding success (24 B less). Part of that is the error representation: CFE carries one string, CSE an error array built at step 1.
-- ErrorOr allocates the most on every path and is the slowest on every path except the net11 yielding ones, where all three are within error.
+- CFE allocates less than CSE on the failure path (56 B and 80-81 B less) and on yielding success (24 B less). Part of that is the error representation: CFE carries one string, CSE an error array built at step 1.
+- ErrorOr allocates the most on every path and is the slowest on every path and TFM.
 
 ### 8. Error aggregation (three independent checks)
 
@@ -211,18 +211,18 @@ Mean / allocated per TFM for the rows where libraries differ. Map, Bind, Tap, Ma
 | | CFE | 8.9349 ns / 0 B | 9.1264 ns / 0 B | 1.8174 ns / 0 B | 1.7713 ns / 0 B |
 | | ErrorOr | 0.7119 ns / 0 B | 0.8482 ns / 0 B | 0.6358 ns / 0 B | 0.5745 ns / 0 B |
 | | FluentResults | 139.7369 ns / 288 B | 105.4259 ns / 256 B | 58.5485 ns / 256 B | 60.6824 ns / 256 B |
-| Async success, completed | CSE | 107.8 ns / 480 B | 102.2 ns / 480 B | 89.92 ns / 480 B | 85.17 ns / 480 B |
-| | CFE | 120.3 ns / 480 B | 115.3 ns / 480 B | 101.11 ns / 480 B | 100.81 ns / 480 B |
-| | ErrorOr | 130.9 ns / 560 B | 124.0 ns / 560 B | 107.73 ns / 560 B | 105.79 ns / 560 B |
-| Async success, yielding | CSE | 1,672.1 ns / 904 B | 1,653.0 ns / 904 B | 1,607.53 ns / 904 B | 3,098.28 ns / 904 B |
-| | CFE | 1,684.8 ns / 880 B | 1,644.0 ns / 880 B | 1,636.71 ns / 880 B | 3,114.88 ns / 880 B |
-| | ErrorOr | 1,923.3 ns / 1037 B | 1,901.9 ns / 1037 B | 1,872.45 ns / 1037 B | 3,116.52 ns / 1040 B |
-| Async failure, completed | CSE | 126.4 ns / 536 B | 118.2 ns / 536 B | 106.24 ns / 536 B | 101.35 ns / 536 B |
-| | CFE | 115.5 ns / 480 B | 112.7 ns / 480 B | 103.39 ns / 480 B | 103.56 ns / 480 B |
-| | ErrorOr | 150.3 ns / 648 B | 145.5 ns / 648 B | 129.79 ns / 648 B | 123.30 ns / 648 B |
-| Async failure, yielding | CSE | 1,658.3 ns / 960 B | 1,611.2 ns / 960 B | 1,614.62 ns / 960 B | 3,128.82 ns / 960 B |
-| | CFE | 1,640.8 ns / 880 B | 1,598.8 ns / 880 B | 1,588.20 ns / 880 B | 3,080.85 ns / 880 B |
-| | ErrorOr | 1,920.0 ns / 1127 B | 1,906.4 ns / 1127 B | 1,869.76 ns / 1127 B | 3,149.58 ns / 1128 B |
+| Async success, completed | CSE | 103.9 ns / 480 B | 109.6 ns / 480 B | 84.00 ns / 480 B | 83.03 ns / 480 B |
+| | CFE | 115.4 ns / 480 B | 113.0 ns / 480 B | 95.84 ns / 480 B | 93.77 ns / 480 B |
+| | ErrorOr | 122.0 ns / 560 B | 118.2 ns / 560 B | 103.95 ns / 560 B | 109.93 ns / 560 B |
+| Async success, yielding | CSE | 1,628.6 ns / 904 B | 1,572.1 ns / 904 B | 1,580.19 ns / 904 B | 1,179.85 ns / 904 B |
+| | CFE | 1,656.9 ns / 880 B | 1,611.5 ns / 880 B | 1,594.53 ns / 880 B | 1,201.19 ns / 880 B |
+| | ErrorOr | 1,884.8 ns / 1038 B | 1,865.3 ns / 1037 B | 1,836.72 ns / 1037 B | 1,338.94 ns / 1037 B |
+| Async failure, completed | CSE | 123.6 ns / 536 B | 113.8 ns / 536 B | 103.31 ns / 536 B | 96.42 ns / 536 B |
+| | CFE | 113.7 ns / 480 B | 109.1 ns / 480 B | 98.65 ns / 480 B | 98.24 ns / 480 B |
+| | ErrorOr | 162.7 ns / 648 B | 143.5 ns / 648 B | 123.15 ns / 648 B | 113.05 ns / 648 B |
+| Async failure, yielding | CSE | 1,648.5 ns / 960 B | 1,582.9 ns / 960 B | 1,586.32 ns / 960 B | 1,179.38 ns / 960 B |
+| | CFE | 1,591.0 ns / 880 B | 1,550.8 ns / 879 B | 1,558.09 ns / 879 B | 1,170.73 ns / 879 B |
+| | ErrorOr | 1,902.4 ns / 1127 B | 1,885.9 ns / 1126 B | 1,848.80 ns / 1127 B | 1,332.85 ns / 1127 B |
 | Aggregation all-fail | CSE | 116.756 ns / 336 B | 108.90 ns / 336 B | 99.09 ns / 336 B | 81.97 ns / 336 B |
 | | CFE | 458.489 ns / 800 B | 464.36 ns / 784 B | 368.58 ns / 784 B | 356.16 ns / 784 B |
 | | ErrorOr | 47.569 ns / 184 B | 46.15 ns / 184 B | 42.79 ns / 184 B | 36.77 ns / 184 B |
@@ -232,8 +232,8 @@ Mean / allocated per TFM for the rows where libraries differ. Map, Bind, Tap, Ma
 | | ErrorOr | 8.318 ns / 32 B | 11.81 ns / 32 B | 11.63 ns / 32 B | 11.36 ns / 32 B |
 | | FluentResults | 151.108 ns / 368 B | 140.42 ns / 368 B | 106.85 ns / 368 B | 97.63 ns / 368 B |
 
-- The allocation findings hold on every TFM: CSE allocates more than CFE on Create/Ensure failure (+56 B), async failure (+56 B completed, +80 B yielding) and yielding success (+24 B), and more than ErrorOr on aggregation (+16 B all-pass, +152 B all-fail). CSE allocates less than ErrorOr on Create/Ensure failure (56 B vs 88 B).
-- The yielding rows on net11 take 1.90-1.94× the net10 time for CSE and CFE and 1.66-1.68× for ErrorOr. On net11 the three libraries are within error on both yielding paths.
+- The allocation findings hold on every TFM: CSE allocates more than CFE on Create/Ensure failure (+56 B), async failure (+56 B completed, +80-81 B yielding) and yielding success (+24 B), and more than ErrorOr on aggregation (+16 B all-pass, +152 B all-fail). CSE allocates less than ErrorOr on Create/Ensure failure (56 B vs 88 B).
+- The yielding rows on net11 take 0.74-0.75× the net10 time for CSE and CFE and 0.72-0.73× for ErrorOr. On net11 CSE and CFE are within error on both yielding paths; ErrorOr is the slowest.
 
 ---
 
@@ -334,7 +334,7 @@ On the instance rows a failure never calls the handler and never awaits, so "Fai
 - **`ValueTask` sources on the failure path:** with completed tasks the `ValueTask`-source rows take 0.95-3.32× the hand-written `Task` baseline across classes and TFMs. They now allocate what they allocate on success: 0 B (80 B with a `Task` handler). net10 examples: Map `ValueTaskSource_SyncHandler` 20.290 ns / 0 B vs 16.696 ns / 80 B, Ensure `ValueTaskSource_ValueTaskPredicate` 53.71 ns / 0 B vs 17.13 ns / 80 B, Match `ValueTaskSource_ValueTaskHandler` 31.45 ns / 0 B vs 13.93 ns / 0 B. The instance `ValueTask` overloads also allocate 0 B on failure (Bind 4.852 ns / 0 B vs 2.841 ns / 0 B on success).
 - **Other rows slower than the hand-written code on net10:** `ValueTask` sources on the success path with completed tasks take up to 2.81× the baseline (Ensure `ValueTaskSource_ValueTaskPredicate` 56.58 ns vs 20.17 ns), and up to 1.21× when tasks yield, with more bytes (Match `ValueTaskSource_ValueTaskHandler`: 1,666.30 ns / 572 B vs 1,372.82 ns / 328 B). The instance overloads with completed tasks take up to 1.88× (Ensure `Instance_ValueTaskPredicate` on failure: 32.16 ns / 0 B vs 17.13 ns / 80 B).
 - `RenamedMemberBenchmarks`: the obsolete names and the `Async` names allocate the same bytes and differ by 1.06× or less on net10 (for example `Instance_Bind_Obsolete` 9.469 ns vs `Instance_BindAsync` 9.327 ns, both 80 B).
-- net11: single-operation rows that yield are faster than on net10, for the hand-written baseline too (Bind, success, yielding: baseline 903.853 ns on net11 vs 1,363.928 ns on net10, `TaskSource_SyncHandler` 547.012 vs 829.137 ns). The yielding `Task` and `ValueTask` source rows take 0.63-0.81× their net10 time. The comparison suite's async pipeline was not rerun and still shows net11 slower on its yielding rows. The `Traverse` rows that yield are also faster on net11 than on net10.
+- net11: single-operation rows that yield are faster than on net10, for the hand-written baseline too (Bind, success, yielding: baseline 903.853 ns on net11 vs 1,363.928 ns on net10, `TaskSource_SyncHandler` 547.012 vs 829.137 ns). The yielding `Task` and `ValueTask` source rows take 0.63-0.81× their net10 time. The comparison suite's async pipeline agrees: its yielding rows take 0.72-0.75× their net10 time on net11. The `Traverse` rows that yield are also faster on net11 than on net10.
 - Reports for every class and TFM: `benchmarks/results/results-pattern/{tfm}/results/`, for example [Bind net10](../benchmarks/results/results-pattern/net10.0/results/CSharpEssentials.Results.Benchmarks.BindBenchmarks-report-github.md) and [Traverse net10](../benchmarks/results/results-pattern/net10.0/results/CSharpEssentials.Results.Benchmarks.TraverseBenchmarks-report-github.md).
 
 ---
@@ -366,7 +366,7 @@ On the AOT row CSE is the only one of the four that declares `IsAotCompatible`. 
 - The aggregation idioms differ. ErrorOr's documented aggregation builds no per-check results; the other three do. The ErrorOr row measures less work, by design of its idiom. CSE's typed `Result<T>.Combine` was not measured.
 - FluentResults has no Ensure, Tap or Maybe and only two of the five async steps, so it has no column there. Its Match column uses property access, the README's processing idiom. ErrorOr and FluentResults have no Maybe.
 - Many rows are under 2 ns. Differences under 1 ns are reported as noise. Rows below about 0.1 ns (several Maybe rows, CFE Create on net10 and net11) are at timer resolution and cannot be told apart.
-- CFE's 5.5893 to 9.2949 ns on net8/net9 against about 2 ns on net10/net11, the 4.8533 to 7.1051 ns Maybe rows on net8/net9, and the 1.66-1.94× slower yielding rows on net11 affect libraries as a group and were not investigated. They are reported, not explained.
+- CFE's 5.5893 to 9.2949 ns on net8/net9 against about 2 ns on net10/net11, the 4.8533 to 7.1051 ns Maybe rows on net8/net9, and the faster yielding rows on net11 (0.72-0.75× net10) affect libraries as a group and were not investigated. They are reported, not explained.
 - net8 uses CSE's netstandard2.1 build. Results, Errors and Maybe do not target net8.0, so the net8 column runs CSE's netstandard2.1 assembly against competitor assets built for net8. net8 gaps may reflect that build, not only the runtime.
 - Machine load: 1-minute load average 1.41 to 2.65 during the main runs and up to 4.72 during reruns, with a desktop session running. Gaps of a few percent on the async rows are weak evidence even when outside error.
 - The CSE column is the 7.0.0 working tree, which may differ from the last version published to NuGet.

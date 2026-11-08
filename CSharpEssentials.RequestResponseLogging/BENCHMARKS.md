@@ -76,9 +76,9 @@ From CSE source and the competitors' docs; not measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on both classes. `RequestLoggingMetadataComparison`: SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628). `RequestLoggingComparison` was rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on both classes. Both classes were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
 - One Linux x64 machine, 6 physical cores and 12 threads. The suites ran one after another, never in parallel.
-- `RequestLoggingMetadataComparison`: the 1-minute load average was 1.60 when the `aspnetcore` suite started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice; no metadata row is above 5% CV.
+- `RequestLoggingMetadataComparison` rerun: the load average was not recorded; no row is above 5% CV.
 - `RequestLoggingComparison` rerun: one row is above 5% CV (`HttpLogging_Defaults` at 1 KB on net8.0, 5.4%) and is marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/*-report-github.md` (also `.csv` and `.html`), for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/).
 
@@ -110,20 +110,20 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `Plain_NoLogging` | 9.774 μs (1.00), 9.71 KB | 9.461 μs (1.00), 9.66 KB | 8.817 μs (1.00), 9.53 KB | 12.30 μs (1.00), 11.51 KB |
-| `CSharpEssentials_SkipBodies` | 10.813 μs (1.11), 10.51 KB | 10.300 μs (1.09), 10.43 KB | 10.010 μs (1.14), 10.24 KB | 12.86 μs (1.05), 12.17 KB |
-| `Serilog_RequestLogging` | 13.151 μs (1.35), 12.51 KB | 12.484 μs (1.32), 12.39 KB | 11.871 μs (1.35), 12.17 KB | 16.89 μs (1.37), 13.82 KB |
-| `HttpLogging_Metadata` | 10.878 μs (1.11), 10.36 KB | 10.336 μs (1.09), 10.31 KB | 9.795 μs (1.11), 10.19 KB | 13.22 μs (1.08), 12.14 KB |
+| `Plain_NoLogging` | 9.152 μs (1.00), 9.71 KB | 8.558 μs (1.00), 9.66 KB | 8.255 μs (1.00), 9.53 KB | 10.69 μs (1.00), 12.33 KB |
+| `CSharpEssentials_SkipBodies` | 9.977 μs (1.09), 10.49 KB | 9.483 μs (1.11), 10.43 KB | 8.724 μs (1.06), 10.22 KB | 11.47 μs (1.07), 13.06 KB |
+| `Serilog_RequestLogging` | 12.052 μs (1.32), 12.49 KB | 11.090 μs (1.30), 12.41 KB | 10.866 μs (1.32), 12.22 KB | 12.56 μs (1.18), 15 KB |
+| `HttpLogging_Metadata` | 9.752 μs (1.07), 10.36 KB | 9.472 μs (1.11), 10.3 KB | 8.918 μs (1.08), 10.17 KB | 11.78 μs (1.10), 13.05 KB |
 
-- CSE (method, path, timing, both bodies skipped) costs 1.05 to 1.14 of the plain request, HttpLogging 1.08 to 1.11 and Serilog 1.32 to 1.37. CSE is faster than Serilog on every TFM and allocates less.
-- Against HttpLogging, CSE is faster on net8.0, net9.0 and net11.0 and slower on net10.0. CSE allocates slightly more on every TFM.
+- CSE (method, path, timing, both bodies skipped) costs 1.06 to 1.11 of the plain request, HttpLogging 1.07 to 1.11 and Serilog 1.18 to 1.32. CSE is faster than Serilog on every TFM and allocates less.
+- Against HttpLogging, CSE is within error on every TFM. CSE allocates slightly more on every TFM.
 - HttpLogging and Serilog log the status code; CSE has no status code field, so its event carries less.
 
 ### Where CSE loses
 
 - **1 KB bodies, all TFMs: slower than `HttpLogging_Bodies`.** 21.49 against 17.60 μs (net8.0), 18.81 against 15.33 μs (net9.0), 16.685 against 13.661 μs (net10.0), 16.55 against 15.91 μs (net11.0). On net11.0 CSE also allocates more: 23.8 against 22.8 KB.
 - **`HttpLogging_Defaults`, all sizes and TFMs: faster than CSE.** At 1 KB, where it logs both whole bodies plus headers: 18.65 against 21.49 μs (net8.0, the HttpLogging row is noisy, CV 5.4%), 16.26 against 18.81 μs (net9.0), 13.993 against 16.685 μs (net10.0), 16.16 against 16.55 μs (net11.0). At 1 KB it allocates less than CSE only on net11.0 (23.08 against 23.8 KB); on net8.0 to net10.0 CSE allocates less. At 64 KB and 1 MB it truncates each body at 32 KB, so it does less work and allocates less (net10.0: 106.896 against 165.691 μs at 64 KB, 637.724 against 2,107.251 μs at 1 MB).
-- **Metadata, all TFMs: allocates more than HttpLogging.** 10.51 against 10.36 KB (net8.0), 10.43 against 10.31 KB (net9.0), 10.24 against 10.19 KB (net10.0), 12.17 against 12.14 KB (net11.0). On net10.0 it is also slower: 10.010 against 9.795 μs.
+- **Metadata, all TFMs: allocates more than HttpLogging.** 10.49 against 10.36 KB (net8.0), 10.43 against 10.3 KB (net9.0), 10.22 against 10.17 KB (net10.0), 13.06 against 13.05 KB (net11.0). Time is within error on every TFM.
 
 ---
 

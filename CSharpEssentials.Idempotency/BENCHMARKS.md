@@ -98,9 +98,9 @@ From CSE source and IdempotentAPI source at `b38045c`; not measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. Classes 2 to 5: SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628). `IdempotentReplayComparison` and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. All five classes and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
 - One Linux x64 machine, 6 physical cores and 12 threads. The suites ran one after another, never in parallel.
-- `aspnetcore` suite, classes 2 to 5: the 1-minute load average was 1.60 when it started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. `IdempotencyStoreContentionBenchmarks` on net11.0 comes from a rerun that started at a 1-minute load of 3.71 and ended at 6.96.
+- `aspnetcore` suite, classes 2 to 5: the load average was not recorded for the rerun; no row is above 5% CV.
 - `IdempotentReplayComparison` rerun: nine rows on net8.0 and net9.0 are above 5% CV, seven of them 256 KB rows; they are marked noisy wherever they appear.
 - `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0 only, the project has no net8.0 target): two net9.0 rows are above 5% CV (`NewKey` 6.2%, `Plain` at 1 KB 6.8%) and are marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/` (for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/)) and `benchmarks/results/idempotency/{tfm}/results/` (for example [net10.0](../benchmarks/results/idempotency/net10.0/results/)), as `*-report-github.md`, `.csv` and `.html`.
@@ -135,70 +135,70 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `Direct_Call` | 7.973 ns (1.00), - | 8.049 ns (1.00), - | 1.424 ns (1.00), - | 1.066 ns (1.00), - |
-| `HandWritten_ConcurrentDictionary` | 46.223 ns (5.80), - | 23.431 ns (2.91), - | 15.138 ns (10.63), - | 12.380 ns (11.62), - |
-| `CSharpEssentials_FirstRun` | 1,641.095 ns (205.83), 592 B | 1,566.874 ns (194.67), 592 B | 1,486.117 ns (1,043.78), 592 B | 603.325 ns (566.26), 592 B |
-| `CSharpEssentials_Replay` | 171.365 ns (21.49), 152 B | 181.050 ns (22.49), 152 B | 130.799 ns (91.87), 152 B | 129.085 ns (121.15), 152 B |
-| `CSharpEssentials_InFlight` | 151.481 ns (19.00), 96 B | 144.509 ns (17.95), 96 B | 117.662 ns (82.64), 96 B | 120.094 ns (112.72), 96 B |
-| `CSharpEssentials_KeyReused` | 151.532 ns (19.01), 96 B | 143.841 ns (17.87), 96 B | 121.813 ns (85.56), 96 B | 124.695 ns (117.03), 96 B |
-| `CSharpEssentials_ModeOff` | 74.482 ns (9.34), 96 B | 72.395 ns (8.99), 96 B | 59.187 ns (41.57), 96 B | 58.841 ns (55.23), 96 B |
-| `CSharpEssentials_Inbox_New` | 2,222.718 ns (1.00), 1152 B | 2,113.967 ns (1.00), 1152 B | 1,926.299 ns (1.00), 1112 B | 1,027.703 ns (1.00), 1112 B |
-| `CSharpEssentials_Inbox_Duplicate` | 477.924 ns (0.22), 744 B | 448.081 ns (0.21), 744 B | 418.617 ns (0.22), 704 B | 415.982 ns (0.40), 704 B |
+| `Direct_Call` | 8.010 ns (1.00), - | 8.009 ns (1.00), - | 1.418 ns (1.00), - | 1.049 ns (1.00), - |
+| `HandWritten_ConcurrentDictionary` | 46.113 ns (5.76), - | 24.603 ns (3.07), - | 14.194 ns (10.01), - | 12.722 ns (12.13), - |
+| `CSharpEssentials_FirstRun` | 664.826 ns (83.00), 504 B | 610.364 ns (76.21), 504 B | 549.333 ns (387.41), 504 B | 545.730 ns (520.26), 504 B |
+| `CSharpEssentials_Replay` | 161.939 ns (20.22), - | 162.398 ns (20.28), - | 119.891 ns (84.55), - | 121.636 ns (115.96), - |
+| `CSharpEssentials_InFlight` | 147.843 ns (18.46), - | 138.158 ns (17.25), - | 117.577 ns (82.92), - | 120.203 ns (114.59), - |
+| `CSharpEssentials_KeyReused` | 151.747 ns (18.94), - | 140.137 ns (17.50), - | 112.699 ns (79.48), - | 116.737 ns (111.29), - |
+| `CSharpEssentials_ModeOff` | 74.582 ns (9.31), - | 67.085 ns (8.38), - | 51.513 ns (36.33), - | 53.385 ns (50.89), - |
+| `CSharpEssentials_Inbox_New` | 1,121.019 ns (1.00), 1040 B | 1,058.047 ns (1.00), 1040 B | 958.428 ns (1.00), 1000 B | 953.367 ns (1.00), 1000 B |
+| `CSharpEssentials_Inbox_Duplicate` | 480.771 ns (0.43), 568 B | 434.117 ns (0.41), 568 B | 380.314 ns (0.40), 528 B | 394.532 ns (0.41), 528 B |
 
-- `Direct_Call` is 1.066 to 8.049 ns, so the Execute ratios (up to 1,043.78) mostly show how small the baseline is. Read the CSE rows as absolute costs: a replay is 129.085 to 181.050 ns with 152 B, a first run is 603.325 to 1,641.095 ns with 592 B.
-- `CSharpEssentials_ModeOff` (idempotency off) still costs 58.841 to 74.482 ns and 96 B, from the interpolated string built before the mode check (see Caveats).
-- The hand-written `ConcurrentDictionary.GetOrAdd` is 12.380 to 46.223 ns with no allocation. It has no lease, fingerprint, retention or mismatch check, so it is a floor, not an equivalent.
-- The first run is much cheaper on net11.0 (603.325 ns) than on net8.0 to net10.0 (1,486.117 to 1,641.095 ns), and so is the inbox new message; the store rows below show the same step.
+- `Direct_Call` is 1.049 to 8.010 ns, so the Execute ratios (up to 520.26) mostly show how small the baseline is. Read the CSE rows as absolute costs: a replay is 119.891 to 162.398 ns with no allocation, a first run is 545.730 to 664.826 ns with 504 B.
+- `CSharpEssentials_ModeOff` (idempotency off) still costs 51.513 to 74.582 ns, with no allocation.
+- The hand-written `ConcurrentDictionary.GetOrAdd` is 12.722 to 46.113 ns with no allocation. It has no lease, fingerprint, retention or mismatch check, so it is a floor, not an equivalent.
+- The first run is 545.730 to 664.826 ns and the inbox new message 953.367 to 1,121.019 ns, with no large step between TFMs.
 
 ### Record stores
 
 | Method | PayloadSize | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| `CSharpEssentials_Distributed_ReserveComplete` | 0 | 3,146.28 ns (1.00), 3456 B | 2,971.91 ns (1.00), 2909 B | 2,684.14 ns (1.00), 2528 B | 1,723.39 ns (1.00), 2525 B |
-| `CSharpEssentials_Distributed_Replay` | 0 | 361.34 ns (0.11), 1136 B | 291.85 ns (0.10), 592 B | 280.68 ns (0.10), 592 B | 233.12 ns (0.14), 592 B |
-| `CSharpEssentials_Distributed_ReserveComplete` | 1024 | 3,995.13 ns (1.00), 5576 B | 3,665.57 ns (1.00), 5034 B | 3,350.96 ns (1.00), 4646 B | 2,407.61 ns (1.00), 4629 B |
-| `CSharpEssentials_Distributed_Replay` | 1024 | 425.28 ns (0.11), 2184 B | 364.59 ns (0.10), 1640 B | 342.49 ns (0.10), 1640 B | 295.20 ns (0.12), 1640 B |
-| `CSharpEssentials_Distributed_ReserveComplete` | 65536 | 27,488.55 ns (1.00), 134600 B | 28,134.35 ns (1.00), 134057 B | 27,469.85 ns (1.00), 133674 B | 26,279.41 ns (1.00), 133676 B |
-| `CSharpEssentials_Distributed_Replay` | 65536 | 3,355.09 ns (0.12), 66696 B | 3,416.61 ns (0.12), 66152 B | 3,347.91 ns (0.12), 66152 B | 3,039.07 ns (0.12), 66152 B |
-| `CSharpEssentials_InMemory_ReserveComplete` | 0 | 1,383.85 ns (1.00), 432 B | 1,361.78 ns (1.00), 432 B | 1,238.02 ns (1.00), 432 B | 443.29 ns (1.00), 432 B |
-| `CSharpEssentials_InMemory_ReserveHit` | 0 | 67.18 ns (0.05), 56 B | 73.31 ns (0.05), 56 B | 71.59 ns (0.06), 56 B | 58.04 ns (0.13), 56 B |
-| `CSharpEssentials_InMemory_ReserveRelease` | 0 | 1,187.48 ns (0.86), 376 B | 1,125.09 ns (0.83), 376 B | 1,062.08 ns (0.86), 376 B | 295.62 ns (0.67), 376 B |
-| `CSharpEssentials_InMemory_ReserveComplete` | 1024 | 1,586.28 ns (1.00), 1480 B | 1,521.67 ns (1.00), 1480 B | 1,428.43 ns (1.00), 1480 B | 601.67 ns (1.00), 1480 B |
-| `CSharpEssentials_InMemory_ReserveHit` | 1024 | 67.84 ns (0.04), 56 B | 67.43 ns (0.04), 56 B | 73.01 ns (0.05), 56 B | 57.54 ns (0.10), 56 B |
-| `CSharpEssentials_InMemory_ReserveRelease` | 1024 | 1,187.33 ns (0.75), 376 B | 1,138.23 ns (0.75), 376 B | 1,074.98 ns (0.75), 376 B | 288.99 ns (0.48), 376 B |
-| `CSharpEssentials_InMemory_ReserveComplete` | 65536 | 14,835.13 ns (1.000), 65995 B | 14,774.55 ns (1.000), 65995 B | 14,640.26 ns (1.000), 65996 B | 14,033.57 ns (1.001), 65995 B |
-| `CSharpEssentials_InMemory_ReserveHit` | 65536 | 67.42 ns (0.005), 56 B | 66.71 ns (0.005), 56 B | 74.91 ns (0.005), 56 B | 58.14 ns (0.004), 56 B |
-| `CSharpEssentials_InMemory_ReserveRelease` | 65536 | 1,173.37 ns (0.079), 376 B | 1,123.28 ns (0.076), 376 B | 1,064.66 ns (0.073), 376 B | 292.36 ns (0.021), 376 B |
+| `CSharpEssentials_Distributed_ReserveComplete` | 0 | 2,995.63 ns (1.00), 3459 B | 2,797.23 ns (1.00), 2909 B | 2,604.87 ns (1.00), 2528 B | 1,664.53 ns (1.00), 2525 B |
+| `CSharpEssentials_Distributed_Replay` | 0 | 373.59 ns (0.12), 1136 B | 298.79 ns (0.11), 592 B | 258.46 ns (0.10), 592 B | 225.37 ns (0.14), 592 B |
+| `CSharpEssentials_Distributed_ReserveComplete` | 1024 | 3,425.28 ns (1.00), 4478 B | 3,115.52 ns (1.00), 3939 B | 2,948.76 ns (1.00), 3555 B | 1,967.30 ns (1.00), 3549 B |
+| `CSharpEssentials_Distributed_Replay` | 1024 | 363.83 ns (0.11), 1136 B | 272.59 ns (0.09), 592 B | 257.98 ns (0.09), 592 B | 225.07 ns (0.11), 592 B |
+| `CSharpEssentials_Distributed_ReserveComplete` | 65536 | 20,756.53 ns (1.00), 69000 B | 20,888.21 ns (1.00), 68444 B | 19,415.83 ns (1.00), 68069 B | 18,621.39 ns (1.00), 68070 B |
+| `CSharpEssentials_Distributed_Replay` | 65536 | 341.48 ns (0.02), 1136 B | 274.99 ns (0.01), 592 B | 273.20 ns (0.01), 592 B | 234.67 ns (0.01), 592 B |
+| `CSharpEssentials_InMemory_ReserveComplete` | 0 | 478.64 ns (1.00), 440 B | 473.88 ns (1.00), 440 B | 388.51 ns (1.00), 440 B | 390.45 ns (1.00), 440 B |
+| `CSharpEssentials_InMemory_ReserveHit` | 0 | 59.98 ns (0.13), - | 60.56 ns (0.13), - | 53.00 ns (0.14), - | 52.25 ns (0.13), - |
+| `CSharpEssentials_InMemory_ReserveRelease` | 0 | 315.85 ns (0.66), 328 B | 289.54 ns (0.61), 328 B | 258.66 ns (0.67), 328 B | 228.14 ns (0.58), 328 B |
+| `CSharpEssentials_InMemory_ReserveComplete` | 1024 | 766.75 ns (1.00), 1488 B | 617.71 ns (1.00), 1488 B | 597.33 ns (1.00), 1488 B | 531.25 ns (1.00), 1488 B |
+| `CSharpEssentials_InMemory_ReserveHit` | 1024 | 59.22 ns (0.08), - | 59.61 ns (0.10), - | 50.97 ns (0.09), - | 52.27 ns (0.10), - |
+| `CSharpEssentials_InMemory_ReserveRelease` | 1024 | 299.14 ns (0.39), 328 B | 287.33 ns (0.47), 328 B | 234.53 ns (0.39), 328 B | 284.32 ns (0.54), 328 B |
+| `CSharpEssentials_InMemory_ReserveComplete` | 65536 | 14,055.95 ns (1.000), 66003 B | 13,837.52 ns (1.000), 66003 B | 13,600.17 ns (1.000), 66004 B | 13,651.82 ns (1.000), 66003 B |
+| `CSharpEssentials_InMemory_ReserveHit` | 65536 | 58.98 ns (0.004), - | 60.07 ns (0.004), - | 50.67 ns (0.004), - | 53.12 ns (0.004), - |
+| `CSharpEssentials_InMemory_ReserveRelease` | 65536 | 288.09 ns (0.020), 328 B | 282.42 ns (0.020), 328 B | 233.87 ns (0.017), 328 B | 272.31 ns (0.020), 328 B |
 
-- A reservation hit on the in-memory store is 57.54 to 74.91 ns and 56 B at every payload size.
-- The distributed store copies the payload into its entry format: at 64 KB, reserve+complete allocates 133674 to 134600 B (two copies of the payload) and a replay 66152 to 66696 B (one copy). The in-memory store keeps one copy on complete (65995 to 65996 B at 64 KB) and none on a hit.
-- In-memory reserve+complete at 0 and 1 KB is 1,238.02 to 1,586.28 ns on net8.0 to net10.0 and 443.29 to 601.67 ns on net11.0. The reserve+release row shows the same gap (1,062.08 to 1,187.48 ns against 288.99 to 295.62 ns).
+- A reservation hit on the in-memory store is 50.67 to 60.56 ns with no allocation at every payload size.
+- The distributed store copies the payload once into its entry format: at 64 KB, reserve+complete allocates 68069 to 69000 B (one copy of the payload). A replay allocates 592 B (1136 B on net8.0) at every payload size, because the payload is read in place. The in-memory store keeps one copy on complete (66003 to 66004 B at 64 KB) and none on a hit.
+- In-memory reserve+complete at 0 and 1 KB is 388.51 to 766.75 ns and reserve+release 228.14 to 315.85 ns on every TFM.
 
 ### Store contention
 
 | Method | Threads | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| `CSharpEssentials_InMemory_Contended_SameKey` | 8 | 242.3 ns (1.00), 59 B | 248.4 ns (1.00), 59 B | 261.6 ns (1.00), 59 B | 255.0 ns (1.00), 59 B |
-| `CSharpEssentials_InMemory_Contended_DistinctKeys` | 8 | 863.7 ns (3.56), 1483 B | 849.2 ns (3.42), 1483 B | 730.5 ns (2.79), 1483 B | 779.0 ns (3.06), 1483 B |
-| `CSharpEssentials_InMemory_Contended_SameKey` | 32 | 296.6 ns (1.00), 61 B | 278.4 ns (1.00), 61 B | 283.3 ns (1.00), 61 B | 325.8 ns (1.00), 63 B |
-| `CSharpEssentials_InMemory_Contended_DistinctKeys` | 32 | 853.9 ns (2.88), 1485 B | 863.7 ns (3.10), 1485 B | 775.3 ns (2.74), 1485 B | 817.1 ns (2.51), 1487 B |
+| `CSharpEssentials_InMemory_Contended_SameKey` | 8 | 256.4 ns (1.00), 3 B | 245.1 ns (1.00), 3 B | 242.6 ns (1.00), 3 B | 247.3 ns (1.00), 3 B |
+| `CSharpEssentials_InMemory_Contended_DistinctKeys` | 8 | 762.1 ns (2.97), 1491 B | 770.8 ns (3.15), 1491 B | 671.9 ns (2.77), 1491 B | 688.1 ns (2.78), 1491 B |
+| `CSharpEssentials_InMemory_Contended_SameKey` | 32 | 266.1 ns (1.00), 5 B | 267.9 ns (1.00), 5 B | 263.1 ns (1.00), 5 B | 295.8 ns (1.00), 6 B |
+| `CSharpEssentials_InMemory_Contended_DistinctKeys` | 32 | 792.0 ns (2.98), 1493 B | 777.0 ns (2.90), 1493 B | 730.8 ns (2.78), 1493 B | 706.1 ns (2.39), 1493 B |
 
-- The mean is per operation (1024 operations per invocation). The same completed key from every worker costs 242.3 to 325.8 ns and 59 to 63 B; a new key per operation costs 730.5 to 863.7 ns and 1483 to 1487 B.
-- This class depends on the core count and the scheduler. The net11.0 report comes from a rerun at a 1-minute load of 3.71 to 6.96, so compare its rows only with each other.
+- The mean is per operation (1024 operations per invocation). The same completed key from every worker costs 242.6 to 295.8 ns and 3 to 6 B; a new key per operation costs 671.9 to 792.0 ns and 1491 to 1493 B.
+- This class depends on the core count and the scheduler.
 
 ### Deterministic keys
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_For_Short` | 73.17 ns (1.00), 184 B | 65.85 ns (1.00), 184 B | 57.98 ns (1.00), 152 B | 44.64 ns (1.00), 152 B |
-| `CSharpEssentials_For_Long` | 1,814.16 ns (24.80), 2464 B | 1,795.39 ns (27.26), 2464 B | 1,373.50 ns (23.69), 2432 B | 1,293.39 ns (28.97), 2432 B |
-| `CSharpEssentials_ToStorageKey` | 84.83 ns (1.00), 232 B | 72.27 ns (1.00), 232 B | 80.71 ns (1.00), 232 B | 58.73 ns (1.00), 232 B |
-| `CSharpEssentials_Scope_UserAndTenant` | 185.25 ns (2.18), 672 B | 189.07 ns (2.62), 672 B | 174.48 ns (2.16), 632 B | 135.71 ns (2.31), 632 B |
-| `HandWritten_UuidV5` | 733.36 ns (1.00), - | 736.82 ns (1.00), - | 582.37 ns (1.00), - | 587.74 ns (1.00), - |
-| `CSharpEssentials_ToUuidV5` | 1,400.02 ns (1.91), 488 B | 1,305.69 ns (1.77), 488 B | 891.03 ns (1.53), 456 B | 885.82 ns (1.51), 456 B |
+| `CSharpEssentials_For_Short` | 73.54 ns (1.00), 184 B | 63.48 ns (1.00), 184 B | 57.85 ns (1.00), 152 B | 43.63 ns (1.00), 152 B |
+| `CSharpEssentials_For_Long` | 1,723.46 ns (23.44), 2464 B | 1,694.34 ns (26.70), 2464 B | 1,342.18 ns (23.21), 2432 B | 1,258.60 ns (28.85), 2432 B |
+| `CSharpEssentials_ToStorageKey` | 74.18 ns (1.00), 232 B | 67.78 ns (1.00), 232 B | 75.38 ns (1.00), 232 B | 56.34 ns (1.00), 232 B |
+| `CSharpEssentials_Scope_UserAndTenant` | 176.76 ns (2.38), 672 B | 175.62 ns (2.59), 672 B | 166.16 ns (2.20), 632 B | 132.33 ns (2.35), 632 B |
+| `HandWritten_UuidV5` | 735.50 ns (1.00), - | 738.56 ns (1.00), - | 584.51 ns (1.00), - | 587.31 ns (1.00), - |
+| `CSharpEssentials_ToUuidV5` | 1,273.68 ns (1.73), 488 B | 1,269.74 ns (1.72), 488 B | 918.42 ns (1.57), 456 B | 862.30 ns (1.47), 456 B |
 
-- A short key (`For`) is 44.64 to 73.17 ns. A key over 255 characters is hashed: 1,293.39 to 1,814.16 ns and 2432 to 2464 B.
-- `ToUuidV5` costs 1.51 to 1.91 of the hand-written UUIDv5 and allocates 456 to 488 B where the hand-written one allocates nothing. The hand-written version gets the canonical name prepared in setup; `ToUuidV5` builds it on every call.
+- A short key (`For`) is 43.63 to 73.54 ns. A key over 255 characters is hashed: 1,258.60 to 1,723.46 ns and 2432 to 2464 B.
+- `ToUuidV5` costs 1.47 to 1.73 of the hand-written UUIDv5 and allocates 456 to 488 B where the hand-written one allocates nothing. The hand-written version gets the canonical name prepared in setup; `ToUuidV5` builds it on every call.
 
 ### Middleware overhead and fingerprint buffering (`CSharpEssentials.Idempotency.Benchmarks`)
 
@@ -227,8 +227,8 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
 
 ### Where CSE loses
 
-- **`ToUuidV5` against the hand-written UUIDv5, all TFMs:** 1,400.02 against 733.36 ns (net8.0), 1,305.69 against 736.82 ns (net9.0), 891.03 against 582.37 ns (net10.0), 885.82 against 587.74 ns (net11.0), with 456 to 488 B allocated against none.
-- **Executor against the hand-written dedupe:** a CSE replay is 129.085 to 181.050 ns with 152 B, the `ConcurrentDictionary` lookup 12.380 to 46.223 ns with none. The CSE row does more (lease, fingerprint, retention), but the gap is real.
+- **`ToUuidV5` against the hand-written UUIDv5, all TFMs:** 1,273.68 against 735.50 ns (net8.0), 1,269.74 against 738.56 ns (net9.0), 918.42 against 584.51 ns (net10.0), 862.30 against 587.31 ns (net11.0), with 456 to 488 B allocated against none.
+- **Executor against the hand-written dedupe:** a CSE replay is 119.891 to 162.398 ns, the `ConcurrentDictionary` lookup 12.722 to 46.113 ns, neither allocating. The CSE row does more (lease, fingerprint, retention), but the gap is real.
 - **Large keyed requests:** a keyed replay with a 64 KB body takes 136.080 μs against 22.154 μs for the plain request on net10.0, and 1,250.851 μs against 127.180 μs at 1 MB.
 
 ---
@@ -236,12 +236,12 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
 ## Caveats
 
 - **CSE code notes**, from the worktree source, with what the run shows:
-  - `IdempotencyExecutor.cs:58`: an interpolated string is built on every call, before the mode check, only to name the operation in a possible error. `CSharpEssentials_ModeOff` shows it: 96 B per call with idempotency off.
-  - `InMemoryIdempotencyRecordStore.cs:52,60`: the token `Guid` string and the `Entry` are created only when the key is missing or expired, so a hit allocates only its result (56 B).
+  - `IdempotencyExecutor.cs:76-78`: the operation name is a constant and the mode check comes right after the settings, so `CSharpEssentials_ModeOff` allocates nothing.
+  - `InMemoryIdempotencyRecordStore.cs:54,62`: the counter token string (`:120`) and the `Entry` are created only when the key is missing or expired, so a hit allocates nothing.
   - `InMemoryIdempotencyRecordStore.cs:87`: `payload.ToArray()` copies the payload before the token check.
   - `IdempotencyInbox.cs:51`: `"messaging:" + consumer` is concatenated per message.
   - `DistributedCacheIdempotencyRecordStore.cs:52,83,103`: the storage key is rebuilt on every call.
-  - `Internal/RecordEntrySerializer.cs:15-16`: a `MemoryStream`/`BinaryWriter` copy per entry, which is the second payload copy in the distributed reserve+complete rows.
+  - `Internal/RecordEntrySerializer.cs:16-23`: the entry header goes through a `MemoryStream`/`BinaryWriter`; the payload is copied once into an exact-size entry (`:29-32`), and a read returns a slice of the stored bytes (`:71`), so a distributed replay does not copy the payload.
   - `IdempotencyKeys.cs:96-119`: the canonical string, its UTF-8 bytes, the hash and the Base64 text per hashed key; `:79-93`: several arrays and an `IncrementalHash` per UUIDv5.
   - On the HTTP path, a new key captures the response in an `ArrayPool` buffer in `ResponseCaptureStream`, then `IdempotencyEntrySerializer` and the distributed store each build one exact-size entry. The NewKey 256 KB rows allocate 521 to 528 KB more than the plain endpoint, about two times the response size.
   - `CSharpEssentials.AspNetCore/Idempotency/IdempotencyMiddleware.cs:495`: the fingerprint calls `EnableBuffering()` with the default 30 KB threshold, so a larger request body goes to a temporary file before it is hashed.

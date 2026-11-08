@@ -7,7 +7,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - BenchmarkDotNet v0.14.0, default job (ColdStart job with 15 launches for cold startup), full runs of all twelve classes on 2026-11-05.
 - 6-core, 12-thread x64 desktop CPU, CachyOS, SDK 11.0.100-rc.1. TFMs net8.0, net9.0, net10.0 and net11.0, run in that order, one after another. Primary runtime is .NET 10.0.11.
 - Desktop session in the background; 1-minute load average 1.90 at the start of the suite and 1.63 at the end.
-- Rows above 5% CV were rerun up to two times; no row of this suite stayed above 5%.
+- Rows above 5% CV were rerun up to two times; no row of this suite stayed above 5%. The behavior and validation scope classes were rerun after #230-#256 with no load recorded.
 - The Native AOT report is a separate script run from 2026-11-06, after the CSE changes described below.
 
 ## Framing
@@ -36,9 +36,9 @@ Raw material for a post. These notes are not the post. Every number comes from `
 1. Send. Mediator through `IMediator`: 7.761 ns (0 behaviors) and 26.152 ns (2 behaviors), 0 B. MediatR: 68.270 and 185.857 ns, 200 B and 584 B. The concrete class: 2.886 and 13.967 ns.
 2. Publish. Mediator 12.300 / 30.369 ns (1 / 5 handlers), 0 B. MediatR 103.404 / 301.915 ns, 288 B / 896 B.
 3. Cold startup (fresh process, 50 handlers, first send). MediatR 33.06 ms, Mediator 36.56 ms (Ratio 1.11). Mediator is slower on net8, net10 and net11; net9 is a tie (32.17 vs 30.73 ms, inside the error margins). Warm startup goes the other way on net8 to net10 (net10: 216.8 vs 255.6 μs), but on net11 Mediator is slower there too (239.6 vs 216.3 μs).
-4. Behaviors, valid input. Hand-written Mediator 198.0 ns, CSE 163.7 ns (Ratio 0.83), hand-written MediatR 329.6 ns. CSE and hand-written Mediator both allocate 216 B; MediatR 880 B. CSE is faster than hand-written Mediator on net9 to net11 and slower on net8 (199.9 vs 195.9 ns).
-5. Behaviors, invalid input. Hand-written Mediator 273.6 ns / 712 B, CSE 303.9 ns / 752 B (Ratio 1.11), hand-written MediatR 403.3 ns / 1192 B. CSE is slower than hand-written Mediator on every TFM and faster than hand-written MediatR on every TFM.
-6. Validation scope (what a request scope pays to build the behavior). CSE 481.4 ns / 976 B, hand-written Mediator 554.6 ns / 1232 B, hand-written MediatR 530.9 ns / 1232 B. CSE is the fastest row on every TFM.
+4. Behaviors, valid input. Hand-written Mediator 179.3 ns, CSE 177.6 ns (Ratio 0.99, within error), hand-written MediatR 402.4 ns. CSE and hand-written Mediator both allocate 216 B; MediatR 880 B. CSE is faster than hand-written Mediator on net8 and net9, a tie on net10 and slower on net11 (172.6 vs 168.5 ns).
+5. Behaviors, invalid input. Hand-written Mediator 282.1 ns / 712 B, CSE 292.5 ns / 752 B (Ratio 1.04), hand-written MediatR 396.0 ns / 1192 B. CSE is slower than hand-written Mediator on net8 to net10, within error on net11, and faster than hand-written MediatR on every TFM.
+6. Validation scope (what a request scope pays to build the behavior). CSE 469.3 ns / 976 B, hand-written Mediator 511.8 ns / 1232 B, hand-written MediatR 519.8 ns / 1232 B. CSE is the fastest row on every TFM.
 7. Lock, one uncontended send. CSE 167.5 ns / 168 B, hand-written over AsyncKeyedLock 187.1 ns / 48 B (Mediator) and 339.9 ns / 520 B (MediatR).
 8. Lock contention, 8 workers, per operation. One shared key: AsyncKeyedLock 772.06 ns, CSE 779.29 ns (a tie). One key per worker: 409.75 vs 340.94 ns. A new key per operation: 391.88 vs 338.65 ns. CSE allocates more in every row.
 9. Caching. Hit: hand-written Mediator 490.1 ns, CSE 502.0 ns, hand-written MediatR 636.0 ns. Miss: 572.5, 583.1 and 863.3 ns.
@@ -49,8 +49,8 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediator/BENCHMARKS.md`, sections 5 and 7.
 
-- Part B, invalid input: slower than hand-written Mediator on every TFM (Ratio 1.09-1.13; net10 303.9 vs 273.6 ns). Allocates 40 B more on net10 and net11 and 48 B more on net9.
-- Part B, valid input on net8 (netstandard2.1 build): 199.9 vs 195.9 ns against hand-written Mediator.
+- Part B, invalid input: slower than hand-written Mediator on net8 to net10 (Ratio 1.04-1.13; net10 292.5 vs 282.1 ns), within error on net11. Allocates 40 B more on net10 and net11 and 48 B more on net9.
+- Part B, valid input on net11: 172.6 vs 168.5 ns against hand-written Mediator.
 - Validator fan-out (three validators): slower than hand-written Mediator and allocates more in every row on every TFM (net10 Ratio 1.37-1.93). With invalid input it is also slower than hand-written MediatR on every TFM (net10, one group: 1,157.9 vs 821.5 ns). CSE groups by `Order`, goes through an async task per group, removes duplicate errors with `Distinct` and checks the failure observers. Not profiled.
 - Idempotency: slower than both hand-written stores in most rows. The worst row is a failing send that releases its key, with a supplied fingerprint: 1,627.9 ns against 300.7 ns (hand-written Mediator) and 447.3 ns (hand-written MediatR) on net10, 763.5 ns on net11. The hand-written stores are a lower bound with none of CSE's lease, scope, mode or metrics features, but the size of this gap is not explained.
 - Lock: 168 B per uncontended send against 48 B for hand-written AsyncKeyedLock. Under contention CSE allocates 303-305 B per operation against 220-226 B with one key, and 170 B against 50 B with many keys. With one shared key it is slower than AsyncKeyedLock on net9 and net11.
@@ -87,7 +87,7 @@ This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediat
 ## Possible angles
 
 - "A generated dispatcher, then the behaviors on top": Mediator's 0 B sends against MediatR's per-send allocation, and what CSE adds back on top of that.
-- "Where CSE loses": invalid input against hand-written Mediator, validator fan-out, idempotency on the release path, lock allocation. Name the losses first.
+- "Where CSE loses": invalid input against hand-written Mediator, valid input on net11, validator fan-out, idempotency on the release path, lock allocation. Name the losses first.
 - "Cold start is not free for generated code": Mediator is slower than MediatR from a fresh process on three of four TFMs, while the warm numbers mostly say the opposite.
 - "Behaviors you would otherwise write yourself": idempotency, locking and caching have no counterpart in either dispatcher. Compare with the hand-written lower bound and say what the extra cost buys.
 - "A keyed lock, two ways": CSE's lock against AsyncKeyedLock under no contention, full contention and key churn.

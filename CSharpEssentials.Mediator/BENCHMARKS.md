@@ -46,7 +46,7 @@ Environment:
 |---|---|
 | Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
 | OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
-| Machine load | Desktop session in the background. All twelve classes ran on 2026-11-05 from 12:59 to 14:50, run order net8, net9, net10, net11. 1-minute load average 1.90 at the suite start and 1.63 at the end (5-minute 1.73 and 1.68). No other benchmark ran at the same time. The AOT script ran separately, on 2026-11-06, at 4.70 (3.86 / 3.63). `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun on 2026-11-07 from 15:00 after the performance changes to those behaviors; the load average was not recorded for that rerun |
+| Machine load | Desktop session in the background. All twelve classes ran on 2026-11-05 from 12:59 to 14:50, run order net8, net9, net10, net11. 1-minute load average 1.90 at the suite start and 1.63 at the end (5-minute 1.73 and 1.68). No other benchmark ran at the same time. The AOT script ran separately, on 2026-11-06, at 4.70 (3.86 / 3.63). `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun on 2026-11-07 from 15:00 after the performance changes to those behaviors; the load average was not recorded for that rerun. `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun after the performance changes in #230-#256, with no load recorded |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser]; default job for warm classes, ColdStart job (15 launches) for the cold class |
 | .NET SDK | 11.0.100-rc.1.26425.128 (11.0.100-rc.3.26522.148 for the two rerun classes) |
 | Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 (.NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 for the two rerun classes) |
@@ -59,7 +59,7 @@ Environment:
 
 - BenchmarkDotNet v0.14.0, default job (ColdStart job for `ColdStartupBenchmarks`), full runs of all twelve classes, not `--quick`.
 - TFMs net8.0, net9.0, net10.0 and net11.0, run one after another on one machine, with no other benchmark running.
-- 1-minute load average between 1.63 and 1.90 for the suite (start and end of the run). `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun on 2026-11-07 with no load recorded.
+- 1-minute load average between 1.63 and 1.90 for the suite (start and end of the run). `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun on 2026-11-07 with no load recorded. `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun after #230-#256 with no load recorded.
 - After the run, every row with a coefficient of variation above 5% was rerun up to two times. No row of this suite stayed above 5%.
 - Reports: `benchmarks/results/mediator/{tfm}/results/*-report-github.md` (and `.csv`). Native AOT: `benchmarks/results/mediator/aot/aot-report.md`, from a separate run (see section 6).
 - Every table below names its TFM. Mean, Ratio and Allocated are copied from the GitHub Markdown reports; Ratio is BenchmarkDotNet's column against the row named as baseline. "-" in Allocated means 0 B.
@@ -77,13 +77,13 @@ Primary runtime: net10. A tie is a difference within the sum of the two Benchmar
 | Cold startup: Mediator is slower than MediatR on net8, net10 and net11 (Mediator loss), a tie on net9 | net10: 36.56 vs 33.06 ms (Ratio 1.11). net8 1.10, net11 1.09. net9: 32.17 vs 30.73 ms, inside the error margins (1.348 + 0.778 ms). Allocation (2nd in-process invocation) on net10: 388.76 vs 429.4 KB |
 | Warm startup: Mediator is faster on net8 to net10 and slower on net11 (Mediator loss on net11) | net10: 216.8 vs 255.6 μs (0.85), 291.71 vs 378.42 KB. net8 0.78, net9 0.81. net11: 239.6 vs 216.3 μs (1.11). The warm unit hides MediatR's first-send reflection; use the cold row for startup |
 | The concrete `Mediator` class is slower than `IMediator` with 2 behaviors on net8 and net9 (Mediator loss) | net8: 26.860 vs 19.735 ns; net9: 25.241 vs 17.533 ns. On net10 and net11 the concrete class is faster (13.967 vs 26.152 ns, 14.937 vs 31.187 ns), and it is faster in every other Send and Publish row. Not investigated |
-| Valid input: CSE is faster than hand-written behaviors on Mediator on net9, net10 and net11, slower on net8 (CSE loss on net8) | net10: 163.7 vs 198.0 ns (Ratio 0.83), same 216 B. net9 0.92, net11 0.99 (170.2 vs 172.0 ns, outside error). net8: 199.9 vs 195.9 ns (1.02), same 344 B |
-| Valid input: CSE is faster than hand-written behaviors on MediatR on every TFM | net10: 163.7 vs 329.6 ns, 216 vs 880 B. Most of that gap is Mediator's dispatch: MediatRHandWritten has Ratio 1.66 against MediatorHandWritten |
-| Invalid input: CSE is slower than hand-written behaviors on Mediator on every TFM (CSE loss) | net10: 303.9 vs 273.6 ns (Ratio 1.11). 1.09-1.13 on every TFM |
+| Valid input: CSE is faster than hand-written behaviors on Mediator on net8 and net9, a tie on net10, slower on net11 (CSE loss on net11) | net10: 177.6 vs 179.3 ns (Ratio 0.99, within error), same 216 B. net8 0.98 (208.8 vs 213.7 ns), net9 0.97, same 344 B. net11: 172.6 vs 168.5 ns (1.02, outside error), same 216 B |
+| Valid input: CSE is faster than hand-written behaviors on MediatR on every TFM | net10: 177.6 vs 402.4 ns, 216 vs 880 B. Most of that gap is Mediator's dispatch: MediatRHandWritten has Ratio 2.24 against MediatorHandWritten |
+| Invalid input: CSE is slower than hand-written behaviors on Mediator on net8 to net10 (CSE loss), a tie on net11 | net10: 292.5 vs 282.1 ns (Ratio 1.04). net8 1.13, net9 1.11. net11: 260.6 vs 255.4 ns (1.02, within error) |
 | Invalid input: CSE allocates more than hand-written Mediator on net9 to net11 (CSE loss) | net10 and net11: 752 vs 712 B. net9: 928 vs 880 B. net8: equal, 976 B |
-| Invalid input: CSE is faster than hand-written behaviors on MediatR on every TFM and allocates less | net10: 303.9 vs 403.3 ns, 752 vs 1192 B |
+| Invalid input: CSE is faster than hand-written behaviors on MediatR on every TFM and allocates less | net10: 292.5 vs 396.0 ns, 752 vs 1192 B |
 | Section 7 behaviors: where CSE loses | Validator fan-out (three validators): slower than hand-written Mediator in every row (Ratio 1.14-1.25 on net10); against hand-written MediatR it is slower only on net8 invalid input with two groups (a tie with one group). Idempotency: slower than both hand-written stores in most rows; the failing send that releases its key (ExecuteRelease, Supplied) is 649.0 ns against 293.6 and 426.5 ns on net10. Caching: 1.02-1.09 of hand-written Mediator. Lock: faster than both, but 168 B against 48 B. Details in section 7 |
-| Section 7 behaviors: where CSE wins | Validation scope: CSE is the fastest row and allocates least on every TFM (net10: 481.4 vs 554.6 and 530.9 ns, 976 vs 1232 B). Uncontended lock: faster than both hand-written lock behaviors. Contended lock with many keys (PerWorker, Unique): faster than AsyncKeyedLock on net9 to net11. Logging: Ratio 0.95-1.05 against hand-written Mediator on net9 to net11 (up to 1.17 on net8), faster than hand-written MediatR |
+| Section 7 behaviors: where CSE wins | Validation scope: CSE is the fastest row and allocates least on every TFM (net10: 469.3 vs 511.8 and 519.8 ns, 976 vs 1232 B). Uncontended lock: faster than both hand-written lock behaviors. Contended lock with many keys (PerWorker, Unique): faster than AsyncKeyedLock on net9 to net11. Logging: Ratio 0.95-1.05 against hand-written Mediator on net9 to net11 (up to 1.17 on net8), faster than hand-written MediatR |
 | Native AOT (report from 2026-11-06): Mediator publishes with 0 IL warnings and runs; MediatR crashes | MediatR 12.5.0: 23 IL warnings (all ILC), exit 134, "A suitable constructor for type 'MediatR.Mediator' could not be located". Mediator 3.0.2: 0 warnings, 2.2 MB, `response 42 behaviors 2 ok` |
 | Native AOT, same 2026-11-06 report: both CSE samples publish with 0 IL warnings and run | CseAot and CseDirectValidatorAot: 0 IL warnings, 2.5 MB each, exit 0, `valid 6 invalid Name.NotEmpty,Quantity.InclusiveBetween ok`. In the earlier 2026-11-02 report both crashed (4 and 3 IL warnings); the source changes in the next row removed both causes |
 | Changes in the CSE source since the earlier AOT report (2026-11-02) | (a) `AddValidator<T, TValidator>` now carries `[DynamicallyAccessedMembers(PublicConstructors)]` on `TValidator` (`CSharpEssentials.Validation/Extensions/ValidatorServiceCollectionExtensions.cs:26`). (b) `BehaviorCache` and its `GetMethod("Failure")` lookup are gone; failures are built through `FailureResponse<TResponse>.Factory`, a static `IFailureFactory<TResponse>` that takes the `Error[]` directly (`Behaviors/FailureResponse.cs`). (c) With one validator, Enforce mode and no listening observer, a failure returns without an async state machine (`Behaviors/ValidationBehavior.cs:97-98`). The Part B numbers in this document were measured with this code |
@@ -148,15 +148,15 @@ net10. Ratio is against MediatorHandWritten.
 
 | Input | Variant | Mean | Ratio | Allocated |
 |---|---|---:|---:|---:|
-| Valid | MediatorHandWritten | 198.0 ns | 1.00 | 216 B |
-| Valid | Cse | 163.7 ns | 0.83 | 216 B |
-| Valid | MediatRHandWritten | 329.6 ns | 1.66 | 880 B |
-| Invalid | MediatorHandWritten | 273.6 ns | 1.00 | 712 B |
-| Invalid | Cse | 303.9 ns | 1.11 | 752 B |
-| Invalid | MediatRHandWritten | 403.3 ns | 1.47 | 1192 B |
+| Valid | MediatorHandWritten | 179.3 ns | 1.00 | 216 B |
+| Valid | Cse | 177.6 ns | 0.99 | 216 B |
+| Valid | MediatRHandWritten | 402.4 ns | 2.24 | 880 B |
+| Invalid | MediatorHandWritten | 282.1 ns | 1.00 | 712 B |
+| Invalid | Cse | 292.5 ns | 1.04 | 752 B |
+| Invalid | MediatRHandWritten | 396.0 ns | 1.40 | 1192 B |
 
-- Valid: CSE is faster than the hand-written Mediator behaviors on net9, net10 and net11 with the same allocation. On net8 (netstandard2.1 build) it is slower: 199.9 vs 195.9 ns. Why CSE is faster on the valid path was not profiled; with one validator it takes a synchronous path with no async state machine (`ValidationBehavior.cs:85-100`).
-- Invalid: CSE is slower than hand-written Mediator on every TFM (Ratio 1.09-1.13) and allocates 40 B more on net10 and net11, 48 B more on net9. The extra work per failure was not profiled item by item. CSE type-tests the request for `IValidationModeOverride` (`ValidationBehavior.cs:78`) and checks whether a failure observer listens before it builds the failure.
+- Valid: CSE is faster than the hand-written Mediator behaviors on net8 (netstandard2.1 build) and net9 with the same allocation, a tie on net10 (177.6 vs 179.3 ns, within error) and slower on net11 (172.6 vs 168.5 ns). Why the gap changes across TFMs was not profiled; with one validator it takes a synchronous path with no async state machine (`ValidationBehavior.cs:85-100`).
+- Invalid: CSE is slower than hand-written Mediator on net8 to net10 (Ratio 1.04-1.13), within error on net11 (1.02), and allocates 40 B more on net10 and net11, 48 B more on net9. The extra work per failure was not profiled item by item. CSE type-tests the request for `IValidationModeOverride` (`ValidationBehavior.cs:78`) and checks whether a failure observer listens before it builds the failure.
 - Invalid: CSE is faster than hand-written MediatR on every TFM and allocates less.
 - The validator is the same in all three columns, so the gap comes from the behaviors and the dispatcher.
 
@@ -210,7 +210,7 @@ Methodology:
 - Every container registers `ILogger<T>` as `NullLogger<T>`, except the Enabled logging rows.
 - Mediator containers use the one `AddMediator` call of the project through `MediatorApp.Register`. MediatR containers scan the benchmark assembly and add the behavior with `cfg.AddBehavior` or `cfg.AddOpenBehavior` and the same lifetime CSE uses.
 - The net8.0 rows run the netstandard2.1 build of every CSE package (Mediator, Idempotency, Validation, Results, Errors, Json, Maybe have no net8 target). The hand-written columns use the same CSE Results, Validation and Json builds, so the comparison between columns holds, but no net8 row is net8-native CSE code. The netstandard2.1 build runs different code in these behaviors: `LoggingBehavior` allocates a `Stopwatch` (`LoggingBehavior.cs:26`), `InProcessResourceLock` locks an `object` instead of a `Lock` (`InProcessResourceLock.cs:13-17`), and the default fingerprint serializes the whole request and hashes it with `SHA256.Create()` and a manual hex loop (`IdempotencyBehavior.cs:235-245`) instead of the streaming `Sha256JsonStream` (`:233`). Do not read the net8 rows as the same code.
-- The new request types change the code the five older classes measure. Mediator generates one dispatcher for every message type in the project, so `SendBenchmarks` and `BehaviorBenchmarks` dispatch through a larger generated class. MediatR's assembly scan registers the new handlers in the older containers too. All twelve classes ran in the same full run, so every number in this document was measured with the same request types. `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun later from the same project.
+- The new request types change the code the five older classes measure. Mediator generates one dispatcher for every message type in the project, so `SendBenchmarks` and `BehaviorBenchmarks` dispatch through a larger generated class. MediatR's assembly scan registers the new handlers in the older containers too. All twelve classes ran in the same full run, so every number in this document was measured with the same request types. `ValidationFanOutBenchmarks`, `IdempotencyBehaviorBenchmarks`, `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun later from the same project.
 
 What the parity check enforces:
 - Every container resolves exactly the behavior it claims, by type, for each request type.
@@ -261,11 +261,11 @@ net10. [net10 report](../benchmarks/results/mediator/net10.0/results/CSharpEssen
 
 | Variant | Mean | Ratio | Allocated |
 |---|---:|---:|---:|
-| MediatorHandWritten | 554.6 ns | 1.00 | 1232 B |
-| Cse | 481.4 ns | 0.87 | 976 B |
-| MediatRHandWritten | 530.9 ns | 0.96 | 1232 B |
+| MediatorHandWritten | 511.8 ns | 1.00 | 1232 B |
+| Cse | 469.3 ns | 0.92 | 976 B |
+| MediatRHandWritten | 519.8 ns | 1.02 | 1232 B |
 
-CSE is the fastest row and allocates least on every TFM (Ratio 0.85-0.91, 976 B against 1200-1232 B).
+CSE is the fastest row and allocates least on every TFM (Ratio 0.88-0.92, 976 B against 1200-1232 B).
 
 #### 7.3 Idempotency
 
@@ -380,18 +380,18 @@ Mean (and allocation where it is not 0 B) per TFM. Run order net8, net9, net10, 
 | | Mediator | 225.6 μs / 277.18 KB | 221.4 μs / 291.66 KB | 216.8 μs / 291.71 KB | 239.6 μs / 276.18 KB |
 | Cold startup | MediatR | 30.00 ms / 442.76 KB | 30.73 ms / 428.38 KB | 33.06 ms / 429.4 KB | 33.31 ms / 420.87 KB |
 | | Mediator | 32.98 ms / 363.36 KB | 32.17 ms / 363.34 KB | 36.56 ms / 388.76 KB | 36.41 ms / 387.27 KB |
-| Behaviors, valid | MediatorHandWritten | 195.9 ns / 344 B | 223.4 ns / 344 B | 198.0 ns / 216 B | 172.0 ns / 216 B |
-| | Cse | 199.9 ns / 344 B | 205.0 ns / 344 B | 163.7 ns / 216 B | 170.2 ns / 216 B |
-| | MediatRHandWritten | 516.8 ns / 1072 B | 498.6 ns / 1072 B | 329.6 ns / 880 B | 321.2 ns / 856 B |
-| Behaviors, invalid | MediatorHandWritten | 443.1 ns / 976 B | 334.9 ns / 880 B | 273.6 ns / 712 B | 249.0 ns / 712 B |
-| | Cse | 493.2 ns / 976 B | 379.9 ns / 928 B | 303.9 ns / 752 B | 272.0 ns / 752 B |
-| | MediatRHandWritten | 638.0 ns / 1520 B | 586.5 ns / 1424 B | 403.3 ns / 1192 B | 382.4 ns / 1168 B |
+| Behaviors, valid | MediatorHandWritten | 213.7 ns / 344 B | 205.0 ns / 344 B | 179.3 ns / 216 B | 168.5 ns / 216 B |
+| | Cse | 208.8 ns / 344 B | 199.4 ns / 344 B | 177.6 ns / 216 B | 172.6 ns / 216 B |
+| | MediatRHandWritten | 489.4 ns / 1072 B | 431.9 ns / 1072 B | 402.4 ns / 880 B | 314.2 ns / 856 B |
+| Behaviors, invalid | MediatorHandWritten | 435.6 ns / 976 B | 327.4 ns / 880 B | 282.1 ns / 712 B | 255.4 ns / 712 B |
+| | Cse | 490.5 ns / 976 B | 364.3 ns / 928 B | 292.5 ns / 752 B | 260.6 ns / 752 B |
+| | MediatRHandWritten | 620.4 ns / 1520 B | 498.8 ns / 1424 B | 396.0 ns / 1192 B | 367.1 ns / 1168 B |
 | Fan-out, One, Invalid | MediatorHandWritten | 926.1 ns / 2096 B | 759.6 ns / 2000 B | 547.0 ns / 1824 B | 599.8 ns / 1872 B |
 | | Cse | 1,093.5 ns / 2096 B | 818.2 ns / 1952 B | 684.8 ns / 1824 B | 674.8 ns / 1816 B |
 | | MediatRHandWritten | 1,077.6 ns / 2528 B | 911.9 ns / 2432 B | 783.7 ns / 2256 B | 776.7 ns / 2272 B |
-| Validation scope | MediatorHandWritten | 576.2 ns / 1200 B | 586.5 ns / 1232 B | 554.6 ns / 1232 B | 512.3 ns / 1224 B |
-| | Cse | 514.4 ns / 976 B | 499.0 ns / 976 B | 481.4 ns / 976 B | 464.7 ns / 976 B |
-| | MediatRHandWritten | 571.9 ns / 1200 B | 631.3 ns / 1232 B | 530.9 ns / 1232 B | 509.4 ns / 1224 B |
+| Validation scope | MediatorHandWritten | 554.7 ns / 1200 B | 559.5 ns / 1232 B | 511.8 ns / 1232 B | 496.2 ns / 1224 B |
+| | Cse | 506.7 ns / 976 B | 492.4 ns / 976 B | 469.3 ns / 976 B | 448.2 ns / 976 B |
+| | MediatRHandWritten | 561.5 ns / 1200 B | 558.4 ns / 1232 B | 519.8 ns / 1232 B | 556.8 ns / 1224 B |
 | Idempotency, ExecuteRelease, Supplied | MediatorHandWritten | 310.3 ns / 144 B | 297.6 ns / 144 B | 293.6 ns / 144 B | 292.6 ns / 144 B |
 | | Cse | 735.5 ns / 328 B | 669.5 ns / 328 B | 649.0 ns / 328 B | 644.0 ns / 328 B |
 | | MediatRHandWritten | 542.8 ns / 680 B | 485.3 ns / 680 B | 426.5 ns / 616 B | 434.8 ns / 600 B |
@@ -405,8 +405,8 @@ Mean (and allocation where it is not 0 B) per TFM. Run order net8, net9, net10, 
 Full per-TFM tables for every class: `benchmarks/results/mediator/{tfm}/results/*-report-github.md`, for example [net8](../benchmarks/results/mediator/net8.0/results/), [net9](../benchmarks/results/mediator/net9.0/results/), [net10](../benchmarks/results/mediator/net10.0/results/), [net11](../benchmarks/results/mediator/net11.0/results/).
 
 - Mediator is faster than MediatR for send and publish and allocates nothing on every TFM. From a cold process it is slower on net8, net10 and net11 and a tie on net9.
-- Part B: CSE valid input is faster than hand-written Mediator on net9 to net11 and slower on net8. CSE invalid input is slower than hand-written Mediator on every TFM and faster than hand-written MediatR on every TFM.
-- Outliers, not investigated: MediatorIMediator with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; MediatorHandWritten valid on net9 (223.4 ns, above its other TFMs); Mediator warm startup on net11 (239.6 μs, above its net10 value); every lock contention OneKey row on net11.
+- Part B: CSE valid input is faster than hand-written Mediator on net8 and net9, a tie on net10 and slower on net11. CSE invalid input is slower than hand-written Mediator on net8 to net10, within error on net11, and faster than hand-written MediatR on every TFM.
+- Outliers, not investigated: MediatorIMediator with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; Mediator warm startup on net11 (239.6 μs, above its net10 value); every lock contention OneKey row on net11.
 
 Costs read from the source, checked against the run (not changed in this work):
 - `InMemoryIdempotencyRecordStore.cs:54` and `:62` allocate an `Entry` and a counter token string (`:120`) for every new reservation. Replay does not reach them; ExecuteRelease does on every send.
@@ -458,7 +458,7 @@ MediatR links point at tag [`v12.5.0`](https://github.com/jbogard/MediatR/tree/v
 - Cold allocation is not first-call allocation. In each launch BenchmarkDotNet 0.14 runs the unit a second time in the same process, after the timed invocation, to collect GC stats. The allocation column therefore excludes JIT, type loading and first-call reflection-cache allocations, and MediatR's static wrapper cache is already filled.
 - Warm startup favours MediatR: its static wrapper cache and the runtime's reflection caches are filled after the first iteration. Use the cold row for startup decisions.
 - Part B resolves every behavior from the root provider. With Mediator's singleton default the pipeline captures the scoped validation behavior and validator once, and MediatR gets the same root-scoped instances back from `GetServices` on every send. This works with plain `BuildServiceProvider()` and throws for every column with `validateScopes: true`. An application that resolves the mediator from a request scope pays for scoped resolution that these rows do not include.
-- Nothing in Part B or section 7 was profiled. Why CSE is faster than hand-written Mediator on the valid path (net9 to net11) and slower on the invalid path is not known in detail.
+- Nothing in Part B or section 7 was profiled. Why CSE is faster than hand-written Mediator on the valid path on net8 and net9 (slower on net11) and slower on the invalid path is not known in detail.
 - The machine ran a desktop session (1-minute load 1.63-1.90 for the suite). Gaps of a few percent are weak evidence even when outside error.
 - The outliers listed under Cross-TFM were not investigated.
 - The net8 column runs CSE's netstandard2.1 build; the other columns run the matching TFM build.
