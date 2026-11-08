@@ -90,7 +90,7 @@ Result<User> conflictsOnly = await operation.RetryIfFailed(
     maxAttempts: 5);
 ```
 
-`RetryIfFailed` exists for `Func<CancellationToken, Task<Result<T>>>` and `Func<CancellationToken, Task<Result>>`, with and without `shouldRetry`. Both forms reuse a cached pipeline keyed by `(maxAttempts, delay, exponentialBackoff)`; the predicate form passes the delegate through a pooled `ResilienceContext`. Exceptions reach the predicate as `ErrorType.Unexpected` errors. Keep the predicate pure: it can run more than once per attempt.
+`RetryIfFailed` exists for `Func<CancellationToken, Task<Result<T>>>` and `Func<CancellationToken, Task<Result>>`, with and without `shouldRetry`. Both forms reuse a cached pipeline keyed by `(maxAttempts, delay, exponentialBackoff)` and by whether a predicate is used, up to 64 entries per result type; the predicate form passes the delegate through a pooled `ResilienceContext`. Exceptions reach the predicate as `ErrorType.Unexpected` errors. Keep the predicate pure: it can run more than once per attempt.
 
 ## Retry filtering
 

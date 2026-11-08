@@ -74,7 +74,7 @@ This table comes from reading CSE source and the engines' source and docs. None 
 | Async rules | yes | yes | no | async API only |
 | Rule definition | class, `Func` or lambda | code | DSL class | string expression |
 | Runtime code generation | none | none | expression compile | Dynamic LINQ plus FastExpressionCompiler |
-| AOT | `IsAotCompatible` on net8.0 and later targets; no reflection beyond `GetType().Name` in an error text | yes | no (expression compile) | no |
+| AOT | `IsAotCompatible` on the net9.0 and later targets (not netstandard2.1); no reflection beyond `GetType().Name` in an error text | yes | no (expression compile) | no |
 | Error shape | `Result` with `Error[]` | any | user collector | `RuleResultTree` with `ErrorMessage` |
 | License | MIT | n/a | MIT | MIT |
 
