@@ -78,57 +78,58 @@ All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio"
 
 - Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
 - 1-minute load average at the start and end of the comparison suite: 1.55 to 2.37, with a desktop session running. No `MaybeCollectionComparison` row stayed above 5% CV.
+- `MaybeCollectionComparison` was rerun on 2026-11-07 on .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 with SDK 11.0.100-rc.3.26522.148. Every number below comes from that rerun, and no rerun row is above 5% CV.
 - Reports: `benchmarks/results/results-comparison/{tfm}/results/`, for example [MaybeCollectionComparison net10](../benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.MaybeCollectionComparison-report-github.md).
 
 ### net10
 
 | Category | Source | CSE | CFE (ratio) | Hand-written (ratio) |
 |---|---|---|---|---|
-| `TryFirst` | List | 1.101 ns / 0 B | 7.664 ns / 0 B (6.96) | - |
-| `TryFirst` | Sequence | 1.150 ns / 0 B | 4,360.931 ns / 16600 B (3,791.70) | - |
-| `TryLast` | List | 2.995 ns / 0 B | 7.518 ns / 0 B (2.51) | - |
-| `TryLast` | Sequence | 733.584 ns / 0 B | 4,335.030 ns / 16600 B (5.91) | - |
-| `TryFirstWhere` | List | 1,466.973 ns / 0 B | 2,144.331 ns / 192 B (1.46) | 1,469.969 ns / 0 B (1.00) |
-| `TryFirstWhere` | Sequence | 1,669.227 ns / 0 B | 2,707.672 ns / 224 B (1.62) | 1,606.616 ns / 0 B (0.96) |
-| `TryLastWhere` | List | 1,460.609 ns / 0 B | 1,604.279 ns / 0 B (1.10) | 1,607.465 ns / 0 B (1.10) |
-| `TryLastWhere` | Sequence | 3,495.891 ns / 0 B | 4,392.084 ns / 48 B (1.26) | 3,493.867 ns / 0 B (1.00) |
-| `TryFirstMiss` | List | 1,243.765 ns / 0 B | 3,006.975 ns / 160 B (2.42) | 1,457.217 ns / 0 B (1.17) |
-| `TryFirstMiss` | Sequence | 1,458.198 ns / 0 B | 3,864.882 ns / 192 B (2.65) | 1,463.751 ns / 0 B (1.00) |
-| `TryLastMiss` | List | 1,228.511 ns / 0 B | 1,456.500 ns / 0 B (1.19) | 1,204.289 ns / 0 B (0.98) |
-| `TryLastMiss` | Sequence | 1,463.018 ns / 0 B | 1,459.865 ns / 0 B (1.00) | 1,456.570 ns / 0 B (1.00) |
-| `TryFindHit` | List | 21.515 ns / 0 B | 21.306 ns / 0 B (0.99) | 11.004 ns / 0 B (0.51) |
-| `TryFindMiss` | List | 9.682 ns / 0 B | 9.761 ns / 0 B (1.01) | 9.065 ns / 0 B (0.94) |
-| `Choose` | List | 3,467.147 ns / 88 B | 3,429.457 ns / 88 B (0.99) | 449.589 ns / 0 B (0.13) |
+| `TryFirst` | List | 2.687 ns / 0 B | 8.070 ns / 0 B (3.01) | - |
+| `TryFirst` | Sequence | 5.898 ns / 0 B | 4,423.863 ns / 16600 B (750.37) | - |
+| `TryLast` | List | 2.637 ns / 0 B | 7.646 ns / 0 B (2.90) | - |
+| `TryLast` | Sequence | 909.606 ns / 0 B | 4,102.166 ns / 16600 B (4.51) | - |
+| `TryFirstWhere` | List | 1,511.619 ns / 0 B | 2,381.262 ns / 192 B (1.58) | 1,549.859 ns / 0 B (1.03) |
+| `TryFirstWhere` | Sequence | 1,842.250 ns / 0 B | 2,815.999 ns / 224 B (1.53) | 1,815.016 ns / 0 B (0.99) |
+| `TryLastWhere` | List | 1,520.830 ns / 0 B | 1,527.976 ns / 0 B (1.00) | 1,663.832 ns / 0 B (1.09) |
+| `TryLastWhere` | Sequence | 3,580.297 ns / 0 B | 4,368.203 ns / 48 B (1.22) | 3,264.382 ns / 0 B (0.91) |
+| `TryFirstMiss` | List | 1,314.010 ns / 0 B | 3,083.930 ns / 160 B (2.35) | 1,509.095 ns / 0 B (1.15) |
+| `TryFirstMiss` | Sequence | 1,516.854 ns / 0 B | 3,830.247 ns / 192 B (2.53) | 1,779.556 ns / 0 B (1.17) |
+| `TryLastMiss` | List | 1,264.376 ns / 0 B | 1,291.321 ns / 0 B (1.02) | 1,247.162 ns / 0 B (0.99) |
+| `TryLastMiss` | Sequence | 1,534.901 ns / 0 B | 1,517.922 ns / 0 B (0.99) | 1,546.054 ns / 0 B (1.01) |
+| `TryFindHit` | List | 22.916 ns / 0 B | 22.038 ns / 0 B (0.96) | 11.405 ns / 0 B (0.50) |
+| `TryFindMiss` | List | 9.931 ns / 0 B | 10.054 ns / 0 B (1.01) | 9.526 ns / 0 B (0.96) |
+| `Choose` | List | 3,319.996 ns / 88 B | 3,397.408 ns / 88 B (1.02) | 475.180 ns / 0 B (0.14) |
 
-`TryFind` and `Choose` do not depend on `Source`; the `Sequence` rows for them (TryFindHit 21.504 ns, TryFindMiss 9.674 ns, Choose 3,408.543 ns for CSE) match the `List` rows.
+`TryFind` and `Choose` do not depend on `Source`; the `Sequence` rows for them (TryFindHit 24.853 ns, TryFindMiss 10.469 ns, Choose 3,273.527 ns for CSE) are close to the `List` rows.
 
-- On net10 and net11 CSE is faster than CFE or within 1% of it in every search category, and allocates nothing. CFE copies a lazy source to a list for `TryFirst` and `TryLast` without a predicate (16600 B) and allocates 160-224 B on net10 in `TryFirstWhere` and `TryFirstMiss`.
-- `TryLast` on a `List` now reads the last element by index: 2.995 ns on net10 and 2.5696 ns on net11, against 7.518 and 8.7540 ns for CFE.
-- `TryFind` does two lookups in both libraries and takes about twice the hand-written `TryGetValue` on a hit (ratio 0.44 to 0.58 on every TFM).
-- `Choose` takes 7-13× the hand-written loop for both libraries (ratio 0.08 to 0.14) and allocates 88 B.
+- On net10 CSE is faster than CFE or tied with it in every search category. On net11 the one exception is `TryLastMiss` on a `List` (1,210.729 vs 1,184.469 ns). CSE allocates nothing on either TFM. CFE copies a lazy source to a list for `TryFirst` and `TryLast` without a predicate (16600 B) and allocates 160-224 B on net10 in `TryFirstWhere` and `TryFirstMiss`.
+- `TryLast` on a `List` reads the last element by index: 2.637 ns on net10 and 2.540 ns on net11, against 7.646 and 7.629 ns for CFE. `TryFirst` on a `List` now reads by index too (2.687 ns on net10).
+- `TryFind` does two lookups in both libraries and takes about twice the hand-written `TryGetValue` on a hit (ratio 0.43 to 0.52 on every TFM).
+- `Choose` takes 7-11× the hand-written loop for CSE (ratio 0.09 to 0.14), CFE is in the same range, and both allocate 88 B.
 
 ### net8 and net9
 
-On net8 (netstandard2.1 build) and net9 CSE's search helpers are slower, and `TryFirst` allocates: 40 B on a `List` and 48 B on a `Sequence`. On net10 and net11 the same rows allocate 0 B, which points at the runtime removing the enumerator allocation there.
+On net8 (netstandard2.1 build) and net9 every column is slower than on net10 and net11, and on a `Sequence` every column allocates 48 B, the hand-written `foreach` included. On net10 and net11 the CSE and hand-written `Sequence` rows allocate 0 B, which points at the runtime removing the enumerator allocation there. `TryFirst` on a `List` now uses the index path and allocates 0 B on every TFM, and on a `List` CSE is now faster than CFE in `TryFirst`, `TryFirstWhere` and `TryFirstMiss` on net8 and net9.
 
 | Category | Source | TFM | CSE | CFE | Hand-written |
 |---|---|---|---|---|---|
-| `TryFirst` | List | net8 | 17.453 ns / 40 B | 18.119 ns / 0 B | - |
-| `TryFirst` | List | net9 | 15.320 ns / 40 B | 14.726 ns / 0 B | - |
-| `TryFirstWhere` | List | net8 | 4,352.433 ns / 40 B | 3,641.372 ns / 216 B | 2,038.723 ns / 0 B |
-| `TryFirstWhere` | List | net9 | 3,552.999 ns / 40 B | 2,456.392 ns / 192 B | 1,622.883 ns / 0 B |
-| `TryFirstMiss` | List | net8 | 6,043.668 ns / 40 B | 4,346.232 ns / 160 B | 1,228.470 ns / 0 B |
-| `TryFirstMiss` | List | net9 | 6,075.384 ns / 40 B | 3,546.207 ns / 160 B | 1,456.776 ns / 0 B |
-| `TryLastWhere` | Sequence | net8 | 7,864.059 ns / 48 B | 7,294.826 ns / 48 B | 6,693.462 ns / 48 B |
-| `TryLastWhere` | Sequence | net9 | 6,711.837 ns / 48 B | 6,571.505 ns / 48 B | 5,253.496 ns / 48 B |
-| `TryLastMiss` | Sequence | net8 | 5,234.965 ns / 48 B | 4,753.006 ns / 48 B | 3,443.629 ns / 48 B |
-| `TryLast` | List | net8 | 13.047 ns / 0 B | 19.879 ns / 0 B | - |
-| `Choose` | List | net8 | 5,850.007 ns / 88 B | 6,220.321 ns / 88 B | 480.250 ns / 0 B |
+| `TryFirst` | List | net8 | 14.89 ns / 0 B | 19.56 ns / 0 B | - |
+| `TryFirst` | List | net9 | 11.054 ns / 0 B | 15.528 ns / 0 B | - |
+| `TryFirstWhere` | List | net8 | 2,828.73 ns / 0 B | 3,753.73 ns / 216 B | 2,148.24 ns / 0 B |
+| `TryFirstWhere` | List | net9 | 1,778.366 ns / 0 B | 2,428.312 ns / 192 B | 1,606.592 ns / 0 B |
+| `TryFirstMiss` | List | net8 | 1,887.61 ns / 0 B | 4,646.53 ns / 160 B | 1,311.59 ns / 0 B |
+| `TryFirstMiss` | List | net9 | 1,465.363 ns / 0 B | 3,821.654 ns / 160 B | 1,473.769 ns / 0 B |
+| `TryLastWhere` | Sequence | net8 | 8,404.63 ns / 48 B | 7,784.34 ns / 48 B | 7,107.47 ns / 48 B |
+| `TryLastWhere` | Sequence | net9 | 6,947.844 ns / 48 B | 6,581.671 ns / 48 B | 5,774.985 ns / 48 B |
+| `TryLastMiss` | Sequence | net8 | 5,593.46 ns / 48 B | 5,024.79 ns / 48 B | 3,506.99 ns / 48 B |
+| `TryLast` | List | net8 | 13.71 ns / 0 B | 21.02 ns / 0 B | - |
+| `Choose` | List | net8 | 6,285.35 ns / 88 B | 6,660.65 ns / 88 B | 547.66 ns / 0 B |
 
 ### Where CSE loses
 
-- **Against CFE:** `TryFirstWhere` and `TryFirstMiss` on a `List` on net8 and net9 (net9 `TryFirstMiss`: 6,075.384 vs 3,546.207 ns); `TryFirst` on a `List` on net8 and net9 in bytes (40 B vs 0 B; on net9 also 0.594 ns slower); `TryLastWhere` on a `Sequence` on net8 and net9 and on a `List` on net8 (2,762.695 vs 2,760.766 ns); `TryLastMiss` on a `Sequence` on net8 (5,234.965 vs 4,753.006 ns) and net10 (1,463.018 vs 1,459.865 ns). Under 1 ns: `TryFindHit` on net8 to net11 and `TryFindMiss` on net9 and net11.
-- **Against the hand-written loops:** `Choose` and `TryFindHit` on every TFM; `TryFindMiss` on net8, net9 and net11 (net10 under 1 ns); the search categories on net8 and net9 for both sources; on net10 `TryFirstWhere` on a `Sequence` (1,669.227 vs 1,606.616 ns) and `TryLastMiss` on both sources; on net11 `TryFirstMiss` on a `List` (1,234.2120 vs 1,214.1907 ns).
+- **Against CFE:** on net8 `TryLastWhere` on a `Sequence` (8,404.63 vs 7,784.34 ns), `TryFirstMiss` on a `Sequence` (5,706.86 vs 5,510.63 ns), `TryLastMiss` on both sources (`Sequence` 5,593.46 vs 5,024.79 ns) and `TryFindHit` (43.44 vs 39.61 ns); on net9 `TryLastWhere` and `TryLastMiss` on a `Sequence` (6,947.844 vs 6,581.671 ns, 5,986.563 vs 5,675.622 ns) and `TryFindHit` in the `Sequence` run (39.956 vs 37.156 ns); on net11 `TryLastMiss` on a `List` (1,210.729 vs 1,184.469 ns), `Choose` in the `List` run (3,545.760 vs 3,224.333 ns) and `TryFindMiss` in the `Sequence` run (11.811 vs 10.051 ns). Under 1 ns: `TryFindMiss` on net9 (11.718 vs 11.652 ns), `TryFindHit` on net10 (22.916 vs 22.038 ns) and in the net11 `Sequence` run. CSE never allocates more than CFE.
+- **Against the hand-written loops:** `Choose`, `TryFindHit` and `TryFindMiss` on every TFM (`TryFindMiss` under 1 ns on net10 and net11); every search category on both sources on net8, and on net9 except `TryFirstMiss` on a `List` (a tie); on net10 `TryLastWhere` on a `Sequence` (3,580.297 vs 3,264.382 ns); on net11 `TryFirstWhere` on both sources (`Sequence` 1,617.460 vs 1,469.123 ns), `TryLastWhere` and `TryFirstMiss` on a `Sequence` (2,919.927 vs 2,914.465 ns, 1,474.651 vs 1,454.889 ns) and `TryLastMiss` on a `List` (1,210.729 vs 1,194.491 ns).
 
 ---
 
@@ -137,7 +138,7 @@ On net8 (netstandard2.1 build) and net9 CSE's search helpers are slower, and `Tr
 - **CSE behavior checked against the code in this tree**:
   - `CSharpEssentials.Maybe/Modules/TryLast.cs`: `IList<T>` and `IReadOnlyList<T>` fast paths, without and with a predicate.
   - `CSharpEssentials.Maybe/Modules/TryFind.cs`: `ContainsKey` and then the indexer, two hash lookups on a hit.
-  - `CSharpEssentials.Maybe/Modules/TryFirst.cs`: returns none for value types on empty input or a miss. It has no `IList<T>` path and enumerates through `IEnumerable<T>`, which is where the net8 and net9 cost above comes from.
+  - `CSharpEssentials.Maybe/Modules/TryFirst.cs`: returns none for value types on empty input or a miss. It reads an `IList<T>` or `IReadOnlyList<T>` by index and enumerates any other source.
 - The CSE column is the working tree, which may not match the version published on NuGet.
 
 ---

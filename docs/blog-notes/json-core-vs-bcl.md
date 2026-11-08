@@ -2,7 +2,7 @@
 
 These are notes for a post, not the post. Every number comes from `CSharpEssentials.Json/BENCHMARKS.md` and `CSharpEssentials.Core/BENCHMARKS.md`, which read `benchmarks/results/json/{tfm}/results/*-report-github.md` and `benchmarks/results/core/{tfm}/results/*-report-github.md`.
 
-The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, default job, on one Linux machine with 6 cores and 12 threads (x64, RyuJIT AVX2). The SDK was 11.0.100-rc.1; the runtimes were .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. The libraries compared are System.Text.Json and the BCL, Macross.Json.Extensions 3.0.0, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0. All three packages are MIT. The CSE code is the local `integ/all` branch (all open pull requests merged, commit `fe91b26a`).
+The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, default job, on one Linux machine with 6 cores and 12 threads (x64, RyuJIT AVX2). The SDK was 11.0.100-rc.1; the runtimes were .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. The case conversion and Guider classes were rerun on main after pull requests #230 to #256 landed, with SDK 11.0.100-rc.3 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0. The libraries compared are System.Text.Json and the BCL, Macross.Json.Extensions 3.0.0, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0. All three packages are MIT. The CSE code is the local `integ/all` branch (all open pull requests merged, commit `fe91b26a`).
 
 ## Framing
 
@@ -82,9 +82,9 @@ Format: mean (ratio against the CSE row), allocated. A ratio below 1.00 means th
 4. Polymorphic, CSE against `[JsonPolymorphic]`, net10.0: Serialize 763.5 ns (640 B) against 296.2 ns (0.39, 528 B); Deserialize 668.7 ns against 378.5 ns (0.57), both 232 B.
 5. DateTime LateList (`"14-Mar-2024"`), CSE's format walk against `DateTime.Parse`: net10.0 1,249.50 ns against 288.28 ns (0.23), both 48 B. Iso: CSE 94.65 ns, built-in 82.41 ns (0.87), fallback 84.04 ns (0.89), all 0 B.
 6. Case conversion, 280 characters, net10.0:
-   - Snake: CSE 2,406.81 ns, BCL 734.42 ns (0.31), Humanizer 6,249.49 ns (2.60, 1344 B against 672 B).
-   - Camel: CSE 2,350.00 ns, BCL 36.82 ns (0.02), Humanizer 3,483.56 ns (1.48).
-7. Guider, net10.0: Encode CSE 46.85 ns, ShortGuid 68.64 ns (1.47, 256 B against 72 B), `Base64Url` 22.26 ns (0.48, 72 B). Decode CSE 80.81 ns (0 B), ShortGuid 253.70 ns (3.14, 696 B), `Base64Url` 22.12 ns (0.27, 0 B).
+   - Snake: CSE 1,017.55 ns, BCL 735.74 ns (0.72), Humanizer 6,470.99 ns (6.36, 1344 B against 672 B).
+   - Camel: CSE 1,047.50 ns, BCL 34.73 ns (0.03), Humanizer 3,890.26 ns (3.71).
+7. Guider, net10.0: Encode CSE 21.96 ns, ShortGuid 65.01 ns (2.96, 256 B against 72 B), `Base64Url` 19.63 ns (0.89, 72 B). Decode CSE 35.82 ns (0 B), ShortGuid 258.74 ns (7.22, 696 B), `Base64Url` 22.56 ns (0.63, 0 B).
 8. RandomItems Unique, net10.0, cryptographic rows: K = 10 CSE 9,759.15 ns against `RandomNumberGenerator.Shuffle` 1,308,046.47 ns (134.04); K = 500 657,812.08 ns against 1,286,621.72 ns (1.956); K = 990 1,303,631.05 ns against 1,282,952.20 ns (0.984). The non-cryptographic `Random.Shared.Shuffle` row at K = 990 took 5,325.28 ns (0.004).
 9. WithCancellation Pending: net10.0 CSE 169.72 ns (456 B) against `WaitAsync` 77.17 ns (0.45, 248 B); net8.0 283.00 ns (584 B) against 105.36 ns (0.37, 272 B).
 10. GUID creation, one thread: net10.0 `Guider.NewGuid` 59.39 ns, `NewMonotonicGuid` 71.34 ns, `Guid.NewGuid` 752.17 ns, `Guid.CreateVersion7` 773.69 ns. net11.0: 52.95 ns, 57.92 ns, 57.94 ns and 90.15 ns. `Guid.NewGuid` itself dropped from 752.17 ns on net10.0 to 57.94 ns on net11.0 on this machine.
@@ -99,8 +99,8 @@ Measured, with the reason from the code:
 - DateTime Iso against the built-in converter, every TFM (ratio 0.83 to 0.87), even with CSE's byte-level ISO fast path (`:157`).
 - Enum Write, Read and ReadNumber against STJ, every TFM (Write 0.82 to 0.95, Read 0.86 to 0.97, ReadNumber 0.85 to 0.87). Enum Read against Macross on net8.0 (0.96), net10.0 (0.80) and net11.0 (0.95). Enum InvalidThrow against Macross, every TFM (0.97 to 0.98). InvalidFallback against Macross on net11.0 (0.99).
 - Flags, every TFM: STJ and Macross ratio 0.54 to 0.86, and CSE FlagsWrite allocates 56 B against 48 B. The payloads differ (array against comma string).
-- Case conversion against `JsonNamingPolicy`, every length and TFM: snake and kebab 0.29 to 0.48, camel 0.01 to 0.12, with the same output and the same bytes. CSE runs one pass with an ASCII fast path for the character category (`CSharpEssentials.Core/Extensions/StringExtensions.cs:37`), so the gap is not explained by a second pass.
-- Guider against `Base64Url` on net9.0 to net11.0: Encode 0.32 to 0.48, Decode 0.24 to 0.36, for the same text. CSE encodes with `Base64.EncodeToUtf8` and maps `+` and `/` one character at a time (`CSharpEssentials.Core/Guids/Guider.cs:19-41`).
+- Case conversion against `JsonNamingPolicy`, every length and TFM: snake and kebab 0.60 to 0.97, camel 0.03 to 0.27, with the same output and the same bytes. CSE runs one pass with an ASCII fast path for the character category (`CSharpEssentials.Core/Extensions/StringExtensions.cs:137`), so the gap is not explained by a second pass.
+- Guider against `Base64Url` on net9.0 to net11.0: Encode 0.89 to 0.97, so close to level on net9.0 and net11.0, and Decode 0.55 to 0.93, for the same text. On net9.0 and later CSE calls `Base64Url.EncodeToString` and `Base64Url.DecodeFromChars` itself (`CSharpEssentials.Core/Guids/Guider.cs:34,68`); decode also checks the length first.
 - WithCancellation Pending, every TFM: ratio 0.37 to 0.48, and CSE allocates 456 B against 248 B on net9.0 and later. On net9.0 and later CSE calls `WaitAsync` too (`CSharpEssentials.Core/Extensions/GeneralExtensions.cs:111`, `:117`); the extra cost is the fault-observing continuation it registers first (`:121`). On net8.0 the netstandard2.1 build allocates a `TaskCompletionSource`, a token registration, a `WhenAny` task and an async state machine.
 - RandomItems against `Random.Shared` and the hand-written row, every K: these are not cryptographic, so this is the price of the cryptographic RNG, not a like-for-like loss. At K = 990 `RandomNumberGenerator.Shuffle` is also slightly faster than CSE on net10.0 (0.984) and net11.0 (0.989).
 - GUID creation on net11.0: `NewMonotonicGuid` is level with `Guid.NewGuid` on one thread (57.92 ns against 57.94 ns) and 4.03 times its time on 6 threads (50.73 ns against 12.58 ns). The 6 threads contend on its one shared compare-and-swap value, which is what keeps the IDs in order.
@@ -112,8 +112,8 @@ Measured:
 - Enum ReadNumber and InvalidFallback against Macross on net8.0 to net10.0, with 0 B against 24 B and 32 B.
 - Enum InvalidThrow against STJ (1.06 to 1.09), with the fewest bytes of the three.
 - Enum Read allocation on net8.0: 304 B against 968 B for STJ 9.0.4 and Macross.
-- Case conversion against Humanizer on every row (1.43 to 4.50), and Humanizer's Alloc Ratio is 2.00 to 10.50.
-- Guider against ShortGuid on every row (Encode 1.20 to 1.50, Decode 2.53 to 3.49); CSE decodes with 0 B, ShortGuid allocates 696 B.
+- Case conversion against Humanizer on every row (3.26 to 9.59), and Humanizer's Alloc Ratio is 2.00 to 10.50.
+- Guider against ShortGuid on every row (Encode 1.20 to 3.75, Decode 2.66 to 8.66); CSE decodes with 0 B, ShortGuid allocates 696 B.
 - RandomItems against `RandomNumberGenerator.Shuffle` at K = 10 (129.46 to 134.04) and K = 500 (1.956 to 2.053). CSE allocates the least of all Unique rows.
 - `Guider.NewGuid` against `Guid.NewGuid` and `Guid.CreateVersion7` on net8.0 to net10.0 (ratio 0.08 to 0.10 on one thread), and on net11.0 one thread (52.95 ns against 57.94 ns and 90.15 ns). On net11.0 with 6 threads it is level with `Guid.NewGuid` (12.61 ns against 12.58 ns).
 - WithCancellation on a completed task is level with `WaitAsync` (ratio 0.99 to 1.05, same 72 B).

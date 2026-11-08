@@ -50,10 +50,10 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 ## How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs), `[MemoryDiagnoser]`; SDK 11.0.100-rc.1; .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- BenchmarkDotNet v0.14.0, default job (full runs), `[MemoryDiagnoser]`; SDK 11.0.100-rc.1; .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them. `IdempotentReplayComparison`, `RequestLoggingComparison` and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after #230-#256 with SDK 11.0.100-rc.3 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
 - One Linux x64 machine, 6 physical cores and 12 threads; the suites ran one after another.
-- `aspnetcore` suite: 1-minute load average 1.60 at the start and 2.02 at the end. Classes with a row above 5% CV were rerun up to twice, at a 1-minute load of 1.41 to 6.96. Five 256 KB idempotent replay rows on net8.0 and net9.0 and three net11.0 `Bcl_Inline` validation baselines (CV 5.9% to 8.5%) stayed above 5% CV and are marked noisy in the package pages.
-- `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0): 1-minute load average 2.65 at the start, 2.46 at the end.
+- `aspnetcore` suite: 1-minute load average 1.60 at the start and 2.02 at the end. Classes with a row above 5% CV were rerun up to twice, at a 1-minute load of 1.41 to 6.96. Three net11.0 `Bcl_Inline` validation baselines (CV 5.9% to 8.5%) stayed above 5% CV and are marked noisy in the package pages. In the later rerun, nine idempotent replay rows on net8.0 and net9.0 (seven of them 256 KB rows) and one net8.0 `HttpLogging_Defaults` row at 1 KB are above 5% CV and are marked noisy too.
+- `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0): two net9.0 rows are above 5% CV and are marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/` and `benchmarks/results/idempotency/{tfm}/results/`. Full tables, with every row and TFM, are in the three package pages named above.
 
 ## The numbers that matter
@@ -65,28 +65,27 @@ Format: mean, ratio to the plain framework row, allocated. net10.0 unless anothe
 3. **ConditionalGet BodyHash200 at 64 KB:** plain 29.195 μs, 73.75 KB; CSE 87.999 μs (3.02), 74.93 KB; Marvin 294.214 μs (10.08), 949.18 KB.
 4. **ProblemDetails Exception:** framework 28.31 μs, CSE 29.68 μs (1.05), Hellang 28.05 μs (0.99). Hellang is faster than CSE on every TFM.
 5. **ValidationFilter Invalid, 3 rules:** hand-written 17.03 μs, CSE 30.39 μs (1.79), 16 KB; SharpGrip 43.86 μs (2.58), 25 KB.
-6. **IdempotentReplay Replay at 256 KB:** plain 91.71 μs, 268.94 KB; CSE 226.91 μs (2.47), 1046.21 KB; IdempotentAPI 1,887.35 μs (20.58), 4516.21 KB.
-7. **RequestLogging Bodies at 1 MB:** plain 501.71 μs; CSE 3,517.92 μs (7.01), 13447.32 KB; HttpLogging_Bodies 4,680.96 μs (9.33), 19045.95 KB.
+6. **IdempotentReplay Replay at 256 KB:** plain 103.25 μs, 268.93 KB; CSE 85.63 μs (0.83), 276.81 KB; IdempotentAPI 1,498.60 μs (14.51), 4517.6 KB.
+7. **RequestLogging Bodies at 1 MB:** plain 432.244 μs; CSE 2,107.251 μs (4.88), 9289.16 KB; HttpLogging_Bodies 4,256.239 μs (9.85), 19045.49 KB.
 
 ## Where CSE loses (state it, do not soften it)
 
 - **Problem details for an exception: Hellang is faster on every TFM.** Hellang against CSE: 50.37 against 58.12 μs (net8.0), 36.17 against 38.95 μs (net9.0), 28.05 against 29.68 μs (net10.0), 26.97 against 28.18 μs (net11.0).
 - **Marvin's 304 skips the handler.** BodyHash304 at 64 KB: Marvin 11.743 μs, CSE 63.311 μs (net10.0); Marvin is 4.0 to 5.4 times faster on every TFM. CSE runs the handler, serializes and hashes 64 KB, so its 304 takes longer than the plain 200 that sends the whole body (30.608 μs). That is a design difference, and the post should say so. At 1 KB on net11.0 Marvin is also faster (16.05 against 16.86 μs).
-- **Request logging with small bodies.** At 1 KB, CSE is slower than HttpLogging_Bodies and allocates more on every TFM (net10.0: 21.02 μs and 40.71 KB against 15.90 μs and 24.91 KB). At 64 KB on net10.0 CSE is slower too (218.85 against 202.13 μs).
-- **HttpLogging with its defaults:** at 1 KB it logs both bodies plus headers and is still faster and allocates less than CSE on every TFM (net10.0: 16.40 μs and 25.26 KB against 21.02 μs and 40.71 KB). From 64 KB it truncates each body at 32 KB, so it does less work.
+- **Request logging with small bodies.** At 1 KB, CSE is slower than HttpLogging_Bodies on every TFM (net10.0: 16.685 against 13.661 μs). It allocates less on net8.0 to net10.0 and more on net11.0 (23.8 against 22.8 KB).
+- **HttpLogging with its defaults:** at 1 KB it logs both bodies plus headers and is still faster than CSE on every TFM (net10.0: 13.993 against 16.685 μs); it allocates less only on net11.0. From 64 KB it truncates each body at 32 KB, so it does less work.
 - **Metadata-only logging:** CSE allocates a little more than HttpLogging on every TFM (10.24 against 10.19 KB on net10.0) and is slower on net10.0 (10.010 against 9.795 μs).
-- **Idempotency, new key at 256 KB:** CSE allocates more than IdempotentAPI on every TFM (2332.89 against 2273.06 KB on net10.0), about 2 MB above the plain endpoint, while it is faster (345.16 against 5,316.66 μs).
 - **Result filter on net10.0:** 1.19 of `TypedResults` on Success, where the other TFMs show 0.99 to 1.02.
 - **Deterministic keys:** `ToUuidV5` is 1.51 to 1.91 of a hand-written UUIDv5 and allocates 456 to 488 B against none.
 
 ## Where CSE wins or ties
 
 Measured, every TFM:
-- **Idempotent replay against IdempotentAPI:** CSE is faster and allocates less at 1 KB and 256 KB (net10.0, 1 KB: 17.35 μs against 100.42 μs).
+- **Idempotent replay against IdempotentAPI:** CSE is faster and allocates less at 1 KB and 256 KB, for a replay and for a new key (net10.0, 1 KB replay: 14.34 μs against 92.90 μs).
 - **Validation against SharpGrip:** CSE is faster and allocates less in all eight rows (net10.0, 1 rule, Valid: 15.80 μs against 29.39 μs).
 - **Empty error status against Hellang:** CSE 1.01 to 1.17 of the framework, Hellang 1.26 to 1.82.
 - **Conditional GET 200 with a body-hash ETag against Marvin:** CSE is faster and allocates far less at 1 KB and 64 KB.
-- **Request logging at 1 MB against HttpLogging_Bodies:** CSE is faster and allocates less. The metadata row is faster than Serilog (net10.0: 10.010 against 11.871 μs).
+- **Request logging at 64 KB and 1 MB against HttpLogging_Bodies:** CSE is faster and allocates less. The metadata row is faster than Serilog (net10.0: 10.010 against 11.871 μs).
 - **Small overhead:** `UseEnumBinding` on an endpoint without enums (0.98 to 1.04), and `IVersioned` ETags (1.00 to 1.12 of a hand-written ETag).
 
 Features only CSE ships (not a speed claim):
@@ -101,7 +100,7 @@ Features only CSE ships (not a speed claim):
 - IdempotentAPI fingerprints injected services too: a handler that injects a service whose serializable state changes gets a 400 on every retry. The suite captures its counter for that reason; the post can mention it as a usage note.
 - In a long NewKey run, `MemoryDistributedCache` reaches its 200 MB limit and refuses writes for both libraries; the self-check showed that the replay of a fresh key still works after that.
 - The logging rows render messages but write them nowhere, so sink I/O is not included for any library.
-- Five 256 KB idempotent replay rows on net8.0 and net9.0 stayed above 5% CV after two reruns (for example CSE Replay on net8.0, 277.90 μs, CV 11.2%). Quote net10.0 or net11.0 for those rows.
+- Seven 256 KB idempotent replay rows on net8.0 and net9.0 are above 5% CV (for example the plain replay baseline on net8.0, 187.21 μs, CV 14.8%). Quote net10.0 or net11.0 for those rows.
 - The CSE column is the working tree on branch `integ/all`, not a NuGet release.
 
 ## Possible angles
@@ -110,4 +109,3 @@ Features only CSE ships (not a speed claim):
 - "Who answers the 304": Marvin's validator store against CSE's after-the-handler check, with the 64 KB numbers.
 - "Storing bytes or storing objects": the two idempotency designs and what replay costs in each.
 - "Teeing the response": CSE and HttpLogging both tee; CSE keeps a full copy, HttpLogging a 32 KB prefix by default, and the 1 MB rows show what each costs.
-- "Copies on the write path": the CSE new-key path allocates about eight times the response size, a follow-up fix.

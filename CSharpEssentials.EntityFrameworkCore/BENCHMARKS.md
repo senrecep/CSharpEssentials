@@ -214,33 +214,33 @@ Cells are `Mean (Ratio)`. No Read or ReadLegacy row allocates. On Write, EF Core
 
 | Group | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| Write | EF Core `EnumToStringConverter` (baseline) | 62.95 ns (1.00) | 60.53 ns (1.00) | 47.37 ns (1.00) | 52.89 ns (1.00) |
-| Write | CSE `ConfigureEnumConventions` | 53.93 ns (0.86) | 53.39 ns (0.88) | 35.61 ns (0.75) | 35.72 ns (0.68) |
-| Write | CSE `HasLegacyEnumStorage` | 32.40 ns (0.51) | 31.33 ns (0.52) | 30.87 ns (0.65) | 30.36 ns (0.57) |
-| Write | `EnumToFormattedStringConverter` (direct class) | 54.70 ns (0.87) | 47.25 ns (0.78) | 54.63 ns (1.15) | 54.25 ns (1.03) |
-| Write | `LegacySnakeCaseEnumConverter` (direct class) | 22.26 ns (0.35) | 21.65 ns (0.36) | 26.48 ns (0.56) | 26.54 ns (0.50) |
-| Read | EF Core `EnumToStringConverter` (baseline) | 95.03 ns (1.00) | 91.20 ns (1.00) | 74.79 ns (1.00) | 73.16 ns (1.00) |
-| Read | CSE `ConfigureEnumConventions` | 97.40 ns (1.02) | 91.65 ns (1.00) | 142.34 ns (1.90) | 81.07 ns (1.11) |
-| Read | CSE `HasLegacyEnumStorage` | 61.59 ns (0.65) | 92.63 ns (1.02) | 92.95 ns (1.24) | 86.92 ns (1.19) |
-| Read | `EnumToFormattedStringConverter` (direct class) | 94.62 ns (1.00) | 87.68 ns (0.96) | 132.76 ns (1.77) | 72.45 ns (0.99) |
-| Read | `LegacySnakeCaseEnumConverter` (direct class) | 52.35 ns (0.55) | 50.19 ns (0.55) | 47.90 ns (0.64) | 46.45 ns (0.63) |
-| ReadLegacy | CSE `ConfigureEnumConventions` (baseline) | 97.93 ns (1.00) | 92.40 ns (1.00) | 139.89 ns (1.00) | 82.17 ns (1.00) |
-| ReadLegacy | CSE `HasLegacyEnumStorage` | 61.67 ns (0.63) | 86.70 ns (0.94) | 92.70 ns (0.66) | 86.72 ns (1.06) |
-| ReadLegacy | `EnumToFormattedStringConverter` (direct class) | 92.74 ns (0.95) | 87.16 ns (0.94) | 134.37 ns (0.96) | 72.35 ns (0.88) |
-| ReadLegacy | `LegacySnakeCaseEnumConverter` (direct class) | 66.84 ns (0.68) | 64.82 ns (0.70) | 61.93 ns (0.44) | 61.07 ns (0.74) |
+| Write | EF Core `EnumToStringConverter` (baseline) | 60.53 ns (1.00) | 59.14 ns (1.00) | 47.04 ns (1.00) | 49.55 ns (1.00) |
+| Write | CSE `ConfigureEnumConventions` | 53.88 ns (0.89) | 53.00 ns (0.90) | 36.02 ns (0.77) | 35.32 ns (0.71) |
+| Write | CSE `HasLegacyEnumStorage` | 32.14 ns (0.53) | 31.28 ns (0.53) | 30.79 ns (0.65) | 30.65 ns (0.62) |
+| Write | `EnumToFormattedStringConverter` (direct class) | 51.70 ns (0.85) | 48.32 ns (0.82) | 55.61 ns (1.18) | 55.62 ns (1.12) |
+| Write | `LegacySnakeCaseEnumConverter` (direct class) | 22.31 ns (0.37) | 22.45 ns (0.38) | 26.50 ns (0.56) | 26.49 ns (0.53) |
+| Read | EF Core `EnumToStringConverter` (baseline) | 94.49 ns (1.00) | 90.62 ns (1.00) | 79.94 ns (1.00) | 73.32 ns (1.00) |
+| Read | CSE `ConfigureEnumConventions` | 78.17 ns (0.83) | 78.92 ns (0.87) | 70.06 ns (0.88) | 68.40 ns (0.93) |
+| Read | CSE `HasLegacyEnumStorage` | 60.46 ns (0.64) | 58.16 ns (0.64) | 56.49 ns (0.71) | 56.66 ns (0.77) |
+| Read | `EnumToFormattedStringConverter` (direct class) | 74.34 ns (0.79) | 73.57 ns (0.81) | 54.09 ns (0.68) | 53.03 ns (0.72) |
+| Read | `LegacySnakeCaseEnumConverter` (direct class) | 52.68 ns (0.56) | 53.13 ns (0.59) | 46.17 ns (0.58) | 46.11 ns (0.63) |
+| ReadLegacy | CSE `ConfigureEnumConventions` (baseline) | 85.68 ns (1.00) | 84.65 ns (1.00) | 72.30 ns (1.00) | 72.86 ns (1.00) |
+| ReadLegacy | CSE `HasLegacyEnumStorage` | 62.31 ns (0.73) | 58.12 ns (0.69) | 57.45 ns (0.79) | 55.13 ns (0.76) |
+| ReadLegacy | `EnumToFormattedStringConverter` (direct class) | 79.30 ns (0.93) | 77.11 ns (0.91) | 60.39 ns (0.84) | 60.69 ns (0.83) |
+| ReadLegacy | `LegacySnakeCaseEnumConverter` (direct class) | 66.64 ns (0.78) | 68.16 ns (0.81) | 63.47 ns (0.88) | 61.79 ns (0.85) |
 
-CSE writes are faster than EF Core in every Readme-path cell and allocate nothing. Reads are where CSE loses: the `ConfigureEnumConventions` converter is slower than EF Core on every TFM (1.02, 1.00, 1.90, 1.11), and `HasLegacyEnumStorage` is slower on net9.0, net10.0 and net11.0. The net10.0 wire-name reads (142.34 ns and 132.76 ns) are well above the same rows on the other TFMs; their CV is below 5%, so this is not run noise, and the cause is not known yet. The direct `EnumToFormattedStringConverter` class also writes slower than EF Core on net10.0 and net11.0, and reads slower on net10.0 (132.76 ns against 74.79 ns).
+CSE writes are faster than EF Core in every Readme-path cell and allocate nothing. CSE reads are now faster than EF Core in every cell as well: `ConfigureEnumConventions` at 0.83 to 0.93 and `HasLegacyEnumStorage` at 0.64 to 0.77. The direct `EnumToFormattedStringConverter` class still writes slower than EF Core on net10.0 (55.61 ns against 47.04 ns) and net11.0 (55.62 ns against 49.55 ns).
 
 ### MigrateData
 
 | Count | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| 1000 | Hand-written dictionary diff (baseline) | 7.310 ms (1.00), 3.04 MB | 6.932 ms (1.00), 3 MB | 6.044 ms (1.00), 2.94 MB | 6.095 ms (1.00), 2.94 MB |
-| 1000 | CSE `MigrateDataAsync` | 25.221 ms (3.45), 3.28 MB | 15.327 ms (2.21), 3.16 MB | 14.028 ms (2.32), 3.11 MB | 13.748 ms (2.26), 3.1 MB |
-| 10000 | Hand-written dictionary diff (baseline) | 87.743 ms (1.00), 29.45 MB | 81.884 ms (1.00), 29.06 MB | 76.195 ms (1.00), 28.35 MB | 74.779 ms (1.00), 28.39 MB |
-| 10000 | CSE `MigrateDataAsync` | 1,852.582 ms (21.12), 32.21 MB | 956.951 ms (11.69), 31.03 MB | 835.763 ms (10.97), 30.49 MB | 809.988 ms (10.83), 30.21 MB |
+| 1000 | Hand-written dictionary diff (baseline) | 7.033 ms (1.00), 3.04 MB | 6.586 ms (1.00), 3 MB | 6.109 ms (1.00), 2.94 MB | 5.803 ms (1.00), 2.94 MB |
+| 1000 | CSE `MigrateDataAsync` | 7.302 ms (1.04), 3.16 MB | 6.832 ms (1.04), 3.12 MB | 6.208 ms (1.02), 3.06 MB | 6.181 ms (1.07), 3.07 MB |
+| 10000 | Hand-written dictionary diff (baseline) | 87.142 ms (1.00), 29.45 MB | 78.564 ms (1.00), 29.06 MB | 70.924 ms (1.00), 28.53 MB | 69.880 ms (1.00), 28.49 MB |
+| 10000 | CSE `MigrateDataAsync` | 88.815 ms (1.02), 30.9 MB | 82.540 ms (1.05), 30.48 MB | 73.432 ms (1.04), 29.93 MB | 72.614 ms (1.04), 29.89 MB |
 
-CSE loses on every cell, and the gap grows with the table: 2.21 to 3.45 times the dictionary diff at 1,000 rows, 10.83 to 21.12 times at 10,000. The nested `All` matching (`Extensions/DbContextExtensionMethods.cs:153-155` and `:165-167`) is O(n·m), so this is the expected shape. It also allocates 5% to 9% more.
+CSE is still slower on every cell, but by 2% to 7%: 1.02 to 1.07 times the dictionary diff at 1,000 rows and 1.02 to 1.05 times at 10,000. `MigrateDataAsync` now diffs keys through hash sets (`Extensions/DbContextExtensionMethods.cs:153-168`), so the gap no longer grows with the table. It also allocates 4% to 5% more.
 
 ### DbContextLifetime
 
@@ -293,8 +293,8 @@ Every row below is in the tables above.
 - **Keyset After page:** CSE cached is slower than the hand-written row on net8.0 (140.99 μs against 138.85 μs), net9.0 (131.77 μs against 127.62 μs) and net10.0 (124.43 μs against 119.54 μs), and allocates more on every TFM.
 - **Keyset `Func` ordering:** slower than the hand-written row on every page and TFM (1.13 to 1.26), and on the First page slower than MR inline on net10.0 (87.31 μs against 78.66 μs) and net11.0 (82.95 μs against 71.51 μs), and than MR prebuilt with `Take(21)`.
 - **Offset paging:** slower than X.PagedList on net9.0 page 1, net10.0 page 1 and net10.0 page 250, by 0.1 to 1.36 μs; slower than plain EF Core in 6 of 8 cells and allocates more in all 8.
-- **Enum reads:** `ConfigureEnumConventions` reads slower than EF Core's `EnumToStringConverter` on every TFM, by up to 1.90 times on net10.0 (142.34 ns against 74.79 ns). `HasLegacyEnumStorage` reads slower on net9.0, net10.0 and net11.0. The direct `EnumToFormattedStringConverter` class reads slower on net10.0 and writes slower on net10.0 and net11.0.
-- **`MigrateDataAsync`:** 10.83 to 21.12 times the dictionary diff at 10,000 rows (net8.0: 1,852.582 ms against 87.743 ms).
+- **Enum writes, direct class:** the direct `EnumToFormattedStringConverter` class writes slower than EF Core on net10.0 and net11.0 (1.18 and 1.12). The Readme-path converters read and write faster than EF Core on every TFM.
+- **`MigrateDataAsync`:** 1.02 to 1.07 times the dictionary diff (net9.0, 10,000 rows: 82.540 ms against 78.564 ms).
 - **`BaseDbContext` creation:** slower than an `AddDbContext` scope on every TFM and 166 to 170 B larger.
 - **Error translation:** CSE allocates more than EntityFrameworkCore.Exceptions and the plain `catch`; it is slower than the plain `catch` on net9.0 (124.2 μs against 122.3 μs).
 - **Error classification:** CSE is the slowest row in both groups (for example net10.0 Sqlite: 2.5700 ns against 0.9238 ns for DbExceptionClassifier).
@@ -305,7 +305,7 @@ Every row below is in the tables above.
 
 - **In-memory SQLite, not a server.** There is no network and no server-side planning cost, so the database part of each row is small and the library overhead is a larger share than it would be against a server database such as PostgreSQL. The SQLSTATE path is measured only in the CPU-only class; an end-to-end PostgreSQL run is out of scope.
 - **No standalone cursor codec row.** CSE's `KeysetCursorCodec` (`Pagination/Keyset/KeysetCursorCodec.cs:12`) and `DomainEventCollector` (`Interceptors/DomainEvents/DomainEventCollector.cs:13`) are internal, and the benchmarks do not change package source to reach them. `After` minus `First` on the CSE keyset rows is the only view of the cursor decode and predicate cost.
-- **`MigrateDataAsync` at 10,000 rows** matches entities to seed rows with nested `All` loops; it measured 809.988 ms (net11.0) to 1,852.582 ms (net8.0) per operation.
+- **`MigrateDataAsync` at 10,000 rows** matches entities to seed rows through hash sets; it measured 72.614 ms (net11.0) to 88.815 ms (net8.0) per operation.
 - **No Native AOT sample.** EF Core builds its model and translates LINQ at run time, MR builds expression trees and reads the reference object by reflection, and EntityFrameworkCore.Exceptions is an EF Core interceptor, so none of these rows is AOT-ready.
 - **CSE costs seen in the code**, with the rows that show them:
   - `Interceptors/Audit/AuditInterceptor.cs:56` copies `ChangeTracker.Entries()`, which runs change detection; `:83-87` creates a DI scope and resolves `IAuditUserIdProvider` once per save that has an entry to stamp. The Count 1 SaveChangesAudit rows show this as a few microseconds over the hand-written override.
@@ -313,7 +313,7 @@ Every row below is in the tables above.
   - `Abstractions/BaseDbContext.cs:23-26`: a DI scope, a logger lookup and an Information log call per instance. The finalizer (`:215-219`) is suppressed in `Dispose` and `DisposeAsync` (`:226`, `:237`). The CreateDispose rows show the per-instance cost against an `AddDbContext` scope.
   - `Pagination/KeysetPaginationExtensions.cs:41`: the `Func` overload, the form the Readme shows, builds a new `KeysetOrdering` on every call, including the SHA-256 key fingerprint (`Pagination/Keyset/KeysetOrdering.cs:56-63`) and the key validation. Compare the `Func` and cached keyset rows.
   - `Pagination/Keyset/KeysetCursorCodec.cs:88`: the `Invalid` error is built before the cursor is checked, so a successful decode creates it too.
-  - `Extensions/DbContextExtensionMethods.cs:153-155` and `:165-167`: O(n·m) `All` matching, the cause of the MigrateData gap. The key selectors are compiled once per options instance (`Extensions/MigrateDataOptions.cs:19-21`).
+  - `Extensions/DbContextExtensionMethods.cs:153-168`: the key diff runs through two hash sets and a `Join`; the MigrateData rows show the 2% to 7% that is left of the gap. The key selectors are compiled once per options instance (`Extensions/MigrateDataOptions.cs:19-21`).
   - `Converters/EnumToStringConverter.cs:35-37`: the legacy fallback allocates `Enum.GetValues` and a `ToString().ToSnakeCase()` per member on every row it reads. It runs only when the enum's metadata has no 3.x alias (an enum without `[StringEnum]` generated metadata); a `[StringEnum]` enum, as in this suite, never reaches it. `Converters/LegacySnakeCaseEnumConverter.cs:22-27` reads and writes through cached dictionaries, and its rows allocate nothing.
 - The CSE column is the working tree on branch `integ/all`, a local integration of the open pull requests, which may not match the version published on NuGet.
 

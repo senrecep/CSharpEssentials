@@ -98,10 +98,11 @@ From CSE source and IdempotentAPI source at `b38045c`; not measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
-- One Linux x64 machine, 6 physical cores and 12 threads (the exact CPU is in each report header). The suites ran one after another, never in parallel.
-- `aspnetcore` suite (classes 1 to 5 above): the 1-minute load average was 1.60 when it started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. The reports used here for `IdempotentReplayComparison` on net8.0 and net9.0 come from the second rerun (1-minute load 2.41 to 3.94), and on net11.0 from the first rerun (1-minute load 6.96 at its start, 2.23 at its end). `IdempotencyStoreContentionBenchmarks` on net11.0 comes from a rerun that started at a 1-minute load of 3.71 and ended at 6.96. Five 256 KB replay rows stayed above 5% CV after both reruns; they are marked noisy wherever they appear.
-- `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0 only, the project has no net8.0 target): the 1-minute load average was 2.65 at the start and 2.46 at the end (5-minute average 2.18 to 3.54). No row is above 5% CV.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. Classes 2 to 5: SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628). `IdempotentReplayComparison` and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- One Linux x64 machine, 6 physical cores and 12 threads. The suites ran one after another, never in parallel.
+- `aspnetcore` suite, classes 2 to 5: the 1-minute load average was 1.60 when it started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. `IdempotencyStoreContentionBenchmarks` on net11.0 comes from a rerun that started at a 1-minute load of 3.71 and ended at 6.96.
+- `IdempotentReplayComparison` rerun: nine rows on net8.0 and net9.0 are above 5% CV, seven of them 256 KB rows; they are marked noisy wherever they appear.
+- `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0 only, the project has no net8.0 target): two net9.0 rows are above 5% CV (`NewKey` 6.2%, `Plain` at 1 KB 6.8%) and are marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/` (for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/)) and `benchmarks/results/idempotency/{tfm}/results/` (for example [net10.0](../benchmarks/results/idempotency/net10.0/results/)), as `*-report-github.md`, `.csv` and `.html`.
 
 Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TFM. The ratio is against the baseline row of the same category and parameter.
@@ -110,24 +111,24 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 | Method | ResponseSize | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| `Plain_NoIdempotency_NewKey` | 1024 | 15.12 μs (1.00), 11.49 KB | 14.26 μs (1.00), 11.38 KB | 14.25 μs (1.00), 11.97 KB | 16.56 μs (1.00), 13.3 KB |
-| `CSharpEssentials_NewKey` | 1024 | 46.10 μs (3.05), 25.52 KB | 44.34 μs (3.11), 25.06 KB | 41.63 μs (2.92), 25.24 KB | 44.66 μs (2.70), 26.04 KB |
-| `IdempotentAPI_NewKey` | 1024 | 136.69 μs (9.05), 56.89 KB | 133.16 μs (9.34), 56.63 KB | 127.38 μs (8.94), 57.29 KB | 119.67 μs (7.23), 58.65 KB |
-| `Plain_NoIdempotency_NewKey` | 262144 | 153.57 μs (1.00), 403.63 KB | 140.87 μs (1.00), 396.48 KB, noisy (CV 5.4%) | 100.30 μs (1.00), 269.05 KB | 114.48 μs (1.00), 271.45 KB |
-| `CSharpEssentials_NewKey` | 262144 | 358.57 μs (2.34), 2460.96 KB | 345.74 μs (2.46), 2461.39 KB | 345.16 μs (3.44), 2332.89 KB | 353.65 μs (3.09), 2334.81 KB |
-| `IdempotentAPI_NewKey` | 262144 | 4,642.61 μs (30.30), 2407.54 KB | 5,552.47 μs (39.53), 2400.24 KB | 5,316.66 μs (53.03), 2273.06 KB | 5,433.38 μs (47.48), 2275.08 KB |
-| `Plain_NoIdempotency` | 1024 | 15.12 μs (1.00), 11.4 KB | 14.14 μs (1.00), 11.29 KB | 14.94 μs (1.00), 11.89 KB | 17.23 μs (1.00), 13.22 KB |
-| `CSharpEssentials_Replay` | 1024 | 22.19 μs (1.47), 17.89 KB | 19.92 μs (1.41), 16.68 KB | 17.35 μs (1.16), 16.52 KB | 19.63 μs (1.14), 17.94 KB |
-| `IdempotentAPI_Replay` | 1024 | 116.59 μs (7.72), 46.63 KB | 104.84 μs (7.42), 46.35 KB | 100.42 μs (6.72), 47.62 KB | 88.16 μs (5.12), 48.98 KB |
-| `CSharpEssentials_Replay_InMemoryStore` | 1024 | 20.51 μs (1.36), 15.6 KB | 19.17 μs (1.36), 14.92 KB | 15.80 μs (1.06), 14.77 KB | 17.22 μs (1.00), 16.17 KB |
-| `Plain_NoIdempotency` | 262144 | 166.64 μs (1.01), 403.56 KB, noisy (CV 8.2%) | 139.60 μs (1.00), 396.37 KB | 91.71 μs (1.00), 268.94 KB | 113.51 μs (1.00), 271.28 KB |
-| `CSharpEssentials_Replay` | 262144 | 277.90 μs (1.68), 1048.2 KB, noisy (CV 11.2%) | 257.36 μs (1.85), 1047.08 KB, noisy (CV 8.4%) | 226.91 μs (2.47), 1046.21 KB | 221.36 μs (1.95), 1048.56 KB |
-| `IdempotentAPI_Replay` | 262144 | 2,446.48 μs (14.78), 4649.58 KB | 1,999.81 μs (14.34), 4648.05 KB, noisy (CV 7.3%) | 1,887.35 μs (20.58), 4516.21 KB | 1,771.16 μs (15.61), 4518.42 KB |
-| `CSharpEssentials_Replay_InMemoryStore` | 262144 | 207.70 μs (1.25), 790.13 KB | 178.41 μs (1.28), 789.53 KB | 182.93 μs (2.00), 789.41 KB | 181.16 μs (1.60), 791.07 KB |
+| `Plain_NoIdempotency_NewKey` | 1024 | 14.63 μs (1.00), 11.49 KB | 13.49 μs (1.00), 11.38 KB | 13.41 μs (1.00), 11.97 KB | 14.65 μs (1.00), 13.34 KB |
+| `CSharpEssentials_NewKey` | 1024 | 42.02 μs (2.88), 21.11 KB | 38.82 μs (2.88), 20.67 KB | 37.76 μs (2.82), 20.85 KB | 36.21 μs (2.47), 22.64 KB |
+| `IdempotentAPI_NewKey` | 1024 | 130.43 μs (8.93), 56.83 KB | 123.64 μs (9.18), 56.63 KB | 119.57 μs (8.92), 57.29 KB | 106.81 μs (7.29), 58.65 KB |
+| `Plain_NoIdempotency_NewKey` | 262144 | 180.32 μs (1.01), 403.69 KB, noisy (CV 11.7%) | 151.42 μs (1.02), 396.49 KB, noisy (CV 13.5%) | 102.76 μs (1.00), 268.95 KB | 84.26 μs (1.00), 270.45 KB |
+| `CSharpEssentials_NewKey` | 262144 | 206.72 μs (1.16), 924.42 KB | 192.78 μs (1.30), 924.42 KB | 189.84 μs (1.85), 796.12 KB | 190.68 μs (2.26), 798.02 KB |
+| `IdempotentAPI_NewKey` | 262144 | 4,609.39 μs (25.88), 2407.54 KB | 5,296.44 μs (35.62), 2400.24 KB | 5,170.61 μs (50.34), 2272.98 KB | 5,210.03 μs (61.84), 2274.51 KB |
+| `Plain_NoIdempotency` | 1024 | 14.45 μs (1.00), 11.41 KB | 13.08 μs (1.00), 11.29 KB | 13.37 μs (1.00), 11.88 KB | 13.22 μs (1.00), 13.22 KB |
+| `CSharpEssentials_Replay` | 1024 | 19.63 μs (1.36), 14.67 KB | 17.14 μs (1.31), 13.46 KB, noisy (CV 5.2%) | 14.34 μs (1.07), 13.31 KB | 15.01 μs (1.14), 14.72 KB |
+| `IdempotentAPI_Replay` | 1024 | 107.99 μs (7.49), 46.63 KB | 99.06 μs (7.58), 46.35 KB | 92.90 μs (6.95), 47.62 KB | 80.02 μs (6.06), 48.98 KB |
+| `CSharpEssentials_Replay_InMemoryStore` | 1024 | 18.15 μs (1.26), 13.41 KB, noisy (CV 6.0%) | 16.12 μs (1.23), 12.74 KB | 13.91 μs (1.04), 12.59 KB | 14.74 μs (1.12), 14 KB |
+| `Plain_NoIdempotency` | 262144 | 187.21 μs (1.02), 403.61 KB, noisy (CV 14.8%) | 142.70 μs (1.00), 396.21 KB | 103.25 μs (1.00), 268.93 KB | 96.44 μs (1.00), 270.47 KB |
+| `CSharpEssentials_Replay` | 262144 | 143.77 μs (0.78), 277.83 KB | 127.07 μs (0.89), 277.28 KB, noisy (CV 11.6%) | 85.63 μs (0.83), 276.81 KB | 94.11 μs (0.98), 278.24 KB |
+| `IdempotentAPI_Replay` | 262144 | 2,037.07 μs (11.10), 4649.56 KB, noisy (CV 8.3%) | 1,876.38 μs (13.18), 4642.97 KB | 1,498.60 μs (14.52), 4517.6 KB | 1,443.11 μs (14.97), 4518.51 KB |
+| `CSharpEssentials_Replay_InMemoryStore` | 262144 | 133.19 μs (0.73), 277.28 KB, noisy (CV 14.6%) | 124.85 μs (0.88), 276.39 KB, noisy (CV 9.8%) | 90.78 μs (0.88), 276.12 KB | 94.58 μs (0.98), 277.6 KB |
 
-- Replay of a completed key: CSE over `MemoryDistributedCache` is faster than IdempotentAPI and allocates less on every TFM, at both sizes. At 256 KB on net10.0: 226.91 μs and 1046.21 KB against 1,887.35 μs and 4516.21 KB.
-- Against the plain endpoint, a CSE replay costs 1.14 to 1.47 at 1 KB and 1.68 to 2.47 at 256 KB (the 1.68 on net8.0 and 1.85 on net9.0 are noisy rows, CV 11.2% and 8.4%). A replay never runs the handler, but it still reads the stored entry, deserializes it and writes the whole body.
-- New key: CSE is faster than IdempotentAPI on every TFM (at 256 KB, 345.16 μs against 5,316.66 μs on net10.0). At 256 KB CSE allocates more than IdempotentAPI on every TFM (see below).
+- Replay of a completed key: CSE over `MemoryDistributedCache` is faster than IdempotentAPI and allocates less on every TFM, at both sizes. At 256 KB on net10.0: 85.63 μs and 276.81 KB against 1,498.60 μs and 4517.6 KB.
+- Against the plain endpoint, a CSE replay costs 1.07 to 1.36 at 1 KB. At 256 KB it is 0.77 to 0.98 of the plain endpoint (0.83 on net10.0, where neither row is noisy; on net8.0 and net9.0 the plain or the CSE row is noisy). A replay skips the handler and the JSON serialization and writes the stored bytes, which at 256 KB costs less than serializing the payload.
+- New key: CSE is faster than IdempotentAPI and allocates less on every TFM, at both sizes. At 256 KB on net10.0: 189.84 μs and 796.12 KB against 5,170.61 μs and 2272.98 KB.
 - `CSharpEssentials_Replay_InMemoryStore` uses CSE's default store, which IdempotentAPI does not offer; it is not like-for-like.
 
 ### Executor and inbox
@@ -205,31 +206,30 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
 
 | Method | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|
-| `NoIdempotency` | 11.05 μs (1.00), 9.47 KB | 10.34 μs (1.00), 9.34 KB | 12.88 μs (1.00), 10.75 KB |
-| `NewKey` | 30.04 μs (2.72), 14.69 KB | 25.35 μs (2.45), 14.48 KB | 30.46 μs (2.37), 15.39 KB |
-| `Replay` | 16.26 μs (1.47), 11.53 KB | 14.61 μs (1.41), 11.38 KB | 16.25 μs (1.26), 12.78 KB |
+| `NoIdempotency` | 9.993 μs (1.00), 9.47 KB | 9.263 μs (1.00), 9.34 KB | 9.695 μs (1.00), 10.77 KB |
+| `NewKey` | 25.282 μs (2.53), 14.36 KB, noisy (CV 6.2%) | 20.320 μs (2.19), 14.13 KB | 21.487 μs (2.22), 15.69 KB |
+| `Replay` | 14.720 μs (1.47), 11.34 KB | 12.781 μs (1.38), 11.19 KB | 13.388 μs (1.38), 12.6 KB |
 
 | Method | BodySize | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `Plain` | 1024 | 11.33 μs (1.00), 9.5 KB | 10.33 μs (1.00), 9.38 KB | 13.09 μs (1.00), 10.78 KB |
-| `KeyedReplay` | 1024 | 17.70 μs (1.56), 11.56 KB | 15.15 μs (1.47), 11.41 KB | 17.55 μs (1.34), 12.82 KB |
-| `KeyedNewKey` | 1024 | 31.32 μs (2.77), 14.76 KB | 26.17 μs (2.53), 14.5 KB | 31.94 μs (2.44), 15.41 KB |
-| `Plain` | 65536 | 26.06 μs (1.00), 12.51 KB | 23.81 μs (1.00), 12.38 KB | 27.59 μs (1.00), 13.99 KB |
-| `KeyedReplay` | 65536 | 157.28 μs (6.04), 15.49 KB | 152.48 μs (6.41), 15.34 KB | 145.15 μs (5.27), 16.66 KB |
-| `KeyedNewKey` | 65536 | 185.26 μs (7.11), 19.27 KB | 177.70 μs (7.47), 19.08 KB | 173.70 μs (6.31), 20.49 KB |
-| `Plain` | 1048576 | 136.94 μs (1.00), 38.88 KB | 133.43 μs (1.00), 38.75 KB | 131.88 μs (1.00), 41.41 KB |
-| `KeyedReplay` | 1048576 | 1,332.01 μs (9.73), 52.15 KB | 1,320.77 μs (9.90), 52.01 KB | 1,320.03 μs (10.01), 54.25 KB |
-| `KeyedNewKey` | 1048576 | 1,428.49 μs (10.43), 56 KB | 1,413.76 μs (10.60), 55.77 KB | 1,429.64 μs (10.84), 57.94 KB |
+| `Plain` | 1024 | 10.68 μs (1.00), 9.5 KB, noisy (CV 6.8%) | 9.323 μs (1.00), 9.38 KB | 9.169 μs (1.00), 10.79 KB |
+| `KeyedReplay` | 1024 | 15.23 μs (1.43), 11.37 KB | 13.763 μs (1.48), 11.22 KB | 13.258 μs (1.45), 12.62 KB |
+| `KeyedNewKey` | 1024 | 26.30 μs (2.47), 14.42 KB | 22.200 μs (2.38), 14.15 KB | 22.644 μs (2.47), 15.78 KB |
+| `Plain` | 65536 | 23.69 μs (1.00), 12.52 KB | 22.154 μs (1.00), 12.39 KB | 23.945 μs (1.00), 13.72 KB |
+| `KeyedReplay` | 65536 | 147.95 μs (6.24), 15.32 KB | 136.080 μs (6.14), 15.17 KB | 137.100 μs (5.73), 16.47 KB |
+| `KeyedNewKey` | 65536 | 168.85 μs (7.13), 18.95 KB | 156.267 μs (7.05), 18.8 KB | 160.884 μs (6.72), 20.77 KB |
+| `Plain` | 1048576 | 130.40 μs (1.00), 38.88 KB | 127.180 μs (1.00), 38.75 KB | 127.720 μs (1.00), 41.43 KB |
+| `KeyedReplay` | 1048576 | 1,285.99 μs (9.86), 52.46 KB | 1,250.851 μs (9.84), 52.31 KB | 1,263.592 μs (9.89), 54.56 KB |
+| `KeyedNewKey` | 1048576 | 1,373.08 μs (10.53), 56.04 KB | 1,331.182 μs (10.47), 55.79 KB | 1,353.084 μs (10.60), 58.78 KB |
 
-- With a small body, a replay costs 1.26 to 1.47 of the route without idempotency, and a new key 2.37 to 2.72.
-- The fingerprint reads and hashes the whole request body before the store lookup, so the cost grows with the request size: a keyed replay is 1.34 to 1.56 of the plain request at 1 KB, 5.27 to 6.41 at 64 KB and 9.73 to 10.01 at 1 MB. Allocation stays at 1.19 to 1.34 of the plain request, because the body goes through a pooled 16 KB buffer, and above 30 KB the default `EnableBuffering` threshold puts it in a temporary file.
+- With a small body, a replay costs 1.38 to 1.47 of the route without idempotency, and a new key 2.19 to 2.53.
+- The fingerprint reads and hashes the whole request body before the store lookup, so the cost grows with the request size: a keyed replay is 1.43 to 1.48 of the plain request at 1 KB, 5.73 to 6.25 at 64 KB and 9.84 to 9.89 at 1 MB. Allocation stays at 1.17 to 1.35 of the plain request, because the body goes through a pooled 16 KB buffer, and above 30 KB the default `EnableBuffering` threshold puts it in a temporary file.
 
 ### Where CSE loses
 
-- **IdempotentReplay NewKey at 256 KB, all TFMs: CSE allocates more than IdempotentAPI.** 2460.96 against 2407.54 KB (net8.0), 2461.39 against 2400.24 KB (net9.0; the plain row of this pair is noisy, CV 5.4%), 2332.89 against 2273.06 KB (net10.0), 2334.81 against 2275.08 KB (net11.0). CSE is still faster on these rows. Against the plain endpoint, CSE allocates about 2 MB more for a 256 KB response.
 - **`ToUuidV5` against the hand-written UUIDv5, all TFMs:** 1,400.02 against 733.36 ns (net8.0), 1,305.69 against 736.82 ns (net9.0), 891.03 against 582.37 ns (net10.0), 885.82 against 587.74 ns (net11.0), with 456 to 488 B allocated against none.
 - **Executor against the hand-written dedupe:** a CSE replay is 129.085 to 181.050 ns with 152 B, the `ConcurrentDictionary` lookup 12.380 to 46.223 ns with none. The CSE row does more (lease, fingerprint, retention), but the gap is real.
-- **Large keyed requests:** a keyed replay with a 64 KB body takes 152.48 μs against 23.81 μs for the plain request on net10.0, and 1,320.77 μs against 133.43 μs at 1 MB.
+- **Large keyed requests:** a keyed replay with a 64 KB body takes 136.080 μs against 22.154 μs for the plain request on net10.0, and 1,250.851 μs against 127.180 μs at 1 MB.
 
 ---
 
@@ -243,7 +243,7 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
   - `DistributedCacheIdempotencyRecordStore.cs:52,83,103`: the storage key is rebuilt on every call.
   - `Internal/RecordEntrySerializer.cs:15-16`: a `MemoryStream`/`BinaryWriter` copy per entry, which is the second payload copy in the distributed reserve+complete rows.
   - `IdempotencyKeys.cs:96-119`: the canonical string, its UTF-8 bytes, the hash and the Base64 text per hashed key; `:79-93`: several arrays and an `IncrementalHash` per UUIDv5.
-  - On the HTTP path, a new key captures the response in `ResponseCaptureStream` (a growing `MemoryStream`, then `ToArray()`), writes it again through `IdempotencyEntrySerializer` (`MemoryStream`, then `ToArray()`), and the distributed store copies it once more through `RecordEntrySerializer`. The NewKey 256 KB rows allocate about 2 MB more than the plain endpoint, about eight times the response size.
+  - On the HTTP path, a new key captures the response in an `ArrayPool` buffer in `ResponseCaptureStream`, then `IdempotencyEntrySerializer` and the distributed store each build one exact-size entry. The NewKey 256 KB rows allocate 521 to 528 KB more than the plain endpoint, about two times the response size.
   - `CSharpEssentials.AspNetCore/Idempotency/IdempotencyMiddleware.cs:495`: the fingerprint calls `EnableBuffering()` with the default 30 KB threshold, so a larger request body goes to a temporary file before it is hashed.
 - **The contention class is noisy.** It depends on the core count and the scheduler; compare it only on the same machine.
 - **TestServer, not Kestrel**, for the HTTP classes.

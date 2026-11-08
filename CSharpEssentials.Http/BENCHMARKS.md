@@ -114,8 +114,8 @@ This table comes from reading CSE source, the competitors' XML docs, nuspecs and
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (not `--quick`), full runs of every class. The four TFMs ran one after another on one Linux machine; the hardware is in each report header.
-- Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK).
-- The 1-minute load average was 1.74 when the suite started and 1.60 when it ended. No row in this suite kept a coefficient of variation above 5%, so no class was rerun and no row is marked noisy. No mean is near 0 ns, so the timer-resolution caveat does not apply.
+- Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK). `HttpResilienceComparison` and `RetryIfFailedComparison` were rerun on main after pull requests #230 to #256 landed, with the 11.0.100-rc.3 SDK and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348).
+- The 1-minute load average was 1.74 when the suite started and 1.60 when it ended. No row in this suite kept a coefficient of variation above 5%, so no class was rerun for noise and no row is marked noisy. No mean is near 0 ns, so the timer-resolution caveat does not apply.
 - Reports: `benchmarks/results/http/{tfm}/results/*-report-github.md`, with `.csv` and `.html` beside them. Each table below links the four github reports for its class.
 - The CSE column is the repository source as of the run, a local integration of all open pull requests.
 
@@ -125,7 +125,7 @@ Each cell is `Mean (Ratio), Allocated`, copied from that TFM's report. The ratio
 
 - Against Refit, Flurl.Http and RestSharp, CSE takes less time and allocates less in every row they share, on every TFM. RestSharp allocates the most in the GET, POST and 404 rows, for example 30.63 KB against CSE's 2.55 KB for GET Count 1 on net10.0.
 - Against the BCL (`HttpClient` with System.Net.Http.Json, `QueryHelpers`, or hand-written code), CSE is slower in almost every row and allocates more in every row except the Dictionary query string against `QueryHelpers`, where both allocate 544 B. The list below gives each case.
-- Through a retry and timeout policy, CSE is slower than a bare Polly pipeline and faster than both Microsoft.Extensions.Http.Resilience handlers on net9.0 to net11.0. On net8.0 the custom handler is level with CSE (4.135 μs against 4.117 μs, ratio 1.00). CSE allocates less than both handler rows on every TFM.
+- Through a retry and timeout policy, CSE is slower than a bare Polly pipeline and faster than both Microsoft.Extensions.Http.Resilience handlers on net9.0 to net11.0. On net8.0 the custom handler is slightly ahead of CSE (4.145 μs against 4.189 μs, ratio 0.99). CSE allocates less than both handler rows on every TFM.
 
 ### Where CSE loses
 
@@ -138,7 +138,7 @@ Every row where CSE is slower or allocates more than another row in its category
 - **Request build against the hand-written `Bcl_Build`.** 733.4 ns against 189.1 ns (net8.0), 722.7 ns against 161.4 ns (net9.0), 641.8 ns against 127.1 ns (net10.0), 537.55 ns against 99.34 ns (net11.0). Allocated 1648 B against 392 B (1656 B against 400 B on net11.0). The builder parses the URI up to three times and boxes the int query value.
 - **Query string, AppendToUri, against `AspNetCore_AppendToUri` (`QueryHelpers`).** 398.6 ns against 337.9 ns (net8.0), 380.6 ns against 331.2 ns (net9.0), 374.5 ns against 348.1 ns (net10.0), 323.3 ns against 287.1 ns (net11.0). Allocated 784 B against 656 B on every TFM.
 - **Query string, Dictionary, against the hand-written `Bcl_Dictionary` loop.** Ratio 0.83 (net8.0), 0.90 (net9.0), 0.87 (net10.0), 0.94 (net11.0) for the loop, and 488 B against 544 B on every TFM. `QueryHelpers` is also ahead on net8.0 (221.4 ns against 223.2 ns, ratio 0.99) and net9.0 (194.2 ns against 216.2 ns); CSE is ahead on net10.0 and net11.0. Both allocate 544 B.
-- **HTTP resilience against `Polly_Pipeline`.** 4.117 μs against 3.260 μs (net8.0), 3.413 μs against 2.861 μs (net9.0), 2.882 μs against 2.452 μs (net10.0), 2.901 μs against 2.378 μs (net11.0). Allocated 2.73 KB against 2.26 KB (net8.0, net9.0), 2.27 KB (net10.0) and 2.28 KB (net11.0). This gap includes the GET gap above, because the Polly row wraps the streamed BCL call. `Factory_NoResilience` is a reference row with no retry and is faster than every policy row.
+- **HTTP resilience against `Polly_Pipeline`.** 4.189 μs against 3.256 μs (net8.0), 3.406 μs against 2.779 μs (net9.0), 2.914 μs against 2.451 μs (net10.0), 2.764 μs against 2.362 μs (net11.0). Allocated 2.73 KB against 2.26 KB (net8.0, net9.0), 2.27 KB (net10.0) and 2.28 KB (net11.0). This gap includes the GET gap above, because the Polly row wraps the streamed BCL call. `Factory_NoResilience` is a reference row with no retry and is faster than every policy row. On net8.0 the `MicrosoftResilience_Handler` row is also faster, 4.145 μs against 4.189 μs (ratio 0.99), while it allocates more (2.79 KB against 2.73 KB).
 
 ### Full tables
 
@@ -223,11 +223,11 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Policy` | 4.117 μs (1.00), 2.73 KB | 3.413 μs (1.00), 2.73 KB | 2.882 μs (1.00), 2.73 KB | 2.901 μs (1.00), 2.73 KB |
-| `Polly_Pipeline` | 3.260 μs (0.79), 2.26 KB | 2.861 μs (0.84), 2.26 KB | 2.452 μs (0.85), 2.27 KB | 2.378 μs (0.82), 2.28 KB |
-| `MicrosoftResilience_Handler` | 4.135 μs (1.00), 2.79 KB | 3.880 μs (1.14), 2.9 KB | 3.420 μs (1.19), 2.91 KB | 3.172 μs (1.09), 2.92 KB |
-| `MicrosoftResilience_Standard` | 5.137 μs (1.25), 2.83 KB | 4.778 μs (1.40), 2.94 KB | 4.220 μs (1.46), 2.95 KB | 3.897 μs (1.34), 2.96 KB |
-| `Factory_NoResilience` | 2.381 μs (0.58), 2.41 KB | 2.408 μs (0.71), 2.52 KB | 2.122 μs (0.74), 2.54 KB | 1.990 μs (0.69), 2.55 KB |
+| `CSharpEssentials_Policy` | 4.189 μs (1.00), 2.73 KB | 3.406 μs (1.00), 2.73 KB | 2.914 μs (1.00), 2.73 KB | 2.764 μs (1.00), 2.73 KB |
+| `Polly_Pipeline` | 3.256 μs (0.78), 2.26 KB | 2.779 μs (0.82), 2.26 KB | 2.451 μs (0.84), 2.27 KB | 2.362 μs (0.85), 2.28 KB |
+| `MicrosoftResilience_Handler` | 4.145 μs (0.99), 2.79 KB | 3.784 μs (1.11), 2.9 KB | 3.246 μs (1.11), 2.91 KB | 3.146 μs (1.14), 2.92 KB |
+| `MicrosoftResilience_Standard` | 5.172 μs (1.23), 2.83 KB | 4.756 μs (1.40), 2.94 KB | 4.052 μs (1.39), 2.95 KB | 3.931 μs (1.42), 2.96 KB |
+| `Factory_NoResilience` | 2.421 μs (0.58), 2.41 KB | 2.377 μs (0.70), 2.52 KB | 2.050 μs (0.70), 2.54 KB | 1.919 μs (0.69), 2.55 KB |
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-report-github.md).
 

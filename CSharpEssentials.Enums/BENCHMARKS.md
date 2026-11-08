@@ -60,22 +60,22 @@ CSE losses come first. Every row below that names a loss is outside error on the
 
 | Finding | Details |
 |---|---|
-| Boxed format: CSE is the slowest column on every TFM (CSE loss) | net10: 15.084 ns against BCL 5.552 ns and Enums.NET 5.168 ns (Ratio 0.37 and 0.34), all 0 B. net8: 30.357 ns against 8.836 and 14.803 ns. The typed CSE call on the same value takes 3.344 ns on net10 |
-| Boxed list format: CSE `TryFormatMany` is the slowest column on every TFM (CSE loss) | net10: 284.671 ns against a BCL loop at 157.674 ns and an Enums.NET loop at 151.202 ns (Ratio 0.55 and 0.53), all 224 B. net11: 321.773 ns against 157.496 and 145.819 ns |
+| Boxed format: CSE is the slowest column on every TFM (CSE loss) | net10: 15.566 ns against BCL 5.052 ns and Enums.NET 5.543 ns (Ratio 0.32 and 0.36), all 0 B. net8: 30.214 ns against 6.316 and 14.789 ns. The typed CSE call on the same value takes 3.247 ns on net10 |
+| Boxed list format: CSE `TryFormatMany` is the slowest column on every TFM (CSE loss) | net10: 190.594 ns against a BCL loop at 157.100 ns and an Enums.NET loop at 149.443 ns (Ratio 0.82 and 0.78), all 224 B. net11: 189.764 ns against 152.002 and 141.655 ns |
 | Reflection-built names: CSE is the slowest column on every TFM (CSE loss) | net10: 38.36 ns against BCL 32.81 ns / 184 B and Enums.NET 21.55 ns / 0 B; CSE allocates 0 B. Even the names of an info held since setup (23.57 ns) are slower than Enums.NET's cached lookup |
 | Reflection-built values: Enums.NET is faster on every TFM, most on net8 and net9 (CSE loss) | net10: 32.70 vs 29.72 ns. net8: 137.76 vs 30.52 ns (Ratio 0.22); net9: 125.39 vs 28.56 ns (Ratio 0.23). CSE beats the BCL on every TFM (net10 206.56 ns / 584 B) |
 | Description: CSE is the slowest column on every TFM (CSE loss) | net10: 3.6495 ns against Enums.NET 2.6886 ns (Ratio 0.74) and NetEscapades 0.9027 ns (Ratio 0.25). The measured CSE row is the runtime metadata lookup. CSE also generates a `ToDescription()` switch, which this suite does not measure |
 | Invalid case-sensitive parse allocates 88 B and is slower than Enums.NET on every TFM (CSE loss) | net10: 22.5530 ns / 88 B against Enums.NET 13.2294 ns / 0 B (Ratio 0.59). The row calls the `EnumValueParser.TryParse` overload that reports an `EnumValueError`, so a rejected input builds the error. On net11 the BCL is faster too (18.7848 vs 21.8815 ns). The overload without the error, and `TryParseWire`, allocate nothing |
 | Undefined value ToString: CSE is slower than Enums.NET and NetEscapades on net10 (CSE loss) | net10: 3.3626 ns against 1.9853 and 1.7021 ns (Ratio 0.59 and 0.51), all 0 B. NetEscapades is also faster on net9 (1.7694 vs 2.0573 ns) and Enums.NET on net11 (1.1915 vs 1.4798 ns). On net8 CSE ties NetEscapades and beats Enums.NET. CSE's own net10 time is above its net8 (1.7688 ns) and net11 (1.4798 ns) times; the cause was not investigated |
-| GetNames: Enums.NET is faster and allocates nothing on every TFM (CSE loss) | net10: 20.57 ns / 184 B against 16.13 ns / 0 B (Ratio 0.78). NetEscapades is also faster on net10 (19.74 ns) and net11 (18.306 vs 18.877 ns) and ties on net9 (20.34 vs 20.36 ns). `GetNames()` builds a new array per call; the generated cached `Names` list is not measured |
-| GetValues: NetEscapades is faster on net10, and Enums.NET on net8 and net9 (CSE loss) | net10: 11.95 vs 11.42 ns, both 0 B. net8: Enums.NET 15.62 ns / 0 B against CSE 16.69 ns / 104 B. net9: Enums.NET 15.55 ns and NetEscapades 15.77 ns against CSE 16.46 ns / 104 B. net11 ties NetEscapades (9.408 ns each) |
+| GetNames: Enums.NET is faster and allocates nothing on every TFM (CSE loss) | net10: 18.99 ns / 184 B against 16.53 ns / 0 B (Ratio 0.87). CSE beats NetEscapades on net10 (19.67 ns) and ties it on net8, net9 and net11 (net11: 18.331 vs 18.312 ns). `GetNames()` builds a new array per call; the generated cached `Names` list is not measured |
+| GetValues: NetEscapades is faster on net10 and net11 (CSE loss) | net10: 11.71 vs 11.65 ns; net11: 9.123 vs 8.963 ns; all 0 B. On net8 CSE ties NetEscapades and Enums.NET (15.56, 15.54 and 15.62 ns) but allocates 104 B against Enums.NET's 0 B. On net9 CSE ties NetEscapades (15.22 vs 15.26 ns) and beats Enums.NET (15.91 ns) |
 | IsDefined of an undefined value: NetEscapades is faster on net10 and net8 (CSE loss, sub-nanosecond) | net10: 0.7609 vs 0.7258 ns; net8: 0.4484 vs 0.3707 ns. Both rows are below 1 ns, close to the timer |
 | Native AOT: CSE's binary is the second largest (CSE loss) | 1.3 MB against 1.2 MB for NetEscapades and the BCL sample; Enums.NET 2.0 MB. The earlier 2026-11-02 report, from an older CSE build, had 1.9 MB |
 | Parse: CSE is the fastest column in three of the four parse categories on every TFM | net10: valid case-sensitive 8.6618 ns (Enums.NET 18.3746, NetEscapades 28.8248, BCL 45.5131 ns); valid ignore-case 27.5424 ns (Enums.NET 39.2357, NetEscapades 45.0380, BCL 53.4897 ns); invalid ignore-case 8.1523 ns (Enums.NET 15.1186 ns). All 0 B |
 | Flags format: CSE is the fastest column and allocates the least on every TFM | net10: 25.0906 ns / 72 B against NetEscapades 37.0195 ns / 96 B, BCL 39.2608 ns / 96 B and Enums.NET 82.6982 ns / 280 B |
 | IsDefined: CSE beats the BCL and Enums.NET on every TFM | net10 defined: 0.4480 ns against Enums.NET 0.7049 ns and BCL 4.1192 ns; it ties NetEscapades (0.4532 ns), as on net8 (0.4483 vs 0.4454 ns, NetEscapades lower by mean). Sub-nanosecond rows; see Caveats |
 | ToString of a defined value: CSE ties or beats every column | net10: 0.5418 ns, tied with NetEscapades (0.5414 ns), against Enums.NET 1.1186 ns and BCL 9.0266 ns / 24 B. Sub-nanosecond rows |
-| GetValues and GetNames: CSE beats the BCL on every TFM | net10: 11.95 vs 32.15 ns and 20.57 vs 35.34 ns |
+| GetValues and GetNames: CSE beats the BCL on every TFM | net10: 11.71 vs 31.33 ns and 18.99 vs 38.65 ns |
 | Native AOT: CSE, NetEscapades and the BCL publish with 0 IL warnings and run; Enums.NET publishes with 4 and runs | Enums.NET 5.0.0: IL2071, IL2075, IL2080, IL3050 from its reflection-based cache, all ILC. Every sample prints `parsed 20 checksum 971 ok` |
 
 ---
@@ -152,14 +152,14 @@ All tables are net10 unless stated. "vs CSE" is BenchmarkDotNet's Ratio column: 
 
 | Category | Variant | Mean | Error | vs CSE | Allocated |
 |---|---|---:|---:|---:|---:|
-| GetValues | CSE | 11.95 ns | 0.013 ns | 1.00 | 0 B |
-| GetValues | BCL | 32.15 ns | 0.278 ns | 2.69 | 104 B |
-| GetValues | Enums.NET | 14.11 ns | 0.184 ns | 1.18 | 0 B |
-| GetValues | NetEscapades | 11.42 ns | 0.011 ns | 0.96 | 0 B |
-| GetNames | CSE | 20.57 ns | 0.228 ns | 1.00 | 184 B |
-| GetNames | BCL | 35.34 ns | 0.213 ns | 1.72 | 184 B |
-| GetNames | Enums.NET | 16.13 ns | 0.112 ns | 0.78 | 0 B |
-| GetNames | NetEscapades | 19.74 ns | 0.087 ns | 0.96 | 184 B |
+| GetValues | CSE | 11.71 ns | 0.019 ns | 1.00 | 0 B |
+| GetValues | BCL | 31.33 ns | 0.161 ns | 2.68 | 104 B |
+| GetValues | Enums.NET | 14.29 ns | 0.243 ns | 1.22 | 0 B |
+| GetValues | NetEscapades | 11.65 ns | 0.017 ns | 0.99 | 0 B |
+| GetNames | CSE | 18.99 ns | 0.167 ns | 1.00 | 184 B |
+| GetNames | BCL | 38.65 ns | 0.286 ns | 2.04 | 184 B |
+| GetNames | Enums.NET | 16.53 ns | 0.104 ns | 0.87 | 0 B |
+| GetNames | NetEscapades | 19.67 ns | 0.120 ns | 1.04 | 184 B |
 
 - CSE, NetEscapades and the BCL return a new array on every call. Enums.NET returns a cached `IReadOnlyList`. CSE also generates cached `Names` and `Values` lists that allocate nothing to read; this suite measures `GetNames()` and `GetValues()` only.
 - GetValues shows 0 B for CSE and NetEscapades on net10 and net11, but 104 B on net8 and net9. The generated code is the same on every TFM, so this is a runtime effect, not a CSE change. The cause was not investigated.
@@ -198,17 +198,17 @@ All tables are net10 unless stated. "vs CSE" is BenchmarkDotNet's Ratio column: 
 
 | Category | Variant | Mean | Error | vs CSE | Allocated |
 |---|---|---:|---:|---:|---:|
-| Format | CSE `EnumValueFormatter.Format(object, EnumConventions.Default)` | 15.084 ns | 0.0168 ns | 1.00 | 0 B |
-| Format | CSE with `CanHandle = _ => true` | 15.155 ns | 0.0206 ns | 1.00 | 0 B |
-| Format | CSE typed `Format(Shade, EnumWireFormat.String)` (reference only) | 3.344 ns | 0.0010 ns | 0.22 | 0 B |
-| Format | BCL `object.ToString()` | 5.552 ns | 0.0152 ns | 0.37 | 0 B |
-| Format | Enums.NET `Enums.AsString(Type, object)` | 5.168 ns | 0.0101 ns | 0.34 | 0 B |
-| FormatMany | CSE `TryFormatMany` | 284.671 ns | 1.1061 ns | 1.00 | 224 B |
-| FormatMany | BCL loop over `ToString()` | 157.674 ns | 0.6674 ns | 0.55 | 224 B |
-| FormatMany | Enums.NET loop over `AsString(Type, object)` | 151.202 ns | 0.4071 ns | 0.53 | 224 B |
+| Format | CSE `EnumValueFormatter.Format(object, EnumConventions.Default)` | 15.566 ns | 0.0403 ns | 1.00 | 0 B |
+| Format | CSE with `CanHandle = _ => true` | 16.868 ns | 0.0371 ns | 1.08 | 0 B |
+| Format | CSE typed `Format(Shade, EnumWireFormat.String)` (reference only) | 3.247 ns | 0.0055 ns | 0.21 | 0 B |
+| Format | BCL `object.ToString()` | 5.052 ns | 0.0124 ns | 0.32 | 0 B |
+| Format | Enums.NET `Enums.AsString(Type, object)` | 5.543 ns | 0.0175 ns | 0.36 | 0 B |
+| FormatMany | CSE `TryFormatMany` | 190.594 ns | 0.8044 ns | 1.00 | 224 B |
+| FormatMany | BCL loop over `ToString()` | 157.100 ns | 0.5762 ns | 0.82 | 224 B |
+| FormatMany | Enums.NET loop over `AsString(Type, object)` | 149.443 ns | 0.7262 ns | 0.78 | 224 B |
 
-- With the default `CanHandle` the formatter now looks the type up in the registry once. The `CanHandle = _ => true` row is within 1% of the default on net10 (15.155 vs 15.084 ns) and net11 (14.606 vs 14.741 ns), though both gaps are outside error; on net8 and net9 it is slower (31.342 vs 30.357 ns and 29.995 vs 27.950 ns).
-- The boxed CSE call is 15.084 ns against 3.344 ns for the typed call on the same value. The extra time is in the registry lookup and the boxed formatting path; it was not profiled.
+- With the default `CanHandle` the formatter now looks the type up in the registry once. The `CanHandle = _ => true` row is slower than the default on every TFM: net10 16.868 vs 15.566 ns (1.08), net11 15.414 vs 14.442 ns, net8 30.846 vs 30.214 ns and net9 29.437 vs 27.535 ns.
+- The boxed CSE call is 15.566 ns against 3.247 ns for the typed call on the same value. The extra time is in the registry lookup and the boxed formatting path; it was not profiled.
 - FormatMany: every row enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each element, so every row allocates the same 224 B. CSE is slower on every TFM.
 
 ### 8. Reflection-built names and values
@@ -284,14 +284,14 @@ Mean, with allocation where it is not 0 B. Run order net8, net9, net10, net11. P
 | | Enums.NET | 1.5039 ns | 1.3027 ns | 1.3005 ns | 1.2765 ns |
 | | NetEscapades | 0.3707 ns | 0.4524 ns | 0.7258 ns | 1.0132 ns |
 | | BCL | 5.0726 ns | 5.3400 ns | 3.5401 ns | 3.5341 ns |
-| GetValues | CSE | 16.69 ns / 104 B | 16.46 ns / 104 B | 11.95 ns | 9.408 ns |
-| | Enums.NET | 15.62 ns | 15.55 ns | 14.11 ns | 13.908 ns |
-| | NetEscapades | 16.89 ns / 104 B | 15.77 ns / 104 B | 11.42 ns | 9.408 ns |
-| | BCL | 46.04 ns / 104 B | 36.46 ns / 104 B | 32.15 ns / 104 B | 30.426 ns / 104 B |
-| GetNames | CSE | 21.46 ns / 184 B | 20.36 ns / 184 B | 20.57 ns / 184 B | 18.877 ns / 184 B |
-| | Enums.NET | 17.46 ns | 17.26 ns | 16.13 ns | 16.319 ns |
-| | NetEscapades | 21.92 ns / 184 B | 20.34 ns / 184 B | 19.74 ns / 184 B | 18.306 ns / 184 B |
-| | BCL | 32.85 ns / 184 B | 32.50 ns / 184 B | 35.34 ns / 184 B | 29.011 ns / 184 B |
+| GetValues | CSE | 15.56 ns / 104 B | 15.22 ns / 104 B | 11.71 ns | 9.123 ns |
+| | Enums.NET | 15.62 ns | 15.91 ns | 14.29 ns | 15.616 ns |
+| | NetEscapades | 15.54 ns / 104 B | 15.26 ns / 104 B | 11.65 ns | 8.963 ns |
+| | BCL | 44.47 ns / 104 B | 35.03 ns / 104 B | 31.33 ns / 104 B | 29.474 ns / 104 B |
+| GetNames | CSE | 20.45 ns / 184 B | 19.42 ns / 184 B | 18.99 ns / 184 B | 18.331 ns / 184 B |
+| | Enums.NET | 17.39 ns | 17.18 ns | 16.53 ns | 16.030 ns |
+| | NetEscapades | 20.37 ns / 184 B | 19.58 ns / 184 B | 19.67 ns / 184 B | 18.312 ns / 184 B |
+| | BCL | 29.68 ns / 184 B | 30.92 ns / 184 B | 38.65 ns / 184 B | 24.735 ns / 184 B |
 | Flags format | CSE | 22.6283 ns / 72 B | 22.8844 ns / 72 B | 25.0906 ns / 72 B | 23.4963 ns / 72 B |
 | | Enums.NET | 91.2175 ns / 280 B | 95.0625 ns / 280 B | 82.6982 ns / 280 B | 81.0763 ns / 280 B |
 | | NetEscapades | 39.4803 ns / 96 B | 43.0297 ns / 96 B | 37.0195 ns / 96 B | 36.4224 ns / 96 B |
@@ -302,14 +302,14 @@ Mean, with allocation where it is not 0 B. Run order net8, net9, net10, net11. P
 | Description | CSE | 4.4773 ns | 4.5524 ns | 3.6495 ns | 3.1203 ns |
 | | Enums.NET | 4.2669 ns | 3.4942 ns | 2.6886 ns | 2.7039 ns |
 | | NetEscapades | 0.5411 ns | 0.9030 ns | 0.9027 ns | 0.9022 ns |
-| Boxed format | CSE | 30.357 ns | 27.950 ns | 15.084 ns | 14.741 ns |
-| | CSE, `CanHandle = _ => true` | 31.342 ns | 29.995 ns | 15.155 ns | 14.606 ns |
-| | CSE typed (reference) | 8.386 ns | 7.249 ns | 3.344 ns | 3.394 ns |
-| | Enums.NET | 14.803 ns | 15.200 ns | 5.168 ns | 5.524 ns |
-| | BCL | 8.836 ns | 5.594 ns | 5.552 ns | 5.523 ns |
-| Boxed list format | CSE | 721.441 ns / 224 B | 615.678 ns / 224 B | 284.671 ns / 224 B | 321.773 ns / 224 B |
-| | Enums.NET loop | 520.411 ns / 224 B | 474.508 ns / 224 B | 151.202 ns / 224 B | 145.819 ns / 224 B |
-| | BCL loop | 574.047 ns / 224 B | 493.746 ns / 224 B | 157.674 ns / 224 B | 157.496 ns / 224 B |
+| Boxed format | CSE | 30.214 ns | 27.535 ns | 15.566 ns | 14.442 ns |
+| | CSE, `CanHandle = _ => true` | 30.846 ns | 29.437 ns | 16.868 ns | 15.414 ns |
+| | CSE typed (reference) | 8.229 ns | 7.145 ns | 3.247 ns | 3.567 ns |
+| | Enums.NET | 14.789 ns | 15.077 ns | 5.543 ns | 5.888 ns |
+| | BCL | 6.316 ns | 7.255 ns | 5.052 ns | 5.219 ns |
+| Boxed list format | CSE | 634.760 ns / 224 B | 498.842 ns / 224 B | 190.594 ns / 224 B | 189.764 ns / 224 B |
+| | Enums.NET loop | 529.243 ns / 224 B | 469.709 ns / 224 B | 149.443 ns / 224 B | 141.655 ns / 224 B |
+| | BCL loop | 539.468 ns / 224 B | 486.657 ns / 224 B | 157.100 ns / 224 B | 152.002 ns / 224 B |
 | Reflection names | CSE | 45.72 ns | 40.25 ns | 38.36 ns | 40.33 ns |
 | | CSE, held info (reference) | 24.27 ns | 24.18 ns | 23.57 ns | 23.28 ns |
 | | Enums.NET | 22.09 ns | 22.14 ns | 21.55 ns | 20.94 ns |
