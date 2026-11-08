@@ -2,28 +2,28 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 
 
 ```
-| Method                       | Categories  | WithMetadata | Mean          | Error      | StdDev     | Ratio | Gen0   | Allocated | Alloc Ratio |
-|----------------------------- |------------ |------------- |--------------:|-----------:|-----------:|------:|-------:|----------:|------------:|
-| **CSharpEssentials_Equals**      | **Equals**      | **False**        |      **6.057 ns** |  **0.0095 ns** |  **0.0079 ns** |  **1.00** |      **-** |         **-** |          **NA** |
-| ErrorOr_Equals               | Equals      | False        |      5.935 ns |  0.0467 ns |  0.0437 ns |  0.98 |      - |         - |          NA |
-|                              |             |              |               |            |            |       |        |           |             |
-| **CSharpEssentials_Equals**      | **Equals**      | **True**         |     **27.564 ns** |  **0.0398 ns** |  **0.0353 ns** |  **1.00** |      **-** |         **-** |          **NA** |
-| ErrorOr_Equals               | Equals      | True         |     29.885 ns |  0.0846 ns |  0.0706 ns |  1.08 |      - |         - |          NA |
-|                              |             |              |               |            |            |       |        |           |             |
-| **CSharpEssentials_GetHashCode** | **GetHashCode** | **False**        |     **32.201 ns** |  **0.0262 ns** |  **0.0245 ns** |  **1.00** |      **-** |         **-** |          **NA** |
-| ErrorOr_GetHashCode          | GetHashCode | False        |     26.499 ns |  0.0187 ns |  0.0175 ns |  0.82 |      - |         - |          NA |
-|                              |             |              |               |            |            |       |        |           |             |
-| **CSharpEssentials_GetHashCode** | **GetHashCode** | **True**         |     **88.275 ns** |  **0.0448 ns** |  **0.0374 ns** |  **1.00** |      **-** |         **-** |          **NA** |
-| ErrorOr_GetHashCode          | GetHashCode | True         |     64.548 ns |  0.1080 ns |  0.0902 ns |  0.73 |      - |         - |          NA |
-|                              |             |              |               |            |            |       |        |           |             |
-| **CSharpEssentials_HashSet**     | **HashSet**     | **False**        |  **6,455.556 ns** | **26.3886 ns** | **24.6839 ns** |  **1.00** | **0.3204** |    **5392 B** |        **1.00** |
-| ErrorOr_HashSet              | HashSet     | False        |  5,217.701 ns | 10.3049 ns |  9.1350 ns |  0.81 | 0.3204 |    5392 B |        1.00 |
-|                              |             |              |               |            |            |       |        |           |             |
-| **CSharpEssentials_HashSet**     | **HashSet**     | **True**         | **14,871.272 ns** | **14.6791 ns** | **13.7308 ns** |  **1.00** | **0.3204** |    **5392 B** |        **1.00** |
-| ErrorOr_HashSet              | HashSet     | True         | 13,217.930 ns | 24.0479 ns | 21.3178 ns |  0.89 | 0.3204 |    5392 B |        1.00 |
+| Method                       | Categories  | WithMetadata | Mean          | Error       | StdDev      | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|----------------------------- |------------ |------------- |--------------:|------------:|------------:|------:|--------:|-------:|----------:|------------:|
+| **CSharpEssentials_Equals**      | **Equals**      | **False**        |      **6.385 ns** |   **0.1614 ns** |   **0.2416 ns** |  **1.00** |    **0.05** |      **-** |         **-** |          **NA** |
+| ErrorOr_Equals               | Equals      | False        |      6.245 ns |   0.1445 ns |   0.1664 ns |  0.98 |    0.04 |      - |         - |          NA |
+|                              |             |              |               |             |             |       |         |        |           |             |
+| **CSharpEssentials_Equals**      | **Equals**      | **True**         |     **30.304 ns** |   **0.3485 ns** |   **0.3260 ns** |  **1.00** |    **0.01** |      **-** |         **-** |          **NA** |
+| ErrorOr_Equals               | Equals      | True         |     33.199 ns |   0.0962 ns |   0.0803 ns |  1.10 |    0.01 |      - |         - |          NA |
+|                              |             |              |               |             |             |       |         |        |           |             |
+| **CSharpEssentials_GetHashCode** | **GetHashCode** | **False**        |     **31.101 ns** |   **0.1914 ns** |   **0.1697 ns** |  **1.00** |    **0.01** |      **-** |         **-** |          **NA** |
+| ErrorOr_GetHashCode          | GetHashCode | False        |     27.044 ns |   0.0928 ns |   0.0775 ns |  0.87 |    0.01 |      - |         - |          NA |
+|                              |             |              |               |             |             |       |         |        |           |             |
+| **CSharpEssentials_GetHashCode** | **GetHashCode** | **True**         |     **69.908 ns** |   **1.0241 ns** |   **0.9580 ns** |  **1.00** |    **0.02** |      **-** |         **-** |          **NA** |
+| ErrorOr_GetHashCode          | GetHashCode | True         |     68.913 ns |   0.4959 ns |   0.4396 ns |  0.99 |    0.01 |      - |         - |          NA |
+|                              |             |              |               |             |             |       |         |        |           |             |
+| **CSharpEssentials_HashSet**     | **HashSet**     | **False**        |  **6,598.451 ns** |  **56.1129 ns** |  **43.8093 ns** |  **1.00** |    **0.01** | **0.3204** |    **5392 B** |        **1.00** |
+| ErrorOr_HashSet              | HashSet     | False        |  5,540.137 ns |  90.6571 ns |  84.8007 ns |  0.84 |    0.01 | 0.3204 |    5392 B |        1.00 |
+|                              |             |              |               |             |             |       |         |        |           |             |
+| **CSharpEssentials_HashSet**     | **HashSet**     | **True**         | **14,243.500 ns** | **112.1213 ns** |  **99.3926 ns** |  **1.00** |    **0.01** | **0.3204** |    **5392 B** |        **1.00** |
+| ErrorOr_HashSet              | HashSet     | True         | 13,452.364 ns | 178.0944 ns | 166.5896 ns |  0.94 |    0.01 | 0.3204 |    5392 B |        1.00 |

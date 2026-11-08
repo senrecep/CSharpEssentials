@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Rules.Comparison.Benchmarks.ConditionalComparison-20261104-221053</title>
+<title>CSharpEssentials.Rules.Comparison.Benchmarks.ConditionalComparison-20261108-180439</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,19 +15,19 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method</th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>HandWritten</td><td>Pass</td><td>4.635 ns</td><td>0.0068 ns</td><td>0.0053 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseIf</td><td>Pass</td><td>152.083 ns</td><td>0.0708 ns</td><td>0.0553 ns</td><td>32.81</td><td>0.04</td><td>0.0024</td><td>40 B</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>FailLast</td><td>16.835 ns</td><td>0.0589 ns</td><td>0.0492 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CseIf</td><td>FailLast</td><td>166.029 ns</td><td>0.2334 ns</td><td>0.2183 ns</td><td>9.86</td><td>0.03</td><td>0.0057</td><td>96 B</td><td>1.71</td>
+</thead><tbody><tr><td>HandWritten</td><td>Pass</td><td>4.656 ns</td><td>0.0106 ns</td><td>0.0094 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseIf</td><td>Pass</td><td>154.422 ns</td><td>0.5215 ns</td><td>0.4878 ns</td><td>33.16</td><td>0.12</td><td>0.0024</td><td>40 B</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>FailLast</td><td>16.340 ns</td><td>0.1206 ns</td><td>0.1069 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CseIf</td><td>FailLast</td><td>163.025 ns</td><td>0.6762 ns</td><td>0.6325 ns</td><td>9.98</td><td>0.07</td><td>0.0057</td><td>96 B</td><td>1.71</td>
 </tr></tbody></table>
 </body>
 </html>

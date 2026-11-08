@@ -2,20 +2,20 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 
 
 ```
 | Method                     | Categories | Mean       | Error     | StdDev    | Ratio | Gen0   | Allocated | Alloc Ratio |
 |--------------------------- |----------- |-----------:|----------:|----------:|------:|-------:|----------:|------------:|
-| CSharpEssentials           | Format     |  15.084 ns | 0.0168 ns | 0.0140 ns |  1.00 |      - |         - |          NA |
-| CSharpEssentials_HandleAll | Format     |  15.155 ns | 0.0206 ns | 0.0182 ns |  1.00 |      - |         - |          NA |
-| CSharpEssentials_Typed     | Format     |   3.344 ns | 0.0010 ns | 0.0009 ns |  0.22 |      - |         - |          NA |
-| Bcl                        | Format     |   5.552 ns | 0.0152 ns | 0.0142 ns |  0.37 |      - |         - |          NA |
-| EnumsNet                   | Format     |   5.168 ns | 0.0101 ns | 0.0094 ns |  0.34 |      - |         - |          NA |
+| CSharpEssentials           | Format     |  15.566 ns | 0.0403 ns | 0.0377 ns |  1.00 |      - |         - |          NA |
+| CSharpEssentials_HandleAll | Format     |  16.868 ns | 0.0371 ns | 0.0347 ns |  1.08 |      - |         - |          NA |
+| CSharpEssentials_Typed     | Format     |   3.247 ns | 0.0055 ns | 0.0049 ns |  0.21 |      - |         - |          NA |
+| Bcl                        | Format     |   5.052 ns | 0.0124 ns | 0.0116 ns |  0.32 |      - |         - |          NA |
+| EnumsNet                   | Format     |   5.543 ns | 0.0175 ns | 0.0164 ns |  0.36 |      - |         - |          NA |
 |                            |            |            |           |           |       |        |           |             |
-| CSharpEssentials_Many      | FormatMany | 284.671 ns | 1.1061 ns | 0.9236 ns |  1.00 | 0.0134 |     224 B |        1.00 |
-| Bcl_Many                   | FormatMany | 157.674 ns | 0.6674 ns | 0.5573 ns |  0.55 | 0.0134 |     224 B |        1.00 |
-| EnumsNet_Many              | FormatMany | 151.202 ns | 0.4071 ns | 0.3808 ns |  0.53 | 0.0134 |     224 B |        1.00 |
+| CSharpEssentials_Many      | FormatMany | 190.594 ns | 0.8044 ns | 0.7524 ns |  1.00 | 0.0134 |     224 B |        1.00 |
+| Bcl_Many                   | FormatMany | 157.100 ns | 0.5762 ns | 0.5390 ns |  0.82 | 0.0134 |     224 B |        1.00 |
+| EnumsNet_Many              | FormatMany | 149.443 ns | 0.7262 ns | 0.6793 ns |  0.78 | 0.0134 |     224 B |        1.00 |

@@ -6,8 +6,8 @@ Pipeline behaviors for the [Mediator](https://github.com/martinothamar/Mediator)
 > startup, behavior cost and Native AOT), are in [BENCHMARKS.md](./BENCHMARKS.md). This package is not a dispatcher, so
 > its dispatch cost is Mediator's: on net10 a send takes 7.8 ns through Mediator and 67.4 ns through MediatR (0
 > behaviors), but Mediator is 1.10× slower from a cold process (35.6 vs 32.4 ms). The validation and exception handling
-> behaviors cost more than hand-written ones on Mediator: 236.2 vs 183.5 ns for valid input, 439.8 vs 262.9 ns and 1,032
-> vs 712 B for invalid input, which is also slower than hand-written MediatR behaviors (428.7 ns). Under Native AOT
+> behaviors tie hand-written ones on Mediator for valid input (177.6 vs 179.3 ns) and cost more for invalid input (292.5 vs
+> 282.1 ns, 752 vs 712 B), which is still faster than hand-written MediatR behaviors (396.0 ns). Under Native AOT
 > (samples without `TrimmerRootAssembly`) Mediator runs and MediatR crashes. Both CSE samples (validation and exception
 > handling behaviors, with and without `AddValidator`) publish with 0 IL warnings and run, at 2.5 MB. See BENCHMARKS.md.
 

@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyExecutorBenchmarks-20261105-223801</title>
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyExecutorBenchmarks-20261108-193134</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,24 +15,24 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method                    </th><th>Categories</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method                    </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>Direct_Call</td><td>Execute</td><td>1.424 ns</td><td>0.0138 ns</td><td>0.0129 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten_ConcurrentDictionary</td><td>Execute</td><td>15.138 ns</td><td>0.0197 ns</td><td>0.0184 ns</td><td>10.63</td><td>0.09</td><td>-</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_FirstRun</td><td>Execute</td><td>1,486.117 ns</td><td>11.4068 ns</td><td>10.6700 ns</td><td>1,043.78</td><td>11.71</td><td>0.0343</td><td>0.0305</td><td>592 B</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_Replay</td><td>Execute</td><td>130.799 ns</td><td>0.5063 ns</td><td>0.4736 ns</td><td>91.87</td><td>0.87</td><td>0.0091</td><td>-</td><td>152 B</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_InFlight</td><td>Execute</td><td>117.662 ns</td><td>0.3616 ns</td><td>0.3383 ns</td><td>82.64</td><td>0.76</td><td>0.0057</td><td>-</td><td>96 B</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_KeyReused</td><td>Execute</td><td>121.813 ns</td><td>0.1942 ns</td><td>0.1722 ns</td><td>85.56</td><td>0.76</td><td>0.0057</td><td>-</td><td>96 B</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_ModeOff</td><td>Execute</td><td>59.187 ns</td><td>0.1490 ns</td><td>0.1393 ns</td><td>41.57</td><td>0.38</td><td>0.0057</td><td>-</td><td>96 B</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_Inbox_New</td><td>Inbox</td><td>1,926.299 ns</td><td>9.5303 ns</td><td>8.4484 ns</td><td>1.00</td><td>0.01</td><td>0.0648</td><td>0.0420</td><td>1112 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Inbox_Duplicate</td><td>Inbox</td><td>418.617 ns</td><td>0.4773 ns</td><td>0.4464 ns</td><td>0.22</td><td>0.00</td><td>0.0420</td><td>-</td><td>704 B</td><td>0.63</td>
+</thead><tbody><tr><td>Direct_Call</td><td>Execute</td><td>1.418 ns</td><td>0.0098 ns</td><td>0.0091 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten_ConcurrentDictionary</td><td>Execute</td><td>14.194 ns</td><td>0.0245 ns</td><td>0.0229 ns</td><td>10.01</td><td>0.06</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_FirstRun</td><td>Execute</td><td>549.333 ns</td><td>4.2837 ns</td><td>4.0069 ns</td><td>387.41</td><td>3.65</td><td>0.0296</td><td>0.0238</td><td>504 B</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Replay</td><td>Execute</td><td>119.891 ns</td><td>0.2947 ns</td><td>0.2756 ns</td><td>84.55</td><td>0.56</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_InFlight</td><td>Execute</td><td>117.577 ns</td><td>0.3118 ns</td><td>0.2916 ns</td><td>82.92</td><td>0.55</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_KeyReused</td><td>Execute</td><td>112.699 ns</td><td>0.1801 ns</td><td>0.1596 ns</td><td>79.48</td><td>0.51</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_ModeOff</td><td>Execute</td><td>51.513 ns</td><td>0.0662 ns</td><td>0.0587 ns</td><td>36.33</td><td>0.23</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Inbox_New</td><td>Inbox</td><td>958.428 ns</td><td>10.7661 ns</td><td>10.0706 ns</td><td>1.00</td><td>0.01</td><td>0.0591</td><td>0.0477</td><td>1000 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Inbox_Duplicate</td><td>Inbox</td><td>380.314 ns</td><td>1.0714 ns</td><td>0.9498 ns</td><td>0.40</td><td>0.00</td><td>0.0315</td><td>-</td><td>528 B</td><td>0.53</td>
 </tr></tbody></table>
 </body>
 </html>

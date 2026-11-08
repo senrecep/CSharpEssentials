@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Endpoints.Benchmarks.OperationNameReadBenchmarks-20261105-050332</title>
+<title>CSharpEssentials.Endpoints.Benchmarks.OperationNameReadBenchmarks-20261106-211427</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,18 +15,18 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method  </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method  </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CseTypeName</td><td>13.464 &mu;s</td><td>0.0130 &mu;s</td><td>0.0101 &mu;s</td><td>1.00</td><td>-</td><td>NA</td>
-</tr><tr><td>CseCustom</td><td>9.804 &mu;s</td><td>0.1914 &mu;s</td><td>0.2048 &mu;s</td><td>0.73</td><td>-</td><td>NA</td>
-</tr><tr><td>DirectWithName</td><td>8.006 &mu;s</td><td>0.0473 &mu;s</td><td>0.0419 &mu;s</td><td>0.59</td><td>-</td><td>NA</td>
+</thead><tbody><tr><td>CseTypeName</td><td>11.118 &mu;s</td><td>0.1658 &mu;s</td><td>0.1551 &mu;s</td><td>1.00</td><td>0.02</td><td>-</td><td>NA</td>
+</tr><tr><td>CseCustom</td><td>11.348 &mu;s</td><td>0.1292 &mu;s</td><td>0.1209 &mu;s</td><td>1.02</td><td>0.02</td><td>-</td><td>NA</td>
+</tr><tr><td>DirectWithName</td><td>8.983 &mu;s</td><td>0.1161 &mu;s</td><td>0.1086 &mu;s</td><td>0.81</td><td>0.01</td><td>-</td><td>NA</td>
 </tr></tbody></table>
 </body>
 </html>

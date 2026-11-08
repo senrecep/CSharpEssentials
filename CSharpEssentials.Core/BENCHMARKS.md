@@ -86,57 +86,57 @@ Snake, 280 characters (Long):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Snake` | 2,640.85 ns (1.00), 672 B | 2,517.16 ns (1.00), 672 B | 2,406.81 ns (1.00), 672 B | 2,500.28 ns (1.00), 672 B |
-| `Bcl_Snake` | 927.29 ns (0.35), 672 B | 743.06 ns (0.30), 672 B | 734.42 ns (0.31), 672 B | 836.97 ns (0.33), 672 B |
-| `Humanizer_Snake` | 6,860.30 ns (2.60), 1344 B | 6,615.43 ns (2.63), 1344 B | 6,249.49 ns (2.60), 1344 B | 6,057.94 ns (2.42), 1344 B |
+| `CSharpEssentials_Snake` | 1,014.75 ns (1.00), 672 B | 1,040.42 ns (1.00), 672 B | 1,017.55 ns (1.00), 672 B | 991.35 ns (1.00), 672 B |
+| `Bcl_Snake` | 929.06 ns (0.92), 672 B | 744.68 ns (0.72), 672 B | 735.74 ns (0.72), 672 B | 894.45 ns (0.90), 672 B |
+| `Humanizer_Snake` | 6,892.06 ns (6.79), 1344 B | 6,816.86 ns (6.55), 1344 B | 6,470.99 ns (6.36), 1344 B | 6,083.06 ns (6.14), 1344 B |
 
 Snake, 64 characters (Medium):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Snake` | 635.57 ns (1.00), 176 B | 581.66 ns (1.00), 176 B | 558.58 ns (1.00), 176 B | 592.39 ns (1.00), 176 B |
-| `Bcl_Snake` | 216.74 ns (0.34), 176 B | 184.92 ns (0.32), 176 B | 165.51 ns (0.30), 176 B | 193.58 ns (0.33), 176 B |
-| `Humanizer_Snake` | 1,780.52 ns (2.80), 352 B | 1,644.08 ns (2.83), 352 B | 1,539.08 ns (2.76), 352 B | 1,537.28 ns (2.60), 352 B |
+| `CSharpEssentials_Snake` | 241.94 ns (1.00), 176 B | 267.35 ns (1.00), 176 B | 257.22 ns (1.00), 176 B | 245.66 ns (1.00), 176 B |
+| `Bcl_Snake` | 219.96 ns (0.91), 176 B | 183.85 ns (0.69), 176 B | 169.04 ns (0.66), 176 B | 189.92 ns (0.77), 176 B |
+| `Humanizer_Snake` | 1,767.53 ns (7.31), 352 B | 1,705.91 ns (6.38), 352 B | 1,559.77 ns (6.06), 352 B | 1,535.71 ns (6.25), 352 B |
 
 Snake, 12 characters (Short):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Snake` | 131.27 ns (1.00), 56 B | 121.29 ns (1.00), 56 B | 110.23 ns (1.00), 56 B | 113.12 ns (1.00), 56 B |
-| `Bcl_Snake` | 55.30 ns (0.42), 56 B | 58.74 ns (0.48), 56 B | 43.11 ns (0.39), 56 B | 47.90 ns (0.42), 56 B |
-| `Humanizer_Snake` | 541.08 ns (4.12), 112 B | 508.16 ns (4.19), 112 B | 464.84 ns (4.22), 112 B | 457.72 ns (4.05), 112 B |
+| `CSharpEssentials_Snake` | 60.09 ns (1.00), 56 B | 61.74 ns (1.00), 56 B | 70.15 ns (1.00), 56 B | 58.95 ns (1.00), 56 B |
+| `Bcl_Snake` | 54.70 ns (0.91), 56 B | 58.52 ns (0.95), 56 B | 42.27 ns (0.60), 56 B | 48.17 ns (0.82), 56 B |
+| `Humanizer_Snake` | 553.68 ns (9.21), 112 B | 518.29 ns (8.40), 112 B | 469.49 ns (6.69), 112 B | 483.98 ns (8.21), 112 B |
 
 Kebab, 280 characters (Long):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Kebab` | 2,468.21 ns (1.00), 672 B | 2,567.24 ns (1.00), 672 B | 2,408.47 ns (1.00), 672 B | 2,503.77 ns (1.00), 672 B |
-| `Bcl_Kebab` | 925.45 ns (0.37), 672 B | 756.91 ns (0.29), 672 B | 736.50 ns (0.31), 672 B | 833.69 ns (0.33), 672 B |
-| `Humanizer_Kebab` | 7,051.23 ns (2.86), 2016 B | 6,715.63 ns (2.62), 2016 B | 6,475.46 ns (2.69), 2016 B | 6,090.09 ns (2.43), 2016 B |
+| `CSharpEssentials_Kebab` | 1,015.86 ns (1.00), 672 B | 1,052.57 ns (1.00), 672 B | 1,009.14 ns (1.00), 672 B | 995.83 ns (1.00), 672 B |
+| `Bcl_Kebab` | 919.25 ns (0.90), 672 B | 733.99 ns (0.70), 672 B | 733.56 ns (0.73), 672 B | 823.34 ns (0.83), 672 B |
+| `Humanizer_Kebab` | 6,902.96 ns (6.80), 2016 B | 6,887.76 ns (6.54), 2016 B | 6,368.42 ns (6.31), 2016 B | 6,011.88 ns (6.04), 2016 B |
 
 Kebab, 12 characters (Short):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Kebab` | 123.10 ns (1.00), 56 B | 122.89 ns (1.00), 56 B | 109.92 ns (1.00), 56 B | 113.40 ns (1.00), 56 B |
-| `Bcl_Kebab` | 55.60 ns (0.45), 56 B | 58.86 ns (0.48), 56 B | 43.18 ns (0.39), 56 B | 47.22 ns (0.42), 56 B |
-| `Humanizer_Kebab` | 553.61 ns (4.50), 168 B | 535.44 ns (4.36), 168 B | 481.01 ns (4.38), 168 B | 492.32 ns (4.34), 168 B |
+| `CSharpEssentials_Kebab` | 58.65 ns (1.00), 56 B | 60.73 ns (1.00), 56 B | 63.09 ns (1.00), 56 B | 58.08 ns (1.00), 56 B |
+| `Bcl_Kebab` | 54.90 ns (0.94), 56 B | 58.97 ns (0.97), 56 B | 43.24 ns (0.69), 56 B | 45.86 ns (0.79), 56 B |
+| `Humanizer_Kebab` | 562.44 ns (9.59), 168 B | 518.65 ns (8.54), 168 B | 504.43 ns (8.00), 168 B | 472.71 ns (8.14), 168 B |
 
 Camel, 280 characters (Long):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Camel` | 2,484.74 ns (1.00), 584 B | 2,425.49 ns (1.00), 584 B | 2,350.00 ns (1.00), 584 B | 2,447.31 ns (1.00), 584 B |
-| `Bcl_Camel` | 39.21 ns (0.02), 584 B | 38.43 ns (0.02), 584 B | 36.82 ns (0.02), 584 B | 35.44 ns (0.01), 584 B |
-| `Humanizer_Camel` | 3,595.10 ns (1.45), 1576 B | 3,588.17 ns (1.48), 1576 B | 3,483.56 ns (1.48), 1576 B | 3,507.09 ns (1.43), 1576 B |
+| `CSharpEssentials_Camel` | 893.53 ns (1.00), 584 B | 1,019.44 ns (1.00), 584 B | 1,047.50 ns (1.00), 584 B | 1,051.73 ns (1.00), 584 B |
+| `Bcl_Camel` | 34.55 ns (0.04), 584 B | 35.97 ns (0.04), 584 B | 34.73 ns (0.03), 584 B | 32.43 ns (0.03), 584 B |
+| `Humanizer_Camel` | 3,605.42 ns (4.04), 1576 B | 3,603.89 ns (3.54), 1576 B | 3,890.26 ns (3.71), 1576 B | 3,427.89 ns (3.26), 1576 B |
 
 Camel, 12 characters (Short):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Camel` | 118.80 ns (1.00), 48 B | 121.44 ns (1.00), 48 B | 106.88 ns (1.00), 48 B | 111.71 ns (1.00), 48 B |
-| `Bcl_Camel` | 14.22 ns (0.12), 48 B | 14.15 ns (0.12), 48 B | 11.95 ns (0.11), 48 B | 11.28 ns (0.10), 48 B |
-| `Humanizer_Camel` | 502.78 ns (4.23), 504 B | 455.77 ns (3.75), 504 B | 397.74 ns (3.72), 504 B | 398.58 ns (3.57), 504 B |
+| `CSharpEssentials_Camel` | 51.96 ns (1.00), 48 B | 54.22 ns (1.00), 48 B | 71.36 ns (1.00), 48 B | 56.52 ns (1.00), 48 B |
+| `Bcl_Camel` | 13.95 ns (0.27), 48 B | 13.71 ns (0.25), 48 B | 11.73 ns (0.16), 48 B | 11.00 ns (0.19), 48 B |
+| `Humanizer_Camel` | 447.87 ns (8.62), 504 B | 437.39 ns (8.07), 504 B | 394.95 ns (5.53), 504 B | 400.03 ns (7.08), 504 B |
 
 Kebab Medium and Camel Medium follow the same pattern; they are in the reports.
 
@@ -146,17 +146,17 @@ Encode:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Encode` | 56.79 ns (1.00), 112 B | 47.68 ns (1.00), 72 B | 46.85 ns (1.00), 72 B | 47.72 ns (1.00), 72 B |
-| `ShortGuid_Encode` | 72.78 ns (1.28), 256 B | 71.67 ns (1.50), 256 B | 68.64 ns (1.47), 256 B | 57.23 ns (1.20), 256 B |
-| `Bcl_Encode` | no row | 19.52 ns (0.41), 72 B | 22.26 ns (0.48), 72 B | 15.03 ns (0.32), 72 B |
+| `CSharpEssentials_Encode` | 56.72 ns (1.00), 112 B | 19.60 ns (1.00), 72 B | 21.96 ns (1.00), 72 B | 14.33 ns (1.00), 72 B |
+| `ShortGuid_Encode` | 67.82 ns (1.20), 256 B | 70.02 ns (3.57), 256 B | 65.01 ns (2.96), 256 B | 53.79 ns (3.75), 256 B |
+| `Bcl_Encode` | no row | 18.96 ns (0.97), 72 B | 19.63 ns (0.89), 72 B | 13.94 ns (0.97), 72 B |
 
 Decode:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Decode` | 101.99 ns (1.00), 0 B | 102.01 ns (1.00), 0 B | 80.81 ns (1.00), 0 B | 56.49 ns (1.00), 0 B |
-| `ShortGuid_Decode` | 268.40 ns (2.63), 696 B | 257.93 ns (2.53), 696 B | 253.70 ns (3.14), 696 B | 197.32 ns (3.49), 696 B |
-| `Bcl_Decode` | no row | 24.14 ns (0.24), 0 B | 22.12 ns (0.27), 0 B | 20.26 ns (0.36), 0 B |
+| `CSharpEssentials_Decode` | 99.13 ns (1.00), 0 B | 43.46 ns (1.00), 0 B | 35.82 ns (1.00), 0 B | 21.76 ns (1.00), 0 B |
+| `ShortGuid_Decode` | 264.13 ns (2.66), 696 B | 253.47 ns (5.83), 696 B | 258.74 ns (7.22), 696 B | 188.53 ns (8.66), 696 B |
+| `Bcl_Decode` | no row | 23.79 ns (0.55), 0 B | 22.56 ns (0.63), 0 B | 20.23 ns (0.93), 0 B |
 
 ### Unique random sample (`RandomItemsComparison`)
 
@@ -229,8 +229,8 @@ Time per GUID:
 
 ### Where CSE wins
 
-- Case conversion against Humanizer on every length and TFM: ratio 1.43 to 4.50, and Humanizer allocates 2 to 10.50 times as much (Alloc Ratio 2.00 to 10.50). CSE allocates the same as the BCL.
-- Guider against ShortGuid on every TFM: Encode ratio 1.20 to 1.50, Decode ratio 2.53 to 3.49. CSE decodes with 0 B, ShortGuid allocates 696 B.
+- Case conversion against Humanizer on every length and TFM: ratio 3.26 to 9.59, and Humanizer allocates 2 to 10.50 times as much (Alloc Ratio 2.00 to 10.50). CSE allocates the same as the BCL.
+- Guider against ShortGuid on every TFM: Encode ratio 1.20 to 3.75, Decode ratio 2.66 to 8.66. CSE decodes with 0 B, ShortGuid allocates 696 B.
 - Unique sample against `RandomNumberGenerator.Shuffle` (the only other cryptographic row) at K = 10 (ratio 129.46 to 134.04) and K = 500 (ratio 1.956 to 2.053), and at K = 990 on net8.0 (1.025) and net9.0 (1.011). CSE allocates the least of all Unique rows at every K.
 - `Guider.NewGuid` and `NewMonotonicGuid` against `Guid.NewGuid` and `Guid.CreateVersion7` on net8.0 to net10.0, on one thread and on 6 threads. On net10.0, one thread: 59.39 ns and 71.34 ns against 752.17 ns and 773.69 ns.
 - `Guider.NewGuid` on net11.0, one thread: 52.95 ns against 57.94 ns for `Guid.NewGuid` (0.91) and 90.15 ns for `Guid.CreateVersion7`.
@@ -239,8 +239,8 @@ Time per GUID:
 
 Every row where CSE is slower or allocates more than a competitor:
 
-- **Case conversion against `JsonNamingPolicy`, every length and TFM.** Snake and kebab: ratio 0.29 to 0.48 with the same output and the same allocation; on net10.0 Long snake took 734.42 ns against 2,406.81 ns. Camel: ratio 0.01 to 0.12; on net10.0 Long camel took 36.82 ns against 2,350.00 ns. The BCL camel policy only lowercases the leading capitals, so it does less work, but for these inputs the output is the same.
-- **Guider against `Base64Url`, net9.0 to net11.0.** Encode ratio 0.32 to 0.48 (net11.0: 15.03 ns against 47.72 ns), Decode ratio 0.24 to 0.36 (net11.0: 20.26 ns against 56.49 ns). The text is the same and so is the allocation (72 B and 0 B).
+- **Case conversion against `JsonNamingPolicy`, every length and TFM.** Snake and kebab: ratio 0.60 to 0.97 with the same output and the same allocation; on net10.0 Long snake took 735.74 ns against 1,017.55 ns. Camel: ratio 0.03 to 0.27; on net10.0 Long camel took 34.73 ns against 1,047.50 ns. The BCL camel policy only lowercases the leading capitals, so it does less work, but for these inputs the output is the same.
+- **Guider against `Base64Url`, net9.0 to net11.0.** Encode ratio 0.89 to 0.97 (net11.0: 13.94 ns against 14.33 ns), so close to level on net9.0 and net11.0. Decode ratio 0.55 to 0.93 (net11.0: 20.23 ns against 21.76 ns). The text is the same and so is the allocation (72 B and 0 B).
 - **Guider Encode on net8.0 allocates 112 B**, because the netstandard2.1 build calls `Guid.ToByteArray()`. On net9.0 and later it allocates 72 B. ShortGuid still allocates more (256 B).
 - **Unique sample against the `Random.Shared` and hand-written rows, every K and TFM.** These rows use a non-cryptographic RNG, so they do a different job. At K = 10 `Random.Shared.Shuffle` has ratio 0.46 to 0.92 and the hand-written row 0.03; at K = 500 and K = 990 both are at 0.004 to 0.010.
 - **Unique sample at K = 990 against `RandomNumberGenerator.Shuffle` on net10.0 and net11.0:** 1,282,952.20 ns against 1,303,631.05 ns (0.984) and 1,288,284.27 ns against 1,302,933.68 ns (0.989). Both draw from the cryptographic RNG once per item.
@@ -252,7 +252,7 @@ Every row where CSE is slower or allocates more than a competitor:
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on one Linux machine with 6 cores and 12 threads (x64, RyuJIT AVX2). The report headers have the exact CPU and OS.
-- SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
+- SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. Classes 1 and 2 were rerun on main after pull requests #230 to #256 landed, with SDK 11.0.100-rc.3.26522.148 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the `integ/all` note below applies to classes 3 to 6.
 - The CSE code is the local `integ/all` branch, which merges every open pull request (commit `fe91b26a`). It may not match the version published on NuGet.
 - Load, classes 1 to 4 (json suite): the 1-minute load average was 1.43 at the start and 1.74 at the end.
 - Load, classes 5 and 6 (core suite): the 1-minute load average was 3.35 at the start and 4.87 at the end (5-minute 3.45 and 3.86). The 6-thread class ran on a 12-thread machine with that background load. Only the start and end of each suite were sampled.

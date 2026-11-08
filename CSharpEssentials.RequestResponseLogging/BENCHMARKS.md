@@ -76,9 +76,10 @@ From CSE source and the competitors' docs; not measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on both classes. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
-- One Linux x64 machine, 6 physical cores and 12 threads (the exact CPU is in each report header). The suites ran one after another, never in parallel.
-- The 1-minute load average was 1.60 when the `aspnetcore` suite started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. The `RequestLoggingComparison` report for net9.0 comes from a rerun at a 1-minute load of 2.48 at its start and 2.35 at its end. After the reruns, no row on this page is above 5% CV.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on both classes. Both classes were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- One Linux x64 machine, 6 physical cores and 12 threads. The suites ran one after another, never in parallel.
+- `RequestLoggingMetadataComparison` rerun: the load average was not recorded; no row is above 5% CV.
+- `RequestLoggingComparison` rerun: one row is above 5% CV (`HttpLogging_Defaults` at 1 KB on net8.0, 5.4%) and is marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/*-report-github.md` (also `.csv` and `.html`), for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/).
 
 Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TFM. The ratio is against `Plain_NoLogging` with the same `BodySize`.
@@ -87,43 +88,42 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 | Method | BodySize | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| `Plain_NoLogging` | 1024 | 11.74 μs (1.00), 10.59 KB | 11.49 μs (1.00), 10.54 KB | 10.47 μs (1.00), 10.42 KB | 14.12 μs (1.00), 12.38 KB |
-| `CSharpEssentials_AllFields` | 1024 | 25.19 μs (2.15), 40.94 KB | 22.03 μs (1.92), 40.9 KB | 21.02 μs (2.01), 40.71 KB | 28.26 μs (2.00), 42.12 KB |
-| `HttpLogging_Bodies` | 1024 | 18.11 μs (1.54), 25.06 KB | 17.46 μs (1.52), 25.04 KB | 15.90 μs (1.52), 24.91 KB | 23.79 μs (1.69), 21.58 KB |
-| `HttpLogging_Defaults` | 1024 | 18.84 μs (1.61), 25.44 KB | 18.08 μs (1.57), 25.38 KB | 16.40 μs (1.57), 25.26 KB | 25.20 μs (1.79), 21.94 KB |
-| `Plain_NoLogging` | 65536 | 41.66 μs (1.00), 78.36 KB | 40.32 μs (1.00), 78.31 KB | 40.64 μs (1.00), 78.21 KB | 50.34 μs (1.00), 81.24 KB |
-| `CSharpEssentials_AllFields` | 65536 | 243.45 μs (5.84), 893.59 KB | 225.18 μs (5.58), 893.48 KB | 218.85 μs (5.39), 893.38 KB | 231.60 μs (4.60), 895.63 KB |
-| `HttpLogging_Bodies` | 65536 | 277.95 μs (6.67), 1093.28 KB | 286.47 μs (7.10), 1093.26 KB | 202.13 μs (4.98), 1093.47 KB | 270.41 μs (5.37), 1095.7 KB |
-| `HttpLogging_Defaults` | 65536 | 120.83 μs (2.90), 579.47 KB | 121.87 μs (3.02), 579.35 KB | 127.65 μs (3.14), 579.17 KB | 134.19 μs (2.67), 581.71 KB |
-| `Plain_NoLogging` | 1048576 | 508.93 μs (1.00), 1988.69 KB | 642.03 μs (1.00), 1988.13 KB | 501.71 μs (1.00), 1092.22 KB | 506.68 μs (1.00), 1096.41 KB |
-| `CSharpEssentials_AllFields` | 1048576 | 3,414.21 μs (6.71), 14343.37 KB | 3,603.47 μs (5.61), 14343.09 KB | 3,517.92 μs (7.01), 13447.32 KB | 3,701.84 μs (7.31), 13451.19 KB |
-| `HttpLogging_Bodies` | 1048576 | 3,632.79 μs (7.14), 19941.43 KB | 4,339.94 μs (6.76), 19942.6 KB | 4,680.96 μs (9.33), 19045.95 KB | 4,953.94 μs (9.78), 19051.26 KB |
-| `HttpLogging_Defaults` | 1048576 | 643.18 μs (1.26), 2488.74 KB | 658.34 μs (1.03), 2489.06 KB | 770.80 μs (1.54), 1592.46 KB | 542.46 μs (1.07), 1596.75 KB |
+| `Plain_NoLogging` | 1024 | 11.68 μs (1.00), 10.59 KB | 10.36 μs (1.00), 10.54 KB | 9.318 μs (1.00), 10.41 KB | 10.72 μs (1.00), 13.18 KB |
+| `CSharpEssentials_AllFields` | 1024 | 21.49 μs (1.84), 21.36 KB | 18.81 μs (1.82), 21.28 KB | 16.685 μs (1.79), 21.08 KB | 16.55 μs (1.54), 23.8 KB |
+| `HttpLogging_Bodies` | 1024 | 17.60 μs (1.51), 25.05 KB | 15.33 μs (1.48), 24.98 KB | 13.661 μs (1.47), 24.87 KB | 15.91 μs (1.48), 22.8 KB |
+| `HttpLogging_Defaults` | 1024 | 18.65 μs (1.60), 25.45 KB, noisy (CV 5.4%) | 16.26 μs (1.57), 25.34 KB | 13.993 μs (1.50), 25.22 KB | 16.16 μs (1.51), 23.08 KB |
+| `Plain_NoLogging` | 65536 | 41.21 μs (1.00), 78.36 KB | 37.97 μs (1.00), 78.31 KB | 36.807 μs (1.00), 78.19 KB | 39.10 μs (1.00), 80.78 KB |
+| `CSharpEssentials_AllFields` | 65536 | 151.19 μs (3.67), 594.68 KB | 170.47 μs (4.50), 594.63 KB | 165.691 μs (4.50), 594.44 KB | 139.79 μs (3.58), 597.57 KB |
+| `HttpLogging_Bodies` | 65536 | 286.98 μs (6.97), 1093.32 KB | 248.86 μs (6.56), 1093.46 KB | 223.724 μs (6.08), 1093.17 KB | 242.72 μs (6.21), 1096.5 KB |
+| `HttpLogging_Defaults` | 65536 | 117.17 μs (2.84), 579.37 KB | 109.90 μs (2.90), 579.4 KB | 106.896 μs (2.90), 579.28 KB | 111.84 μs (2.86), 582.17 KB |
+| `Plain_NoLogging` | 1048576 | 571.48 μs (1.00), 1988.26 KB | 564.31 μs (1.00), 1988.22 KB | 432.244 μs (1.00), 1092.15 KB | 425.52 μs (1.00), 1097.42 KB |
+| `CSharpEssentials_AllFields` | 1048576 | 2,283.50 μs (4.00), 10185.53 KB | 2,651.67 μs (4.70), 10185.52 KB | 2,107.251 μs (4.88), 9289.16 KB | 2,284.02 μs (5.37), 9294.03 KB |
+| `HttpLogging_Bodies` | 1048576 | 3,280.59 μs (5.74), 19941.05 KB | 4,624.49 μs (8.20), 19941.45 KB | 4,256.239 μs (9.85), 19045.49 KB | 4,628.40 μs (10.88), 19050.27 KB |
+| `HttpLogging_Defaults` | 1048576 | 589.77 μs (1.03), 2489.09 KB | 688.92 μs (1.22), 2488.41 KB | 637.724 μs (1.48), 1592.31 KB | 625.47 μs (1.47), 1597.19 KB |
 
-- 1 KB: CSE costs 1.92 to 2.15 of the plain request and is slower than `HttpLogging_Bodies` on every TFM, with more allocated (see below).
-- 64 KB: CSE is faster than `HttpLogging_Bodies` on net8.0, net9.0 and net11.0 and slower on net10.0 (218.85 against 202.13 μs). It allocates less on every TFM (893.38 KB against 1093.47 KB on net10.0).
-- 1 MB: CSE is faster than `HttpLogging_Bodies` and allocates less on every TFM. On net10.0: 3,517.92 μs and 13447.32 KB against 4,680.96 μs and 19045.95 KB. Both still cost 5.61 to 9.78 times the plain request, because both put two 1 MB bodies into one log message.
-- `HttpLogging_Defaults` stops each body at 32 KB, so from 64 KB on it does less work than the other two rows (643.18 μs at 1 MB on net8.0). It is there to show the default, not as a like-for-like row.
+- 1 KB: CSE costs 1.54 to 1.84 of the plain request and is slower than `HttpLogging_Bodies` on every TFM (see below). It allocates less than `HttpLogging_Bodies` on net8.0 to net10.0 (21.08 against 24.87 KB on net10.0) and more on net11.0.
+- 64 KB: CSE is faster than `HttpLogging_Bodies` and allocates less on every TFM (net10.0: 165.691 μs and 594.44 KB against 223.724 μs and 1093.17 KB).
+- 1 MB: CSE is faster than `HttpLogging_Bodies` and allocates less on every TFM. On net10.0: 2,107.251 μs and 9289.16 KB against 4,256.239 μs and 19045.49 KB. Both still cost 4.00 to 10.88 times the plain request, because both put two 1 MB bodies into one log message.
+- `HttpLogging_Defaults` stops each body at 32 KB, so from 64 KB on it does less work than the other two rows (589.77 μs at 1 MB on net8.0). It is there to show the default, not as a like-for-like row.
 
 ### Metadata only
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `Plain_NoLogging` | 9.774 μs (1.00), 9.71 KB | 9.461 μs (1.00), 9.66 KB | 8.817 μs (1.00), 9.53 KB | 12.30 μs (1.00), 11.51 KB |
-| `CSharpEssentials_SkipBodies` | 10.813 μs (1.11), 10.51 KB | 10.300 μs (1.09), 10.43 KB | 10.010 μs (1.14), 10.24 KB | 12.86 μs (1.05), 12.17 KB |
-| `Serilog_RequestLogging` | 13.151 μs (1.35), 12.51 KB | 12.484 μs (1.32), 12.39 KB | 11.871 μs (1.35), 12.17 KB | 16.89 μs (1.37), 13.82 KB |
-| `HttpLogging_Metadata` | 10.878 μs (1.11), 10.36 KB | 10.336 μs (1.09), 10.31 KB | 9.795 μs (1.11), 10.19 KB | 13.22 μs (1.08), 12.14 KB |
+| `Plain_NoLogging` | 9.152 μs (1.00), 9.71 KB | 8.558 μs (1.00), 9.66 KB | 8.255 μs (1.00), 9.53 KB | 10.69 μs (1.00), 12.33 KB |
+| `CSharpEssentials_SkipBodies` | 9.977 μs (1.09), 10.49 KB | 9.483 μs (1.11), 10.43 KB | 8.724 μs (1.06), 10.22 KB | 11.47 μs (1.07), 13.06 KB |
+| `Serilog_RequestLogging` | 12.052 μs (1.32), 12.49 KB | 11.090 μs (1.30), 12.41 KB | 10.866 μs (1.32), 12.22 KB | 12.56 μs (1.18), 15 KB |
+| `HttpLogging_Metadata` | 9.752 μs (1.07), 10.36 KB | 9.472 μs (1.11), 10.3 KB | 8.918 μs (1.08), 10.17 KB | 11.78 μs (1.10), 13.05 KB |
 
-- CSE (method, path, timing, both bodies skipped) costs 1.05 to 1.14 of the plain request, HttpLogging 1.08 to 1.11 and Serilog 1.32 to 1.37. CSE is faster than Serilog on every TFM and allocates less.
-- Against HttpLogging, CSE is faster on net8.0, net9.0 and net11.0 and slower on net10.0. CSE allocates slightly more on every TFM.
+- CSE (method, path, timing, both bodies skipped) costs 1.06 to 1.11 of the plain request, HttpLogging 1.07 to 1.11 and Serilog 1.18 to 1.32. CSE is faster than Serilog on every TFM and allocates less.
+- Against HttpLogging, CSE is within error on every TFM. CSE allocates slightly more on every TFM.
 - HttpLogging and Serilog log the status code; CSE has no status code field, so its event carries less.
 
 ### Where CSE loses
 
-- **1 KB bodies, all TFMs: slower than `HttpLogging_Bodies` and allocates more.** 25.19 against 18.11 μs and 40.94 against 25.06 KB (net8.0); 22.03 against 17.46 μs and 40.9 against 25.04 KB (net9.0); 21.02 against 15.90 μs and 40.71 against 24.91 KB (net10.0); 28.26 against 23.79 μs and 42.12 against 21.58 KB (net11.0).
-- **64 KB bodies, net10.0: slower than `HttpLogging_Bodies`.** 218.85 against 202.13 μs.
-- **`HttpLogging_Defaults`, all sizes and TFMs: faster and allocates less than CSE.** At 1 KB, where it logs both whole bodies plus headers: 18.84 against 25.19 μs and 25.44 against 40.94 KB (net8.0), 18.08 against 22.03 μs and 25.38 against 40.9 KB (net9.0), 16.40 against 21.02 μs and 25.26 against 40.71 KB (net10.0), 25.20 against 28.26 μs and 21.94 against 42.12 KB (net11.0). At 64 KB and 1 MB it truncates each body at 32 KB, so it does less work (net10.0: 127.65 against 218.85 μs at 64 KB, 770.80 against 3,517.92 μs at 1 MB).
-- **Metadata, all TFMs: allocates more than HttpLogging.** 10.51 against 10.36 KB (net8.0), 10.43 against 10.31 KB (net9.0), 10.24 against 10.19 KB (net10.0), 12.17 against 12.14 KB (net11.0). On net10.0 it is also slower: 10.010 against 9.795 μs.
+- **1 KB bodies, all TFMs: slower than `HttpLogging_Bodies`.** 21.49 against 17.60 μs (net8.0), 18.81 against 15.33 μs (net9.0), 16.685 against 13.661 μs (net10.0), 16.55 against 15.91 μs (net11.0). On net11.0 CSE also allocates more: 23.8 against 22.8 KB.
+- **`HttpLogging_Defaults`, all sizes and TFMs: faster than CSE.** At 1 KB, where it logs both whole bodies plus headers: 18.65 against 21.49 μs (net8.0, the HttpLogging row is noisy, CV 5.4%), 16.26 against 18.81 μs (net9.0), 13.993 against 16.685 μs (net10.0), 16.16 against 16.55 μs (net11.0). At 1 KB it allocates less than CSE only on net11.0 (23.08 against 23.8 KB); on net8.0 to net10.0 CSE allocates less. At 64 KB and 1 MB it truncates each body at 32 KB, so it does less work and allocates less (net10.0: 106.896 against 165.691 μs at 64 KB, 637.724 against 2,107.251 μs at 1 MB).
+- **Metadata, all TFMs: allocates more than HttpLogging.** 10.49 against 10.36 KB (net8.0), 10.43 against 10.3 KB (net9.0), 10.22 against 10.17 KB (net10.0), 13.06 against 13.05 KB (net11.0). Time is within error on every TFM.
 
 ---
 

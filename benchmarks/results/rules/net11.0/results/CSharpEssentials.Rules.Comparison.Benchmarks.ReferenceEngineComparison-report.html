@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Rules.Comparison.Benchmarks.ReferenceEngineComparison-20261104-225011</title>
+<title>CSharpEssentials.Rules.Comparison.Benchmarks.ReferenceEngineComparison-20261108-182708</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,23 +15,23 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method        </th><th>Input</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CseLinear</td><td>Pass</td><td>87.452 ns</td><td>0.3517 ns</td><td>0.3290 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>Pass</td><td>2.285 ns</td><td>0.0195 ns</td><td>0.0182 ns</td><td>0.03</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>NRulesReference</td><td>Pass</td><td>3,452.054 ns</td><td>28.7248 ns</td><td>26.8692 ns</td><td>39.47</td><td>0.33</td><td>0.6485</td><td>0.0153</td><td>10872 B</td><td>NA</td>
-</tr><tr><td>RulesEngineReference</td><td>Pass</td><td>1,525.928 ns</td><td>8.4456 ns</td><td>7.9001 ns</td><td>17.45</td><td>0.11</td><td>0.2518</td><td>0.0019</td><td>4240 B</td><td>NA</td>
-</tr><tr><td>CseLinear</td><td>FailLast</td><td>97.123 ns</td><td>0.1068 ns</td><td>0.0892 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>-</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>HandWritten</td><td>FailLast</td><td>11.465 ns</td><td>0.1496 ns</td><td>0.1400 ns</td><td>0.12</td><td>0.00</td><td>0.0033</td><td>-</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>NRulesReference</td><td>FailLast</td><td>4,865.466 ns</td><td>28.6967 ns</td><td>26.8429 ns</td><td>50.10</td><td>0.27</td><td>0.8240</td><td>0.0229</td><td>13864 B</td><td>247.57</td>
-</tr><tr><td>RulesEngineReference</td><td>FailLast</td><td>1,676.275 ns</td><td>10.2418 ns</td><td>9.5802 ns</td><td>17.26</td><td>0.10</td><td>0.2594</td><td>-</td><td>4360 B</td><td>77.86</td>
+</thead><tbody><tr><td>CseLinear</td><td>Pass</td><td>81.619 ns</td><td>0.1619 ns</td><td>0.1515 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>Pass</td><td>2.241 ns</td><td>0.0028 ns</td><td>0.0022 ns</td><td>0.03</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>NRulesReference</td><td>Pass</td><td>3,151.643 ns</td><td>27.2329 ns</td><td>21.2617 ns</td><td>38.61</td><td>0.26</td><td>0.6485</td><td>0.0153</td><td>10872 B</td><td>NA</td>
+</tr><tr><td>RulesEngineReference</td><td>Pass</td><td>1,490.528 ns</td><td>13.4048 ns</td><td>12.5389 ns</td><td>18.26</td><td>0.15</td><td>0.2518</td><td>0.0019</td><td>4240 B</td><td>NA</td>
+</tr><tr><td>CseLinear</td><td>FailLast</td><td>93.996 ns</td><td>0.2623 ns</td><td>0.2453 ns</td><td>1.00</td><td>0.00</td><td>0.0033</td><td>-</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>HandWritten</td><td>FailLast</td><td>10.712 ns</td><td>0.0889 ns</td><td>0.0832 ns</td><td>0.11</td><td>0.00</td><td>0.0033</td><td>-</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>NRulesReference</td><td>FailLast</td><td>4,820.420 ns</td><td>34.6671 ns</td><td>32.4277 ns</td><td>51.28</td><td>0.36</td><td>0.8240</td><td>0.0229</td><td>13864 B</td><td>247.57</td>
+</tr><tr><td>RulesEngineReference</td><td>FailLast</td><td>1,645.927 ns</td><td>8.4496 ns</td><td>7.9037 ns</td><td>17.51</td><td>0.09</td><td>0.2594</td><td>-</td><td>4360 B</td><td>77.86</td>
 </tr></tbody></table>
 </body>
 </html>

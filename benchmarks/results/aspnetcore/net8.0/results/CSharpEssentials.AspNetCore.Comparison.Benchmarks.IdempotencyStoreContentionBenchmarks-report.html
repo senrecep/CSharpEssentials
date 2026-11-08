@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyStoreContentionBenchmarks-20261105-215306</title>
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyStoreContentionBenchmarks-20261108-185600</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,9 +15,9 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
 </code></pre>
 <pre><code>Categories=Contended  
 </code></pre>
@@ -25,10 +25,10 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 <table>
 <thead><tr><th>Method                                    </th><th>Threads</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_InMemory_Contended_SameKey</td><td>8</td><td>242.3 ns</td><td>1.15 ns</td><td>1.08 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>-</td><td>59 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_InMemory_Contended_DistinctKeys</td><td>8</td><td>863.7 ns</td><td>8.72 ns</td><td>7.73 ns</td><td>3.56</td><td>0.03</td><td>0.0973</td><td>0.0820</td><td>1483 B</td><td>25.14</td>
-</tr><tr><td>CSharpEssentials_InMemory_Contended_SameKey</td><td>32</td><td>296.6 ns</td><td>2.95 ns</td><td>2.76 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>-</td><td>61 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_InMemory_Contended_DistinctKeys</td><td>32</td><td>853.9 ns</td><td>13.77 ns</td><td>12.21 ns</td><td>2.88</td><td>0.05</td><td>0.0973</td><td>0.0820</td><td>1485 B</td><td>24.34</td>
+</thead><tbody><tr><td>CSharpEssentials_InMemory_Contended_SameKey</td><td>8</td><td>256.4 ns</td><td>0.70 ns</td><td>0.65 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>3 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_Contended_DistinctKeys</td><td>8</td><td>762.1 ns</td><td>5.63 ns</td><td>5.27 ns</td><td>2.97</td><td>0.02</td><td>0.0973</td><td>0.0782</td><td>1491 B</td><td>497.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_Contended_SameKey</td><td>32</td><td>266.1 ns</td><td>2.27 ns</td><td>2.01 ns</td><td>1.00</td><td>0.01</td><td>-</td><td>-</td><td>5 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_Contended_DistinctKeys</td><td>32</td><td>792.0 ns</td><td>10.19 ns</td><td>9.53 ns</td><td>2.98</td><td>0.04</td><td>0.0973</td><td>0.0782</td><td>1493 B</td><td>298.60</td>
 </tr></tbody></table>
 </body>
 </html>

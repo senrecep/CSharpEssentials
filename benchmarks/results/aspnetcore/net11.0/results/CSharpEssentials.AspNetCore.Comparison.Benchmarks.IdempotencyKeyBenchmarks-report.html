@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyKeyBenchmarks-20261105-230635</title>
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyKeyBenchmarks-20261108-195309</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,21 +15,21 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                        </th><th>Categories</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_For_Short</td><td>For</td><td>44.64 ns</td><td>0.242 ns</td><td>0.215 ns</td><td>1.00</td><td>0.01</td><td>0.0091</td><td>152 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_For_Long</td><td>For</td><td>1,293.39 ns</td><td>6.620 ns</td><td>5.869 ns</td><td>28.97</td><td>0.18</td><td>0.1450</td><td>2432 B</td><td>16.00</td>
-</tr><tr><td>CSharpEssentials_ToStorageKey</td><td>StorageKey</td><td>58.73 ns</td><td>0.401 ns</td><td>0.375 ns</td><td>1.00</td><td>0.01</td><td>0.0138</td><td>232 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Scope_UserAndTenant</td><td>StorageKey</td><td>135.71 ns</td><td>1.410 ns</td><td>1.250 ns</td><td>2.31</td><td>0.02</td><td>0.0377</td><td>632 B</td><td>2.72</td>
-</tr><tr><td>HandWritten_UuidV5</td><td>Uuid</td><td>587.74 ns</td><td>0.544 ns</td><td>0.455 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_ToUuidV5</td><td>Uuid</td><td>885.82 ns</td><td>3.438 ns</td><td>3.216 ns</td><td>1.51</td><td>0.01</td><td>0.0267</td><td>456 B</td><td>NA</td>
+</thead><tbody><tr><td>CSharpEssentials_For_Short</td><td>For</td><td>43.63 ns</td><td>0.469 ns</td><td>0.438 ns</td><td>1.00</td><td>0.01</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_For_Long</td><td>For</td><td>1,258.60 ns</td><td>9.118 ns</td><td>8.083 ns</td><td>28.85</td><td>0.33</td><td>0.1450</td><td>2432 B</td><td>16.00</td>
+</tr><tr><td>CSharpEssentials_ToStorageKey</td><td>StorageKey</td><td>56.34 ns</td><td>0.338 ns</td><td>0.316 ns</td><td>1.00</td><td>0.01</td><td>0.0138</td><td>232 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Scope_UserAndTenant</td><td>StorageKey</td><td>132.33 ns</td><td>1.042 ns</td><td>0.975 ns</td><td>2.35</td><td>0.02</td><td>0.0377</td><td>632 B</td><td>2.72</td>
+</tr><tr><td>HandWritten_UuidV5</td><td>Uuid</td><td>587.31 ns</td><td>0.779 ns</td><td>0.691 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_ToUuidV5</td><td>Uuid</td><td>862.30 ns</td><td>2.936 ns</td><td>2.746 ns</td><td>1.47</td><td>0.00</td><td>0.0267</td><td>456 B</td><td>NA</td>
 </tr></tbody></table>
 </body>
 </html>

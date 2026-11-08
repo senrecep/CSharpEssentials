@@ -2,20 +2,20 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 
 
 ```
-| Method                     | Succeed | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|--------------------------- |-------- |-----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| **CSharpEssentials**           | **False**   |  **9.9265 ns** | **0.1208 ns** | **0.1130 ns** | **1.000** |    **0.02** | **0.0033** |      **56 B** |        **1.00** |
-| CSharpFunctionalExtensions | False   |  0.0000 ns | 0.0000 ns | 0.0000 ns | 0.000 |    0.00 |      - |         - |        0.00 |
-| ErrorOr                    | False   | 16.9649 ns | 0.1845 ns | 0.1726 ns | 1.709 |    0.03 | 0.0052 |      88 B |        1.57 |
-| FluentResults              | False   | 90.7117 ns | 0.7417 ns | 0.6938 ns | 9.139 |    0.12 | 0.0205 |     344 B |        6.14 |
-|                            |         |            |           |           |       |         |        |           |             |
-| **CSharpEssentials**           | **True**    |  **0.2526 ns** | **0.0041 ns** | **0.0036 ns** |  **1.00** |    **0.02** |      **-** |         **-** |          **NA** |
-| CSharpFunctionalExtensions | True    |  0.0276 ns | 0.0013 ns | 0.0012 ns |  0.11 |    0.00 |      - |         - |          NA |
-| ErrorOr                    | True    |  0.2907 ns | 0.0029 ns | 0.0024 ns |  1.15 |    0.02 |      - |         - |          NA |
-| FluentResults              | True    | 22.4665 ns | 0.2236 ns | 0.2092 ns | 88.97 |    1.45 | 0.0067 |     112 B |          NA |
+| Method                     | Succeed | Mean       | Error     | StdDev    | Median     | Ratio  | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|--------------------------- |-------- |-----------:|----------:|----------:|-----------:|-------:|--------:|-------:|----------:|------------:|
+| **CSharpEssentials**           | **False**   |  **9.2621 ns** | **0.0412 ns** | **0.0386 ns** |  **9.2565 ns** |  **1.000** |    **0.01** | **0.0033** |      **56 B** |        **1.00** |
+| CSharpFunctionalExtensions | False   |  0.0001 ns | 0.0002 ns | 0.0002 ns |  0.0000 ns |  0.000 |    0.00 |      - |         - |        0.00 |
+| ErrorOr                    | False   | 15.1515 ns | 0.1516 ns | 0.1344 ns | 15.1880 ns |  1.636 |    0.02 | 0.0052 |      88 B |        1.57 |
+| FluentResults              | False   | 90.3819 ns | 0.6773 ns | 0.6336 ns | 90.0853 ns |  9.758 |    0.08 | 0.0205 |     344 B |        6.14 |
+|                            |         |            |           |           |            |        |         |        |           |             |
+| **CSharpEssentials**           | **True**    |  **0.1498 ns** | **0.0014 ns** | **0.0013 ns** |  **0.1502 ns** |   **1.00** |    **0.01** |      **-** |         **-** |          **NA** |
+| CSharpFunctionalExtensions | True    |  0.2908 ns | 0.0004 ns | 0.0004 ns |  0.2907 ns |   1.94 |    0.02 |      - |         - |          NA |
+| ErrorOr                    | True    |  0.1486 ns | 0.0015 ns | 0.0013 ns |  0.1484 ns |   0.99 |    0.01 |      - |         - |          NA |
+| FluentResults              | True    | 20.4042 ns | 0.1433 ns | 0.1340 ns | 20.4297 ns | 136.25 |    1.41 | 0.0067 |     112 B |          NA |

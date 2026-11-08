@@ -2,14 +2,14 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 
 
 ```
-| Method                   | Mean     | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------- |---------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| HandWrittenAsync         | 3.377 μs | 0.0334 μs | 0.0313 μs |  1.00 |    0.01 | 0.0229 |     485 B |        1.00 |
-| CseEvaluateAsync         | 3.578 μs | 0.0345 μs | 0.0306 μs |  1.06 |    0.01 | 0.0534 |     982 B |        2.02 |
-| CseEvaluateSyncOverAsync | 3.520 μs | 0.0455 μs | 0.0426 μs |  1.04 |    0.02 | 0.0305 |     592 B |        1.22 |
+| Method                   | Mean       | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
+| HandWrittenAsync         |   790.4 ns |  5.49 ns |  4.86 ns |  1.00 |    0.01 | 0.0267 |     486 B |        1.00 |
+| CseEvaluateAsync         | 1,256.1 ns | 10.64 ns |  8.88 ns |  1.59 |    0.01 | 0.0381 |     667 B |        1.37 |
+| CseEvaluateSyncOverAsync |   936.0 ns | 11.99 ns | 11.22 ns |  1.18 |    0.02 | 0.0343 |     591 B |        1.22 |

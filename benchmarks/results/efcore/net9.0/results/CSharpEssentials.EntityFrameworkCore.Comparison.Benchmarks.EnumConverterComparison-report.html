@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.EnumConverterComparison-20261106-001150</title>
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.EnumConverterComparison-20261107-123925</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,29 +15,29 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method                                               </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method                                               </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>Ef_EnumToStringConverter_Read</td><td>Read</td><td>91.20 ns</td><td>0.028 ns</td><td>0.024 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_EnumWireNameConverter_Read</td><td>Read</td><td>91.65 ns</td><td>0.051 ns</td><td>0.043 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_HasLegacyEnumStorage_Read</td><td>Read</td><td>92.63 ns</td><td>0.270 ns</td><td>0.210 ns</td><td>1.02</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_EnumToFormattedStringConverter_Read</td><td>Read</td><td>87.68 ns</td><td>0.104 ns</td><td>0.082 ns</td><td>0.96</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_LegacySnakeCaseEnumConverter_Read</td><td>Read</td><td>50.19 ns</td><td>0.049 ns</td><td>0.046 ns</td><td>0.55</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_EnumWireNameConverter_LegacyInput</td><td>ReadLegacy</td><td>92.40 ns</td><td>0.074 ns</td><td>0.065 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_HasLegacyEnumStorage_LegacyInput</td><td>ReadLegacy</td><td>86.70 ns</td><td>0.313 ns</td><td>0.262 ns</td><td>0.94</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_EnumToFormattedStringConverter_LegacyInput</td><td>ReadLegacy</td><td>87.16 ns</td><td>0.030 ns</td><td>0.027 ns</td><td>0.94</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_LegacySnakeCaseEnumConverter_LegacyInput</td><td>ReadLegacy</td><td>64.82 ns</td><td>0.306 ns</td><td>0.287 ns</td><td>0.70</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>Ef_EnumToStringConverter</td><td>Write</td><td>60.53 ns</td><td>0.272 ns</td><td>0.241 ns</td><td>1.00</td><td>0.0072</td><td>120 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_EnumWireNameConverter</td><td>Write</td><td>53.39 ns</td><td>0.036 ns</td><td>0.031 ns</td><td>0.88</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_HasLegacyEnumStorage</td><td>Write</td><td>31.33 ns</td><td>0.108 ns</td><td>0.096 ns</td><td>0.52</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_EnumToFormattedStringConverter</td><td>Write</td><td>47.25 ns</td><td>0.033 ns</td><td>0.031 ns</td><td>0.78</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_LegacySnakeCaseEnumConverter</td><td>Write</td><td>21.65 ns</td><td>0.005 ns</td><td>0.005 ns</td><td>0.36</td><td>-</td><td>-</td><td>0.00</td>
+</thead><tbody><tr><td>Ef_EnumToStringConverter_Read</td><td>Read</td><td>90.62 ns</td><td>0.028 ns</td><td>0.025 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EnumWireNameConverter_Read</td><td>Read</td><td>78.92 ns</td><td>0.032 ns</td><td>0.030 ns</td><td>0.87</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_HasLegacyEnumStorage_Read</td><td>Read</td><td>58.16 ns</td><td>0.073 ns</td><td>0.069 ns</td><td>0.64</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EnumToFormattedStringConverter_Read</td><td>Read</td><td>73.57 ns</td><td>0.120 ns</td><td>0.100 ns</td><td>0.81</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_LegacySnakeCaseEnumConverter_Read</td><td>Read</td><td>53.13 ns</td><td>0.127 ns</td><td>0.118 ns</td><td>0.59</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EnumWireNameConverter_LegacyInput</td><td>ReadLegacy</td><td>84.65 ns</td><td>0.079 ns</td><td>0.074 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_HasLegacyEnumStorage_LegacyInput</td><td>ReadLegacy</td><td>58.12 ns</td><td>0.088 ns</td><td>0.082 ns</td><td>0.69</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_EnumToFormattedStringConverter_LegacyInput</td><td>ReadLegacy</td><td>77.11 ns</td><td>0.039 ns</td><td>0.037 ns</td><td>0.91</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_LegacySnakeCaseEnumConverter_LegacyInput</td><td>ReadLegacy</td><td>68.16 ns</td><td>0.246 ns</td><td>0.230 ns</td><td>0.81</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Ef_EnumToStringConverter</td><td>Write</td><td>59.14 ns</td><td>0.790 ns</td><td>0.739 ns</td><td>1.00</td><td>0.02</td><td>0.0072</td><td>120 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_EnumWireNameConverter</td><td>Write</td><td>53.00 ns</td><td>0.030 ns</td><td>0.028 ns</td><td>0.90</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_HasLegacyEnumStorage</td><td>Write</td><td>31.28 ns</td><td>0.009 ns</td><td>0.007 ns</td><td>0.53</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_EnumToFormattedStringConverter</td><td>Write</td><td>48.32 ns</td><td>0.021 ns</td><td>0.019 ns</td><td>0.82</td><td>0.01</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_LegacySnakeCaseEnumConverter</td><td>Write</td><td>22.45 ns</td><td>0.007 ns</td><td>0.006 ns</td><td>0.38</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
 </tr></tbody></table>
 </body>
 </html>

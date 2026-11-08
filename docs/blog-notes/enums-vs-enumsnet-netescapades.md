@@ -41,8 +41,8 @@ This is raw material for a post, not the post itself. Every number comes from `C
 5. IsDefined. CSE 0.4480 ns (defined) and 0.7609 ns (undefined). NetEscapades 0.4532 / 0.7258 ns. Enums.NET 0.7049 / 1.3005 ns. BCL 4.1192 / 3.5401 ns. Every CSE and NetEscapades row is below 1 ns.
 6. Flags format, undeclared combination. CSE 25.0906 ns / 72 B, NetEscapades 37.0195 ns / 96 B, BCL 39.2608 ns / 96 B, Enums.NET 82.6982 ns / 280 B.
 7. Description (metadata path). CSE 3.6495 ns, Enums.NET 2.6886 ns, NetEscapades 0.9027 ns.
-8. GetNames. CSE 20.57 ns / 184 B, Enums.NET 16.13 ns / 0 B, NetEscapades 19.74 ns / 184 B.
-9. Boxed format. CSE 15.084 ns, BCL 5.552 ns, Enums.NET 5.168 ns, all 0 B. The typed CSE call is 3.344 ns.
+8. GetNames. CSE 18.99 ns / 184 B, Enums.NET 16.53 ns / 0 B, NetEscapades 19.67 ns / 184 B.
+9. Boxed format. CSE 15.566 ns, BCL 5.052 ns, Enums.NET 5.543 ns, all 0 B. The typed CSE call is 3.247 ns.
 10. Reflection-built names from a `Type`. CSE 38.36 ns / 0 B, BCL 32.81 ns / 184 B, Enums.NET 21.55 ns / 0 B.
 11. Native AOT. CSE, NetEscapades and the BCL sample: 0 IL warnings. Enums.NET: 4. All four run.
 
@@ -50,9 +50,9 @@ This is raw material for a post, not the post itself. Every number comes from `C
 
 The code paths below were read, not profiled.
 
-- Boxed formatting, every TFM. `EnumValueFormatter.Format(object, ...)` is 15.084 ns on net10 against 5.552 ns for `object.ToString()` and 5.168 ns for Enums.NET. net8: 30.357 against 8.836 and 14.803 ns.
-  - With the default `CanHandle` the formatter now does one registry lookup (`CSharpEssentials.Enums/Parsing/EnumValueFormatter.cs:138`), and `CanHandle = _ => true` is within 1% of it on net10 (15.155 ns). The typed call on the same value takes 3.344 ns. Where the rest goes was not profiled.
-- Boxed list formatting, every TFM. `TryFormatMany` 284.671 ns against hand-written BCL and Enums.NET loops at 157.674 and 151.202 ns on net10, all 224 B.
+- Boxed formatting, every TFM. `EnumValueFormatter.Format(object, ...)` is 15.566 ns on net10 against 5.052 ns for `object.ToString()` and 5.543 ns for Enums.NET. net8: 30.214 against 6.316 and 14.789 ns.
+  - With the default `CanHandle` the formatter does one registry lookup (`CSharpEssentials.Enums/Parsing/EnumValueFormatter.cs:152-154`), and `CanHandle = _ => true` is slower than it on every TFM (net10 16.868 ns, Ratio 1.08). The typed call on the same value takes 3.247 ns. Where the rest goes was not profiled.
+- Boxed list formatting, every TFM. `TryFormatMany` 190.594 ns against hand-written BCL and Enums.NET loops at 157.100 and 149.443 ns on net10, all 224 B.
 - Reflection-built names, every TFM. 38.36 ns on net10, slower than the BCL (32.81 ns, which allocates 184 B) and Enums.NET (21.55 ns).
   - Each call reads a `ConcurrentDictionary` keyed by `(Type, EnumNaming)` and then checks the registry (`CSharpEssentials.Enums/Metadata/EnumMetadata.cs:71-72`). The names of an info held since setup still take 23.57 ns against Enums.NET's 21.55 ns.
 - Reflection-built values against Enums.NET, every TFM, worst on net8 and net9: 137.76 vs 30.52 ns (net8) and 125.39 vs 28.56 ns (net9). net10 is 32.70 vs 29.72 ns. The row reads 20 members through `IReadOnlyList<IEnumMemberInfo>`; the net8/net9 cost was not explained. CSE beats the BCL on every TFM.
@@ -63,8 +63,8 @@ The code paths below were read, not profiled.
 - Undefined ToString on net10: 3.3626 ns against 1.9853 (Enums.NET) and 1.7021 ns (NetEscapades). NetEscapades is also faster on net9 and Enums.NET on net11.
   - The generated `switch` now ends in `((int)value).ToString()` (`StringEnumSourceWriter.cs:66`), so it no longer boxes and allocates 0 B. Why net10 is slower than CSE's own net8 (1.7688 ns) and net11 (1.4798 ns) times was not investigated.
 - Smaller losses:
-  - GetNames, every TFM: Enums.NET is faster and allocates 0 B (net10 16.13 ns against 20.57 ns / 184 B). NetEscapades is faster on net10 and net11 and ties on net9 (20.34 vs 20.36 ns). `GetNames()` returns a new array per call (`StringEnumSourceWriter.cs:410`). The cached `Names` list is not measured.
-  - GetValues: NetEscapades on net10 (11.42 vs 11.95 ns) and net9 (15.77 vs 16.46 ns); Enums.NET on net8 (15.62 vs 16.69 ns) and net9 (15.55 ns), where CSE allocates 104 B and Enums.NET 0 B.
+  - GetNames, every TFM: Enums.NET is faster and allocates 0 B (net10 16.53 ns against 18.99 ns / 184 B). CSE beats NetEscapades on net10 (18.99 vs 19.67 ns) and ties it on net8, net9 and net11. `GetNames()` returns a new array per call (`StringEnumSourceWriter.cs:410`). The cached `Names` list is not measured.
+  - GetValues: NetEscapades on net10 (11.65 vs 11.71 ns) and net11 (8.963 vs 9.123 ns). On net8 CSE ties Enums.NET (15.56 vs 15.62 ns) but allocates 104 B against 0 B.
   - IsDefined of an undefined value: NetEscapades on net10 (0.7258 vs 0.7609 ns) and net8 (0.3707 vs 0.4484 ns). Sub-nanosecond.
   - Native AOT binary: 1.3 MB against 1.2 MB for NetEscapades (1.9 MB in the earlier 2026-11-02 report).
 
@@ -99,7 +99,7 @@ The code paths below were read, not profiled.
 
 - "Generated code is not automatically fast": generated `switch` helpers and the generated flags formatter lead or tie, while the runtime paths that take an `object` or a `Type` trail Enums.NET's cache. Show a generated method next to the boxed formatter.
 - "The cost of a good error message": 88 B per rejected input on the error-reporting overload, 0 B on the overload without it.
-- "Formatting when you only have an object": the typed CSE call (3.344 ns) next to the boxed one (15.084 ns) and the BCL (5.552 ns).
+- "Formatting when you only have an object": the typed CSE call (3.247 ns) next to the boxed one (15.566 ns) and the BCL (5.052 ns).
 - "Where CSE loses": boxed formatting, boxed list formatting, reflection-built names and values, description lookup, invalid case-sensitive parse allocation, undefined ToString on net10, GetNames allocation and the AOT binary size. Name the losses first.
 
 ## Boxed formatting and reflection-built metadata

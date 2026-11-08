@@ -2,16 +2,16 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
 
 Categories=Metadata  
 
 ```
 | Method                      | Mean      | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |---------------------------- |----------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| Plain_NoLogging             |  9.774 μs | 0.1940 μs | 0.2156 μs |  1.00 |    0.03 | 0.5493 |   9.71 KB |        1.00 |
-| CSharpEssentials_SkipBodies | 10.813 μs | 0.2116 μs | 0.1875 μs |  1.11 |    0.03 | 0.6104 |  10.51 KB |        1.08 |
-| Serilog_RequestLogging      | 13.151 μs | 0.2556 μs | 0.2391 μs |  1.35 |    0.04 | 0.7324 |  12.51 KB |        1.29 |
-| HttpLogging_Metadata        | 10.878 μs | 0.2142 μs | 0.2859 μs |  1.11 |    0.04 | 0.6104 |  10.36 KB |        1.07 |
+| Plain_NoLogging             |  9.152 μs | 0.1594 μs | 0.1331 μs |  1.00 |    0.02 | 0.5493 |   9.71 KB |        1.00 |
+| CSharpEssentials_SkipBodies |  9.977 μs | 0.1782 μs | 0.1830 μs |  1.09 |    0.02 | 0.6104 |  10.49 KB |        1.08 |
+| Serilog_RequestLogging      | 12.052 μs | 0.2173 μs | 0.3185 μs |  1.32 |    0.04 | 0.7324 |  12.49 KB |        1.29 |
+| HttpLogging_Metadata        |  9.752 μs | 0.1910 μs | 0.1787 μs |  1.07 |    0.02 | 0.6104 |  10.36 KB |        1.07 |

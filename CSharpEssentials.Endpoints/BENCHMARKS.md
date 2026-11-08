@@ -2,7 +2,7 @@
 
 Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · 6-core, 12-thread x64 desktop CPU · .NET 8 / 9 / 10 / 11
 
-Every BenchmarkDotNet number on this page comes from one full run of the suite on 2026-11-05 (the net9.0 throughput class was rerun on 2026-11-06). That run includes three newer classes: operation naming, name reads and the empty-prefix group. Their results are in [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group). The Native AOT table comes from a separate script run on 2026-11-06. Every CSE loss is collected in [Where CSE loses](#where-cse-loses).
+Every BenchmarkDotNet number on this page comes from one full run of the suite on 2026-11-05 (the net9.0 throughput class was rerun on 2026-11-06, and the name-read class on 2026-11-07). That run includes three newer classes: operation naming, name reads and the empty-prefix group. Their results are in [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group). The Native AOT table comes from a separate script run on 2026-11-06. Every CSE loss is collected in [Where CSE loses](#where-cse-loses).
 
 ---
 
@@ -71,7 +71,7 @@ Primary runtime: net10. "CSE" means CseGenerated unless the row says otherwise. 
 | Throughput, GET and DELETE: CSE ties Plain and Carter on every TFM; FastEndpoints takes 1.23-1.32× as long on net8 to net10 | net10 GET: 8.855 μs CSE, 8.723 μs Plain, 8.907 μs Carter (all ties), 11.165 μs FastEndpoints (1.26×). net10 DELETE: 6.728 μs CSE, 6.727 μs Plain, 8.530 μs FastEndpoints (1.27×). On net11 the GET gap to FastEndpoints is 1.07× (12.82 vs 13.70 μs); DELETE stays at 1.28× (10.37 vs 13.23 μs) |
 | Throughput, POST valid: Carter takes 10% less time than CSE on net10 (CSE loss) | net10: 15.620 μs vs 17.325 μs (CSE takes 1.11× as long); net11: 18.82 vs 20.02 μs (1.06×). Carter also allocates less (11.38 vs 11.67 KB on net10). CSE vs Plain is a tie. FastEndpoints takes 1.24× the CSE time on net10. Validation engines differ (DataAnnotations vs FluentValidation) |
 | Throughput, POST invalid: CSE ties Plain; Carter and FastEndpoints take longer | net10: 24.369 μs CSE, 23.880 μs Plain (tie), 32.138 μs Carter (1.32×), 50.133 μs FastEndpoints (2.06×, 2 exceptions per request). net11: 25.97 μs CSE, 26.07 μs Plain (tie), 33.01 μs Carter (1.27×), 44.15 μs FastEndpoints (1.70×) |
-| Name reads: an `OperationNaming.TypeName` name takes 1.92× as long to read as a hand-written `WithName` name (CSE loss) | net10, 500 reads: 12.280 μs vs 6.381 μs; `Custom` names 7.396 μs. Every TypeName read takes a lock. See [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group) |
+| Name reads: an `OperationNaming.TypeName` name takes 1.22× as long to read as a hand-written `WithName` name (CSE loss) | net10, 500 reads: 8.505 μs vs 6.960 μs; `Custom` names 8.404 μs, a tie with TypeName. Resolved TypeName names are now read without the lock. See [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group) |
 | Native AOT (2026-11-06 run): CseGenerated publishes with 0 IL warnings | 10.4 MB binary and 92 ms to first 200, against 10.3 MB / 95 ms for Plain and 15.2 MB / 100 ms for FastEndpointsSourceGen. CseReflection publishes with 4 warnings and stops at startup with `PlatformNotSupportedException` instead of mapping a partial set of routes. Carter and FastEndpoints (reflection discovery) crash at startup with this setup |
 
 ### Where CSE loses
@@ -85,7 +85,7 @@ Every row where CSE (CseGenerated) takes longer or allocates more than another v
 - Warm startup at N=500: vs Plain on net8 (509.850 vs 501.513 ms), vs Carter on net10 (721.454 vs 710.012 ms). Warm allocation at N=500 is 4.3-4.9% above Plain on every TFM (net10: 16233.1 KB vs 15539.98 KB). Warm allocation is also above Plain at N=10 and N=100 on every TFM (net10: 699.62 vs 683.84 KB, 3553.08 vs 3409.3 KB), above Carter on net10 at N=100 and N=500 (3553.08 vs 3544.92 KB, 16233.1 vs 16211.28 KB) and on net11 at N=10 (662.65 vs 662.17 KB). FastEndpoints is lower in time at every N, and in allocation at N=100 and N=500 on every TFM (net10 N=500: 15994.83 vs 16233.1 KB), but that row is not like-for-like.
 - Throughput, POST valid vs Carter: net10 17.325 vs 15.620 μs, net11 20.02 vs 18.82 μs. Carter also allocates less there (net10 11.38 vs 11.67 KB, net11 12.71 vs 13.52 KB).
 - Throughput allocation, 0.01 KB per request: vs Plain on POST valid on net10 (11.67 vs 11.66 KB) and net11 (13.52 vs 13.51 KB), and on DELETE on net11 (9.32 vs 9.31 KB); vs Carter on DELETE on net11 (9.32 vs 9.31 KB).
-- Name reads: TypeName takes 1.67-1.92× and Custom 1.16-1.22× as long as hand-written `WithName` names (net10: 12.280 and 7.396 vs 6.381 μs).
+- Name reads: TypeName takes 1.21-1.32× and Custom 1.19-1.26× as long as hand-written `WithName` names (net10: 8.505 and 8.404 vs 6.960 μs). On net11 TypeName also takes 1.06× as long as Custom (8.071 vs 7.609 μs).
 - Operation naming at build: TypeName takes longer than None on net8, net10 and net11 (net10: 714.4 vs 703.9 ms) and allocates 1.07-1.08× as much (net10: 16.83 vs 15.62 MB).
 - The per-type `MapGroup("")` allocates 3-4% more than direct mapping (net10: 15.6 vs 15.1 MB). Its time is within error on every TFM.
 
@@ -276,9 +276,9 @@ Alloc ratio against the category baseline, every TFM: TypeName 1.07-1.08, Custom
 
 | Row | net8 | net9 | net10 | net11 |
 |---|---:|---:|---:|---:|
-| TypeName app (baseline) | 14.531 μs (1.00) | 13.464 μs (1.00) | 12.280 μs (1.00) | 10.515 μs (1.00) |
-| Custom app | 10.247 μs (0.71) | 9.804 μs (0.73) | 7.396 μs (0.60) | 6.879 μs (0.65) |
-| Hand-written `WithName` app | 8.723 μs (0.60) | 8.006 μs (0.59) | 6.381 μs (0.52) | 5.782 μs (0.55) |
+| TypeName app (baseline) | 11.536 μs (1.00) | 11.118 μs (1.00) | 8.505 μs (1.00) | 8.071 μs (1.00) |
+| Custom app | 11.350 μs (0.98) | 11.348 μs (1.02) | 8.404 μs (0.99) | 7.609 μs (0.94) |
+| Hand-written `WithName` app | 9.545 μs (0.83) | 8.983 μs (0.81) | 6.960 μs (0.82) | 6.108 μs (0.76) |
 
 `EmptyPrefixGroupBenchmarks`, mean and allocation (report ratios against direct mapping):
 
@@ -288,7 +288,7 @@ Alloc ratio against the category baseline, every TFM: TypeName 1.07-1.08, Custom
 | `MapGroup("").MapGet` per endpoint | 546.9 ms (1.01), 15.55 MB (1.04) | 688.0 ms (1.00), 15.68 MB (1.04) | 759.5 ms (1.00), 15.6 MB (1.03) | 804.7 ms (1.00), 15.54 MB (1.03) |
 
 What the numbers say:
-- Name reads. A TypeName read takes 1.37-1.66× as long as a Custom read and 1.67-1.92× as long as a hand-written read, on every TFM. On net10 that is 12.280 μs against 6.381 μs for 500 reads. Custom reads are also slower than hand-written reads (1.16-1.22×). This is a CSE loss.
+- Name reads. TypeName and Custom reads tie on net8, net9 and net10; on net11 a TypeName read takes 1.06× as long as a Custom read. Both take longer than a hand-written read on every TFM: TypeName 1.21-1.32×, Custom 1.19-1.26×. On net10 that is 8.505 μs against 6.960 μs for 500 reads. This is a CSE loss.
 - Naming at build. TypeName takes longer than None on net8 (1.04), net10 (1.01) and net11 (1.02), outside error; net9 is a tie. TypeName vs Custom is outside error only on net8 (523.0 vs 507.6 ms) and a tie elsewhere. TypeName allocates 1.21 MB more than None on net10 (16.83 vs 15.62 MB); a hand-written `WithName` adds 0.22 MB over plain `MapGet` (15.23 vs 15.01 MB).
 - The empty-prefix group. The time difference is within error on every TFM. The group allocates 0.49-0.56 MB more at 500 endpoints (alloc ratio 1.03-1.04). This covers part of the 4.3-4.9% warm-startup allocation gap between CSE and Plain.
 
@@ -329,7 +329,7 @@ Feature matrix for these classes, from reading each library's source and docs (n
 | Route group per endpoint | None | One `MapGroup("")` per endpoint type, always (`EndpointMapper.cs:93`) | `ICarterModule`: none. `CarterModule` base class: one `MapGroup(basePath)` per module, `""` by default ([CarterExtensions.cs#L35](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/CarterExtensions.cs#L35), [ICarterModule.cs#L50](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/ICarterModule.cs#L50)) | None: `MapMethods` on the app |
 
 Expected losses, read from the source before the run (not fixed in this work), checked against the numbers:
-- Every read of a TypeName name takes the registry lock, even after the names are resolved (`OperationNameMetadata.cs:7` calls `OperationNameRegistry.cs:120-132`). Confirmed: the TypeName read row is the slowest on every TFM (net10: 12.280 μs against 7.396 μs Custom and 6.381 μs hand-written).
+- Every read of a TypeName name took the registry lock, even after the names were resolved (`OperationNameMetadata.cs:7` calls `OperationNameRegistry.cs:120`). The first run confirmed it (net10: 12.280 μs against 7.396 μs Custom and 6.381 μs hand-written). This was later fixed: resolved names are now read without the lock (`OperationNameRegistry.cs:122-129`), and the 2026-11-07 rerun shows TypeName tied with Custom on net8 to net10 (net10: 8.505 vs 8.404 μs).
 - TypeName does more work per endpoint while mapping and building. At map time: a `ConditionalWeakTable` lookup and a lock (`EndpointMapper.cs:113-115`, `OperationNameRegistry.cs:39` and `:42-67`). At build: a `string.Create` key, LINQ `OfType().LastOrDefault()` twice and another lock (`OperationNameRegistry.cs:69-104`). Partly confirmed: TypeName is above None on net8, net10 and net11 and allocates the most, but it is above Custom only on net8.
 - CSE wraps each endpoint type in its own `MapGroup(string.Empty)` (`EndpointMapper.cs:93`), which adds a group data source per type: 500 against 1 here. Confirmed for allocation (0.49-0.56 MB more). The time difference is within error on every TFM.
 

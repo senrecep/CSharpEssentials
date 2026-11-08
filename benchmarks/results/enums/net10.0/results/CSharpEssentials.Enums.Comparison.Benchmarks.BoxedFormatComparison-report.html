@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Enums.Comparison.Benchmarks.BoxedFormatComparison-20261105-154300</title>
+<title>CSharpEssentials.Enums.Comparison.Benchmarks.BoxedFormatComparison-20261108-165401</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,23 +15,23 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method              </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials</td><td>Format</td><td>15.084 ns</td><td>0.0168 ns</td><td>0.0140 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_HandleAll</td><td>Format</td><td>15.155 ns</td><td>0.0206 ns</td><td>0.0182 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_Typed</td><td>Format</td><td>3.344 ns</td><td>0.0010 ns</td><td>0.0009 ns</td><td>0.22</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>Bcl</td><td>Format</td><td>5.552 ns</td><td>0.0152 ns</td><td>0.0142 ns</td><td>0.37</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>EnumsNet</td><td>Format</td><td>5.168 ns</td><td>0.0101 ns</td><td>0.0094 ns</td><td>0.34</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CSharpEssentials_Many</td><td>FormatMany</td><td>284.671 ns</td><td>1.1061 ns</td><td>0.9236 ns</td><td>1.00</td><td>0.0134</td><td>224 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Many</td><td>FormatMany</td><td>157.674 ns</td><td>0.6674 ns</td><td>0.5573 ns</td><td>0.55</td><td>0.0134</td><td>224 B</td><td>1.00</td>
-</tr><tr><td>EnumsNet_Many</td><td>FormatMany</td><td>151.202 ns</td><td>0.4071 ns</td><td>0.3808 ns</td><td>0.53</td><td>0.0134</td><td>224 B</td><td>1.00</td>
+</thead><tbody><tr><td>CSharpEssentials</td><td>Format</td><td>15.566 ns</td><td>0.0403 ns</td><td>0.0377 ns</td><td>1.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_HandleAll</td><td>Format</td><td>16.868 ns</td><td>0.0371 ns</td><td>0.0347 ns</td><td>1.08</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Typed</td><td>Format</td><td>3.247 ns</td><td>0.0055 ns</td><td>0.0049 ns</td><td>0.21</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Bcl</td><td>Format</td><td>5.052 ns</td><td>0.0124 ns</td><td>0.0116 ns</td><td>0.32</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>EnumsNet</td><td>Format</td><td>5.543 ns</td><td>0.0175 ns</td><td>0.0164 ns</td><td>0.36</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CSharpEssentials_Many</td><td>FormatMany</td><td>190.594 ns</td><td>0.8044 ns</td><td>0.7524 ns</td><td>1.00</td><td>0.0134</td><td>224 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Many</td><td>FormatMany</td><td>157.100 ns</td><td>0.5762 ns</td><td>0.5390 ns</td><td>0.82</td><td>0.0134</td><td>224 B</td><td>1.00</td>
+</tr><tr><td>EnumsNet_Many</td><td>FormatMany</td><td>149.443 ns</td><td>0.7262 ns</td><td>0.6793 ns</td><td>0.78</td><td>0.0134</td><td>224 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>

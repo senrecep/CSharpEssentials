@@ -90,6 +90,7 @@ All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio"
 
 - Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
 - 1-minute load average at the start and end of the comparison suite: 1.55 to 2.37, with a desktop session running. No row of the six Error classes stayed above 5% CV.
+- `ErrorEqualityComparison` and `ErrorMetadataToStringComparison` were rerun on 2026-11-07 on .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 with SDK 11.0.100-rc.3.26522.148. Their numbers below come from that rerun, and no rerun row is above 5% CV.
 - Reports: `benchmarks/results/results-comparison/{tfm}/results/`, for example [ErrorEqualityComparison net10](../benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.ErrorEqualityComparison-report-github.md).
 
 ### 1. Error factory
@@ -106,28 +107,28 @@ CSE and ErrorOr build the same struct shape and allocate the same bytes. ErrorOr
 
 | Row | CSE | ErrorOr | Ratio |
 |---|---|---|---:|
-| `Equals`, no metadata | 6.064 ns / 0 B | 6.178 ns / 0 B | 1.02 |
-| `Equals`, metadata | 28.129 ns / 0 B | 29.905 ns / 0 B | 1.06 |
-| `GetHashCode`, no metadata | 37.817 ns / 0 B | 74.036 ns / 0 B | 1.96 |
-| `GetHashCode`, metadata | 88.526 ns / 0 B | 62.997 ns / 0 B | 0.71 |
-| `HashSet` of 100, no metadata | 10,173.842 ns / 5392 B | 5,407.757 ns / 5392 B | 0.53 |
-| `HashSet` of 100, metadata | 18,361.398 ns / 5392 B | 13,207.228 ns / 5392 B | 0.72 |
+| `Equals`, no metadata | 6.371 ns / 0 B | 6.350 ns / 0 B | 1.00 |
+| `Equals`, metadata | 28.973 ns / 0 B | 30.756 ns / 0 B | 1.06 |
+| `GetHashCode`, no metadata | 32.282 ns / 0 B | 75.549 ns / 0 B | 2.34 |
+| `GetHashCode`, metadata | 82.964 ns / 0 B | 66.331 ns / 0 B | 0.80 |
+| `HashSet` of 100, no metadata | 10,342.030 ns / 5392 B | 7,111.568 ns / 5392 B | 0.69 |
+| `HashSet` of 100, metadata | 17,862.602 ns / 5392 B | 13,643.837 ns / 5392 B | 0.76 |
 
 | Row | Library | net8 | net9 | net10 | net11 |
 |---|---|---|---|---|---|
-| `GetHashCode`, no metadata | CSE | 41.338 ns | 41.822 ns | 37.817 ns | 32.201 ns |
-| | ErrorOr | 27.051 ns | 27.223 ns | 74.036 ns | 26.499 ns |
-| `GetHashCode`, metadata | CSE | 94.933 ns | 89.232 ns | 88.526 ns | 88.275 ns |
-| | ErrorOr | 87.090 ns | 87.717 ns | 62.997 ns | 64.548 ns |
-| `HashSet`, no metadata | CSE | 6,473.350 ns | 6,555.170 ns | 10,173.842 ns | 6,455.556 ns |
-| | ErrorOr | 5,762.013 ns | 6,154.638 ns | 5,407.757 ns | 5,217.701 ns |
-| `HashSet`, metadata | CSE | 16,611.856 ns | 16,171.247 ns | 18,361.398 ns | 14,871.272 ns |
-| | ErrorOr | 15,607.398 ns | 15,298.233 ns | 13,207.228 ns | 13,217.930 ns |
+| `GetHashCode`, no metadata | CSE | 32.818 ns | 33.577 ns | 32.282 ns | 31.101 ns |
+| | ErrorOr | 28.300 ns | 28.173 ns | 75.549 ns | 27.044 ns |
+| `GetHashCode`, metadata | CSE | 87.748 ns | 86.103 ns | 82.964 ns | 69.908 ns |
+| | ErrorOr | 90.589 ns | 90.013 ns | 66.331 ns | 68.913 ns |
+| `HashSet`, no metadata | CSE | 6,604.562 ns | 6,951.115 ns | 10,342.030 ns | 6,598.451 ns |
+| | ErrorOr | 6,246.707 ns | 6,245.728 ns | 7,111.568 ns | 5,540.137 ns |
+| `HashSet`, metadata | CSE | 16,515.790 ns | 15,404.429 ns | 17,862.602 ns | 14,243.500 ns |
+| | ErrorOr | 16,577.879 ns | 15,781.778 ns | 13,643.837 ns | 13,452.364 ns |
 
-- `Equals` is a tie or a CSE win on every TFM except net11 without metadata, where ErrorOr is 0.122 ns faster (5.935 vs 6.057 ns).
-- CSE `GetHashCode` is slower than ErrorOr on every TFM except net10 without metadata. That net10 row is an ErrorOr outlier: 74.036 ns against 26.499 to 27.223 ns on its other TFMs, so it is not a CSE win.
-- CSE builds the `HashSet` more slowly on every TFM, with the same 5392 B. The net10 CSE row without metadata (10,173.842 ns) is also an outlier against 6,455.556 to 6,555.170 ns on the other TFMs.
-- CSE hashes metadata independent of insertion order (an XOR over the entries). ErrorOr's hash depends on insertion order. The inputs here always use the same order, so this does not change the numbers.
+- `Equals` is a tie or a CSE win on every TFM except net9 without metadata, where ErrorOr is 0.288 ns faster (8.517 vs 8.805 ns).
+- Without metadata CSE `GetHashCode` is slower than ErrorOr on net8, net9 and net11. The net10 row is an ErrorOr outlier: 75.549 ns against 27.044 to 28.300 ns on its other TFMs, so it is not a CSE win. With metadata CSE is faster on net8 and net9 (87.748 vs 90.589 ns, 86.103 vs 90.013 ns), slower on net10 (82.964 vs 66.331 ns) and a tie on net11.
+- Without metadata CSE builds the `HashSet` more slowly on every TFM, with the same 5392 B. The net10 CSE row (10,342.030 ns) is also an outlier against 6,598.451 to 6,951.115 ns on the other TFMs. With metadata CSE is a tie on net8, faster on net9 (15,404.429 vs 15,781.778 ns) and slower on net10 and net11.
+- CSE hashes metadata independent of insertion order (a sum over the entries). ErrorOr's hash depends on insertion order. The inputs here always use the same order, so this does not change the numbers.
 
 ### 3. Error from an exception
 
@@ -144,11 +145,11 @@ CSE and ErrorOr build the same struct shape and allocate the same bytes. ErrorOr
 
 | Entries | CSE | Hand-written `StringBuilder` loop | Ratio |
 |---:|---|---|---:|
-| 1 | 97.40 ns / 248 B | 42.31 ns / 152 B | 0.43 |
-| 8 | 525.02 ns / 1392 B | 258.59 ns / 776 B | 0.49 |
-| 32 | 1,723.50 ns / 4880 B | 736.66 ns / 2400 B | 0.43 |
+| 1 | 64.54 ns / 152 B | 50.09 ns / 152 B | 0.78 |
+| 8 | 417.69 ns / 776 B | 264.38 ns / 776 B | 0.63 |
+| 32 | 1,399.05 ns / 2400 B | 812.07 ns / 2400 B | 0.58 |
 
-CSE loses to the hand-written loop at every size and TFM: the hand-written ratio is 0.38 to 0.49 on net9 to net11 and 0.19 to 0.30 on net8 (32 entries on net8: 3,786.76 ns / 7184 B vs 725.81 ns / 2400 B). Both grow about linearly with the entry count. CSE builds one formatted string per entry and copies the builder into a final interpolated string; the hand-written loop appends the pieces to one builder. The net8 column runs the netstandard2.1 build, which formats through `FormattableString.Invariant`.
+CSE loses to the hand-written loop in time at every size and TFM: the hand-written ratio is 0.54 to 0.91 on net9 to net11 and 0.32 to 0.55 on net8 (32 entries on net8: 2,561.28 ns vs 827.38 ns). Both allocate the same bytes at every size and TFM. Both grow about linearly with the entry count. CSE formats each entry straight into one builder with an interpolated `Append` and the invariant culture; the hand-written loop appends the pieces to one builder. The net8 column runs the netstandard2.1 build, which formats each entry through `AppendFormat`.
 
 ### 5. `ToString`
 
@@ -175,12 +176,12 @@ Serialize writes the same text and allocates the same bytes. ErrorOr is faster o
 ### Where CSE loses
 
 - Factory: ErrorOr plain on net8 (6.711 vs 10.269 ns) and net10 (5.280 vs 5.771 ns, under 1 ns); ErrorOr with metadata on net8, net10 and net11 (net10 60.802 vs 64.585 ns).
-- `GetHashCode`: ErrorOr on every TFM with metadata and on net8, net9 and net11 without (net8 27.051 vs 41.338 ns).
-- `HashSet`: ErrorOr on every TFM, both inputs (net10 5,407.757 vs 10,173.842 ns without metadata).
-- `Equals`: ErrorOr without metadata on net11 by 0.122 ns (under 1 ns).
+- `GetHashCode`: ErrorOr on net8, net9 and net11 without metadata (net8 28.300 vs 32.818 ns) and on net10 with metadata (66.331 vs 82.964 ns).
+- `HashSet`: ErrorOr on every TFM without metadata (net10 7,111.568 vs 10,342.030 ns) and on net10 and net11 with metadata.
+- `Equals`: ErrorOr without metadata on net9 by 0.288 ns (under 1 ns).
 - `Error.Exception`: every other row, by design (see section 3).
 - `Error.Failure`: ErrorOr on net8, both inputs (17.94 vs 13.32 ns never thrown, 18.55 vs 13.31 ns thrown).
-- Metadata `ToString`: the hand-written loop at every size and TFM, in time and bytes.
+- Metadata `ToString`: the hand-written loop at every size and TFM, in time. The bytes are the same.
 - `ToString`: ErrorOr on `Error` without metadata on net10 (170.33 vs 175.50 ns); ErrorOr and FluentResults on `Error` with metadata on every TFM; FluentResults on `Error` without metadata (it prints less text). CFE allocates less on the `Result` row on net8 (48 B vs 72 B).
 - JSON: ErrorOr `Serialize` on net8 (321.2 vs 341.1 ns).
 
@@ -189,10 +190,10 @@ Serialize writes the same text and allocates the same bytes. ErrorOr is faster o
 ## Caveats
 
 - **CSE behavior checked against the code in this tree**:
-  - `CSharpEssentials.Errors/Error.cs`: `GetHashCode` combines metadata entries with XOR, so two equal errors hash the same whatever the insertion order. Nested `ErrorMetadata` values are compared by value in `Equals`.
+  - `CSharpEssentials.Errors/Error.cs`: `GetHashCode` sums the metadata entry hashes, so two equal errors hash the same whatever the insertion order. Nested `ErrorMetadata` values are compared by value in `Equals`.
   - `CSharpEssentials.Errors/ErrorMetadata.cs`: `ToString` enumerates the dictionary once. `CreateWithExceptionDetailed` reads `exception.StackTrace` and does not walk the stack for an exception that was never thrown. `CreateWithException` stores a nested `ErrorMetadata`, not the `Exception`, so System.Text.Json can serialize it.
   - A JSON round trip of an error with metadata is not equal to the original, because the values come back as `JsonElement`.
-- The `GetHashCode` net10 ErrorOr row and the `HashSet` net10 CSE row without metadata are single-TFM outliers. They were not rerun because their CV stayed under 5%.
+- The `GetHashCode` net10 ErrorOr row and the `HashSet` net10 CSE row without metadata are single-TFM outliers. Both stayed outliers in the 2026-11-07 rerun of the class, with CV under 5%.
 - The CSE column is the working tree, which may not match the version published on NuGet.
 
 ---

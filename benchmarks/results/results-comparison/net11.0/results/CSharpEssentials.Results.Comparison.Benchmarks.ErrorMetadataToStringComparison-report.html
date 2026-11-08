@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Results.Comparison.Benchmarks.ErrorMetadataToStringComparison-20261105-105812</title>
+<title>CSharpEssentials.Results.Comparison.Benchmarks.ErrorMetadataToStringComparison-20261106-225142</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,21 +15,21 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method    </th><th>Entries</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method    </th><th>Entries</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials</td><td>1</td><td>103.11 ns</td><td>0.322 ns</td><td>0.285 ns</td><td>1.00</td><td>0.0148</td><td>248 B</td><td>1.00</td>
-</tr><tr><td>HandWritten</td><td>1</td><td>38.90 ns</td><td>0.171 ns</td><td>0.143 ns</td><td>0.38</td><td>0.0091</td><td>152 B</td><td>0.61</td>
-</tr><tr><td>CSharpEssentials</td><td>8</td><td>568.45 ns</td><td>2.796 ns</td><td>2.616 ns</td><td>1.00</td><td>0.0830</td><td>1392 B</td><td>1.00</td>
-</tr><tr><td>HandWritten</td><td>8</td><td>254.11 ns</td><td>1.678 ns</td><td>1.569 ns</td><td>0.45</td><td>0.0463</td><td>776 B</td><td>0.56</td>
-</tr><tr><td>CSharpEssentials</td><td>32</td><td>1,851.62 ns</td><td>3.189 ns</td><td>2.663 ns</td><td>1.00</td><td>0.2899</td><td>4880 B</td><td>1.00</td>
-</tr><tr><td>HandWritten</td><td>32</td><td>733.09 ns</td><td>4.643 ns</td><td>4.343 ns</td><td>0.40</td><td>0.1431</td><td>2400 B</td><td>0.49</td>
+</thead><tbody><tr><td>CSharpEssentials</td><td>1</td><td>50.80 ns</td><td>0.607 ns</td><td>0.568 ns</td><td>1.00</td><td>0.02</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>HandWritten</td><td>1</td><td>45.03 ns</td><td>0.636 ns</td><td>0.595 ns</td><td>0.89</td><td>0.01</td><td>0.0091</td><td>152 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials</td><td>8</td><td>296.95 ns</td><td>2.624 ns</td><td>2.191 ns</td><td>1.00</td><td>0.01</td><td>0.0463</td><td>776 B</td><td>1.00</td>
+</tr><tr><td>HandWritten</td><td>8</td><td>269.67 ns</td><td>3.003 ns</td><td>2.809 ns</td><td>0.91</td><td>0.01</td><td>0.0463</td><td>776 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials</td><td>32</td><td>885.66 ns</td><td>11.570 ns</td><td>10.823 ns</td><td>1.00</td><td>0.02</td><td>0.1431</td><td>2400 B</td><td>1.00</td>
+</tr><tr><td>HandWritten</td><td>32</td><td>767.05 ns</td><td>14.505 ns</td><td>12.859 ns</td><td>0.87</td><td>0.02</td><td>0.1431</td><td>2400 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>

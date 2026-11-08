@@ -60,7 +60,7 @@ The code is in `benchmarks/CSharpEssentials.Http.Comparison.Benchmarks/`, in fou
 - Per-call policies: the CSE Readme's Quick Start builds the policy inline, inside the call. Polly's performance guide says to reuse pipelines. The RetryPerCall rows show what building per call costs in both.
 - Wrapper layer: every CSE `ExecuteAsync` passes Polly a static lambda with the operation as state, the same shape as the Polly rows (`ResiliencePolicy.cs:71,87,103,121`; `ResiliencePolicyT.cs:47,71`). CSE's own `ExecuteAsync` is an async method with a try/catch around that call, so each call runs one more async state machine than the Polly rows.
 - Boxing in the non-generic policy: the retry and circuit-breaker predicates test `Outcome<object>.Result is IResultBase` (`Modules/ResiliencePolicy.Retry.cs:20-22`, `Modules/ResiliencePolicy.CircuitBreaker.cs:24`), so `Result<T>` is boxed per attempt; ResultBoxingComparison isolates this.
-- The predicate form of `RetryIfFailed` builds a new pipeline on every call by design (`Extensions/ResilienceResultExtensions.cs:113,163-179`); a delegate cannot key the cache safely. The cached overload looks its pipeline up in a `ConcurrentDictionary`.
+- Both forms of `RetryIfFailed` look their pipeline up in a `ConcurrentDictionary` (`Extensions/ResilienceResultExtensions.cs:194-201`). A delegate cannot key the cache safely, so the predicate form takes its own cached pipeline and passes the delegate through a pooled `ResilienceContext` (`:115-117`).
 
 ---
 
@@ -89,8 +89,8 @@ This table comes from reading CSE source, the Polly 8.9.0 docs, nuspecs and asse
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (not `--quick`), full runs of every class. These classes ran in the same `--project http` suite as the Http classes. The four TFMs ran one after another on one Linux machine; the hardware is in each report header.
-- Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK).
-- The 1-minute load average was 1.74 when the suite started and 1.60 when it ended. No row in this suite kept a coefficient of variation above 5%, so no class was rerun and no row is marked noisy. The smallest mean is `Direct_Await` at 13.63 ns (net11.0), well above timer resolution.
+- Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK). `RetryIfFailedComparison` was rerun on main after pull requests #230 to #256 landed, with the 11.0.100-rc.3 SDK and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348).
+- The 1-minute load average was 1.74 when the suite started and 1.60 when it ended. No row in this suite kept a coefficient of variation above 5%, so no class was rerun for noise and no row is marked noisy. The smallest mean is `Direct_Await` at 13.63 ns (net11.0), well above timer resolution.
 - Reports: `benchmarks/results/http/{tfm}/results/*-report-github.md`, with `.csv` and `.html` beside them. Each table below links the four github reports for its class.
 - The CSE column is the repository source as of the run, a local integration of all open pull requests.
 
@@ -98,7 +98,7 @@ Each cell is `Mean (Ratio), Allocated`, copied from that TFM's report. The ratio
 
 ### Summary
 
-- CSE is slower than the matching Polly row, and allocates more, in every category on every TFM, with one exception (RetryPerCall on net11.0, below). That is expected: every CSE row runs Polly and adds its own layer on top.
+- CSE is slower than the matching Polly row in every category on every TFM, with one exception (RetryPerCall on net11.0, below). It allocates more everywhere except the `RetryIfFailed` predicate row, which allocates nothing, like Polly. That is expected: every CSE row runs Polly and adds its own layer on top.
 - The policy cost is small next to any real I/O: the prebuilt retry rows run from 215.61 ns (Polly, net11.0) to 345.90 ns (CSE, net8.0) per call, and the per-call rows from 3,398.24 ns (Polly, net10.0) to 4,967.01 ns (CSE, net8.0).
 
 ### Where CSE loses
@@ -110,8 +110,8 @@ Every row where CSE is slower or allocates more than the Polly row in its catego
 - **Retry built per call.** CSE is slower on net8.0 (4,967.01 ns against 4,888.51 ns), net9.0 (4,332.14 ns against 4,324.80 ns) and net10.0 (3,466.70 ns against 3,398.24 ns). On net11.0 the Polly row is the slower one, 4,351.67 ns against 3,533.64 ns, with a low error in both rows; this run does not explain it, and it should not be read as a general result. CSE allocates more on every TFM (8136 B against 8056 B on net8.0, 6848 B against 6768 B on net11.0).
 - **Composed, non-generic.** `Polly_SingleBuilder` against `CSharpEssentials_Options`: ratio 0.77 (net8.0), 0.72 (net9.0), 0.78 (net10.0), 0.73 (net11.0), and 48 B against 128 B. `CSharpEssentials_FromPipeline`, which runs that same single Polly pipeline through CSE's wrapper, sits between them: ratio 0.79 (net8.0, net9.0) and 0.84 (net10.0, net11.0), still 128 B. So part of the gap is the wrapper and part is the nesting of one pipeline per `With...` call. The options form and the fluent form are level (ratio 0.99 to 1.01).
 - **Composed, generic.** `PollyT_SingleBuilder` against `CSharpEssentialsT_Fluent`: 681.5 ns against 915.2 ns (net8.0), 620.7 ns against 825.9 ns (net9.0), 579.5 ns against 781.4 ns (net10.0), 567.3 ns against 791.7 ns (net11.0). CSE allocates 80 B, Polly nothing.
-- **`RetryIfFailed`, cached.** `Polly_Cached` against `CSharpEssentials_Cached`: ratio 0.83, 0.87, 0.74, 0.78 with `FailFirst` false and 0.82, 0.87, 0.78, 0.82 with `FailFirst` true (net8.0, net9.0, net10.0, net11.0). CSE allocates 88 B (80 B on net11.0), Polly nothing.
-- **`RetryIfFailed` with a predicate.** This form builds a pipeline on every call. Ratio 16.37, 16.34, 12.40, 13.18 with `FailFirst` false and 11.53, 10.77, 8.57, 9.01 with `FailFirst` true (net8.0 to net11.0), allocating 8584 B, 7632 B, 7432 B and 7280 B per call. On net10.0 that is 3,794.6 ns against 306.1 ns for the cached form.
+- **`RetryIfFailed`, cached.** `Polly_Cached` against `CSharpEssentials_Cached`: ratio 0.84, 0.84, 0.77, 0.74 with `FailFirst` false and 0.86, 0.88, 0.78, 0.81 with `FailFirst` true (net8.0, net9.0, net10.0, net11.0). CSE allocates 88 B (80 B on net11.0), Polly nothing.
+- **`RetryIfFailed` with a predicate.** This form now reuses a cached pipeline and allocates nothing, as `Polly_Cached` does, but it is slower than both cached rows. Ratio 1.23, 1.20, 1.19, 1.05 with `FailFirst` false and 1.32, 1.24, 1.16, 1.17 with `FailFirst` true (net8.0 to net11.0), against the cached CSE form. On net10.0 that is 352.3 ns against 296.0 ns for the cached form and 227.1 ns for Polly.
 - **Non-generic policy over `Result<int>` (boxing).** `CSharpEssentials_Generic` against `CSharpEssentials_NonGeneric`: ratio 0.72, 0.88, 0.84, 0.85 with `FailFirst` false and 0.71, 0.88, 0.80, 0.83 with `FailFirst` true (net8.0 to net11.0). The non-generic policy allocates 112 B with one attempt and 144 B with two, against 80 B for the generic one, which matches one box per attempt. `Polly_Generic` is faster than both and allocates nothing.
 
 ### Full tables
@@ -147,12 +147,12 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 | Method | FailFirst | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| `CSharpEssentials_Cached` | False | 313.8 ns (1.00), 88 B | 296.7 ns (1.00), 88 B | 306.1 ns (1.00), 88 B | 295.1 ns (1.00), 80 B |
-| `CSharpEssentials_Predicate` | False | 5,137.6 ns (16.37), 8584 B | 4,849.1 ns (16.34), 7632 B | 3,794.6 ns (12.40), 7432 B | 3,887.9 ns (13.18), 7280 B |
-| `Polly_Cached` | False | 259.4 ns (0.83), - | 257.7 ns (0.87), - | 225.6 ns (0.74), - | 229.8 ns (0.78), - |
-| `CSharpEssentials_Cached` | True | 501.5 ns (1.00), 88 B | 457.2 ns (1.00), 88 B | 473.1 ns (1.00), 88 B | 451.7 ns (1.00), 80 B |
-| `CSharpEssentials_Predicate` | True | 5,783.6 ns (11.53), 8584 B | 4,924.7 ns (10.77), 7632 B | 4,055.5 ns (8.57), 7432 B | 4,071.4 ns (9.01), 7280 B |
-| `Polly_Cached` | True | 411.6 ns (0.82), - | 398.7 ns (0.87), - | 371.1 ns (0.78), - | 372.1 ns (0.82), - |
+| `CSharpEssentials_Cached` | False | 307.0 ns (1.00), 88 B | 293.6 ns (1.00), 88 B | 296.0 ns (1.00), 88 B | 310.1 ns (1.00), 80 B |
+| `CSharpEssentials_Predicate` | False | 378.0 ns (1.23), - | 351.2 ns (1.20), - | 352.3 ns (1.19), - | 326.6 ns (1.05), - |
+| `Polly_Cached` | False | 257.7 ns (0.84), - | 245.2 ns (0.84), - | 227.1 ns (0.77), - | 228.9 ns (0.74), - |
+| `CSharpEssentials_Cached` | True | 478.1 ns (1.00), 88 B | 456.6 ns (1.00), 88 B | 472.8 ns (1.00), 88 B | 458.5 ns (1.00), 80 B |
+| `CSharpEssentials_Predicate` | True | 630.2 ns (1.32), - | 566.6 ns (1.24), - | 546.7 ns (1.16), - | 535.6 ns (1.17), - |
+| `Polly_Cached` | True | 413.6 ns (0.86), - | 400.0 ns (0.88), - | 368.2 ns (0.78), - | 371.4 ns (0.81), - |
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-report-github.md).
 

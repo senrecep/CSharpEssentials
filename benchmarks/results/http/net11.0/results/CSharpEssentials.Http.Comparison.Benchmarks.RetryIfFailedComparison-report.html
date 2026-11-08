@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-20261105-213636</title>
+<title>CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-20261107-164927</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,21 +15,21 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method              </th><th>FailFirst</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method              </th><th>FailFirst</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Cached</td><td>False</td><td>295.1 ns</td><td>0.27 ns</td><td>0.24 ns</td><td>1.00</td><td>0.00</td><td>0.0048</td><td>80 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Predicate</td><td>False</td><td>3,887.9 ns</td><td>24.10 ns</td><td>22.54 ns</td><td>13.18</td><td>0.07</td><td>0.4349</td><td>7280 B</td><td>91.00</td>
-</tr><tr><td>Polly_Cached</td><td>False</td><td>229.8 ns</td><td>0.23 ns</td><td>0.21 ns</td><td>0.78</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
-</tr><tr><td>CSharpEssentials_Cached</td><td>True</td><td>451.7 ns</td><td>0.33 ns</td><td>0.31 ns</td><td>1.00</td><td>0.00</td><td>0.0048</td><td>80 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Predicate</td><td>True</td><td>4,071.4 ns</td><td>16.39 ns</td><td>14.53 ns</td><td>9.01</td><td>0.03</td><td>0.4349</td><td>7280 B</td><td>91.00</td>
-</tr><tr><td>Polly_Cached</td><td>True</td><td>372.1 ns</td><td>0.24 ns</td><td>0.21 ns</td><td>0.82</td><td>0.00</td><td>-</td><td>-</td><td>0.00</td>
+</thead><tbody><tr><td>CSharpEssentials_Cached</td><td>False</td><td>310.1 ns</td><td>0.46 ns</td><td>0.41 ns</td><td>1.00</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Predicate</td><td>False</td><td>326.6 ns</td><td>0.31 ns</td><td>0.29 ns</td><td>1.05</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Polly_Cached</td><td>False</td><td>228.9 ns</td><td>0.11 ns</td><td>0.09 ns</td><td>0.74</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_Cached</td><td>True</td><td>458.5 ns</td><td>0.89 ns</td><td>0.83 ns</td><td>1.00</td><td>0.0048</td><td>80 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Predicate</td><td>True</td><td>535.6 ns</td><td>0.61 ns</td><td>0.57 ns</td><td>1.17</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>Polly_Cached</td><td>True</td><td>371.4 ns</td><td>0.08 ns</td><td>0.07 ns</td><td>0.81</td><td>-</td><td>-</td><td>0.00</td>
 </tr></tbody></table>
 </body>
 </html>

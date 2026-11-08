@@ -43,7 +43,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 ## How these numbers were produced
 
-BenchmarkDotNet v0.14.0, default job, full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on one Linux machine. The 1-minute load average was 1.74 at the start of the suite and 1.60 at the end. No row kept a coefficient of variation above 5%, so none is marked noisy. Reports: `benchmarks/results/http/{tfm}/results/`.
+BenchmarkDotNet v0.14.0, default job, full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on one Linux machine. The 1-minute load average was 1.74 at the start of the suite and 1.60 at the end. No row kept a coefficient of variation above 5%, so none is marked noisy. The resilience class was rerun on main after pull requests #230 to #256 landed, with newer runtime patches (.NET 8.0.33, 9.0.22, 10.0.14). Reports: `benchmarks/results/http/{tfm}/results/`.
 
 ## The numbers that matter
 
@@ -67,13 +67,13 @@ HTTP call through retry(3) and timeout(30 s), net10.0 ([report](../../benchmarks
 
 | Row (net10.0) | Mean | Allocated |
 |---|---|---|
-| CSE `CreateResiliencePolicy` over `GetFromJsonAsResultAsync` | 2.882 μs | 2.73 KB |
-| Bare Polly pipeline over `GetFromJsonAsync` | 2.452 μs | 2.27 KB |
-| Microsoft.Extensions.Http.Resilience, custom handler | 3.420 μs | 2.91 KB |
-| Microsoft.Extensions.Http.Resilience, standard handler | 4.220 μs | 2.95 KB |
-| `IHttpClientFactory` client, no resilience (reference) | 2.122 μs | 2.54 KB |
+| CSE `CreateResiliencePolicy` over `GetFromJsonAsResultAsync` | 2.914 μs | 2.73 KB |
+| Bare Polly pipeline over `GetFromJsonAsync` | 2.451 μs | 2.27 KB |
+| Microsoft.Extensions.Http.Resilience, custom handler | 3.246 μs | 2.91 KB |
+| Microsoft.Extensions.Http.Resilience, standard handler | 4.052 μs | 2.95 KB |
+| `IHttpClientFactory` client, no resilience (reference) | 2.050 μs | 2.54 KB |
 
-On net8.0 the custom handler is level with CSE (4.135 μs against 4.117 μs, ratio 1.00); on net9.0 and net11.0 it is slower, as on net10.0.
+On net8.0 the custom handler is slightly ahead of CSE (4.145 μs against 4.189 μs, ratio 0.99); on net9.0 and net11.0 it is slower, as on net10.0.
 
 ## Where CSE loses (state it, do not soften it)
 
@@ -83,7 +83,7 @@ Measured; the full list with every TFM is in [the Results section](../../CSharpE
 - POST and 404 against the BCL: slower and more allocation on every TFM (404: 879.5 ns against 635.4 ns on net10.0). The BCL 404 row only checks the status code; CSE also builds a typed `Error`.
 - Request build against a hand-written `HttpRequestMessage`: 641.8 ns against 127.1 ns and 1648 B against 392 B on net10.0. `HttpRequestBuilder` parses the URI up to three times: the template (`HttpRequestBuilder.cs:31`), the route-substituted string (`:230`), and the string with the query appended (`QueryStringExtensions.cs:218`). It also boxes the int query value through the object overload.
 - Query strings: `QueryHelpers` beats CSE on AppendToUri on every TFM (348.1 ns against 374.5 ns, 656 B against 784 B on net10.0), and a hand-written `Uri.EscapeDataString` loop beats CSE on the Dictionary row on every TFM (182.5 ns against 208.8 ns, 488 B against 544 B on net10.0).
-- Policy-wrapped GET against bare Polly: slower on every TFM (2.882 μs against 2.452 μs on net10.0). The CSE row wraps `GetFromJsonAsResultAsync` (buffered, own try/catch) while the Polly row wraps the streamed BCL `GetFromJsonAsync`, so the gap includes the GET gap above, not only the policy wrapper.
+- Policy-wrapped GET against bare Polly: slower on every TFM (2.914 μs against 2.451 μs on net10.0). On net8.0 the Microsoft.Extensions.Http.Resilience custom handler is also slightly faster than CSE (4.145 μs against 4.189 μs). The CSE row wraps `GetFromJsonAsResultAsync` (buffered, own try/catch) while the Polly row wraps the streamed BCL `GetFromJsonAsync`, so the gap includes the GET gap above, not only the policy wrapper.
 
 ## Where CSE wins
 

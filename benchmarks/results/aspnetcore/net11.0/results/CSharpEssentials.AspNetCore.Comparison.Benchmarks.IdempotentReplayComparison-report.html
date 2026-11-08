@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotentReplayComparison-20261106-053320</title>
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotentReplayComparison-20261107-174446</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,29 +15,29 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                         </th><th>Categories</th><th>ResponseSize</th><th>Mean </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>Plain_NoIdempotency_NewKey</td><td>NewKey</td><td>1024</td><td>16.56 &mu;s</td><td>0.287 &mu;s</td><td>0.502 &mu;s</td><td>1.00</td><td>0.04</td><td>0.7324</td><td>-</td><td>-</td><td>13.3 KB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_NewKey</td><td>NewKey</td><td>1024</td><td>44.66 &mu;s</td><td>0.857 &mu;s</td><td>1.115 &mu;s</td><td>2.70</td><td>0.10</td><td>1.4648</td><td>0.4883</td><td>-</td><td>26.04 KB</td><td>1.96</td>
-</tr><tr><td>IdempotentAPI_NewKey</td><td>NewKey</td><td>1024</td><td>119.67 &mu;s</td><td>2.373 &mu;s</td><td>2.733 &mu;s</td><td>7.23</td><td>0.27</td><td>3.4180</td><td>0.9766</td><td>-</td><td>58.65 KB</td><td>4.41</td>
-</tr><tr><td>Plain_NoIdempotency_NewKey</td><td>NewKey</td><td>262144</td><td>114.48 &mu;s</td><td>2.183 &mu;s</td><td>2.144 &mu;s</td><td>1.00</td><td>0.03</td><td>25.8789</td><td>24.9023</td><td>24.9023</td><td>271.45 KB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_NewKey</td><td>NewKey</td><td>262144</td><td>353.65 &mu;s</td><td>4.164 &mu;s</td><td>3.251 &mu;s</td><td>3.09</td><td>0.06</td><td>6.8359</td><td>5.8594</td><td>5.8594</td><td>2334.81 KB</td><td>8.60</td>
-</tr><tr><td>IdempotentAPI_NewKey</td><td>NewKey</td><td>262144</td><td>5,433.38 &mu;s</td><td>28.503 &mu;s</td><td>26.661 &mu;s</td><td>47.48</td><td>0.88</td><td>7.8125</td><td>-</td><td>-</td><td>2275.08 KB</td><td>8.38</td>
-</tr><tr><td>Plain_NoIdempotency</td><td>Replay</td><td>1024</td><td>17.23 &mu;s</td><td>0.333 &mu;s</td><td>0.681 &mu;s</td><td>1.00</td><td>0.05</td><td>0.7324</td><td>-</td><td>-</td><td>13.22 KB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Replay</td><td>Replay</td><td>1024</td><td>19.63 &mu;s</td><td>0.381 &mu;s</td><td>0.934 &mu;s</td><td>1.14</td><td>0.07</td><td>0.9766</td><td>-</td><td>-</td><td>17.94 KB</td><td>1.36</td>
-</tr><tr><td>IdempotentAPI_Replay</td><td>Replay</td><td>1024</td><td>88.16 &mu;s</td><td>0.992 &mu;s</td><td>0.879 &mu;s</td><td>5.12</td><td>0.20</td><td>2.9297</td><td>-</td><td>-</td><td>48.98 KB</td><td>3.71</td>
-</tr><tr><td>CSharpEssentials_Replay_InMemoryStore</td><td>Replay</td><td>1024</td><td>17.22 &mu;s</td><td>0.338 &mu;s</td><td>0.526 &mu;s</td><td>1.00</td><td>0.05</td><td>0.9766</td><td>-</td><td>-</td><td>16.17 KB</td><td>1.22</td>
-</tr><tr><td>Plain_NoIdempotency</td><td>Replay</td><td>262144</td><td>113.51 &mu;s</td><td>2.021 &mu;s</td><td>1.687 &mu;s</td><td>1.00</td><td>0.02</td><td>24.4141</td><td>23.4375</td><td>23.4375</td><td>271.28 KB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Replay</td><td>Replay</td><td>262144</td><td>221.36 &mu;s</td><td>4.373 &mu;s</td><td>9.129 &mu;s</td><td>1.95</td><td>0.08</td><td>142.5781</td><td>141.1133</td><td>141.1133</td><td>1048.56 KB</td><td>3.87</td>
-</tr><tr><td>IdempotentAPI_Replay</td><td>Replay</td><td>262144</td><td>1,771.16 &mu;s</td><td>27.976 &mu;s</td><td>24.800 &mu;s</td><td>15.61</td><td>0.31</td><td>367.1875</td><td>359.3750</td><td>359.3750</td><td>4518.42 KB</td><td>16.66</td>
-</tr><tr><td>CSharpEssentials_Replay_InMemoryStore</td><td>Replay</td><td>262144</td><td>181.16 &mu;s</td><td>2.028 &mu;s</td><td>1.584 &mu;s</td><td>1.60</td><td>0.03</td><td>80.0781</td><td>78.6133</td><td>78.6133</td><td>791.07 KB</td><td>2.92</td>
+</thead><tbody><tr><td>Plain_NoIdempotency_NewKey</td><td>NewKey</td><td>1024</td><td>14.65 &mu;s</td><td>0.285 &mu;s</td><td>0.370 &mu;s</td><td>1.00</td><td>0.03</td><td>0.7324</td><td>-</td><td>-</td><td>13.34 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_NewKey</td><td>NewKey</td><td>1024</td><td>36.21 &mu;s</td><td>0.718 &mu;s</td><td>1.482 &mu;s</td><td>2.47</td><td>0.12</td><td>1.2207</td><td>0.2441</td><td>-</td><td>22.64 KB</td><td>1.70</td>
+</tr><tr><td>IdempotentAPI_NewKey</td><td>NewKey</td><td>1024</td><td>106.81 &mu;s</td><td>2.046 &mu;s</td><td>1.914 &mu;s</td><td>7.29</td><td>0.22</td><td>3.4180</td><td>0.9766</td><td>-</td><td>58.65 KB</td><td>4.40</td>
+</tr><tr><td>Plain_NoIdempotency_NewKey</td><td>NewKey</td><td>262144</td><td>84.26 &mu;s</td><td>0.978 &mu;s</td><td>0.914 &mu;s</td><td>1.00</td><td>0.01</td><td>22.4609</td><td>21.9727</td><td>21.9727</td><td>270.45 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_NewKey</td><td>NewKey</td><td>262144</td><td>190.68 &mu;s</td><td>3.381 &mu;s</td><td>4.628 &mu;s</td><td>2.26</td><td>0.06</td><td>1.9531</td><td>0.9766</td><td>0.9766</td><td>798.02 KB</td><td>2.95</td>
+</tr><tr><td>IdempotentAPI_NewKey</td><td>NewKey</td><td>262144</td><td>5,210.03 &mu;s</td><td>11.243 &mu;s</td><td>9.389 &mu;s</td><td>61.84</td><td>0.66</td><td>7.8125</td><td>-</td><td>-</td><td>2274.51 KB</td><td>8.41</td>
+</tr><tr><td>Plain_NoIdempotency</td><td>Replay</td><td>1024</td><td>13.22 &mu;s</td><td>0.262 &mu;s</td><td>0.511 &mu;s</td><td>1.00</td><td>0.05</td><td>0.7324</td><td>-</td><td>-</td><td>13.22 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Replay</td><td>Replay</td><td>1024</td><td>15.01 &mu;s</td><td>0.286 &mu;s</td><td>0.340 &mu;s</td><td>1.14</td><td>0.05</td><td>0.7324</td><td>-</td><td>-</td><td>14.72 KB</td><td>1.11</td>
+</tr><tr><td>IdempotentAPI_Replay</td><td>Replay</td><td>1024</td><td>80.02 &mu;s</td><td>1.354 &mu;s</td><td>1.267 &mu;s</td><td>6.06</td><td>0.24</td><td>2.9297</td><td>-</td><td>-</td><td>48.98 KB</td><td>3.70</td>
+</tr><tr><td>CSharpEssentials_Replay_InMemoryStore</td><td>Replay</td><td>1024</td><td>14.74 &mu;s</td><td>0.293 &mu;s</td><td>0.456 &mu;s</td><td>1.12</td><td>0.05</td><td>0.7324</td><td>-</td><td>-</td><td>14 KB</td><td>1.06</td>
+</tr><tr><td>Plain_NoIdempotency</td><td>Replay</td><td>262144</td><td>96.44 &mu;s</td><td>1.850 &mu;s</td><td>1.817 &mu;s</td><td>1.00</td><td>0.03</td><td>22.9492</td><td>22.4609</td><td>22.4609</td><td>270.47 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Replay</td><td>Replay</td><td>262144</td><td>94.11 &mu;s</td><td>1.324 &mu;s</td><td>1.174 &mu;s</td><td>0.98</td><td>0.02</td><td>30.7617</td><td>29.7852</td><td>29.7852</td><td>278.24 KB</td><td>1.03</td>
+</tr><tr><td>IdempotentAPI_Replay</td><td>Replay</td><td>262144</td><td>1,443.11 &mu;s</td><td>21.036 &mu;s</td><td>19.677 &mu;s</td><td>14.97</td><td>0.33</td><td>396.4844</td><td>386.7188</td><td>386.7188</td><td>4518.51 KB</td><td>16.71</td>
+</tr><tr><td>CSharpEssentials_Replay_InMemoryStore</td><td>Replay</td><td>262144</td><td>94.58 &mu;s</td><td>1.858 &mu;s</td><td>1.908 &mu;s</td><td>0.98</td><td>0.03</td><td>30.2734</td><td>29.2969</td><td>29.2969</td><td>277.6 KB</td><td>1.03</td>
 </tr></tbody></table>
 </body>
 </html>

@@ -2,42 +2,42 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 
 
 ```
-| Method                             | Succeed | Yield | Mean        | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|----------------------------------- |-------- |------ |------------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| **HandWritten_TaskSource_TaskHandler** | **False**   | **False** |    **15.91 ns** |  **0.047 ns** |  **0.044 ns** |  **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| TaskSource_SyncHandler             | False   | False |    13.52 ns |  0.043 ns |  0.040 ns |  0.85 |    0.00 |      - |         - |          NA |
-| TaskSource_TaskHandler             | False   | False |    32.00 ns |  0.238 ns |  0.223 ns |  2.01 |    0.01 |      - |         - |          NA |
-| ValueTaskSource_SyncHandler        | False   | False |    47.17 ns |  0.086 ns |  0.072 ns |  2.96 |    0.01 | 0.0033 |      56 B |          NA |
-| Instance_TaskHandler               | False   | False |    29.58 ns |  0.618 ns |  0.712 ns |  1.86 |    0.04 | 0.0033 |      56 B |          NA |
-| ValueTaskSource_ValueTaskHandler   | False   | False |    54.70 ns |  1.124 ns |  1.294 ns |  3.44 |    0.08 | 0.0033 |      56 B |          NA |
-| Instance_ValueTaskHandler          | False   | False |    37.88 ns |  0.615 ns |  0.575 ns |  2.38 |    0.04 | 0.0033 |      56 B |          NA |
-|                                    |         |       |             |           |           |       |         |        |           |             |
-| **HandWritten_TaskSource_TaskHandler** | **False**   | **True**  | **1,418.83 ns** |  **8.189 ns** |  **7.259 ns** |  **1.00** |    **0.01** | **0.0229** |     **384 B** |        **1.00** |
-| TaskSource_SyncHandler             | False   | True  |   860.04 ns |  4.782 ns |  4.473 ns |  0.61 |    0.00 | 0.0172 |     295 B |        0.77 |
-| TaskSource_TaskHandler             | False   | True  | 1,682.01 ns | 20.042 ns | 18.748 ns |  1.19 |    0.01 | 0.0305 |     549 B |        1.43 |
-| ValueTaskSource_SyncHandler        | False   | True  |   879.73 ns |  6.885 ns |  6.440 ns |  0.62 |    0.01 | 0.0210 |     359 B |        0.93 |
-| Instance_TaskHandler               | False   | True  |   852.56 ns |  6.573 ns |  6.148 ns |  0.60 |    0.01 | 0.0172 |     295 B |        0.77 |
-| ValueTaskSource_ValueTaskHandler   | False   | True  | 1,750.96 ns | 16.765 ns | 14.862 ns |  1.23 |    0.01 | 0.0362 |     630 B |        1.64 |
-| Instance_ValueTaskHandler          | False   | True  |   882.64 ns |  6.644 ns |  6.215 ns |  0.62 |    0.01 | 0.0181 |     312 B |        0.81 |
-|                                    |         |       |             |           |           |       |         |        |           |             |
-| **HandWritten_TaskSource_TaskHandler** | **True**    | **False** |    **27.08 ns** |  **0.186 ns** |  **0.174 ns** |  **1.00** |    **0.01** | **0.0086** |     **144 B** |        **1.00** |
-| TaskSource_SyncHandler             | True    | False |    19.19 ns |  0.119 ns |  0.111 ns |  0.71 |    0.01 | 0.0043 |      72 B |        0.50 |
-| TaskSource_TaskHandler             | True    | False |    45.01 ns |  0.490 ns |  0.458 ns |  1.66 |    0.02 | 0.0129 |     216 B |        1.50 |
-| ValueTaskSource_SyncHandler        | True    | False |    26.70 ns |  0.044 ns |  0.039 ns |  0.99 |    0.01 |      - |         - |        0.00 |
-| Instance_TaskHandler               | True    | False |    26.03 ns |  0.321 ns |  0.285 ns |  0.96 |    0.01 | 0.0086 |     144 B |        1.00 |
-| ValueTaskSource_ValueTaskHandler   | True    | False |    41.51 ns |  0.265 ns |  0.235 ns |  1.53 |    0.01 |      - |         - |        0.00 |
-| Instance_ValueTaskHandler          | True    | False |    25.20 ns |  0.517 ns |  0.531 ns |  0.93 |    0.02 |      - |         - |        0.00 |
-|                                    |         |       |             |           |           |       |         |        |           |             |
-| **HandWritten_TaskSource_TaskHandler** | **True**    | **True**  | **1,386.80 ns** |  **5.640 ns** |  **5.000 ns** |  **1.00** |    **0.00** | **0.0191** |     **328 B** |        **1.00** |
-| TaskSource_SyncHandler             | True    | True  |   846.42 ns |  5.600 ns |  5.238 ns |  0.61 |    0.00 | 0.0143 |     239 B |        0.73 |
-| TaskSource_TaskHandler             | True    | True  | 1,642.05 ns |  9.132 ns |  8.542 ns |  1.18 |    0.01 | 0.0286 |     494 B |        1.51 |
-| ValueTaskSource_SyncHandler        | True    | True  |   866.58 ns |  5.207 ns |  4.870 ns |  0.62 |    0.00 | 0.0172 |     303 B |        0.92 |
-| Instance_TaskHandler               | True    | True  |   844.50 ns | 14.081 ns | 12.483 ns |  0.61 |    0.01 | 0.0143 |     239 B |        0.73 |
-| ValueTaskSource_ValueTaskHandler   | True    | True  | 1,726.67 ns |  9.480 ns |  8.868 ns |  1.25 |    0.01 | 0.0343 |     573 B |        1.75 |
-| Instance_ValueTaskHandler          | True    | True  |   859.59 ns |  6.257 ns |  5.853 ns |  0.62 |    0.00 | 0.0153 |     255 B |        0.78 |
+| Method                             | Succeed | Yield | Mean        | Error     | StdDev    | Ratio | Gen0   | Allocated | Alloc Ratio |
+|----------------------------------- |-------- |------ |------------:|----------:|----------:|------:|-------:|----------:|------------:|
+| **HandWritten_TaskSource_TaskHandler** | **False**   | **False** |    **15.69 ns** |  **0.009 ns** |  **0.008 ns** |  **1.00** |      **-** |         **-** |          **NA** |
+| TaskSource_SyncHandler             | False   | False |    13.08 ns |  0.008 ns |  0.007 ns |  0.83 |      - |         - |          NA |
+| TaskSource_TaskHandler             | False   | False |    30.43 ns |  0.029 ns |  0.026 ns |  1.94 |      - |         - |          NA |
+| ValueTaskSource_SyncHandler        | False   | False |    28.52 ns |  0.013 ns |  0.013 ns |  1.82 |      - |         - |          NA |
+| Instance_TaskHandler               | False   | False |    14.87 ns |  0.008 ns |  0.007 ns |  0.95 |      - |         - |          NA |
+| ValueTaskSource_ValueTaskHandler   | False   | False |    40.40 ns |  0.085 ns |  0.076 ns |  2.57 |      - |         - |          NA |
+| Instance_ValueTaskHandler          | False   | False |    23.24 ns |  0.011 ns |  0.010 ns |  1.48 |      - |         - |          NA |
+|                                    |         |       |             |           |           |       |        |           |             |
+| **HandWritten_TaskSource_TaskHandler** | **False**   | **True**  | **1,393.15 ns** |  **4.815 ns** |  **4.504 ns** |  **1.00** | **0.0191** |     **328 B** |        **1.00** |
+| TaskSource_SyncHandler             | False   | True  |   830.86 ns |  6.233 ns |  5.525 ns |  0.60 | 0.0134 |     238 B |        0.73 |
+| TaskSource_TaskHandler             | False   | True  | 1,598.21 ns |  7.092 ns |  6.633 ns |  1.15 | 0.0286 |     492 B |        1.50 |
+| ValueTaskSource_SyncHandler        | False   | True  |   857.73 ns |  2.412 ns |  2.014 ns |  0.62 | 0.0172 |     302 B |        0.92 |
+| Instance_TaskHandler               | False   | True  |   832.77 ns |  4.618 ns |  4.320 ns |  0.60 | 0.0134 |     238 B |        0.73 |
+| ValueTaskSource_ValueTaskHandler   | False   | True  | 1,633.12 ns |  9.801 ns |  9.168 ns |  1.17 | 0.0343 |     572 B |        1.74 |
+| Instance_ValueTaskHandler          | False   | True  |   849.01 ns |  5.735 ns |  5.084 ns |  0.61 | 0.0143 |     255 B |        0.78 |
+|                                    |         |       |             |           |           |       |        |           |             |
+| **HandWritten_TaskSource_TaskHandler** | **True**    | **False** |    **25.25 ns** |  **0.163 ns** |  **0.152 ns** |  **1.00** | **0.0086** |     **144 B** |        **1.00** |
+| TaskSource_SyncHandler             | True    | False |    17.91 ns |  0.156 ns |  0.138 ns |  0.71 | 0.0043 |      72 B |        0.50 |
+| TaskSource_TaskHandler             | True    | False |    42.13 ns |  0.228 ns |  0.213 ns |  1.67 | 0.0129 |     216 B |        1.50 |
+| ValueTaskSource_SyncHandler        | True    | False |    26.60 ns |  0.020 ns |  0.018 ns |  1.05 |      - |         - |        0.00 |
+| Instance_TaskHandler               | True    | False |    24.59 ns |  0.246 ns |  0.230 ns |  0.97 | 0.0086 |     144 B |        1.00 |
+| ValueTaskSource_ValueTaskHandler   | True    | False |    38.48 ns |  0.044 ns |  0.039 ns |  1.52 |      - |         - |        0.00 |
+| Instance_ValueTaskHandler          | True    | False |    22.89 ns |  0.008 ns |  0.007 ns |  0.91 |      - |         - |        0.00 |
+|                                    |         |       |             |           |           |       |        |           |             |
+| **HandWritten_TaskSource_TaskHandler** | **True**    | **True**  | **1,406.34 ns** | **11.825 ns** |  **9.875 ns** |  **1.00** | **0.0191** |     **328 B** |        **1.00** |
+| TaskSource_SyncHandler             | True    | True  |   835.24 ns |  3.625 ns |  3.027 ns |  0.59 | 0.0134 |     239 B |        0.73 |
+| TaskSource_TaskHandler             | True    | True  | 1,599.57 ns |  6.934 ns |  5.790 ns |  1.14 | 0.0286 |     494 B |        1.51 |
+| ValueTaskSource_SyncHandler        | True    | True  |   847.99 ns |  7.265 ns |  6.796 ns |  0.60 | 0.0172 |     302 B |        0.92 |
+| Instance_TaskHandler               | True    | True  |   841.16 ns |  3.064 ns |  2.866 ns |  0.60 | 0.0134 |     239 B |        0.73 |
+| ValueTaskSource_ValueTaskHandler   | True    | True  | 1,636.97 ns | 11.944 ns | 11.172 ns |  1.16 | 0.0343 |     572 B |        1.74 |
+| Instance_ValueTaskHandler          | True    | True  |   860.14 ns |  4.192 ns |  3.921 ns |  0.61 | 0.0143 |     255 B |        0.78 |

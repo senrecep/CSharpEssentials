@@ -2,18 +2,18 @@
 
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 
 
 ```
 | Method                  | Categories | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |------------------------ |----------- |----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
-| CSharpEssentials_Decode | Decode     |  80.81 ns | 0.673 ns | 0.596 ns |  1.00 |    0.01 |      - |         - |          NA |
-| ShortGuid_Decode        | Decode     | 253.70 ns | 5.029 ns | 5.589 ns |  3.14 |    0.07 | 0.0415 |     696 B |          NA |
-| Bcl_Decode              | Decode     |  22.12 ns | 0.027 ns | 0.025 ns |  0.27 |    0.00 |      - |         - |          NA |
+| CSharpEssentials_Decode | Decode     |  35.82 ns | 0.095 ns | 0.089 ns |  1.00 |    0.00 |      - |         - |          NA |
+| ShortGuid_Decode        | Decode     | 258.74 ns | 1.923 ns | 1.799 ns |  7.22 |    0.05 | 0.0415 |     696 B |          NA |
+| Bcl_Decode              | Decode     |  22.56 ns | 0.047 ns | 0.044 ns |  0.63 |    0.00 |      - |         - |          NA |
 |                         |            |           |          |          |       |         |        |           |             |
-| CSharpEssentials_Encode | Encode     |  46.85 ns | 0.260 ns | 0.243 ns |  1.00 |    0.01 | 0.0043 |      72 B |        1.00 |
-| ShortGuid_Encode        | Encode     |  68.64 ns | 0.362 ns | 0.339 ns |  1.47 |    0.01 | 0.0153 |     256 B |        3.56 |
-| Bcl_Encode              | Encode     |  22.26 ns | 0.125 ns | 0.117 ns |  0.48 |    0.00 | 0.0043 |      72 B |        1.00 |
+| CSharpEssentials_Encode | Encode     |  21.96 ns | 0.145 ns | 0.136 ns |  1.00 |    0.01 | 0.0043 |      72 B |        1.00 |
+| ShortGuid_Encode        | Encode     |  65.01 ns | 0.506 ns | 0.473 ns |  2.96 |    0.03 | 0.0153 |     256 B |        3.56 |
+| Bcl_Encode              | Encode     |  19.63 ns | 0.219 ns | 0.205 ns |  0.89 |    0.01 | 0.0043 |      72 B |        1.00 |

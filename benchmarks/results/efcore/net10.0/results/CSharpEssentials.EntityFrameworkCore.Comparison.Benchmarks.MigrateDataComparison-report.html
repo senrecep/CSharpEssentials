@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.MigrateDataComparison-20261106-005550</title>
+<title>CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.MigrateDataComparison-20261107-124455</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,19 +15,19 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method                     </th><th>Count</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method                     </th><th>Count</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>HandWritten_DictionaryDiff</td><td>1000</td><td>6.044 ms</td><td>0.0630 ms</td><td>0.0863 ms</td><td>1.00</td><td>0.02</td><td>125.0000</td><td>62.5000</td><td>-</td><td>2.94 MB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_MigrateDataAsync</td><td>1000</td><td>14.028 ms</td><td>0.1854 ms</td><td>0.1644 ms</td><td>2.32</td><td>0.04</td><td>166.6667</td><td>-</td><td>-</td><td>3.11 MB</td><td>1.06</td>
-</tr><tr><td>HandWritten_DictionaryDiff</td><td>10000</td><td>76.195 ms</td><td>0.4272 ms</td><td>0.3787 ms</td><td>1.00</td><td>0.01</td><td>2000.0000</td><td>1285.7143</td><td>571.4286</td><td>28.35 MB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_MigrateDataAsync</td><td>10000</td><td>835.763 ms</td><td>9.4885 ms</td><td>8.4113 ms</td><td>10.97</td><td>0.12</td><td>1000.0000</td><td>-</td><td>-</td><td>30.49 MB</td><td>1.08</td>
+</thead><tbody><tr><td>HandWritten_DictionaryDiff</td><td>1000</td><td>6.109 ms</td><td>0.0975 ms</td><td>0.0912 ms</td><td>1.00</td><td>0.02</td><td>125.0000</td><td>62.5000</td><td>2.94 MB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_MigrateDataAsync</td><td>1000</td><td>6.208 ms</td><td>0.0804 ms</td><td>0.0627 ms</td><td>1.02</td><td>0.02</td><td>187.5000</td><td>62.5000</td><td>3.06 MB</td><td>1.04</td>
+</tr><tr><td>HandWritten_DictionaryDiff</td><td>10000</td><td>70.924 ms</td><td>1.1299 ms</td><td>1.9491 ms</td><td>1.00</td><td>0.04</td><td>1000.0000</td><td>-</td><td>28.53 MB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_MigrateDataAsync</td><td>10000</td><td>73.432 ms</td><td>0.9104 ms</td><td>0.7107 ms</td><td>1.04</td><td>0.03</td><td>1000.0000</td><td>-</td><td>29.93 MB</td><td>1.05</td>
 </tr></tbody></table>
 </body>
 </html>

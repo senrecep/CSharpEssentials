@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.RequestLoggingMetadataComparison-20261105-220315</title>
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.RequestLoggingMetadataComparison-20261108-190435</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,9 +15,9 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
-  DefaultJob : .NET 8.0.30 (8.0.3026.36720), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
+  DefaultJob : .NET 8.0.33 (8.0.3326.52219), X64 RyuJIT AVX2
 </code></pre>
 <pre><code>Categories=Metadata  
 </code></pre>
@@ -25,10 +25,10 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 <table>
 <thead><tr><th>Method               </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>Plain_NoLogging</td><td>9.774 &mu;s</td><td>0.1940 &mu;s</td><td>0.2156 &mu;s</td><td>1.00</td><td>0.03</td><td>0.5493</td><td>9.71 KB</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_SkipBodies</td><td>10.813 &mu;s</td><td>0.2116 &mu;s</td><td>0.1875 &mu;s</td><td>1.11</td><td>0.03</td><td>0.6104</td><td>10.51 KB</td><td>1.08</td>
-</tr><tr><td>Serilog_RequestLogging</td><td>13.151 &mu;s</td><td>0.2556 &mu;s</td><td>0.2391 &mu;s</td><td>1.35</td><td>0.04</td><td>0.7324</td><td>12.51 KB</td><td>1.29</td>
-</tr><tr><td>HttpLogging_Metadata</td><td>10.878 &mu;s</td><td>0.2142 &mu;s</td><td>0.2859 &mu;s</td><td>1.11</td><td>0.04</td><td>0.6104</td><td>10.36 KB</td><td>1.07</td>
+</thead><tbody><tr><td>Plain_NoLogging</td><td>9.152 &mu;s</td><td>0.1594 &mu;s</td><td>0.1331 &mu;s</td><td>1.00</td><td>0.02</td><td>0.5493</td><td>9.71 KB</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_SkipBodies</td><td>9.977 &mu;s</td><td>0.1782 &mu;s</td><td>0.1830 &mu;s</td><td>1.09</td><td>0.02</td><td>0.6104</td><td>10.49 KB</td><td>1.08</td>
+</tr><tr><td>Serilog_RequestLogging</td><td>12.052 &mu;s</td><td>0.2173 &mu;s</td><td>0.3185 &mu;s</td><td>1.32</td><td>0.04</td><td>0.7324</td><td>12.49 KB</td><td>1.29</td>
+</tr><tr><td>HttpLogging_Metadata</td><td>9.752 &mu;s</td><td>0.1910 &mu;s</td><td>0.1787 &mu;s</td><td>1.07</td><td>0.02</td><td>0.6104</td><td>10.36 KB</td><td>1.07</td>
 </tr></tbody></table>
 </body>
 </html>
