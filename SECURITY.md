@@ -5,8 +5,7 @@
 | Version | Supported |
 | ------- | --------- |
 | 7.x     | Yes       |
-| 6.x     | Yes       |
-| < 6.0   | No        |
+| < 7.0   | No        |
 
 ## Reporting a vulnerability
 
@@ -27,4 +26,4 @@ This policy covers every package published from this repository: `CSharpEssentia
 ## Out of scope
 
 - Vulnerabilities in third-party dependencies (report to the respective maintainer)
-- Issues in unsupported versions (< 6.0)
+- Issues in unsupported versions (< 7.0)
