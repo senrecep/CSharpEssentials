@@ -1546,4 +1546,18 @@ public class RuleEngineTests
     }
 
     #endregion
+
+    [Fact]
+    public void Evaluate_ThrowingDelegateRule_InsideAnd_ShouldReturnSimpleRuleError()
+    {
+        Func<TestContext, Result> throwing = _ => throw new InvalidOperationException("Kaboom");
+        IRuleBase<TestContext> rule = new[] { throwing }.And();
+
+        Result result = RuleEngine.Evaluate(rule, new TestContext());
+
+        result.IsFailure.Should().BeTrue();
+        result.FirstError.Code.Should().Be("RuleEngine.Evaluate.SimpleRule");
+        result.FirstError.Description.Should().Be("Kaboom");
+    }
+
 }
