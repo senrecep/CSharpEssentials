@@ -25,7 +25,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, default job,
 - Humanizer.Core 3.0.10: `Underscore`, `Kebaberize` and `Camelize` over regex-based inflectors. Trimmable and annotated.
 - CSharpVitamins.ShortGuid 2.0.0: a `ShortGuid` struct with implicit casts, the RFC 4648 URL-safe alphabet and a strict decode.
 - CSE:
-  - Json: `[StringEnum]` conventions with generated metadata, Data and Input read modes, `[EnumFallback]`, flags as a JSON array; `PolymorphicJsonConverterFactory` with no derived-type list, and `[JsonTypeDiscriminator]` with a source-generated, AOT-safe `AddPolymorphism()` (not benchmarked); `MultiFormatDateTimeConverterFactory` over a fixed list of 34 formats plus Unix seconds.
+  - Json: `[StringEnum]` conventions with generated metadata, Data and Input read modes, `[EnumFallback]`, flags as a JSON array; `PolymorphicJsonConverterFactory` with no derived-type list, and `[JsonTypeDiscriminator]` with a source-generated, AOT-safe `AddPolymorphism()` (not benchmarked); `MultiFormatDateTimeConverterFactory` over a fixed list of 35 formats plus Unix seconds.
   - Core: `ToSnakeCase`/`ToKebabCase`/`ToCamelCase`, `Guider` text helpers on the RFC 4648 alphabet, `Guider.NewGuid`/`NewMonotonicGuid` (version 7), `GetRandomItems` on a cryptographic RNG, and `WithCancellation` for Task and ValueTask.
 
 ## Feature matrix
@@ -44,8 +44,8 @@ Json:
 | Polymorphism discriminator | Factory: automatic, CLR full name; `AddPolymorphism`: `[JsonTypeDiscriminator]` | Declared | None |
 | Polymorphism needs a derived-type list | No (assembly scan or generated registrations) | Yes | n/a |
 | Polymorphism under AOT | Factory no; `AddPolymorphism` yes (not benchmarked) | Yes | n/a |
-| Multi-format DateTime read | 34 formats plus Unix seconds | ISO 8601-1:2019 only | `/Date()/` only |
-| 7-digit ISO fraction | No (bug) | Yes | n/a |
+| Multi-format DateTime read | 35 formats plus Unix seconds | ISO 8601-1:2019 only | `/Date()/` only |
+| 7-digit ISO fraction | Yes (fixed after the run) | Yes | n/a |
 
 Core:
 
@@ -127,7 +127,7 @@ Features only CSE ships (not a speed claim):
 
 ## Caveats to keep in the post
 
-- The benchmark found a CSE bug, still open: `MultiFormatDateTimeConverter` has no 7-digit fraction format (`CSharpEssentials.Json/MultiFormatDateTimeConverter.cs:37-90`), and its ISO fast path does not take that length, so the `O` form STJ writes for a `DateTime` throws on read. The Iso input uses a 3-digit fraction for that reason.
+- The benchmark found a CSE bug, since fixed: `MultiFormatDateTimeConverter` had no 7-digit fraction format and its ISO fast path did not take that length, so the `O` form STJ writes for a `DateTime` threw on read. The default list now includes `yyyy-MM-ddTHH:mm:ss.FFFFFFFK` and the fast path takes 1 to 7 fraction digits. The Iso input still uses a 3-digit fraction; the numbers predate the fix.
 - Flags rows write different payloads and do not do the same work.
 - The GUID text parity is a round trip within each library, even though all three now write the same RFC 4648 text.
 - On net8 every JSON row uses the STJ 9.0.4 package, so those are not STJ 8 numbers.
@@ -139,6 +139,6 @@ Features only CSE ships (not a speed claim):
 
 - "The BCL caught up": most rows have a BCL answer now, and the BCL answer is faster in most like-for-like rows. The post is about the behaviour CSE adds, not about speed.
 - "Convenience has a price": automatic polymorphism (ratio 0.39 to 0.60) and the format list (0.22 to 0.26 on a late entry) are the two places where CSE trades speed for less setup.
-- "The bug the benchmark found": the 7-digit fraction, which STJ itself writes.
+- "The bug the benchmark found": the 7-digit fraction, which STJ itself writes, and its fix.
 - "Crypto randomness is not free": at K = 990 on net10.0 the two cryptographic rows took 1,303,631.05 ns (CSE) and 1,282,952.20 ns, against 5,325.28 ns for `Random.Shared.Shuffle`.
 - "Faster than the old library, slower than the BCL": Humanizer and ShortGuid against `JsonNamingPolicy` and `Base64Url`.

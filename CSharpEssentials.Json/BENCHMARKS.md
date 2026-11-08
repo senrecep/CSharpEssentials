@@ -92,8 +92,8 @@ This table comes from reading source, docs and nuspecs, plus the probe noted abo
 | Polymorphism discriminator | `PolymorphicJsonConverterFactory`: automatic, CLR full name. `[JsonTypeDiscriminator]` + `AddPolymorphism()`: declared per derived type | Declared with `[JsonDerivedType]` | None |
 | Polymorphism needs a derived-type list | No: assembly scan (factory) or generated registrations (`AddPolymorphism`) | Yes | n/a |
 | Polymorphism under AOT | Factory no (RUC/RDC); `AddPolymorphism` yes (`benchmarks/json-aot`) | Yes | n/a |
-| Multi-format DateTime read | A fixed list of 34 formats plus Unix seconds | ISO 8601-1:2019 only | The `/Date()/` format only (not benchmarked) |
-| 7-digit ISO fraction (the `O` round-trip form) | No, see Caveats | Yes | n/a |
+| Multi-format DateTime read | A fixed list of 35 formats plus Unix seconds | ISO 8601-1:2019 only | The `/Date()/` format only (not benchmarked) |
+| 7-digit ISO fraction (the `O` round-trip form) | Yes, since the fix after this run; see Caveats | Yes | n/a |
 | License | MIT | MIT | MIT |
 
 ---
@@ -233,7 +233,7 @@ Every row where CSE is slower or allocates more than a competitor:
 
 ## Caveats
 
-- Known CSE bug: `MultiFormatDateTimeConverter` has no format with a 7-digit fraction, and its ISO fast path does not take that length either, so `"2024-03-14T15:30:45.1234567Z"` throws a `JsonException`. That is the form STJ itself writes for a `DateTime`, so a payload STJ wrote cannot be read back through `DefaultOptions`. The Iso input uses a 3-digit fraction for this reason.
+- The benchmark found a CSE bug, since fixed: `MultiFormatDateTimeConverter` had no format with a 7-digit fraction and its ISO fast path did not take that length, so `"2024-03-14T15:30:45.1234567Z"`, the form STJ writes for a `DateTime`, threw a `JsonException`. The default list now has `yyyy-MM-ddTHH:mm:ss.FFFFFFFK` and the fast path takes 1 to 7 fraction digits. The Iso input still uses a 3-digit fraction, and the numbers here come from the run before the fix.
 - On net8.0 every JSON row runs the STJ 9.0.4 package, not the in-box STJ 8. Numbers for net8 are not numbers for STJ 8.
 - Macross 3.0.0 dates from 2022 and targets net6.0. It is still the latest stable release.
 

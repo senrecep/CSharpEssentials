@@ -300,7 +300,36 @@ public class MultiFormatDateTimeConverterTests
         "2024-13-14",
         "2024-03-14T15:30:45.123z",
         "+2024-03-14",
+        "2024-03-14T15:30:45.1234567Z",
+        "2024-03-14T15:30:45.1234567",
+        "2024-03-14T15:30:45.1234567+03:00",
+        "2024-03-14T15:30:45.1Z",
+        "2024-03-14T15:30:45.12345678Z",
+        "2024-03-14T15:30:45.Z",
     ];
+
+    [Theory]
+    [InlineData(DateTimeKind.Utc)]
+    [InlineData(DateTimeKind.Unspecified)]
+    public void Deserialize_TextWrittenBySystemTextJson_Should_Round_Trip(DateTimeKind kind)
+    {
+        DateTime original = new(638460378451234567, kind);
+        string json = JsonSerializer.Serialize(original);
+
+        DateTime read = JsonSerializer.Deserialize<DateTime>(json, DefaultOptions);
+
+        read.Kind.Should().Be(DateTimeKind.Utc);
+        read.Ticks.Should().Be(original.Ticks);
+    }
+
+    [Fact]
+    public void Deserialize_EscapedSevenDigitFraction_Should_Use_The_Format_List()
+    {
+        DateTime dateTime = JsonSerializer.Deserialize<DateTime>("\"2024-03-14T15:30:45.1234567\\u005A\"", DefaultOptions);
+
+        dateTime.Kind.Should().Be(DateTimeKind.Utc);
+        dateTime.Ticks.Should().Be(new DateTime(2024, 3, 14, 15, 30, 45, DateTimeKind.Utc).AddTicks(1234567).Ticks);
+    }
 
     [Theory]
     [MemberData(nameof(IsoShapedTexts))]
