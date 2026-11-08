@@ -28,6 +28,18 @@ public static partial class RuleEngine
         }
     }
 
+    private static Result EvaluateDelegate<TContext>(Func<TContext, Result> rule, TContext context)
+    {
+        try
+        {
+            return rule(context);
+        }
+        catch (Exception ex)
+        {
+            return RuleErrors.RuleEngineEvaluateError(RuleTypes.SimpleRule, ex);
+        }
+    }
+
     private static ValueTask<Result> Evaluate<TContext>(IAsyncRule<TContext> rule, TContext context, CancellationToken cancellationToken = default)
     {
         return new ValueTask<Result>(Result.TryAsync(
@@ -195,6 +207,7 @@ public static partial class RuleEngine
     {
         return rule switch
         {
+            SimpleRuleAdapter<TContext> adapter => EvaluateDelegate(adapter.Rule, context),
             IAsyncRule<TContext> asyncRule => InternalEvaluateAsync(asyncRule, context, cancellationToken).GetAwaiter().GetResult(),
             IConditionalRule<TContext> conditionalRule => Evaluate(conditionalRule, context, cancellationToken),
             ILinearRule<TContext> linearRule => Evaluate(linearRule, context, cancellationToken),
