@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Rules.Comparison.Benchmarks.ConditionalComparison-20261104-222830</title>
+<title>CSharpEssentials.Rules.Comparison.Benchmarks.ConditionalComparison-20261108-181306</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,20 +14,20 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method</th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>HandWritten</td><td>Pass</td><td>4.607 ns</td><td>0.0031 ns</td><td>0.0027 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>CseIf</td><td>Pass</td><td>141.324 ns</td><td>0.1684 ns</td><td>0.1492 ns</td><td>30.68</td><td>0.04</td><td>0.0024</td><td>40 B</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>FailLast</td><td>16.563 ns</td><td>0.1018 ns</td><td>0.0952 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
-</tr><tr><td>CseIf</td><td>FailLast</td><td>129.871 ns</td><td>0.2481 ns</td><td>0.2321 ns</td><td>7.84</td><td>0.05</td><td>0.0057</td><td>96 B</td><td>1.71</td>
+</thead><tbody><tr><td>HandWritten</td><td>Pass</td><td>4.404 ns</td><td>0.0189 ns</td><td>0.0158 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>CseIf</td><td>Pass</td><td>125.255 ns</td><td>0.4977 ns</td><td>0.4656 ns</td><td>28.44</td><td>0.14</td><td>0.0024</td><td>40 B</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>FailLast</td><td>15.686 ns</td><td>0.1234 ns</td><td>0.1154 ns</td><td>1.00</td><td>0.01</td><td>0.0033</td><td>56 B</td><td>1.00</td>
+</tr><tr><td>CseIf</td><td>FailLast</td><td>138.210 ns</td><td>0.4957 ns</td><td>0.4637 ns</td><td>8.81</td><td>0.07</td><td>0.0057</td><td>96 B</td><td>1.71</td>
 </tr></tbody></table>
 </body>
 </html>

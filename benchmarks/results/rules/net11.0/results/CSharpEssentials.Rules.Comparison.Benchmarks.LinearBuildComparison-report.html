@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Rules.Comparison.Benchmarks.LinearBuildComparison-20261104-224636</title>
+<title>CSharpEssentials.Rules.Comparison.Benchmarks.LinearBuildComparison-20261108-182355</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,24 +14,24 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method    </th><th>Count</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>Prebuilt</td><td>5</td><td>101.984 ns</td><td>0.0395 ns</td><td>0.0308 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>RebuiltStatic</td><td>5</td><td>196.179 ns</td><td>0.6656 ns</td><td>0.6226 ns</td><td>1.92</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>NA</td>
-</tr><tr><td>RebuiltExtension</td><td>5</td><td>138.419 ns</td><td>1.4025 ns</td><td>1.3119 ns</td><td>1.36</td><td>0.01</td><td>0.0076</td><td>128 B</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>5</td><td>2.834 ns</td><td>0.0017 ns</td><td>0.0014 ns</td><td>0.03</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>Prebuilt</td><td>10</td><td>177.017 ns</td><td>3.4059 ns</td><td>5.4999 ns</td><td>1.00</td><td>0.04</td><td>-</td><td>-</td><td>NA</td>
-</tr><tr><td>RebuiltStatic</td><td>10</td><td>391.407 ns</td><td>2.7027 ns</td><td>2.5281 ns</td><td>2.21</td><td>0.06</td><td>0.0405</td><td>680 B</td><td>NA</td>
-</tr><tr><td>RebuiltExtension</td><td>10</td><td>282.208 ns</td><td>1.0404 ns</td><td>0.9732 ns</td><td>1.60</td><td>0.05</td><td>0.0172</td><td>288 B</td><td>NA</td>
-</tr><tr><td>HandWritten</td><td>10</td><td>6.633 ns</td><td>0.0498 ns</td><td>0.0465 ns</td><td>0.04</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</thead><tbody><tr><td>Prebuilt</td><td>5</td><td>91.197 ns</td><td>0.1616 ns</td><td>0.1433 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>RebuiltStatic</td><td>5</td><td>190.275 ns</td><td>1.0881 ns</td><td>1.0178 ns</td><td>2.09</td><td>0.01</td><td>0.0215</td><td>360 B</td><td>NA</td>
+</tr><tr><td>RebuiltExtension</td><td>5</td><td>133.359 ns</td><td>1.1878 ns</td><td>1.0530 ns</td><td>1.46</td><td>0.01</td><td>0.0076</td><td>128 B</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>5</td><td>2.821 ns</td><td>0.0049 ns</td><td>0.0038 ns</td><td>0.03</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>Prebuilt</td><td>10</td><td>172.476 ns</td><td>0.2947 ns</td><td>0.2612 ns</td><td>1.00</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
+</tr><tr><td>RebuiltStatic</td><td>10</td><td>393.064 ns</td><td>4.1533 ns</td><td>3.8850 ns</td><td>2.28</td><td>0.02</td><td>0.0405</td><td>680 B</td><td>NA</td>
+</tr><tr><td>RebuiltExtension</td><td>10</td><td>265.187 ns</td><td>1.9944 ns</td><td>1.8656 ns</td><td>1.54</td><td>0.01</td><td>0.0172</td><td>288 B</td><td>NA</td>
+</tr><tr><td>HandWritten</td><td>10</td><td>6.588 ns</td><td>0.0093 ns</td><td>0.0078 ns</td><td>0.04</td><td>0.00</td><td>-</td><td>-</td><td>NA</td>
 </tr></tbody></table>
 </body>
 </html>
