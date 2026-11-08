@@ -1,22 +1,22 @@
 ```
 
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 
 
 ```
-| Method                           | Categories | Mean         | Error      | StdDev     | Ratio  | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|--------------------------------- |----------- |-------------:|-----------:|-----------:|-------:|--------:|-------:|-------:|----------:|------------:|
-| Direct_Call                      | Execute    |     1.066 ns |  0.0159 ns |  0.0149 ns |   1.00 |    0.02 |      - |      - |         - |          NA |
-| HandWritten_ConcurrentDictionary | Execute    |    12.380 ns |  0.0953 ns |  0.0891 ns |  11.62 |    0.18 |      - |      - |         - |          NA |
-| CSharpEssentials_FirstRun        | Execute    |   603.325 ns |  3.0837 ns |  2.7336 ns | 566.26 |    7.98 | 0.0353 | 0.0315 |     592 B |          NA |
-| CSharpEssentials_Replay          | Execute    |   129.085 ns |  0.3530 ns |  0.3302 ns | 121.15 |    1.65 | 0.0091 |      - |     152 B |          NA |
-| CSharpEssentials_InFlight        | Execute    |   120.094 ns |  0.2194 ns |  0.1713 ns | 112.72 |    1.52 | 0.0057 |      - |      96 B |          NA |
-| CSharpEssentials_KeyReused       | Execute    |   124.695 ns |  1.3462 ns |  1.2592 ns | 117.03 |    1.94 | 0.0057 |      - |      96 B |          NA |
-| CSharpEssentials_ModeOff         | Execute    |    58.841 ns |  0.6865 ns |  0.6085 ns |  55.23 |    0.92 | 0.0057 |      - |      96 B |          NA |
-|                                  |            |              |            |            |        |         |        |        |           |             |
-| CSharpEssentials_Inbox_New       | Inbox      | 1,027.703 ns | 11.6310 ns | 10.8796 ns |   1.00 |    0.01 | 0.0648 | 0.0477 |    1112 B |        1.00 |
-| CSharpEssentials_Inbox_Duplicate | Inbox      |   415.982 ns |  1.5312 ns |  1.4323 ns |   0.40 |    0.00 | 0.0420 |      - |     704 B |        0.63 |
+| Method                           | Categories | Mean       | Error     | StdDev    | Ratio  | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|--------------------------------- |----------- |-----------:|----------:|----------:|-------:|--------:|-------:|-------:|----------:|------------:|
+| Direct_Call                      | Execute    |   1.049 ns | 0.0027 ns | 0.0025 ns |   1.00 |    0.00 |      - |      - |         - |          NA |
+| HandWritten_ConcurrentDictionary | Execute    |  12.722 ns | 0.0120 ns | 0.0106 ns |  12.13 |    0.03 |      - |      - |         - |          NA |
+| CSharpEssentials_FirstRun        | Execute    | 545.730 ns | 4.7639 ns | 4.4562 ns | 520.26 |    4.28 | 0.0296 | 0.0238 |     504 B |          NA |
+| CSharpEssentials_Replay          | Execute    | 121.636 ns | 0.2727 ns | 0.2551 ns | 115.96 |    0.36 |      - |      - |         - |          NA |
+| CSharpEssentials_InFlight        | Execute    | 120.203 ns | 0.1191 ns | 0.1114 ns | 114.59 |    0.28 |      - |      - |         - |          NA |
+| CSharpEssentials_KeyReused       | Execute    | 116.737 ns | 0.4134 ns | 0.3867 ns | 111.29 |    0.44 |      - |      - |         - |          NA |
+| CSharpEssentials_ModeOff         | Execute    |  53.385 ns | 0.0610 ns | 0.0571 ns |  50.89 |    0.13 |      - |      - |         - |          NA |
+|                                  |            |            |           |           |        |         |        |        |           |             |
+| CSharpEssentials_Inbox_New       | Inbox      | 953.367 ns | 4.4512 ns | 4.1636 ns |   1.00 |    0.01 | 0.0591 | 0.0486 |    1000 B |        1.00 |
+| CSharpEssentials_Inbox_Duplicate | Inbox      | 394.532 ns | 1.8834 ns | 1.7617 ns |   0.41 |    0.00 | 0.0315 |      - |     528 B |        0.53 |

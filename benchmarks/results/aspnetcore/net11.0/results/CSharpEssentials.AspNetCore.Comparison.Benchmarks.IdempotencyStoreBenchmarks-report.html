@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyStoreBenchmarks-20261105-230831</title>
+<title>CSharpEssentials.AspNetCore.Comparison.Benchmarks.IdempotencyStoreBenchmarks-20261108-194018</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,31 +14,31 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                                </th><th>Categories</th><th>PayloadSize</th><th>Mean  </th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Gen1</th><th>Gen2</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Distributed_ReserveComplete</td><td>Distributed</td><td>0</td><td>1,723.39 ns</td><td>16.448 ns</td><td>14.580 ns</td><td>1.00</td><td>0.01</td><td>0.1450</td><td>0.1373</td><td>0.0687</td><td>2525 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Distributed_Replay</td><td>Distributed</td><td>0</td><td>233.12 ns</td><td>2.281 ns</td><td>2.134 ns</td><td>0.14</td><td>0.00</td><td>0.0353</td><td>-</td><td>-</td><td>592 B</td><td>0.23</td>
-</tr><tr><td>CSharpEssentials_Distributed_ReserveComplete</td><td>Distributed</td><td>1024</td><td>2,407.61 ns</td><td>47.720 ns</td><td>53.041 ns</td><td>1.00</td><td>0.03</td><td>0.3204</td><td>0.1831</td><td>0.0610</td><td>4629 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Distributed_Replay</td><td>Distributed</td><td>1024</td><td>295.20 ns</td><td>1.978 ns</td><td>1.851 ns</td><td>0.12</td><td>0.00</td><td>0.0978</td><td>-</td><td>-</td><td>1640 B</td><td>0.35</td>
-</tr><tr><td>CSharpEssentials_Distributed_ReserveComplete</td><td>Distributed</td><td>65536</td><td>26,279.41 ns</td><td>519.080 ns</td><td>674.951 ns</td><td>1.00</td><td>0.04</td><td>8.8501</td><td>8.7891</td><td>0.9155</td><td>133676 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Distributed_Replay</td><td>Distributed</td><td>65536</td><td>3,039.07 ns</td><td>30.282 ns</td><td>25.286 ns</td><td>0.12</td><td>0.00</td><td>3.9368</td><td>-</td><td>-</td><td>66152 B</td><td>0.49</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveComplete</td><td>InMemory</td><td>0</td><td>443.29 ns</td><td>2.111 ns</td><td>1.871 ns</td><td>1.00</td><td>0.01</td><td>0.0257</td><td>0.0205</td><td>-</td><td>432 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveHit</td><td>InMemory</td><td>0</td><td>58.04 ns</td><td>0.120 ns</td><td>0.094 ns</td><td>0.13</td><td>0.00</td><td>0.0033</td><td>-</td><td>-</td><td>56 B</td><td>0.13</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveRelease</td><td>InMemory</td><td>0</td><td>295.62 ns</td><td>1.016 ns</td><td>0.901 ns</td><td>0.67</td><td>0.00</td><td>0.0224</td><td>-</td><td>-</td><td>376 B</td><td>0.87</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveComplete</td><td>InMemory</td><td>1024</td><td>601.67 ns</td><td>10.672 ns</td><td>9.982 ns</td><td>1.00</td><td>0.02</td><td>0.0877</td><td>0.0820</td><td>-</td><td>1480 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveHit</td><td>InMemory</td><td>1024</td><td>57.54 ns</td><td>0.118 ns</td><td>0.099 ns</td><td>0.10</td><td>0.00</td><td>0.0033</td><td>-</td><td>-</td><td>56 B</td><td>0.04</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveRelease</td><td>InMemory</td><td>1024</td><td>288.99 ns</td><td>0.682 ns</td><td>0.569 ns</td><td>0.48</td><td>0.01</td><td>0.0224</td><td>-</td><td>-</td><td>376 B</td><td>0.25</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveComplete</td><td>InMemory</td><td>65536</td><td>14,033.57 ns</td><td>264.145 ns</td><td>324.394 ns</td><td>1.001</td><td>0.03</td><td>4.4708</td><td>4.4403</td><td>0.5341</td><td>65995 B</td><td>1.000</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveHit</td><td>InMemory</td><td>65536</td><td>58.14 ns</td><td>0.148 ns</td><td>0.131 ns</td><td>0.004</td><td>0.00</td><td>0.0033</td><td>-</td><td>-</td><td>56 B</td><td>0.001</td>
-</tr><tr><td>CSharpEssentials_InMemory_ReserveRelease</td><td>InMemory</td><td>65536</td><td>292.36 ns</td><td>2.811 ns</td><td>2.492 ns</td><td>0.021</td><td>0.00</td><td>0.0224</td><td>-</td><td>-</td><td>376 B</td><td>0.006</td>
+</thead><tbody><tr><td>CSharpEssentials_Distributed_ReserveComplete</td><td>Distributed</td><td>0</td><td>1,664.53 ns</td><td>21.544 ns</td><td>20.152 ns</td><td>1.00</td><td>0.02</td><td>0.1450</td><td>0.1373</td><td>0.0687</td><td>2525 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Distributed_Replay</td><td>Distributed</td><td>0</td><td>225.37 ns</td><td>1.271 ns</td><td>1.127 ns</td><td>0.14</td><td>0.00</td><td>0.0353</td><td>-</td><td>-</td><td>592 B</td><td>0.23</td>
+</tr><tr><td>CSharpEssentials_Distributed_ReserveComplete</td><td>Distributed</td><td>1024</td><td>1,967.30 ns</td><td>29.177 ns</td><td>25.864 ns</td><td>1.00</td><td>0.02</td><td>0.2136</td><td>0.2060</td><td>0.1450</td><td>3549 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Distributed_Replay</td><td>Distributed</td><td>1024</td><td>225.07 ns</td><td>0.996 ns</td><td>0.883 ns</td><td>0.11</td><td>0.00</td><td>0.0353</td><td>-</td><td>-</td><td>592 B</td><td>0.17</td>
+</tr><tr><td>CSharpEssentials_Distributed_ReserveComplete</td><td>Distributed</td><td>65536</td><td>18,621.39 ns</td><td>367.876 ns</td><td>594.051 ns</td><td>1.00</td><td>0.04</td><td>4.7302</td><td>4.6997</td><td>0.7019</td><td>68070 B</td><td>1.000</td>
+</tr><tr><td>CSharpEssentials_Distributed_Replay</td><td>Distributed</td><td>65536</td><td>234.67 ns</td><td>1.073 ns</td><td>1.004 ns</td><td>0.01</td><td>0.00</td><td>0.0353</td><td>-</td><td>-</td><td>592 B</td><td>0.009</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveComplete</td><td>InMemory</td><td>0</td><td>390.45 ns</td><td>1.517 ns</td><td>1.419 ns</td><td>1.00</td><td>0.00</td><td>0.0262</td><td>0.0205</td><td>-</td><td>440 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveHit</td><td>InMemory</td><td>0</td><td>52.25 ns</td><td>0.059 ns</td><td>0.056 ns</td><td>0.13</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveRelease</td><td>InMemory</td><td>0</td><td>228.14 ns</td><td>1.064 ns</td><td>0.995 ns</td><td>0.58</td><td>0.00</td><td>0.0196</td><td>-</td><td>-</td><td>328 B</td><td>0.75</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveComplete</td><td>InMemory</td><td>1024</td><td>531.25 ns</td><td>3.636 ns</td><td>3.401 ns</td><td>1.00</td><td>0.01</td><td>0.0887</td><td>0.0839</td><td>-</td><td>1488 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveHit</td><td>InMemory</td><td>1024</td><td>52.27 ns</td><td>0.094 ns</td><td>0.088 ns</td><td>0.10</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>-</td><td>0.00</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveRelease</td><td>InMemory</td><td>1024</td><td>284.32 ns</td><td>1.818 ns</td><td>1.701 ns</td><td>0.54</td><td>0.00</td><td>0.0196</td><td>-</td><td>-</td><td>328 B</td><td>0.22</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveComplete</td><td>InMemory</td><td>65536</td><td>13,651.82 ns</td><td>271.742 ns</td><td>240.892 ns</td><td>1.000</td><td>0.02</td><td>4.4250</td><td>4.3945</td><td>0.4883</td><td>66003 B</td><td>1.000</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveHit</td><td>InMemory</td><td>65536</td><td>53.12 ns</td><td>0.076 ns</td><td>0.067 ns</td><td>0.004</td><td>0.00</td><td>-</td><td>-</td><td>-</td><td>-</td><td>0.000</td>
+</tr><tr><td>CSharpEssentials_InMemory_ReserveRelease</td><td>InMemory</td><td>65536</td><td>272.31 ns</td><td>2.134 ns</td><td>1.996 ns</td><td>0.020</td><td>0.00</td><td>0.0196</td><td>-</td><td>-</td><td>328 B</td><td>0.005</td>
 </tr></tbody></table>
 </body>
 </html>
