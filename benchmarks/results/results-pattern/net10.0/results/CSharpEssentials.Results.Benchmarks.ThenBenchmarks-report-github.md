@@ -1,39 +1,39 @@
 ```
 
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 
 
 ```
 | Method                              | Succeed | Yield | Mean        | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |------------------------------------ |-------- |------ |------------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
-| **TaskSource_BindAsync**                | **False**   | **False** |    **17.98 ns** |  **0.095 ns** |  **0.084 ns** |  **1.00** |    **0.01** | **0.0048** |      **80 B** |        **1.00** |
-| TaskSource_ThenAsync                | False   | False |    33.80 ns |  0.206 ns |  0.192 ns |  1.88 |    0.01 | 0.0095 |     160 B |        2.00 |
-| Instance_ThenAsync_TaskHandler      | False   | False |    28.77 ns |  0.351 ns |  0.329 ns |  1.60 |    0.02 | 0.0081 |     136 B |        1.70 |
-| ValueTaskSource_BindAsync           | False   | False |    41.40 ns |  0.139 ns |  0.130 ns |  2.30 |    0.01 | 0.0033 |      56 B |        0.70 |
-| ValueTaskSource_ThenAsync           | False   | False |    44.73 ns |  0.153 ns |  0.143 ns |  2.49 |    0.01 | 0.0033 |      56 B |        0.70 |
-| Instance_ThenAsync_ValueTaskHandler | False   | False |    23.43 ns |  0.084 ns |  0.078 ns |  1.30 |    0.01 | 0.0033 |      56 B |        0.70 |
+| **TaskSource_BindAsync**                | **False**   | **False** |    **16.80 ns** |  **0.103 ns** |  **0.091 ns** |  **1.00** |    **0.01** | **0.0048** |      **80 B** |        **1.00** |
+| TaskSource_ThenAsync                | False   | False |    32.87 ns |  0.170 ns |  0.159 ns |  1.96 |    0.01 | 0.0095 |     160 B |        2.00 |
+| Instance_ThenAsync_TaskHandler      | False   | False |    16.02 ns |  0.119 ns |  0.111 ns |  0.95 |    0.01 | 0.0048 |      80 B |        1.00 |
+| ValueTaskSource_BindAsync           | False   | False |    24.63 ns |  0.030 ns |  0.028 ns |  1.47 |    0.01 |      - |         - |        0.00 |
+| ValueTaskSource_ThenAsync           | False   | False |    30.34 ns |  0.047 ns |  0.044 ns |  1.81 |    0.01 |      - |         - |        0.00 |
+| Instance_ThenAsync_ValueTaskHandler | False   | False |    10.23 ns |  0.010 ns |  0.009 ns |  0.61 |    0.00 |      - |         - |        0.00 |
 |                                     |         |       |             |           |           |       |         |        |           |             |
-| **TaskSource_BindAsync**                | **False**   | **True**  |   **846.57 ns** |  **4.185 ns** |  **3.915 ns** |  **1.00** |    **0.01** | **0.0181** |     **303 B** |        **1.00** |
-| TaskSource_ThenAsync                | False   | True  |   869.60 ns | 15.069 ns | 13.359 ns |  1.03 |    0.02 | 0.0229 |     391 B |        1.29 |
-| Instance_ThenAsync_TaskHandler      | False   | True  |    29.24 ns |  0.295 ns |  0.276 ns |  0.03 |    0.00 | 0.0081 |     136 B |        0.45 |
-| ValueTaskSource_BindAsync           | False   | True  |   870.28 ns |  4.436 ns |  4.149 ns |  1.03 |    0.01 | 0.0238 |     399 B |        1.32 |
-| ValueTaskSource_ThenAsync           | False   | True  |   863.35 ns |  4.823 ns |  4.512 ns |  1.02 |    0.01 | 0.0238 |     399 B |        1.32 |
-| Instance_ThenAsync_ValueTaskHandler | False   | True  |    22.89 ns |  0.098 ns |  0.091 ns |  0.03 |    0.00 | 0.0033 |      56 B |        0.18 |
+| **TaskSource_BindAsync**                | **False**   | **True**  |   **840.26 ns** |  **4.368 ns** |  **4.086 ns** |  **1.00** |    **0.01** | **0.0143** |     **247 B** |        **1.00** |
+| TaskSource_ThenAsync                | False   | True  |   850.32 ns |  2.766 ns |  2.452 ns |  1.01 |    0.01 | 0.0200 |     335 B |        1.36 |
+| Instance_ThenAsync_TaskHandler      | False   | True  |    16.80 ns |  0.114 ns |  0.106 ns |  0.02 |    0.00 | 0.0048 |      80 B |        0.32 |
+| ValueTaskSource_BindAsync           | False   | True  |   861.18 ns |  6.632 ns |  6.204 ns |  1.02 |    0.01 | 0.0191 |     342 B |        1.38 |
+| ValueTaskSource_ThenAsync           | False   | True  |   841.84 ns |  6.748 ns |  6.312 ns |  1.00 |    0.01 | 0.0200 |     342 B |        1.38 |
+| Instance_ThenAsync_ValueTaskHandler | False   | True  |    10.78 ns |  0.017 ns |  0.016 ns |  0.01 |    0.00 |      - |         - |        0.00 |
 |                                     |         |       |             |           |           |       |         |        |           |             |
-| **TaskSource_BindAsync**                | **True**    | **False** |    **25.59 ns** |  **0.290 ns** |  **0.271 ns** |  **1.00** |    **0.01** | **0.0095** |     **160 B** |        **1.00** |
-| TaskSource_ThenAsync                | True    | False |    43.49 ns |  0.596 ns |  0.529 ns |  1.70 |    0.03 | 0.0143 |     240 B |        1.50 |
-| Instance_ThenAsync_TaskHandler      | True    | False |    23.98 ns |  0.302 ns |  0.282 ns |  0.94 |    0.01 | 0.0095 |     160 B |        1.00 |
-| ValueTaskSource_BindAsync           | True    | False |    29.59 ns |  0.126 ns |  0.118 ns |  1.16 |    0.01 |      - |         - |        0.00 |
-| ValueTaskSource_ThenAsync           | True    | False |    33.75 ns |  0.117 ns |  0.109 ns |  1.32 |    0.01 |      - |         - |        0.00 |
-| Instance_ThenAsync_ValueTaskHandler | True    | False |    14.43 ns |  0.024 ns |  0.021 ns |  0.56 |    0.01 |      - |         - |        0.00 |
+| **TaskSource_BindAsync**                | **True**    | **False** |    **24.24 ns** |  **0.155 ns** |  **0.145 ns** |  **1.00** |    **0.01** | **0.0095** |     **160 B** |        **1.00** |
+| TaskSource_ThenAsync                | True    | False |    41.70 ns |  0.594 ns |  0.556 ns |  1.72 |    0.02 | 0.0143 |     240 B |        1.50 |
+| Instance_ThenAsync_TaskHandler      | True    | False |    22.44 ns |  0.396 ns |  0.371 ns |  0.93 |    0.02 | 0.0095 |     160 B |        1.00 |
+| ValueTaskSource_BindAsync           | True    | False |    30.16 ns |  0.030 ns |  0.026 ns |  1.24 |    0.01 |      - |         - |        0.00 |
+| ValueTaskSource_ThenAsync           | True    | False |    33.36 ns |  0.051 ns |  0.048 ns |  1.38 |    0.01 |      - |         - |        0.00 |
+| Instance_ThenAsync_ValueTaskHandler | True    | False |    14.01 ns |  0.012 ns |  0.012 ns |  0.58 |    0.00 |      - |         - |        0.00 |
 |                                     |         |       |             |           |           |       |         |        |           |             |
-| **TaskSource_BindAsync**                | **True**    | **True**  | **1,369.53 ns** |  **4.807 ns** |  **4.261 ns** |  **1.00** |    **0.00** | **0.0191** |     **352 B** |        **1.00** |
-| TaskSource_ThenAsync                | True    | True  | 1,610.64 ns |  7.251 ns |  6.783 ns |  1.18 |    0.01 | 0.0286 |     502 B |        1.43 |
-| Instance_ThenAsync_TaskHandler      | True    | True  |   842.14 ns |  4.859 ns |  4.545 ns |  0.61 |    0.00 | 0.0143 |     247 B |        0.70 |
-| ValueTaskSource_BindAsync           | True    | True  | 1,511.03 ns |  7.618 ns |  7.126 ns |  1.10 |    0.01 | 0.0267 |     464 B |        1.32 |
-| ValueTaskSource_ThenAsync           | True    | True  | 1,678.84 ns |  9.541 ns |  8.925 ns |  1.23 |    0.01 | 0.0381 |     634 B |        1.80 |
-| Instance_ThenAsync_ValueTaskHandler | True    | True  |   843.78 ns |  4.191 ns |  3.920 ns |  0.62 |    0.00 | 0.0172 |     295 B |        0.84 |
+| **TaskSource_BindAsync**                | **True**    | **True**  | **1,349.82 ns** | **10.152 ns** |  **9.496 ns** |  **1.00** |    **0.01** | **0.0191** |     **352 B** |        **1.00** |
+| TaskSource_ThenAsync                | True    | True  | 1,585.75 ns |  7.307 ns |  6.835 ns |  1.17 |    0.01 | 0.0286 |     502 B |        1.43 |
+| Instance_ThenAsync_TaskHandler      | True    | True  |   827.21 ns |  5.379 ns |  5.031 ns |  0.61 |    0.01 | 0.0143 |     247 B |        0.70 |
+| ValueTaskSource_BindAsync           | True    | True  | 1,519.81 ns | 30.129 ns | 46.011 ns |  1.13 |    0.03 | 0.0267 |     464 B |        1.32 |
+| ValueTaskSource_ThenAsync           | True    | True  | 1,672.80 ns |  6.518 ns |  5.443 ns |  1.24 |    0.01 | 0.0381 |     634 B |        1.80 |
+| Instance_ThenAsync_ValueTaskHandler | True    | True  |   824.52 ns |  2.581 ns |  2.288 ns |  0.61 |    0.00 | 0.0172 |     295 B |        0.84 |
