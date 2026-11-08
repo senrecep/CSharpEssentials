@@ -23,7 +23,7 @@ using CSharpEssentials.Resilience;      // ResiliencePolicy (for the resilience 
 
 ---
 
-## Result-Returning Extensions
+## Result-returning extensions
 
 All methods take a `Uri` (use `UriKind.Relative` with a `BaseAddress`).
 
@@ -41,10 +41,10 @@ Result<User> patched = await client.PatchAsJsonAsResultAsync<User>(new Uri("/use
 Result deleted = await client.DeleteAsResultAsync(new Uri("/users/1", UriKind.Relative));
 ```
 
-- 2xx → success. A 2xx with an empty or undeserializable body → `NotFound` error.
+- 2xx → success. A 2xx whose body is the JSON literal `null` → `NotFound` error. An empty or malformed JSON body, or a request value that fails to serialize → `Validation` error.
 - Non-2xx → `HttpStatusCodeMapper.ToError(statusCode)`: code `Http.<status>`, type from `ToErrorType` (400/411/413-417/422 → `Validation`, 401/407 → `Unauthorized`, 403 → `Forbidden`, 404/410 → `NotFound`, 409/412/429 → `Conflict`, 408 and 5xx → `Unexpected`, 402/405/406 and any other status → `Failure`).
 - Transport exceptions → `Unexpected` error. Cancelling your own token throws `OperationCanceledException`; an HTTP timeout (`TaskCanceledException` wrapping `TimeoutException`, e.g. `HttpClient.Timeout`) → `Unexpected` error with code `Http.Timeout` (a Polly `TimeoutRejectedException` keeps its type name as code), and any other cancellation → `Unexpected` error (both threw before 6.5.0).
-- JSON uses `EnhancedJsonSerializerOptions.DefaultOptions` unless you pass `options`.
+- JSON uses `EnhancedJsonSerializerOptions.DefaultOptions` unless you pass `options`. For trimming or Native AOT, use the `JsonTypeInfo<T>` overloads (`client.GetFromJsonAsResultAsync(uri, AppJsonContext.Default.User)`, `WithJsonTypeInfoContent`); passing a literal `null` as options is ambiguous with them.
 - Also available: `PostAsResultAsync` / `PutAsResultAsync` (raw `HttpContent`), `SendAsResultAsync` / `SendAsResultAsync<T>` (`HttpRequestMessage`), `SendWithRedirectsAsResultAsync`, and `HttpContent.ReadAsStringAsResultAsync` / `ReadFromJsonAsResultAsync<T>`.
 
 ---
@@ -69,13 +69,13 @@ Result<User> redirected = await HttpRequestBuilder
     .AsResultAsync<User>(client);
 ```
 
-Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name/value, dictionary or object value), `WithRoute` (fills `{name}` placeholders), `WithEnumConventions`, `WithContent`, `WithJsonContent`, `FollowRedirects`. `Build()` returns `Result<HttpRequestMessage>`.
+Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name/value, dictionary or object value), `WithRoute` (fills `{name}` placeholders), `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithJsonTypeInfoContent`, `WithIdempotencyKey`, `FollowRedirects` (default 5 hops). `Build()` returns `Result<HttpRequestMessage>`.
 
 `WithQuery` and `Uri.WithQueryString` work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs resolve against `BaseAddress`.
 
 ---
 
-## Query Strings
+## Query strings
 
 ```csharp
 Uri uri = new("https://api.example.com/search");
@@ -102,11 +102,11 @@ Result<User> result = await policy.ExecuteAsync(token =>
 
 - Policies: `CreateRetryPolicy`, `CreateTimeoutPolicy`, `CreateCircuitBreakerPolicy`, `CreateResiliencePolicy` (plus generic `<T>` forms).
 - Raw Polly pipelines: `CreateRetryPipeline`, `CreateTimeoutPipeline`, `CreateCircuitBreakerPipeline`, `CreateResiliencePipeline`, run with `pipeline.ExecuteAsResultAsync(...)`.
-- Since 4.0 the non-generic policies and pipelines also retry failed `Result` values. `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors are not retried.
+- Failed `Result` values are retried like exceptions, except `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors. `maxRetryAttempts` counts retries after the first attempt; the `CreateResiliencePolicy`/`CreateResiliencePipeline` timeout defaults to 30 s.
 
 ---
 
-## Idempotency-Key Client
+## Idempotency-Key client
 
 Retry POST/PATCH only when every attempt carries the same `Idempotency-Key`. Set the key once per logical call; the retry resends the same `HttpRequestMessage`, so the key stays the same.
 
@@ -123,7 +123,7 @@ services.AddHttpClient("payments")
     .AddStandardResilienceHandler(o => o.Retry.RetryUnsafeMethodsOnlyWithIdempotencyKey());
 ```
 
-- `IdempotentRetry.ShouldRetryAsync(request, response, exception)` is the decision; `RetryUnsafeMethodsOnlyWithIdempotencyKey()` plugs it into any `RetryStrategyOptions<HttpResponseMessage>`.
+- `IdempotentRetry.ShouldRetryAsync(request, response, exception, options, cancellationToken)` is the decision; `RetryUnsafeMethodsOnlyWithIdempotencyKey()` plugs it into any `RetryStrategyOptions<HttpResponseMessage>`.
 - Never retried: `Idempotency-Replayed: true`, caller cancellation, POST/PATCH without a key, 400/422 key errors, business 409s, 2xx, `SsrfBlockedException`.
 - POST/PATCH with a key retry on no response or timeout, 408, 429, 503, 504, and 409 `Idempotency.InFlight`. A 409 InFlight, 429 or 503 waits for its `Retry-After` (capped by `IdempotentRetryOptions.MaxRetryAfter`, 30 s); without it the normal backoff applies. 500/502 are not retried for them; GET/HEAD/PUT/DELETE/OPTIONS also retry every 5xx.
 - The 409 body is read up to 4 KiB within `ProblemReadTimeout` (2 s) and put back; an unreadable or stuck body is not retried.
@@ -131,7 +131,7 @@ services.AddHttpClient("payments")
 
 ---
 
-## SSRF Guard (.NET 9+, not available on netstandard2.1)
+## SSRF guard (.NET 9+, not available on netstandard2.1)
 
 Use it for any client that calls a URL a user or tenant supplied (webhooks, link previews, import-by-URL).
 
@@ -153,10 +153,3 @@ services.AddHttpClient("webhooks")
 - Do not retry `SsrfBlockedException` in resilience handlers.
 - Do not replace the primary handler or turn on a proxy or cookies after `AddSsrfGuard`; the first request will throw.
 
----
-
-## Best Practices
-
-- Use `HttpRequestBuilder` when a request needs headers, query values or redirects.
-- Chain follow-up calls with `Result` combinators (`Bind`, `Map`, `Match`) instead of nested try/catch.
-- Register typed clients with `IHttpClientFactory` (`AddHttpClient<T>`) and keep the extensions on the injected `HttpClient`.

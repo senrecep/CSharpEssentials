@@ -1,8 +1,6 @@
 # CSharpEssentials.Maybe: Performance benchmarks
 
-This page compares the CSharpEssentials.Maybe (CSE) collection helpers with CSharpFunctionalExtensions 3.7.0 (CFE) and with hand-written loops. It covers `TryFirst`, `TryLast`, `TryFind` and `Choose`. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. The basic `Maybe<T>` operations (From, Map, Bind, Where, GetValueOrDefault, Match) are measured in [CSharpEssentials.Results/BENCHMARKS.md](../CSharpEssentials.Results/BENCHMARKS.md).
-
-The numbers come from full default-job runs on net8.0 to net11.0 (see [How these numbers were produced](#how-these-numbers-were-produced) and [Results](#results)).
+The CSharpEssentials.Maybe (CSE) collection helpers `TryFirst`, `TryLast`, `TryFind` and `Choose` against CSharpFunctionalExtensions 3.7.0 (CFE) and hand-written loops, with BenchmarkDotNet v0.14.0 on .NET 8, 9, 10 and 11. The basic `Maybe<T>` operations (From, Map, Bind, Where, GetValueOrDefault, Match) are measured in [CSharpEssentials.Results/BENCHMARKS.md](../CSharpEssentials.Results/BENCHMARKS.md).
 
 | Package | Version | License |
 |---|---|---|
@@ -40,19 +38,17 @@ The code is `MaybeCollectionComparison` in `benchmarks/CSharpEssentials.Results.
 
 Parity keys: `ok:<value>` or `none` in each search category, `ok:500` and `none` for `TryFind`, and `ok:4000` for `Choose`.
 
-All rows are like-for-like: same input, same delegate, same answer.
-
 ---
 
 ## Semantic differences
 
-- **Reference-type elements on purpose.** With `int` elements CFE `TryLast` with a predicate returns `Some(0)` instead of none on a miss. Strings avoid that, so every column gives the same answer. CSE `TryFirst` and `TryLast` return none for value types too.
-- **How each library walks the source.**
+- Elements are strings on purpose. With `int` elements CFE `TryLast` with a predicate returns `Some(0)` instead of none on a miss. Strings avoid that, so every column gives the same answer. CSE `TryFirst` and `TryLast` return none for value types too.
+- How each library walks the source:
   - CSE `TryLast` reads the last element by index on an `IList<T>` or `IReadOnlyList<T>`, and with a predicate walks the list from the end. On a lazy sequence it walks to the end.
   - CFE `TryFirst` and `TryLast` without a predicate copy a non-collection source to a list first (`source as ICollection<T> ?? source.ToList()`). On `Sequence` that is a full copy.
   - CFE `TryFirst` with a predicate runs `Where().Take(1).ToList()`.
   - CFE `TryLast` with a predicate calls `LastOrDefault(predicate)`, which scans a `List` from the end.
-- **`TryFind` does two lookups in both libraries.** Each checks `ContainsKey` and then reads the indexer. The hand-written row does one `TryGetValue`.
+- `TryFind` does two lookups in both libraries. Each checks `ContainsKey` and then reads the indexer. The hand-written row does one `TryGetValue`.
 
 ---
 
@@ -76,7 +72,7 @@ All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio"
 
 ### How these numbers were produced
 
-- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
+- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU on Linux, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
 - 1-minute load average at the start and end of the comparison suite: 1.55 to 2.37, with a desktop session running. No `MaybeCollectionComparison` row stayed above 5% CV.
 - `MaybeCollectionComparison` was rerun on 2026-11-07 on .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 with SDK 11.0.100-rc.3.26522.148. Every number below comes from that rerun, and no rerun row is above 5% CV.
 - Reports: `benchmarks/results/results-comparison/{tfm}/results/`, for example [MaybeCollectionComparison net10](../benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.MaybeCollectionComparison-report-github.md).
@@ -104,13 +100,13 @@ All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio"
 `TryFind` and `Choose` do not depend on `Source`; the `Sequence` rows for them (TryFindHit 24.853 ns, TryFindMiss 10.469 ns, Choose 3,273.527 ns for CSE) are close to the `List` rows.
 
 - On net10 CSE is faster than CFE or tied with it in every search category. On net11 the one exception is `TryLastMiss` on a `List` (1,210.729 vs 1,184.469 ns). CSE allocates nothing on either TFM. CFE copies a lazy source to a list for `TryFirst` and `TryLast` without a predicate (16600 B) and allocates 160-224 B on net10 in `TryFirstWhere` and `TryFirstMiss`.
-- `TryLast` on a `List` reads the last element by index: 2.637 ns on net10 and 2.540 ns on net11, against 7.646 and 7.629 ns for CFE. `TryFirst` on a `List` now reads by index too (2.687 ns on net10).
+- `TryLast` on a `List` reads the last element by index: 2.637 ns on net10 and 2.540 ns on net11, against 7.646 and 7.629 ns for CFE. `TryFirst` on a `List` also reads by index (2.687 ns on net10).
 - `TryFind` does two lookups in both libraries and takes about twice the hand-written `TryGetValue` on a hit (ratio 0.43 to 0.52 on every TFM).
 - `Choose` takes 7-11× the hand-written loop for CSE (ratio 0.09 to 0.14), CFE is in the same range, and both allocate 88 B.
 
 ### net8 and net9
 
-On net8 (netstandard2.1 build) and net9 every column is slower than on net10 and net11, and on a `Sequence` every column allocates 48 B, the hand-written `foreach` included. On net10 and net11 the CSE and hand-written `Sequence` rows allocate 0 B, which points at the runtime removing the enumerator allocation there. `TryFirst` on a `List` now uses the index path and allocates 0 B on every TFM, and on a `List` CSE is now faster than CFE in `TryFirst`, `TryFirstWhere` and `TryFirstMiss` on net8 and net9.
+On net8 (netstandard2.1 build) and net9 every column is slower than on net10 and net11, and on a `Sequence` every column allocates 48 B, the hand-written `foreach` included. On net10 and net11 the CSE and hand-written `Sequence` rows allocate 0 B, which points at the runtime removing the enumerator allocation there. `TryFirst` on a `List` uses the index path and allocates 0 B on every TFM, and on a `List` CSE is faster than CFE in `TryFirst`, `TryFirstWhere` and `TryFirstMiss` on net8 and net9.
 
 | Category | Source | TFM | CSE | CFE | Hand-written |
 |---|---|---|---|---|---|
@@ -128,14 +124,14 @@ On net8 (netstandard2.1 build) and net9 every column is slower than on net10 and
 
 ### Where CSE loses
 
-- **Against CFE:** on net8 `TryLastWhere` on a `Sequence` (8,404.63 vs 7,784.34 ns), `TryFirstMiss` on a `Sequence` (5,706.86 vs 5,510.63 ns), `TryLastMiss` on both sources (`Sequence` 5,593.46 vs 5,024.79 ns) and `TryFindHit` (43.44 vs 39.61 ns); on net9 `TryLastWhere` and `TryLastMiss` on a `Sequence` (6,947.844 vs 6,581.671 ns, 5,986.563 vs 5,675.622 ns) and `TryFindHit` in the `Sequence` run (39.956 vs 37.156 ns); on net11 `TryLastMiss` on a `List` (1,210.729 vs 1,184.469 ns), `Choose` in the `List` run (3,545.760 vs 3,224.333 ns) and `TryFindMiss` in the `Sequence` run (11.811 vs 10.051 ns). Under 1 ns: `TryFindMiss` on net9 (11.718 vs 11.652 ns), `TryFindHit` on net10 (22.916 vs 22.038 ns) and in the net11 `Sequence` run. CSE never allocates more than CFE.
-- **Against the hand-written loops:** `Choose`, `TryFindHit` and `TryFindMiss` on every TFM (`TryFindMiss` under 1 ns on net10 and net11); every search category on both sources on net8, and on net9 except `TryFirstMiss` on a `List` (a tie); on net10 `TryLastWhere` on a `Sequence` (3,580.297 vs 3,264.382 ns); on net11 `TryFirstWhere` on both sources (`Sequence` 1,617.460 vs 1,469.123 ns), `TryLastWhere` and `TryFirstMiss` on a `Sequence` (2,919.927 vs 2,914.465 ns, 1,474.651 vs 1,454.889 ns) and `TryLastMiss` on a `List` (1,210.729 vs 1,194.491 ns).
+- Against CFE: on net8 `TryLastWhere` on a `Sequence` (8,404.63 vs 7,784.34 ns), `TryFirstMiss` on a `Sequence` (5,706.86 vs 5,510.63 ns), `TryLastMiss` on both sources (`Sequence` 5,593.46 vs 5,024.79 ns) and `TryFindHit` (43.44 vs 39.61 ns); on net9 `TryLastWhere` and `TryLastMiss` on a `Sequence` (6,947.844 vs 6,581.671 ns, 5,986.563 vs 5,675.622 ns) and `TryFindHit` in the `Sequence` run (39.956 vs 37.156 ns); on net11 `TryLastMiss` on a `List` (1,210.729 vs 1,184.469 ns), `Choose` in the `List` run (3,545.760 vs 3,224.333 ns) and `TryFindMiss` in the `Sequence` run (11.811 vs 10.051 ns). Under 1 ns: `TryFindMiss` on net9 (11.718 vs 11.652 ns), `TryFindHit` on net10 (22.916 vs 22.038 ns) and in the net11 `Sequence` run. CSE never allocates more than CFE.
+- Against the hand-written loops: `Choose`, `TryFindHit` and `TryFindMiss` on every TFM (`TryFindMiss` under 1 ns on net10 and net11); every search category on both sources on net8, and on net9 except `TryFirstMiss` on a `List` (a tie); on net10 `TryLastWhere` on a `Sequence` (3,580.297 vs 3,264.382 ns); on net11 `TryFirstWhere` on both sources (`Sequence` 1,617.460 vs 1,469.123 ns), `TryLastWhere` and `TryFirstMiss` on a `Sequence` (2,919.927 vs 2,914.465 ns, 1,474.651 vs 1,454.889 ns) and `TryLastMiss` on a `List` (1,210.729 vs 1,194.491 ns).
 
 ---
 
 ## Caveats
 
-- **CSE behavior checked against the code in this tree**:
+- CSE behavior was checked against the code in this tree:
   - `CSharpEssentials.Maybe/Modules/TryLast.cs`: `IList<T>` and `IReadOnlyList<T>` fast paths, without and with a predicate.
   - `CSharpEssentials.Maybe/Modules/TryFind.cs`: `ContainsKey` and then the indexer, two hash lookups on a hit.
   - `CSharpEssentials.Maybe/Modules/TryFirst.cs`: returns none for value types on empty input or a miss. It reads an `IList<T>` or `IReadOnlyList<T>` by index and enumerates any other source.

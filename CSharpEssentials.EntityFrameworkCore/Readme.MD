@@ -2,30 +2,26 @@
 
 Extensions, interceptors and utilities for Entity Framework Core, covering audit trails, domain events, pagination and CQRS.
 
-> Benchmarks against plain EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions
-> (SaveChanges with audit and domain events, keyset and offset paging, enum converters, MigrateDataAsync, context lifetime,
-> database error translation) are in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
-> Design-time cost of the bundled CSE3001 analyzer (against a no-op analyzer) is described in
-> [the analyzer BENCHMARKS.md](../CSharpEssentials.EntityFrameworkCore.Generators/BENCHMARKS.md). Results are pending the full run.
+Benchmarks against plain EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions are in [BENCHMARKS.md](./BENCHMARKS.md). The design-time cost of the bundled CSE3001 analyzer is in [the analyzer BENCHMARKS.md](../CSharpEssentials.EntityFrameworkCore.Generators/BENCHMARKS.md).
 
 ## Features
 
-- **Audit interceptor**: Fills in `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and handles soft deletes.
-- **Domain event interceptor**: Dispatches domain events with before/after save timing and outbox support.
-- **Slow query logging**: Logs queries that run longer than a configurable threshold.
-- **Pagination**: Offset-based pagination on `IQueryable` and composite keyset (cursor) pagination with opaque, versioned cursors and `Result` errors for bad cursors.
-- **Batch soft delete**: Soft-delete many rows with a single `UPDATE` statement.
-- **Named query filters** (EF Core 10): Register the soft-delete filter under a name and ignore only that filter, with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
-- **BaseDbContext**: Opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
-- **Maybe columns**: Store `Maybe<T>?` properties in nullable columns, per property or by convention.
-- **CQRS support**: Register separate write and read DbContexts, plus pooled and factory registrations with shared options.
-- **Entity mapping**: `EntityBaseMap`, `SoftDeletableEntityBaseMap`, `OptimisticConcurrencyVersionMap` and a JSON column conversion.
-- **Result helpers**: `FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync` and `SaveChangesAsResultAsync` return `Result<T>` instead of `null` or an exception.
-- **Hard delete and data seeding**: `HardDelete` on a context or set, and `MigrateDataAsync` to sync seed data.
-- **SQL connection factories**: Abstractions for raw SQL/Dapper scenarios.
-- **Idempotency records**: `EfCoreIdempotencyRecordStore<TContext>` keeps idempotency records in your `DbContext` and its transaction, so a rolled-back request leaves no record.
-- **Ordered GUID keys**: Opt-in, provider-aware time-ordered values for generated `Guid` keys, with a SQL Server layout.
-- **Database error translation**: Turns unique, foreign key, check and not-null violations, serialization failures and deadlocks into `Error` values through SQLSTATE, with pluggable provider translators.
+- Audit interceptor: fills in `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy` and turns deletes into soft deletes.
+- Domain event interceptor: dispatches domain events before or after the save, with outbox support.
+- Slow query logging above a configurable threshold.
+- Offset pagination, and composite keyset pagination with opaque, versioned cursors and `Result` errors for bad cursors.
+- Batch soft delete in one `UPDATE` statement.
+- Named query filters (EF Core 10), with the CSE3001 analyzer and code fix for parameterless `IgnoreQueryFilters()`.
+- `BaseDbContext`: opt-in interceptor attachment from DI and domain event dispatch around `SaveChanges`.
+- `Maybe<T>?` properties in nullable columns, per property or by convention.
+- Enum storage by wire name with check constraints, and migration helpers to convert existing columns.
+- CQRS write and read contexts, pooled and factory registrations.
+- Entity mapping helpers for the `CSharpEssentials.Entity` base classes and a JSON column conversion.
+- `Result` helpers (`FirstOrDefaultAsResultAsync`, `SingleOrDefaultAsResultAsync`, `FindAsResultAsync`, `SaveChangesAsResultAsync`), `HardDelete` and `MigrateDataAsync` for seed data.
+- `ITransactionRunner` for EF Core, and an idempotency record store that writes inside the same transaction.
+- Opt-in, provider-aware ordered `Guid` keys.
+- Database error translation from SQLSTATE to `Error` values, with pluggable provider translators.
+- SQL connection factory interfaces for raw SQL and Dapper.
 
 ## Installation
 
@@ -36,13 +32,6 @@ dotnet add package CSharpEssentials.EntityFrameworkCore
 Targets `net10.0` (EF Core 10), `net9.0` (EF Core 9) and `net8.0` (EF Core 8); there is no `net11.0` target. Use the EF Core major that matches your target framework.
 
 This package is not Native AOT compatible, because EF Core's Native AOT support is experimental, needs precompiled queries and is not available on net8.0 ([EF Core NativeAOT and precompiled queries](https://learn.microsoft.com/ef/core/performance/nativeaot-and-precompiled-queries)).
-
-## Upgrade notes
-
-Changes in the next major version that need action:
-
-- **Slow query logging hides parameter values by default.** `SlowQueryInterceptor` now follows EF Core's sensitive data setting: values appear in the log and in `SlowQueryContext.Parameters` only when `EnableSensitiveDataLogging()` is on (or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`). Without it, parameters read `@name=?`. Turn sensitive data logging on if you relied on the values.
-- **Soft delete keeps cascaded rows.** When `AuditInterceptor` turns a delete into a soft delete, it now also keeps the tracked entries EF cascade-deleted with it: owned types stay in place, `ISoftDeletable` dependents are soft-deleted, and other dependents of a `Cascade`/`ClientCascade` relationship are left unchanged. Before, tracked required dependents were physically deleted and owned columns were nulled (or the save failed on a `NOT NULL` column). If you relied on the old behaviour, delete the children in a separate save, or mark the root with `MarkAsHardDeleted()`.
 
 ## Usage
 
@@ -58,7 +47,7 @@ services.AddDbContext<MyDbContext>((sp, options) =>
            .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
 ```
 
-On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved on every save, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons, each only when that service is not registered yet, so a `TimeProvider` you registered before is kept and calling it twice adds no second interceptor.
+On `SaveChanges`, an `Added` entity that implements `ICreationAudit` gets `SetCreatedInfo`, a `Modified` one that implements `IModificationAudit` gets `SetUpdatedInfo`, and a `Deleted` `ISoftDeletable` that is not marked with `MarkAsHardDeleted()` is turned into a soft delete (`MarkAsDeleted`, state `Modified`). The user name comes from a scoped `IAuditUserIdProvider`, resolved once per save that has entries to stamp, and the time from `TimeProvider`. `AddAuditInterceptor` also registers `TimeProvider.System` and `AuditInterceptor` as singletons, each only when that service is not registered yet, so a `TimeProvider` you registered before is kept and calling it twice adds no second interceptor.
 
 EF Core deletes tracked owned types and `Cascade`/`ClientCascade` dependents as soon as you call `Remove` (the default `CascadeDeleteTiming.Immediate`). When the root becomes a soft delete, the interceptor keeps those entries too: owned types stay, `ISoftDeletable` dependents are soft-deleted, and other dependents go back to `Unchanged`. Pending edits on them are still saved with the default snapshot change tracking; with a notification-based `ChangeTrackingStrategy` they can be lost, so save those edits before removing the root. A dependent marked with `MarkAsHardDeleted()` is still deleted. A dependent that is also cascade-deleted from another principal deleted in the same save is deleted with it. A dependent you removed yourself in the same save looks the same as a cascaded one and is kept, so remove it in its own `SaveChanges`. Optional dependents with `SetNull`/`ClientSetNull` still get their foreign key set to null by EF.
 
@@ -133,8 +122,6 @@ await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, cancellationToke
 await dbContext.Users.OrderBy(u => u.Id).PaginateAsync(request, maxPageSize: 500, cancellationToken: ct);  // 500 rows
 ```
 
-`ICursorPaginationRequest<TCursor>.Normalize()` only raises `Limit` to 1; `Normalize(int maxLimit)` also lowers it to `maxLimit`. It is used only by the obsolete single-column cursor `PaginateAsync`, so it keeps its 5.x behavior; `KeysetPaginateAsync` caps `Limit` on its own. The obsolete `PaginateAsync` returns the first page when `HasCursor` is `false`. `CursorPaginationRequest<TCursor>` sets `HasCursor` whenever `Cursor` is assigned a non-null value, so a cursor of `0` or `Guid.Empty` is a real position and a page that ends on such a row continues with the next rows.
-
 `PaginationRequest.Search` is trimmed by `Normalize` and, when it is not empty and you pass a `search` delegate (`Func<string, Expression<Func<T, bool>>>`), `PaginateAsync` and `Paginate` apply that filter before counting. `PaginationResponse<T>` carries `Items`, `PageNumber`, `PageSize`, `TotalCount`, `TotalPages`, `HasPreviousPage` and `HasNextPage`; with `includeTotalCount: false` no `COUNT` runs and `TotalCount` is `-1`.
 
 ### Keyset pagination
@@ -156,17 +143,21 @@ Result<KeysetPaginationResponse<Order>> page = await db.Orders
 // page.Value.Items, NextCursor, PreviousCursor, HasNext, HasPrevious
 ```
 
-- **Keys.** The keys replace any `OrderBy` already on the query. Together they must be unique, so end with a unique tie-breaker such as the primary key. Directions can be mixed (`Descending(x => x.CreatedAt).Ascending(x => x.Id)`). A `KeysetOrdering<T>` is immutable; build it once and reuse it with the `KeysetOrdering<T>` overloads.
-- **Request.** `After` takes `NextCursor` and returns the following page; `Before` takes `PreviousCursor` and returns the page before it. Setting both returns a `KeysetPagination.AfterAndBefore` validation error. A request with neither returns the first page.
-- **Limit.** `Limit` is clamped to `1..KeysetPaginationOptions.MaxLimit` (default `100`, at most `int.MaxValue - 1`).
-- **Cursor length.** A cursor longer than `KeysetPaginationOptions.MaxCursorLength` (default `2048` characters) is rejected with `InvalidCursor` before it is decoded. Raise it if a protector produces longer cursors.
-- **Before pages.** For a `Before` request the ordering is reversed in SQL, `limit + 1` rows are read, and the page is reversed in memory, so `Items` is always in the configured order.
-- **Has next/previous.** `HasNext` and `HasPrevious` come from the extra row, not from a count. A page reached with `After` always reports a previous page, and a page reached with `Before` always reports a next page, since the cursor came from a real neighbouring page. An empty page has no cursors.
-- **Errors.** A malformed, tampered, outdated or mismatched cursor never throws. It returns `Error.Validation` with one of the `KeysetCursorErrors` codes (`InvalidCursor`, `UnsupportedCursorVersion`, `CursorDirectionMismatch`, `CursorKeyMismatch`), and the metadata key `parameter` names the bad request field (`after` or `before`). Map it to HTTP 400.
+- The keys replace any `OrderBy` already on the query. Together they must be unique, so end with a unique tie-breaker such as the primary key. Directions can be mixed (`Descending(x => x.CreatedAt).Ascending(x => x.Id)`). A `KeysetOrdering<T>` is immutable; build it once and reuse it with the `KeysetOrdering<T>` overloads. The inline `Func` form builds a new ordering on every call.
+- `After` takes `NextCursor` and returns the following page; `Before` takes `PreviousCursor` and returns the page before it. Setting both returns a `KeysetPagination.AfterAndBefore` validation error. A request with neither returns the first page.
+- `Limit` is clamped to `1..KeysetPaginationOptions.MaxLimit` (default `100`, at most `int.MaxValue - 1`).
+- A cursor longer than `KeysetPaginationOptions.MaxCursorLength` (default `2048` characters) is rejected with `InvalidCursor` before it is decoded. Raise it if a protector produces longer cursors.
+- For a `Before` request the ordering is reversed in SQL, `limit + 1` rows are read, and the page is reversed in memory, so `Items` is always in the configured order.
+- `HasNext` and `HasPrevious` come from the extra row, not from a count. A page reached with `After` always reports a previous page, and a page reached with `Before` always reports a next page. An empty page has no cursors.
+- A malformed, tampered, outdated or mismatched cursor never throws. It returns `Error.Validation` with one of the `KeysetCursorErrors` codes (`InvalidCursor`, `UnsupportedCursorVersion`, `CursorDirectionMismatch`, `CursorKeyMismatch`), and the metadata key `parameter` names the bad request field (`after` or `before`). Map it to HTTP 400.
 
-**Cursor format.** A cursor is base64url (no padding) of a small versioned JSON payload: `{"v":1,"d":"a","k":"<key fingerprint>","p":[<key values>]}`. `d` is the direction (`a` after, `b` before), `k` is a hash of the entity type and the key paths, types and directions, so a cursor issued for one ordering or entity is rejected by another, and `p` holds the typed key values. `DateTime` keeps its `Kind`, `DateTimeOffset` its offset, enums are stored as numbers, and non-finite `double`/`float` values as the strings `"NaN"`, `"Infinity"` and `"-Infinity"`. Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly` and enums (except `ulong`-based ones).
+#### Cursor format
 
-**Cursor protection.** The default cursor is encoded, not encrypted or signed: a client can read the key values and craft a cursor. That is safe for the query (every value is a typed SQL parameter), but if the key values are sensitive or you want to reject client-built cursors, plug in an `ICursorProtector`. The package does not reference ASP.NET Core; a Data Protection wrapper takes a few lines:
+A cursor is base64url (no padding) of a small versioned JSON payload: `{"v":1,"d":"a","k":"<key fingerprint>","p":[<key values>]}`. `d` is the direction (`a` after, `b` before), `k` is a hash of the entity type and the key paths, types and directions, so a cursor issued for one ordering or entity is rejected by another, and `p` holds the typed key values. `DateTime` keeps its `Kind`, `DateTimeOffset` its offset, enums are stored as numbers, and non-finite `double`/`float` values as the strings `"NaN"`, `"Infinity"` and `"-Infinity"`. Supported key types: `int`, `long`, `short`, `byte`, `decimal`, `double`, `float`, `string`, `Guid`, `DateTime`, `DateTimeOffset`, `TimeSpan`, `DateOnly`, `TimeOnly` and enums (except `ulong`-based ones).
+
+#### Cursor protection
+
+The default cursor is encoded, not encrypted or signed: a client can read the key values and craft a cursor. That is safe for the query (every value is a typed SQL parameter), but if the key values are sensitive or you want to reject client-built cursors, plug in an `ICursorProtector`. The package does not reference ASP.NET Core; a Data Protection wrapper takes a few lines:
 
 ```csharp
 public sealed class DataProtectionCursorProtector(IDataProtectionProvider provider) : ICursorProtector
@@ -188,7 +179,9 @@ Result<KeysetPaginationResponse<Order>> page = await db.Orders.KeysetPaginateAsy
 
 `TryUnprotect` must not throw; return `false` and the request gets an `InvalidCursor` error.
 
-**Predicate.** The default `KeysetPredicateBuilder` writes the expanded form with a redundant leading-column condition, which lets the database use an index on the first key:
+#### Predicate
+
+The default `KeysetPredicateBuilder` writes the expanded form with a redundant leading-column condition, which lets the database use an index on the first key:
 
 ```sql
 -- Descending(CreatedAt).Ascending(Name).Ascending(Id), After cursor
@@ -201,7 +194,9 @@ Cursor values always become SQL parameters, so the SQL text, and the cached quer
 
 To emit a different predicate, implement `IKeysetPredicateBuilder` and set `KeysetPaginationOptions.PredicateBuilder`. Each `KeysetColumn` carries the column expression, the parameter expression for the cursor value, the CLR type and the effective direction (already reversed for `Before` pages).
 
-**Untested sketch: PostgreSQL row values.** This is not shipped or tested by this package; verify it against your Npgsql version before use. Npgsql translates `EF.Functions.GreaterThan`/`LessThan` over value tuples to a row-value comparison, which PostgreSQL can serve from one composite index. A custom builder would have to emit an expression equivalent to this LINQ (shown for `Descending(x => x.CreatedAt).Descending(x => x.Id)` and an `After` cursor):
+#### PostgreSQL row values (untested sketch)
+
+This is not shipped or tested by this package; verify it against your Npgsql version before use. Npgsql translates `EF.Functions.GreaterThan`/`LessThan` over value tuples to a row-value comparison, which PostgreSQL can serve from one composite index. A custom builder would have to emit an expression equivalent to this LINQ (shown for `Descending(x => x.CreatedAt).Descending(x => x.Id)` and an `After` cursor):
 
 ```csharp
 x => EF.Functions.LessThan(ValueTuple.Create(x.CreatedAt, x.Id), ValueTuple.Create(cursorCreatedAt, cursorId))
@@ -210,7 +205,7 @@ x => EF.Functions.LessThan(ValueTuple.Create(x.CreatedAt, x.Id), ValueTuple.Crea
 
 A row-value comparison only fits orderings whose keys all share one direction. For mixed directions, return `KeysetPredicateBuilder.Instance.BuildPredicate(columns)` from your builder.
 
-**Limitations.**
+#### Limitations
 
 - Nullable key columns (`int?`, `string?` with nullable annotations) are rejected with `ArgumentException` when the ordering is built, because SQL `NULL` breaks `<`/`>` comparisons. Use a non-nullable column, or a computed non-null column.
 - Keys must be property or field accesses on the entity (`x => x.CreatedAt`, `x => x.Audit.CreatedAt`), not computed expressions. Every member on the path must be non-nullable: `x => x.Audit!.CreatedAt` through a nullable `Audit?` navigation is rejected with `ArgumentException`.
@@ -218,7 +213,9 @@ A row-value comparison only fits orderings whose keys all share one direction. F
 - The ordering is by the key values alone. Rows that change their key values between requests can move between pages.
 - There is no total count. Run a separate `CountAsync` if you need it.
 
-**Moving from `PaginateAsync<T, TCursor>`.** The single-column cursor overload is `[Obsolete]` since 6.0 (warning CS0618) and will be removed in a later major version. It still works and sends the cursor as a SQL parameter, but it filters by one column only, so that column must be unique: with a non-unique column such as a timestamp, a page that ends inside a group of equal values skips the rest of that group. It also has no upper bound on `Limit`. To migrate:
+#### Moving from `PaginateAsync<T, TCursor>`
+
+The single-column cursor overload is `[Obsolete]` since 6.0 (warning CS0618) and will be removed in a later major version. It still works and sends the cursor as a SQL parameter, but it filters by one column only, so that column must be unique: with a non-unique column such as a timestamp, a page that ends inside a group of equal values skips the rest of that group. It returns the first page when `HasCursor` is `false`; `CursorPaginationRequest<TCursor>` sets `HasCursor` whenever `Cursor` is assigned a non-null value, so `0` or `Guid.Empty` is a real position. It calls `ICursorPaginationRequest<TCursor>.Normalize()`, which only raises `Limit` to 1, so there is no upper bound on `Limit` (`Normalize(int maxLimit)` also lowers it, if you call it yourself). To migrate:
 
 ```csharp
 // Before
@@ -270,7 +267,9 @@ List<Order> orders = await db.Orders.IgnoreSoftDeleteQueryFilter().ToListAsync(c
 - EF Core does not allow an anonymous filter and named filters on the same entity type. Use these helpers instead of `ApplySoftDeleteQueryFilter`/`AddQueryFilter`, not next to them; they throw `InvalidOperationException` when the entity type already has an anonymous filter. Those anonymous helpers keep working unchanged, and on `net8.0`/`net9.0` they are the only option.
 - `ApplyNamedSoftDeleteQueryFilter` puts the filter on root entity types only; derived types inherit it. A soft-deletable type whose root is not soft-deletable gets no filter, so make the root implement `ISoftDeletableBase`. Owned types are skipped, because EF Core does not allow query filters on them.
 
-**Moving from `ApplySoftDeleteQueryFilter()`.** Named keys only switch off named filters. While the model still uses the anonymous `ApplySoftDeleteQueryFilter()`, `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })` and `IgnoreSoftDeleteQueryFilter()` ignore nothing and soft-deleted rows stay hidden. Switch the model to `ApplyNamedSoftDeleteQueryFilter()` (and register your other filters by name, for example with `HasQueryFilter(QueryFilterNames.Tenant, ...)`) before you change the queries.
+#### Moving from `ApplySoftDeleteQueryFilter()`
+
+Named keys only switch off named filters. While the model still uses the anonymous `ApplySoftDeleteQueryFilter()`, `IgnoreQueryFilters(new[] { QueryFilterNames.SoftDelete })` and `IgnoreSoftDeleteQueryFilter()` ignore nothing and soft-deleted rows stay hidden. Switch the model to `ApplyNamedSoftDeleteQueryFilter()` (and register your other filters by name, for example with `HasQueryFilter(QueryFilterNames.Tenant, ...)`) before you change the queries.
 
 The package ships an analyzer for the parameterless `IgnoreQueryFilters()`, which turns off every filter, the tenant filter included. It runs only when the referenced EF Core has the named overload (EF Core 10 or later):
 
@@ -542,7 +541,7 @@ public sealed class InvoiceConfiguration : IEntityTypeConfiguration<Invoice>   /
 }
 ```
 
-`EntityBaseGuidIdMap()` does the same for an `EntityBase<Guid>` entity without the soft delete columns. The audit columns are `CreatedAt`/`CreatedBy` (required) and `UpdatedAt`/`UpdatedBy` (optional), with the user columns limited to 40 characters unless you pass `userIdMaxLength`. `EntityBaseMap<TEntity>()` and `SoftDeletableEntityBaseMap<TEntity>()` map the audit columns without a key. `ApplySoftDeleteQueryFilter()` adds `!IsDeleted` as an anonymous filter to every root entity type that implements `ISoftDeletableBase`, and `AddQueryFilter<T>(expression)` combines your filter with the existing anonymous one with `AND` (on net10.0 use the named helpers below when you need to ignore filters by name). `HasJsonConversion(columnType: "jsonb")` stores a property as JSON with the CSharpEssentials JSON options. An undefined enum value inside it is saved as its number; on load it becomes the `[EnumFallback]` member, or the read throws when the enum has none.
+`EntityBaseGuidIdMap()` does the same for an `EntityBase<Guid>` entity without the soft delete columns. The audit columns are `CreatedAt`/`CreatedBy` (required) and `UpdatedAt`/`UpdatedBy` (optional), with the user columns limited to 40 characters unless you pass `userIdMaxLength`. `EntityBaseMap<TEntity>()` and `SoftDeletableEntityBaseMap<TEntity>()` map the audit columns without a key. `ApplySoftDeleteQueryFilter()` adds `!IsDeleted` as an anonymous filter to every root entity type that implements `ISoftDeletableBase`, and `AddQueryFilter<T>(expression)` combines your filter with the existing anonymous one with `AND`. To ignore filters by name on net10.0, use the [named query filters](#named-query-filters-ef-core-10) instead. `HasJsonConversion(columnType: "jsonb")` stores a property as JSON with the CSharpEssentials JSON options. An undefined enum value inside it is saved as its number; on load it becomes the `[EnumFallback]` member, or the read throws when the enum has none.
 
 ### Result helpers, hard delete and seeding
 
@@ -627,12 +626,12 @@ services.AddEfCoreIdempotencyRecordStore<AppDbContext>();   // replaces the in-m
 
 Add a migration after `AddIdempotencyRecords`: it maps `IdempotencyRecord` to `IdempotencyRecords` (`TableName`, `Schema`) with the primary key `KeyHash` and an index on `ExpiresAt`. `KeyHash` is a fixed-length `binary(32)`: the SHA-256 of the UTF-8 bytes of the length-prefixed storage key (namespace, scope and key). The readable `Namespace`, `Scope` and `Key` columns sit next to it. A global key is stored with the scope `global`; `ExpiresAt` is UTC.
 
-- **Collation.** Uniqueness does not depend on any collation: two keys share a row only when their hashes are equal, so `KEY-A` and `key-a`, `Tenant("ABC")` and `Tenant("abc")`, or `order-1` and `order-1 ` stay separate records even under a case-insensitive or PAD SPACE collation. The store looks rows up by `KeyHash` and compares the readable columns ordinally before it uses a row; a row whose text belongs to another key makes the reservation throw `InvalidOperationException` instead of replaying a foreign response. `AddIdempotencyRecords(Database.ProviderName)` still gives the readable columns the binary collation of a known provider, so your own queries compare them case-sensitively: `C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server, `utf8mb4_0900_bin` on MySQL (Pomelo and Oracle) and `BINARY` on SQLite. Any other provider keeps the database default. Set `KeyCollation` to override it, for example `utf8mb4_nopad_bin` on MariaDB, which has no `utf8mb4_0900_bin`. These collations only make your own queries case-sensitive. SQL Server ignores trailing spaces in `=` and unique comparisons under every collation, `_BIN2` included, so on SQL Server the `KeyHash` primary key is the only thing that keeps `order-1` and `order-1 ` apart. On PostgreSQL keep the readable columns `text` or `varchar`; `char(n)` pads.
-- **Reservation.** On PostgreSQL and SQLite a reservation is one `INSERT … ON CONFLICT DO NOTHING`; on other providers it is a plain `INSERT` behind a savepoint, rolled back to the savepoint on a duplicate key so the transaction stays usable. A concurrent request for the same key waits on the primary key until the first transaction ends, then replays its stored response, or reserves the key when the first one rolled back. Complete and release change the row only while it carries the reservation's token. An expired row counts as absent and is taken over.
-- **Isolation.** The store needs `READ COMMITTED` (the default of PostgreSQL, SQL Server and MySQL). Under `REPEATABLE READ` or `SERIALIZABLE` a concurrent reservation fails with a serialization error.
-- **Set-based writes.** Records are written with SQL, never through the change tracker, so `SaveChanges`, interceptors and query filters do not see them.
-- **Hybrid profiles.** `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` registers the store as the keyed store of every profile whose `StoreKey` is `"payments"` and keeps the default store for the rest: `o.AddProfile("payments", p => p.StoreKey = "payments")`.
-- **Observe.** In `Observe` the executor and the `Idempotency-Key` middleware reserve and release through `Detached`, which resolves a new `TContext` in a scope of its own for every call and suppresses any ambient `TransactionScope`. A reservation then never waits for a concurrent request and a failing reservation cannot fail the business transaction. A result to store releases the detached reservation and is written through the store itself, in the business transaction, so it commits and rolls back with the business data as in `Enforce`: a commit that fails leaves no record, and its retry runs again after the switch to `Enforce`. From that write until the commit a reservation of the same key waits; unlike in `Enforce`, that wait can be a cycle across the request's two connections that the database cannot detect, ended only by the command timeout. A database error on that write is rolled back to a savepoint (of the context's transaction, or on PostgreSQL of an ambient `TransactionScope` the connection is enlisted in), so the business data commits without the record. On PostgreSQL, under an isolation level stricter than `READ COMMITTED` (`TransactionScope` defaults to `Serializable`) the write always fails this way and `Observe` records nothing; other providers may succeed. On SQL Server a transaction the server has doomed (`XACT_ABORT ON`, or an update conflict under `SNAPSHOT` isolation, error 3960) cannot be saved by the savepoint: the business data is lost with it and the original error is thrown. The context must not depend on state that only the request scope has.
+- Uniqueness does not depend on any collation: two keys share a row only when their hashes are equal, so `KEY-A` and `key-a`, `Tenant("ABC")` and `Tenant("abc")`, or `order-1` and `order-1 ` stay separate records even under a case-insensitive or PAD SPACE collation. The store looks rows up by `KeyHash` and compares the readable columns ordinally before it uses a row; a row whose text belongs to another key makes the reservation throw `InvalidOperationException` instead of replaying a foreign response. `AddIdempotencyRecords(Database.ProviderName)` still gives the readable columns the binary collation of a known provider, so your own queries compare them case-sensitively: `C` on PostgreSQL, `Latin1_General_100_BIN2` on SQL Server, `utf8mb4_0900_bin` on MySQL (Pomelo and Oracle) and `BINARY` on SQLite. Any other provider keeps the database default. Set `KeyCollation` to override it, for example `utf8mb4_nopad_bin` on MariaDB, which has no `utf8mb4_0900_bin`. These collations only make your own queries case-sensitive. SQL Server ignores trailing spaces in `=` and unique comparisons under every collation, `_BIN2` included, so on SQL Server the `KeyHash` primary key is the only thing that keeps `order-1` and `order-1 ` apart. On PostgreSQL keep the readable columns `text` or `varchar`; `char(n)` pads.
+- On PostgreSQL and SQLite a reservation is one `INSERT ... ON CONFLICT DO NOTHING`; on other providers it is a plain `INSERT` behind a savepoint, rolled back to the savepoint on a duplicate key so the transaction stays usable. A concurrent request for the same key waits on the primary key until the first transaction ends, then replays its stored response, or reserves the key when the first one rolled back. Complete and release change the row only while it carries the reservation's token. An expired row counts as absent and is taken over.
+- The store needs `READ COMMITTED` (the default of PostgreSQL, SQL Server and MySQL). Under `REPEATABLE READ` or `SERIALIZABLE` a concurrent reservation fails with a serialization error.
+- Records are written with SQL, never through the change tracker, so `SaveChanges`, interceptors and query filters do not see them.
+- `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` registers the store as the keyed store of every profile whose `StoreKey` is `"payments"` and keeps the default store for the rest: `o.AddProfile("payments", p => p.StoreKey = "payments")`.
+- In `Observe` the executor and the `Idempotency-Key` middleware reserve and release through `Detached`, which resolves a new `TContext` in a scope of its own for every call and suppresses any ambient `TransactionScope`. A reservation then never waits for a concurrent request and a failing reservation cannot fail the business transaction. A result to store releases the detached reservation and is written through the store itself, in the business transaction, so it commits and rolls back with the business data as in `Enforce`: a commit that fails leaves no record, and its retry runs again after the switch to `Enforce`. From that write until the commit a reservation of the same key waits; unlike in `Enforce`, that wait can be a cycle across the request's two connections that the database cannot detect, ended only by the command timeout. A database error on that write is rolled back to a savepoint (of the context's transaction, or on PostgreSQL of an ambient `TransactionScope` the connection is enlisted in), so the business data commits without the record. On PostgreSQL, under an isolation level stricter than `READ COMMITTED` (`TransactionScope` defaults to `Serializable`) the write always fails this way and `Observe` records nothing; other providers may succeed. On SQL Server a transaction the server has doomed (`XACT_ABORT ON`, or an update conflict under `SNAPSHOT` isolation, error 3960) cannot be saved by the savepoint: the business data is lost with it and the original error is thrown. The context must not depend on state that only the request scope has.
 
 Expired records stay in the table until `PurgeExpiredAsync` deletes them in one statement; an expired record already counts as absent, so purging only keeps the table small:
 
@@ -713,7 +712,7 @@ Notes:
 - A `Version7` value sorts randomly in SQL Server, and a `SqlServer` value sorts randomly everywhere else. Pass a layout only when the default pick is wrong for your columns.
 - The order holds within one process. Values from different processes interleave by their millisecond.
 
-**Security.** Both layouts show the time a row was created, to the millisecond, to anyone who sees the key, and carry 56 random bits instead of the 122 of `Guid.NewGuid()`. Do not use them for keys that must stay secret or hard to guess, such as tokens, invitation links or password reset ids.
+Security: both layouts show the time a row was created, to the millisecond, to anyone who sees the key, and carry 56 random bits instead of the 122 of `Guid.NewGuid()`. Do not use them for keys that must stay secret or hard to guess, such as tokens, invitation links or password reset ids.
 
 ### Database error translation
 
@@ -744,7 +743,7 @@ public sealed class RegisterUserHandler(AppDbContext db, DbErrorTranslation tran
 }
 ```
 
-`translation.SaveChangesAsync` returns the translated error and rethrows exceptions no translator recognizes, so unexpected failures still reach your exception handler. `SaveChangesAsResultAsync` is different: it turns every exception into an `Unknown` error, except an `OperationCanceledException` caused by the `cancellationToken` you passed, which propagates. After a failure the change tracker keeps the unsaved changes. To translate an exception you caught yourself, call `translation.TryTranslate(exception, out Error error)`.
+`translation.SaveChangesAsync` returns the translated error and rethrows exceptions no translator recognizes, so unexpected failures still reach your exception handler (`SaveChangesAsResultAsync`, by contrast, turns every exception into an `Unknown` error). After a failure the change tracker keeps the unsaved changes. To translate an exception you caught yourself, call `translation.TryTranslate(exception, out Error error)`.
 
 Providers that report no SQLSTATE (SQL Server, SQLite) or extra details (the constraint name of `PostgresException`) plug in an `IDbErrorTranslator`. Custom translators run in registration order before the SQLSTATE default, and the first match wins. `DbErrorTranslation` is a singleton, so translators must be stateless:
 
@@ -777,6 +776,8 @@ The default ProblemDetails fields (`Codes | ValidationErrors`) do not include er
 
 ## Upgrading to 8.0
 
+- Slow query logging hides parameter values unless sensitive data logging is on (`EnableSensitiveDataLogging()` or `DbContextRegistrationOptions.EnableSensitiveDataLogging = true`); without it, parameters read `@name=?` in the log and in `SlowQueryContext.Parameters`. Turn it on if you relied on the values.
+- When `AuditInterceptor` turns a delete into a soft delete, it now keeps the tracked entries EF cascade-deleted with it (see [Audit interceptor](#audit-interceptor)). 7.x physically deleted tracked required dependents and nulled owned columns (or failed the save on a `NOT NULL` column). If you relied on that, delete the children in a separate save, or mark the root with `MarkAsHardDeleted()`.
 - `ICursorPaginationRequest<TCursor>` has a new `HasCursor` property, and the obsolete cursor `PaginateAsync` uses it to decide whether to start at the first page. 7.x treated a cursor equal to `default(TCursor)` (`0`, `Guid.Empty`) as "no cursor", so a page ending on such a row started over at page one. `CursorPaginationRequest<TCursor>` sets `HasCursor` when `Cursor` is assigned a non-null value, including `0`. If you set `Cursor = 0` or `Cursor = Guid.Empty` to mean "first page", leave `Cursor` unset instead. A custom `ICursorPaginationRequest<TCursor>` must implement `HasCursor`; return `false` for a request that has no cursor. The serialized request also gains a read-only `hasCursor` field.
 - `AddAuditInterceptor` registers `TimeProvider.System` and `AuditInterceptor` only when they are not registered yet. 7.x added both every time, so a `TimeProvider` registered before the call was replaced by `TimeProvider.System` and repeated calls added more `AuditInterceptor` registrations. If you registered your `TimeProvider` after `AddAuditInterceptor` to work around this, either order now works; if you relied on `TimeProvider.System` replacing an earlier registration, remove that registration.
 - `EnumStoredAs.LegacySnakeCase`, `UseLegacySnakeCase` and `LegacySnakeCaseEnumConverter` write the 8.0 Core `ToSnakeCase` output, which keeps letters without case and combining marks. A member named `用户Name` was stored as `name`, which could not be read back, and is now stored as `用户_name`. Members named only with Latin letters and digits store the same text. Rewrite stored rows of non-Latin members with the new value.

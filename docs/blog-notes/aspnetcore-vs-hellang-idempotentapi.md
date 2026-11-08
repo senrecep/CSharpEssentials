@@ -1,6 +1,6 @@
 # Blog notes: CSharpEssentials.AspNetCore, Idempotency and RequestResponseLogging against the framework, Hellang, Marvin, SharpGrip, IdempotentAPI and Serilog
 
-These are notes for a post, not the post. Every number comes from `CSharpEssentials.AspNetCore/BENCHMARKS.md`, `CSharpEssentials.Idempotency/BENCHMARKS.md` and `CSharpEssentials.RequestResponseLogging/BENCHMARKS.md`, which copy the full default-job reports under `benchmarks/results/aspnetcore/{tfm}/results/` and `benchmarks/results/idempotency/{tfm}/results/`.
+Notes for a post, not the post. Every number comes from `CSharpEssentials.AspNetCore/BENCHMARKS.md`, `CSharpEssentials.Idempotency/BENCHMARKS.md` and `CSharpEssentials.RequestResponseLogging/BENCHMARKS.md`, which copy the full default-job reports under `benchmarks/results/aspnetcore/{tfm}/results/` and `benchmarks/results/idempotency/{tfm}/results/`.
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The libraries compared are plain ASP.NET Core minimal APIs and its HttpLogging middleware, Hellang.Middleware.ProblemDetails 6.5.1 (MIT), Marvin.Cache.Headers 7.2.0 (MIT), SharpGrip.FluentValidation.AutoValidation.Endpoints 2.0.0 (MIT) with FluentValidation 12.2.0 (Apache-2.0), IdempotentAPI 2.6.0 with IdempotentAPI.MinimalAPI 3.2.0 and IdempotentAPI.Cache.DistributedCache 2.2.0 (MIT in the repo; the nuspecs carry no license metadata), and Serilog.AspNetCore 10.0.0 (Apache-2.0).
 
@@ -12,13 +12,13 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 ## What each library provides
 
-- **ASP.NET Core:** `TypedResults`, `AddProblemDetails` with `UseExceptionHandler` and `UseStatusCodePages`, parameter binding, HttpLogging with `CombineLogs` and body limits, and on net10+ a DataAnnotations `AddValidation()`.
-- **Hellang.Middleware.ProblemDetails 6.5.1:** a middleware that turns exceptions and empty error responses into problem+json, with `Map`/`MapToStatusCode` per exception type. It writes through the MVC `ObjectResult` executor, so MVC must be registered. Last release 2022.
-- **Marvin.Cache.Headers 7.2.0:** a middleware that buffers the response, computes a strong MD5 ETag, writes `Cache-Control`, `Expires`, `Last-Modified` and `Vary`, and answers 304 and 412 from its validator store.
-- **SharpGrip.FluentValidation.AutoValidation.Endpoints 2.0.0:** an endpoint filter that runs the registered FluentValidation validators and writes a validation problem.
-- **IdempotentAPI 2.6.0 / MinimalAPI 3.2.0:** an endpoint filter that fingerprints the bound arguments, stores the result object as gzipped Newtonsoft JSON in `IDistributedCache` (or FusionCache), and rebuilds the result on replay. Last release 2024.
-- **Serilog.AspNetCore 10.0.0:** one structured event per request with method, path, status and elapsed time.
-- **CSE:** `ResultEndpointFilter` (`Result<T>` to HTTP), enhanced problem details with error codes, enum binding that accepts the JSON spelling in query and route values, conditional GET from `IVersioned` or a body hash, `WithValidation<T>`, an idempotency middleware over transport-independent stores and an executor, and a request/response body logger.
+- ASP.NET Core: `TypedResults`, `AddProblemDetails` with `UseExceptionHandler` and `UseStatusCodePages`, parameter binding, HttpLogging with `CombineLogs` and body limits, and on net10+ a DataAnnotations `AddValidation()`.
+- Hellang.Middleware.ProblemDetails 6.5.1: a middleware that turns exceptions and empty error responses into problem+json, with `Map`/`MapToStatusCode` per exception type. It writes through the MVC `ObjectResult` executor, so MVC must be registered. Last release 2022.
+- Marvin.Cache.Headers 7.2.0: a middleware that buffers the response, computes a strong MD5 ETag, writes `Cache-Control`, `Expires`, `Last-Modified` and `Vary`, and answers 304 and 412 from its validator store.
+- SharpGrip.FluentValidation.AutoValidation.Endpoints 2.0.0: an endpoint filter that runs the registered FluentValidation validators and writes a validation problem.
+- IdempotentAPI 2.6.0 / MinimalAPI 3.2.0: an endpoint filter that fingerprints the bound arguments, stores the result object as gzipped Newtonsoft JSON in `IDistributedCache` (or FusionCache), and rebuilds the result on replay. Last release 2024.
+- Serilog.AspNetCore 10.0.0: one structured event per request with method, path, status and elapsed time.
+- CSE: `ResultEndpointFilter` (`Result<T>` to HTTP), enhanced problem details with error codes, enum binding that accepts the JSON spelling in query and route values, conditional GET from `IVersioned` or a body hash, `WithValidation<T>`, an idempotency middleware over transport-independent stores and an executor, and a request/response body logger.
 
 ## Feature matrix
 
@@ -51,7 +51,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 ## How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (full runs), `[MemoryDiagnoser]`; SDK 11.0.100-rc.1; .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them. `IdempotentReplayComparison`, `RequestLoggingComparison`, `RequestLoggingMetadataComparison`, the four idempotency executor, store, contention and key classes and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after #230-#256 with SDK 11.0.100-rc.3 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
-- One Linux x64 machine, 6 physical cores and 12 threads; the suites ran one after another.
+- One machine, a 6-core, 12-thread x64 desktop CPU on Linux; the suites ran one after another.
 - `aspnetcore` suite: 1-minute load average 1.60 at the start and 2.02 at the end. Classes with a row above 5% CV were rerun up to twice, at a 1-minute load of 1.41 to 6.96. Three net11.0 `Bcl_Inline` validation baselines (CV 5.9% to 8.5%) stayed above 5% CV and are marked noisy in the package pages. In the later rerun, nine idempotent replay rows on net8.0 and net9.0 (seven of them 256 KB rows) and one net8.0 `HttpLogging_Defaults` row at 1 KB are above 5% CV and are marked noisy too.
 - `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0): two net9.0 rows are above 5% CV and are marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/` and `benchmarks/results/idempotency/{tfm}/results/`. Full tables, with every row and TFM, are in the three package pages named above.
@@ -60,33 +60,33 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 
 Format: mean, ratio to the plain framework row, allocated. net10.0 unless another TFM is named.
 
-1. **ResultFilter.** Success: filter 11.231 μs (1.19), 8.74 KB; hand-written match 9.395 μs (0.99); `TypedResults` 9.475 μs. On net8.0, net9.0 and net11.0 the filter is 0.99 to 1.02. Failure: filter 13.547 μs (1.23), manual match 12.940 μs (1.18), so most of the failure cost is the larger CSE problem body.
-2. **EnumBinding PassThrough:** 0.98 to 1.04 of the plain request on every TFM; 0.06 KB more allocated on net8.0 and net9.0, none on net10.0 and net11.0.
-3. **ConditionalGet BodyHash200 at 64 KB:** plain 29.195 μs, 73.75 KB; CSE 87.999 μs (3.02), 74.93 KB; Marvin 294.214 μs (10.08), 949.18 KB.
-4. **ProblemDetails Exception:** framework 28.31 μs, CSE 29.68 μs (1.05), Hellang 28.05 μs (0.99). Hellang is faster than CSE on every TFM.
-5. **ValidationFilter Invalid, 3 rules:** hand-written 17.03 μs, CSE 30.39 μs (1.79), 16 KB; SharpGrip 43.86 μs (2.58), 25 KB.
-6. **IdempotentReplay Replay at 256 KB:** plain 103.25 μs, 268.93 KB; CSE 85.63 μs (0.83), 276.81 KB; IdempotentAPI 1,498.60 μs (14.51), 4517.6 KB.
-7. **RequestLogging Bodies at 1 MB:** plain 432.244 μs; CSE 2,107.251 μs (4.88), 9289.16 KB; HttpLogging_Bodies 4,256.239 μs (9.85), 19045.49 KB.
+1. ResultFilter. Success: filter 11.231 μs (1.19), 8.74 KB; hand-written match 9.395 μs (0.99); `TypedResults` 9.475 μs. On net8.0, net9.0 and net11.0 the filter is 0.99 to 1.02. Failure: filter 13.547 μs (1.23), manual match 12.940 μs (1.18), so most of the failure cost is the larger CSE problem body.
+2. EnumBinding PassThrough: 0.98 to 1.04 of the plain request on every TFM; 0.06 KB more allocated on net8.0 and net9.0, none on net10.0 and net11.0.
+3. ConditionalGet BodyHash200 at 64 KB: plain 29.195 μs, 73.75 KB; CSE 87.999 μs (3.02), 74.93 KB; Marvin 294.214 μs (10.08), 949.18 KB.
+4. ProblemDetails Exception: framework 28.31 μs, CSE 29.68 μs (1.05), Hellang 28.05 μs (0.99). Hellang is faster than CSE on every TFM.
+5. ValidationFilter Invalid, 3 rules: hand-written 17.03 μs, CSE 30.39 μs (1.79), 16 KB; SharpGrip 43.86 μs (2.58), 25 KB.
+6. IdempotentReplay Replay at 256 KB: plain 103.25 μs, 268.93 KB; CSE 85.63 μs (0.83), 276.81 KB; IdempotentAPI 1,498.60 μs (14.52), 4517.6 KB.
+7. RequestLogging Bodies at 1 MB: plain 432.244 μs; CSE 2,107.251 μs (4.88), 9289.16 KB; HttpLogging_Bodies 4,256.239 μs (9.85), 19045.49 KB.
 
 ## Where CSE loses (state it, do not soften it)
 
-- **Problem details for an exception: Hellang is faster on every TFM.** Hellang against CSE: 50.37 against 58.12 μs (net8.0), 36.17 against 38.95 μs (net9.0), 28.05 against 29.68 μs (net10.0), 26.97 against 28.18 μs (net11.0).
-- **Marvin's 304 skips the handler.** BodyHash304 at 64 KB: Marvin 11.743 μs, CSE 63.311 μs (net10.0); Marvin is 4.0 to 5.4 times faster on every TFM. CSE runs the handler, serializes and hashes 64 KB, so its 304 takes longer than the plain 200 that sends the whole body (30.608 μs). That is a design difference, and the post should say so. At 1 KB on net11.0 Marvin is also faster (16.05 against 16.86 μs).
-- **Request logging with small bodies.** At 1 KB, CSE is slower than HttpLogging_Bodies on every TFM (net10.0: 16.685 against 13.661 μs). It allocates less on net8.0 to net10.0 and more on net11.0 (23.8 against 22.8 KB).
-- **HttpLogging with its defaults:** at 1 KB it logs both bodies plus headers and is still faster than CSE on every TFM (net10.0: 13.993 against 16.685 μs); it allocates less only on net11.0. From 64 KB it truncates each body at 32 KB, so it does less work.
-- **Metadata-only logging:** CSE allocates a little more than HttpLogging on every TFM (10.22 against 10.17 KB on net10.0); time is within error on every TFM (net10.0: 8.724 against 8.918 μs).
-- **Result filter on net10.0:** 1.19 of `TypedResults` on Success, where the other TFMs show 0.99 to 1.02.
-- **Deterministic keys:** `ToUuidV5` is 1.47 to 1.73 of a hand-written UUIDv5 and allocates 456 to 488 B against none.
+- Problem details for an exception: Hellang is faster on every TFM. Hellang against CSE: 50.37 against 58.12 μs (net8.0), 36.17 against 38.95 μs (net9.0), 28.05 against 29.68 μs (net10.0), 26.97 against 28.18 μs (net11.0).
+- Marvin's 304 skips the handler. BodyHash304 at 64 KB: Marvin 11.743 μs, CSE 63.311 μs (net10.0); Marvin is 4.0 to 5.4 times faster on every TFM. CSE runs the handler, serializes and hashes 64 KB, so its 304 takes longer than the plain 200 that sends the whole body (30.608 μs). That is a design difference, and the post should say so. At 1 KB on net11.0 Marvin is also faster (16.05 against 16.86 μs).
+- Request logging with small bodies: at 1 KB, CSE is slower than HttpLogging_Bodies on every TFM (net10.0: 16.685 against 13.661 μs). It allocates less on net8.0 to net10.0 and more on net11.0 (23.8 against 22.8 KB).
+- HttpLogging with its defaults: at 1 KB it logs both bodies plus headers and is still faster than CSE on every TFM (net10.0: 13.993 against 16.685 μs); it allocates less only on net11.0. From 64 KB it truncates each body at 32 KB, so it does less work.
+- Metadata-only logging: CSE allocates a little more than HttpLogging on every TFM (10.22 against 10.17 KB on net10.0); time is within error on every TFM (net10.0: 8.724 against 8.918 μs).
+- Result filter on net10.0: 1.19 of `TypedResults` on Success, where the other TFMs show 0.99 to 1.02.
+- Deterministic keys: `ToUuidV5` is 1.47 to 1.73 of a hand-written UUIDv5 and allocates 456 to 488 B against none.
 
 ## Where CSE wins or ties
 
 Measured, every TFM:
-- **Idempotent replay against IdempotentAPI:** CSE is faster and allocates less at 1 KB and 256 KB, for a replay and for a new key (net10.0, 1 KB replay: 14.34 μs against 92.90 μs).
-- **Validation against SharpGrip:** CSE is faster and allocates less in all eight rows (net10.0, 1 rule, Valid: 15.80 μs against 29.39 μs).
-- **Empty error status against Hellang:** CSE 1.01 to 1.17 of the framework, Hellang 1.26 to 1.82.
-- **Conditional GET 200 with a body-hash ETag against Marvin:** CSE is faster and allocates far less at 1 KB and 64 KB.
-- **Request logging at 64 KB and 1 MB against HttpLogging_Bodies:** CSE is faster and allocates less. The metadata row is faster than Serilog (net10.0: 8.724 against 10.866 μs).
-- **Small overhead:** `UseEnumBinding` on an endpoint without enums (0.98 to 1.04), and `IVersioned` ETags (1.00 to 1.12 of a hand-written ETag).
+- Idempotent replay against IdempotentAPI: CSE is faster and allocates less at 1 KB and 256 KB, for a replay and for a new key (net10.0, 1 KB replay: 14.34 μs against 92.90 μs).
+- Validation against SharpGrip: CSE is faster and allocates less in all eight rows (net10.0, 1 rule, Valid: 15.80 μs against 29.39 μs).
+- Empty error status against Hellang: CSE 1.01 to 1.17 of the framework, Hellang 1.26 to 1.82.
+- Conditional GET 200 with a body-hash ETag against Marvin: CSE is faster and allocates far less at 1 KB and 64 KB.
+- Request logging at 64 KB and 1 MB against HttpLogging_Bodies: CSE is faster and allocates less. The metadata row is faster than Serilog (net10.0: 8.724 against 10.866 μs).
+- Small overhead: `UseEnumBinding` on an endpoint without enums (0.98 to 1.04), and `IVersioned` ETags (1.00 to 1.12 of a hand-written ETag).
 
 Features only CSE ships (not a speed claim):
 - Error codes in every problem body, and `Result<T>` straight to HTTP.

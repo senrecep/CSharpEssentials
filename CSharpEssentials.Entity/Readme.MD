@@ -1,23 +1,21 @@
 # CSharpEssentials.Entity
 
-DDD foundation for .NET entities with auditing, soft deletion, and domain events.
+Base classes for DDD entities with audit fields, soft deletion and domain events.
 
-> Benchmarks of the `EntityBase` domain event list against a hand-written list (read, raise and clear, collect)
-> are in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+- `EntityBase<TId>`: a typed `Id` (protected setter) plus creation and modification audit fields. `EntityBase` is the same without an ID.
+- `SoftDeletableEntityBase<TId>` and `SoftDeletableEntityBase`: add `MarkAsDeleted`, `Restore` and `MarkAsHardDeleted`.
+- Domain events: `Raise`, `DomainEvents` and `ClearDomainEvents`, with `[DomainEventTiming]` to choose when the EF Core package publishes each event.
+- Interfaces for code that works with any entity: `IEntityBase`, `IEntityBase<TId>`, `ISoftDeletable`, `ICreationAudit`, `IModificationAudit`, `IDomainEventHolder` and `IDomainEvent`, in namespace `CSharpEssentials.Entity.Interfaces`.
 
-## Features
-
-- **`EntityBase<TId>`**: Typed IDs with creation and modification audit fields. `EntityBase` is the same without an ID.
-- **`SoftDeletableEntityBase<TId>`**: Soft delete with `MarkAsDeleted`, `Restore`, and `MarkAsHardDeleted`. `SoftDeletableEntityBase` is the same without an ID.
-- **Domain events**: Raise and clear events for outbox or dispatcher patterns.
-- **Event timing**: Control when events publish with `[DomainEventTiming]`.
-- **Interfaces**: `IEntityBase`, `IEntityBase<TId>`, `ISoftDeletable`, `ICreationAudit`, `IModificationAudit` and `IDomainEventHolder` (namespace `CSharpEssentials.Entity.Interfaces`) for code that works with any entity.
+Benchmarks of the `EntityBase` domain event list against a hand-written list (read, raise and clear, collect) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Entity
 ```
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Time`.
 
 ## Usage
 
@@ -28,7 +26,7 @@ using CSharpEssentials.Entity;
 
 public class Product : EntityBase<Guid>
 {
-    public Product(Guid id) => Id = id; // Id has a protected setter
+    public Product(Guid id) => Id = id;
 
     public string Name { get; set; } = string.Empty;
 }
@@ -56,6 +54,9 @@ user.Restore();                                     // clears IsDeleted, Deleted
 ### Domain events
 
 ```csharp
+using CSharpEssentials.Entity;
+using CSharpEssentials.Entity.Interfaces;
+
 public record OrderCreated(Guid OrderId) : IDomainEvent;
 
 public class Order : EntityBase<Guid>
@@ -70,15 +71,12 @@ public class Order : EntityBase<Guid>
 var order = new Order();
 order.Create();
 
-// Later (e.g., in EF Core SaveChanges)
-foreach (var evt in order.DomainEvents)
-{
-    // dispatch...
-}
+IDomainEvent[] events = [.. order.DomainEvents];
 order.ClearDomainEvents();
+// dispatch events...
 ```
 
-`DomainEvents` is a read-only live view of the entity's events, so reading it does not copy the list. Raising or clearing events while you loop over it throws `InvalidOperationException`; copy it first with `[.. order.DomainEvents]`, and keep a copy if you clear the events before you dispatch them. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
+`Raise` throws `ArgumentNullException` for `null`. `DomainEvents` is a read-only live view of the entity's events, so reading it does not copy the list. Raising or clearing events while you loop over it throws `InvalidOperationException`; copy it first with `[.. order.DomainEvents]`, as above, when you clear before you dispatch. The EF Core package collects the events of tracked entities and dispatches them; see `CSharpEssentials.EntityFrameworkCore`.
 
 ### Event timing
 
@@ -91,7 +89,7 @@ public record OrderCreatedEvent(Guid OrderId) : IDomainEvent;
 public record OrderValidationEvent(Guid OrderId) : IDomainEvent;
 ```
 
-The attribute only labels the event; `CSharpEssentials.EntityFrameworkCore` reads it. `BaseDbContext` with `DispatchDomainEventsOnSaveChanges` publishes `AfterSave` events once the save has succeeded. `DomainEventInterceptor` dispatches them inside `SavingChanges`, still before the database write, so that an outbox can store them in the same save.
+The attribute only labels the event; `CSharpEssentials.EntityFrameworkCore` reads it. `BaseDbContext` with `DispatchDomainEventsOnSaveChanges` publishes `AfterSave` events once the save has succeeded. `DomainEventInterceptor` handles them inside `SavingChanges`, still before the database write, so that an outbox can store them in the same save.
 
 ## Upgrading to 8.0
 

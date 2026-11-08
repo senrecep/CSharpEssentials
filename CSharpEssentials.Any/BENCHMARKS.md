@@ -50,12 +50,12 @@ On net8.0, CSE runs its netstandard2.1 build, because CSharpEssentials.Any, Thes
 
 The parity checks use inputs on which every row agrees. The libraries still differ in ways the numbers alone do not show.
 
-- **Storage.** CSE keeps the value in `object? Value`, so building an int case boxes it (24 B on 64-bit) and every read unboxes it. A string case is stored as a reference and is not boxed, which is why FromText is the control row. OneOf keeps typed fields and does not allocate. A Dunet union is a record class, so every value allocates, whichever case it holds.
-- **Exhaustiveness.** CSE `Match` and `Switch` handlers are optional. When no handler applies, CSE returns `AnyActionStatus.NotExecuted`, so nothing checks at compile time that every case is handled. OneOf and Dunet need a handler for every case. CSE `Match` returns `AnyActionResult<T>`, and its value is read through `.Result`.
-- **Null value.** CSE `Match` and `Switch` throw `InvalidOperationException` when `Value` is null. That is the state `default(Any<...>)` is in.
-- **TryPick.** OneOf `TryPickT0` also writes the remainder (for two cases, the bare other value `T1`; for more, a `OneOf` of the rest). CSE `TryAs<T>` tests the runtime type of `Value`, not the active case. The two differ for a union such as `Any<int, int>`, so `TryAs` sits in its own category.
-- **Partition.** Only CSE ships one. The OneOf and Dunet rows are hand-written loops that use each library's documented access API. The Dunet row passes a value tuple of two lists as the state of the stateful `Match`, so it needs no extra holder object. Every row fills unsized lists and copies them to arrays, as CSE `Partition` does.
-- **JSON wire format.** The payloads differ, so the payload lengths differ too. The parity check compares the decoded case and value, never the JSON text.
+- Storage: CSE keeps the value in `object? Value`, so building an int case boxes it (24 B on 64-bit) and every read unboxes it. A string case is stored as a reference and is not boxed, which is why FromText is the control row. OneOf keeps typed fields and does not allocate. A Dunet union is a record class, so every value allocates, whichever case it holds.
+- Exhaustiveness: CSE `Match` and `Switch` handlers are optional. When no handler applies, CSE returns `AnyActionStatus.NotExecuted`, so nothing checks at compile time that every case is handled. OneOf and Dunet need a handler for every case. CSE `Match` returns `AnyActionResult<T>`, and its value is read through `.Result`.
+- Null value: CSE `Match` and `Switch` throw `InvalidOperationException` when `Value` is null. That is the state `default(Any<...>)` is in.
+- TryPick: OneOf `TryPickT0` also writes the remainder (for two cases, the bare other value `T1`; for more, a `OneOf` of the rest). CSE `TryAs<T>` tests the runtime type of `Value`, not the active case. The two differ for a union such as `Any<int, int>`, so `TryAs` sits in its own category.
+- Partition: Only CSE ships one. The OneOf and Dunet rows are hand-written loops that use each library's documented access API. The Dunet row passes a value tuple of two lists as the state of the stateful `Match`, so it needs no extra holder object. Every row fills unsized lists and copies them to arrays, as CSE `Partition` does.
+- JSON wire format: The payloads differ, so the payload lengths differ too. The parity check compares the decoded case and value, never the JSON text.
 
   | Library | Int payload | Text payload |
   |---|---|---|
@@ -67,7 +67,7 @@ The parity checks use inputs on which every row agrees. The libraries still diff
   - The OneOf add-on builds its converter with `MakeGenericType` and `Activator.CreateInstance`, and calls a factory through `MethodInfo.Invoke` on every read.
   - Dunet uses System.Text.Json's built-in polymorphism.
   - The add-on README registers `OneOfJsonConverter` and `OneOfBaseJsonConverter`. It also says the second one can be left out when no `OneOfBase` types are serialized, and the suite leaves it out.
-- **ToString.** The outputs differ, so these rows measure each library's default `ToString` and are not a ranking:
+- ToString: The outputs differ, so these rows measure each library's default `ToString` and are not a ranking:
   - CSE returns the value's own `ToString()`, `42` or `forty-two` (no quotes), and an empty string when `Value` is null (`CSharpEssentials.Any/AnyT2.cs:70`). No reflection is involved.
   - OneOf returns `System.Int32: 42`.
   - Dunet returns `Number { Value = 42 }`.
@@ -104,10 +104,9 @@ Each cell is `Mean / Ratio / Allocated`, copied from the BenchmarkDotNet github 
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on one Linux machine. The CPU and runtime versions are in the header of each report.
+- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux. Runtime versions are in the header of each report.
 - The main suite ran with a 1-minute load average between 1.18 and 1.43. The runner exited with a non-zero code for that pass (`any end rc=1` in the load log) because the ToString Text rows failed the parity check, and `ToStringComparison` was then rerun on every TFM after the ToString parity fix, with a load average between 2.42 and 2.71. The ToString tables below come from that rerun.
 - `ConstructComparison` and `TryPickComparison` use `OperationsPerInvoke = 1024`, so their means are per element of a 1024-element batch. `MatchComparison`, `JsonComparison` and `ToStringComparison` time one call. `PartitionComparison` times one partition of 1000 items.
-- Results path: `benchmarks/results/any/{tfm}/results/`.
 
 ### Construct (per element, batched)
 
@@ -223,15 +222,15 @@ Each library is in its own category with no baseline, so there is no Ratio colum
 
 Every row below is in the tables above.
 
-- **Construct, int case.** CSE allocates 24 B per value and takes 7.2450 to 8.6522 ns per element. OneOf allocates nothing and takes 0.4394 to 0.5900 ns (ratio 0.06 to 0.07 on every TFM). CSE is ahead of Dunet, which also allocates 24 B.
-- **Construct, text case.** OneOf is ahead on net8.0 (2.6899 ns, ratio 0.94) and net10.0 (2.0255 ns, ratio 0.88). net9.0 and net11.0 are ties (ratio 1.00).
-- **Match `ToInt`.** OneOf is ahead in both cases on every TFM (ratio 0.37 to 0.95). CSE is ahead of Dunet on every TFM.
-- **`Switch`.** Dunet is ahead in both cases on every TFM (ratio 0.65 to 0.94). OneOf is ahead everywhere except net10.0 Text, where CSE leads (OneOf ratio 1.19).
-- **TryPick by case, int.** OneOf is ahead on every TFM (ratio 0.47 to 0.75). Dunet is ahead on net8.0 (ratio 0.75) and ties elsewhere.
-- **TryPick by case, text.** Dunet is ahead on net8.0 (0.5858 ns against 0.6145 ns, ratio 0.95). CSE leads OneOf on every TFM and Dunet on net9.0 to net11.0.
-- **Partition.** CSE `Partition()` is behind the OneOf hand loop and the hand loop over CSE itself on every TFM (ratio 0.50 to 0.64), and allocates more than the other three rows: 18.45 KB against 18.33 KB on net8.0 and net9.0, and 18.33 KB against 18.3 KB on net10.0 and net11.0. It is ahead of the Dunet stateful `Match` on every TFM.
-- **JSON deserialize.** CSE is the slowest row and allocates the most in both cases on every TFM: 444.6 to 535.3 ns and 344 to 408 B, against 291.6 to 406.8 ns and 152 to 240 B for the other two.
-- **JSON serialize.** The OneOf add-on is ahead on net10.0 and net11.0 in both cases (ratio 0.68 to 0.75) and allocates less there (88 B against 104 B for Int, 112 B against 120 B for Text). It is also ahead on net8.0 Int (ratio 0.97) and net9.0 Text (ratio 0.92). Dunet is ahead on net9.0 Text (ratio 0.96) and net11.0 Int (ratio 0.96). CSE allocates less than Dunet on every TFM and less than OneOf on net8.0 and net9.0.
+- Construct, int case: CSE allocates 24 B per value and takes 7.2450 to 8.6522 ns per element. OneOf allocates nothing and takes 0.4394 to 0.5900 ns (ratio 0.06 to 0.07 on every TFM). CSE is ahead of Dunet, which also allocates 24 B.
+- Construct, text case: OneOf is ahead on net8.0 (2.6899 ns, ratio 0.94) and net10.0 (2.0255 ns, ratio 0.88). net9.0 and net11.0 are ties (ratio 1.00).
+- Match `ToInt`: OneOf is ahead in both cases on every TFM (ratio 0.37 to 0.95). CSE is ahead of Dunet on every TFM.
+- `Switch`: Dunet is ahead in both cases on every TFM (ratio 0.65 to 0.94). OneOf is ahead everywhere except net10.0 Text, where CSE leads (OneOf ratio 1.19).
+- TryPick by case, int: OneOf is ahead on every TFM (ratio 0.47 to 0.75). Dunet is ahead on net8.0 (ratio 0.75) and ties elsewhere.
+- TryPick by case, text: Dunet is ahead on net8.0 (0.5858 ns against 0.6145 ns, ratio 0.95). CSE leads OneOf on every TFM and Dunet on net9.0 to net11.0.
+- Partition: CSE `Partition()` is behind the OneOf hand loop and the hand loop over CSE itself on every TFM (ratio 0.50 to 0.64), and allocates more than the other three rows: 18.45 KB against 18.33 KB on net8.0 and net9.0, and 18.33 KB against 18.3 KB on net10.0 and net11.0. It is ahead of the Dunet stateful `Match` on every TFM.
+- JSON deserialize: CSE is the slowest row and allocates the most in both cases on every TFM: 444.6 to 535.3 ns and 344 to 408 B, against 291.6 to 406.8 ns and 152 to 240 B for the other two.
+- JSON serialize: The OneOf add-on is ahead on net10.0 and net11.0 in both cases (ratio 0.68 to 0.75) and allocates less there (88 B against 104 B for Int, 112 B against 120 B for Text). It is also ahead on net8.0 Int (ratio 0.97) and net9.0 Text (ratio 0.92). Dunet is ahead on net9.0 Text (ratio 0.96) and net11.0 Int (ratio 0.96). CSE allocates less than Dunet on every TFM and less than OneOf on net8.0 and net9.0.
 
 Where CSE leads: construct in both cases against Dunet, Match `ToInt` against Dunet in both cases, TryPick text against OneOf on every TFM and against Dunet on net9.0 to net11.0, Partition against the Dunet stateful `Match`, and serialize allocations against Dunet.
 
@@ -239,13 +238,10 @@ Where CSE leads: construct in both cases against Dunet, Match `ToInt` against Du
 
 ## Caveats
 
-- The OneOf JSON column measures OneOf.Serialization.SystemTextJson, a third-party add-on, not OneOf itself. OneOf ships no System.Text.Json converter.
 - On net8.0 CSE runs its netstandard2.1 build. The repo's System.Text.Json pin (`[9.0.4,)`) means every column on net8 uses the STJ 9.0.4 package. On net9.0 and later the framework's copy wins.
-- Dunet has to allocate for every union value, because that is how it is designed. Its Construct rows measure that design, not overhead from the library.
-- The OneOf and Dunet Partition rows are hand-written loops, because neither library has a partition helper.
+- Dunet allocates for every union value by design. Its Construct rows measure that design, not library overhead.
 - The Dunet JSON rows use reflection-based STJ with `[JsonDerivedType]`. AOT with a source-gen context was not tried.
 - The CSE column is the 7.0.0 working tree on the `integ/all` integration branch (all open pull requests merged locally), which may not match the version published on NuGet.
-- The feature matrix comes from reading source and docs.
 
 ---
 

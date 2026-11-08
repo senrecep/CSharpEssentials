@@ -19,7 +19,7 @@ dotnet add package CSharpEssentials.Errors
 using CSharpEssentials.Errors;
 ```
 
-## Creating Errors
+## Creating errors
 
 ```csharp
 // ErrorType: Failure | Unexpected | Validation | Conflict | NotFound | Unauthorized | Forbidden | Unknown (no factory)
@@ -33,7 +33,7 @@ Error unexpected   = Error.Unexpected("sys.error", "An unexpected error occurred
 Error fromEx       = Error.Exception(ex); // code = exception type name, description = message, metadata = exception details
 ```
 
-## Error Properties
+## Error properties
 
 ```csharp
 string code          = error.Code;        // "email.invalid"
@@ -43,7 +43,7 @@ int numeric          = error.NumericType; // int value of Type
 ErrorMetadata? meta  = error.Metadata;    // nullable
 ```
 
-Every factory has defaults for `code` and `description` (`Error.NotFound()` has the code `NotFound`). Two errors are equal when type, code, description and metadata entries are equal.
+Every factory has defaults for `code` and `description` (`Error.NotFound()` has the code `NotFound`). Two errors are equal when type, code, description and metadata entries are equal; metadata order does not matter.
 
 ## ErrorMetadata
 
@@ -57,14 +57,14 @@ Error withMeta = Error.NotFound(
 // .AddMetadata(): NOT .WithMetadata(); an existing key is kept, not overwritten
 ```
 
-## Combining Errors
+## Combining errors
 
 ```csharp
 Error[] merged = error1 + error2;              // operator +
 Error[] many   = Error.CreateMany(error1, error2, error3);
 ```
 
-## HTTP Status Mapping
+## HTTP status mapping
 
 ```csharp
 int status   = ErrorType.NotFound.ToHttpStatusCode();  // 404
@@ -74,7 +74,7 @@ ErrorType et = 401.ToErrorType();                       // Unauthorized
 
 `Validation` 400, `Unauthorized` 401, `Forbidden` 403, `NotFound` 404, `Conflict` 409. `ToErrorType` reverses 400, 401, 403, 404, 409 and 500 (`Failure`); any other status gives `Unexpected`.
 
-## Domain-Specific Error Hierarchies
+## Domain-specific error classes
 
 `Error` is a `readonly record struct`, so it cannot be subclassed. Use static classes per aggregate:
 
@@ -116,7 +116,7 @@ public Result<User> FindUser(Guid id)
 }
 ```
 
-## Domain Exceptions
+## Domain exceptions
 
 ```csharp
 using CSharpEssentials.Exceptions;
@@ -126,10 +126,8 @@ throw new DomainException(Error.Validation("Order.Invalid", "Total must be great
 throw new EnhancedValidationException(new[] { emailError, passwordError });                         // .Errors holds the Error[]
 ```
 
-## Best Practices
+## Rules
 
-- Group errors in static classes per aggregate for IDE autocomplete + type-safe codes
-- Use `error.Description`; the field is named `Description`, not `Message`
-- `ErrorMetadata` uses `.AddMetadata()`; there is no `.WithMetadata()`
-- Prefer factory methods (parameterized) over static readonly fields when the message includes runtime data
-- `Error` is a value type, safe to use as dictionary key, in switch expressions, etc.
+- Group errors in static classes per aggregate.
+- Use a factory method instead of a `static readonly` field when the description includes runtime data.
+- `Error` is a value type with value equality, usable as a dictionary key or in switch expressions. Do not add an `ErrorMetadata` to itself: hashing or comparing the cycle overflows the stack.

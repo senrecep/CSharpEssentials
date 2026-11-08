@@ -1,19 +1,19 @@
 # CSharpEssentials.AspNetCore example
 
-This project demonstrates `CSharpEssentials.AspNetCore` with MVC controllers, integrated with `CSharpEssentials.Results` and `CSharpEssentials.Errors`, and uses `CSharpEssentials.AspNetCore.Swashbuckle` for the Swagger document.
+`CSharpEssentials.AspNetCore` with MVC controllers, integrated with `CSharpEssentials.Results` and `CSharpEssentials.Errors`, and uses `CSharpEssentials.AspNetCore.Swashbuckle` for the Swagger document.
 
 ## Features demonstrated
 
 | Feature | File | Description |
 |---------|------|-------------|
-| **Result Pattern** | `Services/*.cs` | Business logic returns `Result<T>` instead of throwing exceptions |
-| **ProblemDetails** | `Program.cs`, `Controllers/*.cs` | `AddEnhancedProblemDetails()` and `errors.ToActionResult()` turn failures into RFC 9457 problem responses; `ToProblemDetails()` and `this.Problem(result)` are shown in `ProductsController.GetProblemDetails` |
-| **Global Exception Handling** | `Program.cs` | `AddExceptionHandler<GlobalExceptionHandler>()` + `UseExceptionHandler()`: unhandled exceptions become ProblemDetails |
-| **Model Validation Response** | `Program.cs` | `ConfigureModelValidatorResponse()` returns invalid model state as an enhanced problem |
-| **JSON Configuration** | `Program.cs` | `ConfigureSystemTextJson(configureOptions: ...)` applies the `CSharpEssentials.Json` options with `WriteIndented` |
-| **API Versioning** | `Program.cs`, `Controllers/*.cs` | `AddAndConfigureApiVersioning(...)`; URL-segment versioning (`/api/v1/products`) |
-| **Swagger** | `Program.cs` | `AddSwaggerGen` with `EnumSchemaFilter` and `SwashbuckleSchemaIdFactory` (see Swagger enum display) |
-| **Result Chaining** | `Services/OrderService.cs` | `Then()` composes multiple validation steps |
+| Result pattern | `Services/*.cs` | Business logic returns `Result<T>` instead of throwing exceptions |
+| ProblemDetails | `Program.cs`, `Controllers/*.cs` | `AddEnhancedProblemDetails()` and `errors.ToActionResult()` turn failures into RFC 9457 problem responses; `ToProblemDetails()` and `this.Problem(result)` are shown in `ProductsController.GetProblemDetails` |
+| Global exception handling | `Program.cs` | `AddExceptionHandler<GlobalExceptionHandler>()` + `UseExceptionHandler()`: unhandled exceptions become ProblemDetails |
+| Model validation response | `Program.cs` | `ConfigureModelValidatorResponse()` returns invalid model state as an enhanced problem |
+| JSON configuration | `Program.cs` | `ConfigureSystemTextJson(configureOptions: ...)` applies the `CSharpEssentials.Json` options with `WriteIndented` |
+| API versioning | `Program.cs`, `Controllers/*.cs` | `AddAndConfigureApiVersioning(...)`; URL-segment versioning (`/api/v1/products`) |
+| Swagger | `Program.cs` | `AddSwaggerGen` with `EnumSchemaFilter` and `SwashbuckleSchemaIdFactory` (see Swagger enum display) |
+| Result chaining | `Services/OrderService.cs` | `Then()` composes multiple validation steps |
 
 ## Running the project
 
@@ -35,7 +35,6 @@ The project has no launch profile, so Kestrel listens on `http://localhost:5000`
 | POST | `/api/v1/products` | Create a new product |
 | PUT | `/api/v1/products/{id}` | Update a product |
 | DELETE | `/api/v1/products/{id}` | Delete a product |
-
 | GET | `/api/v1/products/problem/{id}` | Same lookup as `GET /{id}`, written with `ToProblemDetails()` and `this.Problem(result)` |
 
 ### Orders
@@ -106,7 +105,7 @@ If any step fails, the chain short-circuits and returns the first error set.
 
 ## Error types
 
-| Error Type | HTTP Status | Use Case |
+| Error type | HTTP status | Use case |
 |------------|-------------|----------|
 | `Error.NotFound()` | 404 | Resource does not exist |
 | `Error.Validation()` | 400 | Input validation failure |
@@ -116,7 +115,7 @@ If any step fails, the chain short-circuits and returns the first error set.
 
 ## Swagger enum display
 
-`Program.cs` adds `options.SchemaFilter<EnumSchemaFilter>()`. `EnumSchemaFilter` (package `CSharpEssentials.AspNetCore.Swashbuckle`, namespace `CSharpEssentials.AspNetCore`) describes the enums that the enum conventions handle: `[StringEnum]` enums, whose metadata the `CSharpEssentials.Enums` generator creates. `ProductCategory` and `OrderStatus` in this project are plain enums, and the project does not reference the generator, so the filter leaves them alone and Swagger shows the framework schema:
+`Program.cs` adds `options.SchemaFilter<EnumSchemaFilter>()`. `EnumSchemaFilter` (package `CSharpEssentials.AspNetCore.Swashbuckle`, namespace `CSharpEssentials.AspNetCore.Swagger.Filters`) describes the enums that the enum conventions handle: `[StringEnum]` enums, whose metadata the `CSharpEssentials.Enums` generator creates. `ProductCategory` and `OrderStatus` in this project are plain enums, and the project does not reference the generator, so the filter leaves them alone and Swagger shows the framework schema:
 
 ```json
 "ProductCategory": { "type": "integer", "format": "int32", "enum": [0, 1, 2, 3, 4] }

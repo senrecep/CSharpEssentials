@@ -1,25 +1,16 @@
 # CSharpEssentials.Any
 
-Discriminated unions (sum types) for .NET: a type-safe way to represent a value that can be one of several fixed types.
+Discriminated unions (sum types) for .NET: `Any<T0, T1>` through `Any<T0, ..., T7>` hold a value of one of 2 to 8 fixed types. They support implicit conversions, `Switch` and `Match`, type helpers (`Is`, `As`, `TryAs`, `Deconstruct`, `ToTuple`), `Partition` and `Traverse` over sequences, and JSON.
 
-> Benchmarks against OneOf 3.0.271 and Dunet 1.16.2 (construct, match, try-pick, partition, JSON and ToString) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
-
-## Features
-
-- **Unions of 2 to 8 types**: `Any<T0, T1>` through `Any<T0, ..., T7>`.
-- **Implicit conversions**: Assign values directly to the union type.
-- **Pattern matching**: `Switch` and `Match` for exhaustive handling.
-- **Type helpers**: `Is<T>`, `As<T>`, `TryAs<T>`, `Deconstruct`, `ToTuple`.
-- **JSON**: Built-in serialization.
-
-Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Json` and `CSharpEssentials.Core`. The types live in the `CSharpEssentials.Any` namespace.
+Benchmarks against OneOf 3.0.271 and Dunet 1.16.2 (construct, match, try-pick, partition, JSON and ToString) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Any
 ```
+
+Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Json` and `CSharpEssentials.Core`. The types live in the `CSharpEssentials.Any` namespace.
 
 ## Usage
 
@@ -39,7 +30,7 @@ Any<string, int> first = Any<string, int>.First("text");   // explicit factories
 Any<string, int> second = Any.Create<string, int>(5);      // or Any.Create with the type arguments spelled out
 ```
 
-The union holds its active branch in `Index` (0 for the first type) and its value in `Value` (`object?`). Implicit conversion is ambiguous when two type arguments are the same type, for example `Any<int, int>`, and `default(Any<...>)` has `Index` 0 but a `null` `Value`, so `IsFirst` is `true` while `GetFirst()` returns `null` or `default`.
+The union holds its active branch in `Index` (0 for the first type) and its value in `Value` (`object?`, so a value-type branch is boxed). Implicit conversion is ambiguous when two type arguments are the same type, for example `Any<int, int>`. `default(Any<...>)` has `Index` 0 but a `null` `Value`, so `IsFirst` is `true` while `GetFirst()` returns `null` or `default`.
 
 ### Pattern matching
 
@@ -57,7 +48,7 @@ AnyActionStatus status = result.Switch(
     second: num => Console.WriteLine("It's a number"));
 ```
 
-Every handler is optional. When the active branch has no handler, `Switch` returns `AnyActionStatus.NotExecuted` and `Match` returns an `AnyActionResult` whose `Status` is `NotExecuted` and whose `Result` is `default`; otherwise the status is `Executed`. Calling `Match` or `Switch` on `default(Any<...>)`, or on a union that holds `null`, throws `InvalidOperationException`.
+Every handler is optional, so the compiler does not check that all branches are handled. When the active branch has no handler, `Switch` returns `AnyActionStatus.NotExecuted` and `Match` returns an `AnyActionResult` whose `Status` is `NotExecuted` and whose `Result` is `default`; otherwise the status is `Executed`. Calling `Match` or `Switch` on `default(Any<...>)`, or on a union that holds `null`, throws `InvalidOperationException`.
 
 ### Type checking
 
@@ -77,24 +68,15 @@ var (text, number) = result;
 (string? First, int Second) tuple = result.ToTuple();
 ```
 
-`IsFirst`, `IsSecond`, `IsThird` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. `Is`, `As` and `TryAs` test the runtime type of the value, not the branch. For a value-type target, `As` returns `default` (so `0` for `int`) when the value is of another type, not `null`; use `Is` or `TryAs` to tell the cases apart.
+`IsFirst` through `IsEighth` and `GetFirst()` through `GetEighth()` exist up to the arity of the union. `Is`, `As` and `TryAs` test the runtime type of the value, not the branch. For a value-type target, `As` returns `default` (so `0` for `int`) when the value is of another type, not `null`; use `Is` or `TryAs` to tell the cases apart.
 
-A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. The value is read with the `JsonSerializerOptions` you pass to `JsonSerializer`, so a naming policy or converter applies to it too. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the value's own `ToString()`, or an empty string when the value is `null`. It does not use reflection, so it is safe under trimming and Native AOT.
+### JSON and ToString
 
-### Multiple types
-
-```csharp
-Any<string, int, Exception> response = GetData(5);
-
-response.Switch(
-    first: s => Console.WriteLine($"Success: {s}"),
-    second: i => Console.WriteLine($"NotFound: {i}"),
-    third: e => Console.WriteLine($"Error: {e.Message}"));
-```
+A union serializes to JSON as `{"Index":1,"Value":123}` and deserializes back to the same branch. The value is read with the `JsonSerializerOptions` you pass to `JsonSerializer`, so a naming policy or converter applies to it too. A `null` value deserializes when the branch type is a reference type or `Nullable<T>`, and throws `ArgumentNullException` for any other value-type branch. `ToString()` returns the value's own `ToString()`, or an empty string when the value is `null`; it does not use reflection, so it is safe under trimming and Native AOT.
 
 ### Collection extensions
 
-Scatter a sequence of unions into typed arrays in one pass:
+`Partition` and `Traverse` scatter a sequence of unions into one typed array per branch in one pass, for every arity:
 
 ```csharp
 // Classify API responses into successes and errors
@@ -106,8 +88,6 @@ var (drafts, published) = articles
     .Select(a => GetState(a))             // returns Any<Draft, Published>
     .Partition();
 ```
-
-`Partition` and `Traverse` are available for all arities (`Any<T0,T1>` through `Any<T0,...,T7>`), returning a tuple with one typed array per variant.
 
 ## Upgrading to 8.0
 

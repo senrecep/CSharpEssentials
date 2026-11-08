@@ -5,7 +5,7 @@ description: Use when composing business validation logic. Define rules as class
 
 # CSharpEssentials.Rules
 
-Composable rule engine for .NET. Define business logic as small rules in any style and combine them freely.
+Rule engine for .NET. Rules are classes, `Func` fields or lambdas returning `Result` / `Result<T>`, combined with And, Or, Linear and If.
 
 ## Installation
 
@@ -23,11 +23,11 @@ using CSharpEssentials.Errors;       // Error
 
 ---
 
-## Three Definition Styles
+## Three definition styles
 
-All styles are interchangeable; mix and match freely when composing.
+The styles can be mixed when composing.
 
-### 1. Class (injectable, unit-testable)
+### 1. Class (injectable)
 
 ```csharp
 public sealed class AgeRule : IRule<UserContext>
@@ -47,7 +47,7 @@ public sealed class LicenseRule : IRule<UserContext>
 }
 ```
 
-### 2. Func field (reusable, no class needed)
+### 2. Func field or method
 
 ```csharp
 Func<UserContext, Result> regionRule = ctx =>
@@ -57,7 +57,7 @@ static Result CheckEmail(UserContext ctx) =>
     ctx.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email.");
 ```
 
-### 3. Inline lambda (one-off, maximum density)
+### 3. Inline lambda
 
 ```csharp
 Result r = RuleEngine.Evaluate(
@@ -67,7 +67,7 @@ Result r = RuleEngine.Evaluate(
 
 ---
 
-## Evaluating a Single Rule
+## Evaluating a single rule
 
 ```csharp
 // Any style passes directly, no .ToRule() needed
@@ -81,13 +81,13 @@ Result r4 = RuleEngine.Evaluate(
 
 ---
 
-## Combining Rules
+## Combining rules
 
-Compose first using extension methods on arrays, then evaluate with `RuleEngine.Evaluate`.
+Compose with the extension methods on arrays, then evaluate with `RuleEngine.Evaluate`.
 
 ### And: all must pass
 
-And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
+`Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors.
 
 ```csharp
 // Class instances
@@ -140,11 +140,11 @@ Result longer = RuleEngine.Evaluate(
     ctx);
 ```
 
-`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, same as `a.Next(b.Next(c))` or an array with `.Linear()`: a failing `b` stops the chain.
+`Next` links one rule to the rule after it. `a.Next(b).Next(c)` appends `c` to the end of the chain, same as `a.Next(b.Next(c))` or an array with `.Linear()`: a failing `b` stops the chain. An empty array fails with the `EMPTY_RULE_ARRAY` validation error, as `And` and `Or` do.
 
 ### Static shortcuts
 
-`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly:
+`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly. `RuleEngine.Linear(Func[], ctx)` rebuilds the chain on every call; on a hot path build the tree once and keep it.
 
 ```csharp
 Result all = RuleEngine.And(new Func<UserContext, Result>[] { regionRule, CheckEmail }, ctx);
@@ -180,7 +180,7 @@ Result conditional3 = RuleEngine.If(
 
 ---
 
-## Rules with Values (Result<T>)
+## Rules with values (`Result<T>`)
 
 ```csharp
 // Class form
@@ -202,7 +202,7 @@ Result<string> grade = RuleEngine.Evaluate(
 
 ---
 
-## Domain Error Hierarchies
+## Domain error catalogues
 
 ```csharp
 public static class RegistrationErrors
@@ -240,9 +240,9 @@ result.Switch(
 
 ---
 
-## Predicate Factories
+## Predicate factories
 
-Create `IRule<T>` or `IAsyncRule<T>` directly from a predicate; no class needed.
+`FromPredicate` and `FromPredicateAsync` build an `IRule<T>` or `IAsyncRule<T>` from a predicate.
 
 ```csharp
 // Static error
@@ -270,7 +270,7 @@ Result composed = await RuleEngine.EvaluateAsync(
 
 ---
 
-## Async Evaluation
+## Async evaluation
 
 Async rules implement `IAsyncRule<TContext>` (`ValueTask<Result> EvaluateAsync(context, ct)`), come from `FromPredicateAsync`, or are a `Func<TContext, CancellationToken, ValueTask<Result>>` converted with `.ToRule()`.
 
@@ -284,12 +284,11 @@ Async rules implement `IAsyncRule<TContext>` (`ValueTask<Result> EvaluateAsync(c
 
 ---
 
-## Best Practices
+## Best practices
 
-- And: all must pass. `Result` rules stop at the first failure and return its errors; `Result<T>` rules evaluate every child and aggregate all errors. `array.Linear()` stops at the **first** failure
 - Use `.Linear()` on an array for sequences of three or more rules; `.Next()` links one rule to the next and can be chained as `a.Next(b).Next(c)`
 - No explicit `.ToRule()` needed when passing `Func<>` to `RuleEngine.Evaluate` or to `.And()/.Or()` on `Func[]`
 - Group domain errors in static classes so rules read like domain language
-- Test each `IRule<T>` in isolation: `Evaluate(context)` → assert Result. No mocking needed
+- Test each `IRule<T>` in isolation: call `Evaluate(context)` and assert on the `Result`
 - Use class rules when the rule needs DI; use `Func` fields when it doesn't
 - Await `RuleEngine.EvaluateAsync` whenever the tree contains an `IAsyncRule`

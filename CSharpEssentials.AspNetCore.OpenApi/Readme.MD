@@ -2,9 +2,9 @@
 
 `Microsoft.AspNetCore.OpenApi` integration for the CSharpEssentials enum conventions.
 
-> One host, one OpenAPI package: reference either `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle), never both. Both use `Microsoft.OpenApi` 2.x.
+A host references either this package or `CSharpEssentials.AspNetCore.Swashbuckle`, never both. Both use `Microsoft.OpenApi` 2.x.
 
-> **Benchmarks:** document generation for 50 Minimal API endpoints and 30 enums, plain `AddOpenApi` against the CSE enum, idempotency and optional route conventions, warm and first document, is described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
+Document generation benchmarks (50 Minimal API endpoints, 30 enums, plain `AddOpenApi` against the CSE conventions) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
@@ -52,7 +52,7 @@ The Swashbuckle package produces the same enum schemas (both are compared with t
 
 ## Optional route parameters
 
-OpenAPI requires every path parameter to be `required: true`, so a route with an optional segment (`{id?}`, `{id:int?}`, `{page=1}`) cannot be described on one path. `AddOptionalRouteParameters` (from 6.2.0, opt-in) describes it on several paths, one per form:
+OpenAPI requires every path parameter to be `required: true`, so a route with an optional segment (`{id?}`, `{id:int?}`, `{page=1}`) cannot be described on one path. `AddOptionalRouteParameters` (opt-in, since 6.2.0) describes it on several paths, one per form:
 
 ```csharp
 using CSharpEssentials.AspNetCore; // AddOptionalRouteParameters, OpenApiOptionalRouteParameterMode
@@ -71,8 +71,7 @@ builder.Services.AddOpenApi("v1", o => o.AddOptionalRouteParameters());
 | `/api/archive/{year}/{month}` | `GetArchive` |
 
 - Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue`, a `null` type or default, or a `{"type": "null"}` member in `oneOf` or `anyOf` (a nullable enum such as `{status?}` in OpenAPI 3.1).
-- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required.
-- A route with more than three trailing optional parameters is logged as a warning (once per document, path and method) through the host's `ILoggerFactory`. Without an `ILoggerFactory` nothing is logged.
+- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required. More than three trailing optional parameters also log a warning (once per document, path and method) through the host's `ILoggerFactory`, if one is registered.
 - A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
 - The full form keeps the operationId; a shorter form gets `{operationId}Without{Param}` (`And` between parameters), or none when the full form has none. A generated operationId that another operation already uses throws `InvalidOperationException` when the document is generated; rename one of them or pass a selector.
 - Controller and Minimal API routes are handled the same way, on the paths `Microsoft.AspNetCore.OpenApi` writes (`/minimal/{id}` for `/minimal/{id:int?}`).

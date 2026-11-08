@@ -1,9 +1,8 @@
 # CSharpEssentials.Resilience
 
-HTTP-agnostic resilience patterns (retry, timeout, circuit breaker, fallback) that work with `Result<T>`. A composable `ResiliencePolicy` builder, backed by Polly v8 (`Polly.Core`), handles transient faults without exceptions.
+Retry, timeout, circuit breaker and fallback for operations that return `Result` or `Result<T>`. `ResiliencePolicy` is a fluent wrapper over Polly v8 (`Polly.Core`) that returns failures as `Result` values instead of throwing.
 
-> Benchmarks against Polly.Core (policy overhead, composed policies, `RetryIfFailed` and `Result` boxing) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks against Polly.Core (policy overhead, composed policies, `RetryIfFailed`, `Result` boxing) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
@@ -11,7 +10,9 @@ HTTP-agnostic resilience patterns (retry, timeout, circuit breaker, fallback) th
 dotnet add package CSharpEssentials.Resilience
 ```
 
-This package is not marked Native AOT compatible. A Native AOT publish that uses it gets ILC warning IL3054 from Polly's `DelegatingComponent.ExecuteCore` (generic recursion; ILC says an exception is thrown at run time if that code path is reached), and Polly's `AddRetry<TResult>` asks for `DynamicallyAccessedMemberTypes.All` on the result type, which the retry extensions cannot meet for `Result<T>` without trim warnings.
+The package depends on `Polly.Core` `[8.0.0,9.0.0)`, not the full `Polly` package. Add `Polly` yourself if you use the v7 API (`Policy`, `AsyncRetryPolicy`).
+
+It is not marked Native AOT compatible. A Native AOT publish gets ILC warning IL3054 from Polly's `DelegatingComponent.ExecuteCore` (generic recursion; ILC says an exception is thrown at run time if that path is reached), and Polly's `AddRetry<TResult>` asks for `DynamicallyAccessedMemberTypes.All` on the result type, which the retry extensions cannot meet for `Result<T>` without trim warnings.
 
 ## Namespaces
 
@@ -21,27 +22,24 @@ using CSharpEssentials.ResultPattern; // Result, Result<T>
 using CSharpEssentials.Errors;        // Error, ErrorType
 ```
 
-The samples below assume these usings.
-
 ## Quick start
 
 ```csharp
-using CSharpEssentials.Resilience;
-
-// Simple retry
+// Retry
 Result<User> user = await ResiliencePolicy
     .Create()
     .WithRetry(maxAttempts: 3, delay: TimeSpan.FromSeconds(1))
     .ExecuteAsync(_ => _db.GetUser(id));
 
-// Retry + Timeout
-Result<Order> order = await ResiliencePolicy
+// Retry, timeout and circuit breaker
+Result<Data> data = await ResiliencePolicy
     .Create()
     .WithRetry(3)
     .WithTimeout(TimeSpan.FromSeconds(5))
-    .ExecuteAsync(_ => _orderService.GetOrder(id));
+    .WithCircuitBreaker(minimumThroughput: 10)
+    .ExecuteAsync(_ => _api.GetData());
 
-// Circuit Breaker + Fallback (fallback needs the typed ResiliencePolicy<T>)
+// Circuit breaker and fallback (fallback needs the typed ResiliencePolicy<T>)
 Result<Product> product = await ResiliencePolicy<Product>
     .Create()
     .WithCircuitBreaker(minimumThroughput: 10, failureRatio: 0.5)
@@ -49,26 +47,41 @@ Result<Product> product = await ResiliencePolicy<Product>
     .ExecuteAsync(_ => _productService.GetProduct(id));
 ```
 
+The samples build the policy inline for brevity. A policy is immutable, so in real code build it once and reuse it: in the benchmarks a retry policy built per call costs 12 to 15 times a prebuilt one.
+
 ## Policy builder
 
-Both `ResiliencePolicy` and `ResiliencePolicy<T>` are immutable structs: every `With...` call returns a new policy.
+`ResiliencePolicy` and `ResiliencePolicy<T>` are immutable structs: every `With...` call returns a new policy. `default(ResiliencePolicy)` and `default(ResiliencePolicy<T>)` behave like `Create()`.
 
 | Method | Parameters (defaults) | Notes |
 |--------|-----------------------|-------|
-| `WithRetry` | `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`) | `maxAttempts` is the number of retries after the first attempt, so the operation runs at most `maxAttempts + 1` times. With `exponentialBackoff` the delay doubles after each retry |
+| `WithRetry` | `maxAttempts` (3), `delay` (1 s), `exponentialBackoff` (`true`) | `maxAttempts` counts retries after the first attempt, so the operation runs at most `maxAttempts + 1` times. With `exponentialBackoff` the delay doubles after each retry |
 | `WithTimeout` | `timeout` | Polly accepts 1 second to 1 day; any other value throws `ValidationException` when the policy is built |
 | `WithCircuitBreaker` | `minimumThroughput` (10), `samplingDuration` (1 min), `breakDuration` (30 s), `failureRatio` (0.5) | Counts the same failures as the retry strategy |
 | `WithFallback` | `Func<CancellationToken, Task<T>>` or `Func<CancellationToken, Task<Result<T>>>` | `ResiliencePolicy<T>` only; runs after the other strategies are exhausted |
 | `Create(ResiliencePolicyOptions)` | `Retry`, `Timeout`, `CircuitBreaker` records | `ResiliencePolicy` only. `WithRetry(RetryOptions)`, `WithTimeout(TimeoutOptions)` and `WithCircuitBreaker(CircuitBreakerOptions)` take the records on both policies |
 | `Create(Action<ResiliencePipelineBuilder>)`, `FromPipeline(pipeline)`, `ToPipeline()` | | Interoperate with raw Polly pipelines (`ResiliencePipelineBuilder<Result<T>>` for `ResiliencePolicy<T>`) |
 
-Strategies nest in the order you add them: the first one is the outermost. `WithRetry(3).WithTimeout(TimeSpan.FromSeconds(1))` applies the timeout to each attempt, while `WithTimeout(TimeSpan.FromSeconds(1)).WithRetry(3)` limits all attempts together. `WithFallback` always wraps the strategies of the policy it is called on.
+Strategies nest in the order you add them, the first one outermost. `WithRetry(3).WithTimeout(TimeSpan.FromSeconds(1))` applies the timeout to each attempt, while `WithTimeout(TimeSpan.FromSeconds(1)).WithRetry(3)` limits all attempts together. `WithFallback` always wraps the strategies of the policy it is called on. `Create(ResiliencePolicyOptions)` adds retry, then circuit breaker, then timeout.
 
-## Retrying failed results
+```csharp
+var options = new ResiliencePolicyOptions
+{
+    Retry = new RetryOptions { MaxAttempts = 3, Delay = TimeSpan.FromSeconds(1) },
+    Timeout = new TimeoutOptions { Timeout = TimeSpan.FromSeconds(5) },
+    CircuitBreaker = new CircuitBreakerOptions { MinimumThroughput = 10, FailureRatio = 0.5, BreakDuration = TimeSpan.FromSeconds(30) }
+};
 
-Both `ResiliencePolicy` and `ResiliencePolicy<T>` retry exceptions and failed `Result` / `Result<T>` values. The circuit breaker counts the same failures. The non-generic `ResiliencePolicy` checks any return value that implements `IResultBase`; other return values count only when the delegate throws.
+Result<User> user = await ResiliencePolicy.Create(options).ExecuteAsync(_ => _db.GetUser(id));
+```
 
-Errors of type `Unauthorized`, `Forbidden`, `NotFound` and `Validation` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict`, …) is treated as transient. When the retries run out, the last failed result is returned.
+The records default to the same values as the method parameters, plus `TimeoutOptions.Timeout` = 30 s.
+
+## What is retried
+
+Both policies retry exceptions and failed `Result` / `Result<T>` values, and the circuit breaker counts the same failures. The non-generic `ResiliencePolicy` checks any return value that implements `IResultBase`; other return values count only when the delegate throws.
+
+Errors of type `Unauthorized`, `Forbidden`, `NotFound` and `Validation` are not retried, because running the operation again gives the same answer. Every other failed result (`Failure`, `Unexpected`, `Conflict` and so on) is treated as transient. When the retries run out, the last failed result is returned.
 
 ```csharp
 Result<Order> order = await ResiliencePolicy
@@ -79,110 +92,69 @@ Result<Order> order = await ResiliencePolicy
 
 ## Delegate extensions
 
-```csharp
-using CSharpEssentials.Resilience;
+`ExecuteAsync` on a `Func<Task>`, `Func<Task<T>>` or `Func<Task<Result<T>>>` (with or without a `CancellationToken` parameter) runs it through an empty policy, so exceptions become failed results:
 
-// Direct execution: wraps any Func<Task<T>> in a Result
+```csharp
 Func<Task<User>> getUser = () => _db.GetUser(id);
 Result<User> user = await getUser.ExecuteAsync();
 
-// With CancellationToken
 Func<CancellationToken, Task<User>> getUserWithToken = ct => _db.GetUser(id, ct);
 Result<User> userWithToken = await getUserWithToken.ExecuteAsync(cancellationToken);
 ```
 
-## Result retry
+`RetryIfFailed` retries a `Func<CancellationToken, Task<Result<T>>>` or `Func<CancellationToken, Task<Result>>` with the same classification, parameters and defaults as `WithRetry`:
 
 ```csharp
-// Retry a failed Result directly
-Func<CancellationToken, Task<Result<User>>> operation = ct => _db.TryGetUser(id, ct); // returns Result<User>
+Func<CancellationToken, Task<Result<User>>> operation = ct => _db.TryGetUser(id, ct);
 Result<User> result = await operation.RetryIfFailed(maxAttempts: 3, delay: TimeSpan.FromSeconds(1));
-```
 
-By default every failure is retried except `Unauthorized`, `Forbidden`, `NotFound` and `Validation` errors. Pass a `shouldRetry` predicate to decide yourself:
-
-```csharp
 // Retry only errors you classify as transient
-Result<User> result = await operation.RetryIfFailed(
+Result<User> classified = await operation.RetryIfFailed(
     shouldRetry: error => error.Code == "Db.Timeout",
     maxAttempts: 3,
     delay: TimeSpan.FromSeconds(1));
 ```
 
-The predicate replaces the default classification. An exception thrown by the operation is converted to the error that would be returned for it (`ErrorType.Unexpected`) and passed to the predicate too, so an exception the predicate rejects is not retried. Caller cancellation works as without a predicate: it is never retried and throws `OperationCanceledException`.
+Both forms reuse a cached pipeline, keyed by `(maxAttempts, delay, exponentialBackoff)` and by whether a predicate is used, up to 64 entries per result type. The predicate form passes the delegate through a pooled `ResilienceContext`, so it does not allocate per call.
 
-## Configuration options
+`shouldRetry` replaces the default classification. An exception thrown by the operation is converted to the error that would be returned for it (`ErrorType.Unexpected`) and passed to the predicate too, so an exception the predicate rejects is not retried. The predicate can run more than once for the same attempt, so keep it pure and cheap. If it throws, retrying stops and the exception is returned as an `Unexpected` error.
 
-```csharp
-using CSharpEssentials.Resilience;
+## Errors and cancellation
 
-// Use options records
-var options = new ResiliencePolicyOptions
-{
-    Retry = new RetryOptions { MaxAttempts = 3, Delay = TimeSpan.FromSeconds(1) },
-    Timeout = new TimeoutOptions { Timeout = TimeSpan.FromSeconds(5) },
-    CircuitBreaker = new CircuitBreakerOptions
-    {
-        MinimumThroughput = 10,
-        FailureRatio = 0.5,
-        BreakDuration = TimeSpan.FromSeconds(30)
-    }
-};
-
-Result<User> user = await ResiliencePolicy
-    .Create(options)
-    .ExecuteAsync(_ => _db.GetUser(id));
-```
-
-## Error handling
-
-Resilience-specific errors are returned as `Error` values:
+Resilience failures are returned as `Error` values:
 
 - `Error.Failure("Resilience.Timeout", "Operation timed out.")`
 - `Error.Failure("Resilience.CircuitBroken", "Circuit breaker is open.")`
 
-When retries exhaust, the last exception is returned as `Error.Exception(ex, ErrorType.Unexpected)`, with the exception type name as code.
+When retries are exhausted, the last exception is returned as `Error.Exception(ex, ErrorType.Unexpected)`, with the exception type name as code. An exception thrown by the `WithFallback` delegate is returned the same way.
 
-An exception thrown by the `WithFallback` delegate is returned the same way, as an `Unexpected` error.
+Cancellation of the caller's token is never converted to an error:
 
-Cancellation of the caller's token is not converted to an error. When the `CancellationToken` passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback. If the caller cancels after an attempt returned a retryable failed `Result`, `ExecuteAsync`, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException` instead of returning that result. This is the same whether the cancel lands during an attempt or during the backoff delay, and it also applies right after the final attempt: cancellation wins over returning the last failed result. It also applies to policies without a retry strategy, such as a circuit-breaker-only or timeout-only policy. This rule covers returned failures only: if the operation throws an exception other than `OperationCanceledException` while the caller's token is cancelled, the exception is returned as an `Unexpected` error. An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is treated as a normal failure: it is retried and it triggers the fallback.
-
-A `default(ResiliencePolicy)` or `default(ResiliencePolicy<T>)` behaves like `Create()`.
-
-## Pipeline composition
-
-```csharp
-// Stack multiple policies
-Result<Data> result = await ResiliencePolicy
-    .Create()
-    .WithRetry(3)
-    .WithTimeout(TimeSpan.FromSeconds(5))
-    .WithCircuitBreaker(minimumThroughput: 10)
-    .ExecuteAsync(_ => _api.GetData());
-```
+- When the token passed to `ExecuteAsync` or `RetryIfFailed` is cancelled and the operation throws `OperationCanceledException`, the exception is rethrown and `WithFallback` does not run the fallback.
+- If the caller cancels after an attempt returned a retryable failed `Result`, `ExecuteAsync`, `RetryIfFailed` and `WithFallback` throw `OperationCanceledException` instead of returning that result. This holds whether the cancel lands during an attempt, during the backoff delay or right after the final attempt, and also for policies without a retry strategy (circuit breaker only, timeout only).
+- If the operation throws an exception other than `OperationCanceledException` while the caller's token is cancelled, that exception is returned as an `Unexpected` error.
+- An `OperationCanceledException` from another token, such as an `HttpClient` timeout, is a normal failure: it is retried and it triggers the fallback.
 
 ## Polly integration
 
-Under the hood it uses the Polly v8 `ResiliencePipeline` from the `Polly.Core` package. The package does not reference the full `Polly` package; add it yourself if you use the Polly v7 API (`Policy`, `AsyncRetryPolicy`, …).
+`Create(Action<ResiliencePipelineBuilder>)` gives direct access to the Polly builder:
 
 ```csharp
-// Advanced: Direct Polly configuration
 using Polly;
 using Polly.Retry;
 
 Result<Data> result = await ResiliencePolicy
-    .Create(builder =>
+    .Create(builder => builder.AddRetry(new RetryStrategyOptions
     {
-        builder.AddRetry(new RetryStrategyOptions
-        {
-            MaxRetryAttempts = 3,
-            Delay = TimeSpan.FromSeconds(1),
-            BackoffType = DelayBackoffType.Exponential
-        });
-    })
+        MaxRetryAttempts = 3,
+        Delay = TimeSpan.FromSeconds(1),
+        BackoffType = DelayBackoffType.Exponential
+    }))
     .ExecuteAsync(_ => _api.GetData());
 ```
 
+A strategy added this way uses Polly's own `ShouldHandle`, which ignores returned `Result` values unless you set it.
+
 ## Upgrading to 8.0
 
-An exception thrown by the `WithFallback` delegate is now returned as an `ErrorType.Unexpected` error, like an exception from the operation itself. Earlier versions returned it as `ErrorType.Failure`. Update code that checks the error type of a failed fallback. A `TimeoutRejectedException` or `BrokenCircuitException` thrown by the fallback delegate now gets the same codes as on the operation itself, `Resilience.Timeout` or `Resilience.CircuitBroken`, instead of the exception type name.
+An exception thrown by the `WithFallback` delegate is now returned as an `ErrorType.Unexpected` error, like an exception from the operation itself. Earlier versions returned it as `ErrorType.Failure`. A `TimeoutRejectedException` or `BrokenCircuitException` thrown by the fallback delegate now gets the same codes as on the operation, `Resilience.Timeout` or `Resilience.CircuitBroken`, instead of the exception type name.

@@ -4,13 +4,13 @@ This page compares CSharpEssentials.RequestResponseLogging (CSE) with the framew
 
 The classes live in `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/` (suite key `aspnetcore`), next to the classes documented in [CSharpEssentials.AspNetCore/BENCHMARKS.md](../CSharpEssentials.AspNetCore/BENCHMARKS.md) and [CSharpEssentials.Idempotency/BENCHMARKS.md](../CSharpEssentials.Idempotency/BENCHMARKS.md).
 
-The parity self-check passes on every TFM, and full default-job results for net8.0 to net11.0 are in [Results](#results).
+The parity self-check passes on every TFM.
 
 | Package | Version | Published | License (nuspec expression) | Asset the suite loads |
 |---|---|---|---|---|
 | Serilog.AspNetCore | 10.0.0 | 2025-11-28 | Apache-2.0 | `lib/net8.0`, `lib/net9.0`, `lib/net10.0` (net11 loads `lib/net10.0`) |
 
-HttpLogging ships in the `Microsoft.AspNetCore.App` shared framework (8.0.30, 9.0.19, 10.0.11, 11.0.0-rc.1). CSE.RequestResponseLogging targets net8-net11 natively. Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0, which is why transitive pinning is off for this project. Its assembly reports `AssemblyInformationalVersion` `10.0.0-main-0ddce6f`.
+HttpLogging ships in the `Microsoft.AspNetCore.App` shared framework (8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348), as the report headers print the runtimes). CSE.RequestResponseLogging targets net8-net11 natively. Serilog.AspNetCore 10 needs Microsoft.Extensions.* and System.Text.Json 10.0.0, which is why transitive pinning is off for this project. Its assembly reports `AssemblyInformationalVersion` `10.0.0-main-0ddce6f`.
 
 ---
 
@@ -22,7 +22,7 @@ HttpLogging ships in the `Microsoft.AspNetCore.App` shared framework (8.0.30, 9.
 | 2 | `RequestLoggingMetadataComparison` | GET /ping, no request body, 1 KB JSON response | No logging (baseline), CSE method + path + timing with `SkipRequestResponseLogging` (labelled), Serilog request logging, HttpLogging method + path + status + duration | 200 with the same body, one event per request per logging row, none for the baseline |
 
 - Every class has `[MemoryDiagnoser]`; every variant runs on its own Production `TestServer` host and reads the whole response.
-- **Logging is on for the middleware under test, and only for it.** Each host logs through a counting provider (MEL) or sink (Serilog) that renders every message, as a real provider would, and only adds its length to a counter. MEL hosts: `ClearProviders()`, the counting provider, `SetMinimumLevel(Warning)`, then `Information` for `RequestResponseLogger` and `Microsoft.AspNetCore.HttpLogging`. The Serilog host: `MinimumLevel.Warning()` with an `Information` override for `Serilog.AspNetCore.RequestLoggingMiddleware`. The hosting "Request starting/finished" events stay below the floor on every host, the baseline included.
+- Logging is on for the middleware under test, and only for it: each host logs through a counting provider (MEL) or sink (Serilog) that renders every message, as a real provider would, and only adds its length to a counter. MEL hosts: `ClearProviders()`, the counting provider, `SetMinimumLevel(Warning)`, then `Information` for `RequestResponseLogger` and `Microsoft.AspNetCore.HttpLogging`. The Serilog host: `MinimumLevel.Warning()` with an `Information` override for `Serilog.AspNetCore.RequestLoggingMiddleware`. The hosting "Request starting/finished" events stay below the floor on every host, the baseline included.
 - This matters for fairness: with logging off, HttpLogging and Serilog skip their work on `IsEnabled == false`. CSE checks `IsEnabled` before it builds the message (`LogWriters/LoggerFactoryLogWriter.cs:49`), but its middleware has already captured both bodies by then. A disabled-logger comparison would measure that difference instead of the logging.
 - HttpLogging logs the request body only as the app reads it, so the handler reads the whole request (`CopyToAsync(Stream.Null)`) before it writes the response.
 
@@ -43,12 +43,12 @@ From the self-check output on all four TFMs (message lengths in characters):
 | HttpLogging_Bodies | 2212 | 131235-131236 | 2097316 |
 | HttpLogging_Defaults | 2329 | 65841 (both bodies truncated at 32 KB) | 65843 (truncated) |
 
-- **Response capture.** CSE wraps the response stream in a `ResponseCaptureStream` that writes each chunk to the client and to a `RecyclableMemoryStream`, then decodes the whole copy to a string after the endpoint finishes. The client gets the bytes as they are written; the copy has no size cap. HttpLogging also tees the stream, and keeps only the logged prefix up to its limit.
-- **Request capture.** CSE calls `EnableBuffering` with a memory threshold of the `Content-Length` clamped to 30 KB to 1 MB, reads the body through a `StreamReader` into a string and rewinds; HttpLogging records the request as the app reads it. The 64 KB request stays in memory. The 1 MB request is at the 1 MB threshold; a larger one would go to a temporary file under `ASPNETCORE_TEMP`/`Path.GetTempPath()`.
-- **Fields.** CSE's all-fields set logs the host name, the query string, an empty header list (no `HeaderKeys` configured) and both lengths, and no status code (CSE has no status code field). HttpLogging_Bodies logs method, path, query, both bodies, status and duration. HttpLogging_Defaults (`All`) also logs request and response headers, with redaction.
-- **Metadata event.** CSE: `Method: GET / Path: /ping / ResponseTiming: {mm:ss.fff}` (50 characters rendered, one placeholder per field). Serilog: `HTTP "GET" "/ping" responded 200 in {Elapsed:0.0000} ms` (45 characters rendered). HttpLogging: `Request and Response: Method: GET PathBase: Path: /ping StatusCode: 200 Duration: {ms}` (87-89 characters rendered, depending on the duration digits). Serilog and HttpLogging include the status code; CSE has no status code field.
-- **What stops capture.** With no handler, CSE captures the request body only when `LoggingFields` has `Request` or `RequestLength`, and the response body only when it has `Response` or `ResponseLength`; a skip attribute stops capture in every case (`Infrastructure/Middlewares/BaseMiddleware.cs:104-106,137-150`). The metadata CSE row (method, path, timing) would skip both bodies without `SkipRequestResponseLogging` too; the suite keeps the attribute on that row.
-- **Never compare the metadata rows with the body rows.** The Serilog row exists only in the metadata class.
+- Response capture: CSE wraps the response stream in a `ResponseCaptureStream` that writes each chunk to the client and to a `RecyclableMemoryStream`, then decodes the whole copy to a string after the endpoint finishes. The client gets the bytes as they are written; the copy has no size cap. HttpLogging also tees the stream, and keeps only the logged prefix up to its limit.
+- Request capture: CSE calls `EnableBuffering` with a memory threshold of the `Content-Length` clamped to 30 KB to 1 MB, reads the body in 4 KB chunks into a pooled `RecyclableMemoryStream`, decodes the UTF-8 text straight from its buffers and rewinds; HttpLogging records the request as the app reads it. The 64 KB request stays in memory. The 1 MB request is at the 1 MB threshold; a larger one would go to a temporary file under `ASPNETCORE_TEMP`/`Path.GetTempPath()`.
+- Fields: CSE's all-fields set logs the host name, the query string, an empty header list (no `HeaderKeys` configured) and both lengths, and no status code (CSE has no status code field). HttpLogging_Bodies logs method, path, query, both bodies, status and duration. HttpLogging_Defaults (`All`) also logs request and response headers, with redaction.
+- Metadata event: CSE: `Method: GET / Path: /ping / ResponseTiming: {mm:ss.fff}` (50 characters rendered, one placeholder per field). Serilog: `HTTP "GET" "/ping" responded 200 in {Elapsed:0.0000} ms` (45 characters rendered). HttpLogging: `Request and Response: Method: GET PathBase: Path: /ping StatusCode: 200 Duration: {ms}` (87-89 characters rendered, depending on the duration digits). Serilog and HttpLogging include the status code; CSE has no status code field.
+- What stops capture: with no handler, CSE captures the request body only when `LoggingFields` has `Request` or `RequestLength`, and the response body only when it has `Response` or `ResponseLength`; a skip attribute stops capture in every case (`Infrastructure/Middlewares/BaseMiddleware.cs:105-106,137-149`). The metadata CSE row (method, path, timing) would skip both bodies without `SkipRequestResponseLogging` too; the suite keeps the attribute on that row.
+- Never compare the metadata rows with the body rows: the Serilog row exists only in the metadata class.
 
 ---
 
@@ -76,8 +76,8 @@ From CSE source and the competitors' docs; not measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on both classes. Both classes were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
-- One Linux x64 machine, 6 physical cores and 12 threads. The suites ran one after another, never in parallel.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on both classes. Both classes were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0. Differences and multiples in the prose are computed from the means and allocations in the tables.
+- One machine, a 6-core, 12-thread x64 desktop CPU on Linux. The suites ran one after another, never in parallel.
 - `RequestLoggingMetadataComparison` rerun: the load average was not recorded; no row is above 5% CV.
 - `RequestLoggingComparison` rerun: one row is above 5% CV (`HttpLogging_Defaults` at 1 KB on net8.0, 5.4%) and is marked noisy.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/*-report-github.md` (also `.csv` and `.html`), for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/).
@@ -121,21 +121,21 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 ### Where CSE loses
 
-- **1 KB bodies, all TFMs: slower than `HttpLogging_Bodies`.** 21.49 against 17.60 μs (net8.0), 18.81 against 15.33 μs (net9.0), 16.685 against 13.661 μs (net10.0), 16.55 against 15.91 μs (net11.0). On net11.0 CSE also allocates more: 23.8 against 22.8 KB.
-- **`HttpLogging_Defaults`, all sizes and TFMs: faster than CSE.** At 1 KB, where it logs both whole bodies plus headers: 18.65 against 21.49 μs (net8.0, the HttpLogging row is noisy, CV 5.4%), 16.26 against 18.81 μs (net9.0), 13.993 against 16.685 μs (net10.0), 16.16 against 16.55 μs (net11.0). At 1 KB it allocates less than CSE only on net11.0 (23.08 against 23.8 KB); on net8.0 to net10.0 CSE allocates less. At 64 KB and 1 MB it truncates each body at 32 KB, so it does less work and allocates less (net10.0: 106.896 against 165.691 μs at 64 KB, 637.724 against 2,107.251 μs at 1 MB).
-- **Metadata, all TFMs: allocates more than HttpLogging.** 10.49 against 10.36 KB (net8.0), 10.43 against 10.3 KB (net9.0), 10.22 against 10.17 KB (net10.0), 13.06 against 13.05 KB (net11.0). Time is within error on every TFM.
+- 1 KB bodies, all TFMs: slower than `HttpLogging_Bodies`: 21.49 against 17.60 μs (net8.0), 18.81 against 15.33 μs (net9.0), 16.685 against 13.661 μs (net10.0), 16.55 against 15.91 μs (net11.0). On net11.0 CSE also allocates more: 23.8 against 22.8 KB.
+- `HttpLogging_Defaults`, all sizes and TFMs: faster than CSE: at 1 KB, where it logs both whole bodies plus headers: 18.65 against 21.49 μs (net8.0, the HttpLogging row is noisy, CV 5.4%), 16.26 against 18.81 μs (net9.0), 13.993 against 16.685 μs (net10.0), 16.16 against 16.55 μs (net11.0). At 1 KB it allocates less than CSE only on net11.0 (23.08 against 23.8 KB); on net8.0 to net10.0 CSE allocates less. At 64 KB and 1 MB it truncates each body at 32 KB, so it does less work and allocates less (net10.0: 106.896 against 165.691 μs at 64 KB, 637.724 against 2,107.251 μs at 1 MB).
+- Metadata, all TFMs: allocates more than HttpLogging: 10.49 against 10.36 KB (net8.0), 10.43 against 10.3 KB (net9.0), 10.22 against 10.17 KB (net10.0), 13.06 against 13.05 KB (net11.0). Time is within error on every TFM.
 
 ---
 
 ## Caveats
 
-- **CSE code notes**, from the worktree source:
-  - `Infrastructure/Middlewares/BaseMiddleware.cs:152-200`: the request body is buffered by `EnableBuffering`, then read through a `StreamReader` into a `StringBuilder` and turned into a string, so a logged request exists as buffered bytes, builder chunks and a final string.
-  - `BaseMiddleware.cs:220-270`: the response is teed into a `RecyclableMemoryStream` with no size cap and decoded to one string after the endpoint finishes.
+- CSE code notes, from the source:
+  - `Infrastructure/Middlewares/BaseMiddleware.cs:152-191,259-270`: the request body is buffered by `EnableBuffering`, copied into a pooled `RecyclableMemoryStream` and decoded with `Encoding.UTF8.GetString` over its buffers (a `StreamReader` runs only when the first byte suggests a byte order mark or UTF-16), so a logged request exists as buffered bytes, pooled blocks and one final string.
+  - `BaseMiddleware.cs:210-257`: the response is teed into a `RecyclableMemoryStream` with no size cap and decoded the same way to one string after the endpoint finishes.
   - `Infrastructure/MessageCreators/LogMessageWithContextCreator.cs` builds the template once per options; `LogMessageCreator.cs` (used when `UseSeparateContext` is off) formats a new message string per request, which is its job. `LoggingOptions.CreateAllFields()` turns `UseSeparateContext` on.
   - `LogWriters/LoggerFactoryLogWriter.cs:49` checks `IsEnabled` before it builds the message, but the middleware has already captured the bodies by then.
 - The counting provider renders the message but writes nothing, so I/O cost of a real sink is not included for any row.
-- **TestServer, not Kestrel.** Sockets, TLS and HTTP parsing are not measured.
+- TestServer, not Kestrel: sockets, TLS and HTTP parsing are not measured.
 - The CSE column is the working tree on branch `integ/all` (all open pull requests merged locally), which may not match the version published on NuGet.
 
 ---

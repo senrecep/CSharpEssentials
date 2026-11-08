@@ -1,18 +1,18 @@
 # CSharpEssentials.EntityFrameworkCore example
 
-This console application demonstrates `CSharpEssentials.EntityFrameworkCore` on SQLite: soft delete, the audit, domain event and slow query interceptors, offset and keyset pagination, and enum storage.
+A console app that runs `CSharpEssentials.EntityFrameworkCore` on SQLite: soft delete, the audit, domain event and slow query interceptors, offset and keyset pagination, and enum storage.
 
 ## Features demonstrated
 
 | Feature | File | Description |
 |---------|------|-------------|
-| **BaseDbContext** | `Data/ShopDbContext.cs` | `ShopDbContext : BaseDbContext<ShopDbContext>` logs the context lifecycle and keeps a service scope; it also applies the enum conventions and the soft-delete filter |
-| **Soft Delete** | `Data/Entities/Product.cs`, `Services/ProductCatalogService.cs` | `Product : SoftDeletableEntityBase<Guid>`; `MarkAsDeleted` hides the row through a query filter (`HasQueryFilter(e => !e.IsDeleted)`, added by reflection in `ShopDbContext`) |
-| **Audit Interceptor** | `Program.cs` | `AddAuditInterceptor(() => "demo-user")`, attached with `AddInterceptors`; sets `CreatedAt`/`CreatedBy` and `UpdatedAt`/`UpdatedBy` on `SaveChanges` |
-| **Domain Event Interceptor** | `Program.cs`, `Services/ConsoleDomainEventPublisher.cs`, `Data/Events/` | `DomainEventInterceptor` publishes entity events through `IDomainEventPublisher`; `ProductCreatedEvent` has `[DomainEventTiming(BeforeSave)]`, `ProductPriceChangedEvent` uses the `AfterSave` default |
-| **Slow Query Interceptor** | `Program.cs` | `AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500))` |
-| **Pagination** | `Services/ProductCatalogService.cs`, `Program.cs` | Offset-based `PaginateAsync()` and keyset `KeysetPaginateAsync()` |
-| **Enum Storage** | `Data/ShopDbContext.cs`, `Data/Entities/Product.cs` | `ConfigureEnumConventions(EnumConventions.Default)` stores the `[StringEnum]` enum `ProductCategory` by its wire name and adds a check constraint |
+| BaseDbContext | `Data/ShopDbContext.cs` | `ShopDbContext : BaseDbContext<ShopDbContext>` logs the context lifecycle and keeps a service scope; it also applies the enum conventions and the soft-delete filter |
+| Soft delete | `Data/Entities/Product.cs`, `Services/ProductCatalogService.cs` | `Product : SoftDeletableEntityBase<Guid>`; `MarkAsDeleted` hides the row through a query filter (`HasQueryFilter(e => !e.IsDeleted)`, added by reflection in `ShopDbContext`) |
+| Audit interceptor | `Program.cs` | `AddAuditInterceptor(() => "demo-user")`, attached with `AddInterceptors`; sets `CreatedAt`/`CreatedBy` and `UpdatedAt`/`UpdatedBy` on `SaveChanges` |
+| Domain event interceptor | `Program.cs`, `Services/ConsoleDomainEventPublisher.cs`, `Data/Events/` | `DomainEventInterceptor` publishes entity events through `IDomainEventPublisher`; `ProductCreatedEvent` has `[DomainEventTiming(BeforeSave)]`, `ProductPriceChangedEvent` uses the `AfterSave` default |
+| Slow query interceptor | `Program.cs` | `AddSlowQueryInterceptor(TimeSpan.FromMilliseconds(500))` |
+| Pagination | `Services/ProductCatalogService.cs`, `Program.cs` | Offset-based `PaginateAsync()` and keyset `KeysetPaginateAsync()` |
+| Enum storage | `Data/ShopDbContext.cs`, `Data/Entities/Product.cs` | `ConfigureEnumConventions(EnumConventions.Default)` stores the `[StringEnum]` enum `ProductCategory` by its wire name and adds a check constraint |
 
 The interceptors are registered in DI and attached to the context in `Program.cs`. `ShopDbContext` does not override `InterceptorsFromServices` or `DispatchDomainEventsOnSaveChanges`, so `BaseDbContext` does not attach them itself. The example does not use a naming convention: the `Product` table is named `products` explicitly and the columns keep their property names.
 
@@ -101,7 +101,7 @@ var page = await _dbContext.Products
 
 ### Keyset (cursor) pagination
 
-Use it for infinite scroll or very large datasets. The key must be unique, so add the id as a tie-breaker.
+The key must be unique, so add the id as a tie-breaker.
 
 ```csharp
 var page = await _dbContext.Products.KeysetPaginateAsync(
@@ -117,13 +117,13 @@ var page = await _dbContext.Products.KeysetPaginateAsync(
 
 `ConfigureEnumConventions` stores `[StringEnum]` values by their wire name through `EnumWireNameConverter<TEnum>`:
 
-| Enum Value | Stored in DB |
+| Enum value | Stored value |
 |------------|--------------|
 | `ProductCategory.Electronics` | `"electronics"` |
 | `ProductCategory.Clothing` | `"clothing"` |
 | `ProductCategory.Food` | `"food"` |
 
-This makes the database self-documenting and avoids magic numbers. The convention also adds a check constraint, so the database rejects unknown values:
+The convention also adds a check constraint, so the database rejects unknown values:
 
 ```sql
 CONSTRAINT "ck_products_Category_enum" CHECK ("Category" IN ('electronics', 'clothing', 'food', 'books', 'home'))

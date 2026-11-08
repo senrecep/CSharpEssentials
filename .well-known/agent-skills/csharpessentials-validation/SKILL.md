@@ -7,7 +7,7 @@ description: Use when writing model validation that returns Result<T>. Covers Va
 
 Model-first validation. `Configure` receives the live model, so rules are plain C#: no expression trees, no `When()` DSL. Returns `Result<T>`.
 
-> **Migrating from FluentValidation?** See the [migration guide](#fluentvalidation-migration-guide) at the bottom.
+Migrating from FluentValidation: see the [migration guide](#fluentvalidation-migration-guide) at the bottom.
 
 ## Installation
 
@@ -27,9 +27,7 @@ Without the `Validators` using, `rules.For(...).NotEmpty()` does not compile. `R
 
 ---
 
-## Defining a Validator
-
-Extend `Validator<T>` and override `Configure`.
+## Defining a validator
 
 ```csharp
 public class CreateUserCommandValidator : Validator<CreateUserCommand>
@@ -44,8 +42,6 @@ public class CreateUserCommandValidator : Validator<CreateUserCommand>
 }
 ```
 
-Run it directly or through DI:
-
 ```csharp
 var validator = new CreateUserCommandValidator();
 Result<CreateUserCommand> result = await validator.ValidateAsync(command);
@@ -57,7 +53,7 @@ if (result.IsFailure)
 
 There is no sync `Validate()`. A validator without async work completes synchronously, so `ValidateAsync(...).GetAwaiter().GetResult()` is safe at sync call sites.
 
-### Inline (Static) Usage
+### Inline (static) usage
 
 ```csharp
 // Sync delegate
@@ -77,11 +73,9 @@ Result<CreateUserCommand> checkedResult = await Validator.ValidateAsync(command,
 }, cancellationToken);
 ```
 
-The static `Validator` class and the abstract `Validator<T>` are independent types.
-
 ---
 
-## Built-in Validators
+## Built-in validators
 
 The fragments below run inside `Configure`, where `model` and `rules` are in scope.
 
@@ -99,14 +93,14 @@ rules.For(() => model.Name)
 
 rules.For(() => model.Email).EmailAddress();
 
-// Comparable values (int, decimal, DateTime, …)
+// Comparable values (int, decimal, DateTime, ...)
 rules.For(() => model.Age)
     .GreaterThanOrEqualTo(18)
     .LessThanOrEqualTo(120)
     .InclusiveBetween(18, 65)
     .NotEqual(0);
 
-// Collections (List<T>?, IEnumerable<T>?, T[]?, …)
+// Collections (List<T>?, IEnumerable<T>?, T[]?, ...)
 rules.For(() => model.Tags)
     .NotEmpty()           // null or empty fails
     .MinCount(1)
@@ -138,7 +132,7 @@ rules.For(() => model.Password)
 
 ---
 
-## Custom Predicates
+## Custom predicates
 
 ```csharp
 // Sync, with an explicit code
@@ -155,7 +149,7 @@ await rules.For(() => model.Email)
 
 ---
 
-## Nested Objects
+## Nested objects
 
 `SetValidatorAsync` skips `null`, so nullable properties need no `!`. Child error codes are prefixed with the property path (`"Address.City.NotEmpty"`). Use it inside an `async` `Configure`.
 
@@ -168,7 +162,7 @@ A `null` intermediate member is tolerated: `rules.For(() => model.Address.City)`
 
 ---
 
-## Collection Items
+## Collection items
 
 ```csharp
 rules.ForEach(() => model.Tags, (tag, tagRules) =>
@@ -185,7 +179,7 @@ await rules.ForEachAsync(() => model.Items, async (item, itemRules, c) =>
 
 ---
 
-## Native C# Conditional Rules
+## Native C# conditional rules
 
 ```csharp
 public class OrderValidator : Validator<Order>
@@ -217,11 +211,11 @@ public class OrderValidator : Validator<Order>
 }
 ```
 
-`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), …)`, `rules.ForEach(() => model.Tags.WithoutNulls(), …)`. The property name in the error code comes from the lambda text. Method calls, `!` and `?` are dropped, so the filtered collections give `Tags[1].NotEmpty` and `Items[0].Sku.NotEmpty`. For the `IfNotNull` form the lambda only sees `c`, so the code is `Code.NotEmpty`; use `rules.For(model.Coupon.Code, "Coupon.Code")` to name the full path.
+`CSharpEssentials.Core` helpers compose too: `model.Coupon.IfNotNull(c => rules.For(() => c.Code).NotEmpty())`, `rules.ForEach(() => model.Items.WhereIf(onlyActive, i => i.IsActive), ...)`, `rules.ForEach(() => model.Tags.WithoutNulls(), ...)`. The property name in the error code comes from the lambda text. Method calls, `!` and `?` are dropped, so the filtered collections give `Tags[1].NotEmpty` and `Items[0].Sku.NotEmpty`. For the `IfNotNull` form the lambda only sees `c`, so the code is `Code.NotEmpty`; use `rules.For(model.Coupon.Code, "Coupon.Code")` to name the full path.
 
 ---
 
-## Custom Rules and Manual Failures
+## Custom rules and manual failures
 
 ```csharp
 public static class EvenValidators
@@ -240,7 +234,7 @@ rules.For(model.Name, nameof(model.Name)).NotEmpty();                         //
 
 ---
 
-## Composition and Ordering
+## Composition and ordering
 
 `Include` merges another validator's rules into the same result:
 
@@ -285,7 +279,7 @@ public class BusinessRulesValidator(IReadOnlySet<string> blocklist) : Validator<
 
 ---
 
-## DI Registration
+## DI registration
 
 ```csharp
 services.AddValidator<CreateUserCommand, CreateUserCommandValidator>();
@@ -294,11 +288,11 @@ services.AddValidatorsFromAssemblies([typeof(CreateUserCommandValidator).Assembl
 ```
 
 - Default lifetime is `Scoped`; pass a `ServiceLifetime` to change it.
-- Registration uses `TryAddEnumerable` (4.0): calling `AddValidator` or `AddValidatorsFromAssembly` twice does not register the same validator twice. Different validators for the same model are all kept.
+- Registration uses `TryAddEnumerable`: calling `AddValidator` or `AddValidatorsFromAssembly` twice does not register the same validator twice. Different validators for the same model are all kept.
 
 ---
 
-## Railway Bindings
+## Railway bindings
 
 `ValidateWith` (sync) and `ValidateWithAsync` work on `Result<T>`, `Task<Result<T>>` and `ValueTask<Result<T>>`. A failed source result short-circuits.
 
@@ -312,7 +306,7 @@ Result<CreateUserCommand> viaValidator = await GetUserCommand()
 
 ---
 
-## Mediator Pipeline Integration
+## Mediator pipeline integration
 
 ```csharp
 services.AddMediatorValidationBehavior();
@@ -324,7 +318,7 @@ Validation runs before the handler; on failure the handler is not invoked. `Resu
 
 ---
 
-## Best Practices
+## Best practices
 
 - Put guards (`NotEmpty` / `NotNull`) first; the default stop mode skips the rest of the chain on null or empty values.
 - Use `if` / `switch` for conditional rules.
@@ -334,7 +328,7 @@ Validation runs before the handler; on failure the handler is not invoked. `Resu
 
 ---
 
-## FluentValidation Migration Guide
+## FluentValidation migration guide
 
 ### 1. Swap the package
 
@@ -350,14 +344,14 @@ dotnet add package CSharpEssentials.Validation
 |---|---|
 | `AbstractValidator<T>` + constructor | `Validator<T>` + `override ValueTask Configure(T model, RuleContext<T> rules, CancellationToken ct)` |
 | `RuleFor(x => x.Name)` | `rules.For(() => model.Name)` |
-| `When(x => cond, () => { … })` / `.When(...)` / `.Unless(...)` | `if (cond) { … }` |
+| `When(x => cond, () => { ... })` / `.When(...)` / `.Unless(...)` | `if (cond) { ... }` |
 | `RuleForEach(x => x.Tags).NotEmpty()` | `rules.ForEach(() => model.Tags, (tag, r) => r.For(() => tag).NotEmpty())` |
 | `.SetValidator(new AddressValidator())` | `await rules.For(() => model.Address).SetValidatorAsync(new AddressValidator(), ct)` |
 | `Include(new BaseValidator())` | `await Include(new BaseValidator(), model, rules, ct)` |
 | `MinimumLength(n)` / `MaximumLength(n)` | `MinLength(n)` / `MaxLength(n)` |
 | `Must(pred)` / `MustAsync(pred)` | `Must(pred, code, message)` / `await MustAsync(pred, code, message, ct)` |
-| `.WithMessage("…")` | `message:` argument, e.g. `.NotEmpty(message: "…")` |
-| `.WithErrorCode("X")` | Pass an `Error`: `.NotEmpty(Error.Validation("X", "…"))` |
+| `.WithMessage("...")` | `message:` argument, e.g. `.NotEmpty(message: "...")` |
+| `.WithErrorCode("X")` | Pass an `Error`: `.NotEmpty(Error.Validation("X", "..."))` |
 | `validator.Validate(x)` → `ValidationResult.IsValid` / `.Errors` | `await validator.ValidateAsync(x)` → `Result<T>.IsFailure` / `.Errors` (`Code`, `Description`) |
 | `services.AddValidatorsFromAssemblyContaining<T>()` | `services.AddValidatorsFromAssembly(typeof(T).Assembly)` |
 | `RuleSet` | Separate validators, or composition with `Include` |

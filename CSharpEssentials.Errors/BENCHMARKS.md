@@ -1,8 +1,6 @@
 # CSharpEssentials.Errors: performance benchmarks
 
-This page compares the CSharpEssentials.Errors (CSE) `Error` type with ErrorOr 2.1.1 and FluentResults 4.0.0. CSharpFunctionalExtensions 3.7.0 appears only where it has a matching API. It covers creating an error, equality and hashing, building an error from an exception, metadata and record `ToString`, and System.Text.Json. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
-
-The numbers come from full default-job runs on net8.0 to net11.0 (see [How these numbers were produced](#how-these-numbers-were-produced) and [Results](#results)).
+The CSharpEssentials.Errors (CSE) `Error` type against ErrorOr 2.1.1 and FluentResults 4.0.0, and CSharpFunctionalExtensions 3.7.0 where it has a matching API: creating an error, equality and hashing, building an error from an exception, metadata and record `ToString`, and System.Text.Json. BenchmarkDotNet v0.14.0, .NET 8, 9, 10 and 11.
 
 The competitors are pinned exactly in `Directory.Packages.props`. Each pin is the latest stable release on NuGet as of 2026-11-03:
 
@@ -53,13 +51,13 @@ CSharpFunctionalExtensions has no column in classes 1 to 4 and 6. Its default er
 
 ## Semantic differences
 
-- **FluentResults errors are classes with no code or type.** `new Error(message)` allocates the error, an empty metadata dictionary and an empty reasons list.
-- **No FluentResults equality column.** FluentResults `Error` uses reference equality, so `Equals` is false and a HashSet keeps all 100 items.
-- **`Error.Exception` does more work than the other rows.** It builds a three-entry metadata dictionary with the type name, the stack trace string and the message. When the exception was never thrown, `StackTrace` is null and the entry holds null. On a thrown exception, reading `StackTrace` formats the trace again on every call.
-- **ErrorOr has no exception bridge.** Its row maps the type name and message by hand, as the README's section on replacing exceptions suggests. The CSE `Error.Failure` row does the same, so it shows CSE without the exception metadata.
-- **FluentResults `ExceptionalError` keeps a reference** to the exception and copies nothing.
-- **`ToString` output differs.** CSE and ErrorOr `Error` are record structs, and without metadata both print `Error { Code = Order.Invalid, Description = Order is invalid, Type = Validation, NumericType = 2, Metadata =  }`. With metadata, CSE formats each entry, ErrorOr prints the dictionary type name, and FluentResults joins the entries with `; `. On a success result, CSE prints `Success: 42` (the value formatted through `IFormattable` with the invariant culture), and every other library prints its own text.
-- **Deserialize is CSE only.** System.Text.Json does not throw. It silently returns a `default` ErrorOr `Error` with a null code. FluentResults throws `NotSupportedException`, and its README says not to serialize its result objects. The serialize rows use no metadata, because a CSE round trip with metadata does not give back an equal error.
+- FluentResults errors are classes with no code or type. `new Error(message)` allocates the error, an empty metadata dictionary and an empty reasons list.
+- No FluentResults equality column. FluentResults `Error` uses reference equality, so `Equals` is false and a HashSet keeps all 100 items.
+- `Error.Exception` does more work than the other rows. It builds a three-entry metadata dictionary with the type name, the stack trace string and the message. When the exception was never thrown, `StackTrace` is null and the entry holds null. On a thrown exception, reading `StackTrace` formats the trace again on every call.
+- ErrorOr has no exception bridge. Its row maps the type name and message by hand, as the README's section on replacing exceptions suggests. The CSE `Error.Failure` row does the same, so it shows CSE without the exception metadata.
+- FluentResults `ExceptionalError` keeps a reference to the exception and copies nothing.
+- `ToString` output differs. CSE and ErrorOr `Error` are record structs, and without metadata both print `Error { Code = Order.Invalid, Description = Order is invalid, Type = Validation, NumericType = 2, Metadata =  }`. With metadata, CSE formats each entry, ErrorOr prints the dictionary type name, and FluentResults joins the entries with `; `. On a success result, CSE prints `Success: 42` (the value formatted through `IFormattable` with the invariant culture), and every other library prints its own text.
+- Deserialize is CSE only. System.Text.Json does not throw. It silently returns a `default` ErrorOr `Error` with a null code. FluentResults throws `NotSupportedException`, and its README says not to serialize its result objects. The serialize rows use no metadata, because a CSE round trip with metadata does not give back an equal error.
 
 ---
 
@@ -88,7 +86,7 @@ All tables: mean and allocated bytes per operation, net10 unless stated. "Ratio"
 
 ### How these numbers were produced
 
-- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU with CachyOS, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
+- Full BenchmarkDotNet default-job runs (no `--quick`) on net8.0 (.NET 8.0.30, CSE netstandard2.1 build), net9.0 (9.0.19), net10.0 (10.0.11) and net11.0 (11.0.0), on a 6-core, 12-thread x64 desktop CPU on Linux, SDK 11.0.100-rc.1.26425.128, BenchmarkDotNet v0.14.0.
 - 1-minute load average at the start and end of the comparison suite: 1.55 to 2.37, with a desktop session running. No row of the six Error classes stayed above 5% CV.
 - `ErrorEqualityComparison` and `ErrorMetadataToStringComparison` were rerun on 2026-11-07 on .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 with SDK 11.0.100-rc.3.26522.148. Their numbers below come from that rerun, and no rerun row is above 5% CV.
 - Reports: `benchmarks/results/results-comparison/{tfm}/results/`, for example [ErrorEqualityComparison net10](../benchmarks/results/results-comparison/net10.0/results/CSharpEssentials.Results.Comparison.Benchmarks.ErrorEqualityComparison-report-github.md).
@@ -189,7 +187,7 @@ Serialize writes the same text and allocates the same bytes. ErrorOr is faster o
 
 ## Caveats
 
-- **CSE behavior checked against the code in this tree**:
+- CSE behavior was checked against the code in this tree:
   - `CSharpEssentials.Errors/Error.cs`: `GetHashCode` sums the metadata entry hashes, so two equal errors hash the same whatever the insertion order. Nested `ErrorMetadata` values are compared by value in `Equals`.
   - `CSharpEssentials.Errors/ErrorMetadata.cs`: `ToString` enumerates the dictionary once. `CreateWithExceptionDetailed` reads `exception.StackTrace` and does not walk the stack for an exception that was never thrown. `CreateWithException` stores a nested `ErrorMetadata`, not the `Exception`, so System.Text.Json can serialize it.
   - A JSON round trip of an error with metadata is not equal to the original, because the values come back as `JsonElement`.

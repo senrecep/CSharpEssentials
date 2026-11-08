@@ -1,10 +1,8 @@
 # CSharpEssentials.AspNetCore.OpenApi: performance benchmarks
 
-Full results for net10.0 are in [Results](#results). The parity self-check passes there. Short version: with all three conventions, the warm document takes 1.49 times the plain time and 1.52 times the plain allocation, and the first document in a fresh process takes 1.09 times the plain time. Every CSE row costs more than the plain row, because every CSE row writes more output; see [Where CSE costs more](#where-cse-costs-more).
+Results for net10.0 are in [Results](#results); the parity self-check passes. In short: with all three conventions, the warm document takes 1.49 times the plain time and 1.52 times the plain allocation, and the first document in a fresh process takes 1.09 times the plain time. Every CSE row costs more than the plain row, because every CSE row writes more output; see [Where CSE costs more](#where-cse-costs-more).
 
 CSharpEssentials.AspNetCore.OpenApi (CSE) is compared with plain Microsoft.AspNetCore.OpenApi 10.0.14 on Microsoft.OpenApi 2.13.0. There is no competitor library. The baseline is the framework's documented setup: `AddOpenApi()` and `MapOpenApi()`.
-
-The suite measures what it costs to describe the same app with the CSE conventions. The CSE rows write more output by design, so no CSE row is like-for-like with the plain row.
 
 The suite lives in `benchmarks/CSharpEssentials.AspNetCore.OpenApi.Benchmarks/`. The Swashbuckle package has its own suite over the same sample API ([CSharpEssentials.AspNetCore.Swashbuckle/BENCHMARKS.md](../CSharpEssentials.AspNetCore.Swashbuckle/BENCHMARKS.md)).
 
@@ -37,12 +35,11 @@ Every host registers the same app services: `AddIdempotency(o => o.Mode = Idempo
 ## Methodology
 
 - In-process TestServer, Production environment, logging providers cleared. Every row reads the whole response body.
-- Every row serves the same 50 Minimal API endpoints and 30 enums. The plain and CSE hosts differ only in the document options, except the StringEnums row.
+- The plain and CSE hosts differ only in the document options, except the StringEnums row.
 - Warm rows regenerate the document on every request, because Microsoft.AspNetCore.OpenApi does not cache it. `MapOpenApi` calls the document service per request.
 - Cold rows run one sample per fresh process, 15 launches (`RunStrategy.ColdStart`, no warmup). JIT, the framework schema store and the CSE per-provider caches are all cold inside the measurement.
-- The CSE rows write more output by design. Each ratio is the cost of the extra description.
 - The library compiles against its declared ranges (Microsoft.AspNetCore.OpenApi `[10.0.0,11)`, Microsoft.OpenApi `[2.7.5,3)`) and runs on the pinned versions, the same as a consumer app does.
-- net10.0 only. The package targets net10.0 only. On net11.0 the package's net10.0 build would run Microsoft.AspNetCore.OpenApi 10.x on an ASP.NET Core 11 release candidate runtime, which is not a supported pairing. Microsoft.AspNetCore.OpenApi 11.x needs Microsoft.OpenApi 3.x, which the package does not support yet.
+- net10.0 only, the package's only target. On net11.0 the package's net10.0 build would run Microsoft.AspNetCore.OpenApi 10.x on an ASP.NET Core 11 release candidate runtime, which is not a supported pairing. Microsoft.AspNetCore.OpenApi 11.x needs Microsoft.OpenApi 3.x, which the package does not support yet.
 - The repo builds with `GenerateDocumentationFile=true`. So the built-in XML comment generator of Microsoft.AspNetCore.OpenApi runs in every row, the baseline included. That is its default for such projects. The plain Swashbuckle rows do not read XML comments, so ratios across the two suites are not comparable.
 - Every class has `[MemoryDiagnoser]`. A doc URL sits above every row.
 
@@ -107,13 +104,13 @@ The asserted plain shapes, as written by Microsoft.AspNetCore.OpenApi 10.0.14:
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. SDK and runtime builds are in the header of each report.
 - TFM: net10.0 only (.NET 10.0.11), the only target of the package.
 - `OpenApiDocumentComparison` ran on the default job. `OpenApiFirstDocumentComparison` ran on its own `cold` job: `RunStrategy=ColdStart`, `LaunchCount=15`, `IterationCount=1`, `WarmupCount=0`, so each of the 15 samples is one fresh process.
 - The 1-minute load average stayed between 1.55 and 1.96 during the suite. No row has a CV above 5%.
 - Reports: [`benchmarks/results/openapi/net10.0/results/`](../benchmarks/results/openapi/net10.0/results/), one `*-report-github.md` and one `.csv` per class. Every number below is copied from the `-report-github.md` files.
 
-Ratios are against `Plain_AddOpenApi`. Every CSE row writes a larger document than the baseline, so each ratio is the price of the extra description, not a like-for-like loss.
+Ratios are against `Plain_AddOpenApi`.
 
 ### Warm document, one `GET /openapi/v1.json` (net10.0, default job)
 
@@ -135,7 +132,7 @@ Ratios are against `Plain_AddOpenApi`. Every CSE row writes a larger document th
 
 ### Where CSE costs more
 
-All numbers are net10.0. Every CSE row is slower and allocates more than the plain baseline. None of them is a like-for-like loss, because each writes more output, but the cost is real for an app that serves the document:
+Every CSE row is slower and allocates more than the plain baseline. Each writes more output, so none is a like-for-like loss, but the cost is real for an app that serves the document:
 
 - The Readme setup, `CSharpEssentials_AllConventions`, takes 7.715 ms against 5.176 ms per warm request (1.49) and allocates 4.72 MB against 3.11 MB (1.52). Microsoft.AspNetCore.OpenApi regenerates the document on every request, so an app pays this on every `GET /openapi/v1.json` unless it caches the response.
 - In a fresh process the same setup takes 828.4 ms to the first document against 762.4 ms (1.09), with 10.89 MB against 8.72 MB allocated (1.25).

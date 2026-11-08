@@ -1,19 +1,10 @@
 # CSharpEssentials.Errors
 
-Structured, type-safe error handling for .NET that represents errors as data instead of exceptions.
-
-## Features
-
-- `Error`, a value-type error with a code, description, type and metadata.
-- Standard error types: Failure, Validation, NotFound, Conflict, Unauthorized, Forbidden, Unexpected. `ErrorType` also has an `Unknown` member, which has no factory method.
-- `ErrorMetadata` for attaching contextual data to errors fluently.
-- Conversion from exceptions to `Error`, and `DomainException` / `EnhancedValidationException` to throw.
-- Built-in conversion between `ErrorType` and HTTP status codes.
+Errors as data instead of exceptions. `Error` is a value type with a code, description, `ErrorType` and optional `ErrorMetadata`. The package also converts exceptions to errors, maps `ErrorType` to HTTP status codes and back, and has two exception types that carry errors.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Core` and `CSharpEssentials.Enums`.
 
-> **Benchmarks:** creating errors, equality and hashing, errors from exceptions, metadata and record `ToString`, and JSON against
-> ErrorOr and FluentResults are documented in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks for creating errors, equality and hashing, errors from exceptions, metadata and record `ToString`, and JSON against ErrorOr and FluentResults are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
@@ -37,7 +28,7 @@ Error unauthorized = Error.Unauthorized("Token.Expired", "The token has expired.
 Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 ```
 
-Every factory takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal.
+The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
 
 ### Error metadata
 
@@ -112,12 +103,11 @@ ErrorType type = 401.ToErrorType();                      // Unauthorized
 
 ### Domain-specific error hierarchies
 
-`Error` is a value type (`readonly record struct`) and cannot be subclassed. The idiomatic way to build domain-specific, typed error hierarchies is to group static factory methods in a dedicated class per aggregate or bounded context:
+`Error` is a `readonly record struct` and cannot be subclassed. Group static factories in one class per aggregate or bounded context instead:
 
 ```csharp
 using CSharpEssentials.Errors;
 
-// Organize errors by domain aggregate
 public static class UserErrors
 {
     public static Error NotFound(Guid id) =>
@@ -171,8 +161,6 @@ public Result PlaceOrder(Cart cart, decimal balance)
     return Result.Success();
 }
 ```
-
-Each domain's errors show up in IDE autocomplete, the error codes are type-safe and the descriptions live in one place. None of it needs inheritance.
 
 ## Upgrading to 8.0
 

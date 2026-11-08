@@ -60,23 +60,23 @@ The code is in `benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Bench
 - `Country` keyed by `Code` (`C000000` onwards), and `CountrySeed(Code, Name)`.
 - `UniqueItem` with a unique index on `Name`; `[GlobalSetup]` inserts `dup`, and every invocation adds another `dup`.
 - `OrderStatus { Pending, InTransit, Delivered, Cancelled, Level2Check }`, a `[StringEnum]`. `Level2Check` is `level2_check` as a wire name and `level_2_check` in the 3.x legacy format, so the legacy input differs from the wire input; `[GlobalSetup]` checks that it matches neither the wire name nor the member name. The generated metadata lists every 3.x spelling as an alias, so the current converter reads legacy text by lookup and never reaches its fallback loop (`Converters/EnumToStringConverter.cs:35-37`).
-- The DbErrorClassification inputs are a `DbUpdateException` wrapping `new SqliteException(…, 19, 2067)` and a provider-neutral `DbException` whose `SqlState` is `23505`, both built once.
+- The DbErrorClassification inputs are a `DbUpdateException` wrapping `new SqliteException(..., 19, 2067)` and a provider-neutral `DbException` whose `SqlState` is `23505`, both built once.
 
 ---
 
 ## Semantic differences
 
-- **Reference rows.** The plain EF Core rows of SaveChangesAudit and SaveChangesDomainEvents do less work: no audit fields, no dispatch. They show what the feature adds, not a competitor.
-- **Audit scope.** CSE's `AuditInterceptor` creates a DI scope and resolves `IAuditUserIdProvider` once per save that has entries to stamp (`Interceptors/Audit/AuditInterceptor.cs:83-87`). The hand-written override reads a user captured in the constructor. Both stamp the same fields with the same user.
-- **When AfterSave events run.** `DomainEventInterceptor` dispatches `AfterSave` events inside `SavingChanges`, before the write (`Interceptors/DomainEvents/DomainEventInterceptor.cs:58-61`). The hand-written row and `BaseDbContext` dispatch after the save. The event count is the same.
-- **Cursor format.** The hand-written cursor is `{"c":ticks,"i":id}` in base64url with no version, direction or key check. CSE's cursor is versioned JSON with a direction and a key fingerprint, and CSE also issues the previous cursor. MR has no cursor: the rows decode the hand-written cursor and pass it as MR's reference object, then encode the next one the same way.
-- **MR has-next.** MR's documented `HasNextAsync` runs an extra `Any` query per page. The two `TakePlusOne` rows read `limit + 1` rows instead, the way CSE and the hand-written row do, so they send one query.
-- **X.PagedList past the end.** X.PagedList skips the data query when the page is past the last one and throws when the page number is below 1. CSE normalizes the request and always runs both queries. Both pages here are in range, so all rows do the same work.
-- **Stored enum text.** EF Core stores the member name (`InTransit`), CSE the wire name (`in_transit`), and `HasLegacyEnumStorage(LegacySnakeCase)` the 3.x text. EF Core also reads numbers and any casing; an unknown value throws in every row.
-- **Readme path and direct classes.** The `ConfigureEnumConventions` and `HasLegacyEnumStorage` rows take their converters from a model built the way the Readme shows (`EnumStorageContext`), so they measure what the documented setup installs. `EnumToFormattedStringConverter` and `LegacySnakeCaseEnumConverter` are public converter classes the Readme does not document; their rows measure the classes directly and are not the Readme path.
-- **Pooling.** The pooled factory reuses context instances. `BaseDbContext` cannot be pooled, because its constructor needs `IServiceScopeFactory`, so the pooled row is EF Core only.
-- **SQLite errors.** SQLite reports no SQLSTATE, so CSE's built-in `SqlStateErrorTranslator` returns false there (`DbErrors/SqlStateErrorTranslator.cs:38-40`). CSE's documented SQLite path is a translator you write; the suite registers the one from CSE's tests (`SqliteUniqueTranslator`). CSE returns a failed `Result<int>` and does not throw. EntityFrameworkCore.Exceptions throws a second, typed exception; on SQLite it does not fill `ConstraintName` or `ConstraintProperties`.
-- **SqlState rows have no competitor.** EntityFrameworkCore.Exceptions needs a provider exception type and cannot classify a SQLSTATE-only `DbException`. CSE's translator also builds metadata and an `Error` (`DbErrors/SqlStateErrorTranslator.cs:42-55`).
+- Reference rows: the plain EF Core rows of SaveChangesAudit and SaveChangesDomainEvents do less work: no audit fields, no dispatch. They show what the feature adds, not a competitor.
+- Audit scope: CSE's `AuditInterceptor` creates a DI scope and resolves `IAuditUserIdProvider` once per save that has entries to stamp (`Interceptors/Audit/AuditInterceptor.cs:83-87`). The hand-written override reads a user captured in the constructor. Both stamp the same fields with the same user.
+- When AfterSave events run: `DomainEventInterceptor` dispatches `AfterSave` events inside `SavingChanges`, before the write (`Interceptors/DomainEvents/DomainEventInterceptor.cs:58-61`). The hand-written row and `BaseDbContext` dispatch after the save. The event count is the same.
+- Cursor format: the hand-written cursor is `{"c":ticks,"i":id}` in base64url with no version, direction or key check. CSE's cursor is versioned JSON with a direction and a key fingerprint, and CSE also issues the previous cursor. MR has no cursor: the rows decode the hand-written cursor and pass it as MR's reference object, then encode the next one the same way.
+- MR has-next: MR's documented `HasNextAsync` runs an extra `Any` query per page. The two `TakePlusOne` rows read `limit + 1` rows instead, the way CSE and the hand-written row do, so they send one query.
+- X.PagedList past the end: X.PagedList skips the data query when the page is past the last one and throws when the page number is below 1. CSE normalizes the request and always runs both queries. Both pages here are in range, so all rows do the same work.
+- Stored enum text: EF Core stores the member name (`InTransit`), CSE the wire name (`in_transit`), and `HasLegacyEnumStorage(LegacySnakeCase)` the 3.x text. EF Core also reads numbers and any casing; an unknown value throws in every row.
+- Readme path and direct classes: the `ConfigureEnumConventions` and `HasLegacyEnumStorage` rows take their converters from a model built the way the Readme shows (`EnumStorageContext`), so they measure what the documented setup installs. `EnumToFormattedStringConverter` and `LegacySnakeCaseEnumConverter` are public converter classes the Readme does not document; their rows measure the classes directly and are not the Readme path.
+- Pooling: the pooled factory reuses context instances. `BaseDbContext` cannot be pooled, because its constructor needs `IServiceScopeFactory`, so the pooled row is EF Core only.
+- SQLite errors: SQLite reports no SQLSTATE, so CSE's built-in `SqlStateErrorTranslator` returns false there (`DbErrors/SqlStateErrorTranslator.cs:38-40`). CSE's documented SQLite path is a translator you write; the suite registers the one from CSE's tests (`SqliteUniqueTranslator`). CSE returns a failed `Result<int>` and does not throw. EntityFrameworkCore.Exceptions throws a second, typed exception; on SQLite it does not fill `ConstraintName` or `ConstraintProperties`.
+- SqlState rows have no competitor: EntityFrameworkCore.Exceptions needs a provider exception type and cannot classify a SQLSTATE-only `DbException`. CSE's translator also builds metadata and an `Error` (`DbErrors/SqlStateErrorTranslator.cs:42-55`).
 
 ---
 
@@ -109,9 +109,12 @@ This table comes from reading CSE source and the competitors' source and docs at
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread desktop CPU under Linux. The exact CPU, SDK and runtime builds are in the header of each report.
-- TFMs: net8.0 (.NET 8.0.30, EF Core 8.0.33), net9.0 (.NET 9.0.19, EF Core 9.0.22), net10.0 (.NET 10.0.11, EF Core 10.0.14) and net11.0 (.NET 11.0.0, EF Core 10.0.14).
-- The 1-minute load average stayed between 1.99 and 2.60 during the suite and its reruns. `DbErrorClassificationComparison` was rerun on net10.0 and net11.0 because of its CV; after the reruns no row of this suite has a CV above 5%.
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. The exact SDK and runtime builds are in the header of each report.
+- EF Core per TFM: 8.0.33 (net8.0), 9.0.22 (net9.0), 10.0.14 (net10.0 and net11.0).
+- The reports come from two runs:
+  - First run, SDK 11.0.100-rc.1: every class except the two below, on .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. The 1-minute load average stayed between 1.99 and 2.60 during the suite and its reruns. `DbErrorClassificationComparison` was rerun on net10.0 and net11.0 because of its CV.
+  - Rerun after the changes in #230 to #256, SDK 11.0.100-rc.3: `EnumConverterComparison` and `MigrateDataComparison`, on .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0.
+- No row of this suite has a CV above 5%.
 - Reports: [`benchmarks/results/efcore/{tfm}/results/`](../benchmarks/results/efcore/), one `*-report-github.md` and one `.csv` per class. Every number below is copied from the `-report-github.md` files.
 
 How to read the tables:
@@ -229,7 +232,7 @@ Cells are `Mean (Ratio)`. No Read or ReadLegacy row allocates. On Write, EF Core
 | ReadLegacy | `EnumToFormattedStringConverter` (direct class) | 79.30 ns (0.93) | 77.11 ns (0.91) | 60.39 ns (0.84) | 60.69 ns (0.83) |
 | ReadLegacy | `LegacySnakeCaseEnumConverter` (direct class) | 66.64 ns (0.78) | 68.16 ns (0.81) | 63.47 ns (0.88) | 61.79 ns (0.85) |
 
-CSE writes are faster than EF Core in every Readme-path cell and allocate nothing. CSE reads are now faster than EF Core in every cell as well: `ConfigureEnumConventions` at 0.83 to 0.93 and `HasLegacyEnumStorage` at 0.64 to 0.77. The direct `EnumToFormattedStringConverter` class still writes slower than EF Core on net10.0 (55.61 ns against 47.04 ns) and net11.0 (55.62 ns against 49.55 ns).
+CSE writes are faster than EF Core in every Readme-path cell and allocate nothing. CSE reads are faster than EF Core in every cell as well: `ConfigureEnumConventions` at 0.83 to 0.93 and `HasLegacyEnumStorage` at 0.64 to 0.77. The direct `EnumToFormattedStringConverter` class still writes slower than EF Core on net10.0 (55.61 ns against 47.04 ns) and net11.0 (55.62 ns against 49.55 ns).
 
 ### MigrateData
 
@@ -240,7 +243,7 @@ CSE writes are faster than EF Core in every Readme-path cell and allocate nothin
 | 10000 | Hand-written dictionary diff (baseline) | 87.142 ms (1.00), 29.45 MB | 78.564 ms (1.00), 29.06 MB | 70.924 ms (1.00), 28.53 MB | 69.880 ms (1.00), 28.49 MB |
 | 10000 | CSE `MigrateDataAsync` | 88.815 ms (1.02), 30.9 MB | 82.540 ms (1.05), 30.48 MB | 73.432 ms (1.04), 29.93 MB | 72.614 ms (1.04), 29.89 MB |
 
-CSE is still slower on every cell, but by 2% to 7%: 1.02 to 1.07 times the dictionary diff at 1,000 rows and 1.02 to 1.05 times at 10,000. `MigrateDataAsync` now diffs keys through hash sets (`Extensions/DbContextExtensionMethods.cs:153-168`), so the gap no longer grows with the table. It also allocates 4% to 5% more.
+CSE is slower on every cell, by 2% to 7%: 1.02 to 1.07 times the dictionary diff at 1,000 rows and 1.02 to 1.05 times at 10,000. `MigrateDataAsync` diffs keys through hash sets (`Extensions/DbContextExtensionMethods.cs:153-168`), so the gap does not grow with the table. It also allocates 4% to 5% more.
 
 ### DbContextLifetime
 
@@ -289,25 +292,24 @@ CSE is the slowest row in both groups on every TFM. In the SqlState group the CS
 
 Every row below is in the tables above.
 
-- **Audit and domain events:** slower than the hand-written code in 30 of 32 CSE cells at Count 1, 21 of 32 at Count 100 and 20 of 32 at Count 1,000. CSE allocates more than the hand-written rows in every SaveChanges cell but one (net10.0, Count 1,000, 0 events, interceptor: 11379.94 KB against 11379.99 KB).
-- **Keyset After page:** CSE cached is slower than the hand-written row on net8.0 (140.99 μs against 138.85 μs), net9.0 (131.77 μs against 127.62 μs) and net10.0 (124.43 μs against 119.54 μs), and allocates more on every TFM.
-- **Keyset `Func` ordering:** slower than the hand-written row on every page and TFM (1.13 to 1.26), and on the First page slower than MR inline on net10.0 (87.31 μs against 78.66 μs) and net11.0 (82.95 μs against 71.51 μs), and than MR prebuilt with `Take(21)`.
-- **Offset paging:** slower than X.PagedList on net9.0 page 1, net10.0 page 1 and net10.0 page 250, by 0.1 to 1.36 μs; slower than plain EF Core in 6 of 8 cells and allocates more in all 8.
-- **Enum writes, direct class:** the direct `EnumToFormattedStringConverter` class writes slower than EF Core on net10.0 and net11.0 (1.18 and 1.12). The Readme-path converters read and write faster than EF Core on every TFM.
-- **`MigrateDataAsync`:** 1.02 to 1.07 times the dictionary diff (net9.0, 10,000 rows: 82.540 ms against 78.564 ms).
-- **`BaseDbContext` creation:** slower than an `AddDbContext` scope on every TFM and 166 to 170 B larger.
-- **Error translation:** CSE allocates more than EntityFrameworkCore.Exceptions and the plain `catch`; it is slower than the plain `catch` on net9.0 (124.2 μs against 122.3 μs).
-- **Error classification:** CSE is the slowest row in both groups (for example net10.0 Sqlite: 2.5700 ns against 0.9238 ns for DbExceptionClassifier).
+- Audit and domain events: slower than the hand-written code in 30 of 32 CSE cells at Count 1, 21 of 32 at Count 100 and 20 of 32 at Count 1,000. CSE allocates more than the hand-written rows in every SaveChanges cell but one (net10.0, Count 1,000, 0 events, interceptor: 11379.94 KB against 11379.99 KB).
+- Keyset After page: CSE cached is slower than the hand-written row on net8.0 (140.99 μs against 138.85 μs), net9.0 (131.77 μs against 127.62 μs) and net10.0 (124.43 μs against 119.54 μs), and allocates more on every TFM.
+- Keyset `Func` ordering: slower than the hand-written row on every page and TFM (1.13 to 1.26), and on the First page slower than MR inline on net10.0 (87.31 μs against 78.66 μs) and net11.0 (82.95 μs against 71.51 μs), and than MR prebuilt with `Take(21)`.
+- Offset paging: slower than X.PagedList on net9.0 page 1, net10.0 page 1 and net10.0 page 250, by 0.1 to 1.36 μs; slower than plain EF Core in 6 of 8 cells and allocates more in all 8.
+- Enum writes, direct class: the direct `EnumToFormattedStringConverter` class writes slower than EF Core on net10.0 and net11.0 (1.18 and 1.12).
+- `MigrateDataAsync`: 1.02 to 1.07 times the dictionary diff (net9.0, 10,000 rows: 82.540 ms against 78.564 ms).
+- `BaseDbContext` creation: slower than an `AddDbContext` scope on every TFM and 166 to 170 B larger.
+- Error translation: CSE allocates more than EntityFrameworkCore.Exceptions and the plain `catch`; it is slower than the plain `catch` on net9.0 (124.2 μs against 122.3 μs).
+- Error classification: CSE is the slowest row in both groups (for example net10.0 Sqlite: 2.5700 ns against 0.9238 ns for DbExceptionClassifier).
 
 ---
 
 ## Caveats
 
-- **In-memory SQLite, not a server.** There is no network and no server-side planning cost, so the database part of each row is small and the library overhead is a larger share than it would be against a server database such as PostgreSQL. The SQLSTATE path is measured only in the CPU-only class; an end-to-end PostgreSQL run is out of scope.
-- **No standalone cursor codec row.** CSE's `KeysetCursorCodec` (`Pagination/Keyset/KeysetCursorCodec.cs:12`) and `DomainEventCollector` (`Interceptors/DomainEvents/DomainEventCollector.cs:13`) are internal, and the benchmarks do not change package source to reach them. `After` minus `First` on the CSE keyset rows is the only view of the cursor decode and predicate cost.
-- **`MigrateDataAsync` at 10,000 rows** matches entities to seed rows through hash sets; it measured 72.614 ms (net11.0) to 88.815 ms (net8.0) per operation.
-- **No Native AOT sample.** EF Core builds its model and translates LINQ at run time, MR builds expression trees and reads the reference object by reflection, and EntityFrameworkCore.Exceptions is an EF Core interceptor, so none of these rows is AOT-ready.
-- **CSE costs seen in the code**, with the rows that show them:
+- In-memory SQLite, not a server: there is no network and no server-side planning cost, so the database part of each row is small and the library overhead is a larger share than it would be against a server database such as PostgreSQL. The SQLSTATE path is measured only in the CPU-only class; an end-to-end PostgreSQL run is out of scope.
+- No standalone cursor codec row: CSE's `KeysetCursorCodec` (`Pagination/Keyset/KeysetCursorCodec.cs:12`) and `DomainEventCollector` (`Interceptors/DomainEvents/DomainEventCollector.cs:13`) are internal, and the benchmarks do not change package source to reach them. `After` minus `First` on the CSE keyset rows is the only view of the cursor decode and predicate cost.
+- No Native AOT sample: EF Core builds its model and translates LINQ at run time, MR builds expression trees and reads the reference object by reflection, and EntityFrameworkCore.Exceptions is an EF Core interceptor, so none of these rows is AOT-ready.
+- CSE costs seen in the code, with the rows that show them:
   - `Interceptors/Audit/AuditInterceptor.cs:56` copies `ChangeTracker.Entries()`, which runs change detection; `:83-87` creates a DI scope and resolves `IAuditUserIdProvider` once per save that has an entry to stamp. The Count 1 SaveChangesAudit rows show this as a few microseconds over the hand-written override.
   - `Interceptors/DomainEvents/DomainEventCollector.cs:26` calls `ChangeTracker.Entries<IDomainEventHolder>()`, and `:29` copies each tracked entity's events into an array once per save.
   - `Abstractions/BaseDbContext.cs:23-26`: a DI scope, a logger lookup and an Information log call per instance. The finalizer (`:215-219`) is suppressed in `Dispose` and `DisposeAsync` (`:226`, `:237`). The CreateDispose rows show the per-instance cost against an `AddDbContext` scope.
@@ -315,7 +317,7 @@ Every row below is in the tables above.
   - `Pagination/Keyset/KeysetCursorCodec.cs:88`: the `Invalid` error is built before the cursor is checked, so a successful decode creates it too.
   - `Extensions/DbContextExtensionMethods.cs:153-168`: the key diff runs through two hash sets and a `Join`; the MigrateData rows show the 2% to 7% that is left of the gap. The key selectors are compiled once per options instance (`Extensions/MigrateDataOptions.cs:19-21`).
   - `Converters/EnumToStringConverter.cs:35-37`: the legacy fallback allocates `Enum.GetValues` and a `ToString().ToSnakeCase()` per member on every row it reads. It runs only when the enum's metadata has no 3.x alias (an enum without `[StringEnum]` generated metadata); a `[StringEnum]` enum, as in this suite, never reaches it. `Converters/LegacySnakeCaseEnumConverter.cs:22-27` reads and writes through cached dictionaries, and its rows allocate nothing.
-- The CSE column is the working tree on branch `integ/all`, a local integration of the open pull requests, which may not match the version published on NuGet.
+- The CSE column is repository source, not a NuGet release. The first run used branch `integ/all`, a local integration of the open pull requests; the EnumConverter and MigrateData rerun used the code after #230 to #256.
 
 ---
 

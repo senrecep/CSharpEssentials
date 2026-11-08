@@ -31,7 +31,7 @@ using CSharpEssentials.EntityFrameworkCore.Extensions;            // AddCqrsDbCo
 
 ## Interceptors
 
-Interceptors are resolved from DI. Register them, then attach them to the context:
+Register the interceptors in DI, then attach them to the context:
 
 ```csharp
 builder.Services.AddAuditInterceptor(sp =>
@@ -50,7 +50,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 
 ### AuditInterceptor
 
-Sets `CreatedAt`/`CreatedBy` and `UpdatedAt`/`UpdatedBy` on `EntityBase` entries during `SaveChanges`. `AddAuditInterceptor` registers both the interceptor and an `IAuditUserIdProvider` from a factory; implement the interface yourself for anything more complex:
+During `SaveChanges` it stamps `CreatedAt`/`CreatedBy` on added `ICreationAudit` entries and `UpdatedAt`/`UpdatedBy` on modified `IModificationAudit` entries, and turns the delete of an `ISoftDeletable` (not marked with `MarkAsHardDeleted()`) into a soft delete. The soft delete also keeps the tracked entries EF cascade-deleted with it: owned types stay, `ISoftDeletable` dependents are soft-deleted, other `Cascade`/`ClientCascade` dependents go back to `Unchanged`. `AddAuditInterceptor` registers the interceptor, a scoped `IAuditUserIdProvider` from your factory, and `TimeProvider.System` unless a `TimeProvider` is already registered. `AddAuditUserIdProvider` registers only the provider. Implement the interface yourself for anything more complex:
 
 ```csharp
 public class HttpAuditUserIdProvider(IHttpContextAccessor accessor) : IAuditUserIdProvider
@@ -77,7 +77,7 @@ public class MediatorDomainEventPublisher(ILogger<MediatorDomainEventPublisher> 
 
 ### SlowQueryInterceptor
 
-Logs commands slower than `SlowQueryOptions.Threshold` (default 1 second). Register an optional `ISlowQueryHandler` for metrics or alerts:
+Logs commands slower than `SlowQueryOptions.Threshold` (default 1 second) as warnings. Parameter values appear only with `EnableSensitiveDataLogging()`; otherwise each reads `@name=?`. Register an optional `ISlowQueryHandler` for metrics or alerts; an exception it throws is logged and the command still succeeds:
 
 ```csharp
 public class SlowQueryMetrics(ILogger<SlowQueryMetrics> logger) : ISlowQueryHandler
@@ -110,7 +110,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options, IServic
 
 ---
 
-## Enum Storage (5.0)
+## Enum storage
 
 `ConfigureEnumConventions` stores `[StringEnum]` enums by wire name (same spelling as JSON) and adds a check constraint `ck_{table}_{column}_enum` per column. Enums without `[StringEnum]` keep EF's integer default.
 
@@ -135,7 +135,7 @@ modelBuilder.Entity<Order>().Property(o => o.Priority).HasEnumCheckConstraint(fa
 
 ---
 
-## Maybe Columns
+## Maybe columns
 
 EF Core cannot make a non-nullable struct property optional, so `Maybe<T>` always maps to `NOT NULL`. Declare `Maybe<T>?` to store absence as `NULL`:
 
@@ -150,7 +150,7 @@ public sealed class Customer
 configurationBuilder.ConfigureNullableMaybeConventions();                                   // all Maybe<T>? properties
 modelBuilder.Entity<Customer>().Property(c => c.LoyaltyPoints).HasNullableMaybeConversion(); // or per property
 
-Maybe<int> points = customer.LoyaltyPoints.Flatten();   // null → None (CSharpEssentials.Maybe)
+Maybe<int> points = customer.LoyaltyPoints.Flatten();   // null becomes None (CSharpEssentials.Maybe)
 ```
 
 - `null` and `None` are both written as `NULL`; `NULL` reads back as `null`. Use `Flatten()` on the domain side.
@@ -211,7 +211,7 @@ var options = new KeysetPaginationOptions { MaxLimit = 50, Protector = myDataPro
 
 ---
 
-## Soft Delete and Result Queries
+## Soft delete and Result queries
 
 ```csharp
 // One UPDATE statement; bypasses the change tracker and SaveChanges interceptors
@@ -244,7 +244,7 @@ Analyzer CSE3001 (Info by default; raise with `dotnet_diagnostic.CSE3001.severit
 
 ---
 
-## Entity Mapping and Result Helpers
+## Entity mapping and Result helpers
 
 ```csharp
 public sealed class OrderConfiguration : IEntityTypeConfiguration<Order>   // Order : SoftDeletableEntityBase<Guid>
@@ -267,7 +267,7 @@ await db.MigrateDataAsync<Country, CountrySeed>(seed, (set, data) => set.Any(), 
 
 ---
 
-## Database Error Translation
+## Database error translation
 
 `DbErrorTranslation` turns persistence exceptions into `Error` values (the AspNetCore package renders them as ProblemDetails). The built-in `SqlStateErrorTranslator` reads `DbException.SqlState`:
 
@@ -294,7 +294,7 @@ The metadata carries `sqlState` and, when there are entries, `entities`; the dat
 
 ---
 
-## Transaction Runner
+## Transaction runner
 
 ```csharp
 using CSharpEssentials.EntityFrameworkCore.Transactions;   // AddEfCoreTransactionRunner
@@ -312,7 +312,7 @@ The outermost call runs inside `CreateExecutionStrategy()` with a transaction, s
 
 ---
 
-## Idempotency Records
+## Idempotency records
 
 ```csharp
 using CSharpEssentials.EntityFrameworkCore.Idempotency;   // AddIdempotencyRecords, EfCoreIdempotencyRecordStore<TContext>
@@ -331,7 +331,7 @@ Records are written with SQL inside the context's current transaction, so a roll
 
 ---
 
-## Enum Column Migrations
+## Enum column migrations
 
 ```csharp
 migrationBuilder.ConvertEnumColumn<OrderStatus>("orders", "Status", from: EnumStoredAs.Integer, to: EnumStorage.String);
@@ -343,18 +343,18 @@ When you drop `HasLegacyEnumStorage`/`existingStorage` for a column, replace the
 
 ---
 
-## CQRS Registration
+## CQRS registration
 
 ```csharp
 builder.Services.AddCqrsDbContexts<WriteDbContext, ReadDbContext>(
     configureWrite: (sp, options) => options.UseSqlite("Data Source=app.db"));
 ```
 
-The write context is pooled with change tracking; the read context is pooled with `NoTracking`. `AddWriteDbContext<T>` and `AddReadDbContext<T>` register them one at a time.  `AddPooledDbContext<T>` and `RegisterDbContextFactory<T>` register a pooled context and an `IDbContextFactory<T>`. Every registration method has an overload that takes `Action<DbContextRegistrationOptions>` first (`EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, and `EnableAuditInterceptor`/`EnableDomainEventInterceptor`/`EnableSlowQueryInterceptor`, which attach the interceptor only when it is registered in DI). `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` on that class are not applied by this version; set them in the provider callback. `UseAsWriteContext()`, `UseAsReadContext()` and `UseAsReadContextWithIdentityResolution()` are available on `DbContextOptionsBuilder`.
+The write context is pooled with change tracking; the read context is pooled with `NoTracking`. `AddWriteDbContext<T>` and `AddReadDbContext<T>` register them one at a time. `AddPooledDbContext<T>` and `RegisterDbContextFactory<T>` register a pooled context and an `IDbContextFactory<T>`. Every registration method has an overload that takes `Action<DbContextRegistrationOptions>` first (`EnableDetailedErrors`, `EnableSensitiveDataLogging`, `QueryTrackingBehavior`, and `EnableAuditInterceptor`/`EnableDomainEventInterceptor`/`EnableSlowQueryInterceptor`, which attach the interceptor only when it is registered in DI). `MigrationsAssembly`, `RetryOptions` and `QuerySplittingBehavior` on that class are not applied by this version; set them in the provider callback. `UseAsWriteContext()`, `UseAsReadContext()` and `UseAsReadContextWithIdentityResolution()` are available on `DbContextOptionsBuilder`.
 
 ---
 
-## Best Practices
+## Best practices
 
 - Build the unit of work around `ITransactionRunner` rather than your own `BeginTransaction` when retries are enabled
 - Pick one domain event path: `DomainEventInterceptor` or `BaseDbContext.DispatchDomainEventsOnSaveChanges`

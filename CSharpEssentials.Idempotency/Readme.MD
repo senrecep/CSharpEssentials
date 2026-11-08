@@ -5,9 +5,8 @@ deterministic keys built from business ids, plus an executor that runs an operat
 `CSharpEssentials.AspNetCore` uses them for its HTTP middleware, `CSharpEssentials.Mediator` for its idempotency
 behavior; message consumers, background jobs and other pipelines can use them directly.
 
-> Benchmarks against IdempotentAPI (HTTP replay over the same distributed cache) and hand-written baselines
-> (executor, inbox, record stores, deterministic keys) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks against IdempotentAPI (HTTP replay over the same distributed cache) and hand-written baselines (executor,
+inbox, record stores, deterministic keys) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Features
 
@@ -117,7 +116,6 @@ services.Configure<IdempotencyExecutorOptions>(configuration.GetSection("Idempot
 - The executor reads `IOptionsMonitor<IdempotencyExecutorOptions>` on every call, so a reload of a bound configuration section changes the mode, globally or per profile, without a restart. A reload that makes the options invalid throws `OptionsValidationException` from every call until it is fixed. The store is the one registered at startup.
 - The mode comes from the operation (`IdempotencyExecutionOptions.Mode`), else its profile, else `IdempotencyExecutorOptions.Mode`.
 - After a switch from `Observe` to `Enforce`, a result stored in `Observe` is replayed and a key still in flight is answered `InFlight`. With a store that writes in the business transaction (`ITransactionalIdempotencyRecordStore`, such as the EF Core store) only results whose transaction committed are stored, so a retry of work that rolled back runs again.
-- `Observe` measures duplicates; it does not prevent them. Keep it short for operations that move money.
 - In `Observe` a store that throws while reserving is logged (`Idempotency.Observe.ReserveFailed`) and the operation runs once without idempotency, unless the caller cancelled. In `Enforce` the exception propagates.
 - The `Idempotency-Key` middleware of `CSharpEssentials.AspNetCore` has its own switch, `IdempotencyOptions.Mode`. The Mediator behavior and `IdempotencyInbox` use this one.
 
@@ -127,7 +125,9 @@ To add idempotency to an operation that already has callers:
 2. Read the [telemetry](#telemetry). `key_reused` shows callers that reuse a key for different content, `in_flight` shows concurrent duplicates, `replay` shows how often a retry would have been answered from the store, and `unscoped` shows callers that send a key without a resolvable scope (the log events name the endpoint or request type, never the key).
 3. Fix what the numbers show (a client that reuses keys, a machine caller that needs `IdempotencyScopes.Client`), then switch to `Enforce` through configuration.
 
-**Transactions in `Observe`.** `Observe` records are real records. With an `ITransactionalIdempotencyRecordStore` (the
+#### Transactions in `Observe`
+
+`Observe` records are real records. With an `ITransactionalIdempotencyRecordStore` (the
 EF Core store) the executor and the HTTP middleware reserve the key through the `Detached` view, so the reservation never
 waits for or fails the business transaction. When the operation returns a result to store, they release that reservation
 and write the result through the store itself, in the business transaction (the Mediator transaction with
@@ -301,12 +301,11 @@ IdempotencyRecordKey recordKey = new("http", scope.Value, key);
 return `null` for an anonymous principal or a missing claim, and the caller decides what to do with it.
 
 The scope factories and the `IdempotencyRecordKey` constructor throw `ArgumentException` for a value with an unpaired
-surrogate, which has no UTF-8 encoding. A `Custom` kind cannot contain `:` or `/`, and `user`, `tenant`, `client` and
-`global` are reserved for the built-in factories in any casing: `Custom("user", id)` throws, use `User(id)`.
+surrogate, which has no UTF-8 encoding. `Custom("user", id)` throws because the built-in kinds are reserved; use
+`User(id)`.
 
 A scope is part of the key, so a key means something only to its owner: `consume:42` from two tenants is two records.
-Scopes are built only by the factories, so a raw id such as `"user:42"` cannot collide with the output of another
-factory. `User` needs a user claim, so a machine caller that authenticates with client credentials has none; pick
+`User` needs a user claim, so a machine caller that authenticates with client credentials has none; pick
 `IdempotencyScopes.Client` (`client_id`, then `azp`) for it, or `UserAndTenant` and `Custom` when the owner is the pair.
 `IdempotencyScope.Global` is a deliberate choice to share a key between all callers and never matches a scoped key.
 
@@ -336,7 +335,7 @@ public sealed record CapturePaymentCommand(Guid OrderId, string IdempotencyKey, 
 
 - A failed `Result` of an `ITransactionalRequest` rolls back, and an exception does too, so in both cases the record rolls back with the data and the retry runs again.
 - Send the provider the deterministic key (`IdempotencyKeys.For("capture", orderId.ToString())`), because its call is outside your transaction.
-- Use the Redis or distributed cache store for operations that have no database transaction to join, and a hybrid for the rest: `AddProfile("payments", p => p.StoreKey = "payments")` with `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` sends only that profile to the database.
+- Use the Redis or distributed cache store for operations that have no database transaction to join, or a hybrid: `AddProfile("payments", p => p.StoreKey = "payments")` with `AddEfCoreIdempotencyRecordStore<AppDbContext>("payments")` sends only that profile to the database.
 - Over HTTP the middleware can sit in front for the `Idempotency-Key` contract (lease mode); the command's record is what makes the data single.
 
 ### Webhook dedupe
@@ -395,8 +394,7 @@ For strict guarantees across instances, use the EF Core store or implement `IIde
 `TryReserveAsync` (Redis `SET NX`, a unique index) and token-checked `CompleteAsync` and `ReleaseAsync`, then run the
 `CSharpEssentials.Idempotency.Testing` contract tests against it. See [External stores](#external-stores).
 
-**Store requirement:** a store must compare `Namespace`, `Scope` and `Key` ordinally: case-sensitively and with
-trailing spaces significant. A SQL unique index on the text columns gets this wrong in two ways: a case-insensitive
+A store must compare `Namespace`, `Scope` and `Key` ordinally: case-sensitively and with trailing spaces significant. A SQL unique index on the text columns gets this wrong in two ways: a case-insensitive
 collation makes `Tenant("ABC")` and `Tenant("abc")` one record, and a PAD SPACE collation, which ignores trailing
 spaces (every SQL Server collation, `_BIN2` included, and MySQL's `utf8mb4_bin`), makes `Tenant("abc")` and `Tenant("abc ")` one
 record, so one scope can replay another's response. Key a SQL store by a fixed-length hash of `ToStorageKey()` in a
@@ -455,7 +453,7 @@ service.
 There is no Redis or DynamoDB package. The library gives the `IIdempotencyRecordStore` contract, the requirements
 below and the contract tests in `CSharpEssentials.Idempotency.Testing`; the store itself lives in your application.
 
-**Atomicity requirements**
+A store must meet these requirements:
 
 - `TryReserveAsync` is one atomic operation: of concurrent calls for a free or expired key, exactly one returns
   `Reserved`. A live entry with another fingerprint returns `FingerprintMismatch`, whether it is in flight or completed.

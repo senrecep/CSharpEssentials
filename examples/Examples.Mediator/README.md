@@ -1,16 +1,14 @@
 # CSharpEssentials.Mediator example
 
-This console application demonstrates the pipeline behaviors from `CSharpEssentials.Mediator`.
+Console application that calls the `CSharpEssentials.Mediator` pipeline behaviors directly, without a generated mediator.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| **ValidationBehavior** | Runs the request's `CSharpEssentials.Validation` validators and returns a failed `Result` without calling the handler |
-| **LoggingBehavior** | Logs the request (`IRequestLoggable`), the response (`IResponseLoggable`) or both (`IRequestResponseLoggable`) |
-| **CachingBehavior** | Caches the response of `ICacheable` requests in `IDistributedCache` |
-| **TransactionScopeBehavior** | Runs the handler of an `ITransactionalRequest` inside a `TransactionScope` |
-| **DI Registration** | `AddMediatorBehaviors()` in the default order, or one `AddMediator*Behavior()` call per behavior |
+| Feature | What the sample does |
+|---------|----------------------|
+| ValidationBehavior | Runs the request's `CSharpEssentials.Validation` validator and returns a failed `Result` without calling the handler |
+| LoggingBehavior | Logs the handling and the JSON response of a request marked `IResponseLoggable` |
+| CachingBehavior | Caches the response of an `ICacheable` request in an `IDistributedCache` (a dictionary-backed one in the sample) |
+| TransactionScopeBehavior | Runs the handler of an `ITransactionalRequest` inside a `TransactionScope` |
+| DI registration | `AddMediatorBehaviors()` registers the default behaviors |
 
 ## Running
 

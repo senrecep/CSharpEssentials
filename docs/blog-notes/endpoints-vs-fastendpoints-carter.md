@@ -2,7 +2,7 @@
 
 Raw material for a post, not the post itself. Every number comes from `CSharpEssentials.Endpoints/BENCHMARKS.md`, which reads `benchmarks/results/endpoints/{tfm}/results/*-report-github.md` and `benchmarks/results/endpoints/aot/aot-report.md`.
 
-How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoints suite (default job, plus a cold-start job for `ColdStartupBenchmarks`) on net8.0, net9.0, net10.0 and net11.0, run on 2026-11-05 with the net9.0 throughput class rerun on 2026-11-06. A 6-core, 12-thread x64 desktop CPU with a desktop session in the background; 1-minute load average 2.18 to 4.72 over the suite. SDK 11.0.100-rc.1. Primary runtime is .NET 10.0.11. No row of this suite stayed above 5% CV after reruns. The Native AOT numbers come from a separate script run on 2026-11-06 (load average 3.72).
+How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoints suite (default job, plus a cold-start job for `ColdStartupBenchmarks`) on net8.0, net9.0, net10.0 and net11.0, run on 2026-11-05, with the net9.0 throughput class rerun on 2026-11-06 and the name-read class rerun on 2026-11-07 (SDK 11.0.100-rc.3, .NET 10.0.14) after the lock fix. A 6-core, 12-thread x64 desktop CPU on Linux with a desktop session in the background; 1-minute load average 2.18 to 4.72 over the suite. SDK 11.0.100-rc.1 and primary runtime .NET 10.0.11 for every other class. No row of this suite stayed above 5% CV after reruns. The Native AOT numbers come from a separate script run on 2026-11-06 (load average 3.72).
 
 ## The problem
 
@@ -10,7 +10,7 @@ How these numbers were produced: BenchmarkDotNet 0.14.0, full runs of the endpoi
 - The usual fixes add a framework.
   - Carter: modules found by assembly scanning and created through DI.
   - FastEndpoints: a base class per endpoint, its own binder, its own pipeline, and an instance per request.
-- The question to answer: can you get the organization (one type per endpoint, groups, discovery) without giving up plain Minimal APIs, and without paying for it at startup, per request, or under Native AOT?
+- The question: can you get the organization (one type per endpoint, groups, discovery) without giving up plain Minimal APIs, and without paying for it at startup, per request, or under Native AOT?
 
 ## What the framework already gives you
 
@@ -57,7 +57,7 @@ Cold startup is the fair startup figure: a fresh process, timed until every endp
    - FastEndpoints + Generator: 0 warnings, 15.2 MB, 100 ms.
    - Carter (8 warnings) and FastEndpoints with reflection discovery (4 warnings) crash at startup with this setup.
    - CSE's own reflection scanner publishes with 4 warnings and stops at startup with `PlatformNotSupportedException` ("MapEndpointsFromAssemblies needs dynamic code"). In the earlier 2026-11-01 run it started and its routes returned 404/405.
-6. Operation names, 500 endpoints: reading every `OperationNaming.TypeName` name takes 12.280 μs against 6.381 μs for hand-written `WithName` names (1.92×) and 7.396 μs for `Custom` names. A CSE loss: every TypeName read takes a lock.
+6. Operation names, 500 endpoints: reading every `OperationNaming.TypeName` name takes 8.505 μs against 6.960 μs for hand-written `WithName` names (1.22×) and 8.404 μs for `Custom` names, a tie with TypeName. A CSE loss. The first run measured 12.280 μs because every TypeName read took a lock; resolved names are now read without it.
 
 ## Where CSE loses (keep this list in the post)
 
@@ -67,7 +67,7 @@ Cold startup is the fair startup figure: a fresh process, timed until every endp
 - Warm startup at N=500: against Plain on net8 (509.850 vs 501.513 ms), against Carter on net10 (721.454 vs 710.012 ms); 4.3-4.9% more allocation than Plain on every TFM. Warm allocation is also above Plain at N=10 and N=100 on every TFM, and above Carter on net10 at N=100 and N=500 and on net11 at N=10.
 - Valid POST against Carter on net10 (17.325 vs 15.620 μs) and net11 (20.02 vs 18.82 μs).
 - Per-request allocation 0.01 KB above Plain on valid POST (net10, net11) and on DELETE (net11), and above Carter on DELETE (net11: 9.32 vs 9.31 KB).
-- Name reads: TypeName 1.67-1.92× and Custom 1.16-1.22× the hand-written `WithName` read time.
+- Name reads: TypeName 1.21-1.32× and Custom 1.19-1.26× the hand-written `WithName` read time; on net11 TypeName also takes 1.06× as long as Custom (8.071 vs 7.609 μs).
 - Naming at build: TypeName takes longer than None on net8, net10 and net11 and allocates 1.07-1.08× as much (net10: 16.83 vs 15.62 MB).
 - The per-type `MapGroup("")` allocates 3-4% more than direct mapping (net10: 15.6 vs 15.1 MB); its time is a tie on every TFM.
 
@@ -100,7 +100,7 @@ What each one asks:
 
 What the numbers say (net10 unless stated):
 - Naming at build: None 703.9 ms, TypeName 714.4 ms (ratio 1.01), Custom 711.4 ms (1.01). TypeName vs Custom is a tie on net9, net10 and net11 and slower only on net8 (523.0 vs 507.6 ms). TypeName allocates 16.83 MB against 15.62 MB for None. Hand-written: 747.7 ms without names, 753.5 ms with `WithName` (compare inside a category only).
-- Name reads: TypeName 12.280 μs, Custom 7.396 μs, hand-written 6.381 μs for 500 reads. TypeName is the slowest on every TFM (1.67-1.92× the hand-written read). The lock on every read was predicted from the source before the run.
+- Name reads: TypeName 8.505 μs, Custom 8.404 μs, hand-written 6.960 μs for 500 reads. TypeName ties Custom on net8, net9 and net10; both take longer than the hand-written read on every TFM (TypeName 1.21-1.32×).
 - The empty-prefix group: 759.5 ms grouped vs 757.0 ms direct, a tie on every TFM. It allocates 15.6 MB vs 15.1 MB (alloc ratio 1.03-1.04 across TFMs).
 
 Things to say:

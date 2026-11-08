@@ -1,10 +1,8 @@
-# CSharpEssentials.AspNetCore.Swashbuckle: Performance benchmarks
+# CSharpEssentials.AspNetCore.Swashbuckle: performance benchmarks
 
-Full BenchmarkDotNet runs on net8.0, net9.0, net10.0 and net11.0 are below in [Results](#results). The parity self-check passes on every TFM. Short-job (`--quick`) numbers are not published.
+Full BenchmarkDotNet runs on net8.0, net9.0, net10.0 and net11.0 are in [Results](#results); the parity self-check passes on every TFM.
 
 CSharpEssentials.AspNetCore.Swashbuckle (CSE) is compared with plain Swashbuckle.AspNetCore 10.3.1 on Microsoft.OpenApi 2.13.0. There is no competitor library. The baseline is Swashbuckle's documented setup: `AddEndpointsApiExplorer()`, `AddSwaggerGen()` and `UseSwagger()`.
-
-The suite measures what it costs to describe the same app with the CSE conventions. The CSE rows write more output by design, so no CSE row is like-for-like with the plain row.
 
 The suite lives in `benchmarks/CSharpEssentials.AspNetCore.Swashbuckle.Benchmarks/`. The Microsoft.AspNetCore.OpenApi package has its own suite over the same sample API ([CSharpEssentials.AspNetCore.OpenApi/BENCHMARKS.md](../CSharpEssentials.AspNetCore.OpenApi/BENCHMARKS.md)).
 
@@ -40,13 +38,12 @@ Every host registers the same app services: `AddIdempotency(o => o.Mode = Idempo
 ## Methodology
 
 - In-process TestServer, Production environment, logging providers cleared. Every row reads the whole response body.
-- Every row serves the same 50 Minimal API endpoints and 30 enums. The plain and CSE hosts differ only in the document options, except the StringEnums row.
+- The plain and CSE hosts differ only in the document options, except the StringEnums row.
 - Warm rows regenerate the document on every request, because Swashbuckle does not cache it. `SwaggerMiddleware` builds the document per request.
 - Cold rows run one sample per fresh process, 15 launches (`RunStrategy.ColdStart`, no warmup). JIT, the Swashbuckle generator and the CSE per-provider caches are all cold inside the measurement.
-- The CSE rows write more output by design. Each ratio is the cost of the extra description.
-- Swashbuckle's default OpenAPI 3.0 document, as the CSE Readme says to keep.
+- Swashbuckle's default OpenAPI 3.0 document, which the CSE Readme says to keep.
 - The library compiles against its declared ranges (Swashbuckle.AspNetCore `[10.2.3,11)`, Microsoft.OpenApi `[2.7.5,3)`) and runs on the pinned versions, the same as a consumer app does.
-- net8.0, net9.0, net10.0 and net11.0. The package targets all four, and Swashbuckle 10.3.1 runs on all four.
+- net8.0 to net11.0: the package and Swashbuckle 10.3.1 both run on all four.
 - Plain `AddSwaggerGen` does not read XML comments. Only `CSharpEssentials_AddSwagger` calls `IncludeXmlComments`. The baseline of the OpenApi suite runs the framework XML comment generator, so ratios across the two suites are not comparable.
 - Every class has `[MemoryDiagnoser]`. A doc URL sits above every row.
 
@@ -106,8 +103,7 @@ The asserted plain shapes, as written by Swashbuckle.AspNetCore 10.3.1 on every 
 
 - None of the CSE rows is like-for-like with the plain row on output. Each CSE row describes the same endpoints with more detail. The optional route rows and `AddSwagger` also describe 20 more operations.
 - `Plain_AddSwaggerGen_StringEnums` uses `JsonStringEnumConverter` instead of the CSE converter. That is the framework's documented way to get string enums. Its documents describe member names, not CSE wire names.
-- `CSharpEssentials_AddSwagger` does more work than `CSharpEssentials_AllConventions`: the security requirement, schema ids and XML comments come on top.
-- `CSharpEssentials_AddSwagger` writes different schema ids from every other row. Since 8.0 the CSE schema id factory qualifies each id with the namespace by default (`SwashbuckleSchemaIdFactory.QualifyWithNamespace = true`), so `Resource01` becomes `CSharpEssentials.AspNetCore.ApiDocs.Benchmarks.Resource01` in the components and in every `$ref`. Its document is longer for that reason too. The parity checks match schemas by the last segment of the id, so the same checks apply to this row.
+- `CSharpEssentials_AddSwagger` does more work than `CSharpEssentials_AllConventions` (security requirement, schema ids, XML comments) and writes different schema ids from every other row. Since 8.0 the CSE schema id factory qualifies each id with the namespace by default (`SwashbuckleSchemaIdFactory.QualifyWithNamespace = true`), so `Resource01` becomes `CSharpEssentials.AspNetCore.ApiDocs.Benchmarks.Resource01` in the components and in every `$ref`. Its document is longer for that reason too. The parity checks match schemas by the last segment of the id, so the same checks apply to this row.
 
 ## Not compared
 
@@ -118,7 +114,7 @@ Unchase.Swashbuckle.AspNetCore.Extensions 2.7.2 (2024-12-17) adds enum descripti
 
 ## Results
 
-The CSE rows describe more than the baseline, so every ratio below is the cost of the extra description, not a like-for-like speed comparison. Ratio and Alloc Ratio are against `Plain_AddSwaggerGen` on the same TFM.
+The CSE rows describe more than the baseline, so each ratio is the cost of the extra description, not a like-for-like speed comparison. Ratio and Alloc Ratio are against `Plain_AddSwaggerGen` on the same TFM.
 
 ### Warm document, mean time per request (`SwashbuckleDocumentComparison`)
 
@@ -159,13 +155,13 @@ Reports: [net8.0](../benchmarks/results/swashbuckle/net8.0/results/CSharpEssenti
 
 ### Where CSE costs more
 
-Every CSE row is slower and allocates more than the plain baseline, on every TFM. That is expected, because each one writes more document, but it is still a cost you pay on every document request:
+Every CSE row is slower and allocates more than the plain baseline, on every TFM. Each writes a larger document, but the cost is paid on every document request:
 
 - `CSharpEssentials_EnumConventions`: 1.19 (net11.0) to 1.28 (net9.0) times the baseline time, 1.19 to 1.21 times the allocation.
 - `CSharpEssentials_IdempotencyConventions`: 1.16 (net11.0) to 1.21 (net8.0) times the time, 1.20 to 1.21 times the allocation.
 - `CSharpEssentials_OptionalRouteParameters`: 1.10 (net11.0) to 1.20 (net8.0 and net9.0) times the time, 1.18 to 1.19 times the allocation. It also describes 70 operations against 50.
 - `CSharpEssentials_AllConventions`: 1.53 (net11.0) to 1.68 (net8.0 and net9.0) times the time, 1.57 to 1.72 times the allocation. On a cold start it adds 1.08 (net10.0) to 1.09 times the time and 1.22 (net11.0) to 1.24 times the allocation.
-- `CSharpEssentials_AddSwagger`: 2.03 (net11.0) to 2.24 (net8.0) times the time and 3.16 (net10.0 and net11.0) to 3.37 (net8.0) times the allocation. This row adds XML comments, a security scheme and namespace-qualified schema ids on top of the three conventions, so its document is the largest. It is the most expensive row in the suite.
+- `CSharpEssentials_AddSwagger`: 2.03 (net11.0) to 2.24 (net8.0) times the time and 3.16 (net10.0 and net11.0) to 3.37 (net8.0) times the allocation. It adds XML comments, a security scheme and namespace-qualified schema ids on top of the three conventions, so its document is the largest and it is the most expensive row in the suite.
 
 Swashbuckle does not cache the document, so these costs repeat on every `GET /swagger/v1/swagger.json`. An app that serves the document often can cache it in front of the middleware.
 
@@ -173,7 +169,7 @@ Swashbuckle does not cache the document, so these costs repeat on every `GET /sw
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one TFM at a time on one machine: a 6-core, 12-thread x64 desktop CPU, CachyOS Linux, .NET SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
+- BenchmarkDotNet v0.14.0, full runs (no `--quick`), one TFM at a time on a 6-core, 12-thread x64 desktop CPU on Linux, .NET SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
 - `SwashbuckleDocumentComparison` uses the default job. `SwashbuckleFirstDocumentComparison` uses a `cold` job: `RunStrategy=ColdStart`, `LaunchCount=15`, `IterationCount=1`, `WarmupCount=0`.
 - The suite was rerun after the 8.0 schema id change, so `CSharpEssentials_AddSwagger` measures the namespace-qualified ids. The 1-minute load average was 2.47 at the start of that run and 2.05 at its end.
 - No row has a CV (StdDev / Mean) above 5%. The highest in the reports is `Plain_AddSwaggerGen_StringEnums` on net11.0 (0.1289 ms on 3.304 ms). The automated noise scan could not read statistics for the warm rows from the JSON exports, so this check comes from the github reports.

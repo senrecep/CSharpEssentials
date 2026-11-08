@@ -2,17 +2,7 @@
 
 `These<TError, TValue>` is a three-state discriminated union: `Left` (error only), `Right` (value only), or `Both` (error and value together). Unlike `Result<T>`, it does not treat the presence of an error as an automatic failure. Use it when partial success carries a meaningful value alongside a warning or non-fatal error.
 
-> Benchmarks against a hand-written record (match, a Map/FlatMap/Match pipeline, partition and JSON) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
-
-## Features
-
-- A three-state union (`Left`, `Right`, `Both`) with explicit state flags.
-- `Map`, `MapLeft`, `FlatMap`, `Tap`, `TapLeft` and `Match`.
-- `GetRight()` and `GetLeft()`, which return `Maybe<T>` without throwing.
-- Conversion to and from `Result<T>`, in strict or lenient mode.
-- `Partition`, which splits a sequence into its three states.
-- A JSON round trip; the wire form is `{"isLeft":true,"isRight":true,"left":...,"right":...}`.
+Benchmarks against a hand-written record (match, a Map/FlatMap/Match pipeline, partition and JSON) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results`, `CSharpEssentials.Maybe` and `CSharpEssentials.Errors`. `These<TError, TValue>` is a `readonly record struct` in the `CSharpEssentials.These` namespace.
 
@@ -48,6 +38,8 @@ bool isBoth  = these.IsBoth;  // true when Both
 ```
 
 `HasLeft` is `true` for `Left` and `Both`, `HasRight` is `true` for `Right` and `Both`, and `LeftOrDefault` and `RightOrDefault` give the raw payloads (`default` when that side is absent). `default(These<TError, TValue>)` is none of the three states, and `Match` routes it to `onBoth` with default values, so create instances through `Left`, `Right` or `Both`.
+
+JSON round-trips these four properties as `{"isLeft":true,"isRight":true,"left":...,"right":...}` (`isLeft` holds `HasLeft`, `isRight` holds `HasRight`).
 
 ### Map: transform the value
 

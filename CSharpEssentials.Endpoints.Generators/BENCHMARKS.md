@@ -1,8 +1,8 @@
 # CSharpEssentials.Endpoints.Generators: design-time benchmarks
 
-This page describes how the endpoints source generator is measured against Immediate.Apis 6.4.0. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is ahead on every row except cold at `Files=1000`, where Immediate.Apis takes about half the CSE time; see [Where CSE loses](#where-cse-loses).
+The endpoints source generator measured against Immediate.Apis 6.4.0 on net8.0, net9.0, net10.0 and net11.0 (full default-job runs, [Results](#results)). CSE is ahead on every row except cold at `Files=1000`, where Immediate.Apis takes about half the CSE time; see [Where CSE loses](#where-cse-loses).
 
-The generator runs inside the compiler and the IDE, not in the shipped app. The cost measured here is build time and the work the IDE does after a keystroke. It has no effect on request handling.
+The generator runs inside the compiler and the IDE, not in the shipped app, so the cost is build time and the work the IDE does after a keystroke. It has no effect on request handling.
 
 ---
 
@@ -123,7 +123,7 @@ The report cannot show one CSE cost. `EndpointTypes` and `ReservedNames` come fr
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. The SDK and runtime builds are in the header of each report.
 - TFMs: net8.0 (.NET 8.0.33), net9.0 (.NET 9.0.22), net10.0 (.NET 10.0.14) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
 - This class was rerun on 2026-11-07 on every TFM, after the literal `WithName` change described in [Known CSE costs](#known-cse-costs). Three rows have a CV above 5% and are marked `noisy` in the tables: `ImmediateApisWithHandlers_Cold` at `Files=1000` on net10.0, and at `Files=200` and `Files=1000` on net11.0.
 - Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.EndpointsGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
@@ -183,15 +183,14 @@ In the first run CSE also lost incremental at `Files=1000`, and its cold and inc
 
 ## Known CSE costs
 
-These come from reading the generator source. The third one was narrowed after the first run; the other two are not fixed here. In the rerun the CSE cold row still grows with `Files` faster than the Immediate.Apis row (see [Where CSE loses](#where-cse-loses)).
+From reading the generator source. The third one was narrowed after the first run; the other two are not fixed. In the rerun the CSE cold row still grows with `Files` faster than the Immediate.Apis row (see [Where CSE loses](#where-cse-loses)).
 
-- `CSharpEssentials.Endpoints.Generators/EndpointsGenerator.cs:36-40,88-100`: the `EndpointTypes` predicate accepts a non-interface type declaration that has a base list and declares a static `Map` method. A `partial` type needs only one of the two. The transform calls `GetDeclaredSymbol` for each match. In this input only the 50 endpoint classes match: the filler classes have a base list but no `Map`, and the filler route classes have a `Map` but no base list. This provider is a `CreateSyntaxProvider`, so every edit runs the transform again for the 50 matches.
-- `EndpointsGenerator.cs:47-49`: the Host step is a `CompilationProvider.Select` that runs on every edit. Its output is equatable, so later steps stay cached.
-- `EndpointsGenerator.cs:51-56,121-131` with `EndpointNameReader.cs:29-50`: `GetOperation` on every `WithName` and `WithMetadata` invocation in the project, except a `.WithName(...)` call with one plain string literal argument, which is read from syntax. This is also a `CreateSyntaxProvider`, so every edit runs it again for every such invocation, not only for the edited file. Const names, `nameof`, interpolated strings and every `WithMetadata` call still bind. The filler routes use only literal `WithName` calls (one per 10 filler files, 15 at `Files=200` and 95 at `Files=1000`), so the rerun does not measure the binding path.
+- `CSharpEssentials.Endpoints.Generators/EndpointsGenerator.cs:35-39,88-99`: the `EndpointTypes` predicate accepts a non-interface type declaration that has a base list and declares a static `Map` method. A `partial` type needs only one of the two. The transform calls `GetDeclaredSymbol` for each match. In this input only the 50 endpoint classes match: the filler classes have a base list but no `Map`, and the filler route classes have a `Map` but no base list. This provider is a `CreateSyntaxProvider`, so every edit runs the transform again for the 50 matches.
+- `EndpointsGenerator.cs:46-48`: the Host step is a `CompilationProvider.Select` that runs on every edit. Its output is equatable, so later steps stay cached.
+- `EndpointsGenerator.cs:50-55,121-131` with `EndpointNameReader.cs:29-50`: `GetOperation` on every `WithName` and `WithMetadata` invocation in the project, except a `.WithName(...)` call with one plain string literal argument, which is read from syntax. This is also a `CreateSyntaxProvider`, so every edit runs it again for every such invocation, not only for the edited file. Const names, `nameof`, interpolated strings and every `WithMetadata` call still bind. The filler routes use only literal `WithName` calls (one per 10 filler files, 15 at `Files=200` and 95 at `Files=1000`), so the rerun does not measure the binding path.
 
 ## Caveats
 
-- Design time only. Nothing here affects the shipped app.
 - Part of CSE's cold cost is binding that the compiler does anyway in a full build: the endpoint declarations and the route calls around each `WithName`. The generator moves that cost earlier; not all of it is extra.
 - Code fixes and analyzers in the packages are not measured.
 - The input is generated, not a real app. Real projects have larger files and more references.

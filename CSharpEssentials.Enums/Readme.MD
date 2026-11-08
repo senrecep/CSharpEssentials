@@ -3,16 +3,15 @@
 One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]` and a bundled source generator writes its metadata and helpers at compile time. The generated code uses no reflection and is trim and NativeAOT safe.
 
 > Benchmarks against Enums.NET 5.0.0, NetEscapades.EnumGenerators 1.0.0-beta21 (a prerelease; no stable version
-> exists) and the BCL are in [BENCHMARKS.md](./BENCHMARKS.md). `ToOptimizedString` ties the fastest column on net10
-> (0.5439 ns) and net8; NetEscapades is faster on net9 and net11. All three libraries publish under Native AOT, and CSE
-> and NetEscapades do so with 0 IL warnings. CSE loses elsewhere: `IsDefined` takes 3.9082 ns against 0.4209 ns, and descriptions
-> and `ToString` of an undefined value are slower. Parsing a valid name is slower than Enums.NET on net10 (22.1890 vs
-> 17.8628 ns case-sensitive, 51.9075 vs 35.9320 ns ignore-case) and is the slowest column on net8 and net9. A rejected
-> input parses 2.99× to 4.14× slower than Enums.NET on net10 and allocates 88 B. `GetNames` allocates 184 B where Enums.NET
-> allocates nothing, the AOT binary is 1.3 MB against 1.2 MB for NetEscapades, and on net8 (the netstandard2.1 build)
-> parsing allocates on every call. Design-time cost of the bundled source generator (cold and incremental runs against
-> NetEscapades.EnumGenerators) is described in [the generator BENCHMARKS.md](../CSharpEssentials.Enums.Generators/BENCHMARKS.md).
-> Results are pending the full run.
+> exists) and the BCL are in [BENCHMARKS.md](./BENCHMARKS.md). On net10, `ToOptimizedString` ties NetEscapades (0.5418 ns),
+> CSE is the fastest column in three of four parse categories (valid case-sensitive 8.6618 ns against Enums.NET 18.3746 ns)
+> and formats flags fastest with the least allocation. CSE loses elsewhere: formatting a boxed value (15.566 ns against
+> BCL 5.052 ns), `TryFormatMany`, reflection-built names and values, descriptions through the metadata (3.6495 ns against
+> NetEscapades 0.9027 ns), a rejected case-sensitive parse with the error-reporting overload (22.5530 ns / 88 B against
+> Enums.NET 13.2294 ns / 0 B), `ToString` of an undefined value, and `GetNames` (184 B where Enums.NET allocates nothing).
+> All three libraries publish under Native AOT; CSE and NetEscapades do so with 0 IL warnings, and the CSE binary is
+> 1.3 MB against 1.2 MB for NetEscapades. Design-time cost of the source generator is in
+> [the generator BENCHMARKS.md](../CSharpEssentials.Enums.Generators/BENCHMARKS.md).
 
 ## Installation
 
@@ -20,14 +19,14 @@ One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core
 dotnet add package CSharpEssentials.Enums
 ```
 
-The package contains the source generator, the analyzers and the code fixes. Any CSharpEssentials package brings the generator and analyzers: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. A project that references one of them gets `[StringEnum]` metadata, the CSE analyzers and the `CSharpEssentialsEnumNaming` property without a direct `CSharpEssentials.Enums` reference. Reference `CSharpEssentials.Enums` directly only when the project uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints` and `.RequestResponseLogging` do not depend on it).
+The package contains the source generator, the analyzers and the code fixes. Every CSharpEssentials package that depends on Enums, directly or transitively, passes them on, so a project that references one of them gets `[StringEnum]` metadata, the CSE analyzers and the `CSharpEssentialsEnumNaming` property without a direct reference. Reference `CSharpEssentials.Enums` directly only when the project uses no such package (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints` and `.RequestResponseLogging` do not depend on it).
 
 | Scenario | Packages |
 |---|---|
 | Enums only (generated helpers, `EnumMetadata`) | `CSharpEssentials.Enums` |
 | System.Text.Json (workers, message buses, clients) | `CSharpEssentials.Json` |
 | ASP.NET Core API (JSON, binding, responses) | `CSharpEssentials.AspNetCore` |
-| OpenAPI document | add `CSharpEssentials.AspNetCore.OpenApi` (net10.0) **or** `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
+| OpenAPI document | add `CSharpEssentials.AspNetCore.OpenApi` (net10.0) or `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
 | EF Core storage and migrations | `CSharpEssentials.EntityFrameworkCore` |
 | Outgoing HTTP | `CSharpEssentials.Http` |
 | Enums declared in a shared domain library | `CSharpEssentials.Enums` (or one of the packages above) in the library; consumers need it only if they declare enums too |
@@ -107,7 +106,7 @@ OrderStatusExtensions.Values;                       // all members, cached IRead
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are formatted as comma separated wire names of single flags.
 - `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member). They never map an unknown value to the fallback member: `ParseWire("gone")` throws, while `ParseWire("unknown")` returns `Unknown` because that is the member's own wire name.
-- `ToDescription()` is a new generated member. It returns the member's `[Description]` text, and `null` (not the member name) for a member without one, an undefined value or a `[Flags]` combination. Because it lives in the enum's namespace, it takes precedence over a generic `ToDescription(this Enum)` helper at call sites there, and a `ToDescription(this YourEnum)` extension in the same namespace becomes an ambiguous call (CS0121). Rename or remove your own extension when you upgrade.
+- `ToDescription()` returns the member's `[Description]` text, and `null` (not the member name) for a member without one, an undefined value or a `[Flags]` combination. Because it lives in the enum's namespace, it takes precedence over a generic `ToDescription(this Enum)` helper at call sites there, and a `ToDescription(this YourEnum)` extension in the same namespace becomes an ambiguous call (CS0121). Rename or remove your own extension when you upgrade.
 - `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values, except for member names with letters without case or combining marks (see [Upgrading to 8.0](#upgrading-to-80)).
 - `ToSnakeCase()`, `TryParse` and `Parse` are obsolete; use `ToWireName()`, `TryParseWire` and `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`), while `ToWireName()` returns `http_status`. That old spelling is read as an extra alias, so stored values still load.
 
@@ -179,7 +178,7 @@ Use flags for a fixed, small set of independent on/off capabilities (permissions
 
 A wire name is a contract: it is in JSON payloads, URLs, OpenAPI clients and database rows. Changing it (renaming a member, changing `Naming` or `[JsonStringEnumMemberName]`) also changes the check constraint, so `dotnet ef migrations add` emits `DropCheckConstraint` + `AddCheckConstraint` and nothing else. Rows that still hold the old name make `AddCheckConstraint` fail.
 
-**Option 1: rename the C# member only (recommended for public APIs).** Pin the old wire name, which has the highest priority:
+Option 1, for public APIs: rename the C# member only. Pin the old wire name, which has the highest priority:
 
 ```csharp
 [JsonStringEnumMemberName("shipped")] Dispatched, // was Shipped; the wire name stays "shipped"
@@ -187,7 +186,7 @@ A wire name is a contract: it is in JSON payloads, URLs, OpenAPI clients and dat
 
 Nothing changes on the wire or in the database, and the next migration is empty.
 
-**Option 2: change the wire name.** Keep the old spelling readable and rewrite the stored data:
+Option 2: change the wire name. Keep the old spelling readable and rewrite the stored data:
 
 ```csharp
 [EnumAlias("shipped")] Dispatched, // writes "dispatched", still reads "shipped"
@@ -258,4 +257,4 @@ See [Migrating from 4.x to 5.0](../docs/migration/v4-to-v5.md#naming-and-generat
 
 ## Upgrading to 8.0
 
-- The legacy spelling (`{Member}SnakeCase`, `{Member}KebabCase`, the obsolete `ToSnakeCase()` and `ToKebabCase()`, and the legacy alias read by `TryParseWire`) follows the 8.0 Core `ToSnakeCase` rule and keeps letters without case, titlecase letters and combining marks. A member named `用户Name` was `name` and is now `用户_name`. Members named only with Latin letters and digits keep their values. If you stored the old spelling of such a member, rewrite the stored values with the new spelling.
+- The legacy spelling (`{Member}SnakeCase`, `{Member}KebabCase`, `ToKebabCase()`, the obsolete `ToSnakeCase()` and the legacy alias read by `TryParseWire`) follows the 8.0 Core `ToSnakeCase` rule and keeps letters without case, titlecase letters and combining marks. A member named `用户Name` was `name` and is now `用户_name`. Members named only with Latin letters and digits keep their values. If you stored the old spelling of such a member, rewrite the stored values with the new spelling.

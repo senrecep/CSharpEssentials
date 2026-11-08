@@ -5,15 +5,11 @@ description: Use when you need testable time. Inject IDateTimeProvider (DateTime
 
 # CSharpEssentials.Time
 
-Testable time abstraction built on .NET's `TimeProvider`. Never call `DateTime.UtcNow` directly in domain or service code.
-
-## Installation
+Testable time abstraction built on .NET's `TimeProvider`. Inject `IDateTimeProvider` instead of calling `DateTime.UtcNow` in domain or service code.
 
 ```bash
 dotnet add package CSharpEssentials.Time
 ```
-
-## Namespace
 
 ```csharp
 using CSharpEssentials.Time;
@@ -32,7 +28,7 @@ public interface IDateTimeProvider
     DateTime       UtcNowDateTime { get; }   // Kind == Utc
     DateTimeOffset UtcNow         { get; }
 
-    // NET6+ only:
+    // not in the netstandard2.1 build:
     DateOnly UtcNowDate { get; }
     TimeOnly UtcNowTime { get; }
 }
@@ -51,7 +47,7 @@ builder.Services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
 ---
 
-## Use in Services
+## Use in services
 
 ```csharp
 public class OrderService(IDateTimeProvider time)
@@ -69,7 +65,7 @@ public class OrderService(IDateTimeProvider time)
 
 ## Test with FakeDateTimeProvider
 
-`CSharpEssentials.Time` ships a `FakeDateTimeProvider`, so no extra NuGet package is needed. Its time zone is UTC.
+`FakeDateTimeProvider` ships in this package. Its time zone is UTC, and it is thread-safe.
 
 ```csharp
 var start = new DateTimeOffset(2025, 1, 15, 10, 0, 0, TimeSpan.Zero);
@@ -90,18 +86,18 @@ TimeOnly time = fake.UtcNowTime;
 
 ---
 
-## Date Extensions
+## Date extensions
 
 ```csharp
 DateTime dt = DateTime.UtcNow;
-DateOnly date = dt.ToDateOnly();   // NET6+
-TimeOnly time = dt.ToTimeOnly();   // NET6+
+DateOnly date = dt.ToDateOnly();
+TimeOnly time = dt.ToTimeOnly();
 
 // Next/previous weekday; the current day counts only with includeCurrent: true
 DateTime nextMonday = dt.NextDayOfWeek(DayOfWeek.Monday);
 DateOnly lastFriday = date.PreviousDayOfWeek(DayOfWeek.Friday, includeCurrent: true);
 
-// Age in whole years (DateOnly, NET6+)
+// Age in whole years
 var birthDate = new DateOnly(1990, 5, 20);
 int age      = birthDate.GetAge(new DateOnly(2025, 5, 19));   // 34
 int ageToday = birthDate.GetAge(dateTimeProvider);            // "today" in the IDateTimeProvider's time zone
@@ -111,10 +107,8 @@ int ageToday = birthDate.GetAge(dateTimeProvider);            // "today" in the 
 
 ---
 
-## Best Practices
+## Guidance
 
-- Inject `IDateTimeProvider`; never call `DateTime.UtcNow` directly in domain/service code
-- Register `TimeProvider.System` and `DateTimeProvider` as singletons
-- `DateOnly` / `TimeOnly` members are `NET6_0_OR_GREATER` only, not available on `netstandard2.1`
-- `FakeDateTimeProvider.Advance()` simulates elapsed time without `Thread.Sleep` in tests
-- Use `GetAge(IDateTimeProvider)` instead of `DateTime.Today` so age checks are testable
+- Register `TimeProvider.System` and `DateTimeProvider` as singletons.
+- The `DateOnly`/`TimeOnly` members (`UtcNowDate`, `UtcNowTime`, `ToDateOnly`, `ToTimeOnly`, the `DateOnly` weekday overloads, `GetAge`) are not in the `netstandard2.1` build.
+- Use `GetAge(IDateTimeProvider)` instead of `DateTime.Today` so age checks are testable.

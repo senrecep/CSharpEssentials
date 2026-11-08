@@ -1,6 +1,6 @@
 # CSharpEssentials.Endpoints
 
-Source-generated endpoint organization for ASP.NET Core Minimal APIs. A thin layer over Minimal APIs: route calls stay in your code, so binding, filters, `IResult`, OpenAPI and the Request Delegate Generator work unchanged.
+Source-generated endpoint organization for ASP.NET Core Minimal APIs. Route calls stay in your code, so binding, filters, `IResult`, OpenAPI and the Request Delegate Generator work unchanged.
 
 ## Installation
 
@@ -10,17 +10,16 @@ dotnet add package CSharpEssentials.Endpoints
 
 Target frameworks: `net11.0`, `net10.0`, `net9.0`, `net8.0`. The source generator, analyzer and code fix are bundled in the package.
 
-> Benchmarks: cold and warm startup (10/100/500 endpoints), request throughput and Native AOT against plain Minimal APIs,
-> Carter and FastEndpoints are documented in [BENCHMARKS.md](./BENCHMARKS.md).
-> On net10, cold startup is within error of plain Minimal APIs and Carter. Per-request time is within
-> 10% of both on GET, DELETE and valid POST (Carter is 4% faster on a valid POST). On an invalid POST, plain Minimal
-> APIs takes 10% less time than CSE with the same validation engine, and Carter takes 1.37× as long. Against
-> FastEndpoints, cold startup takes 22% less time at 10 endpoints but 1.65× as long at 500 endpoints; FastEndpoints
-> takes 1.23-2.10× as long per request. The POST rows compare a DataAnnotations stack (Plain, CSE) with FluentValidation stacks (Carter
-> and FastEndpoints). FastEndpoints defers per-endpoint setup to the first request, so only the cold startup figures
-> are like-for-like. The generated path publishes as Native AOT with 0 IL warnings.
-> Design-time cost of the bundled source generator (cold and incremental runs against Immediate.Apis) is described in
-> [the generator BENCHMARKS.md](../CSharpEssentials.Endpoints.Generators/BENCHMARKS.md). Results are pending the full run.
+> Benchmarks against plain Minimal APIs, Carter and FastEndpoints are in [BENCHMARKS.md](./BENCHMARKS.md). On net10,
+> cold startup ties Carter at 10, 100 and 500 endpoints and ties plain Minimal APIs at 10; at 100 and 500 it takes
+> 1.05× and 1.07× the plain time. Against FastEndpoints, cold startup takes 23% less time at 10 endpoints and 1.62× as
+> long at 500. Per request, CSE ties plain Minimal APIs on every route. Carter ties CSE on GET and DELETE, takes 10%
+> less time on a valid POST and 1.32× as long on an invalid POST. FastEndpoints takes 1.26× (GET), 1.27× (DELETE),
+> 1.24× (valid POST) and 2.06× (invalid POST) the CSE time. The POST rows compare a DataAnnotations stack (Plain, CSE)
+> with FluentValidation stacks (Carter, FastEndpoints). FastEndpoints defers per-endpoint setup to the first request,
+> so only the cold startup figures are like-for-like. The generated path publishes as Native AOT with 0 IL warnings.
+> Design-time cost of the bundled generator against Immediate.Apis is in
+> [the generator BENCHMARKS.md](../CSharpEssentials.Endpoints.Generators/BENCHMARKS.md).
 
 ## Endpoints and groups
 
@@ -43,7 +42,7 @@ public sealed class CreateApp : IEndpoint
 ```
 
 - `IEndpoint.Map` is static. Endpoint types are never instantiated; dependencies come from handler parameters.
-- The generator maps a non-partial type only when it declares `static Map` itself. A non-partial class that inherits `Map` from an endpoint base class, abstract or not, is not mapped (CSE1012), so make it `partial` or declare `Map` on it. Partial types are checked either way.
+- The generator maps a non-partial type only when it declares `static Map` itself; a class that only inherits `Map` is not mapped (CSE1012, see [Upgrading to 8.0](#upgrading-to-80)). Partial types are checked either way.
 - `IEndpointGroup.Prefix` is passed to `MapGroup`. `Configure` applies group-wide conventions.
 - `[EndpointGroup(typeof(TGroup))]` or `[EndpointGroup<TGroup>]` places an endpoint or a group under a group. Groups can nest.
 - `[ExcludeFromMapping]` excludes an endpoint, a group (with everything under it) or an assembly.
@@ -176,13 +175,13 @@ The bundled analyzer reports types the generator cannot map and explicit endpoin
 | CSE1009 | Warning | Two referenced assemblies produce the same registry name, for example `Foo.Api` and `FooApi` both produce `FooApiEndpointRegistry`. `MapAllEndpoints` skips both registries so the project still compiles. The project's own registry counts too: when it has the same name as a referenced one, only the own registry is mapped. Give one of them a distinct name with `[assembly: EndpointRegistryName("...")]`. Reported only in projects that generate the aggregate. |
 | CSE1010 | Warning | The same constant endpoint name is set at two call sites with `WithName(...)` or with `EndpointNameAttribute`, `EndpointNameMetadata` or `RouteNameMetadata` in `WithMetadata(...)`. Duplicate names produce duplicate operationIds and make link generation by name ambiguous. Endpoint names and route names are compared separately, so `WithMetadata(new EndpointNameMetadata("X"))` and `WithMetadata(new RouteNameMetadata("X"))` on one endpoint are not reported. Reported on each call site. |
 | CSE1011 | Info | An explicit endpoint name outside an `IEndpoint` or `IEndpointGroup` type is not a compile-time constant, so the generated registry cannot reserve it and `OperationNaming.TypeName` can generate the same name. Use a constant. Names set inside endpoint and group types are seen at runtime and are not reported. |
-| CSE1012 | Warning | A non-partial endpoint class inherits `Map` from a base class and does not declare it, so the generator leaves it out of the registry and `MapAllEndpoints` does not map it. Make the class `partial`, or declare `public static new void Map(IEndpointRouteBuilder app) => Base.Map(app);` on it. |
+| CSE1012 | Warning | A non-partial endpoint class inherits `Map` from a base class and does not declare it, so the generator leaves it out of the registry. Make the class `partial`, or declare `Map` on it (see [Upgrading to 8.0](#upgrading-to-80)). |
 
 The bundled code fix for CSE1004 ("Remove instance state from '{Type}'") deletes the instance fields, auto-properties and parameterized constructors of the endpoint. It is offered only when nothing else in the solution uses them, and not for records.
 
 ## Migrating from Carter
 
-Carter modules are instances created at startup; this package maps static methods from a generated registry, so no module is constructed and no reflection runs.
+Carter modules are instances created at startup; this package maps static methods from a generated registry, so no module is constructed and no assembly is scanned.
 
 | Carter | CSharpEssentials.Endpoints |
 |---|---|

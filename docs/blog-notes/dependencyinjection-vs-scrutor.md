@@ -1,13 +1,13 @@
 # Blog notes: CSharpEssentials.DependencyInjection vs Scrutor vs manual registration
 
-Raw material for a post. These notes are not the post. Every number comes from `CSharpEssentials.DependencyInjection/BENCHMARKS.md`, which reads `benchmarks/results/di/{tfm}/results/*.csv` and `benchmarks/results/di/aot/aot-report.md`. The machine was a 6-core, 12-thread x64 desktop CPU running a desktop session. Full BenchmarkDotNet runs (default job for the warm classes, a 15-launch ColdStart job for the cold class) on net8.0, net9.0, net10.0 and net11.0, in that order. The cold, warm registration, resolve and TryAdd classes were rerun after pull requests #230-#256 (SDK 11.0.100-rc.3, primary runtime .NET 10.0.14, no load reading recorded). The decoration and transient decorator classes come from the first run (SDK 11.0.100-rc.1, .NET 10.0.11, 1-minute load average 1.55 at the start of the suite and 1.90 at the end). No row had a coefficient of variation above 5%. BenchmarkDotNet 0.14.0. Competitor: Scrutor 7.0.0. Microsoft.Extensions.DependencyInjection 10.0.0. Reports: `benchmarks/results/di/{tfm}/results/*-report-github.md`. The AOT result is from a separate script run on 2026-11-02.
+Raw material for a post, not the post itself. Every number comes from `CSharpEssentials.DependencyInjection/BENCHMARKS.md`, which reads `benchmarks/results/di/{tfm}/results/*.csv` and `benchmarks/results/di/aot/aot-report.md`. The machine was a 6-core, 12-thread x64 desktop CPU on Linux with a desktop session running. Full BenchmarkDotNet runs (default job for the warm classes, a 15-launch ColdStart job for the cold class) on net8.0, net9.0, net10.0 and net11.0, in that order. The cold, warm registration, resolve and TryAdd classes were rerun after pull requests #230-#256 (SDK 11.0.100-rc.3, primary runtime .NET 10.0.14, no load reading recorded). The decoration and transient decorator classes come from the first run (SDK 11.0.100-rc.1, .NET 10.0.11, 1-minute load average 1.55 at the start of the suite and 1.90 at the end). No row had a coefficient of variation above 5%. BenchmarkDotNet 0.14.0. Competitor: Scrutor 7.0.0. Microsoft.Extensions.DependencyInjection 10.0.0. Reports: `benchmarks/results/di/{tfm}/results/*-report-github.md`. The AOT result is from a separate script run on 2026-11-06 (1-minute load average 2.85).
 
 ## The problem
 
 - A growing app ends up with hundreds of `services.AddScoped<IFoo, Foo>()` lines, and a forgotten line fails only at runtime.
 - The usual fix is assembly scanning at startup. It costs reflection at every process start. In the AOT sample here (no `TrimmerRootAssembly`), Scrutor's scan found no classes after trimming and the app crashed; whether rooting the input assembly fixes that was not tested.
 - Decoration (wrapping a registered service) has no framework API, so it is either a hand-written factory or a library.
-- The question to answer: can registration and decoration be declared on the class, without paying for a scan at startup, per resolve, or under Native AOT?
+- The question: can registration and decoration be declared on the class, without paying for a scan at startup, per resolve, or under Native AOT?
 
 ## What the framework already provides
 
@@ -38,7 +38,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 5. Plain resolve, net10: Manual 137.9 ns, CseGenerated 137.8 ns (1.00), Scrutor 136.4 ns (0.99), 360 B each. All three tie on every TFM. Decorated resolve: Manual factory 111.0 ns, CseGenerated 129.7 ns (1.17), CseRuntime 138.1 ns (1.24), Scrutor 391.7 ns (3.53); CSE 360 B, Scrutor 392 B. CseGenerated is faster than CseRuntime on every TFM.
 6. Transient decorator resolve (root provider, no scope), net10: Manual 24.73 ns, CseGenerated 38.39 ns (1.55), CseRuntime 55.34 ns (2.24), Scrutor 163.95 ns (6.63). CSE 48 B like Manual, Scrutor 80 B.
 7. TryAdd registration, net10, ManualTryAdd / CseGenerated / Scrutor / CseReflection: N=50 2,485.4 / 2,957.6 / 50,982.9 / 156,846.6 ns; N=2000 3,197,772.4 / 3,927,624.1 / 6,661,029.8 / 12,177,000.5 ns. Plain `AddScoped` takes 618.2 ns and 27,978.0 ns, so the TryAdd scan is quadratic for everyone. CseGenerated is 1.028-1.30× ManualTryAdd across TFMs, and ties it on net9 at N=50 and N=500.
-8. Native AOT (net10, linux-x64, separate 2026-11-06 run). Manual and CseGenerated: 0 IL warnings, 2.2 MB, run and resolve all 50 services. Scrutor: 12 IL warnings, crashes with "Could not find any registered services for type 'IService0'". CseReflection: 4 IL warnings, crashes with "must have exactly one public constructor, but has 0" (documented as not AOT-safe). No sample roots the input assemblies.
+8. Native AOT (net10, linux-x64). Manual and CseGenerated: 0 IL warnings, 2.2 MB, run and resolve all 50 services. Scrutor: 12 IL warnings, crashes with "Could not find any registered services for type 'IService0'". CseReflection: 4 IL warnings, crashes with "must have exactly one public constructor, but has 0" (documented as not AOT-safe). No sample roots the input assemblies.
 
 ## Where CSE loses (lead with these)
 
@@ -51,10 +51,11 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 - Registration on the generated path does no runtime reflection.
 - Decoration reads constructor metadata. Generated `[Decorates]` code calls `ServiceRegistration.Decorate(services, DecoratorRegistration[])`, which applies all decorators in one pass over the collection (`ServiceDecoration.DecorateAll`). `EnsureDecoratable` (`Internal/ServiceDecoration.cs:196-215`) reads the implementation's constructors to reject `[ServiceKey]` injection, caches the answer per type for the process, and skips types the generator already checked at compile time.
-- It is metadata reflection only: no dynamic code, 0 AOT warnings, and the AOT sample runs. The Readme now describes this read.
+- It is metadata reflection only: no dynamic code, 0 AOT warnings, and the AOT sample runs. The Readme describes this read.
+- The hidden inner of a scoped decorated service is registered as transient (pull request #252), so the scope does not cache the inner a second time.
 - Runtime `Decorate<TService, TDecorator>` reads the constructor once and calls it through a `ConstructorInvoker` on net8 and later, with no argument array for up to four parameters.
 
-## Honest caveats to keep in the post
+## Caveats to keep in the post
 
 - Warm registration favours the reflection rows (types loaded, caches filled, scanning code JIT-compiled). Quote the cold table for startup.
 - The manual decoration baseline builds the inner service with `new`; CSE and Scrutor resolve it from a hidden keyed registration. Part of the decorated-resolve and transient-resolve gap is that extra resolve.

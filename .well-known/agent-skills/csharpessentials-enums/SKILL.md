@@ -5,7 +5,7 @@ description: Use when an enum must have one string spelling across JSON, ASP.NET
 
 # CSharpEssentials.Enums
 
-One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]`; a bundled source generator writes its metadata and helpers at compile time: no reflection, trim and NativeAOT safe.
+One spelling per enum member across JSON, ASP.NET Core binding, OpenAPI, EF Core and outgoing HTTP. Mark an enum with `[StringEnum]`; a bundled source generator writes its metadata and helpers at compile time. The generated code uses no reflection and is trim and NativeAOT safe.
 
 ## Installation
 
@@ -20,7 +20,7 @@ The package contains the source generator, the analyzers and the code fixes. Any
 | Enums only (generated helpers, `EnumMetadata`) | `CSharpEssentials.Enums` |
 | System.Text.Json | `CSharpEssentials.Json` |
 | ASP.NET Core API (JSON, binding, responses) | `CSharpEssentials.AspNetCore` |
-| OpenAPI document | add `CSharpEssentials.AspNetCore.OpenApi` (net10.0) **or** `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
+| OpenAPI document | add `CSharpEssentials.AspNetCore.OpenApi` (net10.0) or `CSharpEssentials.AspNetCore.Swashbuckle`, never both |
 | EF Core storage and migrations | `CSharpEssentials.EntityFrameworkCore` |
 | Outgoing HTTP | `CSharpEssentials.Http` |
 
@@ -34,7 +34,7 @@ using CSharpEssentials.Enums;
 
 ---
 
-## Declare an Enum
+## Declare an enum
 
 ```csharp
 using System.ComponentModel;
@@ -57,7 +57,7 @@ public enum OrderStatus
 - `[EnumFallback]` marks the member that data reads (database rows, other services' responses, messages) map unknown values to. Request input never uses it: an unknown request value is a 400.
 - `[Description]` texts appear in the OpenAPI value table.
 
-### Wire Names
+### Wire names
 
 Resolved in this order: `[JsonStringEnumMemberName]` on the member, `[EnumMember(Value = "...")]` on the member, `[StringEnum(Naming = ...)]` on the enum, the `CSharpEssentialsEnumNaming` MSBuild property, `SnakeCaseLower`.
 
@@ -71,7 +71,7 @@ Resolved in this order: `[JsonStringEnumMemberName]` on the member, `[EnumMember
 
 ---
 
-## Generated Helpers
+## Generated helpers
 
 For `OrderStatus` the generator writes `OrderStatusExtensions`:
 
@@ -81,6 +81,7 @@ OrderStatus status = OrderStatus.PendingApproval;
 status.ToWireName();                                // "pending_approval"
 OrderStatusExtensions.PendingApprovalWireName;      // const "pending_approval"
 status.IsDefined();                                 // true (flags: a combination of defined flags)
+status.ToDescription();                             // the [Description] text, or null
 
 OrderStatusExtensions.TryParseWire("Approval", out OrderStatus parsed); // true, PendingApproval
 OrderStatusExtensions.ParseWire("pending_approval");                     // PendingApproval
@@ -92,18 +93,21 @@ status.ToLowerCase();                               // "pendingapproval"
 status.ToUpperCase();                               // "PENDINGAPPROVAL"
 status.AsUnderlyingType();                          // 1
 OrderStatusExtensions.IsDefined("PendingApproval"); // true (member names)
-OrderStatusExtensions.GetNames();                   // member names
-OrderStatusExtensions.GetValues();                  // all members
+OrderStatusExtensions.GetNames();                   // member names (a new array per call)
+OrderStatusExtensions.GetValues();                  // all members (a new array per call)
+OrderStatusExtensions.Names;                        // cached IReadOnlyList<string>
+OrderStatusExtensions.Values;                       // cached IReadOnlyList<OrderStatus>
 ```
 
 - `ToWireName()` throws `EnumValueException` for an undefined value. `[Flags]` values are written as comma separated wire names of single flags.
 - `TryParseWire`/`ParseWire` accept every known spelling (wire name, member name in any casing, alias, the number of a defined member). They never map an unknown value to the fallback member.
 - `ToSnakeCase()`, `TryParse` and `Parse` are `[Obsolete]`: use `ToWireName()`, `TryParseWire` and `ParseWire`. `ToSnakeCase()` keeps its 4.x output (`HTTPStatus` → `httpstatus`); `ToWireName()` returns `http_status`.
-- The `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values.
+- `ToDescription()` returns null for a member without `[Description]`, an undefined value or a flags combination. A `ToDescription(this YourEnum)` extension in the enum's namespace becomes an ambiguous call (CS0121).
+- The `{Member}SnakeCase` and `{Member}KebabCase` constants keep their 4.x values, except for member names with letters without case or combining marks: since 8.0 the legacy spelling keeps them (`用户Name` was `name`, now `用户_name`).
 
 ---
 
-## Conventions and Runtime API
+## Conventions and runtime API
 
 One `EnumConventions` record drives every layer; `EnumConventions.Default` accepts numbers, member names and any casing on input, maps unknown data to the `[EnumFallback]` member (`UnknownValue = UseFallback`), writes strings (`WriteAs = String`), stores strings in EF Core (`Storage = String`, flags `Integer`) and adds check constraints. Derive variants with `with`:
 
@@ -142,7 +146,7 @@ Flags are JSON arrays (`["read","write"]`), repeated or comma separated query va
 
 ---
 
-## Renaming a Member Safely
+## Renaming a member safely
 
 A wire name is a contract (JSON, URLs, clients, database rows); changing it also changes the EF Core check constraint.
 
@@ -182,7 +186,7 @@ CSE0011 is not used. When CSE0002, CSE0003, CSE0004, CSE0008 or CSE0009 applies,
 
 ---
 
-## AOT and Trimming
+## AOT and trimming
 
 - The `[StringEnum]` path uses no reflection. `CSharpEssentials.Enums` and `CSharpEssentials.Json` set `IsAotCompatible` on net8.0 and later.
 - The reflection opt-ins carry `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`: `EnumMetadata.GetOrCreateWithReflection`, `AddEnumConventionsWithReflection` (JSON and ASP.NET Core), `EnumConverterFactory.CreateWithReflectionFallback` and `ConfigureEnumConventionsWithReflection` (EF Core).
@@ -196,7 +200,7 @@ CSE0011 is not used. When CSE0002, CSE0003, CSE0004, CSE0008 or CSE0009 applies,
 
 ---
 
-## Best Practices
+## Best practices
 
 - Apply `[StringEnum]` to every enum that crosses a boundary (API, database, messages).
 - Pin a wire name with `[JsonStringEnumMemberName]` before renaming a member of a public enum.

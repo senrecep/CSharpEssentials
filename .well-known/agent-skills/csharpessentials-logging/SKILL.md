@@ -36,15 +36,16 @@ app.AddRequestResponseLogging(opt =>
 ```
 
 - Without `UseLogger` or `UseHandler`, the middleware runs but writes nothing.
-- `IgnorePaths` matches by prefix, case-insensitive. A later call replaces the earlier list.
-- A request with a `Content-Length` over 10 MB is not read; `Request body too large: {n} bytes` is logged instead. An empty body is logged as `Empty request body`.
-- The response body is buffered in memory until the request completes, so use `[SkipResponseLogging]` on streaming or very large responses.
-- If the pipeline throws, the middleware logs `Error occurred during request processing` with the exception type and message, then rethrows.
+- `IgnorePaths` matches by prefix, ignoring case and a trailing `/` (`"/health"` also skips `/healthz`). `"/"` skips only the root path. A later call replaces the earlier list.
+- Without a handler, the request body is read only when `LoggingFields` has `Request` or `RequestLength`, the response body only when it has `Response` or `ResponseLength`. With a handler both are captured.
+- A request with a `Content-Length` over 10 MB is not read (`Request body too large: {n} bytes`); a chunked body is read up to 10 MB, then logged as `Request body too large: over 10485760 bytes`. An empty body is logged as `Empty request body`.
+- Each response write goes to the client right away and is also copied into memory, so streaming still works, but the whole response body is held in memory until the request finishes. Use `[SkipResponseLogging]` on very large responses. Set status and headers before the first write.
+- If the pipeline throws, the middleware logs the captured request body with `Exception: {type}, Message: {message}` as the response body, passes the same context to the `UseHandler` handler, then rethrows.
 - `UseHandler` runs in addition to `UseLogger` when both are set.
 
 ---
 
-## Choosing Fields
+## Choosing fields
 
 ```csharp
 app.AddRequestResponseLogging(opt =>
@@ -66,7 +67,7 @@ app.AddRequestResponseLogging(opt =>
 
 ---
 
-## Custom Handler
+## Custom handler
 
 ```csharp
 app.AddRequestResponseLogging(opt => opt.UseHandler(context =>
@@ -76,11 +77,11 @@ app.AddRequestResponseLogging(opt => opt.UseHandler(context =>
 }));
 ```
 
-`RequestResponseContext` exposes `RequestBody`, `ResponseBody`, `ResponseCreationTime`, `ResponseTime`, `RequestLength`, `ResponseLength` and `Url`.
+`RequestResponseContext` exposes `RequestBody`, `ResponseBody`, `ResponseCreationTime` (`TimeSpan?`), `ResponseTime` (`mm:ss.fff` text), `RequestLength`, `ResponseLength` and `Url`. The handler runs after the rest of the pipeline has completed or thrown.
 
 ---
 
-## Per-Endpoint Opt-Out
+## Per-endpoint opt-out
 
 The middleware reads the attributes from endpoint metadata:
 
@@ -106,7 +107,7 @@ app.MapGet("/export", () => Results.Ok()).WithMetadata(new SkipResponseLoggingAt
 
 ---
 
-## Best Practices
+## Best practices
 
 - Skip request bodies on endpoints that receive passwords, tokens or other PII.
 - Add health check and metrics paths to `IgnorePaths`; they are high-frequency and low-value.

@@ -2,9 +2,9 @@
 
 Swashbuckle (Swagger) integration for `CSharpEssentials.AspNetCore`: versioned Swagger setup, schema ids and security schemes.
 
-> One host, one OpenAPI package: reference either `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle) or `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`), never both. Both use `Microsoft.OpenApi` 2.x.
+A host references either this package or `CSharpEssentials.AspNetCore.OpenApi`, never both. Both use `Microsoft.OpenApi` 2.x.
 
-> **Benchmarks:** document generation for 50 Minimal API endpoints and 30 enums, plain `AddSwaggerGen` against the CSE enum, idempotency and optional route conventions and the full `AddSwagger` setup, warm and first document, is described in [BENCHMARKS.md](./BENCHMARKS.md). Results are pending the full run.
+Document generation benchmarks (50 Minimal API endpoints, 30 enums, plain `AddSwaggerGen` against the CSE conventions and the full `AddSwagger` setup) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
@@ -14,7 +14,7 @@ dotnet add package CSharpEssentials.AspNetCore.Swashbuckle
 
 Targets net8.0, net9.0, net10.0 and net11.0 with `Swashbuckle.AspNetCore` 10.2.3 or later (below 11) and `Microsoft.OpenApi` 2.x (2.7.5 or later) on every target. Filters and `MapType` factories you add next to these use the Microsoft.OpenApi 2.x model (`using Microsoft.OpenApi;`, `IOpenApiSchema`, `JsonSchemaType`, `JsonNode`).
 
-This package is not Native AOT compatible, because Swashbuckle.AspNetCore.SwaggerGen builds its documents with reflection. Swashbuckle's own [v10 migration guide](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md) points apps that need native AoT support to Microsoft.AspNetCore.OpenApi, so use `CSharpEssentials.AspNetCore.OpenApi` in Native AOT apps.
+This package is not Native AOT compatible, because Swashbuckle.AspNetCore.SwaggerGen builds its documents with reflection. Native AOT apps use `CSharpEssentials.AspNetCore.OpenApi`, as Swashbuckle's [v10 migration guide](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md) also advises.
 
 ## Swagger with versioning
 
@@ -59,8 +59,7 @@ OpenAPI requires every path parameter to be `required: true`, so a route with an
 | `/api/archive/{year}/{month}` | `GetArchive` |
 
 - Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue`, a `null` type or default, or a `{"type": "null"}` member in `oneOf` or `anyOf`.
-- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required.
-- A route with more than three trailing optional parameters is logged as a warning (once per document, path and method) through the host's `ILoggerFactory`, so the missing shorter forms do not go unnoticed. Without an `ILoggerFactory` nothing is logged.
+- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required. More than three trailing optional parameters also log a warning (once per document, path and method) through the host's `ILoggerFactory`, if one is registered.
 - A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
 - The full form keeps the operationId; a shorter form gets `{operationId}Without{Param}` (`And` between parameters), or none when the full form has none. A generated operationId that another operation already uses throws `InvalidOperationException` when the document is generated; rename one of them or pass a selector.
 - Controller and Minimal API routes are handled the same way.
@@ -117,6 +116,12 @@ A document whose operations all write numbers describes the enums as `integer`; 
 
 The schemas match those of `CSharpEssentials.AspNetCore.OpenApi` (both are compared with the same golden files). Microsoft.AspNetCore.OpenApi uses short schema ids, so the `$ref` values match only with `QualifyWithNamespace = false`.
 
+## Upgrading
+
+### To 8.0
+
+`SwashbuckleSchemaIdFactory.QualifyWithNamespace` is `true` by default, and `AddSwagger` uses that default. Schema ids are namespace-qualified (`MyApp.Contracts.Order` instead of `Order`), so every `$ref` and every client type name generated from the document changes. Regenerate your clients, or keep the 7.x ids as shown in [Swagger with versioning](#swagger-with-versioning).
+
 ### From 5.x
 
 5.x pinned `Swashbuckle.AspNetCore` 8.x/9.x and `Microsoft.OpenApi` 1.x. 6.0 needs `Swashbuckle.AspNetCore` 10 and `Microsoft.OpenApi` 2.x on every target:
@@ -134,7 +139,3 @@ See [docs/migration/v5-to-v6.md](../docs/migration/v5-to-v6.md) for the full lis
 ### From 4.x
 
 The Swagger code moved here from `CSharpEssentials.AspNetCore`; namespaces and the `AddSwagger` API are unchanged. `EnumSchemaFilter` now takes an `IServiceProvider` (Swashbuckle creates it); register it with `AddEnumConventions()` instead of `SchemaFilter<EnumSchemaFilter>()`.
-
-## Upgrading to 8.0
-
-- `SwashbuckleSchemaIdFactory.QualifyWithNamespace` is `true` by default, and `AddSwagger` uses that default. Schema ids are namespace-qualified (`MyApp.Contracts.Order` instead of `Order`), so they no longer depend on the order in which types are first seen. Every `$ref` and every client type name generated from the document changes. Regenerate your clients, or keep the 7.x ids with `options.CustomSchemaIds(new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false }.GetSchemaId)` after `AddSwagger`.

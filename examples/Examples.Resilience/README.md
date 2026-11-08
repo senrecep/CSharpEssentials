@@ -1,6 +1,6 @@
 # Examples.Resilience
 
-Shows the `CSharpEssentials.Resilience` package, which builds modular resilience policies for transient fault handling.
+Console demo of `CSharpEssentials.Resilience`.
 
 ## Run
 
@@ -10,14 +10,14 @@ dotnet run
 
 ## What's covered
 
-- Empty pipeline: `ResiliencePolicy.Create()`
-- Retry: a retry policy, and exponential and constant backoff policies
-- Timeout: cancelling long-running operations
-- Circuit breaker: opening after a failure threshold
-- Combined policies: chaining retry + timeout + circuit breaker
-- Generic `ResiliencePolicy<T>`: typed result pipelines
-- Fallback: providing default values on failure
-- Options record: building from `ResiliencePolicyOptions`
-- Func extensions: inline `Func<Task<T>>.ExecuteAsync()`
-- `RetryIfFailed`: extension on `Func<CT, Task<Result<T>>>`
-- Error type handling: `Validation` and `NotFound` failures are returned without retrying, while a `Conflict` failure is retried by `RetryIfFailed`
+- Empty policy: `ResiliencePolicy.Create()`
+- Retry with exponential and constant backoff
+- Timeout
+- Circuit breaker
+- Retry, timeout and circuit breaker combined
+- Generic `ResiliencePolicy<T>`
+- Fallback values
+- `Create(ResiliencePolicyOptions)`
+- `ExecuteAsync` on a `Func<Task<T>>`
+- `RetryIfFailed` on a `Func<CancellationToken, Task<Result<T>>>`
+- Error types: `Validation` and `NotFound` failures are returned without retrying; a `Conflict` failure is retried by `RetryIfFailed`

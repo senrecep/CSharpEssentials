@@ -6,13 +6,11 @@ CSharpEssentials.Mediator (CSE) is not a dispatcher. It ships no `IMediator`, no
 
 MediatR is pinned to 12.5.0, the last release under Apache-2.0. The latest stable release, 14.2.0, is dual-licensed (RPL-1.5 or a separate commercial license) and expects a license key ([v14.2.0 LICENSE.md](https://github.com/jbogard/MediatR/blob/v14.2.0/LICENSE.md), [license key setup](https://github.com/jbogard/MediatR/blob/v14.2.0/README.md)). It was not used for that reason.
 
-The same suite has seven more classes for the other CSE behaviors: validator fan-out, validation scope, idempotency, lock, lock contention, caching and logging. Their results are in [7. Validator fan-out, idempotency, lock, caching and logging behaviors](#7-validator-fan-out-idempotency-lock-caching-and-logging-behaviors).
-
 ---
 
 ## What was measured
 
-Twelve BenchmarkDotNet classes in `benchmarks/CSharpEssentials.Mediator.Benchmarks/` plus a Native AOT script. The first five are described here; the other seven are described in section 7. Every class uses `[MemoryDiagnoser]`. Each class runs a self-check (`MediatorSelfCheck`) in its setup. It fails unless MediatR is 12.5.0 and Mediator.Abstractions is 3.0.2 at run time, and unless every column returns the same result and runs the behaviors and handlers it claims to run: `Ping(41)` returns 42 after exactly 0 or 2 behavior calls, a publish reaches exactly 1 or 5 handlers, both startups register exactly 50 request handlers, and in Part B every column returns success 6 for the valid order, exactly `Name.NotEmpty,Quantity.InclusiveBetween` for the invalid one, and one `InvalidOperationException` error for an order whose handler throws.
+Twelve BenchmarkDotNet classes in `benchmarks/CSharpEssentials.Mediator.Benchmarks/` plus a Native AOT script. The first five are described here; the other seven (validator fan-out, validation scope, idempotency, lock, lock contention, caching, logging) in [section 7](#7-validator-fan-out-idempotency-lock-caching-and-logging-behaviors). Every class uses `[MemoryDiagnoser]`. Each class runs a self-check (`MediatorSelfCheck`) in its setup. It fails unless MediatR is 12.5.0 and Mediator.Abstractions is 3.0.2 at run time, and unless every column returns the same result and runs the behaviors and handlers it claims to run: `Ping(41)` returns 42 after exactly 0 or 2 behavior calls, a publish reaches exactly 1 or 5 handlers, both startups register exactly 50 request handlers, and in Part B every column returns success 6 for the valid order, exactly `Name.NotEmpty,Quantity.InclusiveBetween` for the invalid one, and one `InvalidOperationException` error for an order whose handler throws.
 
 | # | Class | Measured unit | Columns |
 |---|---|---|---|
@@ -34,7 +32,7 @@ Variants:
 | MediatorHandWritten | Mediator + `MediatorValidationBehavior` (scoped) and `MediatorExceptionHandlingBehavior` (singleton), written the way the Mediator README shows behaviors ([4.4](https://github.com/martinothamar/Mediator/blob/v3.0.2/README.md#44-use-pipeline-behaviors), [3.3.1](https://github.com/martinothamar/Mediator/blob/v3.0.2/README.md#331-message-validation-example)) |
 | MediatRHandWritten | MediatR + `MediatRValidationBehavior` and `MediatRExceptionHandlingBehavior` through `cfg.AddBehavior<,>(lifetime)` with the same scoped / singleton lifetimes ([MediatrServiceConfiguration.cs](https://github.com/jbogard/MediatR/blob/v12.5.0/src/MediatR/MicrosoftExtensionsDI/MediatrServiceConfiguration.cs)) |
 
-Lifetimes. Part A keeps each library's documented default: MediatR registers `IMediator`, handlers and open behaviors as transient ([MediatrServiceConfiguration.cs L36-L38](https://github.com/jbogard/MediatR/blob/v12.5.0/src/MediatR/MicrosoftExtensionsDI/MediatrServiceConfiguration.cs#L36-L38)); Mediator registers everything as singleton ([README 3.4](https://github.com/martinothamar/Mediator/blob/v3.0.2/README.md#34-configuration)). MediatR therefore resolves the handler and behaviors from DI and composes the pipeline on every send, while Mediator composes it once per container and then calls a cached delegate. The libraries work that way; the setup does not cause the difference. Part B gives all three columns CSE's behavior lifetimes (validation behavior and validator scoped, exception behavior singleton) so the behaviors are the only difference; the mediators keep their defaults.
+Lifetimes. Part A keeps each library's documented default: MediatR registers `IMediator`, handlers and open behaviors as transient ([MediatrServiceConfiguration.cs L36-L38](https://github.com/jbogard/MediatR/blob/v12.5.0/src/MediatR/MicrosoftExtensionsDI/MediatrServiceConfiguration.cs#L36-L38)); Mediator registers everything as singleton ([README 3.4](https://github.com/martinothamar/Mediator/blob/v3.0.2/README.md#34-configuration)). MediatR therefore resolves the handler and behaviors from DI and composes the pipeline on every send, while Mediator composes it once per container and then calls a cached delegate. That difference comes from the libraries, not from the setup. Part B gives all three columns CSE's behavior lifetimes (validation behavior and validator scoped, exception behavior singleton) so the behaviors are the only difference; the mediators keep their defaults.
 
 Inputs: `benchmarks/CSharpEssentials.Mediator.Benchmarks.Handlers/` holds two generated libraries (`MediatR50`, `Mediator50`, written by `generate-handlers.py`) with 50 request/handler pairs each, used only by the startup classes. Mediator generates one mediator per project, so `Mediator50` carries its own generated `AddMediator`. The benchmark project's `AddMediator` uses `options.Assemblies = [typeof(Ping)]` to keep that library out. All Part B columns run the same `CreateOrderValidator` (Name not empty, Quantity 1 to 100) from CSharpEssentials.Validation.
 
@@ -45,11 +43,11 @@ Environment:
 | Property | Value |
 |---|---|
 | Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
-| OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
-| Machine load | Desktop session in the background. All twelve classes ran on 2026-11-05 from 12:59 to 14:50, run order net8, net9, net10, net11. 1-minute load average 1.90 at the suite start and 1.63 at the end (5-minute 1.73 and 1.68). No other benchmark ran at the same time. The AOT script ran separately, on 2026-11-06, at 4.70 (3.86 / 3.63). `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun on 2026-11-07 from 15:00 after the performance changes to those behaviors; the load average was not recorded for that rerun. `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun after the performance changes in #230-#256, with no load recorded |
+| OS | Linux, kernel 7.3.0 |
+| Machine load | Desktop session in the background. All twelve classes ran on 2026-11-05 from 12:59 to 14:50, run order net8, net9, net10, net11. 1-minute load average 1.90 at the suite start and 1.63 at the end (5-minute 1.73 and 1.68). No other benchmark ran at the same time. The AOT script ran separately, on 2026-11-06, at 4.70 (3.86 / 3.63). Four classes were rerun later with no load recorded: `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` on 2026-11-07 from 15:00, after performance changes to those behaviors, and `BehaviorBenchmarks` and `ValidationScopeBenchmarks` after the performance changes in #230-#256 |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser]; default job for warm classes, ColdStart job (15 launches) for the cold class |
-| .NET SDK | 11.0.100-rc.1.26425.128 (11.0.100-rc.3.26522.148 for the two rerun classes) |
-| Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 (.NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 for the two rerun classes) |
+| .NET SDK | 11.0.100-rc.1.26425.128 (11.0.100-rc.3.26522.148 for the four rerun classes) |
+| Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 (.NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 for the four rerun classes) |
 | MediatR | 12.5.0 |
 | Mediator.SourceGenerator / Mediator.Abstractions | 3.0.2 / 3.0.2 (the bench sets `VersionOverride="3.0.2"` because CSE floats Mediator.Abstractions at `[3.0.1,)`; generated code must run on the abstractions of its own generator version) |
 | Microsoft.Extensions.DependencyInjection | 10.0.0 (benchmark project) |
@@ -57,9 +55,7 @@ Environment:
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (ColdStart job for `ColdStartupBenchmarks`), full runs of all twelve classes, not `--quick`.
-- TFMs net8.0, net9.0, net10.0 and net11.0, run one after another on one machine, with no other benchmark running.
-- 1-minute load average between 1.63 and 1.90 for the suite (start and end of the run). `ValidationFanOutBenchmarks` and `IdempotencyBehaviorBenchmarks` were rerun on 2026-11-07 with no load recorded. `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun after #230-#256 with no load recorded.
+- Full runs of all twelve classes, not `--quick`, on the TFMs one after another; load and rerun dates are in the Environment table.
 - After the run, every row with a coefficient of variation above 5% was rerun up to two times. No row of this suite stayed above 5%.
 - Reports: `benchmarks/results/mediator/{tfm}/results/*-report-github.md` (and `.csv`). Native AOT: `benchmarks/results/mediator/aot/aot-report.md`, from a separate run (see section 6).
 - Every table below names its TFM. Mean, Ratio and Allocated are copied from the GitHub Markdown reports; Ratio is BenchmarkDotNet's column against the row named as baseline. "-" in Allocated means 0 B.
@@ -103,8 +99,6 @@ net10. Ratio is against MediatR.
 | MediatorConcrete | 2.886 ns | 0.04 | 0 B | 13.967 ns | 0.08 | 0 B |
 
 - MediatR resolves the transient handler and behaviors and builds the pipeline per send, which is where its allocation comes from. Mediator (singleton) builds the pipeline once per container.
-- The MediatorIMediator 2-behavior row moves between TFMs: 19.735 ns on net8, 17.533 ns on net9, 26.152 ns on net10, 31.187 ns on net11. Not investigated.
-- On net8 and net9 the concrete class is slower than `IMediator` with 2 behaviors (26.860 vs 19.735 ns, 25.241 vs 17.533 ns).
 
 ### 2. Publish (1 or 5 handlers, default `ForeachAwaitPublisher`)
 
@@ -178,7 +172,6 @@ net10. Ratio is against MediatorHandWritten.
 - CseAot (Mediator + CSE `ValidationBehavior` and `ExceptionHandlingBehavior` through `options.PipelineBehaviors`, `AddMediatorValidationOptions()`, validator through `AddValidator`, the CSE Readme's AOT path): runs. In the 2026-11-02 report it crashed with `A suitable constructor for type 'CreateOrderValidator' could not be located.` The cause was IL2087 in `AddValidator`, which now carries the annotation (finding a).
 - CseDirectValidatorAot (the same, validator registered with `AddScoped<IValidator<CreateOrder>, CreateOrderValidator>()` so the run reaches the behaviors): runs. In the 2026-11-02 report it crashed with ``Method Failure not found on CSharpEssentials.ResultPattern.Result`1[[System.Int32, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e]]``, thrown from `BehaviorCache.GetOrCreateFactory` on the invalid send. The cause was IL2070 in `BehaviorCache`, which has been removed (finding b).
 - In the 2026-11-02 report both CSE samples also listed IL2026 and IL3050 at `Result<T>.ToString()`. The 2026-11-06 report lists no IL warnings for either CSE sample.
-- The CSE Readme says the package is not marked `IsAotCompatible` and that `CachingBehavior`, `LoggingBehavior` and `IdempotencyBehavior` serialize with reflection-based `System.Text.Json`.
 - Wall time was 2 ms for MediatorAot and 3 ms for both CSE samples (median of 5). The run started at load 4.70 (5-minute average 3.86), so these are not startup results.
 
 ### 7. Validator fan-out, idempotency, lock, caching and logging behaviors
@@ -210,7 +203,7 @@ Methodology:
 - Every container registers `ILogger<T>` as `NullLogger<T>`, except the Enabled logging rows.
 - Mediator containers use the one `AddMediator` call of the project through `MediatorApp.Register`. MediatR containers scan the benchmark assembly and add the behavior with `cfg.AddBehavior` or `cfg.AddOpenBehavior` and the same lifetime CSE uses.
 - The net8.0 rows run the netstandard2.1 build of every CSE package (Mediator, Idempotency, Validation, Results, Errors, Json, Maybe have no net8 target). The hand-written columns use the same CSE Results, Validation and Json builds, so the comparison between columns holds, but no net8 row is net8-native CSE code. The netstandard2.1 build runs different code in these behaviors: `LoggingBehavior` allocates a `Stopwatch` (`LoggingBehavior.cs:26`), `InProcessResourceLock` locks an `object` instead of a `Lock` (`InProcessResourceLock.cs:13-17`), and the default fingerprint serializes the whole request and hashes it with `SHA256.Create()` and a manual hex loop (`IdempotencyBehavior.cs:235-245`) instead of the streaming `Sha256JsonStream` (`:233`). Do not read the net8 rows as the same code.
-- The new request types change the code the five older classes measure. Mediator generates one dispatcher for every message type in the project, so `SendBenchmarks` and `BehaviorBenchmarks` dispatch through a larger generated class. MediatR's assembly scan registers the new handlers in the older containers too. All twelve classes ran in the same full run, so every number in this document was measured with the same request types. `ValidationFanOutBenchmarks`, `IdempotencyBehaviorBenchmarks`, `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun later from the same project.
+- The section 7 request types also change the code the first five classes measure. Mediator generates one dispatcher for every message type in the project, so `SendBenchmarks` and `BehaviorBenchmarks` dispatch through a larger generated class. MediatR's assembly scan registers the new handlers in the older containers too. All twelve classes ran in the same full run, so every number in this document was measured with the same request types. `ValidationFanOutBenchmarks`, `IdempotencyBehaviorBenchmarks`, `BehaviorBenchmarks` and `ValidationScopeBenchmarks` were rerun later from the same project.
 
 What the parity check enforces:
 - Every container resolves exactly the behavior it claims, by type, for each request type.
@@ -228,7 +221,7 @@ Semantic differences, labelled in each class summary:
 - Idempotency: the hand-written store has no lease or retention expiry, no scope, no key format check, no modes, no metrics, no options monitor read and no reservation token. CSE shares one settings object per request type unless the request sets its own retention or lease (`IdempotencyBehavior.cs:162-179`). The first run that stores a success is not measured: it needs a new key per call, and the store would grow with every invocation.
 - Lock: CSE goes through `IResourceLock` and releases with an `IAsyncDisposable` handle. AsyncKeyedLock releases with a pooled `IDisposable`.
 - Contention: the hand-written row never removes or disposes a semaphore. In Unique it only pays for lookups after the first invocation and keeps 2048 semaphores alive. CSE and AsyncKeyedLock remove the entry when the last holder releases it.
-- Caching: the request builds its key as the CSE Readme shows, with an interpolated `CacheKey` property (`Readme.MD:199`). CSE reads it once per send (`CachingBehavior.cs:26`). CSE also type-tests the response for `IResultBase` on every miss (`:46`) and creates a `DistributedCacheEntryOptions` on every set (`:50`).
+- Caching: the request builds its key as the CSE Readme shows, with an interpolated `CacheKey` property (the Readme's caching example). CSE reads it once per send (`CachingBehavior.cs:26`). CSE also type-tests the response for `IResultBase` on every miss (`:46`) and creates a `DistributedCacheEntryOptions` on every set (`:50`).
 - Logging: CSE keeps the request and response type names in static fields (`LoggingBehavior.cs:15-16`), as the hand-written behaviors do.
 
 #### 7.1 Validator fan-out (three validators)
@@ -404,14 +397,9 @@ Mean (and allocation where it is not 0 B) per TFM. Run order net8, net9, net10, 
 
 Full per-TFM tables for every class: `benchmarks/results/mediator/{tfm}/results/*-report-github.md`, for example [net8](../benchmarks/results/mediator/net8.0/results/), [net9](../benchmarks/results/mediator/net9.0/results/), [net10](../benchmarks/results/mediator/net10.0/results/), [net11](../benchmarks/results/mediator/net11.0/results/).
 
-- Mediator is faster than MediatR for send and publish and allocates nothing on every TFM. From a cold process it is slower on net8, net10 and net11 and a tie on net9.
-- Part B: CSE valid input is faster than hand-written Mediator on net8 and net9, a tie on net10 and slower on net11. CSE invalid input is slower than hand-written Mediator on net8 to net10, within error on net11, and faster than hand-written MediatR on every TFM.
-- Outliers, not investigated: MediatorIMediator with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; Mediator warm startup on net11 (239.6 μs, above its net10 value); every lock contention OneKey row on net11.
+Outliers, not investigated: MediatorIMediator with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; Mediator warm startup on net11 (239.6 μs, above its net10 value); every lock contention OneKey row on net11.
 
-Costs read from the source, checked against the run (not changed in this work):
-- `InMemoryIdempotencyRecordStore.cs:54` and `:62` allocate an `Entry` and a counter token string (`:120`) for every new reservation. Replay does not reach them; ExecuteRelease does on every send.
-- `InProcessResourceLock.cs:82` and `:97` take one lock shared by every key for each rent and return. `:86` and `:110` create an `Entry` and a `SemaphoreSlim` per new key, and `:78` a `Handle` per acquisition. This is consistent with the 168 B and 170 B rows (not profiled).
-- `CachingBehavior.cs:50` creates a `DistributedCacheEntryOptions` on every set.
+Read from the source, not profiled: `InProcessResourceLock.cs:82` and `:97` take one lock shared by every key for each rent and return, on top of the per-key allocations described in 7.4. Replay does not reach the in-memory store's per-reservation allocations (7.3); ExecuteRelease does on every send.
 
 Feature matrix for the section 7 behaviors, from reading each library's source and docs (not measured):
 
@@ -422,7 +410,6 @@ Feature matrix for the section 7 behaviors, from reading each library's source a
 | Keyed lock | `LockBehavior` over `IResourceLock` (in-process by default, pluggable for a distributed lock). A timeout throws `TimeoutException`. Not reentrant | None | None | Keyed semaphores, pooling (default pool size 20), a striped variant, `MaxCount`, timeouts through `LockOrNullAsync` and `TryLock`, conditional locking |
 | Response caching | `CachingBehavior` over `IDistributedCache`, reflection-based `System.Text.Json`, no hook for serializer options | None | None | n/a |
 | Request logging | `LoggingBehavior`, opt-in by marker interface, `[LoggerMessage]`, optional JSON payloads, elapsed time | A wiki sample with interpolated strings | None built in; README 3.3.2 has an error logging sample only | n/a |
-| License | MIT | Apache-2.0 (13.0.0 and later: RPL-1.5 or commercial) | MIT | MIT |
 
 ---
 
@@ -456,16 +443,12 @@ MediatR links point at tag [`v12.5.0`](https://github.com/jbogard/MediatR/tree/v
 - The MediatorConcrete column calls the generated concrete class, the form Mediator's own benchmarks measure. Applications that inject `IMediator` get the MediatorIMediator row.
 - The 2 behaviors in Send are pass-through and the handlers do trivial work, so Send and Publish measure dispatch overhead only.
 - Cold allocation is not first-call allocation. In each launch BenchmarkDotNet 0.14 runs the unit a second time in the same process, after the timed invocation, to collect GC stats. The allocation column therefore excludes JIT, type loading and first-call reflection-cache allocations, and MediatR's static wrapper cache is already filled.
-- Warm startup favours MediatR: its static wrapper cache and the runtime's reflection caches are filled after the first iteration. Use the cold row for startup decisions.
 - Part B resolves every behavior from the root provider. With Mediator's singleton default the pipeline captures the scoped validation behavior and validator once, and MediatR gets the same root-scoped instances back from `GetServices` on every send. This works with plain `BuildServiceProvider()` and throws for every column with `validateScopes: true`. An application that resolves the mediator from a request scope pays for scoped resolution that these rows do not include.
 - Nothing in Part B or section 7 was profiled. Why CSE is faster than hand-written Mediator on the valid path on net8 and net9 (slower on net11) and slower on the invalid path is not known in detail.
-- The machine ran a desktop session (1-minute load 1.63-1.90 for the suite). Gaps of a few percent are weak evidence even when outside error.
-- The outliers listed under Cross-TFM were not investigated.
-- The net8 column runs CSE's netstandard2.1 build; the other columns run the matching TFM build.
+- The machine ran a desktop session (load averages in the Environment table; none recorded for the reruns). Gaps of a few percent are weak evidence even when outside error.
 - The AOT report is a separate script run from 2026-11-06. AOT warning counts use `TrimmerSingleWarn=false` and are higher than a default publish shows. No sample uses `TrimmerRootAssembly`; rooting assemblies might change the MediatR outcome and was not tested. The 2 and 3 ms AOT wall times were taken at load 4.70 and are not a result.
 - The feature matrix comes from reading source and docs, except the measured AOT row. The MediatR wiki is unversioned and tracks the current release; it is cited only where the 12.5.0 source agrees.
-- A difference within the sum of the two error margins is reported as a tie.
-- The CSE column is the 7.0.0 working tree on branch `integ/all` (a local integration of the open pull requests), which may differ from the last version published to NuGet.
+- The CSE column is repository source, not a NuGet release. The first run used the 7.0.0 working tree on branch `integ/all`, a local integration of the open pull requests; the four rerun classes used later code.
 
 ---
 

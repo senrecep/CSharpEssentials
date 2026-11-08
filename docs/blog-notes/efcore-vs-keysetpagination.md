@@ -39,7 +39,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, on in-memory
 
 ## Methodology
 
-- One BenchmarkDotNet project, `benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks/`, with ten classes, each with `[MemoryDiagnoser]`.
+- One BenchmarkDotNet project, `benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks/`, with ten classes (nine for EntityFrameworkCore, one for `EntityBase`), each with `[MemoryDiagnoser]`.
 - One in-memory SQLite connection per class, open for the whole run. Every row that writes runs in a transaction that is rolled back, so tables do not grow between invocations and every row pays the same transaction.
 - Entities and events are created inside the measured method, the same way for every row.
 - Every class checks parity in `[GlobalSetup]`, and `--self-check` runs the same checks on every TFM without BenchmarkDotNet: written row counts, stamped users, published event counts, page ids and flags, the second page reached through each row's own cursor, a checksum of the synced table, the detected error.
@@ -49,29 +49,29 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, on in-memory
 
 ## How these numbers were produced
 
-BenchmarkDotNet v0.14.0, default job, full runs, one suite at a time, on a 6-core, 12-thread desktop CPU under Linux (exact model in each report header). TFMs net8.0, net9.0, net10.0 and net11.0. The 1-minute load average stayed between 1.99 and 2.60 during the suite and its reruns; `DbErrorClassificationComparison` was rerun on net10.0 and net11.0, and afterwards no row has a CV above 5%. Each number is `Mean (Ratio), Allocated` copied from the `-report-github.md` files. Compare within one TFM only: net8.0 and net9.0 run a different EF Core major from net10.0 and net11.0.
+BenchmarkDotNet v0.14.0, default job, full runs, one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. TFMs net8.0, net9.0, net10.0 and net11.0, with EF Core 8.0.33, 9.0.22 and 10.0.14 (net11.0 runs 10.0.14). The reports come from two runs. The first (SDK 11.0.100-rc.1; .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0) covers every class except EnumConverter and MigrateData; its 1-minute load average stayed between 1.99 and 2.60, and `DbErrorClassificationComparison` was rerun on net10.0 and net11.0. EnumConverter and MigrateData were rerun after #230 to #256 (SDK 11.0.100-rc.3; .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0). No row has a CV above 5%. Each number is `Mean (Ratio), Allocated` copied from the `-report-github.md` files. Compare within one TFM only: net8.0 and net9.0 run a different EF Core major from net10.0 and net11.0.
 
 ## The numbers that matter
 
-1. **SaveChangesAudit, 1,000 Added, net10.0:** hand-written override 27,625.17 μs (1.07), 11403.25 KB; CSE `AuditInterceptor` 28,275.79 μs (1.09), 11411.65 KB; CSE `BaseDbContext` 27,447.65 μs (1.06), 11411.7 KB. Plain EF Core, which stamps nothing, is 25,902.24 μs. At Count 1 CSE is behind the override on 15 of 16 cells (net10.0 Added: 69.23 μs override, 70.90 μs and 71.32 μs CSE).
-2. **SaveChangesDomainEvents, 1,000 with 0 events, net10.0:** EF Core 25,967.90 μs (1.00), hand-written 27,640.53 μs (1.06), CSE `BaseDbContext` 28,250.70 μs (1.09), CSE interceptor 26,537.53 μs (1.02). Allocation is 11379.94 to 11380.21 KB for the three dispatching rows.
-3. **KeysetPagination After, net10.0:** hand-written 119.54 μs (1.00), 23.15 KB; CSE cached 124.43 μs (1.04), 25.33 KB; MR prebuilt with `Take(21)` 145.81 μs (1.22), 30.38 KB; MR prebuilt with `HasNextAsync` 233.43 μs (1.95), 48.59 KB. CSE `Func` 137.49 μs (1.15) against CSE cached 124.43 μs. On net11.0 CSE cached is 112.84 μs against 113.27 μs hand-written.
-4. **OffsetPagination page 250, net10.0:** EF Core 132.06 μs (1.00), 23.59 KB; CSE 136.71 μs (1.04), 24.24 KB; X.PagedList 136.60 μs (1.03), 24 KB. All three send the same two queries.
-5. **MigrateData 10,000:** CSE 73.432 ms (1.04) against 70.924 ms for the dictionary diff on net10.0; 88.815 ms (1.02) against 87.142 ms on net8.0.
-6. **DbContextLifetime CreateDispose, net10.0:** `AddDbContext` scope 64,698.5 ns, 60029 B; `BaseDbContext` 69,587.6 ns, 60195 B; with interceptors 74,789.2 ns, 66535 B; pooled factory 245.1 ns, 112 B. Gen1 per 1,000 operations is 0.2441 for the scope and both `BaseDbContext` rows.
-7. **DbErrorTranslation, net10.0:** plain `catch` 88.17 μs (1.00), 21.84 KB; EntityFrameworkCore.Exceptions 92.39 μs (1.05), 21.49 KB; CSE `Result` 85.75 μs (0.97), 22.05 KB. net11.0: 71.29 μs, 77.41 μs and 70.90 μs.
-8. **`EntityBase.DomainEvents` read, net10.0:** 0 events 2.256 ns, 1 event 4.163 ns, 10 events 21.540 ns, no allocation; the hand-written cached view is 1.519 ns, 3.585 ns and 20.517 ns.
+1. SaveChangesAudit, 1,000 Added, net10.0: hand-written override 27,625.17 μs (1.07), 11403.25 KB; CSE `AuditInterceptor` 28,275.79 μs (1.09), 11411.65 KB; CSE `BaseDbContext` 27,447.65 μs (1.06), 11411.7 KB. Plain EF Core, which stamps nothing, is 25,902.24 μs. At Count 1 CSE is behind the override on 15 of 16 cells (net10.0 Added: 69.23 μs override, 70.90 μs and 71.32 μs CSE).
+2. SaveChangesDomainEvents, 1,000 with 0 events, net10.0: EF Core 25,967.90 μs (1.00), hand-written 27,640.53 μs (1.06), CSE `BaseDbContext` 28,250.70 μs (1.09), CSE interceptor 26,537.53 μs (1.02). Allocation is 11379.94 to 11380.21 KB for the three dispatching rows.
+3. KeysetPagination After, net10.0: hand-written 119.54 μs (1.00), 23.15 KB; CSE cached 124.43 μs (1.04), 25.33 KB; MR prebuilt with `Take(21)` 145.81 μs (1.22), 30.38 KB; MR prebuilt with `HasNextAsync` 233.43 μs (1.95), 48.59 KB. CSE `Func` 137.49 μs (1.15) against CSE cached 124.43 μs. On net11.0 CSE cached is 112.84 μs against 113.27 μs hand-written.
+4. OffsetPagination page 250, net10.0: EF Core 132.06 μs (1.00), 23.59 KB; CSE 136.71 μs (1.04), 24.24 KB; X.PagedList 136.60 μs (1.03), 24 KB. All three send the same two queries.
+5. MigrateData 10,000: CSE 73.432 ms (1.04) against 70.924 ms for the dictionary diff on net10.0; 88.815 ms (1.02) against 87.142 ms on net8.0.
+6. DbContextLifetime CreateDispose, net10.0: `AddDbContext` scope 64,698.5 ns, 60029 B; `BaseDbContext` 69,587.6 ns, 60195 B; with interceptors 74,789.2 ns, 66535 B; pooled factory 245.1 ns, 112 B. Gen1 per 1,000 operations is 0.2441 for the scope and both `BaseDbContext` rows.
+7. DbErrorTranslation, net10.0: plain `catch` 88.17 μs (1.00), 21.84 KB; EntityFrameworkCore.Exceptions 92.39 μs (1.05), 21.49 KB; CSE `Result` 85.75 μs (0.97), 22.05 KB. net11.0: 71.29 μs, 77.41 μs and 70.90 μs.
+8. `EntityBase.DomainEvents` read, net10.0: 0 events 2.256 ns, 1 event 4.163 ns, 10 events 21.540 ns, no allocation; the hand-written cached view is 1.519 ns, 3.585 ns and 20.517 ns.
 
-## Where CSE loses (state it, do not soften it)
+## Where CSE loses
 
-- **Count 1 saves.** Audit and domain event dispatch are slower than the hand-written code in 30 of 32 CSE cells, and CSE allocates more than the hand-written rows in every SaveChanges cell but one (net10.0, Count 1,000, 0 events, interceptor: 11379.94 KB against 11379.99 KB). At Count 100 and 1,000 CSE is slower in 21 and 20 of 32 cells. The audit path copies `ChangeTracker.Entries()` and creates a DI scope per save that has entries to stamp (`Interceptors/Audit/AuditInterceptor.cs:56`, `:83-87`).
-- **The `Func` ordering.** The form the Readme shows rebuilds the keys and the SHA-256 fingerprint on every call (`CSharpEssentials.EntityFrameworkCore/Pagination/KeysetPaginationExtensions.cs:41`, `Pagination/Keyset/KeysetOrdering.cs:56-63`). It is 13.06 to 26.43 μs slower than the cached ordering, and on the First page it loses to MR's inline form: 87.31 μs against 78.66 μs on net10.0, 82.95 μs against 71.51 μs on net11.0.
-- **Keyset After against hand-written code.** CSE cached is 1.02 to 1.04 times the hand-written row on net8.0, net9.0 and net10.0, and allocates 1.48 to 2.18 KB more on every TFM. It validates the cursor, issues a previous cursor and builds the `Invalid` error even when the cursor decodes (`Pagination/Keyset/KeysetCursorCodec.cs:88`).
-- **`MigrateDataAsync`.** 1.02 to 1.07 times the dictionary diff on every cell, with hash-set key matching (`Extensions/DbContextExtensionMethods.cs:153-168`), and 4% to 5% more allocation.
-- **`BaseDbContext` creation.** Slower than an `AddDbContext` scope on every TFM (net10.0: 69,587.6 ns against 64,698.5 ns), 166 to 170 B larger, and it cannot be pooled.
-- **Error classification.** CSE is the slowest classifier: net10.0 Sqlite 2.5700 ns against 0.9238 ns for DbExceptionClassifier, and the SqlState translator 49.3231 ns with 248 B against a 0.4459 ns pattern match.
-- **SQLite errors** need your own translator in CSE; EntityFrameworkCore.Exceptions detects them out of the box.
-- **Offset paging.** Slower than X.PagedList on net9.0 page 1, net10.0 page 1 and net10.0 page 250, by 0.1 to 1.36 μs.
+- Count 1 saves: audit and domain event dispatch are slower than the hand-written code in 30 of 32 CSE cells, and CSE allocates more than the hand-written rows in every SaveChanges cell but one (net10.0, Count 1,000, 0 events, interceptor: 11379.94 KB against 11379.99 KB). At Count 100 and 1,000 CSE is slower in 21 and 20 of 32 cells. The audit path copies `ChangeTracker.Entries()` and creates a DI scope per save that has entries to stamp (`Interceptors/Audit/AuditInterceptor.cs:56`, `:83-87`).
+- The `Func` ordering: the form the Readme shows rebuilds the keys and the SHA-256 fingerprint on every call (`CSharpEssentials.EntityFrameworkCore/Pagination/KeysetPaginationExtensions.cs:41`, `Pagination/Keyset/KeysetOrdering.cs:56-63`). It is 13.06 to 26.43 μs slower than the cached ordering, and on the First page it loses to MR's inline form: 87.31 μs against 78.66 μs on net10.0, 82.95 μs against 71.51 μs on net11.0.
+- Keyset After against hand-written code: CSE cached is 1.02 to 1.04 times the hand-written row on net8.0, net9.0 and net10.0, and allocates 1.48 to 2.18 KB more on every TFM. It validates the cursor, issues a previous cursor and builds the `Invalid` error even when the cursor decodes (`Pagination/Keyset/KeysetCursorCodec.cs:88`).
+- `MigrateDataAsync`: 1.02 to 1.07 times the dictionary diff on every cell, with hash-set key matching (`Extensions/DbContextExtensionMethods.cs:153-168`), and 4% to 5% more allocation.
+- `BaseDbContext` creation: slower than an `AddDbContext` scope on every TFM (net10.0: 69,587.6 ns against 64,698.5 ns), 166 to 170 B larger, and it cannot be pooled.
+- Error classification: CSE is the slowest classifier. net10.0 Sqlite 2.5700 ns against 0.9238 ns for DbExceptionClassifier, and the SqlState translator 49.3231 ns with 248 B against a 0.4459 ns pattern match.
+- SQLite errors need your own translator in CSE; EntityFrameworkCore.Exceptions detects them out of the box.
+- Offset paging: slower than X.PagedList on net9.0 page 1, net10.0 page 1 and net10.0 page 250, by 0.1 to 1.36 μs.
 
 ## Where CSE wins or ties
 
@@ -91,7 +91,7 @@ Features only CSE ships (not a speed claim):
 - CSE's cursor codec and event collector are internal, so they have no standalone rows; the keyset `After` minus `First` difference is the public view of the cursor cost.
 - MR and EntityFrameworkCore.Exceptions ship net10.0 only; X.PagedList.EF needs EF Core 9 or later, so it has no net8.0 row. `X.PagedList.EntityFramework` targets classic EF6 and is not compared.
 - net11.0 runs EF Core 10, because EF Core 11 is still a release candidate.
-- The CSE column is the working tree on branch `integ/all`, a local integration of the open pull requests, not a NuGet release.
+- The CSE column is repository source, not a NuGet release: branch `integ/all` (a local integration of the open pull requests) for the first run, the code after #230 to #256 for the EnumConverter and MigrateData rerun.
 
 ## Possible angles
 

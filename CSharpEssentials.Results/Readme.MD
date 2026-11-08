@@ -2,25 +2,11 @@
 
 Functional Result pattern for explicit success/failure handling in .NET, without exceptions for control flow.
 
-## Features
-
-- **Result & Result<T>**: Value-type results with implicit conversions from values and errors.
-- **Railway-oriented programming**: Chain operations with `Then`, `Bind`, `Map`, `Ensure`.
-- **Error aggregation**: Collect multiple validation errors in one result.
-- **Async**: async/await across all extension methods.
-- **Safe execution**: `Result.Try`, `Result.TryAsync` and `TryCatch` wrap exceptions into results.
-- **Recovery and inspection**: `Else`, `Compensate`, `Recover`, `TapError`, `Match`, `Switch`, `Unwrap`.
+`Result` and `Result<T>` are value types with implicit conversions from values and errors. Operations chain with `Then`, `Bind`, `Map` and `Ensure`, a failure can carry several errors, every operation has async overloads, and `Result.Try`, `Result.TryAsync` and `TryCatch` turn exceptions into errors.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
 
-> **Benchmarks:** Create, Map, Bind, Ensure, Match, Tap, a 5-step async pipeline, error aggregation and Maybe against
-> CSharpFunctionalExtensions, ErrorOr and FluentResults are documented in [BENCHMARKS.md](./BENCHMARKS.md).
-> Results on net10: Map, Bind, Tap and Match allocate 0 B, like CSharpFunctionalExtensions and ErrorOr
-> (FluentResults 88-344 B). A failure allocates 104 B (ErrorOr 88 B; CSharpFunctionalExtensions 0 B with its string
-> error), and the async pipeline's failure path allocates 536 B vs 480 B for CSharpFunctionalExtensions. Error
-> aggregation takes 237.9 ns / 696 B vs 41.9 ns / 184 B for ErrorOr's manual-list idiom. The package sets
-> `IsAotCompatible` for net8.0 and later, `Result<T>.ToString()` formats the value without JSON, and it brings CSharpEssentials.Errors, Json,
-> Core and Enums (CSharpFunctionalExtensions has no dependencies).
+Benchmarks against CSharpFunctionalExtensions, ErrorOr and FluentResults are in [BENCHMARKS.md](./BENCHMARKS.md). On net10, Map, Bind, Tap and Match allocate 0 B, like CSharpFunctionalExtensions and ErrorOr (FluentResults 88-344 B). A failure allocates 56 B (ErrorOr 88 B; CSharpFunctionalExtensions 0 B with its string error), and the async pipeline's failure path allocates 536 B vs 480 B for CSharpFunctionalExtensions. Error aggregation takes 99.09 ns / 336 B vs 42.79 ns / 184 B for ErrorOr's manual-list idiom. The package sets `IsAotCompatible` on its .NET 9+ targets and brings CSharpEssentials.Errors, Json, Core and Enums (CSharpFunctionalExtensions has no dependencies).
 
 ## Installation
 
@@ -72,7 +58,7 @@ Result<int> multiError = new[]
 
 `Result<T>` does not accept `null`: `Result<string> r = (string?)null;` throws `ArgumentNullException`. A `bool` converts to `Result` too: `true` is a success and `false` is the `Error.False` failure. `default(Result)` and `default(Result<T>)` are successes; the `Value` of `default(Result<T>)` is `default(TValue)` (`null` for reference types) even though the nullability annotations say it is set, so call `EnsureNotNull` on results that may come from an uninitialized field or array slot. A failure must hold at least one error: `Result.From` and `Result.Failure` throw `ArgumentException` for an empty collection. Results serialize with `System.Text.Json` (an `errors` array and, for `Result<T>`, a `Value`) and deserialize back to the same state.
 
-Implicit conversion is the idiomatic style. Use the explicit factories when the compiler cannot infer the target type, for example with `var`, in a lambda whose return type is inferred, or as a generic argument:
+Use the explicit factories when the compiler cannot infer the target type, for example with `var`, in a lambda whose return type is inferred, or as a generic argument:
 
 ```csharp
 var conflict = Result.Failure<string>(Error.Conflict("User.Duplicate", "User already exists."));
@@ -100,7 +86,7 @@ var (isSuccess, value2, errors) = result;   // Result<T>; Result deconstructs to
 
 `Value` is `default` on a failure. `Errors`, `FirstError` and `LastError` on a success return the sentinel errors `Error.NoErrors`, `Error.NoFirstError` and `Error.NoLastError`; `ErrorsOrEmptyArray` returns an empty array instead. `TryGet(out value, out errors)` returns `true` for a success. `Result<T>.ToResult()` drops the value, and `Result<T>` values support `==`, `Equals`, LINQ query syntax (`from a in r1 from b in r2 select a + b`) and `r1 + r2` (a `Result<T[]>` that collects every value or every error).
 
-`ToString()` is for logs and debugging. A success prints `Success: ` plus the value's own `ToString()`, formatted with `CultureInfo.InvariantCulture` when the value is `IFormattable`, so a class without a `ToString` override prints its type name. Earlier versions printed the value as JSON. For JSON, call `result.Value.ConvertToJson()` from `CSharpEssentials.Json`.
+`ToString()` is for logs. A success prints `Success: ` plus the value's own `ToString()`, formatted with `CultureInfo.InvariantCulture` when the value is `IFormattable`, so a class without a `ToString` override prints its type name. Earlier versions printed JSON; for JSON, call `result.Value.ConvertToJson()` from `CSharpEssentials.Json`.
 
 ### Chaining
 
@@ -117,7 +103,7 @@ Result<int> result = Parse("5")
     .Then(n => n + 10);
 ```
 
-`Then` takes either a plain function (`Func<T, U>`) or a function that returns a `Result<U>`. `Bind` takes a `Result`-returning function and `Map` a plain one (a `Result`-returning `Map` overload exists too). `ThenDo` and `Tap` run a side effect on success and return the same result. These success-side operations skip their handler when the result already failed and pass the errors through.
+`Then` takes either a plain function (`Func<T, U>`) or a function that returns a `Result<U>`. `Bind` takes a `Result`-returning function and `Map` a plain one (a `Result`-returning `Map` overload exists too). `ThenDo` and `Tap` run a side effect and return the same result. On a failure these operations skip the handler and pass the errors through.
 
 ### Ensuring
 
@@ -172,10 +158,9 @@ Result<User> single = GetUser(id)
     .MapError(errors => [Error.Failure("Users.Failed", $"{errors.Length} error(s)")]);
 ```
 
-> **Behaviour change:** `MapError(Func<Error, Error>)` used to map only `FirstError` and drop the rest. It now maps every error and keeps the order.
+`MapError(Func<Error, Error>)` used to map only `FirstError` and drop the rest; it now maps every error.
 
 `MapErrorAsync` takes `Task` or `ValueTask` mappers in the same two shapes. Per-error async mappers run one at a time, in order. The `CancellationToken` is checked before each mapper call; a mapper that is already running is not abandoned, so pass the token into the mapper if it must stop early. An async lambda (`async e => ...`) binds to the `Task` overload.
-
 
 ```csharp
 // Instance: async mapper on a Result / Result<T>
@@ -192,7 +177,7 @@ Result<User> fromCache = await GetCachedUserAsync(id)
 
 ### Operations reference
 
-Every operation returns a new `Result`; handlers run only on the side named in the table. The `Async` counterparts are listed under [Async](#async).
+Handlers run only on the side named in the table. The `Async` counterparts are under [Async](#async).
 
 | Operation | Runs on | Behaviour |
 |---|---|---|
@@ -202,7 +187,7 @@ Every operation returns a new `Result`; handlers run only on the side named in t
 | `Ensure(predicate, error)` | success | `Result<T>` only. Fail with the error, or with `errorFactory(value)`, when the predicate is `false`. `EnsureNotNull` fails on a `null` value. |
 | `FailIf(predicate, error)` | success | `Result<T>` only. The opposite of `Ensure`: fail when the predicate is `true`. |
 | `ThenEnsure(validator)` | success | `Result<T>` only. Run a validator that returns a `Result` or a `Result<T>`; its failure becomes the result. |
-| `MapError` | failure | Rewrite the errors; see [Mapping Errors](#mapping-errors). |
+| `MapError` | failure | Rewrite the errors; see [Mapping errors](#mapping-errors). |
 | `Else(...)` | failure | Replace the failure with an `Error`, or with what a function of the `Error[]` returns: an `Error`, an `Error[]` (`IEnumerable<Error>` on `Result`) or, on `Result<T>`, a `TValue`. `Result<T>` also takes a fallback `TValue` directly. |
 | `ElseDo`, `ElseDoFirst`, `TapError`, `TapErrorFirst`, `TapErrorIf` | failure | Side effect with the `Error[]` or the first `Error`; the failure is returned unchanged. |
 | `Compensate`, `CompensateFirst` | failure | Replace the failure with the result of a function of the errors or the first error. |
@@ -223,7 +208,7 @@ Result<(int, string)> pair = Result<int>.Combine(Result.Success(1), Result.Succe
 Result either = Result.Or(r1, r2);   // success as soon as one succeeds, otherwise every error
 ```
 
-`Result.From` and `Result.Failure` build failures from one or more errors; an empty error list throws. `ToResult()` extension methods turn an `Error`, an `Error[]`, an `IEnumerable<Error>` or a plain value into a `Result` or `Result<T>`. On .NET 10 and later `result.ValueOrDefault` and `left | right` (the left result when it succeeded, otherwise the right) are available as extension members. `ResultComparer`, `ResultComparer<T>` and `ResultBaseComparer` in `CSharpEssentials.ResultPattern.Comparers` are `IEqualityComparer` implementations, and `TrimStart`/`TrimEnd` on `string` return a `Result<string>` that fails on empty input.
+`Result.From` and `Result.Failure` build failures from one or more errors; an empty error list throws. `ToResult()` extension methods turn an `Error`, an `Error[]`, an `IEnumerable<Error>` or a plain value into a `Result` or `Result<T>`. On .NET 10 and later `result.ValueOrDefault` and `left | right` (the left result when it succeeded, otherwise the right) are available as extension members. `ResultComparer`, `ResultComparer<T>` and `ResultBaseComparer` in `CSharpEssentials.ResultPattern.Comparers` are `IEqualityComparer` implementations, and `TrimStart(prefix)`/`TrimEnd(suffix)` on `string` return a `Result<string>` that fails when the input or the prefix/suffix is empty.
 
 ### Async
 
@@ -233,7 +218,7 @@ Result<UserDto> result = await FetchUserAsync(id)
     .EnsureAsync(dto => IsValidAsync(dto), Error.Validation("Invalid", "Not valid."));
 ```
 
-Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders and will be removed in 7.0; the `Bind` members on `IResult`/`IResult<T>` are obsolete too. Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). An untyped async lambda binds to the `Task` overload of `BindAsync` through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a `Func<..., Task<Result<T>>>` local. The `CancellationToken` is optional on every `Task` source.
+Every member that returns `Task` or `ValueTask` ends in `Async`: `BindAsync`, `ElseAsync`, `FailIfAsync`, `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `ThenAsync` and `ThenDoAsync`. The old unsuffixed names on `Task`/`ValueTask` sources (`task.Match(...)`, `task.Then(...)`) and the instance `Bind` overloads that take a `Task`/`ValueTask` function still compile as `[Obsolete]` forwarders, as do the `Bind` members on `IResult`/`IResult<T>`; see [the async naming migration](https://github.com/senrecep/CSharpEssentials/blob/main/docs/migration/v6-async-naming.md). Use `BindAsync` for async lambdas: `result.Bind(async v => ...)` is ambiguous (CS0121). The `CancellationToken` is optional on every `Task` source.
 
 #### Async overload matrix
 
@@ -262,7 +247,7 @@ The source decides the handler flavour. A `Task<Result>` source takes sync and `
 
 ¹ .NET 9+ assets only. The `netstandard2.1` asset (.NET 8, older hosts) does not have these overloads.
 
-`ThenAsync` stays an alias of `BindAsync`. Nothing crosses flavours: a `Task<Result>` source has no `ValueTask` handler, and the matrix adds no new `Task` handlers to `ValueTask` sources.
+`ThenAsync` is an alias of `BindAsync`. A `Task<Result>` source has no `ValueTask` handler.
 
 `Task` and `ValueTask` sources also have `BindIfAsync`, `SelectAsync`, `TryCatchAsync` and `GetValueOrDefaultAsync`, which are not part of the matrix.
 
@@ -278,37 +263,25 @@ Result<Price> price = await GetCachedProductAsync(sku)
     .MapAsync(p => _pricing.QuoteAsync(p, ct));   // Func<Product, ValueTask<Price>>
 ```
 
-On .NET 9+, a lambda that returns `ValueTask` binds the `ValueTask` handler, and an untyped `async` lambda binds the `Task` handler through `OverloadResolutionPriority`. That needs C# 13 or later. With `LangVersion` 12 on a .NET 9+ target, an untyped `async` lambda is ambiguous (CS0121) on every operation marked ¹, including existing ones such as `result.MatchAsync(async ...)` and `vt.ThenAsync(async ...)`. Move to C# 13, or type the handler: `(Func<int, Task<string>>)(async v => ...)` or a local function. Two more shapes need a typed handler on C# 12, on every target including `netstandard2.1`:
+#### Lambda binding and C# 12
+
+On .NET 9+, a lambda that returns `ValueTask` binds the `ValueTask` handler, and an untyped `async` lambda binds the `Task` handler through `OverloadResolutionPriority`, which needs C# 13 or later. With `LangVersion` 12 on a .NET 9+ target, an untyped `async` lambda is ambiguous (CS0121) on every operation marked ¹, `TraverseAsync` included. Move to C# 13, or type the handler: `(Func<int, Task<string>>)(async v => ...)` or a local function. Two more shapes need a typed handler on C# 12, on every target including `netstandard2.1`:
 
 - `result.MapErrorAsync(async e => ...)`: the per-error `Func<Error, Task<Error>>` and the array `Func<Error[], Task<Error[]>>` mappers both fit.
 - `result.BindAsync(async v => ...)` on a `Result<T>`.
 
 On C# 13 or later both compile. On a `Result<T>`, `MapErrorAsync` matches an untyped `async` lambda on what its body returns: a body that returns an `Error`, including `return e;`, binds the per-error mapper, so `async errors => errors` receives a single `Error`, and a body that returns a new `Error[]` binds the array mapper. Cast to `Func<Error[], Task<Error[]>>` when the array mapper must be explicit.
 
-#### Migrating to the async matrix
+#### Handlers that are not awaited
 
-Recompiling against this version changes what some existing call sites bind to:
-
-- `TapAsync` on a `Task<Result>`, `Task<Result<T>>`, `ValueTask<Result>` or `ValueTask<Result<T>>` source with an `async` lambda now awaits the handler. It used to bind `Action`/`Action<T>`, which ran it as `async void`: the chain did not wait for it and its exceptions were lost. Exceptions from the handler now propagate.
-- `MapAsync` on a `ValueTask<Result<T>>` source with an `async` lambda now returns `ValueTask<Result<U>>`. It used to return `ValueTask<Result<Task<U>>>`.
-- `TapAsync` on a `Task<Result>` or `Task<Result<T>>` source with a non-`async` lambda that returns a `Task`, such as `taskResult.TapAsync(x => SaveAsync(x))`, now awaits that task. It used to bind `Action<T>` and discard it.
-- On .NET 9+, a lambda that returns `ValueTask` binds the new `ValueTask` handlers instead of a sync or `Action` overload.
-- 6.5.0, on .NET 9+: `SwitchFirstAsync`/`SwitchLastAsync` on a `ValueTask` source with two non-`async` lambdas that return a `ValueTask` now await them. They used to bind the `Action` pair and discard them.
-- 6.5.0, on .NET 9+: `FinallyAsync` on a `ValueTask` source with a lambda that returns `ValueTask`, `ValueTask<T>` or `Task<T>`, or an `async` lambda that returns a value, now awaits the handler. The result is `ValueTask<Result..>` for `ValueTask` and `Task<T>` handlers and `ValueTask<T>` otherwise; it used to be the nested `ValueTask<ValueTask..>` or `ValueTask<Task<T>>` from the `Func<.., TOut>` overload.
-- 6.5.0, every target: the conditional `TapAsync(condition, action)` on a `Task`/`ValueTask` source, with a `bool` or `Func<bool>` condition, now awaits an `async` lambda, such as `taskResult.TapAsync(isNew, async v => await SaveAsync(v))`. It used to bind `Action`/`Action<T>` and run as `async void`, so exceptions from the handler were lost; they now propagate. A non-`async` lambda that returns a `Task` on a `Task` source, or a `ValueTask` on a `ValueTask` source, is now awaited too; it used to be discarded.
-
-Unchanged:
+Upgrading from 6.x changes what some `TapAsync`, `MapAsync`, `SwitchFirstAsync`/`SwitchLastAsync` and `FinallyAsync` call sites bind to, mostly so that `async` lambdas are now awaited; the list is in [the async naming migration](https://github.com/senrecep/CSharpEssentials/blob/main/docs/migration/v6-async-naming.md). These shapes still bind a sync `Action` and do not await the handler:
 
 - A non-`async` lambda that returns a `Task` on a `ValueTask` source still binds `Action<T>` for `TapAsync` and the conditional `TapAsync`, so the task is not awaited. Use an `async` lambda or a `ValueTask` handler.
 - A non-`async` lambda that returns a `ValueTask` on a `Task` source, such as `taskResult.TapAsync(x => SaveValueTaskAsync(x))` or `taskResult.TapAsync(isNew, x => SaveValueTaskAsync(x))`, still binds `Action<T>`, so the `ValueTask` is discarded. Use an `async` lambda or a `Task` handler.
 - A non-`async` lambda that returns `ValueTask<T>` on a `ValueTask` source still binds `Action<T>` for `TapAsync` and the conditional `TapAsync`, so the `ValueTask<T>` is discarded: unlike `Task<T>` on a `Task` source, `ValueTask<T>` does not convert to `ValueTask`. Use an `async` lambda.
 - The sync `Tap(condition, action)` on a `Result`/`Result<T>` instance takes only `Action`, so `result.Tap(isNew, async () => await SaveAsync())` still runs as `async void`. Check the condition inside an awaited handler instead: `result.TapAsync(() => isNew ? SaveAsync() : Task.CompletedTask)`.
 
-Source compatibility: a project that targets .NET 9+ and pins `LangVersion` 12 gets CS0121 for untyped `async` lambdas on `MatchAsync`, `MatchFirstAsync`, `MatchLastAsync`, `SwitchAsync`, `EnsureAsync`, `TapIfAsync`, `ThenAsync`, `ThenDoAsync` and `TraverseAsync`, which all compiled before, and since 6.5.0 on `ElseAsync`, `FailIfAsync`, `SwitchFirstAsync`, `SwitchLastAsync`, `TapErrorAsync`, `TapErrorFirstAsync`, `ElseDoAsync`, `ElseDoFirstAsync`, `CompensateAsync`, `CompensateFirstAsync`, `ThenEnsureAsync`, `FinallyAsync` (`ValueTask` sources) and `Result.TryAsync`. Use C# 13 or later, or type the handler.
-
 ### Collection extensions
-
-Batch operations on sequences of results:
 
 ```csharp
 // Collect ALL errors from multiple results
@@ -334,11 +307,11 @@ Result pipeline = new[] { CheckStock(), ReserveItem(), CreateOrder() }
 | `Partition()` | Split | `(T[] Successes, Error[] Errors)` |
 | `FirstFailureOrSuccesses()` | Short-circuit | `Result` or `Result<T[]>` |
 | `TraverseAsync(selector, ct)` | Async map then sequence, one item at a time | `Task<Result<TOut[]>>` |
-| `SequenceAsync(ct)` | Await already-started tasks, collect all | `Task<Result<T[]>>` |
+| `SequenceAsync(ct)` | Await already-started tasks, collect all | `Task<Result<T[]>>` or `ValueTask<Result<T[]>>` |
 
 #### TraverseAsync and SequenceAsync
 
-`TraverseAsync` runs an async selector over a sequence **sequentially**: each item is awaited before the next one starts, so side effects keep their order and a non-thread-safe resource such as a `DbContext` is safe to use. Like `Traverse`, it never short-circuits: every failure is collected and the errors come back in input order.
+`TraverseAsync` runs an async selector over a sequence sequentially: each item is awaited before the next one starts, so side effects keep their order and a non-thread-safe resource such as a `DbContext` is safe to use. Like `Traverse`, it never short-circuits: every failure is collected and the errors come back in input order.
 
 ```csharp
 Result<OrderDto[]> orders = await orderIds.TraverseAsync(
@@ -353,7 +326,6 @@ Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync()
 - Selector exceptions propagate. They are not converted to errors.
 - `SequenceAsync` awaits every task, even after a failed `Result` or a faulted task. Only the first exception is rethrown, after all tasks have completed (like `Task.WhenAll`).
 - On cancellation `SequenceAsync` stops waiting at once. The remaining tasks of a materialized collection (`ICollection<T>`/`IReadOnlyCollection<T>`) are observed, so a later fault does not surface as an unobserved task exception. Lazy sources are not enumerated further, because that would start new work.
-- On .NET 9+ with `LangVersion` 12, untyped `async` lambdas can be ambiguous between the `Task` and `ValueTask` overloads (CS0121), the same as `MapErrorAsync`. Use `LangVersion` 13+ or a typed delegate.
 - Overloads: `Func<T, Task<Result<U>>>` and `Func<T, CancellationToken, Task<Result<U>>>` on all targets; the `ValueTask` selector twins are available on .NET 9+. `SequenceAsync` accepts `IEnumerable<Task<Result<T>>>` and `IEnumerable<ValueTask<Result<T>>>`.
 
 ### TapIf: conditional side effects
@@ -361,7 +333,7 @@ Result<int[]> values = await new[] { LoadA(), LoadB(), LoadC() }.SequenceAsync()
 ```csharp
 Result<int> result = 42;
 
-// Predicate-based tap: action fires only when Success AND predicate is true
+// Runs only on success when the predicate is true
 result.TapIf(v => v > 10, v => logger.LogInformation("Large value: {Value}", v));
 
 // Async variants

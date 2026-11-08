@@ -4,9 +4,7 @@ This page compares CSharpEssentials.AspNetCore (CSE) with plain ASP.NET Core min
 
 The same project, `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/` (suite key `aspnetcore`), also holds the idempotency classes, documented in [CSharpEssentials.Idempotency/BENCHMARKS.md](../CSharpEssentials.Idempotency/BENCHMARKS.md), and the request logging classes, documented in [CSharpEssentials.RequestResponseLogging/BENCHMARKS.md](../CSharpEssentials.RequestResponseLogging/BENCHMARKS.md).
 
-The parity self-check passes on every TFM, and full default-job results for net8.0 to net11.0 are in [Results](#results).
-
-The competitors are pinned exactly in `Directory.Packages.props`. Each pin is the latest stable release on NuGet as of 2026-11-03:
+The parity self-check passes on every TFM. The competitors are pinned exactly in `Directory.Packages.props`, each at the latest stable release on NuGet as of 2026-11-03:
 
 | Package | Version | Published | License (nuspec expression) | Asset the suite loads |
 |---|---|---|---|---|
@@ -32,7 +30,8 @@ The SharpGrip assembly reports `AssemblyInformationalVersion` 1.0.0 although the
 
 ## What was measured
 
-The code is in `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/`, in five classes for this package.
+Five classes cover this package.
+
 - Every class has `[MemoryDiagnoser]`.
 - These are overhead measurements, so the plain framework row is the baseline in every category, and the ratio reads as "the cost of adding X".
 - Each variant runs on its own Production host over `TestServer` (`WebApplication.CreateSlimBuilder` + `UseTestServer`). Production matters: the framework and Hellang add exception details in Development. Logging providers are cleared.
@@ -62,15 +61,15 @@ The code is in `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/`, 
 
 These were seen in the self-check output on all four TFMs and are not timed.
 
-- **Result filter failure body.** The framework writes `{"type":…,"title":"Order not found","status":404}` (plus a `traceId` on net9 and later). CSE writes title `Not Found`, `detail`, `instance`, `errorCodes: ["order.notFound"]` and a trace id. The ManualMatch row uses the same CSE types without the filter, so ManualMatch minus ResultFilter is the filter's own cost.
-- **Enum spelling.** On every TFM the framework rejects `pending_approval` with an empty 400 and does not run the handler; CSE binds it to `PendingApproval`. On `bogus` both answer 400, but only CSE writes a problem+json body listing the allowed values. The Normalized and Invalid rows are not like-for-like.
-- **ETag from the body.** CSE writes a weak `W/"<base64url SHA-256 of the JSON>"` from a second serialization and no other cache header. Marvin writes a strong MD5 ETag over its store key and the body, buffers the whole response in a `MemoryStream`, adds `Cache-Control`, `Expires`, `Last-Modified` and `Vary`, and stores the validator in its in-memory store.
-- **Who decides the 304.** Marvin answers a matching `If-None-Match` from its validator store before the endpoint runs (handler calls 0). CSE runs the handler, hashes the value and then answers 304 (handler calls 1). The BodyHash304 rows therefore measure different work; the Versioned304 rows (hand-written against CSE `IVersioned`) both run the handler. Marvin has no `IVersioned` equivalent by default (only a custom `IETagInjector`), so it has no Versioned row.
-- **Problem bodies.** Titles differ: for an exception the framework says `An error occurred while processing your request.` on net8-net10 and `Internal Server Error` on net11, CSE `An unexpected error occurred.`, Hellang `Internal Server Error`. Type URIs differ (Hellang uses `https://httpstatuses.io/{status}`). CSE adds `instance`, `traceId` and, for errors from code, `errorCodes`; Hellang adds `traceId` on every TFM and the framework on net9 and later. With no `Activity` running, every trace id here is `HttpContext.TraceIdentifier`. Parity compares status, media type and the `status` member only.
-- **Hellang needs MVC.** Its middleware writes through the MVC `ObjectResult` executor, so its host registers `AddControllers()`, because 6.5.1's `AddProblemDetails` registers MVC's `ObjectResultExecutor`. The upstream minimal-API sample added that call after the 6.5.1 release (2a04612); the sample at the 6.5.1 commit 2c41d08 omits it. Its `AddProblemDetails` overload is ambiguous with the framework's parameterless one when both namespaces are imported; the suite calls the framework one by its static class.
-- **Hellang has no ErrorResult row.** It has no error-value API; its minimal-API sample returns a ProblemDetails subclass through the framework's `Results.BadRequest(problem)`.
-- **Validation bodies.** The framework and SharpGrip write `"errors": {"Name": ["'Name' must not be empty."], …}`. CSE writes `"errors": [{"code": "Name.NotEmpty", "description": …}]`, `errorCodes`, a `detail` with the first message, `instance` and a trace id. All three use `application/problem+json`. SharpGrip runs a different validator engine (FluentValidation 12.2.0).
-- **No DataAnnotations row.** The framework's net10+ `AddValidation()` has no net8/net9 support and no N-rule validator class to match, so it is not included.
+- Result filter failure body: the framework writes `{"type":…,"title":"Order not found","status":404}` (plus a `traceId` on net9 and later). CSE writes title `Not Found`, `detail`, `instance`, `errorCodes: ["order.notFound"]` and a trace id. The ManualMatch row uses the same CSE types without the filter, so ManualMatch minus ResultFilter is the filter's own cost.
+- Enum spelling: on every TFM the framework rejects `pending_approval` with an empty 400 and does not run the handler; CSE binds it to `PendingApproval`. On `bogus` both answer 400, but only CSE writes a problem+json body listing the allowed values. The Normalized and Invalid rows are not like-for-like.
+- ETag from the body: CSE writes a weak `W/"<base64url SHA-256 of the JSON>"` from a second serialization and no other cache header. Marvin writes a strong MD5 ETag over its store key and the body, buffers the whole response in a `MemoryStream`, adds `Cache-Control`, `Expires`, `Last-Modified` and `Vary`, and stores the validator in its in-memory store.
+- Who decides the 304: Marvin answers a matching `If-None-Match` from its validator store before the endpoint runs (handler calls 0). CSE runs the handler, hashes the value and then answers 304 (handler calls 1). The BodyHash304 rows therefore measure different work; the Versioned304 rows (hand-written against CSE `IVersioned`) both run the handler. Marvin has no `IVersioned` equivalent by default (only a custom `IETagInjector`), so it has no Versioned row.
+- Problem bodies: for an exception the framework says `An error occurred while processing your request.` on net8-net10 and `Internal Server Error` on net11, CSE `An unexpected error occurred.`, Hellang `Internal Server Error`. Type URIs differ (Hellang uses `https://httpstatuses.io/{status}`). CSE adds `instance`, `traceId` and, for errors from code, `errorCodes`; Hellang adds `traceId` on every TFM and the framework on net9 and later. With no `Activity` running, every trace id here is `HttpContext.TraceIdentifier`. Parity compares status, media type and the `status` member only.
+- Hellang needs MVC: its middleware writes through the MVC `ObjectResult` executor, so its host registers `AddControllers()`, because 6.5.1's `AddProblemDetails` registers MVC's `ObjectResultExecutor`. The upstream minimal-API sample added that call after the 6.5.1 release (2a04612); the sample at the 6.5.1 commit 2c41d08 omits it. Its `AddProblemDetails` overload is ambiguous with the framework's parameterless one when both namespaces are imported; the suite calls the framework one by its static class.
+- Hellang has no ErrorResult row because it has no error-value API; its minimal-API sample returns a ProblemDetails subclass through the framework's `Results.BadRequest(problem)`.
+- Validation bodies: the framework and SharpGrip write `"errors": {"Name": ["'Name' must not be empty."], …}`. CSE writes `"errors": [{"code": "Name.NotEmpty", "description": …}]`, `errorCodes`, a `detail` with the first message, `instance` and a trace id. All three use `application/problem+json`. SharpGrip runs a different validator engine (FluentValidation 12.2.0).
+- No DataAnnotations row: the framework's net10+ `AddValidation()` has no net8/net9 support and no N-rule validator class to match, so it is not included.
 
 ---
 
@@ -104,8 +103,8 @@ This table comes from reading CSE source, the competitors' source and docs at th
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
-- One Linux x64 machine, 6 physical cores and 12 threads (the exact CPU is in each report header). The suites ran one after another, never in parallel.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628), as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0. Differences and multiples in the prose are computed from the means and allocations in the tables.
+- One machine, a 6-core, 12-thread x64 desktop CPU on Linux. The suites ran one after another, never in parallel.
 - The 1-minute load average was 1.60 when the `aspnetcore` suite started and 2.02 when it ended (5-minute average 1.70 to 2.65). Classes with a row above 5% CV were rerun, up to twice. On this page the reports for `ValidationFilterComparison` on net8.0, net10.0 and net11.0 and for `ConditionalGetComparison` on net9.0 come from those reruns, which ran at a 1-minute load of 1.41 to 3.94. After the reruns, three rows on this page are still above 5% CV: the net11.0 `Bcl_Inline` baselines of the validation filter for Rules=1 Valid (CV 6.4%), Rules=3 Invalid (CV 8.5%) and Rules=3 Valid (CV 5.9%). They are marked noisy in the table, and the net11.0 CSE and SharpGrip ratios against them are less certain than the means.
 - Reports: `benchmarks/results/aspnetcore/{tfm}/results/*-report-github.md` (also `.csv` and `.html`), for example [net10.0](../benchmarks/results/aspnetcore/net10.0/results/).
 
@@ -217,26 +216,25 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 ### Where CSE loses
 
-Every CSE row adds cost over the plain framework request; the ratios above give it per row. Rows where a competitor is faster or allocates less, or where CSE costs more than the work suggests:
+Every CSE row adds cost over the plain framework request. Rows where a competitor is faster or allocates less, or where CSE costs more than the work suggests:
 
-- **ProblemDetails Exception, all TFMs: Hellang is faster.** Hellang against CSE: 50.37 against 58.12 μs (net8.0), 36.17 against 38.95 μs (net9.0), 28.05 against 29.68 μs (net10.0), 26.97 against 28.18 μs (net11.0). Hellang allocates more (for example 12.98 KB against 12.39 KB on net10.0).
-- **ConditionalGet BodyHash304 at 64 KB, all TFMs: Marvin is 4.0 to 5.4 times faster.** 14.929 against 67.197 μs (net8.0), 13.411 against 64.654 μs (net9.0), 11.743 against 63.311 μs (net10.0), 16.08 against 64.84 μs (net11.0). Marvin skips the handler; CSE runs it and hashes the body. CSE allocates less (9.58 KB against 12.51 KB on net10.0).
-- **ConditionalGet BodyHash304 at 1 KB, net11.0: Marvin is faster.** 16.05 against 16.86 μs. On net8.0 to net10.0 CSE is faster at 1 KB.
-- **ResultFilter Success, net10.0 only: 1.19 of `TypedResults`** (11.231 against 9.475 μs), where the other TFMs show 0.99 to 1.02.
-- **EnumBinding Invalid: 1.55 to 2.16 of the framework**, which answers an empty 400; CSE writes a problem+json body with the allowed values.
+- ProblemDetails Exception, all TFMs: Hellang is faster. Hellang against CSE: 50.37 against 58.12 μs (net8.0), 36.17 against 38.95 μs (net9.0), 28.05 against 29.68 μs (net10.0), 26.97 against 28.18 μs (net11.0). Hellang allocates more (for example 12.98 KB against 12.39 KB on net10.0).
+- ConditionalGet BodyHash304 at 64 KB, all TFMs: Marvin is 4.0 to 5.4 times faster. 14.929 against 67.197 μs (net8.0), 13.411 against 64.654 μs (net9.0), 11.743 against 63.311 μs (net10.0), 16.08 against 64.84 μs (net11.0). Marvin skips the handler; CSE runs it and hashes the body. CSE allocates less (9.58 KB against 12.51 KB on net10.0).
+- ConditionalGet BodyHash304 at 1 KB, net11.0: Marvin is faster, 16.05 against 16.86 μs. On net8.0 to net10.0 CSE is faster at 1 KB.
+- ResultFilter Success, net10.0 only: 1.19 of `TypedResults` (11.231 against 9.475 μs), where the other TFMs show 0.99 to 1.02.
+- EnumBinding Invalid: 1.55 to 2.16 of the framework, which answers an empty 400; CSE writes a problem+json body with the allowed values.
 
 ---
 
 ## Caveats
 
-- **TestServer, not Kestrel.** Sockets, TLS and HTTP parsing are not measured. Each number is the middleware and endpoint pipeline plus the in-memory transport, which every row pays the same way.
-- **CSE code notes**, from the worktree source, with what the run shows:
+- TestServer, not Kestrel: sockets, TLS and HTTP parsing are not measured. Each number is the middleware and endpoint pipeline plus the in-memory transport, which every row pays the same way.
+- CSE code notes, from the source, with what the run shows:
   - `ResultEndpointFilter/ResultEndpointFilter.cs:15-36` uses no reflection: it reads `IValueResult.BoxedValue`, wraps it in `TypedResults.Ok`, and resolves `IResultErrorMapper` from `RequestServices` only on failure. The cost of the filter itself is the ResultFilter minus ManualMatch gap above.
   - `EnumBinding/EnumBindingMiddleware.cs:27`: the `GetValue` lambda captures `this`, so a delegate is allocated per request even on a cache hit (PassThrough: 0.06 KB on net8.0 and net9.0); `:122,147` allocate a `List<string>` and an array per value even when nothing changes (Canonical); `:71` copies the whole query into a dictionary on the first change (Normalized).
   - `ConditionalRequests/DefaultETagGenerator.cs:30-31` serializes the value a second time into `Sha256Stream`, which hashes as it goes and keeps no copy. The allocation stays near the plain response; the time does not (BodyHash200 and BodyHash304 above).
   - `Validation/ValidationEndpointFilter.cs:29,34-35,53`: every request runs `OfType()` into an array and `OrderBy` over `GetServices`, and `Distinct` on failure.
   - `ProblemDetails/EnhancedProblemDetailsWriter.cs:69` uses the `WriteAsJsonAsync(object, Type, options)` overload, with `EnhancedProblemDetailsJsonContext` appended to the resolvers so the problem types resolve without reflection.
-- Hellang 6.5.1 is a 2022 release built for net6.0; every TFM runs that build.
 - The CSE column is the working tree on branch `integ/all` (all open pull requests merged locally), which may not match the version published on NuGet.
 
 ---

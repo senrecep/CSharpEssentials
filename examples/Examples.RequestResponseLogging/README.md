@@ -1,6 +1,6 @@
 # CSharpEssentials.RequestResponseLogging example
 
-This Web API project logs HTTP requests and responses with `CSharpEssentials.RequestResponseLogging`.
+A Web API that logs HTTP requests and responses with `CSharpEssentials.RequestResponseLogging`.
 
 ## Features demonstrated
 
@@ -44,7 +44,7 @@ curl -s -X POST http://localhost:5000/api/demo/echo \
 curl -s http://localhost:5000/api/demo/error
 ```
 
-The controller throws, so the middleware logs `Request: Error occurred during request processing` and the exception type and message in `Response`, and rethrows. The response is a bare 500, because this project registers no exception handler.
+The controller throws, so the middleware logs the captured request body (`Request: Empty request body` for this GET) with `Response: Exception: InvalidOperationException, Message: Something went wrong in the server!`, and rethrows. The response is a bare 500, because this project registers no exception handler.
 
 ### 4. Not found and validation failure
 
@@ -136,5 +136,5 @@ app.AddRequestResponseLogging(opt =>
 
 1. Headers: only the keys in `HeaderKeys` are logged, so leave `Authorization`, `Cookie` and API key headers out. The keys are compared case-sensitively against the names as the server received them; use `new HashSet<string>(StringComparer.OrdinalIgnoreCase)` for `HeaderKeys` when clients may send the name in another case (HTTP/2 sends lower-case names).
 2. Bodies: request and response bodies are logged as they are. Mark endpoints that carry passwords or personal data with `[SkipRequestLogging]`, `[SkipResponseLogging]` or `[SkipRequestResponseLogging]`, and truncate or scrub bodies in a `UseHandler` callback.
-3. Body size: a request with a `Content-Length` over 10 MB is not read (`Request body too large`). The response body is buffered in memory, so use `[SkipResponseLogging]` on large or streaming responses.
+3. Body size: a request with a `Content-Length` over 10 MB is not read (`Request body too large`), and a chunked body is read only up to 10 MB. Response writes go to the client right away, but a full copy of the response body stays in memory until the request ends, so use `[SkipResponseLogging]` on large responses.
 4. Path filtering: exclude health checks, metrics and static file endpoints.

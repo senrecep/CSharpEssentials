@@ -1,6 +1,6 @@
 # CSharpEssentials
 
-Meta-package that bundles the core functional modules. Install it to get the most commonly used packages through one reference.
+Meta-package that bundles the core functional modules. It targets net11.0, net10.0, net9.0 and netstandard2.1.
 
 ## Included packages
 
@@ -26,7 +26,7 @@ dotnet add package CSharpEssentials
 
 ## Usage
 
-This meta-package is the easiest way to start. It targets net11.0, net10.0, net9.0 and netstandard2.1. The other packages are installed separately: `CSharpEssentials.Validation`, `CSharpEssentials.Mediator`, `CSharpEssentials.Resilience`, `CSharpEssentials.Endpoints`, `CSharpEssentials.DependencyInjection`, `CSharpEssentials.EntityFrameworkCore`, `CSharpEssentials.AspNetCore` (with `CSharpEssentials.AspNetCore.OpenApi` or `CSharpEssentials.AspNetCore.Swashbuckle`), `CSharpEssentials.RequestResponseLogging` and `CSharpEssentials.GcpSecretManager`.
+The other packages are installed separately: `CSharpEssentials.Validation`, `CSharpEssentials.Mediator`, `CSharpEssentials.Resilience`, `CSharpEssentials.Endpoints`, `CSharpEssentials.DependencyInjection`, `CSharpEssentials.EntityFrameworkCore`, `CSharpEssentials.AspNetCore` (with `CSharpEssentials.AspNetCore.OpenApi` or `CSharpEssentials.AspNetCore.Swashbuckle`), `CSharpEssentials.Idempotency` (with `CSharpEssentials.Idempotency.Testing` for store contract tests), `CSharpEssentials.RequestResponseLogging` and `CSharpEssentials.GcpSecretManager`.
 
 ```csharp
 using CSharpEssentials.Errors;
@@ -39,7 +39,7 @@ Result<User> result = maybe.ToResult(Error.NotFound("User.Missing", "User not fo
 
 ## Extensions in the meta-package
 
-The assembly itself adds a few helpers that combine the bundled packages:
+The assembly adds a few helpers that combine the bundled packages:
 
 ```csharp
 using System.Text.Json;

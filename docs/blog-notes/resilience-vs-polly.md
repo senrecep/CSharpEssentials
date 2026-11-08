@@ -1,6 +1,6 @@
 # Blog notes: CSharpEssentials.Resilience against Polly.Core
 
-These are notes for a post, not the post. The numbers come from the full default-job run under `benchmarks/results/http/{tfm}/results/`; [CSharpEssentials.Resilience/BENCHMARKS.md](../../CSharpEssentials.Resilience/BENCHMARKS.md#results) has every row on every TFM.
+Notes for a post, not the post. The numbers come from the full default-job run under `benchmarks/results/http/{tfm}/results/`; [CSharpEssentials.Resilience/BENCHMARKS.md](../../CSharpEssentials.Resilience/BENCHMARKS.md#results) has every row on every TFM.
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The library compared is Polly.Core 8.9.0 (BSD-3-Clause). Microsoft.Extensions.Http.Resilience 10.11.0 (MIT) appears in the HTTP resilience row, which is covered in the Http notes.
 
@@ -8,7 +8,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The library 
 
 - Working title: "What does a Result wrapper around Polly cost?"
 - CSE.Resilience is built on Polly.Core. Every CSE row and every Polly row in the suite runs the same Polly.Core 8.9.0, so this is not engine against engine. The post measures the wrapper: the `Result` conversion, the try/catch, the extra async layer, and the way CSE nests one pipeline per strategy after the first.
-- CSE's case rests on behaviour rather than speed: failed `Result` values count as transient without a hand-written predicate, caller cancellation is never retried, and nothing throws.
+- CSE's case rests on behavior, not speed: failed `Result` values count as transient without a hand-written predicate, caller cancellation is never retried, and nothing throws.
 
 ## What each library provides
 
@@ -64,10 +64,10 @@ Reports: [PolicyOverhead](../../benchmarks/results/http/net10.0/results/CSharpEs
 
 Measured. CSE is slower than the matching Polly row in every category on every TFM, apart from one row on net11.0 (below), and allocates more everywhere except the `RetryIfFailed` predicate row, which allocates nothing. The full list is in [the Results section](../../CSharpEssentials.Resilience/BENCHMARKS.md#where-cse-loses).
 
-- The wrapper itself. Every `ExecuteAsync` is an async method with a try/catch around Polly's call (`CSharpEssentials.Resilience/ResiliencePolicy.cs:64-129`, `ResiliencePolicyT.cs:38-79`), so each call runs one more async state machine than the Polly row. CSE now passes Polly a static lambda with the operation as state, the same shape as the Polly rows, so there is no closure. Empty policy: 84.48 ns and 80 B against 58.40 ns and nothing on net10.0.
+- The wrapper itself. Every `ExecuteAsync` is an async method with a try/catch around Polly's call (`CSharpEssentials.Resilience/ResiliencePolicy.cs:64-129`, `ResiliencePolicyT.cs:38-79`), so each call runs one more async state machine than the Polly row. CSE passes Polly a static lambda with the operation as state, the same shape as the Polly rows, so there is no closure. Empty policy: 84.48 ns and 80 B against 58.40 ns and nothing on net10.0.
 - Nesting. Each `With...` after the first builds a separate pipeline and `Merge` wraps the two in a third (`ResiliencePolicy.cs:131-145`). Retry + circuit breaker + timeout through CSE's options: 815.0 ns against 633.8 ns for one Polly builder on net10.0. `FromPipeline` over that one Polly pipeline is 684.1 ns, so the gap is part wrapper and part nesting.
 - Boxing in the non-generic policy. The retry and circuit-breaker predicates test `args.Outcome.Result is IResultBase` on an `Outcome<object>` (`Modules/ResiliencePolicy.Retry.cs:20-22`, `Modules/ResiliencePolicy.CircuitBreaker.cs:24`), so the `Result<T>` struct is boxed on every attempt: 112 B with one attempt and 144 B with two, against 80 B for the generic policy, on every TFM.
-- The predicate form of `RetryIfFailed` now reuses a cached pipeline and passes the predicate through a pooled `ResilienceContext` (`Extensions/ResilienceResultExtensions.cs:115-117`), so it allocates nothing. It is still the slowest `RetryIfFailed` row: 352.3 ns on net10.0, against 296.0 ns for the cached overload and 227.1 ns for Polly.
+- The predicate form of `RetryIfFailed` reuses a cached pipeline and passes the predicate through a pooled `ResilienceContext` (`Extensions/ResilienceResultExtensions.cs:116-117`), so it allocates nothing. It is still the slowest `RetryIfFailed` row: 352.3 ns on net10.0, against 296.0 ns for the cached overload and 227.1 ns for Polly.
 - Per-call construction: the Readme Quick Start builds the policy inline. On net8.0 to net10.0 that costs about the same in CSE and Polly (3,466.70 ns against 3,398.24 ns on net10.0), a ratio of 12.56 against the prebuilt CSE retry on net10.0.
 
 ## Where the order flips

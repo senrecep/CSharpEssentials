@@ -4,9 +4,7 @@ This page compares the CSE idempotency stack with IdempotentAPI 2.6.0 (with Idem
 
 The classes live in `benchmarks/CSharpEssentials.AspNetCore.Comparison.Benchmarks/` (suite key `aspnetcore`), next to the classes documented in [CSharpEssentials.AspNetCore/BENCHMARKS.md](../CSharpEssentials.AspNetCore/BENCHMARKS.md) and [CSharpEssentials.RequestResponseLogging/BENCHMARKS.md](../CSharpEssentials.RequestResponseLogging/BENCHMARKS.md). The older `benchmarks/CSharpEssentials.Idempotency.Benchmarks/` suite (middleware overhead and fingerprint buffering, net9-net11, results under `benchmarks/results/idempotency/`) is covered in [Results](#middleware-overhead-and-fingerprint-buffering-csharpessentialsidempotencybenchmarks).
 
-The parity self-check passes on every TFM, and full default-job results for net8.0 to net11.0 are in [Results](#results).
-
-The competitor packages are pinned exactly in `Directory.Packages.props`. Each pin is the latest stable release on NuGet as of 2026-11-03:
+The parity self-check passes on every TFM. The competitor packages are pinned exactly in `Directory.Packages.props`, each at the latest stable release on NuGet as of 2026-11-03:
 
 | Package | Version | Published | License | Asset the suite loads |
 |---|---|---|---|---|
@@ -14,20 +12,18 @@ The competitor packages are pinned exactly in `Directory.Packages.props`. Each p
 | IdempotentAPI.MinimalAPI | 3.2.0 | 2024-08-22 | MIT, from the repo | `lib/net7.0` |
 | IdempotentAPI.Cache.DistributedCache | 2.2.0 | 2023-12-26 | MIT, from the repo | `lib/netstandard2.1` |
 
-- **License metadata gap.** None of the IdempotentAPI nuspecs has `<license>` or `<licenseUrl>`, and the packages bundle no license file. The source repository `ikyriak/IdempotentAPI` has `LICENSE.md` with the MIT License at the release commit `b38045c` that the nuspecs name, and the repository's license metadata reports `spdx_id: MIT`. The package is open source, so it stays in the suite.
+- License metadata gap: None of the IdempotentAPI nuspecs has `<license>` or `<licenseUrl>`, and the packages bundle no license file. The source repository `ikyriak/IdempotentAPI` has `LICENSE.md` with the MIT License at the release commit `b38045c` that the nuspecs name, and the repository's license metadata reports `spdx_id: MIT`. The package is open source, so it stays in the suite.
 - Transitive packages: IdempotentAPI.AccessCache 2.2.0, IdempotentAPI.Cache.Abstractions 2.2.0, IdempotentAPI.DistributedAccessLock.Abstractions 2.1.0 and Newtonsoft.Json 13.0.1 (MIT). IdempotentAPI's old `Microsoft.AspNetCore.Mvc.Core 2.2.5` dependency is pruned by the SDK on every TFM; it does not appear in the restore assets.
 - Transitive pinning is off for this project (see the AspNetCore page for why).
 
-What each TFM runs (`--self-check` prints the ASP.NET Core and competitor versions as its first line):
+What each TFM runs (`--self-check` prints the ASP.NET Core and competitor versions as its first line; runtime versions as the report headers print them):
 
 | TFM | ASP.NET Core | CSE.Idempotency build | CSE.AspNetCore build |
 |---|---|---|---|
-| net8.0 | 8.0.30 | netstandard2.1 (+ Microsoft.Bcl.TimeProvider) | net8.0 |
-| net9.0 | 9.0.19 | net9.0 | net9.0 |
-| net10.0 | 10.0.11 | net10.0 | net10.0 |
-| net11.0 | 11.0.0-rc.1 | net11.0 | net11.0 |
-
-CSE.Idempotency has no net8 target, so net8 runs its netstandard2.1 build.
+| net8.0 | 8.0.33 | netstandard2.1 (+ Microsoft.Bcl.TimeProvider) | net8.0 |
+| net9.0 | 9.0.22 | net9.0 | net9.0 |
+| net10.0 | 10.0.14 | net10.0 | net10.0 |
+| net11.0 | 11.0.0 (11.0.26.52348) | net11.0 | net11.0 |
 
 ---
 
@@ -58,14 +54,14 @@ CSE.Idempotency has no net8 target, so net8 runs its netstandard2.1 build.
 
 ## Semantic differences
 
-- **The handler counter is captured, not injected.** IdempotentAPI's minimal-API filter fingerprints every bound argument, injected services included. The first version of the suite injected `HandlerCounter` into the handler; its `Count` changed after the first call, so every retry got `400 The Idempotency header key value '…' was used in a different request.` Every replay host now captures the counter instead, so all rows run the same handler. A real app that injects a service with changing serializable state into an IdempotentAPI endpoint hits the same 400.
-- **Fingerprint.** CSE hashes method, path, query and the raw body (SHA-256; the body is buffered with `EnableBuffering` and would spill to a temp file over 30 KB, which this small request never does). IdempotentAPI hashes the Newtonsoft-serialized bound arguments and the path, never the raw body; `HttpRequest`/`HttpContext` arguments are excluded. Both detect a changed `CreateOrder`.
-- **Stored form.** CSE stores the response bytes plus allowlisted headers and writes them back on replay. IdempotentAPI stores the result object as Newtonsoft JSON with `TypeNameHandling.All`, gzipped; on replay it decompresses, deserializes, rebuilds the result type by reflection and serializes the value again through System.Text.Json. Its cost depends on how well the payload compresses.
-- **Replay signal.** CSE replays add `Idempotency-Replayed: true` (headers seen: `Content-Length, Content-Type, Idempotency-Replayed`). IdempotentAPI replays add none (`Content-Type` only), so parity counts handler calls. The replayed bytes match the plain response byte for byte on both, at 1 KB and 256 KB.
-- **In flight and key reuse.** CSE answers 409 with `Retry-After` while a request is in flight, and 422 when a key is reused with another request. IdempotentAPI answers 409 with no `Retry-After`, and 400 with a plain-text message for key reuse.
-- **Cache limit.** `MemoryDistributedCache` sizes each entry by its value length. Over the default 200 MB `SizeLimit` it refuses new entries and compacts in the background. A long NewKey run reaches the limit for both libraries, so those rows include refused writes and compaction (labelled). The self-check filled a fresh CSE host and a fresh IdempotentAPI host with 1400 keys of 256 KB, then sent one more key twice: both still answered 200/200 with one handler call, so a refused write of older keys did not break the replay of the key just written. The 256 KB NewKey rows are kept.
-- **InMemoryStore row.** `CSharpEssentials_Replay_InMemoryStore` uses CSE's default store, not the store the competitor uses; it is not like-for-like.
-- **Hand-written baselines.** The `ConcurrentDictionary` dedupe has no lease, fingerprint, retention or mismatch detection. The hand-written UUIDv5 receives the canonical name prepared in setup, while `ToUuidV5` builds it on every call.
+- The handler counter is captured, not injected: IdempotentAPI's minimal-API filter fingerprints every bound argument, injected services included. The first version of the suite injected `HandlerCounter` into the handler; its `Count` changed after the first call, so every retry got `400 The Idempotency header key value '…' was used in a different request.` Every replay host now captures the counter instead, so all rows run the same handler. A real app that injects a service with changing serializable state into an IdempotentAPI endpoint hits the same 400.
+- Fingerprint: CSE hashes method, path, query and the raw body (SHA-256; the body is buffered with `EnableBuffering` and would spill to a temp file over 30 KB, which this small request never does). IdempotentAPI hashes the Newtonsoft-serialized bound arguments and the path, never the raw body; `HttpRequest`/`HttpContext` arguments are excluded. Both detect a changed `CreateOrder`.
+- Stored form: CSE stores the response bytes plus allowlisted headers and writes them back on replay. IdempotentAPI stores the result object as Newtonsoft JSON with `TypeNameHandling.All`, gzipped; on replay it decompresses, deserializes, rebuilds the result type by reflection and serializes the value again through System.Text.Json. Its cost depends on how well the payload compresses.
+- Replay signal: CSE replays add `Idempotency-Replayed: true` (headers seen: `Content-Length, Content-Type, Idempotency-Replayed`). IdempotentAPI replays add none (`Content-Type` only), so parity counts handler calls. The replayed bytes match the plain response byte for byte on both, at 1 KB and 256 KB.
+- In flight and key reuse: CSE answers 409 with `Retry-After` while a request is in flight, and 422 when a key is reused with another request. IdempotentAPI answers 409 with no `Retry-After`, and 400 with a plain-text message for key reuse.
+- Cache limit: `MemoryDistributedCache` sizes each entry by its value length. Over the default 200 MB `SizeLimit` it refuses new entries and compacts in the background. A long NewKey run reaches the limit for both libraries, so those rows include refused writes and compaction (labelled). The self-check filled a fresh CSE host and a fresh IdempotentAPI host with 1400 keys of 256 KB, then sent one more key twice: both still answered 200/200 with one handler call, so a refused write of older keys did not break the replay of the key just written. The 256 KB NewKey rows are kept.
+- InMemoryStore row: `CSharpEssentials_Replay_InMemoryStore` uses CSE's default store, not the store the competitor uses; it is not like-for-like.
+- Hand-written baselines: the `ConcurrentDictionary` dedupe has no lease, fingerprint, retention or mismatch detection. The hand-written UUIDv5 receives the canonical name prepared in setup, while `ToUuidV5` builds it on every call.
 
 ---
 
@@ -99,7 +95,7 @@ From CSE source and IdempotentAPI source at `b38045c`; not measured.
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. All five classes and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
-- One Linux x64 machine, 6 physical cores and 12 threads. The suites ran one after another, never in parallel.
+- One machine, a 6-core, 12-thread x64 desktop CPU on Linux. The suites ran one after another, never in parallel.
 - `aspnetcore` suite, classes 2 to 5: the load average was not recorded for the rerun; no row is above 5% CV.
 - `IdempotentReplayComparison` rerun: nine rows on net8.0 and net9.0 are above 5% CV, seven of them 256 KB rows; they are marked noisy wherever they appear.
 - `CSharpEssentials.Idempotency.Benchmarks` suite (net9.0 to net11.0 only, the project has no net8.0 target): two net9.0 rows are above 5% CV (`NewKey` 6.2%, `Plain` at 1 KB 6.8%) and are marked noisy.
@@ -129,7 +125,6 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 - Replay of a completed key: CSE over `MemoryDistributedCache` is faster than IdempotentAPI and allocates less on every TFM, at both sizes. At 256 KB on net10.0: 85.63 μs and 276.81 KB against 1,498.60 μs and 4517.6 KB.
 - Against the plain endpoint, a CSE replay costs 1.07 to 1.36 at 1 KB. At 256 KB it is 0.77 to 0.98 of the plain endpoint (0.83 on net10.0, where neither row is noisy; on net8.0 and net9.0 the plain or the CSE row is noisy). A replay skips the handler and the JSON serialization and writes the stored bytes, which at 256 KB costs less than serializing the payload.
 - New key: CSE is faster than IdempotentAPI and allocates less on every TFM, at both sizes. At 256 KB on net10.0: 189.84 μs and 796.12 KB against 5,170.61 μs and 2272.98 KB.
-- `CSharpEssentials_Replay_InMemoryStore` uses CSE's default store, which IdempotentAPI does not offer; it is not like-for-like.
 
 ### Executor and inbox
 
@@ -147,8 +142,8 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 - `Direct_Call` is 1.049 to 8.010 ns, so the Execute ratios (up to 520.26) mostly show how small the baseline is. Read the CSE rows as absolute costs: a replay is 119.891 to 162.398 ns with no allocation, a first run is 545.730 to 664.826 ns with 504 B.
 - `CSharpEssentials_ModeOff` (idempotency off) still costs 51.513 to 74.582 ns, with no allocation.
-- The hand-written `ConcurrentDictionary.GetOrAdd` is 12.722 to 46.113 ns with no allocation. It has no lease, fingerprint, retention or mismatch check, so it is a floor, not an equivalent.
-- The first run is 545.730 to 664.826 ns and the inbox new message 953.367 to 1,121.019 ns, with no large step between TFMs.
+- The hand-written `ConcurrentDictionary.GetOrAdd` is 12.722 to 46.113 ns with no allocation, a floor rather than an equivalent.
+- The inbox new message is 953.367 to 1,121.019 ns, with no large step between TFMs.
 
 ### Record stores
 
@@ -184,7 +179,6 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 | `CSharpEssentials_InMemory_Contended_DistinctKeys` | 32 | 792.0 ns (2.98), 1493 B | 777.0 ns (2.90), 1493 B | 730.8 ns (2.78), 1493 B | 706.1 ns (2.39), 1493 B |
 
 - The mean is per operation (1024 operations per invocation). The same completed key from every worker costs 242.6 to 295.8 ns and 3 to 6 B; a new key per operation costs 671.9 to 792.0 ns and 1491 to 1493 B.
-- This class depends on the core count and the scheduler.
 
 ### Deterministic keys
 
@@ -198,7 +192,7 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 | `CSharpEssentials_ToUuidV5` | 1,273.68 ns (1.73), 488 B | 1,269.74 ns (1.72), 488 B | 918.42 ns (1.57), 456 B | 862.30 ns (1.47), 456 B |
 
 - A short key (`For`) is 43.63 to 73.54 ns. A key over 255 characters is hashed: 1,258.60 to 1,723.46 ns and 2432 to 2464 B.
-- `ToUuidV5` costs 1.47 to 1.73 of the hand-written UUIDv5 and allocates 456 to 488 B where the hand-written one allocates nothing. The hand-written version gets the canonical name prepared in setup; `ToUuidV5` builds it on every call.
+- `ToUuidV5` costs 1.47 to 1.73 of the hand-written UUIDv5 and allocates 456 to 488 B where the hand-written one allocates nothing.
 
 ### Middleware overhead and fingerprint buffering (`CSharpEssentials.Idempotency.Benchmarks`)
 
@@ -227,15 +221,15 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
 
 ### Where CSE loses
 
-- **`ToUuidV5` against the hand-written UUIDv5, all TFMs:** 1,273.68 against 735.50 ns (net8.0), 1,269.74 against 738.56 ns (net9.0), 918.42 against 584.51 ns (net10.0), 862.30 against 587.31 ns (net11.0), with 456 to 488 B allocated against none.
-- **Executor against the hand-written dedupe:** a CSE replay is 119.891 to 162.398 ns, the `ConcurrentDictionary` lookup 12.722 to 46.113 ns, neither allocating. The CSE row does more (lease, fingerprint, retention), but the gap is real.
-- **Large keyed requests:** a keyed replay with a 64 KB body takes 136.080 μs against 22.154 μs for the plain request on net10.0, and 1,250.851 μs against 127.180 μs at 1 MB.
+- `ToUuidV5` against the hand-written UUIDv5, all TFMs: 1,273.68 against 735.50 ns (net8.0), 1,269.74 against 738.56 ns (net9.0), 918.42 against 584.51 ns (net10.0), 862.30 against 587.31 ns (net11.0), with 456 to 488 B allocated against none.
+- Executor against the hand-written dedupe: a CSE replay is 119.891 to 162.398 ns, the `ConcurrentDictionary` lookup 12.722 to 46.113 ns, neither allocating. The CSE row does more (lease, fingerprint, retention), but the gap is real.
+- Large keyed requests: a keyed replay with a 64 KB body takes 136.080 μs against 22.154 μs for the plain request on net10.0, and 1,250.851 μs against 127.180 μs at 1 MB.
 
 ---
 
 ## Caveats
 
-- **CSE code notes**, from the worktree source, with what the run shows:
+- CSE code notes, from the source, with what the run shows:
   - `IdempotencyExecutor.cs:76-78`: the operation name is a constant and the mode check comes right after the settings, so `CSharpEssentials_ModeOff` allocates nothing.
   - `InMemoryIdempotencyRecordStore.cs:54,62`: the counter token string (`:120`) and the `Entry` are created only when the key is missing or expired, so a hit allocates nothing.
   - `InMemoryIdempotencyRecordStore.cs:87`: `payload.ToArray()` copies the payload before the token check.
@@ -245,8 +239,8 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
   - `IdempotencyKeys.cs:96-119`: the canonical string, its UTF-8 bytes, the hash and the Base64 text per hashed key; `:79-93`: several arrays and an `IncrementalHash` per UUIDv5.
   - On the HTTP path, a new key captures the response in an `ArrayPool` buffer in `ResponseCaptureStream`, then `IdempotencyEntrySerializer` and the distributed store each build one exact-size entry. The NewKey 256 KB rows allocate 521 to 528 KB more than the plain endpoint, about two times the response size.
   - `CSharpEssentials.AspNetCore/Idempotency/IdempotencyMiddleware.cs:495`: the fingerprint calls `EnableBuffering()` with the default 30 KB threshold, so a larger request body goes to a temporary file before it is hashed.
-- **The contention class is noisy.** It depends on the core count and the scheduler; compare it only on the same machine.
-- **TestServer, not Kestrel**, for the HTTP classes.
+- The contention class is noisy. It depends on the core count and the scheduler, so compare it only on the same machine.
+- The HTTP classes run on TestServer, not Kestrel.
 - The CSE column is the working tree on branch `integ/all` (all open pull requests merged locally), which may not match the version published on NuGet.
 
 ---

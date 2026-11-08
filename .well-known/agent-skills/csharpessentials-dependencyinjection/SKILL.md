@@ -5,7 +5,7 @@ description: Use when registering services by attribute instead of manual AddSco
 
 # CSharpEssentials.DependencyInjection
 
-Attribute-based service registration with a source-generated, reflection-free registry (trim and Native AOT safe), plus decorators.
+Attribute-based service registration with a source-generated registry that scans nothing at startup (trim and Native AOT safe), plus decorators.
 
 ## Installation
 
@@ -23,7 +23,7 @@ using CSharpEssentials.DependencyInjection;
 
 ---
 
-## Registering Services
+## Registering services
 
 ```csharp
 [RegisterScoped]                                     // IOrderService, by the I{TypeName} rule
@@ -32,8 +32,8 @@ public sealed class OrderService : IOrderService { }
 [RegisterSingleton(typeof(IClock))]                  // explicit service type
 public sealed class SystemClock : IClock { }
 
-[RegisterSingleton<IPaymentGateway>(Key = "stripe")] // generic form, keyed
-public sealed class StripeGateway : IPaymentGateway { }
+[RegisterSingleton<IPaymentGateway>(Key = "card")]   // generic form, keyed
+public sealed class CardGateway : IPaymentGateway { }
 
 [RegisterTransient(typeof(IRepository<>))]           // open generic
 public sealed class Repository<T> : IRepository<T> { }
@@ -66,25 +66,28 @@ Or at runtime:
 
 ```csharp
 services.Decorate<IOrderService, LoggingOrderService>();             // throws InvalidOperationException when nothing matches
-services.Decorate<IPaymentGateway, RetryingGateway>(serviceKey: "stripe");
+services.Decorate<IPaymentGateway, RetryingGateway>(serviceKey: "card");
 services.Decorate<IClock>((inner, sp) => new CachedClock(inner));
 services.TryDecorate<IOrderService, AuditingOrderService>();         // returns false when nothing matches
 services.Decorate(typeof(IRepository<>), typeof(CachedRepository<>)); // decorates closed registrations such as IRepository<Order>
 ```
 
 - `Decorate(Type, Type)` throws `InvalidOperationException` when a registration of the open generic type itself exists or no closed registration matches; it is `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`.
-- Attribute decorators apply in ascending `Order`. Every matching registration is decorated; lifetime and key are kept.
-- The original moves to a hidden private key under a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The container disposes both.
+- Attribute decorators apply in ascending `Order`. Every matching registration is decorated; the decorator keeps its lifetime and key.
+- The original moves to a hidden private key under a service type other than `T` and `object`, so it never shows up in `GetServices<T>()`, `GetKeyedServices<T>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. The hidden inner of a scoped service is transient, resolved once per cached decorator. The container disposes both.
+- An original implementation that injects `[ServiceKey]` cannot be decorated (`InvalidOperationException`).
 - A decorator needs exactly one public constructor with exactly one parameter of the decorated type.
 - Other decorator parameters: `[ServiceKey]` gets the decorated key; `[FromKeyedServices("k")]` resolves key `k`, `[FromKeyedServices(null)]` the non-keyed registration, and parameterless `[FromKeyedServices]` (.NET 10) inherits the decorated key.
 
 ---
 
-## Generated Registry
+## Generated registry
 
 Each assembly with marked classes gets `services.Add{Assembly}Services()` (dots removed: `Sample.Billing` → `AddSampleBillingServices()`), plus an overload taking an `ILogger` that logs duplicate (service, key) registrations at `Debug`. It registers the assembly's services, then applies its decorators immediately, so a decorator of a service registered by another assembly throws `InvalidOperationException` unless that assembly's `Add{Assembly}Services()` (or a manual registration) ran first.
 
-Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`, which registers every referenced assembly's registry and the app's own before applying any decorator, so a decorator can wrap a service from another assembly. `Order` is global across assemblies; ties follow assembly order (referenced by name, the app last), then type name. `AddServicesFromAssemblies` does the same with the assemblies in the order passed. Registration is idempotent per assembly: a second `Add{Assembly}Services`, `AddAllServices` or `AddServicesFromAssemblies` call skips assemblies already registered by any of them, so services and decorators are never added twice. The per-assembly marker is written only after registrations and decorators succeed, so a call that throws (e.g. a `Throw` strategy conflict) is retried by the next call. That retry is not clean: descriptors added before the exception (e.g. when a decorator fails) stay in the collection and may be added again, and `AddAllServices` marks its assemblies only after all succeed, so one failing registry leaves the successful ones unmarked too. Startup fails anyway, so fix the cause and build a new collection; do not retry on the same one. The marker is a singleton `ServiceDescriptor` of an internal type: it counts in `services.Count` and appears when enumerating the collection, so do not assert exact descriptor counts without accounting for it.
+Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllServices()`, which registers every referenced assembly's registry and the app's own before applying any decorator, so a decorator can wrap a service from another assembly. `Order` is global across assemblies; ties follow assembly order (referenced by name, the app last), then type name. `AddServicesFromAssemblies` does the same with the assemblies in the order passed.
+
+Registration is idempotent per assembly: `Add{Assembly}Services`, `AddAllServices` and `AddServicesFromAssemblies` skip assemblies already registered by any of them. The per-assembly marker is written only after registrations and decorators succeed, so a failed call can be retried, but not cleanly: descriptors added before the exception stay, and `AddAllServices` leaves the successful registries unmarked too. Fix the cause and build a new collection. The marker is a singleton `ServiceDescriptor` of an internal type that counts in `services.Count`, so account for it when asserting descriptor counts.
 
 | Assembly attribute | Effect |
 |---|---|
@@ -92,7 +95,7 @@ Applications (`Exe`/`WinExe`, not test projects) also get an internal `AddAllSer
 | `[assembly: GenerateServiceAggregate]` | Generates `AddAllServices()` in a library or test project |
 | `[assembly: DisableServiceAggregate]` | Turns off `AddAllServices()` in an application |
 
-### Reflection Fallback
+### Reflection fallback
 
 For assemblies that cannot use the generator (plugins loaded at runtime):
 
@@ -100,7 +103,7 @@ For assemblies that cannot use the generator (plugins loaded at runtime):
 services.AddServicesFromAssemblies(typeof(OrderService).Assembly);
 ```
 
-Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`. An overload taking an `ILogger` first warns on unloadable types. Prefer the generated method in trimmed and AOT apps.
+Marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]`; prefer the generated method in trimmed and AOT apps. Without a logger, unloadable types throw; the overload taking an `ILogger` first warns and continues.
 
 ---
 
@@ -138,7 +141,7 @@ Build after adding attributes: CSE2003 flags classes whose interfaces do not fol
 
 ---
 
-## Best Practices
+## Best practices
 
 - Prefer the generated `Add{Assembly}Services()` / `AddAllServices()` over `AddServicesFromAssemblies`.
 - When decorators wrap services from other assemblies, call `AddAllServices()`, or call the per-assembly methods with dependencies first.

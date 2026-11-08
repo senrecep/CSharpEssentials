@@ -54,7 +54,7 @@ string key = IdempotencyKeys.For("capture", orderId.ToString());   // {utf8ByteL
 Guid uuid = IdempotencyKeys.ToUuidV5("capture", orderId.ToString());
 ```
 
-A machine caller has no random key to retry with, so derive the key from business ids (event -> command -> provider) and send the same one downstream. Keys longer than 255 characters or outside printable ASCII become `h:` plus a SHA-256.
+A machine caller has no random key to retry with, so derive the key from business ids (event -> command -> provider) and send the same one downstream. Keys longer than 255 characters or outside printable ASCII become `h:` plus the unpadded base64url SHA-256.
 
 ## Scopes
 
@@ -76,7 +76,7 @@ Key the command with `IdempotencyKeys.FromMessage(EventId, "payments-webhook")`,
 - `AddIdempotency` (ASP.NET Core) defaults to `InMemoryIdempotencyRecordStore`: single instance only.
 - `DistributedCacheIdempotencyRecordStore` is best effort: two instances can both get `Reserved` and the first `CompleteAsync` returns false. Use it only for operations that tolerate a rare repeat, or use the EF Core store.
 - A custom store implements `IIdempotencyRecordStore`, builds keys with `key.ToStorageKey()` and must pass `IdempotencyRecordStoreContractTests` from `CSharpEssentials.Idempotency.Testing` (`Key(string, IdempotencyScope?)`, `UseRealClock`, `IsReservationAtomic`).
-- SQL Server ignores trailing spaces in `=` and unique comparisons under every collation, `_BIN2` included. Key tables on a hash (`KeyHash binary(32)`) and compare the full key in code. Elsewhere use a binary no-pad collation or `text`/`varchar`, never `char(n)`.
+- SQL Server ignores trailing spaces in `=` and unique comparisons under every collation, `_BIN2` included. Key tables on a hash of `ToStorageKey()` in a binary column (`KeyHash binary(32)`), as the EF Core store does. Elsewhere use a binary no-pad collation or `text`/`varchar`, never `char(n)`.
 
 ## Rollout
 

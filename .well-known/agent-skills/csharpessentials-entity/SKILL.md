@@ -5,15 +5,11 @@ description: Use when building DDD domain models. Covers EntityBase<TId> for agg
 
 # CSharpEssentials.Entity
 
-DDD base classes for aggregate roots. Built-in audit tracking, soft deletion, and domain event support.
-
-## Installation
+DDD base classes for aggregate roots with audit fields, soft deletion and domain events.
 
 ```bash
 dotnet add package CSharpEssentials.Entity
 ```
-
-## Namespaces
 
 ```csharp
 using CSharpEssentials.Entity;            // EntityBase, SoftDeletableEntityBase
@@ -42,11 +38,11 @@ public class Order : EntityBase<Guid>
 
 // Provided members:
 // TId? Id
-// DateTimeOffset CreatedAt: set by AuditInterceptor (or SetCreatedInfo)
+// DateTimeOffset CreatedAt: set by AuditInterceptor (or SetCreatedInfo); MinValue throws
 // string? CreatedBy: set by AuditInterceptor (or SetCreatedInfo)
 // DateTimeOffset? UpdatedAt: NOT ModifiedAt
 // string? UpdatedBy: NOT ModifiedBy
-// IReadOnlyList<IDomainEvent> DomainEvents: property, NOT a method
+// IReadOnlyList<IDomainEvent> DomainEvents: property, a cached live read-only view (not a copy)
 // void Raise(IDomainEvent)
 // void ClearDomainEvents()
 ```
@@ -65,11 +61,11 @@ var product = new Product();
 
 // Soft delete lifecycle
 product.MarkAsDeleted(DateTimeOffset.UtcNow, "admin"); // two params: (deletedAt, deletedBy)
-product.Restore();                                      // undoes soft delete
-product.MarkAsHardDeleted();                           // irreversible
+product.MarkAsHardDeleted();                            // sets IsHardDeleted
+product.Restore();                                      // clears IsDeleted, DeletedAt, DeletedBy and IsHardDeleted
 
 // Hard-delete a batch: products.HardDelete() calls MarkAsHardDeleted() on each item
-// IsHardDeleted makes the EF Core AuditInterceptor keep a delete instead of turning it into a soft delete
+// IsHardDeleted makes the EF Core AuditInterceptor remove the row instead of turning the delete into a soft delete
 
 // Additional members:
 // DateTimeOffset? DeletedAt
@@ -80,7 +76,7 @@ product.MarkAsHardDeleted();                           // irreversible
 
 ---
 
-## Domain Events
+## Domain events
 
 ```csharp
 // Default timing is AfterSave; a BeforeSave event is published before the save and a throwing handler aborts it
@@ -90,17 +86,17 @@ public record InventoryReservedEvent(Guid ProductId, int Qty) : IDomainEvent;
 // Raise inside the aggregate (see Order.Create above)
 Order order = Order.Create("customer-1", 99m);
 
-// Read and clear (after publishing)
-IReadOnlyList<IDomainEvent> events = order.DomainEvents;  // property
+// Copy, then clear: DomainEvents is a live view, so an uncopied reference is empty after the clear
+IDomainEvent[] events = [.. order.DomainEvents];
 order.ClearDomainEvents();
 ```
 
 ---
 
-## Best Practices
+## Guidance
 
-- Call `Raise()` only inside entity methods to keep domain events encapsulated in the aggregate
-- `DomainEvents` is a **property**; do not call `GetDomainEvents()` (doesn't exist)
-- Audit fields are `UpdatedAt`/`UpdatedBy`, **not** `ModifiedAt`/`ModifiedBy`
-- `MarkAsDeleted()` takes **two parameters**: `(DateTimeOffset deletedAt, string deletedBy)`
-- Use `DomainEventTiming.BeforeSave` for events that must be processed before the save; the attribute only labels the event, `CSharpEssentials.EntityFrameworkCore` publishes it (`BaseDbContext` dispatches `AfterSave` events after the save, `DomainEventInterceptor` inside `SavingChanges`, before the write)
+- Call `Raise()` only inside entity methods to keep domain events encapsulated in the aggregate.
+- `DomainEvents` is a property; there is no `GetDomainEvents()`. Raising or clearing while iterating it throws `InvalidOperationException`.
+- Audit fields are `UpdatedAt`/`UpdatedBy`, not `ModifiedAt`/`ModifiedBy`.
+- `MarkAsDeleted()` takes two parameters: `(DateTimeOffset deletedAt, string deletedBy)`.
+- Use `DomainEventTiming.BeforeSave` for events that must be processed before the save; the attribute only labels the event, `CSharpEssentials.EntityFrameworkCore` publishes it (`BaseDbContext` dispatches `AfterSave` events after the save, `DomainEventInterceptor` inside `SavingChanges`, before the write).

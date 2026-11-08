@@ -5,15 +5,11 @@ description: Use when modeling partial success. These<TError, TValue> holds Left
 
 # CSharpEssentials.These
 
-`These<TError, TValue>` is a three-state discriminated union: Left (failure), Right (success), or Both (partial success with warning). Unlike `Result<T>`, the Both state lets you carry a value AND an error simultaneously.
-
-## Installation
+`These<TError, TValue>` is a three-state union: Left (error only), Right (value only) or Both (a value and an error together). Unlike `Result<T>`, an error does not mean failure.
 
 ```bash
 dotnet add package CSharpEssentials.These
 ```
-
-## Namespace
 
 ```csharp
 using CSharpEssentials.These;
@@ -30,7 +26,7 @@ These<string, int> success = These<string, int>.Right(42);
 These<string, int> partial = These<string, int>.Both("warning", 42);
 ```
 
-## Checking State
+## Checking state
 
 ```csharp
 bool isErr  = these.IsLeft;
@@ -42,7 +38,7 @@ Maybe<int>    value = these.GetRight(); // None when IsLeft
 Maybe<string> error = these.GetLeft();  // None when IsRight
 ```
 
-## Pattern Match
+## Match
 
 ```csharp
 string msg = these.Match(
@@ -64,7 +60,7 @@ These<string, int> upper = these.MapLeft(e => e.ToUpper());
 These<string, string> chained = these.FlatMap(x => These<string, string>.Right(x.ToString()));
 ```
 
-## Side Effects
+## Side effects
 
 ```csharp
 // Tap fires on Right or Both
@@ -74,29 +70,27 @@ these.Tap(v => logger.LogInformation("Got {Value}", v));
 these.TapLeft(e => logger.LogWarning("Warning: {Warning}", e));
 ```
 
-## Bridge to/from Result
+## Bridge to and from Result
 
 ```csharp
-// Result<T> → These<Error, T>: success is Right, failure is Left with the first error only (never Both)
+// Result<T> to These<Error, T>: success is Right, failure is Left with the first error only (never Both)
 These<Error, int> these = TheseExtensions.FromResult(result);
 
-// These<Error, T> → Result<T> (Both = failure)
+// These<Error, T> to Result<T> (Both = failure)
 Result<int> strict   = these.ToResult();
 
-// These<Error, T> → Result<T> (Both = success, discards error side)
+// These<Error, T> to Result<T> (Both = success, discards error side)
 Result<int> lenient  = these.ToResultLenient();
 ```
 
-## Partition Collections
+## Partition
 
 ```csharp
 var (lefts, rights, boths) = items.Partition();
-// lefts  → IReadOnlyList<TError>
-// rights → IReadOnlyList<TValue>
-// boths  → IReadOnlyList<(TError, TValue)>
+// lefts: IReadOnlyList<TError>, rights: IReadOnlyList<TValue>, boths: IReadOnlyList<(TError, TValue)>
 ```
 
-## When to Use
+## When to use
 
 | Scenario | Use |
 |----------|-----|
@@ -105,12 +99,10 @@ var (lefts, rights, boths) = items.Partition();
 | Partial success with a warning to propagate | `These<TError, TValue>` |
 | Collecting errors while continuing | `These<TError, TValue>` with Both |
 
-## Best Practices
+## Guidance
 
-- Prefer `Match()` over checking `IsLeft`/`IsRight`/`IsBoth` separately; it is exhaustive and compiler-safe
-- `FlatMap` from Both keeps the original error: mapper `Right`/`Both` gives `Both(originalError, newValue)`, mapper `Left` gives that `Left`
-- `ToResultLenient()` is the lenient bridge: Both → success (value wins, error side discarded)
-- `ToResult()` is the strict bridge: Both → failure
-- `default(These<TError, TValue>)` is none of Left, Right or Both; `ToResult()` on it throws `InvalidOperationException`
-- A `These` serializes as `{"isLeft":...,"isRight":...,"left":...,"right":...}` (both flags are `true` for Both)
-- Avoid using `These` as a general-purpose error type; use `Result<T>` for that; `These` is for partial-success semantics
+- Prefer `Match()` over checking `IsLeft`/`IsRight`/`IsBoth` separately; all three handlers are required.
+- `FlatMap` from Both keeps the original error: mapper `Right`/`Both` gives `Both(originalError, newValue)` (the mapper's error is dropped), mapper `Left` gives that `Left`.
+- `default(These<TError, TValue>)` is none of Left, Right or Both: `Match` routes it to `onBoth` with default values and `ToResult()` throws `InvalidOperationException`. Create values through `Left`, `Right` or `Both`.
+- A `These` serializes as `{"isLeft":...,"isRight":...,"left":...,"right":...}` (both flags are `true` for Both).
+- Use `Result<T>` as the general error type; `These` is for partial success.

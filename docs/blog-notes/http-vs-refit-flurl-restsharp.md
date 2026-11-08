@@ -75,7 +75,7 @@ HTTP call through retry(3) and timeout(30 s), net10.0 ([report](../../benchmarks
 
 On net8.0 the custom handler is slightly ahead of CSE (4.145 μs against 4.189 μs, ratio 0.99); on net9.0 and net11.0 it is slower, as on net10.0.
 
-## Where CSE loses (state it, do not soften it)
+## Where CSE loses
 
 Measured; the full list with every TFM is in [the Results section](../../CSharpEssentials.Http/BENCHMARKS.md#where-cse-loses).
 

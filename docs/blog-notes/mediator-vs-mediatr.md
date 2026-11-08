@@ -5,9 +5,10 @@ Raw material for a post. These notes are not the post. Every number comes from `
 ## How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (ColdStart job with 15 launches for cold startup), full runs of all twelve classes on 2026-11-05.
-- 6-core, 12-thread x64 desktop CPU, CachyOS, SDK 11.0.100-rc.1. TFMs net8.0, net9.0, net10.0 and net11.0, run in that order, one after another. Primary runtime is .NET 10.0.11.
+- 6-core, 12-thread x64 desktop CPU on Linux, SDK 11.0.100-rc.1 (rc.3 for the reruns). TFMs net8.0, net9.0, net10.0 and net11.0, run in that order, one after another. Primary runtime is .NET 10.0.11 (10.0.14 for the reruns).
 - Desktop session in the background; 1-minute load average 1.90 at the start of the suite and 1.63 at the end.
-- Rows above 5% CV were rerun up to two times; no row of this suite stayed above 5%. The behavior and validation scope classes were rerun after #230-#256 with no load recorded.
+- Rows above 5% CV were rerun up to two times; no row of this suite stayed above 5%.
+- Four classes were rerun later on SDK 11.0.100-rc.3 (.NET 10.0.14), with no load recorded: validator fan-out and idempotency on 2026-11-07, behavior cost and validation scope after #230-#256.
 - The Native AOT report is a separate script run from 2026-11-06, after the CSE changes described below.
 
 ## Framing
@@ -51,8 +52,8 @@ This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediat
 
 - Part B, invalid input: slower than hand-written Mediator on net8 to net10 (Ratio 1.04-1.13; net10 292.5 vs 282.1 ns), within error on net11. Allocates 40 B more on net10 and net11 and 48 B more on net9.
 - Part B, valid input on net11: 172.6 vs 168.5 ns against hand-written Mediator.
-- Validator fan-out (three validators): slower than hand-written Mediator and allocates more in every row on every TFM (net10 Ratio 1.37-1.93). With invalid input it is also slower than hand-written MediatR on every TFM (net10, one group: 1,157.9 vs 821.5 ns). CSE groups by `Order`, goes through an async task per group, removes duplicate errors with `Distinct` and checks the failure observers. Not profiled.
-- Idempotency: slower than both hand-written stores in most rows. The worst row is a failing send that releases its key, with a supplied fingerprint: 1,627.9 ns against 300.7 ns (hand-written Mediator) and 447.3 ns (hand-written MediatR) on net10, 763.5 ns on net11. The hand-written stores are a lower bound with none of CSE's lease, scope, mode or metrics features, but the size of this gap is not explained.
+- Validator fan-out (three validators): slower than hand-written Mediator in every row on every TFM (net10 Ratio 1.14-1.25; net10 one group, invalid: 684.8 vs 547.0 ns). It allocates more only on valid input on net10 (528 vs 464 B) and net11 with one group. Against hand-written MediatR it loses only on net8 invalid input with two groups (1,111.6 vs 1,069.9 ns) and ties with one group. CSE groups by `Order`, checks errors pairwise for duplicates, type-tests for `IValidationModeOverride` and checks the failure observers. Not profiled.
+- Idempotency: slower than both hand-written stores in most rows. The worst row is a failing send that releases its key, with a supplied fingerprint: 649.0 ns against 293.6 ns (hand-written Mediator) and 426.5 ns (hand-written MediatR) on net10, 644.0 ns on net11. The hand-written stores are a lower bound with none of CSE's lease, scope, mode or metrics features. The in-memory store allocates a token string and an entry per reservation; how much of the gap that explains was not profiled.
 - Lock: 168 B per uncontended send against 48 B for hand-written AsyncKeyedLock. Under contention CSE allocates 303-305 B per operation against 220-226 B with one key, and 170 B against 50 B with many keys. With one shared key it is slower than AsyncKeyedLock on net9 and net11.
 - Caching: 1.02-1.09 of hand-written Mediator in every row, same allocation.
 - Logging: slower than hand-written Mediator with a disabled logger on net9 and on net10 without payloads (109.3 vs 103.7 ns). On net8 CSE allocates 40 B more in every row (a `Stopwatch` in the netstandard2.1 build).
@@ -69,7 +70,7 @@ This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediat
 - `AddValidator<T, TValidator>` carries `[DynamicallyAccessedMembers(PublicConstructors)]`.
 - With one validator, Enforce mode and no listening observer, a failure returns without an async state machine.
 - `CachingBehavior` reads `CacheKey` once per send, and `LoggingBehavior` keeps the type names in static fields.
-- The default idempotency fingerprint hashes the JSON as a stream on net9 and later, so its allocation no longer grows with the request (1184 B for both the normal and the 4096-character request on net10).
+- The default idempotency fingerprint hashes the JSON as a stream on net9 and later, so its allocation no longer grows with the request (856 B on replay for both the normal and the 4096-character request on net10, 480 B on the release path).
 - The earlier AOT crashes (2026-11-02 report) came from the first two items. In the 2026-11-06 rerun both CSE samples run with 0 IL warnings. The samples cover validation and exception handling only; caching, logging and idempotency still serialize with reflection-based `System.Text.Json`.
 
 ## Caveats to keep in the post
@@ -80,7 +81,7 @@ This is a summary. The full per-row, per-TFM list is in `CSharpEssentials.Mediat
 - Send and Publish use pass-through behaviors and trivial handlers: dispatch overhead only.
 - The idempotency hand-written stores and the hand-written contention row are reference points, not feature matches. The contention row never removes a semaphore.
 - AOT warning counts use `TrimmerSingleWarn=false`. No sample roots assemblies; whether that rescues MediatR was not tested. The 2 and 3 ms AOT wall times were taken at load 4.70 and are not a result.
-- Outliers not investigated: `IMediator` with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; CSE idempotency on net11 (763.5 ns against 1,627.9 ns on net10); every one-key contention row on net11 is about half its other TFM values.
+- Outliers not investigated: `IMediator` with 2 behaviors on net10 and net11 (26.152 and 31.187 ns against 17.533-19.735 ns on net8 and net9); net8 Mediator publish; every one-key contention row on net11 is about half its other TFM values.
 - The net8 column runs the netstandard2.1 build of every CSE package. Logging, locking and the default fingerprint take different code there.
 - The MediatR wiki tracks the current release; the feature comparison cites it only where the 12.5.0 source agrees.
 

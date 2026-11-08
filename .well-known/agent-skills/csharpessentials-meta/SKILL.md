@@ -1,24 +1,24 @@
 ---
 name: csharpessentials-meta
-description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 25 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
+description: Use when deciding which CSharpEssentials package to use. Gives an overview of all 27 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.
 ---
 
-# CSharpEssentials: Package Index
+# CSharpEssentials: package index
 
-CSharpEssentials is a modular .NET NuGet ecosystem of 25 packages (24 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
+CSharpEssentials is a modular .NET NuGet ecosystem of 27 packages (26 focused packages plus the `CSharpEssentials` meta-package). Each package is independent; take only what you need.
 
-## Meta-Package
+## Meta-package
 
 ```bash
 dotnet add package CSharpEssentials
 # Includes: Any, Clone, Core, Entity, Enums, Errors, Http, Json, Maybe, Results, Rules, These, Time
 ```
 
-Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, EntityFrameworkCore, AspNetCore (and its OpenApi and Swashbuckle packages), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
+Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, EntityFrameworkCore, AspNetCore (and its OpenApi and Swashbuckle packages), Idempotency (and Idempotency.Testing), RequestResponseLogging and GcpSecretManager. The meta-package assembly also adds `JsonExtensions.TryGetProperty(params string[])` / `TryGetNestedProperty` on `JsonElement` / `JsonDocument` (namespace `CSharpEssentials.Json`) and `TimeExtensions.MsToDateTime(this long?, DateTime?)` (namespace `CSharpEssentials.Time`).
 
-## All Packages
+## All packages
 
-### Functional Core
+### Functional core
 
 | Package | Install | Skill |
 |---------|---------|-------|
@@ -30,7 +30,7 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 | `CSharpEssentials.Core` | `dotnet add package CSharpEssentials.Core` | `csharpessentials-core` |
 | `CSharpEssentials.Enums` | `dotnet add package CSharpEssentials.Enums` | `csharpessentials-enums` |
 
-### Business Rules & Validation
+### Business rules and validation
 
 | Package | Install | Skill |
 |---------|---------|-------|
@@ -43,14 +43,14 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 |---------|---------|-------|
 | `CSharpEssentials.Mediator` | `dotnet add package CSharpEssentials.Mediator` | `csharpessentials-mediator` |
 
-### Domain Model / EF Core
+### Domain model and EF Core
 
 | Package | Install | Skill |
 |---------|---------|-------|
 | `CSharpEssentials.Entity` | `dotnet add package CSharpEssentials.Entity` | `csharpessentials-entity` |
 | `CSharpEssentials.EntityFrameworkCore` | `dotnet add package CSharpEssentials.EntityFrameworkCore` | `csharpessentials-efcore` |
 
-### Web / Infrastructure
+### Web and infrastructure
 
 | Package | Install | Skill |
 |---------|---------|-------|
@@ -70,6 +70,13 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 |---------|---------|-------|
 | `CSharpEssentials.Resilience` | `dotnet add package CSharpEssentials.Resilience` | `csharpessentials-resilience` |
 
+### Idempotency
+
+| Package | Install | Skill |
+|---------|---------|-------|
+| `CSharpEssentials.Idempotency` | `dotnet add package CSharpEssentials.Idempotency` | `csharpessentials-idempotency` |
+| `CSharpEssentials.Idempotency.Testing` | `dotnet add package CSharpEssentials.Idempotency.Testing` | none (see its Readme) |
+
 ### Utilities
 
 | Package | Install | Skill |
@@ -77,9 +84,7 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 | `CSharpEssentials.Time` | `dotnet add package CSharpEssentials.Time` | `csharpessentials-time` |
 | `CSharpEssentials.Clone` | `dotnet add package CSharpEssentials.Clone` | `csharpessentials-clone` |
 
----
-
-## Problem → Package Quick Reference
+## Problem to package
 
 | Problem | Package |
 |---------|---------|
@@ -101,16 +106,15 @@ Not bundled: Validation, Mediator, Resilience, Endpoints, DependencyInjection, E
 | OpenAPI documents with enum schemas and optional route parameters (one per host) | `CSharpEssentials.AspNetCore.Swashbuckle` (net8-net11) or `CSharpEssentials.AspNetCore.OpenApi` (net10, `Microsoft.AspNetCore.OpenApi`) |
 | Idempotency-Key, ETag/304 and If-Match for HTTP endpoints | `CSharpEssentials.AspNetCore` |
 | Run an operation or a message once (`IIdempotencyExecutor`, `IdempotencyInbox`), or a Mediator request (`IdempotencyBehavior`) | `CSharpEssentials.Idempotency`, `CSharpEssentials.Mediator` |
+| Contract tests for a custom `IIdempotencyRecordStore` (xUnit) | `CSharpEssentials.Idempotency.Testing` |
 | Load secrets from GCP Secret Manager | `CSharpEssentials.GcpSecretManager` |
 | Transient fault handling (retry, timeout, circuit breaker, fallback) | `CSharpEssentials.Resilience` |
 | Testable time / freeze clock in tests | `CSharpEssentials.Time` |
 | Deep-copy entity collections | `CSharpEssentials.Clone` |
-| Fast enum-to-string (NativeAOT-safe) | `CSharpEssentials.Enums` |
+| Fast enum to string and back (Native AOT safe) | `CSharpEssentials.Enums` |
 | String case conversions, GUID utilities | `CSharpEssentials.Core` |
 
----
-
-## Namespace Reference
+## Namespaces
 
 ```csharp
 using CSharpEssentials.ResultPattern;       // Result, Result<T>
@@ -126,6 +130,7 @@ using CSharpEssentials.Mediator;           // ICacheable, ILoggableRequest, ITra
 using CSharpEssentials.Entity;             // EntityBase, SoftDeletableEntityBase
 using CSharpEssentials.Entity.Interfaces;  // IDomainEvent
 using CSharpEssentials.EntityFrameworkCore; // BaseDbContext, DbContextInterceptors, SoftDeleteAsync, *AsResultAsync
+using CSharpEssentials.EntityFrameworkCore.DbErrors;     // DbErrorTranslation, IDbErrorTranslator
 using CSharpEssentials.EntityFrameworkCore.Interceptors; // AuditInterceptor, DomainEventInterceptor, SlowQueryInterceptor
 using CSharpEssentials.EntityFrameworkCore.Pagination;   // PaginateAsync, KeysetPaginateAsync
 using CSharpEssentials.AspNetCore;         // GlobalExceptionHandler, ResultEndpointFilter, AddEnhancedProblemDetails, AddSwagger / AddEnumConventions (Swashbuckle and OpenApi packages)
@@ -135,6 +140,8 @@ using CSharpEssentials.Http;               // HttpClientResultExtensions, HttpRe
 using CSharpEssentials.Resilience;          // ResiliencePolicy, ResiliencePolicy<T>
 using CSharpEssentials.Json;               // EnhancedJsonSerializerOptions, converters
 using CSharpEssentials.RequestResponseLogging; // LoggingOptions, [SkipRequestLogging], [SkipResponseLogging]
+using CSharpEssentials.Idempotency;        // IIdempotencyExecutor, IIdempotencyRecordStore, IdempotencyInbox, IdempotencyKeys, IdempotencyScopes
+using CSharpEssentials.Idempotency.Testing; // IdempotencyRecordStoreContractTests
 using CSharpEssentials.GcpSecretManager;   // ProjectSecretConfiguration
 using CSharpEssentials.GcpSecretManager.Extensions; // AddGcpSecretManager()
 using CSharpEssentials.Time;               // IDateTimeProvider, DateTimeProvider
