@@ -2,17 +2,17 @@
 
 A console application that shows `CSharpEssentials.Http` (Result-based `HttpClient` helpers) and a custom `IResultErrorMapper` from `CSharpEssentials.AspNetCore`.
 
-## Features demonstrated
+## What it shows
 
 | Feature | Description |
 |---------|-------------|
-| **Status code mapping** | `HttpStatusCodeMapper.ToErrorType` / `ToError` |
-| **HttpClient Result extensions** | `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `DeleteAsResultAsync` |
-| **Query string builder** | `Uri.WithQueryString(...)` |
-| **HttpRequestBuilder** | Fluent request building with `AsResultAsync<T>` |
-| **Resilience pipeline** | Retry + timeout around Result-returning calls |
-| **Redirect following** | `SendWithRedirectsAsResultAsync`, `FollowRedirects` |
-| **Custom `IResultErrorMapper`** | `ApiErrorMapper` maps `Error[]` to a status code and JSON envelope |
+| Status code mapping | `HttpStatusCodeMapper.ToErrorType` / `ToError` |
+| HttpClient Result extensions | `GetFromJsonAsResultAsync`, `PostAsJsonAsResultAsync`, `PutAsJsonAsResultAsync`, `DeleteAsResultAsync` |
+| Query string builder | `Uri.WithQueryString(...)` |
+| HttpRequestBuilder | Fluent request building with `AsResultAsync<T>` |
+| Resilience pipeline | `CreateResiliencePipeline` (retry and timeout) around Result-returning calls |
+| Redirect following | `SendWithRedirectsAsResultAsync`, `FollowRedirects` |
+| Custom `IResultErrorMapper` | `ApiErrorMapper` maps `Error[]` to a status code and JSON envelope |
 
 ## Custom IResultErrorMapper
 

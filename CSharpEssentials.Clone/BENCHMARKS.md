@@ -40,11 +40,7 @@ Each row's result must match the source on all of these: the item count, the sum
 
 ## Pinned versions
 
-| Package | Version | License |
-|---|---|---|
-| BenchmarkDotNet | `[0.14.0,)` from `Directory.Packages.props`, resolves 0.14.0 | MIT |
-
-There is no competitor library to pin. The baselines are the BCL and hand-written loops.
+There is no competitor library to pin. BenchmarkDotNet is `[0.14.0,)` in `Directory.Packages.props` and resolves 0.14.0 (MIT).
 
 ## Feature matrix
 
@@ -56,23 +52,15 @@ From reading the source and docs, not measured.
 | Clone a list into a new list | `for` loop with `new List<T>(capacity)`, `List<T>.ConvertAll` | `list.Clone().ToList()` |
 | Clone an array into a new array | `for` loop with `new T[n]`, `Array.ConvertAll` | `items.Clone().ToArray()` through the `IEnumerable<T>` overload (no array overload) |
 | Lazy cloning | `Enumerable.Select` | `IEnumerable<T>.Clone()`, lazy: each enumeration clones again |
-| Clone an `IQueryable<T>` | `AsEnumerable().Select(...)` | `IQueryable<T>.Clone()` runs in memory (`EnumerableQuery<T>`), not in the provider |
+| Clone an `IQueryable<T>` | `AsEnumerable().Select(...)` | `IQueryable<T>.Clone()` runs in memory (`EnumerableQuery<T>`), not in the provider, and is marked `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` |
 | Deep copy | User code | User code. The package only calls `Clone()` |
 
-## Semantic differences
+## Why the rows differ
 
-- The CSE result is lazy until it is materialized. The rows materialize it, so all rows do the same work.
-- `Clone()` on a `T[]` variable binds to `Array.Clone()`, not to the CSE extension. That is a shallow copy of the array, and the items are not cloned. The Array row types its source as `IEnumerable<T>` to reach the extension.
-- The `IQueryable<T>` overload does not translate to the provider. It reads the source and clones in memory.
-
-## Expected outcome
-
-Read from the source before the full run. [Against the expected outcome](#against-the-expected-outcome) says which points held.
-
-- `ToList()` over a `Select` on a `List<T>` uses LINQ's sized list path, so allocations should match the hand-written loop. CSE should be slower than the plain LINQ row. Its selector is a static lambda inside the generic `Clone<T>`, and it calls `ICloneable<T>.Clone()` through the interface in shared generic code. The LINQ row's lambda calls the sealed `CloneItem.Clone()` directly. `ConvertAll` and the hand-written loop skip the LINQ iterator, so CSE should be the slowest row in the List category.
-- The Array row goes through the `IEnumerable<T>` overload. LINQ's array path should size the result exactly, so the gap to the hand-written loop should come from the same delegate and interface call.
-- In the LazySource category both rows grow an unsized list, so they should be close.
-- The Queryable row should lose clearly to the hand-written reference row. The overload calls `Enumerable.Select` on the `EnumerableQuery<T>`, which is not a list, so the source count is lost. `ToList()` on the second `EnumerableQuery<T>` then grows an unsized list: 9 backing arrays (4 to 1,024) at 1,000 items instead of one sized array. It also allocates the `Select` iterator, the second wrapper and their enumerators. Expect more time and more allocated bytes than the presized reference row and the List category's CSE row. Allocation should be close to the hand-written LazySource row, which also grows an unsized list.
+- `ToList()` over a `Select` on a `List<T>` takes LINQ's sized list path. CSE's selector is a static lambda inside the generic `Clone<T>` and calls `ICloneable<T>.Clone()` through the interface in shared generic code; the LINQ row's lambda calls the sealed `CloneItem.Clone()` directly. `ConvertAll` and the hand-written loop skip the LINQ iterator.
+- The Array row goes through the `IEnumerable<T>` overload. LINQ's array path sizes the result exactly, so the gap to the hand-written loop comes from the same delegate and interface call.
+- In LazySource both rows grow an unsized list.
+- The Queryable overload calls `Enumerable.Select` on the `EnumerableQuery<T>`, which is not a list, so the source count is lost. `ToList()` on the second `EnumerableQuery<T>` then grows an unsized list: 9 backing arrays (4 to 1,024) at 1,000 items instead of one sized array. It also allocates the `Select` iterator, the second wrapper and their enumerators.
 
 ## Left out
 
@@ -82,7 +70,7 @@ Reflection-based deep cloners. They copy whole object graphs, which is a differe
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux (AVX2). SDK and runtime builds are in the header of each report.
 - TFMs: net8.0 (.NET 8.0.30, running the netstandard2.1 build of CSE), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0).
 - The 1-minute load average stayed between 1.55 and 2.60 during the baselines suite and the net10.0 rerun of `CloneComparison`. After the rerun no row of this class has a CV above 5%.
 - Reports: [`benchmarks/results/baselines/{tfm}/results/`](../benchmarks/results/baselines/), file `CSharpEssentials.Baselines.Benchmarks.CloneComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
@@ -149,17 +137,10 @@ CSE is slower than the hand-written loop in every category, at both counts, on e
 
 - List: CSE is the slowest row on net8.0, net9.0 and net11.0. On net10.0 the plain LINQ row is slower than CSE (144.85 ns, ratio 1.07, at 10 items and 11,893.25 ns, ratio 1.11, at 1,000 items), and the hand-written loop and `ConvertAll` are still faster. On every TFM CSE allocates 528 B against 456 B at 10 items and 40128 B against 40056 B at 1,000 items, the same as the LINQ row.
 - Array: the hand-written loop is 0.56 to 0.73 of the CSE time at 10 items and 0.69 to 0.83 at 1,000 items. CSE allocates more on every TFM (472 B against 424 B, 40072 B against 40024 B).
-- LazySource: the hand-written `foreach` takes 0.66 to 0.88 of the CSE time. On net8.0 CSE also allocates more (704 B against 648 B at 10 items, 48656 B against 48600 B at 1,000 items).
-- Queryable: the largest gap. The presized hand-written loop takes 0.31 to 0.68 of the CSE time. On net8.0 at 1,000 items that is 23,821.94 ns for CSE against 9,694.35 ns. CSE allocates 800 B against 456 B at 10 items and 48752 B against 40056 B at 1,000 items on every TFM.
+- LazySource: the hand-written `foreach` takes 0.66 to 0.88 of the CSE time (0.84 to 0.88 on net10.0 and net11.0, 0.66 to 0.79 on net8.0 and net9.0). On net8.0 CSE also allocates more (704 B against 648 B at 10 items, 48656 B against 48600 B at 1,000 items).
+- Queryable: the largest gap. The presized hand-written loop takes 0.31 to 0.68 of the CSE time. On net8.0 at 1,000 items that is 23,821.94 ns for CSE against 9,694.35 ns. CSE allocates 800 B against 456 B at 10 items and 48752 B against 40056 B at 1,000 items on every TFM, close to the 48600 B of the hand-written LazySource row, which also grows an unsized list.
 
 Where CSE does better: in LazySource on net9.0, net10.0 and net11.0, CSE allocates less than the hand-written loop (512 B against 648 B at 10 items, 40112 B against 48600 B at 1,000 items). Its time is still higher there.
-
-### Against the expected outcome
-
-- List allocation matched the LINQ row on every TFM, as expected. The expectation that CSE is slower than plain LINQ held on net8.0, net9.0 and net11.0 and failed on net10.0, where LINQ was slower.
-- Array: the gap to the hand-written loop is there on every TFM. The allocation is the same on every TFM: 472 B against 424 B at 10 items and 40072 B against 40024 B at 1,000 items.
-- LazySource: the rows were close on net10.0 and net11.0 (ratios 0.84 to 0.88). On net8.0 and net9.0 the gap is wider (0.66 to 0.79).
-- Queryable: CSE lost to the presized loop on every TFM, as expected. At 1,000 items it allocates 48752 B on every TFM, close to the 48600 B (every TFM) of the hand-written LazySource row, which also grows an unsized list.
 
 ## How to reproduce
 

@@ -5,8 +5,8 @@ Results package uses to prefer the `Task` handler over its `ValueTask` twin when
 
 It builds for two targets:
 
-- **net8.0** consumes the `netstandard2.1` asset. That asset has no `ValueTask` handler twins except for the members named under "Shapes that are ambiguous on every target under C# 12" and "Maybe shapes", so other untyped async lambdas bind on their own.
-- **net9.0** consumes the `net9.0` asset. That asset has the `ValueTask` twins, so some shapes need a typed handler under C# 12.
+- net8.0 consumes the `netstandard2.1` asset. That asset has no `ValueTask` handler twins except for the members named under "Shapes that are ambiguous on every target under C# 12" and "Maybe shapes", so other untyped async lambdas bind on their own.
+- net9.0 consumes the `net9.0` asset. That asset has the `ValueTask` twins, so some shapes need a typed handler under C# 12.
 
 ## Shapes that bind under C# 12 on every target
 
@@ -21,9 +21,7 @@ An `async` lambda also compiles against the conditional `TapAsync` `Action` over
 
 ## Shapes that need C# 13, or a typed handler on net9.0+
 
-These are in `UntypedTaskOnlyShapes` (net8.0) and `TypedTwinShapes` (net9.0).
-
-On net9.0+ under C# 12, an untyped async lambda reports CS0121 for the following:
+On net9.0+ under C# 12, an untyped async lambda reports CS0121 for the following. `UntypedTaskOnlyShapes` (net8.0, untyped) and `TypedTwinShapes` (net9.0, typed) guard part of the instance and `ValueTask` source rows plus `TryAsync`; `TypedDelegateShapes` holds the typed `TraverseAsync`.
 
 | Receiver | Methods |
 |---|---|

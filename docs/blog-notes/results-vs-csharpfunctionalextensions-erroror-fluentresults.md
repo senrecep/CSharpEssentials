@@ -19,7 +19,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - CSharpEssentials.Results (CSE).
   - `readonly record struct Result` / `Result<T>`; failure holds an `Error[]`.
   - Typed `Error` struct with code, description, `ErrorType` and `object?` metadata.
-  - Map, Bind/Then, Ensure, Tap, Match, with Task and ValueTask overloads on every TFM.
+  - Map, Bind/Then, Ensure, Tap, Match, with `Task` and `ValueTask` sources on every TFM (`ValueTask` handlers on instances need .NET 9+).
   - `CombineAll` / `Combine` for aggregation, `Try`/`TryAsync`. Maybe lives in a separate package.
   - Depends on CSharpEssentials.Errors and Json, which bring Core and Enums.
 - CSharpFunctionalExtensions 3.7.0.
@@ -47,8 +47,8 @@ Raw material for a post. These notes are not the post. Every number comes from `
 
 ## AOT and dependencies
 
-- CSharpEssentials.Results, Errors and Maybe declare `IsAotCompatible` on their net9.0+ targets, not on netstandard2.1 (so do Core, Enums and Json), so the trim analyzer runs on them at build time. None of the three competitors declares it. No AOT publish was run for these notes, so do not claim zero warnings.
-- `Result<T>.ToString()` formats the value with `IFormattable` and the invariant culture. It no longer goes through JSON, and it is the fastest `Result` `ToString` of the four (11.61 ns / 48 B, CFE 34.73 ns / 48 B).
+- CSharpEssentials.Results, Errors and Maybe (and Core, Enums and Json) declare `IsAotCompatible` on their net9.0+ targets, not on netstandard2.1, so the trim analyzer runs on them at build time. None of the three competitors declares it. No AOT publish was run for these notes, so do not claim zero warnings.
+- `Result<T>.ToString()` formats the value with `IFormattable` and the invariant culture, without JSON, and it is the fastest `Result` `ToString` of the four (11.61 ns / 48 B, CFE 34.73 ns / 48 B).
 - `ErrorMetadata` is a `Dictionary<string, object?>`, so serializing errors with metadata needs reflection-based System.Text.Json or a custom JSON context.
 - Installing Results brings Errors, Json, Core and Enums (plus the Enums generator and analyzers). CFE brings nothing.
 - For a thin layer: the result types are readonly record structs, chaining allocates 0 B, and the packages declare `IsAotCompatible`. Against: the `object?` metadata and four transitive packages.
@@ -56,7 +56,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 ## Errors (net10 unless stated)
 
 - Creating an error: CSE 5.771 ns / 0 B, ErrorOr 5.280 ns / 0 B, FluentResults 28.055 ns / 152 B (a class with an empty metadata dictionary and reasons list, no code or type). With three metadata entries: 64.585 / 60.802 / 68.929 ns, 216 / 216 / 288 B.
-- Equality: `Equals` ties or beats ErrorOr except one net9 row (0.288 ns). Without metadata `GetHashCode` is slower than ErrorOr on net8, net9 and net11 (net8 32.818 vs 28.300 ns); with metadata CSE is faster on net8 and net9 and slower on net10. Building a `HashSet` of 100 errors without metadata is slower on every TFM (net10 10,342.030 vs 7,111.568 ns, both 5392 B). That net10 CSE row and ErrorOr's net10 `GetHashCode` row (75.549 ns) are outliers. CSE's hash no longer depends on metadata insertion order; ErrorOr's still does.
+- Equality: `Equals` ties or beats ErrorOr except one net9 row (0.288 ns). Without metadata `GetHashCode` is slower than ErrorOr on net8, net9 and net11 (net8 32.818 vs 28.300 ns); with metadata CSE is faster on net8 and net9 and slower on net10. Building a `HashSet` of 100 errors without metadata is slower on every TFM (net10 10,342.030 vs 7,111.568 ns, both 5392 B). That net10 CSE row and ErrorOr's net10 `GetHashCode` row (75.549 ns) are outliers. CSE's hash does not depend on metadata insertion order (it sums the entry hashes); ErrorOr's does.
 - `Error.Exception(ex)` is the slowest row by design: 66.286 ns / 216 B for a never-thrown exception, 2,719.927 ns / 4720 B for a thrown one (the stack trace text). `Error.Failure(type name, message)` costs the same as ErrorOr (5.215 vs 5.229 ns), except on net8, where it is slower (17.94 vs 13.32 ns).
 - `ErrorMetadata.ToString()` loses to a hand-written `StringBuilder` loop at 1, 8 and 32 entries on every TFM (32 entries: 1,399.05 ns vs 812.07 ns). Both allocate the same bytes (2400 B at 32 entries) and grow about linearly.
 - `ToString` of an error without metadata: same text and 816 B as ErrorOr, 175.50 vs 170.33 ns. With metadata CSE is the slowest (498.34 ns / 2008 B) because it formats every entry.
@@ -65,8 +65,8 @@ Raw material for a post. These notes are not the post. Every number comes from `
 ## Maybe collection helpers (net10 unless stated)
 
 - `TryFirst` on a lazy sequence: CSE 5.898 ns / 0 B, CFE 4,423.863 ns / 16600 B, because CFE copies the source to a list first.
-- `TryLast` on a `List` reads by index: 2.637 ns for CSE, 7.646 ns for CFE. `TryFirst` on a `List` now does too: 2.687 vs 8.070 ns.
-- On net8 and net9 the CSE `TryFirst` helpers on a `List` are now faster than CFE and allocate nothing (net9 `TryFirstMiss`: 1,465.363 vs 3,821.654 ns). CSE still trails CFE on a lazy sequence in `TryLastWhere` and `TryLastMiss` there (net9 `TryLastMiss`: 5,986.563 vs 5,675.622 ns).
+- `TryLast` on a `List` reads by index: 2.637 ns for CSE, 7.646 ns for CFE. `TryFirst` on a `List` does too: 2.687 vs 8.070 ns.
+- On net8 and net9 the CSE `TryFirst` helpers on a `List` are faster than CFE and allocate nothing (net9 `TryFirstMiss`: 1,465.363 vs 3,821.654 ns). CSE still trails CFE on a lazy sequence in `TryLastWhere` and `TryLastMiss` there (net9 `TryLastMiss`: 5,986.563 vs 5,675.622 ns).
 - `TryFind` does two lookups in both libraries: 22.916 ns against 11.405 ns for a hand-written `TryGetValue`.
 - `Choose`: both libraries take 7-11× the hand-written loop (3,319.996 vs 475.180 ns).
 
@@ -76,7 +76,7 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - Aggregation idioms differ. Compare the ErrorOr row as "what its README tells you to write", not as the same work. CSE's typed `Result<T>.Combine(r1, r2, r3)` was not measured.
 - FluentResults has no column for Ensure, Tap, the async pipeline and Maybe, because it has no matching API.
 - Most single-step rows are under 2 ns. Differences under 1 ns are noise, and rows below about 0.1 ns are at timer resolution.
-- Runtime effects not investigated: CFE takes 7-9 ns per step on net8/net9 and about 2 ns on net10/net11; the yielding pipeline takes 0.74-0.75× its net10 time on net11 for CSE and CFE and 0.72-0.73× for ErrorOr; CSE and CFE stay within error there and ErrorOr stays the slowest.
+- Runtime effects not investigated: CFE takes 8.9-9.3 ns per Map, Bind or Ensure step on net8/net9 and about 2 ns on net10/net11; the yielding pipeline takes 0.74-0.75× its net10 time on net11 for CSE and CFE and 0.72-0.73× for ErrorOr; CSE and CFE stay within error there and ErrorOr stays the slowest.
 - CSE has no net8.0 target, so the net8 column runs its netstandard2.1 build against competitor assets built for net8.
 - Load average 1.41 to 2.65 with a desktop session, 4.72 at one rerun start, not recorded for the async pipeline rerun after #230-#256. Async gaps of a few percent are weak evidence.
 
@@ -85,4 +85,4 @@ Raw material for a post. These notes are not the post. Every number comes from `
 - "Struct results cost nothing until something fails": the 0 B chaining rows against FluentResults, then the 56 B / 88 B / 0 B failure row, and what a string error buys and costs.
 - "Where CSE loses": failure creation and the async failure path against CFE, aggregation and `Sequence` against ErrorOr's hand-written idiom, `GetHashCode` and `HashSet` against ErrorOr, metadata `ToString` against a hand-written loop, and the net8/net9 Maybe search helpers against CFE. Name the losses first.
 - "The async overloads": the `Task`-source overloads with a sync handler take 0.60-1.12× the hand-written `await` baseline on net10, while `ValueTask` sources on the failure path with completed tasks take 0.95-3.32× across all TFMs and allocate 0 B (80 B with a `Task` handler), the same as on success.
-- "Dependencies are part of the cost": the package chain set against CFE's zero dependencies, now with `IsAotCompatible` on the CSE side.
+- "Dependencies are part of the cost": the package chain set against CFE's zero dependencies, with `IsAotCompatible` on the CSE side.

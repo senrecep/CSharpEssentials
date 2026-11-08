@@ -73,16 +73,6 @@ From reading the source and docs, not measured.
 
 - `DateTimeProvider.UtcNowDate` and `UtcNowTime` use `UtcNow.UtcDateTime` (`CSharpEssentials.Time/DateTimeProvider.cs:12-13`), the same instant as the BCL rows. With a `TimeProvider` that returns a non-zero offset they still return the UTC date and time of day.
 - `GetAge` throws `ArgumentOutOfRangeException` when the birth date is after the reference date. The hand-written row has no such check. The inputs never trip it, so both rows return the same ages.
-- On net8 the netstandard2.1 build runs. It has no `DateOnly` or `TimeOnly` members, so those rows do not exist there.
-
-## Expected outcome
-
-Read from the source before the full run. [Against the expected outcome](#against-the-expected-outcome) says which points held.
-
-- `ToDateOnly` and `ToTimeOnly` forward to the BCL, so CSE and the BCL should tie.
-- The weekday helpers do the same modulo arithmetic as the hand-written rows, so they should tie too.
-- `GetAge` adds one comparison for its guard. The gap should be small.
-- `UtcNow` adds one interface call and one virtual call over `DateTimeOffset.UtcNow`. Dynamic PGO may remove most of that.
 
 ## Left out
 
@@ -93,8 +83,8 @@ Read from the source before the full run. [Against the expected outcome](#agains
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
-- TFMs: net8.0 (.NET 8.0.30, running the netstandard2.1 build of CSE, so only the UtcNow, UtcNowDateTime and NextDayOfWeekDateTime categories exist), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0).
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux (AVX2). SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.30, netstandard2.1 build of CSE), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0).
 - The 1-minute load average stayed between 1.55 and 2.60 during the baselines suite. No row of `ClockComparison` or `TimeConversionComparison` has a CV above 5%.
 - Reports: [`benchmarks/results/baselines/{tfm}/results/`](../benchmarks/results/baselines/), files `CSharpEssentials.Baselines.Benchmarks.ClockComparison-report-github.md` and `CSharpEssentials.Baselines.Benchmarks.TimeConversionComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
 
@@ -154,12 +144,12 @@ Level rows where the competitor's mean is still lower than the CSE row:
 - `Bcl_DateOnlyFromDateTime`: 1.021 ns (1.00) against 1.022 ns on net9.0 and net11.0.
 - `Bcl_TimeOnlyFromDateTime`: 1.039 ns (1.00) against 1.044 ns on net10.0.
 
-### Against the expected outcome
+### Notes on the results
 
-- `ToDateOnly` ties with the BCL on every TFM, as expected. `ToTimeOnly` ties on net10.0. On net9.0 (1.10) and net11.0 (1.09) the BCL row is slower than the CSE row, although CSE only forwards to that same call. This is not a CSE win.
-- The `DateOnly` weekday helpers are within 0.99 to 1.02 of the hand-written code, except the two losses above. The `DateTime` helper is faster than the hand-written row on net8.0 (1.21), net9.0 (1.11) and net10.0 (1.12) and level on net11.0 (1.00). The cause is not known.
-- `GetAge` with its guard is within 0.98 to 1.01 of the hand-written row.
-- In the UtcNow category every row is within 0.98 to 1.01 of the CSE interface row. The widest gap between the interface row and the sealed row is on net11.0: 27.67 ns against 27.20 ns (0.98).
+- `ToDateOnly` and `ToTimeOnly` forward to the BCL. `ToDateOnly` ties with the BCL on every TFM, and `ToTimeOnly` ties on net10.0. On net9.0 (1.10) and net11.0 (1.09) the BCL row is slower than the CSE row, although CSE only forwards to that same call. This is not a CSE win.
+- The weekday helpers do the same modulo arithmetic as the hand-written rows. The `DateOnly` helpers are within 0.99 to 1.02 of the hand-written code, except the two losses above. The `DateTime` helper is faster than the hand-written row on net8.0 (1.21), net9.0 (1.11) and net10.0 (1.12) and level on net11.0 (1.00). The cause is not known.
+- `GetAge` adds one comparison for its guard and is within 0.98 to 1.01 of the hand-written row.
+- `UtcNow` adds one interface call and one virtual call over `DateTimeOffset.UtcNow`. In the UtcNow category every row is within 0.98 to 1.01 of the CSE interface row. The widest gap between the interface row and the sealed row is on net11.0: 27.67 ns against 27.20 ns (0.98).
 
 ## How to reproduce
 

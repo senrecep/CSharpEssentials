@@ -2,7 +2,7 @@
 
 These are notes for a post, not the post. Every number comes from `CSharpEssentials.Json/BENCHMARKS.md` and `CSharpEssentials.Core/BENCHMARKS.md`, which read `benchmarks/results/json/{tfm}/results/*-report-github.md` and `benchmarks/results/core/{tfm}/results/*-report-github.md`.
 
-The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, default job, on one Linux machine with 6 cores and 12 threads (x64, RyuJIT AVX2). The SDK was 11.0.100-rc.1; the runtimes were .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. The case conversion and Guider classes were rerun on main after pull requests #230 to #256 landed, with SDK 11.0.100-rc.3 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0. The libraries compared are System.Text.Json and the BCL, Macross.Json.Extensions 3.0.0, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0. All three packages are MIT. The CSE code is the local `integ/all` branch (all open pull requests merged, commit `fe91b26a`).
+The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, default job, on a 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2). The SDK was 11.0.100-rc.1; the runtimes were .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. The case conversion and Guider classes were rerun on main after pull requests #230 to #256 landed, with SDK 11.0.100-rc.3 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0. The libraries compared are System.Text.Json and the BCL, Macross.Json.Extensions 3.0.0, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0. All three packages are MIT. The CSE code is the local `integ/all` branch (all open pull requests merged, commit `fe91b26a`).
 
 ## Framing
 
@@ -25,7 +25,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, default job,
 - Humanizer.Core 3.0.10: `Underscore`, `Kebaberize` and `Camelize` over regex-based inflectors. Trimmable and annotated.
 - CSharpVitamins.ShortGuid 2.0.0: a `ShortGuid` struct with implicit casts, the RFC 4648 URL-safe alphabet and a strict decode.
 - CSE:
-  - Json: `[StringEnum]` conventions with generated metadata, Data and Input read modes, `[EnumFallback]`, flags as a JSON array; `PolymorphicJsonConverterFactory` with no derived-type list; `MultiFormatDateTimeConverterFactory` over a fixed list of 34 formats plus Unix seconds.
+  - Json: `[StringEnum]` conventions with generated metadata, Data and Input read modes, `[EnumFallback]`, flags as a JSON array; `PolymorphicJsonConverterFactory` with no derived-type list, and `[JsonTypeDiscriminator]` with a source-generated, AOT-safe `AddPolymorphism()` (not benchmarked); `MultiFormatDateTimeConverterFactory` over a fixed list of 34 formats plus Unix seconds.
   - Core: `ToSnakeCase`/`ToKebabCase`/`ToCamelCase`, `Guider` text helpers on the RFC 4648 alphabet, `Guider.NewGuid`/`NewMonotonicGuid` (version 7), `GetRandomItems` on a cryptographic RNG, and `WithCancellation` for Task and ValueTask.
 
 ## Feature matrix
@@ -41,9 +41,9 @@ Json:
 | Strict mode rejects undefined numbers | Yes (Input mode) | No; `99` is accepted by default, and `allowIntegerValues: false` rejects every number, defined ones too | No; `99` is accepted by default, and `allowIntegerValues: false` rejects every number, defined ones too |
 | Flags wire format | JSON array | Comma string | Comma string |
 | AOT-friendly enum path | Yes | `JsonStringEnumConverter<T>` only | No |
-| Polymorphism discriminator | Automatic, CLR full name | Declared | None |
-| Polymorphism needs a derived-type list | No | Yes | n/a |
-| Polymorphism under AOT | No | Yes | n/a |
+| Polymorphism discriminator | Factory: automatic, CLR full name; `AddPolymorphism`: `[JsonTypeDiscriminator]` | Declared | None |
+| Polymorphism needs a derived-type list | No (assembly scan or generated registrations) | Yes | n/a |
+| Polymorphism under AOT | Factory no; `AddPolymorphism` yes (not benchmarked) | Yes | n/a |
 | Multi-format DateTime read | 34 formats plus Unix seconds | ISO 8601-1:2019 only | `/Date()/` only |
 | 7-digit ISO fraction | No (bug) | Yes | n/a |
 
@@ -127,13 +127,13 @@ Features only CSE ships (not a speed claim):
 
 ## Caveats to keep in the post
 
-- The benchmark found a CSE bug. `MultiFormatDateTimeConverter` has no 7-digit fraction format (`CSharpEssentials.Json/MultiFormatDateTimeConverter.cs:37-90`), and its ISO fast path does not take that length, so the `O` form STJ writes for a `DateTime` throws on read. The Iso input uses a 3-digit fraction for that reason.
+- The benchmark found a CSE bug, still open: `MultiFormatDateTimeConverter` has no 7-digit fraction format (`CSharpEssentials.Json/MultiFormatDateTimeConverter.cs:37-90`), and its ISO fast path does not take that length, so the `O` form STJ writes for a `DateTime` throws on read. The Iso input uses a 3-digit fraction for that reason.
 - Flags rows write different payloads and do not do the same work.
 - The GUID text parity is a round trip within each library, even though all three now write the same RFC 4648 text.
 - On net8 every JSON row uses the STJ 9.0.4 package, so those are not STJ 8 numbers.
 - `Guid.NewGuid` took 750.46 ns to 759.69 ns per call on net8.0 to net10.0 on this machine and 57.94 ns on net11.0, so the GUID ratios swing by TFM. Quote means.
 - The core suite (GUID creation) ran at a 1-minute load average of 3.35 to 4.87 on a 12-thread machine; the 6-thread class shared the CPU with that load.
-- Macross 3.0.0 is from 2022 and targets net6.0. It is still the latest stable release.
+- Macross 3.0.0 is from 2022 and targets net6.0; it is still the latest stable release.
 
 ## Possible angles
 

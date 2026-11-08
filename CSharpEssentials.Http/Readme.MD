@@ -2,9 +2,7 @@
 
 `HttpClient` extensions that return `Result<T>` instead of throwing exceptions. The package maps status codes to errors and includes a fluent request builder, Polly resilience and redirect handling.
 
-> Benchmarks against HttpClient with System.Net.Http.Json, Refit, Flurl.Http, RestSharp and Microsoft.Extensions.Http.Resilience
-> (JSON GET and POST, 404 without exceptions, request building, query strings, a retry policy) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks against HttpClient with System.Net.Http.Json, Refit, Flurl.Http, RestSharp and Microsoft.Extensions.Http.Resilience are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Features
 
@@ -77,7 +75,7 @@ The `HttpClient` extensions above, `PostAsResultAsync`, `PutAsResultAsync`, `Sen
 - Any other cancellation, for example a token a handler links or owns, returns a failed `Result` with `ErrorType.Unexpected` and the exception type name as code.
 - Other transport exceptions return `ErrorType.Unexpected` with the exception type name as code; an SSRF guard block returns `Http.SsrfBlocked` (see below).
 
-**Behaviour change in 6.5.0:** before, an `HttpClient.Timeout` or any other cancelled token threw `OperationCanceledException`. Handle the failed `Result` instead; check for the `Http.Timeout` code to tell a timeout apart.
+Before 6.5.0 an `HttpClient.Timeout` or any other cancelled token threw `OperationCanceledException`.
 
 ### HttpRequestBuilder
 
@@ -96,7 +94,7 @@ Result created = await HttpRequestBuilder
 
 Query values (`WithQuery`, `Uri.WithQueryString`) work with relative and absolute URIs: `.Get("/users/1").WithQuery("include", "profile")` builds `/users/1?include=profile`, merged with any existing query and placed before a fragment. Relative request URIs are resolved against `HttpClient.BaseAddress`.
 
-Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithIdempotencyKey`, `FollowRedirects`. `Build()` returns a `Result<HttpRequestMessage>`. A content header passed to `WithHeader`, such as `Content-Type` or `Content-Language`, is set on the body and replaces the value the content already has. Calling `WithHeader` again with the same content header adds another value.
+Factories: `Get`, `Post`, `Put`, `Patch`, `Delete` (string or `Uri`). Builders: `WithMethod`, `WithUri`, `WithHeader`, `WithHeaders`, `WithQuery` (name and value, a dictionary, or an object value), `WithRoute`, `WithEnumConventions`, `WithContent`, `WithJsonContent`, `WithJsonTypeInfoContent`, `WithIdempotencyKey`, `FollowRedirects` (default 5 hops, the same as `SendWithRedirectsAsResultAsync`). `Build()` returns a `Result<HttpRequestMessage>`. A content header passed to `WithHeader`, such as `Content-Type` or `Content-Language`, is set on the body and replaces the value the content already has. Calling `WithHeader` again with the same content header adds another value.
 
 ### Enums in route, query and body
 
@@ -174,9 +172,7 @@ Result<User> viaPolicy = await policy.ExecuteAsync(token =>
 
 ### Idempotency-Key and safe retries
 
-These helpers are the client side of the server's [`Idempotency-Key` contract](../CSharpEssentials.Idempotency/Readme.MD). A POST or PATCH can be retried safely only when every attempt carries the same key. The key is set once per logical call, and the retry sends that same `HttpRequestMessage` again, so the key never changes between attempts.
-
-Attach the key to the request:
+These helpers are the client side of the server's [`Idempotency-Key` contract](../CSharpEssentials.Idempotency/Readme.MD). A POST or PATCH can be retried safely only when every attempt carries the same key. The key is set once per logical call and the retry resends the same `HttpRequestMessage`, so the key never changes between attempts.
 
 ```csharp
 using var request = new HttpRequestMessage(HttpMethod.Post, "/payments") { Content = JsonContent.Create(payment) };
@@ -184,9 +180,7 @@ string key = request.SetIdempotencyKey();                                   // r
 request.SetIdempotencyKey(IdempotencyKeys.For("capture", orderId));         // or a deterministic key
 ```
 
-A generated key is a random UUIDv4 from `Guid.NewGuid()`. A version 7 key would show when the request was made, and the server only needs the key to be unique, not ordered.
-
-`IdempotencyKeys` is in `CSharpEssentials.Idempotency`; any key of printable ASCII other than `"` and `\` is accepted, and an invalid key throws `ArgumentException`.
+A generated key is a random UUIDv4 from `Guid.NewGuid()`: a version 7 key would reveal when the request was made, and the server needs uniqueness, not order. `IdempotencyKeys` is in `CSharpEssentials.Idempotency`. Any key of printable ASCII other than `"` and `\` is accepted, and an invalid key throws `ArgumentException`.
 
 Or let the builder hold it. The key is made when `WithIdempotencyKey` is called, so every `Build()` of the same builder returns the same key, and a new builder makes a new one:
 
@@ -198,7 +192,7 @@ Result<Payment> result = await HttpRequestBuilder
     .AsResultAsync<Payment>(client);
 ```
 
-`IdempotencyKeyHandler` is optional (.NET 9+ for `AddIdempotencyKeys`). It adds a generated key to POST and PATCH requests that have none, and leaves an existing key alone. Register it **before** the resilience handler, so that it runs once per logical call and not once per attempt:
+`IdempotencyKeyHandler` is optional (.NET 9+ for `AddIdempotencyKeys`). It adds a generated key to POST and PATCH requests that have none, and leaves an existing key alone. Register it before the resilience handler, so that it runs once per logical call and not once per attempt:
 
 ```csharp
 services.AddHttpClient("payments")
@@ -208,7 +202,7 @@ services.AddHttpClient("payments")
 
 `AddStandardResilienceHandler` comes from `Microsoft.Extensions.Http.Resilience`, which you reference yourself. `RetryUnsafeMethodsOnlyWithIdempotencyKey` extends any Polly `RetryStrategyOptions<HttpResponseMessage>`, so it also works in a pipeline you build with `ResiliencePipelineBuilder<HttpResponseMessage>`. The request is read from `HttpResponseMessage.RequestMessage` when a response arrived. When none did, it is read from `context.Properties` under `IdempotentRetry.RequestMessageKey`, which `AddStandardResilienceHandler` sets; when you run such a pipeline yourself, set it too, so that attempts with no response can be judged.
 
-The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception)`. You can call it from your own `ShouldHandle`:
+The decision is `IdempotentRetry.ShouldRetryAsync(request, response, exception, options, cancellationToken)`, which you can call from your own `ShouldHandle`:
 
 | Outcome | GET, HEAD, PUT, DELETE, OPTIONS | POST, PATCH with a key | POST, PATCH without a key |
 |---|---|---|---|
@@ -238,7 +232,7 @@ Only 301, 302, 303, 307 and 308 are followed. Any other status, including 304, i
 
 ### SSRF guard
 
-Use it when the URL comes from a user, a tenant or a third party: webhooks, link previews, image fetchers, import-by-URL. Without a guard, a caller can point your server at `http://169.254.169.254/` (cloud metadata), `http://localhost:6379/` or an internal admin panel. The response then leaks back to them, or the request alone does damage.
+Use it when the URL comes from a user, a tenant or a third party (webhooks, link previews, image fetchers, import-by-URL). Without a guard, a caller can point your server at `http://169.254.169.254/` (cloud metadata), `http://localhost:6379/` or an internal admin panel.
 
 ```csharp
 services.AddHttpClient("webhooks")
@@ -249,16 +243,14 @@ services.AddHttpClient("webhooks")
     });
 ```
 
-What the guard does:
+- Checks resolved addresses, not host names. A `ConnectCallback` on `SocketsHttpHandler` resolves DNS itself and checks every address the name returns. If any address is blocked, the request fails, so a name that resolves to `[8.8.8.8, 10.0.0.5]` is rejected. The socket connects to an address that was already checked, so DNS rebinding between the check and the connect does not work. IP literals (`http://127.0.0.1/`, `http://[::1]/`) go through the same check.
+- Follows redirects itself. `AllowAutoRedirect` is off. The guard follows 301/302/303/307/308 itself (default 3 hops) and checks scheme, port and address again on every hop. 303, and 301/302 after a POST, become GET with no body. 307/308 keep the method and body. `Authorization`, `Proxy-Authorization` and `Cookie` are removed when a redirect changes scheme, host or port.
+- Disables proxies and the cookie container. A proxy would resolve the name instead of the guard, so the guard turns off `UseProxy`. `UseCookies` is off, so cookies set by one host are never sent to another. If the primary handler is replaced or reconfigured with a proxy or cookies after `AddSsrfGuard`, the first request throws `InvalidOperationException`. The primary handler is an internal wrapper around that `SocketsHttpHandler`; to tune it, cast `((DelegatingHandler)handler).InnerHandler` to `SocketsHttpHandler`.
+- Never uses HTTP/3. HTTP/3 runs over QUIC, which does not go through `ConnectCallback`, so it would skip the address check. On every hop the guard caps `request.Version` at HTTP/2 and turns `RequestVersionOrHigher` into `RequestVersionOrLower`, which also rules out an `Alt-Svc` upgrade.
+- Checks the final request again at the primary handler. Handlers added after `AddSsrfGuard` run between the guard and the socket handler. The primary handler applies the HTTP/2 cap and the request policy (scheme, port, `RequestPolicy`) once more on the request it actually sends, so such a handler cannot switch to HTTP/3 or rewrite the URI to a blocked scheme or port.
+- Allows only https on port 443 by default. Set `AllowHttp = true` to allow http (port 80 is then added). Adding entries to `AllowedPorts` replaces the default ports.
 
-- **Checks resolved addresses, not host names.** A `ConnectCallback` on `SocketsHttpHandler` resolves DNS itself and checks every address the name returns. If any address is blocked, the request fails, so a name that resolves to `[8.8.8.8, 10.0.0.5]` is rejected. The socket connects to an address that was already checked, so DNS rebinding between the check and the connect does not work. IP literals (`http://127.0.0.1/`, `http://[::1]/`) go through the same check.
-- **Follows redirects itself.** `AllowAutoRedirect` is off. The guard follows 301/302/303/307/308 itself (default 3 hops) and checks scheme, port and address again on every hop. 303, and 301/302 after a POST, become GET with no body. 307/308 keep the method and body. `Authorization`, `Proxy-Authorization` and `Cookie` are removed when a redirect changes scheme, host or port.
-- **Disables proxies and the cookie container.** A proxy would resolve the name instead of the guard, so the guard turns off `UseProxy`. `UseCookies` is off, so cookies set by one host are never sent to another. If the primary handler is replaced or reconfigured with a proxy or cookies after `AddSsrfGuard`, the first request throws `InvalidOperationException`. The primary handler is an internal wrapper around that `SocketsHttpHandler`; to tune it, cast `((DelegatingHandler)handler).InnerHandler` to `SocketsHttpHandler`.
-- **Never uses HTTP/3.** HTTP/3 runs over QUIC, which does not go through `ConnectCallback`, so it would skip the address check. On every hop the guard caps `request.Version` at HTTP/2 and turns `RequestVersionOrHigher` into `RequestVersionOrLower`, which also rules out an `Alt-Svc` upgrade.
-- **Checks the final request again at the primary handler.** Handlers added after `AddSsrfGuard` run between the guard and the socket handler. The primary handler applies the HTTP/2 cap and the request policy (scheme, port, `RequestPolicy`) once more on the request it actually sends, so such a handler cannot switch to HTTP/3 or rewrite the URI to a blocked scheme or port.
-- **Allows only https on port 443 by default.** Set `AllowHttp = true` to allow http (port 80 is then added). Adding entries to `AllowedPorts` replaces the default ports.
-
-Blocked by default: `0.0.0.0/8`, `10.0.0.0/8`, `100.64.0.0/10`, `127.0.0.0/8`, `169.254.0.0/16`, `172.16.0.0/12`, `192.0.0.0/24`, `192.0.2.0/24`, `192.88.99.0/24` (6to4 relay anycast), `192.168.0.0/16`, `198.18.0.0/15`, `198.51.100.0/24`, `203.0.113.0/24`, `224.0.0.0/4`, `240.0.0.0/4`, `255.255.255.255`, `::`, `::1`, `::ffff:0:0:0/96` (SIIT IPv4-translated), `100::/64` (discard-only), `fc00::/7`, `fe80::/10`, `fec0::/10` (deprecated site-local), `ff00::/8`, `2001::/32` (Teredo), `2001:2::/48` (benchmarking), `2001:10::/28` (ORCHID), `2001:db8::/32`, `3fff::/20` (documentation), `5f00::/16` (SRv6 SIDs), `64:ff9b:1::/48` (local-use NAT64). IPv6 addresses that embed one of the IPv4 ranges are blocked too: IPv4-mapped (`::ffff:a.b.c.d`), IPv4-compatible (`::a.b.c.d`), SIIT (`::ffff:0:a.b.c.d`), NAT64 (`64:ff9b::/96`) and 6to4 (`2002::/16`). `::` and `::1` are IPv6 addresses in their own right and are not treated as IPv4-compatible. `BlockedNetworks` matches either the raw address or the embedded IPv4 address. `AllowedNetworks` matches only the raw address, so `0.0.0.0/0` does not allow `::1`. The address policy is asked about the embedded IPv4 address and, when it differs, the raw address too; both must be allowed.
+Blocked by default: `0.0.0.0/8`, `10.0.0.0/8`, `100.64.0.0/10`, `127.0.0.0/8`, `169.254.0.0/16`, `172.16.0.0/12`, `192.0.0.0/24`, `192.0.2.0/24`, `192.88.99.0/24` (6to4 relay anycast), `192.168.0.0/16`, `198.18.0.0/15`, `198.51.100.0/24`, `203.0.113.0/24`, `224.0.0.0/4`, `240.0.0.0/4` (which includes `255.255.255.255`), `::`, `::1`, `::ffff:0:0:0/96` (SIIT IPv4-translated), `100::/64` (discard-only), `fc00::/7`, `fe80::/10`, `fec0::/10` (deprecated site-local), `ff00::/8`, `2001::/32` (Teredo), `2001:2::/48` (benchmarking), `2001:10::/28` (ORCHID), `2001:db8::/32`, `3fff::/20` (documentation), `5f00::/16` (SRv6 SIDs), `64:ff9b:1::/48` (local-use NAT64). IPv6 addresses that embed one of the IPv4 ranges are blocked too: IPv4-mapped (`::ffff:a.b.c.d`), IPv4-compatible (`::a.b.c.d`), SIIT (`::ffff:0:a.b.c.d`), NAT64 (`64:ff9b::/96`) and 6to4 (`2002::/16`). `::` and `::1` are IPv6 addresses in their own right and are not treated as IPv4-compatible. `BlockedNetworks` matches either the raw address or the embedded IPv4 address. `AllowedNetworks` matches only the raw address, so `0.0.0.0/0` does not allow `::1`. The address policy is asked about the embedded IPv4 address and, when it differs, the raw address too; both must be allowed.
 
 | Option | Default | Meaning |
 |--------|---------|---------|
@@ -293,7 +285,7 @@ Limitations:
 - It cannot be combined with an outbound proxy. If you have to use a proxy, enforce the rules on the proxy.
 - A custom policy registered in the container applies to every guarded client in that container. Use `AddressPolicy`/`RequestPolicy` on the options to scope a policy to one client.
 - Policies should be pure and idempotent: the request policy runs twice per hop (in the guard and again in the primary handler), and the address policy may run for both the raw and the normalized form of an address.
-- HTTP/3 is never used, because QUIC connections bypass `ConnectCallback`. The cap is enforced at the primary handler, so it also holds when a handler added after `AddSsrfGuard` raises the version. Such a handler still sees the request before the final check, so do not let it send the request through another `HttpClient`.
+- A handler added after `AddSsrfGuard` sees the request before the final check, so do not let it send the request through another `HttpClient`.
 - Only new connections are checked; a pooled connection was checked when it opened. Configure the primary handler with `ConnectTimeout` and `PooledConnectionLifetime` (for example through `ConfigurePrimaryHttpMessageHandler((handler, _) => ...)`) if DNS answers must be re-checked periodically.
 - Synchronous `HttpClient.Send` is not supported. A synchronous `Read` on the response stream checks the timeout only before each read, and throws the same `SsrfBlockedException` as the asynchronous path.
 - A 307/308 redirect sends the request body again, also to another origin, the same as the default .NET redirect handling. Bodies that can only be read once (forward-only streams) fail on that hop. Do not put secrets in the body of a request whose redirects you do not trust.

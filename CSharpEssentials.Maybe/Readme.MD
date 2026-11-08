@@ -1,20 +1,10 @@
 # CSharpEssentials.Maybe
 
-Maybe (Option) monad for null-safe code. Missing values are explicit, which avoids `NullReferenceException`.
-
-## Features
-
-- **Maybe<T>**: Explicit presence/absence of a value with implicit conversions.
-- **Functional API**: `Map`, `Bind`, `Where`, `Match`, `Or`, `Tap`.
-- **LINQ**: Query syntax with `Select`, `SelectMany`, `Where`.
-- **Async**: `MapAsync`, `BindAsync`, and awaitable extensions.
-- **Result bridge**: Convert `Maybe<T>` to `Result<T>` and back.
-- **Sequence helpers**: `TryFirst`, `TryLast`, `TryFind`, `Choose`, `Sequence`, `Traverse`, `Partition`.
+`Maybe<T>` (an Option type) makes a missing value explicit. It has `Map`, `Bind`, `Where`, `Match`, `Or` and `Tap`, LINQ query syntax, async overloads, conversion to and from `Result<T>`, and sequence helpers (`TryFirst`, `TryLast`, `TryFind`, `Choose`, `Sequence`, `Traverse`, `Partition`).
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Results` and `CSharpEssentials.Errors`. `Maybe<T>` and the non-generic `Maybe` (for `Maybe.None`, `Maybe.From`, `Maybe.FromAsync` and `Maybe.FromTry`) live in the `CSharpEssentials.Maybe` namespace.
 
-> **Benchmarks:** `TryFirst`, `TryLast`, `TryFind` and `Choose` against CSharpFunctionalExtensions and hand-written loops are
-> documented in [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks of `TryFirst`, `TryLast`, `TryFind` and `Choose` against CSharpFunctionalExtensions and hand-written loops are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
@@ -24,7 +14,7 @@ dotnet add package CSharpEssentials.Maybe
 
 ## Usage
 
-### Creating Maybe
+### Creating a Maybe
 
 ```csharp
 using CSharpEssentials.Maybe;
@@ -137,12 +127,12 @@ Maybe<Order> order = await user
     .MapAsync(o => EnrichAsync(o));
 ```
 
-Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders and will be removed in 7.0. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `WhereAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`. The instance `MapAsync` has a `Task` and a `ValueTask` twin without that priority, so `maybe.MapAsync(async v => ...)` is ambiguous (CS0121) on every language version; pass a lambda that returns a `Task` instead (`maybe.MapAsync(v => LoadAsync(v))`) or type the delegate.
+Every `Maybe` member that returns `Task` or `ValueTask` ends in `Async`: `WhereAsync`, `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `MatchAsync`, `ToMaybeResultAsync`, `ToMaybeUnitResultAsync` and `Maybe.FromAsync` (`maybe.ExecuteAsync(async v => ...)`, `task.OrAsync(() => ...)`). The old unsuffixed overloads still compile as `[Obsolete]` forwarders. `OrElseAsync` keeps its name. An untyped async lambda on an instance `ExecuteAsync`, `ExecuteNoValueAsync`, `OrAsync`, `WhereAsync` or `MatchAsync`, or on a key/value `MatchAsync`, binds to the `Task` overload through `OverloadResolutionPriority`, which needs C# 13 or later; on C# 12, type the lambda or pass a typed local such as `Func<T, Task>`. The instance `MapAsync` has a `Task` and a `ValueTask` twin without that priority, so `maybe.MapAsync(async v => ...)` is ambiguous (CS0121) on every language version; pass a lambda that returns a `Task` instead (`maybe.MapAsync(v => LoadAsync(v))`) or type the delegate.
 
 ### Collection extensions
 
 ```csharp
-// Require ALL lookups to succeed; None if any is missing
+// None if any lookup is missing
 Maybe<User[]> allUsers = userIds.Traverse(id => FindUser(id));
 
 // Collect present values and count absences
@@ -183,7 +173,9 @@ string display = middleName.Map(n => n.ToUpperInvariant()).GetValueOrDefault("-"
 Result<User> found = _cache.TryFind(id).ToMaybeResult(Error.NotFound("User.NotFound", "User does not exist"));
 ```
 
-`Maybe<T>.None` never equals a non-null plain `T`: `Maybe<int>.None == 0` is `false`, while `Maybe<int>.From(0) == 0` is `true`. `null` compares as absence: `Maybe<string>.None == null` is `true` and `Maybe<string>.From("a") == null` is `false`, in either operand order. A typed `null` means absence, but `Equals(object?)` and `maybe == (object?)null` follow the BCL rule that `x.Equals(null)` is `false`: `Maybe<string>.None.Equals((object?)null)` and `Maybe<string>.None == (object?)null` are both `false`. The static type of the operand picks the rule, so cast to `T?` or use `HasNoValue` to test for absence. Prefer `HasNoValue` over `== null` or `== default` for clarity. For a value type `T`, `maybe == default` means `default(T)` (so `Maybe<int>.None == default` is `false`), and `Maybe<int> == null` does not compile cleanly (CS9342, a known overload ambiguity), so use `HasNoValue`. `ToString()` returns `Some(value)` or `None`; `IFormattable` values are formatted with the invariant culture.
+#### Equality
+
+`Maybe<T>.None` never equals a non-null plain `T`: `Maybe<int>.None == 0` is `false`, while `Maybe<int>.From(0) == 0` is `true`. A typed `null` compares as absence: `Maybe<string>.None == null` is `true` and `Maybe<string>.From("a") == null` is `false`, in either operand order. `Equals(object?)` and `maybe == (object?)null` follow the BCL rule that `x.Equals(null)` is `false`, so `Maybe<string>.None.Equals((object?)null)` and `Maybe<string>.None == (object?)null` are both `false`. Use `HasNoValue` to test for absence. For a value type `T`, `maybe == default` means `default(T)` (so `Maybe<int>.None == default` is `false`), and `Maybe<int> == null` does not compile cleanly (CS9342, a known overload ambiguity), so use `HasNoValue`. `ToString()` returns `Some(value)` or `None`; `IFormattable` values are formatted with the invariant culture.
 
 ### Exception-safe creation
 
@@ -200,7 +192,7 @@ Maybe<User> user  = Maybe<User>.FromTry(() => JsonSerializer.Deserialize<User>(j
 ```csharp
 Maybe<int> maybe = Maybe.None;
 
-maybe.TapNone(() => logger.LogWarning("Value missing"));  // called when None
+maybe.TapNone(() => logger.LogWarning("Value missing"));
 
 // Async
 await maybe.TapNoneAsync(async () => await NotifyAsync("Missing"));
@@ -212,7 +204,7 @@ await GetMaybeAsync().TapNoneAsync(() => logger.LogWarning("Value missing"));
 ### GetValueOrElse: lazy fallback
 
 ```csharp
-// Factory only called when None (unlike GetValueOrDefault which always evaluates)
+// Factory called only on None; same as GetValueOrDefault(Func<T>)
 int value = maybe.GetValueOrElse(() => ComputeExpensiveDefault());
 ```
 
@@ -228,7 +220,7 @@ Maybe<int> points = stored.Flatten();   // None
 ### OrElse: lazy Maybe chain
 
 ```csharp
-// Alias for Or(Func<Maybe<T>>): returns self if Some, calls factory if None
+// Alias of Or(Func<Maybe<T>>): the factory runs only on None
 Maybe<Config> config = GetFromCache().OrElse(() => GetFromDatabase());
 
 // Async

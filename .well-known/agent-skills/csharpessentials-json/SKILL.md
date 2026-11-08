@@ -1,11 +1,11 @@
 ---
 name: csharpessentials-json
-description: Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().
+description: Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions presets (DefaultOptions, StrictOptions, ApplyTo), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), polymorphism with [JsonTypeDiscriminator] and AddPolymorphism (source-generated, AOT safe) or AddPolymorphismWithReflection, the $type PolymorphicJsonConverterFactory for bases without attributes, MultiFormatDateTimeConverterFactory, JsonElement.ToClrObject() and the CSE4001-CSE4012 analyzers.
 ---
 
 # CSharpEssentials.Json
 
-Pre-configured `System.Text.Json` options, converters and serialization helpers.
+Pre-configured `System.Text.Json` options, converters and serialization helpers. Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`; depends on `CSharpEssentials.Enums`.
 
 ## Installation
 
@@ -27,30 +27,28 @@ using CSharpEssentials.Json;
 | Member | Contents |
 |---|---|
 | `DefaultOptionsWithoutConverters` | Web defaults, camelCase, case-insensitive reads, nulls ignored on write, `ReferenceHandler.IgnoreCycles`, relaxed escaping |
-| `DefaultOptions` | The above plus enum conventions (`AddEnumConventions(EnumConventions.Default)`, Data mode), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` |
+| `DefaultOptions` | The above plus enum conventions (`AddEnumConventions(EnumConventions.Default)`, Data mode), `MultiFormatDateTimeConverterFactory`, `PolymorphicJsonConverterFactory` and `AddPolymorphismWithReflection()` |
 | `DefaultOptionsWithDateTimeConverter` | `DefaultOptionsWithoutConverters` plus `MultiFormatDateTimeConverterFactory` |
-| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members |
+| `StrictOptions` | Case-sensitive; rejects trailing commas, comments and unmapped members; `AddPolymorphismWithReflection()` |
 | `CreateOptionsWithConverters(params JsonConverter[])` | `DefaultOptionsWithoutConverters` plus the given converters |
-| `options.Create(configure)` | Copies options and applies a configuration |
-| `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies settings and converters onto another instance; the target keeps its own `TypeInfoResolver` when the source has none |
+| `options.Create(configure)` | Copies the options and applies `configure` to the copy |
+| `source.ApplyTo(target)` / `target.ApplyFrom(source)` | Copies settings and converters onto another instance. The target keeps its own `TypeInfoResolver` when it has one, and gets the source's polymorphism added to it |
 
-The preset instances become read-only after first use; call `Create` for a modifiable copy. The class is `[RequiresUnreferencedCode]` / `[RequiresDynamicCode]` because `DefaultOptions` includes the reflection-based polymorphic converter.
+The preset instances become read-only after first use; call `Create` for a modifiable copy. The class is `[RequiresUnreferencedCode]` / `[RequiresDynamicCode]` because its presets find polymorphic derived types with reflection.
 
 ```csharp
 // ASP.NET Core Minimal APIs
 builder.Services.ConfigureHttpJsonOptions(o =>
     EnhancedJsonSerializerOptions.DefaultOptions.ApplyTo(o.SerializerOptions));
 
-// Standalone serialization
 string json = JsonSerializer.Serialize(order, EnhancedJsonSerializerOptions.DefaultOptions);
-Order? copy = JsonSerializer.Deserialize<Order>(json, EnhancedJsonSerializerOptions.DefaultOptions);
 ```
 
 ---
 
-## Serialization Helpers
+## Serialization helpers
 
-All helpers except `string.ConvertToJsonDocument()` use `DefaultOptions` when no options are passed.
+All helpers except `string.ConvertToJsonDocument()` use `DefaultOptions` when no options are passed. They use reflection-based serialization; in trimmed or AOT apps call `JsonSerializer` with a `JsonSerializerContext`.
 
 ```csharp
 string json = order.ConvertToJson();
@@ -64,9 +62,9 @@ object? clr = document.RootElement.ToClrObject();
 
 ---
 
-## Enum Conventions
+## Enum conventions
 
-`AddEnumConventions` adds the enum converter for enums marked `[StringEnum]` (from `CSharpEssentials.Enums`); other enums keep the converters already on the options, so a plain enum stays a number unless you add `JsonStringEnumConverter` yourself. `DefaultOptions` already applies it in Data mode.
+`AddEnumConventions` adds the enum converter for enums with generated metadata (`[StringEnum]` from `CSharpEssentials.Enums`). Other enums keep the converters already on the options, so a plain enum stays a number unless you add `JsonStringEnumConverter`. `DefaultOptions` already applies it in Data mode.
 
 ```csharp
 using CSharpEssentials.Enums;
@@ -81,53 +79,58 @@ JsonSerializerOptions input = new JsonSerializerOptions(JsonSerializerDefaults.W
 // Plain enum value                 -> 2
 ```
 
-Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`. `AddEnumConventions` takes an optional `writeAs: EnumWireFormat.Number`. `AddEnumConventionsWithReflection` also converts enums without generated metadata and is not trim or AOT safe. `ConditionalStringEnumConverter` is obsolete: it forwards to the same converter in `Input` mode and no longer has `AllowUndefinedValues`.
+- Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`. `[Flags]` values are JSON arrays.
+- `writeAs: EnumWireFormat.Number` writes numbers. An undefined value created in code is written as its number (`42`) in both formats; Input mode still rejects it on read.
+- `AddEnumConventionsWithReflection` also converts enums without generated metadata and is not trim or AOT safe.
+- `ConditionalStringEnumConverter` is obsolete: it forwards to the same converter in Input mode and has no `AllowUndefinedValues`.
+- `StringEnumNaming` (`GetName`, `GetNames<T>`, `TryParse`) is obsolete since 5.0, a facade over `EnumMetadata`. Use `EnumMetadata`, `EnumValueFormatter` or the generated `ToWireName()` and `TryParseWire` helpers.
 
-## StringEnumNaming
+---
 
-Obsolete in 5.0 (a working facade over `EnumMetadata`): use `EnumMetadata`, `EnumValueFormatter` or the generated `ToWireName()` and `TryParseWire` helpers in new code.
+## Polymorphism
 
-The same names are used by JSON, EF Core storage, OpenAPI schemas and route/query binding.
+The base type picks the path:
+
+- A base with `[JsonPolymorphic]` or `[JsonDerivedType]` uses System.Text.Json polymorphism. Derived types in any assembly join it through `[JsonTypeDiscriminator("value")]` (or an integer). A bundled source generator registers them per assembly, so `AddPolymorphism()` uses no reflection and is trim and AOT safe.
+- A base with neither attribute uses `PolymorphicJsonConverterFactory`: a `$type` property with the CLR full name, found by scanning loaded assemblies (reflection, not AOT safe).
 
 ```csharp
-string name = StringEnumNaming.GetName(OrderStatus.Shipped);             // "shipped"
-IReadOnlyList<string> names = StringEnumNaming.GetNames<OrderStatus>();
-bool ok = StringEnumNaming.TryParse("shipped", out OrderStatus status);
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "$event")]
+public interface IEvent;
+
+[JsonTypeDiscriminator("order.placed.v1")]
+public sealed record OrderPlaced(Guid Id, decimal Total) : IEvent;
+
+var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { TypeInfoResolver = new DefaultJsonTypeInfoResolver() }
+    .AddPolymorphism();
+// {"$event":"order.placed.v1","id":"...","total":10}
+
+// Source-generated context: copy its options, list every derived type with [JsonSerializable], call AddPolymorphism last
+var aot = new JsonSerializerOptions(AppJsonContext.Default.Options).AddPolymorphism();
 ```
+
+- Resolution order: `[JsonDerivedType]` on the base, then generated `[JsonTypeDiscriminator]` registrations, then (only with `AddPolymorphismWithReflection` and a base without `[JsonDerivedType]`) an assembly scan that uses the CLR full name for types without a value.
+- `AddPolymorphism` and `AddPolymorphismWithReflection` turn on `AllowOutOfOrderMetadataProperties`.
+- `[JsonPolymorphicProperty("name")]` renames the discriminator for the values of one property.
+- `[JsonAcceptClrTypeNames]` on a base keeps reading old `$type` CLR-name payloads (needs `AddPolymorphismWithReflection`; slower).
+- Duplicate values under one base throw `InvalidOperationException` on first use; an unknown value on read throws `JsonException`.
+- Analyzers CSE4001 to CSE4012 report duplicate values, unreachable types, derived types missing from a `JsonSerializerContext` (CSE4006, with a code fix) and similar mistakes.
 
 ---
 
 ## MultiFormatDateTimeConverterFactory
 
-Reads `DateTime` and `DateTime?` from many input formats (ISO 8601 and common patterns) and from numeric Unix-seconds strings. Extra formats can be passed to the constructor. Values without an offset are read as UTC and returned as local time (`Kind = Local`), so date-only input shifts to the previous evening in time zones behind UTC; the converter writes `yyyy-MM-ddTHH:mm:ss.ffffffzzz`.
+Reads `DateTime` and `DateTime?` from a fixed list of 34 formats (ISO 8601, `dd.MM.yyyy`, `MM/dd/yyyy`, `March 14, 2024`, RFC 1123 and more) and from numeric Unix-seconds strings. Constructor arguments add formats. Every value is returned as UTC (`Kind = Utc`); input without an offset is read as UTC. Slash dates try `dd/MM/yyyy` before `MM/dd/yyyy`. Writes use `yyyy-MM-ddTHH:mm:ss.ffffffzzz`, and an `Unspecified` value is written as UTC. A 7-digit ISO fraction (the `O` round-trip form) is not read.
 
 ```csharp
-// Accepts the built-in formats plus "dd.MM.yyyy"
 var options = new JsonSerializerOptions();
-options.Converters.Add(new MultiFormatDateTimeConverterFactory("dd.MM.yyyy"));
+options.Converters.Add(new MultiFormatDateTimeConverterFactory("dd.MM.yyyy HH-mm"));
 ```
 
 ---
 
-## PolymorphicJsonConverterFactory
+## Best practices
 
-Handles abstract classes and interfaces (collections excluded) with a `$type` discriminator that holds the concrete type's full name.
-
-```csharp
-// Abstract and interface types round-trip through "$type"
-var options = new JsonSerializerOptions();
-options.Converters.Add(new PolymorphicJsonConverterFactory());
-
-// {"$type":"MyApp.Shapes.Circle","Radius":5} → Circle : Shape (property names follow the options' naming policy)
-```
-
-`$type` is written first and is required on read; a missing or unknown value throws `JsonException`.
-
----
-
-## Best Practices
-
-- Configure options once and share them; prefer `DefaultOptions` over ad-hoc instances
-- `AddEnumConventions` only converts enums marked `[StringEnum]` from `CSharpEssentials.Enums`; use `Input` mode for request bodies
-- Since 4.0, string enums are written in snake_case (`"shipped"`); EF Core storage follows the same naming
-- `PolymorphicJsonConverterFactory` discovers types by reflection; it is not trim/AOT safe
+- Configure options once and share them; prefer `DefaultOptions` over ad-hoc instances.
+- Use Input mode for request bodies and Data mode for stored or received data.
+- In AOT apps use `[JsonPolymorphic]` + `[JsonTypeDiscriminator]` with `AddPolymorphism` and a `JsonSerializerContext`, not the reflection presets.

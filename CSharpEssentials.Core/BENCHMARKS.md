@@ -1,4 +1,4 @@
-# CSharpEssentials.Core: Performance benchmarks
+# CSharpEssentials.Core: performance benchmarks
 
 This page compares five CSharpEssentials.Core (CSE) helpers with the BCL and with two libraries: string case conversion against `JsonNamingPolicy` and Humanizer.Core 3.0.10, URL-safe GUID text against `Base64Url` and CSharpVitamins.ShortGuid 2.0.0, unique random sampling against `RandomNumberGenerator`/`Random`, `WithCancellation` against `Task.WaitAsync`, and GUID creation (`Guider.NewGuid`, `Guider.NewMonotonicGuid`) against `Guid.NewGuid` and `Guid.CreateVersion7`. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. The first four classes live in the Json comparison project, which is documented in [CSharpEssentials.Json/BENCHMARKS.md](../CSharpEssentials.Json/BENCHMARKS.md). The GUID creation classes live in `benchmarks/CSharpEssentials.Core.Benchmarks/`.
 
@@ -46,15 +46,15 @@ On net8.0 CSE runs its netstandard2.1 build, because CSharpEssentials.Core has n
 
 The parity checks use inputs on which every row agrees. The libraries still differ in ways the numbers alone do not show. These are not timed.
 
-- **Acronyms.** `"HTTPStatus"` becomes `httpstatus` with CSE and `http_status` with the BCL policy and Humanizer.
-- **Digits.** CSE inserts a separator before a run of digits.
-- **Non-Latin letters.** CSE keeps them: letters and combining marks of every Unicode category count as word characters, not separators.
-- **Camel case.** `JsonNamingPolicy.CamelCase` lowercases only the leading run of capitals. It does not convert from snake case.
-- **GUID alphabet.** CSE, ShortGuid and `Base64Url` all use the RFC 4648 URL-safe alphabet and write `00amyWGct0y_ze4lIsj2Mw` for the input. The parity check is still a round trip within each library, not a cross-library string comparison.
-- **ShortGuid decode** re-encodes the result and compares it with the input, a strict check the other decoders do not do. That is extra work by design.
-- **Random source.** CSE and the `RandomNumberGenerator` row draw from a cryptographic RNG. The `Random.Shared` and hand-written rows do not, so they are not a like-for-like comparison with CSE. The WithReplacement row can return duplicates and does a different job; it has no CSE row and no baseline.
-- **Cancellation exception.** On net9.0 and later CSE calls `WaitAsync`, so both throw `TaskCanceledException`. On net8.0 (the netstandard2.1 build) CSE throws `OperationCanceledException`, the base class. CSE also attaches a continuation that observes a fault of the wrapped task.
-- **GUID versions.** `Guid.NewGuid` is version 4 (random). `Guid.CreateVersion7` and both `Guider` methods are version 7 (time-ordered). `NewMonotonicGuid` also keeps IDs from one process in order within a millisecond; the others do not.
+- Acronyms: `"HTTPStatus"` becomes `httpstatus` with CSE and `http_status` with the BCL policy and Humanizer.
+- Digits: CSE inserts a separator before a run of digits.
+- Non-Latin letters: CSE keeps them: letters and combining marks of every Unicode category count as word characters, not separators.
+- Camel case: `JsonNamingPolicy.CamelCase` lowercases only the leading run of capitals. It does not convert from snake case.
+- GUID alphabet: CSE, ShortGuid and `Base64Url` all use the RFC 4648 URL-safe alphabet and write `00amyWGct0y_ze4lIsj2Mw` for the input. The parity check is still a round trip within each library, not a cross-library string comparison.
+- ShortGuid decode re-encodes the result and compares it with the input, a strict check the other decoders do not do. That is extra work by design.
+- Random source: CSE and the `RandomNumberGenerator` row draw from a cryptographic RNG. The `Random.Shared` and hand-written rows do not, so they are not a like-for-like comparison with CSE. The WithReplacement row can return duplicates and does a different job; it has no CSE row and no baseline.
+- Cancellation exception: On net9.0 and later CSE calls `WaitAsync`, so both throw `TaskCanceledException`. On net8.0 (the netstandard2.1 build) CSE throws `OperationCanceledException`, the base class. CSE also attaches a continuation that observes a fault of the wrapped task.
+- GUID versions: `Guid.NewGuid` is version 4 (random). `Guid.CreateVersion7` and both `Guider` methods are version 7 (time-ordered). `NewMonotonicGuid` also keeps IDs from one process in order within a millisecond; the others do not.
 
 ---
 
@@ -239,35 +239,24 @@ Time per GUID:
 
 Every row where CSE is slower or allocates more than a competitor:
 
-- **Case conversion against `JsonNamingPolicy`, every length and TFM.** Snake and kebab: ratio 0.60 to 0.97 with the same output and the same allocation; on net10.0 Long snake took 735.74 ns against 1,017.55 ns. Camel: ratio 0.03 to 0.27; on net10.0 Long camel took 34.73 ns against 1,047.50 ns. The BCL camel policy only lowercases the leading capitals, so it does less work, but for these inputs the output is the same.
-- **Guider against `Base64Url`, net9.0 to net11.0.** Encode ratio 0.89 to 0.97 (net11.0: 13.94 ns against 14.33 ns), so close to level on net9.0 and net11.0. Decode ratio 0.55 to 0.93 (net11.0: 20.23 ns against 21.76 ns). The text is the same and so is the allocation (72 B and 0 B).
-- **Guider Encode on net8.0 allocates 112 B**, because the netstandard2.1 build calls `Guid.ToByteArray()`. On net9.0 and later it allocates 72 B. ShortGuid still allocates more (256 B).
-- **Unique sample against the `Random.Shared` and hand-written rows, every K and TFM.** These rows use a non-cryptographic RNG, so they do a different job. At K = 10 `Random.Shared.Shuffle` has ratio 0.46 to 0.92 and the hand-written row 0.03; at K = 500 and K = 990 both are at 0.004 to 0.010.
-- **Unique sample at K = 990 against `RandomNumberGenerator.Shuffle` on net10.0 and net11.0:** 1,282,952.20 ns against 1,303,631.05 ns (0.984) and 1,288,284.27 ns against 1,302,933.68 ns (0.989). Both draw from the cryptographic RNG once per item.
-- **WithCancellation Pending, every TFM:** `WaitAsync` has ratio 0.37 to 0.48 and allocates less (net8.0: 272 B against 584 B; net9.0 to net11.0: 248 B against 456 B). On net9.0 and later CSE calls `WaitAsync` itself; the extra time and bytes come from the fault-observing continuation it attaches first.
-- **WithCancellation Completed on net11.0:** 13.26 ns against 13.37 ns (0.99). Both return the completed task as is and allocate 72 B, so this is within run-to-run variation.
-- **GUID creation on net11.0, one thread:** `NewMonotonicGuid` took 57.92 ns against 57.94 ns for `Guid.NewGuid` (ratio 1.00), so the two cannot be told apart.
-- **GUID creation on net11.0, 6 threads:** `Guider.NewGuid` took 12.61 ns against 12.58 ns (ratio 1.00), level with `Guid.NewGuid`. `NewMonotonicGuid` took 50.73 ns (ratio 4.03), slower than `Guid.NewGuid` and than `Guid.CreateVersion7` (18.15 ns). The threads contend on its shared compare-and-swap value, which the other rows do not have; that value is what keeps the IDs in order.
+- Case conversion against `JsonNamingPolicy`, every length and TFM: Snake and kebab: ratio 0.60 to 0.97 with the same output and the same allocation; on net10.0 Long snake took 735.74 ns against 1,017.55 ns. Camel: ratio 0.03 to 0.27; on net10.0 Long camel took 34.73 ns against 1,047.50 ns. The BCL camel policy only lowercases the leading capitals, so it does less work, but for these inputs the output is the same.
+- Guider against `Base64Url`, net9.0 to net11.0: Encode ratio 0.89 to 0.97 (net11.0: 13.94 ns against 14.33 ns), so close to level on net9.0 and net11.0. Decode ratio 0.55 to 0.93 (net11.0: 20.23 ns against 21.76 ns). The text is the same and so is the allocation (72 B and 0 B).
+- Guider Encode on net8.0 allocates 112 B, because the netstandard2.1 build calls `Guid.ToByteArray()`. On net9.0 and later it allocates 72 B. ShortGuid still allocates more (256 B).
+- Unique sample against the `Random.Shared` and hand-written rows, every K and TFM: These rows use a non-cryptographic RNG, so they do a different job. At K = 10 `Random.Shared.Shuffle` has ratio 0.46 to 0.92 and the hand-written row 0.03; at K = 500 and K = 990 both are at 0.004 to 0.010.
+- Unique sample at K = 990 against `RandomNumberGenerator.Shuffle` on net10.0 and net11.0: 1,282,952.20 ns against 1,303,631.05 ns (0.984) and 1,288,284.27 ns against 1,302,933.68 ns (0.989). Both draw from the cryptographic RNG once per item.
+- WithCancellation Pending, every TFM: `WaitAsync` has ratio 0.37 to 0.48 and allocates less (net8.0: 272 B against 584 B; net9.0 to net11.0: 248 B against 456 B). On net9.0 and later CSE calls `WaitAsync` itself; the extra time and bytes come from the fault-observing continuation it attaches first.
+- WithCancellation Completed on net11.0: 13.26 ns against 13.37 ns (0.99). Both return the completed task as is and allocate 72 B, so this is within run-to-run variation.
+- GUID creation on net11.0, one thread: `NewMonotonicGuid` took 57.92 ns against 57.94 ns for `Guid.NewGuid` (ratio 1.00), so the two cannot be told apart.
+- GUID creation on net11.0, 6 threads: `Guider.NewGuid` took 12.61 ns against 12.58 ns (ratio 1.00), level with `Guid.NewGuid`. `NewMonotonicGuid` took 50.73 ns (ratio 4.03), slower than `Guid.NewGuid` and than `Guid.CreateVersion7` (18.15 ns). The threads contend on its shared compare-and-swap value, which the other rows do not have; that value is what keeps the IDs in order.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on one Linux machine with 6 cores and 12 threads (x64, RyuJIT AVX2). The report headers have the exact CPU and OS.
+- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2).
 - SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. Classes 1 and 2 were rerun on main after pull requests #230 to #256 landed, with SDK 11.0.100-rc.3.26522.148 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the `integ/all` note below applies to classes 3 to 6.
 - The CSE code is the local `integ/all` branch, which merges every open pull request (commit `fe91b26a`). It may not match the version published on NuGet.
 - Load, classes 1 to 4 (json suite): the 1-minute load average was 1.43 at the start and 1.74 at the end.
 - Load, classes 5 and 6 (core suite): the 1-minute load average was 3.35 at the start and 4.87 at the end (5-minute 3.45 and 3.86). The 6-thread class ran on a 12-thread machine with that background load. Only the start and end of each suite were sampled.
 - Rows whose CV stayed above 5% were rerun up to twice; no row from these classes needed it.
-- Results paths: `benchmarks/results/json/{tfm}/results/` and `benchmarks/results/core/{tfm}/results/`.
-
----
-
-## Caveats
-
-- The `Base64Url` rows and the `Guid.CreateVersion7` rows exist on net9.0 and later only.
-- On net8.0 CSE runs its netstandard2.1 build, whose paths differ from the net9+ build.
-- The `Random.Shared` rows use a non-cryptographic RNG. They are there to show what the cryptographic RNG costs, not as like-for-like rows.
-- The CSE column is the `integ/all` integration branch, which may not match the version published on NuGet.
-- The feature matrix comes from reading source and docs.
 
 ---
 

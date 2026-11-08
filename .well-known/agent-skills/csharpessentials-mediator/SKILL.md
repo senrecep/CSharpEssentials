@@ -1,18 +1,17 @@
 ---
 name: csharpessentials-mediator
-description: Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).
+description: Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success), LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).
 ---
 
 # CSharpEssentials.Mediator
 
-Pipeline behaviors for the Mediator source-generator library. Register cross-cutting concerns (validation, logging, caching, transactions) once; they run automatically for every matching handler.
-
-> Built on the **Mediator** source-generator NuGet package, not MediatR.
+Pipeline behaviors for the Mediator source-generator package (not MediatR). Registered once, each behavior runs for every request that matches its marker interface.
 
 ## Installation
 
 ```bash
 dotnet add package CSharpEssentials.Mediator
+dotnet add package Mediator.SourceGenerator --version 3.0.*   # in the entry project
 ```
 
 ## Namespace
@@ -22,7 +21,7 @@ using CSharpEssentials.Mediator;   // ICacheable, ILoggableRequest, ITransaction
 using Microsoft.Extensions.DependencyInjection;   // AddMediatorBehaviors and the other AddMediator* methods
 ```
 
-## Register Behaviors
+## Register behaviors
 
 ```csharp
 // Program.cs
@@ -43,7 +42,7 @@ Register `ValidationBehavior` first: invalid requests should never reach the han
 
 ## ValidationBehavior (CSharpEssentials.Validation)
 
-Runs registered validators before the handler. On failure, the handler is never invoked. Errors are surfaced based on the handler return type:
+Runs the registered validators before the handler. On failure the handler does not run, and the errors come back by return type:
 
 | `TResponse` | Failure result |
 |-------------|---------------|
@@ -99,9 +98,9 @@ public record SendEmailCommand(string To, string Body)
 
 ## ExceptionHandlingBehavior: automatic for Result-returning handlers
 
-Registered by `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()` as a singleton pipeline behavior between `LoggingBehavior` and `CachingBehavior`. When a handler throws, the behavior catches the exception and converts it to `Result.Failure(Error.Exception(ex))`. This keeps the caller on the Result railway instead of forcing a try/catch at every call site. `OperationCanceledException` always propagates and is never caught.
+Registered by `AddMediatorBehaviors()` or `AddMediatorExceptionHandlingBehavior()` as a singleton pipeline behavior between `LoggingBehavior` and `CachingBehavior`. When a handler throws, the behavior converts the exception to `Result.Failure(Error.Exception(ex))`. `OperationCanceledException` always propagates.
 
-No marker interface is needed: once the behavior is registered it applies to any handler whose `TResponse` is `Result` or `Result<T>`. Handlers returning other types (plain DTOs, etc.) pass through with zero overhead.
+No marker interface is needed: once the behavior is registered it applies to any handler whose `TResponse` is `Result` or `Result<T>`. Handlers returning other types pass through untouched.
 
 ### Pipeline execution order
 
@@ -166,7 +165,7 @@ public record GetProductQuery(int ProductId)
     public TimeSpan Expiration => TimeSpan.FromMinutes(5);   // zero or negative: no expiration
 }
 
-// Requires an IDistributedCache backend (in-memory here; Redis or SQL Server in production)
+// Requires an IDistributedCache backend (in-memory here; a distributed one in production)
 builder.Services.AddDistributedMemoryCache();
 ```
 
@@ -227,7 +226,7 @@ services.AddIdempotencyExecutor(o => o.AddProfile("payments", p => p.Retention =
 ```
 
 - Key: 1 to 255 printable ASCII characters other than space, `"` and `\`. Missing → `Idempotency.KeyMissing`, invalid → `Idempotency.KeyInvalid` (Validation errors).
-- Scope: `request.IdempotencyScope`, else `ScopeResolver` (default `IdempotencyScopes.User`) on `IIdempotencyScopeAccessor.Principal`. Without an accessor registration the resolver gets `null`. An unresolved scope follows `UnscopedKeyBehavior`: **`Reject` by default here** (`Idempotency.ScopeRequired`), while the HTTP middleware defaults to `Skip`. Machine callers: `ScopeResolver = IdempotencyScopes.Client`.
+- Scope: `request.IdempotencyScope`, else `ScopeResolver` (default `IdempotencyScopes.User`) on `IIdempotencyScopeAccessor.Principal`. Without an accessor registration the resolver gets `null`. An unresolved scope follows `UnscopedKeyBehavior`: `Reject` by default here (`Idempotency.ScopeRequired`), while the HTTP middleware defaults to `Skip`. Machine callers: `ScopeResolver = IdempotencyScopes.Client`.
 - Outcomes: first call runs and stores; a repeat with the same fingerprint replays; a key still running → Conflict `Idempotency.InFlight` (HTTP 409 with `code` and `Retry-After` through `ToProblemResult`/`ToActionResult`); same key, different request → Validation `Idempotency.KeyReused` (HTTP 422 with `code`, as the middleware sends). A non-`Result` response throws `EnhancedValidationException` instead.
 - Stored: success for `Retention`; a failed `Result` with `StoreFailures = true` (default), for `FailureRetention` when its first error is `ErrorType.Unexpected`, else for `Retention`; a failed `ITransactionalRequest` always releases the key (its transaction rolled back); a thrown exception keeps the key in flight until its lease expires.
 - Placement: `IdempotencyPlacement.OutsideTransaction` (default; runs before an outside lock and the transaction) or `InsideTransaction` (runs right inside the transaction, before an inside lock; needs a store that joins that transaction). Call `AddMediatorIdempotencyBehavior` after `AddMediatorBehaviors`; `AddIdempotencyExecutor` with options replaces the defaults it registered.
@@ -237,9 +236,8 @@ services.AddIdempotencyExecutor(o => o.AddProfile("payments", p => p.Retention =
 
 ---
 
-## Best Practices
+## Best practices
 
-- Register `ValidationBehavior` first: invalid requests should never reach the handler
 - Register `ExceptionHandlingBehavior` (included in `AddMediatorBehaviors()`); it then applies to `Result` / `Result<T>` handlers, so do not add try/catch inside handlers that already return `Result`
 - Set `CacheFailures = false`; transient failures should not be cached
 - `ITransactionalRequest` only on commands writing to multiple tables in one operation; return a failed `Result` or throw to roll back

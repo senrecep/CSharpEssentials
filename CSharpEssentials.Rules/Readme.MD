@@ -1,18 +1,8 @@
 # CSharpEssentials.Rules
 
-Composable, functional rule engine for .NET. Define business logic as small, reusable rules and combine them with a fluent API.
+A rule engine for .NET built on `CSharpEssentials.Results`. Rules are classes, `Func` delegates or inline lambdas that return `Result` or `Result<T>`, combined with And, Or, Linear (stop on first failure) and if/then/else. Trees with `IAsyncRule` rules are awaited with `RuleEngine.EvaluateAsync`.
 
-> **Benchmarks:** sync and async trees, prebuilt vs rebuilt chains, short-circuit vs hand-written if/else, NRules and RulesEngine as reference columns: [BENCHMARKS.md](./BENCHMARKS.md).
-
-## Features
-
-- Three definition styles (a class, a `Func` field or an inline lambda), all first-class.
-- Functions go straight to `RuleEngine`; call sites need no explicit `.ToRule()`.
-- Linear sequences run rules in order and stop on the first failure.
-- Conditional rules branch with if/then/else.
-- And/Or logic: all rules must pass, or at least one must.
-- `IAsyncRule` rules are evaluated without blocking via `await RuleEngine.EvaluateAsync(...)`.
-- Built on `CSharpEssentials.Results`.
+> Benchmarks (sync and async trees, prebuilt vs rebuilt chains, short-circuit vs hand-written if/else, NRules and RulesEngine as reference columns): [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Installation
 
@@ -32,11 +22,11 @@ The samples below assume these usings.
 
 ## Rule definition styles
 
-There are three ways to define a rule. All styles are interchangeable and can be mixed freely when composing.
+The three styles can be mixed when composing.
 
-### 1. Class (recommended for complex or injectable rules)
+### 1. Class
 
-Implement `IRule<TContext>` when a rule needs constructor-injected dependencies, internal state, or readable naming across a large codebase.
+Implement `IRule<TContext>` when a rule needs injected dependencies, state, or a name of its own.
 
 ```csharp
 public sealed class AgeRule : IRule<UserContext>
@@ -56,9 +46,9 @@ public sealed class LicenseRule : IRule<UserContext>
 }
 ```
 
-### 2. `Func` field (reusable, no class needed)
+### 2. `Func` field or method
 
-Declare rules as `Func<TContext, Result>` fields or variables. They can be stored, passed around, and used anywhere an `IRule<TContext>` is expected, with or without an explicit `.ToRule()` call.
+A `Func<TContext, Result>` field, variable or method group can be passed wherever the engine takes a rule.
 
 ```csharp
 // Defined once, reused anywhere
@@ -70,9 +60,7 @@ static Result CheckEmail(UserContext ctx) =>
     ctx.Email.Contains('@') ? Result.Success() : Error.Validation("Email.Invalid", "Invalid email address.");
 ```
 
-### 3. Inline lambda (best for one-off or ad-hoc composition)
-
-Write the rule directly at the call site, without a variable or a class. It is the most compact form for simple checks.
+### 3. Inline lambda
 
 ```csharp
 Result result = RuleEngine.Evaluate(
@@ -84,7 +72,7 @@ Result result = RuleEngine.Evaluate(
 
 ## Passing rules without explicit conversion
 
-`RuleEngine.Evaluate`, `.And()`, `.Or()`, and `.Next()` all accept raw `Func` delegates. You never need to wrap them manually.
+`RuleEngine.Evaluate`, `.And()`, `.Or()` and `.Next()` accept `Func` delegates directly. `.ToRule()` is needed to put a `Func` into an `IRuleBase<TContext>[]` next to class instances, to call `.Linear()` (there is no `Func[]` overload), and to turn an async `Func` into an `IAsyncRule`.
 
 ```csharp
 var ctx = new UserContext { Age = 20, HasLicense = true, IsAllowedRegion = true };
@@ -107,8 +95,6 @@ Result r4 = RuleEngine.Evaluate(CheckEmail, ctx);
 ---
 
 ## Combining rules
-
-All three styles compose freely. Mix class instances, `Func` variables, and lambdas in the same call.
 
 ### And: all must pass
 
@@ -170,7 +156,7 @@ Result longer = RuleEngine.Evaluate(
 
 ### Static shortcuts
 
-`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly, so no `.And()` / `.Or()` / `.Linear()` call is needed:
+`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly. `RuleEngine.Linear(Func[], ctx)` rebuilds the chain on every call (2.07 to 2.77 times the prebuilt chain in [BENCHMARKS.md](./BENCHMARKS.md)), so on a hot path build the tree once and keep it:
 
 ```csharp
 Result all = RuleEngine.And(new Func<UserContext, Result>[] { regionRule, CheckEmail }, ctx);
@@ -209,7 +195,7 @@ Result conditional3 = RuleEngine.If(
 
 ## Rules with values (`Result<T>`)
 
-Rules can produce a typed result alongside success/failure.
+A rule can return a value with its outcome.
 
 ```csharp
 // Class form
@@ -233,7 +219,7 @@ Result<string> grade = RuleEngine.Evaluate(
 
 ## Integration with domain error hierarchies
 
-Rules work with domain-specific `Error` factory classes, so validation logic stays close to the domain language:
+Rules can return errors from a domain error catalogue:
 
 ```csharp
 public static class RegistrationErrors
@@ -248,14 +234,6 @@ public static class RegistrationErrors
         Error.Forbidden("Registration.RegionBlocked", "Registration is not available in your region.");
 }
 
-// Class-based rules referencing the domain error catalogue
-public sealed class AgeRule : IRule<ApplicantContext>
-{
-    public Result Evaluate(ApplicantContext ctx, CancellationToken ct = default) =>
-        ctx.Age >= 18 ? Result.Success() : RegistrationErrors.Underage;
-}
-
-// Func-based rule: same domain errors, no class needed
 Func<ApplicantContext, Result> regionRule =
     ctx => ctx.IsAllowedRegion ? Result.Success() : RegistrationErrors.RegionBlocked;
 
@@ -281,9 +259,9 @@ result.Switch(
 // [Validation] Registration.Underage: Applicant must be at least 18.
 ```
 
-Rules return `Result` / `Result<T>`, the same type used throughout CSharpEssentials, so rule outcomes compose directly with `Then`, `Match`, and other chaining operations.
+The outcome is a plain `Result` / `Result<T>`, so it chains with `Then`, `Match` and the other Results operations.
 
-### FromPredicate / FromPredicateAsync: inline rules without classes
+## `FromPredicate` and `FromPredicateAsync`
 
 ```csharp
 // Static error: reuse the same error for any failing context
@@ -329,7 +307,7 @@ IAsyncRule<string> notReserved = ((Func<string, CancellationToken, ValueTask<Res
 })).ToRule();
 ```
 
-`RuleEngine.EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` / `ValueTask<Result<T>>`. It awaits every `IAsyncRule` in the tree, so no thread is blocked on database or HTTP calls.
+`RuleEngine.EvaluateAsync` takes the same arguments as `Evaluate` and returns `ValueTask<Result>` / `ValueTask<Result<T>>`. It awaits every `IAsyncRule` in the tree instead of blocking a thread.
 
 ```csharp
 Result result = await RuleEngine.EvaluateAsync(

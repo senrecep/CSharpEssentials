@@ -3,7 +3,8 @@
 JSON serialization helpers on top of `System.Text.Json`.
 
 > Benchmarks against System.Text.Json built-ins and Macross.Json.Extensions 3.0.0 (enums, flags, polymorphism and DateTime reads) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+> [BENCHMARKS.md](./BENCHMARKS.md). CSE is slower than System.Text.Json in every timed category except the invalid-input rows
+> (polymorphic serialize takes 763.5 ns against 296.2 ns on net10.0), and faster than Macross on enum writes.
 
 ## Features
 
@@ -126,7 +127,7 @@ JsonSerializer.Deserialize<Account>("""{"status":"gone","level":0}""", input); /
 
 ### StringEnumNaming
 
-`StringEnumNaming` is obsolete in 5.0 and stays as a working facade over `EnumMetadata`. In new code use `EnumMetadata`, `EnumValueFormatter`, `EnumValueParser` or the generated `ToWireName()` and `TryParseWire` helpers: they are the naming source that JSON, EF Core storage, Swagger schemas and query/route binding all use, so a member is spelled the same everywhere. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
+`StringEnumNaming` is obsolete since 5.0 and stays as a working facade over `EnumMetadata`. New code uses `EnumMetadata`, `EnumValueFormatter`, `EnumValueParser` or the generated `ToWireName()` and `TryParseWire` helpers, the naming source that JSON, EF Core storage, OpenAPI schemas and query/route binding share. Names are `[JsonStringEnumMemberName]` when present, otherwise `snake_case_lower`.
 
 ```csharp
 using CSharpEssentials.Enums;
@@ -324,5 +325,5 @@ Constructor arguments add formats to the built-in list. Every value is returned 
 - `MultiFormatDateTimeConverter` throws `JsonException` for a Unix-seconds string outside the `DateTime` range. Before, it threw `ArgumentOutOfRangeException`. Catch `JsonException` instead.
 - `MultiFormatDateTimeConverter` writes a `DateTime` with `Kind` `Unspecified` as UTC (`+00:00`). Before, it used the host's local offset, so a round trip on a non-UTC host shifted the value. Set `Kind` to `Local` before serializing if the value is local time.
 - The enum converter writes an undefined value as its underlying number (`42`, dictionary key `"42"`) instead of throwing `EnumValueException`. A `[Flags]` value with undefined bits is written as one number, not an array. Reads still reject undefined numbers in `Input` mode. `HasJsonConversion` properties save such a value too, and loading it gives the `[EnumFallback]` member or throws when the enum has none. Check `EnumInfo<TEnum>.IsDefined` before serializing if an undefined value must still fail.
-- `PolymorphicJsonConverterFactory` no longer picks derived types from .NET framework assemblies (assemblies signed with a Microsoft framework key). A payload on an `IDisposable` or `ICloneable` member could name any loaded framework type with a public parameterless constructor; such a `$type` now throws `JsonException`. Your own types that implement those interfaces still read. If you stored a framework type behind an interface, wrap it in your own type.
+- `PolymorphicJsonConverterFactory` no longer picks derived types from .NET framework assemblies (assemblies signed with a .NET framework public key). A payload on an `IDisposable` or `ICloneable` member could name any loaded framework type with a public parameterless constructor; such a `$type` now throws `JsonException`. Your own types that implement those interfaces still read. If you stored a framework type behind an interface, wrap it in your own type.
 - `DefaultOptions` and `StrictOptions` call `AddPolymorphismWithReflection()`, and so does the `HttpRequestBuilder` in `CSharpEssentials.Http`. Their `TypeInfoResolver` is no longer `null` but a `DefaultJsonTypeInfoResolver` with the polymorphism modifier, and `AllowOutOfOrderMetadataProperties` is `true`. `ApplyTo` sets `AllowOutOfOrderMetadataProperties` on the target and adds the polymorphism to the target's own resolver (or uses the source's when the target has none), so ASP.NET Core options set up with `ConfigureSystemTextJson` keep their contexts and get it too. If you set your own `TypeInfoResolver` after `ApplyTo`, call `AddPolymorphism()` or `AddPolymorphismWithReflection()` again. A `[JsonPolymorphic]` base with no `[JsonDerivedType]` used to throw; it now finds its derived types.

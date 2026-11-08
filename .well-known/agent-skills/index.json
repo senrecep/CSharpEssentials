@@ -32,7 +32,7 @@
     },
     {
       "name": "csharpessentials-endpoints",
-      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes. Covers IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001-CSE1011.",
+      "description": "Use when organizing ASP.NET Core Minimal API endpoints into classes. Covers IEndpoint/IEndpointGroup with a static Map, [EndpointGroup<T>] nesting, the source-generated Map{Assembly}Endpoints/MapAllEndpoints registry (AOT-safe), EndpointMappingOptions, RouteOf<T>, RequireRoles/RequirePolicies/RequireAuthSchemes, the MapEndpointsFromAssemblies reflection fallback and analyzers CSE1001-CSE1012.",
       "files": ["SKILL.md"]
     },
     {
@@ -52,7 +52,7 @@
     },
     {
       "name": "csharpessentials-gcpsecretmanager",
-      "description": "Use when loading Google Cloud Secret Manager secrets into IConfiguration at startup. Covers builder.Configuration.AddGcpSecretManager(o => o.AddProject(new ProjectSecretConfiguration { ProjectId, SecretIds, PrefixFilters, RawSecretIds, Region })) or the \"GoogleSecretManager\" appsettings section, with `__` → `:` key mapping, JSON secret flattening, LoggerFactory diagnostics and transient gRPC retries.",
+      "description": "Use when loading Google Cloud Secret Manager secrets into IConfiguration at startup. Covers builder.Configuration.AddGcpSecretManager(o => o.AddProject(new ProjectSecretConfiguration { ProjectId, SecretIds, PrefixFilters, RawSecretIds, Region })) or the \"GoogleSecretManager\" appsettings section, with `__` to `:` key mapping, JSON secret flattening, LoggerFactory diagnostics and transient gRPC retries.",
       "files": ["SKILL.md"]
     },
     {
@@ -67,7 +67,7 @@
     },
     {
       "name": "csharpessentials-json",
-      "description": "Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions.DefaultOptions (camelCase, no nulls, cycle-safe), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), MultiFormatDateTimeConverterFactory, PolymorphicJsonConverterFactory ($type discriminator) and JsonElement.ToClrObject().",
+      "description": "Use when configuring System.Text.Json. Covers EnhancedJsonSerializerOptions presets (DefaultOptions, StrictOptions, ApplyTo), ConvertToJson/ConvertFromJson helpers, AddEnumConventions for [StringEnum] enums (obsolete ConditionalStringEnumConverter and StringEnumNaming), polymorphism with [JsonTypeDiscriminator] and AddPolymorphism (source-generated, AOT safe) or AddPolymorphismWithReflection, the $type PolymorphicJsonConverterFactory for bases without attributes, MultiFormatDateTimeConverterFactory, JsonElement.ToClrObject() and the CSE4001-CSE4012 analyzers.",
       "files": ["SKILL.md"]
     },
     {
@@ -82,12 +82,12 @@
     },
     {
       "name": "csharpessentials-mediator",
-      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success) LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).",
+      "description": "Use when adding cross-cutting pipeline behaviors to CQRS handlers. Covers ValidationBehavior (CSharpEssentials.Validation; modes Enforce/LogOnly/Off, failure observers; Result failure or EnhancedValidationException), LoggingBehavior (ILoggableRequest), ExceptionHandlingBehavior (converts exceptions to Result.Failure for Result-returning handlers), CachingBehavior (ICacheable with IDistributedCache), TransactionScopeBehavior and TransactionBehavior (ITransactionalRequest, commits only on success), LockBehavior (ILockedRequest) and IdempotencyBehavior (IIdempotentRequest over IIdempotencyExecutor; replays the stored Result for a repeated key).",
       "files": ["SKILL.md"]
     },
     {
       "name": "csharpessentials-meta",
-      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 25 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
+      "description": "Use when deciding which CSharpEssentials package to use. Gives an overview of all 27 packages organized by concern, what the CSharpEssentials meta-package bundles, and a quick-reference table mapping problems to packages.",
       "files": ["SKILL.md"]
     },
     {

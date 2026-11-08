@@ -1,6 +1,6 @@
 # CSharpEssentials.Enums.Generators: design-time benchmarks
 
-This page describes how the `[StringEnum]` source generator is measured against NetEscapades.EnumGenerators 1.0.0-beta21. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is faster on a cold run. After an edit, NetEscapades is level or slightly faster; see [Where CSE loses](#where-cse-loses).
+The `[StringEnum]` source generator measured against NetEscapades.EnumGenerators 1.0.0-beta21. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). CSE is faster on a cold run. After an edit, NetEscapades is level or slightly faster; see [Where CSE loses](#where-cse-loses).
 
 The generator runs inside the compiler and the IDE, not in the shipped app. The cost measured here is build time and the work the IDE does after a keystroke. Runtime cost of the generated code is covered in [the package BENCHMARKS.md](../CSharpEssentials.Enums/BENCHMARKS.md).
 
@@ -31,18 +31,18 @@ Parity is checked in `[GlobalSetup]` and with `--self-check`. A failed check sto
 
 ## Methodology
 
-- **Host Roslyn.** Every row runs on `Microsoft.CodeAnalysis.CSharp` 5.9.0, the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). It is shared with the other classes in the suite, one of which needs Roslyn 4.14 or later.
-- **Loading.** Each generator loads from its own folder into its own load context. The usage analyzers in both packages are not run.
-- **Recommended install.** The NetEscapades meta package brings `NetEscapades.EnumGenerators.RuntimeDependencies`. Without it the generator emits nested copies of `EnumParseOptions` and the other option types in every extensions class. The shared references include that DLL, so NetEscapades uses the shared types, as in the recommended install. The DLL is inert for CSE.
-- **Cold.** Each call creates a fresh `CSharpCompilation` from pre-parsed trees and a fresh `CSharpGeneratorDriver`, then runs it. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cold cost.
-- **Incremental.** Each row warms a driver once on the original compilation. Each call runs that driver on the original compilation with one tree replaced (`ReplaceSyntaxTree`), which is what the IDE does on a keystroke.
-- **The edit.** File `Src/Filler0051.cs`: `return x + 51;` becomes `return x + 52;`. It is a method-body change in a file with no attributes, with base-list classes and with no `WithName` call.
-- **Step tracking** is off in every measured call.
-- **Project shape.** Assembly `Bench.App`, `OutputKind.ConsoleApplication`, nullable enabled, C# latest. `Files` is 200 or 1000 source files: the 30 feature files, `GlobalUsings.cs` with the Web SDK implicit usings, `Program.cs` and filler files for the rest.
-- **References.** One set for every row: the host runtime's framework, the ASP.NET Core shared framework, the CSE runtime DLLs and the competitor attribute and runtime DLLs. On net8.0 the CSE runtime DLLs need Microsoft.Extensions.DependencyInjection.Abstractions and Microsoft.Extensions.Logging.Abstractions 9.0.4 from NuGet. Those copies from the output folder replace the older shared framework copies for every row, as SDK conflict resolution does in a CSE app. On the other TFMs the shared framework copies are used.
-- **Preprocessor symbols.** The parse options define the symbols the SDK defines for the host TFM in Release. `NETESCAPADES_ENUMGENERATORS_USAGES`, which the meta package's build targets define, is not applied. It only keeps the `[Conditional]` attribute in IL.
-- **Options.** One `AnalyzerConfigOptionsProvider` for every row. Global options are the package defaults plus `build_property.RootNamespace=Bench.App` (set by the SDK for every project): `EnumGenerator_EnumMetadataSource=EnumMemberAttribute`, `EnumGenerator_ForceExtensionMembers=false`, `EnumGenerator_ForceInternal=false`. `CSharpEssentialsEnumNaming` stays unset.
-- **Cross-TFM rows** run on that TFM's shared framework, so the references differ by TFM. The host Roslyn 5.9.0 also runs its netstandard2.0 build on net8.0 and net9.0 and its net10.0 build on net10.0 and net11.0. Compare rows within one TFM.
+- Host Roslyn: every row runs on `Microsoft.CodeAnalysis.CSharp` 5.9.0, the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). It is shared with the other classes in the suite, one of which needs Roslyn 4.14 or later.
+- Loading: each generator loads from its own folder into its own load context. The usage analyzers in both packages are not run.
+- Recommended install: the NetEscapades meta package brings `NetEscapades.EnumGenerators.RuntimeDependencies`. Without it the generator emits nested copies of `EnumParseOptions` and the other option types in every extensions class. The shared references include that DLL, so NetEscapades uses the shared types, as in the recommended install. The DLL is inert for CSE.
+- Cold: each call creates a fresh `CSharpCompilation` from pre-parsed trees and a fresh `CSharpGeneratorDriver`, then runs it. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cold cost.
+- Incremental: each row warms a driver once on the original compilation. Each call runs that driver on the original compilation with one tree replaced (`ReplaceSyntaxTree`), which is what the IDE does on a keystroke.
+- The edit: in `Src/Filler0051.cs`, `return x + 51;` becomes `return x + 52;`. It is a method-body change in a file with no attributes, with base-list classes and with no `WithName` call.
+- Step tracking is off in every measured call.
+- Project shape: assembly `Bench.App`, `OutputKind.ConsoleApplication`, nullable enabled, C# latest. `Files` is 200 or 1000 source files: the 30 feature files, `GlobalUsings.cs` with the Web SDK implicit usings, `Program.cs` and filler files for the rest.
+- References: one set for every row: the host runtime's framework, the ASP.NET Core shared framework, the CSE runtime DLLs and the competitor attribute and runtime DLLs. On net8.0 the CSE runtime DLLs need Microsoft.Extensions.DependencyInjection.Abstractions and Microsoft.Extensions.Logging.Abstractions 9.0.4 from NuGet. Those copies from the output folder replace the older shared framework copies for every row, as SDK conflict resolution does in a CSE app. On the other TFMs the shared framework copies are used.
+- Preprocessor symbols: the parse options define the symbols the SDK defines for the host TFM in Release. `NETESCAPADES_ENUMGENERATORS_USAGES`, which the meta package's build targets define, is not applied. It only keeps the `[Conditional]` attribute in IL.
+- Options: one `AnalyzerConfigOptionsProvider` for every row. Global options are the package defaults plus `build_property.RootNamespace=Bench.App` (set by the SDK for every project): `EnumGenerator_EnumMetadataSource=EnumMemberAttribute`, `EnumGenerator_ForceExtensionMembers=false`, `EnumGenerator_ForceInternal=false`. `CSharpEssentialsEnumNaming` stays unset.
+- Cross-TFM rows run on that TFM's shared framework, so the references differ by TFM. The host Roslyn 5.9.0 also runs its netstandard2.0 build on net8.0 and net9.0 and its net10.0 build on net10.0 and net11.0. Compare rows within one TFM.
 - BenchmarkDotNet default job, `[MemoryDiagnoser]`, rows grouped by category, CSE is the baseline in each category.
 
 ## Pinned versions
@@ -58,11 +58,10 @@ NetEscapades.EnumGenerators has never shipped a stable release. Every 1.x versio
 
 ## Semantic differences
 
-The two rows read the same input but write different output. Treat the timings as the cost of each library's documented output, not of the same output.
+The two rows read the same input but write different output, so the timings are the cost of each library's documented output and include different amounts of emit work.
 
 - CSE emits per enum an `{Enum}Extensions` class with `EnumInfo` metadata, and per assembly a module-initializer registry. It also emits a `ModuleInitializerAttribute` polyfill when the target lacks the attribute; every TFM in this suite has it. Self-check: 31 generated files, 560,196 characters.
 - NetEscapades emits per enum a larger extensions class (`ToStringFast`, `IsDefined`, `TryParse`, `Parse`, `GetValues`, `GetNames` and more overloads) and no registry. Self-check: 30 generated files, 1,799,820 characters.
-- The output sizes are not timings. They show that the rows do different amounts of emit work.
 
 ## Feature matrix
 
@@ -99,7 +98,7 @@ Every source output stays cached after the unrelated edit. The self-check fails 
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux (AVX2). The SDK and runtime builds are in the header of each report.
 - TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
 - The 1-minute load average stayed between 2.63 and 3.35 during the generators suite. No row of this class has a CV above 5%.
 - Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.EnumsGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
@@ -150,7 +149,6 @@ From reading the source. Not fixed here. NetEscapades also reads the compilation
 
 ## Caveats
 
-- Design time only. Nothing here affects the shipped app.
 - Code fixes and analyzers in the packages are not measured.
 - The input is generated, not a real app.
 

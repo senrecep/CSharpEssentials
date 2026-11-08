@@ -2,9 +2,8 @@
 
 Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 
-> Benchmarks against the framework's HttpLogging and Serilog.AspNetCore (request and response bodies of 1 KB to 1 MB,
-> a metadata-only event per request) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks against the framework's HttpLogging and Serilog.AspNetCore (request and response bodies of 1 KB to 1 MB, a
+metadata-only event per request) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Features
 
@@ -19,19 +18,6 @@ Configurable middleware for logging HTTP requests and responses in ASP.NET Core.
 ```bash
 dotnet add package CSharpEssentials.RequestResponseLogging
 ```
-
-## Upgrading to 8.0
-
-- When the request pipeline throws, the handler set with `UseHandler` now runs before the exception is rethrown, so it sees failed requests too. The logged `RequestBody` holds the captured request body instead of `Error occurred during request processing`; the exception type and message are still in `ResponseBody`. If your handler assumed every call was a completed request, check `ResponseBody` for the `Exception:` prefix.
-- The response is no longer buffered until the endpoint finishes. Each write goes to the client right away and is copied into the log, so streamed responses (server-sent events, large downloads, flushed chunks) reach the client as they are written. This changes four things:
-  - The first write or flush to `Response.Body` starts the response. Set the status code, headers and cookies before it. Changing them afterwards now throws `InvalidOperationException` (headers are read-only once the response has started), and `Response.OnStarting` callbacks run at the first write instead of when the endpoint returns. Before 8.0, `await context.Response.WriteAsync("x"); context.Response.StatusCode = 201;` worked; now the second line throws.
-  - If writing to the client fails (for example the client disconnected), the exception is thrown inside the endpoint and reaches the caller. A single entry records it as `Exception: {type}, Message: {message}` and goes to the logger and the `UseHandler` handler. Before 8.0 a single entry showed `Error capturing response body: {message}`. Handle or filter the exception (often an `IOException` or `OperationCanceledException`) where you handle aborted requests.
-  - Once the endpoint has written part of the response, an exception thrown later can no longer be turned into a fresh error response by an outer exception handler, because the status code and headers are already sent. This is the same as running without the middleware.
-  - Synchronous writes and flushes to `Response.Body` (for example disposing a `StreamWriter` over it) now reach the server directly, so they fail when the server does not allow synchronous IO (the Kestrel and IIS default). Before, the middleware's memory buffer accepted them. Write asynchronously, or set `AllowSynchronousIO`.
-- `IgnorePaths("/")` now skips only the root path. Before, it skipped every request except the root, because `"/"` trimmed to an empty prefix that every path starts with. A `null` or empty entry is now skipped instead of throwing or matching everything. To skip all requests, leave the middleware out.
-- `LoggingFields` is now read once, when `AddRequestResponseLogging` runs. Adding or removing fields on the `LoggingOptions` instance after that has no effect. Before, the logger read the list on every request. Set the fields before you register the middleware.
-- Without a `UseHandler` handler, the middleware now reads the request body only when `LoggingFields` contains `Request` or `RequestLength`, and the response body only when it contains `Response` or `ResponseLength`. What gets logged is the same. When the request body is not read, `Request.Body` is left as the server gave it, so it is no longer seekable for later middleware or endpoints. If your code rewinds the request body, call `Request.EnableBuffering()` yourself. With a handler, both bodies are still captured on every request.
-- `Microsoft.IO.RecyclableMemoryStream` is still installed with the package and used at runtime, but your code can no longer compile against it through this package. If you use `RecyclableMemoryStreamManager` or other `Microsoft.IO` types yourself, add `Microsoft.IO.RecyclableMemoryStream` to your project.
 
 ## Usage
 
@@ -123,3 +109,16 @@ app.AddRequestResponseLogging(opt =>
     });
 });
 ```
+
+## Upgrading to 8.0
+
+- When the request pipeline throws, the handler set with `UseHandler` now runs before the exception is rethrown, so it sees failed requests too. The logged `RequestBody` holds the captured request body instead of `Error occurred during request processing`; the exception type and message are still in `ResponseBody`. If your handler assumed every call was a completed request, check `ResponseBody` for the `Exception:` prefix.
+- The response is no longer buffered until the endpoint finishes. Each write goes to the client right away and is copied into the log, so streamed responses (server-sent events, large downloads, flushed chunks) reach the client as they are written. This changes four things:
+  - The first write or flush to `Response.Body` starts the response. Set the status code, headers and cookies before it. Changing them afterwards now throws `InvalidOperationException` (headers are read-only once the response has started), and `Response.OnStarting` callbacks run at the first write instead of when the endpoint returns. Before 8.0, `await context.Response.WriteAsync("x"); context.Response.StatusCode = 201;` worked; now the second line throws.
+  - If writing to the client fails (for example the client disconnected), the exception is thrown inside the endpoint and reaches the caller. A single entry records it as `Exception: {type}, Message: {message}` and goes to the logger and the `UseHandler` handler. Before 8.0 a single entry showed `Error capturing response body: {message}`. Handle or filter the exception (often an `IOException` or `OperationCanceledException`) where you handle aborted requests.
+  - Once the endpoint has written part of the response, an exception thrown later can no longer be turned into a fresh error response by an outer exception handler, because the status code and headers are already sent. This is the same as running without the middleware.
+  - Synchronous writes and flushes to `Response.Body` (for example disposing a `StreamWriter` over it) now reach the server directly, so they fail when the server does not allow synchronous IO (the Kestrel and IIS default). Before, the middleware's memory buffer accepted them. Write asynchronously, or set `AllowSynchronousIO`.
+- `IgnorePaths("/")` now skips only the root path. Before, it skipped every request except the root, because `"/"` trimmed to an empty prefix that every path starts with. A `null` or empty entry is now skipped instead of throwing or matching everything. To skip all requests, leave the middleware out.
+- `LoggingFields` is now read once, when `AddRequestResponseLogging` runs. Adding or removing fields on the `LoggingOptions` instance after that has no effect. Before, the logger read the list on every request. Set the fields before you register the middleware.
+- Without a `UseHandler` handler, the middleware now reads the request body only when `LoggingFields` contains `Request` or `RequestLength`, and the response body only when it contains `Response` or `ResponseLength`. What gets logged is the same. When the request body is not read, `Request.Body` is left as the server gave it, so it is no longer seekable for later middleware or endpoints. If your code rewinds the request body, call `Request.EnableBuffering()` yourself. With a handler, both bodies are still captured on every request.
+- `Microsoft.IO.RecyclableMemoryStream` is still installed with the package and used at runtime, but your code can no longer compile against it through this package. If you use `RecyclableMemoryStreamManager` or other `Microsoft.IO` types yourself, add `Microsoft.IO.RecyclableMemoryStream` to your project.

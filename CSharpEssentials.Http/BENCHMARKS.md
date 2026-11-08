@@ -66,20 +66,20 @@ The code is in `benchmarks/CSharpEssentials.Http.Comparison.Benchmarks/`, in six
 
 ## Semantic differences
 
-The parity checks use inputs on which every row agrees. The libraries still differ in ways the numbers alone do not show. These were seen in the self-check output on net8 and net10 and are not timed.
+The parity checks use inputs on which every row agrees. The libraries still differ in ways the numbers do not show; these come from the self-check output on net8 and net10 and are not timed.
 
-- **Response disposal.** Every CSE call disposes its `HttpResponseMessage` with a `using` declaration (for GET in `GetCoreAsync`, `CSharpEssentials.Http/HttpClientResultExtensions.cs:257`). An earlier version of the package did not, and this suite is where that showed up. The BCL `GetFromJsonAsync`, Refit, Flurl and RestSharp dispose it too.
-- **Buffering.** CSE's `GetFromJsonAsResultAsync` uses `GetAsync` (`ResponseContentRead`, `HttpClientResultExtensions.cs:257`), so the body is buffered before it is deserialized. The BCL `GetFromJsonAsync` reads headers first and streams the body. RestSharp reads the body to a string before it deserializes.
-- **CSE's POST value is typed `object`**, so System.Text.Json serializes it by its runtime type. This is the real CSE API.
-- **Request Content-Type.** CSE, BCL, Refit and RestSharp send `application/json; charset=utf-8`, Flurl sends `application/json; charset=UTF-8`. Content-Type is not part of the POST parity check.
-- **Flurl default options** are `{ PropertyNameCaseInsensitive = true }`, which write PascalCase. Only the labelled Defaults GET row uses them, and a read is not affected.
-- **CSE default options** are the Readme's `EnhancedJsonSerializerOptions.DefaultOptions`: Web-like naming plus case-insensitive reads, relaxed escaping, ignore-nulls, IgnoreCycles and the polymorphic, enum and DateTime converter factories. Only the labelled Defaults rows use them.
-- **404 paths.** The default calls of Refit (`Task<T>`, throws `ApiException`), Flurl (throws `FlurlHttpException`) and RestSharp (`GetAsync<T>`, throws) all throw on 404. The suite uses each library's non-throwing path. Refit's `IApiResponse<T>` still builds an `ApiException` object for the error, RestSharp reads the body to a string, and CSE builds an `Error` from the status code and does not read the body.
-- **RestSharp 404 body.** RestSharp also deserializes the problem+json error body into `User` (`RestSerializers.DeserializeContent` attempts HTTP error bodies by design, `RestClient.Extensions.cs:47-48` at 114.1.0). CSE, the BCL and Flurl never touch the body; Refit only reads it to a string for `ApiException`.
-- **Request building.** Refit builds requests only inside a generated call, so it has no row. Flurl.Http has no public build-without-send API, and RestSharp builds only the URI, so both rows are the library's URL builder plus the same hand-made `HttpRequestMessage` and header line. CSE's `WithQuery("page", 2)` boxes the int through the object overload, as in the Readme.
-- **Query encoding.** CSE, `QueryHelpers`, Flurl and `Uri.EscapeDataString` all encode `c# tips` as `c%23%20tips`. A probe of `a+b/c?d&e=f ü` also gave the same text from all four: `a%2Bb%2Fc%3Fd%26e%3Df%20%C3%BC`. Refit and RestSharp have no standalone query-string builder.
-- **Resilience rows.** CSE and bare Polly retry the whole call, deserialization included. CSE also retries failed `Result` values. Microsoft.Extensions.Http.Resilience retries only the send, on transient status codes and exceptions, inside an `IHttpClientFactory` pipeline that adds the factory's logging handlers and its own resilience telemetry. The standard handler runs five strategies (rate limiter, total timeout, retry, circuit breaker, attempt timeout), not two. CSE's row wraps `GetFromJsonAsResultAsync` (buffered, with its own try/catch); the Polly and factory rows wrap the BCL `GetFromJsonAsync` (streamed). The CSE-vs-Polly difference includes the GetJsonComparison Get-category gap, not only the policy wrapper.
-- **Circuit breaker defaults** differ inside CSE: `minimumThroughput` defaults to 5 in the Http helpers (`HttpClientResilienceExtensions.cs:22,25,85,88`) and to 10 in CSharpEssentials.Resilience. No row depends on it.
+- Response disposal. Every CSE call disposes its `HttpResponseMessage` with a `using` declaration (for GET in `GetCoreAsync`, `CSharpEssentials.Http/HttpClientResultExtensions.cs:257`). An earlier version of the package did not, and this suite is where that showed up. The BCL `GetFromJsonAsync`, Refit, Flurl and RestSharp dispose it too.
+- Buffering. CSE's `GetFromJsonAsResultAsync` uses `GetAsync` (`ResponseContentRead`, `HttpClientResultExtensions.cs:257`), so the body is buffered before it is deserialized. The BCL `GetFromJsonAsync` reads headers first and streams the body. RestSharp reads the body to a string before it deserializes.
+- CSE's POST value is typed `object`, so System.Text.Json serializes it by its runtime type. This is the real CSE API.
+- Request Content-Type. CSE, BCL, Refit and RestSharp send `application/json; charset=utf-8`, Flurl sends `application/json; charset=UTF-8`. Content-Type is not part of the POST parity check.
+- Flurl default options are `{ PropertyNameCaseInsensitive = true }`, which write PascalCase. Only the labelled Defaults GET row uses them, and a read is not affected.
+- CSE default options are the Readme's `EnhancedJsonSerializerOptions.DefaultOptions`: Web-like naming plus case-insensitive reads, relaxed escaping, ignore-nulls, IgnoreCycles and the polymorphic, enum and DateTime converter factories. Only the labelled Defaults rows use them.
+- 404 paths. The default calls of Refit (`Task<T>`, throws `ApiException`), Flurl (throws `FlurlHttpException`) and RestSharp (`GetAsync<T>`, throws) all throw on 404. The suite uses each library's non-throwing path. Refit's `IApiResponse<T>` still builds an `ApiException` object for the error, RestSharp reads the body to a string, and CSE builds an `Error` from the status code and does not read the body.
+- RestSharp 404 body. RestSharp also deserializes the problem+json error body into `User` (`RestSerializers.DeserializeContent` attempts HTTP error bodies by design, `RestClient.Extensions.cs:47-48` at 114.1.0). CSE, the BCL and Flurl never touch the body; Refit only reads it to a string for `ApiException`.
+- Request building. Refit builds requests only inside a generated call, so it has no row. Flurl.Http has no public build-without-send API, and RestSharp builds only the URI, so both rows are the library's URL builder plus the same hand-made `HttpRequestMessage` and header line. CSE's `WithQuery("page", 2)` boxes the int through the object overload, as in the Readme.
+- Query encoding. CSE, `QueryHelpers`, Flurl and `Uri.EscapeDataString` all encode `c# tips` as `c%23%20tips`. A probe of `a+b/c?d&e=f ü` also gave the same text from all four: `a%2Bb%2Fc%3Fd%26e%3Df%20%C3%BC`. Refit and RestSharp have no standalone query-string builder.
+- Resilience rows. CSE and bare Polly retry the whole call, deserialization included. CSE also retries failed `Result` values. Microsoft.Extensions.Http.Resilience retries only the send, on transient status codes and exceptions, inside an `IHttpClientFactory` pipeline that adds the factory's logging handlers and its own resilience telemetry. The standard handler runs five strategies (rate limiter, total timeout, retry, circuit breaker, attempt timeout), not two. CSE's row wraps `GetFromJsonAsResultAsync` (buffered, with its own try/catch); the Polly and factory rows wrap the BCL `GetFromJsonAsync` (streamed). The CSE-vs-Polly difference includes the GetJsonComparison Get-category gap, not only the policy wrapper.
+- Circuit breaker defaults differ inside CSE: `minimumThroughput` defaults to 5 in the Http helpers (`HttpClientResilienceExtensions.cs:22,25,85,88`) and to 10 in CSharpEssentials.Resilience. No row depends on it.
 
 ---
 
@@ -117,7 +117,6 @@ This table comes from reading CSE source, the competitors' XML docs, nuspecs and
 - Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK). `HttpResilienceComparison` and `RetryIfFailedComparison` were rerun on main after pull requests #230 to #256 landed, with the 11.0.100-rc.3 SDK and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348).
 - The 1-minute load average was 1.74 when the suite started and 1.60 when it ended. No row in this suite kept a coefficient of variation above 5%, so no class was rerun for noise and no row is marked noisy. No mean is near 0 ns, so the timer-resolution caveat does not apply.
 - Reports: `benchmarks/results/http/{tfm}/results/*-report-github.md`, with `.csv` and `.html` beside them. Each table below links the four github reports for its class.
-- The CSE column is the repository source as of the run, a local integration of all open pull requests.
 
 Each cell is `Mean (Ratio), Allocated`, copied from that TFM's report. The ratio is against the category baseline: the CSE row where the category has one, `Bcl_GetSourceGen` in SourceGen, and `CSharpEssentials_Build` in RequestBuild. "-" means the report shows no allocation.
 
@@ -129,20 +128,18 @@ Each cell is `Mean (Ratio), Allocated`, copied from that TFM's report. The ratio
 
 ### Where CSE loses
 
-Every row where CSE is slower or allocates more than another row in its category:
-
-- **GET, Count 1, against `Bcl_Get`.** Slower on every TFM: 2.440 μs against 2.087 μs (net8.0), 2.223 μs against 1.996 μs (net9.0), 1.857 μs against 1.729 μs (net10.0), 1.817 μs against 1.581 μs (net11.0). Allocates 2.54 KB against 2.18 KB (net8.0, net9.0) and 2.55 KB against 2.2 KB (net10.0, net11.0).
-- **GET, Count 50, against `Bcl_Get`.** Slower on net8.0 (24.493 μs against 23.480 μs), net9.0 (23.869 μs against 22.743 μs) and net10.0 (21.337 μs against 21.141 μs). On net11.0 CSE is ahead, 19.970 μs against 20.131 μs. Allocates more on every TFM: 18.35 KB against 14.95 KB (net8.0, net9.0), 18.36 KB against 14.97 KB (net10.0), 18.36 KB against 14.98 KB (net11.0). CSE buffers the whole body before it deserializes; the BCL streams it.
-- **POST against `Bcl_Post`.** CSE against the BCL: 3.400 μs against 2.864 μs (net8.0, BCL ratio 0.84), 3.041 μs against 2.668 μs (net9.0, 0.88), 2.598 μs against 2.336 μs (net10.0, 0.90), 2.496 μs against 2.213 μs (net11.0, 0.89). CSE allocates 2.79 KB against 2.42 KB (net8.0, net9.0), 2.81 KB against 2.45 KB (net10.0) and 2.8 KB against 2.45 KB (net11.0).
-- **404 against `Bcl_NotFound`.** 1,172.5 ns against 781.8 ns (net8.0), 1,130.8 ns against 811.1 ns (net9.0), 879.5 ns against 635.4 ns (net10.0), 839.4 ns against 618.8 ns (net11.0). Allocated 1.81 KB against 1.35 KB (net8.0), 1.74 KB against 1.35 KB (net9.0), 1.75 KB against 1.36 KB (net10.0), 1.75 KB against 1.37 KB (net11.0). The BCL row only checks the status code; CSE also builds a typed `Error`.
-- **Request build against the hand-written `Bcl_Build`.** 733.4 ns against 189.1 ns (net8.0), 722.7 ns against 161.4 ns (net9.0), 641.8 ns against 127.1 ns (net10.0), 537.55 ns against 99.34 ns (net11.0). Allocated 1648 B against 392 B (1656 B against 400 B on net11.0). The builder parses the URI up to three times and boxes the int query value.
-- **Query string, AppendToUri, against `AspNetCore_AppendToUri` (`QueryHelpers`).** 398.6 ns against 337.9 ns (net8.0), 380.6 ns against 331.2 ns (net9.0), 374.5 ns against 348.1 ns (net10.0), 323.3 ns against 287.1 ns (net11.0). Allocated 784 B against 656 B on every TFM.
-- **Query string, Dictionary, against the hand-written `Bcl_Dictionary` loop.** Ratio 0.83 (net8.0), 0.90 (net9.0), 0.87 (net10.0), 0.94 (net11.0) for the loop, and 488 B against 544 B on every TFM. `QueryHelpers` is also ahead on net8.0 (221.4 ns against 223.2 ns, ratio 0.99) and net9.0 (194.2 ns against 216.2 ns); CSE is ahead on net10.0 and net11.0. Both allocate 544 B.
-- **HTTP resilience against `Polly_Pipeline`.** 4.189 μs against 3.256 μs (net8.0), 3.406 μs against 2.779 μs (net9.0), 2.914 μs against 2.451 μs (net10.0), 2.764 μs against 2.362 μs (net11.0). Allocated 2.73 KB against 2.26 KB (net8.0, net9.0), 2.27 KB (net10.0) and 2.28 KB (net11.0). This gap includes the GET gap above, because the Polly row wraps the streamed BCL call. `Factory_NoResilience` is a reference row with no retry and is faster than every policy row. On net8.0 the `MicrosoftResilience_Handler` row is also faster, 4.145 μs against 4.189 μs (ratio 0.99), while it allocates more (2.79 KB against 2.73 KB).
+- GET, Count 1, against `Bcl_Get`. Slower on every TFM: 2.440 μs against 2.087 μs (net8.0), 2.223 μs against 1.996 μs (net9.0), 1.857 μs against 1.729 μs (net10.0), 1.817 μs against 1.581 μs (net11.0). Allocates 2.54 KB against 2.18 KB (net8.0, net9.0) and 2.55 KB against 2.2 KB (net10.0, net11.0).
+- GET, Count 50, against `Bcl_Get`. Slower on net8.0 (24.493 μs against 23.480 μs), net9.0 (23.869 μs against 22.743 μs) and net10.0 (21.337 μs against 21.141 μs). On net11.0 CSE is ahead, 19.970 μs against 20.131 μs. Allocates more on every TFM: 18.35 KB against 14.95 KB (net8.0, net9.0), 18.36 KB against 14.97 KB (net10.0), 18.36 KB against 14.98 KB (net11.0). CSE buffers the whole body before it deserializes; the BCL streams it.
+- POST against `Bcl_Post`. CSE against the BCL: 3.400 μs against 2.864 μs (net8.0, BCL ratio 0.84), 3.041 μs against 2.668 μs (net9.0, 0.88), 2.598 μs against 2.336 μs (net10.0, 0.90), 2.496 μs against 2.213 μs (net11.0, 0.89). CSE allocates 2.79 KB against 2.42 KB (net8.0, net9.0), 2.81 KB against 2.45 KB (net10.0) and 2.8 KB against 2.45 KB (net11.0).
+- 404 against `Bcl_NotFound`. 1,172.5 ns against 781.8 ns (net8.0), 1,130.8 ns against 811.1 ns (net9.0), 879.5 ns against 635.4 ns (net10.0), 839.4 ns against 618.8 ns (net11.0). Allocated 1.81 KB against 1.35 KB (net8.0), 1.74 KB against 1.35 KB (net9.0), 1.75 KB against 1.36 KB (net10.0), 1.75 KB against 1.37 KB (net11.0). The BCL row only checks the status code; CSE also builds a typed `Error`.
+- Request build against the hand-written `Bcl_Build`. 733.4 ns against 189.1 ns (net8.0), 722.7 ns against 161.4 ns (net9.0), 641.8 ns against 127.1 ns (net10.0), 537.55 ns against 99.34 ns (net11.0). Allocated 1648 B against 392 B (1656 B against 400 B on net11.0). The builder parses the URI up to three times and boxes the int query value.
+- Query string, AppendToUri, against `AspNetCore_AppendToUri` (`QueryHelpers`). 398.6 ns against 337.9 ns (net8.0), 380.6 ns against 331.2 ns (net9.0), 374.5 ns against 348.1 ns (net10.0), 323.3 ns against 287.1 ns (net11.0). Allocated 784 B against 656 B on every TFM.
+- Query string, Dictionary, against the hand-written `Bcl_Dictionary` loop. Ratio 0.83 (net8.0), 0.90 (net9.0), 0.87 (net10.0), 0.94 (net11.0) for the loop, and 488 B against 544 B on every TFM. `QueryHelpers` is also ahead on net8.0 (221.4 ns against 223.2 ns, ratio 0.99) and net9.0 (194.2 ns against 216.2 ns); CSE is ahead on net10.0 and net11.0. Both allocate 544 B.
+- HTTP resilience against `Polly_Pipeline`. 4.189 μs against 3.256 μs (net8.0), 3.406 μs against 2.779 μs (net9.0), 2.914 μs against 2.451 μs (net10.0), 2.764 μs against 2.362 μs (net11.0). Allocated 2.73 KB against 2.26 KB (net8.0, net9.0), 2.27 KB (net10.0) and 2.28 KB (net11.0). This gap includes the GET gap above, because the Polly row wraps the streamed BCL call. `Factory_NoResilience` is a reference row with no retry and is faster than every policy row. On net8.0 the `MicrosoftResilience_Handler` row is also faster, 4.145 μs against 4.189 μs (ratio 0.99), while it allocates more (2.79 KB against 2.73 KB).
 
 ### Full tables
 
-### GetJsonComparison
+#### GetJsonComparison
 
 | Method | Categories | Count | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|---|
@@ -167,7 +164,7 @@ Every row where CSE is slower or allocates more than another row in its category
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-report-github.md).
 
-### PostJsonComparison
+#### PostJsonComparison
 
 | Method | Categories | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
@@ -180,7 +177,7 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PostJsonComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PostJsonComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PostJsonComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PostJsonComparison-report-github.md).
 
-### NotFoundComparison
+#### NotFoundComparison
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
@@ -192,7 +189,7 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md).
 
-### RequestBuildComparison
+#### RequestBuildComparison
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
@@ -203,7 +200,7 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RequestBuildComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RequestBuildComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RequestBuildComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RequestBuildComparison-report-github.md).
 
-### QueryStringComparison
+#### QueryStringComparison
 
 | Method | Categories | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
@@ -219,7 +216,7 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.QueryStringComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.QueryStringComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.QueryStringComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.QueryStringComparison-report-github.md).
 
-### HttpResilienceComparison
+#### HttpResilienceComparison
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
@@ -235,9 +232,9 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 ## Caveats
 
-- **A real connection is not measured.** The stub removes sockets, TLS and the server. A row's number is the library's own overhead around `HttpClient.SendAsync` plus JSON work. On a real network that overhead is a small part of the total.
-- **No CSE source-gen row.** CSharpEssentials.Http has `JsonTypeInfo<T>` overloads, but the suite has no CSE row in the SourceGen category yet, so `Bcl_GetSourceGen` is that category's baseline.
-- On net8.0 every JSON row runs the System.Text.Json 9.0.4 and System.Net.Http.Json 9.0.0 packages, not the in-box STJ 8. Numbers for net8 are not numbers for STJ 8.
+- A real connection is not measured. The stub removes sockets, TLS and the server. A row's number is the library's own overhead around `HttpClient.SendAsync` plus JSON work. On a real network that overhead is a small part of the total.
+- No CSE source-gen row. CSharpEssentials.Http has `JsonTypeInfo<T>` overloads, but the suite has no CSE row in the SourceGen category yet, so `Bcl_GetSourceGen` is that category's baseline.
+- On net8.0 every JSON row runs the System.Text.Json 9.0.4 and System.Net.Http.Json 9.0.0 packages, so the net8 numbers are not numbers for the in-box STJ 8.
 - The `IHttpClientFactory` rows include the factory's logging handlers and Microsoft.Extensions.Http.Resilience's telemetry. Their difference from the bare Polly row is not the cost of retry alone.
 - The CSE column is the repository source at the time of the run (a local integration of all open pull requests), which may not match the version published on NuGet.
 - The feature matrix comes from reading source and docs. Cells marked "Not checked" were not confirmed.

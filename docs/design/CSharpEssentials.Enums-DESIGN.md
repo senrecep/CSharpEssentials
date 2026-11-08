@@ -1,6 +1,6 @@
 # CSharpEssentials enum conventions: design document
 
-> **Date:** 2026-10-06 | **Status:** Implemented in 5.0, kept current through 6.5
+> **Date:** 2026-10-06 | **Status:** Implemented in 5.0, kept in sync with the source
 > **Issues:** #59 (epic), #60 (this document), #61 (metadata, conventions, JSON), #62 (ASP.NET Core), #63 (OpenAPI), #64 (EF Core storage), #65 (EF Core migrations), #66 (HTTP clients), #67 (validation, analyzers), #68 (docs, examples, golden tests)
 > **Related:** [ADR-007](../adr/ADR-007-enum-conventions.md), [ADR-006](../adr/ADR-006-source-generators-in-separate-projects.md)
 
@@ -27,14 +27,14 @@
 
 | Term | Meaning |
 |---|---|
-| **Wire name** | The canonical string of a member. Written by every layer when the output format is `String`. |
-| **Member name** | The C# identifier (`PendingApproval`). |
-| **Alias** | A declared extra spelling (`[EnumAlias("Started")]`). Read, never written. |
-| **Legacy name** | The 3.x/4.x `ToSnakeCase()` spelling (`HTTPStatus` → `httpstatus`): the 3.x Core helper and EF storage, and the 4.x generated `ToSnakeCase()`. Emitted automatically as an alias when it differs from the wire name. Read, never written. |
-| **Input** | A value sent to this service by a caller: request body, route, query, header, form. The strictest read mode. |
-| **Data read** | A value this service reads from something it trusts to have been valid once: database rows, JSON columns, responses of other services, message bus payloads. Tolerant, may map to the fallback member. |
-| **Output** | Any value this service writes: response bodies, outgoing request bodies and query strings, message payloads, database writes. Always canonical. |
-| **Defined** | A value equal to a declared member or, for `[Flags]`, a combination of declared flags (`(value & ~DefinedMask) == 0`). |
+| Wire name | The canonical string of a member. Written by every layer when the output format is `String`. |
+| Member name | The C# identifier (`PendingApproval`). |
+| Alias | A declared extra spelling (`[EnumAlias("Started")]`). Read, never written. |
+| Legacy name | The 3.x/4.x `ToSnakeCase()` spelling (`HTTPStatus` → `httpstatus`): the 3.x Core helper and EF storage, and the 4.x generated `ToSnakeCase()`. Emitted automatically as an alias when it differs from the wire name. Read, never written. |
+| Input | A value sent to this service by a caller: request body, route, query, header, form. The strictest read mode. |
+| Data read | A value this service reads from something it trusts to have been valid once: database rows, JSON columns, responses of other services, message bus payloads. Tolerant, may map to the fallback member. |
+| Output | Any value this service writes: response bodies, outgoing request bodies and query strings, message payloads, database writes. Always canonical. |
+| Defined | A value equal to a declared member or, for `[Flags]`, a combination of declared flags (`(value & ~DefinedMask) == 0`). |
 
 ## 3. Packages, TFMs and dependencies
 
@@ -44,7 +44,7 @@
 | `CSharpEssentials.Enums.Generators` (new, not packable) | `netstandard2.0` | Roslyn 4.8 (ADR-006) | `StringEnumGenerator`, analyzers CSE0002 to CSE0016, packed into `CSharpEssentials.Enums` |
 | `CSharpEssentials.Enums.CodeFixes` (new, not packable) | `netstandard2.0` | Roslyn 4.8 | code fixes for CSE0005 and CSE0006 |
 | `CSharpEssentials.Json` | unchanged | none | `EnumConverterFactory`, `JsonSerializerOptions.AddEnumConventions` |
-| `CSharpEssentials.AspNetCore` | unchanged | **removes** `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
+| `CSharpEssentials.AspNetCore` | unchanged | removes `Swashbuckle.AspNetCore` | binding, errors, per-group output format, `AddEnumConventions` |
 | `CSharpEssentials.AspNetCore.OpenApi` (new) | `net10.0` | `Microsoft.AspNetCore.OpenApi`, `Microsoft.OpenApi` 2.x (approved 2026-10-06, only in this package) | schema and operation transformers |
 | `CSharpEssentials.AspNetCore.Swashbuckle` (new) | `net11.0;net10.0;net9.0;net8.0` | `Swashbuckle.AspNetCore` [8.1.0,10) with Microsoft.OpenApi 1.x in 5.0 (moved); `[10.2.3,11)` with Microsoft.OpenApi `[2.7.5,3)` since 6.0 | `AddSwagger`, filters, schema id factory, security schemes |
 | `CSharpEssentials.EntityFrameworkCore` | unchanged | none | storage conventions, check constraint convention, migration helpers, `EnumDataAudit` |
@@ -133,8 +133,7 @@ public sealed record EnumConventions
 
     // Which enums the conventions apply to. Default: enums with generated metadata, and [StringEnum] enums without it,
     // so a missing generator fails loudly (CSE0015) instead of silently writing numbers.
-    public Func<Type, bool> CanHandle { get; init; } = type =>
-        EnumMetadata.IsRegistered(type) || type is not null && type.IsEnum && type.IsDefined(typeof(StringEnumAttribute), inherit: false);
+    public Func<Type, bool> CanHandle { get; init; } = DefaultCanHandle;   // static type => EnumMetadata.IsRegistered(type) || IsStringEnum(type)
 }
 
 public enum UnknownEnumValueHandling { Reject, UseFallback }
@@ -144,9 +143,9 @@ public enum EnumStorage { Default, String, Integer }
 
 Rules for the switches:
 
-- `UseFallback` maps an undefined value to the `[EnumFallback]` member **only when the enum declares one**. Without a fallback member it behaves like `Reject`. `Reject` ignores fallback members everywhere.
-- `UnknownValue` applies to **data reads only**. Input is always strict: undefined values and the fallback member itself are rejected (section 5).
-- `AcceptNumbers`, `AcceptMemberNames` and `CaseInsensitive` apply to **input only**. Data reads always accept every known spelling of a defined member, because that is how legacy rows and legacy producers stay readable.
+- `UseFallback` maps an undefined value to the `[EnumFallback]` member only when the enum declares one. Without a fallback member it behaves like `Reject`. `Reject` ignores fallback members everywhere.
+- `UnknownValue` applies to data reads only. Input is always strict: undefined values and the fallback member itself are rejected (section 5).
+- `AcceptNumbers`, `AcceptMemberNames` and `CaseInsensitive` apply to input only. Data reads always accept every known spelling of a defined member, because that is how legacy rows and legacy producers stay readable.
 - `WriteAs = Number` writes the underlying number. It exists for legacy consumers; it is selected per endpoint group (section 9.4), per HTTP client (section 13), globally for ASP.NET Core output (section 9.4) or per serializer options instance (message producers).
 
 Registration:
@@ -236,7 +235,7 @@ public enum Permissions { None = 0, Read = 1, Write = 2, Delete = 4, ReadWrite =
 | EF `Integer` (default) | `3` | integer |
 | EF `String` | PostgreSQL `text[]` `{read,write}`; other providers JSON array text `["read","write"]` | also legacy comma text |
 
-Output decomposition: named composite members are **not** used on output (`ReadWrite` is written as `["read","write"]`), so the output does not depend on member declaration order and consumers never have to know composites. Composite names are accepted on input. `WriteAs = Number` writes the integer.
+Output decomposition: named composite members are not used on output (`ReadWrite` is written as `["read","write"]`), so the output does not depend on member declaration order and consumers never have to know composites. Composite names are accepted on input. `WriteAs = Number` writes the integer.
 
 ### 5.2 Enum collections
 
@@ -303,19 +302,20 @@ public static class EnumMetadata
     [RequiresUnreferencedCode("..."), RequiresDynamicCode("...")]
     public static IEnumInfo GetOrCreateWithReflection(Type enumType, EnumNaming naming = EnumNaming.SnakeCaseLower);
 
-    public static void Register<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum;   // called by generated code
+    public static void Register<TEnum>(EnumInfo<TEnum> info) where TEnum : struct, Enum;
+    public static void RegisterRange(KeyValuePair<Type, Func<IEnumInfo>>[] factories);   // called by generated code
 }
 ```
 
-Generic access is a static field read (`EnumInfoCache<TEnum>.Value`). Non-generic access is a dictionary lookup in a copy-on-write dictionary that becomes a `FrozenDictionary` snapshot on net9.0+ after the first read (`CSharpEssentials.Enums` has no net8.0 TFM; net8.0 hosts use the netstandard2.1 build with a plain dictionary).
+Generic access is a static field read (`EnumInfoCache<TEnum>.Value`). Non-generic access is a lookup in a copy-on-write `Dictionary` snapshot, rebuilt on the first read after a registration. `EnumValueFormatter` skips the delegate when the conventions carry the default `CanHandle`: one metadata lookup answers both "is it handled" and "what is its metadata".
 
 `IEnumInfo.Accept` is how every package outside `CSharpEssentials.Enums` reaches typed code from a `Type` without `MakeGenericType`: the JSON factory, EF Core converters and the binding plan each implement one visitor. `CSharpEssentials.Enums` therefore stays free of `System.Text.Json`, EF Core and ASP.NET Core references, and a contracts assembly needs only `CSharpEssentials.Enums`.
 
 ### 6.2 Registration
 
-The generator emits, per assembly, one `internal static class __CSharpEssentialsEnumRegistry` with a `[ModuleInitializer]` that calls `EnumMetadata.Register(...)` for every `[StringEnum]` enum of the assembly. On `netstandard2.0`/`netstandard2.1` consumers the generator emits an internal `ModuleInitializerAttribute` polyfill when the compilation does not have one. C# 9 is required for registration.
+The generator emits, per assembly, one `internal static class __CSharpEssentialsEnumRegistry` with a `[ModuleInitializer]` that passes one metadata factory per `[StringEnum]` enum to `EnumMetadata.RegisterRange(...)`. Each factory runs on the first lookup of its enum. `EnumMetadata.Register<TEnum>(EnumInfo<TEnum>)` registers metadata built in code. On `netstandard2.0`/`netstandard2.1` consumers the generator emits an internal `ModuleInitializerAttribute` polyfill when the compilation does not have one. C# 9 is required for registration.
 
-A module initializer runs only when code of the declaring assembly runs; `typeof(OrderStatus)` alone does not trigger it. A contracts assembly that contains only types would otherwise report `IsRegistered = false` and the enum would silently fall back to default handling. Therefore `EnumMetadata.TryGet(Type)` and `EnumInfoCache<TEnum>` call `RuntimeHelpers.RunModuleConstructor(type.Module.ModuleHandle)` on every miss and retry the lookup (the runtime runs a module constructor at most once, so repeated calls are cheap, race free and AOT safe). A test covers an enum in a separate type-only assembly. On older language versions the generator emits the extension methods without registration and CSE0015 (warning) reports the enum; JSON converter creation for it throws instead of taking a reflection path.
+A module initializer runs only when code of the declaring assembly runs; `typeof(OrderStatus)` alone does not trigger it. A contracts assembly that contains only types would otherwise report `IsRegistered = false` and the enum would silently fall back to default handling. Therefore `EnumMetadata.TryGet(Type)` (which `EnumInfoCache<TEnum>` also goes through) calls `RuntimeHelpers.RunModuleConstructor(type.Module.ModuleHandle)` on a miss and retries the lookup (the runtime runs a module constructor at most once, so repeated calls are cheap, race free and AOT safe). A test covers an enum in a separate type-only assembly. On older language versions the generator emits the extension methods without registration and CSE0015 (warning) reports the enum; JSON converter creation for it throws instead of taking a reflection path.
 
 Nested enums are supported in 5.0 (the generated extension class is emitted at namespace level with the containing type names joined, `Order_StateExtensions`), so CSE0001 is retired as obsolete and kept reserved.
 
@@ -342,8 +342,11 @@ public enum EnumReadMode { Input, Data }
 
 public static class EnumValueParser
 {
+    // text is ReadOnlySpan<char>, or string on netstandard2.0. An overload without the error argument does not build it.
     public static bool TryParse<TEnum>(ReadOnlySpan<char> text, EnumReadMode mode, EnumConventions conventions,
         out TEnum value, out EnumValueError? error) where TEnum : struct, Enum;
+    public static bool TryParse<TEnum>(ReadOnlySpan<char> text, EnumReadMode mode, EnumConventions conventions,
+        out TEnum value) where TEnum : struct, Enum;
 
     public static bool TryParseNumber<TEnum>(long number, EnumReadMode mode, EnumConventions conventions,
         out TEnum value, out EnumValueError? error) where TEnum : struct, Enum;
@@ -372,7 +375,10 @@ public sealed record EnumValueError(Type EnumType, string? Value, IReadOnlyList<
     public string Message { get; }
 }
 
-public sealed class EnumValueException(EnumValueError error) : Exception(error.Message);
+public sealed class EnumValueException(EnumValueError error) : Exception(error.Message)
+{
+    public EnumValueError Error { get; }
+}
 ```
 
 Lookup order for a single token (first match wins, so an alias can never shadow a wire name):
@@ -385,7 +391,7 @@ Lookup order for a single token (first match wins, so an alias can never shadow 
 
 Then: fallback member rejected in `Input` mode; undefined values go to the fallback member in `Data` mode when `UnknownValue = UseFallback` and a fallback exists; otherwise the read fails with `EnumValueError` listing the wire names (fallback member excluded from the list for input).
 
-The lookup tables are built once per enum from metadata: a `FrozenDictionary<string, ulong>` with `StringComparer.Ordinal` and one with `StringComparer.OrdinalIgnoreCase` (net9.0+), plain `Dictionary` on netstandard. On net9.0+ the JSON converter copies the token into a stack buffer of chars (`Utf8JsonReader.CopyString(Span<char>)`, which also unescapes) and looks it up through `GetAlternateLookup<ReadOnlySpan<char>>`, so a valid value costs no string allocation. Longer tokens than the longest accepted spelling are rejected before the copy.
+The lookup tables are built once per enum from metadata: ordinal and ignore-case `EnumNameLookup` tables, with and without member names, plus an exact wire-name table. `EnumNameLookup` is a hand-rolled hash table with span lookups (allocation free on netstandard2.1 and later; a plain `Dictionary` on netstandard2.0). It replaces `FrozenDictionary` because the frozen alternate lookup uses generic virtual methods, which make a Native AOT app carry the runtime type loader. The JSON converter unescapes the token into a stack buffer of chars (`Utf8JsonReader.CopyString(Span<char>)`, pooled when longer) and looks it up as a span, so a valid value costs no string allocation. A token longer than every accepted spelling is rejected before the copy.
 
 ## 7. JSON (`CSharpEssentials.Json`, #61)
 
@@ -437,7 +443,7 @@ app.UseEnumBinding();                     // route/query/header/form normalizati
 
 ### 9.2 Binding
 
-Minimal APIs bind enums with `Enum.TryParse` inside `RequestDelegateFactory` and offer no global binder hook, and a startup filter runs before routing, so it cannot see the endpoint. 5.0 keeps the 4.1 mechanism, which already works for minimal APIs (including `[AsParameters]`) and MVC on every TFM: the `UseEnumBinding()` middleware. It stays public and is **not** obsolete; only `AddEnumBinding`/`EnumBindingOptions` are obsolete forwarders to `AddEnumConventions`.
+Minimal APIs bind enums with `Enum.TryParse` inside `RequestDelegateFactory` and offer no global binder hook, and a startup filter runs before routing, so it cannot see the endpoint. 5.0 keeps the 4.1 mechanism, which already works for minimal APIs (including `[AsParameters]`) and MVC on every TFM: the `UseEnumBinding()` middleware. It stays public and is not obsolete; only `AddEnumBinding`/`EnumBindingOptions` are obsolete forwarders to `AddEnumConventions`.
 
 Changes in 5.0:
 - Reads `EnumConventions` (Input mode) and metadata instead of its own options; the per-endpoint plan is built once and cached per endpoint as in 4.1.
@@ -517,7 +523,7 @@ Rules:
 - The fallback member stays in `enum` (it can appear in responses) and its table row and `x-enum-descriptions` entry start with `Response only:`. Separate request schemas were considered and rejected: they double the component count for a rule that input validation already enforces.
 - `default` is the wire name when the property or parameter has a default value.
 - A `[DefaultValue]` is given as the enum value (`[DefaultValue(OrderStatus.Pending)]`) or as `[DefaultValue(typeof(OrderStatus), "Pending")]`; a raw wire-name string such as `[DefaultValue("pending")]` is not used as a default.
-- Nullable is expressed where it is used, never on the shared component (a nullable component would make every use nullable). The transformer branches on the **document's** OpenAPI version, not on the package version (net10.0+ can still emit 3.0):
+- Nullable is expressed where it is used, never on the shared component (a nullable component would make every use nullable). The transformer branches on the document's OpenAPI version, not on the package version (net10.0+ can still emit 3.0):
   - OpenAPI 3.0: `{ "allOf": [ { "$ref": "#/components/schemas/OrderStatus" } ], "nullable": true }`.
   - OpenAPI 3.1: `{ "oneOf": [ { "$ref": "#/components/schemas/OrderStatus" }, { "type": "null" } ] }`.
 - Flags and collections: `type: array`, `items: { $ref: OrderStatus }`, `uniqueItems: true` for flags; query parameters get `style: form`, `explode: true`.
@@ -528,14 +534,13 @@ Rules:
 - Query arrays get `style: form`, `explode: true`; Microsoft.OpenApi 2.x omits both from the output because they are the defaults for query parameters, so the golden extract ignores them.
 - Parameters are classified by `ApiParameterDescription.Type`, then by `ModelMetadata.ModelType`: MVC reports `string` as the type of a parameter whose type converts from string.
 - Parity: Microsoft.OpenApi 1.x and 2.x share an assembly name, so the two packages are tested in two test projects (net9.0 Swashbuckle in `CSharpEssentials.Tests`, net10.0 in `CSharpEssentials.AspNetCore.OpenApi.Tests`) against the same OpenAPI 3.0 golden files (`tests/golden/openapi/*.json`, enum components, enum properties and enum operation parts); the 3.1 files are Microsoft.AspNetCore.OpenApi only.
-- Not implemented (deferred past 5.0): `EnumSchemaStyle.StringOrNumber` (a `oneOf` string/integer request schema).
 
 ### 10.2 Package split
 
-- `CSharpEssentials.AspNetCore.Swashbuckle`: `AddSwagger`, `ConfigureSwaggerOptions`, `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory`, `SecuritySchemes`. Namespaces stay `CSharpEssentials.AspNetCore.Swagger*` so only a package reference changes. Swashbuckle 8.x/9.x (Microsoft.OpenApi 1.x) on every TFM, as pinned centrally today. This package carries the net8.0/net9.0 story. Swashbuckle 10 (Microsoft.OpenApi 2.x) support is a follow-up outside 5.0. 6.0 (#69): Swashbuckle 10 and Microsoft.OpenApi 2.x on every TFM, one code path, and both packages share the enum schema writer (`shared/OpenApiEnums/OpenApiEnumSchemas.cs`).
+- `CSharpEssentials.AspNetCore.Swashbuckle`: `AddSwagger`, `ConfigureSwaggerOptions`, `EnumSchemaFilter`, `ReApplyOptionalRouteParameterOperationFilter`, `SwashbuckleSchemaIdFactory`, `SecuritySchemes`. Namespaces stay `CSharpEssentials.AspNetCore.Swagger*` so only a package reference changes. Targets net8.0 to net11.0, so it carries the net8.0/net9.0 story. 5.0 shipped it on Swashbuckle 8.x/9.x (Microsoft.OpenApi 1.x); since 6.0 (#69) it uses Swashbuckle `[10.2.3,11)` and Microsoft.OpenApi 2.x on every TFM, one code path, and both packages share the enum schema writer (`shared/OpenApiEnums/OpenApiEnumSchemas.cs`).
 - Fixes moved with the code: XML comments are loaded per assembly that declares the type (`type.Assembly.Location` with `File.Exists`), not `GetCallingAssembly`; descriptions are appended, not replaced; the schema follows `EnumConventions` and metadata, no hardcoded policy.
 - `CSharpEssentials.AspNetCore.OpenApi` (net10.0+ only, Microsoft.OpenApi 2.x): `services.AddOpenApi(o => o.AddEnumConventions())` registers an `IOpenApiSchemaTransformer`, an `IOpenApiOperationTransformer` (parameters, bodies, group format markers) and an `IOpenApiDocumentTransformer` (enum components and the enum properties of object components, which the schema transformer cannot see by usage). There is no net9.0 target: between Microsoft.OpenApi 1.x and 2.x the schema type (`string` → `JsonSchemaType`), enum values and extensions (`IOpenApiAny` → `JsonNode`) and the schema model (`IOpenApiSchema` interface) all change, so multi-targeting would implement the package core twice, and net8.0/net9.0 reach end of support on 2026-11-10, around the 5.0 release. Adding net9.0 later is non-breaking; removing it would be breaking. There is no net11.0 target in 5.0: `Microsoft.AspNetCore.OpenApi` 11.x (rc.1 only so far) needs Microsoft.OpenApi `[3.10.0, 4.0.0)`, which conflicts with the 2.x pin. net11.0 with Microsoft.OpenApi 3.x will come later as a non-breaking addition.
-- **One host references one of the two packages, never both.** Microsoft.OpenApi 2.x from the OpenApi package and Swashbuckle 8.x/9.x (1.x) in the same host resolve to 2.x and break Swashbuckle at runtime (5.x; since 6.0 both use Microsoft.OpenApi 2.x, and one OpenAPI generator per host stays the rule). The README of both packages states it. No other package (`CSharpEssentials.AspNetCore`, `.Enums`, `.Json`) depends on Microsoft.OpenApi. A test asserts that the dependency closure of each package never contains the other, and the OpenApi tests run on a net10.0 test TFM (the main test project is net9.0 only today).
+- One host references one of the two packages, never both. In 5.x the mix resolved Microsoft.OpenApi to 2.x and broke Swashbuckle at runtime; since 6.0 both use 2.x, and one OpenAPI generator per host stays the rule. The README of both packages states it. No other package (`CSharpEssentials.AspNetCore`, `.Enums`, `.Json`) depends on Microsoft.OpenApi. A test asserts that the dependency closure of each package never contains the other, and the OpenApi tests run on a net10.0 test TFM (the main test project is net9.0 only today).
 - Scalar UI: no helper in 5.0 (no new dependency). The README shows the two lines for versioned documents.
 
 ## 11. EF Core storage (`CSharpEssentials.EntityFrameworkCore`, #64)
@@ -566,9 +571,9 @@ modelBuilder.Entity<Order>().Property(o => o.Status).HasEnumStorage(EnumStorage.
 
 `existingStorage` applies `HasLegacyEnumStorage(existingStorage)` to every enum property the convention handles that has no property-level `HasEnumStorage`/`HasLegacyEnumStorage`; it wins over `[StringEnum(Storage)]` and `EnumConventions.Storage`. Without it, a `[StringEnum]` enum stored as an integer would get `Storage = String` and EF would generate an `int → text` `AlterColumn` (PostgreSQL's implicit cast writes `'1'`). With it, the first 5.0 migration is empty (section 12.3). New projects omit the argument.
 
-`HasLegacyEnumStorage(EnumStoredAs format)` writes the old format (`Integer`, `MemberName`, `CamelCase`, `LegacySnakeCase`, `FlagsText`), reads every spelling tolerantly, adds **no** check constraint and keeps the current column type. It affects the database only; JSON, OpenAPI and binding still use the wire name. Server-side filters keep matching existing rows because writes and query parameters use the same old format.
+`HasLegacyEnumStorage(EnumStoredAs format)` writes the old format (`Integer`, `MemberName`, `CamelCase`, `LegacySnakeCase`, `FlagsText`), reads every spelling tolerantly, adds no check constraint and keeps the current column type. It affects the database only; JSON, OpenAPI and binding still use the wire name. Server-side filters keep matching existing rows because writes and query parameters use the same old format.
 
-Properties that already have a value converter or provider type configured by the user (`HasConversion<string>()`, `HasConversion<int>()`, a custom converter) are **skipped** by the convention: no converter replacement, no check constraint, no column change. Upgrading to 5.0 therefore never changes such a column on its own; the team opts in by removing the manual conversion (or replacing it with `HasLegacyEnumStorage`) when it is ready.
+Properties that already have a value converter or provider type configured by the user (`HasConversion<string>()`, `HasConversion<int>()`, a custom converter) are skipped by the convention: no converter replacement, no check constraint, no column change. Upgrading to 5.0 therefore never changes such a column on its own; the team opts in by removing the manual conversion (or replacing it with `HasLegacyEnumStorage`) when it is ready.
 
 `ConfigureEnumConventions` no longer scans assemblies. It adds one model convention (`IModelFinalizingConvention`; a finalizing pass sees user `HasConversion` calls, table names and JSON mappings, which a property-added pass would not) that recognizes enum properties through `EnumConventions.CanHandle` and generated metadata, so only enums that are actually mapped are configured. It handles enum, nullable enum and enum collection properties (primitive collections, element converter), including properties of `ToJson()` owned types.
 
@@ -594,7 +599,7 @@ The 4.x overloads (`params Assembly[]` and `Action<EnumConventionOptions>, param
 - Integer storage: `EnumIntegerConverter<TEnum, TNumber>` (`TNumber` is the underlying type; write: underlying value after the defined check; read: defined check, fallback, exception).
 - Flags with `String` storage: PostgreSQL uses a `string[]` provider type (`text[]`) with an enum value comparer on the property; other providers store a JSON array of wire names as text.
 - Writes of undefined values fail in the converter with `EnumValueException` (path = column), before the database reports a constraint violation. `SaveChanges` surfaces it as the inner exception of EF's `DbUpdateException`.
-- Converters capture the model's `EnumConventions` and metadata as instances, so compiled models (`dbcontext optimize`) are not supported for these properties in 5.0.
+- Converters capture the model's `EnumConventions` and metadata as instances, so compiled models (`dbcontext optimize`) are not supported for these properties.
 - JSON columns mapped by EF Core (`ToJson()` on owned types, EF 8+, and on complex types, EF 10+) use their own writer, not STJ converters. The convention sets a `JsonValueReaderWriter` (`EnumJsonValueReaderWriter<TEnum>`) on enum properties inside JSON-mapped types. Reads are tolerant (names and the integers EF wrote before). Writes follow the property's storage: `Integer` storage writes numbers, `String` writes wire names, and `HasLegacyEnumStorage` keeps the old format. Because EF Core writes enums in JSON columns as numbers by default, an existing JSON column must be configured with `HasLegacyEnumStorage(EnumStoredAs.Integer)` until `ConvertEnumJsonPath` has run; otherwise new rows get strings next to legacy integers and JSON predicates miss rows. The convention sets the instance, not the type (`HasJsonValueReaderWriterType` would create it through reflection). EF Core 9 puts a convention-level `JsonWarningEnumReaderWriter` type on enum properties in JSON, which wins over the type mapping's instance; the convention clears it when the type was set by convention (a user-set type is kept).
 - Properties mapped to `jsonb` by a user value converter through `JsonSerializer` use the user's options; the guide shows `AddEnumConventions` there.
 - `UseFallback` on reads: an entity loaded with a fallback member and saved again writes the fallback member, overwriting the unknown stored value. The XML doc and the guide state it; teams that cannot accept it set `UnknownValue = Reject` for the model.
@@ -616,8 +621,6 @@ An `IModelFinalizingConvention` adds one constraint per enum column, named `ck_{
 | JSON column, JSON text collections | no constraint (provider specific JSON validation is out of scope); the converter guards writes |
 
 SQL Server uses `[status] IN (N'pending', ...)` and `([permissions] & ~7) = 0`; SQLite and MySQL use the same `IN` form. Flags with `uint`/`ulong` underlying types get no mask constraint (the convention does not emit a mask expression for unsigned types). Table splitting and TPH: the constraint is added once per table and column; when properties sharing a TPH column would produce different SQL (rare), no constraint is added for that column and nothing is logged.
-
-Properties with a user value converter or with `HasLegacyEnumStorage` get no constraint (section 11.1).
 
 Adding, removing or renaming a member changes the constraint SQL, so `dotnet ef migrations add` emits `DropCheckConstraint` + `AddCheckConstraint`. Nothing else changes in that migration (`EnumStorageMigrationTests`, which also pins the empty first migration under `existingStorage: EnumStoredAs.Integer`).
 
@@ -650,7 +653,7 @@ The helpers live in `CSharpEssentials.EntityFrameworkCore` (`EnumMigrationBuilde
 
 ### 12.1 Operation order
 
-When storage changes (removing `HasLegacyEnumStorage` or a manual `HasConversion`), `dotnet ef migrations add` generates its own `AlterColumn` (for integer to text an implicit cast that produces `'1'`) and an `AddCheckConstraint`, in an order EF chooses. The helper **replaces** EF's `AlterColumn` for that column, and the migration must run in this order:
+When storage changes (removing `HasLegacyEnumStorage` or a manual `HasConversion`), `dotnet ef migrations add` generates its own `AlterColumn` (for integer to text an implicit cast that produces `'1'`) and an `AddCheckConstraint`, in an order EF chooses. The helper replaces EF's `AlterColumn` for that column, and the migration must run in this order:
 
 1. `DropCheckConstraint` (when one exists).
 2. `ConvertEnumColumn` (type change and data conversion in one step).
@@ -662,8 +665,8 @@ The guide shows the edit: delete the generated `AlterColumn` for the column, ins
 
 No conversion ever writes `NULL` or loses a value. Every CASE has an `ELSE`:
 
-- **Text targets** keep the original value in the `ELSE`. A value that matches no spelling stays as it is and fails the constraint added in step 3, which is intended: `EnumDataAudit` lists such values before the migration runs.
-- **Integer targets** keep integer text as that number (undefined numbers survive, as they do in integer columns) and abort the statement for any other text with an error that names the column, the enum and the value: `CSharpEssentials: cannot convert orders.status to OrderStatus, unknown value: bogus`. PostgreSQL raises it through `CAST('<message>' || value AS integer)`, SQLite through `json_extract('{}', '<message>' || value)`; both roll back the migration transaction.
+- Text targets keep the original value in the `ELSE`. A value that matches no spelling stays as it is and fails the constraint added in step 3, which is intended: `EnumDataAudit` lists such values before the migration runs.
+- Integer targets keep integer text as that number (undefined numbers survive, as they do in integer columns) and abort the statement for any other text with an error that names the column, the enum and the value: `CSharpEssentials: cannot convert orders.status to OrderStatus, unknown value: bogus`. PostgreSQL raises it through `CAST('<message>' || value AS integer)`, SQLite through `json_extract('{}', '<message>' || value)`; both roll back the migration transaction.
 
 Spellings are matched on `lower(trim(value))` in this priority (first wins when two members share one): wire name, member name, aliases, camelCase, legacy snake case, numeric text. SQL `trim` removes spaces only: a value or flags token with a leading or trailing tab, CR or LF is an unknown value, so the audit lists it and the conversion stops, unlike the .NET tolerant read, whose `string.Trim()` removes any whitespace around a flags token.
 
@@ -674,21 +677,21 @@ Spellings are matched on `lower(trim(value))` in this priority (first wins when 
 | `Text` → `Integer` | `ALTER COLUMN status TYPE integer USING CASE lower(trim(status)) WHEN 'pending' THEN 0 ... ELSE <integer text or loud failure> END` |
 | `FlagsText` → flags `Integer` | PostgreSQL rejects subqueries in `USING`, so through a temporary column: `ADD COLUMN "cse_tmp_<hash>" integer`; `UPDATE ... SET "cse_tmp_<hash>" = (SELECT coalesce(bit_or(<token CASE>), 0) FROM unnest(string_to_array(permissions, ',')) AS cse_token(value)) WHERE permissions IS NOT NULL`; `ALTER COLUMN permissions TYPE integer USING "cse_tmp_<hash>"`; `DROP COLUMN "cse_tmp_<hash>"` (`<hash>`: 8 hex digits of an FNV-1a hash of the column name, so the name stays within the 63 byte identifier limit for any column). The column itself is kept, so `NOT NULL`, defaults that cast, and indexes survive. `bit_or` handles repeated and overlapping tokens; an empty token is `0`; an unknown token fails loudly. |
 | flags `Integer` → `FlagsText` | `CASE WHEN p = 0 THEN 'None' WHEN (p & ~7) <> 0 THEN CAST(p AS text) ELSE substr(CASE WHEN (p & 1) <> 0 THEN ', Read' ELSE '' END \|\| ..., 3) END`: single-bit member names in declaration order; a value with undefined bits is kept as its number |
-| jsonb path | `UPDATE ... SET payload = jsonb_set(payload, ARRAY['status']::text[], <value>) WHERE payload #> '{status}' IS NOT NULL AND <value> IS NOT NULL AND payload #> '{status}' IS DISTINCT FROM <value>`, where `<value>` is `to_jsonb(<CASE payload #>> '{status}' ... END>)` without an `ELSE`. The `IS NOT NULL` guard keeps `jsonb_set` from receiving `NULL` (which would null the whole document), so unknown values stay untouched. Integers and strings in the document are both matched through `#>>`. Array paths (`items[*].status`) and flags are not supported in 5.0. |
+| jsonb path | `UPDATE ... SET payload = jsonb_set(payload, ARRAY['status']::text[], <value>) WHERE payload #> '{status}' IS NOT NULL AND <value> IS NOT NULL AND payload #> '{status}' IS DISTINCT FROM <value>`, where `<value>` is `to_jsonb(<CASE payload #>> '{status}' ... END>)` without an `ELSE`. The `IS NOT NULL` guard keeps `jsonb_set` from receiving `NULL` (which would null the whole document), so unknown values stay untouched. Integers and strings in the document are both matched through `#>>`. Array paths (`items[*].status`) and flags are not supported. |
 
 - The CASE expressions are generated from metadata when the migration is authored and written into the migration as literals, so the migration does not change when the enum changes later.
 - `Down()`: the mirrored call (`from: EnumStoredAs.Text, to: EnumStorage.Integer` or `to: EnumStoredAs.MemberName`; flags `from: EnumStoredAs.Integer, to: EnumStoredAs.FlagsText`). Text spellings cannot be restored byte for byte (PascalCase vs camelCase is lost), so `Down()` restores the format, not the original bytes; the XML doc states it.
 - Idempotent: running a text conversion or a jsonb update twice changes nothing, because already canonical values are skipped; type changes are guarded by the migration history like any migration.
-- **SQLite** cannot change a column type. The helper runs `UPDATE ... SET status = <same CASE>` and adds an `AlterColumnOperation` so that EF rebuilds the table with the target model's column and constraints; the rebuild's `INSERT ... SELECT` applies the new column affinity and checks every row against the new constraint. EF runs SQLite table rebuilds after the SQL operations of a migration, so the old constraint is still in place during the update; the helper wraps the update in `PRAGMA ignore_check_constraints = ON/OFF`. The pragma is per connection, survives a rollback and SQL has no `try/finally`, so a failed update would hand a pooled connection back with constraints ignored. The helper therefore first evaluates the conversion of every row in a `SELECT count(...)` while the constraints still apply: an unknown value aborts the migration before the pragma is turned on, and the update between `ON` and `OFF` only writes values that already converted. Flags text is split into tokens with a recursive `instr`/`substr` CTE (any text, control characters included, without JSON escaping) and folded with a second recursive CTE, since SQLite has no bitwise aggregate.
+- SQLite cannot change a column type. The helper runs `UPDATE ... SET status = <same CASE>` and adds an `AlterColumnOperation` so that EF rebuilds the table with the target model's column and constraints; the rebuild's `INSERT ... SELECT` applies the new column affinity and checks every row against the new constraint. EF runs SQLite table rebuilds after the SQL operations of a migration, so the old constraint is still in place during the update; the helper wraps the update in `PRAGMA ignore_check_constraints = ON/OFF`. The pragma is per connection, survives a rollback and SQL has no `try/finally`, so a failed update would hand a pooled connection back with constraints ignored. The helper therefore first evaluates the conversion of every row in a `SELECT count(...)` while the constraints still apply: an unknown value aborts the migration before the pragma is turned on, and the update between `ON` and `OFF` only writes values that already converted. Flags text is split into tokens with a recursive `instr`/`substr` CTE (any text, control characters included, without JSON escaping) and folded with a second recursive CTE, since SQLite has no bitwise aggregate.
 - On PostgreSQL a column default that cannot be cast to the new type must be dropped before the conversion and recreated after it (`AlterColumn` with `oldDefaultValueSql`), as with any type change.
 - Flags `String` storage (text arrays) and wire name flags text are not converted in 5.0; ulong flags are not supported on PostgreSQL (stored as `numeric`, which has no bitwise operators).
 
 ### 12.3 Rollout order
 
-1. **Deploy 5.0 without changing storage.** Columns with a manual `HasConversion` are skipped (section 11.1); plain integer columns are covered by `existingStorage: EnumStoredAs.Integer`. Columns managed by 4.x `ConfigureEnumConventions` already hold 4.x wire names; the first migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint, so run `EnumDataAudit` before it. JSON columns get `HasLegacyEnumStorage(EnumStoredAs.Integer)`. Reads are tolerant from now on; writes are unchanged, so queries keep matching rows and older instances can still read new rows.
-2. **Audit** every column that will be converted: run `EnumDataAudit` in production, fix or map unknown values.
-   Acceptance criterion: `dotnet ef migrations add Upgrade5` right after the upgrade produces an **empty** migration (no `AlterColumn`, no `AddCheckConstraint`) for a model that only used manual conversions and plain integer columns. #64 pins it with a test; consumers use the same check.
-3. **Convert**: replace the manual conversion with nothing (or remove `HasLegacyEnumStorage`), add the migration, apply section 12.1, deploy. Pre-5.0 instances must be drained before this step, because they cannot read the new format.
+1. Deploy 5.0 without changing storage. Columns with a manual `HasConversion` are skipped (section 11.1); plain integer columns are covered by `existingStorage: EnumStoredAs.Integer`. Columns managed by 4.x `ConfigureEnumConventions` already hold 4.x wire names; the first migration alters `varchar(n)` to `text` on PostgreSQL and adds the constraint, so run `EnumDataAudit` before it. JSON columns get `HasLegacyEnumStorage(EnumStoredAs.Integer)`. Reads are tolerant from now on; writes are unchanged, so queries keep matching rows and older instances can still read new rows.
+2. Audit every column that will be converted: run `EnumDataAudit` in production, fix or map unknown values.
+   Acceptance criterion: `dotnet ef migrations add Upgrade5` right after the upgrade produces an empty migration (no `AlterColumn`, no `AddCheckConstraint`) for a model that only used manual conversions and plain integer columns. #64 pins it with a test; consumers use the same check.
+3. Convert: replace the manual conversion with nothing (or remove `HasLegacyEnumStorage`), add the migration, apply section 12.1, deploy. Pre-5.0 instances must be drained before this step, because they cannot read the new format.
 
 ## 13. Outgoing HTTP clients (`CSharpEssentials.Http`, #66)
 
@@ -817,7 +820,7 @@ These recipes are text. The repository references no Refit, RestEase or Flurl pa
 
 Generated clients (Kiota, NSwag) need nothing: they send the wire names from the OpenAPI `enum` list, and their response readers accept names.
 
-Rollout rule for HTTP, the same as for the bus: **every consumer before any producer**. A server switches its output from `Number` to `String` only after all of its clients run 5.0 (tolerant reads) or another reader that accepts names. A pre-5.0 Refit client fails on `pending_approval`, because the Refit default converter knows only its own naming. Mobile apps that cannot be updated keep the `Number` group or the header selector (section 9.4) for as long as they are supported.
+Rollout rule for HTTP, the same as for the bus: every consumer before any producer. A server switches its output from `Number` to `String` only after all of its clients run 5.0 (tolerant reads) or another reader that accepts names. A pre-5.0 Refit client fails on `pending_approval`, because the Refit default converter knows only its own naming. Mobile apps that cannot be updated keep the `Number` group or the header selector (section 9.4) for as long as they are supported.
 
 ## 14. Message bus
 
@@ -829,7 +832,7 @@ cfg.ConfigureJsonSerializerOptions(o => o.AddEnumConventions(conventions, EnumRe
 ```
 
 - Consumers use `Data` mode: integers from Newtonsoft producers and names from STJ producers are both read; unknown values map to the fallback member.
-- Producers write `Number` until every consumer runs 5.0, then switch to `String`. The guide gives the order: consumers first, producers second.
+- Producers write `Number` until every consumer runs 5.0, then switch to `String` (consumers first, producers second, as in section 13).
 
 ## 15. Validation and diagnostics (#67)
 
@@ -881,7 +884,7 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 - `[StringEnum]` path: no reflection, no `MakeGenericType`, no `Activator`. The JSON factory, EF converters and model binders obtain typed instances through generated `IEnumInfo` factory methods.
 - Reflection fallback (`EnumMetadata.GetOrCreateWithReflection`) is annotated and off by default. It is reached only through an explicit opt-in that carries the same annotations; the default path never touches it. `CSharpEssentials.Enums` and `CSharpEssentials.Json` set `IsAotCompatible` so the trim analyzer enforces this.
 - A `[StringEnum]` enum without metadata fails loudly (CSE0015, converter creation throws); it never silently falls back to integers.
-- Verification in 5.0: `IsAotCompatible` turns on the trim, AOT and single-file analyzers for `CSharpEssentials.Enums` and `CSharpEssentials.Json` on net8.0+, and `TreatWarningsAsErrors` makes any unannotated reflection a build error. There is no `PublishAot` sample for enums yet; a console sample that publishes with `PublishAot=true` and exercises every matrix row is a follow-up. User-facing guidance is in the [Enums Readme](../../CSharpEssentials.Enums/Readme.MD#aot-and-trimming).
+- Verification: `IsAotCompatible` turns on the trim, AOT and single-file analyzers for `CSharpEssentials.Enums` and `CSharpEssentials.Json` on net8.0+, and `TreatWarningsAsErrors` makes any unannotated reflection a build error. `benchmarks/enums-aot/CseAot` publishes with `PublishAot=true` and 0 IL warnings and runs (format, parse, enumerate; see the [Enums BENCHMARKS](../../CSharpEssentials.Enums/BENCHMARKS.md)). A sample that exercises every matrix row under AOT is not written. User-facing guidance is in the [Enums Readme](../../CSharpEssentials.Enums/Readme.MD#aot-and-trimming).
 
 ## 18. Testing strategy
 
@@ -897,24 +900,9 @@ Signals that a flags enum should be a collection: the API filters "contains any 
 | HTTP | TestServer peer: String client ↔ Number server and Number client ↔ tolerant server (`CSharpEssentials.Http`); `EnumValueFormatter` non-generic overloads for every underlying type, nullable, flags, collections |
 | Cross-layer | one table-driven golden test (#68) executed against JSON, binding, EF, `CSharpEssentials.Http` and both OpenAPI outputs |
 
-## 19. Migration guide outline (`docs/migration/v4-to-v5.md`, #68)
+## 19. Migration guide (`docs/migration/v4-to-v5.md`, #68)
 
-1. Package changes: add `CSharpEssentials.AspNetCore.Swashbuckle` (or move to `CSharpEssentials.AspNetCore.OpenApi`).
-2. Registration: `AddEnumBinding` → `AddEnumConventions` (`UseEnumBinding` stays); `EnumConventionOptions` → `EnumConventions`; `ConditionalStringEnumConverter` → `AddEnumConventions`.
-3. Naming: custom `JsonNamingPolicy` → MSBuild property, `[StringEnum(Naming)]` or per-member names.
-4. Generated helpers: `ToSnakeCase()` → `ToWireName()`, `TryParse` → `TryParseWire`; output differences (`HTTPStatus`).
-5. JSON: undefined numbers are rejected; flags are arrays; add `[EnumFallback]` where newer producers exist.
-6. Database:
-   - Columns with a manual `HasConversion` are untouched until you remove it.
-   - Integer storage → string storage (audit, convert, constraint, operation order of 12.1).
-   - PascalCase/camelCase text → snake_case (audit, `Text` conversion, constraint).
-   - 4.x `varchar(n)` → `text` on PostgreSQL (automatic ALTER in the next migration; review it).
-   - Flags comma text → integer bitmask.
-   - jsonb documents with integers: no change needed (tolerant read); optional `ConvertEnumJsonPath`.
-7. Legacy clients: `WithEnumWireFormat(EnumWireFormat.Number)` per group, or the header selector for shared routes.
-8. Outgoing clients: `AddEnumConventions` on the client options plus the recipe of section 13.1 (Refit, RestEase, Flurl).
-9. Message bus: consumers first, producers second.
-10. `EnumData<T>`-style holders → typed parameters.
+The guide walks the 4.x user through the decisions above in this order: package changes (section 10.2), registration (`AddEnumBinding` → `AddEnumConventions`, `EnumConventionOptions` → `EnumConventions`, `ConditionalStringEnumConverter` → `AddEnumConventions`), naming (section 4.1), generated helpers (section 6.3), JSON behavior changes (undefined numbers rejected, flags as arrays, `[EnumFallback]` where newer producers exist), database conversions (sections 11 and 12, including the PostgreSQL `varchar(n)` → `text` ALTER in the first migration), legacy clients (section 9.4), outgoing clients (section 13.1), message bus order (section 14) and `EnumData<T>`-style holders (section 9.5).
 
 ## 20. Example rollout (existing production app)
 
@@ -936,17 +924,4 @@ Open item for such an app: confirm whether its jsonb enums are EF `ToJson()` own
 | Converter precedence over `JsonSerializerContext` metadata (including `UseStringEnumConverter`) on net9.0 to net11.0 | #61 | pinned by a test; if a TFM differs, `AddEnumConventions` also sets the context's `TypeInfoResolver` modifier |
 | EF Core `JsonValueReaderWriter` on enum properties of `ToJson()` owned (EF 8+) and complex (EF 10+) types | #64 | covered by SQLite and PostgreSQL tests on EF 9 (owned types); EF 9's convention-level `JsonWarningEnumReaderWriter` is cleared (section 11.3) |
 
-Deferred past 5.0 and not implemented as of 6.5: `EnumSchemaStyle.StringOrNumber`, a Scalar helper, a migration checklist test helper, a generated-client round trip test, JSON array paths in `ConvertEnumJsonPath`, `FlagsText` conversion for non-PostgreSQL providers.
-
-## 22. Issue map
-
-| Section | Issue |
-|---|---|
-| 3, 4, 5, 6, 7, 8 | #61 |
-| 8, 9 | #62 |
-| 10 | #63 |
-| 11 | #64 |
-| 12 | #65 |
-| 13, 14 | #66 |
-| 15 | #67 |
-| 16, 17, 18, 19, 20 | #68 |
+Deferred past 5.0 and not implemented: `EnumSchemaStyle.StringOrNumber` (a `oneOf` string/integer request schema), a Scalar helper, a migration checklist test helper, a generated-client round trip test, JSON array paths and flags in `ConvertEnumJsonPath`.

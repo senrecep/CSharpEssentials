@@ -1,8 +1,8 @@
 # CSharpEssentials.EntityFrameworkCore.Generators: design-time benchmarks
 
-This page describes how the CSE3001 analyzer is measured. Full default-job results for net8.0, net9.0, net10.0 and net11.0 are in [Results](#results). On the cleanest pair, one edited file in a 1,000-file project, the no-op analyzer takes 0.89 to 0.91 of the CSE3001 time on every TFM; see [What the rule costs over the floor](#what-the-rule-costs-over-the-floor).
+Design-time cost of the CSE3001 analyzer on net8.0, net9.0, net10.0 and net11.0. On the cleanest pair, one edited file in a 1,000-file project, the no-op analyzer takes 0.89 to 0.91 of the CSE3001 time on every TFM; see [What the rule costs over the floor](#what-the-rule-costs-over-the-floor).
 
-Despite the project name, `CSharpEssentials.EntityFrameworkCore.Generators` holds no source generator. It holds one diagnostic analyzer, `IgnoreQueryFiltersAnalyzer` (CSE3001), which reports the parameterless EF Core `IgnoreQueryFilters()` when the named overload exists. It cannot run under `CSharpGeneratorDriver`, so it is measured with `CompilationWithAnalyzers` instead. The quality audit had left this package out as design-time only. The suite measures it anyway, so its IDE cost is known.
+Despite the project name, `CSharpEssentials.EntityFrameworkCore.Generators` holds no source generator. It holds one diagnostic analyzer, `IgnoreQueryFiltersAnalyzer` (CSE3001), which reports the parameterless EF Core `IgnoreQueryFilters()` when the named overload exists. It cannot run under `CSharpGeneratorDriver`, so it is measured with `CompilationWithAnalyzers` instead.
 
 The analyzer runs inside the compiler and the IDE, not in the shipped app. Runtime cost of the EF Core helpers is covered in [the package BENCHMARKS.md](../CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md).
 
@@ -38,7 +38,7 @@ There is no cold and incremental output check, because analyzers keep no increme
 
 ## Methodology
 
-- Host Roslyn. `Microsoft.CodeAnalysis.CSharp` 5.9.0, the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). It is shared with the generator classes in the suite.
+- Host Roslyn. `Microsoft.CodeAnalysis.CSharp` 5.9.0, pinned for this benchmark project and shared with the generator classes in the suite.
 - Fresh state per call. Each call builds a fresh compilation (Compilation rows) or a fresh edited compilation (Document rows) and a fresh `CompilationWithAnalyzers`. Results are cached per instance, so reusing either would measure a cache hit. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cost.
 - Single-threaded. `concurrentAnalysis: false` for lower noise. The IDE runs analyzers concurrently.
 - No incremental API. Analyzers have no incremental pipeline. The Document row is the closest IDE equivalent of a keystroke: the semantic diagnostics of one edited file.
@@ -69,7 +69,7 @@ There is no cold and incremental output check, because analyzers keep no increme
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on one Linux x64 machine with a 6-core, 12-thread desktop CPU (AVX2). The exact CPU, SDK and runtime builds are in the header of each report.
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. The exact SDK and runtime builds are in the header of each report.
 - TFMs: net8.0 (.NET 8.0.30), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
 - The 1-minute load average stayed between 1.77 and 6.52 during the generators suite and the two reruns of this class on every TFM. Nine rows still have a CV above 5% after the reruns and are marked `noisy` in the tables. Every TFM has at least one noisy row at `Compilation`, `Files=200`.
 - Reports: [`benchmarks/results/generators/{tfm}/results/`](../benchmarks/results/generators/), file `CSharpEssentials.Generators.Benchmarks.QueryFilterAnalyzerComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
@@ -104,7 +104,7 @@ How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)`
 
 ### What the rule costs over the floor
 
-There is no competitor, so there is no "Where CSE loses" list. In time every CSE row is at or above the no-op floor. In allocation every CSE row is above it except Compilation at `Files=1000` on net9.0, where the no-op row allocates 207850.09 KB (1.01) against 206207.87 KB for CSE.
+There is no competitor. In time every CSE row is at or above the no-op floor. In allocation every CSE row is above it except Compilation at `Files=1000` on net9.0, where the no-op row allocates 207850.09 KB (1.01) against 206207.87 KB for CSE.
 
 - Document, `Files=1000`, the closest equivalent of a keystroke. No row is noisy. CSE takes 9.881 ms against 8.994 ms on net8.0, 9.405 ms against 8.414 ms on net9.0, 9.176 ms against 8.350 ms on net10.0 and 9.218 ms against 8.331 ms on net11.0 (no-op ratio 0.89 to 0.91). It allocates 2738 KB, 2729.68 KB, 2727.68 KB and 2727.06 KB against 2663.82 KB, 2656.42 KB, 2653.01 KB and 2654.48 KB (ratio 0.97).
 - Document, `Files=200`: the no-op row takes 0.76 to 0.83 of the CSE time. The clean pairs are 3.616 ms against 2.990 ms on net8.0 and 3.404 ms against 2.715 ms on net9.0. The net10.0 and net11.0 CSE rows are noisy.

@@ -1,22 +1,20 @@
 # CSharpEssentials.Validation example
 
-This console application demonstrates model validation with `CSharpEssentials.Validation` and its `Result` integration.
+Console application for `CSharpEssentials.Validation` and its `Result` integration.
 
-## Features demonstrated
-
-| Feature | Description |
-|---------|-------------|
-| **String validators** | `NotEmpty`, length, `EmailAddress`, `Matches`, `StartsWith`, `EndsWith`, `NotNull` |
-| **Comparable validators** | `GreaterThan`, `LessThan`, `LessThanOrEqualTo`, `InclusiveBetween`, `ExclusiveBetween`, `Equal`, `NotEqual` for `int`, `decimal`, `DateTime`, string `Equal`/`NotEqual` |
-| **Nullable structs** | Rules on `int?` and `DateTime?` are skipped when the value is `null` |
-| **Collections** | Rules on `List<T>?`, `T[]?` and `IEnumerable<T>?` |
-| **CascadeMode** | `CascadeMode.Continue` collects every error of a field |
-| **Must / MustAsync** | Custom predicates |
-| **Nested objects** | `SetValidatorAsync` on a nested property; a `null` nested object is skipped |
-| **ForEach / ForEachAsync** | Validates each item of a collection |
-| **Conditional rules** | Plain C# `if`/`switch` inside the validator |
-| **Include** | Composes one validator from others |
-| **ValidateWith** | Validates inside a `Result<T>` chain |
+| Feature | What the sample does |
+|---------|----------------------|
+| String validators | `NotEmpty`, `MinLength`, `MaxLength`, `EmailAddress`, `Matches`, `StartsWith`, `EndsWith`, `NotNull` |
+| Comparable validators | `GreaterThan`, `LessThan`, `LessThanOrEqualTo`, `InclusiveBetween`, `ExclusiveBetween`, `Equal`, `NotEqual` on `int` and `decimal`, and string `Equal` / `NotEqual` |
+| Nullable structs | Rules on `int?` are skipped when the value is `null` |
+| Collections | Rules on `List<T>?` and `T[]?` |
+| CascadeMode | `CascadeMode.Continue` collects every error of a field |
+| Must / MustAsync | Custom predicates |
+| Nested objects | `SetValidatorAsync` on a nested property; a `null` nested object is skipped |
+| ForEach / ForEachAsync | Validates each item of a collection |
+| Conditional rules | A plain C# `if` inside the validator |
+| Include | Composes one validator from others |
+| ValidateWith | Validates inside a `Result<T>` chain |
 
 ## Running
 

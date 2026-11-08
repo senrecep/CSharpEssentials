@@ -2,21 +2,21 @@
 paths: [".git/**", "**/*.md", "**/*.MD", "CONTRIBUTING.md"]
 ---
 
-## Git Commit Conventions
+## Git commit conventions
 
-Use Conventional Commits format: `type(scope): description`
+Use the Conventional Commits format: `type(scope): description`
 
-Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`
+Allowed types: `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `chore`, `ci`, `build`, `revert`. release-please reads them: `feat` gives a minor bump, `fix` and `perf` a patch, and `feat!`, `fix!` or a `BREAKING CHANGE:` footer a major.
 
-Scope should match the affected package or area: `core`, `results`, `errors`, `rules`, `efcore`, `json`, `http`, `maybe`, `any`, `these`, `entity`, `aspnetcore`, `openapi`, `swashbuckle`, `endpoints`, `di`, `mediator`, `validation`, `resilience`, `time`, `enums`, `clone`, `gcpsecretmanager`, `idempotency`, `logging`, `examples`, `deps`
+The scope matches the affected package or area: `core`, `results`, `errors`, `rules`, `efcore`, `json`, `http`, `maybe`, `any`, `these`, `entity`, `aspnetcore`, `openapi`, `swashbuckle`, `endpoints`, `di`, `mediator`, `validation`, `resilience`, `time`, `enums`, `clone`, `gcpsecretmanager`, `idempotency`, `logging`, `bench`, `aot`, `blog`, `examples`, `deps`.
 
 Examples:
 - `feat(results): add MapError overload for async chains`
 - `fix(efcore): fix AuditInterceptor not firing on SaveChangesAsync`
-- `refactor(any): update Any<T1,T2> implicit operators for netstandard2.0`
+- `refactor(any): update Any<T1,T2> implicit operators for netstandard2.1`
 - `test(core): add edge cases for StringExtensions.ToSnakeCase`
 - `chore(deps): bump SonarAnalyzer.CSharp to 10.x`
 
 Rules:
 - Use lowercase after the colon.
-- Description must use imperative mood ("add" not "added").
+- Write the description in the imperative mood ("add", not "added").

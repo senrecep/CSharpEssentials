@@ -5,15 +5,11 @@ description: Use when entities need deep-copy semantics. Implement ICloneable<T>
 
 # CSharpEssentials.Clone
 
-Typed deep-copy contract for domain objects. `ICloneable<T>` is covariant and type-safe, unlike `System.ICloneable` which returns `object`.
-
-## Installation
+Typed copy contract for domain objects. `ICloneable<out T>.Clone()` returns `T`, unlike `System.ICloneable`, which returns `object`. The library only calls `Clone()`; your implementation decides how deep the copy goes.
 
 ```bash
 dotnet add package CSharpEssentials.Clone
 ```
-
-## Namespace
 
 ```csharp
 using CSharpEssentials.Clone;
@@ -47,9 +43,7 @@ public class Tag : ICloneable<Tag>
 
 ---
 
-## Clone Collections
-
-Extension methods call `Clone()` on every element:
+## Clone collections
 
 ```csharp
 List<Product> products = [new() { Id = 1, Name = "Pen" }];
@@ -57,13 +51,14 @@ List<Product> products = [new() { Id = 1, Name = "Pen" }];
 // IEnumerable<T> where T : ICloneable<T>: lazily clones each element
 IEnumerable<Product> copies = products.Clone();
 
-// IQueryable<T> where T : ICloneable<T>: clones in memory, not translated to SQL
+// IQueryable<T> where T : ICloneable<T>: clones in memory, not translated to SQL;
+// marked [RequiresUnreferencedCode]/[RequiresDynamicCode], so use the IEnumerable<T> overload under AOT
 IQueryable<Product> projected = products.AsQueryable().Clone();
 ```
 
 ---
 
-## Typical Use Case
+## Typical use
 
 Snapshot EF Core results before applying in-memory transformations, without mutating tracked entities:
 
@@ -77,10 +72,9 @@ List<Product> working = snapshot.Clone().ToList();  // independent deep copies; 
 
 ---
 
-## Best Practices
+## Guidance
 
-- Always deep-copy nested collections inside `Clone()`; a shallow copy defeats the purpose
-- `ICloneable<T>` is covariant (`out T`): a `Product : ICloneable<Product>` is also an `ICloneable<object>`
-- `Clone()` on a sequence is lazy; call `ToList()` to materialize the copies once
-- Consider using `record` types with `with` expressions for immutable value objects instead of `ICloneable<T>`
-- `ICloneable<T>` is most valuable for mutable domain objects that are tracked by EF Core
+- Deep-copy nested collections inside `Clone()`; the extensions do not.
+- `ICloneable<T>` is covariant (`out T`): a `Product : ICloneable<Product>` is also an `ICloneable<object>`.
+- `Clone()` on a sequence is lazy; call `ToList()` to materialize the copies once. There is no array overload: `Clone()` on a `T[]` variable binds to `Array.Clone()` (shallow, returns `object`).
+- For immutable value objects, `record` types with `with` expressions are simpler than `ICloneable<T>`.

@@ -1,6 +1,6 @@
-# CSharpEssentials.Json: Performance benchmarks
+# CSharpEssentials.Json: performance benchmarks
 
-This page compares CSharpEssentials.Json (CSE) with System.Text.Json (STJ) built-in features and with Macross.Json.Extensions 3.0.0. It covers string enums, flags enums, polymorphic types and multi-format `DateTime` reads. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. The same project also holds the CSharpEssentials.Core classes, which are documented in [CSharpEssentials.Core/BENCHMARKS.md](../CSharpEssentials.Core/BENCHMARKS.md).
+CSharpEssentials.Json (CSE) compared with System.Text.Json (STJ) built-in features and with Macross.Json.Extensions 3.0.0. It covers string enums, flags enums, polymorphic types and multi-format `DateTime` reads. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. The same project also holds the CSharpEssentials.Core classes, which are documented in [CSharpEssentials.Core/BENCHMARKS.md](../CSharpEssentials.Core/BENCHMARKS.md).
 
 Short version: CSE is slower than STJ in every timed category except the invalid-input rows, and it is faster than Macross on enum writes. The numbers are in [Results](#results), and every row where CSE loses is listed in [Where CSE loses](#where-cse-loses).
 
@@ -55,11 +55,11 @@ On net8.0 CSE runs its netstandard2.1 build, because CSharpEssentials.Json has n
 
 The parity checks use inputs on which every row agrees. The libraries still differ in ways the numbers alone do not show. These were checked with a probe on net8 and net10 and are not timed.
 
-- **Member-name and case-variant reads.** CSE and STJ accept `"InProgress"` and `"inprogress"`. Macross throws on both, or returns the fallback value when one is configured.
-- **Undefined numbers.** STJ and Macross read `99` as `(OrderStatus)99`. CSE in Data mode returns `Unknown`, and in Input mode throws.
-- **InvalidThrow.** Every row ends in a `JsonException` (CSE throws its subclass `EnumValueJsonException`). The messages and the data each library builds differ, and the cost of the exception dominates the row.
-- **InvalidFallback.** STJ has no fallback member, so it has no row. The Macross fallback also catches member-name and case-variant reads, which CSE reads as the member itself.
-- **Flags wire format.** The rows do not do the same work. CSE writes a JSON array; STJ and Macross write a comma string:
+- Member-name and case-variant reads: CSE and STJ accept `"InProgress"` and `"inprogress"`. Macross throws on both, or returns the fallback value when one is configured.
+- Undefined numbers: STJ and Macross read `99` as `(OrderStatus)99`. CSE in Data mode returns `Unknown`, and in Input mode throws.
+- InvalidThrow: every row ends in a `JsonException` (CSE throws its subclass `EnumValueJsonException`). The messages and the data each library builds differ, and the cost of the exception dominates the row.
+- InvalidFallback: STJ has no fallback member, so it has no row. The Macross fallback also catches member-name and case-variant reads, which CSE reads as the member itself.
+- Flags wire format: the rows do not do the same work. CSE writes a JSON array; STJ and Macross write a comma string:
 
   | Library | Payload for `Read \| Write` |
   |---|---|
@@ -68,11 +68,11 @@ The parity checks use inputs on which every row agrees. The libraries still diff
   | Macross | `"read, write"` |
 
   Each row reads its own payload. The parity check compares the decoded value, never the text.
-- **Polymorphism.** CSE finds the derived types by scanning the loaded assemblies once per base type (a `Lazy` cache, warmed in setup) and uses the CLR full name as the discriminator. STJ needs the `[JsonDerivedType]` list. The CSE row adds `PolymorphicJsonConverterFactory` to plain Web options, not the Readme's `ConvertToJson()`/`DefaultOptions`, which also turns on IgnoreCycles, relaxed escaping and ignore-nulls. Both rows then share the same base options, and the number is the factory's cost alone. CSE is reflection-based and marked `RequiresUnreferencedCode`/`RequiresDynamicCode`; the STJ attributes also work with source generation.
-- **DateTime Iso.** CSE reads the ISO shapes of its leading formats straight from the UTF-8 bytes (`TryReadIso`) before it looks at the format list, so the Iso row does not walk the list.
-- **DateTime LateList.** CSE walks its fixed format list until one matches. `dd-MMM-yyyy` is entry 27 of 34. The fallback converter calls `DateTime.Parse`, which uses culture heuristics instead of a list.
-- **DateTime write.** Not covered: the formats differ (CSE writes `yyyy-MM-ddTHH:mm:ss.ffffffzzz`, STJ writes `O`).
-- **Enum dictionary keys.** Not covered in this phase. Macross 3.0 says it supports them, but no parity probe was run.
+- Polymorphism: CSE finds the derived types by scanning the loaded assemblies once per base type (a `Lazy` cache, warmed in setup) and uses the CLR full name as the discriminator. STJ needs the `[JsonDerivedType]` list. The CSE row adds `PolymorphicJsonConverterFactory` to plain Web options, not the Readme's `ConvertToJson()`/`DefaultOptions`, which also turns on IgnoreCycles, relaxed escaping and ignore-nulls. Both rows then share the same base options, and the number is the factory's cost alone. The factory is reflection-based and marked `RequiresUnreferencedCode`/`RequiresDynamicCode`; the STJ attributes also work with source generation. CSE's generated path (`[JsonTypeDiscriminator]` with `AddPolymorphism()`, built on STJ polymorphism, trim and AOT safe) is not benchmarked.
+- DateTime Iso: CSE reads the ISO shapes of its leading formats straight from the UTF-8 bytes (`TryReadIso`) before it looks at the format list, so the Iso row does not walk the list.
+- DateTime LateList: CSE walks its fixed format list until one matches. `dd-MMM-yyyy` is entry 27 of 34. The fallback converter calls `DateTime.Parse`, which uses culture heuristics instead of a list.
+- DateTime write: not covered, because the formats differ (CSE writes `yyyy-MM-ddTHH:mm:ss.ffffffzzz`, STJ writes `O`).
+- Enum dictionary keys: not covered. Macross 3.0 says it supports them, but no parity probe was run.
 
 ---
 
@@ -89,11 +89,11 @@ This table comes from reading source, docs and nuspecs, plus the probe noted abo
 | Strict mode rejects undefined numbers | Yes (Input mode) | No; `99` is accepted by default, and `allowIntegerValues: false` rejects every number, defined ones too | No; `99` is accepted by default, and `allowIntegerValues: false` rejects every number, defined ones too |
 | Flags wire format | JSON array | Comma string | Comma string |
 | AOT / source-gen friendly enum path | Yes (generated metadata) | `JsonStringEnumConverter<T>` yes, the non-generic converter no | No |
-| Polymorphism discriminator | Automatic, CLR full name | Declared with `[JsonDerivedType]` | None |
-| Polymorphism needs a derived-type list | No (assembly scan) | Yes | n/a |
-| Polymorphism under AOT | No (RUC/RDC) | Yes | n/a |
+| Polymorphism discriminator | `PolymorphicJsonConverterFactory`: automatic, CLR full name. `[JsonTypeDiscriminator]` + `AddPolymorphism()`: declared per derived type | Declared with `[JsonDerivedType]` | None |
+| Polymorphism needs a derived-type list | No: assembly scan (factory) or generated registrations (`AddPolymorphism`) | Yes | n/a |
+| Polymorphism under AOT | Factory no (RUC/RDC); `AddPolymorphism` yes (`benchmarks/json-aot`) | Yes | n/a |
 | Multi-format DateTime read | A fixed list of 34 formats plus Unix seconds | ISO 8601-1:2019 only | The `/Date()/` format only (not benchmarked) |
-| 7-digit ISO fraction (the `O` round-trip form) | **No, see Caveats** | Yes | n/a |
+| 7-digit ISO fraction (the `O` round-trip form) | No, see Caveats | Yes | n/a |
 | License | MIT | MIT | MIT |
 
 ---
@@ -209,20 +209,20 @@ LateList, `"14-Mar-2024"` (no built-in row, that converter rejects the input):
 
 Every row where CSE is slower or allocates more than a competitor:
 
-- **Enum Write against STJ, every TFM.** net8.0 368.09 ns against CSE 388.36 ns (0.95); net9.0 352.30 ns against 431.13 ns (0.82); net10.0 322.93 ns against 394.33 ns (0.82); net11.0 321.64 ns against 372.48 ns (0.86).
-- **Enum Read against STJ, every TFM** (ratio 0.86 to 0.97), and against Macross on net8.0 (1,149.52 ns against 1,196.57 ns, 0.96), net10.0 (910.53 ns against 1,143.03 ns, 0.80) and net11.0 (925.57 ns against 970.96 ns, 0.95). Macross is slower only on net9.0 (1.01).
-- **Enum ReadNumber against STJ, every TFM** (ratio 0.85 to 0.87), for example 51.49 ns against 60.20 ns on net10.0.
-- **Enum InvalidThrow against Macross, every TFM** (ratio 0.97 to 0.98), for example 4,181.40 ns against 4,306.06 ns on net11.0. CSE still allocates less.
-- **Enum InvalidFallback against Macross on net11.0:** 83.54 ns against 84.08 ns (0.99). CSE still allocates 0 B against 32 B.
-- **Flags, every row and every TFM.** FlagsWrite: STJ ratio 0.63 to 0.76, Macross 0.69 to 0.86, and CSE allocates 56 B against 48 B. FlagsRead: STJ ratio 0.54 to 0.65, Macross 0.58 to 0.64. The payloads differ, so this is not the same work.
-- **Polymorphic Serialize, every TFM:** STJ ratio 0.39 to 0.43, and CSE allocates more (624 B on net8.0 and net9.0, 640 B on net10.0 and net11.0, against 528 B). On net10.0: 763.5 ns against 296.2 ns. CSE serializes the value to a `JsonElement` and then copies every property behind its `$type`.
-- **Polymorphic Deserialize, every TFM:** STJ ratio 0.56 to 0.60, same allocation (232 B). On net10.0: 668.7 ns against 378.5 ns. CSE scans the object once with a copy of the reader to find `$type`, then deserializes the derived type.
-- **DateTime Iso against the built-in converter, every TFM** (ratio 0.83 to 0.87), and against the fallback converter on net9.0 to net11.0 (0.86 to 0.90). On net8.0 the fallback converter and CSE are level (107.70 ns against 108.01 ns, ratio 1.00).
-- **DateTime LateList, every TFM:** the `DateTime.Parse` fallback converter has ratio 0.22 to 0.26 at the same 48 B. On net11.0: 280.85 ns against 1,306.05 ns. CSE tries the list in order and `dd-MMM-yyyy` is entry 27.
+- Enum Write against STJ, every TFM: net8.0 368.09 ns against CSE 388.36 ns (0.95); net9.0 352.30 ns against 431.13 ns (0.82); net10.0 322.93 ns against 394.33 ns (0.82); net11.0 321.64 ns against 372.48 ns (0.86).
+- Enum Read against STJ, every TFM (ratio 0.86 to 0.97), and against Macross on net8.0 (1,149.52 ns against 1,196.57 ns, 0.96), net10.0 (910.53 ns against 1,143.03 ns, 0.80) and net11.0 (925.57 ns against 970.96 ns, 0.95). Macross is slower only on net9.0 (1.01).
+- Enum ReadNumber against STJ, every TFM (ratio 0.85 to 0.87), for example 51.49 ns against 60.20 ns on net10.0.
+- Enum InvalidThrow against Macross, every TFM (ratio 0.97 to 0.98), for example 4,181.40 ns against 4,306.06 ns on net11.0. CSE still allocates less.
+- Enum InvalidFallback against Macross on net11.0: 83.54 ns against 84.08 ns (0.99). CSE still allocates 0 B against 32 B.
+- Flags, every row and every TFM. FlagsWrite: STJ ratio 0.63 to 0.76, Macross 0.69 to 0.86, and CSE allocates 56 B against 48 B. FlagsRead: STJ ratio 0.54 to 0.65, Macross 0.58 to 0.64. The payloads differ, so this is not the same work.
+- Polymorphic Serialize, every TFM: STJ ratio 0.39 to 0.43, and CSE allocates more (624 B on net8.0 and net9.0, 640 B on net10.0 and net11.0, against 528 B). On net10.0: 763.5 ns against 296.2 ns. CSE serializes the value to a `JsonElement` and then copies every property behind its `$type`.
+- Polymorphic Deserialize, every TFM: STJ ratio 0.56 to 0.60, same allocation (232 B). On net10.0: 668.7 ns against 378.5 ns. CSE scans the object once with a copy of the reader to find `$type`, then deserializes the derived type.
+- DateTime Iso against the built-in converter, every TFM (ratio 0.83 to 0.87), and against the fallback converter on net9.0 to net11.0 (0.86 to 0.90). On net8.0 the fallback converter and CSE are level (107.70 ns against 108.01 ns, ratio 1.00).
+- DateTime LateList, every TFM: the `DateTime.Parse` fallback converter has ratio 0.22 to 0.26 at the same 48 B. On net11.0: 280.85 ns against 1,306.05 ns. CSE tries the list in order and `dd-MMM-yyyy` is entry 27.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on one Linux machine with 6 cores and 12 threads (x64, RyuJIT AVX2). The report headers have the exact CPU and OS.
+- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2). The report headers have the exact OS and runtime builds.
 - SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
 - The CSE code is the local `integ/all` branch, which merges every open pull request (commit `fe91b26a`). It may not match the version published on NuGet.
 - Load: the 1-minute load average was 1.43 when the json suite started and 1.74 when it ended (5-minute 1.47 and 1.77). Only the start and end were sampled.
@@ -233,11 +233,9 @@ Every row where CSE is slower or allocates more than a competitor:
 
 ## Caveats
 
-- **Known CSE bug.** `MultiFormatDateTimeConverter` has no format with a 7-digit fraction, and its ISO fast path does not take that length either, so `"2024-03-14T15:30:45.1234567Z"` throws a `JsonException`. That is the form STJ itself writes for a `DateTime`, so a payload STJ wrote cannot be read back through `DefaultOptions`. The Iso input uses a 3-digit fraction for this reason.
+- Known CSE bug: `MultiFormatDateTimeConverter` has no format with a 7-digit fraction, and its ISO fast path does not take that length either, so `"2024-03-14T15:30:45.1234567Z"` throws a `JsonException`. That is the form STJ itself writes for a `DateTime`, so a payload STJ wrote cannot be read back through `DefaultOptions`. The Iso input uses a 3-digit fraction for this reason.
 - On net8.0 every JSON row runs the STJ 9.0.4 package, not the in-box STJ 8. Numbers for net8 are not numbers for STJ 8.
 - Macross 3.0.0 dates from 2022 and targets net6.0. It is still the latest stable release.
-- The CSE column is the `integ/all` integration branch, which may not match the version published on NuGet.
-- The feature matrix comes from reading source and docs.
 
 ---
 

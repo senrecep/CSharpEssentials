@@ -2,7 +2,15 @@
 
 ## What
 
-CSharpEssentials is a modular .NET NuGet ecosystem (27 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors/pagination, ASP.NET Core utilities, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection). Multi-targets: .NET 11/10/9 (some packages also net8.0), netstandard2.1 (a few also netstandard2.0). CSharpEssentials.EntityFrameworkCore targets net10.0/net9.0/net8.0 only (no net11.0), each pinned to its EF Core major. CSharpEssentials.AspNetCore.OpenApi targets net10.0 only.
+CSharpEssentials is a modular .NET NuGet ecosystem (27 packages) that bridges OOP and functional programming in C#. Core patterns: Result/Maybe monads, discriminated unions (Any<T1,T2,...>), a composable Rules engine, DDD base classes (EntityBase), EF Core interceptors and pagination, ASP.NET Core utilities, idempotency, source-generated Minimal API endpoints (CSharpEssentials.Endpoints) and attribute-based DI registration (CSharpEssentials.DependencyInjection).
+
+Target frameworks, per project file:
+
+- Most packages: net11.0, net10.0, net9.0 and netstandard2.1. Core, Clone and Enums add netstandard2.0.
+- DependencyInjection: net11.0 to net8.0 plus netstandard2.1.
+- AspNetCore, AspNetCore.Swashbuckle, Endpoints, RequestResponseLogging and Idempotency.Testing: net11.0 to net8.0, no netstandard.
+- EntityFrameworkCore: net10.0, net9.0 and net8.0 only (no net11.0), each pinned to its EF Core major.
+- AspNetCore.OpenApi: net10.0 only.
 
 Current version: 7.0.0 <!-- x-release-please-version -->
 
@@ -16,15 +24,22 @@ Current version: 7.0.0 <!-- x-release-please-version -->
 
 ## How
 
+- Solution: `CSharpEssentials.slnx`. The SDK is pinned in `global.json` (an 11.0 prerelease, `rollForward: latestFeature`).
 - Build: `dotnet build`
 - Test: `dotnet test`
 - Pack: `dotnet pack`
 - Publish: `./build-and-publish-nugets.sh` (CI runs it on release; see Releasing)
-- First-time setup: `git config core.hooksPath .githooks` (activates pre-commit badge validation)
+- First-time setup: `git config core.hooksPath .githooks` (activates the pre-commit hook that checks and fixes the test and package count badges in README.MD)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
-- File layout: One public type per file, filename matches type name
-- Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`
-- Endpoints, DependencyInjection, EntityFrameworkCore, Enums and Json keep their source generators/analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable); both are bundled into the package under `analyzers/dotnet/cs`.
+- File layout: one public type per file, filename matches type name
+- Tests live in `CSharpEssentials.Tests/` (net9.0, needs Docker for the PostgreSQL tests) and in the projects under `tests/`: the EF Core and OpenApi tests (net10.0), `CSharpEssentials.Enums.Net8.Tests` (net8.0, binds the netstandard2.1 asset of Enums), `CSharpEssentials.Core.NetStandard.Tests` (the netstandard2.1 asset of Core), `CSharpEssentials.Compat.CSharp12` (compile-only, `LangVersion` 12) and the fixture projects.
+- Endpoints, DependencyInjection, EntityFrameworkCore, Enums and Json keep their source generators and analyzers in `<Package>.Generators/` and code fixes in `<Package>.CodeFixes/` (netstandard2.0, not packable, Roslyn pinned to 4.8.0 in `build/Generators.props`). `build/PackGenerator.targets` packs both into the package under `analyzers/dotnet/cs`.
+
+Directory.Build.props applies to every project: `LangVersion` preview, `Nullable` enable, `TreatWarningsAsErrors` and `CodeAnalysisTreatWarningsAsErrors`, `EnforceCodeStyleInBuild`, `AnalysisLevel` latest with `AnalysisMode` All, `NoWarn` 1591 only, SonarAnalyzer.CSharp and SourceLink, and the `CSHARP_ESSENTIALS_ENABLE_UNIONS` define on net11.0.
+
+Directory.Build.targets gives a packable project's references to other CSharpEssentials projects `PrivateAssets="contentfiles;build"` by default, so the Enums generator and analyzers reach consumers of any package that depends on Enums. It also packs `.well-known/agent-skills/<name>/SKILL.md` into each package at `skills/<name>/SKILL.md`.
+
+CI (`.github/workflows/build.yml`) restores, builds and tests in Release; builds or tests the examples that stay outside the solution (Enums end to end, and the Redis and PostgreSQL idempotency examples, which need Docker); packs to a local feed; checks that every agent skill is packed; runs `tests/PackageConsumer` against six packages; and publishes `examples/Examples.Endpoints` with Native AOT. `codeql.yml` runs CodeQL on pushes and pull requests to `main` and weekly.
 
 ## Releasing
 
@@ -33,7 +48,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 1. Merge work to `main` with Conventional Commits. `feat` gives a minor bump, `fix` and `perf` a patch, and `feat!` or a `BREAKING CHANGE:` footer a major.
 2. The `Release Please` workflow keeps a release PR open with the next version in `Directory.Build.props`, `AGENTS.md` and `.release-please-manifest.json`, and a generated `CHANGELOG.md` entry.
 3. Before merging the release PR, edit its `CHANGELOG.md` entry into the style of the earlier entries: group under `### Added`, `### Changed`, `### Fixed`, name the package and API for each item, and drop internal noise. Read the commits and the diff since the last tag, not only the commit subjects. Add a migration guide under `docs/migration/` for a major version.
-4. Merging the release PR creates the `vX.Y.Z` tag and the GitHub release, then calls `publish.yml`, which builds, tests and pushes the packages to NuGet.
+4. Merging the release PR creates the `vX.Y.Z` tag and the GitHub release, then calls `publish.yml`, which checks the tag against `<Version>`, builds, tests and pushes the packages to NuGet.
 5. To release a specific version, add a `Release-As: X.Y.Z` footer to a commit on `main`.
 
 `<Version>` in `Directory.Build.props` is the only version source. Internal package pins (`[$(Version)]`), `AssemblyVersion` and `FileVersion` derive from it.
@@ -54,10 +69,10 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 - Don't add new packages to `Directory.Packages.props` without checking existing entries.
 - Don't break multi-targeting. Test against all declared target frameworks.
 - Don't add inline code comments (`//`, `/* */`) that explain code unless explicitly asked. XML documentation comments (`///`) on public APIs are expected.
-- Don't create placeholder/stub implementations.
+- Don't create placeholder or stub implementations.
 
 ## Boundaries
 
-- **Always**: Write tests, follow nullable annotations, use conventional commits, run build before committing.
-- **Ask first**: Adding new NuGet packages, changing shared abstractions (interfaces in .Core/.Entity), bumping major version, removing public API.
-- **Never**: Commit secrets, edit `.snupkg`/`.nupkg` artifacts, push directly to main, suppress TreatWarningsAsErrors.
+- Always: write tests, follow nullable annotations, use conventional commits, run the build before committing.
+- Ask first: adding new NuGet packages, changing shared abstractions (interfaces in .Core/.Entity), bumping the major version, removing public API.
+- Never: commit secrets, edit `.snupkg`/`.nupkg` artifacts, push directly to main, suppress TreatWarningsAsErrors.

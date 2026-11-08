@@ -1,6 +1,6 @@
 # CSharpEssentials.Validation: Performance benchmarks
 
-This page compares CSharpEssentials.Validation (CSE) with FluentValidation 12.2.0, the DataAnnotations validator in the BCL and Microsoft.Extensions.Validation 10.0.14. It covers the validation path on valid and invalid input, the enum validators, the `For` overloads, validator construction and the DI assembly scan. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. Numbers are in [Results](#results).
+CSharpEssentials.Validation (CSE) compared with FluentValidation 12.2.0, the DataAnnotations validator in the BCL and Microsoft.Extensions.Validation 10.0.14. Covered: the validation path on valid and invalid input, the enum validators, the `For` overloads, validator construction and the DI assembly scan. BenchmarkDotNet v0.14.0, .NET 8, 9, 10 and 11. Numbers are in [Results](#results).
 
 The competitors are pinned exactly in `Directory.Packages.props`. Each pin is the latest stable release on NuGet as of 2026-11-03:
 
@@ -30,7 +30,7 @@ The code is in `benchmarks/CSharpEssentials.Validation.Benchmarks/`, in 31 class
 - Every class has `[MemoryDiagnoser]`.
 - Each class checks parity in `[GlobalSetup]`, and `--self-check` runs the same check for every parameter value without BenchmarkDotNet. A mismatch fails the run.
 - The parity key is `ok`, or `fail:` followed by the sorted, distinct failing property paths. CSE paths come from the error code up to its last `.` (`Items[0].Sku.NotEmpty` gives `Items[0].Sku`), FluentValidation paths from `PropertyName`, DataAnnotations paths from `MemberNames`, and Microsoft.Extensions.Validation paths from the keys of `ValidationErrors`. The error count per property is not in the key (see [Semantic differences](#semantic-differences)).
-- An invalid input must give `fail:` for every library. The new classes also compare each library with a hard-coded expected key.
+- An invalid input must give `fail:` for every library. The comparison classes also compare each library with a hard-coded expected key.
 - In the 8 comparison classes, every competitor and BCL row has a comment above it that links to the documentation it follows, and each CSE row links to its Readme section. The 23 earlier classes predate this and carry no links.
 - CSE is called as `validator.ValidateAsync(x)` and consumed synchronously without `AsTask` when the `ValueTask` has completed, which matches the Readme's sync call site.
 
@@ -53,7 +53,7 @@ The enum rows of `EnumDefinedComparison` return whether the input is valid; the 
 
 ### Earlier classes (FluentValidation head-to-head)
 
-The 23 classes from the earlier suite are kept as they were, now running on FluentValidation 12.2.0. Each has one CSE and one FluentValidation row per input. Their setups gained the parity check; nothing else changed. They predate the house style for benchmark code (several public types per file, section comments) and return `object`, so each CSE row also boxes its `Result<T>`; the new classes return the result type directly.
+23 older classes, on FluentValidation 12.2.0, with one CSE and one FluentValidation row per input and the same parity check. They predate the house style for benchmark code (several public types per file, section comments) and return `object`, so each CSE row also boxes its `Result<T>`; the comparison classes return the result type directly.
 
 | Class | Inputs | Parity key on the invalid input | Label |
 |---|---|---|---|
@@ -94,13 +94,13 @@ Every one of the 23 classes agrees on the key on every TFM, so none needed a per
 
 ## Semantic differences
 
-- **Rule-level cascade.** FluentValidation defaults to Continue (every validator on a property runs); CSE defaults to Stop. Per-property error counts can differ, so parity compares the failing paths only. Two earlier classes differ in count on their invalid input: `SimpleValidationBenchmarks` (CSE 4 errors, FluentValidation 5) and `ComplexValidationBenchmarks` (CSE 13, FluentValidation 14). In both, FluentValidation's `Tags` rule runs `NotEmpty` and a `Must` count check on the empty list. FluentValidation does more work on those two rows.
-- **DataAnnotations.** A failing `[Required]` skips the property's other attributes. Without `validateAllProperties: true` only `[Required]` runs, so the suite always passes it. It does not recurse into nested objects or collections, it goes through `TypeDescriptor` by reflection, and `TryValidateObject` is `[RequiresUnreferencedCode]`.
-- **Microsoft.Extensions.Validation.** It runs on net10.0 and later only and is experimental (ASP0029). Validation is async only (`IValidatableInfo.ValidateAsync` returns `Task`). The type info is source-generated from `[ValidatableType]`, it recurses into nested types, and the rules are DataAnnotations attributes.
-- **Email.** CSE checks the address with a regex; FluentValidation (default mode), DataAnnotations and Microsoft.Extensions.Validation check for an `@`. The invalid input has no `@`, so all four reject it, but the work differs.
-- **Enums.** CSE's error text lists the allowed values. FluentValidation has no `IsOneOf`, so its row is a `Must` predicate with the generic message. The CSE `Generated` row reads the `[StringEnum]` metadata; the competitors treat that enum as a plain enum (reflection or `Enum.IsDefined`).
-- **Construction.** FluentValidation builds its rule tree in the constructor from expression trees and caches it per instance. CSE runs `Configure` on every call and does no rule-building work in its constructor. `ValidatorConstructionBenchmarks` shows one side of that trade; the valid-path rows show the other.
-- **Assembly scan.** FluentValidation registers each validator under its interface and its concrete type; CSE adds one descriptor per validator through `TryAddEnumerable`. The setup checks that each library registered every one of its own validators.
+- Rule-level cascade: FluentValidation defaults to Continue (every validator on a property runs); CSE defaults to Stop. Per-property error counts can differ, so parity compares the failing paths only. Two earlier classes differ in count on their invalid input: `SimpleValidationBenchmarks` (CSE 4 errors, FluentValidation 5) and `ComplexValidationBenchmarks` (CSE 13, FluentValidation 14). In both, FluentValidation's `Tags` rule runs `NotEmpty` and a `Must` count check on the empty list. FluentValidation does more work on those two rows.
+- DataAnnotations: a failing `[Required]` skips the property's other attributes. Without `validateAllProperties: true` only `[Required]` runs, so the suite always passes it. It does not recurse into nested objects or collections, it goes through `TypeDescriptor` by reflection, and `TryValidateObject` is `[RequiresUnreferencedCode]`.
+- Microsoft.Extensions.Validation: runs on net10.0 and later only and is experimental (ASP0029). Validation is async only (`IValidatableInfo.ValidateAsync` returns `Task`). The type info is source-generated from `[ValidatableType]`, it recurses into nested types, and the rules are DataAnnotations attributes.
+- Email: CSE checks the address with a regex; FluentValidation (default mode), DataAnnotations and Microsoft.Extensions.Validation check for an `@`. The invalid input has no `@`, so all four reject it, but the work differs.
+- Enums: CSE's error text lists the allowed values. FluentValidation has no `IsOneOf`, so its row is a `Must` predicate with the generic message. The CSE `Generated` row reads the `[StringEnum]` metadata; the competitors treat that enum as a plain enum (reflection or `Enum.IsDefined`).
+- Construction: FluentValidation builds its rule tree in the constructor from expression trees and caches it per instance. CSE runs `Configure` on every call and does no rule-building work in its constructor. `ValidatorConstructionBenchmarks` shows one side of that trade; the valid-path rows show the other.
+- Assembly scan: FluentValidation registers each validator under its interface and its concrete type; CSE adds one descriptor per validator through `TryAddEnumerable`. The setup checks that each library registered every one of its own validators.
 
 ---
 
@@ -132,7 +132,7 @@ Full default-job runs on net8.0, net9.0, net10.0 and net11.0. Each cell is mean,
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0 default job (full runs, not `--quick`), run serially on one Linux machine. The CPU is in the header of each report. SDK 11.0.100-rc.1; runtimes .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
-- `AssemblyScanColdComparison` is the exception: it uses its own `cold` job (`RunStrategy.ColdStart`, 15 launches, one iteration each), as described above.
+- `AssemblyScanColdComparison` uses its own `cold` job (`RunStrategy.ColdStart`, 15 launches, one iteration each).
 - The 1-minute load average was 1.54 to 1.61 during the main run. Three reports were rerun because their CV was above 5%: `ValidatorConstructionBenchmarks` on net8.0 and net10.0 (twice) and `AssemblyScanColdComparison` on net8.0 (once). The load average during those reruns was 2.18 to 4.87.
 - Rows still above 5% CV after two reruns are marked "noisy (CV above 5%)" where they appear: `ValidatorConstructionBenchmarks` `CSE-Ctor` on net8.0 (CV 8.2%) and net10.0 (CV 10.3%).
 - No row in this suite is near 0 ns. The smallest rows are the hand-written enum checks at 1.271 ns to 1.591 ns, which are above timer resolution.
@@ -278,24 +278,24 @@ The 23 earlier classes have no baseline column, so their reports have no Ratio. 
 
 ### Where CSE loses
 
-- **Allocations on the wide valid path.** `BaselineWideComparison` Valid=True: CSE 1784 B against FluentValidation 984 B on net8.0, net9.0 and net10.0 (Alloc Ratio 0.55), and 1688 B against 984 B on net11.0 (0.58). `WideModelBenchmarks` valid: CSE 1816 B against 984 B on net8.0 to net10.0, and 1720 B against 984 B on net11.0. CSE is still faster on time in these rows. The cost is `For(() => ...)`: the same model with `For(value, name)` allocates 608 B.
-- **Allocations against Microsoft.Extensions.Validation on the wide model.** net10.0: CSE 1784 B against 1312 B (valid) and 4632 B against 3480 B (invalid). net11.0: 1688 B against 1304 B and 4536 B against 3472 B.
-- **`ConditionalValidationBenchmarks` business order, net10.0.** CSE 273.4 ns against FluentValidation 255.4 ns. On net8.0 (301.7 ns against 347.2 ns), net9.0 (285.9 ns against 311.7 ns) and net11.0 (251.1 ns against 259.6 ns) CSE is faster, so this row is close on every TFM.
-- **Cold assembly scan allocation, net11.0.** CSE 67.32 KB against FluentValidation 66.87 KB (Alloc Ratio 0.99). On net10.0 the two are 67.38 KB and 68.13 KB.
-- **Against hand-written code.** `EnumDefinedComparison`: a plain `Enum.IsDefined` check is 1.271 ns to 1.591 ns with no allocation on every TFM; the CSE validator ranges from 49.331 ns (net11.0, Generated, valid) to 475.177 ns (net8.0, Plain, invalid). The hand-written row builds no error object, so the gap is the cost of the validator pipeline itself.
-- **Small margins on valid input.** On `BaselineSimpleComparison` valid, FluentValidation's Ratio is 1.12 to 1.18; on `StringValidationBenchmarks` net11.0 the rows are 278.2 ns and 298.9 ns. These are leads, but small ones.
+- Allocations on the wide valid path: `BaselineWideComparison` Valid=True: CSE 1784 B against FluentValidation 984 B on net8.0, net9.0 and net10.0 (Alloc Ratio 0.55), and 1688 B against 984 B on net11.0 (0.58). `WideModelBenchmarks` valid: CSE 1816 B against 984 B on net8.0 to net10.0, and 1720 B against 984 B on net11.0. CSE is still faster on time in these rows. The cost is `For(() => ...)`: the same model with `For(value, name)` allocates 608 B.
+- Allocations against Microsoft.Extensions.Validation on the wide model: net10.0: CSE 1784 B against 1312 B (valid) and 4632 B against 3480 B (invalid). net11.0: 1688 B against 1304 B and 4536 B against 3472 B.
+- `ConditionalValidationBenchmarks` business order, net10.0: CSE 273.4 ns against FluentValidation 255.4 ns. On net8.0 (301.7 ns against 347.2 ns), net9.0 (285.9 ns against 311.7 ns) and net11.0 (251.1 ns against 259.6 ns) CSE is faster, so this row is close on every TFM.
+- Cold assembly scan allocation, net11.0: CSE 67.32 KB against FluentValidation 66.87 KB (Alloc Ratio 0.99). On net10.0 the two are 67.38 KB and 68.13 KB.
+- Against hand-written code: `EnumDefinedComparison`: a plain `Enum.IsDefined` check is 1.271 ns to 1.591 ns with no allocation on every TFM; the CSE validator ranges from 49.331 ns (net11.0, Generated, valid) to 475.177 ns (net8.0, Plain, invalid). The hand-written row builds no error object, so the gap is the cost of the validator pipeline itself.
+- Small margins on valid input: on `BaselineSimpleComparison` valid, FluentValidation's Ratio is 1.12 to 1.18; on `StringValidationBenchmarks` net11.0 the rows are 278.2 ns and 298.9 ns.
 
 ---
 
 ## Caveats
 
-- **Microsoft.Extensions.Validation is experimental** and documents no standalone idiom; its rows follow the API reference and may need changes when the API settles.
-- **Both assembly scans use reflection.** CSE's Readme says to register validators with `AddValidator<T, TValidator>` under trimming or Native AOT. `TValidator` on that method carries `[DynamicallyAccessedMembers(PublicConstructors)]` (`CSharpEssentials.Validation/Extensions/ValidatorServiceCollectionExtensions.cs:26`), and the 2026-11-06 mediator Native AOT sample registers a validator with it and publishes with no IL warnings.
-- **No Native AOT sample.** FluentValidation compiles expression trees and DataAnnotations is `[RequiresUnreferencedCode]`, so only the CSE and Microsoft.Extensions.Validation rows could run under AOT.
-- **Known CSE costs, with the rows that measure them:**
-  - `CSharpEssentials.Validation/RuleContext.cs:62-76`: `For(() => ...)` parses the member expression text with `PropertyPath.Extract` on every call and allocates a closure. `ForOverloadComparison` valid on net10.0: 664.1 ns and 1784 B with the lambda, 203.6 ns and 608 B with `For(value, name)`.
+- Microsoft.Extensions.Validation is experimental and documents no standalone idiom; its rows follow the API reference and may need changes when the API settles.
+- Both assembly scans use reflection: CSE's Readme says to register validators with `AddValidator<T, TValidator>` under trimming or Native AOT. `TValidator` on that method carries `[DynamicallyAccessedMembers(PublicConstructors)]` (`CSharpEssentials.Validation/Extensions/ValidatorServiceCollectionExtensions.cs:26`), and the 2026-11-06 mediator Native AOT sample registers a validator with it and publishes with no IL warnings.
+- No Native AOT sample: FluentValidation compiles expression trees and DataAnnotations is `[RequiresUnreferencedCode]`, so only the CSE and Microsoft.Extensions.Validation rows could run under AOT.
+- Known CSE costs, with the rows that measure them:
+  - `CSharpEssentials.Validation/RuleContext.cs:62-76`: `For(() => ...)` parses the member expression text with `PropertyPath.Extract` on every call and allocates a closure; `ForOverloadComparison` measures it against `For(value, name)` (see [`For` overloads](#for-overloads)).
   - `CSharpEssentials.Validation/Validators/EnumValidators.cs:201-204`: the plain-enum path converts through `Convert.ToInt64(object)`, which boxes. `EnumFlagsComparison` runs it; CSE is still below both competitors there (net10.0 valid: CSE 116.0 ns and 216 B, FluentValidation 1,407.2 ns and 1064 B, DataAnnotations 988.1 ns and 1040 B).
-- The Readme's inline example says the sync delegate form does not allocate. `ForOverloadComparison` measures the inline form at 1784 B on valid input (net8.0 to net10.0), the same as `For(() => ...)` in a validator class.
+- The inline sync delegate form avoids a `Task`, not allocation: `ForOverloadComparison` measures it at 1784 B on valid input (net8.0 to net10.0), the same as `For(() => ...)` in a validator class.
 - The CSE column is the working tree, which may not match the version published on NuGet.
 
 ---

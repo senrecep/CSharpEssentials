@@ -23,7 +23,7 @@ using CSharpEssentials.AspNetCore;
 
 ---
 
-## ProblemDetails + GlobalExceptionHandler
+## ProblemDetails and GlobalExceptionHandler
 
 `AddEnhancedProblemDetails` configures one ProblemDetails pipeline (RFC 9457) shared by `ToProblemResult` (Minimal API), `ToActionResult` (MVC), `GlobalExceptionHandler`, status code pages and framework 404/405 responses.
 
@@ -134,7 +134,7 @@ builder.Services.AddScoped<IResultErrorMapper, LegacyErrorMapper>();
 
 ---
 
-## Validation Endpoint Filter
+## Validation endpoint filter
 
 ```csharp
 using CSharpEssentials.Validation.Extensions; // AddValidator
@@ -160,17 +160,31 @@ app.UseIdempotency();                      // after auth: keys are scoped to the
 app.MapPost("/orders", CreateOrder).WithIdempotency();   // or [Idempotent] on an MVC action, or on a group
 ```
 
-Applies to endpoints marked with `IdempotentAttribute` metadata and to POST and PATCH by default (`Methods`). A repeat with the same `Idempotency-Key`, method, path, query and body replays the stored response (`Idempotency-Replayed: true`); the same key with a different request returns 422; a request still running returns 409 with `Retry-After`; a missing key passes through (400 with `RequireKey`). Keys are scoped by `ScopeResolver` (default `IdempotencyScopes.User`: `NameIdentifier`, then `sub`; also `Tenant`, `UserAndTenant`, `Client`, `Custom(kind, resolve)` (kinds `user`, `tenant`, `client`, `global` are reserved in any casing), `Global`; scopes read `user:{id}`, `tenant:{id}`, `client:{id}`, `{kind}:{value}` and `global`; a custom `IIdempotencyScopeResolver` returns `IdempotencyScope?` built only with `IdempotencyScope.User/Tenant/Client/UserAndTenant/Custom(kind, value)/Global`) and written in `Namespace` (default `http`); requests whose scope cannot be resolved follow `UnscopedKeyBehavior` (`Skip` default with an `Idempotency.UnscopedKeySkipped` warning, `Reject` → 400 `Idempotency.ScopeRequired`, `Global`). `.WithIdempotency()` and `[Idempotent]` also install a filter that marks the handler as started; the key is released when the handler did not start, kept in flight until `InFlightTimeout` after a 503/504 (`NeverStoreStatusCodes`), an exception or abort mid-handler, or a non-4xx response that cannot be stored, and otherwise settled by `ShouldStore` (`IdempotencyStorePolicies.Default`: 2xx and 3xx stored for `RetentionPeriod`, 5xx for `ServerErrorRetention` = 10 min, 4xx released; `SuccessOnly`: 2xx only, releases 3xx and 5xx). Per endpoint: `.WithIdempotency(o => { o.InFlightTimeout = ...; o.StoreKey = "payments"; })`, `.WithIdempotency("profile")` with `AddIdempotency(o => o.AddProfile("profile", p => ...))`, or `[Idempotent(Profile = "...", RetentionSeconds = ..., LeaseSeconds = ..., ServerErrorRetentionSeconds = ..., RequireKey = ..., UnscopedKeyBehavior = ..., StoreKey = "...")]`; `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore` (profile or Minimal API only), `UnscopedKeyBehavior` and `StoreKey` (a keyed `IIdempotencyRecordStore`) resolve endpoint > profile > global, and an endpoint overrides its group or controller. An unregistered profile or invalid merged settings throw `InvalidOperationException` on the endpoint's requests; invalid profiles throw in `AddIdempotency`. An idempotent endpoint without the filter stores only 2xx, releases everything else and warns once (`RequireExecutionFilter = true` throws). `Retry-After` is replayed. Stores implement `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`: in-memory (default, single instance), `o.UseDistributedCacheStore()` (best effort, needs `IDistributedCache`), or your own with `o.UseStore<TStore>(lifetime)`. `AddIdempotency` also registers `IHttpContextAccessor` and an `IIdempotencyScopeAccessor` that reads `HttpContext.User`, so the Mediator `IdempotencyBehavior` scopes keys to the request user. A failed `Result` carrying an idempotency code gets the middleware status and a top-level `code` in both `ToProblemResult` and `ToActionResult`, whatever its `ErrorType`: `Idempotency.InFlight` → 409 with `Retry-After` (`IdempotencyOptions.RetryAfter`, 1 second without `AddIdempotency`), `Idempotency.KeyReused` → 422, `Idempotency.KeyMissing`/`KeyInvalid`/`ScopeRequired` → 400 (`DefaultErrorStatusCodeMapper`).
+- Scope: endpoints with `IdempotentAttribute` metadata, POST and PATCH by default (`Methods`).
+- Same `Idempotency-Key`, method, path, query and body: the stored response is replayed with `Idempotency-Replayed: true`. Same key, different request: 422. Still running: 409 with `Retry-After`. Missing key: passes through (400 with `RequireKey`).
+- Keys are scoped by `ScopeResolver` (default `IdempotencyScopes.User`: `NameIdentifier`, then `sub`; also `Tenant`, `UserAndTenant`, `Client`, `Custom(kind, resolve)` and `Global`; the kinds `user`, `tenant`, `client` and `global` are reserved in any casing). Scopes read `user:{id}`, `tenant:{id}`, `client:{id}`, `{kind}:{value}` and `global`; a custom `IIdempotencyScopeResolver` returns an `IdempotencyScope?` built only with the `IdempotencyScope.User/Tenant/Client/UserAndTenant/Custom(kind, value)/Global` factories. Records go to `Namespace` (default `http`).
+- A request whose scope cannot be resolved follows `UnscopedKeyBehavior`: `Skip` (default, warns `Idempotency.UnscopedKeySkipped`), `Reject` (400 `Idempotency.ScopeRequired`) or `Global`.
+- `.WithIdempotency()` and `[Idempotent]` install a filter that marks the handler as started. The key is released when the handler did not start; it stays in flight until `InFlightTimeout` after a 503/504 (`NeverStoreStatusCodes`), an exception or abort mid-handler, or a non-4xx response that cannot be stored; otherwise `ShouldStore` decides (`IdempotencyStorePolicies.Default`: 2xx and 3xx stored for `RetentionPeriod`, 5xx for `ServerErrorRetention` = 10 min, 4xx released; `SuccessOnly`: 2xx only). An endpoint without the filter stores only 2xx, releases everything else and warns once (`RequireExecutionFilter = true` throws).
+- Per endpoint: `.WithIdempotency(o => { o.InFlightTimeout = ...; o.StoreKey = "payments"; })`, `.WithIdempotency("profile")` with `AddIdempotency(o => o.AddProfile("profile", p => ...))`, or `[Idempotent(Profile = "...", RetentionSeconds = ..., LeaseSeconds = ..., ServerErrorRetentionSeconds = ..., RequireKey = ..., UnscopedKeyBehavior = ..., StoreKey = "...")]`. `RetentionPeriod`, `InFlightTimeout`, `ServerErrorRetention`, `RequireKey`, `ShouldStore` (profile or Minimal API only), `UnscopedKeyBehavior` and `StoreKey` (a keyed `IIdempotencyRecordStore`) resolve endpoint > profile > global; an endpoint overrides its group or controller. An unregistered profile or invalid merged settings throw `InvalidOperationException` on the endpoint's requests; invalid profiles throw in `AddIdempotency`.
+- Stores implement `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`: in-memory (default, single instance), `o.UseDistributedCacheStore()` (best effort, needs `IDistributedCache`) or your own with `o.UseStore<TStore>(lifetime)`. `Retry-After` is replayed.
+- `AddIdempotency` also registers `IHttpContextAccessor` and an `IIdempotencyScopeAccessor` that reads `HttpContext.User`, so the Mediator `IdempotencyBehavior` scopes keys to the request user.
+- A failed `Result` carrying an idempotency code gets the middleware status and a top-level `code` in both `ToProblemResult` and `ToActionResult`, whatever its `ErrorType` (`DefaultErrorStatusCodeMapper`): `Idempotency.InFlight` 409 with `Retry-After` (`IdempotencyOptions.RetryAfter`, 1 second without `AddIdempotency`), `Idempotency.KeyReused` 422, `Idempotency.KeyMissing`/`KeyInvalid`/`ScopeRequired` 400.
 
-Rollout: `IdempotencyOptions.Mode` (`Enforce` default), overridden by `IdempotencyEndpointOptions.Mode`, a profile's `Mode` or `[Idempotent(Mode = ...)]` (endpoint > profile > global). `Off` ignores the header (no scope resolver, no store call). `Observe` answers exactly as `Off` (no replay, no `Idempotency-Replayed`, no 400/409/422, no `Retry-After`), stores new keys as `Enforce` and logs/counts what `Enforce` would have done; it does not prevent duplicates, so keep it short for payments. Switching to `Enforce` replays what `Observe` stored and returns 409 for a key in flight. Options are read per request through `IOptionsMonitor<IdempotencyOptions>`, so `services.Configure<IdempotencyOptions>(configuration.GetSection("Idempotency:Http"))` switches the mode on reload without a restart; the store is fixed at `AddIdempotency`, an invalid reload throws `OptionsValidationException` per request, and `IdempotencyOptions` from DI is the transient current value. HTTP mode is separate from `IdempotencyExecutorOptions.Mode` (Mediator, inbox). In `Observe` a throwing scope resolver, keyed store or fingerprint logs `Idempotency.Observe.ResolutionFailed` (and a throwing reserve `Idempotency.Observe.ReserveFailed`) and runs the request once without idempotency; in `Enforce` or after a client abort it propagates. Decisions go to counter `idempotency.decisions` on meter `CSharpEssentials.Idempotency` (`IdempotencyTelemetry`) with tags `decision`, `mode`, `source` = `http`, `target` = route template; logs (event ids 7001-7017) carry a key hash, never the key or the scope.
+Rollout:
 
-The middleware is always lease mode (reserve before, complete after, outside your transaction). For money movement, parse the header with `IdempotencyKeyHeader.TryParse(header, out string? key)` (or `TryParse(header, maxKeyLength, out key)`; the middleware's own normalization: it unquotes a structured-field `"abc"` to `abc` and validates with `IdempotencyKeys.IsValid`), answer `Idempotency.KeyInvalid` when it fails, and pass that key, never the raw header, to a Mediator command that is `ITransactionalRequest` and `IIdempotentRequest`, backed by the EF Core store, and send external providers a deterministic key (`IdempotencyKeys.For`). `DistributedCacheIdempotencyRecordStore` is best effort across instances. Lease must cover the longest server timeout and the client retry budget. Migrating from 6.x: `docs/migration/v6-to-v7-idempotency.md`. See the `csharpessentials-idempotency` skill.
+- `IdempotencyOptions.Mode` (`Enforce` default), overridden by `IdempotencyEndpointOptions.Mode`, a profile's `Mode` or `[Idempotent(Mode = ...)]` (endpoint > profile > global). It is separate from `IdempotencyExecutorOptions.Mode` (Mediator, inbox).
+- `Off` ignores the header (no scope resolver, no store call). `Observe` answers exactly as `Off` (no replay, no `Idempotency-Replayed`, no 400/409/422, no `Retry-After`), stores new keys as `Enforce` and logs and counts what `Enforce` would have done. It does not prevent duplicates, so keep it short for payments. Switching to `Enforce` replays what `Observe` stored and returns 409 for a key in flight.
+- Options are read per request through `IOptionsMonitor<IdempotencyOptions>`, so `services.Configure<IdempotencyOptions>(configuration.GetSection("Idempotency:Http"))` switches the mode on reload without a restart. The store is fixed at `AddIdempotency`, an invalid reload throws `OptionsValidationException` per request, and `IdempotencyOptions` from DI is the transient current value.
+- In `Observe` a throwing scope resolver, keyed store or fingerprint logs `Idempotency.Observe.ResolutionFailed` (a throwing reserve `Idempotency.Observe.ReserveFailed`) and runs the request once without idempotency; in `Enforce` or after a client abort it propagates.
+- Decisions go to counter `idempotency.decisions` on meter `CSharpEssentials.Idempotency` (`IdempotencyTelemetry`) with tags `decision`, `mode`, `source` = `http`, `target` = route template. Logs (event ids 7001-7017) carry a key hash, never the key or the scope.
 
-Idempotent endpoints are described in the OpenAPI document by `o.AddIdempotencyConventions()` (`OpenApiOptions` in `CSharpEssentials.AspNetCore.OpenApi`; `SwaggerGenOptions` in `CSharpEssentials.AspNetCore.Swashbuckle`, which `AddSwagger` already calls): the key header (required with `RequireKey`), `Idempotency-Replayed` on 2xx, and 400, 409 (`Retry-After`) and 422 problem+json with `code` enums. Methods in `IdempotencyOptions.Methods` only; `Enforce` endpoints get all of this, `Observe` endpoints only the key header with `required: false`, `Off` endpoints nothing; an own 409 keeps its description and gets the idempotency one appended.
+The middleware is always lease mode (reserve before, complete after, outside your transaction). For money movement, parse the header with `IdempotencyKeyHeader.TryParse(header, out string? key)` (or `TryParse(header, maxKeyLength, out key)`; the middleware's own normalization: it unquotes a structured-field `"abc"` to `abc` and validates with `IdempotencyKeys.IsValid`), answer `Idempotency.KeyInvalid` when it fails, and pass that key, never the raw header, to a Mediator command that is `ITransactionalRequest` and `IIdempotentRequest`, backed by the EF Core store; send external providers a deterministic key (`IdempotencyKeys.For`). `DistributedCacheIdempotencyRecordStore` is best effort across instances. The lease must cover the longest server timeout and the client retry budget. Migrating from 6.x: `docs/migration/v6-to-v7-idempotency.md`. See the `csharpessentials-idempotency` skill.
+
+Idempotent endpoints are described in the OpenAPI document by `o.AddIdempotencyConventions()` (`OpenApiOptions` in `CSharpEssentials.AspNetCore.OpenApi`; `SwaggerGenOptions` in `CSharpEssentials.AspNetCore.Swashbuckle`, which `AddSwagger` already calls): the key header (required with `RequireKey`), `Idempotency-Replayed` on 2xx, and 400, 409 (`Retry-After`) and 422 problem+json with `code` enums. Methods in `IdempotencyOptions.Methods` only; `Enforce` endpoints get all of this, `Observe` endpoints only the key header with `required: false`, `Off` endpoints nothing. An endpoint's own 400, 409 or 422 keeps its description and gets the idempotency one appended.
 
 ---
 
-## Conditional Requests
+## Conditional requests
 
 ```csharp
 using Microsoft.Net.Http.Headers;   // EntityTagHeaderValue
@@ -191,7 +205,7 @@ Entities that implement `IVersioned` (`string Version`) get a strong ETag `"{Ver
 
 ---
 
-## Enum Conventions and Binding
+## Enum conventions and binding
 
 ```csharp
 builder.Services.AddEnumConventions(c => c with { AcceptNumbers = false })   // required by UseEnumBinding
@@ -204,7 +218,7 @@ app.MapGroup("/api/v1").WithEnumWireFormat(EnumWireFormat.Number);   // legacy n
 
 `[StringEnum]` enums in route, query, header and form values (Minimal API incl. `[AsParameters]`, and MVC) accept the same spellings as a JSON body. Invalid values return a 400 ProblemDetails response listing the allowed values; the same error is used for Minimal API JSON body errors. Enums without generated metadata keep the framework's behavior unless `AddEnumConventionsWithReflection` opts them in. Use a typed enum parameter instead of a string parameter + action filter + scoped holder (`EnumData<T>`). `[EnumWireFormat]` sets the output format of an MVC controller or action (action > controller > group > `WriteAs`). `AddEnumBinding` is an obsolete forwarder.
 
-## MVC Invalid Model State
+## MVC invalid model state
 
 ```csharp
 builder.Services.AddControllers();
@@ -219,7 +233,7 @@ Do not combine with `ConfigureModelValidatorResponse()`, which turns the automat
 
 ---
 
-## API Versioning + Swagger
+## API versioning and Swagger
 
 ```csharp
 builder.Services.AddAndConfigureApiVersioning();   // v1 default, URL segment or x-api-version header
@@ -240,7 +254,7 @@ Optional route parameters (`{id?}`, `{id:int?}`, `{page=1}`) are described as on
 
 ---
 
-## OpenAPI Enum Schemas
+## OpenAPI enum schemas
 
 A host references one OpenAPI package, never both: `CSharpEssentials.AspNetCore.Swashbuckle` (Swashbuckle) or `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`, net10.0 only). Both describe `[StringEnum]` enums the way they are written (wire names, `x-enum-varnames`).
 
@@ -254,9 +268,9 @@ builder.Services.AddSwaggerGen(o => o.AddEnumConventions());        // CSharpEss
 
 ---
 
-## Best Practices
+## Best practices
 
-- Call `AddEnhancedProblemDetails()` (not plain `AddProblemDetails()`) and `app.UseEnhancedProblemDetails()`
+- Call `AddEnhancedProblemDetails()` (not plain `AddProblemDetails()`) and `app.UseEnhancedProblemDetails()`.
 - Keep `ExposeExceptionDetails` off outside development; never put raw exception messages in `ExceptionProblem.Detail`
 - `ToProblemResult` / `ToActionResult` return `EnhancedProblemHttpResult` / `EnhancedProblemObjectResult`, not `ProblemHttpResult` / `BadRequestObjectResult`
 - Apply `ResultEndpointFilter` at the group level, not per endpoint

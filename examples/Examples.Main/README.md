@@ -1,22 +1,22 @@
 # CSharpEssentials (main package) example
 
-This console application demonstrates how several `CSharpEssentials` packages work together, and the helpers that the `CSharpEssentials` meta-package adds itself.
+A console app that combines several `CSharpEssentials` packages and uses the helpers the `CSharpEssentials` meta-package adds itself.
 
 ## Features demonstrated
 
-| Feature | Packages Used | Description |
+| Feature | Package | Description |
 |---------|---------------|-------------|
-| **Input Sanitization** | Core | `Trim()` and `ToPascalCase()` for cleaning user input |
-| **Optional Lookup** | Maybe | `Maybe<T>` for safe nullable handling (`FindUserByEmail`) |
-| **Business Logic** | Results | `Result<T>` for composable operations (`PlaceOrder`) and `Switch` on the outcome |
-| **Error Reporting** | Errors | Structured errors with `Error.Validation`, `Error.NotFound` |
-| **Time Handling** | Time | `IDateTimeProvider` / `DateTimeProvider` for testable date/time access |
-| **Guid Generation** | Core | `Guider.NewGuid()` and `Guider.ToStringFromGuid` (URL-safe) |
-| **String Extensions** | Results | `TrimStart(prefix)` / `TrimEnd(suffix)` returning `Result<string>` (`Program.cs` labels this section "Meta String Extensions", but the methods come from `CSharpEssentials.Results`) |
-| **Json Extensions** | Meta | `JsonElement.TryGetProperty(params string[])` (first name that exists) and `JsonDocument.TryGetNestedProperty(params string[])` (names as a path), both returning `Result` |
-| **Time Extensions** | Meta | `long?.MsToDateTime()` returning `Maybe<DateTime>` (`None` for `null`) |
-| **Maybe to Result** | Maybe | `ToMaybeResult(error)` and `ToMaybeUnitResult(error)` |
-| **Pipeline** | All | A parse and validate function that returns `Result<int>` |
+| Input sanitization | Core | `Trim()` and `ToPascalCase()` on user input |
+| Optional lookup | Maybe | `Maybe<T>` instead of a nullable return (`FindUserByEmail`) |
+| Business logic | Results | `Result<T>` for composable operations (`PlaceOrder`) and `Switch` on the outcome |
+| Error reporting | Errors | Structured errors with `Error.Validation`, `Error.NotFound` |
+| Time | Time | `IDateTimeProvider` / `DateTimeProvider` for testable date and time access |
+| GUID generation | Core | `Guider.NewGuid()` and `Guider.ToStringFromGuid` (URL-safe) |
+| String extensions | Results | `TrimStart(prefix)` / `TrimEnd(suffix)` returning `Result<string>` (`Program.cs` labels this section "Meta String Extensions", but the methods come from `CSharpEssentials.Results`) |
+| JSON extensions | Meta | `JsonElement.TryGetProperty(params string[])` (first name that exists) and `JsonDocument.TryGetNestedProperty(params string[])` (names as a path), both returning `Result` |
+| Time extensions | Meta | `long?.MsToDateTime()` returning `Maybe<DateTime>` (`None` for `null`) |
+| Maybe to Result | Maybe | `ToMaybeResult(error)` and `ToMaybeUnitResult(error)` |
+| Pipeline | All | A parse and validate function that returns `Result<int>` |
 
 ## Running
 

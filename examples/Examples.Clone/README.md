@@ -1,14 +1,14 @@
 # CSharpEssentials.Clone example
 
-This console application demonstrates deep cloning with `CSharpEssentials.Clone`.
+This console app shows deep cloning with `CSharpEssentials.Clone`.
 
 ## Features demonstrated
 
 | Feature | Description |
 |---------|-------------|
-| **ICloneable<T>** | Explicit deep-clone contract for domain models (`Person`, `Address`, `Product`) |
-| **Clone** | The `Clone()` method each model implements; the example does not clone collections |
-| **Deep Copy Verification** | Modify clone without affecting original, and compare references |
+| `ICloneable<T>` | Explicit deep-clone contract for domain models (`Person`, `Address`, `Product`) |
+| Clone | The `Clone()` method each model implements; the example does not clone collections |
+| Deep copy check | Change the clone without affecting the original, and compare references |
 
 ## Running
 

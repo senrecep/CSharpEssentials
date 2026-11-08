@@ -1,184 +1,104 @@
-# CSharpEssentials extension methods
+# CSharpEssentials.Core extension methods
 
-Extension methods that add functional programming helpers to C# and make code easier to read.
+All extensions live in namespace `CSharpEssentials.Core`, except the C# 14 extension members noted at the end.
 
-## String extensions
-
-Extension methods for string manipulation (namespace `CSharpEssentials.Core`):
-
-### Case conversion methods
+## Case conversion
 
 Every conversion takes an optional `CultureInfo` (invariant culture when omitted), for example `"istanbul".ToPascalCase(CultureInfo.GetCultureInfo("tr-TR"))`.
 
 ```csharp
-// Case Conversion Examples and Explanations
-"helloWorld".ToPascalCase();      // => "HelloWorld"
-// First letter of each word capitalized, rest lowercase
-
-"hello_world".ToCamelCase();      // => "helloWorld"
-// First word lowercase, other words PascalCase
-
-"HelloWorld".ToKebabCase();       // => "hello-world"
-// All lowercase, words separated by hyphens
-
-"helloWorld".ToSnakeCase();       // => "hello_world"
-// All lowercase, words separated by underscores
-
-"hello world".ToMacroCase();      // => "HELLO_WORLD"
-// All uppercase, words separated by underscores
-
-"hello-world".ToTrainCase();      // => "Hello-World"
-// Each word PascalCase, separated by hyphens
-
-"hello world".ToTitleCase();      // => "Hello World"
-// Each word PascalCase, separated by spaces
-
-"helloWorld".ToUnderscoreCamelCase(); // => "_helloWorld"
-// CamelCase with leading underscore
+"helloWorld".ToPascalCase();          // "HelloWorld"
+"hello_world".ToCamelCase();          // "helloWorld"
+"HelloWorld".ToKebabCase();           // "hello-world"
+"helloWorld".ToSnakeCase();           // "hello_world"
+"hello world".ToMacroCase();          // "HELLO_WORLD"
+"hello-world".ToTrainCase();          // "Hello-World"
+"hello world".ToTitleCase();          // "Hello World"
+"helloWorld".ToUnderscoreCamelCase(); // "_helloWorld"
 ```
 
-The conversions work in a `stackalloc` buffer for short inputs and rent from `ArrayPool<char>` for longer ones, so they are safe on large strings.
+Each call allocates only the result string. The work buffer is `stackalloc` up to 512 characters and rented from `ArrayPool<char>` above that, so large inputs are safe. The word-splitting rules are in the [package README](../README.MD#string-case-conversions).
 
-## Random item extensions
+## Random items
 
-Extension methods for random item selection with `RandomNumberGenerator` (cryptographically secure). They exist for `T[]`, `List<T>` and `Span<T>`:
+`GetRandomItem` and `GetRandomItems` exist for `T[]`, `List<T>` and `Span<T>` and use `RandomNumberGenerator`, not `System.Random`.
 
 ```csharp
-// Single random item selection
 List<int> numbers = [1, 2, 3, 4, 5];
-int randomNumber = numbers.GetRandomItem();
-// Selects a random number from the list
+int one = numbers.GetRandomItem();
+int[] three = numbers.GetRandomItems(3);
 
-// Multiple random item selection
-int[] threeRandomNumbers = numbers.GetRandomItems(3);
-// Selects 3 items at distinct positions; a count >= the list length returns all items shuffled
-
-// Works with arrays and spans (an empty source throws ArgumentException)
 Span<string> words = ["apple", "banana", "cherry"];
-string randomWord = words.GetRandomItem();
-// Selects a random word from the span
+string word = words.GetRandomItem();
 ```
 
-## General extensions
+`GetRandomItems` picks items at distinct positions. A `count` at or above the length returns all items shuffled, and a negative `count` throws `ArgumentOutOfRangeException`. `GetRandomItem` on an empty source throws `ArgumentException`.
 
-### Null and empty checks
+## Null, empty and boolean checks
 
 ```csharp
 string? text = null;
-bool isEmpty = text.IsEmpty();      // true if null, empty, or whitespace
-bool isNotEmpty = text.IsNotEmpty(); // true if not null, empty, or whitespace
-bool isNull = text.IsNull();        // true if null (works for any T)
-bool isNotNull = text.IsNotNull();  // true if not null (works for any T)
-```
+text.IsEmpty();      // true for null, "" and whitespace (string? only)
+text.IsNotEmpty();
+text.IsNull();       // any T
+text.IsNotNull();
 
-`IsEmpty` and `IsNotEmpty` are for `string?` only. All four carry `[NotNullWhen]` annotations, so the compiler treats the value as non-null after a successful `IsNotEmpty()` or `IsNotNull()` check.
-
-### Boolean extensions and functional programming
-
-```csharp
 bool condition = true;
-condition.IsTrue();   // Returns true if condition is true
-condition.IsFalse();  // Returns true if condition is false
-
-// Conditional Actions - Functional programming approach
-condition.IfTrue(() => Console.WriteLine("Condition true"));
-// Executes action if condition is true
-
-condition.IfFalse(() => Console.WriteLine("Condition false"));
-// Executes action if condition is false
+condition.IsTrue();
+condition.IsFalse();
+condition.IfTrue(() => Console.WriteLine("true"));
+condition.IfFalse(() => Console.WriteLine("false"));
 ```
 
-### Null object pattern implementation
+All four checks carry `[NotNullWhen]`, so the compiler treats the value as non-null after a successful `IsNotEmpty()` or `IsNotNull()`. `IfTrue` and `IfFalse` return the condition.
+
+`IfNotNull` and `IfNull` run an action, with an optional else action:
 
 ```csharp
-string? text = "Hello";
+text.IfNotNull(t => Console.WriteLine(t));
+text.IfNotNull(() => Console.WriteLine("has a value"));   // ignores the value
+text.IfNull(() => Console.WriteLine("null"));
 
-// Single action usage
-text.IfNotNull(t => Console.WriteLine(t));  // Executes if text is not null
-text.IfNull(() => Console.WriteLine("Null"));  // Executes if text is null
-
-// Usage with else action
-text.IfNotNull(
-    t => Console.WriteLine(t),           // Executes if text is not null
-    () => Console.WriteLine("Is null")   // Executes if text is null
-);
-
-text.IfNull(
-    () => Console.WriteLine("Is null"),  // Executes if text is null
-    t => Console.WriteLine(t)            // Executes if text is not null
-);
-
-// The action may also ignore the value
-text.IfNotNull(() => Console.WriteLine("Has a value"));
+text.IfNotNull(t => Console.WriteLine(t), () => Console.WriteLine("null"));
+text.IfNull(() => Console.WriteLine("null"), t => Console.WriteLine(t));
 ```
 
-Every `IfNotNull` / `IfNull` overload returns a `bool`: `true` when the value was not null for `IfNotNull`, `true` when it was null for `IfNull`.
+Each overload returns a `bool`: `true` when the value was not null for `IfNotNull`, `true` when it was null for `IfNull`.
 
-### Task extensions and asynchronous programming
+## Tasks
 
 ```csharp
-// Converting synchronous values to Tasks
-string value = "test";
-Task<string> task = value.AsTask();         // Task.FromResult(value)
-ValueTask<string> valueTask = value.AsValueTask(); // ValueTask.FromResult(value)
+Task<string> task = "test".AsTask();              // Task.FromResult
+ValueTask<string> valueTask = "test".AsValueTask();
 
-// Stop waiting when the token is cancelled
 await task.WithCancellation(cancellationToken);
 await valueTask.WithCancellation(cancellationToken);
 ```
 
-`WithCancellation` exists for `Task`, `Task<T>`, `ValueTask` and `ValueTask<T>`. It throws `OperationCanceledException` as soon as the token is cancelled, but it does not cancel the underlying operation. A completed task, or a token that cannot be cancelled, returns the original task unchanged.
+`WithCancellation` exists for `Task`, `Task<T>`, `ValueTask` and `ValueTask<T>`. It throws `OperationCanceledException` as soon as the token is cancelled (on .NET 9 and later the `TaskCanceledException` subclass from `Task.WaitAsync`), but it does not cancel the wrapped operation. A completed task, or a token that cannot be cancelled, returns the original task unchanged.
 
-## Collection extensions
-
-### Conditional collection operations
+## Collections
 
 ```csharp
-var list = new List<int>();
-
-// Conditional add operations
 list.IfAdd(condition: true, 1);
-// Adds item if condition is true
-
 list.IfAddRange(condition: true, [1, 2, 3]);
-// Adds all items if condition is true
+
+var query = items.WhereIf(condition, x => x.IsActive);   // IQueryable<T> and IEnumerable<T>
+var nonNull = items.WithoutNulls();
+var withProperty = items.WithoutNulls(x => x.Property);  // drops items whose property is null
+
+bool same = list1.HasSameElements(list2);   // set comparison: order and duplicates ignored
+bool allTrue = flags.AllTrue();
+bool allFalse = flags.AllFalse();
+
+items.ForEach(item => Console.WriteLine(item))
+     .Where(x => x.IsValid)
+     .ToList();   // the actions run here
 ```
 
-### LINQ extensions and functional queries
+`ForEach` is lazy and yields each item after running the action. When `items` is a `List<T>`, the instance method `List<T>.ForEach` (returns `void`) wins overload resolution; call `items.AsEnumerable().ForEach(...)` to get this one. `WithoutNulls`, `GetInnerExceptions` and `GetInnerExceptionsMessages` are lazy too.
 
-```csharp
-// Conditional where clause
-var query = items.WhereIf(condition, x => x.IsActive);
-// Applies where filter if condition is true
-
-// Null element filtering
-var withoutNulls = items.WithoutNulls();
-// Returns non-null elements from collection
-
-var withoutNullProperties = items.WithoutNulls(x => x.Property);
-// Returns non-null elements whose specified property is not null
-
-// Collection comparison
-bool areEqual = list1.HasSameElements(list2);
-// Compares as sets: order and duplicates are ignored
-
-// Boolean collection operations
-bool allTrue = boolList.AllTrue();   // True if all elements are true
-bool allFalse = boolList.AllFalse(); // True if all elements are false
-```
-
-### Enumerable extensions and fluent interface
-
-```csharp
-// Fluent interface usage with ForEach
-items.ForEach(item => Console.WriteLine(item))  // Runs the action for each item as it is enumerated
-     .Where(x => x.IsValid)                     // Applies filter
-     .ToList();                                 // Enumerates, so the actions run here
-```
-
-`ForEach` is lazy and returns each item after running the action. Nothing runs until the sequence is enumerated. When `items` is a `List<T>`, the instance method `List<T>.ForEach` (returns `void`) is chosen instead; call `items.AsEnumerable().ForEach(...)` to use this one.
-
-### Range checks
+## Range checks
 
 ```csharp
 5.IsBetween(1, 10);            // true  (inclusive)
@@ -187,16 +107,14 @@ items.ForEach(item => Console.WriteLine(item))  // Runs the action for each item
 
 Both work for any `IComparable<T>`.
 
-### Other general extensions
+## Other extensions
 
 ```csharp
-object boxed = 42;
-int number = boxed.ExplicitCast<int>();   // (int)boxed
+int number = ((object)42).ExplicitCast<int>();   // (int)boxed
 
-DateTime when = 1700000000000L.MsToDateTime();   // from Unix milliseconds
+DateTime when = 1700000000000L.MsToDateTime();   // Unix milliseconds, Kind is Utc
 
-Guid id = Guider.NewGuid();
-string shortId = id.ToStringFromGuid();          // see ../Guids/Readme.MD
+string shortId = Guider.NewGuid().ToStringFromGuid();   // see ../Guids/Readme.MD
 Guid parsed = shortId.ToGuidFromString();
 
 HttpGroup group = HttpStatus.BadRequest.GetTypeGroup<HttpGroup, HttpStatus>();   // HttpGroup.ClientError
@@ -207,36 +125,8 @@ public enum HttpGroup { Success = 200, ClientError = 400 }
 
 `GetTypeGroup` rounds the enum value down to a multiple of `group` (default 100) and converts it to the target enum.
 
-On .NET 10 and later, `using CSharpEssentials;` also brings the C# 14 extension members `IEnumerable<T>.IsEmpty` (a property equal to `!source.Any()`) and `string.IsPalindrome` (a property).
-
-## Exception extensions
-
-Helper methods for exception handling:
-
-```csharp
-try
-{
-    // Code that throws exception
-}
-catch (Exception ex)
-{
-    // Get all inner exceptions
-    var allExceptions = ex.GetInnerExceptions();
-    // Lazily returns ex itself, then each inner exception in turn
-
-    // Get all exception messages
-    var allMessages = ex.GetInnerExceptionsMessages();
-    // Lazily returns the Message of each of those exceptions (IEnumerable<string?>)
-}
-```
-
-## HTTP status codes
+`GetInnerExceptions()` returns the exception itself followed by each inner exception; `GetInnerExceptionsMessages()` returns their `Message` values as `IEnumerable<string?>`.
 
 `HttpCodes` holds `int` constants for common status codes (`HttpCodes.Ok`, `HttpCodes.NotFound`, `HttpCodes.UnprocessableEntity`, `HttpCodes.TooManyRequests`, ...).
 
-## Notes
-
-1. String case conversions allocate one result string and use a `stackalloc` buffer for short inputs (a pooled array for longer ones), so they stay safe on very large inputs.
-2. Random selection uses `RandomNumberGenerator`, not `System.Random`.
-3. `ForEach`, `WithoutNulls`, `GetInnerExceptions` and `GetInnerExceptionsMessages` are lazy; enumerate them to run them.
-4. `WithCancellation` stops the wait only; the wrapped task keeps running.
+On .NET 10 and later, `using CSharpEssentials;` brings the C# 14 extension properties `IEnumerable<T>.IsEmpty` (`!source.Any()`) and `string.IsPalindrome`.

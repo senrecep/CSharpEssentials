@@ -1,6 +1,6 @@
 # CSharpEssentials.Endpoints: performance benchmarks
 
-Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0) · BenchmarkDotNet v0.14.0 · 6-core, 12-thread x64 desktop CPU · .NET 8 / 9 / 10 / 11
+Compared with plain Minimal APIs, Carter 10.0.0 and FastEndpoints 8.3.0 (+ FastEndpoints.Generator 8.3.0), measured with BenchmarkDotNet v0.14.0 on a 6-core, 12-thread x64 desktop CPU on Linux under .NET 8, 9, 10 and 11.
 
 Every BenchmarkDotNet number on this page comes from one full run of the suite on 2026-11-05 (the net9.0 throughput class was rerun on 2026-11-06, and the name-read class on 2026-11-07). That run includes three newer classes: operation naming, name reads and the empty-prefix group. Their results are in [Operation naming and the empty-prefix group](#operation-naming-and-the-empty-prefix-group). The Native AOT table comes from a separate script run on 2026-11-06. Every CSE loss is collected in [Where CSE loses](#where-cse-loses).
 
@@ -35,11 +35,11 @@ Environment:
 | Property | Value |
 |---|---|
 | Machine | 6-core, 12-thread x64 desktop CPU (RyuJIT AVX2) |
-| OS | CachyOS, Linux kernel 7.3.0-4-cachyos |
+| OS | Linux, kernel 7.3.0 |
 | Machine load | Desktop session and other work in the background; 1-minute load average 2.18 to 4.72 (see below) |
 | Tool | BenchmarkDotNet v0.14.0, [MemoryDiagnoser], [ExceptionDiagnoser] on throughput |
-| .NET SDK | 11.0.100-rc.1.26425.128 |
-| Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 |
+| .NET SDK | 11.0.100-rc.1.26425.128; 11.0.100-rc.3.26522.148 for the `OperationNameReadBenchmarks` rerun |
+| Runtimes tested | .NET 8.0.30, 9.0.19, 10.0.11, 11.0.0; `OperationNameReadBenchmarks` rerun: .NET 8.0.33, 9.0.22, 10.0.14, 11.0.0 |
 | Request Delegate Generator | Off in the BenchmarkDotNet runs (JIT, no `PublishAot`); on in the Native AOT publishes |
 | Carter | 10.0.0 |
 | FastEndpoints | 8.3.0, FastEndpoints.Generator 8.3.0 |
@@ -95,8 +95,6 @@ Every row where CSE (CseGenerated) takes longer or allocates more than another v
 
 ### 1. Cold startup (fresh process until every endpoint answered once)
 
-> This is the fair startup comparison, because every library's lazy work falls inside the timing.
-
 Net10, mean of 15 launches. "Ratio" is the report's ratio against Plain. Allocation is copied in the report's unit.
 
 | Variant | N=10 | Ratio | N=100 | Ratio | N=500 | Ratio | Alloc N=10 | Alloc N=500 |
@@ -121,7 +119,7 @@ Cross-TFM, mean (ms):
 | FastEndpoints | 225.6 | 211.1 | 213.5 | 215.3 | 297.7 | 288.4 | 296.7 | 299.8 | 653.2 | 643.4 | 688.4 | 687.2 |
 | FastEndpointsSourceGen | 225.7 | 210.1 | 205.5 | 212.2 | 296.3 | 287.5 | 301.2 | 299.3 | 652.0 | 636.4 | 690.4 | 689.1 |
 
-In small apps (N=10), FastEndpoints takes 1.26-1.31× the CSE time on every TFM, and CSE is within error of Plain except on net9 (ratio 1.02). In large apps (N≥100), FastEndpoints is faster on every TFM. At N=500 CSE takes 1.39× (net8) to 1.73× (net11) as long. Plain takes 1.29× (net8) to 1.62× (net11) as long as FastEndpoints at N=500, which points to how Minimal APIs build handlers rather than the CSE registry (not profiled). The CSE overhead over Plain at N=500 (ratio 1.06-1.08) is the part that belongs to CSE.
+Plain takes 1.29× (net8) to 1.62× (net11) as long as FastEndpoints at N=500, which points to how Minimal APIs build handlers rather than the CSE registry (not profiled). The CSE overhead over Plain at N=500 (ratio 1.06-1.08) is the part that belongs to CSE.
 
 ---
 
@@ -191,8 +189,6 @@ The net9 row comes from the rerun on 2026-11-06.
 
 On every route and every TFM, CSE and Plain run the same Minimal API pipeline and tie. Carter ties CSE on GET and DELETE. FastEndpoints takes 1.23-1.32× as long on GET and DELETE on net8 to net10 and allocates 1.19-1.38 KB more per request on every TFM. On net11 the GET gap to FastEndpoints shrinks to 1.07×, while DELETE stays at 1.28×.
 
-On a valid POST, Carter is faster than CSE on net10 (15.620 vs 17.325 μs) and net11 (18.82 vs 20.02 μs). On an invalid POST, CSE ties Plain on net10 and net11; Carter takes 1.32× (net10) and 1.27× (net11) as long, and FastEndpoints 2.06× (net10) and 1.70× (net11), with two exceptions per invalid request.
-
 ---
 
 ### 4. Native AOT (net10, linux-x64, three routes)
@@ -233,7 +229,7 @@ CSE cells come from this repository (csproj, Readme, `ReflectionEndpointScanner.
 | DI registration required | No | No: `app.Map{Asm}Endpoints()` or `MapAllEndpoints()` | `AddCarter()` + `MapCarter()` | `AddFastEndpoints()` + `UseFastEndpoints()` | `AddFastEndpoints(DiscoveredTypes.All)` + `UseFastEndpoints()` |
 | Request binding pipeline | RequestDelegateFactory or RDG | Unchanged Minimal APIs (calls stay in user code; each type wrapped in `MapGroup("")`) | Unchanged Minimal APIs | Its own `RequestBinder<TRequest>` behind `MapMethods(..., FeRequestHandler)` ([EndpointRouteMapper.cs](https://github.com/FastEndpoints/FastEndpoints/blob/v8.3/Src/Library/Main/EndpointRouteMapper.cs), [RequestBinder.cs](https://github.com/FastEndpoints/FastEndpoints/blob/v8.3/Src/Library/Binder/RequestBinder.cs)) | Same, plus the generated reflection cache when enabled |
 | Built-in validation | .NET 10 `AddValidation()` with DataAnnotations ([minimal-apis](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/minimal-apis?view=aspnetcore-10.0)) | None in the package. `AddValidation()` works (measured in section 3); `.WithValidation<T>()` lives in `CSharpEssentials.AspNetCore` | FluentValidation, validators found by scanning ([CarterExtensions.cs](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/CarterExtensions.cs)) | FluentValidation, singleton validators; DataAnnotations opt-in ([validation docs](https://fast-endpoints.com/docs/validation)) | Same |
-| Minimal API groups / IResult / OpenAPI unchanged | Yes | Yes: `IEndpointGroup.Configure` receives a real `RouteGroupBuilder` | Yes | No: own `Group`/`SubGroup`, `IResult` via `Results<…>`, OpenAPI through FastEndpoints.Swagger or FastEndpoints.OpenApi ([config docs](https://fast-endpoints.com/docs/configuration-settings), [get-started](https://fast-endpoints.com/docs/get-started), [OpenAPI docs](https://fast-endpoints.com/docs/openapi-documents)) | Same |
+| Minimal API groups / IResult / OpenAPI unchanged | Yes | Yes: `IEndpointGroup.Configure` receives a real `RouteGroupBuilder` | Yes | No: own `Group`/`SubGroup`, `IResult` via `Results<...>`, OpenAPI through FastEndpoints.Swagger or FastEndpoints.OpenApi ([config docs](https://fast-endpoints.com/docs/configuration-settings), [get-started](https://fast-endpoints.com/docs/get-started), [OpenAPI docs](https://fast-endpoints.com/docs/openapi-documents)) | Same |
 
 [2] The Carter.Analyzers package ships its DLL under `lib/`, so the Roslyn package enters the runtime dependency graph. Whether the Roslyn DLLs reach the publish output was not checked.
 
@@ -246,7 +242,6 @@ CSE cells come from this repository (csproj, Readme, `ReflectionEndpointScanner.
 - BenchmarkDotNet's MemoryDiagnoser measures allocation in a separate run, not in the timed cold launch. The cold allocation column is managed allocation for one invocation of the unit.
 - The JIT benchmarks do not enable the Request Delegate Generator, so Plain, CSE and Carter pay RequestDelegateFactory at startup. The large-N cold gap to FastEndpoints may change with RDG on; this was not measured.
 - Validation engines differ. Plain and CSE use DataAnnotations + `AddValidation()`; Carter and FastEndpoints use FluentValidation. The POST rows compare complete stacks, not routing alone. They exist on net10 and net11 only.
-- A difference within the sum of the two error margins is reported as a tie.
 - The net11 warm Baseline is 551.7-570.4 μs against 1.058-1.100 ms on the other TFMs, so vs-Baseline ratios are not comparable across TFMs. None are quoted here.
 - Per-request time on net11 is higher for every variant (GET 12.64-13.92 μs against 8.723-11.559 μs on net10). This is a runtime-level difference, not a library one.
 - Carter runs with one module per endpoint, matching CSE's one type per endpoint. Carter apps that group many routes per module would build fewer modules.
@@ -256,7 +251,7 @@ CSE cells come from this repository (csproj, Readme, `ReflectionEndpointScanner.
 
 ## Operation naming and the empty-prefix group
 
-These three classes ran in the same full run as the sections above, on net8.0 to net11.0. Short-job (`--quick`) numbers are not published.
+These three classes ran in the same full run as the sections above, on net8.0 to net11.0 (`OperationNameReadBenchmarks` was rerun after the lock fix described below). Short-job (`--quick`) numbers are not published.
 
 ### Results
 
@@ -328,7 +323,7 @@ Feature matrix for these classes, from reading each library's source and docs (n
 | When names are fixed | At map time | TypeName: on the first read, and again after any later mapping call | At map time | At map time (`WithName`) |
 | Route group per endpoint | None | One `MapGroup("")` per endpoint type, always (`EndpointMapper.cs:93`) | `ICarterModule`: none. `CarterModule` base class: one `MapGroup(basePath)` per module, `""` by default ([CarterExtensions.cs#L35](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/CarterExtensions.cs#L35), [ICarterModule.cs#L50](https://github.com/CarterCommunity/Carter/blob/10.0.0/src/Carter/ICarterModule.cs#L50)) | None: `MapMethods` on the app |
 
-Expected losses, read from the source before the run (not fixed in this work), checked against the numbers:
+Expected losses, read from the source before the run and checked against the numbers:
 - Every read of a TypeName name took the registry lock, even after the names were resolved (`OperationNameMetadata.cs:7` calls `OperationNameRegistry.cs:120`). The first run confirmed it (net10: 12.280 μs against 7.396 μs Custom and 6.381 μs hand-written). This was later fixed: resolved names are now read without the lock (`OperationNameRegistry.cs:122-129`), and the 2026-11-07 rerun shows TypeName tied with Custom on net8 to net10 (net10: 8.505 vs 8.404 μs).
 - TypeName does more work per endpoint while mapping and building. At map time: a `ConditionalWeakTable` lookup and a lock (`EndpointMapper.cs:113-115`, `OperationNameRegistry.cs:39` and `:42-67`). At build: a `string.Create` key, LINQ `OfType().LastOrDefault()` twice and another lock (`OperationNameRegistry.cs:69-104`). Partly confirmed: TypeName is above None on net8, net10 and net11 and allocates the most, but it is above Custom only on net8.
 - CSE wraps each endpoint type in its own `MapGroup(string.Empty)` (`EndpointMapper.cs:93`), which adds a group data source per type: 500 against 1 here. Confirmed for allocation (0.49-0.56 MB more). The time difference is within error on every TFM.
@@ -349,4 +344,4 @@ cd benchmarks
 python3 CSharpEssentials.Endpoints.Benchmarks/generate-endpoints.py   # regenerate the N=10/100/500 endpoint libraries
 ```
 
-Results are stored per framework under `benchmarks/results/endpoints/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/endpoints/aot/aot-report.md`; raw publish and run logs are written to `benchmarks/results/endpoints/aot/logs/`.
+Results are stored per framework under `benchmarks/results/endpoints/{tfm}/results/` (Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/endpoints/aot/aot-report.md`; raw publish and run logs are written to `benchmarks/results/endpoints/aot/logs/`.

@@ -5,15 +5,11 @@ description: Use when a method can return one of several distinct types. Covers 
 
 # CSharpEssentials.Any
 
-`Any<T0,T1,...>` is a discriminated union: a value that is exactly one of several possible types at runtime. Replaces `object`-typed returns and eliminates unsafe casting.
-
-## Installation
+`Any<T0,T1,...>` is a discriminated union: a value that is exactly one of 2 to 8 types at run time. Use it instead of `object`-typed returns and casts.
 
 ```bash
 dotnet add package CSharpEssentials.Any
 ```
-
-## Namespace
 
 ```csharp
 using CSharpEssentials.Any;
@@ -33,7 +29,7 @@ Any<Order, ValidationFailure, NotFoundError> outcome = Any<Order, ValidationFail
 Any<User, NotFoundError> viaCreate = Any.Create<User, NotFoundError>(user);
 ```
 
-Two type arguments of the same type (`Any<int, int>`) make the implicit conversion ambiguous (CS0457). `Index` is the active branch (0 for the first type) and `Value` its `object?` value.
+Two type arguments of the same type (`Any<int, int>`) make the implicit conversion ambiguous (CS0457). `Index` is the active branch (0 for the first type) and `Value` its `object?` value, so a value-type branch is boxed.
 
 ## Match and Switch
 
@@ -52,7 +48,7 @@ AnyActionStatus status = found.Switch(
     second: err => Console.WriteLine(err.Message));
 ```
 
-## Type Inspection
+## Type inspection
 
 ```csharp
 if (found.IsFirst)
@@ -80,7 +76,7 @@ var (maybeUser, maybeError) = found;
 (User[] loaded, NotFoundError[] failed) = ids.Traverse(id => FindUser(id));
 ```
 
-## Typical Usage: service return type
+## Typical usage: service return type
 
 ```csharp
 public Any<Order, ValidationFailure, NotFoundError> PlaceOrder(PlaceOrderRequest request)
@@ -103,10 +99,10 @@ public IResult PlaceOrderEndpoint(PlaceOrderRequest request) =>
         third: err => Results.NotFound(err.Message)).Result!;
 ```
 
-## Best Practices
+## Guidance
 
-- Use `Any<T0,T1>` over `Result<T>` when the error branches carry distinct, typed data
-- Pass a handler for every branch to `Match()`/`Switch()`; a missing handler is not a compile error, it returns `NotExecuted`
-- `IsFirst`/`GetFirst()` or `TryAs<…>()` are the escape hatch for cases where `Match()` is too verbose
-- Avoid `object`-typed union members; they defeat the purpose
-- A union serializes to JSON as `{"Index":n,"Value":...}` and deserializes back to the same branch
+- Use `Any<T0,T1>` over `Result<T>` when the error branches carry distinct, typed data.
+- Pass a handler for every branch to `Match()`/`Switch()`; a missing handler is not a compile error, it returns `NotExecuted`.
+- Use `IsFirst`/`GetFirst()` or `TryAs<...>()` where `Match()` is too verbose.
+- Avoid `object`-typed branches.
+- A union serializes to JSON as `{"Index":n,"Value":...}` and deserializes back to the same branch, reading the value with the caller's `JsonSerializerOptions`. `ToString()` returns the value's own `ToString()` (empty for null).

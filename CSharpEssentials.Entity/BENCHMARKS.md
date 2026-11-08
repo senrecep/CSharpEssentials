@@ -1,10 +1,10 @@
-# CSharpEssentials.Entity: Performance benchmarks
+# CSharpEssentials.Entity: performance benchmarks
 
-This page measures the domain event list of CSharpEssentials.Entity (CSE) `EntityBase` against a hand-written list, without a database, and points to the SaveChanges rows where the same list is read during a save. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. There is no third-party row: the comparison is against a hand-written list.
+This page measures the domain event list of CSharpEssentials.Entity (CSE) `EntityBase` against a hand-written list, without a database, and points to the SaveChanges rows where the same list is read during a save. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11.
 
 The classes live in `benchmarks/CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks/` (suite key `efcore`), next to the EF Core classes documented in [CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md](../CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md).
 
-The numbers on this page come from full default-job runs on net8.0, net9.0, net10.0 and net11.0 (see [Results](#results) and [How these numbers were produced](#how-these-numbers-were-produced)). The parity self-check passes on every TFM.
+The numbers come from full default-job runs on net8.0, net9.0, net10.0 and net11.0, and the parity self-check passes on every TFM.
 
 net9.0, net10.0 and net11.0 run CSE.Entity's own build for that TFM; net8.0 runs its netstandard2.1 build, because the package has no net8.0 target. Nothing is pinned for this page beyond BenchmarkDotNet.
 
@@ -34,8 +34,8 @@ With `EventsPerEntity = 0`, the SaveChangesDomainEvents rows minus the plain EF 
 
 ## Semantic differences
 
-- **Snapshot or live view.** CSE's `DomainEvents` returns one cached read-only view of the list (`EntityBase.cs:40`): it copies nothing, and later raises and clears show through it. The hand-written cached view does the same work, so it is the like-for-like row. The hand-written snapshot copies to an array on every read.
-- **Collect1k is a stand-in.** It repeats, without EF Core, what `DomainEventCollector.CollectByEntity` does per tracked entity during a save (`[.. entity.DomainEvents]`, then clear; `CSharpEssentials.EntityFrameworkCore/Interceptors/DomainEvents/DomainEventCollector.cs:29`). The real collector also enumerates the change tracker.
+- Snapshot or live view: CSE's `DomainEvents` returns one cached read-only view of the list (`EntityBase.cs:40`): it copies nothing, and later raises and clears show through it. The hand-written cached view does the same work, so it is the like-for-like row. The hand-written snapshot copies to an array on every read.
+- Collect1k is a stand-in: It repeats, without EF Core, what `DomainEventCollector.CollectByEntity` does per tracked entity during a save (`[.. entity.DomainEvents]`, then clear; `CSharpEssentials.EntityFrameworkCore/Interceptors/DomainEvents/DomainEventCollector.cs:29`). The real collector also enumerates the change tracker.
 
 ---
 
@@ -59,7 +59,7 @@ This table comes from reading CSE source. None of it was measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread desktop CPU under Linux. The exact CPU, SDK and runtime builds are in the header of each report.
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. SDK and runtime builds are in the header of each report.
 - TFMs: net8.0 (.NET 8.0.30, CSE.Entity netstandard2.1 build), net9.0 (.NET 9.0.19), net10.0 (.NET 10.0.11) and net11.0 (.NET 11.0.0).
 - The 1-minute load average stayed between 1.99 and 2.60 during the `efcore` suite and its reruns. No row of this class has a CV above 5%.
 - Reports: [`benchmarks/results/efcore/{tfm}/results/`](../benchmarks/results/efcore/), file `CSharpEssentials.EntityFrameworkCore.Comparison.Benchmarks.DomainEventsReadComparison-report-github.md`. Every number below is copied from those files.
@@ -92,9 +92,9 @@ Each cell is `Mean (Ratio), Allocated` for that TFM; Ratio is against the baseli
 | Collect1k | 10 | Hand-written (baseline) | 123,528.515 ns (1.00), 268056 B | 121,972.929 ns (1.00), 268056 B | 114,461.980 ns (1.00), 268056 B | 101,777.675 ns (1.00), 268056 B |
 | Collect1k | 10 | CSE, collector style | 137,731.792 ns (1.11), 268056 B | 125,176.648 ns (1.03), 268056 B | 114,706.463 ns (1.00), 268056 B | 100,576.696 ns (0.99), 268056 B |
 
-- **Read.** CSE's read allocates nothing on any TFM, like the hand-written cached view. Against that view, its like-for-like row, CSE is slower in 11 of 12 cells, by 0.15 to 1.02 ns; the exception is net8.0 with one event (7.581 ns against 7.827 ns). Against the copying snapshot, CSE is faster except with 0 events on net10.0 and net11.0 (2.256 ns and 2.255 ns against 1.689 ns and 1.687 ns), where the snapshot returns an empty array without copying.
-- **RaiseClear.** CSE is slower than the hand-written list in 6 of 12 cells: net8.0 with 1 and 10 events, net9.0 with 1, net10.0 with 0, net11.0 with 0 and 10. The largest gap is net8.0 with 1 event (12.430 ns against 11.441 ns).
-- **Collect1k.** CSE is slower in 7 of 12 cells: net8.0 and net9.0 with 1 and 10 events (up to 1.23 times), net10.0 and net11.0 with 0 events (1.48 and 1.37 times), and net10.0 with 10 events (114,706.463 ns against 114,461.980 ns, ratio 1.00). Allocation is the same in every pair.
+- Read: CSE's read allocates nothing on any TFM, like the hand-written cached view. Against that view, its like-for-like row, CSE is slower in 11 of 12 cells, by 0.15 to 1.02 ns; the exception is net8.0 with one event (7.581 ns against 7.827 ns). Against the copying snapshot, CSE is faster except with 0 events on net10.0 and net11.0 (2.256 ns and 2.255 ns against 1.689 ns and 1.687 ns), where the snapshot returns an empty array without copying.
+- RaiseClear: CSE is slower than the hand-written list in 6 of 12 cells: net8.0 with 1 and 10 events, net9.0 with 1, net10.0 with 0, net11.0 with 0 and 10. The largest gap is net8.0 with 1 event (12.430 ns against 11.441 ns).
+- Collect1k: CSE is slower in 7 of 12 cells: net8.0 and net9.0 with 1 and 10 events (up to 1.23 times), net10.0 and net11.0 with 0 events (1.48 and 1.37 times), and net10.0 with 10 events (114,706.463 ns against 114,461.980 ns, ratio 1.00). Allocation is the same in every pair.
 
 The SaveChanges rows that read the same list during a save are on the [EF Core page](../CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md#savechangesdomainevents).
 
@@ -102,9 +102,6 @@ The SaveChanges rows that read the same list during a save are on the [EF Core p
 
 ## Caveats
 
-- **CSE costs seen in the code:**
-  - `EntityBase.cs:40`: `DomainEvents` returns a read-only view created once per entity and cached in `_domainEventsView` (`:12`); the Read rows show no allocation.
-  - `CSharpEssentials.EntityFrameworkCore/Interceptors/DomainEvents/DomainEventCollector.cs:29`: the collector copies each entity's events into an array once per tracked entity per save.
 - The CSE column is the working tree on branch `integ/all`, a local integration of the open pull requests, which may not match the version published on NuGet.
 
 ---

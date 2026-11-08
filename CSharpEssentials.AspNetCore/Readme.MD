@@ -2,21 +2,19 @@
 
 ASP.NET Core utilities: global exception handling, structured ProblemDetails, API versioning, enum conventions, and Result endpoint filters.
 
-> Benchmarks against plain ASP.NET Core, Hellang.Middleware.ProblemDetails, Marvin.Cache.Headers and SharpGrip.FluentValidation.AutoValidation
-> (Result endpoint filter, enum binding, conditional GET, problem details, validation filter) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks against plain ASP.NET Core, Hellang.Middleware.ProblemDetails, Marvin.Cache.Headers and SharpGrip.FluentValidation.AutoValidation are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Features
 
-- **Enhanced problem details**: One configurable ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages. It has secure defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
-- **Global exception handler**: Maps exceptions to ProblemDetails. Unknown exceptions return 500, and the exception message goes to the log, not to the response.
-- **Result endpoint filter**: Converts `Result<T>` return values to `200 OK` or a ProblemDetails response.
-- **Validation endpoint filter**: Runs `CSharpEssentials.Validation` validators for a handler argument and returns a 400 ProblemDetails response on failure.
-- **Idempotency**: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response instead of running the handler again. Records live in an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`; in-memory and `IDistributedCache` stores are included.
-- **Enum binding**: Query and route values for `[StringEnum]` enums accept the same spellings as JSON. Invalid values return 400.
-- **Conditional requests**: `ETag`/`Last-Modified` with `304 Not Modified` on reads (`WithConditionalGet()`, `[ConditionalGet]`), and `If-Match` optimistic concurrency with 412/428 on writes (`WithIfMatch()`, `[IfMatch]`).
-- **API versioning**: Pre-configured URL segment and header-based versioning.
-- **OpenAPI**: Not part of this package. Add `CSharpEssentials.AspNetCore.OpenApi` (`Microsoft.AspNetCore.OpenApi`) or `CSharpEssentials.AspNetCore.Swashbuckle` (Swagger), one per host.
+- Problem details: one ProblemDetails pipeline for Minimal API, MVC, the exception handler and status code pages, with privacy-first defaults and the extension points `IProblemDetailsEnricher`, `IErrorStatusCodeMapper` and `IExceptionProblemMapper`.
+- Global exception handler: unknown exceptions return 500; the exception message goes to the log, not to the response.
+- Result endpoint filter: `Result<T>` becomes `200 OK` or a ProblemDetails response.
+- Validation endpoint filter: runs `CSharpEssentials.Validation` validators for a handler argument and returns 400 on failure.
+- Idempotency: `Idempotency-Key` handling for opted-in endpoints. A retry with the same key and request gets the stored response; records live in an `IIdempotencyRecordStore` from `CSharpEssentials.Idempotency`.
+- Enum binding: query, route, header and form values of `[StringEnum]` enums accept the same spellings as JSON.
+- Conditional requests: `ETag`/`Last-Modified` with 304 on reads, `If-Match` with 412/428 on writes.
+- API versioning: URL segment and header versioning, preconfigured.
+- OpenAPI is not part of this package. `AddSwagger`, `UseVersionableSwagger` and the Swagger filters moved to `CSharpEssentials.AspNetCore.Swashbuckle` in 5.0 (same namespaces); for `Microsoft.AspNetCore.OpenApi` use `CSharpEssentials.AspNetCore.OpenApi`. A host references one of them, never both.
 
 ## Installation
 
@@ -24,7 +22,7 @@ ASP.NET Core utilities: global exception handling, structured ProblemDetails, AP
 dotnet add package CSharpEssentials.AspNetCore
 ```
 
-Depends on `CSharpEssentials.Errors`, `CSharpEssentials.Json`, `CSharpEssentials.Results` and `CSharpEssentials.Validation` (for the validation endpoint filter). None of them references this package, so there is no cycle.
+Depends on `CSharpEssentials.Errors`, `CSharpEssentials.Json`, `CSharpEssentials.Results` and `CSharpEssentials.Validation`.
 
 ## Usage
 
@@ -58,7 +56,7 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler + UseStatusCodePages
 | `TypeUriResolver` | `ProblemTypeUris.Rfc9110` | `ProblemTypeUris.Rfc7231` or a custom function |
 | `ExposeExceptionDetails` | `false` | Enable only in Development |
 
-`o.UseLegacyDefaults()` restores the 3.x output. See the migration notes in the repository README.
+`o.UseLegacyDefaults()` restores the 3.x output.
 
 With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpContext.TraceIdentifier`. `errors` lists only `ErrorType.Validation` errors; every code is in `errorCodes`.
 
@@ -117,10 +115,6 @@ v2.MapGet("/ping", () => "pong");             // GET /v2/ping
 v2.MapAppsEndpoints();                        // CSharpEssentials.Endpoints registry under /v2
 ```
 
-### OpenAPI documents
-
-`AddSwagger`, `UseVersionableSwagger` and the Swagger filters moved to `CSharpEssentials.AspNetCore.Swashbuckle` in 5.0 (same namespaces). For `Microsoft.AspNetCore.OpenApi` use `CSharpEssentials.AspNetCore.OpenApi`. A host references one of them, never both.
-
 ### Result endpoint filter
 
 ```csharp
@@ -144,10 +138,7 @@ app.MapPost("/users", (CreateUserRequest request) => CreateUser(request))
    .WithValidation<CreateUserRequest>();
 ```
 
-- Validates each non-null argument of type `T` with every registered `IValidator<T>`, in ascending `Order`. Errors are combined and returned with `ToProblemResult()` (validation errors → 400); the handler does not run.
-- A `null` argument (optional body) is passed through.
-- No registered `IValidator<T>` throws `InvalidOperationException` at request time, so unvalidated input never reaches the handler. A handler without a `T` parameter throws when the endpoint is built.
-- `ValidationEndpointFilter<T>` can also be added directly with `AddEndpointFilter<ValidationEndpointFilter<T>>()`, for example on a route group.
+Each non-null argument of type `T` is validated by every registered `IValidator<T>`, in ascending `Order`; the combined errors go out through `ToProblemResult()` (400) and the handler does not run. A `null` argument (optional body) passes through. With no `IValidator<T>` registered the request throws `InvalidOperationException`, so unvalidated input never reaches the handler; a handler without a `T` parameter throws when the endpoint is built. On a route group, add `AddEndpointFilter<ValidationEndpointFilter<T>>()` directly.
 
 ### Idempotency
 
@@ -205,7 +196,7 @@ How a request with an `Idempotency-Key` header is handled:
 
 #### Guarantee modes
 
-The middleware is lease mode: it reserves the key before the endpoint and settles it after, outside any transaction your handler opens, so a request that outlives its lease or a crash between the side effect and the write can run again after the lease. That is the right default for most endpoints. For a transactional guarantee on money movement, see [Transactional store for money movement](#transactional-store-for-money-movement) below and the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#guarantee-modes).
+The middleware is lease mode: it reserves the key before the endpoint and settles it after, outside any transaction your handler opens, so a request that outlives its lease or a crash between the side effect and the write can run again after the lease. For a transactional guarantee on money movement, see [Transactional store for money movement](#transactional-store-for-money-movement) below and the [Idempotency Readme](../CSharpEssentials.Idempotency/Readme.MD#guarantee-modes).
 
 #### Release policy and the 5xx trade-off
 
@@ -230,14 +221,15 @@ o.ServerErrorRetention = o.RetentionPeriod;          // strictest: a stored 5xx 
 
 - `ShouldStore` receives an `IdempotencyOutcome` (`StatusCode`, `HandlerStarted`). It is asked only after the handler started and only for statuses outside `NeverStoreStatusCodes`.
 - An idempotent endpoint without the filter (a `RequestDelegate` endpoint given `IdempotentAttribute` metadata by hand, or an MVC action opted in with `MapControllers().WithIdempotency()` but without `[Idempotent]`) cannot tell whether its handler started. Its 2xx responses are still stored (a 2xx that cannot be stored keeps the key in flight), and every other outcome, including 3xx, 5xx, 503/504 and exceptions before the response started, releases the key, so a failure after a side effect can run again. It logs `Idempotency.ExecutionFilterMissing` once; `RequireExecutionFilter = true` throws instead.
-
 - Only endpoints with `IdempotentAttribute` metadata (`WithIdempotency()`, `[Idempotent]`, or on a route group) and methods in `Methods` (default POST and PATCH) participate.
+
 #### Scopes and machine callers
 
 - Keys are scoped by `ScopeResolver`, which reads `HttpContext.User`. The default `IdempotencyScopes.User` uses the authenticated user (`NameIdentifier`, then `sub`), so a user only ever receives responses stored under the same scope. Other resolvers: `IdempotencyScopes.Tenant(claimType)`, `UserAndTenant(claimType)`, `Client` (`client_id`, then `azp`), `Custom(kind, principal => ...)` (the kinds `user`, `tenant`, `client` and `global` are reserved) and `Global`. A resolver returns an `IdempotencyScope?` built with the `IdempotencyScope` factories (`User(id)`, `Tenant(id)`, `Client(id)`, `UserAndTenant(userId, tenantId)`, `Custom(kind, value)`, `Global`), which prefix the owner id with its kind. Requests whose scope cannot be resolved (for example anonymous ones) follow `UnscopedKeyBehavior` (see above); the raw key is never logged. Use `Client` for callers that authenticate with client credentials. Global keys never match a scoped entry.
-- `UnscopedKeyBehavior` defaults to `Skip` here: a request without a scope runs without idempotency and logs a warning, so a machine caller that authenticates with client credentials is not protected until you set `ScopeResolver = IdempotencyScopes.Client` (or `Reject`, to make the gap visible as 400 `Idempotency.ScopeRequired`). The Mediator behavior defaults to `Reject`; see [HTTP and Mediator scope defaults](#http-and-mediator-scope-defaults).
+- With the default `Skip`, a machine caller that authenticates with client credentials is not protected until you set `ScopeResolver = IdempotencyScopes.Client` (or `UnscopedKeyBehavior = Reject`, to make the gap visible as 400).
 - Records are written in the `Namespace` (default `http`), so HTTP keys never meet the keys of message consumers or jobs that share the store.
 - `AddIdempotency` also registers an `IIdempotencyScopeAccessor` that reads `HttpContext.User` (unless one is registered), so the idempotency behavior of `CSharpEssentials.Mediator` scopes keys to the same caller as the middleware. A failed `Result` whose errors include an idempotency code, returned with `ToProblemResult()` or `ToActionResult()`, gets the middleware's status and the top-level `code` member, whatever its `ErrorType`: `Idempotency.InFlight` → 409 with `Retry-After` from `RetryAfter` (1 second without `AddIdempotency`), `Idempotency.KeyReused` → 422, `Idempotency.KeyMissing`, `KeyInvalid` and `ScopeRequired` → 400. Other errors get neither, so clients retry only a key in flight.
+
 #### HTTP and Mediator scope defaults
 
 | Layer | Default | A keyed request without a scope |
@@ -288,14 +280,14 @@ Stores:
 | Store | Register with | Notes |
 |-------|---------------|-------|
 | `InMemoryIdempotencyRecordStore` | default, or `o.UseInMemoryStore()` | Single instance only. Unbounded: every stored response stays in memory for `RetentionPeriod`, so use it for development or small workloads |
-| `DistributedCacheIdempotencyRecordStore` | `o.UseDistributedCacheStore()` plus an `IDistributedCache` | Single instance or development. Best effort: `IDistributedCache` has no atomic add, so two simultaneous first requests can both run |
+| `DistributedCacheIdempotencyRecordStore` | `o.UseDistributedCacheStore()` plus an `IDistributedCache` | Single instance or development. Best effort: `IDistributedCache` has no atomic add (see below) |
 | Your own `IIdempotencyRecordStore` | `o.UseStore<TStore>(lifetime)` | Use an atomic insert (for example `INSERT ... ON CONFLICT DO NOTHING` or Redis `SET NX`) for a strict guarantee, and make `CompleteAsync`/`ReleaseAsync` conditional on the reservation token (`WHERE key = @key AND token = @token`). Verify it with `CSharpEssentials.Idempotency.Testing` |
 
 The response is stored as an opaque, versioned payload. A stored payload that cannot be read is answered with 500 and an error log; the handler does not run again.
 
 #### Best-effort stores across multiple instances
 
-`UseDistributedCacheStore()` is for one instance and development: two instances can both reserve the same free key and both run the handler, and the later reservation wins, so the first request's completion is dropped. With several instances use `UseStore<TStore>(lifetime)` with an atomic store (the EF Core store, or a Redis store passing the contract tests); see [Best-effort stores across multiple instances](../CSharpEssentials.Idempotency/Readme.MD#best-effort-stores-across-multiple-instances).
+Two instances can both reserve the same free key and both run the handler; the later reservation wins, so the first request's completion is dropped. With several instances use `UseStore<TStore>(lifetime)` with an atomic store (the EF Core store, or a Redis store passing the contract tests); see [Best-effort stores across multiple instances](../CSharpEssentials.Idempotency/Readme.MD#best-effort-stores-across-multiple-instances).
 
 #### Transactional store for money movement
 

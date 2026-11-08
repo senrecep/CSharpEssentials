@@ -30,10 +30,10 @@ On net8.0, CSE runs its netstandard2.1 build, because the package has no net8 ta
 
 ## Semantic differences
 
-- **FlatMap on Both.** CSE never combines errors here. If the mapper returns Right or Both, the original left is kept and the mapper's left is dropped. If it returns Left, the mapper's left is returned and the original left is dropped (`CSharpEssentials.These/These.cs:72-75`). The hand-written pipeline copies this rule on purpose so that parity holds. Copying it does not mean the rule is recommended, because one of the two errors never reaches the caller.
-- **JSON.** Both rows write `{"isLeft":...,"isRight":...,"left":...,"right":...}`, and parity checks that the two JSON strings are equal. CSE binds through a private `[JsonConstructor]`; `Outcome` binds through its public record constructor.
-- **Why a value tuple was not used.** The baseline is a record and not a value tuple, because STJ skips tuple fields unless `IncludeFields` is set and would silently write `{}`.
-- **Partition.** CSE's `Partition` returns `IReadOnlyList`s (unlike Any's arrays), and so does the hand-written row.
+- FlatMap on Both: CSE never combines errors here. If the mapper returns Right or Both, the original left is kept and the mapper's left is dropped. If it returns Left, the mapper's left is returned and the original left is dropped (`CSharpEssentials.These/These.cs:72-75`). The hand-written pipeline copies this rule on purpose so that parity holds. Copying it does not mean the rule is recommended, because one of the two errors never reaches the caller.
+- JSON: Both rows write `{"isLeft":...,"isRight":...,"left":...,"right":...}`, and parity checks that the two JSON strings are equal. CSE binds through a private `[JsonConstructor]`; `Outcome` binds through its public record constructor.
+- Why a value tuple was not used: The baseline is a record and not a value tuple, because STJ skips tuple fields unless `IncludeFields` is set and would silently write `{}`.
+- Partition: CSE's `Partition` returns `IReadOnlyList`s (unlike Any's arrays), and so does the hand-written row.
 
 ---
 
@@ -49,8 +49,6 @@ On net8.0, CSE runs its netstandard2.1 build, because the package has no net8 ta
 | Combining errors in FlatMap on Both | None. One of the two lefts is always dropped (the mapper's on Right or Both, the original on Left) | The caller decides |
 | Native AOT | `IsAotCompatible` is set for the net9.0 and later builds (`CSharpEssentials.These.csproj:18`). JSON binds through a private `[JsonConstructor]` (`These.cs:9-11`) | Public record constructor |
 
-No library competitor is included. These is a small type, and the useful question is what it costs compared with the equivalent hand-written code.
-
 ---
 
 ## Results
@@ -59,10 +57,9 @@ Each cell is `Mean / Ratio / Allocated`, copied from the BenchmarkDotNet github 
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on one Linux machine. The CPU and runtime versions are in the header of each report.
+- BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux. Runtime versions are in the header of each report.
 - The These classes ran in the same pass as the Any classes, with a 1-minute load average between 1.18 and 1.43. The runner exited with a non-zero code for that pass (`any end rc=1` in the load log) because of the Any ToString parity check; every These report has a value in every row. The noise pass flagged no These row.
 - `TheseMatchComparison` uses `OperationsPerInvoke = 1024`, so its means are per fold over a 1024-element batch. `ThesePipelineComparison` and `TheseJsonComparison` time one call, and `ThesePartitionComparison` one partition of 1000 values.
-- Results path: `benchmarks/results/any/{tfm}/results/` (the These reports are the `These*` files).
 
 ### Match (per fold, batched)
 
@@ -105,7 +102,7 @@ Reports: [net8.0](../benchmarks/results/any/net8.0/results/CSharpEssentials.Any.
 | CSE `Partition()` | 9.977 μs / 1.00 / 28.58 KB | 8.086 μs / 1.00 / 28.58 KB | 5.322 μs / 1.00 / 28.58 KB | 5.000 μs / 1.00 / 28.58 KB |
 | Hand-written | 5.695 μs / 0.57 / 28.58 KB | 5.008 μs / 0.62 / 28.58 KB | 5.077 μs / 0.95 / 28.55 KB | 4.969 μs / 0.99 / 28.55 KB |
 
-`Partition()` is now a plain if/else loop with no delegates (`CSharpEssentials.These/TheseCollectionExtensions.cs:15-27`), the same shape as the hand-written row. net11.0 is a tie (ratio 0.99). The gap on net8.0 and net9.0 is not explained by the code.
+`Partition()` is a plain if/else loop with no delegates (`CSharpEssentials.These/TheseCollectionExtensions.cs:15-27`), the same shape as the hand-written row. net11.0 is a tie (ratio 0.99). The gap on net8.0 and net9.0 is not explained by the code.
 
 ### JSON (one call)
 
@@ -132,18 +129,17 @@ Both types write the same JSON text and allocate the same 168 B when serializing
 
 The baseline is hand-written code with no API surface, so CSE is expected to cost something. These are the rows where it does:
 
-- **Match.** The hand-written fold is ahead in every state on every TFM (ratio 0.27 to 0.49): 1.5164 to 2.6370 ns per fold for CSE against 0.5822 to 0.8710 ns. CSE calls one delegate per fold.
-- **Pipeline.** The hand-written pipeline is ahead in every state on every TFM (ratio 0.05 to 0.56). See the note under the pipeline table: the CSE Left and Right rows are slower than CSE Both on net9.0 to net11.0.
-- **Partition.** The hand-written loop is ahead on net8.0 (ratio 0.57), net9.0 (ratio 0.62) and net10.0 (ratio 0.95). net11.0 is a tie (ratio 0.99). CSE allocates 28.58 KB against 28.55 KB on net10.0 and net11.0.
-- **JSON deserialize.** The hand-written record is ahead in every state on every TFM (ratio 0.68 to 0.77) and allocates less (32 or 64 B against 120 to 184 B).
-- **JSON serialize.** The hand-written record is ahead on net8.0 Both (ratio 0.97), net9.0 Right and Both (0.92, 0.97), net10.0 Left and Right (0.96, 0.89) and every state on net11.0 (0.89 to 0.93). net8.0 Left, net9.0 Left (0.99) and net10.0 Both (1.00) are ties. CSE leads on net8.0 Right (hand-written ratio 1.10). Allocations are equal.
+- Match: The hand-written fold is ahead in every state on every TFM (ratio 0.27 to 0.49): 1.5164 to 2.6370 ns per fold for CSE against 0.5822 to 0.8710 ns. CSE calls one delegate per fold.
+- Pipeline: The hand-written pipeline is ahead in every state on every TFM (ratio 0.05 to 0.56). See the note under the pipeline table: the CSE Left and Right rows are slower than CSE Both on net9.0 to net11.0.
+- Partition: The hand-written loop is ahead on net8.0 (ratio 0.57), net9.0 (ratio 0.62) and net10.0 (ratio 0.95). net11.0 is a tie (ratio 0.99). CSE allocates 28.58 KB against 28.55 KB on net10.0 and net11.0.
+- JSON deserialize: The hand-written record is ahead in every state on every TFM (ratio 0.68 to 0.77) and allocates less (32 or 64 B against 120 to 184 B).
+- JSON serialize: The hand-written record is ahead on net8.0 Both (ratio 0.97), net9.0 Right and Both (0.92, 0.97), net10.0 Left and Right (0.96, 0.89) and every state on net11.0 (0.89 to 0.93). net8.0 Left, net9.0 Left (0.99) and net10.0 Both (1.00) are ties. CSE leads on net8.0 Right (hand-written ratio 1.10). Allocations are equal.
 
 ---
 
 ## Caveats
 
-- The baseline is hand-written code, not another library. It has none of CSE's API surface, such as the bridges or `Tap`.
-- The pipeline baseline copies CSE's lossy FlatMap rule on Both.
+- The baseline has none of CSE's API surface, such as the bridges or `Tap`.
 - On net8.0 CSE runs its netstandard2.1 build, and System.Text.Json resolves to the 9.0.4 package for both rows. On net9.0 and later the framework's copy wins.
 - The CSE column is the 7.0.0 working tree on the `integ/all` integration branch (all open pull requests merged locally).
 
@@ -157,4 +153,4 @@ cd benchmarks
 dotnet run -c Release -f net10.0 --project CSharpEssentials.Any.Comparison.Benchmarks -- --filter "*.These*" # These classes only
 ```
 
-Results are stored per framework under `benchmarks/results/any/{tfm}/results/`.
+Results are stored per framework under `benchmarks/results/any/{tfm}/results/` (the `These*` files).

@@ -19,17 +19,17 @@ The sample uses `CSharpEssentials.AspNetCore.OpenApi` (net10.0). A Swashbuckle h
 
 ## Package references
 
-The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository: a `ProjectReference` does not carry the referenced project's own generator output, but analyzers from that project's NuGet packages do flow, so the generator project is referenced explicitly. The same app outside the repository references the packages:
+The project uses `ProjectReference`s, including the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository, because a `ProjectReference` does not carry the referenced project's generator output. The same app outside the repository references the packages:
 
 ```xml
 <ItemGroup>
-  <PackageReference Include="CSharpEssentials.AspNetCore" Version="6.5.0" />
-  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="6.5.0" />
-  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="6.5.0" />
+  <PackageReference Include="CSharpEssentials.AspNetCore" Version="7.0.0" />
+  <PackageReference Include="CSharpEssentials.AspNetCore.OpenApi" Version="7.0.0" />
+  <PackageReference Include="CSharpEssentials.EntityFrameworkCore" Version="7.0.0" />
 </ItemGroup>
 ```
 
-No direct `CSharpEssentials.Enums` reference is needed: any package that depends on Enums brings the generator, and `CSharpEssentials.AspNetCore`, `.AspNetCore.OpenApi` and `.EntityFrameworkCore` each bring it with its analyzers and code fixes.
+No direct `CSharpEssentials.Enums` reference is needed: each of these packages brings the generator, the analyzers and the code fixes.
 
 ## Running
 

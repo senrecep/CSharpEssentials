@@ -8,7 +8,7 @@ namespace CSharpEssentials.Enums.Comparison.Benchmarks;
 /// Formats an enum value the caller holds only as an <see cref="object"/>. In category Format the value is boxed once in setup, not per call.
 /// Category Format: <see cref="Shade.Indigo"/> as "Indigo" (PascalCase wire names, so CSE writes the member name like the
 /// BCL and Enums.NET). <c>CSharpEssentials_HandleAll</c> is a CSE configuration row with the same output: its
-/// <c>CanHandle</c> accepts every type, which isolates the cost of the default registry check. <c>CSharpEssentials_Typed</c>
+/// <c>CanHandle</c> is a custom delegate that accepts every type, so the row measures the cost of calling a custom delegate before the registry lookup. <c>CSharpEssentials_Typed</c>
 /// is a reference row only: the unboxed generic call, which shows what boxing plus the visitor cost.
 /// Category FormatMany: a boxed <c>Shade[]</c> of all eight members into one list. CSE has <c>TryFormatMany</c>; the BCL and
 /// Enums.NET have no collection formatter, so their rows are hand-written loops around their documented single-value call.

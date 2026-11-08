@@ -2,8 +2,7 @@
 
 Utilities and extensions for everyday .NET development, with no internal dependencies.
 
-> Benchmarks against the BCL, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0 (case conversion, GUID text, random items and WithCancellation) are in
-> [BENCHMARKS.md](./BENCHMARKS.md). That page is a draft: results are pending the full run.
+Benchmarks against the BCL, Humanizer.Core 3.0.10 and CSharpVitamins.ShortGuid 2.0.0 (case conversion, GUID text and creation, random items, `WithCancellation`) are in [BENCHMARKS.md](./BENCHMARKS.md).
 
 ## Features
 
@@ -95,7 +94,7 @@ name.IsEmpty();      // true for null, "" and whitespace
 name.IsNotEmpty();   // false
 ```
 
-Each `IfNotNull` / `IfNull` overload returns a `bool`: whether the value was not null (`IfNotNull`) or null (`IfNull`). `IfNotNull` and `IfNull` also take an else action:
+Each overload returns a `bool`: whether the value was not null (`IfNotNull`) or null (`IfNull`). Both also take an else action:
 
 ```csharp
 data.IfNotNull(d => Process(d), () => Initialize());
@@ -127,32 +126,13 @@ string shortId = id.ToStringFromGuid(); // URL-safe, 22 chars
 Guid parsed = shortId.ToGuidFromString();
 ```
 
-The string is RFC 4648 base64url without padding: standard Base64 with `+` replaced by `-` and `/` replaced by `_`. Any base64url codec, such as `System.Buffers.Text.Base64Url` on .NET 9+, decodes it to the same GUID, and `ToGuidFromString` accepts strings that codec produces.
+The string is RFC 4648 base64url without padding: standard Base64 with `+` replaced by `-` and `/` replaced by `_`. Any base64url codec, such as `System.Buffers.Text.Base64Url` on .NET 9+, decodes it to the same GUID, and `ToGuidFromString` accepts strings that codec produces. A last character with non-zero unused bits decodes to the same GUID as the canonical string on every runtime; any other malformed input throws `FormatException`.
 
-`Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms of the same two conversions. See [Guids](Guids/Readme.MD).
-
-### Exception helpers
-
-```csharp
-try { /* ... */ }
-catch (Exception ex)
-{
-    var innerExceptions = ex.GetInnerExceptions();
-    var messages = ex.GetInnerExceptionsMessages();
-}
-```
-
-Both return lazy sequences that start with `ex` itself, followed by each inner exception.
-
-### HTTP status codes
-
-```csharp
-int ok = HttpCodes.Ok;
-int notFound = HttpCodes.NotFound;
-int badRequest = HttpCodes.BadRequest;
-```
+`Guider.ToStringFromGuid` and `Guider.ToGuidFromString` are the static forms. See [Guids](Guids/Readme.MD).
 
 ### Other helpers
+
+`ex.GetInnerExceptions()` and `ex.GetInnerExceptionsMessages()` return lazy sequences that start with `ex` itself, followed by each inner exception. `HttpCodes` holds `int` constants such as `HttpCodes.Ok`, `HttpCodes.NotFound` and `HttpCodes.BadRequest`.
 
 ```csharp
 object boxed = 42;

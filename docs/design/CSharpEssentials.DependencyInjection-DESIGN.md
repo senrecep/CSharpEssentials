@@ -1,6 +1,6 @@
 # CSharpEssentials.DependencyInjection: design document
 
-> **Date:** 2026-10-06 | **Status:** Implemented in 4.1, kept current through 6.5
+> **Date:** 2026-10-06 | **Status:** Implemented in 4.1, kept current through 7.0
 > **Issues:** #48 (epic), #49 (docs), #50 (infra), #55 (attributes + runtime), #56 (generator + analyzer), #57 (docs/AOT example), #58 (P3)
 > **Related:** [ADR-006](../adr/ADR-006-source-generators-in-separate-projects.md), [Endpoints design](CSharpEssentials.Endpoints-DESIGN.md)
 
@@ -10,7 +10,7 @@
 
 ### Goals
 - Replace Scrutor for attribute-based registration and decoration on top of `Microsoft.Extensions.DependencyInjection`.
-- Compile-time registration through a generated `Add{Asm}Services()`. Trim/AOT clean, with no startup reflection.
+- Compile-time registration through a generated `Add{Asm}Services()`. Trim/AOT clean, with no startup scanning.
 - Deterministic service-type resolution, key-aware strategies and keyed decoration.
 - Gradual migration: manual `services.Add*` calls and generated registrations coexist.
 
@@ -25,7 +25,7 @@
 | # | Principle | Consequence |
 |---|---|---|
 | 1 | Opt-in only | A type is registered only if it carries `[RegisterScoped]`, `[RegisterSingleton]` or `[RegisterTransient]`, and decorated only via `[Decorates]`. |
-| 2 | No startup reflection on the generated path | Registrations are `typeof`-based descriptors. Decorators use generated factories with direct `new` calls (no `ActivatorUtilities`). |
+| 2 | No startup scanning on the generated path | Registrations are `typeof`-based descriptors. Decorators use generated factories with direct `new` calls (no `ActivatorUtilities`). The only reflection left is a cached constructor-metadata read before decorating (§4.7). |
 | 3 | Reflection is explicit | `AddServicesFromAssemblies` and open-generic `Decorate(Type, Type)` carry `[RequiresUnreferencedCode]` / `[RequiresDynamicCode]`. |
 | 4 | Coexistence | The default strategy is `Add`. Generated code never removes or rewrites registrations it did not create, except under an explicit `Replace` strategy or decoration. |
 | 5 | Deterministic | The same source always yields the same registrations in the same order. |
@@ -34,11 +34,12 @@
 
 | Project | TFMs | Dependencies | Packable |
 |---|---|---|---|
-| `CSharpEssentials.DependencyInjection` | `net11.0;net10.0;net9.0;net8.0;netstandard2.1` (no `netstandard2.0`) | `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions` (duplicate debug log) | yes |
-| `CSharpEssentials.DependencyInjection.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` | no, packed into the runtime nupkg at `analyzers/dotnet/cs` (ADR-006) |
+| `CSharpEssentials.DependencyInjection` | `net11.0;net10.0;net9.0;net8.0;netstandard2.1` (no `netstandard2.0`) | `Microsoft.Extensions.DependencyInjection.Abstractions`, `Microsoft.Extensions.Logging.Abstractions` (duplicate debug log), both `[9.0.4,)` | yes |
+| `CSharpEssentials.DependencyInjection.Generators` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp` `VersionOverride="4.8.0"`, `Microsoft.CodeAnalysis.Analyzers` (`build/Generators.props`) | no, packed into the runtime nupkg at `analyzers/dotnet/cs` (ADR-006) |
+| `CSharpEssentials.DependencyInjection.CodeFixes` | `netstandard2.0` | `Microsoft.CodeAnalysis.CSharp.Workspaces` `VersionOverride="4.8.0"` | no, packed at `analyzers/dotnet/cs` |
 
-- Both dependencies already exist in `Directory.Packages.props` (`[9.0.4,)`). Keyed services are available on `netstandard2.1` through `Microsoft.Extensions.DependencyInjection.Abstractions` 8+.
-- **netstandard2.1 polyfills** (`internal`, compiled only for `netstandard2.1`): `RequiresUnreferencedCodeAttribute`, `RequiresDynamicCodeAttribute`, `DynamicallyAccessedMembersAttribute`, `DynamicallyAccessedMemberTypes`. Trim annotations are meaningful only on `net8.0+`.
+- Keyed services are available on `netstandard2.1` through `Microsoft.Extensions.DependencyInjection.Abstractions` 8+.
+- netstandard2.1 polyfills (`internal`, compiled only for `netstandard2.1`): `RequiresUnreferencedCodeAttribute`, `RequiresDynamicCodeAttribute`, `DynamicallyAccessedMembersAttribute`, `DynamicallyAccessedMemberTypes`. Trim annotations are meaningful only on `net8.0+`, where `IsAotCompatible` is set.
 - Generic attribute forms are compiled only for `NET7_0_OR_GREATER` TFMs. The `netstandard2.1` asset has the `typeof` forms only.
 - Namespace: `CSharpEssentials.DependencyInjection`. Generated registries live in `Microsoft.Extensions.DependencyInjection`, so `services.Add{Asm}Services()` is discoverable without a `using`.
 
@@ -59,15 +60,15 @@ public sealed class RegisterScopedAttribute : Attribute
     public RegistrationStrategy Strategy { get; set; }   // default Add
 }
 
-public sealed class RegisterScopedAttribute<TService> : Attribute { /* same named properties */ }
+public sealed class RegisterScopedAttribute<TService> : Attribute { /* ServiceType => typeof(TService); Key, As, Strategy */ }
 ```
 
 `RegisterSingletonAttribute` / `RegisterSingletonAttribute<TService>` and `RegisterTransientAttribute` / `RegisterTransientAttribute<TService>` have the same shape.
 
-- The `typeof` form is primary. The generic form is secondary (C# 11+, `net8.0+` assets only).
+- The `typeof` form is primary. The generic form needs C# 11 and a `net7.0+` asset.
 - `Key`: any attribute-legal constant (`string`, numeric, `char`, `bool`, enum, `Type`). `null` = non-keyed. Generated code emits the constant with its original type (`global::Ns.Region.Eu`, `"primary"`, `42`).
 - `AllowMultiple = true`: one class may register under several lifetimes, keys or service types.
-- No `[Service(Lifetime)]` variant. The lifetime is in the attribute name, so it is visible at a glance and needs no extra argument.
+- No `[Service(Lifetime)]` variant: the lifetime is in the attribute name, visible at a glance.
 
 ### 4.2 `ServiceAs`
 
@@ -80,11 +81,11 @@ public enum ServiceAs
 }
 ```
 
-- `As` is honored only when it is set explicitly as a named argument. The generator and the fallback read the named arguments. An unset `As` means "use the default resolution" (§5.1).
-- Interface expansion (`SelfWithInterfaces`, `ImplementedInterfaces`) uses all implemented interfaces except: `System.IDisposable`, `System.IAsyncDisposable`, `System.IEquatable<T>`, `System.IComparable<T>`, `System.Collections.IEnumerable`.
-- `SelfWithInterfaces`: the concrete type is registered with the attribute's lifetime. Each interface is registered as a forwarding factory (`sp => sp.GetRequiredService<Impl>()`, or the keyed equivalent), so singleton and scoped instances are shared.
-- `ImplementedInterfaces`: each interface gets its own descriptor with the implementation type, so there is one instance per service type for scoped and singleton lifetimes. Use `SelfWithInterfaces` to share the instance.
-- An explicit service type combined with `As` registers the union of both (explicit first).
+- `As` is honored only when it is set explicitly as a named argument. An unset `As` means the default resolution (§5.1).
+- Interface expansion (`SelfWithInterfaces`, `ImplementedInterfaces`) uses all implemented interfaces except `System.IDisposable`, `System.IAsyncDisposable`, `System.IEquatable<T>`, `System.IComparable<T>` and `System.Collections.IEnumerable`.
+- `SelfWithInterfaces`: the concrete type is registered with the attribute's lifetime, and each interface is a forwarding factory (`sp => sp.GetRequiredService<Impl>()`, or the keyed equivalent), so singleton and scoped instances are shared.
+- `ImplementedInterfaces`: each interface gets its own descriptor with the implementation type, so scoped and singleton lifetimes get one instance per service type.
+- An explicit service type combined with `As` registers the union of both (explicit first). With `SelfWithInterfaces`, the explicit type is forwarded too, so every service type of the registration shares the instance.
 
 ### 4.3 `RegistrationStrategy`
 
@@ -99,14 +100,14 @@ public enum RegistrationStrategy
 }
 ```
 
-All strategies are **key-aware**: a match means the same `ServiceType` **and** an equal `ServiceKey` (`null` matches only `null`).
+All strategies are key-aware: a match means the same `ServiceType` and an equal `ServiceKey` (`null` matches only `null`).
 
 | Strategy | Behavior |
 |---|---|
 | `Add` (default) | Always appends. |
 | `TryAdd` | Appends if no descriptor matches (service, key). |
-| `TryAddEnumerable` | Appends if no descriptor matches (service, key, implementation type). |
-| `Replace` | Removes **all** descriptors matching (service, key), then appends. Unlike `ServiceCollectionDescriptorExtensions.Replace`, it is key-aware and removes every match, not only the first. |
+| `TryAddEnumerable` | Appends if no descriptor matches (service, key, implementation). |
+| `Replace` | Removes all descriptors matching (service, key), then appends. Unlike `ServiceCollectionDescriptorExtensions.Replace`, it is key-aware and removes every match, not only the first. |
 | `Throw` | Throws `InvalidOperationException` (service, key, existing implementation) if a descriptor matches. A `Throw` registration that follows a registration of the same (service, key) within one compilation is reported at compile time (CSE2002); registration order is metadata type name, then attribute order. |
 
 ### 4.4 `DecoratesAttribute`
@@ -120,16 +121,16 @@ public sealed class DecoratesAttribute(Type serviceType) : Attribute
     public object? Key { get; set; }        // decorate the keyed registration
 }
 
-public sealed class DecoratesAttribute<TService> : Attribute { /* Order, Key */ }
+public sealed class DecoratesAttribute<TService> : Attribute { /* ServiceType, Order, Key */ }
 ```
 
-- The decorator must implement the service type (CSE2001). It must have exactly one public constructor (CSE2005) with exactly one parameter of the decorated service type (CSE2004).
+- The decorator must implement the service type (CSE2001). It must have exactly one public constructor (CSE2005, which also covers zero) with exactly one parameter of the decorated service type (CSE2004).
 - A `[Decorates]` class is constructed only by its generated factory and is not registered as a service.
 - Ties in `Order` are broken by the decorator's fully qualified name.
 
 ### 4.5 `ExcludeFromRegistrationAttribute`
 
-`AttributeTargets.Class | AttributeTargets.Assembly`. On a class, the class is neither registered nor applied as a decorator, whatever other attributes it has. On an assembly, no registry or `ServiceModule` attribute is generated, and the fallback skips the assembly.
+`AttributeTargets.Class | AttributeTargets.Assembly`. On a class, the class is neither registered nor applied as a decorator, whatever other attributes it has. On an assembly, no registry or `ServiceModule` attribute is generated, the fallback skips the assembly, and the analyzer reports nothing (no declaration there can fail at registration).
 
 ### 4.6 Registry-level attributes (same pattern as Endpoints)
 
@@ -145,11 +146,13 @@ public sealed class DecoratesAttribute<TService> : Attribute { /* Order, Key */ 
 ```csharp
 public static class ServiceCollectionDecorationExtensions
 {
-    public static IServiceCollection Decorate<TService, TDecorator>(this IServiceCollection services, object? serviceKey = null)
+    public static IServiceCollection Decorate<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDecorator>(
+        this IServiceCollection services, object? serviceKey = null)
         where TService : class
         where TDecorator : class, TService;
 
-    public static bool TryDecorate<TService, TDecorator>(this IServiceCollection services, object? serviceKey = null)
+    public static bool TryDecorate<TService, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TDecorator>(
+        this IServiceCollection services, object? serviceKey = null)
         where TService : class
         where TDecorator : class, TService;
 
@@ -165,15 +168,15 @@ public static class ServiceCollectionDecorationExtensions
 }
 ```
 
-- **Hidden inner registration:** each matched descriptor is re-registered under a **private sentinel key**. Its service type is the implementation type for implementation-type originals, the instance's runtime type for instance originals, and a private marker class for factory originals, because MS.DI requires the implementation or instance to be assignable to the service type. The key is a fresh instance of a private sealed class per decorated descriptor, compared by reference. Implementation type, factory or instance and the lifetime are preserved. The decorator descriptor takes the original's place, with the same service type, key and lifetime.
-- **No leak:** the hidden registration's service type is not `TService`, so it never appears in `GetServices<TService>()`, `GetKeyedServices<TService>(key)` or `GetKeyedServices<TService>(KeyedService.AnyKey)`. The sentinel type is private, so no user code can construct or obtain the key. `GetKeyedServices<object>(KeyedService.AnyKey)` does not return hidden inners either. Only `GetKeyedServices<TImplementation>(KeyedService.AnyKey)` on the concrete implementation type returns them, which code that resolves services by their contracts does not do. The marker type is private and no runtime `MakeGenericType` is needed, so the path stays AOT-safe.
-- **Multiple registrations:** every descriptor matching (service, key) is decorated, so enumeration returns decorated instances in the original order.
-- **Keyed services** are decoratable through `serviceKey`. Original implementations that inject `[ServiceKey]` cannot be decorated (they would receive the sentinel), so `Decorate` throws `InvalidOperationException`. This is detected through the trim-annotated `ImplementationType` constructors.
-- **No partial mutation:** all matches are collected and validated first, and the collection is changed only after validation succeeds. On failure, `services` is unchanged.
+- Hidden inner registration: each matched descriptor is re-registered under a private key, a fresh instance of a private sealed class per decorated descriptor, compared by reference. Its service type is the implementation type for implementation-type originals, the instance's runtime type for instance originals, and a private marker class for factory originals, because MS.DI requires the implementation or instance to be assignable to the service type. The implementation, factory or instance is preserved. The lifetime is preserved too, except that a scoped original gets a transient inner: the decorator factory runs once per scope and resolves the inner from that scope, so the scope still creates and disposes one inner per cached decorator without caching it a second time. The decorator descriptor takes the original's place, with the same service type, key and lifetime.
+- No leak: the hidden registration's service type is neither `TService` nor `object`, so it never appears in `GetServices<TService>()`, `GetKeyedServices<TService>(key)`, `GetKeyedServices<TService>(KeyedService.AnyKey)` or `GetKeyedServices<object>(KeyedService.AnyKey)`. Only `GetKeyedServices<TImplementation>(KeyedService.AnyKey)` on the concrete type returns it. The key type is private, so no user code can obtain the key, and no runtime `MakeGenericType` is needed.
+- Multiple registrations: every descriptor matching (service, key) is decorated, so enumeration returns decorated instances in the original order.
+- Keyed services are decoratable through `serviceKey`. An original implementation that injects `[ServiceKey]` would receive the private key, so `Decorate` throws `InvalidOperationException`. The check reads the implementation type's public constructors once per type per process; the result is cached in a `ConditionalWeakTable`, which does not keep collectible types alive. Generated decorators pass the implementation types the generator already verified (`DecoratorRegistration.VerifiedImplementations`: non-generic, non-partial types registered by attribute in the same assembly under the same service type and key), and those are not read at all.
+- No partial mutation: all matches are collected and validated first, and the collection changes only after validation succeeds.
 - `Decorate*` throws `InvalidOperationException` when nothing matches. `TryDecorate` returns `false` instead.
-- `Decorate<TService, TDecorator>` constructs `TDecorator` through its single public constructor, which is trim-annotated with `[DynamicallyAccessedMembers(PublicConstructors)]`. The generated path never uses it, because it emits direct `new` factories via the `Func<,>` overload.
-- **Open generics:** `Decorate(Type, Type)` decorates every **closed** registration whose service type is constructed from `serviceType`. Open-generic registrations (`typeof(IRepo<>)` → `typeof(Repo<>)`) cannot be decorated by MS.DI without a constant key. They are reported in the exception (no partial mutation).
-- Disposal: the container owns both the hidden inner and the decorator, and disposes both. `ValidateOnBuild` and `ValidateScopes` pass, because the hidden registration is a normal descriptor.
+- `Decorate<TService, TDecorator>` constructs `TDecorator` through its single public constructor (a `ConstructorInvoker` on net8+), kept by the `[DynamicallyAccessedMembers]` annotation. The generated path does not use it (§6.2).
+- Open generics: `Decorate(Type, Type)` decorates every closed registration whose service type is constructed from `serviceType`. The API has no key parameter, so it decorates closed registrations of every key; each keeps its key and the decorator receives it through `[ServiceKey]`. It also carries `[RequiresUnreferencedCode]`, because closing the decorator with `MakeGenericType` and reading its constructors cannot be annotated statically. Open-generic registrations (`typeof(IRepo<>)` → `typeof(Repo<>)`) cannot be decorated by MS.DI without a constant key; they are reported in the exception, with no partial mutation.
+- Disposal: the container owns and disposes both the hidden inner and the decorator. `ValidateOnBuild` and `ValidateScopes` pass, because the hidden registration is a normal descriptor.
 
 ### 4.8 Reflection fallback
 
@@ -182,51 +185,55 @@ public static class ServiceCollectionDecorationExtensions
 [RequiresDynamicCode("Builds decorator factories and closes generic types at runtime.")]
 public static IServiceCollection AddServicesFromAssemblies(this IServiceCollection services, params Assembly[] assemblies);
 
-[RequiresUnreferencedCode("Scans assemblies for registration attributes; use the generated Add{Asm}Services for trimmed/AOT apps.")]
-[RequiresDynamicCode("Builds decorator factories and closes generic types at runtime.")]
+[RequiresUnreferencedCode(...)]
+[RequiresDynamicCode(...)]
 public static IServiceCollection AddServicesFromAssemblies(this IServiceCollection services, ILogger? logger, params Assembly[] assemblies);
 ```
 
-It uses the same rules as the generator (§5): resolution, strategies, forwarding, decorators last ordered by `Order`. Attributes are read through `CustomAttributeData`, so an explicitly set `As` is detected. All assemblies' registrations are applied before any decorator, in the order the assemblies are passed. Decorators are sorted globally by `Order`, then by the position of their assembly, then by type name, which matches the aggregate. `ReflectionTypeLoadException` is handled and never swallowed: without a logger, an `InvalidOperationException` listing the loader errors is thrown before `services` changes; with a logger, a `Warning` (event 2002) lists the loader errors and the loadable types are processed. The logger also receives the duplicate `Debug` log (§5.5). An open-generic `[Decorates]` class is applied through `Decorate(Type, Type)` restricted to the attribute's `Key`. Invalid types that the analyzer would report as errors throw `InvalidOperationException` (fail fast, because this path has no compile-time check).
+- Same rules as the generator (§5): resolution, strategies, forwarding, decorators last ordered by `Order`. Attributes are read through `CustomAttributeData`, so an explicitly set `As` is detected.
+- All assemblies' registrations are applied before any decorator, in the order the assemblies are passed. Decorators are sorted globally by `Order`, then by the position of their assembly, then by type name, which matches the aggregate.
+- `ReflectionTypeLoadException`: the `ILogger?` overload makes the choice explicit. Without a logger, an `InvalidOperationException` listing the loader errors is thrown before `services` changes. With a logger, a `Warning` (event 2002) lists the loader errors and the loadable types are processed. The logger also receives the duplicate `Debug` log (§5.5).
+- An open-generic `[Decorates]` class is applied through `Decorate(Type, Type)` restricted to the attribute's `Key`.
+- Invalid types that the analyzer would report as errors throw `InvalidOperationException`, because this path has no compile-time check. A decorator with zero public constructors gets a message that names trimming and the AOT-safe alternatives, since in a trimmed app the trimmer removes constructors that only the scan uses. Other callers of the activator get the usual message, because outside the scanner zero public constructors is a declaration error.
 
 ## 5. Semantics
 
 ### 5.1 Default service resolution
 
-Applied when neither an explicit service type nor `As` is given:
-
-1. **Explicit:** `typeof(T)` / `<T>` / `As` → exactly those.
-2. **`I{TypeName}`, arity-aware:** an implemented interface whose name is `I` + the class name and whose generic arity equals the class's arity (`Repository<T>` → `IRepository<T>`, `Clock` → `IClock`). Namespace does not matter. If several match, all are registered, ordered by fully qualified name.
-3. **Self:** otherwise the class registers as itself. If the class implements at least one interface outside the exclusion list and none matched step 2, the analyzer reports **CSE2003** (info).
+1. Explicit: `typeof(T)` / `<T>` / `As` → exactly those.
+2. `I{TypeName}`, arity-aware: an implemented interface whose name is `I` + the class name and whose generic arity equals the class's arity (`Repository<T>` → `IRepository<T>`, `Clock` → `IClock`). Namespace does not matter. If several match, all are registered, ordered by fully qualified name.
+3. Self: otherwise the class registers as itself. If the class implements at least one interface outside the exclusion list and none matched step 2, the analyzer reports CSE2003 (info).
 
 ### 5.2 Open generics
 
 - `[RegisterScoped(typeof(IRepository<>))] sealed class Repository<T> : IRepository<T>` → `ServiceDescriptor.Scoped(typeof(IRepository<>), typeof(Repository<>))`. Keys are supported.
-- The class's type parameters must map one-to-one, in order, onto the service's type parameters. Otherwise, the mapping is invalid for MS.DI and reported as CSE2001.
+- The class's type parameters must map one-to-one, in order, onto the service's type parameters. Otherwise the mapping is invalid for MS.DI and reported as CSE2001.
 - Default resolution applies with arity matching. `As = ImplementedInterfaces` and `As = SelfWithInterfaces` consider only open interfaces satisfying the one-to-one rule. Forwarding is not possible for open generics, so each gets its own descriptor.
 - Open-generic decorators on the generated path → CSE2008 (use runtime `Decorate(Type, Type)`).
 
 ### 5.3 Order of operations in `Add{Asm}Services`
 
-1. Registrations in deterministic order (by implementation fully qualified name, then attribute order), each through its strategy.
-2. Decorators, **last**, sorted by `Order` then fully qualified name, each through `Decorate<TService>(factory, key)` with a generated factory.
+1. Registrations in deterministic order (by implementation metadata name, then attribute order), each through its strategy.
+2. Decorators, last: for each distinct `Order` ascending, one `ServiceRegistration.Decorate(services, DecoratorRegistration[])` call with every decorator of that order, sorted by fully qualified name.
 
-Decorators may target services registered manually or by other modules, as long as those registrations exist when the decorator is applied. Otherwise, `Decorate` throws with the decorator name. Because `Add{Asm}Services` applies its decorators immediately, per-assembly calls are order-sensitive: `AddAuditServices()` decorating a service from `Billing` throws when it runs before `AddBillingServices()`. Callers either register dependencies first or use the aggregate (§6.3), which applies all modules' registrations before any decorators and so covers cross-assembly decoration regardless of order. The generator cannot reorder per-assembly calls written by the user, and decorators are not deferred, so a missing registration still fails fast at startup instead of silently leaving a service undecorated.
+One pass over the collection finds the registrations of every decorator of that order. The result equals consecutive decorate calls in declaration order (a later decorator of the same service wraps an earlier one, and the first failing decorator throws the same exception), but every decorator of the order is validated before any registration is replaced, so a failure leaves the collection unchanged.
+
+Decorators may target services registered manually or by other modules, as long as those registrations exist when the decorator is applied; otherwise `Decorate` throws. The generated exception names the service type and key but not the decorator type, because a `DecoratorRegistration` carries only the service type, key, typed factory and verified implementation types. Because `Add{Asm}Services` applies its decorators immediately, per-assembly calls are order-sensitive: `AddAuditServices()` decorating a service from `Billing` throws when it runs before `AddBillingServices()`. Callers register dependencies first or use the aggregate (§6.3). Decorators are not deferred, so a missing registration fails at startup instead of silently leaving a service undecorated.
 
 ### 5.4 Coexistence with manual registrations
 
-Under `Add` (default), a generated registration and a manual `services.AddScoped<IFoo, Foo>()` both stay in the collection. `GetService<IFoo>()` resolves the **last** one added, and `GetServices<IFoo>()` returns both. Call order therefore decides the winner. This is the documented behavior during gradual migration. To prevent it, use `TryAdd` or `Throw` on the attribute, or the "no duplicate (service, key)" test helper described in the README (#57).
+Under `Add` (default), a generated registration and a manual `services.AddScoped<IFoo, Foo>()` both stay in the collection. `GetService<IFoo>()` resolves the last one added, and `GetServices<IFoo>()` returns both, so call order decides the winner. To prevent it, use `TryAdd` or `Throw` on the attribute, or the duplicate-registration test in the README (#57).
 
 ### 5.5 Duplicate visibility (debug log)
 
-`Add{Asm}Services(this IServiceCollection services, ILogger? logger = null)`: when `logger` is not null and `Debug` is enabled, every registration whose (service, key) already exists in the collection is logged at `Debug` (service, key, existing implementation, new implementation, strategy). The default strategy remains `Add`. Logging goes through a `LoggerMessage`-generated method in the runtime package (`ServiceRegistrationLog`), which is AOT-safe. When the logger is null or `Debug` is disabled, the duplicate scan does not run at all.
+`Add{Asm}Services(this IServiceCollection services, ILogger? logger = null)`: when `logger` is not null and `Debug` is enabled, every registration whose (service, key) already exists is logged at `Debug` (service, key, existing implementation, new implementation, strategy) through a `LoggerMessage`-generated method (`ServiceRegistrationLog`). When the logger is null or `Debug` is disabled, the duplicate scan does not run.
 
 ## 6. Generated code (#56)
 
 ### 6.1 Discovery
 
-- `ForAttributeWithMetadataName` per attribute metadata name (`RegisterScopedAttribute`, `` RegisterScopedAttribute`1 ``, and so on, and `DecoratesAttribute` / `` DecoratesAttribute`1 ``). Value-equatable models only (ADR-006).
-- Types with analyzer **errors** are skipped by the generator. The error comes from the analyzer, not from generated code.
+- One `ForAttributeWithMetadataName` provider per attribute metadata name (`RegisterScopedAttribute`, `` RegisterScopedAttribute`1 ``, and so on, plus `DecoratesAttribute` / `` DecoratesAttribute`1 ``), eight in all. Value-equatable models only (ADR-006).
+- Types with analyzer errors are skipped by the generator, so the error comes from the analyzer, not from generated code.
 - If nothing is registered or decorated, no registry and no `ServiceModule` attribute are emitted.
 
 ### 6.2 Per-assembly registry
@@ -254,7 +261,10 @@ public static class {Asm}ServiceRegistry
 [assembly: CSharpEssentials.DependencyInjection.ServiceModule(typeof(Microsoft.Extensions.DependencyInjection.{Asm}ServiceRegistry))]
 ```
 
-`{Asm}` sanitization is the same as in Endpoints (§5.2 of the Endpoints design). `Add{Asm}Services` = `RegisterServices` + `ApplyDecorators`, guarded by `ServiceRegistration.IsRegistered(services, typeof({Asm}ServiceRegistry).Assembly)`: when the assembly is already marked, `Add{Asm}Services` returns without changes; otherwise it registers, decorates and then calls `ServiceRegistration.MarkRegistered`, which adds a singleton marker descriptor for the assembly. The marker is written only after registrations and decorators succeed, so an exception (for example from a `Throw` strategy conflict) leaves the assembly unmarked and the next call retries. The marker is an ordinary descriptor of an internal type: it counts in `services.Count` and appears when enumerating the collection, but nothing resolves it. `RegisterServices` and `ApplyDecorators` stay unguarded building blocks for the aggregate. `ApplyDecorators(services)` calls `ApplyDecorators(services, order)` for each value of `DecoratorOrders` (the distinct `Order` values of the assembly, ascending).
+- `{Asm}` sanitization is the same as in Endpoints (§5.2 of the Endpoints design).
+- `Add{Asm}Services` = `RegisterServices` + `ApplyDecorators`, guarded by `ServiceRegistration.IsRegistered(services, typeof({Asm}ServiceRegistry).Assembly)`. When the assembly is already marked, it returns without changes. Otherwise it registers, decorates and then calls `ServiceRegistration.MarkRegistered`, which adds a singleton marker descriptor of an internal type. The marker is written only after registrations and decorators succeed, so an exception (for example a `Throw` conflict) leaves the assembly unmarked and the next call retries. The marker counts in `services.Count` and appears when enumerating, but nothing resolves it.
+- `RegisterServices` and `ApplyDecorators` are unguarded building blocks for the aggregate. `ApplyDecorators(services)` calls `ApplyDecorators(services, order)` for each value of `DecoratorOrders` (the distinct `Order` values of the assembly, ascending).
+- Decorator entries are `static readonly` `DecoratorRegistration[]` fields, one per order, built once per registry type.
 
 ### 6.3 Aggregate `AddAllServices`
 
@@ -269,9 +279,9 @@ Same rules as `MapAllEndpoints`:
 - `internal`.
 - Auto-generated in `Exe`/`WinExe` when `IsTestProject` is not `true`. `[assembly: DisableServiceAggregate]` opts out, and `[assembly: GenerateServiceAggregate]` opts in libraries and test projects.
 - Referenced assemblies are filtered by name (skip `System*`, `Microsoft*`, `mscorlib`, `netstandard`, and assemblies not referencing `CSharpEssentials.DependencyInjection`) before `ServiceModule` attributes are read.
-- Modules are deduplicated, so there is no duplicate registration. Registries of different assemblies whose names collide after sanitizing (`Foo.Api`, `FooApi`) are skipped, because the aggregate cannot refer to an ambiguous type; the analyzer reports CSE2009. A referenced registry with the same name as the own registry is skipped too (the compiler resolves the name to the own type), and CSE2009 reports that case as well. The analyzer counts the own registry only when the project has at least one registration or decorator the generator emits, because only then is the own registry generated.
-- Phases: **all** `RegisterServices` (referenced modules by assembly name, own module last), then decorators across all modules: for each distinct `Order` in the union of every module's `DecoratorOrders` (ascending), `ApplyDecorators(services, order)` of each module in the same module order. `Order` is global; within one `Order`, module order and then type name decide, so the host's decorators are outermost among equal orders.
-- Idempotent: every module is checked with `ServiceRegistration.IsRegistered` first, and modules already registered (by `Add{Asm}Services`, an earlier `AddAllServices`, or `AddServicesFromAssemblies`) take part in neither phase. The remaining modules are marked with `ServiceRegistration.MarkRegistered` only after both phases succeed, so a failing call can be retried. A retry on the same collection is best effort: registration is not transactional, so descriptors added before an exception (for example while applying decorators) stay in the collection and the retry can add them again, and because the aggregate marks modules only after both phases of every module succeed, one failing registry leaves the modules that succeeded unmarked as well. Application startup fails in that case anyway; the documented guidance is to fix the cause and build a new collection rather than retry on the same one. The reflection fallback (§4.8) checks the same marker per assembly and sets it after its registrations and decorators succeed; its scan validates every type before mutating the collection, so a failing scan leaves the collection untouched.
+- Modules are deduplicated. Registries of different assemblies whose names collide after sanitizing (`Foo.Api`, `FooApi`) are skipped, because the aggregate cannot refer to an ambiguous type. A referenced registry with the same name as the own registry is skipped too (the compiler resolves the name to the own type). CSE2009 reports both cases. The analyzer counts the own registry only when the project has at least one registration or decorator the generator emits.
+- Phases: all `RegisterServices` (referenced modules by assembly name, own module last), then, for each distinct `Order` in the union of every module's `DecoratorOrders` (ascending), `ApplyDecorators(services, order)` of each module in the same module order. `Order` is global; within one `Order`, module order and then type name decide, so the host's decorators are outermost among equal orders.
+- Idempotent: modules already registered (by `Add{Asm}Services`, an earlier `AddAllServices`, or `AddServicesFromAssemblies`) take part in neither phase. The remaining modules are marked only after both phases succeed. Registration is not transactional, so descriptors added before an exception stay in the collection and a retry can add them again, and one failing registry leaves the modules that succeeded unmarked as well. Startup fails in that case anyway; the guidance is to fix the cause and build a new collection. The reflection fallback (§4.8) checks and sets the same marker per assembly; its scan validates every type before mutating the collection.
 
 ### 6.4 Sample generated code
 
@@ -286,14 +296,14 @@ public sealed class InvoiceService(IInvoiceRepository repository) : IInvoiceServ
 [RegisterSingleton(As = ServiceAs.SelfWithInterfaces)]
 public sealed class SystemClock : IClock, IDisposable { /* ... */ }
 
-[RegisterScoped(typeof(IPaymentGateway), Key = "stripe", Strategy = RegistrationStrategy.TryAdd)]
-public sealed class StripeGateway : IPaymentGateway { /* ... */ }
+[RegisterScoped(typeof(IPaymentGateway), Key = "card", Strategy = RegistrationStrategy.TryAdd)]
+public sealed class CardGateway : IPaymentGateway { /* ... */ }
 
 [Decorates(typeof(IInvoiceService), Order = 1)]
 public sealed class CachedInvoiceService(IInvoiceService inner, IMemoryCache cache) : IInvoiceService { /* ... */ }
 ```
 
-Output `SampleBillingServiceRegistry.g.cs`:
+Output `SampleBillingServiceRegistry.g.cs` (XML doc comments omitted):
 
 ```csharp
 // <auto-generated/>
@@ -302,15 +312,21 @@ Output `SampleBillingServiceRegistry.g.cs`:
 
 namespace Microsoft.Extensions.DependencyInjection
 {
-    [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "4.1.0")]
+    [global::System.CodeDom.Compiler.GeneratedCode("CSharpEssentials.DependencyInjection.Generators", "7.0.0.0")]
     public static class SampleBillingServiceRegistry
     {
         public static global::Microsoft.Extensions.DependencyInjection.IServiceCollection AddSampleBillingServices(
             this global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
             global::Microsoft.Extensions.Logging.ILogger? logger = null)
         {
+            if (global::CSharpEssentials.DependencyInjection.ServiceRegistration.IsRegistered(services, typeof(SampleBillingServiceRegistry).Assembly))
+            {
+                return services;
+            }
+
             RegisterServices(services, logger);
             ApplyDecorators(services);
+            global::CSharpEssentials.DependencyInjection.ServiceRegistration.MarkRegistered(services, typeof(SampleBillingServiceRegistry).Assembly);
             return services;
         }
 
@@ -319,30 +335,32 @@ namespace Microsoft.Extensions.DependencyInjection
             global::Microsoft.Extensions.DependencyInjection.IServiceCollection services,
             global::Microsoft.Extensions.Logging.ILogger? logger)
         {
-            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(services, logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(
-                    typeof(global::Sample.Billing.IInvoiceService), typeof(global::Sample.Billing.InvoiceService)),
-                global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
-
-            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(services, logger,
-                new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(
-                    typeof(global::Sample.Billing.IPaymentGateway), "stripe", typeof(global::Sample.Billing.StripeGateway),
-                    global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped),
+            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
+                services,
+                logger,
+                new global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor(typeof(global::Sample.Billing.IPaymentGateway), "card", typeof(global::Sample.Billing.CardGateway), global::Microsoft.Extensions.DependencyInjection.ServiceLifetime.Scoped),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.TryAdd);
-
-            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(services, logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(
-                    typeof(global::Sample.Billing.SystemClock), typeof(global::Sample.Billing.SystemClock)),
+            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
+                services,
+                logger,
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Scoped(typeof(global::Sample.Billing.IInvoiceService), typeof(global::Sample.Billing.InvoiceService)),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
-            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(services, logger,
-                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Sample.Billing.IClock>(
-                    static sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                        .GetRequiredService<global::Sample.Billing.SystemClock>(sp)),
+            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
+                services,
+                logger,
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton(typeof(global::Sample.Billing.SystemClock), typeof(global::Sample.Billing.SystemClock)),
+                global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
+            global::CSharpEssentials.DependencyInjection.ServiceRegistration.Apply(
+                services,
+                logger,
+                global::Microsoft.Extensions.DependencyInjection.ServiceDescriptor.Singleton<global::Sample.Billing.IClock>(sp => global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Sample.Billing.SystemClock>(sp)),
                 global::CSharpEssentials.DependencyInjection.RegistrationStrategy.Add);
         }
 
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
-        public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 0 };
+        public static global::System.Collections.Generic.IReadOnlyList<int> DecoratorOrders { get; } = new int[] { 1 };
+
+        private static readonly global::System.Type[] VerifiedImplementations0 = new global::System.Type[] { typeof(global::Sample.Billing.InvoiceService) };
 
         private static readonly global::CSharpEssentials.DependencyInjection.DecoratorRegistration[] Decorators0 = new global::CSharpEssentials.DependencyInjection.DecoratorRegistration[]
         {
@@ -351,9 +369,8 @@ namespace Microsoft.Extensions.DependencyInjection
                 null,
                 (inner, sp) => new global::Sample.Billing.CachedInvoiceService(
                     (global::Sample.Billing.IInvoiceService)inner,
-                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
-                        .GetRequiredService<global::Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp)),
-                global::System.Array.Empty<global::System.Type>()),
+                    global::Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<global::Microsoft.Extensions.Caching.Memory.IMemoryCache>(sp)),
+                VerifiedImplementations0),
         };
 
         [global::System.ComponentModel.EditorBrowsable(global::System.ComponentModel.EditorBrowsableState.Never)]
@@ -370,7 +387,7 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             switch (order)
             {
-                case 0:
+                case 1:
                     global::CSharpEssentials.DependencyInjection.ServiceRegistration.Decorate(services, Decorators0);
                     break;
             }
@@ -379,7 +396,15 @@ namespace Microsoft.Extensions.DependencyInjection
 }
 ```
 
-`ServiceRegistration.Apply(IServiceCollection, ILogger?, ServiceDescriptor, RegistrationStrategy)` is the public, `[EditorBrowsable(Never)]` runtime helper that implements the key-aware strategies and the duplicate log. The fallback uses it too. Decorator constructor parameters are resolved as follows: the decorated service → `inner`; `[FromKeyedServices(k)]` → `GetRequiredKeyedService`, or `GetRequiredService` when `k` is `null` (`ServiceKeyLookupMode.NullKey`); the parameterless `[FromKeyedServices]` (.NET 10 `ServiceKeyLookupMode.InheritKey`) → the decorated key, or `GetRequiredService` for a non-keyed decorator; `[ServiceKey]` → the decorated key; parameters with defaults → `GetService` with a fallback to the default; others → `GetRequiredService`. `IDisposable` is excluded from `SystemClock`'s interface expansion. Snapshot tests pin the exact text.
+`ServiceRegistration.Apply(IServiceCollection, ILogger?, ServiceDescriptor, RegistrationStrategy)` is the public, `[EditorBrowsable(Never)]` runtime helper that implements the key-aware strategies and the duplicate log; the fallback uses it too. `IDisposable` is excluded from `SystemClock`'s interface expansion. Snapshot tests pin the exact text.
+
+Decorator constructor parameters are emitted as follows:
+- the decorated service → `(TService)inner`;
+- `[FromKeyedServices(k)]` → `GetRequiredKeyedService`, or `GetRequiredService` when `k` is `null` (`ServiceKeyLookupMode.NullKey`);
+- the parameterless `[FromKeyedServices]` (.NET 10 `ServiceKeyLookupMode.InheritKey`) → the decorated key, or `GetRequiredService` for a non-keyed decorator;
+- `[ServiceKey]` → `(T)(object)key`, or `default(T)!` for a non-keyed decorator. The double cast compiles for every key/parameter type pair the runtime activator accepts (for example an `object` parameter or a boxed enum);
+- parameters with defaults → `GetService` with a fallback to the default;
+- others → `GetRequiredService`.
 
 ## 7. Diagnostics (#56)
 
@@ -390,33 +415,33 @@ Reported by `DependencyInjectionAnalyzer` (`DiagnosticAnalyzer`) in `CSharpEssen
 | CSE2001 | Service type not implemented by the class (also covers `[Decorates]` targets and invalid open-generic mappings) | Error | MS.DI would throw at registration or resolution |
 | CSE2002 | `Throw` registration whose (service, key) an earlier registration in the same compilation already registers | Error | Certain runtime failure |
 | CSE2003 | Class implements interfaces but none matched the default rule, so it is registered as self | Info | Deliberate fallback, made visible |
-| CSE2004 | Decorator has no usable constructor parameter of the decorated service | Error | Generated factory would not compile |
-| CSE2005 | Decorator has multiple public constructors | Error | Generated factory needs exactly one |
-| CSE2006 | Captive dependency: a singleton depends on a scoped/transient service, or a scoped service on a transient one. Single-constructor, non-generic classes only; matches attribute registrations in the same compilation by service type and `[FromKeyedServices]` key (a parameterless `[FromKeyedServices]` inherits the consumer's own key; `[FromKeyedServices(null)]` is keyless), including open-generic registrations for closed parameter types | Info | The dependency lives longer than its registration intends. Reported on the consumer's attribute at compilation end. |
-| CSE2007 | Registration or decoration attribute on an abstract or static class | Error | Cannot be constructed |
-| CSE2008 | Open-generic decorator on the generated path; use runtime `Decorate(Type, Type)` | Warning | Not generated. The user must register it at runtime. |
+| CSE2004 | Decorator has no constructor parameter of the decorated service, or more than one | Error | Generated factory would not compile |
+| CSE2005 | Decorator does not have exactly one public constructor (zero or several) | Error | Generated factory needs exactly one; the runtime activator rejects zero as well |
+| CSE2006 | Captive dependency: a singleton depends on a scoped/transient service, or a scoped service on a transient one. Single-constructor, non-generic classes only; matches attribute registrations in the same compilation by service type and `[FromKeyedServices]` key (a parameterless `[FromKeyedServices]` inherits the consumer's own key; `[FromKeyedServices(null)]` is keyless), including open-generic registrations for closed parameter types | Info | The dependency lives longer than its registration intends. Registrations outside attributes are not visible, so the rule is best effort. Reported on the consumer's attribute at compilation end. |
+| CSE2007 | Type cannot be constructed by generated code: abstract, static, file-local, nested in a `private`/`protected` type, or nested in a generic type | Error | Generated code lives in another file and namespace and cannot name these types |
+| CSE2008 | Open-generic decorator on the generated path; use runtime `Decorate(Type, Type)` | Warning | Not generated. The user must apply it at runtime. |
 | CSE2009 | Two registries, referenced or the project's own, have the same fully qualified name after sanitizing (`Foo.Api`, `FooApi`) | Warning | Reported only when the aggregate is generated. The aggregate skips the colliding referenced registries so the project compiles. When the own registry is part of the collision, only the own registry is called. |
 
-Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.Unshipped.md`.
+Every ID has a positive and a negative test and an entry in `AnalyzerReleases.*.md`.
 
-## 8. P3 follow-ups (#58, optional)
+## 8. P3 follow-ups (#58)
 
-- Shipped: CSE2006 captive dependency (info, single-constructor types, §7).
-- Shipped: code fix for CSE2003 in `CSharpEssentials.DependencyInjection.CodeFixes` (netstandard2.0, `Microsoft.CodeAnalysis.CSharp.Workspaces` 4.8.0, packed into `analyzers/dotnet/cs`). One action per implemented service interface adds `typeof(IFoo)` (`typeof(IFoo<>)` for generic classes), and one adds `As = ServiceAs.Self`. The analyzer assembly does not reference Workspaces (RS1038).
+- Shipped: CSE2006 captive dependency (§7).
+- Shipped: code fix for CSE2003 in `CSharpEssentials.DependencyInjection.CodeFixes`. One action per implemented service interface adds `typeof(IFoo)` (`typeof(IFoo<>)` for generic classes), and one adds `As = ServiceAs.Self`. The analyzer assembly does not reference Workspaces (RS1038).
 
 ## 9. Explicitly skipped Scrutor features
 
 | Scrutor feature | Reason skipped |
 |---|---|
-| `Scan(s => s.FromAssemblyOf<T>().AddClasses(...))` fluent scanning | Runtime reflection. Replaced by attribute opt-in + generator. Reflection exists only as `AddServicesFromAssemblies`. |
-| Convention-based "register all classes" | Violates opt-in. Third-party types would be touched. |
+| `Scan(s => s.FromAssemblyOf<T>().AddClasses(...))` fluent scanning | Runtime reflection. Replaced by attribute opt-in + generator; reflection exists only as `AddServicesFromAssemblies`. |
+| Convention-based "register all classes" | Violates opt-in; third-party types would be touched. |
 | `FromApplicationDependencies` / `DependencyContext` scanning | Replaced by the `ServiceModule` aggregate, which reads compile-time references only. |
 | `AsMatchingInterface(Action<...>)` with arbitrary naming | One deterministic rule: `I{TypeName}`, arity-aware. Anything else is explicit `typeof`. |
 | `AsImplementedInterfaces(predicate)` | Fixed exclusion list. Use explicit `typeof` for finer control. |
-| `[ServiceDescriptor]` / `[Service(Lifetime)]` single attribute | Lifetime-named attributes are clearer and need no enum argument. |
+| `[ServiceDescriptor]` / `[Service(Lifetime)]` single attribute | Lifetime-named attributes need no enum argument. |
 | `RegistrationStrategy.Replace(ReplacementBehavior.ImplementationType)` | `Replace` matches (service, key) only. Implementation-based replacement is rarely correct and is not key-aware in Scrutor. |
 | `WithAttributes` / namespace filters (`InNamespaceOf`) | `[ExcludeFromRegistration]` on class or assembly. |
-| Decoration via `ActivatorUtilities` | Generated factories (`new`) on the generated path, which are AOT-safe. |
+| Decoration via `ActivatorUtilities` | Generated factories (`new`) on the generated path. |
 | Decorating open-generic registrations | MS.DI cannot inject the hidden inner without a constant key. Only closed registrations are decorated (§4.7). |
 
 ## 10. Testing strategy
@@ -424,33 +449,14 @@ Every ID gets a positive and a negative test and an entry in `AnalyzerReleases.U
 | Layer | Tests |
 |---|---|
 | Strategies (#55) | Every strategy with and without keys; `Replace` removes all matches; `Throw` message |
-| Decoration (#55) | Order; multiple registrations; keyed decoration; disposal of decorator + inner; `ValidateOnBuild` + `ValidateScopes`; **sentinel does not leak** via `GetKeyedServices<T>(KeyedService.AnyKey)`, `GetKeyedServices<object>(KeyedService.AnyKey)` or `GetServices<T>()`; no partial mutation on failure; `TryDecorate` returns `false`; `[ServiceKey]` original rejected; open-generic `Decorate(Type, Type)` on closed registrations |
+| Decoration (#55) | Order; multiple registrations; keyed decoration; disposal of decorator + inner; `ValidateOnBuild` + `ValidateScopes`; hidden key does not leak via `GetKeyedServices<T>(KeyedService.AnyKey)`, `GetKeyedServices<object>(KeyedService.AnyKey)` or `GetServices<T>()`; no partial mutation on failure; `TryDecorate` returns `false`; `[ServiceKey]` original rejected; open-generic `Decorate(Type, Type)` on closed registrations |
 | Coexistence (#55) | Manual `AddScoped` + generated `Add`: last wins, both enumerated |
-| Fallback (#55) | `AddServicesFromAssemblies` parity with generated registry |
-| Generator snapshots (#56) | Lifetimes, keys (string/enum/int/Type), `As` variants, forwarding, open generics, decorators ordering, empty assembly, `ServiceRegistryName`, aggregate on/off (Exe, library, test project, opt-in, opt-out) |
+| Fallback (#55) | `AddServicesFromAssemblies` parity with the generated registry, compared on descriptor sets (service type, key, lifetime, implementation type), not on order: the fallback scans in metadata order and the generator in ordinal name order, which differs only between unrelated service types |
+| Generator snapshots (#56) | Lifetimes, keys (string/enum/int/Type), `As` variants, forwarding, open generics, decorator ordering, empty assembly, `ServiceRegistryName`, aggregate on/off (Exe, library, test project, opt-in, opt-out) |
 | Incremental caching | Second run → tracked steps `Cached`/`Unchanged` |
-| Aggregate | Two fixture assemblies (`CSharpEssentials.Tests.Fixtures.DependencyInjectionA/B`); cross-assembly decorator; no duplicate registration |
+| Aggregate | Two fixture assemblies (`tests/CSharpEssentials.Tests.Fixtures.DependencyInjectionA/B`); cross-assembly decorator; no duplicate registration |
 | Debug log (#56) | Duplicate (service, key) logged at `Debug`; nothing logged when the logger is null |
 | Analyzer (#56, #58) | Positive and negative per ID (CSE2001 to CSE2009) |
-| AOT (#57) | `examples/Examples.Endpoints` uses `Add{Asm}Services` and publishes with zero trim/AOT warnings |
+| AOT (#57) | `examples/Examples.Endpoints` uses `AddAllServices()` and publishes with zero trim/AOT warnings |
 
 Test location: `CSharpEssentials.Tests/DependencyInjection/` and `CSharpEssentials.Tests/Generators/`. xUnit + FluentAssertions, `Method_Should_Behavior`.
-
-## 11. Implementation deviations
-
-| Deviation | Reason |
-|---|---|
-| `Decorate(Type, Type)` also carries `[RequiresUnreferencedCode]` | Closing the decorator with `MakeGenericType` and reading its constructors cannot be statically annotated for trimming, so the trim analyzer warns unless the caller is told. |
-| `AddServicesFromAssemblies(ILogger?, params Assembly[])` overload | §4.8 asks for loader failures to be "thrown or logged". The overload makes the choice explicit: no logger throws, a logger warns and continues. It also carries the duplicate debug log of §5.5 to the fallback. |
-| `SelfWithInterfaces` with an explicit service type forwards the explicit type too | §4.2 defines the union but not whether the explicit type shares the instance. Forwarding keeps one instance per scope for every service type of the registration, which is what `SelfWithInterfaces` promises. |
-| Open-generic `Decorate(Type, Type)` decorates closed registrations of every key | The API has no key parameter. Each registration keeps its own key, and the decorator receives that key through `[ServiceKey]`. The fallback restricts it to the attribute's `Key`. |
-| CSE2007 also covers file-local types, types nested in a `private`/`protected` type, and types nested in a generic type | Generated code lives in another file and namespace and cannot name these types, so the generator would emit code that does not compile. Reporting them keeps the rule "the error comes from the analyzer, not from generated code" (§6.1). |
-| CSE2005 also reports a decorator with zero public constructors | The generated factory needs exactly one public constructor, and the runtime activator rejects zero as well. |
-| CSE2006 also reports a scoped service that depends on a transient one | The transient instance is held for the whole scope, which is the same capture problem one level down. Registrations made outside attributes (manual `services.Add*`, other assemblies) are not visible to the analyzer, so the rule stays best effort and `Info`. |
-| A generated decorator with nothing to decorate does not name the decorator type in its exception | Generated code passes one `DecoratorRegistration` (service type, key, typed lambda, verified implementation types) per decorator to `ServiceRegistration.Decorate(services, decorators)`, so it needs no decorator activation by reflection; the entry has no decorator type to report. The service type and key are still named. |
-| The generated registry applies all decorators of one order in a single `ServiceRegistration.Decorate` call | One pass over the collection finds the registrations of every decorator of that order, instead of one full pass per decorator. The result equals consecutive decorate calls in declaration order: a later decorator of the same service wraps an earlier one, and the first failing decorator throws the same exception. Every decorator of the order is validated before any registration is replaced, so a failure leaves the collection unchanged instead of keeping the decorators applied before it. The entries are `static readonly` fields, built once per registry type. |
-| The `[ServiceKey]` check result is cached per implementation type | The constructor metadata of a type cannot change, so each type is read once per process. The cache is a `ConditionalWeakTable`, which does not keep collectible types alive. |
-| `AddServicesFromAssemblies` names trimming when a decorator has no public constructor | In a trimmed or Native AOT app the trimmer removes constructors it cannot see being used, and scanning finds decorators only by reflection. The scanner passes a hint to the activator, which appends it to its usual message only when it finds zero public constructors; the hint names trimming and the AOT-safe alternatives. Other callers get the usual message, because outside the scanner zero public constructors is a declaration error. |
-| The `[ServiceKey]` argument is emitted as `(T)(object)key`, or `default(T)!` for a non-keyed decorator | The key constant and the parameter type can differ (for example an `object` parameter or a boxed enum). The double cast compiles for every combination the runtime activator accepts. |
-| The analyzer reports nothing in an assembly marked `[ExcludeFromRegistration]` | The generator emits no registry for such an assembly, so its declarations cannot fail at registration. |
-| Fallback parity is tested on descriptor sets (service type, key, lifetime, implementation type), not on order | The fallback scans types in metadata order and the generator in ordinal name order. Registration order differs only between unrelated service types, which the container does not observe. |

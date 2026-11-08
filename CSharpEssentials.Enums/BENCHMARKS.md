@@ -20,7 +20,7 @@ The suite has eight BenchmarkDotNet classes in `benchmarks/CSharpEssentials.Enum
 | 4 | `GetValuesComparison` | Get all 20 `Status` values (summed as ints) or names (summed lengths) | CSE, BCL, Enums.NET, NetEscapades `GetValues` / `GetNames` |
 | 5 | `FlagsComparison` | `Permissions` value `Write \| Execute \| Delete`: `HasFlag(Write)` and formatting as "Write, Execute, Delete" | Format: CSE `ToOptimizedString`, BCL `ToString`, Enums.NET `FlagEnums.FormatFlags`, NetEscapades `ToStringFast`. HasFlag: BCL `HasFlag` (baseline), Enums.NET `HasAllFlags`, NetEscapades `HasFlagFast`. Separate: CSE `ToWireName` ("write,execute,delete") |
 | 6 | `DescriptionComparison` | Read the `[Description]` text of `Status.PendingApproval` ("Waiting for approval") | CSE `EnumMetadata.Get<T>().TryGetMember(...).Description`, Enums.NET `AsString(EnumFormat.Description)`, NetEscapades `ToStringFast(useMetadataAttributes: true)` |
-| 7 | `BoxedFormatComparison` | Format `Shade.Indigo`, boxed once in setup, as "Indigo"; and a boxed `Shade[]` of all eight members into one list | CSE `EnumValueFormatter.Format(object, ...)` and `TryFormatMany`, BCL `object.ToString()`, Enums.NET `Enums.AsString(Type, object)`. Separate: CSE with `CanHandle = _ => true`, and the typed CSE call |
+| 7 | `BoxedFormatComparison` | Format `Shade.Indigo`, boxed once in setup, as "Indigo"; and a boxed `Shade[]` of all eight members into one list | CSE `EnumValueFormatter.Format(object, ...)` and `TryFormatMany`, BCL `object.ToString()`, Enums.NET `Enums.AsString(Type, object)`. Separate: CSE with a custom `CanHandle = _ => true` delegate, and the typed CSE call |
 | 8 | `ReflectionInfoComparison` | All 20 names and values of `PlainStatus` (no attribute) from a `Type` | CSE `EnumMetadata.GetOrCreateWithReflection(Type, PascalCase)`, BCL `Enum.GetNames(Type)` / `Enum.GetValuesAsUnderlyingType(Type)`, Enums.NET `Enums.GetNames(Type)` / `Enums.GetMembers(Type)`. Separate: CSE names from an info held since setup |
 | 9 | Native AOT (`benchmarks/enums-aot/run-enums-aot.sh`, not BenchmarkDotNet) | One sample per library, `PublishAot=true`, net10, linux-x64 | BclAot, CseAot, EnumsNetAot, NetEscapadesAot |
 
@@ -41,8 +41,8 @@ Environment:
 
 | Property | Value |
 |---|---|
-| Machine | 6 cores / 12 threads (x64, RyuJIT AVX2), desktop session in the background |
-| OS | Linux, kernel 7.3.0-4-cachyos |
+| Machine | A 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2), desktop session in the background |
+| OS | Linux, kernel 7.3.0 |
 | Tool | BenchmarkDotNet v0.14.0, default job, [MemoryDiagnoser] |
 | .NET SDK | 11.0.100-rc.1.26425.128 |
 | Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 |
@@ -207,7 +207,7 @@ All tables are net10 unless stated. "vs CSE" is BenchmarkDotNet's Ratio column: 
 | FormatMany | BCL loop over `ToString()` | 157.100 ns | 0.5762 ns | 0.82 | 224 B |
 | FormatMany | Enums.NET loop over `AsString(Type, object)` | 149.443 ns | 0.7262 ns | 0.78 | 224 B |
 
-- With the default `CanHandle` the formatter now looks the type up in the registry once. The `CanHandle = _ => true` row is slower than the default on every TFM: net10 16.868 vs 15.566 ns (1.08), net11 15.414 vs 14.442 ns, net8 30.846 vs 30.214 ns and net9 29.437 vs 27.535 ns.
+- With the default `CanHandle` the formatter skips the delegate and does one metadata lookup, which also answers whether the type is handled (`EnumValueFormatter.TryGetInfo`). A custom `CanHandle`, even `_ => true`, is invoked first and the metadata lookup follows, so that row measures the delegate call on top of the same lookup. It is slower than the default on every TFM: net10 16.868 vs 15.566 ns (1.08), net11 15.414 vs 14.442 ns, net8 30.846 vs 30.214 ns and net9 29.437 vs 27.535 ns.
 - The boxed CSE call is 15.566 ns against 3.247 ns for the typed call on the same value. The extra time is in the registry lookup and the boxed formatting path; it was not profiled.
 - FormatMany: every row enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each element, so every row allocates the same 224 B. CSE is slower on every TFM.
 
@@ -365,24 +365,13 @@ Enums.NET links point at tag [`5.0.0`](https://github.com/TylerBrinkley/Enums.NE
 
 ## Boxed formatting and reflection-built metadata
 
-Method notes for sections 7 and 8. The rules are the same as for the other classes: every class has `[MemoryDiagnoser]`, CSE is the baseline in each category, a doc URL sits above every row, `[GlobalSetup]` runs the parity check, and `--self-check` runs it without BenchmarkDotNet. NetEscapades.EnumGenerators 1.0.0-beta21 is not used by these two classes.
-
-| Class | Measured unit | Rows | Label |
-|---|---|---|---|
-| `BoxedFormatComparison`, category Format | Format `Shade.Indigo`, boxed once in setup, as "Indigo" | CSE `EnumValueFormatter.Format(object, EnumConventions.Default)` (baseline), BCL `object.ToString()`, Enums.NET `Enums.AsString(Type, object)` | Like-for-like |
-| `BoxedFormatComparison`, category Format | Same | CSE with `CanHandle = _ => true` | CSE configuration row with the same output. It shows the cost of the default registry check |
-| `BoxedFormatComparison`, category Format | Same, unboxed | CSE `EnumValueFormatter.Format(Shade, EnumWireFormat.String)` | Reference only. It shows what the boxed path costs |
-| `BoxedFormatComparison`, category FormatMany | A boxed `Shade[]` of all eight members into one list. Returns the entry count plus the summed lengths | CSE `TryFormatMany` (baseline), a BCL loop over `ToString()`, an Enums.NET loop over `AsString(Type, object)` | Like-for-like on output. The BCL and Enums.NET rows are hand-written loops, because neither library has a collection formatter |
-| `ReflectionInfoComparison`, category Names | All 20 names of `PlainStatus` from a `Type`, summed lengths | CSE `GetOrCreateWithReflection(Type, PascalCase).WireNames` (baseline), BCL `Enum.GetNames(Type)`, Enums.NET `Enums.GetNames(Type)` | Like-for-like |
-| `ReflectionInfoComparison`, category Names | Same | CSE `WireNames` of an info held from setup | Reference only. No lookup, so the lookup cost is visible |
-| `ReflectionInfoComparison`, category Values | All 20 values of `PlainStatus` from a `Type`, summed as `long` | CSE `Members[i].RawValue` (baseline), BCL `Enum.GetValuesAsUnderlyingType(Type)` with `Convert.ToInt64`, Enums.NET `Enums.GetMembers(Type)` with `ToInt64()` | Like-for-like on the result |
+Method notes for sections 7 and 8. NetEscapades.EnumGenerators is not used by these two classes: its generated methods take the typed enum, never an `object` or a `Type`, and need `[EnumExtensions]` on the enum.
 
 Methodology:
-- Format: the value is boxed once in setup, and no row boxes it again. FormatMany: every row, CSE's `TryFormatMany` included, enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each of the eight elements per call. That cost is the same in every row.
+- Format: the value is boxed once in setup, and no row boxes it again. The typed `Format(Shade, EnumWireFormat.String)` row is reference only. FormatMany: every row enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each of the eight elements per call. The BCL and Enums.NET rows are hand-written loops, because neither library has a collection formatter.
 - `Shade` has `[StringEnum(Naming = EnumNaming.PascalCase)]`. Its wire names equal its member names, so CSE, the BCL and Enums.NET write the same text. The existing `Color` enum uses snake_case wire names, so it is not reused.
 - `PlainStatus` has the members and values of `Status` and no attribute at all. CSE has no generated metadata for it, so `GetOrCreateWithReflection` takes the reflection path. The self-check fails if `PlainStatus` is ever registered.
 - Every CSE row in `ReflectionInfoComparison` except the held-info reference row (`CSharpEssentials_HeldNames`) calls `GetOrCreateWithReflection` per invocation. That is the documented API: it builds the info once and caches it. The enum type is held in a field, as a caller that has only a `Type` would hold it.
-- NetEscapades.EnumGenerators has no column. Its generated methods take the typed enum, never an `object`, and need `[EnumExtensions]` on the enum.
 - There is no undefined-value row. For an undefined value CSE throws `EnumValueException` while the BCL returns the number ("99"), so the outputs differ.
 - The BCL `GetValuesAsUnderlyingType(Type)` returns a new array per call, and `Array.GetValue` boxes each element. That is the cost of the non-generic API. CSE lists members in declaration order and Enums.NET in value order. The sums do not depend on order, and `PlainStatus` values ascend anyway.
 
@@ -405,18 +394,14 @@ Not measured here: reflection-built infos convert the value to a raw number on e
 
 ## Caveats
 
-- NetEscapades.EnumGenerators 1.0.0-beta21 is a prerelease. No stable version exists to compare against.
+- Two net8 HasFlag rows stayed noisy after two reruns (CV 12.0% and 11.8%), and three suites come from next-morning reruns (see [How these numbers were produced](#how-these-numbers-were-produced)).
 - Rows below about 1 ns are close to the timer and loop overhead. Treat the defined ToString, IsDefined and HasFlag gaps among the fastest columns as orders of magnitude, not exact ratios. The HasFlag rows (0.1666 to 0.8052 ns) are at timer resolution and are not ranked.
-- Two rows stayed noisy after two reruns: net8 BCL `HasFlag` (CV 12.0%) and net8 NetEscapades `HasFlagFast` (CV 11.8%).
-- net8 and net11 `FlagsComparison` and net9 `IsDefinedComparison` come from reruns made the next morning; the other reports come from one session.
 - The net8 column runs CSE's netstandard2.1 build; the other columns run the matching TFM build.
 - The net10 BCL parse rows are far above the other TFMs in two runs with different TFM orders. The cause was not investigated.
 - GetValues allocation drops to 0 B on net10 and net11 for both generated libraries without any code change. The cause was not investigated.
 - The Native AOT report is a separate script run from 2026-11-06, not part of the BenchmarkDotNet suite.
 - The "why" notes on CSE losses come from reading the source. They were not profiled.
 - AOT warning counts use `TrimmerSingleWarn=false`. The 2 ms AOT wall time is not a result.
-- The feature matrix comes from reading source and docs, except the measured AOT row.
-- A difference within the sum of the two error margins is reported as a tie.
 - The CSE column is the 7.0.0 working tree on branch `integ/all`, which may differ from the last version published to NuGet.
 
 ---

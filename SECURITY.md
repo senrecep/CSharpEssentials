@@ -4,14 +4,13 @@
 
 | Version | Supported |
 | ------- | --------- |
+| 7.x     | Yes       |
 | 6.x     | Yes       |
 | < 6.0   | No        |
 
 ## Reporting a vulnerability
 
-Please **do not** open a public GitHub issue for security vulnerabilities.
-
-Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/senrecep/CSharpEssentials/security/advisories/new).
+Do not open a public GitHub issue for a security vulnerability. Report it privately through [GitHub Security Advisories](https://github.com/senrecep/CSharpEssentials/security/advisories/new).
 
 Include:
 - Affected package(s) and version(s)
@@ -19,21 +18,11 @@ Include:
 - Steps to reproduce
 - Potential impact
 
-You will receive a response within **72 hours**. If the vulnerability is confirmed, a patched release will be published and a CVE will be requested where appropriate.
+You will receive a response within 72 hours. If the vulnerability is confirmed, a patched release will be published and a CVE will be requested where appropriate.
 
 ## Scope
 
-This policy covers all packages published under the `CSharpEssentials` NuGet namespace:
-
-- `CSharpEssentials`
-- `CSharpEssentials.Core`
-- `CSharpEssentials.Maybe`
-- `CSharpEssentials.Results`
-- `CSharpEssentials.Rules`
-- `CSharpEssentials.Entity`
-- `CSharpEssentials.EntityFrameworkCore`
-- `CSharpEssentials.AspNetCore`
-- And all other packages in this repository
+This policy covers every package published from this repository: `CSharpEssentials` and all `CSharpEssentials.*` packages listed in the [README](README.MD#packages).
 
 ## Out of scope
 

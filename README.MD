@@ -26,15 +26,15 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 | `CSharpEssentials.Any` | `Any<T1,T2,...>`: type-safe discriminated unions | [Docs](examples/Examples.Any/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Any.svg)](https://www.nuget.org/packages/CSharpEssentials.Any) |
 | `CSharpEssentials.These` | `These<TError,TValue>`: 3-state union with Left, Right, Both (error + value simultaneously) | [Docs](CSharpEssentials.These/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.These.svg)](https://www.nuget.org/packages/CSharpEssentials.These) |
 | `CSharpEssentials.Core` | String/GUID/collection utilities | [Docs](examples/Examples.Core/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Core.svg)](https://www.nuget.org/packages/CSharpEssentials.Core) |
-| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum↔string | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
+| `CSharpEssentials.Enums` | `[StringEnum]` source generator, AOT-safe enum to string and back | [Docs](CSharpEssentials.Enums/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Enums.svg)](https://www.nuget.org/packages/CSharpEssentials.Enums) |
 | `CSharpEssentials.Rules` | Composable rule engine with `.And()/.Or()/.Linear()/.Next()` | [Docs](examples/Examples.Rules/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Rules.svg)](https://www.nuget.org/packages/CSharpEssentials.Rules) |
-| `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
+| `CSharpEssentials.Mediator` | CQRS pipeline behaviors for the Mediator source generator: validation, logging, exception handling, caching, locking, transactions, idempotency | [Docs](CSharpEssentials.Mediator/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Mediator.svg)](https://www.nuget.org/packages/CSharpEssentials.Mediator) |
 | `CSharpEssentials.Entity` | `EntityBase<TId>`, soft deletion, domain events | [Docs](examples/Examples.Entity/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Entity.svg)](https://www.nuget.org/packages/CSharpEssentials.Entity) |
 | `CSharpEssentials.EntityFrameworkCore` | EF Core interceptors (audit, events, slow queries), offset and keyset pagination, enum storage | [Docs](examples/Examples.EntityFrameworkCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.EntityFrameworkCore.svg)](https://www.nuget.org/packages/CSharpEssentials.EntityFrameworkCore) |
-| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
+| `CSharpEssentials.AspNetCore` | `GlobalExceptionHandler`, `ResultEndpointFilter`, enum binding, API versioning, `Idempotency-Key` middleware, ETag and `If-Match` | [Docs](examples/Examples.AspNetCore/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore) |
 | `CSharpEssentials.AspNetCore.OpenApi` | Enum convention schemas for `Microsoft.AspNetCore.OpenApi` (net10.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.OpenApi/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.OpenApi.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.OpenApi) |
 | `CSharpEssentials.AspNetCore.Swashbuckle` | Swagger versioning, schema ids, security schemes and enum convention schemas for Swashbuckle 10 (net8.0+, Microsoft.OpenApi 2.x); one OpenAPI package per host | [Docs](CSharpEssentials.AspNetCore.Swashbuckle/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.AspNetCore.Swashbuckle.svg)](https://www.nuget.org/packages/CSharpEssentials.AspNetCore.Swashbuckle) |
-| `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1011 | [Docs](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
+| `CSharpEssentials.Endpoints` | Source-generated Minimal API endpoint discovery (`IEndpoint`, `IEndpointGroup`), AOT-safe, analyzers CSE1001 to CSE1012 | [Docs](CSharpEssentials.Endpoints/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Endpoints.svg)](https://www.nuget.org/packages/CSharpEssentials.Endpoints) |
 | `CSharpEssentials.DependencyInjection` | Attribute-based, source-generated service registration and decoration (`[RegisterScoped]`, `[Decorates]`), analyzers CSE2001 to CSE2009 | [Docs](CSharpEssentials.DependencyInjection/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.DependencyInjection.svg)](https://www.nuget.org/packages/CSharpEssentials.DependencyInjection) |
 | `CSharpEssentials.Http` | `HttpClient` extensions returning `Result<T>` | [Docs](CSharpEssentials.Http/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Http.svg)](https://www.nuget.org/packages/CSharpEssentials.Http) |
 | `CSharpEssentials.Idempotency` | Transport-independent idempotency: record store with reservation tokens, scoped record keys, scope resolvers, deterministic keys (UUIDv5) | [Docs](CSharpEssentials.Idempotency/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Idempotency.svg)](https://www.nuget.org/packages/CSharpEssentials.Idempotency) |
@@ -42,24 +42,20 @@ CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented 
 | `CSharpEssentials.Resilience` | Transient fault handling: Retry, Timeout, Circuit Breaker, Fallback | [Docs](CSharpEssentials.Resilience/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Resilience.svg)](https://www.nuget.org/packages/CSharpEssentials.Resilience) |
 | `CSharpEssentials.Json` | Pre-configured `System.Text.Json` options and converters | [Docs](examples/Examples.Json/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Json.svg)](https://www.nuget.org/packages/CSharpEssentials.Json) |
 | `CSharpEssentials.RequestResponseLogging` | Request/response body logging middleware | [Docs](examples/Examples.RequestResponseLogging/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.RequestResponseLogging.svg)](https://www.nuget.org/packages/CSharpEssentials.RequestResponseLogging) |
-| `CSharpEssentials.GcpSecretManager` | GCP Secret Manager → `IConfiguration` provider | [Docs](examples/Examples.GcpSecretManager/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
+| `CSharpEssentials.GcpSecretManager` | `IConfiguration` provider for GCP Secret Manager | [Docs](examples/Examples.GcpSecretManager/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.GcpSecretManager.svg)](https://www.nuget.org/packages/CSharpEssentials.GcpSecretManager) |
 | `CSharpEssentials.Time` | Testable `IDateTimeProvider` wrapping `TimeProvider` | [Docs](examples/Examples.Time/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Time.svg)](https://www.nuget.org/packages/CSharpEssentials.Time) |
-| `CSharpEssentials.Validation` | High-performance model-first validation with `Result<T>` integration | [Docs](CSharpEssentials.Validation/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Validation.svg)](https://www.nuget.org/packages/CSharpEssentials.Validation) |
+| `CSharpEssentials.Validation` | Model-first validation with `Result<T>` integration | [Docs](CSharpEssentials.Validation/Readme.MD) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Validation.svg)](https://www.nuget.org/packages/CSharpEssentials.Validation) |
 | `CSharpEssentials.Clone` | `ICloneable<T>`: typed deep-copy for entity collections | [Docs](examples/Examples.Clone/README.md) | [![NuGet](https://img.shields.io/nuget/v/CSharpEssentials.Clone.svg)](https://www.nuget.org/packages/CSharpEssentials.Clone) |
 
 ## Documentation
 
-The [API Reference](docs/API_REFERENCE.md) is a guide to every package, method and pattern in the ecosystem. It covers 24 of the 27 packages with method tables, philosophy, code examples, and cross-cutting FP patterns; `CSharpEssentials.AspNetCore.OpenApi`, `CSharpEssentials.AspNetCore.Swashbuckle` and `CSharpEssentials.Idempotency.Testing` are documented in their own Readme files.
+The [API reference](docs/API_REFERENCE.md) covers 26 of the 27 packages with method tables, code examples and cross-cutting patterns. `CSharpEssentials.Idempotency.Testing` is documented in its own Readme.
 
 ## Installation
 
 ```bash
-# Core functional modules
-dotnet add package CSharpEssentials
-
-# Individual packages
-dotnet add package CSharpEssentials.Rules
-dotnet add package CSharpEssentials.Mediator
+dotnet add package CSharpEssentials            # meta-package with the core functional modules
+dotnet add package CSharpEssentials.Mediator   # any other package on its own
 ```
 
 ## Core concepts
@@ -69,7 +65,7 @@ dotnet add package CSharpEssentials.Mediator
 Return expected failures as values instead of throwing exceptions, and chain operations that short-circuit on the first error.
 
 ```csharp
-// ❌ Traditional: exceptions as control flow
+// Exceptions as control flow
 public User GetUserOrThrow(Guid id)
 {
     var user = _db.Find(id);
@@ -77,7 +73,7 @@ public User GetUserOrThrow(Guid id)
     return user;
 }
 
-// ✅ Result<T>: explicit, composable error handling
+// Result<T>: explicit, composable error handling
 public Result<User> GetUser(Guid id)
 {
     var user = _db.Find(id);
@@ -97,10 +93,10 @@ Result<UserDto> result = GetUser(id)
 Model the absence of a value without null references.
 
 ```csharp
-// ❌ Null checks everywhere, easy to miss
+// Null checks everywhere, easy to miss
 string display = user?.Profile?.DisplayName?.Trim()?.ToUpper() ?? "ANONYMOUS";
 
-// ✅ Maybe<T>: pipeline that handles absence at every step
+// Maybe<T>: a pipeline that handles absence at every step
 string displayName = Maybe.From(user)
     .Bind(u  => Maybe.From(u.Profile))
     .Bind(p  => Maybe.From(p.DisplayName))
@@ -139,9 +135,9 @@ Result result = RuleEngine.Evaluate(new[] { minAge, validEmail, verified }.And()
 Result adminOrMod = RuleEngine.Evaluate(new[] { isAdmin, isModerator }.Or(), user);
 ```
 
-### AspNetCore: Result → HTTP, automatically
+### AspNetCore: Result to HTTP
 
-Map `Result<T>` to the matching HTTP status codes without writing the error mapping yourself.
+Map `Result<T>` failures to the matching HTTP status codes without writing the mapping yourself.
 
 ```csharp
 // Program.cs
@@ -207,7 +203,7 @@ builder.Services.AddAllServices(); // every generated registry of the app and it
 
 ## Enums end to end
 
-Mark an enum with `[StringEnum]` and every layer reads and writes it the same way, driven by one `EnumConventions` instance (`CSharpEssentials.Enums`). The wire name is snake_case by default (`PendingApproval` → `pending_approval`); change it per enum (`[StringEnum(Naming = ...)]`), per member (`[JsonStringEnumMemberName]`) or per project (the `CSharpEssentialsEnumNaming` MSBuild property). Enums without `[StringEnum]` keep the framework defaults.
+Mark an enum with `[StringEnum]` and every layer reads and writes it the same way, driven by one `EnumConventions` instance (`CSharpEssentials.Enums`). The wire name is snake_case by default (`PendingApproval` becomes `pending_approval`); change it per enum (`[StringEnum(Naming = ...)]`), per member (`[JsonStringEnumMemberName]`) or per project (the `CSharpEssentialsEnumNaming` MSBuild property). Enums without `[StringEnum]` keep the framework defaults.
 
 ```csharp
 [StringEnum]
@@ -222,14 +218,14 @@ public enum OrderStatus
 | Layer | Package | Setup | Reads | Writes |
 |---|---|---|---|---|
 | JSON (System.Text.Json) | `CSharpEssentials.Json` | `options.AddEnumConventions(conventions)` | wire name, member name in any casing, alias, defined number; undefined numbers rejected | `"pending_approval"`, or `1` with `WriteAs = Number` |
-| Route, query, header, form | `CSharpEssentials.AspNetCore` | `AddEnumConventions()` + `UseEnumBinding()` | same rules as a JSON body, trimmed; invalid → 400 problem listing the allowed values | |
+| Route, query, header, form | `CSharpEssentials.AspNetCore` | `AddEnumConventions()` + `UseEnumBinding()` | same rules as a JSON body, trimmed; invalid gives a 400 problem listing the allowed values | |
 | Responses | `CSharpEssentials.AspNetCore` | `WithEnumWireFormat(...)` per group, `[EnumWireFormat]` per controller | | string by default, number per group |
 | OpenAPI | `CSharpEssentials.AspNetCore.OpenApi` or `.Swashbuckle` (one per host) | `o.AddEnumConventions()` | | string or integer schema, value table, `x-enum-*` |
-| EF Core | `CSharpEssentials.EntityFrameworkCore` | `ConfigureEnumConventions(conventions)` | tolerant: any known spelling, unknown → fallback member | `text` column + `ck_{table}_{column}_enum`; `[Flags]` as an integer bitmask |
+| EF Core | `CSharpEssentials.EntityFrameworkCore` | `ConfigureEnumConventions(conventions)` | tolerant: any known spelling, unknown maps to the fallback member | `text` column + `ck_{table}_{column}_enum`; `[Flags]` as an integer bitmask |
 | Outgoing HTTP | `CSharpEssentials.Http` | `WithEnumConventions(conventions)` on `HttpRequestBuilder` | tolerant | wire names in route and query |
 | Validation | `CSharpEssentials.Validation` | `IsDefinedEnum()`, `IsOneOf(...)`, `HasOnlyDefinedFlags()` | | |
 
-`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. Any CSharpEssentials package brings the generator and analyzers to your project: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. A direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints` and `.RequestResponseLogging` do not depend on it).
+`CSharpEssentials.Enums` carries the source generator, the analyzers and the code fixes. Any CSharpEssentials package brings the generator and analyzers to your project: every package that depends on Enums, directly or through another CSharpEssentials package, passes them on. A direct `CSharpEssentials.Enums` reference is not required; add it only when the project uses no other CSharpEssentials package that depends on it (`.Core`, `.Clone`, `.Time`, `.DependencyInjection`, `.Endpoints`, `.RequestResponseLogging`, `.Idempotency` and `.Idempotency.Testing` do not depend on it).
 
 | Scenario | Packages |
 |---|---|
@@ -305,12 +301,10 @@ Details: [CSharpEssentials.Enums Readme](CSharpEssentials.Enums/Readme.MD) (gene
 
 ## AI skills
 
-Install skills for Claude Code, Cursor, Codex, and 50+ other AI agents:
+Install the agent skills:
 
 ```bash
 npx skills add senrecep/CSharpEssentials
 ```
 
-Each package has its own skill with API examples, the namespaces to import and common pitfalls.
-
-The same skill also ships inside each NuGet package, at `skills/<name>/SKILL.md`. After `dotnet restore`, agent tools that read package skills find the version that matches the package you installed, with nothing else to set up. For example, `dotnet-package-skills install` copies them into your repo.
+Each package has its own skill with API examples, the namespaces to import and common pitfalls. The same skill ships inside each NuGet package, at `skills/<name>/SKILL.md`. After `dotnet restore`, agent tools that read package skills find the version that matches the package you installed, with nothing else to set up. For example, `dotnet-package-skills install` copies them into your repo.
