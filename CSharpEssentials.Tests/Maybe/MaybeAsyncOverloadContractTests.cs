@@ -71,7 +71,7 @@ public sealed class MaybeAsyncOverloadContractTests
             if (obsolete is null)
                 continue;
 
-            string expected = $"Use {forwarder.Name}Async. Will be removed in 7.0.";
+            string expected = $"Use {forwarder.Name}Async. Will be removed in a future major version.";
             if (obsolete.Message != expected)
                 wrong.Add($"{forwarder.DeclaringType!.Name}.{forwarder.Name}: {obsolete.Message}");
         }

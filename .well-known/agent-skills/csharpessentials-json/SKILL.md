@@ -120,7 +120,7 @@ var aot = new JsonSerializerOptions(AppJsonContext.Default.Options).AddPolymorph
 
 ## MultiFormatDateTimeConverterFactory
 
-Reads `DateTime` and `DateTime?` from a fixed list of 34 formats (ISO 8601, `dd.MM.yyyy`, `MM/dd/yyyy`, `March 14, 2024`, RFC 1123 and more) and from numeric Unix-seconds strings. Constructor arguments add formats. Every value is returned as UTC (`Kind = Utc`); input without an offset is read as UTC. Slash dates try `dd/MM/yyyy` before `MM/dd/yyyy`. Writes use `yyyy-MM-ddTHH:mm:ss.ffffffzzz`, and an `Unspecified` value is written as UTC. A 7-digit ISO fraction (the `O` round-trip form) is not read.
+Reads `DateTime` and `DateTime?` from a fixed list of 35 formats (ISO 8601, `dd.MM.yyyy`, `MM/dd/yyyy`, `March 14, 2024`, RFC 1123 and more) and from numeric Unix-seconds strings. Constructor arguments add formats. Every value is returned as UTC (`Kind = Utc`); input without an offset is read as UTC. Slash dates try `dd/MM/yyyy` before `MM/dd/yyyy`. Writes use `yyyy-MM-ddTHH:mm:ss.ffffffzzz`, and an `Unspecified` value is written as UTC. ISO text with 1 to 7 fraction digits is read, including the `O` round-trip form System.Text.Json writes.
 
 ```csharp
 var options = new JsonSerializerOptions();

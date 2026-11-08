@@ -37,6 +37,7 @@ public sealed class MultiFormatDateTimeConverterFactory : JsonConverterFactory
     internal static readonly string[] DefaultFormats = [
         // ISO 8601 and Web Formats
         "yyyy-MM-ddTHH:mm:ss.ffffffzzz",    // 2024-03-14T15:30:45.123456+03:00
+        "yyyy-MM-ddTHH:mm:ss.FFFFFFFK",     // 2024-03-14T15:30:45.1234567Z, the round-trip form System.Text.Json writes
         "yyyy-MM-ddTHH:mm:ss.fffZ",         // 2024-03-14T15:30:45.123Z
         "yyyy-MM-ddTHH:mm:ssZ",             // 2024-03-14T15:30:45Z
         "yyyy-MM-ddTHH:mm:ss",              // 2024-03-14T15:30:45
@@ -161,10 +162,10 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
             return false;
 
         ReadOnlySpan<byte> text = reader.ValueSpan;
-        if (!IsIsoShape(text))
+        if (!IsIsoShape(text, out bool hasZone))
             return false;
 
-        if (text[^1] == (byte)'Z' || text.Length is 25 or 32)
+        if (hasZone)
         {
             if (!reader.TryGetDateTimeOffset(out DateTimeOffset withOffset))
                 return false;
@@ -178,39 +179,38 @@ public sealed class MultiFormatDateTimeConverter<T> : JsonConverter<T>
         return true;
     }
 
-    private static bool IsIsoShape(ReadOnlySpan<byte> s)
+    private static bool IsIsoShape(ReadOnlySpan<byte> s, out bool hasZone)
     {
+        hasZone = false;
         if (s.Length < 10 || s[4] != (byte)'-' || s[7] != (byte)'-')
             return false;
         if (s.Length == 10)
             return true;
-        if (s.Length < 19 || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':')
+        if (s.Length < 19 || s[10] != (byte)'T' || s[13] != (byte)':' || s[16] != (byte)':' || !IsDigit(s[18]))
             return false;
 
-        return s.Length switch
+        int index = 19;
+        if (index < s.Length && s[index] == (byte)'.')
         {
-            19 => IsDigit(s[18]),
-            20 => s[19] == (byte)'Z',
-            23 or 26 => s[19] == (byte)'.' && AllDigits(s[20..]),
-            24 => s[19] == (byte)'.' && s[23] == (byte)'Z',
-            25 => IsSign(s[19]) && s[22] == (byte)':',
-            32 => s[19] == (byte)'.' && IsSign(s[26]) && s[29] == (byte)':',
+            int start = ++index;
+            while (index < s.Length && IsDigit(s[index]))
+                index++;
+            if (index - start is < 1 or > 7)
+                return false;
+        }
+
+        ReadOnlySpan<byte> zone = s[index..];
+        hasZone = zone.Length > 0;
+        return zone.Length switch
+        {
+            0 => true,
+            1 => zone[0] == (byte)'Z',
+            6 => IsSign(zone[0]) && zone[3] == (byte)':',
             _ => false,
         };
     }
 
     private static bool IsDigit(byte value) => value is >= (byte)'0' and <= (byte)'9';
-
-    private static bool AllDigits(ReadOnlySpan<byte> s)
-    {
-        foreach (byte value in s)
-        {
-            if (!IsDigit(value))
-                return false;
-        }
-
-        return true;
-    }
 
     private static bool IsSign(byte value) => value is (byte)'+' or (byte)'-';
 
