@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Mediator.Benchmarks.ValidationScopeBenchmarks-20261105-135509</title>
+<title>CSharpEssentials.Mediator.Benchmarks.ValidationScopeBenchmarks-20261108-183526</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,19 +14,19 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method       </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method       </th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>MediatorHandWritten</td><td>586.5 ns</td><td>2.88 ns</td><td>2.70 ns</td><td>1.00</td><td>0.0734</td><td>1232 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>499.0 ns</td><td>2.88 ns</td><td>2.70 ns</td><td>0.85</td><td>0.0582</td><td>976 B</td><td>0.79</td>
-</tr><tr><td>MediatRHandWritten</td><td>631.3 ns</td><td>3.12 ns</td><td>2.92 ns</td><td>1.08</td><td>0.0734</td><td>1232 B</td><td>1.00</td>
+</thead><tbody><tr><td>MediatorHandWritten</td><td>559.5 ns</td><td>3.30 ns</td><td>2.93 ns</td><td>1.00</td><td>0.01</td><td>0.0734</td><td>1232 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>492.4 ns</td><td>2.83 ns</td><td>2.64 ns</td><td>0.88</td><td>0.01</td><td>0.0582</td><td>976 B</td><td>0.79</td>
+</tr><tr><td>MediatRHandWritten</td><td>558.4 ns</td><td>10.08 ns</td><td>9.43 ns</td><td>1.00</td><td>0.02</td><td>0.0734</td><td>1232 B</td><td>1.00</td>
 </tr></tbody></table>
 </body>
 </html>

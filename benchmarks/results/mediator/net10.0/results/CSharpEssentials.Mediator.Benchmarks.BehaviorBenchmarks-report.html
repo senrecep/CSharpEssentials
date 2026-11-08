@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Mediator.Benchmarks.BehaviorBenchmarks-20261105-135659</title>
+<title>CSharpEssentials.Mediator.Benchmarks.BehaviorBenchmarks-20261108-184204</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -14,22 +14,22 @@
 <body>
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
-x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
-  DefaultJob : .NET 10.0.11 (10.0.1126.37416), X64 RyuJIT AVX2
+AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
+  DefaultJob : .NET 10.0.14 (10.0.1426.52326), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>Method       </th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
+<thead><tr><th>Method       </th><th>Input</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>MediatorHandWritten</td><td>Valid</td><td>198.0 ns</td><td>0.55 ns</td><td>0.52 ns</td><td>1.00</td><td>0.0129</td><td>216 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>Valid</td><td>163.7 ns</td><td>0.59 ns</td><td>0.55 ns</td><td>0.83</td><td>0.0129</td><td>216 B</td><td>1.00</td>
-</tr><tr><td>MediatRHandWritten</td><td>Valid</td><td>329.6 ns</td><td>1.86 ns</td><td>1.74 ns</td><td>1.66</td><td>0.0525</td><td>880 B</td><td>4.07</td>
-</tr><tr><td>MediatorHandWritten</td><td>Invalid</td><td>273.6 ns</td><td>1.62 ns</td><td>1.52 ns</td><td>1.00</td><td>0.0424</td><td>712 B</td><td>1.00</td>
-</tr><tr><td>Cse</td><td>Invalid</td><td>303.9 ns</td><td>1.31 ns</td><td>1.16 ns</td><td>1.11</td><td>0.0448</td><td>752 B</td><td>1.06</td>
-</tr><tr><td>MediatRHandWritten</td><td>Invalid</td><td>403.3 ns</td><td>3.36 ns</td><td>2.98 ns</td><td>1.47</td><td>0.0710</td><td>1192 B</td><td>1.67</td>
+</thead><tbody><tr><td>MediatorHandWritten</td><td>Valid</td><td>179.3 ns</td><td>0.71 ns</td><td>0.67 ns</td><td>1.00</td><td>0.01</td><td>0.0129</td><td>216 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Valid</td><td>177.6 ns</td><td>1.08 ns</td><td>1.01 ns</td><td>0.99</td><td>0.01</td><td>0.0129</td><td>216 B</td><td>1.00</td>
+</tr><tr><td>MediatRHandWritten</td><td>Valid</td><td>402.4 ns</td><td>3.85 ns</td><td>3.42 ns</td><td>2.24</td><td>0.02</td><td>0.0525</td><td>880 B</td><td>4.07</td>
+</tr><tr><td>MediatorHandWritten</td><td>Invalid</td><td>282.1 ns</td><td>2.22 ns</td><td>1.96 ns</td><td>1.00</td><td>0.01</td><td>0.0424</td><td>712 B</td><td>1.00</td>
+</tr><tr><td>Cse</td><td>Invalid</td><td>292.5 ns</td><td>5.68 ns</td><td>6.76 ns</td><td>1.04</td><td>0.02</td><td>0.0448</td><td>752 B</td><td>1.06</td>
+</tr><tr><td>MediatRHandWritten</td><td>Invalid</td><td>396.0 ns</td><td>3.14 ns</td><td>2.94 ns</td><td>1.40</td><td>0.01</td><td>0.0710</td><td>1192 B</td><td>1.67</td>
 </tr></tbody></table>
 </body>
 </html>
