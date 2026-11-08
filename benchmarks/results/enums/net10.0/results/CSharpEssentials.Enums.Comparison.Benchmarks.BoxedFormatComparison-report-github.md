@@ -8,14 +8,14 @@ AMD Ryzen 5 5600, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                     | Categories | Mean       | Error     | StdDev     | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|--------------------------- |----------- |-----------:|----------:|-----------:|------:|--------:|-------:|----------:|------------:|
-| CSharpEssentials           | Format     |  15.197 ns | 0.0252 ns |  0.0223 ns |  1.00 |    0.00 |      - |         - |          NA |
-| CSharpEssentials_HandleAll | Format     |  17.358 ns | 0.1507 ns |  0.1336 ns |  1.14 |    0.01 |      - |         - |          NA |
-| CSharpEssentials_Typed     | Format     |   3.486 ns | 0.0078 ns |  0.0073 ns |  0.23 |    0.00 |      - |         - |          NA |
-| Bcl                        | Format     |   5.023 ns | 0.0075 ns |  0.0070 ns |  0.33 |    0.00 |      - |         - |          NA |
-| EnumsNet                   | Format     |   5.522 ns | 0.0026 ns |  0.0022 ns |  0.36 |    0.00 |      - |         - |          NA |
-|                            |            |            |           |            |       |         |        |           |             |
-| CSharpEssentials_Many      | FormatMany | 225.045 ns | 5.6360 ns | 16.5295 ns |  1.01 |    0.10 | 0.0134 |     224 B |        1.00 |
-| Bcl_Many                   | FormatMany | 154.828 ns | 0.3941 ns |  0.3494 ns |  0.69 |    0.05 | 0.0134 |     224 B |        1.00 |
-| EnumsNet_Many              | FormatMany | 146.268 ns | 0.6656 ns |  0.6226 ns |  0.65 |    0.05 | 0.0134 |     224 B |        1.00 |
+| Method                     | Categories | Mean       | Error     | StdDev    | Ratio | Gen0   | Allocated | Alloc Ratio |
+|--------------------------- |----------- |-----------:|----------:|----------:|------:|-------:|----------:|------------:|
+| CSharpEssentials           | Format     |  15.566 ns | 0.0403 ns | 0.0377 ns |  1.00 |      - |         - |          NA |
+| CSharpEssentials_HandleAll | Format     |  16.868 ns | 0.0371 ns | 0.0347 ns |  1.08 |      - |         - |          NA |
+| CSharpEssentials_Typed     | Format     |   3.247 ns | 0.0055 ns | 0.0049 ns |  0.21 |      - |         - |          NA |
+| Bcl                        | Format     |   5.052 ns | 0.0124 ns | 0.0116 ns |  0.32 |      - |         - |          NA |
+| EnumsNet                   | Format     |   5.543 ns | 0.0175 ns | 0.0164 ns |  0.36 |      - |         - |          NA |
+|                            |            |            |           |           |       |        |           |             |
+| CSharpEssentials_Many      | FormatMany | 190.594 ns | 0.8044 ns | 0.7524 ns |  1.00 | 0.0134 |     224 B |        1.00 |
+| Bcl_Many                   | FormatMany | 157.100 ns | 0.5762 ns | 0.5390 ns |  0.82 | 0.0134 |     224 B |        1.00 |
+| EnumsNet_Many              | FormatMany | 149.443 ns | 0.7262 ns | 0.6793 ns |  0.78 | 0.0134 |     224 B |        1.00 |
