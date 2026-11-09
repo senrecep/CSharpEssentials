@@ -8,8 +8,8 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                   | Mean       | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------- |-----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
-| HandWrittenAsync         |   790.4 ns |  5.49 ns |  4.86 ns |  1.00 |    0.01 | 0.0267 |     486 B |        1.00 |
-| CseEvaluateAsync         | 1,256.1 ns | 10.64 ns |  8.88 ns |  1.59 |    0.01 | 0.0381 |     667 B |        1.37 |
-| CseEvaluateSyncOverAsync |   936.0 ns | 11.99 ns | 11.22 ns |  1.18 |    0.02 | 0.0343 |     591 B |        1.22 |
+| Method                   | Mean       | Error   | StdDev  | Ratio | Gen0   | Allocated | Alloc Ratio |
+|------------------------- |-----------:|--------:|--------:|------:|-------:|----------:|------------:|
+| HandWrittenAsync         |   771.9 ns | 5.62 ns | 5.26 ns |  1.00 | 0.0286 |     485 B |        1.00 |
+| CseEvaluateAsync         | 1,217.2 ns | 7.36 ns | 6.53 ns |  1.58 | 0.0381 |     669 B |        1.38 |
+| CseEvaluateSyncOverAsync |   828.1 ns | 4.37 ns | 4.09 ns |  1.07 | 0.0353 |     591 B |        1.22 |
