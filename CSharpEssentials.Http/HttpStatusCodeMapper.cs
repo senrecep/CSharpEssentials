@@ -34,10 +34,21 @@ public static class HttpStatusCodeMapper
             _ => ErrorType.Failure
         };
 
+    private const int CachedStatusCount = 600;
+    private static readonly string?[] Codes = new string?[CachedStatusCount];
+    private static readonly string?[] Messages = new string?[CachedStatusCount];
+
+    private static string DefaultMessage(HttpStatusCode statusCode) =>
+        $"HTTP request failed with status code {(int)statusCode} ({statusCode}).";
+
     public static Error ToError(HttpStatusCode statusCode, string? description = null)
     {
-        string code = $"Http.{(int)statusCode}";
-        string msg = description ?? $"HTTP request failed with status code {(int)statusCode} ({statusCode}).";
+        int status = (int)statusCode;
+        bool cacheable = (uint)status < CachedStatusCount;
+        string code = cacheable ? Codes[status] ??= $"Http.{status}" : $"Http.{status}";
+        string msg = description ?? (cacheable
+            ? Messages[status] ??= DefaultMessage(statusCode)
+            : DefaultMessage(statusCode));
         return statusCode switch
         {
             HttpStatusCode.BadRequest => Error.Validation(code, msg),
