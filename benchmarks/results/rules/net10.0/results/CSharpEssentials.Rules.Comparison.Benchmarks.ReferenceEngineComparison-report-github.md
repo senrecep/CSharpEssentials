@@ -10,12 +10,12 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method               | Input    | Mean         | Error      | StdDev     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
 |--------------------- |--------- |-------------:|-----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
-| **CseLinear**            | **Pass**     |    **62.157 ns** |  **0.1755 ns** |  **0.1641 ns** |  **1.00** |    **0.00** |      **-** |      **-** |         **-** |          **NA** |
-| HandWritten          | Pass     |     4.616 ns |  0.0110 ns |  0.0103 ns |  0.07 |    0.00 |      - |      - |         - |          NA |
-| NRulesReference      | Pass     | 3,454.014 ns | 20.4509 ns | 19.1298 ns | 55.57 |    0.33 | 0.6485 | 0.0153 |   10872 B |          NA |
-| RulesEngineReference | Pass     | 1,579.112 ns |  8.2569 ns |  7.3195 ns | 25.41 |    0.13 | 0.2518 | 0.0019 |    4240 B |          NA |
+| **CseLinear**            | **Pass**     |    **80.364 ns** |  **0.1893 ns** |  **0.1771 ns** |  **1.00** |    **0.00** |      **-** |      **-** |         **-** |          **NA** |
+| HandWritten          | Pass     |     4.610 ns |  0.0102 ns |  0.0096 ns |  0.06 |    0.00 |      - |      - |         - |          NA |
+| NRulesReference      | Pass     | 3,289.964 ns | 12.6838 ns | 11.8645 ns | 40.94 |    0.17 | 0.6485 | 0.0153 |   10872 B |          NA |
+| RulesEngineReference | Pass     | 1,566.710 ns | 10.5763 ns |  9.8931 ns | 19.50 |    0.13 | 0.2518 | 0.0019 |    4240 B |          NA |
 |                      |          |              |            |            |       |         |        |        |           |             |
-| **CseLinear**            | **FailLast** |    **73.195 ns** |  **0.3804 ns** |  **0.3558 ns** |  **1.00** |    **0.01** | **0.0033** |      **-** |      **56 B** |        **1.00** |
-| HandWritten          | FailLast |    15.966 ns |  0.1591 ns |  0.1243 ns |  0.22 |    0.00 | 0.0033 |      - |      56 B |        1.00 |
-| NRulesReference      | FailLast | 4,853.301 ns | 39.0011 ns | 36.4817 ns | 66.31 |    0.57 | 0.8240 | 0.0229 |   13864 B |      247.57 |
-| RulesEngineReference | FailLast | 1,655.924 ns |  8.2870 ns |  7.7517 ns | 22.62 |    0.15 | 0.2594 |      - |    4360 B |       77.86 |
+| **CseLinear**            | **FailLast** |    **75.405 ns** |  **0.2772 ns** |  **0.2593 ns** |  **1.00** |    **0.00** | **0.0033** |      **-** |      **56 B** |        **1.00** |
+| HandWritten          | FailLast |    15.952 ns |  0.1076 ns |  0.1007 ns |  0.21 |    0.00 | 0.0033 |      - |      56 B |        1.00 |
+| NRulesReference      | FailLast | 5,044.944 ns | 26.7086 ns | 20.8523 ns | 66.90 |    0.35 | 0.8240 | 0.0229 |   13864 B |      247.57 |
+| RulesEngineReference | FailLast | 1,697.992 ns |  5.8105 ns |  5.4352 ns | 22.52 |    0.10 | 0.2594 |      - |    4360 B |       77.86 |
