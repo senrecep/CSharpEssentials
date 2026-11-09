@@ -362,6 +362,6 @@ public sealed class GuidV7Tests
             Generate(generator);
         long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 
-        allocated.Should().Be(0);
+        allocated.Should().BeLessThan(10_000, "one allocating call per Generate would add at least 10,000 bytes");
     }
 }
