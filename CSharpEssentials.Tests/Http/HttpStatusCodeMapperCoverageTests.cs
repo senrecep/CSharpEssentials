@@ -69,4 +69,27 @@ public class HttpStatusCodeMapperCoverageTests
 
         error.Description.Should().Be("HTTP request failed with status code 404 (NotFound).");
     }
+
+    [Theory]
+    [InlineData(404, "Http.404", "HTTP request failed with status code 404 (NotFound).")]
+    [InlineData(599, "Http.599", "HTTP request failed with status code 599 (599).")]
+    [InlineData(600, "Http.600", "HTTP request failed with status code 600 (600).")]
+    [InlineData(1000, "Http.1000", "HTTP request failed with status code 1000 (1000).")]
+    public void ToError_Repeated_Should_Return_The_Same_Code_And_Message(int status, string code, string description)
+    {
+        Error first = HttpStatusCodeMapper.ToError((HttpStatusCode)status);
+        Error second = HttpStatusCodeMapper.ToError((HttpStatusCode)status);
+
+        first.Code.Should().Be(code);
+        first.Description.Should().Be(description);
+        second.Should().Be(first);
+    }
+
+    [Fact]
+    public void ToError_With_Description_After_Default_Should_Keep_The_Description()
+    {
+        _ = HttpStatusCodeMapper.ToError(HttpStatusCode.Conflict);
+
+        HttpStatusCodeMapper.ToError(HttpStatusCode.Conflict, "custom").Description.Should().Be("custom");
+    }
 }
