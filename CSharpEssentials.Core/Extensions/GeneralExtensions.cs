@@ -105,16 +105,30 @@ public static class GeneralExtensions
         return await task.ConfigureAwait(false);
     }
 #else
-    private static Task WithCancellationCore(Task task, CancellationToken cancellationToken)
+    private static async Task WithCancellationCore(Task task, CancellationToken cancellationToken)
     {
-        ObserveFault(task);
-        return task.WaitAsync(cancellationToken);
+        try
+        {
+            await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ObserveFault(task);
+            throw;
+        }
     }
 
-    private static Task<T> WithCancellationCore<T>(Task<T> task, CancellationToken cancellationToken)
+    private static async Task<T> WithCancellationCore<T>(Task<T> task, CancellationToken cancellationToken)
     {
-        ObserveFault(task);
-        return task.WaitAsync(cancellationToken);
+        try
+        {
+            return await task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            ObserveFault(task);
+            throw;
+        }
     }
 #endif
 
