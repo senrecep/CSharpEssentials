@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish, for example v4.2.0
+        required: true
+        type: string
   workflow_call:
     inputs:
       tag:
@@ -17,6 +23,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -62,5 +71,11 @@ jobs:
       - name: Make script executable
         run: chmod +x ./build-and-publish-nugets.sh
 
+      - name: NuGet login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: recepsen
+
       - name: Publish to NuGet
-        run: ./build-and-publish-nugets.sh --parallel ${{ secrets.NUGET_API_KEY }}
+        run: ./build-and-publish-nugets.sh --parallel ${{ steps.login.outputs.NUGET_API_KEY }}
