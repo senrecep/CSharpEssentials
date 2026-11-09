@@ -88,7 +88,7 @@ Full default-job runs on net8.0, net9.0, net10.0 and net11.0. Each cell is mean,
 
 - BenchmarkDotNet v0.14.0 default job (full runs, not `--quick`), run serially on one Linux machine. The CPU is in the header of each report. Every report comes from SDK 11.0.100-rc.3 with .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0, all six classes in one run on 2026-11-09, after #262 started dispatching sync leaf rules directly in `RuleEngine.Evaluate`.
 - The load average was not recorded. No row is above 5% CV.
-- No row is near 0 ns. The smallest is 2.242 ns (`ConditionalComparison` hand-written Pass, net11.0), and every row is above timer resolution.
+- No row is near 0 ns. The smallest is 2.245 ns (`ConditionalComparison` hand-written Pass, net11.0), and every row is above timer resolution.
 - Results path: `benchmarks/results/rules/{tfm}/results/` (`*-report-github.md` and `.csv`).
 
 ### Sync and async trees
@@ -97,34 +97,34 @@ Full default-job runs on net8.0, net9.0, net10.0 and net11.0. Each cell is mean,
 
 | Shape | Input | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|---|
-| Linear5 | Pass | hand-written | 5.488 ns, none | 5.254 ns, none | 4.977 ns, none | 2.845 ns, none |
-| Linear5 | Pass | `Evaluate` | 116.535 ns, none | 100.557 ns, none | 71.667 ns, none | 69.061 ns, none |
-| Linear5 | Pass | `EvaluateAsync` | 400.122 ns, none | 371.538 ns, none | 315.547 ns, none | 316.352 ns, none |
-| Linear5 | FailLast | hand-written | 18.139 ns, 56 B | 16.683 ns, 56 B | 16.233 ns, 56 B | 11.291 ns, 56 B |
-| Linear5 | FailLast | `Evaluate` | 128.454 ns, 56 B | 110.133 ns, 56 B | 92.459 ns, 56 B | 81.956 ns, 56 B |
-| Linear5 | FailLast | `EvaluateAsync` | 413.906 ns, 56 B | 384.542 ns, 56 B | 320.147 ns, 56 B | 325.959 ns, 56 B |
-| And5 | Pass | hand-written | 5.036 ns, none | 5.230 ns, none | 4.975 ns, none | 2.836 ns, none |
-| And5 | Pass | `Evaluate` | 71.092 ns, none | 53.358 ns, none | 47.302 ns, none | 44.559 ns, none |
-| And5 | Pass | `EvaluateAsync` | 447.177 ns, none | 429.482 ns, none | 372.233 ns, none | 376.943 ns, none |
-| And5 | FailLast | hand-written | 18.725 ns, 56 B | 16.536 ns, 56 B | 16.211 ns, 56 B | 11.361 ns, 56 B |
-| And5 | FailLast | `Evaluate` | 81.714 ns, 56 B | 71.919 ns, 56 B | 60.573 ns, 56 B | 58.944 ns, 56 B |
-| And5 | FailLast | `EvaluateAsync` | 484.083 ns, 56 B | 446.346 ns, 56 B | 389.920 ns, 56 B | 357.473 ns, 56 B |
-| Or5 | Pass | hand-written | 5.239 ns, none | 5.275 ns, none | 5.272 ns, none | 2.894 ns, none |
-| Or5 | Pass | `Evaluate` | 178.868 ns, 224 B | 150.585 ns, 224 B | 138.188 ns, 224 B | 119.258 ns, 224 B |
-| Or5 | Pass | `EvaluateAsync` | 565.863 ns, 224 B | 520.468 ns, 224 B | 479.787 ns, 224 B | 442.495 ns, 224 B |
-| Or5 | FailLast | hand-written | 6.067 ns, none | 5.455 ns, none | 5.614 ns, none | 3.110 ns, none |
-| Or5 | FailLast | `Evaluate` | 273.962 ns, 464 B | 241.583 ns, 464 B | 219.347 ns, 464 B | 190.202 ns, 464 B |
-| Or5 | FailLast | `EvaluateAsync` | 681.265 ns, 464 B | 648.539 ns, 464 B | 587.084 ns, 464 B | 533.287 ns, 464 B |
+| Linear5 | Pass | hand-written | 5.490 ns, none | 5.254 ns, none | 4.988 ns, none | 2.841 ns, none |
+| Linear5 | Pass | `Evaluate` | 116.216 ns, none | 99.403 ns, none | 96.669 ns, none | 71.536 ns, none |
+| Linear5 | Pass | `EvaluateAsync` | 400.230 ns, none | 343.834 ns, none | 301.415 ns, none | 347.234 ns, none |
+| Linear5 | FailLast | hand-written | 18.704 ns, 56 B | 16.523 ns, 56 B | 16.465 ns, 56 B | 11.536 ns, 56 B |
+| Linear5 | FailLast | `Evaluate` | 128.914 ns, 56 B | 110.011 ns, 56 B | 85.785 ns, 56 B | 85.199 ns, 56 B |
+| Linear5 | FailLast | `EvaluateAsync` | 408.115 ns, 56 B | 374.558 ns, 56 B | 314.941 ns, 56 B | 304.892 ns, 56 B |
+| And5 | Pass | hand-written | 5.026 ns, none | 5.234 ns, none | 4.983 ns, none | 2.840 ns, none |
+| And5 | Pass | `Evaluate` | 70.036 ns, none | 62.187 ns, none | 48.326 ns, none | 44.488 ns, none |
+| And5 | Pass | `EvaluateAsync` | 495.862 ns, none | 428.930 ns, none | 361.209 ns, none | 353.412 ns, none |
+| And5 | FailLast | hand-written | 19.220 ns, 56 B | 16.551 ns, 56 B | 16.205 ns, 56 B | 11.327 ns, 56 B |
+| And5 | FailLast | `Evaluate` | 81.752 ns, 56 B | 65.733 ns, 56 B | 62.522 ns, 56 B | 55.735 ns, 56 B |
+| And5 | FailLast | `EvaluateAsync` | 465.346 ns, 56 B | 453.741 ns, 56 B | 382.029 ns, 56 B | 364.515 ns, 56 B |
+| Or5 | Pass | hand-written | 5.029 ns, none | 5.244 ns, none | 5.255 ns, none | 2.780 ns, none |
+| Or5 | Pass | `Evaluate` | 174.603 ns, 224 B | 150.943 ns, 224 B | 130.956 ns, 224 B | 112.621 ns, 224 B |
+| Or5 | Pass | `EvaluateAsync` | 599.190 ns, 224 B | 530.858 ns, 224 B | 476.722 ns, 224 B | 447.701 ns, 224 B |
+| Or5 | FailLast | hand-written | 6.041 ns, none | 5.451 ns, none | 5.524 ns, none | 3.058 ns, none |
+| Or5 | FailLast | `Evaluate` | 268.180 ns, 464 B | 233.726 ns, 464 B | 217.825 ns, 464 B | 185.004 ns, 464 B |
+| Or5 | FailLast | `EvaluateAsync` | 676.207 ns, 464 B | 637.719 ns, 464 B | 570.477 ns, 464 B | 552.079 ns, 464 B |
 
-`EvaluateAsync` on a tree of sync rules takes 2.49 to 8.46 times as long as `Evaluate` on every shape and TFM. It allocates the same as `Evaluate`: nothing beyond the result on Linear5 and And5, 224 B and 464 B on Or5. The range is wider than before #262 because the direct leaf dispatch applies to `Evaluate` only.
+`EvaluateAsync` on a tree of sync rules takes 2.52 to 7.94 times as long as `Evaluate` on every shape and TFM. It allocates the same as `Evaluate`: nothing beyond the result on Linear5 and And5, 224 B and 464 B on Or5. The range is wider than before #262 because the direct leaf dispatch applies to `Evaluate` only.
 
 `MixedAsyncTreeComparison`, a five-node `And()` whose last leaf awaits `Task.Yield()`. Baseline is the hand-written async method.
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| hand-written async | 1,007.0 ns, 487 B | 995.8 ns, 487 B | 968.3 ns, 487 B | 771.9 ns, 485 B |
-| `await EvaluateAsync` | 1,558.0 ns, 670 B | 1,592.4 ns, 668 B | 1,395.1 ns, 671 B | 1,217.2 ns, 669 B |
-| `Evaluate` (sync over async) | 1,092.0 ns, 600 B | 1,047.5 ns, 600 B | 1,003.4 ns, 600 B | 828.1 ns, 591 B |
+| hand-written async | 1.014 μs, 487 B | 1.003 μs, 487 B | 976.8 ns, 487 B | 794.3 ns, 485 B |
+| `await EvaluateAsync` | 1.589 μs, 670 B | 1.445 μs, 671 B | 1,375.1 ns, 671 B | 1,255.7 ns, 669 B |
+| `Evaluate` (sync over async) | 1.078 μs, 600 B | 1.034 μs, 600 B | 971.9 ns, 600 B | 825.2 ns, 591 B |
 
 The sync-over-async row is faster than `await EvaluateAsync` on every TFM, but it blocks a thread and can deadlock under a `SynchronizationContext` (see [Semantic differences](#semantic-differences)).
 
@@ -134,20 +134,20 @@ The sync-over-async row is faster than `await EvaluateAsync` on every TFM, but i
 
 | Class | Param | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|---|
-| Conditional | Pass | hand-written | 4.501 ns, none | 4.786 ns, none | 5.174 ns, none | 2.242 ns, none |
-| Conditional | Pass | `RuleEngine.If` | 117.543 ns, 40 B | 99.885 ns, 40 B | 72.622 ns, 40 B | 73.909 ns, 40 B |
-| Conditional | FailLast | hand-written | 18.248 ns, 56 B | 16.404 ns, 56 B | 16.010 ns, 56 B | 11.300 ns, 56 B |
-| Conditional | FailLast | `RuleEngine.If` | 132.820 ns, 96 B | 112.688 ns, 96 B | 84.361 ns, 96 B | 81.990 ns, 96 B |
-| LinearBuild | Count=5 | prebuilt | 116.335 ns, none | 101.655 ns, none | 71.929 ns, none | 82.697 ns, none |
-| LinearBuild | Count=5 | `Linear(Func[], ctx)` rebuilt | 284.706 ns, 360 B | 242.523 ns, 360 B | 183.288 ns, 360 B | 177.912 ns, 360 B |
-| LinearBuild | Count=5 | `IRule[].Linear()` rebuilt | 175.910 ns, 128 B | 153.666 ns, 128 B | 119.519 ns, 128 B | 112.161 ns, 128 B |
-| LinearBuild | Count=5 | hand-written | 5.015 ns, none | 5.246 ns, none | 5.200 ns, none | 2.825 ns, none |
-| LinearBuild | Count=10 | prebuilt | 284.153 ns, none | 219.249 ns, none | 154.847 ns, none | 188.251 ns, none |
-| LinearBuild | Count=10 | `Linear(Func[], ctx)` rebuilt | 613.439 ns, 680 B | 495.101 ns, 680 B | 387.168 ns, 680 B | 348.203 ns, 680 B |
-| LinearBuild | Count=10 | `IRule[].Linear()` rebuilt | 400.395 ns, 288 B | 370.070 ns, 288 B | 258.988 ns, 288 B | 280.888 ns, 288 B |
-| LinearBuild | Count=10 | hand-written | 13.198 ns, none | 12.875 ns, none | 7.747 ns, none | 6.592 ns, none |
+| Conditional | Pass | hand-written | 4.511 ns, none | 4.649 ns, none | 4.354 ns, none | 2.245 ns, none |
+| Conditional | Pass | `RuleEngine.If` | 119.601 ns, 40 B | 100.531 ns, 40 B | 80.601 ns, 40 B | 67.016 ns, 40 B |
+| Conditional | FailLast | hand-written | 18.887 ns, 56 B | 16.321 ns, 56 B | 15.857 ns, 56 B | 10.612 ns, 56 B |
+| Conditional | FailLast | `RuleEngine.If` | 129.958 ns, 96 B | 114.675 ns, 96 B | 84.393 ns, 96 B | 78.616 ns, 96 B |
+| LinearBuild | Count=5 | prebuilt | 116.687 ns, none | 100.842 ns, none | 71.942 ns, none | 72.662 ns, none |
+| LinearBuild | Count=5 | `Linear(Func[], ctx)` rebuilt | 287.019 ns, 360 B | 241.907 ns, 360 B | 186.231 ns, 360 B | 165.412 ns, 360 B |
+| LinearBuild | Count=5 | `IRule[].Linear()` rebuilt | 179.833 ns, 128 B | 192.274 ns, 128 B | 122.964 ns, 128 B | 112.424 ns, 128 B |
+| LinearBuild | Count=5 | hand-written | 5.029 ns, none | 5.242 ns, none | 5.203 ns, none | 2.822 ns, none |
+| LinearBuild | Count=10 | prebuilt | 256.821 ns, none | 218.557 ns, none | 157.993 ns, none | 186.165 ns, none |
+| LinearBuild | Count=10 | `Linear(Func[], ctx)` rebuilt | 578.811 ns, 680 B | 484.639 ns, 680 B | 380.141 ns, 680 B | 361.068 ns, 680 B |
+| LinearBuild | Count=10 | `IRule[].Linear()` rebuilt | 395.115 ns, 288 B | 334.246 ns, 288 B | 267.953 ns, 288 B | 258.102 ns, 288 B |
+| LinearBuild | Count=10 | hand-written | 13.270 ns, none | 12.814 ns, none | 7.753 ns, none | 6.595 ns, none |
 
-Rebuilding a chain with `RuleEngine.Linear(Func[], ctx)` per call has Ratio 1.85 to 2.55 against the prebuilt chain. Build the chain once and keep it.
+Rebuilding a chain with `RuleEngine.Linear(Func[], ctx)` per call has Ratio 1.94 to 2.59 against the prebuilt chain. Build the chain once and keep it.
 
 ### Short-circuit
 
@@ -155,15 +155,15 @@ Rebuilding a chain with `RuleEngine.Linear(Func[], ctx)` per call has Ratio 1.85
 
 | Row | Compare with | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| hand-written early return | | 16.86 ns, 56 B | 14.29 ns, 56 B | 14.149 ns, 56 B | 11.434 ns, 56 B |
-| `Linear()` | early return | 38.12 ns, 56 B | 34.89 ns, 56 B | 16.193 ns, 56 B | 13.841 ns, 56 B |
-| non-generic `And()` | early return | 50.42 ns, 56 B | 41.41 ns, 56 B | 20.415 ns, 56 B | 17.011 ns, 56 B |
-| hand-written, all ten rules | | 49.83 ns, 144 B | 50.90 ns, 144 B | 117.368 ns, 144 B | 110.819 ns, 144 B |
-| `Result<int>` `And()` (evaluates all ten) | all ten rules | 531.32 ns, 56 B | 439.43 ns, 56 B | 429.854 ns, 56 B | 399.326 ns, 56 B |
-| hand-written Or, all fail | | 13.46 ns, none | 11.92 ns, none | 6.910 ns, none | 5.424 ns, none |
-| `Or()`, all fail | hand-written Or | 483.47 ns, 904 B | 446.61 ns, 904 B | 392.511 ns, 904 B | 375.735 ns, 904 B |
+| hand-written early return | | 16.77 ns, 56 B | 14.31 ns, 56 B | 14.069 ns, 56 B | 11.180 ns, 56 B |
+| `Linear()` | early return | 37.63 ns, 56 B | 34.50 ns, 56 B | 19.523 ns, 56 B | 13.834 ns, 56 B |
+| non-generic `And()` | early return | 50.85 ns, 56 B | 42.09 ns, 56 B | 20.034 ns, 56 B | 17.116 ns, 56 B |
+| hand-written, all ten rules | | 49.23 ns, 144 B | 50.62 ns, 144 B | 117.954 ns, 144 B | 112.736 ns, 144 B |
+| `Result<int>` `And()` (evaluates all ten) | all ten rules | 500.87 ns, 56 B | 445.02 ns, 56 B | 436.086 ns, 56 B | 418.481 ns, 56 B |
+| hand-written Or, all fail | | 13.24 ns, none | 11.88 ns, none | 6.902 ns, none | 5.426 ns, none |
+| `Or()`, all fail | hand-written Or | 479.80 ns, 904 B | 450.05 ns, 904 B | 411.011 ns, 904 B | 388.191 ns, 904 B |
 
-`Linear()` is close to the hand-written early return on net10.0 and net11.0 (Ratio 1.14 and 1.21). The hand-written all-rules row more than doubles from net9.0 to net10.0 (50.90 ns to 117.368 ns), so the generic And's Ratio against the early-return baseline (31.52, 30.75, 30.38, 34.92) moves with that baseline too. The generic And allocates 56 B, less than the hand-written all-rules method's 144 B.
+`Linear()` comes closest to the hand-written early return on net10.0 and net11.0 (Ratio 1.39 and 1.24). The hand-written all-rules row more than doubles from net9.0 to net10.0 (50.62 ns to 117.954 ns), so the generic And's Ratio against the early-return baseline (29.87, 31.10, 31.00, 37.43) moves with that baseline too. The generic And allocates 56 B, less than the hand-written all-rules method's 144 B.
 
 ### Reference engines (reference only)
 
@@ -171,24 +171,24 @@ Rebuilding a chain with `RuleEngine.Linear(Func[], ctx)` per call has Ratio 1.85
 
 | Input | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|---|
-| Pass | CSE `Linear()` | 116.115 ns, none | 99.992 ns, none | 62.157 ns, none | 58.080 ns, none |
-| Pass | hand-written | 4.482 ns, none | 4.602 ns, none | 4.616 ns, none | 2.245 ns, none |
-| Pass | NRules (reference) | 3,728.061 ns, 10984 B | 3,722.919 ns, 10984 B | 3,454.014 ns, 10872 B | 3,230.602 ns, 10872 B |
-| Pass | RulesEngine (reference) | 2,153.313 ns, 4296 B | 1,981.387 ns, 4296 B | 1,579.112 ns, 4240 B | 1,489.506 ns, 4240 B |
-| FailLast | CSE `Linear()` | 133.305 ns, 56 B | 113.096 ns, 56 B | 73.195 ns, 56 B | 67.526 ns, 56 B |
-| FailLast | hand-written | 18.030 ns, 56 B | 17.283 ns, 56 B | 15.966 ns, 56 B | 11.556 ns, 56 B |
-| FailLast | NRules (reference) | 5,429.812 ns, 14016 B | 5,185.864 ns, 14016 B | 4,853.301 ns, 13864 B | 5,156.951 ns, 13864 B |
-| FailLast | RulesEngine (reference) | 2,321.007 ns, 4416 B | 2,198.416 ns, 4416 B | 1,655.924 ns, 4360 B | 1,637.418 ns, 4360 B |
+| Pass | CSE `Linear()` | 116.021 ns, none | 99.433 ns, none | 80.364 ns, none | 63.309 ns, none |
+| Pass | hand-written | 4.485 ns, none | 4.476 ns, none | 4.610 ns, none | 2.247 ns, none |
+| Pass | NRules (reference) | 3,761.612 ns, 10984 B | 3,654.437 ns, 10984 B | 3,289.964 ns, 10872 B | 3,146.639 ns, 10872 B |
+| Pass | RulesEngine (reference) | 2,159.329 ns, 4296 B | 2,063.821 ns, 4296 B | 1,566.710 ns, 4240 B | 1,545.836 ns, 4240 B |
+| FailLast | CSE `Linear()` | 133.622 ns, 56 B | 111.822 ns, 56 B | 75.405 ns, 56 B | 68.537 ns, 56 B |
+| FailLast | hand-written | 17.189 ns, 56 B | 16.166 ns, 56 B | 15.952 ns, 56 B | 10.860 ns, 56 B |
+| FailLast | NRules (reference) | 5,538.396 ns, 14016 B | 5,348.921 ns, 14016 B | 5,044.944 ns, 13864 B | 4,669.467 ns, 13864 B |
+| FailLast | RulesEngine (reference) | 2,390.721 ns, 4416 B | 2,242.292 ns, 4416 B | 1,697.992 ns, 4360 B | 1,605.936 ns, 4360 B |
 
 ### Where CSE loses
 
-Every CSE row is slower than the hand-written code that does the same work, on every TFM. The gaps that stand out:
+Every CSE row is slower than the hand-written code that does the same work, on every TFM, with one exception: on net10.0 the sync-over-async `Evaluate` on the mixed async tree is level with the hand-written async method (971.9 ns against 976.8 ns, Ratio 1.00) and still allocates more (600 B against 487 B). The gaps that stand out:
 
-- `Or()`, Or5 Pass on net10.0: `Evaluate` 138.188 ns and 224 B against hand-written 5.272 ns and none. `ShortCircuitComparison` Or with all ten failing, net10.0: 392.511 ns and 904 B against 6.910 ns and none. The hand-written Or returns a prebuilt error array, so part of this gap is the per-call error array CSE builds.
-- Generic `Result<T>` `And()`: against a hand-written method that also checks all ten rules, net10.0: 429.854 ns and 56 B against 117.368 ns and 144 B; net8.0: 531.32 ns and 56 B against 49.83 ns and 144 B. It allocates less, but takes 3.6 to 10.7 times as long.
-- `EvaluateAsync` on sync trees: 2.49 to 8.46 times `Evaluate` (Or5 FailLast, net10.0: 587.084 ns against 219.347 ns), see [Sync and async trees](#sync-and-async-trees).
-- `await EvaluateAsync` on a mixed tree is slower than the sync-over-async `Evaluate` row on every TFM (net10.0: 1,395.1 ns and 671 B against 1,003.4 ns and 600 B).
-- Conditional: `RuleEngine.If` builds its node per call: 72.622 ns and 40 B against hand-written 5.174 ns and none on Pass, net10.0.
+- `Or()`, Or5 Pass on net10.0: `Evaluate` 130.956 ns and 224 B against hand-written 5.255 ns and none. `ShortCircuitComparison` Or with all ten failing, net10.0: 411.011 ns and 904 B against 6.902 ns and none. The hand-written Or returns a prebuilt error array, so part of this gap is the per-call error array CSE builds.
+- Generic `Result<T>` `And()`: against a hand-written method that also checks all ten rules, net10.0: 436.086 ns and 56 B against 117.954 ns and 144 B; net8.0: 500.87 ns and 56 B against 49.23 ns and 144 B. It allocates less, but takes 3.7 to 10.2 times as long.
+- `EvaluateAsync` on sync trees: 2.52 to 7.94 times `Evaluate` (Or5 FailLast, net10.0: 570.477 ns against 217.825 ns), see [Sync and async trees](#sync-and-async-trees).
+- `await EvaluateAsync` on a mixed tree is slower than the sync-over-async `Evaluate` row on every TFM (net10.0: 1,375.1 ns and 671 B against 971.9 ns and 600 B).
+- Conditional: `RuleEngine.If` builds its node per call: 80.601 ns and 40 B against hand-written 4.354 ns and none on Pass, net10.0.
 
 ---
 
@@ -197,9 +197,10 @@ Every CSE row is slower than the hand-written code that does the same work, on e
 - The reference columns are not a ranking. NRules and RulesEngine are built for rule sets that change at run time or chain inferences; a five-rule check on one object is a small case for them. The rows show what that model costs on a small, fixed rule set.
 - Known CSE costs, with the rows that measure them:
   - `CSharpEssentials.Rules/Engines/RuleEngineAsync.cs`: a tree of sync rules completes `EvaluateAsync` without allocating a task, as the Readme says; the time cost is in [Sync and async trees](#sync-and-async-trees).
-  - `CSharpEssentials.Rules/Engines/Linear.cs:25-64`: the static `Linear(Func[], ctx)` overloads rebuild the adapter chain with LINQ on every call. `LinearBuildComparison` Count=5 on net10.0: 183.288 ns and 360 B rebuilt, 71.929 ns and none prebuilt.
+  - `CSharpEssentials.Rules/Engines/Linear.cs:25-64`: the static `Linear(Func[], ctx)` overloads rebuild the adapter chain with LINQ on every call. `LinearBuildComparison` Count=5 on net10.0: 186.231 ns and 360 B rebuilt, 71.942 ns and none prebuilt.
   - `CSharpEssentials.Rules/Engines/RuleEngine.cs:185` and `RuleEngineAsync.cs:139`: the Or5 rows allocate 224 B (Pass) and 464 B (FailLast) on every TFM, for `Evaluate` and `EvaluateAsync` alike. That matches 56 B per failing child result (four on Pass, five on FailLast) plus, when every child fails, one flattened `Error[]` (184 B for five errors); the ten-rule `Or()` row's 904 B matches the same count. The hand-written Or creates no child results. This is arithmetic from the reports, not a profile.
   - The And and Or adapters are `record struct`s boxed to `IRuleBase`.
+- Linear Pass on net10.0 moves between runs with no code change: SyncTree Linear5 Pass `Evaluate` was 71.667 ns (previous run), 96.669 ns (this run) and 76.166 ns (a net10.0 recheck), and `ReferenceEngineComparison` CSE Pass 62.157, 80.364 and 62.024 ns. Each run is under 5% CV, so the spread is between runs, not within one. The tables keep this run.
 - The CSE column is the working tree, which may not match the version published on NuGet.
 
 ---

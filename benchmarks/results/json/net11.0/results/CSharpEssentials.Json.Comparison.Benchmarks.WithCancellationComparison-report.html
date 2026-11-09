@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Json.Comparison.Benchmarks.WithCancellationComparison-20261105-201022</title>
+<title>CSharpEssentials.Json.Comparison.Benchmarks.WithCancellationComparison-20261109-111923</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,19 +15,19 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
-  DefaultJob : .NET 11.0.0 (11.0.26.42628), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
+  DefaultJob : .NET 11.0.0 (11.0.26.52348), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method              </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Completed</td><td>Completed</td><td>13.37 ns</td><td>0.118 ns</td><td>0.104 ns</td><td>1.00</td><td>0.0043</td><td>72 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Completed</td><td>Completed</td><td>13.26 ns</td><td>0.152 ns</td><td>0.142 ns</td><td>0.99</td><td>0.0043</td><td>72 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Pending</td><td>Pending</td><td>160.14 ns</td><td>1.549 ns</td><td>1.449 ns</td><td>1.00</td><td>0.0272</td><td>456 B</td><td>1.00</td>
-</tr><tr><td>Bcl_Pending</td><td>Pending</td><td>76.85 ns</td><td>0.398 ns</td><td>0.352 ns</td><td>0.48</td><td>0.0148</td><td>248 B</td><td>0.54</td>
+</thead><tbody><tr><td>CSharpEssentials_Completed</td><td>Completed</td><td>12.61 ns</td><td>0.072 ns</td><td>0.067 ns</td><td>1.00</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Completed</td><td>Completed</td><td>12.57 ns</td><td>0.071 ns</td><td>0.063 ns</td><td>1.00</td><td>0.0043</td><td>72 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Pending</td><td>Pending</td><td>155.19 ns</td><td>0.791 ns</td><td>0.740 ns</td><td>1.00</td><td>0.0219</td><td>368 B</td><td>1.00</td>
+</tr><tr><td>Bcl_Pending</td><td>Pending</td><td>75.05 ns</td><td>0.407 ns</td><td>0.361 ns</td><td>0.48</td><td>0.0148</td><td>248 B</td><td>0.67</td>
 </tr></tbody></table>
 </body>
 </html>

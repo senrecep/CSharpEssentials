@@ -4,7 +4,7 @@ JSON serialization helpers on top of `System.Text.Json`.
 
 > Benchmarks against System.Text.Json built-ins and Macross.Json.Extensions 3.0.0 (enums, flags, polymorphism and DateTime reads) are in
 > [BENCHMARKS.md](./BENCHMARKS.md). CSE is slower than System.Text.Json in every timed category except the invalid-input rows
-> (polymorphic serialize takes 763.5 ns against 296.2 ns on net10.0), and faster than Macross on enum writes.
+> and the net8.0 enum Write and Read rows (polymorphic serialize takes 402.6 ns against 276.3 ns on net10.0), and faster than Macross on enum writes.
 
 ## Features
 

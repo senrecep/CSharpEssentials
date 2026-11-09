@@ -195,15 +195,15 @@ Pending:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Pending` | 283.00 ns (1.00), 584 B | 213.02 ns (1.00), 456 B | 169.72 ns (1.00), 456 B | 160.14 ns (1.00), 456 B |
-| `Bcl_Pending` | 105.36 ns (0.37), 272 B | 90.41 ns (0.42), 248 B | 77.17 ns (0.45), 248 B | 76.85 ns (0.48), 248 B |
+| `CSharpEssentials_Pending` | 291.25 ns (1.00), 584 B | 172.73 ns (1.00), 368 B | 173.61 ns (1.00), 368 B | 155.19 ns (1.00), 368 B |
+| `Bcl_Pending` | 102.30 ns (0.35), 272 B | 87.66 ns (0.51), 248 B | 84.40 ns (0.49), 248 B | 75.05 ns (0.48), 248 B |
 
 Completed:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Completed` | 16.64 ns (1.00), 72 B | 16.15 ns (1.00), 72 B | 13.83 ns (1.00), 72 B | 13.37 ns (1.00), 72 B |
-| `Bcl_Completed` | 17.48 ns (1.05), 72 B | 16.48 ns (1.02), 72 B | 13.94 ns (1.01), 72 B | 13.26 ns (0.99), 72 B |
+| `CSharpEssentials_Completed` | 16.07 ns (1.00), 72 B | 15.35 ns (1.00), 72 B | 12.79 ns (1.00), 72 B | 12.61 ns (1.00), 72 B |
+| `Bcl_Completed` | 16.73 ns (1.04), 72 B | 16.37 ns (1.07), 72 B | 12.98 ns (1.01), 72 B | 12.57 ns (1.00), 72 B |
 
 ### GUID creation, one thread (`GuidBenchmarks`)
 
@@ -244,15 +244,15 @@ Every row where CSE is slower or allocates more than a competitor:
 - Guider Encode on net8.0 allocates 112 B, because the netstandard2.1 build calls `Guid.ToByteArray()`. On net9.0 and later it allocates 72 B. ShortGuid still allocates more (256 B).
 - Unique sample against the `Random.Shared` and hand-written rows, every K and TFM: These rows use a non-cryptographic RNG, so they do a different job. At K = 10 `Random.Shared.Shuffle` has ratio 0.46 to 0.92 and the hand-written row 0.03; at K = 500 and K = 990 both are at 0.004 to 0.010.
 - Unique sample at K = 990 against `RandomNumberGenerator.Shuffle` on net10.0 and net11.0: 1,282,952.20 ns against 1,303,631.05 ns (0.984) and 1,288,284.27 ns against 1,302,933.68 ns (0.989). Both draw from the cryptographic RNG once per item.
-- WithCancellation Pending, every TFM: `WaitAsync` has ratio 0.37 to 0.48 and allocates less (net8.0: 272 B against 584 B; net9.0 to net11.0: 248 B against 456 B). On net9.0 and later CSE calls `WaitAsync` itself; the extra time and bytes come from the fault-observing continuation it attaches first.
-- WithCancellation Completed on net11.0: 13.26 ns against 13.37 ns (0.99). Both return the completed task as is and allocate 72 B, so this is within run-to-run variation.
+- WithCancellation Pending, every TFM: `WaitAsync` has ratio 0.35 to 0.51 and allocates less (net8.0: 272 B against 584 B; net9.0 to net11.0: 248 B against 368 B). On net9.0 and later CSE calls `WaitAsync` itself; the extra time and bytes come from the async method around that call, which catches a cancel to observe a fault of the abandoned task.
+- WithCancellation Completed on net11.0: 12.57 ns against 12.61 ns (1.00). Both return the completed task as is and allocate 72 B, so this is within run-to-run variation.
 - GUID creation on net11.0, one thread: `NewMonotonicGuid` took 57.92 ns against 57.94 ns for `Guid.NewGuid` (ratio 1.00), so the two cannot be told apart.
 - GUID creation on net11.0, 6 threads: `Guider.NewGuid` took 12.61 ns against 12.58 ns (ratio 1.00), level with `Guid.NewGuid`. `NewMonotonicGuid` took 50.73 ns (ratio 4.03), slower than `Guid.NewGuid` and than `Guid.CreateVersion7` (18.15 ns). The threads contend on its shared compare-and-swap value, which the other rows do not have; that value is what keeps the IDs in order.
 
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2).
-- SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. Classes 1 and 2 were rerun on main after pull requests #230 to #256 landed, with SDK 11.0.100-rc.3.26522.148 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the `integ/all` note below applies to classes 3 to 6.
+- SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. Classes 1 and 2 were rerun on main after pull requests #230 to #256 landed, and class 4 after #264, with SDK 11.0.100-rc.3.26522.148 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the `integ/all` note below applies to classes 3, 5 and 6.
 - The CSE code is the local `integ/all` branch, which merges every open pull request (commit `fe91b26a`). It may not match the version published on NuGet.
 - Load, classes 1 to 4 (json suite): the 1-minute load average was 1.43 at the start and 1.74 at the end.
 - Load, classes 5 and 6 (core suite): the 1-minute load average was 3.35 at the start and 4.87 at the end (5-minute 3.45 and 3.86). The 6-thread class ran on a 12-thread machine with that background load. Only the start and end of each suite were sampled.

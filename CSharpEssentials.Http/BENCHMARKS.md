@@ -114,7 +114,7 @@ This table comes from reading CSE source, the competitors' XML docs, nuspecs and
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0, default job (not `--quick`), full runs of every class. The four TFMs ran one after another on one Linux machine; the hardware is in each report header.
-- Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK). `HttpResilienceComparison` and `RetryIfFailedComparison` were rerun on main after pull requests #230 to #256 landed, with the 11.0.100-rc.3 SDK and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348).
+- Runtimes from the report headers: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0 (11.0.26.42628, built with the 11.0.100-rc.1 SDK). `HttpResilienceComparison` and `RetryIfFailedComparison` were rerun on main after pull requests #230 to #256 landed, and `NotFoundComparison` after #266, with the 11.0.100-rc.3 SDK and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348).
 - The 1-minute load average was 1.74 when the suite started and 1.60 when it ended. No row in this suite kept a coefficient of variation above 5%, so no class was rerun for noise and no row is marked noisy. No mean is near 0 ns, so the timer-resolution caveat does not apply.
 - Reports: `benchmarks/results/http/{tfm}/results/*-report-github.md`, with `.csv` and `.html` beside them. Each table below links the four github reports for its class.
 
@@ -131,7 +131,7 @@ Each cell is `Mean (Ratio), Allocated`, copied from that TFM's report. The ratio
 - GET, Count 1, against `Bcl_Get`. Slower on every TFM: 2.440 μs against 2.087 μs (net8.0), 2.223 μs against 1.996 μs (net9.0), 1.857 μs against 1.729 μs (net10.0), 1.817 μs against 1.581 μs (net11.0). Allocates 2.54 KB against 2.18 KB (net8.0, net9.0) and 2.55 KB against 2.2 KB (net10.0, net11.0).
 - GET, Count 50, against `Bcl_Get`. Slower on net8.0 (24.493 μs against 23.480 μs), net9.0 (23.869 μs against 22.743 μs) and net10.0 (21.337 μs against 21.141 μs). On net11.0 CSE is ahead, 19.970 μs against 20.131 μs. Allocates more on every TFM: 18.35 KB against 14.95 KB (net8.0, net9.0), 18.36 KB against 14.97 KB (net10.0), 18.36 KB against 14.98 KB (net11.0). CSE buffers the whole body before it deserializes; the BCL streams it.
 - POST against `Bcl_Post`. CSE against the BCL: 3.400 μs against 2.864 μs (net8.0, BCL ratio 0.84), 3.041 μs against 2.668 μs (net9.0, 0.88), 2.598 μs against 2.336 μs (net10.0, 0.90), 2.496 μs against 2.213 μs (net11.0, 0.89). CSE allocates 2.79 KB against 2.42 KB (net8.0, net9.0), 2.81 KB against 2.45 KB (net10.0) and 2.8 KB against 2.45 KB (net11.0).
-- 404 against `Bcl_NotFound`. 1,172.5 ns against 781.8 ns (net8.0), 1,130.8 ns against 811.1 ns (net9.0), 879.5 ns against 635.4 ns (net10.0), 839.4 ns against 618.8 ns (net11.0). Allocated 1.81 KB against 1.35 KB (net8.0), 1.74 KB against 1.35 KB (net9.0), 1.75 KB against 1.36 KB (net10.0), 1.75 KB against 1.37 KB (net11.0). The BCL row only checks the status code; CSE also builds a typed `Error`.
+- 404 against `Bcl_NotFound`. 965.0 ns against 743.9 ns (net8.0), 874.5 ns against 736.0 ns (net9.0), 725.6 ns against 621.4 ns (net10.0), 691.9 ns against 579.0 ns (net11.0). Allocated 1.58 KB against 1.35 KB (net8.0, net9.0), 1.59 KB against 1.36 KB (net10.0), 1.59 KB against 1.37 KB (net11.0). The BCL row only checks the status code; CSE also builds a typed `Error`.
 - Request build against the hand-written `Bcl_Build`. 733.4 ns against 189.1 ns (net8.0), 722.7 ns against 161.4 ns (net9.0), 641.8 ns against 127.1 ns (net10.0), 537.55 ns against 99.34 ns (net11.0). Allocated 1648 B against 392 B (1656 B against 400 B on net11.0). The builder parses the URI up to three times and boxes the int query value.
 - Query string, AppendToUri, against `AspNetCore_AppendToUri` (`QueryHelpers`). 398.6 ns against 337.9 ns (net8.0), 380.6 ns against 331.2 ns (net9.0), 374.5 ns against 348.1 ns (net10.0), 323.3 ns against 287.1 ns (net11.0). Allocated 784 B against 656 B on every TFM.
 - Query string, Dictionary, against the hand-written `Bcl_Dictionary` loop. Ratio 0.83 (net8.0), 0.90 (net9.0), 0.87 (net10.0), 0.94 (net11.0) for the loop, and 488 B against 544 B on every TFM. `QueryHelpers` is also ahead on net8.0 (221.4 ns against 223.2 ns, ratio 0.99) and net9.0 (194.2 ns against 216.2 ns); CSE is ahead on net10.0 and net11.0. Both allocate 544 B.
@@ -181,11 +181,11 @@ Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Htt
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_NotFound` | 1,172.5 ns (1.00), 1.81 KB | 1,130.8 ns (1.00), 1.74 KB | 879.5 ns (1.00), 1.75 KB | 839.4 ns (1.00), 1.75 KB |
-| `Bcl_NotFound` | 781.8 ns (0.67), 1.35 KB | 811.1 ns (0.72), 1.35 KB | 635.4 ns (0.72), 1.36 KB | 618.8 ns (0.74), 1.37 KB |
-| `Refit_NotFound` | 3,512.0 ns (3.00), 3.92 KB | 3,133.2 ns (2.77), 3.91 KB | 2,623.9 ns (2.98), 3.91 KB | 2,673.4 ns (3.18), 3.92 KB |
-| `Flurl_NotFound` | 4,263.0 ns (3.64), 4.88 KB | 4,145.6 ns (3.67), 4.88 KB | 3,329.0 ns (3.78), 4.89 KB | 3,743.6 ns (4.46), 5.04 KB |
-| `RestSharp_NotFound` | 12,188.0 ns (10.39), 30.47 KB | 11,622.2 ns (10.28), 30.34 KB | 9,167.7 ns (10.42), 30.08 KB | 9,246.7 ns (11.02), 30.06 KB |
+| `CSharpEssentials_NotFound` | 965.0 ns (1.00), 1.58 KB | 874.5 ns (1.00), 1.58 KB | 725.6 ns (1.00), 1.59 KB | 691.9 ns (1.00), 1.59 KB |
+| `Bcl_NotFound` | 743.9 ns (0.77), 1.35 KB | 736.0 ns (0.84), 1.35 KB | 621.4 ns (0.86), 1.36 KB | 579.0 ns (0.84), 1.37 KB |
+| `Refit_NotFound` | 3,501.7 ns (3.63), 3.92 KB | 3,222.9 ns (3.69), 3.91 KB | 2,670.1 ns (3.68), 3.91 KB | 2,581.0 ns (3.73), 3.92 KB |
+| `Flurl_NotFound` | 4,253.5 ns (4.41), 4.88 KB | 4,104.0 ns (4.69), 4.88 KB | 3,316.8 ns (4.57), 4.89 KB | 3,178.9 ns (4.59), 5.04 KB |
+| `RestSharp_NotFound` | 11,778.9 ns (12.21), 30.47 KB | 11,456.7 ns (13.10), 30.34 KB | 9,125.7 ns (12.58), 30.08 KB | 8,629.2 ns (12.47), 30.06 KB |
 
 Reports: [net8.0](../benchmarks/results/http/net8.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [net9.0](../benchmarks/results/http/net9.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [net10.0](../benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [net11.0](../benchmarks/results/http/net11.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md).
 

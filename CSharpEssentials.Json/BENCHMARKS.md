@@ -2,7 +2,7 @@
 
 CSharpEssentials.Json (CSE) compared with System.Text.Json (STJ) built-in features and with Macross.Json.Extensions 3.0.0. It covers string enums, flags enums, polymorphic types and multi-format `DateTime` reads. The suite uses BenchmarkDotNet v0.14.0 and targets .NET 8, 9, 10 and 11. The same project also holds the CSharpEssentials.Core classes, which are documented in [CSharpEssentials.Core/BENCHMARKS.md](../CSharpEssentials.Core/BENCHMARKS.md).
 
-Short version: CSE is slower than STJ in every timed category except the invalid-input rows, and it is faster than Macross on enum writes. The numbers are in [Results](#results), and every row where CSE loses is listed in [Where CSE loses](#where-cse-loses).
+Short version: CSE is slower than STJ in every timed category except the invalid-input rows and the net8.0 enum Write and Read rows, and it is faster than Macross on enum writes. The numbers are in [Results](#results), and every row where CSE loses is listed in [Where CSE loses](#where-cse-loses).
 
 The competitor is pinned exactly in `Directory.Packages.props`, and the pin is the latest stable release on NuGet as of 2026-11-03:
 
@@ -108,40 +108,40 @@ Write, 16 values:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Write` | 388.36 ns (1.00), 384 B | 431.13 ns (1.00), 384 B | 394.33 ns (1.00), 384 B | 372.48 ns (1.00), 384 B |
-| `Bcl_Write` | 368.09 ns (0.95), 384 B | 352.30 ns (0.82), 384 B | 322.93 ns (0.82), 384 B | 321.64 ns (0.86), 384 B |
-| `Macross_Write` | 582.15 ns (1.50), 384 B | 677.14 ns (1.57), 384 B | 572.93 ns (1.45), 384 B | 488.50 ns (1.31), 384 B |
+| `CSharpEssentials_Write` | 360.79 ns (1.00), 384 B | 375.99 ns (1.00), 384 B | 365.57 ns (1.00), 384 B | 319.60 ns (1.00), 384 B |
+| `Bcl_Write` | 362.73 ns (1.01), 384 B | 347.32 ns (0.92), 384 B | 355.26 ns (0.97), 384 B | 308.16 ns (0.96), 384 B |
+| `Macross_Write` | 629.03 ns (1.74), 384 B | 657.89 ns (1.75), 384 B | 565.31 ns (1.55), 384 B | 489.11 ns (1.53), 384 B |
 
 Read, 16 values:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Read` | 1,196.57 ns (1.00), 304 B | 1,155.36 ns (1.00), 304 B | 1,143.03 ns (1.00), 304 B | 970.96 ns (1.00), 304 B |
-| `Bcl_Read` | 1,120.36 ns (0.94), 968 B | 988.82 ns (0.86), 304 B | 1,112.77 ns (0.97), 304 B | 838.82 ns (0.86), 304 B |
-| `Macross_Read` | 1,149.52 ns (0.96), 968 B | 1,163.00 ns (1.01), 968 B | 910.53 ns (0.80), 968 B | 925.57 ns (0.95), 968 B |
+| `CSharpEssentials_Read` | 1,034.08 ns (1.00), 304 B | 1,066.00 ns (1.00), 304 B | 936.46 ns (1.00), 304 B | 953.19 ns (1.00), 304 B |
+| `Bcl_Read` | 1,119.15 ns (1.08), 968 B | 1,012.47 ns (0.95), 304 B | 835.56 ns (0.89), 304 B | 834.27 ns (0.88), 304 B |
+| `Macross_Read` | 1,123.87 ns (1.09), 968 B | 1,120.96 ns (1.05), 968 B | 893.70 ns (0.95), 968 B | 893.69 ns (0.94), 968 B |
 
 ReadNumber:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_ReadNumber` | 71.30 ns (1.00), 0 B | 75.99 ns (1.00), 0 B | 60.20 ns (1.00), 0 B | 62.14 ns (1.00), 0 B |
-| `Bcl_ReadNumber` | 61.87 ns (0.87), 0 B | 64.75 ns (0.85), 0 B | 51.49 ns (0.86), 0 B | 52.99 ns (0.85), 0 B |
-| `Macross_ReadNumber` | 120.86 ns (1.70), 24 B | 79.43 ns (1.05), 24 B | 64.33 ns (1.07), 24 B | 64.82 ns (1.04), 24 B |
+| `CSharpEssentials_ReadNumber` | 72.32 ns (1.00), 0 B | 73.26 ns (1.00), 0 B | 61.94 ns (1.00), 0 B | 61.91 ns (1.00), 0 B |
+| `Bcl_ReadNumber` | 64.77 ns (0.90), 0 B | 63.78 ns (0.87), 0 B | 53.46 ns (0.86), 0 B | 52.98 ns (0.86), 0 B |
+| `Macross_ReadNumber` | 121.08 ns (1.67), 24 B | 79.45 ns (1.08), 24 B | 64.56 ns (1.04), 24 B | 67.16 ns (1.08), 24 B |
 
 InvalidThrow:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_InvalidThrow` | 26,026.04 ns (1.00), 1360 B | 9,767.04 ns (1.00), 1208 B | 5,348.06 ns (1.00), 1208 B | 4,306.06 ns (1.00), 1208 B |
-| `Bcl_InvalidThrow` | 27,470.87 ns (1.06), 1488 B | 10,369.04 ns (1.06), 1648 B | 5,668.48 ns (1.06), 1648 B | 4,708.88 ns (1.09), 1648 B |
-| `Macross_InvalidThrow` | 25,562.08 ns (0.98), 1504 B | 9,575.05 ns (0.98), 1432 B | 5,267.60 ns (0.98), 1432 B | 4,181.40 ns (0.97), 1432 B |
+| `CSharpEssentials_InvalidThrow` | 26,213.45 ns (1.00), 1360 B | 9,893.63 ns (1.00), 1208 B | 5,311.48 ns (1.00), 1208 B | 4,250.55 ns (1.00), 1208 B |
+| `Bcl_InvalidThrow` | 27,809.70 ns (1.06), 1488 B | 10,493.41 ns (1.06), 1648 B | 5,618.19 ns (1.06), 1648 B | 4,609.53 ns (1.08), 1648 B |
+| `Macross_InvalidThrow` | 25,707.75 ns (0.98), 1504 B | 9,700.32 ns (0.98), 1432 B | 5,206.36 ns (0.98), 1432 B | 4,121.34 ns (0.97), 1432 B |
 
 InvalidFallback (no STJ row, STJ has no fallback):
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_InvalidFallback` | 100.89 ns (1.00), 0 B | 97.71 ns (1.00), 0 B | 80.49 ns (1.00), 0 B | 84.08 ns (1.00), 0 B |
-| `Macross_InvalidFallback` | 111.77 ns (1.11), 32 B | 106.25 ns (1.09), 32 B | 88.53 ns (1.10), 32 B | 83.54 ns (0.99), 32 B |
+| `CSharpEssentials_InvalidFallback` | 102.73 ns (1.00), 0 B | 97.89 ns (1.00), 0 B | 81.32 ns (1.00), 0 B | 83.37 ns (1.00), 0 B |
+| `Macross_InvalidFallback` | 105.42 ns (1.03), 32 B | 105.01 ns (1.07), 32 B | 82.55 ns (1.02), 32 B | 88.02 ns (1.06), 32 B |
 
 ### Flags (`EnumFlagsComparison`)
 
@@ -169,15 +169,15 @@ Serialize:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Serialize` | 871.4 ns (1.00), 624 B | 875.9 ns (1.00), 624 B | 763.5 ns (1.00), 640 B | 673.1 ns (1.00), 640 B |
-| `Stj_Serialize` | 347.9 ns (0.40), 528 B | 352.8 ns (0.40), 528 B | 296.2 ns (0.39), 528 B | 286.3 ns (0.43), 528 B |
+| `CSharpEssentials_Serialize` | 506.5 ns (1.00), 456 B | 470.1 ns (1.00), 456 B | 402.6 ns (1.00), 472 B | 370.0 ns (1.00), 472 B |
+| `Stj_Serialize` | 340.6 ns (0.67), 528 B | 337.4 ns (0.72), 528 B | 276.3 ns (0.69), 528 B | 263.1 ns (0.71), 528 B |
 
 Deserialize:
 
 | Row | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_Deserialize` | 827.5 ns (1.00), 232 B | 781.2 ns (1.00), 232 B | 668.7 ns (1.00), 232 B | 659.0 ns (1.00), 232 B |
-| `Stj_Deserialize` | 467.6 ns (0.57), 232 B | 438.8 ns (0.56), 232 B | 378.5 ns (0.57), 232 B | 392.9 ns (0.60), 232 B |
+| `CSharpEssentials_Deserialize` | 809.7 ns (1.00), 232 B | 781.5 ns (1.00), 232 B | 713.0 ns (1.00), 232 B | 644.2 ns (1.00), 232 B |
+| `Stj_Deserialize` | 440.7 ns (0.54), 232 B | 447.1 ns (0.57), 232 B | 382.1 ns (0.54), 232 B | 389.6 ns (0.60), 232 B |
 
 ### DateTime (`DateTimeComparison`)
 
@@ -198,32 +198,34 @@ LateList, `"14-Mar-2024"` (no built-in row, that converter rejects the input):
 
 ### Where CSE wins
 
-- Enum Write against Macross on every TFM: 388.36 ns against 582.15 ns on net8.0 (ratio 1.50), 372.48 ns against 488.50 ns on net11.0 (ratio 1.31). All three libraries allocate 384 B.
-- Enum ReadNumber against Macross: ratio 1.70 on net8.0, 1.04 to 1.07 on net9.0 to net11.0. CSE allocates 0 B, Macross 24 B.
-- Enum InvalidFallback against Macross on net8.0 to net10.0 (ratio 1.09 to 1.11), with 0 B against 32 B. On net11.0 Macross is faster (see below).
-- Enum InvalidThrow against STJ on every TFM (ratio 1.06 to 1.09), and CSE allocates the least of the three rows (1208 B on net9.0 to net11.0, 1360 B on net8.0).
+- Enum Write against Macross on every TFM: 360.79 ns against 629.03 ns on net8.0 (ratio 1.74), 319.60 ns against 489.11 ns on net11.0 (ratio 1.53). All three libraries allocate 384 B.
+- Enum Write against STJ on net8.0: 360.79 ns against 362.73 ns (ratio 1.01), close to level.
+- Enum Read on net8.0 against STJ (1,034.08 ns against 1,119.15 ns, ratio 1.08) and Macross (1,123.87 ns, 1.09), and against Macross on net9.0 (1,066.00 ns against 1,120.96 ns, 1.05).
+- Enum ReadNumber against Macross: ratio 1.67 on net8.0, 1.04 to 1.08 on net9.0 to net11.0. CSE allocates 0 B, Macross 24 B.
+- Enum InvalidFallback against Macross on every TFM (ratio 1.02 to 1.07), with 0 B against 32 B.
+- Enum InvalidThrow against STJ on every TFM (ratio 1.06 to 1.08), and CSE allocates the least of the three rows (1208 B on net9.0 to net11.0, 1360 B on net8.0).
 - Enum Read on net8.0: CSE allocates 304 B, STJ 9.0.4 and Macross 968 B. On net9.0 and later STJ also allocates 304 B; Macross stays at 968 B.
+- Polymorphic Serialize allocates less than STJ on every TFM: 456 B on net8.0 and net9.0, 472 B on net10.0 and net11.0, against 528 B. STJ is still faster (see below).
 - FlagsRead allocates 0 B with CSE; Macross allocates 48 B on every TFM and STJ 48 B on net8.0.
 
 ### Where CSE loses
 
 Every row where CSE is slower or allocates more than a competitor:
 
-- Enum Write against STJ, every TFM: net8.0 368.09 ns against CSE 388.36 ns (0.95); net9.0 352.30 ns against 431.13 ns (0.82); net10.0 322.93 ns against 394.33 ns (0.82); net11.0 321.64 ns against 372.48 ns (0.86).
-- Enum Read against STJ, every TFM (ratio 0.86 to 0.97), and against Macross on net8.0 (1,149.52 ns against 1,196.57 ns, 0.96), net10.0 (910.53 ns against 1,143.03 ns, 0.80) and net11.0 (925.57 ns against 970.96 ns, 0.95). Macross is slower only on net9.0 (1.01).
-- Enum ReadNumber against STJ, every TFM (ratio 0.85 to 0.87), for example 51.49 ns against 60.20 ns on net10.0.
-- Enum InvalidThrow against Macross, every TFM (ratio 0.97 to 0.98), for example 4,181.40 ns against 4,306.06 ns on net11.0. CSE still allocates less.
-- Enum InvalidFallback against Macross on net11.0: 83.54 ns against 84.08 ns (0.99). CSE still allocates 0 B against 32 B.
+- Enum Write against STJ, net9.0 to net11.0: net9.0 347.32 ns against CSE 375.99 ns (0.92); net10.0 355.26 ns against 365.57 ns (0.97); net11.0 308.16 ns against 319.60 ns (0.96).
+- Enum Read against STJ on net9.0 to net11.0 (ratio 0.88 to 0.95), and against Macross on net10.0 (893.70 ns against 936.46 ns, 0.95) and net11.0 (893.69 ns against 953.19 ns, 0.94).
+- Enum ReadNumber against STJ, every TFM (ratio 0.86 to 0.90), for example 53.46 ns against 61.94 ns on net10.0.
+- Enum InvalidThrow against Macross, every TFM (ratio 0.97 to 0.98), for example 4,121.34 ns against 4,250.55 ns on net11.0. CSE still allocates less.
 - Flags, every row and every TFM. FlagsWrite: STJ ratio 0.63 to 0.76, Macross 0.69 to 0.86, and CSE allocates 56 B against 48 B. FlagsRead: STJ ratio 0.54 to 0.65, Macross 0.58 to 0.64. The payloads differ, so this is not the same work.
-- Polymorphic Serialize, every TFM: STJ ratio 0.39 to 0.43, and CSE allocates more (624 B on net8.0 and net9.0, 640 B on net10.0 and net11.0, against 528 B). On net10.0: 763.5 ns against 296.2 ns. CSE serializes the value to a `JsonElement` and then copies every property behind its `$type`.
-- Polymorphic Deserialize, every TFM: STJ ratio 0.56 to 0.60, same allocation (232 B). On net10.0: 668.7 ns against 378.5 ns. CSE scans the object once with a copy of the reader to find `$type`, then deserializes the derived type.
+- Polymorphic Serialize, every TFM: STJ ratio 0.67 to 0.72. On net10.0: 402.6 ns against 276.3 ns. CSE serializes the value to UTF-8 bytes and then copies those bytes behind a cached `$type` prefix.
+- Polymorphic Deserialize, every TFM: STJ ratio 0.54 to 0.60, same allocation (232 B). On net10.0: 713.0 ns against 382.1 ns. CSE scans the object once with a copy of the reader to find `$type`, then deserializes the derived type.
 - DateTime Iso against the built-in converter, every TFM (ratio 0.83 to 0.87), and against the fallback converter on net9.0 to net11.0 (0.86 to 0.90). On net8.0 the fallback converter and CSE are level (107.70 ns against 108.01 ns, ratio 1.00).
 - DateTime LateList, every TFM: the `DateTime.Parse` fallback converter has ratio 0.22 to 0.26 at the same 48 B. On net11.0: 280.85 ns against 1,306.05 ns. CSE tries the list in order and `dd-MMM-yyyy` is entry 27.
 
 ### How these numbers were produced
 
 - BenchmarkDotNet v0.14.0 default job (no `--quick`), full runs, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2). The report headers have the exact OS and runtime builds.
-- SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0.
+- SDK 11.0.100-rc.1.26425.128. Runtimes: .NET 8.0.30, 9.0.19, 10.0.11 and 11.0.0. `EnumComparison` and `PolymorphicComparison` were rerun on main after #265 and #267 landed, with SDK 11.0.100-rc.3.26522.148 and .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0; the `integ/all` and load notes below apply to the other classes.
 - The CSE code is the local `integ/all` branch, which merges every open pull request (commit `fe91b26a`). It may not match the version published on NuGet.
 - Load: the 1-minute load average was 1.43 when the json suite started and 1.74 when it ended (5-minute 1.47 and 1.77). Only the start and end were sampled.
 - Rows whose CV stayed above 5% were rerun up to twice; no row from this suite needed it.

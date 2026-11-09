@@ -54,7 +54,7 @@ Headline rows on net10.0, as `Mean, Allocated` from the reports. On the other TF
 | GET, Count 1 | 1.857 μs, 2.55 KB | 1.729 μs, 2.2 KB | 2.499 μs, 2.83 KB | 3.626 μs, 4.99 KB | 10.081 μs, 30.63 KB |
 | GET, Count 50 | 21.337 μs, 18.36 KB | 21.141 μs, 14.97 KB | 23.694 μs, 18.64 KB | 23.392 μs, 20.8 KB | 33.767 μs, 66.46 KB |
 | POST | 2.598 μs, 2.81 KB | 2.336 μs, 2.45 KB | 3.406 μs, 3.36 KB | 5.260 μs, 6.43 KB | 12.006 μs, 30.77 KB |
-| 404 without exceptions | 879.5 ns, 1.75 KB | 635.4 ns, 1.36 KB | 2,623.9 ns, 3.91 KB | 3,329.0 ns, 4.89 KB | 9,167.7 ns, 30.08 KB |
+| 404 without exceptions | 725.6 ns, 1.59 KB | 621.4 ns, 1.36 KB | 2,670.1 ns, 3.91 KB | 3,316.8 ns, 4.89 KB | 9,125.7 ns, 30.08 KB |
 | Build a request, no send | 641.8 ns, 1648 B | 127.1 ns, 392 B (hand-written) | no row | 2,738.7 ns, 5472 B (URL builder + hand-made message) | 2,300.7 ns, 3936 B (`BuildUri` + hand-made message) |
 | Query string, AppendToUri | 374.5 ns, 784 B | 348.1 ns, 656 B (`QueryHelpers`) | no row | 3,327.3 ns, 6312 B | no row |
 | Query string, Dictionary | 208.8 ns, 544 B | 224.3 ns, 544 B (`QueryHelpers`); 182.5 ns, 488 B (hand-written loop) | no row | 2,393.8 ns, 4728 B | no row |
@@ -80,14 +80,14 @@ On net8.0 the custom handler is slightly ahead of CSE (4.145 μs against 4.189 �
 Measured; the full list with every TFM is in [the Results section](../../CSharpEssentials.Http/BENCHMARKS.md#where-cse-loses).
 
 - GET against the BCL. CSE is slower at Count 1 on every TFM (1.857 μs against 1.729 μs on net10.0) and at Count 50 on net8.0 to net10.0, and it allocates more on every TFM (18.36 KB against 14.97 KB at Count 50 on net10.0). CSE wraps the call in its own try/catch and an async layer (`CSharpEssentials.Http/HttpClientResultExtensions.cs:15-29`), and `GetCoreAsync` uses `GetAsync`, which buffers the whole body before deserializing (`:257`). The BCL `GetFromJsonAsync` streams the body.
-- POST and 404 against the BCL: slower and more allocation on every TFM (404: 879.5 ns against 635.4 ns on net10.0). The BCL 404 row only checks the status code; CSE also builds a typed `Error`.
+- POST and 404 against the BCL: slower and more allocation on every TFM (404: 725.6 ns against 621.4 ns on net10.0). The BCL 404 row only checks the status code; CSE also builds a typed `Error`.
 - Request build against a hand-written `HttpRequestMessage`: 641.8 ns against 127.1 ns and 1648 B against 392 B on net10.0. `HttpRequestBuilder` parses the URI up to three times: the template (`HttpRequestBuilder.cs:31`), the route-substituted string (`:230`), and the string with the query appended (`QueryStringExtensions.cs:218`). It also boxes the int query value through the object overload.
 - Query strings: `QueryHelpers` beats CSE on AppendToUri on every TFM (348.1 ns against 374.5 ns, 656 B against 784 B on net10.0), and a hand-written `Uri.EscapeDataString` loop beats CSE on the Dictionary row on every TFM (182.5 ns against 208.8 ns, 488 B against 544 B on net10.0).
 - Policy-wrapped GET against bare Polly: slower on every TFM (2.914 μs against 2.451 μs on net10.0). On net8.0 the Microsoft.Extensions.Http.Resilience custom handler is also slightly faster than CSE (4.145 μs against 4.189 μs). The CSE row wraps `GetFromJsonAsResultAsync` (buffered, own try/catch) while the Polly row wraps the streamed BCL `GetFromJsonAsync`, so the gap includes the GET gap above, not only the policy wrapper.
 
 ## Where CSE wins
 
-- Against Refit, Flurl.Http and RestSharp, CSE is ahead in time and allocation in every shared row on every TFM. In the non-throwing 404, Refit builds an `ApiException` and RestSharp reads the body to a string and deserializes it into `User` (`RestClient.Extensions.cs:47-48` at 114.1.0): 879.5 ns for CSE against 2,623.9 ns (Refit), 3,329.0 ns (Flurl) and 9,167.7 ns (RestSharp) on net10.0.
+- Against Refit, Flurl.Http and RestSharp, CSE is ahead in time and allocation in every shared row on every TFM. In the non-throwing 404, Refit builds an `ApiException` and RestSharp reads the body to a string and deserializes it into `User` (`RestClient.Extensions.cs:47-48` at 114.1.0): 725.6 ns for CSE against 2,670.1 ns (Refit), 3,316.8 ns (Flurl) and 9,125.7 ns (RestSharp) on net10.0.
 - The Dictionary query string against `QueryHelpers` on net10.0 and net11.0 (208.8 ns against 224.3 ns on net10.0, same 544 B).
 - The policy-wrapped GET against both Microsoft.Extensions.Http.Resilience handlers on net9.0 to net11.0, with less allocation on every TFM. Those handlers do more work (factory logging, telemetry, and five strategies in the standard handler), so this is not a like-for-like win.
 

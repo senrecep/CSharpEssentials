@@ -76,7 +76,7 @@ Format: mean, ratio to the plain framework row, allocated. net10.0 unless anothe
 - HttpLogging with its defaults: at 1 KB it logs both bodies plus headers and is still faster than CSE on every TFM (net10.0: 13.993 against 16.685 μs); it allocates less only on net11.0. From 64 KB it truncates each body at 32 KB, so it does less work.
 - Metadata-only logging: CSE allocates a little more than HttpLogging on every TFM (10.22 against 10.17 KB on net10.0); time is within error on every TFM (net10.0: 8.724 against 8.918 μs).
 - Result filter on net10.0: 1.19 of `TypedResults` on Success, where the other TFMs show 0.99 to 1.02.
-- Deterministic keys: `ToUuidV5` is 1.47 to 1.73 of a hand-written UUIDv5 and allocates 456 to 488 B against none.
+- Deterministic keys: `ToUuidV5` is 1.08 to 1.11 of a hand-written UUIDv5 on net9.0 to net11.0 and allocates 152 to 184 B against none. On net8.0 (the netstandard2.1 build) it is 1.77 and 488 B.
 
 ## Where CSE wins or ties
 

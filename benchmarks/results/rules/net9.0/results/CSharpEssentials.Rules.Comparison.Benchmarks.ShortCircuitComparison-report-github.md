@@ -10,10 +10,10 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method           | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |----------------- |----------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
-| HandWritten      |  14.29 ns | 0.072 ns | 0.060 ns |  1.00 |    0.01 | 0.0033 |      56 B |        1.00 |
-| CseLinear        |  34.89 ns | 0.147 ns | 0.138 ns |  2.44 |    0.01 | 0.0033 |      56 B |        1.00 |
-| CseAnd           |  41.41 ns | 0.221 ns | 0.206 ns |  2.90 |    0.02 | 0.0033 |      56 B |        1.00 |
-| HandWrittenAll   |  50.90 ns | 0.265 ns | 0.248 ns |  3.56 |    0.02 | 0.0086 |     144 B |        2.57 |
-| CseAndGeneric    | 439.43 ns | 0.825 ns | 0.731 ns | 30.75 |    0.13 | 0.0033 |      56 B |        1.00 |
-| HandWrittenOrAll |  11.92 ns | 0.026 ns | 0.023 ns |  0.83 |    0.00 |      - |         - |        0.00 |
-| CseOrAllFail     | 446.61 ns | 6.490 ns | 6.071 ns | 31.26 |    0.43 | 0.0539 |     904 B |       16.14 |
+| HandWritten      |  14.31 ns | 0.116 ns | 0.102 ns |  1.00 |    0.01 | 0.0033 |      56 B |        1.00 |
+| CseLinear        |  34.50 ns | 0.218 ns | 0.193 ns |  2.41 |    0.02 | 0.0033 |      56 B |        1.00 |
+| CseAnd           |  42.09 ns | 0.229 ns | 0.214 ns |  2.94 |    0.02 | 0.0033 |      56 B |        1.00 |
+| HandWrittenAll   |  50.62 ns | 0.278 ns | 0.260 ns |  3.54 |    0.03 | 0.0086 |     144 B |        2.57 |
+| CseAndGeneric    | 445.02 ns | 0.876 ns | 0.777 ns | 31.10 |    0.22 | 0.0033 |      56 B |        1.00 |
+| HandWrittenOrAll |  11.88 ns | 0.014 ns | 0.013 ns |  0.83 |    0.01 |      - |         - |        0.00 |
+| CseOrAllFail     | 450.05 ns | 2.125 ns | 1.884 ns | 31.45 |    0.25 | 0.0539 |     904 B |       16.14 |

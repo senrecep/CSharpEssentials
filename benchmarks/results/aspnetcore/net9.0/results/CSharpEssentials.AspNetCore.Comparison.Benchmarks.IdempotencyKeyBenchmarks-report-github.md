@@ -8,13 +8,13 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 
 
 ```
-| Method                               | Categories | Mean        | Error    | StdDev   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|------------------------------------- |----------- |------------:|---------:|---------:|------:|--------:|-------:|----------:|------------:|
-| CSharpEssentials_For_Short           | For        |    63.48 ns | 0.908 ns | 0.758 ns |  1.00 |    0.02 | 0.0110 |     184 B |        1.00 |
-| CSharpEssentials_For_Long            | For        | 1,694.34 ns | 7.574 ns | 7.085 ns | 26.70 |    0.32 | 0.1469 |    2464 B |       13.39 |
-|                                      |            |             |          |          |       |         |        |           |             |
-| CSharpEssentials_ToStorageKey        | StorageKey |    67.78 ns | 0.406 ns | 0.360 ns |  1.00 |    0.01 | 0.0138 |     232 B |        1.00 |
-| CSharpEssentials_Scope_UserAndTenant | StorageKey |   175.62 ns | 1.182 ns | 1.106 ns |  2.59 |    0.02 | 0.0401 |     672 B |        2.90 |
-|                                      |            |             |          |          |       |         |        |           |             |
-| HandWritten_UuidV5                   | Uuid       |   738.56 ns | 0.966 ns | 0.903 ns |  1.00 |    0.00 |      - |         - |          NA |
-| CSharpEssentials_ToUuidV5            | Uuid       | 1,269.74 ns | 3.530 ns | 3.302 ns |  1.72 |    0.00 | 0.0286 |     488 B |          NA |
+| Method                               | Categories | Mean        | Error     | StdDev    | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+|------------------------------------- |----------- |------------:|----------:|----------:|------:|--------:|-------:|----------:|------------:|
+| CSharpEssentials_For_Short           | For        |    64.61 ns |  0.549 ns |  0.486 ns |  1.00 |    0.01 | 0.0110 |     184 B |        1.00 |
+| CSharpEssentials_For_Long            | For        | 1,746.08 ns | 12.605 ns | 11.791 ns | 27.03 |    0.27 | 0.1469 |    2464 B |       13.39 |
+|                                      |            |             |           |           |       |         |        |           |             |
+| CSharpEssentials_ToStorageKey        | StorageKey |    75.08 ns |  0.911 ns |  0.808 ns |  1.00 |    0.01 | 0.0138 |     232 B |        1.00 |
+| CSharpEssentials_Scope_UserAndTenant | StorageKey |   176.55 ns |  1.637 ns |  1.452 ns |  2.35 |    0.03 | 0.0401 |     672 B |        2.90 |
+|                                      |            |             |           |           |       |         |        |           |             |
+| HandWritten_UuidV5                   | Uuid       |   736.03 ns |  1.992 ns |  1.863 ns |  1.00 |    0.00 |      - |         - |          NA |
+| CSharpEssentials_ToUuidV5            | Uuid       |   814.64 ns |  3.788 ns |  3.543 ns |  1.11 |    0.01 | 0.0105 |     184 B |          NA |

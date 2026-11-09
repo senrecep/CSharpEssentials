@@ -94,7 +94,7 @@ From CSE source and IdempotentAPI source at `b38045c`; not measured.
 
 ### How these numbers were produced
 
-- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. All five classes and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
+- BenchmarkDotNet v0.14.0, default job (full runs, not `--quick`), `[MemoryDiagnoser]` on every class. All five classes and the `CSharpEssentials.Idempotency.Benchmarks` suite were rerun after the performance changes in #230-#256: SDK 11.0.100-rc.3; runtimes .NET 8.0.33, 9.0.22, 10.0.14 and 11.0.0 (11.0.26.52348). `IdempotencyKeyBenchmarks` was rerun again after #268. Versions are as the report headers print them, each TFM in its own run. A range with no TFM named spans net8.0 to net11.0 (net9.0 to net11.0 for the `CSharpEssentials.Idempotency.Benchmarks` rows). Differences and multiples in the prose are computed from the means and allocations in the tables.
 - One machine, a 6-core, 12-thread x64 desktop CPU on Linux. The suites ran one after another, never in parallel.
 - `aspnetcore` suite, classes 2 to 5: the load average was not recorded for the rerun; no row is above 5% CV.
 - `IdempotentReplayComparison` rerun: nine rows on net8.0 and net9.0 are above 5% CV, seven of them 256 KB rows; they are marked noisy wherever they appear.
@@ -184,15 +184,15 @@ Each cell is `Mean (Ratio), Allocated`, copied from the github report of that TF
 
 | Method | net8.0 | net9.0 | net10.0 | net11.0 |
 |---|---|---|---|---|
-| `CSharpEssentials_For_Short` | 73.54 ns (1.00), 184 B | 63.48 ns (1.00), 184 B | 57.85 ns (1.00), 152 B | 43.63 ns (1.00), 152 B |
-| `CSharpEssentials_For_Long` | 1,723.46 ns (23.44), 2464 B | 1,694.34 ns (26.70), 2464 B | 1,342.18 ns (23.21), 2432 B | 1,258.60 ns (28.85), 2432 B |
-| `CSharpEssentials_ToStorageKey` | 74.18 ns (1.00), 232 B | 67.78 ns (1.00), 232 B | 75.38 ns (1.00), 232 B | 56.34 ns (1.00), 232 B |
-| `CSharpEssentials_Scope_UserAndTenant` | 176.76 ns (2.38), 672 B | 175.62 ns (2.59), 672 B | 166.16 ns (2.20), 632 B | 132.33 ns (2.35), 632 B |
-| `HandWritten_UuidV5` | 735.50 ns (1.00), - | 738.56 ns (1.00), - | 584.51 ns (1.00), - | 587.31 ns (1.00), - |
-| `CSharpEssentials_ToUuidV5` | 1,273.68 ns (1.73), 488 B | 1,269.74 ns (1.72), 488 B | 918.42 ns (1.57), 456 B | 862.30 ns (1.47), 456 B |
+| `CSharpEssentials_For_Short` | 72.76 ns (1.00), 184 B | 64.61 ns (1.00), 184 B | 59.33 ns (1.00), 152 B | 42.98 ns (1.00), 152 B |
+| `CSharpEssentials_For_Long` | 1,669.90 ns (22.95), 2464 B | 1,746.08 ns (27.03), 2464 B | 1,381.04 ns (23.28), 2432 B | 1,270.77 ns (29.57), 2432 B |
+| `CSharpEssentials_ToStorageKey` | 77.93 ns (1.00), 232 B | 75.08 ns (1.00), 232 B | 79.96 ns (1.00), 232 B | 56.35 ns (1.00), 232 B |
+| `CSharpEssentials_Scope_UserAndTenant` | 187.67 ns (2.41), 672 B | 176.55 ns (2.35), 672 B | 172.63 ns (2.16), 632 B | 127.49 ns (2.26), 632 B |
+| `HandWritten_UuidV5` | 745.18 ns (1.00), - | 736.03 ns (1.00), - | 583.47 ns (1.00), - | 587.64 ns (1.00), - |
+| `CSharpEssentials_ToUuidV5` | 1,316.23 ns (1.77), 488 B | 814.64 ns (1.11), 184 B | 645.09 ns (1.11), 152 B | 633.89 ns (1.08), 152 B |
 
-- A short key (`For`) is 43.63 to 73.54 ns. A key over 255 characters is hashed: 1,258.60 to 1,723.46 ns and 2432 to 2464 B.
-- `ToUuidV5` costs 1.47 to 1.73 of the hand-written UUIDv5 and allocates 456 to 488 B where the hand-written one allocates nothing.
+- A short key (`For`) is 42.98 to 72.76 ns. A key over 255 characters is hashed: 1,270.77 to 1,746.08 ns and 2432 to 2464 B.
+- `ToUuidV5` costs 1.08 to 1.11 of the hand-written UUIDv5 on net9.0 to net11.0 and allocates 152 to 184 B, the canonical name, where the hand-written one allocates nothing. The net8.0 row runs the netstandard2.1 build, which still hashes through `IncrementalHash` and arrays: 1.77 and 488 B.
 
 ### Middleware overhead and fingerprint buffering (`CSharpEssentials.Idempotency.Benchmarks`)
 
@@ -221,7 +221,7 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
 
 ### Where CSE loses
 
-- `ToUuidV5` against the hand-written UUIDv5, all TFMs: 1,273.68 against 735.50 ns (net8.0), 1,269.74 against 738.56 ns (net9.0), 918.42 against 584.51 ns (net10.0), 862.30 against 587.31 ns (net11.0), with 456 to 488 B allocated against none.
+- `ToUuidV5` against the hand-written UUIDv5, all TFMs: 1,316.23 against 745.18 ns (net8.0), 814.64 against 736.03 ns (net9.0), 645.09 against 583.47 ns (net10.0), 633.89 against 587.64 ns (net11.0), with 152 to 488 B allocated against none.
 - Executor against the hand-written dedupe: a CSE replay is 119.891 to 162.398 ns, the `ConcurrentDictionary` lookup 12.722 to 46.113 ns, neither allocating. The CSE row does more (lease, fingerprint, retention), but the gap is real.
 - Large keyed requests: a keyed replay with a 64 KB body takes 136.080 μs against 22.154 μs for the plain request on net10.0, and 1,250.851 μs against 127.180 μs at 1 MB.
 
@@ -236,7 +236,7 @@ This older suite runs the CSE middleware and endpoint filter over the in-memory 
   - `IdempotencyInbox.cs:51`: `"messaging:" + consumer` is concatenated per message.
   - `DistributedCacheIdempotencyRecordStore.cs:52,83,103`: the storage key is rebuilt on every call.
   - `Internal/RecordEntrySerializer.cs:16-23`: the entry header goes through a `MemoryStream`/`BinaryWriter`; the payload is copied once into an exact-size entry (`:29-32`), and a read returns a slice of the stored bytes (`:71`), so a distributed replay does not copy the payload.
-  - `IdempotencyKeys.cs:96-119`: the canonical string, its UTF-8 bytes, the hash and the Base64 text per hashed key; `:79-93`: several arrays and an `IncrementalHash` per UUIDv5.
+  - `IdempotencyKeys.cs:138-144`: the canonical string, its UTF-8 bytes, the hash and the Base64 text per hashed key. `:84-103`: on .NET a UUIDv5 hashes the namespace and name from a stack buffer with `SHA1.HashData`, so only the canonical name is allocated; the netstandard2.1 build (`:104-117`) still uses several arrays and an `IncrementalHash`.
   - On the HTTP path, a new key captures the response in an `ArrayPool` buffer in `ResponseCaptureStream`, then `IdempotencyEntrySerializer` and the distributed store each build one exact-size entry. The NewKey 256 KB rows allocate 521 to 528 KB more than the plain endpoint, about two times the response size.
   - `CSharpEssentials.AspNetCore/Idempotency/IdempotencyMiddleware.cs:495`: the fingerprint calls `EnableBuffering()` with the default 30 KB threshold, so a larger request body goes to a temporary file before it is hashed.
 - The contention class is noisy. It depends on the core count and the scheduler, so compare it only on the same machine.

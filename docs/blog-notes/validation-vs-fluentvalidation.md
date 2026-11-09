@@ -69,10 +69,10 @@ Mean and allocated, copied from the reports. net10.0 unless a TFM is named.
 4. ForOverload, valid: `For(() => m.Fn)` 664.1 ns, 1784 B; `For(m.Fn, nameof(m.Fn))` 203.6 ns, 608 B; inline `Validator.ValidateAsync` 694.3 ns, 1784 B.
 5. EnumDefined, valid: Plain 72.593 ns, 136 B against Generated 50.615 ns, 136 B (FluentValidation 912.618 ns and 973.457 ns). EnumFlags valid: CSE 116.0 ns, 216 B; FluentValidation 1,407.2 ns, 1064 B; DataAnnotations 988.1 ns, 1040 B.
 6. AssemblyScan. Warm: CSE 9.243 μs, 8.52 KB; FluentValidation 19.603 μs, 31.88 KB. Cold: CSE 5.346 ms, 67.38 KB; FluentValidation 5.695 ms, 68.13 KB.
-7. Rules SyncTree, `EvaluateAsync` against `Evaluate` on sync trees: Linear5 Pass 315.547 ns against 71.667 ns, both no allocation; And5 Pass 372.233 ns against 47.302 ns, both no allocation; Or5 Pass 479.787 ns against 138.188 ns, both 224 B. Hand-written: 4.977 ns, 4.975 ns and 5.272 ns.
-8. Rules LinearBuild, Count=5: prebuilt 71.929 ns, no allocation; `Linear(Func[], ctx)` 183.288 ns, 360 B; `IRule[].Linear()` 119.519 ns, 128 B; hand-written 5.200 ns.
-9. Rules ShortCircuit: `Linear()` 16.193 ns against the early return's 14.149 ns, both 56 B. The generic And 429.854 ns, 56 B against a hand-written all-rules method at 117.368 ns, 144 B.
-10. Rules ReferenceEngine (reference only), FailLast: CSE `Linear()` 73.195 ns, 56 B; hand-written 15.966 ns, 56 B; NRules 4,853.301 ns, 13864 B; RulesEngine 1,655.924 ns, 4360 B.
+7. Rules SyncTree, `EvaluateAsync` against `Evaluate` on sync trees: Linear5 Pass 301.415 ns against 96.669 ns, both no allocation; And5 Pass 361.209 ns against 48.326 ns, both no allocation; Or5 Pass 476.722 ns against 130.956 ns, both 224 B. Hand-written: 4.988 ns, 4.983 ns and 5.255 ns.
+8. Rules LinearBuild, Count=5: prebuilt 71.942 ns, no allocation; `Linear(Func[], ctx)` 186.231 ns, 360 B; `IRule[].Linear()` 122.964 ns, 128 B; hand-written 5.203 ns.
+9. Rules ShortCircuit: `Linear()` 19.523 ns against the early return's 14.069 ns, both 56 B. The generic And 436.086 ns, 56 B against a hand-written all-rules method at 117.954 ns, 144 B.
+10. Rules ReferenceEngine (reference only), FailLast: CSE `Linear()` 75.405 ns, 56 B; hand-written 15.952 ns, 56 B; NRules 5,044.944 ns, 13864 B; RulesEngine 1,697.992 ns, 4360 B.
 
 ## Where CSE loses (state it, do not soften it)
 
@@ -81,11 +81,11 @@ Mean and allocated, copied from the reports. net10.0 unless a TFM is named.
 - `ConditionalValidationBenchmarks` business order on net10.0: CSE 273.4 ns, FluentValidation 255.4 ns. CSE is faster on the other three TFMs.
 - Cold assembly scan allocation on net11.0: CSE 67.32 KB, FluentValidation 66.87 KB.
 - The inline sync delegate avoids a `Task`, not allocation: it measures 1784 B on valid input (net8.0 to net10.0), the same as `For(() => ...)`.
-- Rules `Or()`, net10.0: Or5 Pass 138.188 ns, 224 B against hand-written 5.272 ns; ten-rule Or with all failing 392.511 ns, 904 B against 6.910 ns.
-- Rules generic `Result<T>` `And()`, net10.0: 429.854 ns, 56 B against 117.368 ns, 144 B for a hand-written method doing the same ten checks (net8.0: 531.32 ns against 49.83 ns). It allocates less but is slower.
-- Rules `EvaluateAsync` on sync trees takes 2.49 to 8.46 times as long as `Evaluate` on the same tree. It allocates no task and no more than `Evaluate`, so the Readme's "without allocating a task" holds.
-- Rules `Linear(Func[], ctx)` rebuilt per call, Count=5 on net10.0, is 183.288 ns and 360 B against 71.929 ns prebuilt (`CSharpEssentials.Rules/Engines/Linear.cs:25-64`).
-- Rules against hand-written code: every CSE rules row is slower than the hand-written equivalent. In the classes with a hand-written baseline the Ratio runs from 1.04 (sync-over-async `Evaluate` on the mixed async tree, net10.0) to 171.48 (`EvaluateAsync` Or5 FailLast, net11.0).
+- Rules `Or()`, net10.0: Or5 Pass 130.956 ns, 224 B against hand-written 5.255 ns; ten-rule Or with all failing 411.011 ns, 904 B against 6.902 ns.
+- Rules generic `Result<T>` `And()`, net10.0: 436.086 ns, 56 B against 117.954 ns, 144 B for a hand-written method doing the same ten checks (net8.0: 500.87 ns against 49.23 ns). It allocates less but is slower.
+- Rules `EvaluateAsync` on sync trees takes 2.52 to 7.94 times as long as `Evaluate` on the same tree. It allocates no task and no more than `Evaluate`, so the Readme's "without allocating a task" holds.
+- Rules `Linear(Func[], ctx)` rebuilt per call, Count=5 on net10.0, is 186.231 ns and 360 B against 71.942 ns prebuilt (`CSharpEssentials.Rules/Engines/Linear.cs:25-64`).
+- Rules against hand-written code: every CSE rules row is slower than the hand-written equivalent except one: on net10.0 the sync-over-async `Evaluate` on the mixed async tree is level with the hand-written async method (971.9 ns against 976.8 ns, Ratio 1.00) and allocates more (600 B against 487 B). In the classes with a hand-written baseline the Ratio runs from that 1.00 to 180.55 (`EvaluateAsync` Or5 FailLast, net11.0).
 
 Two expected losses did not show up. The plain-enum boxing in `HasOnlyDefinedFlags` (`CSharpEssentials.Validation/Validators/EnumValidators.cs:201-204`) still leaves CSE below both competitors, and the invalid-path enum message cost leaves CSE below them too (EnumDefined Plain invalid, net10.0: 330.136 ns against FluentValidation 1,869.646 ns and DataAnnotations 877.089 ns).
 
@@ -96,7 +96,7 @@ Two expected losses did not show up. The plain-enum boxing in `HasOnlyDefinedFla
 - Valid paths: CSE is faster than FluentValidation on every valid row except `ConditionalValidationBenchmarks` business on net10.0, but by little on simple models (BaselineSimple Ratio 1.12 to 1.18).
 - DataAnnotations: slower than CSE on every row, Ratio 3.80 to 7.69 on the baseline classes.
 
-Reference only, not a ranking: in `ReferenceEngineComparison`, with CSE `Linear()` as the baseline (1.00), NRules has Ratio 32.11 to 76.37 and RulesEngine 17.41 to 25.65 across the four TFMs.
+Reference only, not a ranking: in `ReferenceEngineComparison`, with CSE `Linear()` as the baseline (1.00), NRules has Ratio 32.42 to 68.13 and RulesEngine 17.89 to 24.42 across the four TFMs.
 
 ## Caveats to keep in the post
 
