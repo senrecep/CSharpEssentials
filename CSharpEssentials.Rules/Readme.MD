@@ -156,7 +156,7 @@ Result longer = RuleEngine.Evaluate(
 
 ### Static shortcuts
 
-`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly. `RuleEngine.Linear(Func[], ctx)` rebuilds the chain on every call (2.07 to 2.77 times the prebuilt chain in [BENCHMARKS.md](./BENCHMARKS.md)), so on a hot path build the tree once and keep it:
+`RuleEngine.And`, `RuleEngine.Or` and `RuleEngine.Linear` take the array and the context directly. `RuleEngine.Linear(Func[], ctx)` rebuilds the chain on every call (1.85 to 2.55 times the prebuilt chain in [BENCHMARKS.md](./BENCHMARKS.md)), so on a hot path build the tree once and keep it:
 
 ```csharp
 Result all = RuleEngine.And(new Func<UserContext, Result>[] { regionRule, CheckEmail }, ctx);
