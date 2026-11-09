@@ -12,7 +12,7 @@ Target frameworks, per project file:
 - EntityFrameworkCore: net10.0, net9.0 and net8.0 only (no net11.0), each pinned to its EF Core major.
 - AspNetCore.OpenApi: net10.0 only.
 
-Current version: 7.0.0 <!-- x-release-please-version -->
+Current version: 8.0.0 <!-- x-release-please-version -->
 
 ## Why
 
