@@ -10,26 +10,26 @@ x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
 ```
 | Method           | Shape   | Input    | Mean       | Error     | StdDev    | Ratio  | RatioSD | Gen0   | Allocated | Alloc Ratio |
 |----------------- |-------- |--------- |-----------:|----------:|----------:|-------:|--------:|-------:|----------:|------------:|
-| **HandWritten**      | **Linear5** | **Pass**     |   **2.836 ns** | **0.0022 ns** | **0.0020 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CseEvaluate      | Linear5 | Pass     |  90.465 ns | 0.0675 ns | 0.0632 ns |  31.90 |    0.03 |      - |         - |          NA |
-| CseEvaluateAsync | Linear5 | Pass     | 291.406 ns | 0.2211 ns | 0.1846 ns | 102.77 |    0.09 |      - |         - |          NA |
+| **HandWritten**      | **Linear5** | **Pass**     |   **2.845 ns** | **0.0047 ns** | **0.0041 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CseEvaluate      | Linear5 | Pass     |  69.061 ns | 0.1158 ns | 0.1027 ns |  24.28 |    0.05 |      - |         - |          NA |
+| CseEvaluateAsync | Linear5 | Pass     | 316.352 ns | 2.0069 ns | 1.8773 ns | 111.20 |    0.66 |      - |         - |          NA |
 |                  |         |          |            |           |           |        |         |        |           |             |
-| **HandWritten**      | **Linear5** | **FailLast** |  **11.120 ns** | **0.0401 ns** | **0.0355 ns** |   **1.00** |    **0.00** | **0.0033** |      **56 B** |        **1.00** |
-| CseEvaluate      | Linear5 | FailLast | 103.886 ns | 0.4836 ns | 0.4287 ns |   9.34 |    0.05 | 0.0033 |      56 B |        1.00 |
-| CseEvaluateAsync | Linear5 | FailLast | 308.990 ns | 0.5753 ns | 0.5382 ns |  27.79 |    0.10 | 0.0033 |      56 B |        1.00 |
+| **HandWritten**      | **Linear5** | **FailLast** |  **11.291 ns** | **0.0916 ns** | **0.0812 ns** |   **1.00** |    **0.01** | **0.0033** |      **56 B** |        **1.00** |
+| CseEvaluate      | Linear5 | FailLast |  81.956 ns | 0.3464 ns | 0.3240 ns |   7.26 |    0.06 | 0.0033 |      56 B |        1.00 |
+| CseEvaluateAsync | Linear5 | FailLast | 325.959 ns | 2.3158 ns | 2.1662 ns |  28.87 |    0.27 | 0.0033 |      56 B |        1.00 |
 |                  |         |          |            |           |           |        |         |        |           |             |
-| **HandWritten**      | **And5**    | **Pass**     |   **2.833 ns** | **0.0016 ns** | **0.0013 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CseEvaluate      | And5    | Pass     | 161.404 ns | 0.1188 ns | 0.1053 ns |  56.97 |    0.04 |      - |         - |          NA |
-| CseEvaluateAsync | And5    | Pass     | 360.340 ns | 1.5071 ns | 1.4098 ns | 127.19 |    0.49 |      - |         - |          NA |
+| **HandWritten**      | **And5**    | **Pass**     |   **2.836 ns** | **0.0054 ns** | **0.0045 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CseEvaluate      | And5    | Pass     |  44.559 ns | 0.0734 ns | 0.0687 ns |  15.71 |    0.03 |      - |         - |          NA |
+| CseEvaluateAsync | And5    | Pass     | 376.943 ns | 0.8399 ns | 0.7856 ns | 132.93 |    0.34 |      - |         - |          NA |
 |                  |         |          |            |           |           |        |         |        |           |             |
-| **HandWritten**      | **And5**    | **FailLast** |  **11.070 ns** | **0.0952 ns** | **0.0891 ns** |   **1.00** |    **0.01** | **0.0033** |      **56 B** |        **1.00** |
-| CseEvaluate      | And5    | FailLast | 189.178 ns | 0.2516 ns | 0.2231 ns |  17.09 |    0.13 | 0.0033 |      56 B |        1.00 |
-| CseEvaluateAsync | And5    | FailLast | 446.577 ns | 0.4585 ns | 0.4289 ns |  40.35 |    0.32 | 0.0033 |      56 B |        1.00 |
+| **HandWritten**      | **And5**    | **FailLast** |  **11.361 ns** | **0.0607 ns** | **0.0568 ns** |   **1.00** |    **0.01** | **0.0033** |      **56 B** |        **1.00** |
+| CseEvaluate      | And5    | FailLast |  58.944 ns | 0.1680 ns | 0.1571 ns |   5.19 |    0.03 | 0.0033 |      56 B |        1.00 |
+| CseEvaluateAsync | And5    | FailLast | 357.473 ns | 0.7256 ns | 0.6788 ns |  31.47 |    0.16 | 0.0033 |      56 B |        1.00 |
 |                  |         |          |            |           |           |        |         |        |           |             |
-| **HandWritten**      | **Or5**     | **Pass**     |   **2.887 ns** | **0.0014 ns** | **0.0012 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CseEvaluate      | Or5     | Pass     | 275.786 ns | 0.4299 ns | 0.3590 ns |  95.52 |    0.13 | 0.0134 |     224 B |          NA |
-| CseEvaluateAsync | Or5     | Pass     | 445.085 ns | 1.3383 ns | 1.2518 ns | 154.15 |    0.42 | 0.0134 |     224 B |          NA |
+| **HandWritten**      | **Or5**     | **Pass**     |   **2.894 ns** | **0.0059 ns** | **0.0056 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CseEvaluate      | Or5     | Pass     | 119.258 ns | 1.0959 ns | 1.0251 ns |  41.21 |    0.35 | 0.0134 |     224 B |          NA |
+| CseEvaluateAsync | Or5     | Pass     | 442.495 ns | 2.1917 ns | 2.0502 ns | 152.91 |    0.74 | 0.0134 |     224 B |          NA |
 |                  |         |          |            |           |           |        |         |        |           |             |
-| **HandWritten**      | **Or5**     | **FailLast** |   **3.016 ns** | **0.0013 ns** | **0.0012 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
-| CseEvaluate      | Or5     | FailLast | 332.180 ns | 2.5263 ns | 2.3631 ns | 110.14 |    0.76 | 0.0277 |     464 B |          NA |
-| CseEvaluateAsync | Or5     | FailLast | 511.256 ns | 2.6560 ns | 2.4844 ns | 169.52 |    0.80 | 0.0277 |     464 B |          NA |
+| **HandWritten**      | **Or5**     | **FailLast** |   **3.110 ns** | **0.0087 ns** | **0.0073 ns** |   **1.00** |    **0.00** |      **-** |         **-** |          **NA** |
+| CseEvaluate      | Or5     | FailLast | 190.202 ns | 1.0612 ns | 0.9927 ns |  61.16 |    0.34 | 0.0277 |     464 B |          NA |
+| CseEvaluateAsync | Or5     | FailLast | 533.287 ns | 2.3711 ns | 2.2179 ns | 171.48 |    0.79 | 0.0277 |     464 B |          NA |
