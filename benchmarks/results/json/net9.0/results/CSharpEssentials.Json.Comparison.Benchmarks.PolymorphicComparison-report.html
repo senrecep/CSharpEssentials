@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CSharpEssentials.Json.Comparison.Benchmarks.PolymorphicComparison-20261105-191007</title>
+<title>CSharpEssentials.Json.Comparison.Benchmarks.PolymorphicComparison-20261109-110231</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -15,19 +15,19 @@
 <pre><code>
 BenchmarkDotNet v0.14.0, CachyOS
 x64 desktop CPU, 1 CPU, 12 logical and 6 physical cores
-.NET SDK 11.0.100-rc.1.26425.128
-  [Host]     : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.19 (9.0.1926.36724), X64 RyuJIT AVX2
+.NET SDK 11.0.100-rc.3.26522.148
+  [Host]     : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.22 (9.0.2226.52218), X64 RyuJIT AVX2
 </code></pre>
 <pre><code></code></pre>
 
 <table>
 <thead><tr><th>Method                </th><th>Categories</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Gen0</th><th>Allocated</th><th>Alloc Ratio</th>
 </tr>
-</thead><tbody><tr><td>CSharpEssentials_Deserialize</td><td>Deserialize</td><td>781.2 ns</td><td>0.99 ns</td><td>0.88 ns</td><td>1.00</td><td>0.0134</td><td>232 B</td><td>1.00</td>
-</tr><tr><td>Stj_Deserialize</td><td>Deserialize</td><td>438.8 ns</td><td>0.33 ns</td><td>0.28 ns</td><td>0.56</td><td>0.0138</td><td>232 B</td><td>1.00</td>
-</tr><tr><td>CSharpEssentials_Serialize</td><td>Serialize</td><td>875.9 ns</td><td>1.89 ns</td><td>1.77 ns</td><td>1.00</td><td>0.0372</td><td>624 B</td><td>1.00</td>
-</tr><tr><td>Stj_Serialize</td><td>Serialize</td><td>352.8 ns</td><td>0.88 ns</td><td>0.78 ns</td><td>0.40</td><td>0.0315</td><td>528 B</td><td>0.85</td>
+</thead><tbody><tr><td>CSharpEssentials_Deserialize</td><td>Deserialize</td><td>781.5 ns</td><td>2.18 ns</td><td>2.04 ns</td><td>1.00</td><td>0.0134</td><td>232 B</td><td>1.00</td>
+</tr><tr><td>Stj_Deserialize</td><td>Deserialize</td><td>447.1 ns</td><td>1.13 ns</td><td>1.05 ns</td><td>0.57</td><td>0.0138</td><td>232 B</td><td>1.00</td>
+</tr><tr><td>CSharpEssentials_Serialize</td><td>Serialize</td><td>470.1 ns</td><td>1.72 ns</td><td>1.61 ns</td><td>1.00</td><td>0.0272</td><td>456 B</td><td>1.00</td>
+</tr><tr><td>Stj_Serialize</td><td>Serialize</td><td>337.4 ns</td><td>1.50 ns</td><td>1.40 ns</td><td>0.72</td><td>0.0315</td><td>528 B</td><td>1.16</td>
 </tr></tbody></table>
 </body>
 </html>
