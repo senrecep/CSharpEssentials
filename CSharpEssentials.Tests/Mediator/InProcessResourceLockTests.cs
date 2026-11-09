@@ -46,7 +46,7 @@ public class InProcessResourceLockTests
 
         await Task.WhenAll(Enumerable.Range(0, 50).Select(async _ =>
         {
-            await using IAsyncDisposable handle = await _lock.AcquireAsync("counter", Long);
+            await using IAsyncDisposable handle = await _lock.AcquireAsync("counter", TimeSpan.FromMinutes(1));
             if (Interlocked.Increment(ref inside) > 1)
                 Interlocked.Increment(ref overlaps);
             int read = counter;
