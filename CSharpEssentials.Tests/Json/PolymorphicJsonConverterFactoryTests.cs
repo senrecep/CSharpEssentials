@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Reflection.Emit;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -17,6 +18,10 @@ internal sealed class Circle : BaseShape
 {
     public double Radius { get; set; }
 }
+
+internal abstract class Marker;
+
+internal sealed class EmptyMarker : Marker;
 
 internal sealed class Rectangle : BaseShape
 {
@@ -287,6 +292,43 @@ public class PolymorphicJsonConverterFactoryTests
         IAttrShape shape = new AttrSquare { Side = 2 };
 
         JsonSerializer.Serialize(shape, PolymorphicOptions).Should().Be("""{"kind":"square","Side":2}""");
+    }
+
+    [Fact]
+    public void Serialize_EmptyDerivedObject_ShouldWriteOnlyTheTypeDiscriminator()
+    {
+        Marker marker = new EmptyMarker();
+
+        JsonSerializer.Serialize(marker, PolymorphicOptions)
+            .Should().Be($$"""{"$type":"{{typeof(EmptyMarker).FullName}}"}""");
+    }
+
+    [Fact]
+    public void Serialize_CompactWriter_ShouldMatchTheElementPathOutput()
+    {
+        BaseShape shape = new FilledCircle { Type = "c\u00e9", Fill = new Solid { Color = "<red>" } };
+        string spliced = JsonSerializer.Serialize(shape, PolymorphicOptions);
+
+        using MemoryStream stream = new();
+        using (Utf8JsonWriter writer = new(stream, new JsonWriterOptions { Encoder = JavaScriptEncoder.Default }))
+        {
+            JsonSerializer.Serialize(writer, shape, PolymorphicOptions);
+        }
+
+        spliced.Should().Be(System.Text.Encoding.UTF8.GetString(stream.ToArray()));
+    }
+
+    [Fact]
+    public void Serialize_WithIndentedOptions_ShouldRoundTrip()
+    {
+        JsonSerializerOptions indented = new(PolymorphicOptions) { WriteIndented = true };
+        BaseShape shape = new FilledCircle { Fill = new Solid { Color = "red" } };
+
+        string json = JsonSerializer.Serialize(shape, indented);
+
+        json.Should().Contain(Environment.NewLine);
+        JsonSerializer.Deserialize<BaseShape>(json, indented)
+            .Should().BeOfType<FilledCircle>().Which.Fill.Should().BeOfType<Solid>().Which.Color.Should().Be("red");
     }
 
     [Fact]
