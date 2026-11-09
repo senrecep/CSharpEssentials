@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.Json;
@@ -109,6 +111,70 @@ public sealed class PolymorphicJsonConverter<T> : JsonConverter<T>
         }
 
         Type valueType = value.GetType();
+        if (!writer.Options.Indented && !options.WriteIndented && ReferenceEquals(writer.Options.Encoder, options.Encoder))
+        {
+            byte[] body;
+            PolymorphicJson.EnterNested(options);
+            try
+            {
+                body = JsonSerializer.SerializeToUtf8Bytes(value, valueType, options);
+            }
+            finally
+            {
+                PolymorphicJson.ExitNested();
+            }
+
+            if (body.Length >= 2 && body[0] == (byte)'{')
+            {
+                WriteSpliced(writer, GetPrefix(valueType, options), body);
+                return;
+            }
+        }
+
+        WriteViaElement(writer, value, valueType, options);
+    }
+
+    private readonly ConcurrentDictionary<Type, byte[]> _prefixes = new();
+
+    private byte[] GetPrefix(Type valueType, JsonSerializerOptions options) =>
+        _prefixes.GetOrAdd(valueType, static (type, opts) =>
+        {
+            ArrayBufferWriter<byte> buffer = new();
+            using (Utf8JsonWriter prefixWriter = new(buffer, new JsonWriterOptions { Encoder = opts.Encoder, SkipValidation = true }))
+            {
+                prefixWriter.WriteStartObject();
+                prefixWriter.WriteString(TypePropertyName, type.FullName);
+            }
+            return buffer.WrittenSpan.ToArray();
+        }, options);
+
+    private static void WriteSpliced(Utf8JsonWriter writer, byte[] prefix, byte[] body)
+    {
+        bool empty = body.Length == 2;
+        int length = prefix.Length + (empty ? 1 : body.Length);
+        byte[] rented = ArrayPool<byte>.Shared.Rent(length);
+        try
+        {
+            prefix.CopyTo(rented, 0);
+            if (empty)
+            {
+                rented[prefix.Length] = (byte)'}';
+            }
+            else
+            {
+                rented[prefix.Length] = (byte)',';
+                body.AsSpan(1).CopyTo(rented.AsSpan(prefix.Length + 1));
+            }
+            writer.WriteRawValue(rented.AsSpan(0, length), skipInputValidation: true);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rented);
+        }
+    }
+
+    private static void WriteViaElement(Utf8JsonWriter writer, T value, Type valueType, JsonSerializerOptions options)
+    {
         JsonElement element;
         PolymorphicJson.EnterNested(options);
         try
