@@ -33,6 +33,10 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
 
     private readonly Dictionary<ulong, JsonEncodedText> _encodedNames = EncodeNames(info);
 
+    private const int MaxDenseLength = 64;
+
+    private JsonEncodedText?[]? _denseNames;
+
     private readonly ulong[] _rawValues = [.. info.TypedMembers.Select(static m => m.RawValue)];
 
     // 4.x flags text ("read, write") holds every flag once, with a separator and a space between them.
@@ -54,7 +58,7 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
         ulong raw = info.ToRawValue(value);
         if (!info.IsFlags)
         {
-            if (writeAs == EnumWireFormat.String && UsesStandardEncoder(writer) && _encodedNames.TryGetValue(raw, out JsonEncodedText name))
+            if (writeAs == EnumWireFormat.String && UsesStandardEncoder(writer) && TryGetEncodedName(raw, out JsonEncodedText name))
                 writer.WriteStringValue(name);
             else if (!info.TryGetMember(value, out EnumMemberInfo<TEnum>? member))
                 WriteNumber(writer, raw);
@@ -285,6 +289,39 @@ internal sealed class EnumConverter<TEnum>(EnumInfo<TEnum> info, EnumConventions
     /// The wire name of the member <see cref="EnumInfo{TEnum}.TryGetMember"/> returns for each value, for names the default
     /// encoder leaves unchanged; those are written the same by the relaxed encoder as well.
     /// </summary>
+    // Every name with a raw value below MaxDenseLength is in the array, so a miss there is a miss in the dictionary too.
+    private bool TryGetEncodedName(ulong raw, out JsonEncodedText name)
+    {
+        JsonEncodedText?[] dense = _denseNames ??= BuildDenseNames(_encodedNames);
+        if (raw < (ulong)dense.Length)
+        {
+            JsonEncodedText? slot = dense[raw];
+            name = slot.GetValueOrDefault();
+            return slot.HasValue;
+        }
+
+        return _encodedNames.TryGetValue(raw, out name);
+    }
+
+    private static JsonEncodedText?[] BuildDenseNames(Dictionary<ulong, JsonEncodedText> names)
+    {
+        ulong length = 0;
+        foreach (ulong raw in names.Keys)
+        {
+            if (raw < MaxDenseLength && raw >= length)
+                length = raw + 1;
+        }
+
+        var dense = new JsonEncodedText?[length];
+        foreach (KeyValuePair<ulong, JsonEncodedText> pair in names)
+        {
+            if (pair.Key < length)
+                dense[pair.Key] = pair.Value;
+        }
+
+        return dense;
+    }
+
     private static Dictionary<ulong, JsonEncodedText> EncodeNames(EnumInfo<TEnum> info)
     {
         Dictionary<ulong, JsonEncodedText> names = [];
