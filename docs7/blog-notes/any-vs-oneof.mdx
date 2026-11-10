@@ -2,7 +2,7 @@
 title: "Blog notes: CSharpEssentials.Any, OneOf and Dunet"
 ---
 
-These are notes for a post, not the post. The numbers below are copied from the full default-job run in `benchmarks/results/any/{tfm}/results/`. [CSharpEssentials.Any/BENCHMARKS.md](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Any/BENCHMARKS.md#results) and [CSharpEssentials.These/BENCHMARKS.md](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.These/BENCHMARKS.md#results) have the full tables for all four TFMs.
+These are notes for a post, not the post. The numbers below are copied from the full default-job run in `benchmarks/results/any/{tfm}/results/`. [CSharpEssentials.Any/BENCHMARKS.md](/benchmarks/any#results) and [CSharpEssentials.These/BENCHMARKS.md](/benchmarks/these#results) have the full tables for all four TFMs.
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The libraries compared are OneOf 3.0.271, the third-party OneOf.Serialization.SystemTextJson 1.1.1 add-on (for JSON only) and Dunet 1.16.2. These has no library competitor and is compared with a hand-written record (see `CSharpEssentials.These/BENCHMARKS.md`).
 
@@ -35,7 +35,7 @@ The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The librarie
 - BenchmarkDotNet v0.14.0 default job, full runs on net8.0, net9.0, net10.0 and net11.0, one TFM after another on a 6-core, 12-thread x64 desktop CPU on Linux.
 - Main pass load average (1 minute) between 1.18 and 1.43. `ToStringComparison` was rerun on every TFM after the ToString parity fix, with a load average between 2.42 and 2.71.
 - Construct, TryPick and These Match use `OperationsPerInvoke = 1024`, so those means are per element of a 1024-element batch. The other rows time one call, or one partition of 1000 items.
-- Reports: `benchmarks/results/any/{tfm}/results/*-report-github.md`, for example [net10.0 Construct](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ConstructComparison-report-github.md).
+- Reports: `benchmarks/results/any/{tfm}/results/*-report-github.md`, for example [net10.0 Construct](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/any/net10.0/results/CSharpEssentials.Any.Comparison.Benchmarks.ConstructComparison-report-github.md).
 
 ## The numbers that matter
 

@@ -2,7 +2,7 @@
 title: "Blog notes: CSharpEssentials.Http against HttpClient, Refit, Flurl.Http and RestSharp"
 ---
 
-These are notes for a post, not the post. The numbers come from the full default-job run under `benchmarks/results/http/{tfm}/results/`; [CSharpEssentials.Http/BENCHMARKS.md](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Http/BENCHMARKS.md#results) has every row on every TFM.
+These are notes for a post, not the post. The numbers come from the full default-job run under `benchmarks/results/http/{tfm}/results/`; [CSharpEssentials.Http/BENCHMARKS.md](/benchmarks/http#results) has every row on every TFM.
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The libraries compared are `HttpClient` with System.Net.Http.Json, Refit 16.4.0 (MIT), Flurl.Http 4.0.2 (MIT), RestSharp 114.1.0 (Apache-2.0) and, for the resilience row, Polly.Core 8.9.0 (BSD-3-Clause) and Microsoft.Extensions.Http.Resilience 10.11.0 (MIT).
 
@@ -61,11 +61,11 @@ Headline rows on net10.0, as `Mean, Allocated` from the reports. On the other TF
 | Query string, AppendToUri | 374.5 ns, 784 B | 348.1 ns, 656 B (`QueryHelpers`) | no row | 3,327.3 ns, 6312 B | no row |
 | Query string, Dictionary | 208.8 ns, 544 B | 224.3 ns, 544 B (`QueryHelpers`); 182.5 ns, 488 B (hand-written loop) | no row | 2,393.8 ns, 4728 B | no row |
 
-Reports: [GetJson](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-report-github.md), [PostJson](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PostJsonComparison-report-github.md), [NotFound](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [RequestBuild](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RequestBuildComparison-report-github.md), [QueryString](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.QueryStringComparison-report-github.md).
+Reports: [GetJson](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.GetJsonComparison-report-github.md), [PostJson](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PostJsonComparison-report-github.md), [NotFound](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.NotFoundComparison-report-github.md), [RequestBuild](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RequestBuildComparison-report-github.md), [QueryString](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.QueryStringComparison-report-github.md).
 
 The two rows where CSE's position changes by TFM: GET Count 50, where CSE is ahead of the BCL on net11.0 only (19.970 μs against 20.131 μs), and the Dictionary query string, where `QueryHelpers` is ahead of CSE on net8.0 (221.4 ns against 223.2 ns) and net9.0 (194.2 ns against 216.2 ns).
 
-HTTP call through retry(3) and timeout(30 s), net10.0 ([report](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-report-github.md)):
+HTTP call through retry(3) and timeout(30 s), net10.0 ([report](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.HttpResilienceComparison-report-github.md)):
 
 | Row (net10.0) | Mean | Allocated |
 |---|---|---|
@@ -79,7 +79,7 @@ On net8.0 the custom handler is slightly ahead of CSE (4.145 μs against 4.189 �
 
 ## Where CSE loses
 
-Measured; the full list with every TFM is in [the Results section](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Http/BENCHMARKS.md#where-cse-loses).
+Measured; the full list with every TFM is in [the Results section](/benchmarks/http#where-cse-loses).
 
 - GET against the BCL. CSE is slower at Count 1 on every TFM (1.857 μs against 1.729 μs on net10.0) and at Count 50 on net8.0 to net10.0, and it allocates more on every TFM (18.36 KB against 14.97 KB at Count 50 on net10.0). CSE wraps the call in its own try/catch and an async layer (`CSharpEssentials.Http/HttpClientResultExtensions.cs:15-29`), and `GetCoreAsync` uses `GetAsync`, which buffers the whole body before deserializing (`:257`). The BCL `GetFromJsonAsync` streams the body.
 - POST and 404 against the BCL: slower and more allocation on every TFM (404: 725.6 ns against 621.4 ns on net10.0). The BCL 404 row only checks the status code; CSE also builds a typed `Error`.

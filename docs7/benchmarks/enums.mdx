@@ -1,0 +1,421 @@
+---
+title: "CSharpEssentials.Enums: performance benchmarks"
+---
+
+CSharpEssentials.Enums (CSE) compared with Enums.NET 5.0.0, NetEscapades.EnumGenerators 1.0.0-beta21 and the plain `System.Enum` API (BCL). Measured with BenchmarkDotNet v0.14.0 under .NET 8, 9, 10 and 11, plus a Native AOT publish of one sample per library.
+
+NetEscapades.EnumGenerators has never shipped a stable release. Every 1.x version on NuGet is a beta, so the suite pins the latest prerelease, 1.0.0-beta21 (published 2026-03-09), exactly in `Directory.Packages.props`. Enums.NET 5.0.0 is its latest stable release.
+
+CSE is a source generator plus a small runtime library. `[StringEnum]` makes the generator write an `{Enum}Extensions` class and the enum's metadata. Most generated helpers are `switch` statements over constants (`ToOptimizedString`, `ToWireName`, `IsDefined(value)`, `IsDefined(string)`, `ToDescription`, `GetNames`, `GetValues`) or a generated flags formatter. `TryParseWire` and the runtime APIs (`EnumValueParser`, `EnumValueFormatter`, `EnumMetadata`) go through the runtime metadata. That split explains most of the results below: the generated rows are at or near the front, and the rows that go through the runtime metadata are where CSE loses.
+
+---
+
+## What was measured
+
+The suite has eight BenchmarkDotNet classes in `benchmarks/CSharpEssentials.Enums.Comparison.Benchmarks/` plus a Native AOT script. Every class uses `[MemoryDiagnoser]` and has CSE as the baseline where CSE has a column. Each class checks parity in `[GlobalSetup]` (also run with `--self-check`): every column must return the same string, the same parsed value, the same bool or the same sum for the same input, or the run fails. Rows that do different work sit in their own category and are compared with nothing.
+
+| # | Class | Measured unit | Columns |
+|---|---|---|---|
+| 1 | `ToStringComparison` | Format `Color.Indigo` (7th of 8 members) as "Indigo", and the undefined `(Color)99` as "99" | CSE `ToOptimizedString`, BCL `ToString`, Enums.NET `AsString`, NetEscapades `ToStringFast`. Separate: CSE `ToWireName` ("indigo") |
+| 2 | `ParseComparison` | Parse `Status.PendingApproval` (11th of 20 members) by name, case-sensitive ("PendingApproval") and ignore-case ("pendingapproval"), plus an unknown name ("Unknown" / "unknown") | CSE `EnumValueParser.TryParse` with the error-reporting overload (case-sensitive) and generated `TryParseWire` (ignore-case), CSE `IsDefined(string)` (bool only), BCL `Enum.TryParse`, Enums.NET `Enums.TryParse`, NetEscapades generated `TryParse` |
+| 3 | `IsDefinedComparison` | Whether `Status.Cancelled` (75) and the undefined `(Status)76` are declared | CSE, BCL, Enums.NET, NetEscapades `IsDefined` |
+| 4 | `GetValuesComparison` | Get all 20 `Status` values (summed as ints) or names (summed lengths) | CSE, BCL, Enums.NET, NetEscapades `GetValues` / `GetNames` |
+| 5 | `FlagsComparison` | `Permissions` value `Write \| Execute \| Delete`: `HasFlag(Write)` and formatting as "Write, Execute, Delete" | Format: CSE `ToOptimizedString`, BCL `ToString`, Enums.NET `FlagEnums.FormatFlags`, NetEscapades `ToStringFast`. HasFlag: BCL `HasFlag` (baseline), Enums.NET `HasAllFlags`, NetEscapades `HasFlagFast`. Separate: CSE `ToWireName` ("write,execute,delete") |
+| 6 | `DescriptionComparison` | Read the `[Description]` text of `Status.PendingApproval` ("Waiting for approval") | CSE `EnumMetadata.Get<T>().TryGetMember(...).Description`, Enums.NET `AsString(EnumFormat.Description)`, NetEscapades `ToStringFast(useMetadataAttributes: true)` |
+| 7 | `BoxedFormatComparison` | Format `Shade.Indigo`, boxed once in setup, as "Indigo"; and a boxed `Shade[]` of all eight members into one list | CSE `EnumValueFormatter.Format(object, ...)` and `TryFormatMany`, BCL `object.ToString()`, Enums.NET `Enums.AsString(Type, object)`. Separate: CSE with a custom `CanHandle = _ => true` delegate, and the typed CSE call |
+| 8 | `ReflectionInfoComparison` | All 20 names and values of `PlainStatus` (no attribute) from a `Type` | CSE `EnumMetadata.GetOrCreateWithReflection(Type, PascalCase)`, BCL `Enum.GetNames(Type)` / `Enum.GetValuesAsUnderlyingType(Type)`, Enums.NET `Enums.GetNames(Type)` / `Enums.GetMembers(Type)`. Separate: CSE names from an info held since setup |
+| 9 | Native AOT (`benchmarks/enums-aot/run-enums-aot.sh`, not BenchmarkDotNet) | One sample per library, `PublishAot=true`, net10, linux-x64 | BclAot, CseAot, EnumsNetAot, NetEscapadesAot |
+
+Columns without an idiomatic equivalent are left out, and the class XML doc says why. CSE has no `HasFlag` helper, so the HasFlag category has no CSE column. The BCL has no description API, so `DescriptionComparison` has no BCL column. NetEscapades has no API that takes an `object` or a `Type`, so it has no column in classes 7 and 8.
+
+Inputs: `Color` (8 contiguous int members), `Status` (20 members with non-contiguous values; one member carries `[Description]`) and `Permissions` (`[Flags]`, 8 bits, `None = 0`, one combination member). Each of these carries every library's attribute at once: `[StringEnum]` for CSE, `[EnumExtensions]` for NetEscapades and none for Enums.NET. `Shade` has `[StringEnum(Naming = EnumNaming.PascalCase)]` and `PlainStatus` has no attribute (details in [Boxed formatting and reflection-built metadata](#boxed-formatting-and-reflection-built-metadata)).
+
+The numbers come from the reports under `benchmarks/results/enums/{tfm}/results/` and `benchmarks/results/enums/aot/aot-report.md`.
+
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, default job (no `--quick`), `[MemoryDiagnoser]`. Full runs of all eight classes on net8.0, net9.0, net10.0 and net11.0, one TFM after another, in the order net8, net9, net10, net11, on the `integ/all` branch (every open pull request merged locally).
+- Rows whose coefficient of variation stayed above 5% were rerun up to twice. net8 and net11 `FlagsComparison` and net9 `IsDefinedComparison` come from those reruns, made the next morning, so the cross-TFM table mixes two sessions. Two rows stayed above 5% after both reruns: net8 `Bcl_HasFlag` (CV 12.0%) and net8 `NetEscapades_HasFlag` (CV 11.8%). They are marked "noisy" wherever they appear.
+- The 1-minute load average was between 1.18 and 1.83 at the start and end of the suite and of every rerun. The machine was not idle: a desktop session ran in the background.
+- Results: `benchmarks/results/enums/{tfm}/results/*-report-github.md` (also CSV, JSON and HTML). The Native AOT report comes from a separate script run on 2026-11-06; see section 9.
+
+Environment:
+
+| Property | Value |
+|---|---|
+| Machine | A 6-core, 12-thread x64 desktop CPU on Linux (RyuJIT AVX2), desktop session in the background |
+| OS | Linux, kernel 7.3.0 |
+| Tool | BenchmarkDotNet v0.14.0, default job, [MemoryDiagnoser] |
+| .NET SDK | 11.0.100-rc.1.26425.128 |
+| Runtimes tested | .NET 8.0.30, .NET 9.0.19, .NET 10.0.11, .NET 11.0.0 |
+| Enums.NET | 5.0.0 (latest stable) |
+| NetEscapades.EnumGenerators | 1.0.0-beta21 (prerelease; no stable release exists) |
+| CSharpEssentials.Enums (CSE) | 7.0.0 working tree on `integ/all`, referenced as a project with its generator as an analyzer reference. It targets net9.0, net10.0, net11.0, netstandard2.1 and netstandard2.0, so the net8 column runs its netstandard2.1 build |
+
+---
+
+## Executive summary
+
+Primary runtime: net10. A tie is a difference within the sum of the two BenchmarkDotNet error margins. The "vs CSE" and ratio figures are BenchmarkDotNet's Ratio column, copied from the reports.
+
+CSE losses come first. Every row below that names a loss is outside error on the TFM it names.
+
+| Finding | Details |
+|---|---|
+| Boxed format: CSE is the slowest column on every TFM (CSE loss) | net10: 15.566 ns against BCL 5.052 ns and Enums.NET 5.543 ns (Ratio 0.32 and 0.36), all 0 B. net8: 30.214 ns against 6.316 and 14.789 ns. The typed CSE call on the same value takes 3.247 ns on net10 |
+| Boxed list format: CSE `TryFormatMany` is the slowest column on every TFM (CSE loss) | net10: 190.594 ns against a BCL loop at 157.100 ns and an Enums.NET loop at 149.443 ns (Ratio 0.82 and 0.78), all 224 B. net11: 189.764 ns against 152.002 and 141.655 ns |
+| Reflection-built names: CSE is the slowest column on every TFM (CSE loss) | net10: 38.36 ns against BCL 32.81 ns / 184 B and Enums.NET 21.55 ns / 0 B; CSE allocates 0 B. Even the names of an info held since setup (23.57 ns) are slower than Enums.NET's cached lookup |
+| Reflection-built values: Enums.NET is faster on every TFM, most on net8 and net9 (CSE loss) | net10: 32.70 vs 29.72 ns. net8: 137.76 vs 30.52 ns (Ratio 0.22); net9: 125.39 vs 28.56 ns (Ratio 0.23). CSE beats the BCL on every TFM (net10 206.56 ns / 584 B) |
+| Description: CSE is the slowest column on every TFM (CSE loss) | net10: 3.6495 ns against Enums.NET 2.6886 ns (Ratio 0.74) and NetEscapades 0.9027 ns (Ratio 0.25). The measured CSE row is the runtime metadata lookup. CSE also generates a `ToDescription()` switch, which this suite does not measure |
+| Invalid case-sensitive parse allocates 88 B and is slower than Enums.NET on every TFM (CSE loss) | net10: 22.5530 ns / 88 B against Enums.NET 13.2294 ns / 0 B (Ratio 0.59). The row calls the `EnumValueParser.TryParse` overload that reports an `EnumValueError`, so a rejected input builds the error. On net11 the BCL is faster too (18.7848 vs 21.8815 ns). The overload without the error, and `TryParseWire`, allocate nothing |
+| Undefined value ToString: CSE is slower than Enums.NET and NetEscapades on net10 (CSE loss) | net10: 3.3626 ns against 1.9853 and 1.7021 ns (Ratio 0.59 and 0.51), all 0 B. NetEscapades is also faster on net9 (1.7694 vs 2.0573 ns) and Enums.NET on net11 (1.1915 vs 1.4798 ns). On net8 CSE ties NetEscapades and beats Enums.NET. CSE's own net10 time is above its net8 (1.7688 ns) and net11 (1.4798 ns) times; the cause was not investigated |
+| GetNames: Enums.NET is faster and allocates nothing on every TFM (CSE loss) | net10: 18.99 ns / 184 B against 16.53 ns / 0 B (Ratio 0.87). CSE beats NetEscapades on net10 (19.67 ns) and ties it on net8, net9 and net11 (net11: 18.331 vs 18.312 ns). `GetNames()` builds a new array per call; the generated cached `Names` list is not measured |
+| GetValues: NetEscapades is faster on net10 and net11 (CSE loss) | net10: 11.71 vs 11.65 ns; net11: 9.123 vs 8.963 ns; all 0 B. On net8 CSE ties NetEscapades and Enums.NET (15.56, 15.54 and 15.62 ns) but allocates 104 B against Enums.NET's 0 B. On net9 CSE ties NetEscapades (15.22 vs 15.26 ns) and beats Enums.NET (15.91 ns) |
+| IsDefined of an undefined value: NetEscapades is faster on net10 and net8 (CSE loss, sub-nanosecond) | net10: 0.7609 vs 0.7258 ns; net8: 0.4484 vs 0.3707 ns. Both rows are below 1 ns, close to the timer |
+| Native AOT: CSE's binary is the second largest (CSE loss) | 1.3 MB against 1.2 MB for NetEscapades and the BCL sample; Enums.NET 2.0 MB. The earlier 2026-11-02 report, from an older CSE build, had 1.9 MB |
+| Parse: CSE is the fastest column in three of the four parse categories on every TFM | net10: valid case-sensitive 8.6618 ns (Enums.NET 18.3746, NetEscapades 28.8248, BCL 45.5131 ns); valid ignore-case 27.5424 ns (Enums.NET 39.2357, NetEscapades 45.0380, BCL 53.4897 ns); invalid ignore-case 8.1523 ns (Enums.NET 15.1186 ns). All 0 B |
+| Flags format: CSE is the fastest column and allocates the least on every TFM | net10: 25.0906 ns / 72 B against NetEscapades 37.0195 ns / 96 B, BCL 39.2608 ns / 96 B and Enums.NET 82.6982 ns / 280 B |
+| IsDefined: CSE beats the BCL and Enums.NET on every TFM | net10 defined: 0.4480 ns against Enums.NET 0.7049 ns and BCL 4.1192 ns; it ties NetEscapades (0.4532 ns), as on net8 (0.4483 vs 0.4454 ns, NetEscapades lower by mean). Sub-nanosecond rows; see Caveats |
+| ToString of a defined value: CSE ties or beats every column | net10: 0.5418 ns, tied with NetEscapades (0.5414 ns), against Enums.NET 1.1186 ns and BCL 9.0266 ns / 24 B. Sub-nanosecond rows |
+| GetValues and GetNames: CSE beats the BCL on every TFM | net10: 11.71 vs 31.33 ns and 18.99 vs 38.65 ns |
+| Native AOT: CSE, NetEscapades and the BCL publish with 0 IL warnings and run; Enums.NET publishes with 4 and runs | Enums.NET 5.0.0: IL2071, IL2075, IL2080, IL3050 from its reflection-based cache, all ILC. Every sample prints `parsed 20 checksum 971 ok` |
+
+---
+
+## Results by scenario
+
+All tables are net10 unless stated. "vs CSE" is BenchmarkDotNet's Ratio column: the mean divided by the CSE mean of the same category. Full tables: `benchmarks/results/enums/net10.0/results/`.
+
+### 1. ToString (member name)
+
+| Input | Variant | Mean | Error | vs CSE | Allocated |
+|---|---|---:|---:|---:|---:|
+| Defined | CSE `ToOptimizedString` | 0.5418 ns | 0.0009 ns | 1.00 | 0 B |
+| Defined | BCL `ToString` | 9.0266 ns | 0.1127 ns | 16.66 | 24 B |
+| Defined | Enums.NET `AsString` | 1.1186 ns | 0.0003 ns | 2.06 | 0 B |
+| Defined | NetEscapades `ToStringFast` | 0.5414 ns | 0.0008 ns | 1.00 | 0 B |
+| Undefined | CSE `ToOptimizedString` | 3.3626 ns | 0.0420 ns | 1.00 | 0 B |
+| Undefined | BCL `ToString` | 12.4800 ns | 0.1810 ns | 3.71 | 24 B |
+| Undefined | Enums.NET `AsString` | 1.9853 ns | 0.0013 ns | 0.59 | 0 B |
+| Undefined | NetEscapades `ToStringFast` | 1.7021 ns | 0.0072 ns | 0.51 | 0 B |
+| WireName (different work) | CSE `ToWireName` | 0.5418 ns | 0.0015 ns | n/a | 0 B |
+
+- For a defined value CSE and NetEscapades both run a generated `switch` that returns a string literal. They tie on net10 and net11. CSE is faster on net8 (0.6127 vs 0.9022 ns) and net9 (0.3245 vs 0.6137 ns). All of these rows are below 1 ns.
+- For an undefined value every column returns "99". The generated `switch` ends in `((int)value).ToString()`, so CSE no longer boxes and allocates nothing. The BCL boxes (24 B). CSE is still behind Enums.NET and NetEscapades on net10; see the summary for the other TFMs.
+- `ToWireName` returns the snake_case wire name "indigo". It is not a member name, so no comparison is claimed. It throws for an undefined value, so it has no undefined row.
+
+### 2. Parse by name
+
+| Mode | Input | Variant | Mean | Error | vs CSE | Allocated |
+|---|---|---|---:|---:|---:|---:|
+| Case-sensitive | Valid | CSE `EnumValueParser.TryParse` | 8.6618 ns | 0.0258 ns | 1.00 | 0 B |
+| Case-sensitive | Valid | CSE `IsDefined(string)` (bool only) | 0.6411 ns | 0.0072 ns | 0.07 | 0 B |
+| Case-sensitive | Valid | BCL `Enum.TryParse` | 45.5131 ns | 0.2225 ns | 5.25 | 0 B |
+| Case-sensitive | Valid | Enums.NET `Enums.TryParse` | 18.3746 ns | 0.0280 ns | 2.12 | 0 B |
+| Case-sensitive | Valid | NetEscapades `TryParse` | 28.8248 ns | 0.0091 ns | 3.33 | 0 B |
+| Case-sensitive | Invalid | CSE `EnumValueParser.TryParse` | 22.5530 ns | 0.1104 ns | 1.00 | 88 B |
+| Case-sensitive | Invalid | CSE `IsDefined(string)` (bool only) | 0.9960 ns | 0.0060 ns | 0.04 | 0 B |
+| Case-sensitive | Invalid | BCL `Enum.TryParse` | 79.3068 ns | 0.2383 ns | 3.52 | 0 B |
+| Case-sensitive | Invalid | Enums.NET `Enums.TryParse` | 13.2294 ns | 0.0800 ns | 0.59 | 0 B |
+| Case-sensitive | Invalid | NetEscapades `TryParse` | 57.9610 ns | 0.1911 ns | 2.57 | 0 B |
+| Ignore-case | Valid | CSE `TryParseWire` | 27.5424 ns | 0.0377 ns | 1.00 | 0 B |
+| Ignore-case | Valid | BCL `Enum.TryParse` | 53.4897 ns | 0.0267 ns | 1.94 | 0 B |
+| Ignore-case | Valid | Enums.NET `Enums.TryParse` | 39.2357 ns | 0.0209 ns | 1.42 | 0 B |
+| Ignore-case | Valid | NetEscapades `TryParse` | 45.0380 ns | 0.0345 ns | 1.64 | 0 B |
+| Ignore-case | Invalid | CSE `TryParseWire` | 8.1523 ns | 0.0447 ns | 1.00 | 0 B |
+| Ignore-case | Invalid | BCL `Enum.TryParse` | 76.9977 ns | 0.0275 ns | 9.45 | 0 B |
+| Ignore-case | Invalid | Enums.NET `Enums.TryParse` | 15.1186 ns | 0.0352 ns | 1.85 | 0 B |
+| Ignore-case | Invalid | NetEscapades `TryParse` | 58.2002 ns | 0.0067 ns | 7.14 | 0 B |
+
+- The generated helpers have no case-sensitive parse, so the case-sensitive CSE row is the runtime parser, `EnumValueParser.TryParse` with `EnumReadMode.Input` and `CaseInsensitive = false`. It does one lookup in an exact-match table of wire and member names.
+- `TryParseWire` always ignores case. For "pendingapproval" it probes the exact wire-name table, misses, then probes one ignore-case table of wire and member names, which hits.
+- The case-sensitive CSE row uses the overload with `out EnumValueError`. An invalid input misses every lookup, and that overload builds the error (the message data for a 400 response or an exception). That is the 88 B, on every TFM. `TryParseWire` and the `EnumValueParser.TryParse` overload without the error do not build it, so the invalid ignore-case row allocates nothing.
+- `IsDefined(string)` is a generated `switch` over member names. It returns only whether the name exists, so it is not a parse result and is not counted as a win.
+- net8 runs the netstandard2.1 build, which now looks names up by span without copying: every CSE parse row allocates 0 B there except the case-sensitive invalid row (88 B).
+- The net10 BCL rows (45.5131 to 79.3068 ns) are far above the BCL's net8, net9 and net11 values (net11: 14.0907 to 23.1647 ns). net10 ran third in this run and first in an earlier run, and the gap showed both times. The cause was not investigated, so the large net10 ratios against the BCL overstate CSE's lead.
+
+### 3. IsDefined(value)
+
+| Input | Variant | Mean | Error | vs CSE | Allocated |
+|---|---|---:|---:|---:|---:|
+| Defined | CSE | 0.4480 ns | 0.0057 ns | 1.00 | 0 B |
+| Defined | BCL | 4.1192 ns | 0.0029 ns | 9.20 | 0 B |
+| Defined | Enums.NET | 0.7049 ns | 0.0198 ns | 1.57 | 0 B |
+| Defined | NetEscapades | 0.4532 ns | 0.0074 ns | 1.01 | 0 B |
+| Undefined | CSE | 0.7609 ns | 0.0149 ns | 1.00 | 0 B |
+| Undefined | BCL | 3.5401 ns | 0.0007 ns | 4.65 | 0 B |
+| Undefined | Enums.NET | 1.3005 ns | 0.0141 ns | 1.71 | 0 B |
+| Undefined | NetEscapades | 0.7258 ns | 0.0004 ns | 0.95 | 0 B |
+
+- The generated `IsDefined(this Status)` is a `switch` over the constants, like NetEscapades'. On `[Flags]` enums it is a mask test instead, which also accepts any combination of defined bits while the others accept only declared members, so this scenario uses the non-flags `Status`.
+- CSE and NetEscapades tie on the defined value. NetEscapades is faster on the undefined value (0.7258 vs 0.7609 ns), outside error. On net9 and net11 CSE is the fastest column for both inputs. All CSE and NetEscapades rows are below 1 ns, so treat the gaps between them as noise-level.
+
+### 4. GetValues / GetNames
+
+| Category | Variant | Mean | Error | vs CSE | Allocated |
+|---|---|---:|---:|---:|---:|
+| GetValues | CSE | 11.71 ns | 0.019 ns | 1.00 | 0 B |
+| GetValues | BCL | 31.33 ns | 0.161 ns | 2.68 | 104 B |
+| GetValues | Enums.NET | 14.29 ns | 0.243 ns | 1.22 | 0 B |
+| GetValues | NetEscapades | 11.65 ns | 0.017 ns | 0.99 | 0 B |
+| GetNames | CSE | 18.99 ns | 0.167 ns | 1.00 | 184 B |
+| GetNames | BCL | 38.65 ns | 0.286 ns | 2.04 | 184 B |
+| GetNames | Enums.NET | 16.53 ns | 0.104 ns | 0.87 | 0 B |
+| GetNames | NetEscapades | 19.67 ns | 0.120 ns | 1.04 | 184 B |
+
+- CSE, NetEscapades and the BCL return a new array on every call. Enums.NET returns a cached `IReadOnlyList`. CSE also generates cached `Names` and `Values` lists that allocate nothing to read; this suite measures `GetNames()` and `GetValues()` only.
+- GetValues shows 0 B for CSE and NetEscapades on net10 and net11, but 104 B on net8 and net9. The generated code is the same on every TFM, so this is a runtime effect, not a CSE change. The cause was not investigated.
+
+### 5. Flags
+
+| Category | Variant | Mean | Error | Ratio | Allocated |
+|---|---|---:|---:|---:|---:|
+| Format | CSE `ToOptimizedString` | 25.0906 ns | 0.1094 ns | 1.00 | 72 B |
+| Format | BCL `ToString` | 39.2608 ns | 0.1781 ns | 1.56 | 96 B |
+| Format | Enums.NET `FormatFlags` | 82.6982 ns | 0.7393 ns | 3.30 | 280 B |
+| Format | NetEscapades `ToStringFast` | 37.0195 ns | 0.1356 ns | 1.48 | 96 B |
+| HasFlag (no CSE column) | BCL `HasFlag` (baseline) | 0.2184 ns | 0.0072 ns | 1.00 | 0 B |
+| HasFlag (no CSE column) | Enums.NET `HasAllFlags` | 0.5718 ns | 0.0051 ns | 2.62 | 0 B |
+| HasFlag (no CSE column) | NetEscapades `HasFlagFast` | 0.2994 ns | 0.0087 ns | 1.37 | 0 B |
+| WireName (different work) | CSE `ToWireName` | 58.2851 ns | 0.2335 ns | n/a | 152 B |
+
+- The Format ratio is relative to CSE; the HasFlag ratio is relative to the BCL.
+- `Write | Execute | Delete` is not a declared member. CSE now formats undeclared combinations in generated code: it picks flags from the largest value down and writes the names with `string.Create`, so it allocates only the result string (72 B). NetEscapades falls back to `Enum.ToString()` (96 B). Enums.NET joins its cached single-flag names (280 B).
+- HasFlag rows are at timer resolution on every TFM (0.1666 to 0.8052 ns). The BCL and NetEscapades rows cannot be told apart, and the net8 BCL (0.1757 ns) and NetEscapades (0.2472 ns) rows are noisy (CV 12.0% and 11.8%). CSE generates no `HasFlag` helper. `Enum.HasFlag` is a JIT intrinsic and does not box, so the BCL row is the CSE answer.
+- `ToWireName` returns "write,execute,delete" (wire names of single flags, no space). That is different output, so no comparison is claimed.
+
+### 6. Description attribute
+
+| Variant | Mean | Error | vs CSE | Allocated |
+|---|---:|---:|---:|---:|
+| CSE `EnumMetadata.Get<T>().TryGetMember(...).Description` | 3.6495 ns | 0.0145 ns | 1.00 | 0 B |
+| Enums.NET `AsString(EnumFormat.Description)` | 2.6886 ns | 0.0079 ns | 0.74 | 0 B |
+| NetEscapades `ToStringFast(useMetadataAttributes: true)` | 0.9027 ns | 0.0013 ns | 0.25 | 0 B |
+
+- The CSE row is a metadata lookup: a `Func<TEnum, ulong>` delegate widens the value, then a `Dictionary<ulong, ...>` finds the member. NetEscapades generates a `switch`.
+- CSE now also generates `ToDescription()`, a `switch` that returns the `[Description]` literal. This suite does not measure it, so the row above is not CSE's fastest description API.
+- Members without `[Description]` differ: the metadata returns the member's XML doc summary, `ToDescription()` returns null, Enums.NET returns null and NetEscapades returns the member name. The input is the one member that has the attribute.
+
+### 7. Boxed formatting
+
+| Category | Variant | Mean | Error | vs CSE | Allocated |
+|---|---|---:|---:|---:|---:|
+| Format | CSE `EnumValueFormatter.Format(object, EnumConventions.Default)` | 15.566 ns | 0.0403 ns | 1.00 | 0 B |
+| Format | CSE with `CanHandle = _ => true` | 16.868 ns | 0.0371 ns | 1.08 | 0 B |
+| Format | CSE typed `Format(Shade, EnumWireFormat.String)` (reference only) | 3.247 ns | 0.0055 ns | 0.21 | 0 B |
+| Format | BCL `object.ToString()` | 5.052 ns | 0.0124 ns | 0.32 | 0 B |
+| Format | Enums.NET `Enums.AsString(Type, object)` | 5.543 ns | 0.0175 ns | 0.36 | 0 B |
+| FormatMany | CSE `TryFormatMany` | 190.594 ns | 0.8044 ns | 1.00 | 224 B |
+| FormatMany | BCL loop over `ToString()` | 157.100 ns | 0.5762 ns | 0.82 | 224 B |
+| FormatMany | Enums.NET loop over `AsString(Type, object)` | 149.443 ns | 0.7262 ns | 0.78 | 224 B |
+
+- With the default `CanHandle` the formatter skips the delegate and does one metadata lookup, which also answers whether the type is handled (`EnumValueFormatter.TryGetInfo`). A custom `CanHandle`, even `_ => true`, is invoked first and the metadata lookup follows, so that row measures the delegate call on top of the same lookup. It is slower than the default on every TFM: net10 16.868 vs 15.566 ns (1.08), net11 15.414 vs 14.442 ns, net8 30.846 vs 30.214 ns and net9 29.437 vs 27.535 ns.
+- The boxed CSE call is 15.566 ns against 3.247 ns for the typed call on the same value. The extra time is in the registry lookup and the boxed formatting path; it was not profiled.
+- FormatMany: every row enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each element, so every row allocates the same 224 B. CSE is slower on every TFM.
+
+### 8. Reflection-built names and values
+
+| Category | Variant | Mean | Error | vs CSE | Allocated |
+|---|---|---:|---:|---:|---:|
+| Names | CSE `GetOrCreateWithReflection(Type, PascalCase).WireNames` | 38.36 ns | 0.317 ns | 1.00 | 0 B |
+| Names | CSE `WireNames` of an info held since setup (reference only) | 23.57 ns | 0.181 ns | 0.61 | 0 B |
+| Names | BCL `Enum.GetNames(Type)` | 32.81 ns | 0.323 ns | 0.86 | 184 B |
+| Names | Enums.NET `Enums.GetNames(Type)` | 21.55 ns | 0.110 ns | 0.56 | 0 B |
+| Values | CSE `Members[i].RawValue` | 32.70 ns | 0.475 ns | 1.00 | 0 B |
+| Values | BCL `Enum.GetValuesAsUnderlyingType(Type)` with `Convert.ToInt64` | 206.56 ns | 0.610 ns | 6.32 | 584 B |
+| Values | Enums.NET `Enums.GetMembers(Type)` with `ToInt64()` | 29.72 ns | 0.540 ns | 0.91 | 0 B |
+
+- `GetOrCreateWithReflection` now serves a cached reflection info without running the module constructor again: it reads a `ConcurrentDictionary` keyed by `(Type, EnumNaming)`, then checks the registry in case generated metadata appeared since. The gap between the per-call row and the held-info row (38.36 vs 23.57 ns) is that lookup.
+- Even the held-info row is slower than Enums.NET's cached lookup (23.57 vs 21.55 ns). Both sum 20 strings through an `IReadOnlyList<string>`; the cause of the gap was not investigated.
+- Values on net8 and net9 are much slower than on net10 and net11 (137.76 and 125.39 ns against 32.70 and 33.80 ns), while Enums.NET stays at 28.56 to 30.52 ns. The CSE row reads 20 members through `IReadOnlyList<IEnumMemberInfo>` and the `RawValue` interface property; the cause of the net8/net9 cost was not profiled.
+
+### 9. Native AOT (net10, linux-x64)
+
+> This section is script-driven, not BenchmarkDotNet. `dotnet publish -c Release -r linux-x64 -p:TreatWarningsAsErrors=false -p:TrimmerSingleWarn=false` from a clean obj. `TrimmerSingleWarn=false` lists each warning per member, so the counts are higher than a default publish shows. Each sample formats, parses and enumerates the same 20-member `Status` enum and prints a checksum.
+>
+> The report was generated on 2026-11-06 at 06:12 UTC on the `integ/all` branch, after the CSE changes measured in sections 1 to 8 (generated `IsDefined` switch, span name tables, generated flags formatter and others). The earlier 2026-11-02 report, from the older build, had a 1.9 MB CSE binary.
+
+| Variant | AOT publish | IL warnings (distinct) | Native binary | Exit code | Output |
+|---|---|---:|---:|---:|---|
+| BclAot | yes | 0 | 1.2 MB | 0 | `parsed 20 checksum 971 ok` |
+| CseAot | yes | 0 | 1.3 MB | 0 | `parsed 20 checksum 971 ok` |
+| EnumsNetAot | yes | 4 (IL2071 ×1, IL2075 ×1, IL2080 ×1, IL3050 ×1; all ILC) | 2.0 MB | 0 | `parsed 20 checksum 971 ok` |
+| NetEscapadesAot | yes | 0 | 1.2 MB | 0 | `parsed 20 checksum 971 ok` |
+
+- Enums.NET's warnings come from `Enums.GetEnumValidatorAttribute(Type)` (`MakeGenericType`, `GetInterfaces`) and `Cacher.CreateCache` (`GetFields`). The sample still runs. It uses the net7.0 build of Enums.NET, which has no package dependencies.
+- CSE's binary is 0.1 MB larger than NetEscapades'. It carries the runtime library (metadata, parser, formatter). The size was not broken down.
+- Wall time was 2 ms for every sample (median of 5). That is not a startup result.
+
+---
+
+## Cross-TFM
+
+Mean, with allocation where it is not 0 B. Run order net8, net9, net10, net11. Per-TFM reports: `benchmarks/results/enums/{tfm}/results/`.
+
+| Scenario | Variant | net8 | net9 | net10 | net11 |
+|---|---|---|---|---|---|
+| ToString, defined | CSE | 0.6127 ns | 0.3245 ns | 0.5418 ns | 0.6133 ns |
+| | Enums.NET | 0.9037 ns | 0.9036 ns | 1.1186 ns | 1.1906 ns |
+| | NetEscapades | 0.9022 ns | 0.6137 ns | 0.5414 ns | 0.6135 ns |
+| | BCL | 11.5296 ns / 24 B | 10.2689 ns / 24 B | 9.0266 ns / 24 B | 10.1011 ns / 24 B |
+| ToString, undefined | CSE | 1.7688 ns | 2.0573 ns | 3.3626 ns | 1.4798 ns |
+| | Enums.NET | 2.9234 ns | 2.6341 ns | 1.9853 ns | 1.1915 ns |
+| | NetEscapades | 1.7692 ns | 1.7694 ns | 1.7021 ns | 1.6093 ns |
+| | BCL | 14.2128 ns / 24 B | 12.4408 ns / 24 B | 12.4800 ns / 24 B | 9.8266 ns / 24 B |
+| Parse case-sensitive, valid | CSE | 11.235 ns | 11.447 ns | 8.6618 ns | 8.9246 ns |
+| | Enums.NET | 20.967 ns | 22.231 ns | 18.3746 ns | 19.9345 ns |
+| | NetEscapades | 28.512 ns | 29.354 ns | 28.8248 ns | 29.0920 ns |
+| | BCL | 28.457 ns | 26.225 ns | 45.5131 ns | 14.0907 ns |
+| Parse case-sensitive, invalid | CSE | 26.283 ns / 88 B | 25.743 ns / 88 B | 22.5530 ns / 88 B | 21.8815 ns / 88 B |
+| | Enums.NET | 19.544 ns | 16.057 ns | 13.2294 ns | 12.6380 ns |
+| | NetEscapades | 58.813 ns | 57.316 ns | 57.9610 ns | 57.8586 ns |
+| | BCL | 42.218 ns | 36.244 ns | 79.3068 ns | 18.7848 ns |
+| Parse ignore-case, valid | CSE | 17.280 ns | 15.772 ns | 27.5424 ns | 13.3809 ns |
+| | Enums.NET | 31.352 ns | 27.324 ns | 39.2357 ns | 27.6431 ns |
+| | NetEscapades | 36.311 ns | 34.295 ns | 45.0380 ns | 33.7045 ns |
+| | BCL | 32.534 ns | 28.506 ns | 53.4897 ns | 17.9229 ns |
+| Parse ignore-case, invalid | CSE | 11.264 ns | 10.964 ns | 8.1523 ns | 8.1444 ns |
+| | Enums.NET | 20.696 ns | 17.505 ns | 15.1186 ns | 17.0603 ns |
+| | NetEscapades | 59.474 ns | 58.500 ns | 58.2002 ns | 57.8152 ns |
+| | BCL | 38.001 ns | 32.491 ns | 76.9977 ns | 23.1647 ns |
+| IsDefined, defined | CSE | 0.4483 ns | 0.3565 ns | 0.4480 ns | 0.3781 ns |
+| | Enums.NET | 0.6926 ns | 0.7048 ns | 0.7049 ns | 0.6885 ns |
+| | NetEscapades | 0.4454 ns | 0.7368 ns | 0.4532 ns | 0.4266 ns |
+| | BCL | 5.1027 ns | 5.7108 ns | 4.1192 ns | 3.8279 ns |
+| IsDefined, undefined | CSE | 0.4484 ns | 0.3748 ns | 0.7609 ns | 0.4298 ns |
+| | Enums.NET | 1.5039 ns | 1.3027 ns | 1.3005 ns | 1.2765 ns |
+| | NetEscapades | 0.3707 ns | 0.4524 ns | 0.7258 ns | 1.0132 ns |
+| | BCL | 5.0726 ns | 5.3400 ns | 3.5401 ns | 3.5341 ns |
+| GetValues | CSE | 15.56 ns / 104 B | 15.22 ns / 104 B | 11.71 ns | 9.123 ns |
+| | Enums.NET | 15.62 ns | 15.91 ns | 14.29 ns | 15.616 ns |
+| | NetEscapades | 15.54 ns / 104 B | 15.26 ns / 104 B | 11.65 ns | 8.963 ns |
+| | BCL | 44.47 ns / 104 B | 35.03 ns / 104 B | 31.33 ns / 104 B | 29.474 ns / 104 B |
+| GetNames | CSE | 20.45 ns / 184 B | 19.42 ns / 184 B | 18.99 ns / 184 B | 18.331 ns / 184 B |
+| | Enums.NET | 17.39 ns | 17.18 ns | 16.53 ns | 16.030 ns |
+| | NetEscapades | 20.37 ns / 184 B | 19.58 ns / 184 B | 19.67 ns / 184 B | 18.312 ns / 184 B |
+| | BCL | 29.68 ns / 184 B | 30.92 ns / 184 B | 38.65 ns / 184 B | 24.735 ns / 184 B |
+| Flags format | CSE | 22.6283 ns / 72 B | 22.8844 ns / 72 B | 25.0906 ns / 72 B | 23.4963 ns / 72 B |
+| | Enums.NET | 91.2175 ns / 280 B | 95.0625 ns / 280 B | 82.6982 ns / 280 B | 81.0763 ns / 280 B |
+| | NetEscapades | 39.4803 ns / 96 B | 43.0297 ns / 96 B | 37.0195 ns / 96 B | 36.4224 ns / 96 B |
+| | BCL | 37.5867 ns / 96 B | 42.3831 ns / 96 B | 39.2608 ns / 96 B | 38.7625 ns / 96 B |
+| HasFlag (timer resolution) | BCL | 0.1757 ns (noisy, CV 12.0%) | 0.1666 ns | 0.2184 ns | 0.1682 ns |
+| | Enums.NET | 0.8052 ns | 0.5817 ns | 0.5718 ns | 0.5819 ns |
+| | NetEscapades | 0.2472 ns (noisy, CV 11.8%) | 0.2170 ns | 0.2994 ns | 0.2109 ns |
+| Description | CSE | 4.4773 ns | 4.5524 ns | 3.6495 ns | 3.1203 ns |
+| | Enums.NET | 4.2669 ns | 3.4942 ns | 2.6886 ns | 2.7039 ns |
+| | NetEscapades | 0.5411 ns | 0.9030 ns | 0.9027 ns | 0.9022 ns |
+| Boxed format | CSE | 30.214 ns | 27.535 ns | 15.566 ns | 14.442 ns |
+| | CSE, `CanHandle = _ => true` | 30.846 ns | 29.437 ns | 16.868 ns | 15.414 ns |
+| | CSE typed (reference) | 8.229 ns | 7.145 ns | 3.247 ns | 3.567 ns |
+| | Enums.NET | 14.789 ns | 15.077 ns | 5.543 ns | 5.888 ns |
+| | BCL | 6.316 ns | 7.255 ns | 5.052 ns | 5.219 ns |
+| Boxed list format | CSE | 634.760 ns / 224 B | 498.842 ns / 224 B | 190.594 ns / 224 B | 189.764 ns / 224 B |
+| | Enums.NET loop | 529.243 ns / 224 B | 469.709 ns / 224 B | 149.443 ns / 224 B | 141.655 ns / 224 B |
+| | BCL loop | 539.468 ns / 224 B | 486.657 ns / 224 B | 157.100 ns / 224 B | 152.002 ns / 224 B |
+| Reflection names | CSE | 45.72 ns | 40.25 ns | 38.36 ns | 40.33 ns |
+| | CSE, held info (reference) | 24.27 ns | 24.18 ns | 23.57 ns | 23.28 ns |
+| | Enums.NET | 22.09 ns | 22.14 ns | 21.55 ns | 20.94 ns |
+| | BCL | 36.17 ns / 184 B | 36.42 ns / 184 B | 32.81 ns / 184 B | 35.59 ns / 184 B |
+| Reflection values | CSE | 137.76 ns | 125.39 ns | 32.70 ns | 33.80 ns |
+| | Enums.NET | 30.52 ns | 28.56 ns | 29.72 ns | 28.84 ns |
+| | BCL | 932.84 ns / 584 B | 1,008.29 ns / 584 B | 206.56 ns / 584 B | 191.69 ns / 584 B |
+
+- The boxed format, boxed list format, reflection names and description losses hold on every TFM. The reflection values loss against Enums.NET holds on every TFM and is largest on net8 and net9.
+- net8 runs CSE's netstandard2.1 build. Parse and IsDefined no longer show a net8 penalty: CSE is the fastest parse column on net8 in three of four categories, as on the other TFMs.
+- The net10 BCL parse rows (45.5131 to 79.3068 ns) are well above the BCL's other TFMs. They were high in an earlier run where net10 ran first and again here where it ran third. The cause was not investigated.
+
+---
+
+## Semantic differences
+
+The parity checks pick inputs where every column agrees. Outside those inputs the libraries do different things, so speed is not the only difference.
+
+- CSE's primary spelling is a wire name (snake_case by default, or `[JsonStringEnumMemberName]` / `[EnumMember]` / a naming policy), which its JSON, ASP.NET Core, OpenAPI and EF Core integrations use. `ToOptimizedString` returns the member name and `ToWireName` the wire name. The `ToWireName` rows do different work and are not compared with anything.
+- CSE parsing accepts `[EnumAlias]` spellings. Enums.NET can accept extra spellings through `EnumFormat` values or custom formats. NetEscapades accepts one metadata spelling per member and has no alias attribute.
+- For numeric strings, CSE accepts the number of a defined member and rejects undefined numbers such as "99". The BCL and Enums.NET accept any number in range. NetEscapades accepts any int unless number parsing is turned off.
+- The BCL and Enums.NET trim whitespace; CSE and NetEscapades do not. The BCL parses "A, B" lists on any enum and Enums.NET only on `[Flags]` enums. NetEscapades does not parse lists, and CSE parsing rejects them.
+- `TryParseWire` always ignores case. Case-sensitive parsing needs the runtime `EnumValueParser` with `CaseInsensitive = false`.
+- CSE's error-reporting parser overload explains why a value was rejected (`EnumValueError`, with the accepted wire names), which feeds 400 responses and exceptions. That is what an invalid input pays for in the case-sensitive row. The overload without the error does not pay it.
+- On `[Flags]` enums CSE `IsDefined` returns true for any combination of defined flags. The others return true only for a declared member.
+- For an undefined value `ToWireName` throws and `ToOptimizedString` returns the number, as Enums.NET and NetEscapades do.
+
+---
+
+## Feature matrix
+
+Enums.NET links point at tag [`5.0.0`](https://github.com/TylerBrinkley/Enums.NET/tree/5.0.0). NetEscapades links point at tag [`v1.0.0-beta21`](https://github.com/andrewlock/NetEscapades.EnumGenerators/tree/v1.0.0-beta21); its repository has no root README at that tag, so docs links go to [docs/README.md](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md). CSE cells come from this repository. The Native AOT row comes from section 9; every other row comes from reading source, nuspecs or docs, not from running code.
+
+| Feature | Enums.NET 5.0.0 | NetEscapades.EnumGenerators 1.0.0-beta21 | CSharpEssentials.Enums 7.0.0 |
+|---|---|---|---|
+| Runtime reflection | Yes: `GetFields` and attribute reads when the per-enum cache is built, and `MakeGenericType` for the non-generic API ([Enums.cs#L100](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L100), [Enums.cs#L4352](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L4352)) | None in the generated helpers, which are `switch` expressions over constants ([SourceGenerationHelper.cs#L149](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/src/NetEscapades.EnumGenerators.Generators/SourceGenerationHelper.cs#L149)) | None on the `[StringEnum]` path. Reflection is opt-in only (`EnumMetadata.GetOrCreateWithReflection`, annotated `[RequiresUnreferencedCode]` / `[RequiresDynamicCode]`) |
+| Source generator | No; a cached generic `EnumCache` per enum type ([EnumCache.cs](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/EnumCache.cs)) | Yes: an `{Enum}Extensions` class per `[EnumExtensions]` enum ([docs/README.md](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md#adding-netescapadesenumgenerators-to-your-project)) | Yes: an `{Enum}Extensions` class and the enum's metadata per `[StringEnum]` enum, bundled in the main package |
+| Native AOT publish without warnings, and runs (measured) | No warnings-free publish: 4 IL warnings (all ILC). It runs | Yes: 0 warnings, runs | Yes: 0 warnings, runs |
+| `IsAotCompatible` / trim annotations | Neither ([Enums.NET.csproj](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.NET.csproj)) | Not declared in any project file ([RuntimeDependencies.csproj](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/src/NetEscapades.EnumGenerators.RuntimeDependencies/NetEscapades.EnumGenerators.RuntimeDependencies.csproj)) | `IsAotCompatible=true` on the net9.0, net10.0 and net11.0 builds, not on the netstandard builds that net8 consumers get (`CSharpEssentials.Enums/CSharpEssentials.Enums.csproj:29`) |
+| Extra runtime dependencies | net7.0 and netcoreapp3.0: none (the AOT sample uses the net7.0 build). netstandard2.0/2.1: `System.ComponentModel.Annotations` 5.0.0 and `System.Runtime.CompilerServices.Unsafe` 6.0.0; net461: `Unsafe` 6.0.0 ([nuspec](https://api.nuget.org/v3-flatcontainer/enums.net/5.0.0/enums.net.nuspec)) | `NetEscapades.EnumGenerators.RuntimeDependencies` 1.0.0-beta21 (holds `EnumParseOptions`, `SerializationOptions`), plus the attributes assembly from the Generators package ([nuspec](https://api.nuget.org/v3-flatcontainer/netescapades.enumgenerators/1.0.0-beta21/netescapades.enumgenerators.nuspec), [avoiding runtime dependencies](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md#avoiding-runtime-dependencies)) | None: the csproj has no `PackageReference` or `ProjectReference` (checked in `CSharpEssentials.Enums/CSharpEssentials.Enums.csproj`; the packed nuspec was not checked) |
+| Attribute required on the enum | No; works on any enum ([README](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/README.md#enumsnet-demo)) | Yes, `[EnumExtensions]`, or `[EnumExtensions<T>]` for an enum you do not own ([docs/README.md#L346](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md?plain=1#L346)) | Yes, `[StringEnum]` |
+| Base class required | No | No | No |
+| Instantiation per request | No; static generic API over a per-type cache | No; static generated methods | No; static generated methods and one metadata object per enum |
+| DI registration required | No | No | No; a generated `[ModuleInitializer]` registers the metadata (`CSharpEssentials.Enums.Generators/StringEnumSourceWriter.cs:99`) |
+| Fast ToString | `AsString()` from the cached member table ([Enums.cs#L691](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L691)) | Generated `ToStringFast()` ([docs/README.md#L127](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md?plain=1#L127)) | Generated `ToOptimizedString()` (member name) and `ToWireName()` (wire name) |
+| Parse | `Enums.TryParse` with `ignoreCase`, names and numbers, extra `EnumFormat` spellings ([Enums.cs#L1370](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L1370)) | Generated `TryParse` with `ignoreCase`, span overloads, optional metadata match ([docs/README.md#L221](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md?plain=1#L221)) | Generated `TryParseWire` (wire names, member names in any case, aliases, defined numbers); runtime `EnumValueParser` with conventions |
+| Flags API | `FlagEnums`: `HasAllFlags`, `HasAnyFlags`, `GetFlags`, `FormatFlags` and more ([FlagEnums.cs](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/FlagEnums.cs)) | Generated `HasFlagFast()` ([docs/README.md#L284](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md?plain=1#L284)) | Generated formatting of undeclared combinations, wire formatting and parsing of flag lists, analyzers CSE0005-CSE0008; no `HasFlag` helper |
+| Description metadata | `EnumFormat.Description` and `EnumFormat.DisplayName` ([EnumFormat.cs#L58-L66](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/EnumFormat.cs#L58-L66)) | `[Description]` or `[Display]`, one source per enum ([docs/README.md#L291-L307](https://github.com/andrewlock/NetEscapades.EnumGenerators/blob/v1.0.0-beta21/docs/README.md?plain=1#L291-L307)) | Generated `ToDescription()` (`[Description]` text or null), and `[Description]` or the XML summary in the metadata (`IEnumMemberInfo.Description`) |
+| JSON, ASP.NET Core binding, OpenAPI, EF Core | None | None | Yes, in `CSharpEssentials.Json`, `.AspNetCore`, `.AspNetCore.OpenApi` / `.Swashbuckle` and `.EntityFrameworkCore` |
+| License | MIT | MIT | MIT |
+
+---
+
+## Boxed formatting and reflection-built metadata
+
+Method notes for sections 7 and 8. NetEscapades.EnumGenerators is not used by these two classes: its generated methods take the typed enum, never an `object` or a `Type`, and need `[EnumExtensions]` on the enum.
+
+Methodology:
+- Format: the value is boxed once in setup, and no row boxes it again. The typed `Format(Shade, EnumWireFormat.String)` row is reference only. FormatMany: every row enumerates the `Shade[]` through the non-generic `IEnumerable`, which boxes each of the eight elements per call. The BCL and Enums.NET rows are hand-written loops, because neither library has a collection formatter.
+- `Shade` has `[StringEnum(Naming = EnumNaming.PascalCase)]`. Its wire names equal its member names, so CSE, the BCL and Enums.NET write the same text. The existing `Color` enum uses snake_case wire names, so it is not reused.
+- `PlainStatus` has the members and values of `Status` and no attribute at all. CSE has no generated metadata for it, so `GetOrCreateWithReflection` takes the reflection path. The self-check fails if `PlainStatus` is ever registered.
+- Every CSE row in `ReflectionInfoComparison` except the held-info reference row (`CSharpEssentials_HeldNames`) calls `GetOrCreateWithReflection` per invocation. That is the documented API: it builds the info once and caches it. The enum type is held in a field, as a caller that has only a `Type` would hold it.
+- There is no undefined-value row. For an undefined value CSE throws `EnumValueException` while the BCL returns the number ("99"), so the outputs differ.
+- The BCL `GetValuesAsUnderlyingType(Type)` returns a new array per call, and `Array.GetValue` boxes each element. That is the cost of the non-generic API. CSE lists members in declaration order and Enums.NET in value order. The sums do not depend on order, and `PlainStatus` values ascend anyway.
+
+What the parity check enforces:
+- Format: every row returns "Indigo".
+- FormatMany: every row returns the same total, computed from `Enum.GetNames<Shade>()`, and the same list text "Red,Orange,Yellow,Green,Cyan,Blue,Indigo,Violet".
+- Names and Values: every row returns the sum computed from `Enum.GetNames<Status>()` and `Enum.GetValues<Status>()`.
+
+Feature matrix for these classes, from reading each library's source and docs (not measured):
+
+| Feature | BCL | Enums.NET 5.0.0 | NetEscapades.EnumGenerators 1.0.0-beta21 | CSharpEssentials.Enums 7.0.0 |
+|---|---|---|---|---|
+| Format a boxed enum (`object`) | `object.ToString()` on the boxed enum | `Enums.AsString(Type, object)` ([Enums.cs#L3439](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L3439)) | None: generated methods take the typed enum | `EnumValueFormatter.Format` and `TryFormat(object, EnumConventions)`. Needs generated metadata |
+| Format a collection of boxed enums | None | None | None | `EnumValueFormatter.TryFormatMany` (one entry per value; flags split into single flags) |
+| Names and values from a `Type` for an enum without an attribute | `Enum.GetNames(Type)`, `Enum.GetValuesAsUnderlyingType(Type)`: a new array per call | `Enums.GetNames(Type)`, `Enums.GetMembers(Type)`: cached per type ([Enums.cs#L3040](https://github.com/TylerBrinkley/Enums.NET/blob/5.0.0/Src/Enums.NET/Enums.cs#L3040)) | None: needs `[EnumExtensions]` | `EnumMetadata.GetOrCreateWithReflection(Type, EnumNaming)`: cached, annotated `[RequiresUnreferencedCode]` and `[RequiresDynamicCode]` |
+
+Not measured here: reflection-built infos convert the value to a raw number on every `Format`, `IsDefined` and member lookup, and `FromRawValue` goes through `Enum.ToObject` (`ReflectionEnumInfoBuilder.cs`). The Names and Values rows read precomputed `RawValue`s, so they do not reach this code. Also left out: a `Format` or `IsDefined` row on a reflection-built info, `EnumMetadata.TryGet(Type)` against a `ConcurrentDictionary` baseline, and the generated `ToDescription()`, `Names` and `Values` members.
+
+---
+
+## Caveats
+
+- Two net8 HasFlag rows stayed noisy after two reruns (CV 12.0% and 11.8%), and three suites come from next-morning reruns (see [How these numbers were produced](#how-these-numbers-were-produced)).
+- Rows below about 1 ns are close to the timer and loop overhead. Treat the defined ToString, IsDefined and HasFlag gaps among the fastest columns as orders of magnitude, not exact ratios. The HasFlag rows (0.1666 to 0.8052 ns) are at timer resolution and are not ranked.
+- The net8 column runs CSE's netstandard2.1 build; the other columns run the matching TFM build.
+- The net10 BCL parse rows are far above the other TFMs in two runs with different TFM orders. The cause was not investigated.
+- GetValues allocation drops to 0 B on net10 and net11 for both generated libraries without any code change. The cause was not investigated.
+- The Native AOT report is a separate script run from 2026-11-06, not part of the BenchmarkDotNet suite.
+- The "why" notes on CSE losses come from reading the source. They were not profiled.
+- AOT warning counts use `TrimmerSingleWarn=false`. The 2 ms AOT wall time is not a result.
+- The CSE column is the 7.0.0 working tree on branch `integ/all`, which may differ from the last version published to NuGet.
+
+---
+
+## How to reproduce
+
+```bash
+cd benchmarks
+./run-benchmarks.sh --project enums                       # all TFMs (net8-net11), all eight classes, committed configuration
+./run-benchmarks.sh --project enums --tfm net10.0         # one TFM
+./run-benchmarks.sh --project enums --quick --tfm net10.0 # one TFM, Short job
+./enums-aot/run-enums-aot.sh                              # Native AOT report (all four samples)
+```
+
+`--quick` without `--tfm` runs on net9.0, the script default. Its patterns select each of the eight classes; the Short job's numbers are not comparable with the committed ones. Results are stored per framework under `benchmarks/results/enums/{tfm}/results/` (GitHub Markdown, CSV, JSON and HTML). The AOT report is `benchmarks/results/enums/aot/aot-report.md`; raw publish and run logs go to `benchmarks/results/enums/aot/logs/`. `run-enums-aot.sh` accepts variant names to run a subset and `RUNS` (default 5) for the wall-time median.

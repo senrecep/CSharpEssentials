@@ -92,9 +92,9 @@ New startup validation in `AddIdempotency`:
 - Every idempotency problem (`Idempotency.KeyMissing`, `KeyInvalid`, `InFlight`, `KeyReused`, `ScopeRequired`) is `application/problem+json` with a top-level `code` member and `errorCodes`. Clients can branch on `code`: `KeyReused` is 422, `InFlight` is 409 with `Retry-After`, the others are 400.
 - A key sent as a structured-field string (`"abc"`) is accepted and names the same record as the bare `abc`. Malformed quoting, several headers or an empty value return 400 `Idempotency.KeyInvalid`. An endpoint that reads the header itself and passes it on, for example to a Mediator command, must parse it with `IdempotencyKeyHeader.TryParse`; the raw `"abc"` keeps its quotes, which the Mediator behavior rejects as `Idempotency.KeyInvalid`.
 - `AddSwagger` in `CSharpEssentials.AspNetCore.Swashbuckle` now calls `AddIdempotencyConventions()`, so generated documents describe the `Idempotency-Key` header and the problem responses of idempotent endpoints. Regenerate any checked-in OpenAPI snapshot.
-- Start new endpoints in `Mode = Observe` and switch to `Enforce` after the decision counters look right; see the [rollout steps](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Idempotency/Readme.MD#rollout-observe--enforce).
-- For operations where a duplicate must be impossible (payments), the EF Core store (`ITransactionalIdempotencyRecordStore`) commits the key with your data; see [Transactional store for money movement](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Idempotency/Readme.MD#transactional-store-for-money-movement).
-- Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`), and the middleware's log messages that name a record now include a key hash, never the key or the scope. See the [Idempotency Readme](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Idempotency/Readme.MD#telemetry).
+- Start new endpoints in `Mode = Observe` and switch to `Enforce` after the decision counters look right; see the [rollout steps](/packages/idempotency#rollout-observe--enforce).
+- For operations where a duplicate must be impossible (payments), the EF Core store (`ITransactionalIdempotencyRecordStore`) commits the key with your data; see [Transactional store for money movement](/packages/idempotency#transactional-store-for-money-movement).
+- Decisions are counted on `idempotency.decisions` (meter `CSharpEssentials.Idempotency`), and the middleware's log messages that name a record now include a key hash, never the key or the scope. See the [Idempotency Readme](/packages/idempotency#telemetry).
 
 ## Custom stores
 
@@ -125,9 +125,9 @@ public sealed class SqlIdempotencyRecordStoreTests : IdempotencyRecordStoreContr
 }
 ```
 
-Set `UseRealClock => true` for a store whose expiry runs on its own clock (Redis TTL, a database `now()`), and `IsReservationAtomic => false` for a best-effort store. See the [Testing package Readme](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Idempotency.Testing/Readme.MD).
+Set `UseRealClock => true` for a store whose expiry runs on its own clock (Redis TTL, a database `now()`), and `IsReservationAtomic => false` for a best-effort store. See the [Testing package Readme](/packages/idempotency-testing).
 
-A Redis store written against the 7.0 interface (one Lua script per operation on a hash with token, fingerprint and payload, keyed by `key.ToStorageKey()`) is in the [External stores](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Idempotency/Readme.MD#external-stores) section of the Idempotency Readme, together with the atomicity requirements and a DynamoDB note. Start from it when you port a 6.x Redis store.
+A Redis store written against the 7.0 interface (one Lua script per operation on a hash with token, fingerprint and payload, keyed by `key.ToStorageKey()`) is in the [External stores](/packages/idempotency#external-stores) section of the Idempotency Readme, together with the atomicity requirements and a DynamoDB note. Start from it when you port a 6.x Redis store.
 
 ## Stored records
 

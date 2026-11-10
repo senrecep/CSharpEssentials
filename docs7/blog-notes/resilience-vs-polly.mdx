@@ -2,7 +2,7 @@
 title: "Blog notes: CSharpEssentials.Resilience against Polly.Core"
 ---
 
-Notes for a post, not the post. The numbers come from the full default-job run under `benchmarks/results/http/{tfm}/results/`; [CSharpEssentials.Resilience/BENCHMARKS.md](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Resilience/BENCHMARKS.md#results) has every row on every TFM.
+Notes for a post, not the post. The numbers come from the full default-job run under `benchmarks/results/http/{tfm}/results/`; [CSharpEssentials.Resilience/BENCHMARKS.md](/benchmarks/resilience#results) has every row on every TFM.
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0. The library compared is Polly.Core 8.9.0 (BSD-3-Clause). Microsoft.Extensions.Http.Resilience 10.11.0 (MIT) appears in the HTTP resilience row, which is covered in the Http notes.
 
@@ -60,11 +60,11 @@ Headline rows on net10.0, as `Mean, Allocated` from the reports. "-" means no al
 | Non-generic policy over `Result<int>`, one retry | 517.2 ns, 144 B | 373.1 ns, - |
 | Generic policy over `Result<int>`, one retry | 412.6 ns, 80 B | 373.1 ns, - |
 
-Reports: [PolicyOverhead](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PolicyOverheadComparison-report-github.md), [ComposedPolicy](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.ComposedPolicyComparison-report-github.md), [RetryIfFailed](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-report-github.md), [ResultBoxing](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.ResultBoxingComparison-report-github.md).
+Reports: [PolicyOverhead](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.PolicyOverheadComparison-report-github.md), [ComposedPolicy](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.ComposedPolicyComparison-report-github.md), [RetryIfFailed](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.RetryIfFailedComparison-report-github.md), [ResultBoxing](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/http/net10.0/results/CSharpEssentials.Http.Comparison.Benchmarks.ResultBoxingComparison-report-github.md).
 
 ## Where CSE loses (state it, do not soften it)
 
-Measured. CSE is slower than the matching Polly row in every category on every TFM, apart from one row on net11.0 (below), and allocates more everywhere except the `RetryIfFailed` predicate row, which allocates nothing. The full list is in [the Results section](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Resilience/BENCHMARKS.md#where-cse-loses).
+Measured. CSE is slower than the matching Polly row in every category on every TFM, apart from one row on net11.0 (below), and allocates more everywhere except the `RetryIfFailed` predicate row, which allocates nothing. The full list is in [the Results section](/benchmarks/resilience#where-cse-loses).
 
 - The wrapper itself. Every `ExecuteAsync` is an async method with a try/catch around Polly's call (`CSharpEssentials.Resilience/ResiliencePolicy.cs:64-129`, `ResiliencePolicyT.cs:38-79`), so each call runs one more async state machine than the Polly row. CSE passes Polly a static lambda with the operation as state, the same shape as the Polly rows, so there is no closure. Empty policy: 84.48 ns and 80 B against 58.40 ns and nothing on net10.0.
 - Nesting. Each `With...` after the first builds a separate pipeline and `Merge` wraps the two in a third (`ResiliencePolicy.cs:131-145`). Retry + circuit breaker + timeout through CSE's options: 815.0 ns against 633.8 ns for one Polly builder on net10.0. `FromPipeline` over that one Polly pipeline is 684.1 ns, so the gap is part wrapper and part nesting.

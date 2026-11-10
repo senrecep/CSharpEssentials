@@ -1,0 +1,205 @@
+---
+title: "CSharpEssentials.Endpoints.Generators: design-time benchmarks"
+---
+
+The endpoints source generator measured against Immediate.Apis 6.4.0 on net8.0, net9.0, net10.0 and net11.0 (full default-job runs, [Results](#results)). CSE is ahead on every row except cold at `Files=1000`, where Immediate.Apis takes about half the CSE time; see [Where CSE loses](#where-cse-loses).
+
+The generator runs inside the compiler and the IDE, not in the shipped app, so the cost is build time and the work the IDE does after a keystroke. It has no effect on request handling.
+
+---
+
+## What was measured
+
+Class `EndpointsGeneratorComparison` in `benchmarks/CSharpEssentials.Generators.Benchmarks/`. The project is an in-memory web app with 50 endpoints. Each library gets its documented idiom for the same 50 endpoints: same names (`Endpoint001` to `Endpoint050`), same route (`/endpointNNN/{id:int}`) and the same result (`id`).
+
+CSE input:
+
+```csharp
+public sealed class Endpoint007 : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) => app.MapGet("/endpoint007/{id:int}", static (int id) => TypedResults.Ok(id));
+}
+```
+
+Immediate input:
+
+```csharp
+[Handler]
+[MapGet("/endpoint007/{id:int}")]
+public static partial class Endpoint007
+{
+    public sealed record Query(int Id);
+
+    private static ValueTask<int> HandleAsync(Query query, CancellationToken token) => ValueTask.FromResult(query.Id);
+}
+```
+
+The two inputs are different files, because each library needs its own annotation. The filler files, the references, the options and the edit are the same. Label: same project, each library's documented idiom.
+
+| Method | Category | Generators | Like for like? |
+|---|---|---|---|
+| `EmptyDriver_Cold` | Cold | none | No. Compilation and driver object overhead. A driver with no generators binds nothing, so this is not a floor for generator work |
+| `CSharpEssentials_Cold` / `_Incremental` (baseline) | Cold / Incremental | `CSharpEssentials.Endpoints.Generators` | Yes |
+| `ImmediateApis_Cold` / `_Incremental` | Cold / Incremental | `Immediate.Apis.Generators` only | Yes. Head to head: endpoint discovery and mapping code |
+| `ImmediateApisWithHandlers_Cold` / `_Incremental` | Cold / Incremental | `Immediate.Apis.Generators` and `Immediate.Handlers.Generators` | No. The documented setup. Immediate.Handlers also emits a handler class and DI registration per endpoint |
+
+Parity is checked in `[GlobalSetup]` and with `--self-check`. A failed check stops the run.
+
+- Every row must name exactly the 50 endpoint types in its generated text.
+- No generator may throw or report an error.
+- The CSE and ImmediateApisWithHandlers outputs must compile with no errors. ImmediateApis alone cannot compile without the Handlers output, so its compile check is skipped.
+- Cold output on the original project must equal incremental output after the edit, file by file.
+
+## Methodology
+
+- Host Roslyn. Every row runs on `Microsoft.CodeAnalysis.CSharp` 5.9.0. That is the latest stable release on NuGet. SDK 10.0.400 ships a build of the same 5.9 compiler (5.9.0-1). Injectio, measured in the same suite, needs Roslyn 4.14 or later.
+- Generator builds. The compiler that loads the generators runs on .NET 10 or later. On net10.0 and net11.0 the bench loads Immediate's `roslyn5.9` build. That build targets net10.0, so on net8.0 and net9.0 the bench loads the `roslyn4.8` build of the same package version. CSE ships one build, compiled against Roslyn 4.8.
+- Loading. Each generator loads from its own folder into its own load context. Only the generator DLL is loaded, never the code fix DLL next to it. Analyzers and code fixes in the same packages are not run.
+- Cold. Each call creates a fresh `CSharpCompilation` from pre-parsed trees and a fresh `CSharpGeneratorDriver`, then runs it. A fresh compilation binds all source symbols again on every call. Referenced-assembly symbols are cached on the shared `MetadataReference` objects, as in the IDE and the compiler server, so metadata loading is not part of the cold cost.
+- Incremental. Each row warms a driver once on the original compilation. Each call runs that driver on the original compilation with one tree replaced (`ReplaceSyntaxTree`). The driver is immutable, so every call starts from the same warm state. This is what the IDE does on a keystroke.
+- The edit. File `Src/Filler0051.cs`: `return x + 51;` becomes `return x + 52;`. It is a method-body change in a file with no attributes, with base-list classes and with no `WithName` call.
+- Step tracking is off in every measured call (`trackIncrementalGeneratorSteps: false`).
+- Project shape. Assembly `Bench.App`, `OutputKind.ConsoleApplication`, nullable enabled, C# latest. CSE also emits `MapAllEndpoints` because the project is an executable. `Files` is 200 or 1000 source files: the 50 feature files, `GlobalUsings.cs` with the Web SDK implicit usings, `Program.cs` and filler files for the rest. A filler file holds an interface, a class with three small methods, a record and a class that derives from `List<string>`. Every 10th filler file also maps a route with `.WithName(...)`.
+- References. One set for every row in the suite: the host runtime's framework, the ASP.NET Core shared framework, the CSE runtime DLLs and the competitor attribute DLLs. On net8.0 the CSE runtime DLLs need Microsoft.Extensions.DependencyInjection.Abstractions and Microsoft.Extensions.Logging.Abstractions 9.0.4 from NuGet. Those copies from the output folder replace the older shared framework copies for every row, as SDK conflict resolution does in a CSE app. On the other TFMs the shared framework copies are used.
+- Preprocessor symbols. The parse options define the symbols the SDK defines for the host TFM in Release (`NET`, `NET10_0`, `NET8_0_OR_GREATER` and so on), because some generators emit code under them.
+- Options. One `AnalyzerConfigOptionsProvider` for every row. Global options: `build_property.IsTestProject=false`, `build_property.RootNamespace=Bench.App` (set by the SDK for every project) plus the NetEscapades defaults. No per-file options.
+- Cross-TFM rows run on that TFM's shared framework, so the references differ by TFM. The host Roslyn 5.9.0 also runs its netstandard2.0 build on net8.0 and net9.0 and its net10.0 build on net10.0 and net11.0. Immediate also switches from its roslyn5.9 build to its roslyn4.8 build on net8.0 and net9.0. Compare rows within one TFM.
+- BenchmarkDotNet default job, `[MemoryDiagnoser]`, rows grouped by category, CSE is the baseline in each category.
+
+## Pinned versions
+
+| Package | Version | License |
+|---|---|---|
+| Microsoft.CodeAnalysis.CSharp (host) | 5.9.0 | MIT |
+| Immediate.Apis | 6.4.0 (latest stable) | MIT |
+| Immediate.Handlers | 4.2.0 (latest stable) | MIT |
+| CSharpEssentials.Endpoints.Generators | 7.0.0 (project reference) | MIT |
+
+## Semantic differences
+
+- CSE emits one registry file per assembly that calls each endpoint's own `Map` method, plus an aggregate file in an executable. The route calls stay in user code. Self-check: 2 generated files, 13,205 characters at 200 files and 15,285 at 1000 files. The registry also lists explicit endpoint names from `WithName` calls, so it grows with the filler routes.
+- Immediate.Apis emits one file per endpoint with the route mapping and handler glue, plus one `MapBenchAppEndpoints` file. Self-check: 51 files, 81,264 characters.
+- With Immediate.Handlers the documented setup also emits a handler class per endpoint and `AddBenchAppHandlers`. Self-check: 102 files, 260,115 characters.
+- The output sizes are not timings. They show that the rows do different amounts of emit work.
+
+## Feature matrix
+
+| | CSE | Immediate.Apis 6.4.0 |
+|---|---|---|
+| How an endpoint is found | Implements `IEndpoint` (a base list) | `[Handler]` plus `[MapGet]` and the other verb attributes |
+| Syntax provider | `CreateSyntaxProvider` on non-interface types with a base list and a static `Map` (either one for a `partial` type), plus one on every `WithName` and `WithMetadata` call | `ForAttributeWithMetadataName` |
+| Extra per-invocation provider | Yes: `WithName` and `WithMetadata` calls | No |
+| Compilation-wide step on each edit | Yes: the Host step walks the references | Yes: reads the compilation for the assembly name; the result is equal after the edit, so later steps stay cached |
+| Generated per endpoint | One registry entry that calls `TEndpoint.Map`; route calls stay in user code | A generated mapping method plus handler glue; the handler class comes from Immediate.Handlers |
+| Cross-assembly aggregate | `MapAllEndpoints` in an executable | No. One `Map{Assembly}Endpoints` per assembly |
+| Endpoint groups | `IEndpointGroup` | `[RouteGroup]` and `[MapGroup<T>]` |
+| Second generator needed | No | Yes, Immediate.Handlers |
+| Roslyn builds shipped | 4.8 | 4.8, 5.0 and 5.9 |
+| Step tracking names | Public constants | Present (`WithTrackingName`) |
+| License | MIT | MIT |
+
+## Incremental cache behaviour
+
+From `--self-check` on net10.0 with `Files=200`, after the filler edit. The counts are the outputs of each tracked step by `IncrementalStepRunReason`. Lower-level `ForAttributeWithMetadataName` steps, the Roslyn input steps (`AnalyzerConfigOptions`, `CompilationOptions`, `ParseOptions`) and single-value steps that stay Cached are left out. The `Files=1000` counts are the same.
+
+| Row | Step | Reasons |
+|---|---|---|
+| CSE | `Compilation` | Modified 1 |
+| CSE | `Host` | Unchanged 1 |
+| CSE | `EndpointTypes` | Cached 50 |
+| CSE | `ReservedNames`, `CollectedEndpoints`, `IsTestProject` | Cached 1 each |
+| CSE | source outputs | Cached 2 |
+| Immediate.Apis | `Compilation` | Modified 3 |
+| Immediate.Apis | `AssemblyName` | Unchanged 1 |
+| Immediate.Apis | `Endpoints` | Cached 50 |
+| Immediate.Apis | source outputs | Cached 51 |
+| Immediate.Handlers | `Behaviors`, `AssemblyName` | Unchanged 1 each |
+| Immediate.Handlers | `Handlers`, `HandlersWithBehaviors` | Cached 50 each |
+| Immediate.Handlers | source outputs | Cached 51 |
+
+Every source output stays cached after the unrelated edit. The self-check fails if a CSE output does not.
+
+The report cannot show one CSE cost. `EndpointTypes` and `ReservedNames` come from `CreateSyntaxProvider`. Roslyn caches the predicate per tree, but when the compilation changes it runs the transform again for every node the predicate accepted, in every tree. For `EndpointTypes` that is the 50 endpoint classes. For `ReservedNames` it is every `WithName` and `WithMetadata` call in the project, and each one that is not a plain string literal `WithName` runs `GetOperation` again. The tracked `ReservedNames` step sits after `Collect`, so the table shows one cached value, not the per-call work. The incremental timing rows include that work. Immediate's `ForAttributeWithMetadataName` providers also run again for every node they matched (the `Unchanged` counts in the self-check), but they match only the 50 attributed types, so their work does not grow with `Files`.
+
+## Results
+
+### How these numbers were produced
+
+- BenchmarkDotNet v0.14.0, default job, full runs (no `--quick`), one suite at a time, on a 6-core, 12-thread x64 desktop CPU on Linux. The SDK and runtime builds are in the header of each report.
+- TFMs: net8.0 (.NET 8.0.33), net9.0 (.NET 9.0.22), net10.0 (.NET 10.0.14) and net11.0 (.NET 11.0.0). The host Roslyn is 5.9.0 on every TFM. Compare rows within one TFM column.
+- This class was rerun on 2026-11-07 on every TFM, after the literal `WithName` change described in [Known CSE costs](#known-cse-costs). Three rows have a CV above 5% and are marked `noisy` in the tables: `ImmediateApisWithHandlers_Cold` at `Files=1000` on net10.0, and at `Files=200` and `Files=1000` on net11.0.
+- Reports: [`benchmarks/results/generators/{tfm}/results/`](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/generators), file `CSharpEssentials.Generators.Benchmarks.EndpointsGeneratorComparison-report-github.md` (and `.csv`) per TFM. Every number below is copied from the `-report-github.md` files.
+
+How to read the tables: each cell is `Mean (Ratio)` or `Allocated (Alloc Ratio)` for that TFM. The ratio is against the CSE row of the same category, `Files` value and TFM. `EmptyDriver_Cold` is driver overhead only and is not a floor for generator work.
+
+### Time
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 8.232 μs (0.001) | 6.820 μs (0.001) | 6.190 μs (0.001) | 6.675 μs (0.001) |
+| Cold | 200 | `CSharpEssentials_Cold` | 8,649.152 μs (1.000) | 8,153.102 μs (1.000) | 7,986.372 μs (1.000) | 8,013.543 μs (1.000) |
+| Cold | 200 | `ImmediateApis_Cold` | 14,956.240 μs (1.729) | 13,726.785 μs (1.684) | 12,296.740 μs (1.540) | 11,759.153 μs (1.467) |
+| Cold | 200 | `ImmediateApisWithHandlers_Cold` | 79,597.258 μs (9.203) | 73,052.477 μs (8.960) | 66,603.582 μs (8.340) | 79,470.563 μs (9.917), noisy |
+| Cold | 1000 | `EmptyDriver_Cold` | 47.085 μs (0.001) | 33.999 μs (0.001) | 34.528 μs (0.001) | 37.768 μs (0.001) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 45,234.301 μs (1.000) | 40,571.878 μs (1.000) | 40,416.302 μs (1.001) | 36,997.701 μs (1.001) |
+| Cold | 1000 | `ImmediateApis_Cold` | 22,280.896 μs (0.493) | 19,947.670 μs (0.492) | 20,492.025 μs (0.508) | 19,014.866 μs (0.515) |
+| Cold | 1000 | `ImmediateApisWithHandlers_Cold` | 91,215.832 μs (2.017) | 84,020.859 μs (2.071) | 84,195.015 μs (2.086), noisy | 89,159.579 μs (2.413), noisy |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 1,701.464 μs (1.00) | 1,436.171 μs (1.00) | 1,327.177 μs (1.00) | 1,238.566 μs (1.00) |
+| Incremental | 200 | `ImmediateApis_Incremental` | 9,487.568 μs (5.58) | 8,619.487 μs (6.00) | 7,873.228 μs (5.93) | 7,391.928 μs (5.97) |
+| Incremental | 200 | `ImmediateApisWithHandlers_Incremental` | 67,860.466 μs (39.88) | 60,340.682 μs (42.02) | 57,968.267 μs (43.68) | 59,856.226 μs (48.33) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 3,738.081 μs (1.00) | 3,141.731 μs (1.00) | 2,956.586 μs (1.00) | 2,891.375 μs (1.00) |
+| Incremental | 1000 | `ImmediateApis_Incremental` | 11,574.734 μs (3.10) | 10,420.084 μs (3.32) | 9,161.308 μs (3.10) | 8,496.244 μs (2.94) |
+| Incremental | 1000 | `ImmediateApisWithHandlers_Incremental` | 68,848.453 μs (18.42) | 66,820.490 μs (21.27) | 62,987.352 μs (21.30) | 67,339.484 μs (23.31) |
+
+### Allocation
+
+| Category | Files | Method | net8.0 | net9.0 | net10.0 | net11.0 |
+|---|---|---|---|---|---|---|
+| Cold | 200 | `EmptyDriver_Cold` | 2.26 KB (0.002) | 2.25 KB (0.002) | 2.19 KB (0.002) | 2.17 KB (0.002) |
+| Cold | 200 | `CSharpEssentials_Cold` | 1386.24 KB (1.000) | 1382.28 KB (1.000) | 1382.05 KB (1.000) | 1380.32 KB (1.000) |
+| Cold | 200 | `ImmediateApis_Cold` | 5283.19 KB (3.811) | 5282.32 KB (3.821) | 5270.79 KB (3.814) | 5267.11 KB (3.816) |
+| Cold | 200 | `ImmediateApisWithHandlers_Cold` | 32435.3 KB (23.398) | 32435.86 KB (23.465) | 32426.53 KB (23.463) | 32423.77 KB (23.490) |
+| Cold | 1000 | `EmptyDriver_Cold` | 2.26 KB (0.000) | 2.25 KB (0.001) | 2.19 KB (0.000) | 2.17 KB (0.000) |
+| Cold | 1000 | `CSharpEssentials_Cold` | 4621.26 KB (1.000) | 4463.29 KB (1.000) | 4896.38 KB (1.000) | 4497.73 KB (1.000) |
+| Cold | 1000 | `ImmediateApis_Cold` | 6760.7 KB (1.463) | 6745.5 KB (1.511) | 6769.58 KB (1.383) | 6764.4 KB (1.504) |
+| Cold | 1000 | `ImmediateApisWithHandlers_Cold` | 33885.52 KB (7.333) | 33880.43 KB (7.591) | 33934.63 KB (6.931) | 33943.99 KB (7.547) |
+| Incremental | 200 | `CSharpEssentials_Incremental` | 551.43 KB (1.00) | 541.77 KB (1.00) | 538.88 KB (1.00) | 537.97 KB (1.00) |
+| Incremental | 200 | `ImmediateApis_Incremental` | 1486.16 KB (2.70) | 1481.01 KB (2.73) | 1474.69 KB (2.74) | 1476.47 KB (2.74) |
+| Incremental | 200 | `ImmediateApisWithHandlers_Incremental` | 24759.52 KB (44.90) | 24752.85 KB (45.69) | 24741.39 KB (45.91) | 24753.41 KB (46.01) |
+| Incremental | 1000 | `CSharpEssentials_Incremental` | 1201.54 KB (1.00) | 1187.26 KB (1.00) | 1176.26 KB (1.00) | 1153.35 KB (1.00) |
+| Incremental | 1000 | `ImmediateApis_Incremental` | 1598.15 KB (1.33) | 1587.17 KB (1.34) | 1578.5 KB (1.34) | 1599.64 KB (1.39) |
+| Incremental | 1000 | `ImmediateApisWithHandlers_Incremental` | 24871.66 KB (20.70) | 24859.1 KB (20.94) | 24845.12 KB (21.12) | 24868.03 KB (21.56) |
+
+### Where CSE loses
+
+Cold at `Files=1000`, CSE takes about twice as long as Immediate.Apis on every TFM. That is the only row where CSE loses, in time or allocation.
+
+- Cold, `Files=1000`: Immediate.Apis takes 0.492 to 0.515 of the CSE time. On net8.0 that is 22,280.896 μs against 45,234.301 μs, on net10.0 20,492.025 μs against 40,416.302 μs. CSE still allocates less there: Immediate.Apis allocates 1.383 to 1.511 of the CSE bytes (6769.58 KB against 4896.38 KB on net10.0).
+- Scaling with project size: on net10.0 the CSE cold row grows from 7,986.372 μs at `Files=200` to 40,416.302 μs at `Files=1000`, Immediate.Apis from 12,296.740 μs to 20,492.025 μs. The incremental rows grow less: CSE from 1,327.177 μs to 2,956.586 μs, Immediate.Apis from 7,873.228 μs to 9,161.308 μs.
+
+At `Files=200`, Immediate.Apis takes 1.467 to 1.729 of the CSE time cold and 5.58 to 6.00 incremental, and allocates 3.811 to 3.821 (cold) and 2.70 to 2.74 (incremental) of the CSE bytes. At `Files=1000` incremental it takes 2.94 to 3.32 of the CSE time and allocates 1.33 to 1.39 of the CSE bytes.
+
+The documented Immediate setup with Immediate.Handlers (`ImmediateApisWithHandlers_*`) is slower than CSE on every row: 8.340 to 9.917 cold at `Files=200`, 2.017 to 2.413 cold at `Files=1000` (the net11.0 cold rows and the net10.0 `Files=1000` cold row are noisy).
+
+In the first run CSE also lost incremental at `Files=1000`, and its cold and incremental rows grew much faster with `Files`. The likely cause was the `WithName` and `WithMetadata` reader, which called `GetOperation` on every matching invocation after every edit. A `.WithName(...)` call with one plain string literal is now read from syntax, and every filler route uses that form, so this input no longer binds those calls. The cause of the remaining cold `Files=1000` gap is not profiled.
+
+## Known CSE costs
+
+From reading the generator source. The third one was narrowed after the first run; the other two are not fixed. In the rerun the CSE cold row still grows with `Files` faster than the Immediate.Apis row (see [Where CSE loses](#where-cse-loses)).
+
+- `CSharpEssentials.Endpoints.Generators/EndpointsGenerator.cs:35-39,88-99`: the `EndpointTypes` predicate accepts a non-interface type declaration that has a base list and declares a static `Map` method. A `partial` type needs only one of the two. The transform calls `GetDeclaredSymbol` for each match. In this input only the 50 endpoint classes match: the filler classes have a base list but no `Map`, and the filler route classes have a `Map` but no base list. This provider is a `CreateSyntaxProvider`, so every edit runs the transform again for the 50 matches.
+- `EndpointsGenerator.cs:46-48`: the Host step is a `CompilationProvider.Select` that runs on every edit. Its output is equatable, so later steps stay cached.
+- `EndpointsGenerator.cs:50-55,121-131` with `EndpointNameReader.cs:29-50`: `GetOperation` on every `WithName` and `WithMetadata` invocation in the project, except a `.WithName(...)` call with one plain string literal argument, which is read from syntax. This is also a `CreateSyntaxProvider`, so every edit runs it again for every such invocation, not only for the edited file. Const names, `nameof`, interpolated strings and every `WithMetadata` call still bind. The filler routes use only literal `WithName` calls (one per 10 filler files, 15 at `Files=200` and 95 at `Files=1000`), so the rerun does not measure the binding path.
+
+## Caveats
+
+- Part of CSE's cold cost is binding that the compiler does anyway in a full build: the endpoint declarations and the route calls around each `WithName`. The generator moves that cost earlier; not all of it is extra.
+- Code fixes and analyzers in the packages are not measured.
+- The input is generated, not a real app. Real projects have larger files and more references.
+
+## How to reproduce
+
+```bash
+./benchmarks/run-benchmarks.sh --project generators
+dotnet run -c Release --project benchmarks/CSharpEssentials.Generators.Benchmarks -f net10.0 -- --self-check
+```

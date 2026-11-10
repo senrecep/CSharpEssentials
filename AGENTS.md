@@ -29,6 +29,7 @@ Current version: 8.0.0 <!-- x-release-please-version -->
 - Test: `dotnet test`
 - Pack: `dotnet pack`
 - Publish: `./build-and-publish-nugets.sh` (CI runs it on release; see Releasing)
+- Docs site: `docs7/` is generated from README.MD, `docs/`, the package Readmes, BENCHMARKS.md files and the example READMEs. After editing any of them run `python3 scripts/docs7.py`; CI fails when `docs7/` is out of date. Never edit `docs7/` by hand.
 - First-time setup: `git config core.hooksPath .githooks` (activates the pre-commit hook that checks and fixes the test and package count badges in README.MD)
 - Naming: PascalCase types, camelCase locals, `_camelCase` private fields
 - File layout: one public type per file, filename matches type name

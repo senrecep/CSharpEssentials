@@ -2,7 +2,7 @@
 title: "Blog notes: CSharpEssentials.EntityFrameworkCore and Entity against EF Core, MR.EntityFrameworkCore.KeysetPagination, X.PagedList.EF and EntityFrameworkCore.Exceptions"
 ---
 
-These are notes for a post, not the post. The full tables are in [CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md) and [CSharpEssentials.Entity/BENCHMARKS.md](https://raw.githubusercontent.com/senrecep/CSharpEssentials/main/CSharpEssentials.Entity/BENCHMARKS.md), and the raw reports in [`benchmarks/results/efcore/{tfm}/results/`](../../benchmarks/results/efcore/).
+These are notes for a post, not the post. The full tables are in [CSharpEssentials.EntityFrameworkCore/BENCHMARKS.md](/benchmarks/entityframeworkcore) and [CSharpEssentials.Entity/BENCHMARKS.md](/benchmarks/entity), and the raw reports in [`benchmarks/results/efcore/{tfm}/results/`](https://github.com/senrecep/CSharpEssentials/blob/main/benchmarks/results/efcore).
 
 The suite runs on .NET 8, 9, 10 and 11 with BenchmarkDotNet 0.14.0, on in-memory SQLite. The libraries compared are EF Core 8.0.33, 9.0.22 and 10.0.14 (one major per TFM; net11.0 runs EF Core 10), MR.EntityFrameworkCore.KeysetPagination 1.6.0 (MIT, net10.0 only), X.PagedList.EF 10.6.0 (MIT, net9.0 and later in this suite) and EntityFrameworkCore.Exceptions.Sqlite 10.0.1 with DbExceptionClassifier.Sqlite 1.0.1 (Apache-2.0, net10.0 only).
 
