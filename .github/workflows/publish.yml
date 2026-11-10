@@ -20,12 +20,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish-nuget
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: nuget-org
     permissions:
       contents: read
       id-token: write
+      packages: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -79,3 +85,11 @@ jobs:
 
       - name: Publish to NuGet
         run: ./build-and-publish-nugets.sh --parallel ${{ steps.login.outputs.NUGET_API_KEY }}
+
+      - name: Publish to GitHub Packages
+        run: >
+          dotnet nuget push "nupkgs/*.nupkg"
+          --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+          --api-key "${{ secrets.GITHUB_TOKEN }}"
+          --skip-duplicate
+          --no-symbols
