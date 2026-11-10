@@ -1,0 +1,75 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "CSharpEssentials",
+  "colors": {
+    "primary": "#58a6ff",
+    "light": "#0969da",
+    "dark": "#58a6ff"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/senrecep/CSharpEssentials"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/senrecep/CSharpEssentials"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "API_REFERENCE"
+        ]
+      },
+      {
+        "group": "Migration",
+        "pages": [
+          "migration/v3-to-v4",
+          "migration/v4-to-v5",
+          "migration/v5-to-v6",
+          "migration/v6-async-naming",
+          "migration/v6-optional-route-parameters",
+          "migration/v6-to-v7-idempotency"
+        ]
+      },
+      {
+        "group": "Design",
+        "pages": [
+          "design/CSharpEssentials.DependencyInjection-DESIGN",
+          "design/CSharpEssentials.Endpoints-DESIGN",
+          "design/CSharpEssentials.Enums-DESIGN"
+        ]
+      },
+      {
+        "group": "Architecture decisions",
+        "pages": [
+          "adr/ADR-006-source-generators-in-separate-projects",
+          "adr/ADR-007-enum-conventions"
+        ]
+      },
+      {
+        "group": "Blog notes",
+        "pages": [
+          "blog-notes/any-vs-oneof",
+          "blog-notes/aspnetcore-vs-hellang-idempotentapi",
+          "blog-notes/dependencyinjection-vs-scrutor",
+          "blog-notes/efcore-vs-keysetpagination",
+          "blog-notes/endpoints-vs-fastendpoints-carter",
+          "blog-notes/enums-vs-enumsnet-netescapades",
+          "blog-notes/http-vs-refit-flurl-restsharp",
+          "blog-notes/json-core-vs-bcl",
+          "blog-notes/mediator-vs-mediatr",
+          "blog-notes/resilience-vs-polly",
+          "blog-notes/results-vs-csharpfunctionalextensions-erroror-fluentresults",
+          "blog-notes/validation-vs-fluentvalidation"
+        ]
+      }
+    ]
+  }
+}
