@@ -11,7 +11,7 @@
 [![Downloads](https://img.shields.io/nuget/dt/CSharpEssentials.svg)](https://www.nuget.org/packages/CSharpEssentials)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/senrecep/CSharpEssentials/blob/main/LICENCE)
 [![.NET](https://img.shields.io/badge/.NET-8%20%7C%209%20%7C%2010%20%7C%2011%20%7C%20ns2.0%20%7C%20ns2.1-512BD4)](https://dotnet.microsoft.com)
-[![Packages](https://img.shields.io/badge/packages-27-blue)](https://www.nuget.org/profiles/senrecep)
+[![Packages](https://img.shields.io/badge/packages-27-blue)](https://www.nuget.org/profiles/recepsen)
 
 CSharpEssentials is a modular .NET NuGet ecosystem that bridges object-oriented and functional programming in C#.
 

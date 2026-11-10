@@ -33,7 +33,7 @@
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 
 		<!-- Package metadata -->
-		<Authors>senrecep</Authors>
+		<Authors>recepsen</Authors>
 		<Company>senrecep</Company>
 		<Copyright>Copyright © senrecep 2024-2026</Copyright>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
