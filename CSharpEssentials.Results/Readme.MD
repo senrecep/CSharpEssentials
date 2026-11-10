@@ -198,6 +198,22 @@ Handlers run only on the side named in the table. The `Async` counterparts are u
 | `GetValueOrThrow(message)`, `GetValueOrThrow(exception)`, `Unwrap()` | both | `Result<T>` only. The value, or throw: `InvalidOperationException`, your exception, or `ResultUnwrapException` with the `Errors`. |
 | `TryCatch(func, error)` | success | Run `func`; an exception becomes `error`, or `Error.Exception(ex)` when none is given. |
 
+#### Compensating a failure
+
+`Else` swaps the failure for an error or a value. `Compensate` runs a function that returns a new `Result`, so the fallback can fail too. `CompensateFirst` passes only the first error, which is enough to choose a fallback by `ErrorType`:
+
+```csharp
+Result<Config> config = LoadConfig(primaryPath)
+    .Compensate(errors => LoadConfig(fallbackPath));
+
+Result<User> user = await GetCachedUserAsync(id, ct)
+    .CompensateFirstAsync(error => error.Type == ErrorType.NotFound
+        ? LoadUserAsync(id, ct)
+        : Task.FromResult<Result<User>>(error), ct);
+```
+
+A successful result skips the function. `CompensateAsync` and `CompensateFirstAsync` take `Task` or `ValueTask` sources and functions; see the [overload matrix](#async-overload-matrix).
+
 Static helpers on `Result`:
 
 ```csharp

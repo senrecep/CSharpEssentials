@@ -1,0 +1,33 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/senrecep/csharpessentials",
+  "public_key": "pk_JSfkqn5KzkfNTm45nVfhp",
+  "projectTitle": "CSharpEssentials",
+  "description": "Modular .NET libraries for functional C#: Result, Maybe, Any, Rules, Mediator, Validation, Entity, EF Core, Endpoints, Dependency Injection, Resilience and more.",
+  "folders": [],
+  "excludeFolders": [
+    "benchmarks",
+    "CSharpEssentials.Tests",
+    ".github",
+    ".omc",
+    ".claude",
+    "**/bin",
+    "**/obj"
+  ],
+  "excludeFiles": [
+    "CHANGELOG.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CODE_OF_CONDUCT.md",
+    "AnalyzerReleases.Shipped.md",
+    "AnalyzerReleases.Unshipped.md"
+  ],
+  "rules": [
+    "Each CSharpEssentials.* package ships separately on NuGet; install only the packages the code uses.",
+    "Return Result or Result<T> from operations that can fail and build failures with the Error factories (Error.Validation, Error.NotFound, Error.Failure) instead of throwing.",
+    "Every Result member that returns Task or ValueTask ends in Async; use BindAsync, not Bind, for async lambdas."
+  ],
+  "previousVersions": [
+    { "tag": "v7.0.0" }
+  ]
+}
