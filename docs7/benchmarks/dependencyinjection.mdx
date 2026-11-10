@@ -197,7 +197,7 @@ net10. Every resolve activates the decorator and its inner service again. The se
 - CSE loss on every TFM: CseGenerated 1.45-1.72× and CseRuntime 1.85-2.54× Manual.
 
 What the parity check enforces for sections 6 and 7:
-- TryAdd: for every variant and N, the collection holds exactly N scoped type registrations of the T{N} types, plus one CSE marker for the two CSE rows, and a scope resolves `0..N-1`. Separately, each of the four TryAdd variants runs over a collection that already holds `IService0`, and `IService0` must still have exactly one descriptor.
+- TryAdd: for every variant and N, the collection holds exactly N scoped type registrations of the T\{N\} types, plus one CSE marker for the two CSE rows, and a scope resolves `0..N-1`. Separately, each of the four TryAdd variants runs over a collection that already holds `IService0`, and `IService0` must still have exactly one descriptor.
 - Transient decoration: in every variant IService0 to IService9 resolve to 1000 + i, the last non-keyed descriptor of each is transient, and two resolves of IService0 return different instances.
 
 Feature matrix for these classes, from reading each library's source and docs (not measured):

@@ -97,6 +97,8 @@ def convert(source, pages):
         elif not fenced:
             line = LINK.sub(lambda m: m.group(1) + rewrite(m.group(2), source, pages) + m.group(3), line)
             line = IMG_TAG.sub(lambda m: m.group(1) + rewrite(m.group(2), source, pages) + m.group(3), line)
+            line = "".join(part if i % 2 else part.replace("{", "\\{").replace("}", "\\}")
+                           for i, part in enumerate(re.split(r"(`[^`]*`)", line)))
         out.append(line)
     front = ["---", "title: " + json.dumps(title, ensure_ascii=False)]
     if pages[source] == "index":
