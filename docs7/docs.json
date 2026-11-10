@@ -1,0 +1,172 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "CSharpEssentials",
+  "colors": {
+    "primary": "#58a6ff",
+    "light": "#0969da",
+    "dark": "#58a6ff"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/senrecep/CSharpEssentials"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/senrecep/CSharpEssentials"
+    }
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get started",
+        "pages": [
+          "index",
+          "API_REFERENCE"
+        ]
+      },
+      {
+        "group": "Packages",
+        "pages": [
+          "libraries/csharpessentials",
+          "libraries/any",
+          "libraries/aspnetcore",
+          "libraries/aspnetcore-openapi",
+          "libraries/aspnetcore-swashbuckle",
+          "libraries/clone",
+          "libraries/core-extensions",
+          "libraries/core-guids",
+          "libraries/core",
+          "libraries/dependencyinjection",
+          "libraries/endpoints",
+          "libraries/entity",
+          "libraries/entityframeworkcore",
+          "libraries/enums",
+          "libraries/errors-exceptions",
+          "libraries/errors",
+          "libraries/gcpsecretmanager",
+          "libraries/http",
+          "libraries/idempotency",
+          "libraries/idempotency-testing",
+          "libraries/json",
+          "libraries/maybe",
+          "libraries/mediator",
+          "libraries/requestresponselogging",
+          "libraries/resilience",
+          "libraries/results",
+          "libraries/rules",
+          "libraries/these",
+          "libraries/time",
+          "libraries/validation"
+        ]
+      },
+      {
+        "group": "Examples",
+        "pages": [
+          "examples/any",
+          "examples/aspnetcore",
+          "examples/clone",
+          "examples/core",
+          "examples/endpoints",
+          "examples/entity",
+          "examples/entityframeworkcore",
+          "examples/enums",
+          "examples/enums-endtoend",
+          "examples/errors",
+          "examples/gcpsecretmanager",
+          "examples/http",
+          "examples/idempotency-endtoend",
+          "examples/idempotency-redis",
+          "examples/json",
+          "examples/main",
+          "examples/maybe",
+          "examples/mediator",
+          "examples/requestresponselogging",
+          "examples/resilience",
+          "examples/results",
+          "examples/rules",
+          "examples/time",
+          "examples/validation"
+        ]
+      },
+      {
+        "group": "Benchmarks",
+        "pages": [
+          "benchmarks/any",
+          "benchmarks/aspnetcore",
+          "benchmarks/aspnetcore-openapi",
+          "benchmarks/aspnetcore-swashbuckle",
+          "benchmarks/clone",
+          "benchmarks/core",
+          "benchmarks/dependencyinjection",
+          "benchmarks/dependencyinjection-generators",
+          "benchmarks/endpoints",
+          "benchmarks/endpoints-generators",
+          "benchmarks/entity",
+          "benchmarks/entityframeworkcore",
+          "benchmarks/entityframeworkcore-generators",
+          "benchmarks/enums",
+          "benchmarks/enums-generators",
+          "benchmarks/errors",
+          "benchmarks/http",
+          "benchmarks/idempotency",
+          "benchmarks/json",
+          "benchmarks/maybe",
+          "benchmarks/mediator",
+          "benchmarks/requestresponselogging",
+          "benchmarks/resilience",
+          "benchmarks/results",
+          "benchmarks/rules",
+          "benchmarks/these",
+          "benchmarks/time",
+          "benchmarks/validation"
+        ]
+      },
+      {
+        "group": "Migration",
+        "pages": [
+          "migration/v3-to-v4",
+          "migration/v4-to-v5",
+          "migration/v5-to-v6",
+          "migration/v6-async-naming",
+          "migration/v6-optional-route-parameters",
+          "migration/v6-to-v7-idempotency"
+        ]
+      },
+      {
+        "group": "Design",
+        "pages": [
+          "design/CSharpEssentials.DependencyInjection-DESIGN",
+          "design/CSharpEssentials.Endpoints-DESIGN",
+          "design/CSharpEssentials.Enums-DESIGN"
+        ]
+      },
+      {
+        "group": "Architecture decisions",
+        "pages": [
+          "adr/ADR-006-source-generators-in-separate-projects",
+          "adr/ADR-007-enum-conventions"
+        ]
+      },
+      {
+        "group": "Blog notes",
+        "pages": [
+          "blog-notes/any-vs-oneof",
+          "blog-notes/aspnetcore-vs-hellang-idempotentapi",
+          "blog-notes/dependencyinjection-vs-scrutor",
+          "blog-notes/efcore-vs-keysetpagination",
+          "blog-notes/endpoints-vs-fastendpoints-carter",
+          "blog-notes/enums-vs-enumsnet-netescapades",
+          "blog-notes/http-vs-refit-flurl-restsharp",
+          "blog-notes/json-core-vs-bcl",
+          "blog-notes/mediator-vs-mediatr",
+          "blog-notes/resilience-vs-polly",
+          "blog-notes/results-vs-csharpfunctionalextensions-erroror-fluentresults",
+          "blog-notes/validation-vs-fluentvalidation"
+        ]
+      }
+    ]
+  }
+}

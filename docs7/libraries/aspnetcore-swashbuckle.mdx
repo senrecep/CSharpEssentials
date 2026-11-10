@@ -1,0 +1,143 @@
+---
+title: "CSharpEssentials.AspNetCore.Swashbuckle"
+---
+
+Swashbuckle (Swagger) integration for `CSharpEssentials.AspNetCore`: versioned Swagger setup, schema ids and security schemes.
+
+A host references either this package or `CSharpEssentials.AspNetCore.OpenApi`, never both. Both use `Microsoft.OpenApi` 2.x.
+
+Document generation benchmarks (50 Minimal API endpoints, 30 enums, plain `AddSwaggerGen` against the CSE conventions and the full `AddSwagger` setup) are in [BENCHMARKS.md](/benchmarks/aspnetcore-swashbuckle).
+
+## Installation
+
+```bash
+dotnet add package CSharpEssentials.AspNetCore.Swashbuckle
+```
+
+Targets net8.0, net9.0, net10.0 and net11.0 with `Swashbuckle.AspNetCore` 10.2.3 or later (below 11) and `Microsoft.OpenApi` 2.x (2.7.5 or later) on every target. Filters and `MapType` factories you add next to these use the Microsoft.OpenApi 2.x model (`using Microsoft.OpenApi;`, `IOpenApiSchema`, `JsonSchemaType`, `JsonNode`).
+
+This package is not Native AOT compatible, because Swashbuckle.AspNetCore.SwaggerGen builds its documents with reflection. Native AOT apps use `CSharpEssentials.AspNetCore.OpenApi`, as Swashbuckle's [v10 migration guide](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/blob/master/docs/migrating-to-v10.md) also advises.
+
+## Swagger with versioning
+
+```csharp
+using CSharpEssentials.AspNetCore; // AddSwagger, DefaultConfigureSwaggerOptions, SecuritySchemes, UseVersionableSwagger
+
+builder.Services.AddSwagger<DefaultConfigureSwaggerOptions>(
+    SecuritySchemes.JwtBearerSchemeName,
+    SecuritySchemes.JwtBearerTokenSecurity);
+
+var app = builder.Build();
+app.UseVersionableSwagger();
+```
+
+The first argument is the id of the security scheme in `components.securitySchemes`; the document requires it for every operation. `AddSwagger` includes the XML documentation file of every assembly that declares an endpoint (controllers and Minimal API handlers), plus the optional `assembly` argument. Missing files are skipped.
+
+`UseVersionableSwagger(options, uiOptions)` serves the documents at `/swagger/{documentName}/swagger.json` and the Swagger UI with one entry per API version (`v1` only when `Asp.Versioning` is not registered), titled `{Swagger:Title} {GROUP}`. The optional callbacks configure `SwaggerOptions` and `SwaggerUIOptions` further.
+
+`DefaultConfigureSwaggerOptions` creates one `SwaggerDoc` per API version (or `v1` without versioning) from configuration:
+
+| Key | Default |
+|---|---|
+| `Swagger:Title` | `API` |
+| `Swagger:Description` | `API Description` (with versioning it becomes `[{environment}] {version} {description}`, plus a note for a deprecated version) |
+| `Swagger:License` | `API License` |
+| `Swagger:LicenseUrl` | `https://opensource.org/license/mit` |
+
+It also keeps the first action when several actions conflict (`ResolveConflictingActions`), calls `AddOptionalRouteParameters()`, maps `TimeSpan` and `TimeOnly` to `type: string` with the example `00:00:00`, and builds schema ids from the namespace-qualified type name, with the generic arguments in front (`NsB.Order`, `NsB.OrderSystem.Collections.Generic.List` for `List<NsB.Order>`), so the ids do not depend on the order in which types are first seen. For the 7.x short names, call `options.CustomSchemaIds(new SwashbuckleSchemaIdFactory { QualifyWithNamespace = false }.GetSchemaId)` after `AddSwagger`: ids then use the type name (`Box<Dto>` becomes `DtoBox`) with a numeric suffix when two types share a name, and that suffix follows the order in which the types are first seen, so `NsB.Order` can be `Order` on one run and `Order1` on the next. To change the documents, derive from the abstract `ConfigureSwaggerOptions` (constructor arguments `IServiceProvider`, `IHostEnvironment`, `IConfiguration`), override `Configure(SwaggerGenOptions)` and pass your class as the type argument of `AddSwagger<T>`.
+
+## Optional route parameters
+
+OpenAPI requires every path parameter to be `required: true`, so a route with an optional segment (`{id?}`, `{id:int?}`, `{page=1}`) cannot be described on one path. `AddSwagger` describes it on several paths, one per form:
+
+```csharp
+[HttpGet("api/archive/{year?}/{month?}", Name = "GetArchive")]
+```
+
+| Path | operationId |
+|------|-------------|
+| `/api/archive` | `GetArchiveWithoutYearAndMonth` |
+| `/api/archive/{year}` | `GetArchiveWithoutMonth` |
+| `/api/archive/{year}/{month}` | `GetArchive` |
+
+- Each form is a full copy of the operation (tags, security, request body, responses, extensions) without the omitted parameters; every path parameter is `required: true`, without `allowEmptyValue`, a `null` type or default, or a `{"type": "null"}` member in `oneOf` or `anyOf`.
+- Only optional parameters at the end of the route are split, up to three. An optional parameter followed by a required segment (`api/{tenant?}/orders`), a route with more than three trailing optional parameters and a catch-all parameter (`{*rest}`, `{**path}`) keep one path with the parameters marked required. More than three trailing optional parameters also log a warning (once per document, path and method) through the host's `ILoggerFactory`, if one is registered.
+- A form whose path and method another operation already has (`[HttpGet("api/orders")]` next to `[HttpGet("api/orders/{id?}")]`) is skipped; the other operation stays.
+- The full form keeps the operationId; a shorter form gets `{operationId}Without{Param}` (`And` between parameters), or none when the full form has none. A generated operationId that another operation already uses throws `InvalidOperationException` when the document is generated; rename one of them or pass a selector.
+- Controller and Minimal API routes are handled the same way.
+- Forms are found by matching the trailing `{name}` segments of the path that `SwaggerGenOptions.PathGroupSelector` returns; a custom selector whose paths do not end with those segments falls back to required-only.
+
+```csharp
+using CSharpEssentials.AspNetCore; // AddOptionalRouteParameters, OptionalRouteParameterMode
+using Swashbuckle.AspNetCore.SwaggerGen; // SwaggerGenOptions
+
+// Split paths with your own operationIds for the shorter forms
+builder.Services.Configure<SwaggerGenOptions>(o => o.AddOptionalRouteParameters(
+    operationIdSelector: (operationId, omitted) => $"{operationId}_{string.Join("_", omitted)}"));
+
+// Or keep one path per operation and only mark the parameters required
+builder.Services.Configure<SwaggerGenOptions>(o =>
+    o.AddOptionalRouteParameters(OptionalRouteParameterMode.RequiredOnly));
+```
+
+`AddOptionalRouteParameters` replaces the earlier setting, so call it after `AddSwagger`. `OptionalRouteParameterMode.LegacyNonCompliant` (obsolete) restores the output of 6.0.0 and earlier: `required: false`, `allowEmptyValue: true` and a nullable schema with a `null` default on the path parameter, which is not valid OpenAPI. See [docs/migration/v6-optional-route-parameters.md](/migration/v6-optional-route-parameters).
+
+## Idempotency
+
+`SwaggerGenOptions.AddIdempotencyConventions()` (`AddSwagger` calls it) describes the contract of idempotent endpoints (`.WithIdempotency()`, `[Idempotent]`) whose method is in `IdempotencyOptions.Methods`. An `Observe` endpoint gets only the `Idempotency-Key` header, always `required: false`, so clients can start sending keys before `Enforce` is switched on: no `Idempotency-Replayed` header and no 400, 409 or 422 responses. `Off` endpoints, other methods and non-idempotent endpoints are left unchanged. The rest of this section describes `Enforce`.
+
+```csharp
+builder.Services.AddIdempotency();
+builder.Services.AddSwaggerGen(o => o.AddEnumConventions().AddIdempotencyConventions());   // AddSwagger already does both
+```
+
+Each such operation gets:
+
+- the header parameter from `IdempotencyOptions.HeaderName` (default `Idempotency-Key`), `required` when the endpoint's resolved `RequireKey` is true;
+- the `ReplayedHeaderName` header (default `Idempotency-Replayed`) on every 2xx response;
+- `400` (`Idempotency.KeyMissing` when the key is required, `KeyInvalid`, and `ScopeRequired` when the endpoint rejects unscoped keys), `409` (`Idempotency.InFlight`, with a `Retry-After` header) and `422` (`Idempotency.KeyReused`) as `application/problem+json` with a `code` enum.
+
+An endpoint that already documents a 400, 409 or 422 keeps its description (ours is appended), headers and schema (the content becomes a `oneOf` of both). Header names are read from the options when the document is generated. `CSharpEssentials.AspNetCore.OpenApi` produces the same description.
+
+## Enum schemas
+
+```csharp
+using CSharpEssentials.AspNetCore; // AddEnumConventions for IServiceCollection and SwaggerGenOptions
+
+builder.Services.AddEnumConventions();
+builder.Services.AddSwaggerGen(o => o.AddEnumConventions()); // AddSwagger calls it
+// or, without AddSwagger, also leaving out undefined enum defaults:
+builder.Services.AddSwaggerEnumConventions();
+```
+
+Enums handled by the enum conventions (`[StringEnum]` or generated metadata) are described the way they are written: one component per enum with the wire names in `enum`, `x-enum-varnames`, `x-enum-descriptions`, `x-enum-numeric-values` and a value table appended to your description (obsolete members `(deprecated)`, the `[EnumFallback]` member `Response only:`). `default` is the wire name, `[Flags]` enums are arrays with `uniqueItems: true`, and nullable is written where the enum is used (`allOf` + `nullable: true`, OpenAPI 3.0). Keep OpenAPI 3.0, the Swashbuckle default. The enum filters always write the 3.0 shape (a filter cannot see the version `UseSwagger` serializes), and with `UseSwagger(o => o.OpenApiVersion = OpenApiSpecVersion.OpenApi3_1)` a nullable enum usage, and (with `OptionalRouteParameterMode.LegacyNonCompliant`) an optional route parameter whose schema is a `$ref`, is serialized as `{"type": "null", "allOf": [{"$ref": ...}]}`: no value matches both `type: "null"` and the referenced component, so the schema is unsatisfiable and validators and client generators reject `null` and every enum value.
+
+An undefined enum default, such as `[DefaultValue((OrderStatus)42)]` or a parameter default `(OrderStatus)42`, is left out of the document by `AddSwagger`. Swashbuckle serializes the default with the enum converter before any filter runs, so `AddSwagger` wraps the registered `ISerializerDataContractResolver`. Without `AddSwagger`, call `services.AddSwaggerEnumConventions()` after `AddSwaggerGen` and after registering your own resolver: it adds `AddEnumConventions()` and wraps the resolver the same way, and calling it twice or together with `AddSwagger` registers once. With only `AddSwaggerGen(o => o.AddEnumConventions())`, or with your own resolver registered by type (`AddSingleton<ISerializerDataContractResolver, MyResolver>()`), nothing is wrapped. CSharpEssentials.Json 8.0 writes an undefined value as its number instead of throwing, so the document is still served, but the default is not guaranteed to be left out. Use a defined value, call `AddSwagger` or `AddSwaggerEnumConventions`, or register your resolver as an instance or a factory.
+
+A document whose operations all write numbers describes the enums as `integer`; a document that mixes formats describes strings and marks each number operation with `x-enum-wire-format: number` and a note; it also logs one warning per enum used in both formats (once per document). Header selected operations get `x-enum-wire-format-header` and a note; a selector that throws for a request without the header is described with the global `WriteAs` format and logged once as a warning. Enums without `[StringEnum]` or metadata keep the Swashbuckle schema.
+
+The schemas match those of `CSharpEssentials.AspNetCore.OpenApi` (both are compared with the same golden files). Microsoft.AspNetCore.OpenApi uses short schema ids, so the `$ref` values match only with `QualifyWithNamespace = false`.
+
+## Upgrading
+
+### To 8.0
+
+`SwashbuckleSchemaIdFactory.QualifyWithNamespace` is `true` by default, and `AddSwagger` uses that default. Schema ids are namespace-qualified (`MyApp.Contracts.Order` instead of `Order`), so every `$ref` and every client type name generated from the document changes. Regenerate your clients, or keep the 7.x ids as shown in [Swagger with versioning](#swagger-with-versioning).
+
+### From 5.x
+
+5.x pinned `Swashbuckle.AspNetCore` 8.x/9.x and `Microsoft.OpenApi` 1.x. 6.0 needs `Swashbuckle.AspNetCore` 10 and `Microsoft.OpenApi` 2.x on every target:
+
+- `AddSwagger<T>(securityScheme, assembly)` is now `AddSwagger<T>(securitySchemeName, securityScheme, assembly)`: Microsoft.OpenApi 2.x has no `Reference` on `OpenApiSecurityScheme`, so the scheme id is an argument. `SecuritySchemes.JwtBearerSchemeName` is `"Bearer"`, the id 5.x used.
+- `SecuritySchemes.JwtBearerTokenSecurity` no longer sets `Reference`.
+- Your own Swashbuckle filters move to the Swashbuckle 10 / Microsoft.OpenApi 2.x API: `using Microsoft.OpenApi;` (no `.Models`/`.Any`), `ISchemaFilter.Apply(IOpenApiSchema, ...)`, `JsonSchemaType` instead of type strings, `JsonNode` instead of `IOpenApiAny`, `JsonNodeExtension` for extensions.
+- `EnumSchemaFilter` is `sealed` and its `Apply` takes `IOpenApiSchema`.
+- A `ConfigureSwaggerOptions` subclass imports `OpenApiInfo` and `OpenApiLicense` from `Microsoft.OpenApi` (was `Microsoft.OpenApi.Models`).
+- An optional route parameter (`{id?}`) whose schema is a `$ref` is written as `allOf: [$ref]` + `nullable: true`, since a `$ref` cannot carry siblings in OpenAPI 3.0. From 6.1.0 this applies to `OptionalRouteParameterMode.LegacyNonCompliant` only; see [Optional route parameters](#optional-route-parameters).
+- An enum property with its own XML `<summary>` is written as `allOf: [$ref]` + `description`; a property without one stays a plain `$ref`.
+
+See [docs/migration/v5-to-v6.md](/migration/v5-to-v6) for the full list.
+
+### From 4.x
+
+The Swagger code moved here from `CSharpEssentials.AspNetCore`; namespaces and the `AddSwagger` API are unchanged. `EnumSchemaFilter` now takes an `IServiceProvider` (Swashbuckle creates it); register it with `AddEnumConventions()` instead of `SchemaFilter<EnumSchemaFilter>()`.

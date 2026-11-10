@@ -19,6 +19,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check the Docs7 site is in sync
+        run: python3 scripts/docs7.py --check
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:

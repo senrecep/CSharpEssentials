@@ -1,0 +1,25 @@
+---
+title: "Examples.Resilience"
+---
+
+Console demo of `CSharpEssentials.Resilience`.
+
+## Run
+
+```bash
+dotnet run
+```
+
+## What's covered
+
+- Empty policy: `ResiliencePolicy.Create()`
+- Retry with exponential and constant backoff
+- Timeout
+- Circuit breaker
+- Retry, timeout and circuit breaker combined
+- Generic `ResiliencePolicy<T>`
+- Fallback values
+- `Create(ResiliencePolicyOptions)`
+- `ExecuteAsync` on a `Func<Task<T>>`
+- `RetryIfFailed` on a `Func<CancellationToken, Task<Result<T>>>`
+- Error types: `Validation` and `NotFound` failures are returned without retrying; a `Conflict` failure is retried by `RetryIfFailed`

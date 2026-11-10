@@ -1,0 +1,33 @@
+---
+title: "CSharpEssentials.Enums example"
+---
+
+This console application shows the helpers that the `CSharpEssentials.Enums` source generator writes for `[StringEnum]` enums. Full documentation: [CSharpEssentials.Enums Readme](/libraries/enums).
+
+## Features demonstrated
+
+| Feature | Description |
+|---------|-------------|
+| `[StringEnum]` | Opts an enum into the generator and the enum conventions |
+| Wire names | `ToWireName()`, the `{Member}WireName` constants, `TryParseWire()` and `ParseWire()` |
+| Other generated helpers | `ToOptimizedString()`, `ToKebabCase()`, `ToLowerCase()`, `ToUpperCase()`, `IsDefined()`, `GetNames()`, `GetValues()` |
+| Runtime API | `EnumValueFormatter` and `EnumMetadata` for `DeliveryStatus` |
+
+## Package references
+
+The project references the library projects and the generator project with `OutputItemType="Analyzer"`. That form only works inside this repository, because a `ProjectReference` does not carry the referenced project's generator output. In your own project reference the package:
+
+```xml
+<ItemGroup>
+  <PackageReference Include="CSharpEssentials.Json" Version="7.0.0" />
+</ItemGroup>
+```
+
+`CSharpEssentials.Json`, like every package that depends on Enums, brings the generator, the analyzers and the code fixes.
+
+## Running
+
+```bash
+cd examples/Examples.Enums
+dotnet run
+```
