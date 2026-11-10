@@ -12,7 +12,7 @@
     <Title>CSharp Essentials</Title>
     <Product>CSharp Essentials</Product>
     <!-- Version inherited from Directory.Build.props -->
-    <Authors>recepsen</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       Result,Error,Maybe,Rule,Any,Json,Entity,DomainEvent,Utility,FunctionalProgramming,Monad,DiscriminatedUnions,TypeSafety,ErrorHandling,DDD,EntityFramework,TimeManagement,Extensions,LINQ</PackageTags>

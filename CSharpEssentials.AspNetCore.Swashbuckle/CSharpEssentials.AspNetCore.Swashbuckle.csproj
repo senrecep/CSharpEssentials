@@ -8,7 +8,7 @@
     <Title>CSharp Essentials AspNetCore Swashbuckle</Title>
     <Product>CSharp Essentials AspNetCore Swashbuckle</Product>
     <!-- Version inherited from Directory.Build.props -->
-    <Authors>recepsen</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>AspNetCore,Swagger,Swashbuckle,OpenApi,ApiVersioning,Enum,StringEnum,EnumConventions</PackageTags>
     <Description>Swashbuckle (Swagger) integration for CSharpEssentials.AspNetCore: versioned Swagger setup,

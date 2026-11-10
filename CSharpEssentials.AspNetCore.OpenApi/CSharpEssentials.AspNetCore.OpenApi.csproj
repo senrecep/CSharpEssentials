@@ -9,7 +9,7 @@
     <Title>CSharp Essentials AspNetCore OpenApi</Title>
     <Product>CSharp Essentials AspNetCore OpenApi</Product>
     <!-- Version inherited from Directory.Build.props -->
-    <Authors>recepsen</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>AspNetCore,OpenApi,Microsoft.AspNetCore.OpenApi,Enum,StringEnum,EnumConventions,Scalar</PackageTags>
     <Description>Microsoft.AspNetCore.OpenApi integration for the CSharpEssentials enum conventions: enum schemas with

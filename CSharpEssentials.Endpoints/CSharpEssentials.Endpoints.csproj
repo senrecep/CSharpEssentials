@@ -6,7 +6,7 @@
     <PackageId>CSharpEssentials.Endpoints</PackageId>
     <Title>CSharp Essentials Endpoints</Title>
     <Product>CSharp Essentials Endpoints</Product>
-    <Authors>recepsen</Authors>
+    <Authors>senrecep</Authors>
     <PackageIcon>icon.png</PackageIcon>
     <PackageTags>
       AspNetCore,MinimalApi,Endpoints,EndpointGroups,SourceGenerator,AOT,Trimming,Carter,RouteGroups,CSharpEssentials</PackageTags>
