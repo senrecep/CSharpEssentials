@@ -45,7 +45,7 @@ def collect():
         for readme in sorted(p for p in pkg.rglob("*") if p.name.lower() == "readme.md"
                              and "bin" not in p.parts and "obj" not in p.parts):
             sub = readme.parent.relative_to(pkg).parts
-            page = "packages/" + "-".join([slug(pkg.name), *[s.lower() for s in sub]])
+            page = "libraries/" + "-".join([slug(pkg.name), *[s.lower() for s in sub]])
             pages[readme] = page
             groups["Packages"].append(page)
         bench = pkg / "BENCHMARKS.md"

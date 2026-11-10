@@ -123,4 +123,4 @@ If any step fails, the chain short-circuits and returns the first error set.
 "ProductCategory": { "type": "integer", "format": "int32", "enum": [0, 1, 2, 3, 4] }
 ```
 
-To get the wire names in the document and in the JSON, mark the enum with `[StringEnum]`, reference `CSharpEssentials.Enums.Generators` as an analyzer (a package reference to `CSharpEssentials.AspNetCore` already brings it), call `builder.Services.AddEnumConventions()` and use `options.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does that for you). See the [Swashbuckle package README](/packages/aspnetcore-swashbuckle).
+To get the wire names in the document and in the JSON, mark the enum with `[StringEnum]`, reference `CSharpEssentials.Enums.Generators` as an analyzer (a package reference to `CSharpEssentials.AspNetCore` already brings it), call `builder.Services.AddEnumConventions()` and use `options.AddEnumConventions()` on `SwaggerGenOptions` (`AddSwagger` does that for you). See the [Swashbuckle package README](/libraries/aspnetcore-swashbuckle).
