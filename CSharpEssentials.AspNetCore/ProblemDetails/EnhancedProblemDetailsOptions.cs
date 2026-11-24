@@ -50,7 +50,11 @@ public sealed class EnhancedProblemDetailsOptions
     public Func<int, string?> TypeUriResolver { get; set; } = ProblemTypeUris.Rfc9110;
 
     /// <summary>
-    /// Writes an <c>exception</c> extension (type, message, stack trace) for unhandled exceptions.
+    /// Writes an <c>exception</c> extension (type, message, stack trace) for unhandled exceptions, and keeps the
+    /// error description and the exception metadata (<c>exceptionType</c>, <c>exceptionMessage</c>,
+    /// <c>exceptionStackTrace</c>, <c>innerException</c>, <c>exception</c>, <c>stackTrace</c>) in 5xx problems built
+    /// from errors. When <see langword="false"/>, a 5xx problem gets a fixed <c>detail</c>, its 5xx errors get the
+    /// same fixed description and those metadata keys are removed.
     /// Enable only in development. Default: <see langword="false"/>.
     /// </summary>
     public bool ExposeExceptionDetails { get; set; }

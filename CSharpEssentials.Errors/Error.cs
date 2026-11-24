@@ -196,6 +196,8 @@ public readonly record struct Error : IError
         code: nameof(False),
         description: "A false error has occurred.");
 
+    internal Error WithMetadata(ErrorMetadata? metadata) => new(Code, Description, Type, metadata);
+
     /// <summary>
     /// Implicitly converts a single <see cref="Error"/> to an <see cref="Error"/> array.
     /// </summary>

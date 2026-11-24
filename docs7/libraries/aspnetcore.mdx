@@ -60,6 +60,14 @@ app.UseEnhancedProblemDetails(); // UseExceptionHandler + UseStatusCodePages
 
 `o.UseLegacyDefaults()` restores the 3.x output.
 
+A problem with status 500 or higher hides server details while `ExposeExceptionDetails` is `false`. This applies to every response built from errors: `ToProblemResult`, `ToActionResult`, `ToProblemDetails`, the Result endpoint filter (including a Mediator `ExceptionHandlingBehavior` failure) and an `IExceptionProblemMapper` that returns errors. In that case:
+
+- `detail` is `An unexpected error occurred.` instead of the description of the primary error.
+- Each error that maps to 5xx gets that same description, so `errors` and `errorMessages` no longer carry `Error.Exception` messages.
+- The metadata keys `exceptionType`, `exceptionMessage`, `exceptionStackTrace`, `innerException`, `exception` and `stackTrace` are removed from every error and from the `extensions` you pass.
+
+Error codes, titles and 4xx responses are unchanged. A `Detail` you set yourself in an `ExceptionProblem` is written as given. With `ExposeExceptionDetails = true` the response keeps the descriptions and metadata. `ToProblemDetails()` and the `ProblemDetails` preview of the Minimal API result always use the default options, so they always redact.
+
 With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpContext.TraceIdentifier`. `errors` lists only `ErrorType.Validation` errors; every code is in `errorCodes`.
 
 `services.ConfigureInvalidModelStateResponse()` writes the automatic 400 of `[ApiController]` (invalid model state) through the same pipeline, with the model state key as the error code. It can be called before or after `AddControllers()`. It has no effect together with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off (`SuppressModelStateInvalidFilter = true`); use one or the other.

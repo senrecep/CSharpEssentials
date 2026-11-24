@@ -137,6 +137,6 @@ public class ProblemDetailsExtensionsTests
 
         problemDetails.Status.Should().Be(500);
         problemDetails.Title.Should().Be("Unknown Error");
-        problemDetails.Errors.Should().Contain(error);
+        problemDetails.Errors.Should().ContainSingle(e => e.Code == error.Code && e.Description == "An unexpected error occurred.");
     }
 }
