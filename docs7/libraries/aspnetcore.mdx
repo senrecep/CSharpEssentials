@@ -70,7 +70,22 @@ Error codes, titles and 4xx responses are unchanged. A `Detail` you set yourself
 
 With no W3C `Activity` (tracing disabled), `W3CTraceId` falls back to `HttpContext.TraceIdentifier`. `errors` lists only `ErrorType.Validation` errors; every code is in `errorCodes`.
 
-`services.ConfigureInvalidModelStateResponse()` writes the automatic 400 of `[ApiController]` (invalid model state) through the same pipeline, with the model state key as the error code. It can be called before or after `AddControllers()`. It has no effect together with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off (`SuppressModelStateInvalidFilter = true`); use one or the other.
+A `BadHttpRequestException` keeps its status code but never its message, which can name parameters, types or server limits. `detail` is a fixed text per status: `The request is invalid.` (400 and any other), `The request timed out.` (408), `The request body is too large.` (413), `The request content type is not supported.` (415) and `The request headers are too large.` (431).
+
+A JSON request body failure becomes a 400 validation problem with one error per field. `AddEnhancedProblemDetails()` registers the mapper; Minimal APIs throw these failures only with `RouteHandlerOptions.ThrowOnBadRequest = true`.
+
+- The error code is the JSON path without `$.`, with property names as the client sent them: `items[2].quantity` (a PascalCase body gives `Items[2].Quantity`). Malformed JSON is keyed by the path where parsing stopped, `$` at the root.
+- The description is fixed: `The value is invalid.`, or `The field is required.` for a missing required member. The framework text (CLR type names, line and byte positions) is never written.
+- A missing required member gets one error per member (`items[1].sku`). System.Text.Json lists the members in its message and cuts a long list short, so only the members it names are reported.
+- In `GlobalExceptionHandler`, a rejected enum value is left to the [enum conventions](#enum-conventions-json-binding-and-wire-format) mapper, whatever the registration order.
+- A `JsonException` that is not wrapped in a `BadHttpRequestException` is mapped the same way. If your own code deserializes server-side data (a cache, a database, a downstream response), or response serialization fails before the headers are sent (an object cycle, the maximum depth), and the `JsonException` escapes, catch it or add an `IExceptionProblemMapper` for it; otherwise the client gets a 400 for a server fault.
+
+```json
+{ "status": 400, "title": "Validation Error", "detail": "The value is invalid.", "errorCodes": ["items[1].quantity"],
+  "errors": [{ "code": "items[1].quantity", "description": "The value is invalid." }] }
+```
+
+`services.ConfigureInvalidModelStateResponse()` writes the automatic 400 of `[ApiController]` (invalid model state) through the same pipeline, with the model state key as the error code. A JSON body error in model state gets the same codes and fixed descriptions as above, a rejected enum value included (MVC reports it through model state, so the enum conventions message is not written); MVC also adds its own required error for the action parameter (`The order field is required.`, keyed by the parameter name). It can be called before or after `AddControllers()`. It has no effect together with `ConfigureModelValidatorResponse()`, which turns the automatic 400 off (`SuppressModelStateInvalidFilter = true`); use one or the other.
 
 `errors.ToProblemResult()` (Minimal API) and `errors.ToActionResult(HttpContext)` (MVC) read these options when they execute, so both produce the same JSON.
 

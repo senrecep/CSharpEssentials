@@ -43,4 +43,20 @@ public class DefaultExceptionProblemMapperTests
         problem.Title.Should().Be("An unexpected error occurred.");
         problem.Detail.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData(400, "The request is invalid.")]
+    [InlineData(408, "The request timed out.")]
+    [InlineData(413, "The request body is too large.")]
+    [InlineData(415, "The request content type is not supported.")]
+    [InlineData(431, "The request headers are too large.")]
+    public void TryMap_Should_UseFixedDetail_When_BadHttpRequestIsThrown(int statusCode, string detail)
+    {
+        var httpContext = new DefaultHttpContext();
+
+        DefaultExceptionProblemMapper.Instance.TryMap(
+            httpContext, new BadHttpRequestException("framework secret", statusCode), out ExceptionProblem? problem);
+
+        problem.Should().Be(new ExceptionProblem(statusCode, Detail: detail));
+    }
 }

@@ -15,7 +15,8 @@ public static partial class Extensions
     /// <summary>
     /// Registers ProblemDetails with the CSharpEssentials enrichment and default options. Every problem response
     /// (CSharpEssentials results, <see cref="GlobalExceptionHandler"/>, status code pages, the framework exception
-    /// handler) then goes through the same <see cref="IProblemDetailsEnricher"/> pipeline.
+    /// handler) then goes through the same <see cref="IProblemDetailsEnricher"/> pipeline. A JSON request body failure
+    /// that reaches <see cref="GlobalExceptionHandler"/> becomes a 400 validation problem keyed by the JSON path.
     /// </summary>
     public static IServiceCollection AddEnhancedProblemDetails(this IServiceCollection services) =>
         services.AddEnhancedProblemDetails(static _ => { });
@@ -32,6 +33,7 @@ public static partial class Extensions
         services.Configure(configure);
         services.TryAddSingleton<EnhancedProblemDetailsMarker>();
         services.TryAddSingleton<IErrorStatusCodeMapper>(DefaultErrorStatusCodeMapper.Instance);
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IExceptionProblemMapper, BindingExceptionProblemMapper>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<ProblemDetailsOptions>, EnhancedProblemDetailsPostConfigure>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<Microsoft.AspNetCore.Http.Json.JsonOptions>, EnhancedProblemDetailsJsonOptionsSetup>());
         return services;
@@ -109,7 +111,9 @@ public static partial class Extensions
     /// binding failures such as an unknown enum value) as an enhanced problem response, so it carries the same
     /// <c>errorCodes</c>/<c>errors</c> fields (and honors <see cref="EnhancedProblemDetailsOptions.ErrorFields"/>)
     /// as every other problem response. Each model error becomes an <see cref="ErrorType.Validation"/> error whose
-    /// code is the model state key (for example <c>status</c>, <c>dto.status</c> or <c>$.status</c>).
+    /// code is the model state key (for example <c>status</c> or <c>dto.status</c>). A JSON body error is keyed by its JSON path
+    /// without <c>$.</c> (<c>items[2].quantity</c>), described by a fixed message instead of the framework text, and a missing
+    /// required member gives one error per member, the same as <see cref="GlobalExceptionHandler"/> writes for Minimal APIs.
     /// <para>
     /// Registered as a post-configuration, so it can be called before or after <c>AddControllers()</c>.
     /// It has no effect together with <see cref="ConfigureModelValidatorResponse"/>, which turns the automatic 400
@@ -125,12 +129,14 @@ public static partial class Extensions
         this IServiceCollection services,
         Func<string, ModelError, Error>? errorFactory = null)
     {
-        Func<string, ModelError, Error> factory = errorFactory ?? CreateModelStateError;
+        Func<string, ModelError, IEnumerable<Error>> factory = errorFactory is null
+            ? CreateModelStateErrors
+            : (key, error) => [errorFactory(key, error)];
         services.PostConfigure<ApiBehaviorOptions>(options => options.InvalidModelStateResponseFactory = context =>
         {
             Error[] errors = [.. context.ModelState
                 .Where(static entry => entry.Value is { Errors.Count: > 0 })
-                .SelectMany(entry => entry.Value!.Errors.Select(error => factory(entry.Key, error)))];
+                .SelectMany(entry => entry.Value!.Errors.SelectMany(error => factory(entry.Key, error)))];
             if (errors.Length == 0)
                 errors = [Error.Validation(code: InvalidModelStateCode, description: InvalidModelStateDescription)];
             return errors.ToActionResult(context.HttpContext, statusCode: StatusCodes.Status400BadRequest);
@@ -142,10 +148,14 @@ public static partial class Extensions
     private const string InvalidModelStateDescription = "The request is invalid.";
 
     // Exception messages of model errors are not written: they may expose implementation details.
-    private static Error CreateModelStateError(string key, ModelError error) =>
-        Error.Validation(
+    private static Error[] CreateModelStateErrors(string key, ModelError error)
+    {
+        if (key.StartsWith('$'))
+            return BindingExceptionProblemMapper.CreateErrors(key, error.ErrorMessage);
+        return [Error.Validation(
             code: string.IsNullOrEmpty(key) ? InvalidModelStateCode : key,
-            description: string.IsNullOrEmpty(error.ErrorMessage) ? InvalidModelStateDescription : error.ErrorMessage);
+            description: string.IsNullOrEmpty(error.ErrorMessage) ? InvalidModelStateDescription : error.ErrorMessage)];
+    }
 
     /// <summary>
     /// Converts a failed result to a problem response. Throws for a successful result.
