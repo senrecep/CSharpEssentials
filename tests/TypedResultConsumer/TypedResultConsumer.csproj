@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Outside the solution. Builds one file from Cases/ per run with the real SDK, so scripts/check-typed-consumer.py can assert
-       the diagnostics a consumer sees: a clean build for full coverage, CS8509, CS0457 and CS0029 for the broken cases.
+       the diagnostics a consumer sees: a clean build for full coverage, CS8509, CS0457, CS0029 and CS0161 for the broken cases.
        Build: dotnet build tests/TypedResultConsumer -p:FixtureCase=MissingArm -p:CseVersion=<packed> -->
   <PropertyGroup>
     <TargetFramework>net11.0</TargetFramework>

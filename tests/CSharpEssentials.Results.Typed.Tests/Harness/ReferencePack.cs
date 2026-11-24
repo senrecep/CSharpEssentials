@@ -15,10 +15,11 @@ internal sealed class ReferencePack
 {
     private static readonly Lazy<ReferencePack> LazyCurrent = new(Create);
 
-    private ReferencePack(FrameworkName framework, string directory, IReadOnlyList<MetadataReference> references)
+    private ReferencePack(FrameworkName framework, string directory, IReadOnlyList<Assembly> library, IReadOnlyList<MetadataReference> references)
     {
         Framework = framework;
         Directory = directory;
+        Library = library;
         References = references;
     }
 
@@ -27,6 +28,11 @@ internal sealed class ReferencePack
     public FrameworkName Framework { get; }
 
     public string Directory { get; }
+
+    /// <summary>
+    /// The CSharpEssentials assemblies the snippets compile against: Results, Errors and everything they reference transitively.
+    /// </summary>
+    public IReadOnlyList<Assembly> Library { get; }
 
     public IReadOnlyList<MetadataReference> References { get; }
 
@@ -41,9 +47,9 @@ internal sealed class ReferencePack
         string directory = FindRefPackDirectory(framework);
 
         IEnumerable<string> platform = System.IO.Directory.GetFiles(directory, "*.dll");
-        IEnumerable<string> library = CSharpEssentialsClosure(typeof(Result).Assembly, errors).Select(a => a.Location);
-        MetadataReference[] references = [.. platform.Concat(library).Select(path => MetadataReference.CreateFromFile(path))];
-        return new ReferencePack(framework, directory, references);
+        Assembly[] library = [.. CSharpEssentialsClosure(typeof(Result).Assembly, errors)];
+        MetadataReference[] references = [.. platform.Concat(library.Select(a => a.Location)).Select(path => MetadataReference.CreateFromFile(path))];
+        return new ReferencePack(framework, directory, library, references);
     }
 
     private static string FindRefPackDirectory(FrameworkName framework)

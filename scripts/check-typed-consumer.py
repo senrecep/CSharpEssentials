@@ -24,6 +24,7 @@ CASES = {
     "MissingArm": {"CS8509"},
     "DuplicateSlot": {"CS0457"},
     "ForeignError": {"CS0029"},
+    "ReturningStatement": {"CS0161"},
 }
 
 DIAGNOSTIC = re.compile(r"\b(?:error|warning) (CS\d{4})\b")
