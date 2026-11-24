@@ -109,7 +109,7 @@ ErrorType type = 401.ToErrorType();                      // Unauthorized
 
 ### Domain-specific error hierarchies
 
-`Error` is a `readonly record struct` and cannot be subclassed. Group static factories in one class per aggregate or bounded context instead:
+`Error` is a `readonly record struct` and cannot be subclassed. Group static factories in one class per aggregate or bounded context instead (or use the typed kinds in the next section):
 
 ```csharp
 using CSharpEssentials.Errors;
@@ -167,6 +167,91 @@ public Result PlaceOrder(Cart cart, decimal balance)
     return Result.Success();
 }
 ```
+
+### Typed error kinds
+
+`TypedError` is an abstract record that implements `IError`. Each `ErrorType` except `Unknown` has a kind that derives from it:
+
+| Kind | `Type` |
+|---|---|
+| `ValidationError` | `Validation` |
+| `UnauthorizedError` | `Unauthorized` |
+| `ForbiddenError` | `Forbidden` |
+| `NotFoundError` | `NotFound` |
+| `ConflictError` | `Conflict` |
+| `DomainError` | `Domain` |
+| `FailureError` | `Failure` |
+| `UnexpectedError` | `Unexpected` |
+
+The CLR type carries the kind, so code can match on the type instead of reading `Type`. The kinds are not sealed: derive a record from one to give an error its own type. The derived type keeps the kind's `Type` (the override is sealed). The constructor rejects a null `code` or `description`, and so does a `with` expression.
+
+Write a catalog per aggregate with predefined instances, a `Codes` class of constants, and a nested type for any error that callers must tell apart by type:
+
+```csharp
+using CSharpEssentials.Errors;
+
+public static class UserErrors
+{
+    public static class Codes
+    {
+        public const string NotFound = "User.NotFound";
+        public const string Deleted = "User.Deleted";
+        public const string Locked = "User.Locked";
+    }
+
+    public static readonly NotFoundError NotFound = new(Codes.NotFound, "User not found.");
+    public static readonly NotFoundError Deleted = new(Codes.Deleted, "User was deleted.");
+
+    public static NotFoundError NotFoundById(Guid id) => new(Codes.NotFound, $"User {id} not found.");
+
+    public sealed record Locked(Guid Id) : ConflictError(Codes.Locked, "User is locked.");
+}
+```
+
+SonarAnalyzer reports S3218 on `Codes.NotFound` because it shares a name with the `NotFound` field. The shadowing is harmless here; move the constants to a separate `UserErrorCodes` class if your build treats that rule as an error.
+
+A static field cannot be a pattern, so match predefined instances on their constant code. Put the bare kind after the code arms:
+
+```csharp
+string message = error switch
+{
+    NotFoundError { Code: UserErrors.Codes.Deleted } => "User was deleted.",
+    NotFoundError => "User not found.",
+    UserErrors.Locked locked => $"User {locked.Id} is locked.",
+    _ => error.Description,
+};
+```
+
+`ToError()` turns a typed error into an `Error` with the same code, description and type, and the same `ErrorMetadata` instance, so it feeds today's `Result` and the AspNetCore problem details:
+
+```csharp
+Result<User> result = UserErrors.NotFoundById(id).ToError();
+```
+
+`[ErrorKind(ErrorType.X)]` declares the kind on the type itself, so tools can read it without an instance. Every built-in kind has it and derived types inherit it. It also works on a struct that implements `IError`:
+
+```csharp
+[ErrorKind(ErrorType.Conflict)]
+public readonly record struct OrderLocked(int OrderId) : IError
+{
+    public string Code => "Order.Locked";
+    public string Description => $"Order {OrderId} is locked.";
+    public ErrorType Type => ErrorType.Conflict;
+    public int NumericType => (int)Type;
+    public ErrorMetadata? Metadata => null;
+}
+```
+
+A struct error is boxed whenever it is used as `IError`, so prefer the class kinds. Nothing stops `default(OrderLocked)`, and a struct that stores its code in a field returns a null `Code` from `default`, which breaks the `IError` contract.
+
+Equality:
+
+- Two typed errors are equal when the runtime type, code, description and type match and the metadata has the same content (compared like `Error` compares it).
+- A derived error never equals its base kind, even with the same code and description.
+- Equality does not survive serialization when metadata holds values: System.Text.Json reads them back as `JsonElement`. Code and type do survive.
+- Tell errors apart by `Code`, not by comparing values across kinds or after a round trip.
+
+Predefined instances share one `ErrorMetadata` dictionary, which is mutable. Do not add metadata to a shared instance; create a new error with its own metadata instead.
 
 ## Upgrading to 8.0
 

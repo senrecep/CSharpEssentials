@@ -223,6 +223,9 @@ public readonly record struct Error : IError
 
     internal Error WithMetadata(ErrorMetadata? metadata) => new(Code, Description, Type, metadata);
 
+    internal static Error Create(string code, string description, ErrorType type, ErrorMetadata? metadata) =>
+        new(code, description, type, metadata);
+
     /// <summary>
     /// Implicitly converts a single <see cref="Error"/> to an <see cref="Error"/> array.
     /// </summary>

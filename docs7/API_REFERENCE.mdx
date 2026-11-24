@@ -66,6 +66,10 @@ Equality compares `Type`, `NumericType`, `Code`, `Description` and the metadata 
 
 `ErrorMetadata` is a `Dictionary<string, object?>` with `CreateEmpty()`, `CreateWithStackTrace()`, `CreateWithException(ex)`, `CreateWithExceptionDetailed(ex)`, the fluent `AddMetadata(key, value)`, `AddStackTrace()`, `AddException(ex)`, `AddExceptionDetailed(ex)`, and `Combine(other)`. `IError` is the interface `Error` implements.
 
+### Typed error kinds
+
+`TypedError` (abstract record, implements `IError`) has one non-sealed kind per `ErrorType` except `Unknown`: `NotFoundError`, `ConflictError`, `ValidationError`, `UnauthorizedError`, `ForbiddenError`, `UnexpectedError`, `FailureError` and `DomainError`, each with a `(code, description, metadata = null)` constructor. Derived records keep the kind's `Type`. `ToError()` returns an `Error` with the same code, description, type and metadata instance. `[ErrorKind(ErrorType.X)]` declares the kind on a class or struct and is inherited. Equality compares runtime type, code, description, type and metadata content; see the [Errors readme](/libraries/errors#typed-error-kinds).
+
 ### Error composition
 
 | Operation | What it does |
