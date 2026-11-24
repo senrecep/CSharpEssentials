@@ -44,7 +44,7 @@ Reference for every package in the CSharpEssentials ecosystem. Failures are retu
 
 | Method | Creates | HTTP mapping | When to use |
 |--------|---------|-------------|-------------|
-| `Error.Failure(code, desc)` | General failure | 500 | Domain logic failures |
+| `Error.Failure(code, desc)` | General failure | 500 | Server-side failures |
 | `Error.Validation(code, desc)` | Validation error | 400 | Input validation failures |
 | `Error.NotFound(code, desc)` | Not found error | 404 | Missing resources |
 | `Error.Unauthorized(code, desc)` | Auth error | 401 | Authentication failures |
@@ -54,6 +54,8 @@ Reference for every package in the CSharpEssentials ecosystem. Failures are retu
 | `Error.Exception(ex)` | From exception | 500 | Bridging exception-based code into the error world |
 
 All factory methods accept an optional `ErrorMetadata? metadata` parameter for attaching arbitrary key-value data. `code` and `description` have defaults (the factory name and a generic message), so `Error.NotFound()` is valid. `Error.Exception` has three overloads, `(exception, type = Failure, metadata)`, `(code, exception, type, metadata)` and `(code, description, exception, type, metadata)`. Without a `code` it is the exception type name; the metadata gets `exceptionType`, `exceptionMessage`, `exceptionStackTrace` and, when present, `innerException`.
+
+`Failure`, `Unexpected`, `Unknown` and the default `Error.Exception` type map to 500. With the AspNetCore problem details and `ExposeExceptionDetails` off (the default), their description is replaced by `An unexpected error occurred.` in the response. Use `Validation`, `Conflict` or `Forbidden` for a business-rule rejection the client should read.
 
 `ErrorType` has eight members: `Failure`, `Unexpected`, `Validation`, `Conflict`, `NotFound`, `Unauthorized`, `Forbidden` and `Unknown`. `Unknown` has no factory; the EF Core `SaveChangesAsResultAsync` uses it.
 
@@ -159,9 +161,9 @@ These run only on success; a failure passes through unchanged.
 
 ```csharp
 Result<OrderDto> result = GetUser(userId)
-    .Ensure(u => u.IsActive, Error.Failure("User.Inactive", "Account is deactivated"))
+    .Ensure(u => u.IsActive, Error.Forbidden("User.Inactive", "Account is deactivated"))
     .Bind(u => GetOrder(u.LatestOrderId))
-    .Ensure(o => o.Status != OrderStatus.Cancelled, Error.Failure("Order.Cancelled", "Order was cancelled"))
+    .Ensure(o => o.Status != OrderStatus.Cancelled, Error.Conflict("Order.Cancelled", "Order was cancelled"))
     .Map(o => new OrderDto(o.Id, o.Total));
 ```
 

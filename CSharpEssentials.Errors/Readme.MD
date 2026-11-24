@@ -22,13 +22,13 @@ using CSharpEssentials.Errors;
 Error notFound = Error.NotFound("User.NotFound", "User was not found.");
 Error validation = Error.Validation("Email.Invalid", "Email format is invalid.");
 Error conflict = Error.Conflict("User.Duplicate", "User already exists.");
-Error failure = Error.Failure("Payment.Failed", "Payment was rejected.");
+Error failure = Error.Failure("Payment.GatewayDown", "The payment gateway did not respond.");
 Error forbidden = Error.Forbidden("Order.Forbidden", "You cannot cancel this order.");
 Error unauthorized = Error.Unauthorized("Token.Expired", "The token has expired.");
 Error unexpected = Error.Unexpected("Db.Down", "The database is unreachable.");
 ```
 
-The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
+`Failure`, `Unexpected` and `Unknown` map to HTTP 500. The AspNetCore problem details hide the description of a 5xx error unless `ExposeExceptionDetails` is on, so use `Validation`, `Conflict` or `Forbidden` for a business-rule rejection the client should read. The factories cover every `ErrorType` except `Unknown`. Each takes `code`, `description` and an optional `ErrorMetadata`, and all three have defaults: `Error.NotFound()` has the code `NotFound` and the description `A 'Not Found' error has occurred.` An `Error` exposes `Code`, `Description`, `Type`, `NumericType` (the `int` value of `Type`) and `Metadata` (`null` when none was given). It implements `IError`, and two errors are equal when type, code, description and metadata entries are equal. Metadata is compared by key, so entry order does not affect equality or `GetHashCode`.
 
 ### Error metadata
 
@@ -129,7 +129,7 @@ public static class OrderErrors
         Error.Validation("Order.EmptyCart", "Cannot place an order with an empty cart.");
 
     public static Error InsufficientFunds(decimal required, decimal available) =>
-        Error.Failure(
+        Error.Conflict(
             "Order.InsufficientFunds",
             $"Payment requires {required:C} but only {available:C} is available.",
             new ErrorMetadata().AddMetadata("Required", required).AddMetadata("Available", available));

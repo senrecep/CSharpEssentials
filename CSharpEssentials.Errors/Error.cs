@@ -137,6 +137,10 @@ public readonly record struct Error : IError
     /// Creates an <see cref="Error"/> from an exception. The code is the exception type name, the description is its message,
     /// and the type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
+    /// <remarks>
+    /// The default <see cref="ErrorType.Failure"/> maps to HTTP 500, and the AspNetCore problem details hide a 5xx
+    /// description unless <c>ExposeExceptionDetails</c> is on. Pass <see cref="ErrorType.Validation"/> for an exception the client caused.
+    /// </remarks>
     /// <param name="exception"></param>
     /// <param name="type"></param>
     /// <param name="metadata"></param>
@@ -150,6 +154,10 @@ public readonly record struct Error : IError
     /// Creates an <see cref="Error"/> from a code and an exception. The description is the exception message,
     /// and the type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
+    /// <remarks>
+    /// The default <see cref="ErrorType.Failure"/> maps to HTTP 500, and the AspNetCore problem details hide a 5xx
+    /// description unless <c>ExposeExceptionDetails</c> is on. Pass <see cref="ErrorType.Validation"/> for an exception the client caused.
+    /// </remarks>
     /// <param name="code"></param>
     /// <param name="exception"></param>
     /// <param name="type"></param>
@@ -166,6 +174,10 @@ public readonly record struct Error : IError
     /// Creates an <see cref="Error"/> from a code, a description and an exception.
     /// The type defaults to <see cref="ErrorType.Failure"/>.
     /// </summary>
+    /// <remarks>
+    /// The default <see cref="ErrorType.Failure"/> maps to HTTP 500, and the AspNetCore problem details hide a 5xx
+    /// description unless <c>ExposeExceptionDetails</c> is on. Pass <see cref="ErrorType.Validation"/> for an exception the client caused.
+    /// </remarks>
     /// <param name="code"></param>
     /// <param name="description"></param>
     /// <param name="exception"></param>
