@@ -4,9 +4,6 @@
 		<!-- Individual projects define their own TargetFrameworks -->
 		<LangVersion>15</LangVersion>
 
-		<!-- .NET 11 Native Union Flag -->
-		<DefineConstants Condition="'$(TargetFramework)' == 'net11.0'">$(DefineConstants);CSHARP_ESSENTIALS_ENABLE_UNIONS</DefineConstants>
-
 		<!-- Use project references by default for development -->
 		<UseProjectReferences Condition="'$(UseProjectReferences)' == ''">true</UseProjectReferences>
 

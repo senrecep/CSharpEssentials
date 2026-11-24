@@ -25,6 +25,11 @@ CASES = {
     "DuplicateSlot": {"CS0457"},
     "ForeignError": {"CS0029"},
     "ReturningStatement": {"CS0161"},
+    "TypedAllArms": set(),
+    "TypedMissingArm": {"CS8509"},
+    "TypedDuplicateSlot": {"CS0457"},
+    "TypedForeignError": {"CS0029"},
+    "TypedReturningStatement": {"CS0161"},
 }
 
 DIAGNOSTIC = re.compile(r"\b(?:error|warning) (CS\d{4})\b")

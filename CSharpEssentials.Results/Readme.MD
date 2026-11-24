@@ -2,7 +2,7 @@
 
 Functional Result pattern for explicit success/failure handling in .NET, without exceptions for control flow.
 
-`Result` and `Result<T>` are value types with implicit conversions from values and errors. Operations chain with `Then`, `Bind`, `Map` and `Ensure`, a failure can carry several errors, every operation has async overloads, and `Result.Try`, `Result.TryAsync` and `TryCatch` turn exceptions into errors.
+`Result` and `Result<T>` are value types with implicit conversions from values and errors. `Result<T, E1..E3>` puts the error types in the signature for exhaustive matching with C# 15 ([Typed errors](#typed-errors-resultt-e1-resultt-e1-e2-resultt-e1-e2-e3)). Operations chain with `Then`, `Bind`, `Map` and `Ensure`, a failure can carry several errors, every operation has async overloads, and `Result.Try`, `Result.TryAsync` and `TryCatch` turn exceptions into errors.
 
 Targets `net11.0`, `net10.0`, `net9.0` and `netstandard2.1`. Depends on `CSharpEssentials.Errors` and `CSharpEssentials.Json`.
 
@@ -359,6 +359,108 @@ await result.TapIfAsync(isEnabled, async v => await TrackAsync(v));
 // Works on Task<Result<T>> and ValueTask<Result<T>>
 await GetResultAsync().TapIfAsync(v => v > 0, v => Enqueue(v));
 ```
+
+## Typed errors: `Result<T, E1>`, `Result<T, E1, E2>`, `Result<T, E1, E2, E3>`
+
+Matching on these types needs the C# 15 compiler. A net11.0 project gets C# 15 by default with the .NET 11 SDK. A project that targets net10.0, net9.0, net8.0 or netstandard2.1 must build with the .NET 11 SDK and set `<LangVersion>15</LangVersion>`; without it a type pattern over the result fails with CS9327 (C# 14), CS9260 (C# 13) or CS8400 (C# 8). Implicit returns, `Match`, `Switch`, `TryGetValue` and `ToResult` work at any language version.
+
+A typed result holds either the success value or exactly one error, and the error type is part of the signature. It is a `readonly struct` with one value field, one error field and a tag, so `Result<int, NotFoundError, ConflictError>` is 16 bytes and the success path allocates nothing. Up to three error types are supported; use `Result<T>` when a handler can fail in more ways.
+
+```csharp
+public static class UserErrors
+{
+    public static class Codes
+    {
+        public const string NotFound = "User.NotFound";
+        public const string Deleted = "User.Deleted";
+        public const string Locked = "User.Locked";
+    }
+
+    public static readonly NotFoundError NotFound = new(Codes.NotFound, "User not found.");
+    public static readonly NotFoundError Deleted = new(Codes.Deleted, "User was deleted.");
+
+    // An error that callers must see as its own case gets its own type.
+    public sealed record Locked(Guid Id) : ConflictError(Codes.Locked, "User is locked.");
+}
+
+public Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id)
+{
+    if (deleted) return UserErrors.Deleted;
+    if (!exists) return UserErrors.NotFound;
+    if (locked) return new UserErrors.Locked(id);
+    return dto;
+}
+```
+
+Values and errors convert implicitly, a predefined `static readonly` error keeps its instance, and a derived error (`UserErrors.Locked`) goes to the slot of its base kind when there is no slot of its own. An error type that is not in the set does not compile (CS0029), and two slots of the same type make every conversion ambiguous (CS0457). The error types come from [CSharpEssentials.Errors](../CSharpEssentials.Errors/Readme.MD#typed-error-kinds).
+
+### Matching
+
+Use a switch expression. Once every case has an arm, the compiler needs no discard and no `null` arm; drop one case and it reports CS8509 naming the missing case.
+
+```csharp
+IResult response = Get(id) switch
+{
+    UserDto dto => Results.Ok(dto),
+    NotFoundError { Code: UserErrors.Codes.Deleted } => Results.StatusCode(410),
+    NotFoundError => Results.NotFound(),
+    UserErrors.Locked locked => Results.Conflict(locked.Id),
+};
+```
+
+- A `static readonly` field is not a pattern (CS0150), so `case UserErrors.NotFound` does not compile. Tell errors of the same type apart with a constant `Code` property pattern, and keep a bare kind arm after it for exhaustiveness.
+- A switch statement gets no exhaustiveness check. One that returns from every case still reports CS0161 until you add `case null:`. In statement code prefer `Match` or `Switch`:
+
+```csharp
+int status = Get(id).Match(
+    onSuccess: _ => 200,
+    onError1: _ => 404,
+    onError2: _ => 409);
+```
+
+`Match` and `Switch` take one delegate per case, in slot order. `TryGetValue(out T)` and `TryGetValue(out Ei)` read a case without throwing.
+
+### Widening and reordering
+
+A result converts implicitly into a result whose error set contains its own, in any order, so a handler can return the result of a narrower call:
+
+```csharp
+Result<UserDto, NotFoundError> Find(Guid id) => ...;
+
+Result<UserDto, NotFoundError, UserErrors.Locked> Get(Guid id) => Find(id);
+Result<UserDto, UserErrors.Locked, NotFoundError> reordered = Get(id);
+```
+
+### `default`
+
+`default(Result<T, E1, E2>)` holds no case. The compiler cannot catch it, so the members behave as follows:
+
+| Member | On `default` |
+|---|---|
+| `HasValue` | `false` |
+| `TryGetValue(...)` | `false` for every case |
+| `Value` | `null` |
+| `IsSuccess` / `IsFailure` | `false` / `true` |
+| switch expression without a `null` arm | throws `SwitchExpressionException` |
+| `Match`, `Switch`, `ToResult` | throw `InvalidOperationException` |
+| `IResultBase.Errors`, `FirstError`, `LastError` | an `Unexpected` error with code `Result.Default` |
+
+Create a typed result from a value or an error. Uninitialized fields, `new Result<T, E1>()` and array elements are all `default`.
+
+### Struct error types
+
+Error types may be structs. A struct error is boxed when it is stored, because all slots share one `object` field. `default` of a struct error type is a valid error with whatever its fields default to, often a `null` code; the bridge below turns an `IError` without a code into an `Unexpected` error instead of throwing.
+
+### Converting to `Result<T>`
+
+`ToResult()` returns the classic `Result<T>`, and the typed result also implements `IResultBase`, so Mediator behaviors, `ResultEndpointFilter` and other code written for `Result<T>` keep working. Each error becomes one `Error`:
+
+- An `Error` stays as it is.
+- Any other `IError` (every `TypedError` kind) keeps its code, description, type and the same `ErrorMetadata` instance.
+- An `Exception` becomes `Error.Exception(exception)`.
+- Anything else becomes an `Unexpected` error whose code is the name of the slot type.
+
+`IResultBase.Errors` and the related members never throw, for any slot type. The typed results do not plug into the Mediator failure conversion: when a handler that returns a typed result throws, `ExceptionHandlingBehavior` lets the original exception through unchanged.
 
 ## Upgrading to 8.0
 

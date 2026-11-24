@@ -84,7 +84,8 @@ jobs:
           dotnet run --project tests/PackageConsumer --configuration Release -p:CsePackage=CSharpEssentials.Mediator -p:CseVersion=0.0.0-ci.${{ github.run_id }}
 
       # Typed results need the C# 15 compiler. tests/TypedResultConsumer builds each case against the packed packages with the
-      # global.json SDK and checks the diagnostics a consumer sees: a clean build for full coverage, CS8509, CS0457, CS0029 and CS0161.
+      # global.json SDK and checks the diagnostics a consumer sees, for an inline union and for the shipped Result<T, E1..E3>: a clean
+      # build for full coverage, CS8509, CS0457, CS0029 and CS0161.
       - name: Check typed result consumer diagnostics
         run: python3 scripts/check-typed-consumer.py --version 0.0.0-ci.${{ github.run_id }}
 

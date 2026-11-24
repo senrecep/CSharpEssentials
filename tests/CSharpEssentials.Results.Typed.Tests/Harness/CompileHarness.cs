@@ -14,6 +14,16 @@ namespace CSharpEssentials.Results.Typed.Tests.Harness;
 /// </remarks>
 internal static class CompileHarness
 {
+    /// <summary>
+    /// The NoWarn 1701;1702 the .NET SDK passes to every build. Coverage instrumentation rewrites the loaded CSharpEssentials
+    /// assemblies with the System.Runtime version of the collector, which reports CS1701 on net11.0 without it.
+    /// </summary>
+    private static readonly Dictionary<string, ReportDiagnostic> SdkDefaultNoWarn = new(StringComparer.Ordinal)
+    {
+        ["CS1701"] = ReportDiagnostic.Suppress,
+        ["CS1702"] = ReportDiagnostic.Suppress,
+    };
+
     public static IReadOnlyList<Diagnostic> Compile(string source, LanguageVersion languageVersion) =>
         [.. Create(source, languageVersion).GetDiagnostics().Where(d => d.Severity >= DiagnosticSeverity.Warning)];
 
@@ -46,7 +56,10 @@ internal static class CompileHarness
             "TypedResultProbe",
             [CSharpSyntaxTree.ParseText(source, new CSharpParseOptions(languageVersion))],
             ReferencePack.Current.References,
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+            new CSharpCompilationOptions(
+                OutputKind.DynamicallyLinkedLibrary,
+                nullableContextOptions: NullableContextOptions.Enable,
+                specificDiagnosticOptions: SdkDefaultNoWarn));
 
     public static IReadOnlySet<string> Ids(this IEnumerable<Diagnostic> diagnostics) =>
         diagnostics.Select(d => d.Id).ToHashSet(StringComparer.Ordinal);
